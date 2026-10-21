@@ -1,4 +1,4 @@
-"""Exercise extracted server shutdown with real SFML threads, without a game."""
+"""Exercise extracted server shutdown with real threads, without a game."""
 import argparse
 import os
 from pathlib import Path
@@ -37,6 +37,7 @@ probe = r'''
 #include <deque>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 #define OD_LOG_INF(message) do {} while(false)
 #define OD_LOG_ERR(message) do {} while(false)
@@ -49,7 +50,7 @@ struct Selector {int cleared=0;void clear(){++cleared;}};
 struct Listener {int closed=0;void close(){++closed;}};
 class ODSocketServer {
 public:
-    sf::Thread* mThread=nullptr;
+    std::thread* mThread=nullptr;
     RUNNING_TYPE mIsConnected{false};
     Selector mSockSelector; Listener mSockListener;
     std::vector<ODSocketClient*> mSockClients;
@@ -81,7 +82,7 @@ struct ODServer:ODSocketServer {
         processServerNotifications();
         finished=true;
     }
-    void launch(){mIsConnected=true;mThread=new sf::Thread(&ODServer::work,this);mThread->launch();
+    void launch(){mIsConnected=true;mThread=new std::thread(&ODServer::work,this);
         while(!ready)sf::sleep(sf::milliseconds(1));}
 };
 FUNCTIONS
@@ -142,7 +143,7 @@ failed = False
 with tempfile.TemporaryDirectory(prefix='odp-server-shutdown-') as temporary:
     work = Path(temporary)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/DNDEBUG', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/DNDEBUG', '/std:c++17',
                     f'/I{prefix / "include"}', 'check.cpp', '/Fecheck.exe',
                     '/link', f'/LIBPATH:{prefix / "lib"}', 'sfml-system.lib'],
                    cwd=work, check=True)

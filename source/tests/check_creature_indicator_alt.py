@@ -93,8 +93,8 @@ namespace OIS { enum KeyCode {KC_LMENU,KC_RMENU,KC_A};struct Keyboard {
  enum Modifier {Alt,Ctrl,Shift};bool held=false;bool isModifierDown(Modifier){return held;}
 }; }
 namespace sf { struct Keyboard {
- enum Key {LAlt,RAlt,LControl,RControl,LShift,RShift};
- static bool keys[6];static bool isKeyPressed(Key key){return keys[key];}
+ enum class Key {LAlt,RAlt,LControl,RControl,LShift,RShift};
+ static bool keys[6];static bool isKeyPressed(Key key){return keys[static_cast<int>(key)];}
 };bool Keyboard::keys[6]={}; }
 struct Keyboard { OIS::Keyboard backend;OIS::Keyboard* mKeyboard=&backend;bool isModifierDown(OIS::Keyboard::Modifier); };
 KEYBOARD_METHOD
@@ -106,7 +106,7 @@ int main(){int checks=0,failures=0;const auto check=[&](bool value,const char* w
  Creature c;MovableTextOverlay display;CreatureOverlayStatus overlay{&c,&display};c.overlay=&overlay;
  Creature notRendered;GameMap map{{&c,&notRendered}};c.map=&map;RenderManager renderer;Keyboard keys;
  for(bool left:{false,true})for(bool right:{false,true}){
-  sf::Keyboard::keys[sf::Keyboard::LAlt]=left;sf::Keyboard::keys[sf::Keyboard::RAlt]=right;keys.backend.held=left||right;
+  sf::Keyboard::keys[static_cast<int>(sf::Keyboard::Key::LAlt)]=left;sf::Keyboard::keys[static_cast<int>(sf::Keyboard::Key::RAlt)]=right;keys.backend.held=left||right;
   const bool alt=keys.isModifierDown(OIS::Keyboard::Alt);
   check(alt==(left||right),"either Alt key requests display");
   renderer.rrSetCreaturesTextOverlay(map,alt);overlay.update(.01f);
