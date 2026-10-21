@@ -655,6 +655,8 @@ public:
     inline bool isFreePossession() const
     { return mFreePossession; }
 
+    //! \brief Sets whether the possession of the level is free of mana costs
+    //! \param free true to let the possession cost no mana
     inline void setFreePossession(bool free)
     { mFreePossession = free; }
 

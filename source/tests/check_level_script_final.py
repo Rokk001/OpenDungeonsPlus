@@ -145,4 +145,12 @@ for word in ('Cond	alive', 'Cond	reached', 'Cond	portal', 'Cond	stone', 'Action	
              'Action	terrain', 'Action	spawn'):
     assert word in story_section, word
 
+# scripted possession: the creature is possessed by the human keeper, and a level that starts with one is free of mana costs
+assert 'case LevelScriptActionType::possessCreature:' in runner and 'startPossession(' in runner
+assert 'case LevelScriptConditionType::possessedInRegion:' in runner
+assert 'type == "possess"' in script_cpp and 'type == "possessed"' in script_cpp
+assert 'key == "FreePossession"' in script_cpp and 'os << "FreePossession' in script_cpp
+assert 'isFreePossession()' in read('source/creatureaction/CreatureActionPossessed.cpp')
+assert 'script.setFreePossession(true)' in runner
+
 print('level script final wiring: ok')
