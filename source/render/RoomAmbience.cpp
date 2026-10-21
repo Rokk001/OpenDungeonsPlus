@@ -2204,6 +2204,7 @@ void RoomAmbience::updateMotions(double timeSinceLastFrame)
             double wave = std::sin(TWO_PI * effect.mSpeed * motionNode.mClock + instance.mPhase);
             if(effect.mHeartRate)
             {
+                // The beat is summed up, so a change of the heart rate does not make the object jump
                 instance.mCycle += effect.mSpeed
                     * getHeartRateFactor(motionNode.mBasePosition) * timeSinceLastFrame;
                 wave = std::sin(TWO_PI * instance.mCycle + instance.mPhase);

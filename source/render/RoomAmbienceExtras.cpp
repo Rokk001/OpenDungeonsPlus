@@ -47,6 +47,11 @@ const double CROW_MAX_PAUSE = 120.0;
 const double HEART_HURT_FRACTION = 0.5;
 // Below this part of the heart health every beat is also heard (the flare starts at the same limit)
 const double HEART_LOW_FRACTION = 0.35;
+//! The beat of a heart is this much faster for every unit of health it lacks (a heart at no health beats 1 + this
+//! as fast as a calm one) ...
+const double HEART_RATE_HURT_FACTOR = 1.6;
+//! ... and this much faster again while it is attacked
+const double HEART_RATE_ATTACK_FACTOR = 0.3;
 
 int32_t toTileCoordinate(double value)
 {
@@ -233,7 +238,7 @@ void RoomAmbienceExtras::scanObjects(RoomAmbience& ambience, GameMap* gameMap, d
             }
 
             // The beat gets faster the more the heart is hurt, and a bit faster again while it is attacked
-            double factor = 1.0 + 1.6 * (1.0 - fraction) + (attacked ? 0.3 : 0.0);
+            double factor = 1.0 + HEART_RATE_HURT_FACTOR * (1.0 - fraction) + (attacked ? HEART_RATE_ATTACK_FACTOR : 0.0);
             ambience.addHeartRate(position, factor);
             double& nextBeat = mNextHeartBeat[tile->getSeat()->getId()];
             if(mInitialized && (fraction < HEART_HURT_FRACTION) && (clock >= nextBeat))

@@ -490,19 +490,26 @@ private:
     std::vector<uint32_t> mNoEffects;
     std::vector<uint32_t> mObjectWildcardEffects;
     double mScanRadius;
+    //! \brief How fast a dungeon heart beats, as told by RoomAmbienceExtras
     struct HeartRate
     {
+        //! \brief Creates the beat of the heart at the given position
+        //! \param position Where the heart stands.
+        //! \param factor Beats per second as a multiple of the calm beat.
         HeartRate(const Ogre::Vector3& position, double factor) :
             mPosition(position), mFactor(factor)
         {}
 
+        //! Where the heart stands
         Ogre::Vector3 mPosition;
+        //! Beats per second as a multiple of the calm beat
         double mFactor;
     };
 
     //! \brief Beat factor of the heart nearest to position, 1 if there is none within a few tiles
     double getHeartRateFactor(const Ogre::Vector3& position) const;
 
+    //! How fast the dungeon hearts beat, found at the last scan
     std::vector<HeartRate> mHeartRates;
 
     //! The grain of one hatchery as last told by the server
