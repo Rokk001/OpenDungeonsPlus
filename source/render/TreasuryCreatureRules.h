@@ -129,6 +129,7 @@ inline float pourClipTime(float t, float climbLength, float pourLength)
     return time < 0.0f ? 0.0f : time;
 }
 
+//! True when the gold of the given pile level is deep enough to splash
 inline bool isDeep(int level)
 {
     return level >= deepLevel;
@@ -149,7 +150,7 @@ inline bool stepDue(float dx, float dy)
     return dx * dx + dy * dy >= stepDistance * stepDistance;
 }
 
-//! Particle budget of one room by the "Treasury detail" option
+//! Particle budget of one room by the "Treasury detail" option (number of splashes it may show at once)
 inline int splashBudget(TreasuryGoldMesh::Detail detail)
 {
     switch(detail)

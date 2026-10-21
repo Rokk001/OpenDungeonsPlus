@@ -945,7 +945,9 @@ private:
     //! \brief Lifts the creature while it walks over low furniture, such as a nest, and lowers it again
     //! afterwards.
     void updateCreatureStep(Creature* creature);
+    //! \brief The creatures on the tile follow the gold of its pile (a pile was created or removed there).
     void refreshCreaturesOnTile(Tile* tile);
+    //! \brief A creature walked on deep gold: splashes coins and clinks after every step of the given length.
     void treasuryCreatureStep(Creature* creature, const Ogre::Vector3& position, float surfaceHeight, int level);
     //! \brief Starts an effect of the given kind at the position, when it is in view and its room still has a place
     //! in the budget of the kind. Returns whether the effect was started.
@@ -999,9 +1001,13 @@ private:
     void destroyTreasuryGlowLight(const std::string& name);
     //! \brief Ends the effects whose time is over and gives their places back to the budget of their room.
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
+    //! \brief The worker standing on the tile climbs the pile and tips its gold out (only what is in view).
     void startTreasuryPour(Tile* tile, int level);
+    //! \brief Moves the pouring workers (clips or procedural climb and tilt).
     void updateTreasuryPours(Ogre::Real timeSinceLastFrame);
+    //! \brief Ends the pour of the creature (of every creature when none is given) and straightens it up.
     void cancelTreasuryPour(Creature* creature);
+    //! \brief The extra height of the pouring worker above the gold of its tile (0 when it does not pour).
     float getTreasuryPourRise(Creature* creature) const;
     //! \brief Forgets the effects, the piles, the buried objects, the sacks and the glow lights and destroys the draw
     //! batches (the scene is cleared or destroyed).

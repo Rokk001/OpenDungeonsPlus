@@ -48,10 +48,15 @@ struct TreasurySettings
     float glowWeightFull = 1.0f;
 
     // Creatures and effects on the gold (TreasuryCreatureRules.h)
+    //! From this fill step on the gold is deep enough for creatures to splash and clink in it
     int deepLevel = 4;
+    //! Distance a creature walks between two splashes, in tiles
     float stepDistance = 0.55f;
+    //! Seconds a splash counts against the budget of its room
     float splashLifetime = 1.4f;
+    //! Seconds a worker spends climbing the pile, pouring out the gold and coming back down
     float pourDuration = 1.4f;
+    //! Splashes a room may show at once at the full and at the reduced detail
     int splashBudgetFull = 6;
     int splashBudgetReduced = 2;
     //! Gold dust puffs a room may show at once at the full and at the reduced detail (0 turns the floating motes off),
