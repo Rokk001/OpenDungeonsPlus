@@ -22,6 +22,10 @@ These instructions apply to every change made to this repository with an AI assi
 - Keep changes focused on what was asked; do not reformat or restyle code that the
   change does not need to touch.
 
+## Branches
+
+- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. After integration it is submitted as its own pull request right away, stacked on the latest pull request it contains ('Stacks on #<n>'). Pull requests are submitted stacked and merged upstream in order; never re-cut, split or rebase a submitted pull request to make it standalone against shaders-improvement. Nothing is committed directly on integration/all, and no work stays only in integration/all without a pull request.
+
 ## Protected content
 
 - Never copy or derive levels, maps, graphics, models, sounds, texts or data tables from
