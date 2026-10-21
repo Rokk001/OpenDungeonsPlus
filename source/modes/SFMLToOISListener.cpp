@@ -77,18 +77,18 @@ void initKeyTable(std::array<CEGUI::Key::Scan,sf::Keyboard::KeyCount>& keyMap)
         keyMap[static_cast<size_t>(sfk::Menu)]		= cgk::AppMenu;
         keyMap[static_cast<size_t>(sfk::LBracket)]	= cgk::LeftBracket;
         keyMap[static_cast<size_t>(sfk::RBracket)]	= cgk::RightBracket;
-        keyMap[static_cast<size_t>(sfk::SemiColon)]	= cgk::Semicolon;
+        keyMap[static_cast<size_t>(sfk::Semicolon)]	= cgk::Semicolon;
         keyMap[static_cast<size_t>(sfk::Comma)]		= cgk::Comma;
         keyMap[static_cast<size_t>(sfk::Period)]		= cgk::Period;
-        keyMap[static_cast<size_t>(sfk::Quote)]		= cgk::Apostrophe;
+        keyMap[static_cast<size_t>(sfk::Apostrophe)]		= cgk::Apostrophe;
         keyMap[static_cast<size_t>(sfk::Slash)]		= cgk::Slash;
-        keyMap[static_cast<size_t>(sfk::BackSlash)]	= cgk::Backslash;
-        keyMap[static_cast<size_t>(sfk::Tilde)]		= cgk::Grave;
+        keyMap[static_cast<size_t>(sfk::Backslash)]	= cgk::Backslash;
+        keyMap[static_cast<size_t>(sfk::Grave)]		= cgk::Grave;
         keyMap[static_cast<size_t>(sfk::Equal)]		= cgk::Equals;
-        keyMap[static_cast<size_t>(sfk::Dash)]		= cgk::Minus;
+        keyMap[static_cast<size_t>(sfk::Hyphen)]		= cgk::Minus;
         keyMap[static_cast<size_t>(sfk::Space)]		= cgk::Space;
-        keyMap[static_cast<size_t>(sfk::Return)]		= cgk::Return;
-        keyMap[static_cast<size_t>(sfk::BackSpace)]	= cgk::Backspace;
+        keyMap[static_cast<size_t>(sfk::Enter)]		= cgk::Return;
+        keyMap[static_cast<size_t>(sfk::Backspace)]	= cgk::Backspace;
         keyMap[static_cast<size_t>(sfk::Tab)]			= cgk::Tab;
         keyMap[static_cast<size_t>(sfk::PageUp)]		= cgk::PageUp;
         keyMap[static_cast<size_t>(sfk::PageDown)]	= cgk::PageDown;
@@ -131,11 +131,11 @@ void initKeyTable(std::array<CEGUI::Key::Scan,sf::Keyboard::KeyCount>& keyMap)
         keyMap[static_cast<size_t>(sfk::F15)]			= cgk::F15;
         keyMap[static_cast<size_t>(sfk::Pause)]		= cgk::Pause;
 /*
-        keyMap[sf::Mouse::Left)]		= CEGUI::LeftButton;
-        keyMap[sf::Mouse::Right)]		= CEGUI::RightButton;
-        keyMap[sf::Mouse::Middle)]		= CEGUI::MiddleButton;
-        keyMap[sf::Mouse::XButton1)]	= CEGUI::X1Button;
-        keyMap[sf::Mouse::XButton2)]	= CEGUI::X2Button;*/
+        keyMap[sf::Mouse::Button::Left)]		= CEGUI::LeftButton;
+        keyMap[sf::Mouse::Button::Right)]		= CEGUI::RightButton;
+        keyMap[sf::Mouse::Button::Middle)]		= CEGUI::MiddleButton;
+        keyMap[sf::Mouse::Button::Extra1)]	= CEGUI::X1Button;
+        keyMap[sf::Mouse::Button::Extra2)]	= CEGUI::X2Button;*/
 }
 
 SFMLToOISListener::SFMLToOISListener(AbstractApplicationMode* receiver, int windowWidth, int windowHeigth)
@@ -157,55 +157,58 @@ bool SFMLToOISListener::handleEvent(const sf::Event& event)
     {
         return true;
     }
-    using et = sf::Event::EventType;
-    switch(event.type)
+    if(const sf::Event::KeyPressed* keyPressed = event.getIf<sf::Event::KeyPressed>())
     {
-        case et::KeyPressed:
-            if (static_cast<size_t>(event.key.code) >= mKeyMap.size())
-            {
-                return true;
-            }
-            return mReceiver->keyPressed(OIS::KeyEvent(nullptr, static_cast<OIS::KeyCode>(mKeyMap.at(event.key.code)), 0));
-        case et::KeyReleased:
-            if (static_cast<size_t>(event.key.code) >= mKeyMap.size())
-            {
-                return true;
-            }
-            return mReceiver->keyReleased(OIS::KeyEvent(nullptr, static_cast<OIS::KeyCode>(mKeyMap.at(event.key.code)), 0));
-        case et::TextEntered:
-            return mReceiver->keyPressed(OIS::KeyEvent(nullptr, OIS::KeyCode::KC_UNASSIGNED, event.text.unicode));
-        case et::MouseMoved:
-            mMouseState.X.abs = event.mouseMove.x;
-            mMouseState.Y.abs = event.mouseMove.y;
-            // Reset the mouse wheel position here as otherwise mouseMoved will think the scrollwheel has changed each
-            // time the mouse moves.
-            mMouseState.Z.rel = 0;
-            return mReceiver->mouseMoved(OIS::MouseEvent(nullptr, mMouseState));
-        case et::MouseButtonPressed:
-            mMouseState.buttons |= 1 << static_cast<int>(event.mouseButton.button);
-            return mReceiver->mousePressed(OIS::MouseEvent(nullptr, mMouseState), static_cast<OIS::MouseButtonID>(event.mouseButton.button));
-        case et::MouseButtonReleased:
-            mMouseState.buttons &= ~(1 << static_cast<int>(event.mouseButton.button));
-            return mReceiver->mouseReleased(OIS::MouseEvent(nullptr, mMouseState), static_cast<OIS::MouseButtonID>(event.mouseButton.button));
-#if SFML_VERSION_MINOR > 2
-        case et::MouseWheelScrolled:
-            mMouseState.Z.rel = static_cast<int>(event.mouseWheelScroll.delta);
-            mMouseState.X.abs = event.mouseWheelScroll.x;
-            mMouseState.Y.abs = event.mouseWheelScroll.y;
-            return mReceiver->mouseMoved(OIS::MouseEvent(nullptr, mMouseState));
-#else /* SFML_VERSION_MINOR > 2 */
-        case et::MouseWheelMoved:
-            mMouseState.Z.rel = event.mouseWheel.delta;
-            mMouseState.X.abs = event.mouseWheel.x;
-            mMouseState.Y.abs = event.mouseWheel.y;
-            return mReceiver->mouseMoved(OIS::MouseEvent(nullptr, mMouseState));
-#endif /* SFML_VERSION_MINOR > 2 */
-        case et::Resized:
-            mMouseState.width = event.size.width;
-            mMouseState.height = event.size.height;
-            break;
-        default:
-            OD_LOG_DBG("Unhandled event!");
+        if (static_cast<size_t>(keyPressed->code) >= mKeyMap.size())
+        {
+            return true;
+        }
+        return mReceiver->keyPressed(OIS::KeyEvent(nullptr, static_cast<OIS::KeyCode>(mKeyMap.at(static_cast<size_t>(keyPressed->code))), 0));
     }
+    if(const sf::Event::KeyReleased* keyReleased = event.getIf<sf::Event::KeyReleased>())
+    {
+        if (static_cast<size_t>(keyReleased->code) >= mKeyMap.size())
+        {
+            return true;
+        }
+        return mReceiver->keyReleased(OIS::KeyEvent(nullptr, static_cast<OIS::KeyCode>(mKeyMap.at(static_cast<size_t>(keyReleased->code))), 0));
+    }
+    if(const sf::Event::TextEntered* textEntered = event.getIf<sf::Event::TextEntered>())
+    {
+        return mReceiver->keyPressed(OIS::KeyEvent(nullptr, OIS::KeyCode::KC_UNASSIGNED, textEntered->unicode));
+    }
+    if(const sf::Event::MouseMoved* mouseMoved = event.getIf<sf::Event::MouseMoved>())
+    {
+        mMouseState.X.abs = mouseMoved->position.x;
+        mMouseState.Y.abs = mouseMoved->position.y;
+        // Reset the mouse wheel position here as otherwise mouseMoved will think the scrollwheel has changed each
+        // time the mouse moves.
+        mMouseState.Z.rel = 0;
+        return mReceiver->mouseMoved(OIS::MouseEvent(nullptr, mMouseState));
+    }
+    if(const sf::Event::MouseButtonPressed* buttonPressed = event.getIf<sf::Event::MouseButtonPressed>())
+    {
+        mMouseState.buttons |= 1 << static_cast<int>(buttonPressed->button);
+        return mReceiver->mousePressed(OIS::MouseEvent(nullptr, mMouseState), static_cast<OIS::MouseButtonID>(buttonPressed->button));
+    }
+    if(const sf::Event::MouseButtonReleased* buttonReleased = event.getIf<sf::Event::MouseButtonReleased>())
+    {
+        mMouseState.buttons &= ~(1 << static_cast<int>(buttonReleased->button));
+        return mReceiver->mouseReleased(OIS::MouseEvent(nullptr, mMouseState), static_cast<OIS::MouseButtonID>(buttonReleased->button));
+    }
+    if(const sf::Event::MouseWheelScrolled* wheelScrolled = event.getIf<sf::Event::MouseWheelScrolled>())
+    {
+        mMouseState.Z.rel = static_cast<int>(wheelScrolled->delta);
+        mMouseState.X.abs = wheelScrolled->position.x;
+        mMouseState.Y.abs = wheelScrolled->position.y;
+        return mReceiver->mouseMoved(OIS::MouseEvent(nullptr, mMouseState));
+    }
+    if(const sf::Event::Resized* resized = event.getIf<sf::Event::Resized>())
+    {
+        mMouseState.width = resized->size.x;
+        mMouseState.height = resized->size.y;
+        return true;
+    }
+    OD_LOG_DBG("Unhandled event!");
     return true;
 }
