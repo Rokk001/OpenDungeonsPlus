@@ -49,7 +49,32 @@ EXCLUDED_FILES = frozenset([
     "source/tests/check_pr_coverage.py",
     # The list of commits below is read by this check and not submitted upstream either.
     "source/tests/pr-coverage-not-upstream.txt",
+    # Not submitted, replaced by feature/dungeonbook-whole-portraits (decision of 2026-10-20): the part-based
+    # Dungeonbook portrait tooling and checks of the withdrawn portrait branches.
+    "materials/portraits/generation-inventory.json",
+    "materials/portraits/neutral-bases/Knight.mesh.png",
+    "scripts/check_portrait_manifests.py",
+    "source/tests/check_portrait_option_orientation.py",
+    "tools/portraits/check_plan_completion.py",
+    "tools/portraits/deliver_neutral_variants.py",
+    "tools/portraits/export_generation_inventory.py",
+    "tools/portraits/measure_base_tints.py",
+    "tools/portraits/neutral-feature-layouts.json",
+    "tools/portraits/prepare_neutral_bases.py",
+    "tools/portraits/prepare_neutral_features.py",
+    "tools/portraits/prepare_outfit_variants.py",
+    "tools/portraits/render_manifest_reviews.py",
+    "tools/portraits/render_native_check_sheets.py",
+    "tools/portraits/validate_neutral_features.py",
+    "tools/portraits/verify_portrait_sources.py",
 ])
+
+# Directories whose files are not submitted, replaced by feature/dungeonbook-whole-portraits (decision of 2026-10-20):
+# the part-based Dungeonbook portrait variants of the withdrawn portrait branches.
+EXCLUDED_PREFIXES = (
+    "materials/portraits/variants/",
+    "materials/portraits/neutral-variants/",
+)
 
 # Commits whose lines in BLAME_FILTERED_FILE are not submitted upstream; their lines in other files still count.
 NOT_UPSTREAM_COMMITS_FILE = "source/tests/pr-coverage-not-upstream.txt"
@@ -200,6 +225,7 @@ def main():
             raise CheckError("no open pull requests found for %s in %s; refusing to report an empty comparison" % (options.author, options.repo))
         target_files, target_added = diff_added(options.base, options.target)
         target_files -= EXCLUDED_FILES
+        target_files = set(f for f in target_files if not f.startswith(EXCLUDED_PREFIXES))
         if BLAME_FILTERED_FILE in target_files:
             target_added[BLAME_FILTERED_FILE] -= lines_from_commits(options.target, BLAME_FILTERED_FILE, read_not_upstream_commits())
             if not target_added[BLAME_FILTERED_FILE]:
