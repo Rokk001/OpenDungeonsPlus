@@ -55,6 +55,10 @@ const uint32_t PROGRESS_ATLAS_LAST_FRAME = PROGRESS_ATLAS_COLUMNS * PROGRESS_ATL
 //! Character heights of the level caption, which gets smaller for two-digit levels.
 const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 32;
 const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;
+//! Character height of the overlay that shows the emote of a reaction
+const Ogre::Real EMOTE_CHAR_HEIGHT = 16;
+//! Width and height in pixels of the area of the emote picture
+const Ogre::Real EMOTE_SIZE = 32;
 
 CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* ent,
         Ogre::Camera* cam) :
@@ -124,8 +128,8 @@ void CreatureOverlayStatus::showEmote(const std::string& materialName, Ogre::Rea
     if(!mEmoteCreated)
     {
         // The material is given at once: it has to be a valid one when the overlay is created
-        mEmoteId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 16, Ogre::ColourValue::White, materialName);
-        mMovableTextOverlay->forceTextArea(mEmoteId, 32, 32);
+        mEmoteId = mMovableTextOverlay->createChildOverlay("MedievalSharp", EMOTE_CHAR_HEIGHT, Ogre::ColourValue::White, materialName);
+        mMovableTextOverlay->forceTextArea(mEmoteId, EMOTE_SIZE, EMOTE_SIZE);
         mEmoteCreated = true;
     }
     else
