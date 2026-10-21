@@ -969,6 +969,7 @@ private:
     void updateTreasuryDents(Ogre::Real timeSinceLastFrame);
     //! Distance of a point to the camera in tiles (0 without a camera)
     float getTreasuryCameraDistance(const Ogre::Vector3& position) const;
+    //! \brief Switches piles between the full and the reduced mesh by their distance to the camera.
     void updateTreasuryLod(Ogre::Real timeSinceLastFrame);
     //! \brief Draws a few of the piles and heaps queued by rrTreasuryDetailChanged again.
     void updateTreasuryRebuild();
