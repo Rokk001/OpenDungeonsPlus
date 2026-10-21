@@ -716,7 +716,8 @@ private:
     //! Rich keepers other than the local one: name of the heart or portal room -> seconds the news of the server
     //! still counts. The server only tells the seats that see the tile, so this holds nothing about hidden buildings.
     std::map<std::string, Ogre::Real> mForeignWealth;
-    //! Set while a game is shown; the portal dust looks up the portals of the local keeper there
+    //! Set while a game is shown; the portal dust looks up the portals of the local keeper there and the sacks of the
+    //! thieves look up the creatures of the game there
     GameMap* mGameMap = nullptr;
     Ogre::Real mTreasuryAmbientTimer = 0.0f;
     size_t mTreasuryAmbientCursor = 0;
@@ -961,6 +962,7 @@ private:
     //! Distance of a point to the camera in tiles (0 without a camera)
     float getTreasuryCameraDistance(const Ogre::Vector3& position) const;
     void updateTreasuryLod(Ogre::Real timeSinceLastFrame);
+    //! \brief Draws a few of the piles and heaps queued by rrTreasuryDetailChanged again.
     void updateTreasuryRebuild();
     //! Ends the dent of the pile: its entity is drawn again, the dynamic copy is destroyed
     void finishTreasuryDent(const std::string& entityName);
@@ -971,6 +973,7 @@ private:
     void refreshBuriedObjectsOnTile(Tile* tile);
     void updateTreasuryBuriedObjects(Ogre::Real timeSinceLastFrame);
     float getBuriedLift(RenderedMovableEntity* entity, bool settleAtOnce);
+    //! \brief Removes the sack that a thief carries on its back (nothing happens when it has none).
     void removeTreasuryThiefSack(Creature* creature);
     void refreshTreasuryGlow(int x, int y);
     void updateTreasuryGlow(Ogre::Real timeSinceLastFrame);

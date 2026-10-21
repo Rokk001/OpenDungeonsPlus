@@ -6662,6 +6662,7 @@ float RenderManager::getBuriedLift(RenderedMovableEntity* entity, bool settleAtO
 
 void RenderManager::rrRefreshCreatureGoldSack(Creature* creature)
 {
+    // Only the creatures that steal gold show a sack
     if(creature == nullptr || creature->getDefinition() == nullptr || creature->getDefinition()->getStealGold() <= 0
         || creature->getEntityNode() == nullptr || !creature->getIsOnMap())
         return;
