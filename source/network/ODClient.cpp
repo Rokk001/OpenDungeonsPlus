@@ -1276,8 +1276,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::playSpatialSound:
         {
             std::string family;
-            int xPos;
-            int yPos;
+            int xPos = 0;
+            int yPos = 0;
             OD_ASSERT_TRUE(packetReceived >> family >> xPos >> yPos);
             if(family == (Spell::SPELL_EFFECT_PREFIX + Spell::HAND_CAST_EFFECT_NAME))
             {
@@ -1550,11 +1550,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::trapEffect:
         {
             // Cosmetic only: tells the room ambience what the trap or door on the tile just did
-            int32_t effectKind;
-            int32_t tileX;
-            int32_t tileY;
+            int32_t effectKind = 0;
+            int32_t tileX = 0;
+            int32_t tileY = 0;
             std::string typeName;
-            float fraction;
+            float fraction = 1.0f;
             OD_ASSERT_TRUE(packetReceived >> effectKind >> tileX >> tileY >> typeName >> fraction);
             if((RoomAmbience::getSingletonPtr() != nullptr) &&
                (frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME))
@@ -2192,7 +2192,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         {
             // The creature the keeper returns from loses its aura and shows a short flash of light where it
             // stands. A creature that fell (the server says so: dead, knocked out or gone) shows another effect
-            bool creatureLost;
+            bool creatureLost = false;
             OD_ASSERT_TRUE(packetReceived >> creatureLost);
             Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
             RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
