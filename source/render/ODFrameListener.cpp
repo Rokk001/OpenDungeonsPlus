@@ -530,10 +530,11 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     return true;
 }
 
-void ODFrameListener::renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& invocation,
+void ODFrameListener::renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& cameraName,
     bool&)
 {
-    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI && invocation.empty())
+    // Ogre 14 passes the camera name here; shadow-texture passes are detected via the render stage (was invocation == "SHADOWS" in Ogre 13).
+    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI && mRenderManager->getSceneManager()->_getCurrentRenderStage() != Ogre::SceneManager::IRS_RENDER_TO_TEXTURE)
     {
         Ogre::Root::getSingleton().getRenderSystem()->clearFrameBuffer(Ogre::FBT_DEPTH);
         CEGUI::System::getSingleton().renderAllGUIContexts();

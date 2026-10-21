@@ -1795,10 +1795,10 @@ Ogre::Entity* RenderManager::addEntityMenu(const std::string& meshName, const st
 
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
 
-    unsigned short src, dest;
-    if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    unsigned short src;
+    if (!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     } 
 
     Ogre::Entity* ent = mSceneManager->createEntity(entityName, meshPtr);
@@ -2892,10 +2892,10 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     if(!Ogre::MeshManager::getSingleton().resourceExists(meshName,"Graphics"))
         Ogre::MeshManager::getSingleton().load(meshName,"Graphics");
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
-    unsigned short src, dest;
-    if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    unsigned short src;
+    if (!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     } 
 
 
@@ -3070,11 +3070,11 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     
                 
                 Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
-                unsigned short src, dest;
+                unsigned short src;
     
-                if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+                if (!meshPtr->suggestTangentVectorBuildParams(src))
                 {
-                    meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+                    meshPtr->buildTangentVectors(src);
                 }               
                 std::string customMeshNodeName = bridgeMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node";
                 Ogre::SceneNode* customMeshNode;
@@ -3352,15 +3352,15 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     
 
         Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName + ".mesh","Graphics");
-        unsigned short src, dest;
+        unsigned short src;
 
         // Meshes without texture coordinates (like the dungeon heart, which only uses
         // plain colour materials) cannot get tangents; Ogre throws for them.
         try
         {
-            if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+            if (!meshPtr->suggestTangentVectorBuildParams(src))
             {
-                meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+                meshPtr->buildTangentVectors(src);
             }
         }
         catch(const Ogre::ItemIdentityException&)
@@ -3534,11 +3534,11 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     
 
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
-    unsigned short src, dest;
+    unsigned short src;
     
-    if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    if (!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     }    
     std::string creatureName = curCreature->getOgreNamePrefix() + curCreature->getName();
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
@@ -3595,10 +3595,10 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
         Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
 
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName, "Graphics");
-    unsigned short src, dest;
-    if(!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    unsigned short src;
+    if(!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     }
 
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);

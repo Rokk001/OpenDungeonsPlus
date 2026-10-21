@@ -364,11 +364,11 @@ bool createArrow(CreatureReactions& reactions, Creature* creature, const Shooter
     if(!meshPtr)
         return false;
 
-    unsigned short src, dest;
+    unsigned short src;
     try
     {
-        if(!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
-            meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        if(!meshPtr->suggestTangentVectorBuildParams(src))
+            meshPtr->buildTangentVectors(src);
     }
     catch(const Ogre::ItemIdentityException&)
     {
