@@ -112,6 +112,7 @@ void addQuad(Ogre::ManualObject* object, uint32_t& index, const Ogre::Vector3& p
     index += 4;
 }
 
+//! \brief Starts a mesh made in code with the given material and returns the object to add triangles to.
 Ogre::ManualObject* beginShape(Ogre::SceneManager* sceneManager, const std::string& material)
 {
     Ogre::ManualObject* object = sceneManager->createManualObject();
@@ -119,12 +120,14 @@ Ogre::ManualObject* beginShape(Ogre::SceneManager* sceneManager, const std::stri
     return object;
 }
 
+//! \brief Turns the shape into a mesh with the given name and frees the manual object.
 void finishShape(Ogre::SceneManager* sceneManager, Ogre::ManualObject* object, const std::string& meshName)
 {
     object->convertToMesh(meshName + ".mesh", MaterialGroup);
     sceneManager->destroyManualObject(object);
 }
 
+//! \brief Makes the loose feathers that show next to a coop of an abandoned hatchery.
 void buildFeathers(Ogre::SceneManager* sceneManager)
 {
     Ogre::ManualObject* object = beginShape(sceneManager, "ChickenFeatherDecor");
@@ -154,6 +157,7 @@ void buildFeathers(Ogre::SceneManager* sceneManager)
     finishShape(sceneManager, object, MeshFeathers);
 }
 
+//! \brief Builds the named mesh with the given function unless it exists already.
 void ensureMesh(Ogre::SceneManager* sceneManager, const std::string& name, void (*build)(Ogre::SceneManager*))
 {
     if(Ogre::MeshManager::getSingleton().resourceExists(name + ".mesh", MaterialGroup))
@@ -162,6 +166,7 @@ void ensureMesh(Ogre::SceneManager* sceneManager, const std::string& name, void 
     build(sceneManager);
 }
 
+//! \brief Reads one number of the room config, the default is used when the key is missing.
 float configValue(const std::string& key, float defaultValue)
 {
     return static_cast<float>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(key, defaultValue));
