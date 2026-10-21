@@ -364,6 +364,8 @@ private:
     int32_t mNbTurnDie;
     bool mIsSlapped;
     bool mLockedEat;
+    //! Turns left in which a hen dropped by the keeper outside a hatchery is offered to a creature that
+    //! is not hungry (0 = not offered, see offerGift)
     uint32_t mGiftTurns;
     //! Turns until the hen may peck (and take grain) again
     uint32_t mPeckWait;
