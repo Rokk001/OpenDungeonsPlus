@@ -1,5 +1,5 @@
 diff --git a/cmake/CEGUIMacros.cmake b/cmake/CEGUIMacros.cmake
-index 2aca3ff3d..d409ff403 100644
+index 2aca3ff3d..0488e8e40 100644
 --- a/cmake/CEGUIMacros.cmake
 +++ b/cmake/CEGUIMacros.cmake
 @@ -46,18 +46,28 @@ macro (cegui_find_libraries _LIBS_VAR _LIB_LIST)
@@ -33,7 +33,7 @@ index 2aca3ff3d..d409ff403 100644
  
                  if (_LIB_IS_IN_PROJECT)
                      target_link_libraries(${_TARGET_NAME}_Static ${_BUILD} ${_LIB}_Static)
-@@ -73,7 +83,7 @@ endmacro()
+@@ -73,11 +83,15 @@ endmacro()
  # add dynamic dependency libraries to a target
  #
  macro (cegui_add_dependency_dynamic_libs _TARGET_NAME _DEP_NAME)
@@ -42,7 +42,16 @@ index 2aca3ff3d..d409ff403 100644
  
      if (_TARGET_EXISTS)
          if (${_DEP_NAME}_LIBRARIES)
-@@ -98,7 +108,7 @@ endmacro()
+-            if (${_DEP_NAME}_LIBRARIES_DBG)
++            list(FIND ${_DEP_NAME}_LIBRARIES optimized _LIB_HAS_KEYWORD)
++            if (NOT _LIB_HAS_KEYWORD EQUAL -1)
++                # the find module already marked release and debug libraries
++                target_link_libraries(${_TARGET_NAME} ${${_DEP_NAME}_LIBRARIES})
++            elseif (${_DEP_NAME}_LIBRARIES_DBG)
+                 foreach(_LIB ${${_DEP_NAME}_LIBRARIES})
+                     target_link_libraries(${_TARGET_NAME} optimized ${_LIB})
+                 endforeach()
+@@ -98,7 +112,7 @@ endmacro()
  # if static do not exist)
  #
  macro (cegui_add_dependency_static_libs _TARGET_NAME _DEP_NAME)
@@ -51,7 +60,7 @@ index 2aca3ff3d..d409ff403 100644
  
      if (_TARGET_EXISTS)
          if (${_DEP_NAME}_LIBRARIES_STATIC)
-@@ -137,8 +147,8 @@ endmacro()
+@@ -137,8 +151,8 @@ endmacro()
  #
  macro (cegui_add_dependency _TARGET_NAME _DEP_NAME)
  # Optional additional arguments: "SCOPE" "IS_SYSTEM"
