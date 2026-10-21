@@ -25,17 +25,23 @@
 class TrapGas : public Trap
 {
 public:
+    //! \brief Creates a gas trap and reads its reload time, damage, number of shots and radius from the config.
     TrapGas(GameMap* gameMap);
 
+    //! \brief The type of this trap.
     virtual const TrapType getType() const override
     { return TrapType::gas; }
 
+    //! \brief Releases the poison cloud when an enemy creature stands on the given tile.
+    //! \return True if the cloud was released, false if no enemy stood on the tile.
     virtual bool shoot(Tile* tile) override;
+    //! \brief The gas trap cannot be attacked.
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -44,8 +50,10 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Creates the entity shown on the given tile.
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief The trap type of the gas trap.
     static const TrapType mTrapType;
 
 private:

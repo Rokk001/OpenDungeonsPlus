@@ -1040,7 +1040,8 @@ public:
     void fleeFromTile(Tile* fearTile, int32_t nbTurns);
 
     //! \brief Stuns the creature for nbTurns turns (lightning trap). A stunned creature does nothing,
-    //! like a creature that was just dropped.
+    //! like a creature that was just dropped. Does nothing if the creature is dead or already KO.
+    //! \param nbTurns How many turns the creature stays stunned.
     void stunForTurns(int32_t nbTurns);
 
     void sleep();

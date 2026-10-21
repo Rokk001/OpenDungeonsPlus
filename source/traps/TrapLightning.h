@@ -25,17 +25,23 @@
 class TrapLightning : public Trap
 {
 public:
+    //! \brief Creates a lightning trap and reads its reload time, damage, number of shots, range and stun time from the config.
     TrapLightning(GameMap* gameMap);
 
+    //! \brief The type of this trap.
     virtual const TrapType getType() const override
     { return TrapType::lightning; }
 
+    //! \brief Strikes one enemy creature within range with a bolt that damages and stuns it.
+    //! \return True if a bolt was fired, false if no enemy was in range.
     virtual bool shoot(Tile* tile) override;
+    //! \brief The lightning trap cannot be attacked.
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -44,8 +50,10 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Creates the entity shown on the given tile.
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief The trap type of the lightning trap.
     static const TrapType mTrapType;
 
 private:
