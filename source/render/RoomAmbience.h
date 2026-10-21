@@ -377,6 +377,7 @@ private:
     void scan();
     //! \brief Hands the torch list of the client map to mWallTorches when it has changed
     void syncWallTorches();
+    //! \brief Finds the objects near the camera that have effects and collects the candidates for them
     void scanObjects(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
@@ -445,6 +446,8 @@ private:
     void stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect);
     //! \brief True if the dungeon heart at the position belongs to the local keeper and its health fraction (as the
     //! heart badge shows it) is below the given value
+    //! \param position Where the heart stands.
+    //! \param below The health fraction (0 to 1) under which the heart counts as low.
     bool isLocalHeartBelow(const Ogre::Vector3& position, double below) const;
     //! \brief Updates and returns the state "no creature for a while" of a target
     bool isIdleLongEnough(const std::string& key, bool busy, double after);

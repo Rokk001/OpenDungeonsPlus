@@ -651,7 +651,7 @@ public:
     inline const std::map<std::string, LevelScriptTimer>& getTimers() const
     { return mTimers; }
 
-    //! A level that starts with a possession (Action possess) does not drain mana for it
+    //! \brief True if the level starts with a possession (Action possess): it does not drain mana for it
     inline bool isFreePossession() const
     { return mFreePossession; }
 

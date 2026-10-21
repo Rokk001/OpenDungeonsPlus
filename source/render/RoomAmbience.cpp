@@ -1324,11 +1324,13 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
 {
     struct Change
     {
+        //! Name of the event
         std::string mEvent;
         //! Trap or door type the event is about (empty = use the tile)
         std::string mVisual;
         //! Creature the event is about (empty = none)
         std::string mCreature;
+        //! Where the thing is
         Ogre::Vector3 mPosition;
     };
 
