@@ -75,7 +75,7 @@ if 'getAnimationState(it->mClip)->getLength()' not in update or "clipLength = 0.
 
 # Every door type shows its wreck on a ghost copy: the barricade with Collapse, all others with Destroyed
 start = ambience[ambience.index("void RoomAmbience::startCollapse"):ambience.index("void RoomAmbience::updateCollapses")]
-if '(typeName == "DoorBarricade") ? "Collapse" : "Destroyed"' not in start:
+if '(typeName == BARRICADE_TYPE) ? COLLAPSE_CLIP : DESTROYED_CLIP' not in start or         'BARRICADE_TYPE = "DoorBarricade"' not in ambience or 'COLLAPSE_CLIP = "Collapse"' not in ambience or         'DESTROYED_CLIP = "Destroyed"' not in ambience:
     problems.append("startCollapse does not pick Collapse for the barricade and Destroyed for every other door")
 if "entityPrefix" not in start or '"DoorBarricade_"' in start:
     problems.append("startCollapse still only finds barricade entities")

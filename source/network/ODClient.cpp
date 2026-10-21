@@ -1549,6 +1549,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::trapEffect:
         {
+            // Cosmetic only: tells the room ambience what the trap or door on the tile just did
             int32_t effectKind;
             int32_t tileX;
             int32_t tileY;

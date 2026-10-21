@@ -181,14 +181,20 @@ private:
     //! door) and then sinks into the floor
     struct Collapse
     {
+        //! \brief Creates remains that are not attached to a scene node yet
         Collapse() :
             mNode(nullptr), mEntity(nullptr), mAge(0.0), mBaseHeight(0.0)
         {}
 
+        //! The scene node of the ghost copy of the door
         Ogre::SceneNode* mNode;
+        //! The ghost copy of the door that plays the clip
         Ogre::Entity* mEntity;
+        //! Seconds since the clip started
         double mAge;
+        //! Height of the node at the start, from which it sinks
         double mBaseHeight;
+        //! Name of the clip that is played
         std::string mClip;
     };
 
@@ -388,7 +394,9 @@ private:
     //! \brief Lets a destroyed door (the door entity of the given type on the tile, which the server is about to
     //! remove) play the clip Collapse (barricade) or Destroyed (every other door) of its skeleton on a ghost copy
     void startCollapse(int32_t tileX, int32_t tileY, const std::string& typeName);
+    //! \brief Moves the clips of the remains of destroyed doors on, lets them lie a moment and sinks them
     void updateCollapses(double timeSinceLastFrame);
+    //! \brief Removes the ghost copy of a destroyed door from the scene
     void destroyCollapse(Collapse& collapse);
     //! \brief Lets the objects of effects of kind turn follow the creatures near them, or go back to rest
     void updateTurrets(double timeSinceLastFrame);
@@ -545,6 +553,7 @@ private:
     //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
+    //! The remains of destroyed doors that are shown
     std::vector<Collapse> mCollapses;
     //! The bolts and flying objects that are on their way
     std::vector<Flight> mFlights;

@@ -171,6 +171,24 @@ const double BEAM_THICKNESS_RANGE = 0.9;
 const double ARC_PARABOLA_FACTOR = 4.0;
 //! A projectile that moved less than this (squared) since the last frame is not turned
 const float MIN_PROJECTILE_MOVE_SQUARED = 0.000001f;
+//! Seconds that a door counts as hit after the server sent a hit, for the effects "When Hit"
+const double HIT_STATE_SECONDS = 1.0;
+//! Seconds that a destroyed door counts as destroyed, so that its removal is not also reported as a sale
+const double WRECKED_STATE_SECONDS = 5.0;
+//! A door with this fraction of its health or less is hurt (the event DoorHurt)
+const float DOOR_HURT_FRACTION = 0.5f;
+//! At most this many remains of destroyed doors are shown at once
+const size_t MAX_COLLAPSES = 4;
+//! Seconds the remains of a door lie there after their clip, and seconds and depth of their sinking into the floor
+const double COLLAPSE_HOLD_SECONDS = 2.0;
+const double COLLAPSE_SINK_SECONDS = 1.0;
+const double COLLAPSE_SINK_DEPTH = 0.3;
+//! The type name of the barricade, which falls into a heap (clip Collapse) while every other door breaks (clip Destroyed)
+static const std::string BARRICADE_TYPE = "DoorBarricade";
+static const std::string COLLAPSE_CLIP = "Collapse";
+static const std::string DESTROYED_CLIP = "Destroyed";
+//! The state of the animation of a door that is closed
+static const std::string DOOR_CLOSED_STATE = "Close";
 
 //! \brief True if the name fits the pattern, which is a plain name or has * as first or last character as wildcard
 bool matchesPattern(const std::string& pattern, const std::string& name)
@@ -1053,7 +1071,7 @@ void RoomAmbience::scanObjects(Ogre::Camera* camera, const Ogre::Vector3& camera
             else if(effect.mWhen == AmbienceWhen::locked)
             {
                 // A door that is closed was locked by its keeper
-                candidate.mActive = (entity->getAnimationStateName() == "Close");
+                candidate.mActive = (entity->getAnimationStateName() == DOOR_CLOSED_STATE);
             }
             else if(effect.mWhen == AmbienceWhen::hit)
             {
@@ -2041,11 +2059,11 @@ void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY, const std::string
         return;
 
     // Only the remains of the door the server is about to remove are shown, so a few at most
-    if(mCollapses.size() >= 4)
+    if(mCollapses.size() >= MAX_COLLAPSES)
         return;
 
     // The barricade falls into a heap, every other door breaks with the clip Destroyed
-    const std::string clipName = (typeName == "DoorBarricade") ? "Collapse" : "Destroyed";
+    const std::string& clipName = (typeName == BARRICADE_TYPE) ? COLLAPSE_CLIP : DESTROYED_CLIP;
     const std::string entityPrefix = typeName + "_";
 
     const std::vector<RenderedMovableEntity*>& entities = mGameMap->getRenderedMovableEntities();
@@ -2072,7 +2090,7 @@ void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY, const std::string
         Ogre::Entity* ghost = nullptr;
         try
         {
-            ghost = sceneManager->createEntity(name, entity->getMeshName() + ".mesh");
+            ghost = sceneManager->createEntity(name, entity->getMeshName() + MESH_SUFFIX);
         }
         catch(const Ogre::Exception&)
         {
@@ -2106,15 +2124,12 @@ void RoomAmbience::startCollapse(int32_t tileX, int32_t tileY, const std::string
 void RoomAmbience::updateCollapses(double timeSinceLastFrame)
 {
     // The heap lies there for a moment after the clip and then sinks into the floor
-    const double holdTime = 2.0;
-    const double sinkTime = 1.0;
-    const double sinkDepth = 0.3;
     for(std::vector<Collapse>::iterator it = mCollapses.begin(); it != mCollapses.end();)
     {
         // The length of the clip of the door skeleton
         const double clipLength = static_cast<double>(it->mEntity->getAnimationState(it->mClip)->getLength());
         it->mAge += timeSinceLastFrame;
-        if(it->mAge >= clipLength + holdTime + sinkTime)
+        if(it->mAge >= clipLength + COLLAPSE_HOLD_SECONDS + COLLAPSE_SINK_SECONDS)
         {
             destroyCollapse(*it);
             it = mCollapses.erase(it);
@@ -2125,11 +2140,11 @@ void RoomAmbience::updateCollapses(double timeSinceLastFrame)
         {
             it->mEntity->getAnimationState(it->mClip)->addTime(static_cast<Ogre::Real>(timeSinceLastFrame));
         }
-        else if(it->mAge > clipLength + holdTime)
+        else if(it->mAge > clipLength + COLLAPSE_HOLD_SECONDS)
         {
-            double sunk = (it->mAge - clipLength - holdTime) / sinkTime;
+            double sunk = (it->mAge - clipLength - COLLAPSE_HOLD_SECONDS) / COLLAPSE_SINK_SECONDS;
             Ogre::Vector3 position = it->mNode->getPosition();
-            position.z = static_cast<Ogre::Real>(it->mBaseHeight - sunk * sinkDepth);
+            position.z = static_cast<Ogre::Real>(it->mBaseHeight - sunk * COLLAPSE_SINK_DEPTH);
             it->mNode->setPosition(position);
         }
 
@@ -2895,13 +2910,13 @@ void RoomAmbience::notifyTrapEffect(int32_t kind, int32_t tileX, int32_t tileY, 
             triggerEvent("TrapLinked", position, false, typeName);
             break;
         case 2:
-            mHitUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 1.0;
+            mHitUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + HIT_STATE_SECONDS;
             triggerEvent("DoorHit", position, false, typeName);
-            if(fraction <= 0.5f)
+            if(fraction <= DOOR_HURT_FRACTION)
                 triggerEvent("DoorHurt", position, false, typeName);
             break;
         case 3:
-            mWreckedUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + 5.0;
+            mWreckedUntil[Helper::toString(tileX) + "," + Helper::toString(tileY)] = mClock + WRECKED_STATE_SECONDS;
             triggerEvent("DoorWrecked", position, false, typeName);
             startCollapse(tileX, tileY, typeName);
             break;
