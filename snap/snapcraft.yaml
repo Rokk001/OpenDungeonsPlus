@@ -43,7 +43,6 @@ apps:
       XDG_CONFIG_HOME: "${SNAP_USER_DATA}"
       CEGUI_MODULE_DIR: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/cegui-0.9999"
       DISPLAY: :0
-      ALSOFT_LOGLEVEL: 3
       OGRE_RTSHADER_CACHE_DIR: "$SNAP_USER_DATA/shaderCache"
     extensions: [gnome]
 
