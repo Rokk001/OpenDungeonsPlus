@@ -484,7 +484,7 @@ void ChickenEntity::mountHen(ChickenEntity& hen)
     mMountHenName = hen.getName();
     // The climb on the hen, the treading and the climb down last three turns together
     hen.playPose(ChickenPose::cackle, MOUNT_POSE_TURNS);
-    playPose(ChickenPose::mount, MOUNT_POSE_TURNS);
+    playPose(ChickenPose::mount, 3);
     // Clearing the old paths can restore their final headings, so announce the shared heading afterwards.
     hen.setAnimationState(ChickenPose::cackle, true, direction, false);
     setAnimationState(ChickenPose::mount, true, direction, false);
