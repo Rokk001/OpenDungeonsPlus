@@ -197,18 +197,22 @@ public:
 
     //! \brief The hatchery tells a chick which animal to follow (the one in front of it in the line).
     void setFollowTarget(const Ogre::Vector2& target, double gap);
+    //! \brief The chick no longer follows anybody.
     void clearFollowTarget();
 
     //! \brief The hatchery controls the rooster itself (perching, guarding, chasing). Otherwise he struts around.
     inline void setRoomDriven(bool driven)
     { mRoomDriven = driven; }
 
+    //! \brief The current mood of the rooster.
     inline RoosterMood getMood() const
     { return mMood; }
 
+    //! \brief Turns left of the current mood.
     inline uint32_t getMoodTurns() const
     { return mMoodTurns; }
 
+    //! \brief Sets the mood of the rooster for the given number of turns.
     inline void setMood(RoosterMood mood, uint32_t turns)
     {
         mMood = mood;
@@ -222,12 +226,15 @@ public:
             --mMoodTurns;
     }
 
+    //! \brief Turns since the rooster crowed last.
     inline uint32_t getSinceCrow() const
     { return mSinceCrow; }
 
+    //! \brief Counts one more turn since the last crow.
     inline void incrementSinceCrow()
     { ++mSinceCrow; }
 
+    //! \brief The rooster crowed just now.
     inline void resetSinceCrow()
     { mSinceCrow = 0; }
 
@@ -239,6 +246,7 @@ public:
     inline void resetApproachTurns()
     { mApproachTurns = 0; }
 
+    //! \brief True while the rooster sits on a coop roof.
     inline bool isOnRoof() const
     { return mOnRoof; }
 
