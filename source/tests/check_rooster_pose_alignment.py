@@ -66,7 +66,9 @@ radius = max(math.hypot(float(p.get('x')), float(p.get('y'))) for p in rooster.i
 assert radius < clearance
 # Use the actual coop bounds and the existing generic furniture scaling.
 furniture = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
-assert 'float width = 0.6f, depth = 0.6f;' in furniture
+assert 'float width = furnitureFootprint, depth = furnitureFootprint;' in furniture
+# the named furniture footprint keeps the value 0.6 tiles
+assert 'constexpr float furnitureFootprint = 0.6f;' in furniture
 factor = min(1.0, 0.6 / (max(p[0] for p in points) - min(p[0] for p in points)),
              0.6 / (max(p[1] for p in points) - min(p[1] for p in points)))
 min_x = min(p[0] for p in points) * factor
