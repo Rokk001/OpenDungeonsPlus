@@ -132,7 +132,7 @@ void checkRules(TestMap& map, const std::vector<WallTorch>& torches)
         for(size_t j = i + 1; j < torches.size(); ++j)
         {
             int32_t distance = std::abs(torch.mX - torches[j].mX) + std::abs(torch.mY - torches[j].mY);
-            BOOST_CHECK(distance >= static_cast<int32_t>(WallTorchPlacement().mMinDistance));
+            BOOST_CHECK(distance >= static_cast<int32_t>(DEFAULT_TORCH_MIN_DISTANCE));
         }
     }
 }
