@@ -209,6 +209,10 @@ const double SLAP_DUCK_MEMORY = 90.0;
 const uint32_t HEAL_MIN_STEPS = 2;
 //! Standing creatures this close to an ally that went down mourn it (world units)
 const double ALLY_DEATH_RADIUS = 8.0;
+//! Seconds the mourning creatures wait (staggered) after the ally went down
+const double ALLY_DEATH_DELAY = 1.2;
+//! Seconds a fleeing creature waits before it shows the panic
+const double FLEE_PANIC_DELAY = 0.4;
 //! The sight of an enemy lets the standing creatures of the keeper close by react at most this often
 const double ENEMY_SPOTTED_INTERVAL = 20.0;
 //! Creatures that walk towards each other and are this close (world units) bump into each other
@@ -1695,7 +1699,7 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
 
         // A prisoner that struggles is not fleeing
         if(!creature->isInContainment())
-            queueReaction(creature, "FleePanic", -1.0, 0.4);
+            queueReaction(creature, "FleePanic", -1.0, FLEE_PANIC_DELAY);
 
         CreatureCombatReactions::noteAlarm(*this, creature);
     }
@@ -2545,7 +2549,7 @@ void CreatureReactions::noteAllyDied(Creature* dead)
     }
 
     if(!mourners.empty())
-        triggerGroup("AllyDied", mourners, false, 1.2);
+        triggerGroup("AllyDied", mourners, false, ALLY_DEATH_DELAY);
 }
 
 void CreatureReactions::noteSlapRequest(GameEntity* entity)
