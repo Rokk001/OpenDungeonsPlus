@@ -62,11 +62,13 @@
 namespace
 {
 
+//! \brief Converts level seconds to game turns.
 int64_t secondsToTurns(int64_t seconds)
 {
     return static_cast<int64_t>(static_cast<double>(seconds) * ODApplication::turnsPerSecond);
 }
 
+//! \brief True if the creature belongs to the seat; seat -1 matches every creature.
 bool isSeatMatching(const Creature* creature, int32_t seatId)
 {
     if(seatId < 0)
@@ -188,6 +190,10 @@ bool areGroundPointsConnected(GameMap& gameMap, const LevelScriptCondition& cond
 }
 
 //! \brief Evaluates gameplay conditions, living captivity and read-only objective presentation predicates.
+//! \param gameMap The server game map.
+//! \param script The level script (flags, timers, regions).
+//! \param cond The condition to test.
+//! \return True if the condition holds now.
 bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScriptCondition& cond)
 {
     switch(cond.mType)
@@ -786,6 +792,7 @@ std::vector<Player*> getTargetPlayers(GameMap& gameMap, int32_t seatId)
     return players;
 }
 
+//! \brief Sends a chat message to the players an action is meant for.
 void sendMessage(GameMap& gameMap, int32_t seatId, const std::string& text)
 {
     for(Player* player : getTargetPlayers(gameMap, seatId))
