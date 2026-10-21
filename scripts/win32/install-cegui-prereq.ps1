@@ -38,6 +38,13 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\cegui" apply $taskPolicyPatch
     if ($LASTEXITCODE -ne 0) { throw 'CEGUI CMake policy patch failed' }
 }
+$taskForwardPatch = Join-Path $PSScriptRoot 'patches/cegui-ogre-forward-declarations.patch'
+& git -C "$taskRoot\src\cegui" apply --reverse --check $taskForwardPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Using the Ogre forward declarations instead of CEGUI copies'
+    & git -C "$taskRoot\src\cegui" apply $taskForwardPatch
+    if ($LASTEXITCODE -ne 0) { throw 'CEGUI Ogre forward declaration patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskOptions = @('-S', "$taskRoot\src\cegui", '-B', "$taskRoot\build\cegui",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",
