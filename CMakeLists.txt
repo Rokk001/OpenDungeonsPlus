@@ -133,14 +133,12 @@ endif()
 # This makes it possible to have them explicitly displayed in CMake GUI
 # CMAKE_CXX_FLAGS can still be used to override our default defintions
 set(OD_OPT_FLAGS CACHE STRING "Optimization and optional compilation flags")
-set(OD_CXX11_FLAGS CACHE STRING "Compilation flags to enable C++11 support")
 
 # The project is built as C++17 (required by SFML 3)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    # C++11 compilation flag is activated by default
     # Optimisation flags can be added if deemed useful
 else()
     include(CheckCXXCompilerFlag)
@@ -202,7 +200,7 @@ if(OD_USE_SFML_WINDOW)
     add_definitions(-DOD_USE_SFML_WINDOW)
 endif()
 
-set(CMAKE_CXX_FLAGS "${OD_CXX11_FLAGS} ${OD_OPT_FLAGS} ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${OD_OPT_FLAGS} ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMake CXX Flags: " ${CMAKE_CXX_FLAGS})
 
 set(EXTRA_LIBRARIES "")
