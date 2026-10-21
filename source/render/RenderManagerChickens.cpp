@@ -559,6 +559,7 @@ void RenderManager::rrChickenHatched(ChickenEntity* chicken)
     createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.05f), "ChickenEggShell");
 }
 
+//! \brief An egg was trampled: lets shell pieces and yolk fly.
 void RenderManager::rrEggTrampled(const Ogre::Vector3& position)
 {
     // Shell pieces and yolk have no chicken feather trigger.
