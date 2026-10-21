@@ -10,7 +10,6 @@ end = source.index('\nstd::vector<GameEntity*> GameMap::getVisibleCreatures', st
 method = source[start:end]
 probe = r'''
 #include <algorithm>
-#include <functional>
 #include <iostream>
 #include <vector>
 #define OD_LOG_ERR(x) ((void)0)
@@ -34,9 +33,9 @@ struct Tile {
 };
 struct GameMap {std::vector<GameEntity*> getVisibleForce(const std::vector<Tile*>&,Seat*,bool);};
 METHOD
-int main(){int checks=0,failures=0;
- std::function<void(bool,const char*)> check=[&](bool ok,const char* msg){
-  ++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
+int checks=0,failures=0;
+void check(bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}}
+int main(){
  Seat owner{1},ally{1},enemy{2};GameMap map;Tile centre,outer,roomTile;
  GameEntity floor{GameEntityType::room,&owner,true,false};centre.building=&floor;outer.building=&floor;
  GameEntity heart{GameEntityType::persistentObject,&owner,true,true,&centre};
