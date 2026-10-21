@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
 $taskRoot = $taskDependencyRoot
-$taskCmake = "$taskRoot\tools\cmake-4.4.1-windows-x86_64\bin\cmake.exe"
+$taskCmake = $taskCmakeExe
 $taskPatch = Join-Path $PSScriptRoot 'patches/cegui-msvc-snprintf.patch'
 $taskHitTestPatch = Join-Path $PSScriptRoot 'patches/cegui-list-hit-test.patch'
 $ErrorActionPreference = 'Continue'
