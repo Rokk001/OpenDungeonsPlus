@@ -856,6 +856,7 @@ bool ChickenEntity::tryPickup(Seat* seat)
     return true;
 }
 
+//! \brief The keeper's hand takes the animal: it is taken out of the room's work, and a rooster protests loudly.
 void ChickenEntity::pickup()
 {
     if(getIsOnServerMap() && ((mKind == ChickenKind::egg) || (mKind == ChickenKind::chick)))

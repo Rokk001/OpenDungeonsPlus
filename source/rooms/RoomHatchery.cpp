@@ -187,6 +187,9 @@ void RoomHatchery::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
     }
 }
 
+//! \brief Plays a hatchery animal sound where the animal is.
+//! \param animal The animal that makes the sound.
+//! \param family The sound family below Rooms/, e.g. "Hatchery/Crow".
 void RoomHatchery::fireAnimalSound(const ChickenEntity& animal, const std::string& family)
 {
     Tile* tile = animal.getPositionTile();
@@ -194,6 +197,8 @@ void RoomHatchery::fireAnimalSound(const ChickenEntity& animal, const std::strin
         fireRoomSound(*tile, family);
 }
 
+//! \brief The rooster protests loudly when the keeper's hand takes him: plays the angry cackle on his tile.
+//! \param tile The tile the rooster was picked up from.
 void RoomHatchery::fireProtest(Tile& tile)
 {
     fireRoomSound(tile, "Hatchery/Protest");
