@@ -156,6 +156,13 @@ const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
 //! Height of the burst above the tile floor, so it is not hidden by the ground.
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_HEIGHT = 0.05f;
 const Ogre::Real CREATURE_COMBAT_IMPACT_DURATION = 0.55f;
+//! A turn of a creature to its target that is smaller than this angle (radians) is not animated
+const Ogre::Real CREATURE_TURN_MIN_ANGLE = 0.05f;
+//! Seconds of a turn without any angle and the extra seconds of a half turn (180 degrees)
+const Ogre::Real CREATURE_TURN_BASE_DURATION = 0.12f;
+const Ogre::Real CREATURE_TURN_HALF_TURN_DURATION = 0.14f;
+//! A turn is given up when the orientation differs from the last one it set by more than this angle (radians)
+const Ogre::Real CREATURE_TURN_INTERRUPT_TOLERANCE = 0.02f;
 //! Seconds a feather effect of the hatchery lives: the feathers tumble down for about two seconds
 const Ogre::Real CHICKEN_FEATHER_EFFECT_DURATION = 2.6f;
 //! Height above the corpse position at which its fly swarm hovers
@@ -821,12 +828,44 @@ Ogre::Vector3 getCombatRootOffset(CombatMotion style, Ogre::Real windup, Ogre::R
     return offset;
 }
 
+//! The blows of a creature with a sword: the plain strike of the source clip, a cut from above, a cut from the side
+//! and a thrust. The three sword blows are played in turn.
+const int COMBAT_BLOW_PLAIN = 0;
+const int COMBAT_BLOW_FROM_ABOVE = 1;
+const int COMBAT_BLOW_FROM_SIDE = 2;
+const int COMBAT_BLOW_THRUST = 3;
+const unsigned int COMBAT_SWORD_BLOW_COUNT = 3;
+//! Extra movement of the sword arm, the forearm and the body (degrees) in the wind-up and in the strike of the
+//! cut from above
+const Ogre::Real COMBAT_ABOVE_ARM_WINDUP = -48.0f;
+const Ogre::Real COMBAT_ABOVE_ARM_STRIKE = 26.0f;
+const Ogre::Real COMBAT_ABOVE_FOREARM_WINDUP = -22.0f;
+const Ogre::Real COMBAT_ABOVE_FOREARM_STRIKE = 12.0f;
+const Ogre::Real COMBAT_ABOVE_BODY_WINDUP = -5.0f;
+const Ogre::Real COMBAT_ABOVE_BODY_STRIKE = 9.0f;
+//! The same for the cut from the side (twist of the arm and the body, pitch of the forearm)
+const Ogre::Real COMBAT_SIDE_ARM_WINDUP = 38.0f;
+const Ogre::Real COMBAT_SIDE_ARM_STRIKE = -58.0f;
+const Ogre::Real COMBAT_SIDE_FOREARM_STRIKE = -8.0f;
+const Ogre::Real COMBAT_SIDE_BODY_TWIST = 16.0f;
+//! The same for the thrust, and how far the whole body steps back and forward (world units)
+const Ogre::Real COMBAT_THRUST_ARM_WINDUP = 22.0f;
+const Ogre::Real COMBAT_THRUST_ARM_STRIKE = -30.0f;
+const Ogre::Real COMBAT_THRUST_FOREARM_WINDUP = 30.0f;
+const Ogre::Real COMBAT_THRUST_FOREARM_STRIKE = -38.0f;
+const Ogre::Real COMBAT_THRUST_BODY_WINDUP = 4.0f;
+const Ogre::Real COMBAT_THRUST_BODY_STRIKE = 6.0f;
+const Ogre::Real COMBAT_THRUST_STEP_BACK = 0.02f;
+const Ogre::Real COMBAT_THRUST_STEP_FORWARD = 0.04f;
+
 //! Bones of the sword arm, for the sword blows of createCreatureCombatAttack
+//! \brief Tells whether the lower-case bone name belongs to the upper arm of the sword arm.
 bool isRightArmBone(const std::string& lowerName)
 {
     return lowerName == "arm_r" || lowerName == "upper_arm.r" || lowerName == "upperarm_r";
 }
 
+//! \brief Tells whether the lower-case bone name belongs to the forearm of the sword arm.
 bool isRightForearmBone(const std::string& lowerName)
 {
     return lowerName == "forearm_r" || lowerName == "forearm.r";
@@ -855,10 +894,10 @@ std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& 
 {
     Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
     if(!skeleton->hasAnimation(original)) return original;
-    const bool mirroredClip = leftHand && blow != 0 && skeleton->hasAnimation(original + MIRRORED_CLIP_SUFFIX);
+    const bool mirroredClip = leftHand && blow != COMBAT_BLOW_PLAIN && skeleton->hasAnimation(original + MIRRORED_CLIP_SUFFIX);
     if(mirroredClip) armScale = 1.0f;
     const std::string name = "AttackCombat_" + original +
-        (blow != 0 ? "_Sword" + Helper::toString(blow) + (leftHand ? (mirroredClip ? "M" : "L") : "") +
+        (blow != COMBAT_BLOW_PLAIN ? "_Sword" + Helper::toString(blow) + (leftHand ? (mirroredClip ? "M" : "L") : "") +
         (armScale != 1.0f ? "S" + Helper::toString(static_cast<int>(armScale * 100.0f)) : std::string()) :
         (alternate ? "_B" : "_A"));
     const Ogre::Animation* source = skeleton->getAnimation(mirroredClip ? original + MIRRORED_CLIP_SUFFIX : original);
@@ -899,31 +938,34 @@ std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& 
                 const Ogre::Real twistAmount = style == CombatMotion::tentacle ?
                     COMBAT_BODY_TWIST_TENTACLE : COMBAT_BODY_TWIST_DEFAULT;
                 Ogre::Real twist = bone == body ? (alternate ? -1.0f : 1.0f) * twistAmount * (strike - windup) : 0.0f;
-                if(blow != 0)
+                if(blow != COMBAT_BLOW_PLAIN)
                 {
                     // Added on top of the strike of the source clip, so the sword hand still follows its own path
                     const bool rightArm = leftHand ? isLeftArmBone(boneName) : isRightArmBone(boneName);
                     const bool rightForearm = leftHand ? isLeftForearmBone(boneName) : isRightForearmBone(boneName);
                     // The cut from the side runs the other way round with the left arm
                     const Ogre::Real side = leftHand ? -1.0f : 1.0f;
-                    if(blow == 1)
+                    if(blow == COMBAT_BLOW_FROM_ABOVE)
                     {
-                        if(rightArm) pitch += (-48.0f * windup + 26.0f * strike) * armScale;
-                        if(rightForearm) pitch += (-22.0f * windup + 12.0f * strike) * armScale;
-                        if(bone == body) pitch += -5.0f * windup + 9.0f * strike;
+                        if(rightArm) pitch += (COMBAT_ABOVE_ARM_WINDUP * windup + COMBAT_ABOVE_ARM_STRIKE * strike) * armScale;
+                        if(rightForearm)
+                            pitch += (COMBAT_ABOVE_FOREARM_WINDUP * windup + COMBAT_ABOVE_FOREARM_STRIKE * strike) * armScale;
+                        if(bone == body) pitch += COMBAT_ABOVE_BODY_WINDUP * windup + COMBAT_ABOVE_BODY_STRIKE * strike;
                     }
-                    else if(blow == 2)
+                    else if(blow == COMBAT_BLOW_FROM_SIDE)
                     {
-                        if(rightArm) twist += side * (38.0f * windup - 58.0f * strike) * armScale;
-                        if(rightForearm) pitch += -8.0f * strike * armScale;
-                        if(bone == body) twist += side * 16.0f * (strike - windup);
+                        if(rightArm) twist += side * (COMBAT_SIDE_ARM_WINDUP * windup + COMBAT_SIDE_ARM_STRIKE * strike) * armScale;
+                        if(rightForearm) pitch += COMBAT_SIDE_FOREARM_STRIKE * strike * armScale;
+                        if(bone == body) twist += side * COMBAT_SIDE_BODY_TWIST * (strike - windup);
                     }
                     else
                     {
-                        if(rightArm) pitch += (22.0f * windup - 30.0f * strike) * armScale;
-                        if(rightForearm) pitch += (30.0f * windup - 38.0f * strike) * armScale;
-                        if(bone == body) pitch += 4.0f * windup + 6.0f * strike;
-                        if(bone->getParent() == nullptr) offset.y += 0.02f * windup - 0.04f * strike;
+                        if(rightArm) pitch += (COMBAT_THRUST_ARM_WINDUP * windup + COMBAT_THRUST_ARM_STRIKE * strike) * armScale;
+                        if(rightForearm)
+                            pitch += (COMBAT_THRUST_FOREARM_WINDUP * windup + COMBAT_THRUST_FOREARM_STRIKE * strike) * armScale;
+                        if(bone == body) pitch += COMBAT_THRUST_BODY_WINDUP * windup + COMBAT_THRUST_BODY_STRIKE * strike;
+                        if(bone->getParent() == nullptr)
+                            offset.y += COMBAT_THRUST_STEP_BACK * windup - COMBAT_THRUST_STEP_FORWARD * strike;
                     }
                 }
                 const Ogre::Quaternion basis = bone->_getDerivedOrientation();
@@ -4033,13 +4075,13 @@ Ogre::Real RenderManager::rrOrientEntityTowardSmoothly(MovableGameEntity* gameEn
     Ogre::Real turn = angle.valueRadians();
     if(turn > Ogre::Math::PI)
         turn = Ogre::Math::TWO_PI - turn;
-    if(turn < 0.05f)
+    if(turn < CREATURE_TURN_MIN_ANGLE)
         return 0.0f;
     for(const CreatureSleepAnimation& sleeping : mCreatureSleepAnimations)
         if(sleeping.mCreature == gameEntity)
             return 0.0f;
     node->setOrientation(before);
-    Ogre::Real duration = 0.12f + 0.14f * turn / Ogre::Math::PI;
+    Ogre::Real duration = CREATURE_TURN_BASE_DURATION + CREATURE_TURN_HALF_TURN_DURATION * turn / Ogre::Math::PI;
     if(announced)
     {
         const Ogre::Real radiansPerSecond = Ogre::Degree(static_cast<Ogre::Real>(
@@ -4060,7 +4102,7 @@ void RenderManager::updateCreatureTurns(Ogre::Real timeSinceLastFrame)
     for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end();)
     {
         // Somebody else (a reaction, a drop, the sleep) set the orientation: let go and keep what they set
-        if(!it->mNode->getOrientation().equals(it->mLast, Ogre::Radian(0.02f)))
+        if(!it->mNode->getOrientation().equals(it->mLast, Ogre::Radian(CREATURE_TURN_INTERRUPT_TOLERANCE)))
         {
             it = mCreatureTurns.erase(it);
             continue;
@@ -4749,7 +4791,7 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
             const bool twoWeapons = humanoid && (twoWeaponMode != TwoWeaponStrike::MODE_OFF) &&
                 CreatureCombatReactions::carriesTwoAttackWeapons(dropCreature);
             const int blow = (humanoid && (twoWeapons || CreatureCombatReactions::carriesSword(dropCreature))) ?
-                static_cast<int>(nextVariant % 3) + 1 : 0;
+                static_cast<int>(nextVariant % COMBAT_SWORD_BLOW_COUNT) + COMBAT_BLOW_FROM_ABOVE : COMBAT_BLOW_PLAIN;
             uint32_t& nextSide = mCreatureAttackSides[dropCreature];
             const bool leftHand = twoWeapons && TwoWeaponStrike::isLeftBlow(twoWeaponMode, nextSide);
             if(twoWeapons)

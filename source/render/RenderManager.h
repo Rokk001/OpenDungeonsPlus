@@ -489,6 +489,7 @@ private:
         Ogre::SceneNode* mNode;
         Ogre::Quaternion mFrom;
         Ogre::Quaternion mTo;
+        //! The orientation the turn set last, to notice when somebody else changes it
         Ogre::Quaternion mLast;
         Ogre::Real mElapsed;
         Ogre::Real mDuration;
@@ -496,6 +497,7 @@ private:
     std::vector<CreatureTurn> mCreatureTurns;
     //! Turns announced by the server (event attackTurn): creature name -> direction to the target
     std::map<std::string, Ogre::Vector3> mAttackTurnNotes;
+    //! \brief Advances the smooth turns of the creatures and removes the finished ones
     void updateCreatureTurns(Ogre::Real timeSinceLastFrame);
 
     //! A small body variant of a death (falls back, sinks aside) laid over the Die clip on the creature node

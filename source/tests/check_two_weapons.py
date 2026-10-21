@@ -162,7 +162,7 @@ assert 'leftHand ? isLeftArmBone(boneName) : isRightArmBone(boneName)' in attack
 assert 'leftHand ? isLeftForearmBone(boneName) : isRightForearmBone(boneName)' in attack
 # A mirrored clip (source name + "Left") is the source of a left-hand blow, the arm deformation is only the fallback
 assert 'const std::string MIRRORED_CLIP_SUFFIX = "Left";' in render
-assert 'leftHand && blow != 0 && skeleton->hasAnimation(original + MIRRORED_CLIP_SUFFIX)' in attack
+assert 'leftHand && blow != COMBAT_BLOW_PLAIN && skeleton->hasAnimation(original + MIRRORED_CLIP_SUFFIX)' in attack
 assert 'getAnimation(mirroredClip ? original + MIRRORED_CLIP_SUFFIX : original)' in attack, 'the clip is preferred'
 assert 'if(mirroredClip) armScale = 1.0f;' in attack, 'TwoWeaponArmStrength is only for the fallback'
 assert 'leftHand ? (mirroredClip ? "M" : "L") : ""' in attack, 'own cache name for the mirrored clip'

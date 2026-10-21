@@ -66,9 +66,9 @@ take = function_body(render, 'bool RenderManager::rrTakeAttackTurn(')
 assert 'mAttackTurnNotes.erase(it);' in take and 'return false;' in take
 turn = function_body(render, 'Ogre::Real RenderManager::rrOrientEntityTowardSmoothly(')
 for needle in ('rrTakeAttackTurn(gameEntity->getName(), aim)', 'getAttackTurnSpeed()', 'getAttackTurnMaxDelay()',
-               '0.12f + 0.14f * turn / Ogre::Math::PI', 'return 0.0f;'):
+               'CREATURE_TURN_BASE_DURATION + CREATURE_TURN_HALF_TURN_DURATION * turn / Ogre::Math::PI', 'return 0.0f;'):
     assert needle in turn, needle
-assert turn.index('0.12f + 0.14f') < turn.index('getAttackTurnSpeed()'), 'without the announcement the old fixed turn stays'
+assert turn.index('CREATURE_TURN_BASE_DURATION + CREATURE_TURN_HALF_TURN_DURATION') < turn.index('getAttackTurnSpeed()'), 'without the announcement the old fixed turn stays'
 assert turn.index('if(!announced)\n        return 0.0f;') < turn.index('getAttackTurnMaxDelay()'), 'no waiting without the announcement'
 assert 'std::min(duration,' in turn, 'a long turn runs over the wind-up'
 assert 'Ogre::Real rrOrientEntityTowardSmoothly(' in render_h and 'void rrNoteAttackTurn(' in render_h
