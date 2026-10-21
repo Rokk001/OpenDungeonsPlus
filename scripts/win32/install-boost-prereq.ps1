@@ -6,6 +6,8 @@ Enter-VsDevShell -VsInstallPath $taskVsPath -SkipAutomaticLocation -DevCmdArgume
 Set-Location -LiteralPath "$taskRoot\src\boost_1_92_0"
 Write-Output 'Preparing Boost build tool'
 $ErrorActionPreference = 'Continue'
+# Boost's build.bat calls guess_toolset.bat without a path; cmd only finds it in the current folder when this variable is unset
+Remove-Item Env:NoDefaultCurrentDirectoryInExePath -ErrorAction SilentlyContinue
 & .\bootstrap.bat *> "$taskRoot\logs\boost-bootstrap.log"
 $ErrorActionPreference = 'Stop'
 if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\boost-bootstrap.log" -Tail 40; throw 'Boost bootstrap failed' }
