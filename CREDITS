@@ -679,6 +679,7 @@ tools/gen_dwarf_pick_texture.py         OD Team                 GPLv3+
 tools/gen_short_sword.py                 OD Team                 GPLv3+
 tools/gen_walk_hurt.py                   OD Team                 GPLv3+
 tools/gen_walk_hurt_hover.py             OD Team                 GPLv3+
+tools/gen_tentacle_glide.py              OD Team                 GPLv3+
 tools/fix_walk_feet.py                  OD Team                 GPLv3+
 tools/fix_walk_feet_rigs.py             OD Team                 GPLv3+
 tools/fix_walk_hurt_feet.py             OD Team                 GPLv3+
