@@ -238,6 +238,8 @@ public:
     void rrEnableHeldCreatureDisplay(bool enabled, Player* localPlayer);
     bool isKeeperHandVisible() const { return mHandKeeperHandVisibility == 0; }
     //! \brief Where the keeper's hand is in the world (the light that follows it). False if there is no hand yet
+    //! \param position Set to the place of the hand when there is one.
+    //! \return False if there is no hand yet.
     bool getKeeperHandPosition(Ogre::Vector3& position) const;
     void rrAddOutliner(Creature* creature);
     void rrRemoveOutliner(Creature* creature);

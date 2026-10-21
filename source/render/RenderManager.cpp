@@ -891,6 +891,7 @@ const std::string MIRRORED_CLIP_SUFFIX = "Left";
 //! struck with the left arm (only with blow != 0, the creature carries a weapon in each hand). If the skeleton has
 //! the mirrored clip of the source (original + "Left"), that clip is the source of a left-hand blow; only without it
 //! the left arm is deformed on top of the right-hand source clip, and armScale scales that arm movement.
+//! \param armScale Scales the arm movement of the sword blow (only used for the deformation without the mirrored clip).
 std::string createCreatureCombatAttack(Ogre::Entity* entity, const std::string& original, bool alternate, int blow,
     bool leftHand, Ogre::Real armScale)
 {
