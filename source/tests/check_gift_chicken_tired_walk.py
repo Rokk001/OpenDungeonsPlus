@@ -221,11 +221,15 @@ loop_src = render[render.index('for(CreatureFeedingAnimation& feeding : mCreatur
 loop_src = loop_src[:loop_src.index('for(Creature* creature : finishedFeeding)')]
 assert 'getChickenMealPhase(time, meal)' in loop_src and 'phase.mStruggle' in loop_src and 'phase.mSize' in loop_src
 assert 'setVisible(phase.mSize > 0.03f)' in loop_src                                       # the chicken is gone after the second bite
-assert 'if(feeding.mFeatherBursts < 2 && time >= meal.mFirstBite + 0.45f * meal.mBite +' in loop_src   # feather bursts only moved to the bites
+assert 'if(feeding.mFeatherBursts < FEEDING_FEATHER_BURSTS && time >= meal.mFirstBite + 0.45f * meal.mBite +' in loop_src   # feather bursts only moved to the bites
+# the named burst count keeps the value 2 (one burst per bite)
+assert 'FEEDING_FEATHER_BURSTS = 2;' in render
 assert loop_src.count('createChickenFeatherEffect(feeding.mNode->convertLocalToWorldPosition(mouth),') == 1
 assert 'updateCreatureFeedingReach(feeding, progress, phase.mReach, phase.mLift,' in loop_src
 reach_src = function_body(render, 'Ogre::Vector3 RenderManager::updateCreatureFeedingReach(')
-assert 'std::function' not in reach_src and 'Degree(35.0f * crouch + biteLean)' in reach_src
+assert 'std::function' not in reach_src and 'Degree(FEEDING_CROUCH_BEND * crouch + biteLean)' in reach_src
+# the named bend keeps the value 35 degrees
+assert 'FEEDING_CROUCH_BEND = 35.0f;' in render
 assert 'Ogre::Vector3(side == 0 ? spread : -spread, 0, -drop)' in reach_src                 # fists below the chicken, seen from above
 prepare_src = function_body(render, 'void RenderManager::prepareCreatureFeedingReach(')
 assert 'holdAtRest.distance(shoulders) > armLength * meal.mReachRatio' in prepare_src      # short arms: chicken into the jaws
