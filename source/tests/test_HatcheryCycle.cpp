@@ -133,6 +133,7 @@ BOOST_AUTO_TEST_CASE(test_CoopHenCount)
     BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 1), 1u);
 }
 
+//! The lay interval stays inside the configured minimum and maximum (one turn above the maximum while the lay factor rounds it up) and is never zero turns, and scaling the settings scales both bounds.
 BOOST_AUTO_TEST_CASE(test_LayInterval)
 {
     HatcheryCycleSettings settings;
