@@ -633,6 +633,10 @@ private:
     //! The nest places the server sent, by room name (the clients compute nothing). mVersion counts the messages.
     struct ServerNests
     {
+        ServerNests() :
+            mVersion(0)
+        {}
+
         std::vector<HatcheryNestField::Place> mPlaces;
         std::vector<HatcheryNestField::Place> mFeathers;
         uint32_t mVersion;
