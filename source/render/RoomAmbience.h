@@ -424,7 +424,12 @@ private:
     bool isLocalHeartBelow(const Ogre::Vector3& position, double below) const;
     //! \brief Updates and returns the state "no creature for a while" of a target
     bool isIdleLongEnough(const std::string& key, bool busy, double after);
-    //! \brief The state "Empty" or "Vacated" of a target, depending on the effect
+    //! \brief The state "Empty" (When Empty) or "Vacated" (When Vacated) of a target, depending on the effect
+    //! \param effect The effect; mWhen tells which of the two is asked and mAfter is the time in seconds.
+    //! \param key The key under which the state of the target is kept.
+    //! \param busy True if a creature is close to the target now.
+    //! \return For When Empty true once no creature was close for mAfter seconds; for When Vacated the same, but only
+    //! for a target that was used at some time while it was watched.
     bool isIdleState(const AmbienceEffect& effect, const std::string& key, bool busy);
     double getDistanceLimit(const AmbienceEffect& effect) const;
     bool isEffectUsable(const AmbienceEffect& effect) const;
