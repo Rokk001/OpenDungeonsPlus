@@ -27,19 +27,24 @@
 class TrapWatchBanner : public Trap
 {
 public:
+    //! \brief Creates a watch banner that has not called the guards yet.
     TrapWatchBanner(GameMap* gameMap);
 
+    //! \brief The type of this trap.
     virtual const TrapType getType() const override
     { return TrapType::watchBanner; }
 
+    //! \brief The watch banner never fires.
     virtual bool shoot(Tile* tile) override
     { return false; }
 
+    //! \brief The watch banner cannot be attacked.
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -48,10 +53,14 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Looks for enemy creatures within the aura of an installed banner and, if there is one,
+    //! sends the guards of the owner's guard rooms to it (at most once per distress period).
     virtual void doUpkeep() override;
 
+    //! \brief Creates the entity shown on the given tile.
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief The trap type of the watch banner.
     static const TrapType mTrapType;
 
 private:
