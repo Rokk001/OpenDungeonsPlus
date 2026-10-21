@@ -897,6 +897,9 @@ void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action,
     }
 }
 
+//! The number of turns the tiles of a revealed region stay visible: shown once, then they count as seen
+const uint32_t REVEAL_REGION_TURNS = 1;
+
 //! \brief The tiles of the region stay visible to the seat, as the tiles revealed by a
 //! tortured creature do: they are shown once and then count as seen.
 void revealRegion(GameMap& gameMap, const LevelScript& script, const LevelScriptAction& action)
@@ -920,7 +923,7 @@ void revealRegion(GameMap& gameMap, const LevelScript& script, const LevelScript
     }
 
     for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
-        player->getSeat()->revealTiles(tiles, 1);
+        player->getSeat()->revealTiles(tiles, REVEAL_REGION_TURNS);
 }
 
 //! \brief A room, trap, door or spell becomes available to the seat, as if it was researched.
