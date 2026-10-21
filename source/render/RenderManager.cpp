@@ -105,7 +105,6 @@
 #include <Overlay/OgreOverlaySystem.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <RTShaderSystem/OgreShaderRenderState.h>
-#include <RTShaderSystem/OgreShaderExIntegratedPSSM3.h>
 
 #include <algorithm>
 #include <sstream>

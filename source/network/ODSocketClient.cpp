@@ -38,7 +38,7 @@ bool ODSocketClient::connect(const std::string& host, const int port, uint32_t t
     // A host that cannot be resolved is reported as a connection error.
     sf::Socket::Status status = sf::Socket::Status::Error;
     // SFML 3: Dns::resolve without timeout, first IPv4 address only (same as SFML 2 IpAddress(host)).
-    std::optional<std::vector<sf::IpAddress> > addresses = sf::Dns::resolve(host, std::nullopt);
+    std::optional<std::vector<sf::IpAddress> > addresses = sf::Dns::resolve(host, std::vector<sf::IpAddress>(), std::nullopt);
     if(addresses.has_value())
     {
         for(std::vector<sf::IpAddress>::const_iterator it = addresses->begin(); it != addresses->end(); ++it)

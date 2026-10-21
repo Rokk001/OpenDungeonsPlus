@@ -34,6 +34,7 @@
 #include "game/SkillType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Random.h"
 
 const std::string SpellCreatureExplosionName = "creatureExplosion";
 const std::string SpellCreatureExplosionNameDisplay = "Creature explosion";
@@ -110,7 +111,7 @@ void SpellCreatureExplosion::checkSpellCast(GameMap* gameMap, const InputManager
 
     // Preview must not consume random numbers or change which creatures a later click affects.
     if(inputManager.mCommandState == InputCommandState::validated)
-        std::random_shuffle(targets.begin(), targets.end());
+        Random::shuffle(targets.begin(), targets.end());
     std::vector<Creature*> creatures;
     for(GameEntity* target : targets)
     {
