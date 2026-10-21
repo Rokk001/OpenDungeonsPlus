@@ -137,4 +137,12 @@ assert 'mPortalOff' in script_h and 'mBlocked' in script_h
 assert 'isPortalOff(getSeat()->getId())' in read('source/rooms/RoomPortal.cpp')
 assert 'isCreatureBlocked(getId()' in read('source/game/Seat.cpp')
 
+# the story test level: a skirmish that uses the story state conditions, a portal stone and a terrain change
+story = read('levels/skirmish/TestLevelScripting.level')
+assert 'Level scripting' in story
+story_section = story[story.index('[Triggers]'):story.index('[/Triggers]')]
+for word in ('Cond	alive', 'Cond	reached', 'Cond	portal', 'Cond	stone', 'Action	portal', 'Action	stonecreate',
+             'Action	terrain', 'Action	spawn'):
+    assert word in story_section, word
+
 print('level script final wiring: ok')
