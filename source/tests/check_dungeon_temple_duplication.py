@@ -34,7 +34,6 @@ override = function(header, 'void checkForSplit()') if 'void checkForSplit()' in
 probe = r'''
 #include <algorithm>
 #include <cstdint>
-#include <functional>
 #include <iostream>
 #include <map>
 #include <set>
@@ -101,9 +100,9 @@ SPLIT
 CENTRE
 ACTIVE
 POSITION
-int main(){int checks=0,failures=0;
- std::function<void(bool,const char*)> check=[&](bool ok,const char* label){
-  ++checks;if(!ok){++failures;std::cout<<"FAIL "<<label<<'\n';}};
+int checks=0,failures=0;
+void check(bool ok,const char* label){++checks;if(!ok){++failures;std::cout<<"FAIL "<<label<<'\n';}}
+int main(){
  // Cut a 5x5 floor down its centre, leaving two disconnected islands, then
  // cut again: exercise virtual dispatch through Room just as upkeep does.
  for(bool editor:{false,true})for(bool isTemple:{false,true})for(int axis:{0,1}){
