@@ -81,6 +81,18 @@ const float FEATHER_HEIGHT_HATCH_SHELL = 0.05f;
 const float FEATHER_HEIGHT_TRAMPLE_SHELL = 0.04f;
 //! \brief Height above the hen at which the feathers fly when she is mounted.
 const float FEATHER_HEIGHT_MOUNT = 0.2f;
+//! \brief Height of the feather cloud above the rooster when he has landed on a hen.
+const float FEATHER_HEIGHT_MOUNT_LANDING = 0.25f;
+//! \brief Height of the first feather cloud of the hen when the rooster has landed on her.
+const float FEATHER_HEIGHT_MOUNT_HEN = 0.15f;
+//! \brief Height of the feather cloud when a hen flutters.
+const float FEATHER_HEIGHT_FLUTTER = 0.1f;
+//! \brief Height of the feather cloud when an animal comes out of the coop.
+const float FEATHER_HEIGHT_EMERGE = 0.1f;
+//! \brief Growth of the stretch of a hen under the rooster while she ducks.
+const float MOUNT_HEN_CROUCH_BULGE = 0.1f;
+//! \brief Shortest time in seconds the rooster needs to climb on a hen.
+const float MOUNT_CLIMB_MIN_SECONDS = 0.05f;
 //! \brief Number of feather bursts of one mating, the count that is stored once the second burst has flown.
 const uint32_t MOUNT_FEATHER_BURSTS = 2;
 //! \brief Height above the ground from which an egg counts as lying in a nest.
@@ -921,7 +933,8 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 else if(look.mMountCrouch > 0.0f)
                 {
                     // The rooster sits on her: she ducks down under him and quivers
-                    stretch = Ogre::Vector3(1.0f + 0.1f * look.mMountCrouch, 1.0f + 0.1f * look.mMountCrouch,
+                    stretch = Ogre::Vector3(1.0f + MOUNT_HEN_CROUCH_BULGE * look.mMountCrouch,
+                        1.0f + MOUNT_HEN_CROUCH_BULGE * look.mMountCrouch,
                         1.0f - (1.0f - values.mMountCrouch) * look.mMountCrouch);
                     roll = values.mCackleRoll * 0.4f * look.mMountCrouch * std::sin(p * values.mCackleRollSpeed);
                 }
@@ -941,7 +954,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                 // He climbs on the back of the hen he caught, treads and beats his wings there, and climbs down
                 std::map<ChickenEntity*, ChickenLook>::iterator hen = (look.mMountPartner != nullptr) ?
                     mChickenLooks.find(look.mMountPartner) : mChickenLooks.end();
-                const Ogre::Real climb = std::max(0.05f, values.mMountClimbSeconds);
+                const Ogre::Real climb = std::max(MOUNT_CLIMB_MIN_SECONDS, values.mMountClimbSeconds);
                 const Ogre::Real upRatio = std::min(1.0f, p / climb);
                 const Ogre::Real downRatio = std::min(1.0f, std::max(0.0f, (values.mMountSeconds - p) / climb));
                 const Ogre::Real on = std::min(upRatio * upRatio * (3.0f - 2.0f * upRatio),
@@ -998,11 +1011,11 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                     look.mFeatherBursts = 1;
                     Ogre::SceneNode* parent = look.mNode->getParentSceneNode();
                     if(parent != nullptr)
-                        createChickenFeatherEffect(parent->convertLocalToWorldPosition(shift + Ogre::Vector3(0.0f, 0.0f, lift + 0.25f)),
+                        createChickenFeatherEffect(parent->convertLocalToWorldPosition(shift + Ogre::Vector3(0.0f, 0.0f, lift + FEATHER_HEIGHT_MOUNT_LANDING)),
                             featherSystem(kind));
                     if((look.mMountPartner != nullptr) && chickenClipVisible(look.mMountPartner, "Duck"))
                     {
-                        createChickenFeatherEffect(look.mMountPartner->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.15f),
+                        createChickenFeatherEffect(look.mMountPartner->getPosition() + Ogre::Vector3(0.0f, 0.0f, FEATHER_HEIGHT_MOUNT_HEN),
                             featherSystem(ChickenKind::hen));
                     }
                 }
@@ -1042,7 +1055,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
            chickenClipVisible(chicken, "Flutter"))
         {
             look.mFeatherBursts = 1;
-            createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.1f), featherSystem(kind));
+            createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, FEATHER_HEIGHT_FLUTTER), featherSystem(kind));
         }
         // The door of the coop swings and the feathers fly when the animal walks through it
         if((look.mEmergeFeathersPending || look.mCoopDoorReplayPending) && moving)
@@ -1066,7 +1079,7 @@ void RenderManager::updateChickenLooks(Ogre::Real timeSinceLastFrame)
                    chickenClipVisible(chicken, EntityAnimation::walk_anim))
                 {
                     look.mEmergeFeathersPending = false;
-                    createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, 0.1f), featherSystem(kind));
+                    createChickenFeatherEffect(chicken->getPosition() + Ogre::Vector3(0.0f, 0.0f, FEATHER_HEIGHT_EMERGE), featherSystem(kind));
                 }
                 if(!look.mEmergeFeathersPending && !look.mCoopDoorReplayPending)
                     break;
