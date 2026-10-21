@@ -60,6 +60,7 @@
 #include "social/SocialProfileCache.h"
 #include "sound/MusicPlayer.h"
 #include "sound/SoundEffectsManager.h"
+#include "spells/Spell.h"
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
 #include "traps/TrapType.h"
@@ -82,6 +83,15 @@ template<> ODClient* Ogre::Singleton<ODClient>::msSingleton = nullptr;
 
 namespace
 {
+//! The room ambience events that show the end of a possession: the keeper returns, or the creature fell
+static const std::string POSSESSION_END_EVENT = "SpellFxPossessEnd";
+static const std::string POSSESSION_LOST_EVENT = "SpellFxPossessLost";
+//! The messages shown when a possession ends, and their colours
+static const std::string POSSESSION_END_TEXT = "Your mind returns to the keeper's view.";
+static const std::string POSSESSION_LOST_TEXT = "Your creature fell. Your mind is torn back to the keeper's view.";
+static const Ogre::ColourValue POSSESSION_END_COLOUR(0.75f, 0.7f, 1.0f);
+static const Ogre::ColourValue POSSESSION_LOST_COLOUR(1.0f, 0.55f, 0.5f);
+
 //! \brief Dungeonbook post for a tier change of two creatures of the local player.
 void reportRelationshipPost(GameMap* gameMap, const std::string& creatureA, const std::string& creatureB,
     RelationshipTier oldTier, RelationshipTier newTier)
@@ -1269,8 +1279,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             int xPos;
             int yPos;
             OD_ASSERT_TRUE(packetReceived >> family >> xPos >> yPos);
-            static const std::string spellEffectPrefix = "SpellFx/";
-            if(family == "SpellFx/HandCast")
+            if(family == (Spell::SPELL_EFFECT_PREFIX + Spell::HAND_CAST_EFFECT_NAME))
             {
                 // The server accepted a spell of this keeper: the hand throws a spark (cosmetic)
                 Ogre::Vector3 handPosition;
@@ -1279,14 +1288,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                     RoomAmbience::getSingleton().noteHandCast(handPosition);
                 break;
             }
-            if(family.compare(0, spellEffectPrefix.size(), spellEffectPrefix) == 0)
+            if(family.compare(0, Spell::SPELL_EFFECT_PREFIX.size(), Spell::SPELL_EFFECT_PREFIX) == 0)
             {
                 // Cosmetic spell effect, no sound belongs to it
                 RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
                 if(ambience != nullptr)
                 {
                     Ogre::Vector3 position(static_cast<Ogre::Real>(xPos), static_cast<Ogre::Real>(yPos), 0.0f);
-                    ambience->triggerEvent("SpellFx" + family.substr(spellEffectPrefix.size()), position, false,
+                    ambience->triggerEvent("SpellFx" + family.substr(Spell::SPELL_EFFECT_PREFIX.size()), position, false,
                         std::string(), true);
                 }
                 break;
@@ -2194,7 +2203,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             {
                 Ogre::Vector3 position(static_cast<Ogre::Real>(possessed->getPosition().x),
                     static_cast<Ogre::Real>(possessed->getPosition().y), 0.0f);
-                ambience->triggerEvent(creatureLost ? "SpellFxPossessLost" : "SpellFxPossessEnd", position, false,
+                ambience->triggerEvent(creatureLost ? POSSESSION_LOST_EVENT : POSSESSION_END_EVENT, position, false,
                     std::string(), true);
             }
             getPlayer()->setPossessedCreatureName(std::string());
@@ -2206,9 +2215,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
                 gm->notifyPossessionEnded();
                 if(creatureLost)
-                    gm->displayText(Ogre::ColourValue(1.0f, 0.55f, 0.5f), "Your creature fell. Your mind is torn back to the keeper's view.");
+                    gm->displayText(POSSESSION_LOST_COLOUR, POSSESSION_LOST_TEXT);
                 else
-                    gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
+                    gm->displayText(POSSESSION_END_COLOUR, POSSESSION_END_TEXT);
             }
             break;
         }

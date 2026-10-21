@@ -276,6 +276,7 @@ public:
     //! \brief The most one-shot particle systems that may run at once
     uint32_t getMaxOneShots() const
     { return mMaxOneShots; }
+    //! \brief The most bolts and flying objects that may be on their way at once
     uint32_t getMaxFlights() const
     { return mMaxFlights; }
     uint32_t getMaxMarks() const
@@ -315,6 +316,7 @@ private:
     //! Most one-shot particle systems that may run at once
     uint32_t mMaxOneShots;
     uint32_t mMaxMarks;
+    //! Most bolts and flying objects that may be on their way at once
     uint32_t mMaxFlights;
     //! Distance in tiles within which a creature counts as close
     double mOccupiedRadius;

@@ -257,18 +257,31 @@ private:
             mArc(0.0), mFlickerRate(DEFAULT_FLIGHT_FLICKER_RATE), mFlickerClock(0.0)
         {}
 
+        //! The scene node that carries the mesh
         Ogre::SceneNode* mNode;
+        //! The mesh of the bolt or of the flying object (none for a trail only)
         Ogre::Entity* mEntity;
+        //! The scene node of the trail
         Ogre::SceneNode* mTrailNode;
+        //! The particle system that trails behind a projectile
         Ogre::ParticleSystem* mTrailSystem;
+        //! True for a bolt, false for a projectile
         bool mBeam;
+        //! Where it starts
         Ogre::Vector3 mStart;
+        //! The target
         Ogre::Vector3 mEnd;
+        //! Seconds since the start
         double mAge;
+        //! Seconds it needs to arrive (a bolt stays that long)
         double mDuration;
+        //! Width of a bolt
         double mWidth;
+        //! Height of the arc of a projectile
         double mArc;
+        //! Flickers per second of a bolt
         double mFlickerRate;
+        //! Seconds since the last flicker of a bolt
         double mFlickerClock;
         //! Event raised at the target on arrival (projectile)
         std::string mLand;
@@ -390,7 +403,9 @@ private:
     void updateShake(double timeSinceLastFrame);
     //! \brief Starts a beam or a projectile (effect kinds beam and projectile) for an event at the given place
     void startFlight(const AmbienceEffect& effect, const Ogre::Vector3& position);
+    //! \brief Moves the bolts and flying objects on and raises the landing events of those that arrived
     void updateFlights(double timeSinceLastFrame);
+    //! \brief Removes the scene objects of a bolt or flying object
     void destroyFlight(Flight& flight);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
     //! \param effect The shake effect; Amount is its strength at the middle of the view.
@@ -531,6 +546,7 @@ private:
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
     std::vector<Collapse> mCollapses;
+    //! The bolts and flying objects that are on their way
     std::vector<Flight> mFlights;
 
     //! Positions of the creatures on the map at the last scan

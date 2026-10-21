@@ -156,6 +156,21 @@ const double SHAKE_SECOND_AXIS_PHASE = 1.7;
 const double SHAKE_THIRD_AXIS_STRENGTH = 0.5;
 const double SHAKE_THIRD_AXIS_SPEED_FACTOR = 0.83;
 const double SHAKE_THIRD_AXIS_PHASE = 0.4;
+//! The shortest time a bolt or flying object is on its way, in seconds
+const double MIN_FLIGHT_SECONDS = 0.05;
+//! The slowest a bolt flickers, in flickers per second
+const double MIN_BEAM_FLICKER_RATE = 1.0;
+//! The shortest length a bolt is stretched to, so that it never has zero length
+const double MIN_BEAM_LENGTH = 0.01;
+//! A bolt is drawn this thick (times its width) at the thinnest, and up to this much thicker at random, and it grows
+//! thinner as it fades
+const double BEAM_THICKNESS_MIN = 0.55;
+const double BEAM_THICKNESS_RANGE = 0.9;
+//! The arc of a projectile is a parabola: its height at the middle of the way is the height of the arc, and this
+//! factor makes the parabola 4 * progress * (1 - progress) reach 1 there
+const double ARC_PARABOLA_FACTOR = 4.0;
+//! A projectile that moved less than this (squared) since the last frame is not turned
+const float MIN_PROJECTILE_MOVE_SQUARED = 0.000001f;
 
 //! \brief True if the name fits the pattern, which is a plain name or has * as first or last character as wildcard
 bool matchesPattern(const std::string& pattern, const std::string& name)
@@ -2669,10 +2684,10 @@ void RoomAmbience::startFlight(const AmbienceEffect& effect, const Ogre::Vector3
     flight.mBeam = (effect.mKind == AmbienceKind::beam);
     flight.mStart = position + effect.mFrom;
     flight.mEnd = position + effect.mOffset;
-    flight.mDuration = std::max(0.05, effect.mDuration);
+    flight.mDuration = std::max(MIN_FLIGHT_SECONDS, effect.mDuration);
     flight.mWidth = effect.mAmount;
     flight.mArc = flight.mBeam ? 0.0 : effect.mAmount;
-    flight.mFlickerRate = std::max(1.0, effect.mSpeed);
+    flight.mFlickerRate = std::max(MIN_BEAM_FLICKER_RATE, effect.mSpeed);
     flight.mLand = effect.mLand;
 
     std::string name = "RoomAmbience_" + effect.mName + "_" + Helper::toString(++mUniqueNumber);
@@ -2681,7 +2696,7 @@ void RoomAmbience::startFlight(const AmbienceEffect& effect, const Ogre::Vector3
     {
         try
         {
-            flight.mEntity = sceneManager->createEntity(name, effect.mMesh + ".mesh");
+            flight.mEntity = sceneManager->createEntity(name, effect.mMesh + MESH_SUFFIX);
         }
         catch(const Ogre::Exception&)
         {
@@ -2729,9 +2744,7 @@ void RoomAmbience::updateFlights(double timeSinceLastFrame)
         {
             // The bolt always spans from its start to the target. The mesh runs along its y axis with length 1; it is
             // turned around that axis and made thinner or thicker a few times a second, which makes it flicker
-            double length = direction.length();
-            if(length < 0.01)
-                length = 0.01;
+            double length = std::max(MIN_BEAM_LENGTH, static_cast<double>(direction.length()));
             direction.normalise();
             flight.mFlickerClock += timeSinceLastFrame;
             if((flight.mFlickerClock * flight.mFlickerRate >= 1.0) || (flight.mAge == timeSinceLastFrame))
@@ -2739,7 +2752,8 @@ void RoomAmbience::updateFlights(double timeSinceLastFrame)
                 flight.mFlickerClock = 0.0;
                 std::uniform_real_distribution<double> dice(0.0, 1.0);
                 double roll = dice(mRandom) * TWO_PI;
-                double thickness = (0.55 + 0.9 * dice(mRandom)) * flight.mWidth * std::sqrt(1.0 - progress);
+                double thickness = (BEAM_THICKNESS_MIN + BEAM_THICKNESS_RANGE * dice(mRandom)) * flight.mWidth *
+                    std::sqrt(1.0 - progress);
                 Ogre::Quaternion turn = Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(roll)), Ogre::Vector3::UNIT_Y);
                 flight.mNode->setOrientation(Ogre::Vector3::UNIT_Y.getRotationTo(direction) * turn);
                 flight.mNode->setScale(static_cast<Ogre::Real>(thickness), static_cast<Ogre::Real>(length),
@@ -2749,11 +2763,11 @@ void RoomAmbience::updateFlights(double timeSinceLastFrame)
         }
         else
         {
-            position.z += static_cast<Ogre::Real>(flight.mArc * 4.0 * progress * (1.0 - progress));
+            position.z += static_cast<Ogre::Real>(flight.mArc * ARC_PARABOLA_FACTOR * progress * (1.0 - progress));
             Ogre::Vector3 previous = flight.mNode->getPosition();
             flight.mNode->setPosition(position);
             Ogre::Vector3 moved = position - previous;
-            if((flight.mEntity != nullptr) && (moved.squaredLength() > 0.000001f))
+            if((flight.mEntity != nullptr) && (moved.squaredLength() > MIN_PROJECTILE_MOVE_SQUARED))
             {
                 moved.normalise();
                 flight.mNode->setOrientation(Ogre::Vector3::UNIT_Y.getRotationTo(moved));

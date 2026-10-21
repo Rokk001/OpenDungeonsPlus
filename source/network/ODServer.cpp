@@ -54,6 +54,7 @@
 #include "rooms/RoomPortalWave.h"
 #include "rooms/RoomWorkshop.h"
 #include "rooms/RoomType.h"
+#include "spells/Spell.h"
 #include "spells/SpellManager.h"
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
@@ -1985,7 +1986,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // The keeper's hand throws a spark, only now that the spell was accepted (cosmetic, only for the caster).
             // Like the spell effects it travels as a sound family with the prefix "SpellFx/", no new notification type
             ServerNotification* handNotification = new ServerNotification(ServerNotificationType::playSpatialSound, player);
-            handNotification->mPacket << std::string("SpellFx/HandCast") << 0 << 0;
+            handNotification->mPacket << (Spell::SPELL_EFFECT_PREFIX + Spell::HAND_CAST_EFFECT_NAME) << 0 << 0;
             ODServer::getSingleton().queueServerNotification(handNotification);
 
             uint32_t newCooldown = SpellManager::getSpellCooldown(spellType);

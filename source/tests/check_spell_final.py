@@ -140,12 +140,14 @@ if "mPacket << lost" not in end_possession or "const bool lost = !isAlive() || i
 client = read("source", "network", "ODClient.cpp")
 end = client[client.index("case ServerNotificationType::possessionEnd:"):]
 end = end[:end.index("default:")]
-for needle in ('endParticleEffectsByScript("SpellCreaturePossess")', "creatureLost", "SpellFxPossessLost", "SpellFxPossessEnd"):
+for needle in ('endParticleEffectsByScript("SpellCreaturePossess")', "creatureLost", "POSSESSION_LOST_EVENT", "POSSESSION_END_EVENT"):
     if needle not in end:
         problems.append("possessionEnd lacks %s" % needle)
 if "packetReceived >> creatureLost" not in end or "isAlive()" in end:
     problems.append("possessionEnd must take the fallen creature from the server message, not guess it")
-if end.index("SpellFxPossessEnd") > end.index("setPossessedCreatureName"):
+if 'POSSESSION_END_EVENT = "SpellFxPossessEnd"' not in client or 'POSSESSION_LOST_EVENT = "SpellFxPossessLost"' not in client:
+    problems.append("the possession end events do not have the names the config uses")
+if end.index("POSSESSION_END_EVENT") > end.index("setPossessedCreatureName"):
     problems.append("the effect must be raised before the possessed name is cleared")
 entity = read("source", "entities", "GameEntity.cpp")
 part = entity[entity.index("uint32_t GameEntity::endParticleEffectsByScript"):entity.index("void GameEntity::restoreEntityState")]
