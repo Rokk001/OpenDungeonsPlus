@@ -810,6 +810,7 @@ Command::Result cCreatureReaction(const Command::ArgumentList_t& args, ConsoleIn
     return Command::Result::SUCCESS;
 }
 
+//! \brief Console command roomambience: lists the effects, reloads the configuration, sets the mode or starts an event at a tile
 Command::Result cRoomAmbience(const Command::ArgumentList_t& args, ConsoleInterface& c, AbstractModeManager&)
 {
     RoomAmbience* ambience = RoomAmbience::getSingletonPtr();

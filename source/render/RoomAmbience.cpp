@@ -124,6 +124,7 @@ const std::string TRAP_PREFIX = "trap:";
 //! The end of a mesh file name
 const std::string MESH_SUFFIX = ".mesh";
 
+//! A full turn in radians
 const double TWO_PI = 6.283185307179586;
 
 //! Seconds that a trap counts as reloading after the server sent the start of the reload; the long time only
@@ -146,6 +147,7 @@ const double SHAKE_THIRD_AXIS_STRENGTH = 0.5;
 const double SHAKE_THIRD_AXIS_SPEED_FACTOR = 0.83;
 const double SHAKE_THIRD_AXIS_PHASE = 0.4;
 
+//! \brief True if the name fits the pattern, which is a plain name or has * as first or last character as wildcard
 bool matchesPattern(const std::string& pattern, const std::string& name)
 {
     if(pattern.empty())
@@ -189,12 +191,14 @@ void turnNodeToward(Ogre::SceneNode* node, const Ogre::Vector3& wanted, double m
     node->rotate(Ogre::Quaternion(Ogre::Radian(static_cast<Ogre::Real>(step)), Ogre::Vector3::UNIT_Z), Ogre::Node::TS_WORLD);
 }
 
+//! \brief A stable start phase (0 to 2 pi) derived from a text, so that equal objects do not move together
 double hashPhase(const std::string& text)
 {
     std::hash<std::string> hasher;
     return static_cast<double>(hasher(text) % PHASE_STEPS) / PHASE_STEPS_PER_RADIAN;
 }
 
+//! \brief Orders candidates by priority (higher first) and then by distance (closer first)
 bool candidateBefore(const std::pair<int32_t, double>& a, const std::pair<int32_t, double>& b)
 {
     if(a.first != b.first)
