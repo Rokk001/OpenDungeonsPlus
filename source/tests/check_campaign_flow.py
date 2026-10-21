@@ -109,7 +109,7 @@ with Image.open(repo / 'gui' / atlas.get('imagefile')) as artwork:
             assert any(g > 140 and g > r * 1.5 and g > b * 1.5 and a > 200 for r, g, b, a in pixels)
         if state == 'Failed':
             assert any(r > 160 and r > g * 1.5 and r > b * 1.5 and a > 200 for r, g, b, a in pixels)
-assert 'name.compare(0, 11, "GoalStatus/") == 0' in read('source/render/Gui.cpp')
+assert 'startsWith(name, "GoalStatus/")' in read('source/render/Gui.cpp')
 assert 'gui/GoalStatus.svg, gui/GoalStatus.png' in read('CREDITS')
 briefing = read('source/modes/MenuModeCampaign.cpp')
 assert "[image='GoalStatus/Open'] " in briefing
