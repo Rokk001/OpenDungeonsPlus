@@ -17,6 +17,13 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\ogre" apply --recount $taskShortEmitterPatch
     if ($LASTEXITCODE -ne 0) { throw 'OGRE short emitter patch failed' }
 }
+$taskLightPositionPatch = Join-Path $PSScriptRoot 'patches/ogre14-light-position-cache.patch'
+& git -C "$taskRoot\src\ogre" apply --recount --reverse --check $taskLightPositionPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying OGRE view space light cache fix'
+    & git -C "$taskRoot\src\ogre" apply --recount $taskLightPositionPatch
+    if ($LASTEXITCODE -ne 0) { throw 'OGRE light position patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskOptions = @('-S', "$taskRoot\src\ogre", '-B', "$taskRoot\build\ogre",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",
