@@ -30,7 +30,7 @@ public:
     //! \param nbTurnsEffect How many turns the creature stays converted.
     //! \param originalSeatId Id of the seat the creature belongs to before the conversion.
     //! \param newSeatId Id of the seat the creature was converted to.
-    CreatureEffectDefector(int32_t nbTurnsEffect, int originalSeatId, int newSeatId) :
+    CreatureEffectDefector(double nbTurnsEffect, int originalSeatId, int newSeatId) :
         CreatureEffect(nbTurnsEffect, "SpellCreatureDefector"),
         mOriginalSeatId(originalSeatId),
         mNewSeatId(newSeatId)

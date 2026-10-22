@@ -81,7 +81,9 @@ void CreatureEffectAreaDamage::applyEffect(Creature& creature)
         if(((dx * dx) + (dy * dy)) > radiusSquared)
             continue;
 
-        target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn), 0.0, 0.0, 0.0, targetTile, false);
+        // In the last turn of the effect only the fraction of the turn that was left counts
+        target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn) * getTurnFraction(),
+            0.0, 0.0, 0.0, targetTile, false);
     }
 }
 
