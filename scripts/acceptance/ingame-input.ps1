@@ -9,7 +9,8 @@
 
     The in-game cursor follows only relative mouse movement. Move calibrates it first: a large negative relative move
     pushes the cursor into the top-left corner of the game window, then the wanted client position is reached with one
-    relative move, which maps 1:1 to the game's window coordinates.
+    relative move, which maps 1:1 to the game's window coordinates. The pause in the corner is kept very short because
+    the game scrolls the camera while the cursor touches the window edge.
 
     Screenshots are never taken with an external capture tool. The Print key makes the game write
     ODscreenshot_*.png into its --appData folder; the Print action copies the newest one to -OutFile.
@@ -95,7 +96,8 @@ function Send-Key([byte]$vk, [byte]$scan, [uint32]$downFlags, [uint32]$upFlags)
 function Move-GameCursor([int]$x, [int]$y)
 {
     [OdInput.Native]::mouse_event(1, -4000, -4000, 0, [UIntPtr]::Zero)
-    Start-Sleep -Milliseconds 300
+    # Short pause: a long stay at the window edge would scroll the camera
+    Start-Sleep -Milliseconds 40
     [OdInput.Native]::mouse_event(1, $x, $y, 0, [UIntPtr]::Zero)
     Start-Sleep -Milliseconds 300
 }
