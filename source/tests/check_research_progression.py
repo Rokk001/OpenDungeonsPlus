@@ -28,16 +28,28 @@ manager = (root / "source/game/SkillManager.cpp").read_text(encoding="utf-8")
 skill = (root / "source/game/Skill.cpp").read_text(encoding="utf-8")
 client = (root / "source/network/ODClient.cpp").read_text(encoding="utf-8")
 server = (root / "source/network/ODServer.cpp").read_text(encoding="utf-8")
-definitions = skill[skill.index("Skill::Skill("):]
+BRIEF = chr(92) + "brief"
+tab_prefix = manager[manager.index("//! " + BRIEF + " Path prefix of the research buttons of the Rooms tab"):
+                     manager.index("//! " + BRIEF + " Titles of the tabs")]
+no_parents = "static const std::vector<SkillType> NO_PARENTS;"
+assert no_parents in manager
+seat_levels = seat[seat.index("//! " + BRIEF + " Highest research level of a skill"):seat.index("const std::string Seat::PLAYER_TYPE_HUMAN")]
+definitions = tab_prefix + "\n" + no_parents + "\n" + function(manager, "SkillTab getTabOfPrefix(") + "\n" + seat_levels + "\n"
+definitions += skill[skill.index("Skill::Skill("):]
 definitions += "\n" + "\n".join(function(manager, signature) for signature in [
+    "static Skill* createSkill(", "static void registerSkillDef(",
     "SkillManager::SkillManager()", "const Skill* SkillManager::getSkill(",
+    "SkillTab SkillManager::getSkillTab(", "void SkillManager::listTabSkills(",
     "bool SkillManager::isAllSkillsDoneForSeat(",
     "double SkillManager::getResearchValue(const Seat*", "double SkillManager::getResearchValue(SkillType",
     "void SkillManager::buildRandomPendingSkillsForSeat("])
 definitions += "\n" + "\n".join(function(seat, signature) for signature in [
     "bool Seat::addSkill(", "bool Seat::isSkillDone(", "uint32_t Seat::getSkillLevel(",
     "void Seat::setResearchLevels(", "void Seat::completeResearch(", "void Seat::addSkillPoints(",
-    "void Seat::setNextSkill(", "void Seat::setSkillsDone(", "void Seat::setSkillTree("])
+    "void Seat::setNextSkill(", "void Seat::setSkillsDone(", "void Seat::setSkillTree(",
+    "bool Seat::isSkillNotAllowed(", "uint32_t Seat::getQueuedSkillLevel(",
+    "std::vector<std::pair<SkillType, int> > Seat::getQueuedLevels(", "const char* Seat::getResearchGateFailure(",
+    "bool Seat::canResearchLevel(", "void Seat::addFreeLevelOneSkills("])
 load = seat[seat.index("    uint32_t nbSkill =", seat.index("bool Seat::importSeatFromStream")):
             seat.index("    // Note: At this point, we are reading seats")]
 save_start = seat.index('    os << "[SkillDone]"')
@@ -62,34 +74,45 @@ probe = r'''
 #include <map>
 #include <memory>
 #include <random>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #define OD_LOG_INF(x) ((void)0)
 #define OD_LOG_ERR(x) ((void)0)
+#define OD_LOG_WRN(x) ((void)0)
 #define OD_ASSERT_TRUE(x) do {if(!(x)) return false;} while(0)
-namespace Random {template<typename RandomIt> void shuffle(RandomIt first,RandomIt last){static std::mt19937 generator(1);std::shuffle(first,last,generator);}}
+namespace Random {template<typename RandomIt> void shuffle(RandomIt first,RandomIt last){static std::mt19937 generator(1);std::shuffle(first,last,generator);}
+ unsigned int Uint(unsigned int low,unsigned int high){static std::mt19937 generator(1);return std::uniform_int_distribution<unsigned int>(low,high)(generator);}}
 namespace Helper {std::string toString(int value){return std::to_string(value);} template<class T> std::string toString(T value){std::ostringstream s;s<<value;return s.str();}}
 class ConfigManager {
 public:
     std::map<std::string,int> points;
+    std::set<std::string> freeLevelOne;
     static ConfigManager& getSingleton(){static ConfigManager c;return c;}
     int getSkillPoints(const std::string& key) const {return points.at(key);}
+    bool isSkillFreeLevelOne(const std::string& key) const {return freeLevelOne.count(key)>0;}
 };
-enum class SkillFamily {rooms,traps,spells,nb};
+enum class SkillFamily {rooms,traps,spells,keeper,nb};
+enum class SkillTab {rooms,traps,spells,nb};
+SkillTab getTabOfPrefix(const std::string& skillFamily);
 struct SkillDef {
-    const Skill* mSkill;
-    SkillDef(const Skill* s):mSkill(s){}
+    const Skill* mSkill;const uint32_t mTier;const SkillTab mTab;
+    SkillDef(const std::string& family,const Skill* s,uint32_t tier):mSkill(s),mTier(tier),mTab(getTabOfPrefix(family)){}
     void mapSkill(std::vector<std::vector<SkillType>>&){ }
 };
-struct SkillDefRoom:SkillDef {SkillDefRoom(const char*,const char*,const Skill* s,RoomType):SkillDef(s){}};
-struct SkillDefTrap:SkillDef {SkillDefTrap(const char*,const char*,const Skill* s,TrapType):SkillDef(s){}};
-struct SkillDefSpell:SkillDef {SkillDefSpell(const char*,const char*,const Skill* s,SpellType):SkillDef(s){}};
+struct SkillDefRoom:SkillDef {SkillDefRoom(const std::string& f,const char*,const Skill* s,uint32_t t,RoomType):SkillDef(f,s,t){}};
+struct SkillDefTrap:SkillDef {SkillDefTrap(const std::string& f,const char*,const Skill* s,uint32_t t,TrapType):SkillDef(f,s,t){}};
+struct SkillDefSpell:SkillDef {SkillDefSpell(const std::string& f,const char*,const Skill* s,uint32_t t,SpellType):SkillDef(f,s,t){}};
+struct SkillDefKeeper:SkillDef {SkillDefKeeper(const std::string& f,const char*,const Skill* s,uint32_t t):SkillDef(f,s,t){}};
 struct Seat;
 struct SkillManager {
     std::vector<const SkillDef*> mSkills;
+    std::vector<std::vector<SkillType>> mTabSkills;
     std::vector<std::vector<SkillType>> mSkillsFamily;
     SkillManager();
     static const Skill* getSkill(SkillType);
+    static SkillTab getSkillTab(SkillType);
+    static void listTabSkills(SkillTab,std::vector<SkillType>&);
     static bool isAllSkillsDoneForSeat(const Seat*);
     static double getResearchValue(SkillType,uint32_t,double,bool=false);
     static double getResearchValue(const Seat*,SkillType,double,bool=false);
@@ -137,6 +160,12 @@ struct Seat {
     const std::vector<SkillType>& getSkillPending()const{return mSkillPending;}
     const std::vector<SkillType>& getSkillNotAllowed()const{return mSkillNotAllowed;}
     bool addSkill(SkillType,bool=true);bool isSkillDone(SkillType)const;uint32_t getSkillLevel(SkillType)const;
+    bool isSkillNotAllowed(SkillType)const;
+    uint32_t getQueuedSkillLevel(SkillType,const std::vector<std::pair<SkillType,int> >&)const;
+    std::vector<std::pair<SkillType,int> > getQueuedLevels(const std::vector<SkillType>&)const;
+    const char* getResearchGateFailure(SkillType,int,const std::vector<std::pair<SkillType,int> >&)const;
+    bool canResearchLevel(SkillType,int,const std::vector<std::pair<SkillType,int> >&)const;
+    void addFreeLevelOneSkills(std::vector<SkillType>&)const;
     void setResearchLevels(const std::map<SkillType,uint32_t>&);
     void completeResearch(SkillType);void addSkillPoints(int32_t);void setNextSkill(SkillType);
     void setSkillsDone(const std::vector<SkillType>&);void setSkillTree(const std::vector<SkillType>&);
@@ -154,18 +183,33 @@ int checks=0;
 void check(bool value,const std::string& name){++checks;if(!value)throw std::runtime_error(name);}
 void near(double a,double b,const std::string& name){check(std::abs(a-b)<1e-7,name);}
 int main(int argc,char** argv){try {
-    std::ifstream config(argv[1]);std::string line;
-    while(std::getline(config,line)){std::istringstream row(line);std::string key;int points;
+    std::ifstream config(argv[1]);std::string line;bool inFree=false;
+    while(std::getline(config,line)){line=line.substr(0,line.find('#'));std::istringstream row(line);std::string key;int points;
+        if(line.find("[FreeLevelOne]")!=std::string::npos){inFree=true;continue;}
+        if(line.find("[/FreeLevelOne]")!=std::string::npos){inFree=false;continue;}
+        if(inFree){if(row>>key)ConfigManager::getSingleton().freeLevelOne.insert(key);continue;}
         if(row>>key>>points && key[0]!='#')ConfigManager::getSingleton().points[key]=points;}
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
         if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
-    check(all.size()==49,"all 49 current research entries");
+    check(all.size()==53,"all 53 research entries");
+    check(ConfigManager::getSingleton().freeLevelOne.size()==5,"five free level one entries in skills.cfg");
+    const std::vector<std::pair<SkillType,int> > none;
+    // The research tree: tabs, tiers and parents of the production constructor
+    check(SkillManager::getSkillTab(SkillType::roomTreasury)==SkillTab::rooms&&SkillManager::getSkillTab(SkillType::keeperDominion)==SkillTab::rooms,"Dominion stands in the Rooms tab");
+    check(SkillManager::getSkillTab(SkillType::trapDoorWooden)==SkillTab::traps&&SkillManager::getSkillTab(SkillType::keeperHeartMending)==SkillTab::traps,"Heart Mending stands in the Traps tab");
+    check(SkillManager::getSkillTab(SkillType::spellSummonWorker)==SkillTab::spells&&SkillManager::getSkillTab(SkillType::keeperManaFlow)==SkillTab::spells,"Mana Flow stands in the Spells tab");
+    {std::vector<SkillType> rooms,traps,spells;SkillManager::listTabSkills(SkillTab::rooms,rooms);SkillManager::listTabSkills(SkillTab::traps,traps);SkillManager::listTabSkills(SkillTab::spells,spells);
+     check(rooms.size()==16&&traps.size()==19&&spells.size()==18,"16 + 19 + 18 entries in the three tabs");}
+    {const Skill* mending=SkillManager::getSkill(SkillType::keeperHeartMending);
+     check(mending->getDependencies().size()==1&&mending->getDependencies()[0]->getType()==SkillType::keeperHeartFortitude,"Heart Mending needs only Heart Fortitude");
+     const Skill* banner=SkillManager::getSkill(SkillType::trapWatchBanner);
+     check(banner->getDependencies().size()==2&&banner->getDependencies()[0]->getType()==SkillType::trapAlarm&&banner->getDependencies()[1]->getType()==SkillType::roomGuardRoom,"Watch Banner needs Alarm Trap and Guard Room");}
     {Seat reward;reward.setSkillTree({SkillType::spellSummonChampion});check(reward.mSkillPending.empty(),"the reward skill cannot be researched");}
     for(SkillType type:all){
         const Skill* skill=SkillManager::getSkill(type);check(skill!=nullptr,"catalog completeness");
-        const int base=skill->getNeededSkillPoints();
-        const int anchor=base?base:((type==SkillType::roomLibrary||type==SkillType::spellSummonWorker)?150:100);
+        const int anchor=ConfigManager::getSingleton().points.at(Skills::toString(type));
+        check(skill->getNeededSkillPoints()==(ConfigManager::getSingleton().isSkillFreeLevelOne(Skills::toString(type))?0:anchor),"level I costs the tier cost, 0 for a free level one entry");
         check(skill->getNeededSkillPoints(2)==2*anchor,"level II cost");
         check(skill->getNeededSkillPoints(3)==4*anchor,"level III cost");
         Seat s;s.setSkillsDone(all);check(s.getSkillLevel(type)==1,"legacy unlock means I");
@@ -179,25 +223,64 @@ int main(int argc,char** argv){try {
         std::stringstream saved;s.save(saved);Seat loaded;
         check(loaded.load(saved) && loaded.getSkillLevel(type)==3 && loaded.mSkillPoints==13,"level and points save roundtrip");
     }
-    Seat fresh;
-    Seat gifted;gifted.setSkillTree({SkillType::roomTrainingHall,SkillType::roomLibrary});
-    gifted.addSkill(SkillType::roomTrainingHall);gifted.addSkillPoints(200);
+    // A new seat starts with the free level one entries (the seat start applies them the same way)
+    std::vector<SkillType> startSkills;Seat probeSeat;probeSeat.addFreeLevelOneSkills(startSkills);
+    check(startSkills.size()==5,"five entries are free at level I");
+    {Seat sandboxLike;sandboxLike.mSkillNotAllowed={SkillType::roomLibrary};std::vector<SkillType> list;sandboxLike.addFreeLevelOneSkills(list);
+     check(list.size()==4&&std::find(list.begin(),list.end(),SkillType::roomLibrary)==list.end(),"the level can forbid a free level one entry");}
+    Seat fresh;fresh.setSkillsDone(startSkills);
+    check(fresh.getSkillLevel(SkillType::roomTreasury)==1&&fresh.getSkillLevel(SkillType::spellSummonWorker)==1,"free entries are at level I at the start");
+    Seat gifted;gifted.setSkillsDone(startSkills);gifted.setSkillTree({SkillType::roomTrainingHall});
+    gifted.addSkill(SkillType::roomTrainingHall);gifted.addSkillPoints(1000);
     check(gifted.getSkillLevel(SkillType::roomTrainingHall)==1 && gifted.mSkillPending.empty(),"gift cannot silently start an unselected upgrade");
-    fresh.setSkillTree({SkillType::roomTrainingHall});fresh.addSkillPoints(100);
+    fresh.setSkillTree({SkillType::roomTrainingHall});fresh.addSkillPoints(250);
     check(fresh.getSkillLevel(SkillType::roomTrainingHall)==1,"actual first unlock");
-    fresh.setSkillTree({SkillType::roomTrainingHall,SkillType::roomTrainingHall});
-    check(fresh.mSkillPending.empty(),"duplicate target rejected");
+    fresh.setSkillTree({SkillType::roomWorkshop,SkillType::roomWorkshop});
+    check(fresh.mSkillPending.size()==1&&fresh.mSkillPending[0]==SkillType::roomWorkshop,"only the duplicate entry is dropped, the valid one stays");
     fresh.mSkillNotAllowed={SkillType::roomTrainingHall};fresh.setSkillTree({SkillType::roomTrainingHall});
     check(fresh.mSkillPending.empty(),"map-disabled upgrade rejected");
     fresh.mSkillNotAllowed.clear();fresh.setSkillTree({SkillType::trapBoulder});
     check(fresh.mSkillPending.empty(),"locked dependencies rejected");
+    // Levels I: a parent counts when it is done or queued earlier, or when the level does not allow it
+    {Seat g;g.setSkillsDone(startSkills);
+     g.setSkillTree({SkillType::roomArena});check(g.mSkillPending.empty(),"Arena without Training Hall is dropped");
+     g.setSkillTree({SkillType::roomArena,SkillType::roomTrainingHall});check(g.mSkillPending.size()==1&&g.mSkillPending[0]==SkillType::roomTrainingHall,"a parent queued later does not count, the valid entry stays");
+     g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomArena,SkillType::keeperDominion});check(g.mSkillPending.size()==3,"parents queued earlier count");
+     Seat denied;denied.setSkillsDone(startSkills);denied.mSkillNotAllowed={SkillType::roomTrainingHall};
+     denied.setSkillTree({SkillType::roomArena});check(denied.mSkillPending.size()==1,"a parent the level does not allow counts as fulfilled");
+     std::vector<SkillType> chain;SkillManager::getSkill(SkillType::roomArena)->buildDependencies(startSkills,denied.mSkillNotAllowed,chain);
+     check(chain.size()==1&&chain[0]==SkillType::roomArena,"the dependency chain skips a parent the level does not allow");
+     check(SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,denied.mSkillNotAllowed)&&!SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,{}),"canBeSkilled honours the allowed list");}
+    // Levels II and III: half (rounded up) and all of the allowed entries of the tab need level I
+    {Seat g;g.setSkillsDone(startSkills);
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,none),"level II waits for 8 of 16 rooms at level I (4 present)");
+     std::vector<std::pair<SkillType,int> > four={{SkillType::roomTrainingHall,1},{SkillType::roomWorkshop,1},{SkillType::roomBridgeWooden,1},{SkillType::roomGuardRoom,1}};
+     check(g.canResearchLevel(SkillType::roomTreasury,2,four),"level II opens with 8 of 16 rooms (queued entries count)");
+     std::vector<std::pair<SkillType,int> > three(four.begin(),four.begin()+3);
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,three),"7 of 16 rooms are not enough");
+     g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomTreasury});
+     check(g.mSkillPending.size()==3,"the queue drops only the level II entry that has no gate yet");
+     g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomGuardRoom,SkillType::roomTreasury});
+     check(g.mSkillPending.size()==5,"the queue accepts level II once 8 entries are done or queued");
+     check(!g.canResearchLevel(SkillType::roomTreasury,3,four),"level III needs the entry at level II");
+     Seat done;done.setSkillsDone(startSkills);
+     std::vector<SkillType> allRooms;SkillManager::listTabSkills(SkillTab::rooms,allRooms);
+     std::vector<SkillType> doneList=startSkills;for(SkillType t:allRooms)if(std::find(doneList.begin(),doneList.end(),t)==doneList.end())doneList.push_back(t);
+     done.setSkillsDone(doneList);done.mResearchLevels[SkillType::roomTreasury]=2;
+     check(done.canResearchLevel(SkillType::roomTreasury,3,none),"level III opens when every room has level I");
+     done.mSkillDone.erase(std::find(done.mSkillDone.begin(),done.mSkillDone.end(),SkillType::keeperDominion));
+     check(!done.canResearchLevel(SkillType::roomTreasury,3,none),"level III waits for the last room");
+     done.mSkillNotAllowed={SkillType::keeperDominion};
+     check(done.canResearchLevel(SkillType::roomTreasury,3,none),"an entry the level does not allow is not counted");
+     check(!done.canResearchLevel(SkillType::keeperDominion,1,none)&&!done.canResearchLevel(SkillType::spellSummonChampion,1,none),"not allowed and reward skills cannot be queued");}
     std::vector<SkillType> automatic;SkillManager::buildRandomPendingSkillsForSeat(automatic,&fresh);
     fresh.setSkillTree(automatic);check(fresh.mSkillPending==automatic && !automatic.empty(),"autofill includes legal unlocks and upgrades");
     fresh.addSkillPoints(100000);check(fresh.mSkillPending.empty(),"large book surplus drains full selected queue");
     check(fresh.getSkillLevel(SkillType::roomTrainingHall)==2,"autofill upgrades unlocked item only once");
     Seat resumed;resumed.setSkillsDone(all);resumed.setSkillTree({SkillType::trapCannon,SkillType::trapSpike});resumed.addSkillPoints(125);
+    check(resumed.mSkillPoints==125,"partial progress of the first upgrade is kept");
     std::stringstream saved;resumed.save(saved);Seat loaded;check(loaded.load(saved),"pending upgrade save loads");
-    auto pending=loaded.mSkillPending;loaded.setSkillTree(pending);loaded.addSkillPoints(275);
+    std::vector<SkillType> pending=loaded.mSkillPending;loaded.setSkillTree(pending);loaded.addSkillPoints(75);
     check(loaded.getSkillLevel(SkillType::trapCannon)==2 && loaded.mSkillPending==std::vector<SkillType>{SkillType::trapSpike},"resume partial upgrade with order retained");
     std::stringstream old("[SkillDone] roomLibrary [/SkillDone] [SkillNotAllowed] [/SkillNotAllowed] [SkillPending] roomTrainingHall [/SkillPending]");
     Seat legacy;check(legacy.load(old) && legacy.getSkillLevel(SkillType::roomLibrary)==1 && legacy.mSkillPoints==0,"old save without extension");
@@ -224,7 +307,7 @@ int main(int argc,char** argv){try {
     Seat host;host.setSkillsDone(all);activePlayer=&host.player;
     ODPacket request;request<<uint32_t(1)<<SkillType::trapCannon<<uint32_t(2);
     check(requestSkills(request) && host.mSkillPending==std::vector<SkillType>{SkillType::trapCannon},"actual server accepts II request");
-    host.addSkillPoints(400);ODPacket stale;stale<<uint32_t(1)<<SkillType::trapCannon<<uint32_t(2);
+    host.addSkillPoints(200);ODPacket stale;stale<<uint32_t(1)<<SkillType::trapCannon<<uint32_t(2);
     check(requestSkills(stale) && host.mSkillPending.empty(),"stale II request cannot silently queue III");
     using T=SkillType;
     struct Effect{T type;double base,second,third;bool secondary;};

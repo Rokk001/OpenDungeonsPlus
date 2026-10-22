@@ -38,7 +38,9 @@
 
 #include <CEGUI/Window.h>
 #include <CEGUI/widgets/PushButton.h>
+#include <algorithm>
 #include <functional>
+#include <utility>
 
 namespace
 {
@@ -69,6 +71,38 @@ SkillManager& getSkillManager()
     static SkillManager manager;
     return manager;
 }
+
+//! \brief Path prefix of the research buttons of the Rooms tab inside SkillTreeWindow/Skills
+static const std::string TREE_PREFIX_ROOMS = "SkillTabs/Rooms/";
+//! \brief Path prefix of the research buttons of the Traps and doors tab inside SkillTreeWindow/Skills
+static const std::string TREE_PREFIX_TRAPS = "SkillTabs/Traps/";
+//! \brief Path prefix of the research buttons of the Spells tab inside SkillTreeWindow/Skills
+static const std::string TREE_PREFIX_SPELLS = "SkillTabs/Spells/";
+
+//! \brief Titles of the tabs of the research tree window
+static const std::string TAB_TITLE_ROOMS = "Rooms";
+static const std::string TAB_TITLE_TRAPS = "Traps and doors";
+static const std::string TAB_TITLE_SPELLS = "Spells";
+
+//! \brief Tooltip titles of the keeper skills
+static const std::string KEEPER_TITLE_DOMINION = "Dominion";
+static const std::string KEEPER_TITLE_HEART_FORTITUDE = "Heart Fortitude";
+static const std::string KEEPER_TITLE_HEART_MENDING = "Heart Mending";
+static const std::string KEEPER_TITLE_MANA_FLOW = "Mana Flow";
+
+//! \brief Parent list of a skill without parents
+static const std::vector<SkillType> NO_PARENTS;
+
+//! \brief The tab of the research tree window that belongs to a path prefix of its buttons
+//! \param skillFamily The path prefix, one of the TREE_PREFIX constants
+SkillTab getTabOfPrefix(const std::string& skillFamily)
+{
+    if(skillFamily == TREE_PREFIX_TRAPS)
+        return SkillTab::traps;
+    if(skillFamily == TREE_PREFIX_SPELLS)
+        return SkillTab::spells;
+    return SkillTab::rooms;
+}
 }
 
 //! \brief Class used to gather information about the skill with the corresponding
@@ -76,10 +110,17 @@ SkillManager& getSkillManager()
 class SkillDef
 {
 public:
-    SkillDef(const std::string& skillFamily, const std::string& buttonName, const Skill* skill) :
+    //! \brief Creates the definition of a research entry.
+    //! \param skillFamily The path prefix of the research button in the tree window, one of the TREE_PREFIX constants (it names the tab)
+    //! \param buttonName The name of the research button
+    //! \param skill The skill of the entry
+    //! \param tier The row of the entry in its tab (1 at the top to 4 at the bottom)
+    SkillDef(const std::string& skillFamily, const std::string& buttonName, const Skill* skill, uint32_t tier) :
         mSkillFamily(skillFamily),
         mButtonName(buttonName),
-        mSkill(skill)
+        mSkill(skill),
+        mTier(tier),
+        mTab(getTabOfPrefix(skillFamily))
     {
     }
 
@@ -89,6 +130,10 @@ public:
     const std::string mSkillFamily;
     const std::string mButtonName;
     const Skill* mSkill;
+    //! \brief The row of the entry in its tab (1 at the top to 4 at the bottom)
+    const uint32_t mTier;
+    //! \brief The tab of the tree window the entry stands in
+    const SkillTab mTab;
 
     virtual SkillFamily getSkillFamily() const = 0;
 
@@ -107,9 +152,10 @@ public:
 class SkillDefRoom : public SkillDef
 {
 public:
-    SkillDefRoom(const std::string& skillFamily, const std::string& buttonName, const Skill* skill,
+    //! \brief Creates the entry of a room skill, see SkillDef for the parameters
+    SkillDefRoom(const std::string& skillFamily, const std::string& buttonName, const Skill* skill, uint32_t tier,
             RoomType roomType) :
-        SkillDef(skillFamily, buttonName, skill),
+        SkillDef(skillFamily, buttonName, skill, tier),
         mRoomType(roomType)
     {
     }
@@ -158,9 +204,10 @@ public:
 class SkillDefTrap : public SkillDef
 {
 public:
-    SkillDefTrap(const std::string& skillFamily, const std::string& buttonName, const Skill* skill,
+    //! \brief Creates the entry of a trap skill, see SkillDef for the parameters
+    SkillDefTrap(const std::string& skillFamily, const std::string& buttonName, const Skill* skill, uint32_t tier,
             TrapType trapType) :
-        SkillDef(skillFamily, buttonName, skill),
+        SkillDef(skillFamily, buttonName, skill, tier),
         mTrapType(trapType)
     {
     }
@@ -209,9 +256,10 @@ public:
 class SkillDefSpell : public SkillDef
 {
 public:
-    SkillDefSpell(const std::string& skillFamily, const std::string& buttonName, const Skill* skill,
+    //! \brief Creates the entry of a spell skill, see SkillDef for the parameters
+    SkillDefSpell(const std::string& skillFamily, const std::string& buttonName, const Skill* skill, uint32_t tier,
             SpellType spellType) :
-        SkillDef(skillFamily, buttonName, skill),
+        SkillDef(skillFamily, buttonName, skill, tier),
         mSpellType(spellType)
     {
     }
@@ -291,8 +339,101 @@ public:
     SpellType mSpellType;
 };
 
+//! \brief A keeper skill: it changes the keeper (creature limit, dungeon heart, mana), so it has no room, trap or spell,
+//! no cast button and no action bar button. Only its research button in the tree window exists.
+class SkillDefKeeper : public SkillDef
+{
+public:
+    //! \brief Creates the entry of a keeper skill, see SkillDef for the parameters
+    SkillDefKeeper(const std::string& skillFamily, const std::string& buttonName, const Skill* skill, uint32_t tier) :
+        SkillDef(skillFamily, buttonName, skill, tier)
+    {
+    }
+
+    //! \brief A keeper skill belongs to no room, trap or spell family
+    SkillFamily getSkillFamily() const override
+    { return SkillFamily::keeper; }
+
+    //! \brief The name of the keeper skill
+    const std::string& getTooltipTitle() const override
+    {
+        switch(mSkill->getType())
+        {
+            case SkillType::keeperDominion:
+                return KEEPER_TITLE_DOMINION;
+            case SkillType::keeperHeartFortitude:
+                return KEEPER_TITLE_HEART_FORTITUDE;
+            case SkillType::keeperHeartMending:
+                return KEEPER_TITLE_HEART_MENDING;
+            default:
+                return KEEPER_TITLE_MANA_FLOW;
+        }
+    }
+
+    //! \brief A keeper skill has no cost to build or cast
+    std::string getCostText(GameMap* gameMap) const override
+    { return ""; }
+
+    //! \brief A keeper skill has no action bar button to connect
+    void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const override
+    {
+    }
+
+    //! \brief A keeper skill has no action bar button, so its gui path is empty
+    const std::string& getGuiPath() const override
+    {
+        static const std::string guiPath;
+        return guiPath;
+    }
+
+    //! \brief A keeper skill is not mapped to a room, trap or spell
+    void mapSkill(std::vector<std::vector<SkillType>>& skillsFamily) const override
+    {
+    }
+};
+
+//! \brief Creates the Skill of the given type with its parents. The cost and the free level one come from skills.cfg.
+//! \param skills The entries registered so far; the parents must be among them
+//! \param type The type of the new skill
+//! \param parentTypes The parents of the skill
+//! \return The new skill
+static Skill* createSkill(const std::vector<const SkillDef*>& skills, SkillType type,
+        const std::vector<SkillType>& parentTypes)
+{
+    std::vector<const Skill*> parents;
+    for(SkillType parentType : parentTypes)
+    {
+        const SkillDef* parent = skills[static_cast<uint32_t>(parentType)];
+        if(parent == nullptr)
+        {
+            OD_LOG_ERR("Parent not registered yet: " + Skills::toString(parentType) + " for " + Skills::toString(type));
+            continue;
+        }
+        parents.push_back(parent->mSkill);
+    }
+
+    const std::string name = Skills::toString(type);
+    const ConfigManager& config = ConfigManager::getSingleton();
+    return new Skill(type, config.getSkillPoints(name), parents, config.isSkillFreeLevelOne(name));
+}
+
+//! \brief Enters a skill definition into the lookup tables of the skill manager
+//! \param def The definition to enter
+//! \param skills The definitions by skill type
+//! \param skillsFamily The skill of each room, trap and spell
+//! \param tabSkills The skills of each tab in tree order
+static void registerSkillDef(SkillDef* def, std::vector<const SkillDef*>& skills,
+        std::vector<std::vector<SkillType>>& skillsFamily, std::vector<std::vector<SkillType>>& tabSkills)
+{
+    def->mapSkill(skillsFamily);
+    skills[static_cast<uint32_t>(def->mSkill->getType())] = def;
+    if(!Skills::isRewardSkill(def->mSkill->getType()))
+        tabSkills[static_cast<uint32_t>(def->mTab)].push_back(def->mSkill->getType());
+}
+
 SkillManager::SkillManager() :
     mSkills(static_cast<uint32_t>(SkillType::countSkill)),
+    mTabSkills(static_cast<uint32_t>(SkillTab::nb)),
     mSkillsFamily(static_cast<uint32_t>(SkillFamily::nb))
 {
     for (uint32_t i = 0; i < static_cast<uint32_t>(SkillFamily::nb); ++i)
@@ -310,510 +451,207 @@ SkillManager::SkillManager() :
             case SkillFamily::spells:
                 family = std::vector<SkillType>(static_cast<uint32_t>(SpellType::nbSpells), SkillType::nullSkillType);
                 break;
+            case SkillFamily::keeper:
+                // The keeper skills have no room, trap or spell to map
+                break;
             default:
                 OD_LOG_ERR("Wrong enum value=" + Helper::toString(static_cast<uint32_t>(resFamily)) + ", size=" + Helper::toString(static_cast<uint32_t>(SkillFamily::nb)));
                 break;
         }
     }
 
-    // We build the skill tree
+    // We build the skill tree. Every entry names its tab (path prefix), its tier (row) and its parents; an entry is
+    // registered after its parents. Within a tier, the entries stand from left to right in registration order.
     SkillDef* def;
-    SkillType resType;
-    int32_t points;
-    std::vector<const Skill*> emptyDepends;
-    std::vector<const Skill*> lvl1depends;
-    std::vector<const Skill*> lvl2depends;
-    std::vector<const Skill*> lvl3depends;
-    std::vector<const Skill*> lvl4depends;
     Skill* skill;
-    uint32_t index;
 
-    // Attack Skills
+    // Rooms tab, tier I
+    skill = createSkill(mSkills, SkillType::roomTreasury, NO_PARENTS);
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "TreasuryButton", skill, 1, RoomType::treasury);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomDormitory, NO_PARENTS);
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "DormitoryButton", skill, 1, RoomType::dormitory);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomHatchery, NO_PARENTS);
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "HatcheryButton", skill, 1, RoomType::hatchery);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomLibrary, NO_PARENTS);
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "LibraryButton", skill, 1, RoomType::library);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    // Lvl 1 skills
-    resType = SkillType::roomTrainingHall;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, emptyDepends);
-    def = new SkillDefRoom("AttackSkills/", "TrainingHallButton", skill, RoomType::trainingHall);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl1depends.push_back(skill);
+    // Rooms tab, tier II
+    skill = createSkill(mSkills, SkillType::roomTrainingHall, std::vector<SkillType>{SkillType::roomTreasury});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "TrainingHallButton", skill, 2, RoomType::trainingHall);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomWorkshop, std::vector<SkillType>{SkillType::roomTreasury});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "WorkshopButton", skill, 2, RoomType::workshop);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomBridgeWooden, std::vector<SkillType>{SkillType::roomTreasury});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "WoodenBridgeButton", skill, 2, RoomType::bridgeWooden);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomGuardRoom, std::vector<SkillType>{SkillType::roomDormitory});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "GuardRoomButton", skill, 2, RoomType::guardRoom);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomCasino, std::vector<SkillType>{SkillType::roomTreasury});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "CasinoButton", skill, 2, RoomType::casino);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    resType = SkillType::roomBridgeWooden;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, emptyDepends);
-    def = new SkillDefRoom("AttackSkills/", "WoodenBridgeButton", skill, RoomType::bridgeWooden);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl1depends.push_back(skill);
+    // Rooms tab, tier III
+    skill = createSkill(mSkills, SkillType::roomArena, std::vector<SkillType>{SkillType::roomTrainingHall});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "ArenaButton", skill, 3, RoomType::arena);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomPrison, std::vector<SkillType>{SkillType::roomGuardRoom});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "PrisonButton", skill, 3, RoomType::prison);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomCrypt, std::vector<SkillType>{SkillType::roomLibrary});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "CryptButton", skill, 3, RoomType::crypt);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomBridgeStone, std::vector<SkillType>{SkillType::roomBridgeWooden});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "StoneBridgeButton", skill, 3, RoomType::bridgeStone);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    // Lvl 2 skills
-    resType = SkillType::spellCallToWar;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefSpell("AttackSkills/", "CallToWarButton", skill, SpellType::callToWar);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
+    // Rooms tab, tier IV
+    skill = createSkill(mSkills, SkillType::roomTorture, std::vector<SkillType>{SkillType::roomPrison});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "TortureButton", skill, 4, RoomType::torture);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomTemple, std::vector<SkillType>{SkillType::roomCrypt});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "PrayerTempleButton", skill, 4, RoomType::temple);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::keeperDominion, std::vector<SkillType>{SkillType::roomArena});
+    def = new SkillDefKeeper(TREE_PREFIX_ROOMS, "DominionButton", skill, 4);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    // CreatureExplosion depends on Training Hall
-    resType = SkillType::spellCreatureExplosion;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefSpell("AttackSkills/", "CreatureExplosionButton", skill, SpellType::creatureExplosion);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
+    // Traps tab, tier I
+    skill = createSkill(mSkills, SkillType::trapDoorWooden, std::vector<SkillType>{SkillType::roomWorkshop});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "WoodenDoorTrapButton", skill, 1, TrapType::doorWooden);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapSpike, std::vector<SkillType>{SkillType::roomWorkshop});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "SpikeTrapButton", skill, 1, TrapType::spike);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapCannon, std::vector<SkillType>{SkillType::roomWorkshop});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "CannonButton", skill, 1, TrapType::cannon);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapAlarm, std::vector<SkillType>{SkillType::roomWorkshop});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "AlarmTrapButton", skill, 1, TrapType::alarm);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    resType = SkillType::roomPrison;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefRoom("AttackSkills/", "PrisonButton", skill, RoomType::prison);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
+    // Traps tab, tier II
+    skill = createSkill(mSkills, SkillType::trapDoorIronbound, std::vector<SkillType>{SkillType::trapDoorWooden});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "IronboundDoorTrapButton", skill, 2, TrapType::doorIronbound);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapDoorBarricade, std::vector<SkillType>{SkillType::trapDoorWooden});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "BarricadeTrapButton", skill, 2, TrapType::doorBarricade);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapGas, std::vector<SkillType>{SkillType::trapSpike});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "GasTrapButton", skill, 2, TrapType::gas);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapBoulder, std::vector<SkillType>{SkillType::trapSpike});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "BoulderTrapButton", skill, 2, TrapType::boulder);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapWatchBanner, std::vector<SkillType>{SkillType::trapAlarm, SkillType::roomGuardRoom});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "WatchBannerTrapButton", skill, 2, TrapType::watchBanner);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapFear, std::vector<SkillType>{SkillType::trapAlarm});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "FearTrapButton", skill, 2, TrapType::fear);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    // Lvl 3 skills
-    resType = SkillType::roomBridgeStone;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefRoom("AttackSkills/", "StoneBridgeButton", skill, RoomType::bridgeStone);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
+    // Traps tab, tier III
+    skill = createSkill(mSkills, SkillType::trapDoorSteel, std::vector<SkillType>{SkillType::trapDoorIronbound});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "SteelDoorTrapButton", skill, 3, TrapType::doorSteel);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapDoorSecret, std::vector<SkillType>{SkillType::trapDoorIronbound});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "SecretDoorTrapButton", skill, 3, TrapType::doorSecret);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapLightning, std::vector<SkillType>{SkillType::trapCannon});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "LightningTrapButton", skill, 3, TrapType::lightning);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapTrigger, std::vector<SkillType>{SkillType::trapAlarm});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "TriggerTrapButton", skill, 3, TrapType::trigger);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapFireburst, std::vector<SkillType>{SkillType::trapGas});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "FireburstTrapButton", skill, 3, TrapType::fireburst);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    resType = SkillType::roomArena;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefRoom("AttackSkills/", "ArenaButton", skill, RoomType::arena);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
+    // Traps tab, tier IV
+    skill = createSkill(mSkills, SkillType::trapDoorRuned, std::vector<SkillType>{SkillType::trapDoorSteel});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "RunedDoorTrapButton", skill, 4, TrapType::doorRuned);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapFreeze, std::vector<SkillType>{SkillType::trapLightning});
+    def = new SkillDefTrap(TREE_PREFIX_TRAPS, "FreezeTrapButton", skill, 4, TrapType::freeze);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::keeperHeartFortitude, std::vector<SkillType>{SkillType::trapDoorSteel});
+    def = new SkillDefKeeper(TREE_PREFIX_TRAPS, "HeartFortitudeButton", skill, 4);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::keeperHeartMending, std::vector<SkillType>{SkillType::keeperHeartFortitude});
+    def = new SkillDefKeeper(TREE_PREFIX_TRAPS, "HeartMendingButton", skill, 4);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    resType = SkillType::roomCasino;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefRoom("AttackSkills/", "CasinoButton", skill, RoomType::casino);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
+    // Spells tab, tier I
+    skill = createSkill(mSkills, SkillType::spellSummonWorker, NO_PARENTS);
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "SummonWorkerButton", skill, 1, SpellType::summonWorker);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCreatureHeal, std::vector<SkillType>{SkillType::roomLibrary});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureHealButton", skill, 1, SpellType::creatureHeal);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCreatureHaste, std::vector<SkillType>{SkillType::roomLibrary});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureHasteButton", skill, 1, SpellType::creatureHaste);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellEyeEvil, std::vector<SkillType>{SkillType::roomLibrary});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "SpellEyeEvilButton", skill, 1, SpellType::eyeEvil);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    resType = SkillType::roomTorture;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefRoom("AttackSkills/", "TortureButton", skill, RoomType::torture);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
+    // Spells tab, tier II
+    skill = createSkill(mSkills, SkillType::spellCreatureDefense, std::vector<SkillType>{SkillType::spellCreatureHeal});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureDefenseButton", skill, 2, SpellType::creatureDefense);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCreatureStrength, std::vector<SkillType>{SkillType::spellCreatureHaste});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureStrengthButton", skill, 2, SpellType::creatureStrength);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCallToWar, std::vector<SkillType>{SkillType::spellCreatureHaste});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CallToWarButton", skill, 2, SpellType::callToWar);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCreatureSlow, std::vector<SkillType>{SkillType::spellEyeEvil});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureSlowButton", skill, 2, SpellType::creatureSlow);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellLightning, std::vector<SkillType>{SkillType::spellEyeEvil});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "LightningButton", skill, 2, SpellType::lightning);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    resType = SkillType::spellLightning;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefSpell("AttackSkills/", "LightningButton", skill, SpellType::lightning);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
+    // Spells tab, tier III
+    skill = createSkill(mSkills, SkillType::spellCreatureWeak, std::vector<SkillType>{SkillType::spellCreatureSlow});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureWeakButton", skill, 3, SpellType::creatureWeak);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCreatureExplosion, std::vector<SkillType>{SkillType::spellLightning});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreatureExplosionButton", skill, 3, SpellType::creatureExplosion);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellPossess, std::vector<SkillType>{SkillType::spellEyeEvil});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "PossessButton", skill, 3, SpellType::possess);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellCreateGold, std::vector<SkillType>{SkillType::roomTreasury});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "CreateGoldButton", skill, 3, SpellType::createGold);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    resType = SkillType::spellTremor;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefSpell("AttackSkills/", "TremorButton", skill, SpellType::tremor);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
+    // Spells tab, tier IV
+    skill = createSkill(mSkills, SkillType::spellTremor, std::vector<SkillType>{SkillType::spellCreatureExplosion});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "TremorButton", skill, 4, SpellType::tremor);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellInferno, std::vector<SkillType>{SkillType::spellCreatureExplosion});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "InfernoButton", skill, 4, SpellType::inferno);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellDefector, std::vector<SkillType>{SkillType::spellPossess});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "DefectorButton", skill, 4, SpellType::defector);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::spellHexenHen, std::vector<SkillType>{SkillType::spellCreatureWeak});
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "HexenHenButton", skill, 4, SpellType::hexenHen);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::keeperManaFlow, std::vector<SkillType>{SkillType::roomTemple});
+    def = new SkillDefKeeper(TREE_PREFIX_SPELLS, "ManaFlowButton", skill, 4);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
-    // Tech Skills
-    lvl1depends.clear();
-    lvl2depends.clear();
-    lvl3depends.clear();
-    lvl4depends.clear();
-
-    resType = SkillType::roomTreasury;
-    index = static_cast<uint32_t>(resType);
-    skill = new Skill(resType, 0, emptyDepends);
-    def = new SkillDefRoom("TacticSkills/", "TreasuryButton", skill, RoomType::treasury);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl1depends.push_back(skill);
-
-    resType = SkillType::roomHatchery;
-    index = static_cast<uint32_t>(resType);
-    skill = new Skill(resType, 0, emptyDepends);
-    def = new SkillDefRoom("TacticSkills/", "HatcheryButton", skill, RoomType::hatchery);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl1depends.push_back(skill);
-
-    resType = SkillType::roomDormitory;
-    index = static_cast<uint32_t>(resType);
-    skill = new Skill(resType, 0, emptyDepends);
-    def = new SkillDefRoom("TacticSkills/", "DormitoryButton", skill, RoomType::dormitory);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl1depends.push_back(skill);
-
-    // Lvl 2 skills
-    resType = SkillType::roomWorkshop;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefRoom("TacticSkills/", "WorkshopButton", skill, RoomType::workshop);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
-
-    resType = SkillType::roomGuardRoom;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefRoom("TacticSkills/", "GuardRoomButton", skill, RoomType::guardRoom);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
-
-    resType = SkillType::trapDoorWooden;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefTrap("TacticSkills/", "WoodenDoorTrapButton", skill, TrapType::doorWooden);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
-    const Skill* woodenDoorSkill = skill;
-
-    // Stronger doors. Each one requires the previous door
-    std::vector<const Skill*> doorDepends;
-    doorDepends.push_back(skill);
-    resType = SkillType::trapDoorIronbound;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, doorDepends);
-    def = new SkillDefTrap("TacticSkills/", "IronboundDoorTrapButton", skill, TrapType::doorIronbound);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    doorDepends.clear();
-    doorDepends.push_back(skill);
-    resType = SkillType::trapDoorSteel;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, doorDepends);
-    def = new SkillDefTrap("TacticSkills/", "SteelDoorTrapButton", skill, TrapType::doorSteel);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    const Skill* steelDoorSkill = skill;
-
-    // The barricade only requires the wooden door
-    doorDepends.clear();
-    doorDepends.push_back(woodenDoorSkill);
-    resType = SkillType::trapDoorBarricade;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, doorDepends);
-    def = new SkillDefTrap("TacticSkills/", "BarricadeTrapButton", skill, TrapType::doorBarricade);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // The secret door only requires the wooden door
-    doorDepends.clear();
-    doorDepends.push_back(woodenDoorSkill);
-    resType = SkillType::trapDoorSecret;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, doorDepends);
-    def = new SkillDefTrap("TacticSkills/", "SecretDoorTrapButton", skill, TrapType::doorSecret);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // The runed door requires the steel door
-    doorDepends.clear();
-    doorDepends.push_back(steelDoorSkill);
-    resType = SkillType::trapDoorRuned;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, doorDepends);
-    def = new SkillDefTrap("TacticSkills/", "RunedDoorTrapButton", skill, TrapType::doorRuned);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // Lvl 3 skills
-    resType = SkillType::trapCannon;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefTrap("TacticSkills/", "CannonButton", skill, TrapType::cannon);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
-
-    resType = SkillType::trapSpike;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefTrap("TacticSkills/", "SpikeTrapButton", skill, TrapType::spike);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
-
-    // The tactic tree row after the wooden door has no room left for a fifth node
-    // (cannon, spike, ironbound door, barricade), so the alarm trap follows cannon and spike
-    resType = SkillType::trapAlarm;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefTrap("TacticSkills/", "AlarmTrapButton", skill, TrapType::alarm);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // Lvl 4 research
-    resType = SkillType::trapBoulder;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefTrap("TacticSkills/", "BoulderTrapButton", skill, TrapType::boulder);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
-
-    resType = SkillType::trapFear;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefTrap("TacticSkills/", "FearTrapButton", skill, TrapType::fear);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    resType = SkillType::trapGas;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefTrap("TacticSkills/", "GasTrapButton", skill, TrapType::gas);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // Lvl 5 research
-    resType = SkillType::trapLightning;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl4depends);
-    def = new SkillDefTrap("TacticSkills/", "LightningTrapButton", skill, TrapType::lightning);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    std::vector<const Skill*> lvl5depends;
-    lvl5depends.push_back(skill);
-
-    // Lvl 6 research
-    resType = SkillType::trapFireburst;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl5depends);
-    def = new SkillDefTrap("TacticSkills/", "FireburstTrapButton", skill, TrapType::fireburst);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    std::vector<const Skill*> lvl6depends;
-    lvl6depends.push_back(skill);
-
-    // Lvl 7 research: the trigger trap only makes sense with other traps to set off,
-    // provisional position below the fireburst trap (research tree is full)
-    resType = SkillType::trapTrigger;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl6depends);
-    def = new SkillDefTrap("TacticSkills/", "TriggerTrapButton", skill, TrapType::trigger);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // The freeze trap follows the lightning trap, in the free slot of the lightning row
-    resType = SkillType::trapFreeze;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl5depends);
-    def = new SkillDefTrap("TacticSkills/", "FreezeTrapButton", skill, TrapType::freeze);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    resType = SkillType::trapWatchBanner;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefTrap("TacticSkills/", "WatchBannerTrapButton", skill, TrapType::watchBanner);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    resType = SkillType::spellDefector;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    // The tactic row after cannon and spike trap is full, so Defector follows the boulder trap
-    skill = new Skill(resType, points, lvl4depends);
-    def = new SkillDefSpell("TacticSkills/", "DefectorButton", skill, SpellType::defector);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // The tactic rows after cannon and spike trap and after the boulder trap are full,
-    // so Hexen Hen follows Defector
-    std::vector<const Skill*> defectorDepends;
-    defectorDepends.push_back(skill);
-    resType = SkillType::spellHexenHen;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, defectorDepends);
-    def = new SkillDefSpell("TacticSkills/", "HexenHenButton", skill, SpellType::hexenHen);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-
-    // Magic Skills
-    lvl1depends.clear();
-    lvl2depends.clear();
-    lvl3depends.clear();
-    lvl4depends.clear();
-
-    // Lvl 1 skills
-    resType = SkillType::roomLibrary;
-    skill = new Skill(resType, 0, emptyDepends);
-    index = static_cast<uint32_t>(resType);
-    def = new SkillDefRoom("MagicSkills/", "LibraryButton", skill, RoomType::library);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl1depends.push_back(skill);
-
-    resType = SkillType::spellSummonWorker;
-    index = static_cast<uint32_t>(resType);
-    skill = new Skill(resType, 0, emptyDepends);
-    def = new SkillDefSpell("MagicSkills/", "SummonWorkerButton", skill, SpellType::summonWorker);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl1depends.push_back(skill);
-
-    // Lvl 2 skills
-    resType = SkillType::roomCrypt;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefRoom("MagicSkills/", "CryptButton", skill, RoomType::crypt);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
-
-    resType = SkillType::spellCreatureHeal;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefSpell("MagicSkills/", "CreatureHealButton", skill, SpellType::creatureHeal);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
-
-    resType = SkillType::spellEyeEvil;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl1depends);
-    def = new SkillDefSpell("MagicSkills/", "SpellEyeEvilButton", skill, SpellType::eyeEvil);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl2depends.push_back(skill);
-
-    // Lvl 3 skills
-    resType = SkillType::spellCreatureHaste;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefSpell("MagicSkills/", "CreatureHasteButton", skill, SpellType::creatureHaste);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
-
-    resType = SkillType::spellCreatureDefense;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefSpell("MagicSkills/", "CreatureDefenseButton", skill, SpellType::creatureDefense);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
-
-    resType = SkillType::spellCreatureSlow;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl2depends);
-    def = new SkillDefSpell("MagicSkills/", "CreatureSlowButton", skill, SpellType::creatureSlow);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl3depends.push_back(skill);
-
-    // Lvl 4 skills
-    resType = SkillType::spellCreatureStrength;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefSpell("MagicSkills/", "CreatureStrengthButton", skill, SpellType::creatureStrength);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
-
-    resType = SkillType::spellCreatureWeak;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefSpell("MagicSkills/", "CreatureWeakButton", skill, SpellType::creatureWeak);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
-
-    resType = SkillType::spellCreateGold;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefSpell("MagicSkills/", "CreateGoldButton", skill, SpellType::createGold);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
-
-    resType = SkillType::roomTemple;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefRoom("MagicSkills/", "PrayerTempleButton", skill, RoomType::temple);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
-
-    resType = SkillType::spellInferno;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefSpell("MagicSkills/", "InfernoButton", skill, SpellType::inferno);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
-
-    resType = SkillType::spellPossess;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, lvl3depends);
-    def = new SkillDefSpell("MagicSkills/", "PossessButton", skill, SpellType::possess);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
-    lvl4depends.push_back(skill);
-
-    // Not researchable: the campaign Heartstone unlocks it. It has no dependency and no node in the skill tree window
-    resType = SkillType::spellSummonChampion;
-    index = static_cast<uint32_t>(resType);
-    points = ConfigManager::getSingleton().getSkillPoints(Skills::toString(resType));
-    skill = new Skill(resType, points, emptyDepends);
-    def = new SkillDefSpell("MagicSkills/", "SummonChampionButton", skill, SpellType::summonChampion);
-    def->mapSkill(mSkillsFamily);
-    mSkills[index] = def;
+    // Not researchable: the campaign Heartstone unlocks it. It has no parent, no cost and no node in the skill tree window
+    skill = new Skill(SkillType::spellSummonChampion, 0, std::vector<const Skill*>());
+    def = new SkillDefSpell(TREE_PREFIX_SPELLS, "SummonChampionButton", skill, 4, SpellType::summonChampion);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 }
 
 SkillManager::~SkillManager()
@@ -896,18 +734,19 @@ bool SkillManager::isAllSkillsDoneForSeat(const Seat* seat)
     if(seat->isSkilling())
         return false;
 
+    // Something is left to research if any entry can reach its next level (parents, tab gates and the
+    // allowed list are checked by the seat)
+    const std::vector<std::pair<SkillType, int>> nothingQueued;
     for(const SkillDef* skill : getSkillManager().mSkills)
     {
         if(skill == nullptr)
             continue;
         if(Skills::isRewardSkill(skill->mSkill->getType()))
             continue;
-        if(seat->getSkillLevel(skill->mSkill->getType()) >= 3)
+        const uint32_t level = seat->getSkillLevel(skill->mSkill->getType());
+        if(level >= 3)
             continue;
-        if(std::find(seat->getSkillNotAllowed().begin(), seat->getSkillNotAllowed().end(),
-            skill->mSkill->getType()) != seat->getSkillNotAllowed().end())
-            continue;
-        if(!seat->isSkillDone(skill->mSkill->getType()) && !skill->mSkill->canBeSkilled(seat->getSkillDone()))
+        if(!seat->canResearchLevel(skill->mSkill->getType(), static_cast<int>(level) + 1, nothingQueued))
             continue;
         return false;
     }
@@ -930,6 +769,61 @@ const Skill* SkillManager::getSkill(SkillType resType)
         return nullptr;
     }
     return skill->mSkill;
+}
+
+SkillTab SkillManager::getSkillTab(SkillType resType)
+{
+    const uint32_t index = static_cast<uint32_t>(resType);
+    if(index >= getSkillManager().mSkills.size() || getSkillManager().mSkills[index] == nullptr)
+    {
+        OD_LOG_ERR("wrong index=" + Helper::toString(index));
+        return SkillTab::rooms;
+    }
+
+    return getSkillManager().mSkills[index]->mTab;
+}
+
+uint32_t SkillManager::getSkillTier(SkillType resType)
+{
+    const uint32_t index = static_cast<uint32_t>(resType);
+    if(index >= getSkillManager().mSkills.size() || getSkillManager().mSkills[index] == nullptr)
+    {
+        OD_LOG_ERR("wrong index=" + Helper::toString(index));
+        return 1;
+    }
+
+    return getSkillManager().mSkills[index]->mTier;
+}
+
+const std::string& SkillManager::getTabTitle(SkillTab tab)
+{
+    switch(tab)
+    {
+        case SkillTab::traps:
+            return TAB_TITLE_TRAPS;
+        case SkillTab::spells:
+            return TAB_TITLE_SPELLS;
+        default:
+            return TAB_TITLE_ROOMS;
+    }
+}
+
+std::string SkillManager::getTreeButtonPath(SkillType resType)
+{
+    const uint32_t index = static_cast<uint32_t>(resType);
+    if(index >= getSkillManager().mSkills.size() || getSkillManager().mSkills[index] == nullptr)
+    {
+        OD_LOG_ERR("wrong index=" + Helper::toString(index));
+        return "";
+    }
+
+    const SkillDef* skill = getSkillManager().mSkills[index];
+    return skill->mSkillFamily + skill->mButtonName;
+}
+
+void SkillManager::listTabSkills(SkillTab tab, std::vector<SkillType>& skills)
+{
+    skills = getSkillManager().mTabSkills.at(static_cast<uint32_t>(tab));
 }
 
 double SkillManager::getResearchValue(const Seat* seat, SkillType type, double base, bool secondary)
@@ -1078,48 +972,37 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
 void SkillManager::buildRandomPendingSkillsForSeat(std::vector<SkillType>& skills,
         const Seat* seat)
 {
-    const std::vector<SkillType>& skillNotAllowed = seat->getSkillNotAllowed();
-    std::vector<const SkillDef*> availableSkills;
-    // We consider as done skills already done for the given seat as well as the skills
-    // already pending
-    std::vector<SkillType> doneSkills = seat->getSkillDone();
-    doneSkills.insert(doneSkills.begin(), skills.begin(), skills.end());
-    // We fill availableSkills with all the skills that are not already done and
-    // that can be researched
-    for(const SkillDef* skill : getSkillManager().mSkills)
+    // The list grows step by step: each step picks at random one of the entries (with the next level of
+    // each) that the seat may research after the entries chosen so far, until nothing is left
+    std::vector<std::pair<SkillType, int>> queued = seat->getQueuedLevels(skills);
+    while(true)
     {
-        if(skill == nullptr)
-            continue;
-
-        SkillType resType = skill->mSkill->getType();
-        if(Skills::isRewardSkill(resType))
-            continue;
-        // We do not consider skills already pending or done
-        if(seat->getSkillLevel(resType) >= 3 || std::find(skills.begin(), skills.end(), resType) != skills.end())
-            continue;
-
-        if(std::find(skillNotAllowed.begin(), skillNotAllowed.end(), resType) != skillNotAllowed.end() ||
-           (!seat->isSkillDone(resType) && skill->mSkill->dependsOn(skillNotAllowed)))
-            continue;
-
-        availableSkills.push_back(skill);
-        doneSkills.push_back(resType);
-    }
-
-    // Now, availableSkills only contains skills that can be done (but unsorted).
-    // We need to shuffle that and fill skills.
-    doneSkills = seat->getSkillDone();
-    Random::shuffle(availableSkills.begin(), availableSkills.end());
-    for(const SkillDef* skill : availableSkills)
-    {
-        if(seat->isSkillDone(skill->mSkill->getType()))
+        std::vector<SkillType> candidates;
+        for(const SkillDef* skill : getSkillManager().mSkills)
         {
-            skills.push_back(skill->mSkill->getType());
-            continue;
+            if(skill == nullptr)
+                continue;
+
+            SkillType resType = skill->mSkill->getType();
+            if(Skills::isRewardSkill(resType))
+                continue;
+            // We do not consider skills already pending or at their last level
+            const uint32_t level = seat->getSkillLevel(resType);
+            if(level >= 3 || std::find(skills.begin(), skills.end(), resType) != skills.end())
+                continue;
+
+            if(!seat->canResearchLevel(resType, static_cast<int>(level) + 1, queued))
+                continue;
+
+            candidates.push_back(resType);
         }
-        // Since buildDependencies guarantees to not add duplicate skills, it is safe
-        // to call it for every skill not already done
-        skill->mSkill->buildDependencies(doneSkills, skills);
+
+        if(candidates.empty())
+            break;
+
+        const SkillType picked = candidates[Random::Uint(0, static_cast<unsigned int>(candidates.size()) - 1)];
+        skills.push_back(picked);
+        queued.push_back(std::make_pair(picked, static_cast<int>(seat->getSkillLevel(picked)) + 1));
     }
 }
 
@@ -1131,7 +1014,9 @@ void SkillManager::listAllSkills(const std::function<void(const std::string&, co
         if(skill == nullptr)
             continue;
 
-        func(skill->mSkillFamily + skill->mButtonName, skill->getGuiPath() + skill->mButtonName,
+        // A skill without an action bar button (a keeper skill) has an empty cast button name
+        const std::string castButtonName = skill->getGuiPath().empty() ? "" : skill->getGuiPath() + skill->mButtonName;
+        func(skill->mSkillFamily + skill->mButtonName, castButtonName,
              skill->mSkillFamily + skill->mButtonName + "/" + skill->mButtonName + "ProgressBar",
              skill->mSkill->getType());
     }
@@ -1205,7 +1090,7 @@ void SkillManager::updateCostTooltip(GameMap* gameMap, CEGUI::Window* rootWindow
 {
     for(const SkillDef* skill : getSkillManager().mSkills)
     {
-        if(skill == nullptr || hoveredWindow->getName() != skill->mButtonName ||
+        if(skill == nullptr || skill->getGuiPath().empty() || hoveredWindow->getName() != skill->mButtonName ||
             hoveredWindow != rootWindow->getChild(skill->getGuiPath() + skill->mButtonName))
             continue;
 
