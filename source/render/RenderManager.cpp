@@ -146,8 +146,6 @@ static const Ogre::Real SLEEP_BREATH_WIDTH_RATIO = 0.4f;
 static const Ogre::Real SLEEP_BED_MAX_SQUARED_DISTANCE = 1.0f;
 //! Gap between the mattress and the sleeping creature.
 static const Ogre::Real SLEEP_BED_CLEARANCE = 0.01f;
-//! Height above the top of the bed mesh from which the mattress is searched.
-static const Ogre::Real SLEEP_BED_RAY_HEIGHT = 1.0f;
 //! Reuse the hand's short four-frame pose blend when entering a native wake clip.
 static const Ogre::Real CREATURE_WAKE_BLEND_DURATION = 4.0f / 30.0f;
 //! Seconds a room construction burst stays in the scene. It is longer than the emitter
@@ -192,10 +190,6 @@ const size_t MARKED_FOG_INSTANCES_PER_BATCH = 128;
 
 namespace
 {
-//! Length of the hand pose transition and of the dig swing (four frames at 30 fps).
-const Ogre::Real HAND_ANIMATION_DURATION = 4.0f / 30.0f;
-//! Side length in pixels of the tool atlas textures.
-const float HAND_TOOL_ATLAS_SIZE = 128.0f;
 //! Height above the floor of the tile preview outline.
 const float TILE_PREVIEW_FLOOR_HEIGHT = 0.04f;
 
@@ -242,7 +236,7 @@ void createKeeperHandPoses(Ogre::Entity* hand)
         if(!hand->hasAnimationState(pose))
             hand->getAllAnimationStates()->createAnimationState(pose, 0, 1.0f);
     }
-    const Ogre::Real duration = HAND_ANIMATION_DURATION;
+    const Ogre::Real duration = 4.0f / 30.0f;
     if(!skeleton->hasAnimation("PointTransition"))
     {
         Ogre::Animation* transition = skeleton->createAnimation("PointTransition", duration);
@@ -378,7 +372,7 @@ void extendHandCursorBounds(Ogre::FloatRect& bounds, const Ogre::Camera* camera,
 void createKeeperHandDigAnimation(Ogre::Entity* hand, const Ogre::String& name = "DigSwing")
 {
     Ogre::Skeleton* skeleton = hand->getMesh()->getSkeleton().get();
-    const Ogre::Real duration = HAND_ANIMATION_DURATION;
+    const Ogre::Real duration = 4.0f / 30.0f;
     if(!skeleton->hasAnimation(name))
     {
         const Ogre::Animation* grip = skeleton->getAnimation("Dig");
@@ -626,13 +620,6 @@ void addPreviewLine(Ogre::ManualObject* preview, const Ogre::Vector3& from, cons
     preview->colour(colour);
 }
 
-//! Adds a texture coordinate inside textureArea, with u and v in [0, 1] across that area.
-void addAtlasTextureCoord(Ogre::ManualObject* mesh, const Ogre::FloatRect& textureArea, float u, float v)
-{
-    mesh->textureCoord(textureArea.left + u * textureArea.width(),
-        textureArea.top + v * textureArea.height());
-}
-
 void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>& points,
     float depth, const Ogre::ColourValue& colour, const Ogre::FloatRect& surface,
     const Ogre::FloatRect& textureArea)
@@ -652,8 +639,8 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
             {
                 mesh->position(points[corner].x, points[corner].y, z);
                 mesh->colour(colour);
-                addAtlasTextureCoord(mesh, textureArea, (points[corner].x - surface.left) / surface.width(),
-                    (points[corner].y - surface.top) / surface.height());
+                mesh->textureCoord(textureArea.left + ((points[corner].x - surface.left) / surface.width()) * textureArea.width(),
+                    textureArea.top + ((points[corner].y - surface.top) / surface.height()) * textureArea.height());
             }
         }
     }
@@ -670,9 +657,11 @@ void addPickaxePrism(Ogre::ManualObject* mesh, const std::vector<Ogre::Vector2>&
             // Map depth across the side rather than collapsing its UVs onto an edge.
             const float across = (vertex.z + depth) / (2.0f * depth);
             if(std::abs(b.y - a.y) > std::abs(b.x - a.x))
-                addAtlasTextureCoord(mesh, textureArea, across, (vertex.y - surface.top) / surface.height());
+                mesh->textureCoord(textureArea.left + across * textureArea.width(),
+                    textureArea.top + ((vertex.y - surface.top) / surface.height()) * textureArea.height());
             else
-                addAtlasTextureCoord(mesh, textureArea, (vertex.x - surface.left) / surface.width(), across);
+                mesh->textureCoord(textureArea.left + ((vertex.x - surface.left) / surface.width()) * textureArea.width(),
+                    textureArea.top + across * textureArea.height());
         }
     }
 }
@@ -1402,7 +1391,7 @@ Ogre::Vector3 getBedSupportPoint(const Ogre::MeshPtr& mesh)
 {
     // A ray through the centre finds the mattress, not the tops of bed posts.
     Ogre::Vector3 point = mesh->getBounds().getCenter();
-    point.z = mesh->getBounds().getMaximum().z + SLEEP_BED_RAY_HEIGHT;
+    point.z = mesh->getBounds().getMaximum().z + 1.0f;
     const Ogre::Ray ray(point, Ogre::Vector3::NEGATIVE_UNIT_Z);
     Ogre::Real nearest = Ogre::Math::POS_INFINITY;
     for(unsigned int sub = 0; sub < mesh->getNumSubMeshes(); ++sub)
@@ -2145,10 +2134,8 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
     mHandPickaxe->setCastShadows(false);
     mHandPickaxe->setRenderQueueGroup(OD_RENDER_QUEUE_ID_GUI);
     // Use interior atlas regions from the existing wood and metal textures.
-    const Ogre::FloatRect woodArea(5.0f / HAND_TOOL_ATLAS_SIZE, 2.0f / HAND_TOOL_ATLAS_SIZE,
-        39.0f / HAND_TOOL_ATLAS_SIZE, 124.0f / HAND_TOOL_ATLAS_SIZE);
-    const Ogre::FloatRect metalArea(58.0f / HAND_TOOL_ATLAS_SIZE, 42.0f / HAND_TOOL_ATLAS_SIZE,
-        118.0f / HAND_TOOL_ATLAS_SIZE, 118.0f / HAND_TOOL_ATLAS_SIZE);
+    const Ogre::FloatRect woodArea(5.0f/128, 2.0f/128, 39.0f/128, 124.0f/128);
+    const Ogre::FloatRect metalArea(58.0f/128, 42.0f/128, 118.0f/128, 118.0f/128);
     const Ogre::FloatRect shaftSurface(-0.006f, -0.065f, 0.006f, 0.075f);
     const Ogre::FloatRect headSurface(-0.085f, 0.043f, 0.085f, 0.085f);
     mHandPickaxe->begin("HandTool/Wood", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");

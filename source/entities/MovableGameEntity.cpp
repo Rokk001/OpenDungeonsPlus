@@ -41,10 +41,6 @@
 const double COMBAT_ATTACK_SPEED_FACTOR = 1.35;
 //! Playback speed factor of the die animation.
 const double DIE_ANIMATION_SPEED_FACTOR = 1.15;
-//! Facing sign of an entity that looks along the way it moves
-const Ogre::Real FACING_WITH_MOVE = 1.0f;
-//! Facing sign of an entity that looks against the way it moves (pulling or being pulled backwards)
-const Ogre::Real FACING_AGAINST_MOVE = -1.0f;
 
 //! \brief Initializes movement and client-side animation request tracking.
 MovableGameEntity::MovableGameEntity(GameMap* gameMap) :
@@ -402,7 +398,7 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
     // The worker that pulls a hurt creature walks backwards and the creature that is pulled lies with its
     // head to the rear: both look against the way they move (server and clients, by the clip they play)
     const Ogre::Real facing = ((mPrevAnimationState == EntityAnimation::drag_anim) ||
-        (mPrevAnimationState == EntityAnimation::dragged_anim)) ? FACING_AGAINST_MOVE : FACING_WITH_MOVE;
+        (mPrevAnimationState == EntityAnimation::dragged_anim)) ? -1.0f : 1.0f;
 
     while(moveDist > 0.0)
     {
