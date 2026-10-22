@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that every change on the integration line is also carried by an open pull request.
 
-Compares the target ref (default origin/integration/all) with the union of the heads of all
+Compares the target ref (default origin/integration/all, or HEAD when --count-file is given) with the union of the heads of all
 open pull requests of one author (default Rokk001, listed through the GitHub CLI against the
 upstream repository). Both sides are diffed against the merge base with the upstream base
 branch. Reported are
@@ -19,7 +19,8 @@ Output: one line "file: <path>" per uncovered file and "lines: <path>: <count> u
 (with the first lines shown) per partly covered file, then a summary.
 With --count-file the number of gaps of every run is stored in that file as one line
 "PR coverage gaps (last run): <n>" (the line is replaced, or appended if the file or the
-line is missing); the run fails when the number is higher than the stored value of the
+line is missing); with --count-file the target defaults to HEAD, so an integration run measures the
+merged state of its worktree and not the remote ref; the run fails when the number is higher than the stored value of the
 previous run (the first run only stores it), so old gaps do not turn a run red. When the
 number rose, the stored value is left unchanged.
 Exit codes: 0 = finished (gaps are only listed unless --strict is given), 1 = gaps found
@@ -211,7 +212,7 @@ def write_count(path, gaps):
 def main():
     """Parse the arguments, compute the gaps and print them; return the exit code."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--target", default=DEFAULT_TARGET)
+    parser.add_argument("--target", default=None, help="ref to measure (default: HEAD with --count-file, else %s)" % DEFAULT_TARGET)
     parser.add_argument("--base", default=DEFAULT_BASE)
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--author", default=DEFAULT_AUTHOR)
@@ -219,6 +220,9 @@ def main():
     parser.add_argument("--count-file", default=None, help="file that keeps the gap count of the last run")
     parser.add_argument("--strict", action="store_true", help="exit 1 when gaps are found")
     options = parser.parse_args()
+    if options.target is None:
+        # An integration run measures the merged HEAD of its worktree; without a count file the remote ref is measured.
+        options.target = "HEAD" if options.count_file else DEFAULT_TARGET
     try:
         heads = list_open_pr_heads(options.repo, options.author)
         if not heads:
