@@ -152,7 +152,7 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
                 {
                     // OGRE 14 rejects an int overload for a bool uniform, so the value goes in as a one element array
                     const int shadowingDisabled = 0;
-                    parameters->setNamedConstant("shadowingEnabled", &shadowingDisabled, 1);
+                    parameters->setNamedConstant("shadowingEnabled", &shadowingDisabled, 1, 1);
                 }
             }
         }

@@ -1248,7 +1248,7 @@ static void setShadowingEnabledParameters(bool enabled)
                         }
                         // OGRE 14 rejects an int overload for a bool uniform, so the value goes in as a one element array
                         const int shadowingValue = (enabled && hasShadowTexture) ? 1 : 0;
-                        parameters->setNamedConstant("shadowingEnabled", &shadowingValue, 1);
+                        parameters->setNamedConstant("shadowingEnabled", &shadowingValue, 1, 1);
                     }
                 }
             }
