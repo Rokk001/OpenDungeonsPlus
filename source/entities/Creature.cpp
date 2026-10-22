@@ -3438,8 +3438,12 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     }
     page->getChild("NameText")->setText(profile.getFullName());
 
-    std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
-        " - Level " + Helper::toString(getLevel());
+    // The champion shows a crown instead of its level
+    std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter");
+    if(definition->isChampion())
+        handle += " - " + CHAMPION_CROWN_MARKUP;
+    else
+        handle += " - Level " + Helper::toString(getLevel());
     page->getChild("HandleText")->setText(handle);
 
     std::string age = (profile.mAgeText == Helper::toString(profile.mAge)) ? "Age " + profile.mAgeText : profile.mAgeText;
@@ -3623,7 +3627,10 @@ std::string Creature::getStatsText()
 
     std::stringstream tempSS;
     tempSS << formatTitleOn << "Characteristics" << formatTitleOff << std::endl;
-    tempSS << "Level: " << getLevel() << std::endl;
+    if(getDefinition()->isChampion())
+        tempSS << "Level: " << CHAMPION_CROWN_MARKUP << std::endl;
+    else
+        tempSS << "Level: " << getLevel() << std::endl;
     tempSS << "Experience: " << mExp << std::endl;
     tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
     tempSS << "Gold: " << mGoldCarried << std::endl;

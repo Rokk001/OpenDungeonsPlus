@@ -158,6 +158,9 @@ bool SpellSummonChampion::castSpell(GameMap* gameMap, Player* player, ODPacket& 
 
     Creature* champion = new Creature(gameMap, definition, player->getSeat());
     OD_LOG_INF("Summoning the champion, name=" + champion->getName() + ", seatId=" + Helper::toString(player->getSeat()->getId()));
+    // The champion always fights at the highest level; set it before it enters the map, like a portal wave creature.
+    champion->setLevel(MAX_LEVEL);
+    champion->setHP(champion->getMaxHp());
     champion->addToGameMap();
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
                                 static_cast<Ogre::Real>(tile->getY()),

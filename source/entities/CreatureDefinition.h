@@ -41,6 +41,9 @@ enum class RoomType;
 //! \brief The maximum level of a creature
 static const uint32_t MAX_LEVEL = 30;
 
+//! \brief GUI text markup of the crown picture that is shown instead of the level of the champion
+static const std::string CHAMPION_CROWN_MARKUP = "[image-size='w:16 h:16'][image='ChampionCrown/Crown']";
+
 class CreatureRoomAffinity
 {
 public:
