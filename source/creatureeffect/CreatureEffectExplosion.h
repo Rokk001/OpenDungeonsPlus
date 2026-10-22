@@ -25,7 +25,7 @@ class CreatureEffectExplosion : public CreatureEffect
 {
 public:
     //! \brief Creates a fixed damage effect whose minimum may be supplied separately.
-    CreatureEffectExplosion(int32_t nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
+    CreatureEffectExplosion(double nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
         mEffectValue(effectValue),
         mEffectValueMin(effectValue)

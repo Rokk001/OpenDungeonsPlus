@@ -43,6 +43,8 @@ enum class CreatureOverlays
     experience,
     //! Attack recovery clock and level caption
     recovery,
+    //! Crown shown instead of the level caption for the champion
+    crown,
     //! Mood symbol
     status,
     nbCreatureOverlays
@@ -59,6 +61,32 @@ const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;
 const Ogre::Real EMOTE_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the emote picture
 const Ogre::Real EMOTE_SIZE = 32;
+//! Material of the crown that replaces the level caption of the champion
+const std::string CROWN_MATERIAL_NAME = "ChampionCrown";
+//! Character height of the crown overlay (it shows no text)
+const Ogre::Real CROWN_CHAR_HEIGHT = 16;
+//! Width and height in pixels of the area of the crown picture
+const Ogre::Real CROWN_SIZE = 64;
+
+//! \brief Shows the level of a creature in the recovery overlay: the level number, or for the champion an empty
+//! caption and the crown.
+//! \param overlay The overlay of the creature.
+//! \param levelId Child overlay that carries the level caption.
+//! \param crownId Child overlay that shows the crown.
+//! \param champion True if the creature is the champion.
+//! \param level Level shown as number for every other creature.
+static void showLevelDisplay(MovableTextOverlay* overlay, uint32_t levelId, uint32_t crownId, bool champion,
+        uint32_t level)
+{
+    if(champion)
+    {
+        overlay->setCaption(levelId, "");
+        overlay->displayOverlay(crownId, -1);
+        return;
+    }
+
+    overlay->setCaption(levelId, Helper::toString(level));
+}
 
 CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* ent,
         Ogre::Camera* cam) :
@@ -97,6 +125,14 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mMovableTextOverlay->setCaptionOutline(recoveryId, Ogre::ColourValue(1.0f, 0.91f, 0.66f, 1.0f));
     mMovableTextOverlay->setAtlasFrame(recoveryId, 0, PROGRESS_ATLAS_COLUMNS);
     mMovableTextOverlay->displayOverlay(recoveryId, -1);
+
+    // The crown is drawn instead of the level number of the champion; it stays hidden for every other creature
+    uint32_t crownId = mMovableTextOverlay->createChildOverlay("MedievalSharp", CROWN_CHAR_HEIGHT,
+        Ogre::ColourValue::White, "", false);
+    mOverlayIds[static_cast<uint32_t>(CreatureOverlays::crown)] = crownId;
+    mMovableTextOverlay->forceTextArea(crownId, CROWN_SIZE, CROWN_SIZE);
+    mMovableTextOverlay->setMaterialName(crownId, CROWN_MATERIAL_NAME);
+    mMovableTextOverlay->displayOverlay(crownId, 0);
 
     updateHealth();
 
@@ -174,7 +210,8 @@ void CreatureOverlayStatus::updateHealth()
             mLevel < 10 ? LEVEL_CAPTION_SIZE_ONE_DIGIT : LEVEL_CAPTION_SIZE_TWO_DIGITS);
         if(mStatus == 0)
         {
-            mMovableTextOverlay->setCaption(levelId, Helper::toString(mLevel));
+            const uint32_t crownId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::crown)];
+            showLevelDisplay(mMovableTextOverlay, levelId, crownId, mCreature->getDefinition()->isChampion(), mLevel);
         }
     }
 
@@ -223,12 +260,14 @@ void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)
     // The level caption belongs to the recovery overlay; it is cleared while a mood symbol is shown
     uint32_t levelId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)];
     uint32_t statusId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::status)];
+    uint32_t crownId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::crown)];
+    const bool champion = mCreature->getDefinition()->isChampion();
     if(moodValue == 0)
     {
         mStatus = 0;
         mTimeDisplayStatus = 0.0;
         mMovableTextOverlay->displayOverlay(statusId, 0);
-        mMovableTextOverlay->setCaption(levelId, Helper::toString(mLevel));
+        showLevelDisplay(mMovableTextOverlay, levelId, crownId, champion, mLevel);
         return;
     }
 
@@ -248,7 +287,7 @@ void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)
         mStatus = 0;
         mTimeDisplayStatus = 1.0;
         mMovableTextOverlay->displayOverlay(statusId, 0);
-        mMovableTextOverlay->setCaption(levelId, Helper::toString(mLevel));
+        showLevelDisplay(mMovableTextOverlay, levelId, crownId, champion, mLevel);
         return;
     }
 
@@ -258,6 +297,7 @@ void CreatureOverlayStatus::updateStatus(Ogre::Real timeSincelastFrame)
     mMovableTextOverlay->setMaterialName(statusId, material);
     mMovableTextOverlay->displayOverlay(statusId, -1);
     mMovableTextOverlay->setCaption(levelId, "");
+    mMovableTextOverlay->displayOverlay(crownId, 0);
 }
 
 //! \brief Keeps interface overlay clocks independent while expiring reaction icons in game time.

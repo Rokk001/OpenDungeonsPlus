@@ -25,7 +25,7 @@ class CreatureEffectBurn : public CreatureEffect
 {
 public:
     //! \brief Creates a fixed damage effect whose minimum may be supplied separately.
-    CreatureEffectBurn(int32_t nbTurnsEffect, double damagePerTurn, const std::string& particleEffectName) :
+    CreatureEffectBurn(double nbTurnsEffect, double damagePerTurn, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
         mDamagePerTurn(damagePerTurn),
         mDamagePerTurnMin(damagePerTurn)

@@ -11,7 +11,7 @@ assert upkeep.count("mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns -
 assert upkeep.index("if(isFrozen())") < countdown < possessed
 assert upkeep.index("if(isHexenHen())") < countdown
 assert 'mNeedFireRefresh = true;' in upkeep[countdown:possessed]
-assert upkeep.index('skillData.mCooldown = std::max(0.0, skillData.mCooldown - 1.0);', possessed) > countdown
+assert upkeep.index('skillData.mCooldown -= 1.0;', possessed) > countdown
 assert upkeep.index('possessedFunc();', possessed) > countdown
 assert 'working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns' in source
 assert 'os << getExperienceProgress() << remaining << duration << mAttackRecoverySerial;' in source

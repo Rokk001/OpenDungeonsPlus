@@ -77,8 +77,11 @@ bool CreatureSkillExplosion::tryUseFight(GameMap& gameMap, Creature* creature, f
     }
 
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
-    CreatureEffectExplosion* effect = new CreatureEffectExplosion(mEffectDuration, mEffectValue, "SpellCreatureExplosion");
-    effect->setDamageMin(mEffectValueMin);
+    // The damage follows the SkillDamageFactor of the creature type
+    const double damageFactor = creature->getDefinition()->getSkillDamageFactor();
+    CreatureEffectExplosion* effect = new CreatureEffectExplosion(mEffectDuration, mEffectValue * damageFactor,
+        "SpellCreatureExplosion");
+    effect->setDamageMin(mEffectValueMin * damageFactor);
     attackedCreature->addCreatureEffect(effect);
 
     return true;

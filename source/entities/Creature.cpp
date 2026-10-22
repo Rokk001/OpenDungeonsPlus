@@ -1850,11 +1850,13 @@ void Creature::doUpkeep()
         // The creature skills keep recovering while the player controls the creature
         for(CreatureSkillData& skillData : mSkillData)
         {
-            if(skillData.mWarmup > 0)
-                --skillData.mWarmup;
+            // The timers keep their fractions: they count down while positive and are not clamped to 0,
+            // so the negative remainder carries over to the next use
+            if(skillData.mWarmup > 0.0)
+                skillData.mWarmup -= 1.0;
 
             if(skillData.mCooldown > 0.0)
-                skillData.mCooldown = std::max(0.0, skillData.mCooldown - 1.0);
+                skillData.mCooldown -= 1.0;
         }
 
         std::function<bool()> possessedFunc = mActions.back()->action();
@@ -1866,17 +1868,18 @@ void Creature::doUpkeep()
     // We use creature skills if we can
     for(CreatureSkillData& skillData : mSkillData)
     {
-        if(skillData.mWarmup > 0)
+        if(skillData.mWarmup > 0.0)
         {
-            --skillData.mWarmup;
+            skillData.mWarmup -= 1.0;
             isWarmUp = true;
         }
 
+        // The cooldown counts down while positive (no clamp to 0); the skill is usable when it is <= 0
         if(skillData.mCooldown > 0.0)
-        {
-            skillData.mCooldown = std::max(0.0, skillData.mCooldown - 1.0);
+            skillData.mCooldown -= 1.0;
+
+        if(skillData.mCooldown > 0.0)
             continue;
-        }
 
         if(!skillData.mSkill->canBeUsedBy(this))
             continue;
@@ -1884,15 +1887,16 @@ void Creature::doUpkeep()
         if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
             continue;
 
-        skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
-        skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+        // The new cooldown and warmup are added, so the remainder of the last turn carries over
+        skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
+        skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
         // Successful self-casts use the same recovery display as attacks.
         mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
         mAttackRecoveryTurns = mAttackRecoveryDuration;
         ++mAttackRecoverySerial;
         mNeedFireRefresh = true;
 
-        if(skillData.mWarmup > 0)
+        if(skillData.mWarmup > 0.0)
             isWarmUp = true;
     }
 
@@ -3438,8 +3442,12 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     }
     page->getChild("NameText")->setText(profile.getFullName());
 
-    std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
-        " - Level " + Helper::toString(getLevel());
+    // The champion shows a crown instead of its level
+    std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter");
+    if(definition->isChampion())
+        handle += " - " + CHAMPION_CROWN_MARKUP;
+    else
+        handle += " - Level " + Helper::toString(getLevel());
     page->getChild("HandleText")->setText(handle);
 
     std::string age = (profile.mAgeText == Helper::toString(profile.mAge)) ? "Age " + profile.mAgeText : profile.mAgeText;
@@ -3623,7 +3631,10 @@ std::string Creature::getStatsText()
 
     std::stringstream tempSS;
     tempSS << formatTitleOn << "Characteristics" << formatTitleOff << std::endl;
-    tempSS << "Level: " << getLevel() << std::endl;
+    if(getDefinition()->isChampion())
+        tempSS << "Level: " << CHAMPION_CROWN_MARKUP << std::endl;
+    else
+        tempSS << "Level: " << getLevel() << std::endl;
     tempSS << "Experience: " << mExp << std::endl;
     tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
     tempSS << "Gold: " << mGoldCarried << std::endl;
@@ -4488,8 +4499,9 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     // We use the skill
     skillData.mSkill->tryUseFight(*getGameMap(), this, range,
         &entityAttack, &tileAttack, ko, notifyPlayerIfHit);
-    skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
-    skillData.mCooldown = getAppliedCooldownNbTurns(*skillData.mSkill);
+    // The new timers are added, so the remainder of the last turn carries over (fractions are kept)
+    skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
+    skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);
 
     // Both timers count down together; either can postpone the next attack.
     mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
@@ -6113,7 +6125,7 @@ void Creature::addCreatureEffect(CreatureEffect* effect)
     OD_LOG_INF("Added CreatureEffect name=" + effectName + " on creature=" + getName());
 
     CreatureParticleEffect* particleEffect = new CreatureParticleEffect(*this, effectName, effect->getParticleEffectScript(),
-        effect->getNbTurnsEffect(), effect);
+        static_cast<int32_t>(std::ceil(effect->getNbTurnsEffect())), effect);
     mEntityParticleEffects.push_back(particleEffect);
 
     mNeedFireRefresh = true;
@@ -6553,7 +6565,7 @@ bool Creature::isWarmup() const
 {
     for(const CreatureSkillData& skillData : mSkillData)
     {
-        if(skillData.mWarmup > 0)
+        if(skillData.mWarmup > 0.0)
             return true;
     }
 
@@ -7093,7 +7105,7 @@ bool isPossessedBasicAttack(const CreatureSkill& skill)
 //! \param skillData The state of the skill (cooldown and warmup turns left).
 bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
 {
-    return (skillData.mCooldown <= 0.0) && (skillData.mWarmup == 0) &&
+    return (skillData.mCooldown <= 0.0) && (skillData.mWarmup <= 0.0) &&
         skillData.mSkill->canBeUsedBy(&creature);
 }
 }
@@ -7242,8 +7254,8 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
             if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
                 return;
 
-            skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
-            skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+            skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
+            skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
             // Report a successful self-cast exactly as in normal creature control.
             mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
             mAttackRecoveryTurns = mAttackRecoveryDuration;
