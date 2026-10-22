@@ -112,7 +112,14 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
     double phyMin = mPhyMin * damageFactor, phyMax = mPhyMax * damageFactor;
     double magMin = mMagMin * damageFactor, magMax = mMagMax * damageFactor;
     double eleMin = mEleMin * damageFactor, eleMax = mEleMax * damageFactor;
-    CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax);
+    // Bow and crossbow lines (not the grenade) follow the Dexterity attribute level, every other line the creature
+    // level. The first attack line of a type without bow is its spell attack: spell% instead of dmg%.
+    const bool carriesBow = creature->carriesBowOrCrossbow();
+    const bool dexterityLine = carriesBow && getSkillName() != "Grenade";
+    const double damageLevel = dexterityLine ? creature->getDexterityLevel() : static_cast<double>(creature->getLevel());
+    const bool spellLine = !carriesBow && creature->getDefinition()->isFirstAttackSkill(this);
+    CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
+        damageLevel, spellLine ? "spell%" : "dmg%");
     missile->setCreatureDamageRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
         creature->getModifierStrength());
     // The plain missile tells the clients what the shot did (cosmetic event hitResult). Guided bolts set their

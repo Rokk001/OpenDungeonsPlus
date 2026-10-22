@@ -102,6 +102,23 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mCreatureDamageExponent(1.167),
     mCreatureHpGrowthPerLevel(0.018),
     mCooldownReductionPerLevel(0.0),
+    mCritChancePerDexterity(0.2),
+    mCritChancePerLevel(0.3),
+    mCritDamageMultiplier(2.0),
+    mManaRefillSeconds(120.0),
+    mManaPerCasterShot(2.5),
+    mManaPerDragonSecondShot(5.0),
+    mSkillPointFirstLevel(10),
+    mSkillRanksPerSkill(5),
+    mSkillTemplateDeviationPercent(25.0),
+    mSkillRespecChickens(2),
+    mSkillRespecWindowSeconds(60.0),
+    mSkillSpellReferenceMinHP(86.1),
+    mSkillHealSelfBelow(0.6),
+    mSkillHealAllyBelow(0.6),
+    mSkillHealAreaBelow(0.7),
+    mSkillHealAreaMinCreatures(2),
+    mGoldCarryPerStrength(0.01),
     mLowHealthWalkThresholdPercent(50.0),
     mHeartHealthStages(5),
     mHeartHealthStageEvents(true),
@@ -765,6 +782,125 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCooldownReductionPerLevel = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CritChancePerDexterity")
+        {
+            configFile >> nextParam;
+            mCritChancePerDexterity = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CritChancePerLevel")
+        {
+            configFile >> nextParam;
+            mCritChancePerLevel = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CritDamageMultiplier")
+        {
+            configFile >> nextParam;
+            mCritDamageMultiplier = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ManaRefillSeconds")
+        {
+            configFile >> nextParam;
+            mManaRefillSeconds = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ManaPerCasterShot")
+        {
+            configFile >> nextParam;
+            mManaPerCasterShot = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ManaPerDragonSecondShot")
+        {
+            configFile >> nextParam;
+            mManaPerDragonSecondShot = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillPointFirstLevel")
+        {
+            configFile >> nextParam;
+            mSkillPointFirstLevel = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillRanksPerSkill")
+        {
+            configFile >> nextParam;
+            mSkillRanksPerSkill = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillTemplateDeviationPercent")
+        {
+            configFile >> nextParam;
+            mSkillTemplateDeviationPercent = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillRespecChickens")
+        {
+            configFile >> nextParam;
+            mSkillRespecChickens = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillRespecWindowSeconds")
+        {
+            configFile >> nextParam;
+            mSkillRespecWindowSeconds = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillSpellReferenceMinHP")
+        {
+            configFile >> nextParam;
+            mSkillSpellReferenceMinHP = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillHealSelfBelow")
+        {
+            configFile >> nextParam;
+            mSkillHealSelfBelow = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillHealAllyBelow")
+        {
+            configFile >> nextParam;
+            mSkillHealAllyBelow = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillHealAreaBelow")
+        {
+            configFile >> nextParam;
+            mSkillHealAreaBelow = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "SkillHealAreaMinCreatures")
+        {
+            configFile >> nextParam;
+            mSkillHealAreaMinCreatures = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "GoldCarryPerStrength")
+        {
+            configFile >> nextParam;
+            mGoldCarryPerStrength = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
