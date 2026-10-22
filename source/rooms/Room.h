@@ -68,6 +68,10 @@ public:
 
     virtual RoomType getType() const = 0;
 
+    //! \brief Hit points of one tile of this room, read from the room configuration
+    //! key <RoomName>HP; falls back to Building::DEFAULT_TILE_HP when the key is missing.
+    double getTileHP() const;
+
     //! \brief What enemies can do to a room, read from RoomsClaimableByEnemies
     //! in the room configuration file.
     enum class ClaimMode
