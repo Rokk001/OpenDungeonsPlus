@@ -100,7 +100,8 @@ def append_fragment(text, container, fragment):
 
 # Build exactly the specified identity mount or the scaled reference mount.
 def weapon_bone(name, original, reference):
-    ids = {int(bone.attrib["id"]) for bone in original.find("bones")}
+    # OGRE 14 writes no id attribute; the bone index is then the order in the file.
+    ids = {int(bone.get("id", index)) for index, bone in enumerate(original.find("bones"))}
     bone = ET.Element("bone", {"id": str(max(ids) + 1), "name": "Weapon_R"})
     if name == "PitDemon":
         position = copy.deepcopy(reference.find("position"))
