@@ -15,12 +15,18 @@ source = source.replace('#include "utils/Helper.h"', '').replace('#include "util
 probe = r'''
 #include <Ogre.h>
 #include <Overlay/OgreOverlaySystem.h>
-#include <functional>
 #include <iostream>
 #include <sstream>
 namespace Helper {template<class T>std::string toString(T v){std::ostringstream s;s<<v;return s.str();}}
 #define OD_LOG_ERR(x) do {} while(false)
 SOURCE
+//! Whether back is drawn behind front: lower Z-order, or the same Z-order and an earlier position in their container
+bool drawsBehind(Ogre::OverlayElement* back,Ogre::OverlayElement* front){
+ if(back->getZOrder()!=front->getZOrder())return back->getZOrder()<front->getZOrder();
+ const Ogre::OverlayContainer::ChildMap& children=static_cast<Ogre::OverlayContainer*>(front->getParent())->getChildren();
+ for(Ogre::OverlayContainer::ChildMap::const_iterator it=children.begin();it!=children.end();++it){
+  if(it->second==back)return true;if(it->second==front)return false;}
+ return false;}
 int main(int argc,char** argv){try{
  Ogre::Root root("","","caption-outline.log");root.loadPlugin(std::string(argv[2])+"/bin/RenderSystem_GL3Plus");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
@@ -40,12 +46,6 @@ int main(int argc,char** argv){try{
  groups.addResourceLocation(std::string(argv[1])+"/gui/fonts","FileSystem","GUI");groups.initialiseResourceGroup("GUI");
  auto& manager=Ogre::OverlayManager::getSingleton();int checks=0,failures=0;
  auto check=[&](bool ok,const char* label){++checks;if(!ok){++failures;std::cout<<"FAIL "<<label<<'\n';}};
- std::function<bool(Ogre::OverlayElement*,Ogre::OverlayElement*)> drawsBehind=[&](Ogre::OverlayElement* back,Ogre::OverlayElement* front){
-  if(back->getZOrder()!=front->getZOrder())return back->getZOrder()<front->getZOrder();
-  const Ogre::OverlayContainer::ChildMap& children=static_cast<Ogre::OverlayContainer*>(front->getParent())->getChildren();
-  for(Ogre::OverlayContainer::ChildMap::const_iterator it=children.begin();it!=children.end();++it){
-   if(it->second==back)return true;if(it->second==front)return false;}
-  return false;};
  {
   MovableTextOverlay label("OutlineProbe",object,camera);
   auto id=label.createChildOverlay("MedievalSharp",32,Ogre::ColourValue(1,.91f,.66f),"");
