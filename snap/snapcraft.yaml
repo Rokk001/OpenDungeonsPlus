@@ -133,7 +133,6 @@ parts:
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE=Debug
       - -DCMAKE_INSTALL_PREFIX=/usr
-      - -DCMAKE_CXX_FLAGS=-std=c++11
 
       # Correct multiarch installation
       - -DINSTALL_LIB_DIR=lib/${SNAPCRAFT_ARCH_TRIPLET}
