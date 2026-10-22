@@ -58,7 +58,15 @@
 
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
-#include <fileapi.h>
+// MinGW's libstdc++ predefines NOMINMAX, and the game builds with -Werror:
+// an unconditional redefinition is fatal there.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 #include <OgreEntity.h>
@@ -546,14 +554,17 @@ void EditorMode::activate()
     // Hide also the Replay check-box as it doesn't make sense for the editor
     guiSheet->getChild("ConfirmExit/SaveReplayCheckbox")->hide();
     guiSheet->getChild("GameChatWindow/GameChatEditBox")->hide();
+    // Start the file dialogs in the folder the player's own levels are saved to.
+    // $HOME is not set on Windows, where the dialogs would open on nothing.
+    const std::string userLevelPath = ResourceManager::getSingleton().getUserLevelPathSkirmish();
     guiSheet->getChild("MenuEditorLoad")->hide();
     guiSheet->getChild("MenuEditorLoad")->getChild("LevelWindowFrame")
-    ->getChild("FilePath")->setText(getEnv("HOME"));
+    ->getChild("FilePath")->setText(userLevelPath);
     guiSheet->getChild("MenuEditorLoad")->getChild("LevelWindowFrame")
     ->getChild("FilePath")->fireEvent(CEGUI::Editbox::EventTextAccepted,args); 
     guiSheet->getChild("MenuEditorSave")->hide();
     guiSheet->getChild("MenuEditorSave")->getChild("LevelWindowFrame")
-    ->getChild("FilePath")->setText(getEnv("HOME"));
+    ->getChild("FilePath")->setText(userLevelPath);
     guiSheet->getChild("MenuEditorSave")->getChild("LevelWindowFrame")
     ->getChild("FilePath")->fireEvent(CEGUI::Editbox::EventTextAccepted,args);     
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>
@@ -2351,7 +2362,7 @@ bool EditorMode::loadMenuFilePathTextChanged( const CEGUI::EventArgs& /*arg*/)
                 int nn = 1;
                 for (directory_entry& xx : directory_iterator(pp))
                 {
-                    if(!(isFileHidden(xx.path().filename().generic_string())
+                    if(!(isFileHidden(xx.path())
                          && !isCheckboxSelected("MenuEditorLoad/LevelWindowFrame/HiddenFiles")))
                     {
                         if(xx.path().has_extension() && xx.path().extension().compare(L".level") == 0)
@@ -2505,7 +2516,7 @@ bool EditorMode::saveMenuFilePathTextChanged(const CEGUI::EventArgs& /*arg*/)
                 int nn = 1;
                 for (directory_entry& xx : directory_iterator(pp))
                 {
-                    if(!(isFileHidden(xx.path().filename().generic_string()) && !isCheckboxSelected("MenuEditorSave/LevelWindowFrame/HiddenFiles")))
+                    if(!(isFileHidden(xx.path()) && !isCheckboxSelected("MenuEditorSave/LevelWindowFrame/HiddenFiles")))
                     {
                         if(xx.path().has_extension() && xx.path().extension().compare(std::string(".level")) == 0)
                         {
@@ -2817,22 +2828,6 @@ bool EditorMode::updateDescription(const CEGUI::EventArgs&)
     return true;
 }
 
-std::string EditorMode::getEnv( const std::string & var )
-{
-    // WINDOWS:
-    // "you could look at HOMEDRIVE, HOMEPATH or USERPROFILE
-    // env variables on windows. or i guess SHGetFolderPathA()"
-    const char * val = std::getenv( var.c_str() );
-    if ( val == nullptr )
-    { // invalid to assign nullptr to std::string
-        return "";
-    }
-    else
-    {
-        return val;
-    }
-}
-
 
 void EditorMode::uninstallCreaturesMenuButtons()
 {
@@ -2951,16 +2946,20 @@ bool EditorMode::isCheckboxSelected(const CEGUI::String& checkbox)
 }
 
 
-bool EditorMode::isFileHidden(std::string path)
+//! \brief Tells whether a file is hidden: the hidden attribute on Windows, a leading dot elsewhere.
+//! \param path The whole path of the file, because Windows keeps the flag as a file attribute.
+bool EditorMode::isFileHidden(const boost::filesystem::path& path)
 {
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
-    
-    //DWORD attributes = GetFileAttributes(path);
-    //return (attributes & FILE_ATTRIBUTE_HIDDEN);
-    return false;
+    const DWORD attributes = GetFileAttributesA(path.string().c_str());
+    if(attributes == INVALID_FILE_ATTRIBUTES)
+        return false;
+
+    return (attributes & FILE_ATTRIBUTE_HIDDEN) != 0;
 #else
-    return (path[0] == '.');
-#endif    
+    const std::string filename = path.filename().string();
+    return !filename.empty() && (filename[0] == '.');
+#endif
 }
 
 
