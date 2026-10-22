@@ -67,10 +67,14 @@ public:
     static void stopAll(CreatureReactions& reactions);
 
 private:
+    //! \brief Returns true if the reactions are switched to full and their configuration is loaded
     static bool isActive(const CreatureReactions& reactions);
+    //! \brief Starts a reaction on the creature unless it is dead, far from the camera or busy; returns true if it started
     static bool show(CreatureReactions& reactions, Creature* creature, const std::string& eventName);
+    //! \brief Looks for the closest enemy in front of the attacker within the range; returns true and sets target and distance if there is one
     static bool findTarget(CreatureReactions& reactions, Creature* attacker, double range, Creature*& target,
         double& distance);
+    //! \brief Returns the reaction that gives the blow its look, chosen by the weapon of the attacker and by ranged or not
     static std::string chooseAttackEvent(const CreatureReactions& reactions, const Creature* attacker, bool ranged);
     //! \brief Queues a hit for one melee request, keeping already landed shots independent of waiting strikes.
     static void scheduleHit(CreatureReactions& reactions, Creature* target, uint32_t level, bool shield, double delay,
@@ -79,15 +83,25 @@ private:
     static void processAttacks(CreatureReactions& reactions);
     //! \brief Shows queued hits at their contact phase and discards superseded visual attack requests.
     static void processHits(CreatureReactions& reactions);
+    //! \brief Lets the weapons of the creatures that died fall to the floor
     static void processDrops(CreatureReactions& reactions);
+    //! \brief Moves the fallen weapons, lets them lie and shrinks them away at the end
     static void updateFallen(CreatureReactions& reactions, double timeSinceLastFrame);
+    //! \brief Removes all fallen weapons from the scene
     static void removeFallen(CreatureReactions& reactions);
+    //! \brief Follows the sheathing and drawing reactions so the weapon models are hidden or shown with them
     static void watchEvents(CreatureReactions& reactions);
+    //! \brief Puts the weapons of calm creatures away, draws them when an enemy is near and starts the stance between blows
     static void tick(CreatureReactions& reactions);
+    //! \brief Takes the weapons of the creature out of the sheath; with announce a visible creature also plays the drawing flourish
     static void draw(CreatureReactions& reactions, Creature* creature, bool announce);
+    //! \brief Returns true if a living creature of a seat that is not allied is within the radius
     static bool isEnemyNear(CreatureReactions& reactions, const Creature* creature, double radius);
+    //! \brief Remembers that the creature has put its weapons away (or drawn them) and hides or shows the models
     static void setSheathed(CreatureReactions& reactions, Creature* creature, bool sheathed);
+    //! \brief Shows or hides the weapon models of the creature
     static void applyVisibility(CreatureReactions& reactions, const Creature* creature, bool visible);
+    //! \brief Returns true if a weapon model of the creature exists in the scene
     static bool hasWeaponModel(CreatureReactions& reactions, const Creature* creature);
 };
 

@@ -92,11 +92,17 @@ public:
     //! \brief Move CEGUI rendering to another Ogre render target.
     void setRenderTarget(Ogre::RenderTarget& renderTarget);
 
+    //! \brief Limits, default and step (in percent) of the user-selectable UI scale.
     enum
     {
         MIN_UI_SCALE_PERCENT = 80,
-        MAX_UI_SCALE_PERCENT = 120
+        MAX_UI_SCALE_PERCENT = 120,
+        DEFAULT_UI_SCALE_PERCENT = 100,
+        UI_SCALE_STEP_PERCENT = 10
     };
+
+    //! \brief Returns the UI scale in percent from the user config, limited to the allowed range.
+    static float getConfiguredUiScalePercent();
 
     //! \brief Registers a window tree for resolution-independent scaling.
     void registerWindowHierarchy(CEGUI::Window* window);
@@ -128,12 +134,16 @@ public:
     //! fraction (0 to 1) of the dungeon heart and its background glows while under attack.
     void updateHeartBadge(float healthFraction, bool underAttack);
 
+    //! \brief Arranges the room, trap and spell buttons of the in game sheet.
+    void arrangeActionButtonPanels(CEGUI::Window* gameSheet);
     //! \brief Arranges visible gameplay actions and retains their scaled layout.
     void arrangeRoomButtons(CEGUI::Window* rooms);
     void arrangeTrapButtons(CEGUI::Window* traps);
     void arrangeSpellButtons(CEGUI::Window* spells);
 
     // Access names of the GUI elements
+    //! Name of the text area inside the window created by createInfoWindow().
+    static const std::string INFO_WINDOW_TEXT;
     static const std::string ROOT;
     static const std::string DISPLAY_GOLD;
     static const std::string DISPLAY_MANA;
@@ -153,6 +163,8 @@ public:
     static const std::string TAB_CREATURES;
     static const std::string BUTTON_CREATURE_WORKER;
     static const std::string BUTTON_CREATURE_FIGHTER;
+    //! User string holding the long help text of a window. The tooltip itself only shows a short label.
+    static const std::string USER_STRING_CONTEXT_HELP;
     static const std::string TAB_COMBAT;
     static const std::string MM_BACKGROUND;
     static const std::string MM_WELCOME_MESSAGE;
@@ -260,11 +272,22 @@ private:
     //! \brief Used to play the button click sound.
     SoundEffectsManager* mSoundEffectsManager;
 
+    //! \brief Rescales all registered windows when the display size changes.
     bool onDisplaySizeChanged(const CEGUI::EventArgs& e);
+
+    //! \brief Forgets a window that was destroyed.
     bool onWindowDestroyed(const CEGUI::EventArgs& e);
+
+    //! \brief Stores the unscaled layout of the window and its children.
     void registerWindow(CEGUI::Window* window);
+
+    //! \brief Scales all registered windows and the fonts and images for the given display size.
     void applyScale(const CEGUI::Sizef& displaySize);
-    void applyScale(CEGUI::Window* window, const WindowScaleData& data, float scale);
+
+    //! \brief Scales one window from its stored unscaled layout.
+    void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float scale);
+
+    //! \brief Sets the native resolution of fonts and skin images from the user scale.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
 };
 

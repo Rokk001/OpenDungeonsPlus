@@ -77,16 +77,17 @@ public:
     //! The settings of the nest places from the config (only the server reads them, the clients draw the places they get).
     static HatcheryNestField::Settings getNestFieldSettings();
 
-    //! Server side: sends the nest places of this hatchery to the human player (see ServerNotificationType::hatcheryNests).
+    //! \brief Server side: sends the nest places of this hatchery to the human player (see
+    //! ServerNotificationType::hatcheryNests).
     void sendNestPlaces(Player* player) const;
 
-    //! Server side: plans the next walk of a roaming animal that is at from: a free point anywhere in the room (any
+    //! \brief Server side: plans the next walk of a roaming animal that is at from: a free point anywhere in the room (any
     //! position on the room tiles, not bound to the tiles, at least HatcheryWanderEdge from every wall, away from the
     //! coops and the nests, at most HatcheryWanderReach from the animal) and one soft bend on the way. False when no
     //! free point was found in a few tries.
     bool planWanderPath(const Ogre::Vector2& from, std::vector<Ogre::Vector2>& path) const;
 
-    //! Server side: a free point anywhere in the room (rules as for planWanderPath, without the reach).
+    //! \brief Server side: a free point anywhere in the room (rules as for planWanderPath, without the reach).
     bool pickFreePoint(Ogre::Vector2& point) const;
 
     //! Server side: plans a short hop of a chicken that is at from away from a hungry creature at threat: a free point
@@ -196,6 +197,8 @@ private:
     //! roof with the pose. Without coop he stays on the ground. True when he is where he crows (on the roof, or on
     //! the ground without coop), false while he is on his way.
     bool roostOnRoof(ChickenEntity* rooster, const std::string& pose);
+    //! \brief Lets the rooster flutter down from a coop roof to a free place next to the coop (he stays on the roof
+    //! when there is none).
     void climbDown(ChickenEntity* rooster);
     //! The chicks follow the nearest hen in a line, never the rooster.
     void updateChickLine(const std::vector<ChickenEntity*>& hens, const std::vector<ChickenEntity*>& chicks);

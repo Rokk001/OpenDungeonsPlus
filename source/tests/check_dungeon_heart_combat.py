@@ -65,7 +65,8 @@ struct Creature:GameEntity {CreatureDefinition definition;Creature(Seat* s,bool 
  const CreatureDefinition* getDefinition()const{return &definition;}};
 struct GameMap {bool editor=false;int fights=0;
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}
- void addManaToSeat(int,int){}uint32_t getHeartDestroyedReward()const{return 0;}};
+ void addManaToSeat(int,int){}uint32_t getHeartDestroyedReward()const{return 0;}
+ static const uint32_t SKIRMISH_HEART_REWARD_SPECIALS=1;static const uint32_t SKIRMISH_HEART_REWARD_ROOMS_AND_LAND=2;};
 struct TreasuryObject {TreasuryObject(GameMap*,int){}void addToGameMap(){}void createMesh(){}void setPosition(Ogre::Vector3){}};
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}bool notifyRemoveAsked(){return true;}};
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
@@ -112,8 +113,9 @@ HEART_OBJECT;
 bool RoomDungeonTemple::isTreasuryTile(Tile*)const{return false;}
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*){}
 Tile* RoomDungeonTemple::getHeartTile()const{return nullptr;}
-int main(){int checks=0,failures=0;
- auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
+int checks=0,failures=0;
+void check(bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}}
+int main(){
  Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2,nullptr,5};Tile centre,floor;BuildingObject object{&centre};
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre,"DungeonHeartObjectHealthy");
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};

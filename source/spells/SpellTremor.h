@@ -30,13 +30,20 @@ class InputManager;
 class SpellTremor : public Spell
 {
 public:
+    //! \brief Shows the price and the area around the cursor while the player aims the spell and sends the cast
+    //! request when the player confirms.
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
     //! \brief Casts the spell using its configured damage range for each damage application.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
+    //! \brief The spell is instant and has no entity, so it can never be read from a stream (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
+    //! \brief The spell is instant and has no entity, so it can never be read from a packet (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
 
+    //! The spell type handled by this class.
     static const SpellType mSpellType;
 };
 

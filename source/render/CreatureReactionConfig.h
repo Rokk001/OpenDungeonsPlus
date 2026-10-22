@@ -72,6 +72,7 @@ struct ReactionMotion
         lunge
     };
 
+    //! \brief No motion: one hop of 0.2 world units that takes no time
     ReactionMotion() :
         mType(Type::none),
         mCount(1),
@@ -119,6 +120,7 @@ struct ReactionProp
         fall
     };
 
+    //! \brief No prop: no path, one piece of size 0.1 world units that takes no time
     ReactionProp() :
         mPath(Path::none),
         mCount(1),
@@ -140,6 +142,7 @@ struct ReactionProp
 //! \brief A particle effect put on the creature
 struct ReactionEffect
 {
+    //! \brief An effect without a name that is shown for 2 seconds
     ReactionEffect() :
         mTime(2.0)
     {}
@@ -153,6 +156,8 @@ struct ReactionEffect
 //! has (tier B), always together with the emote, the particle effect and the motion (tier A).
 struct ReactionVariant
 {
+    //! \brief A variant with weight 1 that plays no clip, shows no emote or effect and has no filters.
+    //! The icon and the effect are shown for 2 seconds. Cooldown and probability of the event apply.
     ReactionVariant() :
         mWeight(1.0),
         mClipSpeed(1.0),
@@ -235,6 +240,8 @@ struct ReactionVariant
 //! \brief A kind of reaction (what happened to the creature) with its variants
 struct ReactionEvent
 {
+    //! \brief An event of priority "event" with a cooldown of 10 seconds, a probability of 1 and at most
+    //! 3 creatures in a group reaction
     ReactionEvent() :
         mPriority(ReactionPriority::event),
         mCooldown(10.0),
@@ -275,33 +282,44 @@ struct ReactionGroup
 class CreatureReactionConfig
 {
 public:
+    //! \brief Sets the default values of the settings (nothing is loaded yet)
     CreatureReactionConfig();
 
     //! \brief Reads the file. Returns false (and keeps what could be read) if it is missing or
     //! malformed: the reactions are then simply not available.
     bool load(const std::string& fileName);
 
+    //! \brief The event with this name, or nullptr if the file has none
     const ReactionEvent* getEvent(const std::string& name) const;
 
     //! \brief Names of the groups the creature definition is in. If it is in none, the default
     //! group is returned.
     std::vector<std::string> getGroupsOf(const std::string& creatureName) const;
 
+    //! \brief Converts the name used in the file to a priority. ok is false (and "event" is returned)
+    //! if the name is unknown.
     static ReactionPriority priorityFromString(const std::string& text, bool& ok);
+
+    //! \brief The name of the priority as it is written in the file
     static std::string priorityToString(ReactionPriority priority);
 
+    //! \brief All events of the file by name
     inline const std::map<std::string, ReactionEvent>& getEvents() const
     { return mEvents; }
 
+    //! \brief The number of reactions that may run at the same time
     inline uint32_t getMaxSimultaneous() const
     { return mMaxSimultaneous; }
 
+    //! \brief The distance from the camera (world units) beyond which no reactions are shown
     inline double getMaxCameraDistance() const
     { return mMaxCameraDistance; }
 
+    //! \brief The shortest time (seconds) between the reactions of two creatures of a group
     inline double getGroupStaggerMin() const
     { return mGroupStaggerMin; }
 
+    //! \brief The longest time (seconds) between the reactions of two creatures of a group
     inline double getGroupStaggerMax() const
     { return mGroupStaggerMax; }
 
@@ -332,8 +350,12 @@ public:
     //! Seconds a creature has to stand idle until it shows small habits, sits down or lies down
     inline double getAmbientAfter() const
     { return mAmbientAfter; }
+
+    //! Seconds a creature has to stand idle until it sits down
     inline double getSitAfter() const
     { return mSitAfter; }
+
+    //! Seconds a creature has to stand idle until it lies down
     inline double getLieAfter() const
     { return mLieAfter; }
 
@@ -416,13 +438,19 @@ public:
     inline double getWeaponTrailLength() const
     { return std::max(0.1, std::min(10.0, mWeaponTrailLength)); }
 
-    //! Colour of the streak (red, green, blue, each 0 to 1) and its brightness at the start (0 to 1)
+    //! Red part of the colour of the streak (0 to 1)
     inline double getWeaponTrailRed() const
     { return std::max(0.0, std::min(1.0, mWeaponTrailRed)); }
+
+    //! Green part of the colour of the streak (0 to 1)
     inline double getWeaponTrailGreen() const
     { return std::max(0.0, std::min(1.0, mWeaponTrailGreen)); }
+
+    //! Blue part of the colour of the streak (0 to 1)
     inline double getWeaponTrailBlue() const
     { return std::max(0.0, std::min(1.0, mWeaponTrailBlue)); }
+
+    //! Brightness of the streak at the start (0 to 1)
     inline double getWeaponTrailBrightness() const
     { return std::max(0.0, std::min(1.0, mWeaponTrailBrightness)); }
 
@@ -436,28 +464,49 @@ public:
     { return std::min<uint32_t>(16, mWeaponTrailMax); }
 
 private:
+    //! \brief Reads the [Settings] block up to its closing tag. Returns false if it is malformed.
     bool loadSettings(std::istream& file);
+    //! \brief Reads the [Groups] block up to its closing tag. Returns false if it is malformed.
     bool loadGroups(std::istream& file);
+    //! \brief Reads the [Events] block up to its closing tag. Returns false if it is malformed.
     bool loadEvents(std::istream& file);
+    //! \brief Reads the lines of one [Event] up to its closing tag into the event
     bool loadEvent(std::istream& file, ReactionEvent& event);
+    //! \brief Reads the lines of one [Variant] up to its closing tag into the variant
     bool loadVariant(std::istream& file, ReactionVariant& variant);
 
+    //! \brief Number of reactions that may run at the same time
     uint32_t mMaxSimultaneous;
+    //! \brief Distance from the camera (world units) beyond which no reactions are shown
     double mMaxCameraDistance;
+    //! \brief Shortest and longest time (seconds) between the reactions of two creatures of a group
     double mGroupStaggerMin;
     double mGroupStaggerMax;
+    //! \brief Seconds between two looks at the moods of a few creatures
     double mMoodInterval;
+    //! \brief Number of creatures looked at in each of these looks
     uint32_t mMoodPerTick;
+    //! \brief Chance (0 to 1) that a mood is shown on a creature that walks instead of standing
     double mMoodWalkingChance;
+    //! \brief Seconds a creature has to stand idle until it is impatient
     double mImpatientAfter;
+    //! \brief Seconds a creature stays proud after a victory or a level up
     double mProudSeconds;
+    //! \brief Seconds a creature has to stand idle until it is bored
     double mBoredAfter;
+    //! \brief Seconds a creature has to stand idle until it shows small habits
     double mAmbientAfter;
+    //! \brief Seconds a creature has to stand idle until it sits down
     double mSitAfter;
+    //! \brief Seconds a creature has to stand idle until it lies down
     double mLieAfter;
+    //! \brief Distance (world units) within which creatures turn their head to an event
     double mLookRadius;
+    //! \brief Chance (0 to 1) that a creature that is looked at starts a short meeting with a creature close by
     double mInteractionChance;
+    //! \brief Distance (world units) within which creatures that meet interact
     double mInteractionRadius;
+    //! \brief Seconds between the starts of two meetings, over all creatures
     double mInteractionPause;
     double mArenaSpectatorInterval;
     double mArenaCheerPause;
@@ -481,8 +530,11 @@ private:
     double mWeaponTrailBrightness;
     double mWeaponTrailMinShare;
     uint32_t mWeaponTrailMax;
+    //! \brief Group used for a creature that is in no group
     std::string mDefaultGroup;
+    //! \brief The groups of the file
     std::vector<ReactionGroup> mGroups;
+    //! \brief The events of the file by name
     std::map<std::string, ReactionEvent> mEvents;
 };
 

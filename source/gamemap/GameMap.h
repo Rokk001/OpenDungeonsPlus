@@ -103,6 +103,9 @@ friend class RenderManager;
 friend class ODServer;
     
 public:
+    //! \brief Creates an empty game map with an empty level script.
+    //! \param isServerGameMap True for the map of the server, false for the one of a client.
+    //! \param nt The kind of tile node the map uses.
     GameMap(bool isServerGameMap, NodeType nt = NodeType::MTILES_NODE);
     virtual ~GameMap();
 
@@ -377,6 +380,7 @@ public:
 
     //! \brief The triggers and actions of the level ([Triggers] section of the level file)
     LevelScript& getLevelScript();
+    //! \brief Read-only access to the triggers and actions of the level, for code that does not change the script
     const LevelScript& getLevelScript() const;
 
     bool withdrawFromTreasuries(int gold, Seat* seat);
@@ -416,9 +420,11 @@ public:
     inline bool isSandbox() const
     { return mIsSandbox; }
 
+    //! \brief Marks the level as a sandbox level (read from the level file or the server packet)
     inline void setSandbox(bool isSandbox)
     { mIsSandbox = isSandbox; }
 
+    //! \brief The server side logic of the sandbox (hero toolbox and invasions)
     inline SandboxMode& getSandboxMode()
     { return mSandboxMode; }
 
@@ -551,9 +557,11 @@ public:
 
     //! \brief Skirmish game settings, chosen by the host in the seat configuration. They are
     //! only used on the server game map. The percentages scale the base value (100 = unchanged).
+    //! \return The share of the normal gold that a worker gets when it digs gold, in percent
     inline uint32_t getGoldDensityPercent() const
     { return mGoldDensityPercent; }
 
+    //! \brief The share of the normal mana income of a seat, in percent
     inline uint32_t getManaRegenerationPercent() const
     { return mManaRegenerationPercent; }
 
@@ -561,6 +569,16 @@ public:
     inline uint32_t getMaxCreaturesSetting() const
     { return mMaxCreaturesSetting; }
 
+    //! \brief Smallest and largest value that the gold density and the mana regeneration can have, in percent
+    static const uint32_t SKIRMISH_PERCENT_MIN = 10;
+    static const uint32_t SKIRMISH_PERCENT_MAX = 500;
+    //! \brief The gold density and the mana regeneration of a game without settings: unchanged
+    static const uint32_t SKIRMISH_PERCENT_DEFAULT = 100;
+
+    //! \brief Sets the skirmish game settings, as chosen by the host
+    //! \param goldDensityPercent Gold density in percent, kept between SKIRMISH_PERCENT_MIN and SKIRMISH_PERCENT_MAX
+    //! \param manaRegenerationPercent Mana regeneration in percent, kept in the same range
+    //! \param maxCreaturesSetting Maximum number of creatures of a seat, 0 for the default of the configuration
     void setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
         uint32_t maxCreaturesSetting);
 
@@ -580,39 +598,68 @@ public:
     //! \brief Sent instead of a setting that the Game Settings page has not shown yet
     static const uint32_t SKIRMISH_SETTING_UNCHOSEN = 0xFFFFFFFF;
 
+    //! \brief Smallest, largest and default game speed, in percent of the default turn rate
+    static const uint32_t SKIRMISH_SPEED_MIN = 25;
+    static const uint32_t SKIRMISH_SPEED_MAX = 400;
+    static const uint32_t SKIRMISH_SPEED_DEFAULT = 100;
+
+    //! \brief Longest game duration that can be set, in minutes
+    static const uint32_t SKIRMISH_DURATION_MAX = 9999;
+
     //! \brief Game speed is a percentage of the default turn rate, duration is in minutes (0 = no limit)
     inline uint32_t getGameSpeedPercent() const
     { return mGameSpeedPercent; }
 
     //! \brief The factor applied to the real time speed of the game (1.0 = default speed)
     inline double getGameSpeedFactor() const
-    { return static_cast<double>(mGameSpeedPercent) / 100.0; }
+    { return static_cast<double>(mGameSpeedPercent) / static_cast<double>(SKIRMISH_SPEED_DEFAULT); }
 
+    //! \brief The game duration in minutes of game time, 0 means no limit
     inline uint32_t getGameDurationMinutes() const
     { return mGameDurationMinutes; }
 
     //! \brief What the keeper that destroys a dungeon heart receives from the owner of the heart:
-    //! 0 = mana, 1 = mana and specials, 2 = mana, rooms and land
+    //! its mana only, its mana and four specials, or its mana, rooms and land
+    static const uint32_t SKIRMISH_HEART_REWARD_MANA = 0;
+    static const uint32_t SKIRMISH_HEART_REWARD_SPECIALS = 1;
+    static const uint32_t SKIRMISH_HEART_REWARD_ROOMS_AND_LAND = 2;
+
+    //! \brief The reward for destroying a dungeon heart, one of the SKIRMISH_HEART_REWARD values
     inline uint32_t getHeartDestroyedReward() const
     { return mHeartDestroyedReward; }
 
+    //! \brief Sets the rules chosen on the Game Settings page
+    //! \param gameSpeedPercent Game speed in percent, kept between SKIRMISH_SPEED_MIN and SKIRMISH_SPEED_MAX
+    //! \param gameDurationMinutes Game duration in minutes of game time, 0 for no limit
+    //! \param fogOfWar True if the fog of war is on
+    //! \param heartDestroyedReward The reward for destroying a dungeon heart, kept at or below
+    //! SKIRMISH_HEART_REWARD_ROOMS_AND_LAND
     void setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinutes, bool fogOfWar,
         uint32_t heartDestroyedReward);
 
     //! \brief Maximum number of creatures of the given class a seat may own.
     //! SKIRMISH_CREATURE_LIMIT_NONE if unlimited
     uint32_t getCreatureClassLimit(const std::string& className) const;
+
+    //! \brief Sets the maximum number of creatures of the given class a seat may own
+    //! \param className The class name of the creature definition
+    //! \param limit The new limit. SKIRMISH_CREATURE_LIMIT_NONE or more removes the limit
     void setCreatureClassLimit(const std::string& className, uint32_t limit);
 
     //! \brief The state of every skill chosen on the Game Settings page. The index is the SkillType. It is
     //! filled from the level the first time it is needed.
     const std::vector<SkirmishItemState>& getSkirmishSkillStates();
+    //! \brief Sets the state of one skill chosen on the Game Settings page
+    //! \param type The skill to change. Invalid skill types are ignored
+    //! \param state The new state. The state unchosen is ignored
     void setSkirmishSkillState(SkillType type, SkirmishItemState state);
 
     //! \brief Applies the states that differ from the level to every seat. To be called before the seats are initialized.
     void applySkirmishSkillStates();
 
-    //! \brief Called on the server each turn: announces the end of the game time once
+    //! \brief Called on the server each turn: sends the time limit and the countdowns of the level script to the
+    //! players and makes every keeper lose once a time limit of the level script or the game duration of the
+    //! skirmish settings has run out. The limit of the level script wins over the game duration.
     void checkGameDuration();
 
     //! \brief Level script action: the time runs out after that many seconds from now, for every
@@ -631,7 +678,8 @@ public:
     static const int32_t TIME_LIMIT_COUNTDOWN_FLAG = 0x40000000;
 
     //! \brief Tells the human players how many seconds are left (-1: there is no time limit), and the
-    //! wave countdown that checkGameDuration set
+    //! wave countdown that checkGameDuration set. Nothing is sent when both are the same as last time.
+    //! \param remainingSeconds Seconds left, with TIME_LIMIT_COUNTDOWN_FLAG added for a countdown
     void sendTimeLimit(int32_t remainingSeconds);
 
     void logFloodFileTiles();
@@ -837,7 +885,9 @@ private:
     std::string mMapInfoDescription;
     std::string mMapInfoMusicFile;
     std::string mMapInfoFightMusicFile;
+    //! \brief True for a sandbox level
     bool mIsSandbox;
+    //! \brief The hero toolbox and invasion logic of a sandbox level
     SandboxMode mSandboxMode;
 
     std::vector<Creature*> mCreatures;
@@ -895,12 +945,14 @@ private:
     // random number generator for Tile's faces
     std::mt19937 generator;   
     //! \brief Updates different entities states.
-    //! Updates active objects (creatures, rooms, ...), goals, count each team Workers, gold, mana and claimed tiles
+    //! Updates active objects (creatures, rooms, ...), goals, count each team Workers, gold, mana and claimed tiles.
+    //! Every pay day it counts the payday event for the level script.
     unsigned long int doMiscUpkeep(double timeSinceLastTurn);
 
     //! \brief Applies the per-second mana income and worker upkeep of one seat for the current
     //! turn. A seat without a living dungeon heart gains and spends nothing.
     //! \param nbManaWellTiles Number of mana well tiles the seat has claimed.
+    //! \param timeSinceLastTurn Seconds since the previous turn, used by the worker countdown.
     void updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn);
 
     //! \brief Pops the workers above the free four when the seat's mana stays too low to

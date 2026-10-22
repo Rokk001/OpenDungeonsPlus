@@ -37,6 +37,8 @@ const unsigned int NB_OUTLINE_ELEMENTS = 4;
 const Ogre::Real OUTLINE_OFFSETS[NB_OUTLINE_ELEMENTS][2] = {
     {-0.75f, 0.0f}, {0.75f, 0.0f}, {0.0f, -0.75f}, {0.0f, 0.75f}
 };
+//! Fraction of a tile that the camera-facing marker covers
+const Ogre::Real MARKER_TILE_FRACTION = 0.75f;
 //! Size in pixels of the marker at scale 1; the markers get bigger when the camera is closer
 const Ogre::Real MARKER_BASE_SIZE = 64.0f;
 }
@@ -108,7 +110,7 @@ void ChildOverlay::centerCaption()
 
     mOverlayText->setPosition((-mTextWidth * 0.5f - 1.0f) * mScale,
         ((mForcedHeight - mTextHeight) * 0.5f + 2.0f) * mScale);
-    for(unsigned i = 0; i < mCaptionOutline.size(); ++i)
+    for(unsigned int i = 0; i < mCaptionOutline.size(); ++i)
         mCaptionOutline[i]->setPosition(mOverlayText->getLeft() + mScale * OUTLINE_OFFSETS[i][0],
             mOverlayText->getTop() + mScale * OUTLINE_OFFSETS[i][1]);
 }
@@ -321,7 +323,7 @@ void MovableTextOverlay::setCaptionOutline(uint32_t childOverlayId, const Ogre::
     ChildOverlay& child = mChildOverlays[childOverlayId];
     if(child.mCaptionOutline.empty())
     {
-        for(unsigned i = 0; i < NB_OUTLINE_ELEMENTS; ++i)
+        for(unsigned int i = 0; i < NB_OUTLINE_ELEMENTS; ++i)
         {
             // Names sort before the foreground glyph in the container's Z-order.
             Ogre::OverlayElement* outline = Ogre::OverlayManager::getSingleton().createOverlayElement("TextArea",
@@ -426,8 +428,8 @@ bool MovableTextOverlay::computeOverlayPositionHead(Ogre::Vector2& position, Ogr
         return false;
     const Ogre::Vector3 screenPosition(projected.x / projected.w,
         projected.y / projected.w, projected.z / projected.w);
-    // A three-quarter-tile, camera-facing marker, with a readable distant minimum.
-    const Ogre::Real diameter = 0.75f * mCamera->getProjectionMatrix()[1][1] *
+    // A camera-facing marker covering part of a tile, with a readable distant minimum.
+    const Ogre::Real diameter = MARKER_TILE_FRACTION * mCamera->getProjectionMatrix()[1][1] *
         Ogre::OverlayManager::getSingleton().getViewportHeight() * 0.5f / projected.w;
     scale = std::max(1.0f, diameter / MARKER_BASE_SIZE);
 

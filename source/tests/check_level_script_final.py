@@ -1,5 +1,6 @@
 """Static wiring check for the later stages of level scripting: the make action, the time limit with
-its countdown, the creature event conditions, the victory statistics and the region test level.
+its countdown, the creature event conditions, the story state conditions, the victory statistics and
+the region test level.
 
 The parser and the writer are run by check_level_script.py; this script checks that the pieces
 that need the running game are connected, so a missing hook is found without playing.
@@ -120,5 +121,44 @@ for word in ('Cond	pickedup', 'Cond	dropped', 'Cond	slapped', 'Cond	happy', 'Con
              'Cond	claimed', 'Cond	region', 'Cond	gold', 'Action	make', 'Action	reveal',
              'Action	timelimit', 'Action	win'):
     assert word in section, word
+
+# story state: the conditions are evaluated by the runner and the portal and class state reach the game
+for kind in ('seatDefeated', 'ownsCreature', 'creatureHealth', 'spellKnown', 'trapsBuilt', 'roomTiles', 'largestRoom',
+             'portalActive', 'creatureAlive', 'creatureReached'):
+    assert 'case LevelScriptConditionType::%s:' % kind in runner, kind
+    assert 'case LevelScriptConditionType::%s:' % kind in script_cpp, kind
+for kind in ('portalStatus', 'creatureAvailable', 'removeCreature'):
+    assert 'case LevelScriptActionType::%s:' % kind in runner, kind
+    assert 'case LevelScriptActionType::%s:' % kind in script_cpp, kind
+for name in ('defeated', 'owns', 'health', 'spell', 'built', 'roomtiles', 'roomsize', 'portal', 'alive', 'reached', 'available', 'remove'):
+    assert 'type == "%s"' % name in script_cpp or '(type == "%s")' % name in script_cpp, name
+assert 'key == "PortalOff"' in script_cpp and 'key == "Block"' in script_cpp
+assert 'mPortalOff' in script_h and 'mBlocked' in script_h
+assert 'isPortalOff(getSeat()->getId())' in read('source/rooms/RoomPortal.cpp')
+assert 'isCreatureBlocked(getId()' in read('source/game/Seat.cpp')
+
+# the story test level: a skirmish that uses the story state conditions, a portal stone and a terrain change
+story = read('levels/skirmish/TestLevelScripting.level')
+assert 'Level scripting' in story
+story_section = story[story.index('[Triggers]'):story.index('[/Triggers]')]
+for word in ('Cond	alive', 'Cond	reached', 'Cond	portal', 'Cond	stone', 'Action	portal', 'Action	stonecreate',
+             'Action	terrain', 'Action	spawn'):
+    assert word in story_section, word
+
+# scripted possession: the creature is possessed by the human keeper, and a level that starts with one is free of mana costs
+assert 'case LevelScriptActionType::possessCreature:' in runner and 'startPossession(' in runner
+assert 'case LevelScriptConditionType::possessedInRegion:' in runner
+assert 'type == "possess"' in script_cpp and 'type == "possessed"' in script_cpp
+assert 'key == "FreePossession"' in script_cpp and 'os << "FreePossession' in script_cpp
+assert 'isFreePossession()' in read('source/creatureaction/CreatureActionPossessed.cpp')
+assert 'script.setFreePossession(true)' in runner
+
+# kept minion: the strongest fighter is chosen by the keepminion action, saved with the campaign progress and
+# given out when the next level of the campaign starts
+campaign = read('source/game/Campaign.cpp')
+assert 'case LevelScriptActionType::keepMinion:' in runner and 'setKeptMinion(' in runner
+assert 'type == "keepminion"' in script_cpp and 'os << "keepminion' in script_cpp
+assert 'takeKeptMinion(' in runner and 'KeptMinion' in campaign
+assert 'LevelScriptRunner::spawnKeptMinion(*gameMap);' in read('source/network/ODServer.cpp')
 
 print('level script final wiring: ok')

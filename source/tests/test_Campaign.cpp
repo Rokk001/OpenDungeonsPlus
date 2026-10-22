@@ -38,6 +38,7 @@ static const std::string sample =
     "[Level]\n"
     "Title=No file, ignored\n";
 
+//! \brief Levels unlock one after the other, a won level is saved and read again, and a new campaign forgets it
 BOOST_AUTO_TEST_CASE(test_sequence_and_progress)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -89,6 +90,7 @@ static const std::string sampleBonusOwnReward =
     "[Level]\nFile=campaign/Bonus.level\nTitle=Hidden\nBonus=1\n"
     "[Level]\nFile=campaign/Own.level\nTitle=Own reward\nBonus=1\nHeartstone=0\n";
 
+//! \brief A bonus level with its own reward gives no Heartstone piece when it is found
 BOOST_AUTO_TEST_CASE(test_bonus_level_without_Heartstone_piece)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -108,6 +110,7 @@ BOOST_AUTO_TEST_CASE(test_bonus_level_without_Heartstone_piece)
     BOOST_CHECK(campaign.isHeartstoneComplete());
 }
 
+//! \brief A bonus level stays hidden until a level script finds it, does not block the main levels and counts as a Heartstone piece
 BOOST_AUTO_TEST_CASE(test_bonus_levels_and_Heartstone)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -152,6 +155,7 @@ BOOST_AUTO_TEST_CASE(test_bonus_levels_and_Heartstone)
     BOOST_CHECK(campaign.isFinished());
 }
 
+//! \brief The difficulty of the campaign is chosen once, saved with the progress and reset by a new campaign
 BOOST_AUTO_TEST_CASE(test_difficulty_is_saved)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -178,6 +182,7 @@ BOOST_AUTO_TEST_CASE(test_difficulty_is_saved)
     BOOST_CHECK_EQUAL(campaign.getDifficulty(), Campaign::getDefaultDifficulty());
 }
 
+//! \brief The province and warden keys of the definition file are read and levels are found by their province
 BOOST_AUTO_TEST_CASE(test_province_keys)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -211,12 +216,16 @@ static const std::string sampleBranch =
     "[Level]\nFile=b.level\nProvince=T09B\nBranch=T09A\n"
     "[Level]\nFile=n.level\nProvince=T10\n";
 
+//! \brief Starts the level with the given index and wins it, so the levels after it unlock.
+//! \param campaign The campaign that runs the level.
+//! \param index Index of the level in the campaign definition.
 static void completeLevel(Campaign& campaign, size_t index)
 {
     campaign.startLevel(index);
     BOOST_REQUIRE(campaign.onLevelWon());
 }
 
+//! \brief Of two branch sisters one is enough to unlock the levels after them and the other stays playable
 BOOST_AUTO_TEST_CASE(test_branch_levels)
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -252,6 +261,7 @@ BOOST_AUTO_TEST_CASE(test_branch_levels)
     BOOST_CHECK_EQUAL(campaign.getCurrentLevel(), 3u);
 }
 
+//! \brief The world map description and the id map give the province under a map pixel
 BOOST_AUTO_TEST_CASE(test_world_map)
 {
     CampaignWorld world;
@@ -286,4 +296,39 @@ BOOST_AUTO_TEST_CASE(test_world_map)
 
     std::istringstream broken("{\"size\":[4,2]}");
     BOOST_CHECK(!world.importDefinition(broken));
+}
+
+//! \brief A kept minion is chosen while a level is played, comes along only when that level is won, is saved with the
+//! progress and is given out once
+BOOST_AUTO_TEST_CASE(test_kept_minion)
+{
+    Campaign& campaign = Campaign::getSingleton();
+    std::istringstream is(sample);
+    BOOST_REQUIRE(campaign.importDefinition(is));
+    campaign.resetProgress();
+
+    // A minion of a level that was lost does not come along
+    campaign.startLevel(0);
+    campaign.setKeptMinion("Knight", 4);
+    campaign.stopCampaign();
+    std::string className;
+    uint32_t level = 0;
+    BOOST_CHECK(!campaign.takeKeptMinion(className, level));
+
+    // A minion of a won level is saved with the progress and read again
+    campaign.startLevel(0);
+    campaign.setKeptMinion("Knight", 4);
+    BOOST_CHECK(campaign.onLevelWon());
+    std::ostringstream os;
+    campaign.exportProgress(os);
+    BOOST_CHECK(os.str().find("KeptMinion Knight 4") != std::string::npos);
+    campaign.resetProgress();
+    std::istringstream saved(os.str());
+    BOOST_REQUIRE(campaign.importProgress(saved));
+    BOOST_CHECK(campaign.takeKeptMinion(className, level));
+    BOOST_CHECK_EQUAL(className, "Knight");
+    BOOST_CHECK_EQUAL(level, 4u);
+
+    // It is given out once
+    BOOST_CHECK(!campaign.takeKeptMinion(className, level));
 }

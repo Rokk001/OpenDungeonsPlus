@@ -61,8 +61,11 @@ public:
 
 private:
     CEGUI::Window* mMiniMapWindow;
+    //! Appended to the names of the texture and image so that several full maps can exist at once.
     std::string mResourceSuffix;
+    //! Top left corner of the shown part of the map, as a fraction of the whole map.
     Ogre::Vector2 mViewOrigin = Ogre::Vector2::ZERO;
+    //! Size of the shown part of the map, as a fraction of the whole map.
     Ogre::Vector2 mViewSize = Ogre::Vector2::UNIT_SCALE;
 
     GameMap& mGameMap;
@@ -77,6 +80,7 @@ private:
 
     Ogre::Vector2 mCamera_2dPosition;
 
+    //! Pixel data of the map, copied to the texture when mPixelsDirty is set.
     std::vector<Ogre::uint8> mPixels;
     bool mPixelsDirty = true;
     Ogre::PixelBox mPixelBox;

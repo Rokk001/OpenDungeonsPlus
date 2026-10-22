@@ -28,14 +28,17 @@ class TrapDoor : public Trap
 {
 public:
     //! \brief Creates an ordinary door; mission locks are restored from level data.
+    //! \param doorType One of the door trap types (wooden, ironbound, steel, barricade, secret or runed).
     TrapDoor(GameMap* gameMap, TrapType doorType);
 
     static const std::string ANIMATION_OPEN;
     static const std::string ANIMATION_CLOSE;
 
+    //! \brief The type of this door.
     const TrapType getType() const override
     { return mDoorType; }
 
+    //! \brief Health given to each tile of a newly built door, depending on the door type.
     double getDefaultTileHP() const override;
 
     bool isDoor() const override
@@ -89,6 +92,8 @@ public:
 
     bool permitsVision(Tile* tile) override;
 
+    //! \brief A secret door looks like a wall to every seat that has not seen a creature of the owner
+    //! (or of an ally) pass through it. All other doors are always seen as doors.
     bool appearsAsWallForSeat(Tile* tile, Seat* seat) const override;
 
     //! Returns true if tiles North and South (or east and west) are suitable to have a door on the
@@ -104,7 +109,7 @@ protected:
     bool importFromStream(std::istream& is) override;
 
 private:
-    //! \brief Wooden, ironbound or steel door
+    //! \brief Type of this door (wooden, ironbound, steel, barricade, secret or runed)
     TrapType mDoorType;
     //! \brief Wanted state for the door (changes when the player slaps the door)
     bool mIsLocked;
@@ -112,7 +117,7 @@ private:
     bool mIsLockedState;
     //! \brief Blocks damage, passage and hand toggles until key delivery.
     bool mKeyLocked;
-    //! brief Turns left before a runed door can fire again
+    //! \brief Turns left before a runed door can fire again
     uint32_t mFireCooldownTurns;
 
     void changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked);

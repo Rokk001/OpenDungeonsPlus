@@ -6,12 +6,19 @@
 //! Resolve held keys together so modifier changes and opposing keys are stable.
 struct CameraInput
 {
+    //! Pan to the right (1) or left (-1).
     float x = 0.0f;
+    //! Pan forward (1) or backward (-1).
     float y = 0.0f;
+    //! Zoom out (1) or in (-1).
     float zoom = 0.0f;
+    //! Swivel to the left (1) or right (-1).
     float swivel = 0.0f;
+    //! Whether the fast modifier key is held.
     bool fast = false;
 
+    //! \brief Reads the held keys. With Ctrl held, the arrow keys swivel and zoom instead of panning.
+    //! \param down Returns whether the given key is held.
     template<typename KeyDown>
     static CameraInput read(KeyDown down)
     {

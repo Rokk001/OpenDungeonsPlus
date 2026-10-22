@@ -63,9 +63,9 @@ void TrapFactory::checkBuildTrapDefault(GameMap* gameMap, TrapType type, const I
 
     if(buildableTiles.empty())
     {
-        inputCommand.displayTileBuildFailure(gameMap->getTile(inputManager.mXPos, inputManager.mYPos),
-            player->getSeat());
-        if(gameMap->getTile(inputManager.mXPos, inputManager.mYPos) != nullptr)
+        Tile* hoveredTile = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
+        inputCommand.displayTileBuildFailure(hoveredTile, player->getSeat());
+        if(hoveredTile != nullptr)
             inputCommand.displayPointerText(Ogre::ColourValue::Red, Helper::toString(pricePerTarget));
         return;
     }

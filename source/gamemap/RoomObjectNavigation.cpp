@@ -36,10 +36,29 @@ const BuildingObject* interactionObject(Creature& creature, const Ogre::Vector2&
     return found == objects.end() ? nullptr : found->second;
 }
 
+//! Spacing of the candidate standing points tried around a workstation (an eighth of a tile)
+const float STANDING_POINT_SPACING = 0.125f;
+//! A creature closer than this (squared distance, 0.05 tile) to a candidate point already stands on it
+const float STANDING_POINT_REACHED_SQUARED = 0.0025f;
+
+// Samples per tile when a straight line is tested against the terrain.
+const float TERRAIN_SAMPLES_PER_TILE = 16.0f;
+// Each client jitter coordinate is +/-0.3, so a rotated object needs the full diagonal
+// displacement (0.3 * sqrt(2), rounded up) as well as the creature's walking radius.
+const float WALK_DISTORTION_REACH = 0.425f;
+// Free standing points are searched on a grid of STANDING_GRID_SIZE x STANDING_GRID_SIZE
+// points per tile; the points are STANDING_POINT_SPACING apart and start at STANDING_GRID_START
+// from the tile centre.
+const int STANDING_GRID_SIZE = 8;
+const float STANDING_GRID_START = -0.4375f;
+// Walking radius of a creature whose mesh is not in the catalog, before it is scaled by its level.
+const float DEFAULT_WALKING_RADIUS = 0.2f;
+
+//! Footprint (walking bounds scaled by creature level) of a creature standing at position and facing direction
 RoomObjectPath::Obstacle interactionFootprint(const Creature& creature,
     const Ogre::Vector2& position, Ogre::Vector2 direction)
 {
-    Ogre::Vector2 minimum(-0.2f), maximum(0.2f);
+    Ogre::Vector2 minimum(-DEFAULT_WALKING_RADIUS), maximum(DEFAULT_WALKING_RADIUS);
     for(const RoomObjectPath::WalkingRadius& model : RoomObjectPath::walkingRadii)
         if(creature.getMeshName() == model.name)
         {
@@ -54,6 +73,8 @@ RoomObjectPath::Obstacle interactionFootprint(const Creature& creature,
     return {minimum * scale, maximum * scale, position, -direction.y, direction.x};
 }
 
+//! Returns false if the creature, standing at point and facing direction, would overlap another creature
+//! that has reserved an interaction position in any room
 bool interactionPositionClear(Creature& creature, const Ogre::Vector2& point,
     const Ogre::Vector2& direction)
 {
@@ -83,7 +104,7 @@ bool terrainClear(Creature& creature, const Ogre::Vector2& from, const Ogre::Vec
     int previousX = Helper::round(from.x), previousY = Helper::round(from.y);
     if(!passable(previousX, previousY))
         return false;
-    const int steps = std::max(1, int(std::ceil(from.distance(to) * 16.0f)));
+    const int steps = std::max(1, int(std::ceil(from.distance(to) * TERRAIN_SAMPLES_PER_TILE)));
     for(int i = 1; i <= steps; ++i)
     {
         const Ogre::Vector2 point = from + (to - from) * (float(i) / steps);
@@ -99,6 +120,18 @@ bool terrainClear(Creature& creature, const Ogre::Vector2& from, const Ogre::Vec
     return true;
 }
 
+//! Squared step length below which two consecutive path points count as the same point
+const float SAME_POINT_SQUARED_DISTANCE = 0.000001f;
+//! Tolerance for treating a step as axis-aligned and two directions as parallel
+const float AXIS_ALIGNED_TOLERANCE = 0.00001f;
+//! A smoothed path must be at least this much shorter than the original to replace it
+const float MIN_PATH_LENGTH_GAIN = 0.0001f;
+//! Axis-aligned paths with fewer 90 degree turns are left alone: only a staircase of turns benefits
+const unsigned MIN_CORRIDOR_TURNS = 2;
+
+//! Replaces a tile-by-tile staircase path through a diagonal corridor by a short chain of straight legs
+//! (greedy, over tile centres and the midpoints between them) that stays on passable terrain and clear of
+//! furniture. Returns true and rewrites path only if the result is shorter than the original.
 bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstacle>& obstacles,
     std::vector<Ogre::Vector2>& path)
 {
@@ -111,10 +144,10 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
     for(const Ogre::Vector2& point : path)
     {
         const Ogre::Vector2 direction = point - previous;
-        if(direction.squaredLength() < 0.000001f)
+        if(direction.squaredLength() < SAME_POINT_SQUARED_DISTANCE)
             continue;
-        const bool cardinal = std::abs(direction.x) < 0.00001f || std::abs(direction.y) < 0.00001f;
-        if(cardinal && std::abs(lastDirection.crossProduct(direction)) > 0.00001f)
+        const bool cardinal = std::abs(direction.x) < AXIS_ALIGNED_TOLERANCE || std::abs(direction.y) < AXIS_ALIGNED_TOLERANCE;
+        if(cardinal && std::abs(lastDirection.crossProduct(direction)) > AXIS_ALIGNED_TOLERANCE)
             ++turns;
         lastDirection = cardinal ? direction : Ogre::Vector2::ZERO;
         candidates.push_back((previous + point) * 0.5f);
@@ -122,7 +155,7 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
         originalLength += direction.length();
         previous = point;
     }
-    if(turns < 2)
+    if(turns < MIN_CORRIDOR_TURNS)
         return false;
     const std::function<bool(const Ogre::Vector2&, const Ogre::Vector2&)> clear = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
     {
@@ -144,7 +177,7 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
         previous = candidates[next];
         first = next + 1;
     }
-    if(length >= originalLength - 0.0001f)
+    if(length >= originalLength - MIN_PATH_LENGTH_GAIN)
         return false;
     path.swap(result);
     return true;
@@ -169,7 +202,7 @@ float RoomObjectNavigation::clearance(const Creature& creature)
     for(const RoomObjectPath::WalkingRadius& model : RoomObjectPath::walkingRadii)
         if(creature.getMeshName() == model.name)
             return model.radius * scale;
-    return 0.2f * scale;
+    return DEFAULT_WALKING_RADIUS * scale;
 }
 
 std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map,
@@ -186,7 +219,7 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
         {
             if(object->getMeshName() != bounds.name)
                 continue;
-            const float angle = float(object->getRotationAngle()) * 0.01745329252f;
+            const float angle = float(object->getRotationAngle()) * RoomObjectPath::degreesToRadians;
             const Ogre::Vector2 placedScale = object->getFurnitureScale();
             const RoomObjectPath::FurnitureScale scale = placedScale == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
                 RoomObjectPath::FurnitureScale{placedScale.x, placedScale.y};
@@ -212,7 +245,7 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creatu
     const BuildingObject* interaction)
 {
     std::vector<RoomObjectPath::Obstacle> result = collect(*creature.getGameMap(), 0.0f, interaction);
-    Ogre::Vector2 minimum(-0.2f), maximum(0.2f);
+    Ogre::Vector2 minimum(-DEFAULT_WALKING_RADIUS), maximum(DEFAULT_WALKING_RADIUS);
     for(const RoomObjectPath::WalkingRadius& model : RoomObjectPath::walkingRadii)
         if(creature.getMeshName() == model.name)
         {
@@ -260,10 +293,11 @@ bool RoomObjectNavigation::standingPosition(const std::vector<RoomObjectPath::Ob
     }
     const Ogre::Vector2 center(float(Helper::round(wanted.x)), float(Helper::round(wanted.y)));
     float distance = std::numeric_limits<float>::infinity();
-    for(int y = 0; y < 8; ++y)
-        for(int x = 0; x < 8; ++x)
+    for(int y = 0; y < STANDING_GRID_SIZE; ++y)
+        for(int x = 0; x < STANDING_GRID_SIZE; ++x)
         {
-            const Ogre::Vector2 point = center + Ogre::Vector2(-0.4375f + x * 0.125f, -0.4375f + y * 0.125f);
+            const Ogre::Vector2 point = center + Ogre::Vector2(STANDING_GRID_START + x * STANDING_POINT_SPACING,
+                STANDING_GRID_START + y * STANDING_POINT_SPACING);
             if(point.squaredDistance(wanted) >= distance || !RoomObjectPath::clearPoint(obstacles, point))
                 continue;
             distance = point.squaredDistance(wanted);
@@ -281,7 +315,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     const float radius = clearance(creature);
     // Each client jitter coordinate is +/-0.3, so a rotated object needs the
     // full diagonal displacement as well as the creature's walking radius.
-    std::vector<RoomObjectPath::Obstacle> obstacles = collect(map, radius + 0.425f, interaction);
+    std::vector<RoomObjectPath::Obstacle> obstacles = collect(map, radius + WALK_DISTORTION_REACH, interaction);
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
     Ogre::Vector2 previous = start;
     bool nearby = !RoomObjectPath::clearSegment(obstacles, start, path.back());
@@ -431,11 +465,11 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
             Tile* tile = map.getTile(foodX + dx, foodY + dy);
             if(!creature.canGoThroughTile(tile) || !map.pathExists(&creature, startTile, tile))
                 continue;
-            for(int y = 0; y < 8; ++y)
-                for(int x = 0; x < 8; ++x)
+            for(int y = 0; y < STANDING_GRID_SIZE; ++y)
+                for(int x = 0; x < STANDING_GRID_SIZE; ++x)
                 {
-                    const Ogre::Vector2 point(foodX + dx - 0.4375f + x * 0.125f,
-                        foodY + dy - 0.4375f + y * 0.125f);
+                    const Ogre::Vector2 point(foodX + dx + STANDING_GRID_START + x * STANDING_POINT_SPACING,
+                        foodY + dy + STANDING_GRID_START + y * STANDING_POINT_SPACING);
                     if(RoomObjectPath::clearPoint(body, point, food - point) &&
                         RoomObjectPath::clearSegment(furniture, point, food))
                         candidates.push_back(point);
@@ -511,17 +545,17 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
     room->releaseInteractionPosition(&creature);
     // Keep the assigned side, but allow neighbouring users to stand side by side.
     const Ogre::Vector2 sideways(-away.y, away.x);
-    const int steps = int(std::ceil((2.0f * clearance(creature) + 1.0f) * 8.0f));
+    const int steps = int(std::ceil((2.0f * clearance(creature) + 1.0f) / STANDING_POINT_SPACING));
     for(int step = 0; step <= steps; ++step)
     {
-        const Ogre::Vector2 center = wanted + away * (step * 0.125f);
+        const Ogre::Vector2 center = wanted + away * (step * STANDING_POINT_SPACING);
         candidates.push_back(center);
         if(!RoomObjectPath::clearPoint(body, center, facing - center) ||
             interactionPositionClear(creature, center, facing - center))
             continue;
         for(int side = 1; side <= steps; ++side)
             for(float sign : {-1.0f, 1.0f})
-                candidates.push_back(center + sideways * (sign * side * 0.125f));
+                candidates.push_back(center + sideways * (sign * side * STANDING_POINT_SPACING));
     }
     for(const Ogre::Vector2& point : candidates)
     {
@@ -530,7 +564,7 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
             !RoomObjectPath::clearPoint(body, point, facing - point) ||
             !interactionPositionClear(creature, point, facing - point))
             continue;
-        if(start.squaredDistance(point) < 0.0025f &&
+        if(start.squaredDistance(point) < STANDING_POINT_REACHED_SQUARED &&
             RoomObjectPath::clearPoint(body, start, facing - start) &&
             interactionPositionClear(creature, start, facing - start))
         {
@@ -571,7 +605,7 @@ bool RoomObjectNavigation::blocked(Creature& creature, const std::vector<Ogre::V
     if(path.empty())
         return false;
     const BuildingObject* interaction = interactionObject(creature, path.back());
-    std::vector<RoomObjectPath::Obstacle> obstacles = includeWalkDistortion ? collect(*creature.getGameMap(), clearance(creature) + 0.425f, interaction) :
+    std::vector<RoomObjectPath::Obstacle> obstacles = includeWalkDistortion ? collect(*creature.getGameMap(), clearance(creature) + WALK_DISTORTION_REACH, interaction) :
         bodyObstacles(creature, interaction);
     if(!includeWalkDistortion)
         removeLowStepObstacles(creature, obstacles);

@@ -21,27 +21,35 @@
 
 #include "creatureeffect/CreatureEffect.h"
 
+#include <string>
+
 //! \brief Marks a creature that only exists for a while (the skeletons of Raise Dead and Skeleton Army).
 //! When the effect runs out, the creature falls apart: it dies.
 class CreatureEffectTemporary : public CreatureEffect
 {
 public:
+    //! \brief Creates the effect that makes the creature fall apart after the given number of turns.
     CreatureEffectTemporary(int32_t nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "")
     {}
 
+    //! \brief Creates an empty effect to be filled from a stream.
     CreatureEffectTemporary() :
         CreatureEffect()
     {}
 
+    //! \brief Nothing to release.
     virtual ~CreatureEffectTemporary()
     {}
 
+    //! \brief The name of this effect ("Temporary").
     virtual const std::string& getEffectName() const override;
 
+    //! \brief Creates the effect from the stream (used when loading a saved game).
     static CreatureEffectTemporary* load(std::istream& is);
 
 protected:
+    //! \brief Kills the creature once the effect has run out.
     virtual void applyEffect(Creature& creature) override;
 };
 

@@ -33,7 +33,7 @@ if args.source_ref:
 if args.trace_food:
     source = source.replace('std::stable_sort(candidates.begin()', 'std::cout << "CANDIDATES " << creature.getMeshName() << " level=" << creature.getLevel() << " count=" << candidates.size() << "\\n"; std::stable_sort(candidates.begin()')
 if args.trace_work:
-    source = source.replace('const auto tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const auto tiles = map.path(&creature, stagingTile);')
+    source = source.replace('const std::list<Tile*> tiles = map.path(&creature, stagingTile);', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"WORK_CAND "<<creature.getMeshName()<<" "<<object.getMeshName()<<" "<<point<<" stage="<<staging<<"\\n"; const std::list<Tile*> tiles = map.path(&creature, stagingTile);')
     source = source.replace('path.clear();\n            return true;', 'if(creature.getLevel()==30&&(creature.getMeshName()=="Dragon.mesh"||creature.getMeshName()=="PitDemon.mesh"))std::cout<<"BAD_LEG "<<previous<<" -> "<<target<<"\\n"; path.clear();\n            return true;')
 # Probe-only: the navigation code looks bodies up in the real table; additionally offer it an artificial
 # oversized test model. The shipped tables stay untouched and the model-wide loops below keep iterating them.
@@ -178,24 +178,24 @@ bool roomWorkGate(RoomType type,Creature& creature,BuildingObject* ro,const Ogre
 }
 int checks=0,failures=0;
 void check(bool ok,const char* reason){++checks;if(!ok){++failures;std::cout<<"FAIL "<<reason<<'\n';}}
+Ogre::Vector2 rotateCorridorPoint(Ogre::Vector2 p,int rotation){for(int i=0;i<rotation;++i)p={19-p.y,p.x};return p;}
 int main(){
  for(int rotation=0;rotation<4;++rotation)for(bool reverse:{false,true}){
-  GameMap corridor(20,20);for(auto& tile:corridor.tiles)tile.walkable=false;
-  auto rotate=[&](Ogre::Vector2 p){for(int i=0;i<rotation;++i)p={19-p.y,p.x};return p;};
-  std::vector<Ogre::Vector2> coarse;Ogre::Vector2 p(4,4);coarse.push_back(rotate(p));
-  for(int i=0;i<6;++i){p.x+=1;coarse.push_back(rotate(p));p.y+=1;coarse.push_back(rotate(p));}
-  for(auto point:coarse)corridor.getTile(Helper::round(point.x),Helper::round(point.y))->walkable=true;
+  GameMap corridor(20,20);for(Tile& tile:corridor.tiles)tile.walkable=false;
+  std::vector<Ogre::Vector2> coarse;Ogre::Vector2 p(4,4);coarse.push_back(rotateCorridorPoint(p,rotation));
+  for(int i=0;i<6;++i){p.x+=1;coarse.push_back(rotateCorridorPoint(p,rotation));p.y+=1;coarse.push_back(rotateCorridorPoint(p,rotation));}
+  for(const Ogre::Vector2& point:coarse)corridor.getTile(Helper::round(point.x),Helper::round(point.y))->walkable=true;
   if(reverse)std::reverse(coarse.begin(),coarse.end());
   Creature walker{&corridor};walker.pos={coarse.front().x,coarse.front().y,0};
-  const auto destination=coarse.back();coarse.erase(coarse.begin());
+  const Ogre::Vector2 destination=coarse.back();coarse.erase(coarse.begin());
   walker.setWalkPath("Walk","Idle",true,true,coarse,true);
   check(!walker.distortion,"stair corridor disables random client offsets");
   check(!walker.walk.empty()&&walker.walk.back()==destination,"stair corridor preserves destination");
   check(walker.walk.size()<=4,"stair corridor follows a diagonal rather than every tile centre");
   Ogre::Vector2 from(walker.pos.x,walker.pos.y);float length=0;bool diagonal=false;
-  for(auto point:walker.walk){check(terrainClear(walker,from,point),"smoothed corridor never traverses wall or blocked corner");
-   auto delta=point-from;length+=delta.length();if(std::abs(delta.x)>.1f&&std::abs(delta.y)>.1f)diagonal=true;
-   for(int i=0;i<=100;++i){auto sample=from+delta*(i/100.f);auto* tile=corridor.getTile(Helper::round(sample.x),Helper::round(sample.y));
+  for(const Ogre::Vector2& point:walker.walk){check(terrainClear(walker,from,point),"smoothed corridor never traverses wall or blocked corner");
+   Ogre::Vector2 delta=point-from;length+=delta.length();if(std::abs(delta.x)>.1f&&std::abs(delta.y)>.1f)diagonal=true;
+   for(int i=0;i<=100;++i){Ogre::Vector2 sample=from+delta*(i/100.f);Tile* tile=corridor.getTile(Helper::round(sample.x),Helper::round(sample.y));
     check(tile&&tile->walkable,"dense samples stay on excavated terrain");}from=point;}
   check(diagonal&&length<10,"stair corridor contains a shorter diagonal leg");
  }

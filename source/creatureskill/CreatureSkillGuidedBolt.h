@@ -27,11 +27,14 @@
 class CreatureSkillGuidedBolt : public CreatureSkillMissileLaunch
 {
 public:
+    //! \brief Destroys the skill.
     virtual ~CreatureSkillGuidedBolt()
     {}
 
+    //! \brief Returns the name under which the skill is registered.
     virtual const std::string& getSkillName() const override;
 
+    //! \brief Returns a copy of the skill with the same parameters.
     virtual CreatureSkillGuidedBolt* clone() const override;
 
 protected:

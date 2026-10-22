@@ -26,10 +26,13 @@
 class CreatureEffectHexenHen : public CreatureEffect
 {
 public:
+    //! \brief Creates the effect.
+    //! \param nbTurnsEffect How many turns the creature stays a chicken.
     CreatureEffectHexenHen(int32_t nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "SpellCreatureHexenHen")
     {}
 
+    //! \brief Creates an empty effect, to be filled from a stream.
     CreatureEffectHexenHen() :
         CreatureEffect()
     {}
@@ -37,11 +40,14 @@ public:
     virtual ~CreatureEffectHexenHen()
     {}
 
+    //! \brief Returns the name under which this effect is registered and saved.
     virtual const std::string& getEffectName() const override;
 
+    //! \brief Creates the effect from the stream (used when loading a saved game).
     static CreatureEffectHexenHen* load(std::istream& is);
 
 protected:
+    //! \brief When the effect has ended, asks the clients to show the normal form again.
     virtual void applyEffect(Creature& creature) override;
 };
 

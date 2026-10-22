@@ -44,6 +44,7 @@ static const uint32_t SKILL_LEVEL_UPGRADED = 2;
 //! Stun Workers: the enemy workers stay down for this many seconds
 static const double STUN_WORKERS_SECONDS = 5.0;
 
+//! \brief Creates a bonus box of the given type and amount with the mystery box mesh
 GiftBoxBonus::GiftBoxBonus(GameMap* gameMap, const std::string& baseName, GiftBoxType type, uint32_t amount) :
     GiftBoxEntity(gameMap, baseName, "MysteryBox", type),
     mAmount(amount)
@@ -52,12 +53,14 @@ GiftBoxBonus::GiftBoxBonus(GameMap* gameMap, const std::string& baseName, GiftBo
     mPrevAnimationStateLoop = true;
 }
 
+//! \brief Creates an empty bonus box of the given type, filled afterwards when it is loaded from a stream
 GiftBoxBonus::GiftBoxBonus(GameMap* gameMap, GiftBoxType type) :
     GiftBoxEntity(gameMap, type),
     mAmount(0)
 {
 }
 
+//! \brief Returns the name of the bonus of the given type
 std::string GiftBoxBonus::getDisplayName(GiftBoxType type)
 {
     switch(type)
@@ -91,6 +94,7 @@ std::string GiftBoxBonus::getDisplayName(GiftBoxType type)
     }
 }
 
+//! \brief Returns a short text saying what the bonus of the given type does
 std::string GiftBoxBonus::getDescription(GiftBoxType type)
 {
     switch(type)
@@ -124,6 +128,7 @@ std::string GiftBoxBonus::getDescription(GiftBoxType type)
     }
 }
 
+//! \brief Returns the amount a box of the given type carries by default
 uint32_t GiftBoxBonus::getDefaultAmount(GiftBoxType type)
 {
     switch(type)
@@ -151,12 +156,14 @@ uint32_t GiftBoxBonus::getDefaultAmount(GiftBoxType type)
     }
 }
 
+//! \brief Writes the box and its amount to the stream
 void GiftBoxBonus::exportToStream(std::ostream& os) const
 {
     GiftBoxEntity::exportToStream(os);
     os << mAmount << "\t";
 }
 
+//! \brief Reads the box and its amount from the stream. Returns false if the data is incomplete
 bool GiftBoxBonus::importFromStream(std::istream& is)
 {
     if(!GiftBoxEntity::importFromStream(is))
@@ -167,6 +174,7 @@ bool GiftBoxBonus::importFromStream(std::istream& is)
     return true;
 }
 
+//! \brief Server side. Gives the bonus of this box to the seat that delivered it
 void GiftBoxBonus::applyEffect()
 {
     Seat* seat = getSeat();
@@ -179,6 +187,8 @@ void GiftBoxBonus::applyEffect()
     applyBonus(getGameMap(), seat, getGiftBoxType(), mAmount, getPositionTile());
 }
 
+//! \brief Server side. Applies the bonus of the given type and amount to the seat. Gold the
+//! treasuries cannot hold is left on the given tile, workers appear on it
 void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, uint32_t amount, Tile* positionTile)
 {
     switch(type)

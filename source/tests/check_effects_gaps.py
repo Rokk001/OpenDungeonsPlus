@@ -110,9 +110,9 @@ need("WatchBannerDroop" in fx and fx["WatchBannerDroop"]["When"] == ["Reloading"
 
 # --- hand: sent with the local cast, no network value
 server_code = read("source", "network", "ODServer.cpp")
-need('"SpellFx/HandCast"' in server_code and server_code.index("SpellManager::castSpell(gameMap") < server_code.index('"SpellFx/HandCast"'),
+need('HAND_CAST_EFFECT_NAME' in server_code and server_code.index("SpellManager::castSpell(gameMap") < server_code.index('HAND_CAST_EFFECT_NAME'),
      "the server must send the hand spark only after the spell was accepted")
-need('family == "SpellFx/HandCast"' in client and "noteHandCast" in client, "the client does not show the hand spark on the server message")
+need('family == (Spell::SPELL_EFFECT_PREFIX + Spell::HAND_CAST_EFFECT_NAME)' in client and "noteHandCast" in client, "the client does not show the hand spark on the server message")
 need("ClientNotificationType::askCastSpell" not in client[client.index("void ODClient::queueClientNotification"):][:400],
      "the hand spark must not be raised by the local request any more")
 need("getKeeperHandPosition" in render_h and "getKeeperHandPosition" in render_cpp, "RenderManager::getKeeperHandPosition missing")

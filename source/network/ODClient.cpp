@@ -60,6 +60,7 @@
 #include "social/SocialProfileCache.h"
 #include "sound/MusicPlayer.h"
 #include "sound/SoundEffectsManager.h"
+#include "spells/Spell.h"
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
 #include "traps/TrapType.h"
@@ -75,10 +76,22 @@
 
 #include <string>
 
+//! \brief Number of position units per tile in the place of a trampled egg that the server sends (hundredths of a tile).
+static const float EGG_HUNDREDTHS_PER_TILE = 100.0f;
+
 template<> ODClient* Ogre::Singleton<ODClient>::msSingleton = nullptr;
 
 namespace
 {
+//! The room ambience events that show the end of a possession: the keeper returns, or the creature fell
+static const std::string POSSESSION_END_EVENT = "SpellFxPossessEnd";
+static const std::string POSSESSION_LOST_EVENT = "SpellFxPossessLost";
+//! The messages shown when a possession ends, and their colours
+static const std::string POSSESSION_END_TEXT = "Your mind returns to the keeper's view.";
+static const std::string POSSESSION_LOST_TEXT = "Your creature fell. Your mind is torn back to the keeper's view.";
+static const Ogre::ColourValue POSSESSION_END_COLOUR(0.75f, 0.7f, 1.0f);
+static const Ogre::ColourValue POSSESSION_LOST_COLOUR(1.0f, 0.55f, 0.5f);
+
 //! \brief Dungeonbook post for a tier change of two creatures of the local player.
 void reportRelationshipPost(GameMap* gameMap, const std::string& creatureA, const std::string& creatureB,
     RelationshipTier oldTier, RelationshipTier newTier)
@@ -147,6 +160,27 @@ void ODClient::playerDisconnected()
     // Place an event in the queue to inform the user about the disconnection.
     addEventMessage(new EventMessage(message));
     // TODO : try to reconnect to the server
+}
+
+//! \brief Tells whether a loaded saved game already fixes the human seat, the faction and the team
+//! of every seat, so that the seat configuration can be skipped. Requires exactly one human seat.
+static bool areSavedGameSeatsFixed(const GameMap& gameMap)
+{
+    uint32_t humanSeats = 0;
+    for(Seat* seat : gameMap.getSeats())
+    {
+        if(seat->isRogueSeat())
+            continue;
+        if(seat->getPlayerType() == Seat::PLAYER_TYPE_HUMAN)
+            ++humanSeats;
+        else if(seat->getPlayerType() != Seat::PLAYER_TYPE_AI &&
+                seat->getPlayerType() != Seat::PLAYER_TYPE_INACTIVE)
+            return false;
+        if(seat->getAvailableTeamIds().size() != 1 ||
+           seat->getFaction() == Seat::PLAYER_FACTION_CHOICE)
+            return false;
+    }
+    return humanSeats == 1;
 }
 
 //! \brief Dispatches validated server packets to the active game or menu presentation.
@@ -366,22 +400,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 case ServerMode::ModeGameLoaded:
                 {
                     // A saved skirmish already fixes its human side, faction and team.
-                    bool fixedSeats = getSource() != ODSource::file;
-                    uint32_t humanSeats = 0;
-                    for(Seat* seat : gameMap->getSeats())
-                    {
-                        if(seat->isRogueSeat())
-                            continue;
-                        if(seat->getPlayerType() == Seat::PLAYER_TYPE_HUMAN)
-                            ++humanSeats;
-                        else if(seat->getPlayerType() != Seat::PLAYER_TYPE_AI &&
-                                seat->getPlayerType() != Seat::PLAYER_TYPE_INACTIVE)
-                            fixedSeats = false;
-                        if(seat->getAvailableTeamIds().size() != 1 ||
-                           seat->getFaction() == Seat::PLAYER_FACTION_CHOICE)
-                            fixedSeats = false;
-                    }
-                    if(fixedSeats && humanSeats == 1)
+                    if(getSource() != ODSource::file && areSavedGameSeatsFixed(*gameMap))
                     {
                         ODPacket ready;
                         ready << ClientNotificationType::readyForSeatConfiguration;
@@ -857,7 +876,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             // A reply may arrive after another local rotation or pickup.
             if(!packetReceived.endOfPacket())
             {
-                int32_t entityType;
+                int32_t entityType = 0;
                 std::string entityName;
                 if(!(packetReceived >> entityType >> entityName))
                 {
@@ -983,7 +1002,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 mLevelStatistics = statistics;
                 mHasLevelStatistics = true;
                 // A won campaign level shows its numbers in the campaign menu
-                if(statistics.mLevelWon && (gameMap->getLocalPlayer() != nullptr))
+                if(statistics.mLevelWon && (gameMap->getLocalPlayer() != nullptr)
+                   && (gameMap->getLocalPlayer()->getSeat() != nullptr))
                 {
                     Campaign::getSingleton().setLevelSummary(
                         debriefingSeatSummary(statistics, gameMap->getLocalPlayer()->getSeat()->getId()));
@@ -1116,8 +1136,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::seatTeam:
         {
-            int32_t seatId;
-            int32_t teamId;
+            int32_t seatId = -1;
+            int32_t teamId = -1;
             OD_ASSERT_TRUE(packetReceived >> seatId >> teamId);
             Seat* seat = gameMap->getSeatById(seatId);
             if(seat != nullptr)
@@ -1256,11 +1276,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::playSpatialSound:
         {
             std::string family;
-            int xPos;
-            int yPos;
+            int xPos = 0;
+            int yPos = 0;
             OD_ASSERT_TRUE(packetReceived >> family >> xPos >> yPos);
-            static const std::string spellEffectPrefix = "SpellFx/";
-            if(family == "SpellFx/HandCast")
+            if(family == (Spell::SPELL_EFFECT_PREFIX + Spell::HAND_CAST_EFFECT_NAME))
             {
                 // The server accepted a spell of this keeper: the hand throws a spark (cosmetic)
                 Ogre::Vector3 handPosition;
@@ -1269,14 +1288,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                     RoomAmbience::getSingleton().noteHandCast(handPosition);
                 break;
             }
-            if(family.compare(0, spellEffectPrefix.size(), spellEffectPrefix) == 0)
+            if(family.compare(0, Spell::SPELL_EFFECT_PREFIX.size(), Spell::SPELL_EFFECT_PREFIX) == 0)
             {
                 // Cosmetic spell effect, no sound belongs to it
                 RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
                 if(ambience != nullptr)
                 {
                     Ogre::Vector3 position(static_cast<Ogre::Real>(xPos), static_cast<Ogre::Real>(yPos), 0.0f);
-                    ambience->triggerEvent("SpellFx" + family.substr(spellEffectPrefix.size()), position, false,
+                    ambience->triggerEvent("SpellFx" + family.substr(Spell::SPELL_EFFECT_PREFIX.size()), position, false,
                         std::string(), true);
                 }
                 break;
@@ -1286,7 +1305,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 // Cosmetic effect of a trampled egg, no sound belongs to it. The numbers are the place of the egg
                 // in hundredths of a tile.
                 RenderManager::getSingleton().rrEggTrampled(Ogre::Vector3(
-                    static_cast<Ogre::Real>(xPos) / 100.0f, static_cast<Ogre::Real>(yPos) / 100.0f, 0.0f));
+                    static_cast<Ogre::Real>(xPos) / EGG_HUNDREDTHS_PER_TILE, static_cast<Ogre::Real>(yPos) / EGG_HUNDREDTHS_PER_TILE, 0.0f));
                 break;
             }
             SoundEffectsManager::getSingleton().playSpatialSound(family, xPos, yPos);
@@ -1530,11 +1549,12 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::trapEffect:
         {
-            int32_t effectKind;
-            int32_t tileX;
-            int32_t tileY;
+            // Cosmetic only: tells the room ambience what the trap or door on the tile just did
+            int32_t effectKind = 0;
+            int32_t tileX = 0;
+            int32_t tileY = 0;
             std::string typeName;
-            float fraction;
+            float fraction = 1.0f;
             OD_ASSERT_TRUE(packetReceived >> effectKind >> tileX >> tileY >> typeName >> fraction);
             if((RoomAmbience::getSingletonPtr() != nullptr) &&
                (frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME))
@@ -1577,10 +1597,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             OD_ASSERT_TRUE(packetReceived >> roosterName >> henName);
             GameEntity* rooster = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, roosterName);
             GameEntity* hen = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, henName);
-            if(rooster != nullptr)
+            if((rooster != nullptr) && (rooster->getObjectType() == GameEntityType::chickenEntity))
             {
                 static_cast<ChickenEntity*>(rooster)->setMountHenFromServer(henName);
-                if(hen != nullptr)
+                if((hen != nullptr) && (hen->getObjectType() == GameEntityType::chickenEntity))
                     RenderManager::getSingleton().rrChickenMount(static_cast<ChickenEntity*>(rooster), static_cast<ChickenEntity*>(hen));
             }
             break;
@@ -1588,13 +1608,13 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         case ServerNotificationType::chickenRoofFlight:
         {
             std::string name;
-            Ogre::Vector3 from;
-            Ogre::Vector3 to;
-            uint32_t turns;
-            Ogre::Real elapsed;
+            Ogre::Vector3 from(Ogre::Vector3::ZERO);
+            Ogre::Vector3 to(Ogre::Vector3::ZERO);
+            uint32_t turns = 0;
+            Ogre::Real elapsed = 0.0f;
             OD_ASSERT_TRUE(packetReceived >> name >> from >> to >> turns >> elapsed);
             GameEntity* entity = gameMap->getEntityFromTypeAndName(GameEntityType::chickenEntity, name);
-            if(entity != nullptr)
+            if((entity != nullptr) && (entity->getObjectType() == GameEntityType::chickenEntity))
                 static_cast<ChickenEntity*>(entity)->startRoofFlightFromServer(from, to, turns, elapsed);
             break;
         }
@@ -2138,14 +2158,29 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
                 break;
             }
-            uint32_t nbRegions;
-            OD_ASSERT_TRUE(packetReceived >> nbRegions);
+            uint32_t nbRegions = 0;
+            if(!(packetReceived >> nbRegions))
+            {
+                OD_LOG_ERR("Truncated editorRegionData packet");
+                break;
+            }
+
             std::vector<LevelScriptRegion> regions;
+            bool isComplete = true;
             for(uint32_t i = 0; i < nbRegions; ++i)
             {
                 LevelScriptRegion region;
-                OD_ASSERT_TRUE(packetReceived >> region.mName >> region.mX1 >> region.mY1 >> region.mX2 >> region.mY2);
+                if(!(packetReceived >> region.mName >> region.mX1 >> region.mY1 >> region.mX2 >> region.mY2))
+                {
+                    isComplete = false;
+                    break;
+                }
                 regions.push_back(region);
+            }
+            if(!isComplete)
+            {
+                OD_LOG_ERR("Truncated editorRegionData packet");
+                break;
             }
 
             EditorMode* editorMode = static_cast<EditorMode*>(frameListener->getModeManager()->getCurrentMode());
@@ -2157,17 +2192,17 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
         {
             // The creature the keeper returns from loses its aura and shows a short flash of light where it
             // stands. A creature that fell (the server says so: dead, knocked out or gone) shows another effect
-            bool creatureLost;
+            bool creatureLost = false;
             OD_ASSERT_TRUE(packetReceived >> creatureLost);
             Creature* possessed = gameMap->getCreature(getPlayer()->getPossessedCreatureName());
             RoomAmbience* ambience = RoomAmbience::getSingletonPtr();
             if(possessed != nullptr)
-                possessed->endParticleEffectsByScript("SpellCreaturePossess");
+                possessed->endParticleEffectsByScript(Creature::POSSESSION_AURA_SCRIPT);
             if((possessed != nullptr) && possessed->getIsOnMap() && (ambience != nullptr))
             {
                 Ogre::Vector3 position(static_cast<Ogre::Real>(possessed->getPosition().x),
                     static_cast<Ogre::Real>(possessed->getPosition().y), 0.0f);
-                ambience->triggerEvent(creatureLost ? "SpellFxPossessLost" : "SpellFxPossessEnd", position, false,
+                ambience->triggerEvent(creatureLost ? POSSESSION_LOST_EVENT : POSSESSION_END_EVENT, position, false,
                     std::string(), true);
             }
             getPlayer()->setPossessedCreatureName(std::string());
@@ -2177,9 +2212,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 GameMode* gm = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
                 gm->notifyPossessionEnded();
                 if(creatureLost)
-                    gm->displayText(Ogre::ColourValue(1.0f, 0.55f, 0.5f), "Your creature fell. Your mind is torn back to the keeper's view.");
+                    gm->displayText(POSSESSION_LOST_COLOUR, POSSESSION_LOST_TEXT);
                 else
-                    gm->displayText(Ogre::ColourValue(0.75f, 0.7f, 1.0f), "Your mind returns to the keeper's view.");
+                    gm->displayText(POSSESSION_END_COLOUR, POSSESSION_END_TEXT);
             }
             break;
         }

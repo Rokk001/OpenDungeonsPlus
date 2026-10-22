@@ -14,6 +14,11 @@ namespace CEGUI
     class Image;
 }
 
+//! Width in pixels of the rendered creature portrait texture.
+static const unsigned int CREATURE_PORTRAIT_WIDTH = 192;
+//! Height in pixels of the rendered creature portrait texture.
+static const unsigned int CREATURE_PORTRAIT_HEIGHT = 384;
+
 //! Render the existing creature model to an isolated, static portrait texture.
 //! The caller owns the returned texture and its TextureManager registration.
 Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::string& textureName);

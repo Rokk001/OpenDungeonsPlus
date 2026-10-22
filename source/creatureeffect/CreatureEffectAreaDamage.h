@@ -21,6 +21,8 @@
 
 #include "creatureeffect/CreatureEffect.h"
 
+#include <string>
+
 //! \brief A zone of damage around a tile (gas cloud, hail storm). The effect sits on the caster
 //! and, every turn while it lasts, hurts every enemy creature of the caster that stands within
 //! the radius of the tile. The zone ends when the effect runs out or when the caster dies.
@@ -51,9 +53,11 @@ public:
     //! \brief Sets the minimum damage used for each application of this effect.
     void setDamageMin(double value) { mDamagePerTurnMin = value; }
 
+    //! \brief Destroys the effect.
     virtual ~CreatureEffectAreaDamage()
     {}
 
+    //! \brief Returns the name under which the effect is registered.
     virtual const std::string& getEffectName() const override;
 
     //! \brief Writes the effect with both damage endpoints.
@@ -61,6 +65,7 @@ public:
     //! \brief Reads both endpoints, accepting legacy fixed damage effects.
     virtual bool importFromStream(std::istream& is) override;
 
+    //! \brief Creates the effect from the stream (used when loading a saved game).
     static CreatureEffectAreaDamage* load(std::istream& is);
 
 protected:

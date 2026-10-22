@@ -32,6 +32,43 @@ const size_t RelationshipCreatureState::MAX_CAPTORS;
 
 namespace
 {
+    //! A creature only starts a brawl if its health is this many percent above the health that stops the brawl
+    static const int32_t BRAWL_START_HEALTH_MARGIN_PERCENT = 25;
+    //! Factor between a fraction and percent, used to compare health with the percent settings of the brawl
+    static const double BRAWL_PERCENT_FACTOR = 100.0;
+
+    //! Saved creature states: number of tab separated fields of a line and the position of each of them
+    static const size_t STATE_FIELD_COUNT = 6;
+    static const size_t STATE_FIELD_GRIEF = 1;
+    static const size_t STATE_FIELD_RAGE_TURNS = 2;
+    static const size_t STATE_FIELD_RAGE_SEAT = 3;
+    static const size_t STATE_FIELD_BRAWL_OPPONENT = 4;
+    static const size_t STATE_FIELD_BRAWL_TURNS = 5;
+    //! A saved grief mood is limited to this many points in both directions, whatever the file says
+    static const int64_t STATE_GRIEF_LIMIT = 100000;
+
+    //! Default values used when config/relationships.cfg is missing or lacks an entry
+    static const int32_t DEFAULT_THRESHOLD_FRIENDS = 50;
+    static const int32_t DEFAULT_THRESHOLD_BEST_FRIENDS = 80;
+    static const int32_t DEFAULT_THRESHOLD_LOVERS = 90;
+    static const int32_t DEFAULT_THRESHOLD_HATED = -50;
+    static const int32_t DEFAULT_THRESHOLD_NEMESIS = -80;
+    static const int32_t DEFAULT_DRIFT_AMOUNT = 1;
+    static const int64_t DEFAULT_DRIFT_INTERVAL_TURNS = 30;
+    static const int64_t DEFAULT_DRIFT_IDLE_TURNS = 420;
+    static const int32_t DEFAULT_EVENT_TRAINING_TOGETHER = 3;
+    static const int32_t DEFAULT_EVENT_DEFEATED_ENEMIES_TOGETHER = 8;
+    static const int32_t DEFAULT_EVENT_ARENA_LOSS = -10;
+    static const int32_t DEFAULT_EVENT_CHICKEN_SNATCHED = -12;
+    //! Largest absolute value a config setting may have; larger values are cut to it
+    static const int64_t SETTING_LIMIT = 1000000;
+    //! Number of tab separated fields of a saved pair line: creatureA, creatureB, value, age in turns
+    static const size_t NB_SAVE_FIELDS = 4;
+    //! Number of fields of a saved pair that also has the lovers flag
+    static const size_t NB_SAVE_FIELDS_WITH_LOVERS = 5;
+
+    //! \brief Reads a whole text as an integer. Returns false and leaves value untouched if the text
+    //! is not exactly one integer.
     bool parseInt(const std::string& text, int64_t& value)
     {
         std::istringstream ss(text);
@@ -83,18 +120,18 @@ namespace
 }
 
 RelationshipSettings::RelationshipSettings() :
-    mThresholdFriends(50),
-    mThresholdBestFriends(80),
-    mThresholdLovers(90),
-    mThresholdHated(-50),
-    mThresholdNemesis(-80),
-    mDriftAmount(1),
-    mDriftIntervalTurns(30),
-    mDriftIdleTurns(420),
-    mEventTrainingTogether(3),
-    mEventDefeatedEnemiesTogether(8),
-    mEventArenaLoss(-10),
-    mEventChickenSnatched(-12),
+    mThresholdFriends(DEFAULT_THRESHOLD_FRIENDS),
+    mThresholdBestFriends(DEFAULT_THRESHOLD_BEST_FRIENDS),
+    mThresholdLovers(DEFAULT_THRESHOLD_LOVERS),
+    mThresholdHated(DEFAULT_THRESHOLD_HATED),
+    mThresholdNemesis(DEFAULT_THRESHOLD_NEMESIS),
+    mDriftAmount(DEFAULT_DRIFT_AMOUNT),
+    mDriftIntervalTurns(DEFAULT_DRIFT_INTERVAL_TURNS),
+    mDriftIdleTurns(DEFAULT_DRIFT_IDLE_TURNS),
+    mEventTrainingTogether(DEFAULT_EVENT_TRAINING_TOGETHER),
+    mEventDefeatedEnemiesTogether(DEFAULT_EVENT_DEFEATED_ENEMIES_TOGETHER),
+    mEventArenaLoss(DEFAULT_EVENT_ARENA_LOSS),
+    mEventChickenSnatched(DEFAULT_EVENT_CHICKEN_SNATCHED),
     mEventPrayedTogether(4),
     mPrayerTogetherCooldownTurns(30),
     mTrainingTogetherCooldownTurns(40),
@@ -242,7 +279,7 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
             missing += std::string(" ") + entry.mKey;
             continue;
         }
-        *entry.mTarget = static_cast<int32_t>(std::max<int64_t>(-1000000, std::min<int64_t>(1000000, value)));
+        *entry.mTarget = static_cast<int32_t>(std::max<int64_t>(-SETTING_LIMIT, std::min<int64_t>(SETTING_LIMIT, value)));
     }
     for(DoubleEntry& entry : doubleEntries)
     {
@@ -1060,8 +1097,8 @@ bool CreatureRelationships::readFromStream(std::istream& is, int64_t turn)
         int64_t value;
         int64_t age;
         int64_t lovers = 0;
-        bool hasFlag = (fields.size() == 5);
-        if(((fields.size() != 4) && !hasFlag) || fields[0].empty() || fields[1].empty() || (fields[0] == fields[1])
+        bool hasFlag = (fields.size() == NB_SAVE_FIELDS_WITH_LOVERS);
+        if(((fields.size() != NB_SAVE_FIELDS) && !hasFlag) || fields[0].empty() || fields[1].empty() || (fields[0] == fields[1])
             || !parseInt(fields[2], value) || !parseInt(fields[3], age) || (hasFlag && !parseInt(fields[4], lovers)))
         {
             return false;
@@ -1136,21 +1173,22 @@ bool readRelationshipCreatureStates(std::istream& is, std::vector<RelationshipCr
         int64_t rageTurns;
         int64_t rageSeat;
         int64_t brawlTurns;
-        if((fields.size() < 6) || fields[0].empty() || !parseInt(fields[1], grief) || !parseInt(fields[2], rageTurns)
-           || !parseInt(fields[3], rageSeat) || !parseInt(fields[5], brawlTurns))
+        if((fields.size() < STATE_FIELD_COUNT) || fields[0].empty() || !parseInt(fields[STATE_FIELD_GRIEF], grief)
+           || !parseInt(fields[STATE_FIELD_RAGE_TURNS], rageTurns) || !parseInt(fields[STATE_FIELD_RAGE_SEAT], rageSeat)
+           || !parseInt(fields[STATE_FIELD_BRAWL_TURNS], brawlTurns))
         {
             return false;
         }
 
         RelationshipCreatureState state;
         state.mName = fields[0];
-        state.mGriefMood = static_cast<int32_t>(std::max<int64_t>(-100000, std::min<int64_t>(100000, grief)));
+        state.mGriefMood = static_cast<int32_t>(std::max<int64_t>(-STATE_GRIEF_LIMIT, std::min<int64_t>(STATE_GRIEF_LIMIT, grief)));
         state.mRageTurnsLeft = std::max<int64_t>(0, rageTurns);
         state.mRageSeatId = static_cast<int32_t>(rageSeat);
-        state.mBrawlOpponent = fields[4];
+        state.mBrawlOpponent = fields[STATE_FIELD_BRAWL_OPPONENT];
         state.mBrawlTurnsLeft = std::max<int64_t>(0, brawlTurns);
         // Older saves have no captor fields
-        for(size_t i = 6; i < fields.size() && (state.mCaptors.size() < RelationshipCreatureState::MAX_CAPTORS); ++i)
+        for(size_t i = STATE_FIELD_COUNT; i < fields.size() && (state.mCaptors.size() < RelationshipCreatureState::MAX_CAPTORS); ++i)
         {
             if(!fields[i].empty())
                 state.mCaptors.push_back(fields[i]);
@@ -1208,13 +1246,14 @@ bool canStartBrawl(const BrawlCandidateState& state, const RelationshipSettings&
     if(state.mFighting || state.mInArenaOrCasino)
         return false;
 
-    return (state.mHp * 100.0) > (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + 25));
+    return (state.mHp * BRAWL_PERCENT_FACTOR) >
+        (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + BRAWL_START_HEALTH_MARGIN_PERCENT));
 }
 
 bool shouldStopBrawl(const BrawlFighterState& first, const BrawlFighterState& second, int64_t turnsSinceStart,
     bool stillFighting, const RelationshipSettings& settings)
 {
-    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / 100.0;
+    double stopRatio = static_cast<double>(settings.mBrawlStopHealthPercent) / BRAWL_PERCENT_FACTOR;
     return !first.mAlive || !second.mAlive || first.mKo || second.mKo
         || first.mPossessed || second.mPossessed
         || (first.mHp <= (first.mMaxHp * stopRatio)) || (second.mHp <= (second.mMaxHp * stopRatio))

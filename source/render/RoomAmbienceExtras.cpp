@@ -30,6 +30,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <string>
 
 namespace
 {
@@ -47,10 +49,15 @@ const double CROW_MAX_PAUSE = 120.0;
 const double HEART_HURT_FRACTION = 0.5;
 // Below this part of the heart health every beat is also heard (the flare starts at the same limit)
 const double HEART_LOW_FRACTION = 0.35;
+//! Added to a coordinate before it is rounded down to the tile it lies on
+const double TILE_ROUNDING = 0.5;
+//! The tile visual of a temple
+static const std::string TEMPLE_VISUAL = "templeRoom";
 
+//! \brief The tile coordinate that a position coordinate lies on
 int32_t toTileCoordinate(double value)
 {
-    return static_cast<int32_t>(std::floor(value + 0.5));
+    return static_cast<int32_t>(std::floor(value + TILE_ROUNDING));
 }
 
 } // namespace
@@ -80,7 +87,7 @@ bool RoomAmbienceExtras::isTempleTile(GameMap* gameMap, const Ogre::Vector3& pos
     if(tile == nullptr)
         return false;
 
-    return Tile::tileVisualToString(tile->getTileVisual()) == "templeRoom";
+    return Tile::tileVisualToString(tile->getTileVisual()) == TEMPLE_VISUAL;
 }
 
 void RoomAmbienceExtras::scan(RoomAmbience& ambience, GameMap* gameMap, double clock, const Ogre::Vector3& cameraPosition)
@@ -130,7 +137,7 @@ void RoomAmbienceExtras::scanCreatures(RoomAmbience& ambience, GameMap* gameMap,
             {
                 // Getting better in the temple: a bell rings and a ring of light spreads
                 snapshot.mLastEvent = clock;
-                ambience.triggerEvent("TempleHealed", position, false, "templeRoom");
+                ambience.triggerEvent("TempleHealed", position, false, TEMPLE_VISUAL);
             }
             else if(snapshot.mPrisoner && !prisoner && (seat != snapshot.mSeat))
             {

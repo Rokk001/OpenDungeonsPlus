@@ -75,12 +75,16 @@ private:
     SocialProfileCache();
     void loadData();
 
+    //! True once loadData() has tried to read the data files
     bool mDataLoaded;
     SocialData mData;
+    //! Generated profiles by creature name
     std::map<std::string, CreatureProfile> mProfiles;
     //! Full names handed out so far, kept unique between the cached profiles
     std::set<std::string> mUsedNames;
+    //! Friends and foe by creature name
     std::map<std::string, FriendsAndFoe> mFriends;
+    //! Classes without a name group that were already logged
     std::set<std::string> mLoggedUnmappedClasses;
 };
 

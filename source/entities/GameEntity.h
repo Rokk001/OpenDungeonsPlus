@@ -306,7 +306,8 @@ class GameEntity
 
     //! \brief Ends the presentation-only particle effects (not the creature effects) that play the given script.
     //! On the client they are removed at once; on the server they run out with the next upkeep.
-    //! Returns the number of effects ended
+    //! \param script The script of the effects to end.
+    //! \return The number of effects ended
     uint32_t endParticleEffectsByScript(const std::string& script);
 
     //! \brief Returns a list of the tiles that this object is in/covering.  For creatures and other small objects

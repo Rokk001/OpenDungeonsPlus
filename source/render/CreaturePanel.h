@@ -8,8 +8,12 @@
 
 #include "game/CreaturePanelData.h"
 #include <CEGUI/Event.h>
+#include <CEGUI/EventArgs.h>
 #include <CEGUI/Size.h>
+#include <array>
+#include <cstddef>
 #include <set>
+#include <string>
 #include <vector>
 
 class GameMap;
@@ -30,15 +34,18 @@ public:
     void update();
 
 private:
+    //! Number of count rows per slot; also the stride of the count window ids.
+    static const size_t SLOT_COUNT_ROWS = 4;
+
     //! \brief One column of the panel, showing a single creature type.
     struct Slot
     {
         //! \brief Container of the column
-        CEGUI::Window* window;
+        CEGUI::Window* window = nullptr;
         //! \brief Portrait image of the creature type
-        CEGUI::Window* portrait;
+        CEGUI::Window* portrait = nullptr;
         //! \brief Count labels below each other, one per criterion of the selected view
-        std::array<CEGUI::Window*, 4> counts;
+        std::array<CEGUI::Window*, SLOT_COUNT_ROWS> counts = {{nullptr, nullptr, nullptr, nullptr}};
         //! \brief Creature class name currently shown in this column
         std::string type;
     };
@@ -57,6 +64,15 @@ private:
     //! \brief Moves the camera to the first creature of the given type that is on the map
     void focus(const std::string& type);
 
+    //! Event handlers; the window id identifies the worker row, view, slot or count row.
+    bool onWorkerCountClicked(const CEGUI::EventArgs& args);
+    bool onViewButtonClicked(const CEGUI::EventArgs& args);
+    bool onPreviousClicked(const CEGUI::EventArgs& args);
+    bool onNextClicked(const CEGUI::EventArgs& args);
+    bool onPortraitClicked(const CEGUI::EventArgs& args);
+    bool onCountClicked(const CEGUI::EventArgs& args);
+
+    //! Game map the panel reads creatures from.
     GameMap& mGameMap;
     Gui& mGui;
     //! \brief Root window of the panel

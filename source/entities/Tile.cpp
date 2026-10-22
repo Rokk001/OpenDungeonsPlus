@@ -61,6 +61,7 @@
 const uint32_t Tile::NO_FLOODFILL = 0;
 const std::string Tile::TILE_PREFIX = "Tile_";
 const std::string Tile::TILE_SCANF = TILE_PREFIX + "%i_%i";
+const Ogre::ColourValue Tile::DIG_MARK_COLOUR(0.65f, 0.45f, 1.0f, 0.5f);
 
 //! \brief Creates the tile at map coordinates x/y and places it there in the world, so maps built without a level
 //! file (the client map, a new editor map) report the same tile positions as a loaded level
@@ -1269,6 +1270,7 @@ bool Tile::isBuildableUpon(Seat* seat) const
                 if(object->getMeshName() != bounds.name)
                     continue;
                 const Ogre::Vector3 position = object->getPosition();
+                // The tile reaches half a unit from its centre in each direction.
                 if(getX() + 0.5f > position.x + bounds.minX &&
                     getX() - 0.5f < position.x + bounds.maxX &&
                     getY() + 0.5f > position.y + bounds.minY &&
@@ -2479,7 +2481,7 @@ void Tile::updateStatsWindow(const std::string& txt)
     if (mStatsWindow == nullptr)
         return;
 
-    CEGUI::Window* textWindow = mStatsWindow->getChild("TextDisplay");
+    CEGUI::Window* textWindow = mStatsWindow->getChild(Gui::INFO_WINDOW_TEXT);
     textWindow->setText(txt);
 }
 
@@ -2592,7 +2594,7 @@ void Tile::setFogOfWarMesh(Ogre::InstancedEntity* instancedEntity, bool isMarked
     mFogOfWarDirtMesh = instancedEntity;
     if(mFogOfWarDirtMesh!=nullptr)
         if(isMarked)
-            mFogOfWarDirtMesh->setCustomParam(0, Ogre::Vector4(0.65f, 0.45f, 1.0f, 0.5f));
+            mFogOfWarDirtMesh->setCustomParam(0, Ogre::Vector4(DIG_MARK_COLOUR.r, DIG_MARK_COLOUR.g, DIG_MARK_COLOUR.b, DIG_MARK_COLOUR.a));
         else
             mFogOfWarDirtMesh->setCustomParam(0, Ogre::Vector4(1.0f, 1.0f, 0.0f, 0.0f)); // 0 in alpha sygnalize the shader to use the orginal color from the texture
 }

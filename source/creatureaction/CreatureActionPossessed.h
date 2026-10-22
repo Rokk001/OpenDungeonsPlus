@@ -27,18 +27,24 @@
 class CreatureActionPossessed : public CreatureAction
 {
 public:
+    //! \brief Creates the possession action for the given creature
     CreatureActionPossessed(Creature& creature) :
         CreatureAction(creature)
     {}
 
+    //! \brief Destroys the possession action
     virtual ~CreatureActionPossessed()
     {}
 
+    //! \brief Returns the action type, which is CreatureActionType::possessed
     CreatureActionType getType() const override
     { return CreatureActionType::possessed; }
 
+    //! \brief Returns the function that runs the action each turn (it calls handlePossessed)
     std::function<bool()> action() override;
 
+    //! \brief Ends the possession when nobody controls the creature any more, when it cannot be controlled or
+    //! when the player has no mana left to pay for it. The creature itself is moved by the possessing player.
     static bool handlePossessed(Creature& creature);
 };
 
