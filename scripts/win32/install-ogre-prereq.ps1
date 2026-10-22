@@ -10,6 +10,13 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\ogre" apply --recount $taskPatch
     if ($LASTEXITCODE -ne 0) { throw 'OGRE compatibility patch failed' }
 }
+$taskShortEmitterPatch = Join-Path $PSScriptRoot 'patches/ogre14-short-emitter.patch'
+& git -C "$taskRoot\src\ogre" apply --recount --reverse --check $taskShortEmitterPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying OGRE short timed emitter fix'
+    & git -C "$taskRoot\src\ogre" apply --recount $taskShortEmitterPatch
+    if ($LASTEXITCODE -ne 0) { throw 'OGRE short emitter patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskOptions = @('-S', "$taskRoot\src\ogre", '-B', "$taskRoot\build\ogre",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",
