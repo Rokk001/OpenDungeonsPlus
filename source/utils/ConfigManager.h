@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <set>
 
 
 class CreatureDefinition;
@@ -373,7 +374,16 @@ public:
     int32_t getSpellConfigInt32(const std::string& param) const;
     double getSpellConfigDouble(const std::string& param) const;
 
+    //! \brief Level-1 research cost of the skill with the given name (tier cost, see skills.cfg).
+    //! A missing entry is logged as an error and costs SKILL_POINTS_MISSING_ENTRY.
     int32_t getSkillPoints(const std::string& res) const;
+
+    //! \brief True when the skill with the given name is listed in the [FreeLevelOne] block of skills.cfg:
+    //! every seat starts with it at level 1 (its level 1 costs no research points).
+    bool isSkillFreeLevelOne(const std::string& res) const;
+
+    //! \brief Research cost used when skills.cfg has no entry for a skill
+    static const int32_t SKILL_POINTS_MISSING_ENTRY = 1500;
 
     inline const CreatureDefinition* getCreatureDefinitionDefaultWorker() const
     { return mCreatureDefinitionDefaultWorker; }
@@ -553,6 +563,8 @@ private:
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;
     std::map<const std::string, int32_t> mSkillPoints;
+    //! \brief Names of the skills of the [FreeLevelOne] block of skills.cfg
+    std::set<std::string> mSkillsFreeLevelOne;
 
     //! \brief Default definition for the editor. At map loading, it will spawn a creature from
     //! the default seat worker depending on seat faction

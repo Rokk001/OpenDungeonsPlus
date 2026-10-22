@@ -1367,6 +1367,25 @@ bool ConfigManager::loadSkills(const std::string& fileName)
 
         defFile >> mSkillPoints[NameAliases::resolve(nextParam)];
     }
+
+    // The optional block with the skills every seat starts with at level 1
+    mSkillsFreeLevelOne.clear();
+    if(defFile >> nextParam)
+    {
+        if(nextParam != "[FreeLevelOne]")
+        {
+            OD_LOG_ERR("Invalid FreeLevelOne start format. Line was " + nextParam);
+            return false;
+        }
+
+        while(defFile >> nextParam)
+        {
+            if(nextParam == "[/FreeLevelOne]")
+                break;
+
+            mSkillsFreeLevelOne.insert(nextParam);
+        }
+    }
     return true;
 }
 
@@ -2046,10 +2065,15 @@ int32_t ConfigManager::getSkillPoints(const std::string& res) const
     if(it == mSkillPoints.end())
     {
         OD_LOG_ERR("Unknown parameter res=" + res);
-        return 0;
+        return SKILL_POINTS_MISSING_ENTRY;
     }
 
     return it->second;
+}
+
+bool ConfigManager::isSkillFreeLevelOne(const std::string& res) const
+{
+    return mSkillsFreeLevelOne.find(res) != mSkillsFreeLevelOne.end();
 }
 
 const CreatureDefinition* ConfigManager::getCreatureDefinition(const std::string& name) const

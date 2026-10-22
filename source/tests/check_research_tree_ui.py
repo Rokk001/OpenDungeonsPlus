@@ -29,28 +29,29 @@ def function(signature):
 # The named colours and helper functions of the research tree that the production methods use.
 research_colours = game[game.index('//! Colours of the research tree'):game.index('//! '+chr(92)+'brief Whether the window under the mouse')]
 
-# Read the actual constructor's ordered dependency lists, not diagram row guesses.
-dependencies = {'emptyDepends': []}
+# Read the actual constructor: tab prefix, tier, button and parents of every entry, in registration order.
+constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
+prefixes = {match[1]: match[2] for match in re.finditer(r'static const std::string (TREE_PREFIX_\w+) = "([^"]+)";', manager)}
+tab_of_prefix = {'SkillTabs/Rooms/': 0, 'SkillTabs/Traps/': 1, 'SkillTabs/Spells/': 2}
 model = {}
-aliases = {}
-for line in manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')].splitlines():
-    if match := re.search(r'(lvl\ddepends|\w+Depends)\.clear\(\)', line):
-        dependencies[match[1]] = []
-    if match := re.search(r'resType = SkillType::(\w+);', line):
+order = []
+current = None
+parents = []
+for line in constructor.splitlines():
+    if match := re.search(r'createSkill\(mSkills, SkillType::(\w+), (NO_PARENTS|std::vector<SkillType>\{([^}]*)\})\)', line):
         current = match[1]
-    if match := re.search(r'new Skill\(resType, .*, (\w+)\)', line):
-        parents = list(dependencies.get(match[1], []))
-    if match := re.search(r'new SkillDef\w+\("([^"]+)", "([^"]+)"', line):
+        parents = re.findall(r'SkillType::(\w+)', match[3] or '')
+    if re.search(r'new Skill\(SkillType::spellSummonChampion', line):
+        current = 'spellSummonChampion'
+    if match := re.search(r'new SkillDef\w+\((TREE_PREFIX_\w+), "([^"]+)", skill, (\d)', line):
         if current != 'spellSummonChampion':  # the reward skill has no node in the tree
-            model[current] = (match[1] + match[2], parents)
-    if match := re.search(r'const Skill\* (\w+) = skill;', line):
-        aliases[match[1]] = current
-    if match := re.search(r'(lvl\ddepends|\w+Depends)\.push_back\((\w+)\)', line):
-        dependencies.setdefault(match[1], []).append(current if match[2] == 'skill' else aliases[match[2]])
-assert len(model) == 49
-initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}};' %
-    (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents))
-    for key, (path, parents) in model.items())
+            model[current] = (prefixes[match[1]] + match[2], parents, int(match[3]), tab_of_prefix[prefixes[match[1]]])
+            order.append(current)
+assert len(model) == 53
+initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}, %d, %d};' %
+    (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents), tier, tab)
+    for key, (path, parents, tier, tab) in model.items())
+initializers += '\n' + '\n'.join('SkillManager::order.push_back(SkillType::%s);' % key for key in order)
 probe = r'''
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/RendererModules/Null/Renderer.h>
@@ -68,23 +69,34 @@ const std::string SKILL_BADGE_FONT_NORMAL="MedievalSharp-10";const std::string S
 namespace Helper {template<class T>std::string toString(T v){return std::to_string(v);}}
 struct CreatureDefinition {std::string getMeshName()const{return "Kobold.mesh";}};
 const CEGUI::Image& getCreatureHandIconImage(const std::string&){return CEGUI::ImageManager::getSingleton().get("OpenDungeonsIcons/WorkerButton");}
-struct Seat {uint32_t level=0,queue=0;bool current=false;std::vector<SkillType> denied;std::map<SkillType,uint32_t> levels;SkillType currentType=SkillType::roomTrainingHall;
+struct Seat {bool gate=true;uint32_t level=0,queue=0;bool current=false;std::vector<SkillType> denied;std::map<SkillType,uint32_t> levels;SkillType currentType=SkillType::roomTrainingHall;
  uint32_t getSkillLevel(SkillType t)const{auto i=levels.find(t);return i==levels.end()?level:i->second;}
  const CreatureDefinition* getWorkerClassToSpawn(){return nullptr;}
  const std::vector<SkillType>& getSkillNotAllowed()const{return denied;}
  uint32_t isSkillPending(SkillType)const{return queue;}
+ bool isSkillNotAllowed(SkillType t)const{return std::find(denied.begin(),denied.end(),t)!=denied.end();}
+ bool canResearchLevel(SkillType,int,const std::vector<std::pair<SkillType,int> >&)const{return gate;}
  bool getCurrentSkillProgress(SkillType& t,float& p){t=currentType;p=.5f;return current;}};
 struct Player {Seat seat;Seat* getSeat(){return &seat;}};
 struct GameMap {Player player;Player* getLocalPlayer(){return &player;}};
-struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;
+enum class SkillTab {rooms,traps,spells,nb};
+bool isKeeper(SkillType t){return t>=SkillType::keeperDominion&&t<SkillType::countSkill;}
+struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;int tier=1;int tab=0;
  SkillType getType()const{return type;}const std::vector<const Skill*>& getDependencies()const{return parents;}
  int getNeededSkillPoints(uint32_t level)const{return 100*level;}};
 struct SkillManager {static std::map<SkillType,Skill> data;
  static const Skill* getSkill(SkillType t){return &data.at(t);}
  static std::string getResearchDescription(SkillType,uint32_t){return "Test research description";}
  static bool isLockedByLostLibrary(SkillType,const Seat*){return false;}
- template<class F>static void listAllSkills(F f){for(auto& p:data)f(p.second.path,"cast"+std::to_string(int(p.first)),p.second.path+"/"+p.second.path.substr(p.second.path.find('/')+1)+"ProgressBar",p.first);}};
+ static std::vector<SkillType> order;
+ static SkillTab getSkillTab(SkillType t){return static_cast<SkillTab>(data.at(t).tab);}
+ static uint32_t getSkillTier(SkillType t){return data.at(t).tier;}
+ static const std::string& getTabTitle(SkillTab t){static const std::string titles[3]={"Rooms","Traps and doors","Spells"};return titles[static_cast<int>(t)];}
+ static std::string getTreeButtonPath(SkillType t){return data.at(t).path;}
+ static void listTabSkills(SkillTab tab,std::vector<SkillType>& out){out.clear();for(size_t i=0;i<order.size();++i)if(data.at(order[i]).tab==static_cast<int>(tab))out.push_back(order[i]);}
+ template<class F>static void listAllSkills(F f){for(std::map<SkillType,Skill>::iterator it=data.begin();it!=data.end();++it){const std::string cast=isKeeper(it->first)?std::string():"cast"+std::to_string(int(it->first));f(it->second.path,cast,it->second.path+"/"+it->second.path.substr(it->second.path.find_last_of('/')+1)+"ProgressBar",it->first);}}};
 std::map<SkillType,Skill> SkillManager::data;
+std::vector<SkillType> SkillManager::order;
 namespace Skills {NAMES}
 struct GameMode {CEGUI::Window* mRootWindow;GameMap* mGameMap;bool mIsSkillWindowOpen=false;std::vector<SkillType> mSkillPending;
  struct Progress {CEGUI::ProgressBar* mProgressBar=nullptr;float mCompleteness=0;void setValue(CEGUI::ProgressBar* b,float p){mProgressBar=b;mCompleteness=p;}}mSkillCurrentCompletion;
@@ -107,7 +119,7 @@ int main(int argc,char** argv){try{
  auto& data=SkillManager::data;INITIALIZERS
  GameMap map;GameMode game{root,&map};int checks=0,failures=0;
  auto check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cout<<"FAIL "<<why<<'\n';}};
- for(const auto& pair:data)root->addChild(windows.createWindow("OD/GameTabButton","cast"+std::to_string(int(pair.first))));
+ for(std::map<SkillType,Skill>::const_iterator it=data.begin();it!=data.end();++it)if(!isKeeper(it->first))root->addChild(windows.createWindow("OD/GameTabButton","cast"+std::to_string(int(it->first))));
  for(uint32_t level=0;level<=3;++level){
   map.player.seat.level=level;map.player.seat.queue=2;map.player.seat.current=level<3;
   SkillManager::listAllSkills([&](const std::string& name,const std::string& cast,const std::string& bar,SkillType type){
@@ -123,19 +135,26 @@ int main(int argc,char** argv){try{
     check(b->getProperty("ResearchTileImage")==CEGUI::String(want),"node state shows as a material tile, not a flat colour square");
     check(!b->isPropertyPresent("ResearchBackgroundColour"),"no flat state colour behind the icon");}
    check(b->isDisabled()==(level==3),"max-level selection rule preserved");
-   check(root->getChild(cast)->isVisible()==(level>0),"unlocked actions stay available during upgrades");
+   check(cast.empty()||root->getChild(cast)->isVisible()==(level>0),"unlocked actions stay available during upgrades (a keeper skill has no cast button)");
    check(b->getUserString("ResearchDetails").find(level==3?"Maximum level":"Queue position: 2")!=CEGUI::String::npos,"queue and level information remains accessible");
    check(b->getUserString("ResearchDetails").find("Requires all (level 1):")!=CEGUI::String::npos || data.at(type).parents.empty(),"prerequisites are explicitly all required");
    check(b->getTooltipText()==b->getUserString("ResearchDetails"),"descriptions are optional hover help, not persistent panels");
    check(b->getChild(b->getName()+"ProgressBar")->isVisible()==(type==SkillType::roomTrainingHall&&level<3),"only the current node displays progress");
   });
   game.refreshSkillConnections();game.refreshSkillConnections();
-  for(const auto& p:data){auto* button=root->getChild("SkillTreeWindow/Skills/"+p.second.path);auto* parent=button->getParent();
-   for(auto* dependency:p.second.parents)for(int part=0;part<3;++part){
-    auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
-    check(line->isMousePassThroughEnabled(),"connections do not intercept clicks");
-    check(line->getPixelSize().d_width>0&&line->getPixelSize().d_height>0,"each immediate edge has positive geometry");
-    check(line->getProperty("ImageColours").find(level>0?"FFE8862E":"FF6E5232")!=CEGUI::String::npos,"permanent paths reflect actual prerequisite completion");
+  for(std::map<SkillType,Skill>::const_iterator it=data.begin();it!=data.end();++it){const Skill& node=it->second;
+   CEGUI::Window* button=root->getChild("SkillTreeWindow/Skills/"+node.path);CEGUI::Window* parent=button->getParent();
+   for(size_t d=0;d<node.parents.size();++d){const Skill* dependency=node.parents[d];
+    for(int part=0;part<3;++part){
+     const std::string linkName="ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(it->first))+"_"+std::to_string(part);
+     if(dependency->tab!=node.tab){check(!parent->isChild(linkName),"a parent in another tab has no path");continue;}
+     CEGUI::Window* line=parent->getChild(linkName);
+     check(line->isMousePassThroughEnabled(),"connections do not intercept clicks");
+     const bool sameRow=dependency->tier==node.tier;
+     if(sameRow&&part>0){check(!line->isVisible(),"a same-row path has one bar");continue;}
+     check(line->getPixelSize().d_width>0&&line->getPixelSize().d_height>0,"each immediate edge has positive geometry");
+     check(line->getProperty("ImageColours").find(level>0?"FFE8862E":"FF6E5232")!=CEGUI::String::npos,"permanent paths reflect actual prerequisite completion");
+    }
    }
   }
   system.getDefaultGUIContext().draw();
@@ -143,19 +162,43 @@ int main(int argc,char** argv){try{
  auto* tree=root->getChild("SkillTreeWindow");
  check(!tree->isChild("CurrentResearch")&&!tree->isChild("ResearchDetails"),"no text banner or explanation panel");
  map.player.seat.level=0;
- for(const auto& p:data)if(p.second.parents.size()>1){
-  auto* parent=root->getChild("SkillTreeWindow/Skills/"+p.second.path)->getParent();
-  map.player.seat.levels.clear();map.player.seat.levels[p.second.parents.front()->type]=1;
-  for(bool complete:{false,true}){
-   if(complete)for(auto* dependency:p.second.parents)map.player.seat.levels[dependency->type]=1;
-   game.refreshSkillConnections();
-   for(auto* dependency:p.second.parents)for(int part=0;part<3;++part){
-    auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
-    bool ready=part==0?map.player.seat.getSkillLevel(dependency->type)>0:complete;
-    check(line->getProperty("ImageColours").find(ready?"FFE8862E":"FF6E5232")!=CEGUI::String::npos,"shared bus unlocks only when ALL prerequisites are complete");
-   }
-  }
+ {CEGUI::Window* tabs=root->getChild("SkillTreeWindow/Skills/SkillTabs");
+  check(tabs->getChild("Rooms")->getText()=="Rooms"&&tabs->getChild("Traps")->getText()=="Traps and doors"&&tabs->getChild("Spells")->getText()=="Spells","tab titles");}
+ map.player.seat.level=0;map.player.seat.levels.clear();game.refreshSkillConnections();
+ for(std::map<SkillType,Skill>::const_iterator it=data.begin();it!=data.end();++it){const Skill& node=it->second;
+  CEGUI::Window* button=root->getChild("SkillTreeWindow/Skills/"+node.path);CEGUI::Window* parent=button->getParent();
+  const char* pageNames[3]={"Rooms","Traps","Spells"};
+  check(parent->getName()==pageNames[node.tab],"every research button stands in the page of its tab");
+  CEGUI::Rectf rect=button->getUnclippedOuterRect().get();CEGUI::Rectf bounds=parent->getUnclippedOuterRect().get();
+  int rowSize=0,rowIndex=0;bool seen=false;
+  for(size_t i=0;i<SkillManager::order.size();++i){const Skill& other=data.at(SkillManager::order[i]);
+   if(other.tab!=node.tab||other.tier!=node.tier)continue;++rowSize;if(SkillManager::order[i]==it->first)seen=true;else if(!seen)++rowIndex;}
+  const float centre=(rect.left()+rect.getWidth()*.5f-bounds.left())/bounds.getWidth();
+  check(std::abs(centre-(rowIndex+.5f)/rowSize)<.01f,"entry i of n of a row stands at (i + 0.5) / n of the page width");
+  for(size_t i=0;i<SkillManager::order.size();++i){const Skill& other=data.at(SkillManager::order[i]);if(other.tab!=node.tab)continue;
+   CEGUI::Rectf r=root->getChild("SkillTreeWindow/Skills/"+other.path)->getUnclippedOuterRect().get();
+   if(other.tier==node.tier)check(std::abs(r.top()-rect.top())<.5f,"the entries of a tier share one row");
+   if(other.tier>node.tier)check(r.top()>rect.top(),"tier I is at the top, tier IV at the bottom");}
+  const std::string details=button->getUserString("ResearchDetails").c_str();
+  for(size_t d=0;d<node.parents.size();++d){const Skill* dependency=node.parents[d];
+   if(dependency->tab==node.tab)continue;
+   const char* tabTitles[3]={"Rooms","Traps and doors","Spells"};
+   check(details.find("Needs: ")!=std::string::npos&&details.find(std::string(" (")+tabTitles[dependency->tab]+")")!=std::string::npos,"a parent in another tab is named with its tab in the tooltip");}
  }
+ {Seat& seat=map.player.seat;seat.denied.assign(1,SkillType::roomGuardRoom);seat.levels.clear();seat.level=0;seat.queue=0;seat.current=false;seat.levels[SkillType::trapAlarm]=1;
+  const std::string bannerPath=data.at(SkillType::trapWatchBanner).path;
+  game.refreshSkillButtonState(bannerPath,"cast"+std::to_string(int(SkillType::trapWatchBanner)),bannerPath+"/"+bannerPath.substr(bannerPath.find_last_of('/')+1)+"ProgressBar",SkillType::trapWatchBanner);
+  CEGUI::Window* banner=root->getChild("SkillTreeWindow/Skills/"+bannerPath);
+  const std::string bannerText=banner->getUserString("ResearchDetails").c_str();
+  check(bannerText.find("Needs: ")!=std::string::npos&&bannerText.find("- MISSING")==std::string::npos,"a parent the level does not allow counts as ready");
+  check(banner->getUserString("ResearchState")!="Locked","an entry whose parents are done or not allowed is not locked");
+  seat.denied.clear();seat.levels.clear();seat.levels[SkillType::roomTreasury]=1;seat.gate=false;
+  const std::string treasuryPath=data.at(SkillType::roomTreasury).path;
+  game.refreshSkillButtonState(treasuryPath,"cast"+std::to_string(int(SkillType::roomTreasury)),treasuryPath+"/"+treasuryPath.substr(treasuryPath.find_last_of('/')+1)+"ProgressBar",SkillType::roomTreasury);
+  CEGUI::Window* treasury=root->getChild("SkillTreeWindow/Skills/"+treasuryPath);
+  check(treasury->getUserString("ResearchState")=="Locked","level II waits for the tab gate");
+  check(std::string(treasury->getUserString("ResearchDetails").c_str()).find("Locked: more entries of the Rooms tab")!=std::string::npos,"the tooltip says why the level is locked");
+  seat.gate=true;seat.levels.clear();}
  map.player.seat.levels.clear();
  map.player.seat.level=0;map.player.seat.current=true;map.player.seat.queue=2;
  SkillManager::listAllSkills([&](const std::string& n,const std::string& c,const std::string& b,SkillType t){game.refreshSkillButtonState(n,c,b,t);});
@@ -176,19 +219,22 @@ int main(int argc,char** argv){try{
    check(rect.left()>=bounds.left()&&rect.right()<=bounds.right()&&rect.top()>=bounds.top()&&rect.bottom()<=bounds.bottom(),"symbol stays inside its graph column");
    check(std::abs(rect.getWidth()-rect.getHeight())<2,"square symbols at all viewport scales");
    check(!parent->isChild(button->getName()+"Label")&&!parent->isChild(button->getName()+"Status"),"no prose around symbol nodes");
-   for(const auto& other:data)if(other.first!=p.first){auto r=root->getChild("SkillTreeWindow/Skills/"+other.second.path)->getUnclippedOuterRect().get();
-    check(rect.right()<=r.left()||rect.left()>=r.right()||rect.bottom()<=r.top()||rect.top()>=r.bottom(),"node hit areas never overlap");}
+   for(std::map<SkillType,Skill>::const_iterator other=data.begin();other!=data.end();++other)if(other->first!=p.first&&other->second.tab==p.second.tab){CEGUI::Rectf r=root->getChild("SkillTreeWindow/Skills/"+other->second.path)->getUnclippedOuterRect().get();
+    check(rect.right()<=r.left()||rect.left()>=r.right()||rect.bottom()<=r.top()||rect.top()>=r.bottom(),"node hit areas never overlap inside a tab");}
    auto* bar=static_cast<CEGUI::ProgressBar*>(button->getChild(button->getName()+"ProgressBar"));
    check(bar->getUnclippedOuterRect().get().bottom()<=label.top(),"level count never covers current progress");
    if(p.first==SkillType::roomTrainingHall){
     check(button->getProperty("ResearchTileImage")=="OpenDungeonsSkin/ResearchTileWorking","active node highlighted");
     check(bar->isVisible()&&bar->getProgress()==.5f&&bar->getAlpha()==1,"real progress visible on active node");}
-   for(auto* dep:p.second.parents)for(int part=0;part<3;++part){auto* line=parent->getChild("ResearchLink_"+std::to_string(int(dep->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
-    check(line->isVisible(),"all prerequisite paths stay visible without hover");
-    auto edge=line->getUnclippedOuterRect().get();
-    check(edge.getWidth()>0&&edge.getHeight()>0,"positive edge geometry");
-    for(const auto& other:data){auto r=root->getChild("SkillTreeWindow/Skills/"+other.second.path)->getUnclippedOuterRect().get();
-     check(edge.right()<=r.left()+1||edge.left()>=r.right()-1||edge.bottom()<=r.top()+1||edge.top()>=r.bottom()-1,"connections never cross symbol interiors");}
+   for(size_t d=0;d<p.second.parents.size();++d){const Skill* dep=p.second.parents[d];if(dep->tab!=p.second.tab)continue;
+    for(int part=0;part<3;++part){if(dep->tier==p.second.tier&&part>0)continue;
+     CEGUI::Window* line=parent->getChild("ResearchLink_"+std::to_string(int(dep->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
+     check(line->isVisible(),"all prerequisite paths stay visible without hover");
+     CEGUI::Rectf edge=line->getUnclippedOuterRect().get();
+     check(edge.getWidth()>0&&edge.getHeight()>0,"positive edge geometry");
+     for(std::map<SkillType,Skill>::const_iterator other=data.begin();other!=data.end();++other)if(other->second.tab==p.second.tab){CEGUI::Rectf r=root->getChild("SkillTreeWindow/Skills/"+other->second.path)->getUnclippedOuterRect().get();
+      check(edge.right()<=r.left()+1||edge.left()>=r.right()-1||edge.bottom()<=r.top()+1||edge.top()>=r.bottom()-1,"connections never cross symbol interiors");}
+    }
    }
   }
  }
