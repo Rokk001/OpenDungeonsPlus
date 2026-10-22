@@ -77,6 +77,7 @@ class SpellSummonWorkerFactory : public SpellFactory
 static SpellRegister reg(new SpellSummonWorkerFactory);
 }
 
+//! \brief Checks on the client if the worker can be paid; the price follows the summon worker research.
 void SpellSummonWorker::checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand)
 {
     Player* player = gameMap->getLocalPlayer();
@@ -96,7 +97,7 @@ void SpellSummonWorker::checkSpellCast(GameMap* gameMap, const InputManager& inp
     int32_t nbWorkers = player->getSeat()->getNumCreaturesWorkers();
     int32_t basePrice = static_cast<int32_t>(std::round(SkillManager::getResearchValue(
         player->getSeat(), SkillType::spellSummonWorker,
-        ConfigManager::getSingleton().getSpellConfigInt32("SummonWorkerBasePrice"))));
+        ConfigManager::getSingleton().getSpellConfigInt32("SummonWorkerBasePrice"), ResearchEffect::Price)));
 
     int32_t priceTotal = 0;
 
@@ -171,6 +172,7 @@ bool SpellSummonWorker::castSpell(GameMap* gameMap, Player* player, ODPacket& pa
     return summonWorkersOnTiles(gameMap, player, tiles);
 }
 
+//! \brief Summons workers on the tiles; the price follows the summon worker research.
 bool SpellSummonWorker::summonWorkersOnTiles(GameMap* gameMap, Player* player, const std::vector<Tile*>& tiles)
 {
     // Creates a creature from the first worker class found for the given faction.
@@ -185,7 +187,7 @@ bool SpellSummonWorker::summonWorkersOnTiles(GameMap* gameMap, Player* player, c
     int32_t nbWorkers = player->getSeat()->getNumCreaturesWorkers();
     int32_t basePrice = static_cast<int32_t>(std::round(SkillManager::getResearchValue(
         player->getSeat(), SkillType::spellSummonWorker,
-        ConfigManager::getSingleton().getSpellConfigInt32("SummonWorkerBasePrice"))));
+        ConfigManager::getSingleton().getSpellConfigInt32("SummonWorkerBasePrice"), ResearchEffect::Price)));
 
     int32_t playerMana = static_cast<int32_t>(player->getSeat()->getMana());
     int32_t priceTotal = 0;
@@ -226,12 +228,13 @@ bool SpellSummonWorker::summonWorkersOnTiles(GameMap* gameMap, Player* player, c
     return true;
 }
 
+//! \brief The price of the next worker of the player, with the summon worker research.
 int32_t SpellSummonWorker::getNextWorkerPriceForPlayer(GameMap* gameMap, Player* player)
 {
     int32_t nbWorkers = player->getSeat()->getNumCreaturesWorkers();
     int32_t basePrice = static_cast<int32_t>(std::round(SkillManager::getResearchValue(
         player->getSeat(), SkillType::spellSummonWorker,
-        ConfigManager::getSingleton().getSpellConfigInt32("SummonWorkerBasePrice"))));
+        ConfigManager::getSingleton().getSpellConfigInt32("SummonWorkerBasePrice"), ResearchEffect::Price)));
 
     return getWorkerPrice(basePrice, nbWorkers);
 }

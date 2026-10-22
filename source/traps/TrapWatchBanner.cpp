@@ -23,6 +23,8 @@
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "ODApplication.h"
@@ -31,6 +33,8 @@
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+
+#include <cmath>
 
 const std::string TrapWatchBannerName = "WatchBanner";
 const std::string TrapWatchBannerNameDisplay = "Watch banner";
@@ -130,6 +134,7 @@ TrapWatchBanner::TrapWatchBanner(GameMap* gameMap) :
     setMeshName("");
 }
 
+//! \brief Keeps the guard posts; the alarm radius follows the watch banner research.
 void TrapWatchBanner::doUpkeep()
 {
     Trap::doUpkeep();
@@ -150,7 +155,8 @@ void TrapWatchBanner::doUpkeep()
     }
 
     // The post notices enemies within its aura and calls the guards of the guard rooms
-    int32_t aura = ConfigManager::getSingleton().getTrapConfigInt32("WatchBannerAuraTiles");
+    int32_t aura = static_cast<int32_t>(std::floor(SkillManager::getResearchValue(getSeat(), SkillType::trapWatchBanner,
+        ConfigManager::getSingleton().getTrapConfigDouble("WatchBannerAuraTiles"), ResearchEffect::AuraRadius) + 0.5));
     Tile* intruderTile = nullptr;
     Tile* callingTile = nullptr;
     for(Tile* postTile : mCoveredTiles)

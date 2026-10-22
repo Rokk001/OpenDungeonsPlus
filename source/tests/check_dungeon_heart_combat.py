@@ -98,7 +98,7 @@ struct RoomDungeonTemple:Room {
  bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);Tile* getHeartTile()const;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
- static const double HEART_HEAL_PER_SECOND;static const double HEART_CRITICAL_FRACTION;double getHeartMaxHP()const;
+ static const double HEART_CRITICAL_FRACTION;double mHeartHPFactor=1.0;double getHeartHPFactor()const;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -137,6 +137,19 @@ int main(){
  check(heart.takeHeartDamage(&attacker,99,0,0,0,&floor)==0,"enemy cannot damage the floor");
  check(core.takeDamage(&attacker,4,5,6,7,&centre,false)==16,"actual heart entity receives damage");
  check(heart.getHP(nullptr)==9984&&heart.floorHP==250,"heart damage never reduces floor health");
+ // The research of the heart: the maximum follows the heart health factor, the current health grows with it, the healing follows its own factor
+ {RoomDungeonTemple h(&map,&owner);h.mHeartHP=5000;gResearchHeartHP=1.698;h.doUpkeep();
+  check(std::abs(h.getHeartMaxHP()-16980.0)<1e-6,"the heart health research raises the maximum");
+  check(std::abs(h.getHP(nullptr)-(5000*1.698+2.5/1.4))<1e-6,"the current health grows with the maximum when a level is reached");
+  gResearchHeartHP=2.474;h.doUpkeep();
+  check(std::abs(h.getHP(nullptr)-((5000*1.698+2.5/1.4)*2.474/1.698+2.5/1.4))<1e-6,"the next level scales by the ratio of the factors");
+  gResearchHeartHP=1.0;
+  RoomDungeonTemple fresh(&map,&owner);gResearchHeartHP=1.698;fresh.doUpkeep();
+  check(std::abs(fresh.getHP(nullptr)-16980.0)<1e-6,"an undamaged heart is at the new maximum");
+  gResearchHeartHP=1.0;
+  RoomDungeonTemple mender(&map,&owner);mender.mHeartHP=1000;gResearchHeartHeal=2.0;mender.doUpkeep();
+  check(std::abs(mender.getHP(nullptr)-(1000+2*2.5/1.4))<1e-9,"the heart healing research multiplies the healing per second");
+  gResearchHeartHeal=1.0;}
  check(heart.dead==0&&map.fights==1,"nonlethal hit reports combat without death");
  heart.doUpkeep();check(heart.removed==0&&heart.upkeep==1,"living heart retains all floor tiles");
  check(std::abs(heart.getHP(nullptr)-(9984+2.5/1.4))<1e-9,"a living damaged heart heals 2.5 per second, per turn 2.5 / turnsPerSecond");
@@ -238,11 +251,11 @@ inline = '\n'.join(function(header, sig) for sig in
 methods = '\n'.join(function(source, sig) for sig in (
     'double RoomDungeonTemple::getHeartHealthFraction(', 'HeartHealthTier RoomDungeonTemple::computeHeartHealthTier(',
     'void RoomDungeonTemple::checkHeartHealthTier(',
-    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
+    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartHPFactor(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
     'bool RoomDungeonTemple::importFromStream('))
-methods = source[source.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
+methods = source[source.index('const double RoomDungeonTemple::HEART_CRITICAL_FRACTION'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
 probe = probe.replace('INLINE_METHODS', inline).replace('METHODS', methods)
 probe = probe.replace('HEART_OBJECT', function(source, 'class DungeonHeartObject :'))
 # The reward for destroying a heart is a file-local helper called by takeHeartDamage
