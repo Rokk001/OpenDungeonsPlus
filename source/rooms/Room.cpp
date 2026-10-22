@@ -322,6 +322,14 @@ bool Room::isDestructible() const
     return getType() == RoomType::dungeonTemple;
 }
 
+//! \brief Hit points of one tile of this room, read from the room configuration
+//! key <RoomName>HP; falls back to Building::DEFAULT_TILE_HP when the key is missing.
+double Room::getTileHP() const
+{
+    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(
+        RoomManager::getRoomNameFromRoomType(getType()) + "HP", Building::DEFAULT_TILE_HP);
+}
+
 bool Room::isAttackable(Tile* tile, Seat* seat) const
 {
     if(!isDestructible())
@@ -617,7 +625,7 @@ void Room::setupRoom(const std::string& name, Seat* seat, const std::vector<Tile
         mCoveredTiles.push_back(tile);
         TileData* tileData = createTileData(tile);
         mTileData[tile] = tileData;
-        tileData->mHP = DEFAULT_TILE_HP;
+        tileData->mHP = getTileHP();
 
         tile->setCoveringBuilding(this);
     }
@@ -1081,7 +1089,7 @@ bool Room::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tile
     if(is.eof())
     {
         // Default initialization
-        tileData->mHP = DEFAULT_TILE_HP;
+        tileData->mHP = getTileHP();
         mCoveredTiles.push_back(tile);
         tile->setCoveringBuilding(this);
         return true;
@@ -1230,7 +1238,7 @@ void Room::repairRoom()
             tileData = createTileData(tile);
             mTileData[tile] = tileData;
         }
-        tileData->mHP = DEFAULT_TILE_HP;
+        tileData->mHP = getTileHP();
 
         tile->setCoveringBuilding(this);
     }
