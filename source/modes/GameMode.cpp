@@ -1840,6 +1840,43 @@ void GameMode::refreshMainUI()
     }
     guiSheet->getChild(Gui::BUTTON_CREATURE_WORKER + "/Count")->setText(Helper::toString(workers));
     guiSheet->getChild(Gui::BUTTON_CREATURE_FIGHTER + "/Count")->setText(Helper::toString(fighters));
+
+    // The price next to the mouse pointer is computed from this same seat, so it is stale
+    // as well until it is written again.
+    refreshPointerInfoText();
+}
+
+//! \brief Writes the text next to the mouse pointer again, so that the price it shows
+//! follows the gold and mana the server just sent without needing a mouse move.
+void GameMode::refreshPointerInfoText()
+{
+    // checkInputCommand() writes the text next to the pointer, and it only runs when the
+    // mouse moves or a button is pressed. The prices it shows come from the seat the server
+    // last sent, so write it again whenever new seat data arrives.
+    switch(mPlayerSelection.getCurrentAction())
+    {
+        // Those are the actions that put a price next to the pointer.
+        case SelectedAction::buildRoom:
+        case SelectedAction::buildTrap:
+        case SelectedAction::castSpell:
+            break;
+        default:
+            return;
+    }
+
+    // Once the player has clicked, the command state stays at validated until the mouse is
+    // moved again, and checkInputCommand() carries the command out in that state instead of
+    // describing it: asking it again as it stands would build or cast a second time. What
+    // belongs next to a pointer that has finished its click is what the pointed tile would
+    // cost, which is the infoOnly state the next mouse move will set anyway.
+    InputManager& inputManager = mModeManager->getInputManager();
+    InputCommandState commandState = inputManager.mCommandState;
+    if(commandState == InputCommandState::validated)
+        inputManager.mCommandState = InputCommandState::infoOnly;
+
+    checkInputCommand();
+
+    inputManager.mCommandState = commandState;
 }
 
 void GameMode::refreshCreaturePanel(const CreaturePanelData& data)

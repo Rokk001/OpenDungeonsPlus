@@ -243,6 +243,9 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     //! \brief Refreshed the main ui data, such as mana, gold, ...
     void refreshMainUI();
+    //! \brief Writes the text next to the mouse pointer again, so that the price it shows
+    //! follows the gold and mana the server just sent without needing a mouse move.
+    void refreshPointerInfoText();
     //! \brief Passes the latest creature counts received from the server to the creature panel
     void refreshCreaturePanel(const CreaturePanelData& data);
 
