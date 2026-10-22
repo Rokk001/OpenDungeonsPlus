@@ -68,8 +68,9 @@ struct Weapon {
  // Return the elemental minimum for the launch scaler.
  double getElementDamageMin()const{return 0;}
 };
-// Creature type data read by the launch method: the SkillDamageFactor of the type (1 = unchanged).
-struct CreatureDefinition {double getSkillDamageFactor()const{return 1.0;}};
+// Creature type data read by the launch method: the SkillDamageFactor of the type (1 = unchanged) and whether a skill
+// is the first attack line (the spell attack of a type without bow).
+struct CreatureDefinition {double getSkillDamageFactor()const{return 1.0;}bool isFirstAttackSkill(const void*)const{return true;}};
 // Creature launch state used by the actual skill method.
 struct Creature {
  CreatureDefinition definition;
@@ -82,6 +83,10 @@ struct Creature {
  std::string getName(){return "Caster";}int getLevel()const{return 1;}Seat* getSeat(){return seat;}
  // Capture the current strength modifier with the projectile range.
  double getModifierStrength()const{return 1.0;}
+ // Damage passives, bow carrying and attribute level read by the shared scaler and the launch method.
+ double getSkillPassive(const std::string&)const{return 0.0;}
+ bool carriesBowOrCrossbow()const{return false;}
+ double getDexterityLevel()const{return 1.0;}
  void fireCosmeticEvent(const CosmeticEvent&,bool){}
  const Weapon* getWeaponL()const{return nullptr;}const Weapon* getWeaponR()const{return nullptr;}
 };
@@ -109,6 +114,8 @@ struct CreatureSkillMissileLaunch {
  double mPhyMin=0,mPhyMax=0,mMagMin=13.25,mMagMax=13.25,mEleMin=0,mEleMax=0;
  // The plain missile attack does not apply the SkillDamageFactor (grenades and guided bolts do).
  bool appliesSkillDamageFactor()const{return false;}
+ // The production skill name, used to keep the grenade on the creature level.
+ const std::string& getSkillName()const{static const std::string name="MissileLaunch";return name;}
  bool tryUseFight(GameMap&,Creature*,float,GameEntity*,Tile*,bool,bool)const;
  MissileOneHit* createMissile(GameMap&,Creature*,const Ogre::Vector3&,double,double,double,GameEntity*,bool,bool)const;
 };

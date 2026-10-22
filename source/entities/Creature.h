@@ -446,6 +446,33 @@ public:
     //! \brief Returns defense rating at the current level, including both held items.
     double getDefenseRating() const;
 
+    //! \brief Returns the Strength attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getStrength() const;
+    //! \brief Returns the Dexterity attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getDexterity() const;
+    //! \brief Returns the Life attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getLife() const;
+    //! \brief Returns the Mana attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getMana() const;
+    //! \brief Returns the Strength attribute level LA: 1 + (attribute - start value) / points per level, at least 1
+    //! (the creature level when the points per level are 0). Equals the creature level without equipment.
+    double getStrengthLevel() const;
+    //! \brief Returns the Dexterity attribute level LA (see getStrengthLevel).
+    double getDexterityLevel() const;
+    //! \brief Returns the Life attribute level LA (see getStrengthLevel).
+    double getLifeLevel() const;
+    //! \brief Returns the Mana attribute level LA (see getStrengthLevel).
+    double getManaLevel() const;
+    //! \brief Returns the critical chance bonus in percent that the carried items add.
+    double getEquipmentCritChance() const;
+    //! \brief Returns true if a carried item is a bow or a crossbow (its weapon type), which makes the
+    //! missile attack lines of the creature use the Dexterity attribute level.
+    bool carriesBowOrCrossbow() const;
+    //! \brief Returns the summed value of all ranked passive skills for the given stat ("hp%", "ar%", "dr%", "dmg%",
+    //! "spell%", "alldmg%", ...), 0 while the creature has no passive skill of that stat.
+    //! \param stat The passive stat name.
+    double getSkillPassive(const std::string& stat) const;
+
     //! \brief Check whether a creature has earned one level. If yes, handle leveling it up
     void checkLevelUp();
 

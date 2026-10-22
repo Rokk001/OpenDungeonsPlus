@@ -133,6 +133,41 @@ bool Weapon::update(Weapon* weapon, std::stringstream& defFile)
                 continue;
             }
 
+            if (nextParam == "Strength")
+            {
+                defFile >> nextParam;
+                weapon->mStrength = Helper::toDouble(nextParam);
+                continue;
+            }
+
+            if (nextParam == "Dexterity")
+            {
+                defFile >> nextParam;
+                weapon->mDexterity = Helper::toDouble(nextParam);
+                continue;
+            }
+
+            if (nextParam == "Life")
+            {
+                defFile >> nextParam;
+                weapon->mLife = Helper::toDouble(nextParam);
+                continue;
+            }
+
+            if (nextParam == "Mana")
+            {
+                defFile >> nextParam;
+                weapon->mMana = Helper::toDouble(nextParam);
+                continue;
+            }
+
+            if (nextParam == "CritChance")
+            {
+                defFile >> nextParam;
+                weapon->mCritChance = Helper::toDouble(nextParam);
+                continue;
+            }
+
             if (nextParam == "WeaponType")
             {
                 defFile >> weapon->mWeaponType;
@@ -313,6 +348,21 @@ void Weapon::writeWeaponDiff(const Weapon* def1, const Weapon* def2, std::ofstre
     if(def1 == nullptr || def1->mDefenseRating != def2->mDefenseRating)
         file << "    DefenseRating\t" << def2->mDefenseRating << std::endl;
 
+    if(def1 == nullptr || def1->mStrength != def2->mStrength)
+        file << "    Strength\t" << def2->mStrength << std::endl;
+
+    if(def1 == nullptr || def1->mDexterity != def2->mDexterity)
+        file << "    Dexterity\t" << def2->mDexterity << std::endl;
+
+    if(def1 == nullptr || def1->mLife != def2->mLife)
+        file << "    Life\t" << def2->mLife << std::endl;
+
+    if(def1 == nullptr || def1->mMana != def2->mMana)
+        file << "    Mana\t" << def2->mMana << std::endl;
+
+    if(def1 == nullptr || def1->mCritChance != def2->mCritChance)
+        file << "    CritChance\t" << def2->mCritChance << std::endl;
+
     file << "    [/Stats]" << std::endl;
     file << "[/Equipment]" << std::endl;
 }
@@ -367,6 +417,11 @@ ODPacket& operator <<(ODPacket& os, const Weapon *weapon)
     os << weapon->mDefenseRating;
     os << weapon->mWeaponType;
     os << weapon->mHands;
+    os << weapon->mStrength;
+    os << weapon->mDexterity;
+    os << weapon->mLife;
+    os << weapon->mMana;
+    os << weapon->mCritChance;
     return os;
 }
 
@@ -393,6 +448,11 @@ ODPacket& operator >>(ODPacket& is, Weapon *weapon)
     OD_ASSERT_TRUE(is >> weapon->mDefenseRating);
     OD_ASSERT_TRUE(is >> weapon->mWeaponType);
     OD_ASSERT_TRUE(is >> weapon->mHands);
+    OD_ASSERT_TRUE(is >> weapon->mStrength);
+    OD_ASSERT_TRUE(is >> weapon->mDexterity);
+    OD_ASSERT_TRUE(is >> weapon->mLife);
+    OD_ASSERT_TRUE(is >> weapon->mMana);
+    OD_ASSERT_TRUE(is >> weapon->mCritChance);
     return is;
 }
 

@@ -31,11 +31,18 @@ inline bool readEffectMinimum(std::istream& is, double& minimum)
     return static_cast<bool>(is >> minimum);
 }
 
-//! \brief Applies the creature curve and carried weapon ranges before any target defenses are subtracted.
+//! \brief Applies the creature curve at the given attribute level, the damage passives and the carried weapon ranges
+//! before any target defenses are subtracted. The passives (the given stat plus alldmg%) multiply the line damage only,
+//! not the weapon ranges.
+//! \param damageLevel The level of the curve: the Strength attribute level for melee, the Dexterity attribute level
+//! for bow and crossbow lines, the creature level for every other line.
+//! \param passiveStat The damage passive stat of the line: "dmg%" or "spell%".
 inline void scale(const Creature& attacker, double& phyMin, double& phyMax,
-    double& magMin, double& magMax, double& eleMin, double& eleMax)
+    double& magMin, double& magMax, double& eleMin, double& eleMax, double damageLevel,
+    const std::string& passiveStat)
 {
-    const double multiplier = CreatureProgression::damageMultiplier(attacker.getLevel());
+    const double passiveFactor = 1.0 + (attacker.getSkillPassive(passiveStat) + attacker.getSkillPassive("alldmg%")) / 100.0;
+    const double multiplier = CreatureProgression::damageMultiplierAt(damageLevel) * passiveFactor;
     phyMin *= multiplier;
     phyMax *= multiplier;
     magMin *= multiplier;

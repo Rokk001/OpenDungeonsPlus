@@ -115,7 +115,9 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
             double phyMin = mPhyMin, phyMax = mPhyMax;
             double magMin = mMagMin, magMax = mMagMax;
             double eleMin = mEleMin, eleMax = mEleMax;
-            CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax);
+            // Melee damage follows the Strength attribute level
+            CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
+                creature->getStrengthLevel(), "dmg%");
             uint32_t weaponCooldown = 0;
             const Weapon* weapons[] = {creature->getWeaponL(), creature->getWeaponR()};
             for(const Weapon* weapon : weapons)

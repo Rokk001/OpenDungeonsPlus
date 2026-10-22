@@ -1071,13 +1071,15 @@ void Creature::buildStats()
     mMagicalDefense = mDefinition->getMagicalDefense();
     mElementDefense = mDefinition->getElementDefense();
 
+    // Hit points follow the Life attribute level, so equipment can raise them even at level 1, then the hp% passives
+    mMaxHP = CreatureProgression::combatStatAt(mMaxHP, mDefinition->getHpPerLevel(), getLifeLevel(),
+        CreatureProgression::hpMultiplierAt) * (1.0 + getSkillPassive("hp%") / 100.0);
+
     // Improve the stats to the current level
     double multiplier = mLevel - 1;
     if (multiplier <= 0.0)
         return;
 
-    mMaxHP = CreatureProgression::combatStat(mMaxHP, mDefinition->getHpPerLevel(), mLevel,
-        CreatureProgression::hpMultiplier);
     mDigRate += mDefinition->getDigRatePerLevel() * multiplier;
     mClaimRate += mDefinition->getClaimRatePerLevel() * multiplier;
     mGroundSpeed += mDefinition->getGroundSpeedPerLevel() * multiplier;
@@ -2664,11 +2666,12 @@ double Creature::getClientPoseSpeedFactor() const
     return factor;
 }
 
-//! \brief Returns level-scaled attack rating with the unscaled ratings of both held items.
+//! \brief Returns the attack rating scaled by the Dexterity attribute level and the ar% passives, plus the unscaled
+//! ratings of both held items.
 double Creature::getAttackRating() const
 {
-    double rating = CreatureProgression::combatStat(mDefinition->getAttackRating(), 0.0, mLevel,
-        CreatureProgression::attackRatingMultiplier);
+    double rating = CreatureProgression::combatStatAt(mDefinition->getAttackRating(), 0.0, getDexterityLevel(),
+        CreatureProgression::attackRatingMultiplierAt) * (1.0 + getSkillPassive("ar%") / 100.0);
     if(mWeaponL != nullptr)
         rating += mWeaponL->getAttackRating();
     if(mWeaponR != nullptr)
@@ -2676,16 +2679,158 @@ double Creature::getAttackRating() const
     return rating;
 }
 
-//! \brief Returns level-scaled defense rating with the unscaled ratings of both held items.
+//! \brief Returns the defense rating scaled by the Dexterity attribute level and the dr% passives, plus the unscaled
+//! ratings of both held items.
 double Creature::getDefenseRating() const
 {
-    double rating = CreatureProgression::combatStat(mDefinition->getDefenseRating(), 0.0, mLevel,
-        CreatureProgression::defenseRatingMultiplier);
+    double rating = CreatureProgression::combatStatAt(mDefinition->getDefenseRating(), 0.0, getDexterityLevel(),
+        CreatureProgression::defenseRatingMultiplierAt) * (1.0 + getSkillPassive("dr%") / 100.0);
     if(mWeaponL != nullptr)
         rating += mWeaponL->getDefenseRating();
     if(mWeaponR != nullptr)
         rating += mWeaponR->getDefenseRating();
     return rating;
+}
+
+namespace
+{
+//! \brief The attributes and bonuses an item can add to a creature.
+enum class EquipmentAttribute
+{
+    strength,
+    dexterity,
+    life,
+    mana,
+    critChance
+};
+
+//! \brief Returns the bonus one item gives for the given attribute (0 for no item).
+//! \param weapon The held item, may be null.
+//! \param attribute The attribute to read.
+double weaponBonus(const Weapon* weapon, EquipmentAttribute attribute)
+{
+    if(weapon == nullptr)
+        return 0.0;
+    switch(attribute)
+    {
+    case EquipmentAttribute::strength:
+        return weapon->getStrength();
+    case EquipmentAttribute::dexterity:
+        return weapon->getDexterity();
+    case EquipmentAttribute::life:
+        return weapon->getLife();
+    case EquipmentAttribute::mana:
+        return weapon->getMana();
+    case EquipmentAttribute::critChance:
+        return weapon->getCritChance();
+    }
+    return 0.0;
+}
+
+//! \brief Returns the summed bonus of both held items for the given attribute.
+//! \param weaponL The item in the left hand, may be null.
+//! \param weaponR The item in the right hand, may be null.
+//! \param attribute The attribute to read.
+double equipmentBonus(const Weapon* weaponL, const Weapon* weaponR, EquipmentAttribute attribute)
+{
+    return weaponBonus(weaponL, attribute) + weaponBonus(weaponR, attribute);
+}
+
+//! \brief Returns the attribute level LA of one attribute: 1 + (value - start value) / points per level, which is
+//! level + equipment bonus / points per level, at least 1; the creature level when the points per level are 0.
+//! \param perLevel Points per level of the attribute.
+//! \param level The creature level.
+//! \param equipmentBonusValue The summed equipment bonus of the attribute.
+double attributeLevel(double perLevel, unsigned int level, double equipmentBonusValue)
+{
+    if(perLevel == 0.0)
+        return static_cast<double>(level);
+    return std::max(1.0, static_cast<double>(level) + equipmentBonusValue / perLevel);
+}
+}
+
+//! \brief Returns the Strength attribute at the current level, including the equipment bonus.
+double Creature::getStrength() const
+{
+    return mDefinition->getStrength() + mDefinition->getStrengthPerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength);
+}
+
+//! \brief Returns the Dexterity attribute at the current level, including the equipment bonus.
+double Creature::getDexterity() const
+{
+    return mDefinition->getDexterity() + mDefinition->getDexterityPerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity);
+}
+
+//! \brief Returns the Life attribute at the current level, including the equipment bonus.
+double Creature::getLife() const
+{
+    return mDefinition->getLife() + mDefinition->getLifePerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life);
+}
+
+//! \brief Returns the Mana attribute at the current level, including the equipment bonus.
+double Creature::getMana() const
+{
+    return mDefinition->getMana() + mDefinition->getManaPerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana);
+}
+
+//! \brief Returns the Strength attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getStrengthLevel() const
+{
+    return attributeLevel(mDefinition->getStrengthPerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength));
+}
+
+//! \brief Returns the Dexterity attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getDexterityLevel() const
+{
+    return attributeLevel(mDefinition->getDexterityPerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity));
+}
+
+//! \brief Returns the Life attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getLifeLevel() const
+{
+    return attributeLevel(mDefinition->getLifePerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life));
+}
+
+//! \brief Returns the Mana attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getManaLevel() const
+{
+    return attributeLevel(mDefinition->getManaPerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana));
+}
+
+//! \brief Returns the critical chance bonus in percent that both held items add.
+double Creature::getEquipmentCritChance() const
+{
+    return equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::critChance);
+}
+
+//! \brief Returns true if one of the held items has the weapon type bow or crossbow.
+bool Creature::carriesBowOrCrossbow() const
+{
+    const Weapon* weapons[] = {mWeaponL, mWeaponR};
+    for(const Weapon* weapon : weapons)
+    {
+        if(weapon == nullptr)
+            continue;
+        const std::string weaponType = weapon->getWeaponType();
+        if(weaponType == "bow" || weaponType == "crossbow")
+            return true;
+    }
+    return false;
+}
+
+//! \brief Returns the sum of the ranked passive skills for the stat; the skill trees are not part of the creature
+//! yet, so the sum is 0.
+double Creature::getSkillPassive(const std::string& stat) const
+{
+    return 0.0;
 }
 
 double Creature::getPhysicalDefense() const
