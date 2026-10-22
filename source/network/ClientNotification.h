@@ -113,7 +113,7 @@ enum class ClientNotificationType
     askUseSpecial
 };
 
-\brief What an editorRegionEdit message asks the server to do with the region markers of the level script.
+//! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.
 enum class EditorRegionOperation
 {
     //! Only send the list of the region markers.

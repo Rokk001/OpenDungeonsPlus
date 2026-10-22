@@ -930,7 +930,10 @@ void RoomAmbience::scan()
         return;
 
     Ogre::Vector3 cameraPosition = camera->getDerivedPosition();
-    Ogre::Vector3 lookPoint = getLookPoint(cameraPosition, camera->getDerivedDirection());
+    Ogre::Vector3 direction = camera->getDerivedDirection();
+    Ogre::Vector3 lookPoint = cameraPosition;
+    if(direction.z < -MIN_LOOK_DOWN)
+        lookPoint = cameraPosition + direction * (cameraPosition.z / -direction.z);
 
     ++mGeneration;
     mEventsThisScan = 0;

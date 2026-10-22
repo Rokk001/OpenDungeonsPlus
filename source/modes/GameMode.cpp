@@ -1002,6 +1002,8 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
     if(isMouseWheelOnCEGUIWindow())
         return;
 
+    ODFrameListener& frameListener = ODFrameListener::getSingleton();
+
     if(cameraInputBlocked())
         return;
 
