@@ -26,6 +26,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 * Leave transparent gaps for depleted creature health segments so they no longer obscure creature details
 * The size shown beside a multi-tile selection now matches the width and height of the marked tiles
 * Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
+* Gold seams hold 3000 gold in three visible densities, gem seams are endless, workers carry 100 gold; every level has enough gold for a game of at least four hours.
 
 ### Version 0.7.3 - 20 September 2026
 
