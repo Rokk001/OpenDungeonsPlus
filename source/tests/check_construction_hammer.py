@@ -132,8 +132,7 @@ int main() {
         resources.addResourceLocation("../../models", "FileSystem", "Graphics");
         resources.addResourceLocation("../../materials/textures", "FileSystem", "Graphics");
         resources.addResourceLocation("OGRE_PREFIX/Media/Main", "FileSystem", "OgreInternal");
-        resources.addResourceLocation("OGRE_PREFIX/Media/Main", "FileSystem", "Graphics");
-        resources.addResourceLocation("OGRE_PREFIX/Media/RTShaderLib/GLSL", "FileSystem", "Graphics");
+        resources.addResourceLocation("OGRE_PREFIX/Media/RTShaderLib", "FileSystem", "Graphics");
         Ogre::RTShader::ShaderGenerator::initialize();
         resources.initialiseAllResourceGroups();
         resources.addResourceLocation("../../materials/scripts", "FileSystem", "Graphics");

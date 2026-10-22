@@ -405,7 +405,7 @@ int main(int argc, char** argv)
     for(int i = 0; i < 5; ++i)
         groups.addResourceLocation(repo + "/" + dirs[i], "FileSystem", "Graphics", true);
     groups.addResourceLocation(prefix + "/Media/Main", "FileSystem", "OgreInternal");
-    groups.addResourceLocation(prefix + "/Media/RTShaderLib/GLSL", "FileSystem", "OgreInternal");
+    groups.addResourceLocation(prefix + "/Media/RTShaderLib", "FileSystem", "Graphics");
     Ogre::RTShader::ShaderGenerator::initialize();
     Ogre::RTShader::ShaderGenerator* generator = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
     groups.initialiseAllResourceGroups();

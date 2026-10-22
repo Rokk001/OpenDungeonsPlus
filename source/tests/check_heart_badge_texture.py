@@ -99,7 +99,7 @@ int main(int argc, char** argv)
     // As the game: the shader generator supplies the GPU programs the GL3+ renderer needs
     Ogre::ResourceGroupManager& resources = Ogre::ResourceGroupManager::getSingleton();
     resources.addResourceLocation(prefix + "/Media/Main", "FileSystem", "OgreInternal");
-    resources.addResourceLocation(prefix + "/Media/RTShaderLib/GLSL", "FileSystem", "General");
+    resources.addResourceLocation(prefix + "/Media/RTShaderLib", "FileSystem", "General");
     resources.initialiseAllResourceGroups();
     Ogre::RTShader::ShaderGenerator::initialize();
     Ogre::RTShader::ShaderGenerator* shaders = Ogre::RTShader::ShaderGenerator::getSingletonPtr();

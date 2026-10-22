@@ -22,7 +22,7 @@ int main(int argc,char** argv){try{
  Ogre::RenderWindow* window=root.createRenderWindow("Arrow check",512,256,false,&options);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  const std::string repo=argv[1],prefix=argv[2];
- for(const std::string& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib/GLSL"})groups.addResourceLocation(path,"FileSystem","Graphics");
+ for(const std::string& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");
  Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("ArrowProjectile.material","Graphics"),"Graphics");

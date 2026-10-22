@@ -42,9 +42,7 @@ int main(int argc,char** argv){try{
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  for(const char* dir:{"models","materials/textures","materials/scripts","shaders","particles"})groups.addResourceLocation(repo+"/"+dir,"FileSystem","Graphics",true);
  groups.addResourceLocation(prefix+"/Media/Main","FileSystem","OgreInternal");
- groups.addResourceLocation(prefix+"/Media/Main","FileSystem","Graphics");
- groups.addResourceLocation(prefix+"/Media/RTShaderLib/GLSL","FileSystem","OgreInternal");
- groups.addResourceLocation(prefix+"/Media/RTShaderLib/GLSL","FileSystem","Graphics");
+ groups.addResourceLocation(prefix+"/Media/RTShaderLib","FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();Ogre::RTShader::ShaderGenerator* generator=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
  groups.initialiseAllResourceGroups();
  OgreBites::SGTechniqueResolverListener listener(generator);Ogre::MaterialManager::getSingleton().addListener(&listener);

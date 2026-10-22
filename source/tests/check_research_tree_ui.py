@@ -202,7 +202,7 @@ if args.render:
  Ogre::NameValuePairList options;options["hidden"]="true";
  auto* window=ogre.createRenderWindow("Research graph preview",1280,960,false,&options);window->setAutoUpdated(false);
  resources.addResourceLocation(std::string(argv[2])+"/Media/Main","FileSystem","OgreInternal");
- resources.addResourceLocation(std::string(argv[2])+"/Media/RTShaderLib/GLSL","FileSystem","General");
+ resources.addResourceLocation(std::string(argv[2])+"/Media/RTShaderLib","FileSystem","General");
  resources.initialiseAllResourceGroups();
  Ogre::RTShader::ShaderGenerator::initialize();auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
  OgreBites::SGTechniqueResolverListener listener(shaders);Ogre::MaterialManager::getSingleton().addListener(&listener);

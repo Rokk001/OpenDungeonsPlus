@@ -25,11 +25,11 @@ int main(int argc,char** argv){try{
  Ogre::RenderWindow* window=root.createRenderWindow("Projectile check",256,128,false,&options);
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  std::string repo=argv[1],prefix=argv[2];
- for(const std::string& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib/GLSL"})groups.addResourceLocation(path,"FileSystem","Graphics");
+ for(const std::string& path:{repo+"/shaders",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  groups.addResourceLocation(repo+"/materials/scripts","FileSystem","Graphics");groups.addResourceLocation(repo+"/particles","FileSystem","Graphics");
  Ogre::MaterialManager& materials=Ogre::MaterialManager::getSingleton();materials.parseScript(groups.openResource("MissileMagic.material","Graphics"),"Graphics");
- Ogre::ParticleSystemManager::getSingleton().parseScript(groups.openResource("MissileMagic.particle","Graphics"),"Graphics");
+ Ogre::ScriptCompilerManager::getSingleton().parseScript(groups.openResource("MissileMagic.particle","Graphics"),"Graphics");
  Ogre::RTShader::ShaderGenerator* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
  Ogre::SceneManager* scene=root.createSceneManager();shaders->addSceneManager(scene);
  Ogre::Camera* camera=scene->createCamera("Camera");camera->setNearClipDistance(.01f);camera->setAspectRatio(2);camera->setProjectionType(Ogre::PT_ORTHOGRAPHIC);camera->setOrthoWindow(6,3);
