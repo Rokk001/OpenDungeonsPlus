@@ -28,7 +28,7 @@ class CreatureEffectHexenHen : public CreatureEffect
 public:
     //! \brief Creates the effect.
     //! \param nbTurnsEffect How many turns the creature stays a chicken.
-    CreatureEffectHexenHen(int32_t nbTurnsEffect) :
+    CreatureEffectHexenHen(double nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "SpellCreatureHexenHen")
     {}
 

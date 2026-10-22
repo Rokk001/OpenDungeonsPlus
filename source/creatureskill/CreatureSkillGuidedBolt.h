@@ -38,6 +38,10 @@ public:
     virtual CreatureSkillGuidedBolt* clone() const override;
 
 protected:
+    //! \brief The guided bolt damage is multiplied by the SkillDamageFactor of the creature type.
+    virtual bool appliesSkillDamageFactor() const override
+    { return true; }
+
     //! \brief Creates a guided single-target shot and records the shooter for hit-result events.
     virtual MissileOneHit* createMissile(GameMap& gameMap, Creature* creature, const Ogre::Vector3& direction,
         double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject, bool ko,

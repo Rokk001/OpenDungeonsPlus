@@ -188,6 +188,18 @@ public:
     //! \brief How much bigger than its base size a creature of the highest level is shown (0.10 = 10 percent), limited to 0 - 1
     inline double getCreatureLevelGrowthMax() const
     { return std::max(0.0, std::min(1.0, mCreatureLevelGrowthMax)); }
+    //! \brief Growth factor of the creature damage curve (CreatureDamageGrowth in global.cfg)
+    inline double getCreatureDamageGrowth() const
+    { return mCreatureDamageGrowth; }
+    //! \brief Exponent of the creature damage curve (CreatureDamageExponent in global.cfg)
+    inline double getCreatureDamageExponent() const
+    { return mCreatureDamageExponent; }
+    //! \brief Extra health growth per level on top of the damage curve (CreatureHpGrowthPerLevel in global.cfg)
+    inline double getCreatureHpGrowthPerLevel() const
+    { return mCreatureHpGrowthPerLevel; }
+    //! \brief Share of an attack or skill cooldown saved per level above 1 (CooldownReductionPerLevel in global.cfg), limited to 0 - 1
+    inline double getCooldownReductionPerLevel() const
+    { return std::max(0.0, std::min(1.0, mCooldownReductionPerLevel)); }
     //! \brief Limits a walk speed factor of a badly hurt creature to LOW_HEALTH_WALK_SPEED_FACTOR_MIN - LOW_HEALTH_WALK_SPEED_FACTOR_MAX
     //! \param factor The factor to limit (1 = no slowdown)
     //! \return The limited factor
@@ -507,6 +519,14 @@ private:
     double mTiredWalkSpeedFactor;
     double mLowHealthWalkSpeedFactor;
     double mCreatureLevelGrowthMax;
+    //! Growth factor of the creature damage curve (global.cfg CreatureDamageGrowth)
+    double mCreatureDamageGrowth;
+    //! Exponent of the creature damage curve (global.cfg CreatureDamageExponent)
+    double mCreatureDamageExponent;
+    //! Extra health growth per level on top of the damage curve (global.cfg CreatureHpGrowthPerLevel)
+    double mCreatureHpGrowthPerLevel;
+    //! Share of the cooldown saved per level above 1 (global.cfg CooldownReductionPerLevel)
+    double mCooldownReductionPerLevel;
     double mLowHealthWalkThresholdPercent;
     int32_t mHeartHealthStages;
     bool mHeartHealthStageEvents;

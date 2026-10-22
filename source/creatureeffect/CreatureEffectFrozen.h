@@ -29,7 +29,7 @@ class CreatureEffectFrozen : public CreatureEffect
 {
 public:
     //! \brief Creates the effect for the given number of turns.
-    CreatureEffectFrozen(int32_t nbTurnsEffect) :
+    CreatureEffectFrozen(double nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "")
     {}
 

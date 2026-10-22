@@ -53,7 +53,9 @@ void CreatureEffectExplosion::applyEffect(Creature& creature)
         return;
 
     Tile* posTile = creature.getPositionTile();
-    creature.takeDamage(nullptr, 0.0, 0.0, Random::Double(mEffectValueMin, mEffectValue), 0.0, posTile, false);
+    // In the last turn of the effect only the fraction of the turn that was left counts
+    creature.takeDamage(nullptr, 0.0, 0.0, Random::Double(mEffectValueMin, mEffectValue) * getTurnFraction(),
+        0.0, posTile, false);
 }
 
 CreatureEffectExplosion* CreatureEffectExplosion::load(std::istream& is)

@@ -216,6 +216,8 @@ public:
             return getWalkClipRate();
         return std::max(WALK_CLIP_RATE_MIN, std::min(WALK_CLIP_RATE_MAX, mWalkHurtClipRate));
     }
+    //! \brief Factor on every damage the skills of this type deal (Explosion, HailStorm, GasCloud, Grenade, GuidedBolt)
+    inline double               getSkillDamageFactor () const   { return mSkillDamageFactor; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -336,6 +338,10 @@ private:
     //! \brief Optional (WalkHurtClipRate): speed factor of the WalkHurt clip only, matching its own stride length.
     //! Negative when not set, then mWalkClipRate is used
     double mWalkHurtClipRate;
+
+    //! \brief Optional (SkillDamageFactor): factor on every damage the skills of this type deal (Explosion, HailStorm,
+    //! GasCloud, Grenade, GuidedBolt). 1 when not set
+    double mSkillDamageFactor;
 
     //! \brief The name of the creatures class
     std::string mClassName;
