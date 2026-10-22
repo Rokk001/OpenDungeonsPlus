@@ -382,6 +382,15 @@ public:
     
     bool setDestination(Tile* tile);
 
+    //! \brief Server side. Checks that the creature can still walk the path it is following and,
+    //! if a tile of it lost its ground (for example a sold or burnt bridge), stops and looks for
+    //! another way to the same destination. Stays stopped when there is none.
+    void checkWalkPathIsStillValid();
+
+    //! \brief Server side. Hurts the creature for one turn when it stands on lava without a bridge
+    //! and cannot walk on lava. The damage per second is the LavaDamagePerSecond config value.
+    void applyLavaDamage();
+
     //! \brief Picks a destination far away in the visible tiles and goes there
     //! Returns true if a valid Tile was found. The creature will go there
     //! Returns false if no reachable Tile was found
