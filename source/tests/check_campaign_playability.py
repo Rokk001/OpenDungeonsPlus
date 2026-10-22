@@ -602,19 +602,27 @@ def parse_level(text, selected_seat=None):
         raise ValueError("seat starting position is outside map")
     tiles = {(x, y): (1, 100.0, None) for x in range(width) for y in range(height)}
     seen = set()
+    densities = {}
     for number, line in tile_lines[2:]:
         values = line.split()
-        if len(values) not in (4, 5):
-            raise ValueError("tile requires x y type fullness [seat]")
+        if len(values) not in (4, 5, 6):
+            raise ValueError("tile requires x y type fullness [seat [density]]")
         x, y, kind = map(int, values[:3])
         fullness = float(values[3])
         if (x, y) not in tiles or (x, y) in seen or kind not in range(1, 8) or not math.isfinite(fullness) or not 0 <= fullness <= 100:
             raise ValueError("invalid or duplicate tile at %d,%d" % (x, y))
         if kind in (4, 5, 7):
             fullness = 0.0
-        owner = int(values[4]) if len(values) == 5 and (kind in (1, 7) or kind == 2 and fullness == 0) else None
+        owner = int(values[4]) if len(values) >= 5 and (kind in (1, 7) or kind == 2 and fullness == 0) else None
+        if owner == -1:
+            owner = None
         if owner is not None and owner not in seats:
             raise ValueError("tile references unknown seat")
+        # A gold tile can carry its density (percent) in a sixth column; the default is 100
+        if len(values) == 6:
+            if kind != 2 or int(values[5]) not in (50, 100, 150):
+                raise ValueError("only a gold tile has a density of 50, 100 or 150 at %d,%d" % (x, y))
+            densities[x, y] = int(values[5])
         tiles[x, y] = kind, fullness, owner
         seen.add((x, y))
     rooms = []
@@ -659,7 +667,15 @@ def parse_level(text, selected_seat=None):
     if start not in tiles:
         raise ValueError("player start is outside map")
     return dict(seats=seats, human=human, start=start, tiles=tiles, rooms=rooms,
-                creatures=creatures, goals=goals, scripts=scripts, text=text)
+                creatures=creatures, goals=goals, scripts=scripts, text=text, densities=densities)
+
+
+GOLD_PER_SEAM_TILE = 3000
+
+
+# The gold a gold tile still holds: GoldPerSeamTile x density / 100 x fullness / 100 (density 100 without a sixth column).
+def tile_gold(level, tile, fullness):
+    return GOLD_PER_SEAM_TILE * level["densities"].get(tile, 100) / 100.0 * fullness / 100.0
 
 
 # Include only guaranteed elapsed-time openings, preserving conditional gates as blockers.
@@ -753,10 +769,11 @@ def check_level(level):
             if count < int(argument):
                 errors.append("only %d potentially claimable tiles for %s" % (count, argument))
         if name == "MineNGold":
-            # DigCoefGold is fixed at 5; a reachable adjacent gem seam yields unlimited gold.
+            # A gold tile holds 3000 gold x density / 100 (GoldPerSeamTile); a reachable adjacent gem seam yields unlimited gold.
             gems = any(kind == 6 and fullness > 0 and any(n in area for n in neighbours(tile))
                        for tile, (kind, fullness, _) in level["tiles"].items())
-            gold = sum(fullness * 5 for tile, (kind, fullness, _) in level["tiles"].items() if tile in area and kind == 2)
+            gold = sum(tile_gold(level, tile, fullness) for tile, (kind, fullness, _) in level["tiles"].items()
+                       if tile in area and kind == 2)
             gold += int(seats[human].get("goldMined", "0"))
             if not gems and gold < int(argument):
                 errors.append("at most %g mineable gold for %s" % (gold, argument))
@@ -917,7 +934,7 @@ def grouped_goal_errors(text, level_name):
         for start in proof.get("selectable_starts", []):
             candidate = parse_level(text, start["seat"])
             candidate_area, _ = reachable(timed_openings(candidate))
-            gold = sum(fullness * 5 for tile, (kind, fullness, _) in candidate["tiles"].items()
+            gold = sum(tile_gold(candidate, tile, fullness) for tile, (kind, fullness, _) in candidate["tiles"].items()
                        if tile in candidate_area and kind == 2)
             if list(candidate["start"]) != start["position"] or gold < start["minimum_mineable_gold"]:
                 errors.append("selectable starting seat lacks its original position or mining resources: " + str(start["seat"]))
@@ -1125,7 +1142,7 @@ def grouped_goal_errors(text, level_name):
         regional = proof.get("regional_gold")
         if regional:
             x1, y1, x2, y2 = regional["bounds"]
-            available = sum(fullness * 5 for (x, y), (kind, fullness, _) in level["tiles"].items()
+            available = sum(tile_gold(level, (x, y), fullness) for (x, y), (kind, fullness, _) in level["tiles"].items()
                             if (x, y) in area and x1 <= x <= x2 and y1 <= y <= y2 and kind == 2)
             if available < regional["minimum"]:
                 errors.append("insufficient reachable regional mining reserve")
@@ -1150,7 +1167,8 @@ def grouped_goal_errors(text, level_name):
             available = section(human_block, "SkillDone").split()
             if any(skill not in available for skill in setup["skills"]):
                 errors.append("starting supply room is not unlocked")
-        gold = sum(fullness * 5 for tile, (kind, fullness, _) in level["tiles"].items() if tile in area and kind == 2)
+        gold = sum(tile_gold(level, tile, fullness) for tile, (kind, fullness, _) in level["tiles"].items()
+                   if tile in area and kind == 2)
         if gold < proof.get("minimum_mineable_gold", 0):
             errors.append("insufficient actual mineable gold for grouped goal")
         for name in proof.get("named_creatures", []):
