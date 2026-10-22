@@ -2,6 +2,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
 $taskRoot = $taskDependencyRoot
 $taskCmake = $taskCmakeExe
+$taskOgreCommit = 'f906880885f6014ca9b5bd8aaa09b399394d5676'
+$taskOgreHead = (& git -C "$taskRoot\src\ogre" rev-parse HEAD)
+if ($taskOgreHead -ne $taskOgreCommit) { throw "OGRE source at $taskRoot\src\ogre is $taskOgreHead, expected $taskOgreCommit (OGRE 14.6.1)" }
 $taskPatch = Join-Path $PSScriptRoot 'patches/ogre14-multiwindow-settings.patch'
 $ErrorActionPreference = 'Continue'
 & git -C "$taskRoot\src\ogre" apply --recount --reverse --check $taskPatch *> $null

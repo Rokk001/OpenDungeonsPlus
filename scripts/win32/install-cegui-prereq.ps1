@@ -2,6 +2,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
 $taskRoot = $taskDependencyRoot
 $taskCmake = $taskCmakeExe
+$taskCeguiCommit = 'd8c7290c0eabc62e4319af4168a81757c6267403'
+$taskCeguiHead = (& git -C "$taskRoot\src\cegui" rev-parse HEAD)
+if ($taskCeguiHead -ne $taskCeguiCommit) { throw "CEGUI source at $taskRoot\src\cegui is $taskCeguiHead, expected $taskCeguiCommit" }
 $taskPatch = Join-Path $PSScriptRoot 'patches/cegui-msvc-snprintf.patch'
 $taskHitTestPatch = Join-Path $PSScriptRoot 'patches/cegui-list-hit-test.patch'
 $ErrorActionPreference = 'Continue'
