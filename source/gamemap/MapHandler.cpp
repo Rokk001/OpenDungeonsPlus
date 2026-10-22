@@ -162,6 +162,15 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             continue;
         }
 
+        param = "TurnNumber\t";
+        if (nextParam.compare(0, param.size(), param) == 0)
+        {
+            int64_t turnNumber = Helper::toInt(nextParam.substr(param.size()));
+            gameMap.setSavedTurnNumber(turnNumber);
+            OD_LOG_INF("Saved at turn: " + Helper::toString(turnNumber));
+            continue;
+        }
+
         param = "Sandbox\t";
         if (nextParam.compare(0, param.size(), param) == 0)
         {
@@ -740,7 +749,12 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     // Only saved games record the option, levels written by the editor do not
     bool isGameSave = gameMap.isServerGameMap() && !gameMap.isInEditorMode();
     if(isGameSave)
+    {
         levelFile << "Relationships\t" << (gameMap.isRelationshipsEnabled() ? "On" : "Off") << std::endl;
+        // A saved game goes on from its current turn when it is loaded again. Levels written
+        // by the editor have to start from the beginning, so they carry no turn.
+        levelFile << "TurnNumber\t" << gameMap.getTurnNumber() << std::endl;
+    }
 
     levelFile << "[/Info]" << std::endl;
 
