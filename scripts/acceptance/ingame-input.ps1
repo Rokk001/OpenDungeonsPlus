@@ -23,6 +23,7 @@
     Move    move the game cursor to client position -X,-Y (corner calibration)
     Press   left mouse button press and release at the current cursor position
     Click   Move to -X,-Y, then Press
+    Wheel   turn the mouse wheel by -Notches notches at the current cursor position (positive = away from the user, zooms in)
     Text    type the string -Text key by key into the focused game input (for example the console opened with Key 0x7B = F12,
             then Key 0x0D for Enter). Only characters that need no Shift work: the game does not see a Shift key that is
             sent from outside, so capitals and characters such as ( ) arrive as the unshifted key. The first character after
@@ -37,13 +38,14 @@
     .\ingame-input.ps1 -Action Stop
 #>
 param(
-    [Parameter(Mandatory = $true)][ValidateSet('Start', 'Key', 'Move', 'Press', 'Click', 'Text', 'Print', 'Stop')][string]$Action,
+    [Parameter(Mandatory = $true)][ValidateSet('Start', 'Key', 'Move', 'Press', 'Click', 'Wheel', 'Text', 'Print', 'Stop')][string]$Action,
     [string]$Exe = '',
     [string]$Level = '',
     [uint32]$Seed = 12345,
     [int]$Seconds = 90,
     [int]$Wait = 25,
     [int]$Vk = 0,
+    [int]$Notches = 0,
     [string]$Text = '',
     [int]$X = 0,
     [int]$Y = 0,
@@ -142,6 +144,17 @@ function Move-GameCursor([int]$x, [int]$y)
     Start-Sleep -Milliseconds 300
 }
 
+# Turns the mouse wheel by whole notches (120 units each); negative values turn it towards the user.
+function Turn-GameWheel([int]$notches)
+{
+    $step = if($notches -lt 0) { -1 } else { 1 }
+    for($i = 0; $i -lt [math]::Abs($notches); $i++)
+    {
+        [OdInput.Native]::mouse_event(0x0800, 0, 0, [BitConverter]::ToUInt32([BitConverter]::GetBytes([int](120 * $step)), 0), [UIntPtr]::Zero)
+        Start-Sleep -Milliseconds 120
+    }
+}
+
 # Left button press and release at the current cursor position.
 function Press-GameButton
 {
@@ -181,6 +194,7 @@ switch($Action)
     'Key'   { Send-Key ([byte]$Vk) ([byte][OdInput.Native]::MapVirtualKey([uint32]$Vk, 0)) 0 2; 'key sent' }
     'Move'  { Move-GameCursor $X $Y; "cursor at client ($X,$Y)" }
     'Press' { Press-GameButton; 'pressed' }
+    'Wheel' { Turn-GameWheel $Notches; "wheel $Notches notches" }
     'Text'  { Send-Text $Text; "typed $($Text.Length) characters" }
     'Click' { Move-GameCursor $X $Y; Press-GameButton; "clicked client ($X,$Y)" }
     'Print'
