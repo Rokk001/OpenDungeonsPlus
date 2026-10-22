@@ -24,7 +24,7 @@ These instructions apply to every change made to this repository with an AI assi
 
 ## Branches
 
-- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. After integration it is submitted as its own pull request right away, stacked on the latest pull request it contains ('Stacks on #<n>'). Pull requests are submitted stacked and merged upstream in order; never re-cut, split or rebase a submitted pull request to make it standalone against shaders-improvement. Nothing is committed directly on integration/all, and no work stays only in integration/all without a pull request. PAUSE 2026-10-21 (Mario): no new upstream pull requests and no pushes to pull request heads until Mario orders it separately.
+- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when Mario explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
 
 ## Protected content
 
