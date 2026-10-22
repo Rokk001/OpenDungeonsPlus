@@ -77,8 +77,12 @@ class ODServer: public Ogre::Singleton<ODServer>,
     inline ServerMode getServerMode() const
     { return mServerMode; }
 
-    //! \brief relationships is the game setup option "Creature relationships". It is ignored in editor
+    //! \brief Loads the level and starts the server. Level files whose dungeon heart does not cover
+    //! 25 tiles (5x5) are refused; savegames and the editor may still load older hearts. In a campaign
+    //! the computer keepers play with the difficulty chosen for the campaign.
+    //! relationships is the game setup option "Creature relationships". It is ignored in editor
     //! mode and when a saved game is loaded (the save knows its own setting).
+    //! \return true when the server is running.
     bool startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer,
         bool relationships = true);
     void stopServer() override;
@@ -108,6 +112,7 @@ class ODServer: public Ogre::Singleton<ODServer>,
     //! for messages that need to show reactivity (after a player does something like building a room or tried to pickup a creature).
     void sendAsyncMsg(ServerNotification& notif);
 
+    //! \brief Asks the server to stop. Only clears the running flag; the owner does the cleanup in stopServer().
     void notifyExit();
 
     //! This function will block the calling thread until the game is launched and
@@ -120,6 +125,7 @@ class ODServer: public Ogre::Singleton<ODServer>,
 protected:
     ODSocketClient* notifyNewConnection(sf::TcpListener& sockListener) override;
     bool notifyClientMessage(ODSocketClient *sock) override;
+    //! \brief Server main loop: runs turns until the server is asked to stop.
     void serverThread() override;
 
 private:
@@ -173,6 +179,8 @@ private:
     //! \brief Sends the packet to the given player. If player is nullptr, the packet is sent to every connected player
     void sendMsg(Player* player, ODPacket& packet);
 
+    //! \brief Sends the seat choices and the skirmish game settings (gold density, mana regeneration,
+    //! maximum creatures, creature class limits and skill availability) to every client
     void fireSeatConfigurationRefresh();
 
     //! \brief Handles console command. player is the player that launched the command

@@ -34,14 +34,31 @@
 
 const std::string CREATURE_OVERLAY_STATUS_PREFIX = "CreatureOverlayStatus_";
 
+//! The child overlays of a creature. The recovery overlay also shows the level caption.
 enum class CreatureOverlays
 {
+    //! Health ring, also decides how long the whole overlay is displayed
     health,
+    //! Experience ring
     experience,
+    //! Attack recovery clock and level caption
     recovery,
+    //! Mood symbol
     status,
     nbCreatureOverlays
 };
+
+//! The experience and recovery textures are square atlases with this many columns and rows.
+const uint32_t PROGRESS_ATLAS_COLUMNS = 8;
+//! Last frame of the atlases. Frame 0 shows no progress.
+const uint32_t PROGRESS_ATLAS_LAST_FRAME = PROGRESS_ATLAS_COLUMNS * PROGRESS_ATLAS_COLUMNS - 1;
+//! Character heights of the level caption, which gets smaller for two-digit levels.
+const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 32;
+const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;
+//! Character height of the overlay that shows the emote of a reaction
+const Ogre::Real EMOTE_CHAR_HEIGHT = 16;
+//! Width and height in pixels of the area of the emote picture
+const Ogre::Real EMOTE_SIZE = 32;
 
 CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* ent,
         Ogre::Camera* cam) :
@@ -70,7 +87,7 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
         Ogre::ColourValue::White, "CreatureExperience", false);
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::experience)] = experienceId;
     mMovableTextOverlay->forceTextArea(experienceId, 64, 64);
-    mMovableTextOverlay->setAtlasFrame(experienceId, 0, 8);
+    mMovableTextOverlay->setAtlasFrame(experienceId, 0, PROGRESS_ATLAS_COLUMNS);
 
     uint32_t recoveryId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
         Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f), "CreatureRecovery", false);
@@ -78,7 +95,7 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mMovableTextOverlay->forceTextArea(recoveryId, 64, 64);
     mMovableTextOverlay->centerCaption(recoveryId);
     mMovableTextOverlay->setCaptionOutline(recoveryId, Ogre::ColourValue(1.0f, 0.91f, 0.66f, 1.0f));
-    mMovableTextOverlay->setAtlasFrame(recoveryId, 0, 8);
+    mMovableTextOverlay->setAtlasFrame(recoveryId, 0, PROGRESS_ATLAS_COLUMNS);
     mMovableTextOverlay->displayOverlay(recoveryId, -1);
 
     updateHealth();
@@ -111,8 +128,8 @@ void CreatureOverlayStatus::showEmote(const std::string& materialName, Ogre::Rea
     if(!mEmoteCreated)
     {
         // The material is given at once: it has to be a valid one when the overlay is created
-        mEmoteId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 16, Ogre::ColourValue::White, materialName);
-        mMovableTextOverlay->forceTextArea(mEmoteId, 32, 32);
+        mEmoteId = mMovableTextOverlay->createChildOverlay("MedievalSharp", EMOTE_CHAR_HEIGHT, Ogre::ColourValue::White, materialName);
+        mMovableTextOverlay->forceTextArea(mEmoteId, EMOTE_SIZE, EMOTE_SIZE);
         mEmoteCreated = true;
     }
     else
@@ -153,7 +170,8 @@ void CreatureOverlayStatus::updateHealth()
     {
         mLevel = mCreature->getLevel();
         const uint32_t levelId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)];
-        mMovableTextOverlay->setCaptionSize(levelId, mLevel < 10 ? 32 : 26);
+        mMovableTextOverlay->setCaptionSize(levelId,
+            mLevel < 10 ? LEVEL_CAPTION_SIZE_ONE_DIGIT : LEVEL_CAPTION_SIZE_TWO_DIGITS);
         if(mStatus == 0)
         {
             mMovableTextOverlay->setCaption(levelId, Helper::toString(mLevel));
@@ -170,7 +188,8 @@ void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
     const bool known = mCreature->hasProgressInformation();
     mMovableTextOverlay->displayOverlay(experienceId, known ? -1 : 0);
     mMovableTextOverlay->setAtlasFrame(experienceId,
-        static_cast<uint32_t>(mCreature->getExperienceProgress() * 63.0), 8);
+        static_cast<uint32_t>(mCreature->getExperienceProgress() * PROGRESS_ATLAS_LAST_FRAME),
+        PROGRESS_ATLAS_COLUMNS);
     const double duration = mCreature->getAttackRecoveryDuration();
     const double remaining = mCreature->getAttackRecoveryTurns();
     const uint32_t serial = mCreature->getAttackRecoverySerial();
@@ -186,9 +205,11 @@ void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
     // The remaining time can be a fraction of a turn (level scaled cooldown): never run past it.
     const double fraction = std::min(std::min(0.999, remaining * 0.999), mRecoveryElapsed * ODApplication::turnsPerSecond
         * mCreature->getGameMap()->getGameSpeedFactor());
+    // Frame 0 means ready, the frames 1 to the last one show the elapsed part of the recovery.
+    const double recoveryFrames = PROGRESS_ATLAS_LAST_FRAME - 1;
     const uint32_t frame = known && duration > 0 && remaining > 0 ?
-        1 + static_cast<uint32_t>(62.0 * (duration - remaining + fraction) / duration) : 0;
-    mMovableTextOverlay->setAtlasFrame(recoveryId, frame, 8);
+        1 + static_cast<uint32_t>(recoveryFrames * (duration - remaining + fraction) / duration) : 0;
+    mMovableTextOverlay->setAtlasFrame(recoveryId, frame, PROGRESS_ATLAS_COLUMNS);
     if(RunLevelTest::isActive())
         RunLevelTest::onRecoveryFrame(mCreature->getDefinition()->isWorker(), frame);
 }

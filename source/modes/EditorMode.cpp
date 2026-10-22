@@ -1887,12 +1887,24 @@ void EditorMode::onEditDelete()
     ODClient::getSingleton().queueClientNotification(notif1);
 }
 
-void EditorMode::askRegionEdit(int32_t operation, const std::string& name,
+namespace
+{
+    //! \brief The colour of the frame drawn around a region marker of the level script (RGBA)
+    const uint32_t REGION_FRAME_COLOUR_RGBA = 0x00FF99FF;
+
+    //! \brief How far the frame of a region reaches beyond the centres of its border tiles, in tiles
+    const Ogre::Real REGION_FRAME_MARGIN = 0.5;
+
+    //! \brief The height of the frame of a region marker above the floor
+    const Ogre::Real REGION_FRAME_HEIGHT = 1.0;
+}
+
+void EditorMode::askRegionEdit(EditorRegionOperation operation, const std::string& name,
     int32_t x1, int32_t y1, int32_t x2, int32_t y2)
 {
     ClientNotification *clientNotification = new ClientNotification(
         ClientNotificationType::editorRegionEdit);
-    clientNotification->mPacket << operation << name << x1 << y1 << x2 << y2;
+    clientNotification->mPacket << static_cast<int32_t>(operation) << name << x1 << y1 << x2 << y2;
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
@@ -1914,7 +1926,7 @@ void EditorMode::markRegion()
     int32_t x2 = static_cast<int32_t>(mTileMarker.getMaxX());
     int32_t y2 = static_cast<int32_t>(mTileMarker.getMaxY());
     std::string name = mGameMap->getLevelScript().getFreeRegionName();
-    askRegionEdit(1, name, x1, y1, x2, y2);
+    askRegionEdit(EditorRegionOperation::set, name, x1, y1, x2, y2);
 
     mModifiedMapBit = true;
     std::stringstream message;
@@ -1933,7 +1945,7 @@ void EditorMode::unmarkRegion()
         return;
     }
 
-    askRegionEdit(2, name, 0, 0, 0, 0);
+    askRegionEdit(EditorRegionOperation::remove, name, 0, 0, 0, 0);
     mModifiedMapBit = true;
     displayText(Ogre::ColourValue::White, name + " removed. Save the level to keep the change.");
 }
@@ -1954,18 +1966,19 @@ void EditorMode::onFrameStarted(const Ogre::FrameEvent& evt)
     if(!mRegionsRequested && ODClient::getSingleton().isConnected() && (mGameMap->getMapSizeX() > 0))
     {
         mRegionsRequested = true;
-        askRegionEdit(0, std::string(), 0, 0, 0, 0);
+        askRegionEdit(EditorRegionOperation::list, std::string(), 0, 0, 0, 0);
     }
 
     for(const LevelScriptRegion& region : mGameMap->getLevelScript().getRegions())
     {
         Ogre::AxisAlignedBox box(
-            Ogre::Vector3(static_cast<Ogre::Real>(std::min(region.mX1, region.mX2)) - 0.5,
-                          static_cast<Ogre::Real>(std::min(region.mY1, region.mY2)) - 0.5, 0.0),
-            Ogre::Vector3(static_cast<Ogre::Real>(std::max(region.mX1, region.mX2)) + 0.5,
-                          static_cast<Ogre::Real>(std::max(region.mY1, region.mY2)) + 0.5, 1.0));
+            Ogre::Vector3(static_cast<Ogre::Real>(std::min(region.mX1, region.mX2)) - REGION_FRAME_MARGIN,
+                          static_cast<Ogre::Real>(std::min(region.mY1, region.mY2)) - REGION_FRAME_MARGIN, 0.0),
+            Ogre::Vector3(static_cast<Ogre::Real>(std::max(region.mX1, region.mX2)) + REGION_FRAME_MARGIN,
+                          static_cast<Ogre::Real>(std::max(region.mY1, region.mY2)) + REGION_FRAME_MARGIN,
+                          REGION_FRAME_HEIGHT));
         Ogre::ColourValue regionColour;
-        regionColour.setAsRGBA(0x00FF99FF);
+        regionColour.setAsRGBA(REGION_FRAME_COLOUR_RGBA);
         DebugDrawer::getSingleton().drawCuboid(box.getAllCorners().data(), regionColour, false);
     }
     if( mTileMarker.isVisible )

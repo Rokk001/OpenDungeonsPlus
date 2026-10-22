@@ -35,14 +35,19 @@ enum class TileVisual;
 class RoomGuardRoom: public Room
 {
 public:
+    //! \brief Creates an empty guard room on the given map.
     RoomGuardRoom(GameMap* gameMap);
 
+    //! \brief Returns the type of this room (RoomType::guardRoom).
     RoomType getType() const override
     { return mRoomType; }
 
     //! \brief One guard per room tile
     bool hasOpenCreatureSpot(Creature* c) override;
+    //! \brief Frees the post of the creature when it stops using the room.
     void removeCreatureUsingRoom(Creature* c) override;
+    //! \brief One duty turn of a guard: it walks to its post and stands there watching. After a while on
+    //! duty it patrols to a free watch banner instead.
     bool useRoom(Creature& creature, bool forced) override;
 
     static const RoomType mRoomType;

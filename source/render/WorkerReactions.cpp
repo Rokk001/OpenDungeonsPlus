@@ -91,8 +91,42 @@ const double GOLD_BODY_WIDTH = 0.6;
 const double RETRY_INTERVAL = 0.7;
 const double RETRY_MAX = 4.0;
 const size_t MAX_LATER = 64;
+//! The most places that are remembered of one kind (veins, deaths)
+const size_t MAX_SPOTS = 32;
+//! Seconds after the first dig animation until the first hit effect, least and most
+const double FIRST_HIT_MIN = 0.5;
+const double FIRST_HIT_MAX = 1.5;
+//! The most a danger look is put off on top of its interval
+const double DANGER_JITTER = 0.5;
+//! An enemy fighter this close (world units) to a worker with an attack animation makes it a fight
+const double FIGHT_RADIUS = 3.0;
+//! The shares of the carry capacity up to which the gold on the body has model 1, 2 and 3 (more: model 4)
+const double GOLD_LEVEL_1_SHARE = 0.25;
+const double GOLD_LEVEL_2_SHARE = 0.5;
+const double GOLD_LEVEL_3_SHARE = 0.8;
+//! A model that is narrower than this (world units) has no usable width
+const float MIN_MODEL_WIDTH = 0.0001f;
+//! The least and the most the gold on the body is scaled
+const float GOLD_BODY_SCALE_MIN = 0.05f;
+const float GOLD_BODY_SCALE_MAX = 4.0f;
+//! The share of the height of a worker at which the lowest point of the gold on its back rests
+const float GOLD_BODY_TOP_SHARE = 0.92f;
+//! Seconds before the reaction to a worker action starts
+const double CLAIM_STOMP_DELAY = 0.4;
+const double WEAK_FIGHT_DELAY = 0.1;
+const double GOLD_CHEER_DELAY = 0.4;
+const double GOLD_CLOUD_DELAY = 0.1;
+const double GOLD_CLOUD_HANDLED_DELAY = 0.15;
+const double TREASURY_TOSS_DELAY = 0.3;
+const double TREASURY_SMOOTH_DELAY = 3.5;
+const double PRISONER_SHOVE_DELAY = 0.1;
+const double CORPSE_LOOK_BACK_DELAY = 0.6;
+const double TRAP_KNOCK_DELAY = 0.4;
+const double HASTY_DELAY = 1.0;
 
 const std::string GOLD_BODY_PREFIX = "WorkerGoldBody_";
+//! Seconds before the worker lets go of the creature it pulled
+const double PUT_WOUNDED_DOWN_DELAY = 0.2;
 
 //! Cosmetic dice of their own: the game logic must not see them
 std::mt19937& workerRng()
@@ -101,17 +135,20 @@ std::mt19937& workerRng()
     return rng;
 }
 
+//! \brief Returns a random number between min and max from the cosmetic generator
 double workerRandom(double min, double max)
 {
     std::uniform_real_distribution<double> distribution(min, max);
     return distribution(workerRng());
 }
 
+//! \brief Returns true if text holds part somewhere
 bool contains(const std::string& text, const std::string& part)
 {
     return text.find(part) != std::string::npos;
 }
 
+//! \brief Returns true if text begins with prefix
 bool startsWith(const std::string& text, const std::string& prefix)
 {
     return text.compare(0, prefix.size(), prefix) == 0;
@@ -184,11 +221,13 @@ double sTickTimer = 0.0;
 //! True once the server has sent a roomTakeover event: it then tells the end of every takeover once per room
 bool sServerTellsTakeover = false;
 
+//! \brief Returns what is remembered of the worker with this name (created on first use)
 WorkerState& getState(const std::string& name)
 {
     return sStates[name];
 }
 
+//! \brief Remembers a place and the time in the list; the oldest entry goes when the list is full
 void addSpot(std::vector<Spot>& spots, double x, double y, double now)
 {
     Spot spot;
@@ -196,10 +235,11 @@ void addSpot(std::vector<Spot>& spots, double x, double y, double now)
     spot.mY = y;
     spot.mTime = now;
     spots.push_back(spot);
-    if(spots.size() > 32)
+    if(spots.size() > MAX_SPOTS)
         spots.erase(spots.begin());
 }
 
+//! \brief Returns true if a spot no older than memory seconds lies within SOURCE_RADIUS of the place
 bool isSpotNear(const std::vector<Spot>& spots, double x, double y, double now, double memory)
 {
     for(std::vector<Spot>::const_iterator it = spots.begin(); it != spots.end(); ++it)
@@ -232,11 +272,11 @@ int32_t goldLevelOf(int32_t gold, int32_t maxGold)
         return 1;
 
     double share = static_cast<double>(gold) / static_cast<double>(maxGold);
-    if(share < 0.25)
+    if(share < GOLD_LEVEL_1_SHARE)
         return 1;
-    if(share < 0.5)
+    if(share < GOLD_LEVEL_2_SHARE)
         return 2;
-    if(share < 0.8)
+    if(share < GOLD_LEVEL_3_SHARE)
         return 3;
     return 4;
 }
@@ -314,6 +354,8 @@ void WorkerReactions::processLater(CreatureReactions& reactions)
     }
 }
 
+//! \brief Notes the clip a creature was told to play: deaths are remembered as loot places, claiming, weak fights and the
+//! pulling of a hurt creature to its bed are started
 void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* creature, const std::string& clip)
 {
     if(!isActive(reactions))
@@ -362,13 +404,13 @@ void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* crea
     else if(previousClip == EntityAnimation::drag_anim)
     {
         if(reactions.getRoomName(creature) == "Dormitory")
-            later(reactions, creature, "PutWoundedDown", 0.2);
+            later(reactions, creature, "PutWoundedDown", PUT_WOUNDED_DOWN_DELAY);
     }
 
     if(clip == "Claim")
     {
         state.mNextClaim = now + workerRandom(CLAIM_MIN, CLAIM_MAX);
-        later(reactions, creature, "ClaimStomp", 0.4);
+        later(reactions, creature, "ClaimStomp", CLAIM_STOMP_DELAY);
     }
     else if(startsWith(clip, "Attack") && !creature->isInContainment())
     {
@@ -385,9 +427,9 @@ void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* crea
 
             Ogre::Vector3 difference = other->getPosition() - position;
             difference.z = 0.0f;
-            if(difference.length() <= 3.0)
+            if(difference.length() <= FIGHT_RADIUS)
             {
-                later(reactions, creature, "WorkerWeakFight", 0.1);
+                later(reactions, creature, "WorkerWeakFight", WEAK_FIGHT_DELAY);
                 break;
             }
         }
@@ -439,10 +481,10 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
         // A big find in one go
         int32_t threshold = static_cast<int32_t>(static_cast<double>(std::max(event.mValue2, 1)) * BIG_FIND_SHARE);
         if((event.mValue - oldGold) >= std::max(threshold, 1))
-            later(reactions, worker, "GoldCheer", 0.4);
+            later(reactions, worker, "GoldCheer", GOLD_CHEER_DELAY);
         // The gold is gone but not put into a treasury: it was thrown off
         else if((event.mValue == 0) && (oldGold > 0) && (reactions.getRoomName(worker) != "Treasury"))
-            later(reactions, worker, "GoldCloud", 0.1);
+            later(reactions, worker, "GoldCloud", GOLD_CLOUD_DELAY);
     }
 }
 
@@ -555,8 +597,8 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
     {
         if(room == "Treasury")
         {
-            later(reactions, carrier, "TreasuryToss", 0.3);
-            later(reactions, carrier, "TreasurySmooth", 3.5);
+            later(reactions, carrier, "TreasuryToss", TREASURY_TOSS_DELAY);
+            later(reactions, carrier, "TreasurySmooth", TREASURY_SMOOTH_DELAY);
         }
     }
     else if(type == GameEntityType::creature)
@@ -564,9 +606,9 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
         Creature* body = static_cast<Creature*>(carried);
         WorkerExtras::endStruggle(reactions.mGameMap, body->getName());
         if(body->isAlive() && ((room == "Prison") || (room == "Torture")))
-            later(reactions, carrier, "PrisonerShove", 0.1);
+            later(reactions, carrier, "PrisonerShove", PRISONER_SHOVE_DELAY);
         else if(!body->isAlive() && (room == "Crypt"))
-            later(reactions, carrier, "CorpseLookBack", 0.6);
+            later(reactions, carrier, "CorpseLookBack", CORPSE_LOOK_BACK_DELAY);
     }
     else if((type == GameEntityType::craftedTrap) && isDoorType(static_cast<CraftedTrap*>(carried)->getTrapType()))
     {
@@ -574,7 +616,7 @@ void WorkerReactions::noteRelease(CreatureReactions& reactions, Creature* carrie
     }
     else if((type == GameEntityType::craftedTrap) || (type == GameEntityType::giftBoxEntity))
     {
-        later(reactions, carrier, "TrapKnock", 0.4);
+        later(reactions, carrier, "TrapKnock", TRAP_KNOCK_DELAY);
     }
 }
 
@@ -585,7 +627,7 @@ void WorkerReactions::noteHandled(CreatureReactions& reactions, Creature* creatu
 
     std::map<std::string, WorkerState>::const_iterator it = sStates.find(creature->getName());
     if((it != sStates.end()) && (it->second.mGold > 0))
-        later(reactions, creature, "GoldCloud", 0.15);
+        later(reactions, creature, "GoldCloud", GOLD_CLOUD_HANDLED_DELAY);
 }
 
 void WorkerReactions::noteParticleEffect(CreatureReactions& reactions, Creature* creature, const std::string& script)
@@ -594,7 +636,7 @@ void WorkerReactions::noteParticleEffect(CreatureReactions& reactions, Creature*
         return;
 
     if(contains(script, "Haste"))
-        later(reactions, creature, "WorkerHasty", 1.0);
+        later(reactions, creature, "WorkerHasty", HASTY_DELAY);
 }
 
 void WorkerReactions::showDigHit(CreatureReactions& reactions, Creature* worker)
@@ -727,7 +769,7 @@ void WorkerReactions::tickWorker(CreatureReactions& reactions, Creature* worker)
         if(state.mDigSince < 0.0)
         {
             state.mDigSince = now;
-            state.mNextHit = now + workerRandom(0.5, 1.5);
+            state.mNextHit = now + workerRandom(FIRST_HIT_MIN, FIRST_HIT_MAX);
         }
         state.mDigLast = now;
 
@@ -810,7 +852,7 @@ void WorkerReactions::tickWorker(CreatureReactions& reactions, Creature* worker)
     if(now < state.mNextDanger)
         return;
 
-    state.mNextDanger = now + DANGER_INTERVAL + workerRandom(0.0, 0.5);
+    state.mNextDanger = now + DANGER_INTERVAL + workerRandom(0.0, DANGER_JITTER);
     if(worker->isInContainment())
         return;
 
@@ -925,12 +967,12 @@ void WorkerReactions::updateGoldBody(CreatureReactions& reactions, Creature* wor
     Ogre::Real goldWidth = std::max(goldBox.getMaximum().x - goldBox.getMinimum().x,
         goldBox.getMaximum().y - goldBox.getMinimum().y);
     Ogre::Real scale = 1.0f;
-    if(goldWidth > 0.0001f)
+    if(goldWidth > MIN_MODEL_WIDTH)
         scale = static_cast<Ogre::Real>(GOLD_BODY_WIDTH) * workerWidth / goldWidth;
 
-    scale = std::min(std::max(scale, 0.05f), 4.0f);
+    scale = std::min(std::max(scale, GOLD_BODY_SCALE_MIN), GOLD_BODY_SCALE_MAX);
     Ogre::Vector3 goldCenter = (goldBox.getMaximum() + goldBox.getMinimum()) * 0.5f;
-    Ogre::Real top = workerBox.getMaximum().z * 0.92f;
+    Ogre::Real top = workerBox.getMaximum().z * GOLD_BODY_TOP_SHARE;
 
     Ogre::SceneNode* node = parent->createChildSceneNode(entityName + "_node");
     node->attachObject(goldEntity);

@@ -20,15 +20,20 @@
 
 #include "creatureeffect/CreatureEffect.h"
 
+#include <cstdint>
+#include <string>
+
 //! \brief Marks a creature that is paralysed by the Freeze trap. While the effect is active,
 //! the creature can neither move nor fight (see Creature::isFrozen).
 class CreatureEffectFrozen : public CreatureEffect
 {
 public:
+    //! \brief Creates the effect for the given number of turns.
     CreatureEffectFrozen(int32_t nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "")
     {}
 
+    //! \brief Creates an empty effect to be filled from a stream.
     CreatureEffectFrozen() :
         CreatureEffect()
     {}
@@ -36,11 +41,14 @@ public:
     virtual ~CreatureEffectFrozen()
     {}
 
+    //! \brief The name of this effect ("Frozen").
     virtual const std::string& getEffectName() const override;
 
+    //! \brief Reads the effect from the given stream.
     static CreatureEffectFrozen* load(std::istream& is);
 
 protected:
+    //! \brief Nothing to update each turn: the frozen state is deduced from the effect (Creature::isFrozen).
     virtual void applyEffect(Creature& creature) override;
 };
 

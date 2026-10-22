@@ -45,6 +45,7 @@ public:
         uint32_t width, uint32_t height, const std::vector<float>* coverage = nullptr) const;
 
 private:
+    //! A palette colour in hue (degrees), saturation and value (0 to 1)
     struct Colour
     {
         float mHue;
@@ -52,6 +53,7 @@ private:
         float mValue;
     };
 
+    //! A named list of colours a region picks one from
     struct Palette
     {
         std::string mName;
@@ -82,18 +84,23 @@ private:
         std::string mName;
         //! Index into mPalettes, or -1 if the region only shifts its colours
         int mPalette;
+        //! Largest random shift of hue (degrees), saturation and value (factor)
         float mShift[3];
+        //! Left, top, right and bottom edge of the region (0 to 1 of the image)
         float mBox[4];
         //! ellipse=cx,cy,rx,ry replaces the box: centre as fractions of width and height, both radii as fractions
         //! of the width (so the ellipse is measured in pixels like the image)
         bool mHasEllipse;
         float mEllipse[4];
+        //! Boxes (four numbers each) cut out of the region
         std::vector<float> mCutOut;
+        //! Lowest and highest hue, saturation and value of the pixels that belong to the region
         float mHue[2];
         float mSaturation[2];
         float mValue[2];
     };
 
+    //! The regions of the portrait of one mesh
     struct Portrait
     {
         std::string mMesh;
@@ -107,7 +114,9 @@ private:
 
     std::vector<Palette> mPalettes;
     std::vector<Portrait> mPortraits;
+    //! Messages of the lines that could not be read
     std::vector<std::string> mErrors;
+    //! Path of the loaded file, used in the error messages
     std::string mSource;
 };
 

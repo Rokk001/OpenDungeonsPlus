@@ -27,14 +27,20 @@ class Tile;
 class CreatureActionReloadTrap : public CreatureAction
 {
 public:
+    //! \brief Reserves the trap tile for the worker so that no other worker reloads it
     CreatureActionReloadTrap(Creature& creature, Tile& tileReload);
+    //! \brief Frees the reservation of the trap tile and ends the worker's reload job count
     virtual ~CreatureActionReloadTrap();
 
+    //! \brief Returns the action type that identifies this action as a trap reload
     CreatureActionType getType() const override
     { return CreatureActionType::reloadTrap; }
 
+    //! \brief Returns the function that walks to the tile and does the reload work
     std::function<bool()> action() override;
 
+    //! \brief Walks the worker to the tile, works there for the configured time and arms the tile again
+    //! \param workTurns Turns already worked on this tile
     static bool handleReloadTrap(Creature& creature, Tile& tileReload, int32_t& workTurns);
 
     //! \brief Looks for the closest trap tile of the worker's seat that needs a reload and, if there is one the

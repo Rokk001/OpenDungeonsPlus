@@ -25,18 +25,26 @@ class GameMap;
 class InputCommand;
 class InputManager;
 
-//! \brief Hurls a lightning bolt on an enemy creature standing on the caster's claimed land.
-//! The target takes damage and is knocked down for a few turns.
+//! \brief Converts an enemy creature standing on the caster's claimed land to the caster's seat for a limited
+//! time. Only one creature of a seat can be converted at a time; when the time is over it returns to its seat.
 class SpellDefector : public Spell
 {
 public:
+    //! \brief Shows the price and highlights the enemy creature under the cursor while the player aims the spell,
+    //! and sends the cast request when the player confirms on an enemy outside prison on claimed land of their own.
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
     //! \brief Converts an eligible creature temporarily and announces its class only on first arrival.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
+    //! \brief The spell is instant and has no entity, so it can never be read from a stream (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
+
+    //! \brief The spell is instant and has no entity, so it can never be read from a packet (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
 
+    //! The spell type handled by this class.
     static const SpellType mSpellType;
 };
 

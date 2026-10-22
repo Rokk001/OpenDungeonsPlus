@@ -73,7 +73,7 @@ assert 'setFollowTarget(previous, gap)' in chick_line and 'rooster->setFollowTar
 # Hens do not gather at the calling rooster any more
 assert 'caller' not in room and 'mCallFollowGap' not in room + rooster_h and 'CallFollowGap' not in config
 hen_follow = [line for line in room.splitlines() if 'hen->setFollowTarget(' in line]
-assert hen_follow == ['                hen->setFollowTarget(it->mStand, 0.1);'], 'only the nest walk of a hen sets a follow target'
+assert hen_follow == ['                hen->setFollowTarget(it->mStand, EGG_FOLLOW_GAP);'], 'only the nest walk of a hen sets a follow target'
 
 # The rooster does not stay on a roof: no perch mood, the roof only for the crow, then down again
 assert 'perch' not in rooster_h and 'perch' not in rooster_cpp and 'RoosterMood::perch' not in room

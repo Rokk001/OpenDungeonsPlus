@@ -115,7 +115,7 @@ def normal_map(height, strength):
     return nrm * 0.5 + 0.5
 
 
-# Calibrated tone correction (calibration): per room (saturation factor, brightness
+# Calibrated tone correction: per room (saturation factor, brightness
 # factor, colour tint), applied to the finished diffuse colours. The room shader raises saturation (x1.3) and the warm room
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
@@ -131,7 +131,7 @@ TONE = {
 }
 
 
-# Repetition pass (repetition pass): a texture repeats on every tile, so broad blotches
+# Repetition pass: a texture repeats on every tile, so broad blotches
 # and brightness gradients show up as a lattice. flatten() divides the colours by a periodic low-pass of their
 # luminance (sigma in texture px, strength 0..1), so nothing larger than about a fifth of a tile keeps a different
 # mean brightness; the mean luminance stays. Applied to the open floor field before the wall bands are added.
@@ -1131,7 +1131,7 @@ def blob(layer, rng, cx, cy, radius, squash=0.7):
 
 
 def treasury_field(variant=0):
-    """Marble checkerboard modelled on the original treasury floor: 4x4 squares per tile, even brightness per
+    """Marble checkerboard: 4x4 squares per tile, even brightness per
     colour, dark grout. The grout and the square outlines are the same in all variants; veining, dirt, stains,
     scratches and chips are drawn inside the squares only, so a tile border is always just grout and the variants
     (picked at random per tile through [oneOf]) fit next to each other. Every tile has an even number of squares,

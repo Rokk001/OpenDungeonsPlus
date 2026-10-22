@@ -21,21 +21,29 @@
 #include "Trap.h"
 #include "traps/TrapType.h"
 
+#include <cstdint>
+
 //! \brief A hidden trap that bursts into flames when an enemy comes close. Everybody in the area takes damage.
 class TrapFireburst : public Trap
 {
 public:
+    //! \brief Creates a fireburst trap and reads its reload time, damage, number of shots and radius from the config.
     TrapFireburst(GameMap* gameMap);
 
+    //! \brief The type of this trap.
     virtual const TrapType getType() const override
     { return TrapType::fireburst; }
 
+    //! \brief Bursts into flames when an enemy creature comes within the radius of the given tile.
+    //! \return True if the burst went off, false if no enemy was close.
     virtual bool shoot(Tile* tile) override;
+    //! \brief The fireburst trap cannot be attacked.
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -44,8 +52,10 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Creates the entity shown on the given tile.
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief The trap type of the fireburst trap.
     static const TrapType mTrapType;
 
 private:

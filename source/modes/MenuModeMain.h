@@ -31,12 +31,15 @@ public:
     {}
 
     //! \brief Called when the game mode is activated
-    //! Used to call the corresponding Gui Sheet.
+    //! Used to call the corresponding Gui Sheet, and to start a level again if a restart was requested
+    //! from the game.
     void activate() final override;
 
     //! \brief Opens the skirmish sub-menu once the flight into the menu (after the defeat debriefing) ended
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
 
+    //! \brief Escape in the main menu: closes the open sub menu (skirmish, multiplayer or editor)
+    //! instead of leaving the menu.
     bool goBack(const CEGUI::EventArgs& e = {}) override;
 
 private:
@@ -45,6 +48,8 @@ private:
 
     //! \brief The Settings window
     SettingsWindow mSettings;
+    //! \brief True while a settings page opened from the settings sub menu is shown,
+    //! so that closing it shows the sub menu again.
     bool mSettingsPageOpen = false;
     //! True while the menu waits for the flight to end before it shows the skirmish sub-menu
     bool mSkirmishSubMenuPending = false;
@@ -56,14 +61,23 @@ private:
     //! \brief Function triggered when pushing a button
     bool quitButtonPressed(const CEGUI::EventArgs&);
     bool toggleSettings(const CEGUI::EventArgs&);
+    //! \brief Hides the settings sub menu and shows the named settings page.
     bool openSettingsPage(const std::string& name);
+    //! \brief Opens the settings page belonging to the clicked sub menu button.
+    bool settingsPageButtonClicked(const CEGUI::EventArgs& e);
+    //! \brief Shows the settings sub menu again after a settings page was closed.
     bool settingsPageClosed(const CEGUI::EventArgs&);
+    //! \brief Shows or hides the main menu buttons behind the sub menus.
     void showMainMenuButtons(bool visible);
+    //! \brief Toggles the named sub menu window and hides the others.
     bool toggleSubMenu(const std::string& name);
 
     //! \brief Sub menu button triggers
+    //! \brief Shows or hides the campaign sub menu
     bool toggleCampaignSubMenu(const CEGUI::EventArgs&);
+    //! \brief Starts a new campaign, after a confirmation when there is saved progress that it would replace
     bool newCampaignPressed(const CEGUI::EventArgs&);
+    //! \brief Forgets the saved campaign progress and opens the campaign menu
     bool newCampaignConfirmed(const CEGUI::EventArgs&);
 
     //! \brief Shows or hides the question that asks whether the saved campaign progress

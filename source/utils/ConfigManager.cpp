@@ -40,6 +40,32 @@ const std::string ConfigManager::DEFAULT_TILESET_NAME = "Default";
 
 const std::string ConfigManager::DEFAULT_KEEPER_VOICE = "Default";
 
+//! \brief Default extra mana per second for each claimed mana well tile; global.cfg can override it.
+static const double DEFAULT_MANA_WELL_BONUS_PER_TILE = 10.0;
+
+const double ConfigManager::AttackTurnSpeedMin = 90.0;
+const double ConfigManager::AttackTurnSpeedMax = 1440.0;
+const double ConfigManager::AttackTurnMaxDelayMin = 0.0;
+const double ConfigManager::AttackTurnMaxDelayMax = 0.6;
+const double ConfigManager::HitShareMin = 0.01;
+const double ConfigManager::HitGlanceShareMax = 0.9;
+const double ConfigManager::HitStrongShareMax = 1.0;
+const double ConfigManager::ChanceMin = 0.0;
+const double ConfigManager::ChanceMax = 100.0;
+const double ConfigManager::ChancePerLevelMax = 10.0;
+
+namespace
+{
+//! Default angular speed in degrees per second of the turn to the target before a blow
+static const double DEFAULT_ATTACK_TURN_SPEED = 540.0;
+//! Default most seconds the strike clip waits for the turn to the target
+static const double DEFAULT_ATTACK_TURN_MAX_DELAY = 0.25;
+//! Default share of the damage below which a blow counts as glancing
+static const double DEFAULT_HIT_GLANCE_SHARE = 0.34;
+//! Default share of the maximum health of the target from which a hit counts as strong
+static const double DEFAULT_HIT_STRONG_SHARE = 0.15;
+}
+
 const std::string ConfigManager::DefaultWorkerCreatureDefinition = "DefaultWorker";
 
 template<> ConfigManager* Ogre::Singleton<ConfigManager>::msSingleton = nullptr;
@@ -69,11 +95,11 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mHeartHealthStages(5),
     mHeartHealthStageEvents(true),
     mHitEvents(true),
-    mHitGlanceShare(0.34),
-    mHitStrongShare(0.15),
+    mHitGlanceShare(DEFAULT_HIT_GLANCE_SHARE),
+    mHitStrongShare(DEFAULT_HIT_STRONG_SHARE),
     mAttackTurnEvents(true),
-    mAttackTurnSpeed(540.0),
-    mAttackTurnMaxDelay(0.25),
+    mAttackTurnSpeed(DEFAULT_ATTACK_TURN_SPEED),
+    mAttackTurnMaxDelay(DEFAULT_ATTACK_TURN_MAX_DELAY),
     mMeleeDodgeParry(true),
     mDodgeBase(3.0),
     mDodgePerLevel(0.5),
@@ -87,7 +113,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
-    mManaWellBonusPerTile(10.0),
+    mManaWellBonusPerTile(DEFAULT_MANA_WELL_BONUS_PER_TILE),
     mBedStepMaxHeight(0.09),
     mClaimingWallPenalty(0.8),
     mDigCoefGold(5.0),

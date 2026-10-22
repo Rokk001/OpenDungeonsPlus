@@ -30,6 +30,9 @@ class Tile;
 class CreatureActionWatchBanner : public CreatureAction
 {
 public:
+    //! \brief Creates the action for a creature that walks to a watch banner and stays there.
+    //! \param postTile The tile of the watch banner to man.
+    //! \param stayTurns How many turns the creature stays on the post once it has arrived.
     CreatureActionWatchBanner(Creature& creature, Tile& postTile, int64_t stayTurns) :
         CreatureAction(creature),
         mPostTile(&postTile),
@@ -40,14 +43,20 @@ public:
     virtual ~CreatureActionWatchBanner()
     {}
 
+    //! \brief The type of this action.
     CreatureActionType getType() const override
     { return CreatureActionType::watchBanner; }
 
+    //! \brief Returns the function that runs one turn of this action.
     std::function<bool()> action() override;
 
+    //! \brief The tile of the watch banner this action goes to.
     inline Tile* getPostTile() const
     { return mPostTile; }
 
+    //! \brief One turn of the action: walks to the post, stands on it until the stay is over or the creature
+    //! has to eat, sleep or get its fee, or until the post is gone, then pops the action.
+    //! \return True if the creature can continue with another action in the same turn.
     static bool handleWatchBanner(Creature& creature, Tile* postTile, CreatureActionWatchBanner* watchBannerAction);
 
     //! \brief Tells whether another creature of the same seat already mans (or walks to) the given post tile
@@ -61,8 +70,11 @@ public:
     static bool goToIntruder(Creature& creature, Tile* intruderTile);
 
 private:
+    //! \brief The tile of the watch banner to man
     Tile* mPostTile;
+    //! \brief How many turns the creature stays on the post once it has arrived
     int64_t mStayTurns;
+    //! \brief Turn at which the creature reached the post, -1 while it is still on its way
     int64_t mArrivalTurn;
 };
 

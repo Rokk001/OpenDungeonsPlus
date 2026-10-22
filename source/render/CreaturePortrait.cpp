@@ -22,7 +22,6 @@
 #include <CEGUI/Texture.h>
 
 #include <algorithm>
-#include <cctype>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -32,11 +31,31 @@ namespace
 //! Illustrated portraits are shrunk by this factor before they are tinted: they are shown small
 //! and every creature gets an own texture
 const uint32_t TINT_DOWNSCALE = 4;
+//! Channels of the pixels read from the portrait image and of the texture that is created (RGBA)
+const size_t RGBA_CHANNELS = 4;
+//! Channels of the colour values the tint works on (RGB, floats from 0 to 1)
+const size_t RGB_CHANNELS = 3;
+//! Largest value of one 8 bit channel
+const float MAX_CHANNEL_VALUE = 255.0f;
 const std::string TINTED_PREFIX = "TintedCreaturePortrait/";
 
-//! Size in pixels of the rendered portrait textures and of the images made from them
-const unsigned int PORTRAIT_WIDTH = 192;
-const unsigned int PORTRAIT_HEIGHT = 384;
+//! Visible portrait height as a fraction of the mesh height, or of the mesh width if larger.
+const float PORTRAIT_HEIGHT_PER_MESH_HEIGHT = 0.65f;
+const float PORTRAIT_HEIGHT_PER_MESH_WIDTH = 0.35f;
+//! Height of the camera focus point inside the mesh bounds, as a fraction of the mesh height.
+const float PORTRAIT_FOCUS_HEIGHT_RATIO = 0.72f;
+//! Focus offset above a head bone, as a fraction of the mesh height.
+const float PORTRAIT_HEAD_OFFSET_RATIO = 0.05f;
+//! Camera distance as a multiple of the mesh diagonal, and its height offset as a fraction of the mesh height.
+const float PORTRAIT_CAMERA_DISTANCE_FACTOR = 2.0f;
+const float PORTRAIT_CAMERA_HEIGHT_RATIO = 0.1f;
+//! Far clip distance as a multiple of the mesh diagonal, with a lower limit.
+const float PORTRAIT_FAR_CLIP_FACTOR = 4.0f;
+const float PORTRAIT_FAR_CLIP_MINIMUM = 10.0f;
+//! Vertical position of the square hand icon crop inside the portrait texture
+//! (0 = top, 1 = bottom of the free space), for illustrated and rendered portraits.
+const float HAND_ICON_ILLUSTRATED_TOP_RATIO = 0.25f;
+const float HAND_ICON_RENDERED_TOP_RATIO = 0.5f;
 
 PortraitTint& getPortraitTint()
 {
@@ -56,6 +75,18 @@ PortraitTint& getPortraitTint()
         }
     }
     return tint;
+}
+
+//! \brief The text with its ASCII capital letters turned into small ones
+std::string toLowerAscii(const std::string& text)
+{
+    std::string result = text;
+    for(std::size_t i = 0; i < result.size(); ++i)
+    {
+        if((result[i] >= 'A') && (result[i] <= 'Z'))
+            result[i] = static_cast<char>(result[i] - 'A' + 'a');
+    }
+    return result;
 }
 
 std::set<std::string>& getTintedPortraitNames()
@@ -89,6 +120,7 @@ const CEGUI::Image& getProfileFallbackImage(const std::string& portraitKey)
     return image;
 }
 
+//! Owns the temporary scene manager and material copies of one portrait render.
 struct PortraitScene
 {
     Ogre::SceneManager* scene;
@@ -122,7 +154,7 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
     lightNode->setDirection(0.4f, 1.0f, -0.6f);
 
     Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
-    unsigned short src;
+    unsigned short src = 0;
     if(!mesh->suggestTangentVectorBuildParams(src))
         mesh->buildTangentVectors(src);
     Ogre::Entity* entity = scene->createEntity(mesh);
@@ -162,10 +194,10 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
     const Ogre::AxisAlignedBox& bounds = mesh->getBounds();
     const Ogre::Vector3 size = bounds.getSize();
     // Visible height of the portrait: most of the model height, but at least what its width needs
-    const float height = std::max(size.z * 0.65f, size.x * 0.35f);
+    const float height = std::max(size.z * PORTRAIT_HEIGHT_PER_MESH_HEIGHT, size.x * PORTRAIT_HEIGHT_PER_MESH_WIDTH);
     // Upright models are framed on the upper body, 72 percent up the model
     Ogre::Vector3 center = bounds.getCenter();
-    center.z = bounds.getMinimum().z + size.z * 0.72f;
+    center.z = bounds.getMinimum().z + size.z * PORTRAIT_FOCUS_HEIGHT_RATIO;
     // Models that are lower than they are deep are framed on the centre, or on the head bone if they have one
     if(size.z < size.y)
     {
@@ -180,7 +212,7 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
                 if(name == "head" || Ogre::StringUtil::endsWith(name, "_head"))
                 {
                     center = bone->_getDerivedPosition();
-                    center.z += size.z * 0.05f;
+                    center.z += size.z * PORTRAIT_HEAD_OFFSET_RATIO;
                     break;
                 }
             }
@@ -189,17 +221,17 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
 
     Ogre::Camera* camera = scene->createCamera("PortraitCamera");
     camera->setNearClipDistance(0.01f);
-    camera->setFarClipDistance(std::max(10.0f, size.length() * 4.0f));
+    camera->setFarClipDistance(std::max(PORTRAIT_FAR_CLIP_MINIMUM, size.length() * PORTRAIT_FAR_CLIP_FACTOR));
     camera->setProjectionType(Ogre::PT_ORTHOGRAPHIC);
     camera->setOrthoWindow(height * 0.5f, height);
     Ogre::SceneNode* cameraNode = scene->getRootSceneNode()->createChildSceneNode();
     cameraNode->setFixedYawAxis(true, Ogre::Vector3::UNIT_Z);
     cameraNode->attachObject(camera);
-    cameraNode->setPosition(center + Ogre::Vector3(0, -size.length() * 2.0f, size.z * 0.1f));
+    cameraNode->setPosition(center + Ogre::Vector3(0, -size.length() * PORTRAIT_CAMERA_DISTANCE_FACTOR, size.z * PORTRAIT_CAMERA_HEIGHT_RATIO));
     cameraNode->lookAt(center, Ogre::Node::TS_WORLD);
 
     Ogre::TexturePtr texture = Ogre::TextureManager::getSingleton().createManual(textureName, "General",
-        Ogre::TEX_TYPE_2D, PORTRAIT_WIDTH, PORTRAIT_HEIGHT, 0, Ogre::PF_BYTE_RGBA, Ogre::TU_RENDERTARGET);
+        Ogre::TEX_TYPE_2D, CREATURE_PORTRAIT_WIDTH, CREATURE_PORTRAIT_HEIGHT, 0, Ogre::PF_BYTE_RGBA, Ogre::TU_RENDERTARGET);
     try
     {
         Ogre::RenderTexture* target = texture->getBuffer()->getRenderTarget();
@@ -236,8 +268,8 @@ const CEGUI::Image& getCreaturePortraitImage(const std::string& meshName)
         CEGUI::Texture& guiTexture = renderer.createTexture(name, texture, true);
         CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
         image.setTexture(&guiTexture);
-        image.setArea(CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(PORTRAIT_WIDTH),
-            static_cast<float>(PORTRAIT_HEIGHT)));
+        image.setArea(CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(CREATURE_PORTRAIT_WIDTH),
+            static_cast<float>(CREATURE_PORTRAIT_HEIGHT)));
         image.setAutoScaled(CEGUI::ASM_Disabled);
         return image;
     }
@@ -304,7 +336,8 @@ const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName)
     const float side = std::min(size.d_width, size.d_height);
     const float left = (size.d_width - side) * 0.5f;
     // Illustrations are cropped closer to the top than rendered portraits, which are cropped in the middle
-    const float top = (size.d_height - side) * (illustrated ? 0.25f : 0.5f);
+    const float topRatio = illustrated ? HAND_ICON_ILLUSTRATED_TOP_RATIO : HAND_ICON_RENDERED_TOP_RATIO;
+    const float top = (size.d_height - side) * topRatio;
     CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
     image.setTexture(&texture);
     image.setArea(CEGUI::Rectf(left, top, left + side, top + side));
@@ -325,8 +358,7 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
     std::string portraitKey = meshName;
     if(!gender.empty())
     {
-        std::string lowerGender = gender;
-        std::transform(lowerGender.begin(), lowerGender.end(), lowerGender.begin(), ::tolower);
+        const std::string lowerGender = toLowerAscii(gender);
         if(Ogre::ResourceGroupManager::getSingleton().resourceExists("Graphics",
             "portrait-" + meshName + "-" + lowerGender + ".png"))
             portraitKey = meshName + "-" + lowerGender;
@@ -352,13 +384,13 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
         if((width == 0) || (height == 0))
             throw std::runtime_error("portrait image too small");
 
-        std::vector<uint8_t> full(static_cast<size_t>(sourceWidth) * sourceHeight * 4);
+        std::vector<uint8_t> full(static_cast<size_t>(sourceWidth) * sourceHeight * RGBA_CHANNELS);
         Ogre::PixelBox fullBox(sourceWidth, sourceHeight, 1, Ogre::PF_BYTE_RGBA, &full[0]);
         Ogre::PixelUtil::bulkPixelConversion(source.getPixelBox(), fullBox);
 
         // Average each block of TINT_DOWNSCALE x TINT_DOWNSCALE pixels
-        std::vector<float> rgb(static_cast<size_t>(width) * height * 3);
-        const float blockSize = static_cast<float>(TINT_DOWNSCALE * TINT_DOWNSCALE) * 255.0f;
+        std::vector<float> rgb(static_cast<size_t>(width) * height * RGB_CHANNELS);
+        const float blockSize = static_cast<float>(TINT_DOWNSCALE * TINT_DOWNSCALE) * MAX_CHANNEL_VALUE;
         for(uint32_t y = 0; y < height; ++y)
         {
             for(uint32_t x = 0; x < width; ++x)
@@ -369,13 +401,13 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
                     for(uint32_t dx = 0; dx < TINT_DOWNSCALE; ++dx)
                     {
                         const uint8_t* pixel = &full[(static_cast<size_t>(y * TINT_DOWNSCALE + dy) * sourceWidth +
-                            x * TINT_DOWNSCALE + dx) * 4];
+                            x * TINT_DOWNSCALE + dx) * RGBA_CHANNELS];
                         sum[0] += pixel[0];
                         sum[1] += pixel[1];
                         sum[2] += pixel[2];
                     }
                 }
-                size_t index = (static_cast<size_t>(y) * width + x) * 3;
+                size_t index = (static_cast<size_t>(y) * width + x) * RGB_CHANNELS;
                 rgb[index] = sum[0] / blockSize;
                 rgb[index + 1] = sum[1] / blockSize;
                 rgb[index + 2] = sum[2] / blockSize;
@@ -385,13 +417,15 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
 
         tint.apply(portraitKey, creatureName, rgb, width, height);
 
-        std::vector<uint8_t> data(static_cast<size_t>(width) * height * 4);
+        std::vector<uint8_t> data(static_cast<size_t>(width) * height * RGBA_CHANNELS);
         for(size_t i = 0; i < static_cast<size_t>(width) * height; ++i)
         {
-            data[i * 4] = static_cast<uint8_t>(rgb[i * 3] * 255.0f + 0.5f);
-            data[i * 4 + 1] = static_cast<uint8_t>(rgb[i * 3 + 1] * 255.0f + 0.5f);
-            data[i * 4 + 2] = static_cast<uint8_t>(rgb[i * 3 + 2] * 255.0f + 0.5f);
-            data[i * 4 + 3] = 255;
+            for(size_t channel = 0; channel < RGB_CHANNELS; ++channel)
+            {
+                data[i * RGBA_CHANNELS + channel] =
+                    static_cast<uint8_t>(rgb[i * RGB_CHANNELS + channel] * MAX_CHANNEL_VALUE + 0.5f);
+            }
+            data[i * RGBA_CHANNELS + RGB_CHANNELS] = 255;
         }
 
         texture = Ogre::TextureManager::getSingleton().createManual(name, "General", Ogre::TEX_TYPE_2D,

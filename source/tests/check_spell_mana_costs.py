@@ -4,7 +4,8 @@ The costs use one own scale (mana cap 200,000, prices in 50 mana steps, see docs
 Summon worker 1,400 per step, Call to war 9,200, Heal 5,400, Eye of evil 4,600, Lightning 6,600,
 Tremor 27,600, Defector 21,600, Hexen hen 10,600, Inferno 46,400, Create gold
 14,000, Possess 450, Summon champion 108,000 plus 2,250 per second. The worker price grows by one base price per worker above
-the four the heart supplies."""
+the four the heart supplies. The creature spells use the same own scale (prices in 50 mana steps): Explosion 4,600,
+Haste 2,200, Defense 2,650, Slow 1,800, Strength 2,300 and Weak 2,150, each with its own recharge turns."""
 from pathlib import Path
 import re
 import subprocess

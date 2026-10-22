@@ -45,6 +45,7 @@
 
 const uint32_t SandboxMode::NB_WAVES = 10;
 const uint32_t SandboxMode::NB_HEROES_PER_WAVE = 8;
+const uint32_t SandboxMode::MIN_HERO_LEVEL = 1;
 const uint32_t SandboxMode::MAX_HERO_LEVEL = 10;
 
 // The values of the sandbox score
@@ -58,6 +59,10 @@ const int32_t SandboxMode::SCORE_CREATURE_CONVERTED = 30;
 namespace
 {
 const std::string HERO_FACTION = "Hero";
+//! \brief Number of bonus objectives that fit into the bit mask of the awarded bonuses
+const uint32_t MAX_BONUS_MASK_BITS = 32;
+//! \brief Turns after the start before the seat counters are taken as the baseline of the score
+const int64_t BASELINE_DELAY_TURNS = 3;
 //! \brief The turns between the check for a beaten wave
 const int32_t TURNS_BETWEEN_CHECKS = 5;
 //! \brief The turns between the end of a wave and the next wave of a continual invasion
@@ -94,6 +99,12 @@ int64_t getRoomUnlockSeconds(uint32_t index)
     return static_cast<int64_t>((static_cast<double>(index) + 1.0) * interval);
 }
 
+//! \brief The class names of the dwarf heroes start with this
+const std::string DWARF_PREFIX = "Dwarf";
+//! \brief The class names of the hero lords contain this (in lower case)
+const std::string LORD_MARK = "lord";
+
+//! \brief Returns the given text in lower case
 std::string toLower(const std::string& str)
 {
     std::string ret = str;
@@ -106,12 +117,13 @@ std::string toLower(const std::string& str)
 //! \brief A hero the invasions can bring. The lords are left to the toolbox.
 bool isInvasionHero(const std::string& className)
 {
-    return toLower(className).find("lord") == std::string::npos;
+    return toLower(className).find(LORD_MARK) == std::string::npos;
 }
 
+//! \brief Tells if the hero class is a dwarf
 bool isDwarf(const std::string& className)
 {
-    return className.compare(0, 5, "Dwarf") == 0;
+    return className.compare(0, DWARF_PREFIX.size(), DWARF_PREFIX) == 0;
 }
 
 //! \brief Tells if the creature of the given name is still fighting
@@ -132,6 +144,10 @@ const char* const BONUS_KIND_NAMES[] =
 };
 const uint32_t NB_BONUS_KINDS = 16;
 
+//! \brief Looks up a bonus kind by its name in BONUS_KIND_NAMES
+//! \param name The name as written in a level file
+//! \param kind Receives the bonus kind when the name is known
+//! \return True if the name is a known bonus kind
 bool bonusKindFromString(const std::string& name, SandboxBonusKind& kind)
 {
     for(uint32_t i = 0; i < NB_BONUS_KINDS; ++i)
@@ -161,6 +177,10 @@ bool parseNumber(const std::string& text, int64_t& number)
     return true;
 }
 
+//! \brief Checks whether the name of the given skill starts with the given prefix
+//! \param type The skill to check
+//! \param prefix The text the skill name has to start with
+//! \return True if the skill name starts with the prefix
 bool isSkillNamed(SkillType type, const std::string& prefix)
 {
     return Skills::toString(type).compare(0, prefix.size(), prefix) == 0;
@@ -280,7 +300,7 @@ bool SandboxMode::importInfoLine(const std::string& line)
         }
 
         mScore = static_cast<int32_t>(score);
-        for(uint32_t i = 0; (i < mBonuses.size()) && (i < 32); ++i)
+        for(uint32_t i = 0; (i < mBonuses.size()) && (i < MAX_BONUS_MASK_BITS); ++i)
             mBonuses[i].mAwarded = ((mask >> i) & 1) != 0;
 
         mTurnsElapsed = static_cast<int64_t>(static_cast<double>(seconds) * ODApplication::turnsPerSecond);
@@ -295,7 +315,7 @@ bool SandboxMode::importInfoLine(const std::string& line)
 uint32_t SandboxMode::getBonusMask() const
 {
     uint32_t mask = 0;
-    for(uint32_t i = 0; (i < mBonuses.size()) && (i < 32); ++i)
+    for(uint32_t i = 0; (i < mBonuses.size()) && (i < MAX_BONUS_MASK_BITS); ++i)
     {
         if(mBonuses[i].mAwarded)
             mask |= (1u << i);
@@ -429,8 +449,8 @@ void SandboxMode::takeHero(Player* player, const std::string& className, uint32_
         mToolboxHeroes.erase(it);
     }
 
-    if(level < 1)
-        level = 1;
+    if(level < MIN_HERO_LEVEL)
+        level = MIN_HERO_LEVEL;
     if(level > MAX_HERO_LEVEL)
         level = MAX_HERO_LEVEL;
 
@@ -658,7 +678,7 @@ void SandboxMode::updateScore(const std::vector<Seat*>& keeperSeats)
     {
         // What the keepers have at the start does not count. The seat counters of the map are
         // computed during the first turns, so the start is taken a few turns later.
-        if(mTurnsElapsed < 3)
+        if(mTurnsElapsed < BASELINE_DELAY_TURNS)
             return;
 
         mIsBaselineSet = true;

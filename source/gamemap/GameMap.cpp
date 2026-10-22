@@ -91,6 +91,17 @@
 #include <string>
 
 const std::string DEFAULT_NICK = "You";
+//! Highest value of the roll (0 to this value) that is compared with a chance in percent for a nemesis brawl
+static const int32_t BRAWL_CHANCE_ROLL_MAX = 99;
+
+//! \brief Definitions of the skirmish limits that are used by reference (std::min, std::max). The values are set in
+//! the class, gcc needs these definitions for them.
+const uint32_t GameMap::SKIRMISH_SPEED_MIN;
+const uint32_t GameMap::SKIRMISH_SPEED_MAX;
+const uint32_t GameMap::SKIRMISH_DURATION_MAX;
+const uint32_t GameMap::SKIRMISH_PERCENT_MIN;
+const uint32_t GameMap::SKIRMISH_PERCENT_MAX;
+const uint32_t GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND;
 
 using namespace std;
 
@@ -235,12 +246,12 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         everVisitedFlagPool(nullptr),
         mIsServerGameMap(isServerGameMap),
         mNodeType(nt),
-        mGoldDensityPercent(100),
-        mManaRegenerationPercent(100),
+        mGoldDensityPercent(SKIRMISH_PERCENT_DEFAULT),
+        mManaRegenerationPercent(SKIRMISH_PERCENT_DEFAULT),
         mMaxCreaturesSetting(0),
-        mGameSpeedPercent(100),
+        mGameSpeedPercent(SKIRMISH_SPEED_DEFAULT),
         mGameDurationMinutes(0),
-        mHeartDestroyedReward(0),
+        mHeartDestroyedReward(SKIRMISH_HEART_REWARD_MANA),
         mGameDurationAnnounced(false),
         mTimeLimitSentSeconds(-1),
         mWaveCountdownSentSeconds(-1),
@@ -413,12 +424,12 @@ void GameMap::clearAll()
         mTurnNumber = -1;
         resetUniqueNumbers();
         mIsFOWActivated = true;
-        mGoldDensityPercent = 100;
-        mManaRegenerationPercent = 100;
+        mGoldDensityPercent = SKIRMISH_PERCENT_DEFAULT;
+        mManaRegenerationPercent = SKIRMISH_PERCENT_DEFAULT;
         mMaxCreaturesSetting = 0;
-        mGameSpeedPercent = 100;
+        mGameSpeedPercent = SKIRMISH_SPEED_DEFAULT;
         mGameDurationMinutes = 0;
-        mHeartDestroyedReward = 0;
+        mHeartDestroyedReward = SKIRMISH_HEART_REWARD_MANA;
         mGameDurationAnnounced = false;
         mTimeLimitSentSeconds = -1;
         mWaveCountdownSentSeconds = -1;
@@ -1284,7 +1295,7 @@ void GameMap::checkRelationshipBrawls()
         if(!isWithinBrawlDistance(dx, dy, settings))
             continue;
 
-        if(!brawlChanceHit(Random::Int(0, 99), settings))
+        if(!brawlChanceHit(Random::Int(0, BRAWL_CHANCE_ROLL_MAX), settings))
             continue;
 
         if(!pathExists(creatureA, tileA, tileB))
@@ -1686,6 +1697,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         }
     }
 
+    // Tiles revealed by game events (like a tortured creature) stay visible for their number of turns
     for (Seat* seat : mSeats)
         seat->applyRevealedTiles();
 
@@ -2811,11 +2823,12 @@ bool GameMap::moveTrapProductionOrder(Seat* seat, const std::string& name, bool 
 {
     if(seat == nullptr || !isServerGameMap() || isInEditorMode())
         return false;
-    std::vector<Trap*>::iterator selected = std::find_if(mTraps.begin(), mTraps.end(), [&](Trap* trap)
+    std::vector<Trap*>::iterator selected = mTraps.begin();
+    while(selected != mTraps.end() && !((*selected)->getName() == name &&
+        (*selected)->getSeat() == seat && (*selected)->getNbNeededCraftedTrap() > 0))
     {
-        return trap->getName() == name && trap->getSeat() == seat &&
-            trap->getNbNeededCraftedTrap() > 0;
-    });
+        ++selected;
+    }
     if(selected == mTraps.end())
         return false;
     std::vector<Trap*>::iterator adjacent = selected;
@@ -3995,8 +4008,8 @@ uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
 void GameMap::setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
     uint32_t maxCreaturesSetting)
 {
-    mGoldDensityPercent = std::min<uint32_t>(std::max<uint32_t>(goldDensityPercent, 10), 500);
-    mManaRegenerationPercent = std::min<uint32_t>(std::max<uint32_t>(manaRegenerationPercent, 10), 500);
+    mGoldDensityPercent = std::min<uint32_t>(std::max<uint32_t>(goldDensityPercent, SKIRMISH_PERCENT_MIN), SKIRMISH_PERCENT_MAX);
+    mManaRegenerationPercent = std::min<uint32_t>(std::max<uint32_t>(manaRegenerationPercent, SKIRMISH_PERCENT_MIN), SKIRMISH_PERCENT_MAX);
     mMaxCreaturesSetting = std::min<uint32_t>(maxCreaturesSetting, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
 }
 
@@ -4004,10 +4017,10 @@ void GameMap::setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinut
     uint32_t heartDestroyedReward)
 {
     // The game turn ranges from 25 % to 400 % of its default rate
-    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, 25), 400);
-    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, 9999);
+    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, SKIRMISH_SPEED_MIN), SKIRMISH_SPEED_MAX);
+    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, SKIRMISH_DURATION_MAX);
     mIsFOWActivated = fogOfWar;
-    mHeartDestroyedReward = std::min<uint32_t>(heartDestroyedReward, 2);
+    mHeartDestroyedReward = std::min<uint32_t>(heartDestroyedReward, SKIRMISH_HEART_REWARD_ROOMS_AND_LAND);
 }
 
 uint32_t GameMap::getCreatureClassLimit(const std::string& className) const
@@ -4071,6 +4084,7 @@ void GameMap::applySkirmishSkillStates()
         if(seat->isRogueSeat())
             continue;
 
+        // Index 0 is nullSkillType, it is no skill
         for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
         {
             // What the host did not change stays as the level defines it for each seat

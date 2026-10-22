@@ -17,10 +17,26 @@
 #include <CEGUI/RendererModules/Ogre/Texture.h>
 #include <CEGUI/RendererModules/Ogre/ResourceProvider.h>
 #include <CEGUI/RendererModules/Ogre/ImageCodec.h>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace
+{
+//! Color channel value above which a pixel counts as part of the rendered creature.
+const unsigned char VISIBLE_PIXEL_THRESHOLD = 20;
+//! A portrait needs at least 1/EMPTY_PORTRAIT_PIXEL_DIVISOR of its pixels to be visible.
+const unsigned int EMPTY_PORTRAIT_PIXEL_DIVISOR = 100;
+//! Bytes per pixel of the RGBA readback buffer.
+const unsigned int BYTES_PER_PIXEL = 4;
+}
 
 int main(int argc, char** argv)
 {
@@ -45,7 +61,7 @@ int main(int argc, char** argv)
         Ogre::NameValuePairList options;
         options["hidden"] = "true";
         options["FSAA"] = "0";
-        Ogre::RenderWindow* window = root.createRenderWindow("PortraitAssetPreview", 192, 384, false, &options);
+        Ogre::RenderWindow* window = root.createRenderWindow("PortraitAssetPreview", CREATURE_PORTRAIT_WIDTH, CREATURE_PORTRAIT_HEIGHT, false, &options);
         window->setAutoUpdated(false);
         Ogre::ResourceGroupManager& resources = Ogre::ResourceGroupManager::getSingleton();
         for(const char* directory : {"/models", "/materials/scripts/Creatures", "/materials/textures", "/shaders"})
@@ -111,20 +127,23 @@ int main(int argc, char** argv)
             target->writeContentsToFile(output + "/portrait-" + meshName + ".png");
             const uint32_t width = texture->getWidth();
             const uint32_t height = texture->getHeight();
-            std::vector<unsigned char> pixels(width * height * 4);
+            std::vector<unsigned char> pixels(width * height * BYTES_PER_PIXEL);
             Ogre::PixelBox box(width, height, 1, Ogre::PF_BYTE_RGBA, pixels.data());
             texture->getBuffer()->blitToMemory(box);
             unsigned int coloured = 0;
-            for(size_t p = 0; p < pixels.size(); p += 4)
-                if(pixels[p] > 20 || pixels[p + 1] > 20 || pixels[p + 2] > 20) ++coloured;
-            if(coloured < width * height / 100) throw std::runtime_error("Empty portrait: " + meshName);
+            for(size_t p = 0; p < pixels.size(); p += BYTES_PER_PIXEL)
+                if(pixels[p] > VISIBLE_PIXEL_THRESHOLD || pixels[p + 1] > VISIBLE_PIXEL_THRESHOLD ||
+                    pixels[p + 2] > VISIBLE_PIXEL_THRESHOLD) ++coloured;
+            if(coloured < width * height / EMPTY_PORTRAIT_PIXEL_DIVISOR) throw std::runtime_error("Empty portrait: " + meshName);
             if(target->getNumViewports() != 0) throw std::runtime_error("Retained portrait viewport");
             if(meshName == "Kobold.mesh" || meshName == "Orc.mesh")
             {
                 window->update(false);
+                const CEGUI::Rectf portraitArea(0.0f, 0.0f,
+                    static_cast<float>(CREATURE_PORTRAIT_WIDTH), static_cast<float>(CREATURE_PORTRAIT_HEIGHT));
                 CEGUI::GeometryBuffer& buffer = guiRenderer.createGeometryBuffer();
-                buffer.setClippingRegion(CEGUI::Rectf(0, 0, 192, 384));
-                image.render(buffer, CEGUI::Rectf(0, 0, 192, 384), nullptr, CEGUI::ColourRect(0xFFFFFFFF));
+                buffer.setClippingRegion(portraitArea);
+                image.render(buffer, portraitArea, nullptr, CEGUI::ColourRect(0xFFFFFFFF));
                 guiRenderer.beginRendering();
                 CEGUI::RenderTarget& guiTarget = guiRenderer.getDefaultRenderTarget();
                 guiTarget.activate();

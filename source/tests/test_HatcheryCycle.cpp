@@ -133,6 +133,7 @@ BOOST_AUTO_TEST_CASE(test_CoopHenCount)
     BOOST_CHECK_EQUAL(HatcheryCycle::coopHenCount(settings, 1), 1u);
 }
 
+//! The lay interval stays inside the configured minimum and maximum (one turn above the maximum while the lay factor rounds it up) and is never zero turns, and scaling the settings scales both bounds.
 BOOST_AUTO_TEST_CASE(test_LayInterval)
 {
     HatcheryCycleSettings settings;
@@ -546,6 +547,7 @@ BOOST_AUTO_TEST_CASE(test_BalanceParity)
     }
 }
 
+//! Light and calm add to a care bonus that shortens the laying times, only while all tiles are claimed and never below one turn; eggs do not hatch while enemies stand in the hatchery.
 BOOST_AUTO_TEST_CASE(test_Care)
 {
     // The two bonuses (light 10, no enemies 15) add up, but only while all tiles are claimed
@@ -594,6 +596,7 @@ BOOST_AUTO_TEST_CASE(test_Care)
     BOOST_CHECK(!HatcheryCycle::canHatch(counts, false));
 }
 
+//! Only enemies trample, only eggs get trampled, and the configured percentage decides with the dice roll.
 BOOST_AUTO_TEST_CASE(test_Trample)
 {
     HatcheryCycleSettings settings;
@@ -865,6 +868,7 @@ BOOST_AUTO_TEST_CASE(test_NestFieldFeathers)
         std::vector<HatcheryNestField::TileCoord>(), std::vector<HatcheryNestField::Place>(), settings).size() >= 2u);
 }
 
+//! The crow interval always lies between the configured minimum and maximum, and a maximum below the minimum falls back to the minimum.
 BOOST_AUTO_TEST_CASE(test_RoosterCrowInterval)
 {
     RoosterSettings settings;
@@ -880,6 +884,7 @@ BOOST_AUTO_TEST_CASE(test_RoosterCrowInterval)
     BOOST_CHECK_EQUAL(HatcheryRooster::crowInterval(settings, 7), 40u);
 }
 
+//! The rooster mood follows the dice (he chases or struts, he never calls the hens or leads the chicks), the animals present, the crow timer and a threat (which always wins); a mood with turns left goes on and a finished mood is followed by strutting.
 BOOST_AUTO_TEST_CASE(test_RoosterDecide)
 {
     RoosterSettings settings;

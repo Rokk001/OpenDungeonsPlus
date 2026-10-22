@@ -39,10 +39,14 @@ enum class Detail
     off
 };
 
+//! \brief Reads the detail option text ("full", "reduced" or "off"); anything else means full.
 Detail detailFromString(const std::string& text);
+//! \brief The option text of the detail ("full", "reduced" or "off").
 const char* detailToString(Detail detail);
 
+//! \brief Sets how much of the gold layer is drawn; the piles are built with this detail from now on.
 void setDetail(Detail detail);
+//! \brief The detail the gold layer is drawn with at the moment.
 Detail getDetail();
 
 //! \brief Returns the name of the mesh to load for the given object mesh name. Names that are not
@@ -68,7 +72,7 @@ void updateDentedPile(Ogre::ManualObject* object, const std::string& meshName, f
 //! the name unchanged (not a classic stack name, or the detail is off).
 std::string pileNameForClassicStack(const std::string& meshName, float x, float y);
 
-//! \brief The piles drawn on this client, by tile, so creatures can be drawn on the gold surface.
+//! \brief The piles drawn on this client, by tile, so objects can stand in the gold and effects can find the piles.
 //! Names that are not pile names, and every pile while the detail is off, are ignored.
 //! The room (any pointer identifying it, may be null) lets effects share a budget per room.
 //! Returns the level this tile had when it was last registered (-1 when it never was, or the pile is
@@ -77,6 +81,7 @@ int registerPile(const std::string& entityName, float x, float y, const std::str
     const void* room = nullptr, bool replacesClassicStack = false);
 //! Forgets the pile, if the tile still holds the pile of that entity (a newer pile stays)
 void unregisterPile(const std::string& entityName, float x, float y);
+//! Forgets every registered pile (the scene is cleared)
 void clearPiles();
 
 //! True when the pile on that tile stands in for a classic stack of the server (dungeon heart ring), so the

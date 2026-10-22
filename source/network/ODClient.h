@@ -101,10 +101,12 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline const LevelStatistics& getLevelStatistics() const
     { return mLevelStatistics; }
 
-    //! \brief Seconds left until the level is lost, -1 if there is no time limit
+    //! \brief Seconds left until the level is lost, -1 if there is no time limit. A countdown that ends
+    //! without a defeat has GameMap::TIME_LIMIT_COUNTDOWN_FLAG added.
     inline int32_t getTimeLimitSeconds() const
     { return mTimeLimitSeconds; }
 
+    //! \brief Seconds left until the next hero wave of a level script, -1 if none is shown
     inline int32_t getWaveCountdownSeconds() const
     { return mWaveCountdownSeconds; }
 
@@ -143,6 +145,7 @@ class ODClient: public Ogre::Singleton<ODClient>,
         std::vector<SandboxBonusStatus> mBonuses;
     };
 
+    //! \brief The score, room timer and bonus objectives of the sandbox as the server last told them
     inline const SandboxStatus& getSandboxStatus() const
     { return mSandboxStatus; }
 
@@ -150,15 +153,19 @@ class ODClient: public Ogre::Singleton<ODClient>,
     inline bool hasSandboxRealmComplete() const
     { return mHasSandboxRealmComplete; }
 
+    //! \brief The name of the realm that was completed, as the server told it
     inline const std::string& getSandboxRealmId() const
     { return mSandboxRealmId; }
 
+    //! \brief The level file of the realm that follows the completed one, empty if there is none
     inline const std::string& getSandboxNextLevel() const
     { return mSandboxNextLevel; }
 
+    //! \brief The text the server sends with the completion of the realm
     inline const std::string& getSandboxRealmText() const
     { return mSandboxRealmText; }
 
+    //! \brief Marks the completion of the realm as taken by the GUI
     inline void clearSandboxRealmComplete()
     { mHasSandboxRealmComplete = false; }
 
@@ -172,7 +179,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
     
  protected:
     //! \brief Applies a server notification, including the saved campaign victory result; creature notices
-    //! get the profile name shown on the creature card.
+    //! get the profile name shown on the creature card. For the carry and release notifications it also flags
+    //! the carrier as carrying or not carrying on the client.
+    //! \return true if the notification was processed.
     bool processMessage(ServerNotificationType cmd, ODPacket& packetReceived) override;
     void playerDisconnected() override;
 
@@ -194,7 +203,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
     // Debriefing counters sent by the server after playerDefeated
     bool mHasLevelStatistics;
     LevelStatistics mLevelStatistics;
+    //! \brief Last time limit received with timeLimit, -1 when there is none
     int32_t mTimeLimitSeconds;
+    //! \brief Last wave countdown received with timeLimit, -1 when none is shown
     int32_t mWaveCountdownSeconds;
 
     // Heart health received with heartHealth
