@@ -215,8 +215,6 @@ static const std::string RESEARCH_FRAME_COLOUR_BRONZE = "FFC98A4A";
 static const std::string RESEARCH_FRAME_COLOUR_GOLD = "FFFFC947";
 static const std::string RESEARCH_LINK_COLOUR_READY = "FFE8862E";
 static const std::string RESEARCH_LINK_COLOUR_WAITING = "FF6E5232";
-static const std::string RESEARCH_JUNCTION_COLOUR_READY = "FFEEBE5C";
-static const std::string RESEARCH_JUNCTION_COLOUR_WAITING = "FF8A6A40";
 //! Research level at which a node gets the bronze frame and the one with the gold frame
 static const uint32_t RESEARCH_LEVEL_BRONZE = 2;
 static const uint32_t RESEARCH_LEVEL_GOLD = 3;
@@ -2769,6 +2767,8 @@ bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
     {
     }
     resetSkillTree();
+    // The Rooms tab is shown when the window opens
+    static_cast<CEGUI::TabControl*>(mRootWindow->getChild("SkillTreeWindow/Skills/SkillTabs"))->setSelectedTab("Rooms");
     mRootWindow->getChild("SkillTreeWindow")->show();
     mRootWindow->getChild("SkillTreeWindow")->moveToFront();
     return true;
@@ -3806,7 +3806,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         static_cast<CEGUI::ProgressBar*>(skillsWindow->getChild(skillProgressBarName));
     if(isDone)
     {
-        guiSheet->getChild(castButtonName)->show();
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->show();
         skillButton->setText("");
         skillButton->setProperty("StateImage", okIcon);
         skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_DONE);
@@ -3815,7 +3816,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     }
     else if(!isAllowed)
     {
-        guiSheet->getChild(castButtonName)->show();
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->show();
         skillButton->setText("");
         skillButton->setProperty("StateImage", abortIcon);
         skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_UNAVAILABLE);
@@ -3825,7 +3827,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     else if(resType == curResType)
     {
         // The skill is not available but skill is being done
-        guiSheet->getChild(castButtonName)->hide();
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->hide();
         if(queueNumber == 0)
             skillButton->setText("");
         else
@@ -3853,7 +3856,8 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     else if (queueNumber >= 1)
     {
         // The skill is not available but skill is pending
-        guiSheet->getChild(castButtonName)->hide();
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->hide();
         skillButton->setText(Helper::toString(queueNumber));
         skillButton->setProperty("StateImage", pendingIcon);
         skillButton->setProperty("StateImageColour", "FFFFFFFF");
@@ -3863,15 +3867,20 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     else
     {
         // The skill is not available and skill is not pending
-        guiSheet->getChild(castButtonName)->hide();
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->hide();
         skillButton->setText("");
         skillButton->setProperty("StateImage", "");
         skillButton->setEnabled(true);
         skillProgressBar->hide();
     }
-    guiSheet->getChild(castButtonName)->setVisible(level > 0);
     const bool isLockedByLibrary = SkillManager::isLockedByLostLibrary(resType, localPlayerSeat);
-    guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
+    // A keeper skill has no cast button (its name is empty)
+    if(!castButtonName.empty())
+    {
+        guiSheet->getChild(castButtonName)->setVisible(level > 0);
+        guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
+    }
     skillButton->setText("");
     skillButton->setProperty("ButtonImageColour", level == 0 ? "FF666666" : "FFFFFFFF");
     skillButton->setProperty("ResearchLevelColour", getResearchFrameColour(level));
@@ -3918,14 +3927,35 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         description += "\nRequires all (level 1):";
         for(size_t i = 0; i < dependencies.size(); ++i)
         {
-            const bool ready = localPlayerSeat->getSkillLevel(dependencies[i]->getType()) > 0;
+            // A parent the level does not allow counts as fulfilled
+            const bool ready = localPlayerSeat->getSkillLevel(dependencies[i]->getType()) > 0 ||
+                localPlayerSeat->isSkillNotAllowed(dependencies[i]->getType());
             prerequisitesReady = prerequisitesReady && ready;
-            description += std::string(ready ? "\n  READY: " : "\n  MISSING: ") +
-                Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType());
+            const SkillTab parentTab = SkillManager::getSkillTab(dependencies[i]->getType());
+            if(parentTab != SkillManager::getSkillTab(resType))
+            {
+                // A parent in another tab has no path in this tab: it is named with its tab
+                description += "\n  Needs: " + Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType()) +
+                    " (" + SkillManager::getTabTitle(parentTab) + ")" + (ready ? "" : " - MISSING");
+            }
+            else
+            {
+                description += std::string(ready ? "\n  READY: " : "\n  MISSING: ") +
+                    Skills::skillTypeToPlayerVisibleString(dependencies[i]->getType());
+            }
         }
     }
     else
         description += "\nNo prerequisites.";
+    // Levels 2 and 3 of an entry wait until enough entries of its tab have level 1
+    const std::vector<std::pair<SkillType, int> > nothingQueued;
+    const bool isTabLocked = (level >= 1) && (level < 3) && isAllowed &&
+        !localPlayerSeat->canResearchLevel(resType, static_cast<int>(level) + 1, nothingQueued);
+    if(isTabLocked)
+    {
+        description += "\nLocked: more entries of the " + SkillManager::getTabTitle(SkillManager::getSkillTab(resType)) +
+            " tab need level 1 first.";
+    }
     std::string state = "Available";
     if(!isAllowed)
         state = "Unavailable";
@@ -3935,7 +3965,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         state = "Researching";
     else if(queueNumber > 0)
         state = "Queued";
-    else if(!prerequisitesReady)
+    else if(!prerequisitesReady || isTabLocked)
         state = "Locked";
     description += "\nStatus: " + state + (mIsSkillWindowOpen && queueNumber > 0 && resType != curResType ?
         " (Apply saves queue changes)." : ".");
@@ -4012,64 +4042,67 @@ void GameMode::refreshSkillConnections()
 {
     std::map<SkillType, CEGUI::Window*> buttons;
     CEGUI::Window* skills = mRootWindow->getChild("SkillTreeWindow/Skills");
-    // The reward skills have no node in the tree
-    SkillManager::listAllSkills([&](const std::string& name, const std::string&,
-        const std::string&, SkillType type) { if(!Skills::isRewardSkill(type)) buttons[type] = skills->getChild(name); });
+    // The reward skills have no entry in any tab, so they have no node in the tree
     Seat* seat = mGameMap->getLocalPlayer()->getSeat();
-    // The depth of a skill is the length of its longest chain of prerequisites. It sets the
-    // row of the node. One pass per skill is enough to settle all chains.
-    std::map<SkillType, unsigned> depths;
-    for(size_t pass = 0; pass < buttons.size(); ++pass)
-        for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
-            for(const Skill* dependency : SkillManager::getSkill(entry.first)->getDependencies())
-                depths[entry.first] = std::max(depths[entry.first], depths[dependency->getType()] + 1);
-
-    // A row fits four nodes at the default size; a column with a longer row uses smaller nodes.
-    // A column fits four rows at the default spacing; a deeper column puts its rows closer together.
-    std::map<std::pair<CEGUI::Window*, unsigned>, unsigned> rowSizes;
-    std::map<CEGUI::Window*, unsigned> widestRows;
-    std::map<CEGUI::Window*, unsigned> deepestRows;
-    for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
+    // Each tab is a page with one row per tier (tier I at the top). The entries of a row stand from left to
+    // right in tree order and share the width of the page equally.
+    for(uint32_t tabIndex = 0; tabIndex < static_cast<uint32_t>(SkillTab::nb); ++tabIndex)
     {
-        CEGUI::Window* parent = entry.second->getParent();
-        unsigned& rowSize = rowSizes[std::make_pair(parent, depths[entry.first])];
-        ++rowSize;
-        widestRows[parent] = std::max(widestRows[parent], rowSize);
-        deepestRows[parent] = std::max(deepestRows[parent], depths[entry.first]);
-    }
+        std::vector<SkillType> tabSkills;
+        SkillManager::listTabSkills(static_cast<SkillTab>(tabIndex), tabSkills);
 
-    for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
-    {
-        CEGUI::Window* button = entry.second;
-        CEGUI::Window* parent = button->getParent();
-        if(!button->isUserStringDefined("ResearchCentre"))
-            button->setUserString("ResearchCentre", Helper::toString(button->getXPosition().d_scale));
-        const float centre = CEGUI::PropertyHelper<float>::fromString(button->getUserString("ResearchCentre"));
-        const float width = std::min(.22f, .9f / static_cast<float>(widestRows[parent]));
-        const float height = width * parent->getPixelSize().d_width / parent->getPixelSize().d_height;
-        const float rowStep = deepestRows[parent] > 3 ? .795f / static_cast<float>(deepestRows[parent]) : .265f;
-        button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0),
-            CEGUI::UDim(.055f + depths[entry.first] * rowStep, 0)),
-            CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
-        if(button->isChild("ResearchLevel"))
+        // A row fits four nodes at the default size; a page with a longer row uses smaller nodes.
+        // A page fits four rows at the default spacing.
+        std::map<uint32_t, uint32_t> rowSizes;
+        uint32_t widestRow = 0;
+        uint32_t deepestRow = 0;
+        for(SkillType type : tabSkills)
         {
-            // The badge is sized for the widest text it can show and sits below the node
-            CEGUI::Window* badge = button->getChild("ResearchLevel");
-            // The nodes of a wide row are close together: use the smaller font when the
-            // counter would otherwise touch the counter of the neighbouring node.
-            const float nodePitch = width * parent->getPixelSize().d_width;
-            CEGUI::Font* badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_NORMAL);
-            if(badgeFont->getTextExtent("3/3") + SKILL_BADGE_NODE_GAP > nodePitch)
-                badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_SMALL);
-            badge->setFont(badgeFont);
-            const float badgeWidth = badge->getFont()->getTextExtent("3/3") + SKILL_BADGE_WIDTH_PADDING;
-            const float badgeHeight = badge->getFont()->getLineSpacing() + 2.0f;
-            badge->setArea(CEGUI::UVector2(CEGUI::UDim(.5f, -badgeWidth * .5f), CEGUI::UDim(1, 0)),
-                CEGUI::USize(CEGUI::UDim(0, badgeWidth), CEGUI::UDim(0, badgeHeight)));
+            const uint32_t row = SkillManager::getSkillTier(type) - 1;
+            uint32_t& rowSize = rowSizes[row];
+            ++rowSize;
+            widestRow = std::max(widestRow, rowSize);
+            deepestRow = std::max(deepestRow, row);
+        }
+
+        std::map<uint32_t, uint32_t> rowPlaced;
+        for(SkillType type : tabSkills)
+        {
+            CEGUI::Window* button = skills->getChild(SkillManager::getTreeButtonPath(type));
+            buttons[type] = button;
+            CEGUI::Window* parent = button->getParent();
+            const uint32_t row = SkillManager::getSkillTier(type) - 1;
+            // The x-centre of entry i of n entries of a row is (i + 0.5) / n of the page width
+            const float centre = (static_cast<float>(rowPlaced[row]) + .5f) / static_cast<float>(rowSizes[row]);
+            ++rowPlaced[row];
+            button->setUserString("ResearchCentre", Helper::toString(centre));
+            const float width = std::min(.22f, .9f / static_cast<float>(widestRow));
+            const float height = width * parent->getPixelSize().d_width / parent->getPixelSize().d_height;
+            const float rowStep = deepestRow > 3 ? .795f / static_cast<float>(deepestRow) : .265f;
+            button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0),
+                CEGUI::UDim(.055f + row * rowStep, 0)),
+                CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
+            if(button->isChild("ResearchLevel"))
+            {
+                // The badge is sized for the widest text it can show and sits below the node
+                CEGUI::Window* badge = button->getChild("ResearchLevel");
+                // The nodes of a wide row are close together: use the smaller font when the
+                // counter would otherwise touch the counter of the neighbouring node.
+                const float nodePitch = width * parent->getPixelSize().d_width;
+                CEGUI::Font* badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_NORMAL);
+                if(badgeFont->getTextExtent("3/3") + SKILL_BADGE_NODE_GAP > nodePitch)
+                    badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_SMALL);
+                badge->setFont(badgeFont);
+                const float badgeWidth = badge->getFont()->getTextExtent("3/3") + SKILL_BADGE_WIDTH_PADDING;
+                const float badgeHeight = badge->getFont()->getLineSpacing() + 2.0f;
+                badge->setArea(CEGUI::UVector2(CEGUI::UDim(.5f, -badgeWidth * .5f), CEGUI::UDim(1, 0)),
+                    CEGUI::USize(CEGUI::UDim(0, badgeWidth), CEGUI::UDim(0, badgeHeight)));
+            }
         }
     }
 
-    // Shared bars represent an ALL-prerequisite junction, not alternative routes.
+    // A path is drawn from a parent to a child only when both stand in the same tab. A parent in another
+    // tab is listed in the tooltip of the child instead.
     for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
     {
         CEGUI::Window* target = entry.second;
@@ -4079,28 +4112,39 @@ void GameMode::refreshSkillConnections()
         if(parentRect.getWidth() <= 0 || parentRect.getHeight() <= 0)
             continue;
         const std::vector<const Skill*>& required = SkillManager::getSkill(entry.first)->getDependencies();
-        bool allReady = true;
-        for(const Skill* prerequisite : required)
-        {
-            if(seat->getSkillLevel(prerequisite->getType()) == 0)
-                allReady = false;
-        }
         for(const Skill* dependency : required)
         {
+            if(SkillManager::getSkillTab(dependency->getType()) != SkillManager::getSkillTab(entry.first))
+                continue;
+
             const CEGUI::Rectf start = buttons.at(dependency->getType())->getUnclippedOuterRect().get();
             const float x1 = (start.left() + start.getWidth() * .5f - parentRect.left()) / parentRect.getWidth();
             const float x2 = (end.left() + end.getWidth() * .5f - parentRect.left()) / parentRect.getWidth();
             const float y1 = (start.bottom() - parentRect.top()) / parentRect.getHeight();
             const float y2 = (end.top() - parentRect.top()) / parentRect.getHeight();
             const float middle = (y1 + y2) * .5f;
-            // The path from a prerequisite to the skill has three bars: down from the
-            // prerequisite, across at half height and down into the skill. width is the
+            // The path from a parent to the skill has three bars: down from the
+            // parent, across at half height and down into the skill. width is the
             // bar thickness as a fraction of the graph width.
             const float width = .012f;
             const float height = width * parentRect.getWidth() / parentRect.getHeight();
-            const float segments[][4] = {{x1 - width * .5f, y1, width, middle - y1 + height},
+            float segments[3][4] = {{x1 - width * .5f, y1, width, middle - y1 + height},
                 {std::min(x1, x2) - width * .5f, middle, std::abs(x2 - x1) + width, height},
                 {x2 - width * .5f, middle, width, y2 - middle}};
+            // A parent in the same row (Heart Fortitude and Heart Mending) is joined by one horizontal bar
+            // from the right edge of the left node to the left edge of the right node
+            const bool sameRow = SkillManager::getSkillTier(dependency->getType()) == SkillManager::getSkillTier(entry.first);
+            if(sameRow)
+            {
+                const bool parentIsLeft = start.left() < end.left();
+                const float xStart = ((parentIsLeft ? start.right() : end.right()) - parentRect.left()) / parentRect.getWidth();
+                const float xEnd = ((parentIsLeft ? end.left() : start.left()) - parentRect.left()) / parentRect.getWidth();
+                const float yRow = ((start.top() + start.bottom()) * .5f - parentRect.top()) / parentRect.getHeight();
+                segments[0][0] = xStart;
+                segments[0][1] = yRow - height * .5f;
+                segments[0][2] = xEnd - xStart;
+                segments[0][3] = height;
+            }
             for(unsigned part = 0; part < 3; ++part)
             {
                 const std::string name = "ResearchLink_" + Helper::toString(static_cast<uint32_t>(dependency->getType())) +
@@ -4119,39 +4163,14 @@ void GameMode::refreshSkillConnections()
                     parent->addChild(line);
                     line->moveToBack();
                 }
+                // The bars 1 and 2 of a same-row path are not used
+                line->setVisible(!sameRow || part == 0);
                 line->setArea(CEGUI::UVector2(CEGUI::UDim(segments[part][0], 0), CEGUI::UDim(segments[part][1], 0)),
                     CEGUI::USize(CEGUI::UDim(segments[part][2], 0), CEGUI::UDim(segments[part][3], 0)));
-                const bool linkReady = part == 0 ? seat->getSkillLevel(dependency->getType()) > 0 : allReady;
+                const bool linkReady = seat->getSkillLevel(dependency->getType()) > 0;
                 line->setProperty("ImageColours",
                     linkReady ? RESEARCH_LINK_COLOUR_READY : RESEARCH_LINK_COLOUR_WAITING);
             }
-        }
-        if(required.size() > 1)
-        {
-            // All nodes at a tier share the same predecessor set in this tree.
-            const CEGUI::String name = "ResearchJunction_" + Helper::toString(depths[entry.first]);
-            CEGUI::Window* junction;
-            if(parent->isChild(name))
-                junction = parent->getChild(name);
-            else
-            {
-                junction = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText", name);
-                junction->setProperty("HorzFormatting", "CentreAligned");
-                junction->setProperty("VertFormatting", "CentreAligned");
-                junction->setProperty("FrameEnabled", "False");
-                junction->setProperty("BackgroundEnabled", "True");
-                junction->setFont("MedievalSharp-10");
-                junction->setText("&");
-                junction->setMousePassThroughEnabled(true);
-                parent->addChild(junction);
-            }
-            const CEGUI::Rectf start = buttons.at(required.front()->getType())->getUnclippedOuterRect().get();
-            const float middle = (start.bottom() + end.top() - 2 * parentRect.top()) / (2 * parentRect.getHeight());
-            // The junction is a square of .075 of the graph width, centred horizontally
-            const float height = .075f * parentRect.getWidth() / parentRect.getHeight();
-            junction->setArea(CEGUI::UVector2(CEGUI::UDim(.4625f, 0), CEGUI::UDim(middle - height * .5f, 0)),
-                CEGUI::USize(CEGUI::UDim(.075f, 0), CEGUI::UDim(height, 0)));
-            junction->setProperty("TextColours", allReady ? RESEARCH_JUNCTION_COLOUR_READY : RESEARCH_JUNCTION_COLOUR_WAITING);
         }
     }
 }
@@ -5046,42 +5065,42 @@ void GameMode::resetSkillTree()
     mIsSkillWindowOpen = true;
 }
 
+void GameMode::dropInvalidPendingSkills()
+{
+    Seat* seat = mGameMap->getLocalPlayer()->getSeat();
+    std::vector<SkillType> validSkills;
+    std::vector<std::pair<SkillType, int> > queuedBefore;
+    for(SkillType pendingType : mSkillPending)
+    {
+        // Same rules as the server: each entry is checked after the valid entries before it
+        const int level = static_cast<int>(seat->getSkillLevel(pendingType)) + 1;
+        if(!seat->canResearchLevel(pendingType, level, queuedBefore))
+            continue;
+
+        validSkills.push_back(pendingType);
+        queuedBefore.push_back(std::make_pair(pendingType, level));
+    }
+    mSkillPending = validSkills;
+}
+
 bool GameMode::skillButtonTreeClicked(SkillType type)
 {
     // Fully upgraded or map-disabled skills cannot be queued.
-    const std::vector<SkillType>& skillDone = mGameMap->getLocalPlayer()->getSeat()->getSkillDone();
-    if(mGameMap->getLocalPlayer()->getSeat()->getSkillLevel(type) >= 3)
+    Seat* seat = mGameMap->getLocalPlayer()->getSeat();
+    const std::vector<SkillType>& skillDone = seat->getSkillDone();
+    if(seat->getSkillLevel(type) >= 3)
         return false;
-    const std::vector<SkillType>& skillNotAllowed = mGameMap->getLocalPlayer()->getSeat()->getSkillNotAllowed();
+    const std::vector<SkillType>& skillNotAllowed = seat->getSkillNotAllowed();
     if(std::find(skillNotAllowed.begin(), skillNotAllowed.end(), type) != skillNotAllowed.end())
         return false;
 
     std::vector<SkillType>::iterator it = std::find(mSkillPending.begin(), mSkillPending.end(), type);
     if(it != mSkillPending.end())
     {
-        // The skill is pending. We remove it as well as all its dependencies
+        // The skill is pending. We remove it as well as everything that needs it: the skills that
+        // have it as a parent and the levels whose tab gate it was part of
         mSkillPending.erase(it);
-
-        if(std::find(skillDone.begin(), skillDone.end(), type) != skillDone.end())
-            return true;
-
-        for(it = mSkillPending.begin(); it != mSkillPending.end();)
-        {
-            SkillType pendingType = *it;
-            const Skill* skill = SkillManager::getSkill(pendingType);
-            if(skill == nullptr)
-            {
-                OD_LOG_ERR("null skill pendingType=" + Helper::toString(static_cast<uint32_t>(pendingType)));
-                continue;
-            }
-
-            if(!skill->dependsOn(type))
-            {
-                ++it;
-                continue;
-            }
-            it = mSkillPending.erase(it);
-        }
+        dropInvalidPendingSkills();
         return true;
     }
 
@@ -5094,17 +5113,21 @@ bool GameMode::skillButtonTreeClicked(SkillType type)
     if(std::find(skillDone.begin(), skillDone.end(), type) != skillDone.end())
         dependencies.push_back(type);
     else
-        skill->buildDependencies(skillDone, dependencies);
+        skill->buildDependencies(skillDone, skillNotAllowed, dependencies);
 
-    // We check if one of the dependencies is not available. If not, we cannot skill
+    // We check each entry in order, after the entries pending before it. If one cannot be researched
+    // (for example the tab gate of level 2 or 3 is not met), we cannot skill
+    std::vector<std::pair<SkillType, int> > queuedBefore = seat->getQueuedLevels(mSkillPending);
     for(SkillType skillType : dependencies)
     {
-        if(std::find(skillNotAllowed.begin(), skillNotAllowed.end(), skillType) != skillNotAllowed.end())
-            return false;
-
         if(std::find(mSkillPending.begin(), mSkillPending.end(), skillType) != mSkillPending.end())
             continue;
 
+        const int level = static_cast<int>(seat->getSkillLevel(skillType)) + 1;
+        if(!seat->canResearchLevel(skillType, level, queuedBefore))
+            return false;
+
+        queuedBefore.push_back(std::make_pair(skillType, level));
         skillToAdd.push_back(skillType);
     }
 

@@ -1221,6 +1221,36 @@ def m_chicken(c):
     c.add(c.ellipse(0.46, -0.10, 0.04, 0.07), RUBY, z=0.04, bevel=0.04, base=0.22)
 
 
+def m_dominion(c):
+    c.glow(0.0, 0.05, 0.6, (200, 130, 20), 0.6)
+    crown = c.poly([(-0.55, 0.35), (-0.55, -0.25), (-0.28, 0.05), (0.0, -0.45), (0.28, 0.05), (0.55, -0.25), (0.55, 0.35)])
+    c.add(crown, GOLD, z=0.10, bevel=0.06, base=0.10, shadow=0.6)
+    c.add(c.box(0.0, 0.45, 0.58, 0.08, 0.02), GOLD_DARK, z=0.08, bevel=0.04, base=0.10, shadow=0.5)
+    for x in (-0.28, 0.0, 0.28):
+        c.add(c.circle(x, 0.20, 0.07), RUBY, z=0.05, bevel=0.05, base=0.18)
+
+
+def m_heart_fortitude(c):
+    shield = c.poly([(-0.52, -0.58), (0.52, -0.58), (0.52, 0.02), (0.0, 0.64), (-0.52, 0.02)])
+    c.add(shield, STEEL, z=0.08, bevel=0.06, base=0.06, shadow=0.6)
+    c.add(heart_sdf(c, 0.0, -0.06, 0.95), RUBY, z=0.18, bevel=0.20, base=0.14, shadow=0.5)
+
+
+def m_heart_mending(c):
+    c.add(heart_sdf(c, -0.08, 0.02, 1.2), RUBY, z=0.22, bevel=0.26, base=0.08, shadow=0.6)
+    plus = c.union(c.box(0.44, -0.44, 0.20, 0.06, 0.02), c.box(0.44, -0.44, 0.06, 0.20, 0.02))
+    c.add(plus, GOLD, z=0.08, bevel=0.04, base=0.20, shadow=0.5)
+
+
+def m_mana_flow(c):
+    c.glow(0.0, 0.05, 0.6, (220, 140, 30), 0.7)
+    c.add(flame_sdf(c, 0.0, 0.08, 1.5), AMBER, z=0.16, bevel=0.14, base=0.10, shadow=0.6)
+    for i in range(8):
+        a = deg(22.5 + 45 * i)
+        c.add(c.seg(0.58 * np.cos(a), 0.58 * np.sin(a), 0.78 * np.cos(a), 0.78 * np.sin(a), 0.03), EMBER,
+              z=0.03, bevel=0.03, base=0.08)
+
+
 # ---------------------------------------------------------------------------------------------
 # The icon table. kind None: a frameless symbol. cells: pixel size of the cell in the atlas.
 # ---------------------------------------------------------------------------------------------
@@ -1333,5 +1363,9 @@ ICONS = {
     "NavigationObjectives": _sym(m_objectives_eye, 128, extent=TALL),
     "NavigationMessages": _sym(m_message, 128, extent=TALL),
     "NavigationMessagesRead": _sym(m_message_read, 128, extent=TALL),
+    "DominionButton": _slot(m_dominion, "room"),
+    "HeartFortitudeButton": _slot(m_heart_fortitude, "trap"),
+    "HeartMendingButton": _slot(m_heart_mending, "trap"),
+    "ManaFlowButton": _slot(m_mana_flow, "spell"),
     "MenuReturn": _sym(m_return, 64),
 }

@@ -23,10 +23,14 @@
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+
+#include <cmath>
 
 const std::string TrapFreezeName = "Freeze";
 const std::string TrapFreezeNameDisplay = "Freeze trap";
@@ -122,11 +126,12 @@ TrapFreeze::TrapFreeze(GameMap* gameMap) :
 {
     mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("FreezeReloadTurns");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("FreezeNbShootsBeforeDeactivation");
-    mFreezeTurns = static_cast<int32_t>(ConfigManager::getSingleton().getTrapConfigUInt32("FreezeDurationTurns"));
+    mFreezeTurns = ConfigManager::getSingleton().getTrapConfigDouble("FreezeDurationTurns");
     mShatterHpPercent = ConfigManager::getSingleton().getTrapConfigDouble("FreezeShatterHpPercent");
     setMeshName("");
 }
 
+//! \brief Freezes the enemies on the tile; the time follows the freeze trap research.
 bool TrapFreeze::shoot(Tile* tile)
 {
     // Pressure trigger: the trap only fires when an enemy creature stands on its tile
@@ -150,7 +155,8 @@ bool TrapFreeze::shoot(Tile* tile)
         }
         else
         {
-            creature->addCreatureEffect(new CreatureEffectFrozen(mFreezeTurns));
+            creature->addCreatureEffect(new CreatureEffectFrozen(static_cast<int32_t>(std::lround(
+                SkillManager::getResearchValue(getSeat(), SkillType::trapFreeze, mFreezeTurns, ResearchEffect::Duration)))));
         }
         creature->notifyFightPlayer(targetTile);
     }

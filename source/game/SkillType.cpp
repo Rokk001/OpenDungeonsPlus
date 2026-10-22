@@ -145,6 +145,14 @@ std::string toString(SkillType type)
             return "trapTrigger";
         case SkillType::trapFreeze:
             return "trapFreeze";
+        case SkillType::keeperDominion:
+            return "keeperDominion";
+        case SkillType::keeperHeartFortitude:
+            return "keeperHeartFortitude";
+        case SkillType::keeperHeartMending:
+            return "keeperHeartMending";
+        case SkillType::keeperManaFlow:
+            return "keeperManaFlow";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
@@ -256,6 +264,14 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Trigger Trap";
         case SkillType::trapFreeze:
             return "The Freeze Trap";
+        case SkillType::keeperDominion:
+            return "Keeper: Dominion";
+        case SkillType::keeperHeartFortitude:
+            return "Keeper: Heart Fortitude";
+        case SkillType::keeperHeartMending:
+            return "Keeper: Heart Mending";
+        case SkillType::keeperManaFlow:
+            return "Keeper: Mana Flow";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }

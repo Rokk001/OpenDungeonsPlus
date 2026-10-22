@@ -262,6 +262,9 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! should be called before calling skillButtonTreeClicked
     //! Returns true if the pending list have been changed and false otherwise
     bool skillButtonTreeClicked(SkillType type);
+    //! \brief Removes from the pending list the entries that can no longer be researched (a parent or a
+    //! tab gate they needed was removed), checking them in order with the rules of the server
+    void dropInvalidPendingSkills();
     //! \brief Called when the player closes the skill tree. If apply is true, the changes
     //! should be sent to the server. If false, the changes should be canceled.
     void endSkillTree(bool apply);
@@ -271,8 +274,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \param forceRefresh Refresh the gui even if no changes was declared by the local player Seat.
     void refreshGuiSkill(bool forceRefresh = false);
 
-    //! \brief Lays out the research nodes in rows by prerequisite depth and draws the paths
-    //! from each prerequisite to the skills that need it, coloured by whether they are done.
+    //! \brief Lays out the research nodes in the rows of their tier on the page of their tab and draws the paths
+    //! from each parent to the skills that need it (parents in the same tab only), coloured by whether they are done.
     //! Called when the research is refreshed and when the size of the window changes.
     void refreshSkillConnections();
 

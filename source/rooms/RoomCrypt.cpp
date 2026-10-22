@@ -138,7 +138,7 @@ BuildingObject* RoomCrypt::notifyActiveSpotCreated(ActiveSpotPlace place, Tile* 
     {
         case ActiveSpotPlace::activeSpotCenter:
         {
-            mRottingCreatures[tile] = std::pair<Creature*,int32_t>(nullptr, -1);
+            mRottingCreatures[tile] = std::pair<Creature*,double>(nullptr, -1);
             int rnd = Random::Int(0, 100);
             if (rnd < 33)
                 return new BuildingObject(getGameMap(), *this, "KnightCoffin", *tile, 0.0, false);
@@ -175,7 +175,7 @@ void RoomCrypt::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
     if(place != ActiveSpotPlace::activeSpotCenter)
         return;
 
-    std::pair<Creature*,int32_t> rottingCreature = mRottingCreatures[tile];
+    std::pair<Creature*,double> rottingCreature = mRottingCreatures[tile];
     mRottingCreatures.erase(tile);
     if(rottingCreature.first == nullptr)
         return;
@@ -205,6 +205,7 @@ void RoomCrypt::absorbRoom(Room *r)
     Room::absorbRoom(r);
 }
 
+//! \brief Counts the turns the corpses rot, with the rot time of the crypt research, and turns the rotten ones into points.
 void RoomCrypt::doUpkeep()
 {
     Room::doUpkeep();
@@ -226,7 +227,7 @@ void RoomCrypt::doUpkeep()
     }
 
     // We increment rotting creatures counter
-    for(std::pair<Tile* const, std::pair<Creature*, int32_t> >& p : mRottingCreatures)
+    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
     {
         if((p.second.first == nullptr) || (p.second.second == -1))
             continue;
@@ -234,8 +235,9 @@ void RoomCrypt::doUpkeep()
         ConfigManager& configManager = ConfigManager::getSingleton();
 
         ++p.second.second;
-        if(p.second.second < std::max(1.0, std::round(SkillManager::getResearchValue(
-            getSeat(), SkillType::roomCrypt, configManager.getRoomConfigInt32("CryptRotNbTurns")))))
+        // The rot time keeps its fractions (the counter is a double that counts the turns)
+        if(p.second.second < std::max(1.0, SkillManager::getResearchValue(
+            getSeat(), SkillType::roomCrypt, configManager.getRoomConfigDouble("CryptRotNbTurns"), ResearchEffect::RotTime)))
             continue;
 
         // We add the rotten creature points to the room and release the active spot
@@ -300,7 +302,7 @@ bool RoomCrypt::hasCarryEntitySpot(GameEntity* carriedEntity)
     if(creature->isAlive())
         return false;
 
-    for(std::pair<Tile* const, std::pair<Creature*, int32_t> >& p : mRottingCreatures)
+    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
     {
         if(p.second.first == nullptr && getDeliveryTile(p.first) != nullptr)
             return true;
@@ -317,7 +319,7 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
     }
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
-    for(std::pair<Tile* const, std::pair<Creature*, int32_t> >& p : mRottingCreatures)
+    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
     {
         if(p.second.first == nullptr)
         {
@@ -334,7 +336,7 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
 
 void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
-    for(std::pair<Tile* const, std::pair<Creature*, int32_t> >& p : mRottingCreatures)
+    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
     {
         if(p.second.first == carriedEntity)
         {

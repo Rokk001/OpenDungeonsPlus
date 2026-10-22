@@ -296,11 +296,12 @@ void RoomPortal::spawnCreature()
     ++getSeat()->getStatistics().mCreaturesEntered;
 }
 
+//! \brief Sets the room up and gives it the creatures per portal of the config.
 void RoomPortal::setupRoom(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles)
 {
     Room::setupRoom(name, seat, tiles);
     // By default, we allow some more creatures per portal
-    mNbCreatureMaxIncrease = 5;
+    mNbCreatureMaxIncrease = ConfigManager::getSingleton().getCreaturesPerPortal();
 }
 
 void RoomPortal::exportToStream(std::ostream& os) const

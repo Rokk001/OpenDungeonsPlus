@@ -433,6 +433,7 @@ void RoomWorkshop::doUpkeep()
     mTrapType = TrapType::nullTrapType;
 }
 
+//! \brief A creature works; the points per work follow the workshop research.
 bool RoomWorkshop::useRoom(Creature& creature, bool forced)
 {
     std::map<Creature*, Tile*>::iterator it = mCreaturesSpots.find(&creature);
@@ -484,7 +485,8 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
         + ", creatureRoomAffinityType=" + Helper::toString(static_cast<int>(creatureRoomAffinity.getRoomType())));
 
     mPoints += static_cast<int32_t>(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
-        getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork")));
+        getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork"),
+        ResearchEffect::PointsPerWork));
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));
