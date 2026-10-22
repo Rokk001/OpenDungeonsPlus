@@ -18,7 +18,6 @@ material MysteryBox
             depth_check on
             depth_func less_equal
             depth_write on
-            illumination_stage
             light_clip_planes off
             light_scissor off
             lighting on

@@ -860,6 +860,14 @@ foreach(OD_OGRE_SUBDIR RTShaderLib RTShaderLib/materials)
         string(APPEND OD_OGRE_SHADER_RESOURCES "FileSystem=${OD_OGRE_MEDIA_DIR}/${OD_OGRE_SUBDIR}\n")
     endif()
 endforeach()
+if(WIN32)
+    # OGRE 14 resolves shader includes only inside the group of the program, and Main cannot be listed in a
+    # second group (its scripts would load twice), so the shared shader includes are copied into their own folder.
+    foreach(OD_OGRE_INCLUDE OgreUnifiedShader.h GLSL_GL3Support.glsl HLSL_SM4Support.hlsl DefaultShaders.metal)
+        configure_file("${OD_OGRE_MEDIA_DIR}/Main/${OD_OGRE_INCLUDE}" ${CMAKE_BINARY_DIR}/ogre-includes/${OD_OGRE_INCLUDE} COPYONLY)
+    endforeach()
+    string(APPEND OD_OGRE_SHADER_RESOURCES "FileSystem=ogre-includes\n")
+endif()
 configure_file(${CMAKE_CONFIG_DIR}/resources.cfg.in ${CMAKE_BINARY_DIR}/resources.cfg @ONLY)
 # Link icon with its full path when not installed in the /usr prefix since it might not be caught by the hicolor theme
 if(CMAKE_INSTALL_PREFIX STREQUAL "/usr")
