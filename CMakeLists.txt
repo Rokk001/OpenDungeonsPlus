@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.13)
 
 ##################################
 #### Project settings ############
@@ -133,23 +133,15 @@ endif()
 # This makes it possible to have them explicitly displayed in CMake GUI
 # CMAKE_CXX_FLAGS can still be used to override our default defintions
 set(OD_OPT_FLAGS CACHE STRING "Optimization and optional compilation flags")
-set(OD_CXX11_FLAGS CACHE STRING "Compilation flags to enable C++11 support")
+
+# The project is built as C++17 (required by SFML 3)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
-    # C++11 compilation flag is activated by default
     # Optimisation flags can be added if deemed useful
 else()
     include(CheckCXXCompilerFlag)
-    if(NOT OD_CXX11_FLAGS)
-        CHECK_CXX_COMPILER_FLAG("-std=c++11" OD_CXX11_FLAG_SUPPORTED)
-        CHECK_CXX_COMPILER_FLAG("-std=gnu++11" OD_CXXGNU11_FLAG_SUPPORTED)
-        # MinGW supports CXX11 flag but do not compile with it. However, it works with gnu++11
-        if(OD_CXX11_FLAG_SUPPORTED AND NOT MINGW)
-            set(OD_CXX11_FLAGS "-std=c++11" CACHE STRING "Compilation flags to enable C++11 support" FORCE)
-        elseif(OD_CXX11_FLAG_SUPPORTED)
-            set(OD_CXX11_FLAGS "-std=gnu++11" CACHE STRING "Compilation flags to enable C++11 support" FORCE)
-        endif()
-    endif()
     if(OD_ENABLE_WARNINGS)
         # Help getting compilation warnings
         set(OD_OPT_FLAGS "${OD_OPT_FLAGS} -Wall -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wold-style-cast")
@@ -208,7 +200,7 @@ if(OD_USE_SFML_WINDOW)
     add_definitions(-DOD_USE_SFML_WINDOW)
 endif()
 
-set(CMAKE_CXX_FLAGS "${OD_CXX11_FLAGS} ${OD_OPT_FLAGS} ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${OD_OPT_FLAGS} ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMake CXX Flags: " ${CMAKE_CXX_FLAGS})
 
 set(EXTRA_LIBRARIES "")
@@ -627,7 +619,7 @@ ENDIF ()
 ##################################
 
 find_package(Threads REQUIRED)
-find_package(PythonLibs REQUIRED)
+find_package(Python 3.14 REQUIRED COMPONENTS Interpreter Development.Embed)
 find_package(pybind11 REQUIRED)
 find_package(OIS REQUIRED)
 find_package(OGRE REQUIRED CONFIG)
@@ -636,22 +628,22 @@ set(OGRE_PLUGIN_DIR_REL ${OGRE_PLUGIN_DIR})
 set(OGRE_PLUGIN_DIR_DBG ${OGRE_PLUGIN_DIR})
 find_package(CEGUI REQUIRED)
 if(OD_USE_SFML_WINDOW)
-    find_package(SFML 2 REQUIRED COMPONENTS Audio System Network Window Graphics)
+    find_package(SFML 3 CONFIG REQUIRED COMPONENTS Audio System Network Window Graphics)
 else()
-    find_package(SFML 2 REQUIRED COMPONENTS Audio System Network)
+    find_package(SFML 3 CONFIG REQUIRED COMPONENTS Audio System Network)
 endif()
-if("${OGRE_VERSION}" VERSION_LESS "1.9.0")
-    message(FATAL_ERROR "OGRE version >= 1.9.0 required")
+if("${OGRE_VERSION}" VERSION_LESS "14.0.0")
+    message(FATAL_ERROR "OGRE version >= 14.0.0 required")
 endif()
 
 if("${CEGUI_VERSION}" VERSION_LESS "0.8.0")
     message(FATAL_ERROR "CEGUI version >= 0.8.0 required")
 endif()
 
-if (SFML_VERSION_MAJOR LESS 2)
-    message(FATAL_ERROR "SFML version >= 2.0 required")
+if(SFML_VERSION VERSION_LESS 3.0)
+    message(FATAL_ERROR "SFML version >= 3.0 required")
 else()
-    message(STATUS "SFML include directory: ${SFML_INCLUDE_DIR}; SFML audio library: ${SFML_AUDIO_LIBRARY_DEBUG} ${SFML_AUDIO_LIBRARY_RELEASE}")
+    message(STATUS "SFML ${SFML_VERSION} config directory: ${SFML_DIR}")
 endif()
 
 #This has to cover the versions not already known by CMake
@@ -693,10 +685,8 @@ include_directories(
 
     #external packages includes
     SYSTEM ${CEGUI_INCLUDE_DIR}
-    SYSTEM ${SFML_INCLUDE_DIR}
     SYSTEM ${OGRE_INCLUDE_DIRS}
     SYSTEM ${OIS_INCLUDE_DIRS}
-	SYSTEM ${PYTHON_INCLUDE_DIRS}
 )
 
 if(WIN32)
@@ -765,9 +755,9 @@ target_link_libraries(
 
 )
 
-target_link_libraries(opendungeons-plus pybind11::embed)
+target_link_libraries(opendungeons-plus pybind11::embed Python::Python)
 
-if(MSVC AND PYTHON_DEBUG_LIBRARY AND NOT PYTHON_IS_DEBUG)
+if(MSVC AND Python_LIBRARY_DEBUG AND NOT PYTHON_IS_DEBUG)
     # Keep pybind11's headers consistent with the selected debug Python library.
     # Python's Windows header defines Py_DEBUG without a value as well.
     target_compile_definitions(${PROJECT_BINARY_NAME} PRIVATE "$<$<CONFIG:Debug>:Py_DEBUG=>")
@@ -810,7 +800,7 @@ endif()
 # Link sfml
 # No need to make a difference when release/debug is found because even
 # if only one is found, the other is set to the same value
-target_link_libraries(${PROJECT_BINARY_NAME} ${SFML_LIBRARIES})
+target_link_libraries(${PROJECT_BINARY_NAME} SFML::Audio SFML::System SFML::Network)
 
 ##################################
 #### Unit testing ################
@@ -865,11 +855,19 @@ if(WIN32)
     endif()
 endif()
 set(OD_OGRE_SHADER_RESOURCES "")
-foreach(OD_OGRE_SUBDIR RTShaderLib RTShaderLib/GLSL RTShaderLib/HLSL RTShaderLib/HLSL_Cg RTShaderLib/materials RTShaderLib/../Main)
+foreach(OD_OGRE_SUBDIR RTShaderLib RTShaderLib/materials)
     if(NOT WIN32 OR IS_DIRECTORY "${OD_OGRE_MEDIA_DIR}/${OD_OGRE_SUBDIR}")
         string(APPEND OD_OGRE_SHADER_RESOURCES "FileSystem=${OD_OGRE_MEDIA_DIR}/${OD_OGRE_SUBDIR}\n")
     endif()
 endforeach()
+if(WIN32)
+    # OGRE 14 resolves shader includes only inside the group of the program, and Main cannot be listed in a
+    # second group (its scripts would load twice), so the shared shader includes are copied into their own folder.
+    foreach(OD_OGRE_INCLUDE OgreUnifiedShader.h GLSL_GL3Support.glsl HLSL_SM4Support.hlsl DefaultShaders.metal)
+        configure_file("${OD_OGRE_MEDIA_DIR}/Main/${OD_OGRE_INCLUDE}" ${CMAKE_BINARY_DIR}/ogre-includes/${OD_OGRE_INCLUDE} COPYONLY)
+    endforeach()
+    string(APPEND OD_OGRE_SHADER_RESOURCES "FileSystem=ogre-includes\n")
+endif()
 configure_file(${CMAKE_CONFIG_DIR}/resources.cfg.in ${CMAKE_BINARY_DIR}/resources.cfg @ONLY)
 # Link icon with its full path when not installed in the /usr prefix since it might not be caught by the hicolor theme
 if(CMAKE_INSTALL_PREFIX STREQUAL "/usr")
@@ -1000,17 +998,16 @@ elseif(WIN32)
     find_file(DEPS_OGRE_RTSHADERSSYSTEM_BIN_REL NAMES "OgreRTShaderSystem.dll" "libOgreRTShaderSystem.dll" PATH_SUFFIXES "")
     find_file(DEPS_OGRE_PLUGIN_OCTREE_BIN_REL NAMES "Plugin_OctreeSceneManager.dll" "libPlugin_OctreeSceneManager.dll" PATH_SUFFIXES "")
     find_file(DEPS_OGRE_PLUGIN_PARTICLEFX_BIN_REL NAMES "Plugin_ParticleFX.dll" "libPlugin_ParticleFX.dll" PATH_SUFFIXES "")
-    find_file(DEPS_OGRE_RENDER_GL_BIN_REL NAMES "RenderSystem_GL.dll" "libRenderSystem_GL.dll" PATH_SUFFIXES "")
+    find_file(DEPS_OGRE_RENDER_GL_BIN_REL NAMES "RenderSystem_GL3Plus.dll" "libRenderSystem_GL3Plus.dll" PATH_SUFFIXES "")
     find_file(DEPS_OGRE_RENDER_D3D9_BIN_REL NAMES "RenderSystem_Direct3D9.dll" "libRenderSystem_Direct3D9.dll" PATH_SUFFIXES "")
     # SFML
-    find_file(DEPS_SFML_AUDIO_BIN_REL NAMES "sfml-audio-2.dll" PATH_SUFFIXES "")
-    find_file(DEPS_SFML_NETWORK_BIN_REL NAMES "sfml-network-2.dll" PATH_SUFFIXES "")
-    find_file(DEPS_SFML_SYSTEM_BIN_REL NAMES "sfml-system-2.dll" PATH_SUFFIXES "")
+    find_file(DEPS_SFML_AUDIO_BIN_REL NAMES "sfml-audio-3.dll" PATH_SUFFIXES "")
+    find_file(DEPS_SFML_NETWORK_BIN_REL NAMES "sfml-network-3.dll" PATH_SUFFIXES "")
+    find_file(DEPS_SFML_SYSTEM_BIN_REL NAMES "sfml-system-3.dll" PATH_SUFFIXES "")
     # Other
     find_file(DEPS_OIS_BIN_REL NAMES "OIS.dll" "libOIS.dll" PATH_SUFFIXES "")
     find_file(DEPS_FREETYPE_BIN_REL NAMES "freetype.dll" "libfreetype.dll" PATH_SUFFIXES "")
     find_file(DEPS_EXPAT_BIN_REL NAMES "expat.dll" "libexpat.dll" PATH_SUFFIXES "")
-    find_file(DEPS_OPENAL32_BIN_REL NAMES "openal32.dll" "libopenal32.dll" PATH_SUFFIXES "")
 
     set(OD_PLUGINSCFGFILE ${CMAKE_BINARY_DIR}/plugins.cfg)
 
@@ -1056,7 +1053,6 @@ elseif(WIN32)
                        ${DEPS_OIS_BIN_REL}
                        ${DEPS_FREETYPE_BIN_REL}
                        ${DEPS_EXPAT_BIN_REL}
-                       ${DEPS_OPENAL32_BIN_REL}
                        )
     # Optional renderers
     if(DEPS_OGRE_RENDER_GL_BIN_REL)

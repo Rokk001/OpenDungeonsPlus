@@ -132,7 +132,7 @@ probe = probe.replace('BED_SIZES', ','.join(f'{{"{name}",{width},{height}}}' for
 with tempfile.TemporaryDirectory(prefix='odp-room-bounds-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{repo / "source"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     result = subprocess.run([str(work / 'check.exe'), str(repo)], cwd=work, capture_output=True, text=True)

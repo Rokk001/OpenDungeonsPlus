@@ -36,7 +36,7 @@ assert 'updateCreatureIndicatorAlt(arg.key, false);' in function(game_mode, 'boo
 # The fake left Control that Windows adds to AltGr must not count as Ctrl in the SFML branch
 modifier = function(keyboard, 'bool Keyboard::isModifierDown(')
 ctrl = modifier[modifier.index('case OIS::Keyboard::Ctrl:'):modifier.index('case OIS::Keyboard::Shift:')]
-assert 'sf::Keyboard::RAlt' in ctrl, 'Ctrl must look at the right Alt key'
+assert 'sf::Keyboard::Key::RAlt' in ctrl, 'Ctrl must look at the right Alt key'
 assert re.search(r'LControl\)\s*&&\s*!rightAltDown', ctrl), 'left Control must be ignored while right Alt is down'
-assert 'sf::Keyboard::RControl' in ctrl, 'a real right Control must still count'
+assert 'sf::Keyboard::Key::RControl' in ctrl, 'a real right Control must still count'
 print('AltGr modifier check passed')

@@ -432,7 +432,7 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-ring-') as tmp:
     probe_path.write_text(probe)
     exe = Path(tmp) / 'check.exe'
     cmd = (
-        'cl /nologo /EHsc /MD /std:c++14 /I source /Fo"{}" {} /Fe"{}"'
+        'cl /nologo /EHsc /MD /std:c++17 /I source /Fo"{}" {} /Fe"{}"'
     ).format(
         str(Path(tmp) / 'check.obj'),
         str(probe_path),

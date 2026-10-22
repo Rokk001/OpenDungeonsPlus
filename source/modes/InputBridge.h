@@ -28,28 +28,33 @@ namespace OIS {
 }
 
 
-using MouseMoveEvent = sf::Event::MouseMoveEvent;
+//! \brief Mouse move event with the layout the application modes use (SFML 3 keeps the position in a vector).
+struct MouseMoveEvent
+{
+    int x;
+    int y;
+};
 
-// MouseWheelEvent is deprecated in newer versions, but MouseWheelScrollEvent does not exist prior to SFML 2.2
-#if SFML_VERSION_MINOR > 2
-using MouseWheelEvent = sf::Event::MouseWheelScrollEvent;
-#else
-using MouseWheelEvent = sf::Event::MouseWheelEvent;
-#endif
+//! \brief Mouse wheel event with the layout the application modes use (SFML 3 keeps the position in a vector).
+struct MouseWheelEvent
+{
+    sf::Mouse::Wheel wheel;
+    float delta;
+    int x;
+    int y;
+};
 
+//! \brief Converts an OIS mouse event to a mouse move event.
 inline MouseMoveEvent toSFMLMouseMove(const OIS::MouseEvent& evt)
 {
     return MouseMoveEvent{evt.state.X.abs, evt.state.Y.abs};
 }
 
+//! \brief Converts an OIS mouse event to a vertical mouse wheel event.
 inline MouseWheelEvent toSFMLMouseWheel(const OIS::MouseEvent& evt)
 {
     // TODO: Not sure if the sfml wheel event would correspond to relative or absolute state
-#if SFML_VERSION_MINOR > 2
-        return MouseWheelEvent{sf::Mouse::VerticalWheel, static_cast<float>(evt.state.Z.rel), evt.state.X.abs, evt.state.Y.abs};
-#else
-        return MouseWheelEvent{evt.state.Z.rel, evt.state.X.abs, evt.state.Y.abs};
-#endif
+    return MouseWheelEvent{sf::Mouse::Wheel::Vertical, static_cast<float>(evt.state.Z.rel), evt.state.X.abs, evt.state.Y.abs};
 }
 
 #endif // INPUTBRIDGE_H

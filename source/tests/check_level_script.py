@@ -84,7 +84,7 @@ with tempfile.TemporaryDirectory() as tmp:
 
     compiler = shutil.which('g++') or shutil.which('clang++')
     if compiler:
-        command = [compiler, '-std=c++11', '-o', str(exe)] + include + [str(s) for s in sources]
+        command = [compiler, '-std=c++17', '-o', str(exe)] + include + [str(s) for s in sources]
         subprocess.run(command, check=True)
     else:
         vcvars = find_vcvars()
@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory() as tmp:
             print('SKIP: no C++ compiler found')
             sys.exit(0)
         prefix = '' if shutil.which('cl') else 'call "%s" >nul && ' % vcvars
-        flags = '/nologo /EHsc /std:c++14 /Fe"%s" /Fo"%s/" /I"%s" /I"%s"' % (
+        flags = '/nologo /EHsc /std:c++17 /Fe"%s" /Fo"%s/" /I"%s" /I"%s"' % (
             exe, tmp.as_posix(), tmp, repo / 'source')
         line = prefix + 'cl ' + flags + ' ' + ' '.join('"%s"' % s for s in sources)
         subprocess.run(line, shell=True, check=True)

@@ -53,21 +53,24 @@ void LogManager::setModuleLevel(const char* module, LogMessageLevel level)
     mModuleLevel[module] = level;
 }
 
+//! \brief Returns how many critical messages were logged (thread-safe).
 uint32_t LogManager::getCriticalCount()
 {
-    sf::Lock locked(mLock);
+    std::lock_guard<std::mutex> locked(mLock);
     return mCriticalCount;
 }
 
+//! \brief Returns the first critical message that was logged (thread-safe).
 std::string LogManager::getFirstCritical()
 {
-    sf::Lock locked(mLock);
+    std::lock_guard<std::mutex> locked(mLock);
     return mFirstCritical;
 }
 
+//! \brief Logs a message to the sinks; guarded by a standard mutex to be thread-safe.
 void LogManager::logMessage(LogMessageLevel level, const char* filepath, int line, const std::string& message)
 {
-    sf::Lock locked(mLock);
+    std::lock_guard<std::mutex> locked(mLock);
 
     if(level == LogMessageLevel::CRITICAL)
     {

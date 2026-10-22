@@ -208,7 +208,7 @@ check("RoomTorches" not in tests_cmake, "source/tests/CMakeLists.txt still names
 
 # Crackling loop: nearest N torches, loop family from the real recording, stopped on removal / stopAll / hide
 sounds = read("source", "sound", "SoundEffectsManager.cpp")
-check("startSpatialLoop" in sounds and "stopSpatialLoop" in sounds and "setLoop(true)" in sounds,
+check("startSpatialLoop" in sounds and "stopSpatialLoop" in sounds and "setLooping(true)" in sounds,
       "SoundEffectsManager has no start/stop for positioned loops")
 check(os.path.exists(os.path.join(ROOT, "sounds", "Spatial", "Rooms", "Torch", "Loop", "FxWallTorchLoop01.ogg")),
       "the torch loop recording is missing")

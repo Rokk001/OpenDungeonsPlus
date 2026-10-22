@@ -1,0 +1,74 @@
+Fix: the view space light positions are reused after the view changed, so objects are lit from wrong light positions.
+
+Description
+  OGRE 14 caches the view space light position and direction arrays (AutoParamDataSource::mLightPosViewSpaceArray
+  and mLightDirViewSpaceArray) and drops them only when the hash of the light list pointers changes
+  (setCurrentLightList). The arrays depend on the view matrix as well, but a change of the camera or of the
+  "identity view" state of the renderable (setCurrentCamera, setCurrentRenderable) does not drop them. When a
+  renderable with an identity view (for example a full screen Rectangle2D) is drawn with the same light list as the
+  following lit objects, it fills the arrays with the identity matrix and every following object with the same
+  list reads world space light positions as view space positions: lights appear far from the object, so
+  RTSS lit objects come out much darker than in OGRE 13.
+
+  The fix drops both arrays (invalidateViewSpaceLights) when the identity view state or the camera changes and
+  marks the light parameters dirty, so the next request recomputes them with the current view. It is the only
+  change.
+
+Affected OGRE file
+  OgreMain/src/OgreAutoParamDataSource.cpp, setCurrentRenderable (identity view toggle, around line 116),
+  setCurrentCamera (around line 155) and getLightPositionViewSpaceArray (around line 305), which fills the array
+  only when it is smaller than the requested size.
+
+Reproduction
+  Draw a Rectangle2D with an identity view (the default for it) in the render queue before an Entity with an RTSS
+  lit material, both getting the same light list (all nearby lights of a scene with 9 or fewer lights), then read
+  light_position_view_space_array in the fragment program of the Entity: it holds the world positions of the
+  lights instead of the view space positions. A lit object next to a point light is then lit far too weakly.
+
+diff --git a/OgreMain/include/OgreAutoParamDataSource.h b/OgreMain/include/OgreAutoParamDataSource.h
+index e529c83..9ee1bd2 100644
+--- a/OgreMain/include/OgreAutoParamDataSource.h
++++ b/OgreMain/include/OgreAutoParamDataSource.h
+@@ -156,6 +156,8 @@ namespace Ogre {
+         /** Updates the current camera */
+         void setCurrentCamera(const Camera* cam, bool useCameraRelative);
+         void setCameraArray(const std::vector<const Camera*> cameras);
++        /// Drops the cached view space light positions and directions after the view changed
++        void invalidateViewSpaceLights();
+         /** Sets the light list that should be used, and it's base index from the global list */
+         void setCurrentLightList(const LightList* ll);
+         /** Sets the current texture projector for a index */
+diff --git a/OgreMain/src/OgreAutoParamDataSource.cpp b/OgreMain/src/OgreAutoParamDataSource.cpp
+index ed34d1d..89ed67e 100644
+--- a/OgreMain/src/OgreAutoParamDataSource.cpp
++++ b/OgreMain/src/OgreAutoParamDataSource.cpp
+@@ -121,6 +121,7 @@ namespace Ogre {
+             mInverseViewMatrixDirty = true;
+             mViewProjMatrixDirty = true;
+             mGpuParamsDirty |= GPV_GLOBAL;
++            invalidateViewSpaceLights();
+         }
+ 
+         bool useIdentityProj = rend && rend->getUseIdentityProjection();
+@@ -167,12 +168,21 @@ namespace Ogre {
+         mCameraPositionDirty = true;
+         mLodCameraPositionObjectSpaceDirty = true;
+         mLodCameraPositionDirty = true;
++        invalidateViewSpaceLights();
+     }
+     void AutoParamDataSource::setCameraArray(const std::vector<const Camera*> cameras)
+     {
+         mCameraArray = cameras;
+     }
+     //-----------------------------------------------------------------------------
++    void AutoParamDataSource::invalidateViewSpaceLights()
++    {
++        // The view space light arrays are only dropped when the light list hash changes; they also depend on the view
++        mLightPosViewSpaceArray.clear();
++        mLightDirViewSpaceArray.clear();
++        mGpuParamsDirty |= GPV_LIGHTS;
++    }
++    //-----------------------------------------------------------------------------
+     void AutoParamDataSource::setCurrentLightList(const LightList* ll)
+     {
+         static LightList NULL_LIGHTS;

@@ -174,7 +174,7 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 with tempfile.TemporaryDirectory(prefix='odp-projectile-collision-') as temporary:
     work = Path(temporary)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/Od', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/Od', '/std:c++17',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe',
                     '/link', f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

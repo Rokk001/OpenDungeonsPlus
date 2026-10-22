@@ -26,6 +26,7 @@ models = sorted(set(re.findall(r'^\s*MeshName\s+(\S+)',
 probe = r'''
 #include <Ogre.h>
 #include <OgreDefaultHardwareBufferManager.h>
+#include <OgreScriptCompiler.h>
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -144,7 +145,7 @@ int main(int argc,char** argv){try{
  Ogre::MaterialManager::getSingleton().create("CorpseFlies","Graphics");
  std::ifstream stream(std::string(argv[1])+"/particles/CorpseDecay.particle");
  Ogre::DataStreamPtr data(new Ogre::FileStreamDataStream("CorpseDecay.particle",&stream,false));
- Ogre::ParticleSystemManager::getSingleton().parseScript(data,"Graphics");
+ Ogre::ScriptCompilerManager::getSingleton().parseScript(data,"Graphics");
  Ogre::ParticleSystem* effect=scene->createParticleSystem("corpse","CorpseDecay");
  check(effect->getParticleQuota()==24,"fly count is bounded");
  check(effect->getNumEmitters()==1&&effect->getNumAffectors()==1,"fly script parses with emitter and movement affector");
@@ -166,7 +167,7 @@ probe = probe.replace('MODELS', ','.join('"' + model + '"' for model in models))
 with tempfile.TemporaryDirectory(prefix='odp-crypt-decay-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work,

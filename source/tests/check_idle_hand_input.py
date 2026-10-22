@@ -105,5 +105,5 @@ int main(){
 with tempfile.TemporaryDirectory(prefix='od-idle-hand-') as temporary:
     out = Path(temporary)
     (out / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++14', 'check.cpp', '/Fe:check.exe'], cwd=out, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', 'check.cpp', '/Fe:check.exe'], cwd=out, check=True)
     subprocess.run([str(out / 'check.exe')], cwd=out, check=True)

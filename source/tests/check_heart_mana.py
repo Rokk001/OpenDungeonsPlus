@@ -444,5 +444,5 @@ print('WIRING OK: redemption on the server drop, per second mana on the HUD, tra
 with tempfile.TemporaryDirectory(prefix='odp-heart-mana-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

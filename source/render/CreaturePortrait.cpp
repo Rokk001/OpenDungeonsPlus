@@ -155,9 +155,8 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
 
     Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
     unsigned short src = 0;
-    unsigned short dest = 0;
-    if(!mesh->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
-        mesh->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+    if(!mesh->suggestTangentVectorBuildParams(src))
+        mesh->buildTangentVectors(src);
     Ogre::Entity* entity = scene->createEntity(mesh);
     scene->getRootSceneNode()->createChildSceneNode()->attachObject(entity);
     if(entity->hasAnimationState("Idle"))
@@ -182,7 +181,11 @@ Ogre::TexturePtr createCreaturePortrait(const std::string& meshName, const std::
                 Ogre::GpuProgramParametersSharedPtr parameters = pass->getFragmentProgramParameters();
                 if(parameters->hasNamedParameters() &&
                     parameters->getConstantDefinitions().map.count("shadowingEnabled") != 0)
-                    parameters->setNamedConstant("shadowingEnabled", false);
+                {
+                    // OGRE 14 rejects an int overload for a bool uniform, so the value goes in as a one element array
+                    const int shadowingDisabled = 0;
+                    parameters->setNamedConstant("shadowingEnabled", &shadowingDisabled, 1, 1);
+                }
             }
         }
         subEntity->setMaterial(material);

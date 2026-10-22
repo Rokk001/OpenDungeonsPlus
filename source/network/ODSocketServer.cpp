@@ -36,24 +36,24 @@ ODSocketServer::~ODSocketServer()
         stopServer();
 }
 
+//! \brief Starts listening on the given port and launches the server thread.
 bool ODSocketServer::createServer(int listeningPort)
 {
     mIsConnected = false;
 
     // As we use selector, there is no need to set the socket as not-blocking
     sf::Socket::Status status = mSockListener.listen(listeningPort);
-    if (status != sf::Socket::Done)
+    if (status != sf::Socket::Status::Done)
     {
         OD_LOG_ERR("Could not listen to server port status="
-            + Helper::toString(status));
+            + Helper::toString(static_cast<int>(status)));
         return false;
     }
 
     mSockSelector.add(mSockListener);
     mIsConnected = true;
     OD_LOG_INF("Server connected and listening");
-    mThread = new sf::Thread(&ODSocketServer::serverThread, this);
-    mThread->launch();
+    mThread = new std::thread(&ODSocketServer::serverThread, this);
 
     return true;
 }
@@ -130,11 +130,17 @@ void ODSocketServer::requestStop()
     mIsConnected = false;
 }
 
+//! \brief Stops the server: joins the server thread, closes the sockets and drops all clients.
 void ODSocketServer::stopServer()
 {
     requestStop();
     if(mThread != nullptr)
-        delete mThread; // Delete waits for the thread to finish
+    {
+        // Wait for the thread to finish before deleting it
+        if(mThread->joinable())
+            mThread->join();
+        delete mThread;
+    }
     mThread = nullptr;
     mSockSelector.clear();
     mSockListener.close();

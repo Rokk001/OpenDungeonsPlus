@@ -35,9 +35,13 @@ material DungeonHeartHealthy
                 colour_op add
             }
 
-            rtshader_system
+            texture_unit
             {
-                lighting_stage normal_map DungeonHeartHealthyNormal.png tangent_space
+                texture DungeonHeartHealthyNormal.png
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -70,9 +74,13 @@ material DungeonHeartDamaged
                 colour_op add
             }
 
-            rtshader_system
+            texture_unit
             {
-                lighting_stage normal_map DungeonHeartDamagedNormal.png tangent_space
+                texture DungeonHeartDamagedNormal.png
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }
@@ -105,9 +113,13 @@ material DungeonHeartCritical
                 colour_op add
             }
 
-            rtshader_system
+            texture_unit
             {
-                lighting_stage normal_map DungeonHeartCriticalNormal.png tangent_space
+                texture DungeonHeartCriticalNormal.png
+                rtshader_system
+                {
+                    normal_map tangent_space
+                }
             }
         }
     }

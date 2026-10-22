@@ -621,5 +621,5 @@ probe = configure_heart_probe(probe)
 with tempfile.TemporaryDirectory(prefix='odp-heart-ring-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     run([str(work / 'check.exe')], work)

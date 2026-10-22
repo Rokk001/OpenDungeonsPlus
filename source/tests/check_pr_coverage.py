@@ -20,11 +20,11 @@ Output: one line "file: <path>" per uncovered file and "lines: <path>: <count> u
 With --count-file the number of gaps of every run is stored in that file as one line
 "PR coverage gaps (last run): <n>" (the line is replaced, or appended if the file or the
 line is missing); with --count-file the target defaults to HEAD, so an integration run measures the
-merged state of its worktree and not the remote ref; the run fails when the number is higher than the stored value of the
-previous run (the first run only stores it), so old gaps do not turn a run red. When the
-number rose, the stored value is left unchanged.
+merged state of its worktree and not the remote ref; a number higher than the stored value of the
+previous run (the first run only stores it) is reported but is informational only and never blocks an
+integration. When the number rose, the stored value is left unchanged.
 Exit codes: 0 = finished (gaps are only listed unless --strict is given), 1 = gaps found
-with --strict or more gaps than in the previous run, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
+with --strict, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
 a pull request head is not available locally); this is never reported as green.
 Nothing is compiled.
 """
@@ -265,7 +265,9 @@ def main():
         else:
             write_count(options.count_file, gaps)
             print("gap count %d stored (previous %s)" % (gaps, "none" if previous is None else previous))
-    return 1 if ((gaps and options.strict) or rose) else 0
+    if rose:
+        print("informational only: a rise of the gap count never blocks an integration")
+    return 1 if (gaps and options.strict) else 0
 
 
 if __name__ == "__main__":

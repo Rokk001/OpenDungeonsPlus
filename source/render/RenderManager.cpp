@@ -107,7 +107,6 @@
 #include <Overlay/OgreOverlaySystem.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <RTShaderSystem/OgreShaderRenderState.h>
-#include <RTShaderSystem/OgreShaderExIntegratedPSSM3.h>
 
 #include <algorithm>
 #include <sstream>
@@ -1580,8 +1579,13 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     mCreatureTextOverlayDisplayed(false),
     mHandKeeperHandVisibility(0)
 {
-  
-  
+
+
+#if OGRE_VERSION > 0x10A00
+    // OGRE 14 sorts the lights only once per frame by default. The world shaders (Room, Claimed, ...) read
+    // the nearest lights of each object, so the lights have to be sorted per object as in OGRE 13.
+    Ogre::SceneManager::usePerRenderableLights(true);
+#endif
     mSceneManager = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "SceneManager");
     mShaderGenerator = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
 
@@ -1682,7 +1686,9 @@ static void setShadowingEnabledParameters(bool enabled)
                             if(pass->getTextureUnitState(unit)->getContentType() == Ogre::TextureUnitState::CONTENT_SHADOW)
                                 hasShadowTexture = true;
                         }
-                        parameters->setNamedConstant("shadowingEnabled", enabled && hasShadowTexture);
+                        // OGRE 14 rejects an int overload for a bool uniform, so the value goes in as a one element array
+                        const int shadowingValue = (enabled && hasShadowTexture) ? 1 : 0;
+                        parameters->setNamedConstant("shadowingEnabled", &shadowingValue, 1, 1);
                     }
                 }
             }
@@ -2230,10 +2236,10 @@ Ogre::Entity* RenderManager::addEntityMenu(const std::string& meshName, const st
 
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
 
-    unsigned short src, dest;
-    if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    unsigned short src;
+    if (!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     } 
 
     Ogre::Entity* ent = mSceneManager->createEntity(entityName, meshPtr);
@@ -3322,10 +3328,10 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     if(!Ogre::MeshManager::getSingleton().resourceExists(meshName,"Graphics"))
         Ogre::MeshManager::getSingleton().load(meshName,"Graphics");
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
-    unsigned short src, dest;
-    if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    unsigned short src;
+    if (!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     } 
 
 
@@ -3500,11 +3506,11 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     
                 
                 Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
-                unsigned short src, dest;
+                unsigned short src;
     
-                if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+                if (!meshPtr->suggestTangentVectorBuildParams(src))
                 {
-                    meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+                    meshPtr->buildTangentVectors(src);
                 }               
                 std::string customMeshNodeName = bridgeMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node";
                 Ogre::SceneNode* customMeshNode;
@@ -3782,15 +3788,15 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     
 
         Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName + ".mesh","Graphics");
-        unsigned short src, dest;
+        unsigned short src;
 
         // Meshes without texture coordinates (like the dungeon heart, which only uses
         // plain colour materials) cannot get tangents; Ogre throws for them.
         try
         {
-            if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+            if (!meshPtr->suggestTangentVectorBuildParams(src))
             {
-                meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+                meshPtr->buildTangentVectors(src);
             }
         }
         catch(const Ogre::ItemIdentityException&)
@@ -3964,11 +3970,11 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     
 
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName,"Graphics");
-    unsigned short src, dest;
+    unsigned short src;
     
-    if (!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    if (!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     }    
     std::string creatureName = curCreature->getOgreNamePrefix() + curCreature->getName();
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
@@ -4026,10 +4032,10 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
         Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
 
     Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(meshName, "Graphics");
-    unsigned short src, dest;
-    if(!meshPtr->suggestTangentVectorBuildParams(Ogre::VES_TANGENT, src, dest))
+    unsigned short src;
+    if(!meshPtr->suggestTangentVectorBuildParams(src))
     {
-        meshPtr->buildTangentVectors(Ogre::VES_TANGENT, src, dest);
+        meshPtr->buildTangentVectors(src);
     }
 
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);

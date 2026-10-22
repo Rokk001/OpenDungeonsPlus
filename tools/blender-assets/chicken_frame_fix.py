@@ -111,7 +111,8 @@ def all_translations(root, clip):
 
 
 def structure(root):
-    bones = [(b.get("id"), b.get("name")) for b in root.find("bones").findall("bone")]
+    # OGRE 14 writes no id attribute; the bone index is then the order in the file.
+    bones = [(b.get("id", str(index)), b.get("name")) for index, b in enumerate(root.find("bones").findall("bone"))]
     hier = [(h.get("bone"), h.get("parent")) for h in root.find("bonehierarchy").findall("boneparent")]
     clips = sorted(a.get("name") for a in root.find("animations").findall("animation"))
     return bones, hier, clips

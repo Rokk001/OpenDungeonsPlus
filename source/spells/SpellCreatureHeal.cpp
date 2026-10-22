@@ -35,6 +35,7 @@
 #include "game/SkillType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Random.h"
 
 const std::string SpellCreatureHealName = "creatureHeal";
 const std::string SpellCreatureHealNameDisplay = "Creature heal";
@@ -108,7 +109,7 @@ void SpellCreatureHeal::checkSpellCast(GameMap* gameMap, const InputManager& inp
 
     // Preview must not consume random numbers or change which creatures a later click affects.
     if(inputManager.mCommandState == InputCommandState::validated)
-        std::random_shuffle(targets.begin(), targets.end());
+        Random::shuffle(targets.begin(), targets.end());
     std::vector<Creature*> creatures;
     for(GameEntity* target : targets)
     {

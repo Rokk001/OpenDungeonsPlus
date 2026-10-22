@@ -156,6 +156,6 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
 with tempfile.TemporaryDirectory(prefix='odp-levels-') as directory:
     work = Path(directory)
     (work / 'probe.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'probe.exe')], cwd=work, check=True)
 print(f'XP_TABLE_CHECKS={checks} SPECIES={len(cases)}')

@@ -69,7 +69,7 @@ int main(){int checks=0,failures=0;const std::function<void(bool,const char*)> c
 with tempfile.TemporaryDirectory(prefix='odp-work-route-dispatch-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     if args.compile_only:

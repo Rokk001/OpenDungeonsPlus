@@ -40,7 +40,7 @@ try {
     # Normalize the environment key for hidden child processes on Windows.
     [Environment]::SetEnvironmentVariable('PATH', $null, 'Process')
     [Environment]::SetEnvironmentVariable('Path', "$taskPrefix\bin;$taskPrefix\lib;$taskOriginalPath", 'Process')
-    & cl.exe /nologo /EHsc /MD /std:c++14 "/I$taskPrefix\include\OGRE" `
+    & cl.exe /nologo /EHsc /MD /std:c++17 "/I$taskPrefix\include\OGRE" `
         "/I$taskPrefix\include\OGRE\RTShaderSystem" "/I$taskPrefix\include\cegui-0" `
         "/I$taskProjectRoot\source" "$taskProjectRoot\tools\portraits\portrait-export.cpp" `
         "$taskProjectRoot\source\render\CreaturePortrait.cpp" /Feportrait-export.exe `

@@ -135,7 +135,7 @@ public:
     bool frameStarted(const Ogre::FrameEvent& evt) override;
     
     //! \brief From Ogre::RenderQueueListener
-    void renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& invocation,
+    void renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& cameraName,
         bool& skipThisInvocation) override;
 
     //! \brief Exit the game.

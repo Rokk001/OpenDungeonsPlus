@@ -3312,11 +3312,12 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
     return true;
 }
 
+//! \brief Accepts a new client connection; returns nullptr if accepting fails or the server state does not allow it.
 ODSocketClient* ODServer::notifyNewConnection(sf::TcpListener& sockListener)
 {
     ODSocketClient* newClient = new ODSocketClient;
     sf::Socket::Status status = sockListener.accept(newClient->getSockClient());
-    if (status != sf::Socket::Done)
+    if (status != sf::Socket::Status::Done)
     {
         OD_LOG_ERR("Error while listening to socket status=" + Helper::toString(static_cast<uint32_t>(status)));
         delete newClient;
@@ -3475,13 +3476,15 @@ ODSocketClient* ODServer::getClientFromPlayerId(int32_t playerId)
     return nullptr;
 }
 
+//! \brief Waits (joins the server thread) until the game ends; false if the server is not launched.
 bool ODServer::waitEndGame()
 {
     // If the server is not launched, we don't allow to wait for end of game
     if(mServerState == ServerState::StateNone)
         return false;
 
-    mThread->wait();
+    if(mThread->joinable())
+        mThread->join();
     return true;
 }
 
