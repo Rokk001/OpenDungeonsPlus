@@ -61,11 +61,13 @@ probe = r'''
 #include <iostream>
 #include <map>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 #define OD_LOG_INF(x) ((void)0)
 #define OD_LOG_ERR(x) ((void)0)
 #define OD_ASSERT_TRUE(x) do {if(!(x)) return false;} while(0)
+namespace Random {template<typename RandomIt> void shuffle(RandomIt first,RandomIt last){static std::mt19937 generator(1);std::shuffle(first,last,generator);}}
 namespace Helper {std::string toString(int value){return std::to_string(value);} template<class T> std::string toString(T value){std::ostringstream s;s<<value;return s.str();}}
 class ConfigManager {
 public:
@@ -264,7 +266,7 @@ with tempfile.TemporaryDirectory(prefix="research-progression-") as directory:
     cpp.write_text(probe, encoding="utf-8")
     executable = work / "check.exe"
     subprocess.run([
-        "cl", "/nologo", "/EHsc", "/MD", "/std:c++14",
+        "cl", "/nologo", "/EHsc", "/MD", "/std:c++17",
         f"/I{root / 'source'}", f"/I{prefix / 'include'}", f"/I{prefix / 'include/OGRE'}",
         str(cpp), str(root / "source/network/ODPacket.cpp"), str(root / "source/game/SkillType.cpp"), str(root / "source/utils/NameAliases.cpp"),
         f"/Fe:{executable}", "/link", f"/LIBPATH:{prefix / 'lib'}",

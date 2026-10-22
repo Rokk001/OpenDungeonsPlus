@@ -156,7 +156,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
 with tempfile.TemporaryDirectory(prefix='odp-progress-') as directory:
     work = Path(directory)
     (work / 'probe.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}',
                     f'/I{prefix / "include"}', f'/I{prefix / "include/OGRE"}', 'probe.cpp',
                     str(root / 'source/network/ODPacket.cpp'), '/Feprobe.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'sfml-network.lib', 'sfml-system.lib', 'OgreMain.lib'], cwd=work, check=True)

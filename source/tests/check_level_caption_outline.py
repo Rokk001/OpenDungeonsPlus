@@ -15,6 +15,7 @@ source = source.replace('#include "utils/Helper.h"', '').replace('#include "util
 probe = r'''
 #include <Ogre.h>
 #include <Overlay/OgreOverlaySystem.h>
+#include <functional>
 #include <iostream>
 #include <sstream>
 namespace Helper {template<class T>std::string toString(T v){std::ostringstream s;s<<v;return s.str();}}
@@ -39,6 +40,12 @@ int main(int argc,char** argv){try{
  groups.addResourceLocation(std::string(argv[1])+"/gui/fonts","FileSystem","GUI");groups.initialiseResourceGroup("GUI");
  auto& manager=Ogre::OverlayManager::getSingleton();int checks=0,failures=0;
  auto check=[&](bool ok,const char* label){++checks;if(!ok){++failures;std::cout<<"FAIL "<<label<<'\n';}};
+ std::function<bool(Ogre::OverlayElement*,Ogre::OverlayElement*)> drawsBehind=[&](Ogre::OverlayElement* back,Ogre::OverlayElement* front){
+  if(back->getZOrder()!=front->getZOrder())return back->getZOrder()<front->getZOrder();
+  const Ogre::OverlayContainer::ChildMap& children=static_cast<Ogre::OverlayContainer*>(front->getParent())->getChildren();
+  for(Ogre::OverlayContainer::ChildMap::const_iterator it=children.begin();it!=children.end();++it){
+   if(it->second==back)return true;if(it->second==front)return false;}
+  return false;};
  {
   MovableTextOverlay label("OutlineProbe",object,camera);
   auto id=label.createChildOverlay("MedievalSharp",32,Ogre::ColourValue(1,.91f,.66f),"");
@@ -55,7 +62,9 @@ int main(int argc,char** argv){try{
     check(edge->getParameter("char_height")==main->getParameter("char_height"),"one- and two-digit sizes stay synchronized");
     const float dx=i==0?-.75f:i==1?.75f:0,dy=i==2?-.75f:i==3?.75f:0;
     check(std::abs(edge->getLeft()-main->getLeft()-dx)<.0001f&&std::abs(edge->getTop()-main->getTop()-dy)<.0001f,"outline stays subpixel-centred around glyph");
-    check(edge->getZOrder()<main->getZOrder(),"outline renders behind the light foreground");
+    // OGRE 14 gives all children of a container the same Z-order and queues them in container order (stable sort), so
+    // an element is drawn behind another when its Z-order is lower or equal with an earlier position in the container.
+    check(drawsBehind(edge,main),"outline renders behind the light foreground");
    }
   }
   auto mood=label.createChildOverlay("MedievalSharp",16,Ogre::ColourValue::White,"",false);

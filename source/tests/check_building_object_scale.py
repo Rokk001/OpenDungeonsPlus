@@ -44,7 +44,7 @@ int main(){try{
 with tempfile.TemporaryDirectory(prefix='odp-building-scale-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{repo / "source"}', f'/I{prefix / "include"}', f'/I{prefix / "include/OGRE"}',
                     'check.cpp', str(repo / 'source/network/ODPacket.cpp'), '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'sfml-network.lib', 'sfml-system.lib'], cwd=work, check=True)
