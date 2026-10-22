@@ -1144,8 +1144,13 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     mCreatureTextOverlayDisplayed(false),
     mHandKeeperHandVisibility(0)
 {
-  
-  
+
+
+#if OGRE_VERSION > 0x10A00
+    // OGRE 14 sorts the lights only once per frame by default. The world shaders (Room, Claimed, ...) read
+    // the nearest lights of each object, so the lights have to be sorted per object as in OGRE 13.
+    Ogre::SceneManager::usePerRenderableLights(true);
+#endif
     mSceneManager = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "SceneManager");
     mShaderGenerator = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
 
