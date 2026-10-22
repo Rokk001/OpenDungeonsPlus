@@ -43,6 +43,12 @@ const std::string ConfigManager::DEFAULT_KEEPER_VOICE = "Default";
 //! \brief Default extra mana per second for each claimed mana well tile; global.cfg can override it.
 static const double DEFAULT_MANA_WELL_BONUS_PER_TILE = 10.0;
 
+//! \brief Defaults used when global.cfg does not set the gold keys; the values in global.cfg are the real ones.
+static const double DEFAULT_GOLD_PER_SEAM_TILE = 3000.0;
+static const double DEFAULT_GOLD_PER_DIG_STEP = 25.0;
+static const double DEFAULT_GEM_GOLD_PER_DIG_STEP = 16.67;
+static const double DEFAULT_WORKER_CHEER_GOLD_SHARE = 0.35;
+
 const double ConfigManager::AttackTurnSpeedMin = 90.0;
 const double ConfigManager::AttackTurnSpeedMax = 1440.0;
 const double ConfigManager::AttackTurnMaxDelayMin = 0.0;
@@ -120,8 +126,10 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mManaWellBonusPerTile(DEFAULT_MANA_WELL_BONUS_PER_TILE),
     mBedStepMaxHeight(0.09),
     mClaimingWallPenalty(0.8),
-    mDigCoefGold(5.0),
-    mDigCoefGem(1.0),
+    mGoldPerSeamTile(DEFAULT_GOLD_PER_SEAM_TILE),
+    mGoldPerDigStep(DEFAULT_GOLD_PER_DIG_STEP),
+    mGemGoldPerDigStep(DEFAULT_GEM_GOLD_PER_DIG_STEP),
+    mWorkerCheerGoldShare(DEFAULT_WORKER_CHEER_GOLD_SHARE),
     mDigCoefClaimedWall(0.5),
     mNbTurnsKoCreatureAttacked(10),
     mCreatureDefinitionDefaultWorker(nullptr),
@@ -801,17 +809,31 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
-        if(nextParam == "DigCoefGold")
+        if(nextParam == "GoldPerSeamTile")
         {
             configFile >> nextParam;
-            mDigCoefGold = Helper::toDouble(nextParam);
+            mGoldPerSeamTile = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
-        if(nextParam == "DigCoefGem")
+        if(nextParam == "GoldPerDigStep")
         {
             configFile >> nextParam;
-            mDigCoefGem = Helper::toDouble(nextParam);
+            mGoldPerDigStep = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "GemGoldPerDigStep")
+        {
+            configFile >> nextParam;
+            mGemGoldPerDigStep = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "WorkerCheerGoldShare")
+        {
+            configFile >> nextParam;
+            mWorkerCheerGoldShare = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
