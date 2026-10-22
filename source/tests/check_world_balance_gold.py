@@ -3,8 +3,8 @@
 format, editor, look of the densities. Static text checks of the sources plus the texture generator check; no game
 start and no build needed.
 
-Package A of the gold balance covers everything below. The gold density rebalance of the levels (a later package)
-extends this file with its own section.
+The first sections cover the gold system code; the last section runs the gold density rebalance tool of the levels
+(--check against its base commit) and compares its per-level summary with the expected table.
 """
 from pathlib import Path
 import re
@@ -265,4 +265,84 @@ status = subprocess.run(['git', '--no-pager', 'status', '--porcelain', '--', 'ma
                         stdout=subprocess.PIPE, universal_newlines=True)
 assert 'materials/textures/Gold.png' not in status.stdout        # the check wrote nothing into the repository folder
 
-print('Gold balance (package A): config, density, mining, fractions, capacity, format, network, editor, look passed')
+# ---------------------------------------------------------------------------------------------------------------------
+# Gold in the levels (9): the tool recomputes every level at its base commit and compares the gold lines with the files
+# ---------------------------------------------------------------------------------------------------------------------
+# Expected result per level of the density rebalance: seats, gold tiles before, gold per seat after,
+# tiles per density 50/100/150, gold tiles added.
+EXPECTED_LEVELS = {
+    'levels/campaign/Ashcombe.level': ('1', '136', '406500', '46/45/45', '0'),
+    'levels/campaign/Bellwick.level': ('2', '129', '301500', '0/0/134', '5'),
+    'levels/campaign/Bonus1.level': ('4', '198', '300375', '0/0/267', '69'),
+    'levels/campaign/BoulderCourse.level': ('1', '188', '562500', '63/63/62', '0'),
+    'levels/campaign/Brackenford.level': ('1', '43', '301500', '0/0/67', '24'),
+    'levels/campaign/Campaign1.level': ('2', '519', '778500', '173/173/173', '0'),
+    'levels/campaign/Campaign2.level': ('2', '651', '976500', '217/217/217', '0'),
+    'levels/campaign/Campaign3.level': ('2', '2386', '3578250', '796/795/795', '0'),
+    'levels/campaign/Cinderhollow.level': ('2', '145', '300000', '0/35/110', '0'),
+    'levels/campaign/Coldwell.level': ('1', '72', '300000', '0/16/56', '0'),
+    'levels/campaign/CrowshotGallery.level': ('1', '36', '301500', '0/0/67', '31'),
+    'levels/campaign/Dunmarrow.level': ('1', '70', '300000', '0/10/60', '0'),
+    'levels/campaign/Ebonrook.level': ('1', '187', '559500', '63/62/62', '0'),
+    'levels/campaign/Goldspire.level': ('1', '110', '328500', '37/37/36', '0'),
+    'levels/campaign/Greywater.level': ('2', '116', '301500', '0/0/134', '18'),
+    'levels/campaign/Highcairn.level': ('1', '114', '342000', '38/38/38', '0'),
+    'levels/campaign/HollinFen.level': ('1', '120', '360000', '40/40/40', '0'),
+    'levels/campaign/HollowmarkCitadel.level': ('1', '113', '337500', '38/38/37', '0'),
+    'levels/campaign/Ironbridge.level': ('2', '116', '301500', '0/0/134', '18'),
+    'levels/campaign/Kingsfall.level': ('1', '72', '300000', '0/16/56', '0'),
+    'levels/campaign/Lanternhill.level': ('2', '111', '301500', '0/0/134', '23'),
+    'levels/campaign/Mirewatch.level': ('1', '225', '675000', '75/75/75', '0'),
+    'levels/campaign/Mossgate.level': ('1', '34', '301500', '0/0/67', '33'),
+    'levels/campaign/Ravensledge.level': ('1', '116', '346500', '39/39/38', '0'),
+    'levels/campaign/Saltmere.level': ('2', '104', '301500', '0/0/134', '30'),
+    'levels/campaign/Silverdeep.level': ('4', '169', '300375', '0/0/267', '98'),
+    'levels/campaign/SkittleCavern.level': ('1', '53', '301500', '0/0/67', '14'),
+    'levels/campaign/Stormhaven.level': ('5', '201', '300600', '0/0/334', '133'),
+    'levels/campaign/SwarmNight.level': ('2', '48', '301500', '0/0/134', '86'),
+    'levels/campaign/Thornreach.level': ('5', '193', '300600', '0/0/334', '141'),
+    'levels/campaign/Tinmoor.level': ('1', '138', '414000', '46/46/46', '0'),
+    'levels/campaign/TwistingHalls.level': ('1', '28', '301500', '0/0/67', '39'),
+    'levels/campaign/VarnsCrossing.level': ('3', '236', '300000', '0/108/128', '0'),
+    'levels/campaign/Wolfscar.level': ('5', '187', '300600', '0/0/334', '147'),
+    'levels/campaign/Wraithwood.level': ('3', '134', '300000', '0/0/200', '66'),
+    'levels/multiplayer/Angel.level': ('4', '2736', '2052000', '912/912/912', '0'),
+    'levels/multiplayer/GreedOrMight.level': ('3', '196', '300000', '0/0/200', '4'),
+    'levels/multiplayer/RuinsOfTheConfluent.level': ('4', '171', '300375', '0/0/267', '96'),
+    'levels/multiplayer/ScreamInTheDark.level': ('5', '372', '300000', '0/116/256', '0'),
+    'levels/multiplayer/TheBridge.level': ('2', '255', '382500', '85/85/85', '0'),
+    'levels/skirmish/Barrackdeep.level': ('1', '75', '300000', '0/25/50', '0'),
+    'levels/skirmish/DuelToDeath.level': ('2', '2386', '3578250', '796/795/795', '0'),
+    'levels/skirmish/Embervault.level': ('1', '79', '300000', '0/37/42', '0'),
+    'levels/skirmish/FallingKeeper.level': ('2', '519', '778500', '173/173/173', '0'),
+    'levels/skirmish/ForgottenTreasures.level': ('2', '651', '976500', '217/217/217', '0'),
+    'levels/skirmish/FourThrones.level': ('4', '384', '300000', '96/160/128', '0'),
+    'levels/skirmish/Gloomkeep.level': ('1', '171', '513000', '57/57/57', '0'),
+    'levels/skirmish/GrandDelve.level': ('1', '74', '300000', '0/22/52', '0'),
+    'levels/skirmish/Lanternreach.level': ('1', '135', '405000', '45/45/45', '0'),
+    'levels/skirmish/Quietcrag.level': ('1', '87', '300000', '3/55/29', '0'),
+    'levels/skirmish/Splitstone.level': ('1', '157', '469500', '53/52/52', '0'),
+    'levels/skirmish/StoneKeep.level': ('3', '698', '697500', '233/233/232', '0'),
+    'levels/skirmish/TriadDeeps.level': ('3', '552', '552000', '184/184/184', '0'),
+    'levels/skirmish/TwinDelve.level': ('2', '124', '301500', '0/0/134', '10'),
+    'levels/skirmish/Wyrmhollow.level': ('1', '508', '1522500', '170/169/169', '0'),
+}
+
+tool = read('tools/balance/rebalance_gold_density.py')
+assert re.search(r'^BASE_COMMIT = "[0-9a-f]{40}"$', tool, re.M)
+assert 'GOLD_TARGET_PER_KEEPER_SEAT = 300000' in tool
+result = subprocess.run([sys.executable, str(ROOT / 'tools' / 'balance' / 'rebalance_gold_density.py'), '--check'],
+                        cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,
+                        timeout=TIMEOUT_SECONDS)
+assert result.returncode == 0, result.stdout
+assert 'MISMATCH' not in result.stdout, result.stdout
+found_levels = {}
+for line in result.stdout.splitlines():
+    fields = [field.strip() for field in line.split('|')]
+    if len(fields) == 6:
+        found_levels[fields[0]] = tuple(fields[1:])
+assert sorted(found_levels) == sorted(EXPECTED_LEVELS), sorted(set(found_levels) ^ set(EXPECTED_LEVELS))
+for level_name, expected in EXPECTED_LEVELS.items():
+    assert found_levels[level_name] == expected, (level_name, found_levels[level_name], expected)
+
+print('Gold balance: config, density, mining, fractions, capacity, format, network, editor, look, levels passed')

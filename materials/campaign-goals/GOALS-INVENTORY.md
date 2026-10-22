@@ -61,14 +61,14 @@ File: `levels/campaign/Bellwick.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3814 | `Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.` | yes |
-| Advisory hint line 3815 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
-| Script line 3816 | `Action	objectiveid	1	bellwick-o03	Survive until both north gates open.` | yes |
-| Script line 3826 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
-| Script line 3950 | `Action	win	1` | yes |
-| Script line 3955 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3957 | `Action	win	1` | yes |
-| Script line 4039 | `Action	win	1` | yes |
+| Script line 3819 | `Action	objectiveid	1	bellwick-o01	Destroy the keeper's heart in the north undercroft.` | yes |
+| Advisory hint line 3820 | `Action	hint	1	Hold the nave against the faithful.` | not an objective; no state required |
+| Script line 3821 | `Action	objectiveid	1	bellwick-o03	Survive until both north gates open.` | yes |
+| Script line 3831 | `Action	objectiveid	1	bellwick-o04	Reach the transept through the nave.` | yes |
+| Script line 3955 | `Action	win	1` | yes |
+| Script line 3960 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3962 | `Action	win	1` | yes |
+| Script line 4044 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -207,13 +207,13 @@ File: `levels/campaign/Brackenford.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1362 | `Action	objectiveid	1	brackenford-o01	Kill Elsa Brack and take her keep.` | yes |
-| Script line 1363 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
-| Script line 1370 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
-| Script line 1379 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
-| Script line 1389 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
-| Script line 1463 | `Action	objectiveid	1	brackenford-o06	Enter the keep and kill Elsa Brack.` | yes |
-| Script line 1487 | `Action	win	1` | yes |
+| Script line 1386 | `Action	objectiveid	1	brackenford-o01	Kill Elsa Brack and take her keep.` | yes |
+| Script line 1387 | `Action	objectiveid	1	brackenford-o02	Build a dormitory.` | yes |
+| Script line 1394 | `Action	objectiveid	1	brackenford-o03	Build a hatchery.` | yes |
+| Script line 1403 | `Action	objectiveid	1	brackenford-o04	Claim the fern grove.` | yes |
+| Script line 1413 | `Action	objectiveid	1	brackenford-o05	Cross the ford and clear the landing yard.` | yes |
+| Script line 1487 | `Action	objectiveid	1	brackenford-o06	Enter the keep and kill Elsa Brack.` | yes |
+| Script line 1511 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -468,8 +468,8 @@ File: `levels/campaign/CrowshotGallery.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 945 | `Action	objectiveid	1	crowshotgallery-o01	Shoot every hornet before time runs out.` | yes |
-| Script line 1023 | `Action	win	1` | yes |
+| Script line 976 | `Action	objectiveid	1	crowshotgallery-o01	Shoot every hornet before time runs out.` | yes |
+| Script line 1054 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -677,11 +677,11 @@ File: `levels/campaign/Greywater.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 2939 | `Action	objectiveid	1	greywater-o01	Kill Corwin Gray in the northern river hall.` | yes |
-| Script line 2940 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
-| Script line 2941 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
-| Script line 2966 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
-| Script line 3052 | `Action	win	1` | yes |
+| Script line 2957 | `Action	objectiveid	1	greywater-o01	Kill Corwin Gray in the northern river hall.` | yes |
+| Script line 2958 | `Action	objectiveid	1	greywater-o02	Mine 600 gold from the cave walls.` | yes |
+| Script line 2959 | `Action	objectiveid	1	greywater-o03	Protect your heart.` | yes |
+| Script line 2984 | `Action	objectiveid	1	greywater-o04	Cross the river to the besieged dungeon.` | yes |
+| Script line 3070 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -875,13 +875,13 @@ File: `levels/campaign/Ironbridge.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4236 | `Action	objectiveid	1	ironbridge-o01	Destroy the heart in the north-east hold.` | yes |
-| Script line 4237 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
-| Script line 4254 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
-| Script line 4275 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
-| Script line 4541 | `Action	win	1` | yes |
-| Script line 4547 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4562 | `Action	win	1` | yes |
+| Script line 4254 | `Action	objectiveid	1	ironbridge-o01	Destroy the heart in the north-east hold.` | yes |
+| Script line 4255 | `Action	objectiveid	1	ironbridge-o02	Cross all three rifts by their bridges.` | yes |
+| Script line 4272 | `Action	objectiveid	1	ironbridge-o03	Cross the second rift.` | yes |
+| Script line 4293 | `Action	objectiveid	1	ironbridge-o04	Break through the rival hold's gate.` | yes |
+| Script line 4559 | `Action	win	1` | yes |
+| Script line 4565 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4580 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -979,14 +979,14 @@ File: `levels/campaign/Lanternhill.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3066 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
-| Script line 3067 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
-| Script line 3068 | `Action	objectiveid	1	lanternhill-o03	Defend your heart against the hill patrols.` | yes |
-| Script line 3198 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3213 | `Action	win	1` | yes |
-| Script line 3218 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 3220 | `Action	win	1` | yes |
-| Script line 3301 | `Action	win	1` | yes |
+| Script line 3089 | `Action	objectiveid	1	lanternhill-o01	Destroy the northern keeper's heart.` | yes |
+| Script line 3090 | `Action	objectiveid	1	lanternhill-o02	Dig a dry path from your start to the ring road.` | yes |
+| Script line 3091 | `Action	objectiveid	1	lanternhill-o03	Defend your heart against the hill patrols.` | yes |
+| Script line 3221 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3236 | `Action	win	1` | yes |
+| Script line 3241 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 3243 | `Action	win	1` | yes |
+| Script line 3324 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1092,12 +1092,12 @@ File: `levels/campaign/Mossgate.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 731 | `Action	objectiveid	1	mossgate-o01	Kill Tobin Marsh in the village hall.` | yes |
-| Script line 732 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
-| Script line 739 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
-| Script line 749 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
-| Script line 767 | `Action	objectiveid	1	mossgate-o05	Enter the hall and kill Tobin Marsh.` | yes |
-| Script line 799 | `Action	win	1` | yes |
+| Script line 764 | `Action	objectiveid	1	mossgate-o01	Kill Tobin Marsh in the village hall.` | yes |
+| Script line 765 | `Action	objectiveid	1	mossgate-o02	Mine 60 gold near your heart.` | yes |
+| Script line 772 | `Action	objectiveid	1	mossgate-o03	Claim the meadow cave west of the gate.` | yes |
+| Script line 782 | `Action	objectiveid	1	mossgate-o04	Clear the village watch post.` | yes |
+| Script line 800 | `Action	objectiveid	1	mossgate-o05	Enter the hall and kill Tobin Marsh.` | yes |
+| Script line 832 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1187,12 +1187,12 @@ File: `levels/campaign/Saltmere.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3086 | `Action	objectiveid	1	saltmere-o01	Kill Bram Seward in the southern port.` | yes |
-| Script line 3087 | `Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.` | yes |
-| Script line 3088 | `Action	objectiveid	1	saltmere-o03	Protect your heart.` | yes |
-| Script line 3131 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
-| Script line 3141 | `Action	objectiveid	1	saltmere-o05	Find Bram Seward in the harbour hall.` | yes |
-| Script line 3231 | `Action	win	1` | yes |
+| Script line 3116 | `Action	objectiveid	1	saltmere-o01	Kill Bram Seward in the southern port.` | yes |
+| Script line 3117 | `Action	objectiveid	1	saltmere-o02	Mine 800 gold from the salt walls.` | yes |
+| Script line 3118 | `Action	objectiveid	1	saltmere-o03	Protect your heart.` | yes |
+| Script line 3161 | `Action	objectiveid	1	saltmere-o04	Break through the port gates.` | yes |
+| Script line 3171 | `Action	objectiveid	1	saltmere-o05	Find Bram Seward in the harbour hall.` | yes |
+| Script line 3261 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1237,13 +1237,13 @@ File: `levels/campaign/Silverdeep.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4539 | `Action	objectiveid	1	silverdeep-o01	Destroy every rival keeper's heart.` | yes |
-| Script line 4540 | `Action	objectiveid	1	silverdeep-o02	Cross all three lakes by the wooden bridges.` | yes |
-| Advisory hint line 4541 | `Action	hint	1	Mine silver first.` | not an objective; no state required |
-| Script line 4841 | `Action	win	1` | yes |
-| Script line 4846 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4848 | `Action	win	1` | yes |
-| Script line 5046 | `Action	win	1` | yes |
+| Script line 4637 | `Action	objectiveid	1	silverdeep-o01	Destroy every rival keeper's heart.` | yes |
+| Script line 4638 | `Action	objectiveid	1	silverdeep-o02	Cross all three lakes by the wooden bridges.` | yes |
+| Advisory hint line 4639 | `Action	hint	1	Mine silver first.` | not an objective; no state required |
+| Script line 4939 | `Action	win	1` | yes |
+| Script line 4944 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4946 | `Action	win	1` | yes |
+| Script line 5144 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1281,9 +1281,9 @@ File: `levels/campaign/SkittleCavern.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 988 | `Action	objectiveid	1	skittlecavern-o01	Knock down all ten guards before time runs out.` | yes |
-| Script line 1057 | `Action	win	1` | yes |
-| Script line 1207 | `Action	win	1` | yes |
+| Script line 1002 | `Action	objectiveid	1	skittlecavern-o01	Knock down all ten guards before time runs out.` | yes |
+| Script line 1071 | `Action	win	1` | yes |
+| Script line 1221 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1333,13 +1333,13 @@ File: `levels/campaign/Stormhaven.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4025 | `Action	objectiveid	1	stormhaven-o01	Destroy every rival keeper's heart.` | yes |
-| Script line 4026 | `Action	objectiveid	1	stormhaven-o02	Cross the inlet by the stone bridges.` | yes |
-| Script line 4027 | `Action	objectiveid	1	stormhaven-o03	Prevent the keepers from joining forces.` | yes |
-| Script line 4264 | `Action	win	1` | yes |
-| Script line 4269 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4271 | `Action	win	1` | yes |
-| Script line 4378 | `Action	win	1` | yes |
+| Script line 4158 | `Action	objectiveid	1	stormhaven-o01	Destroy every rival keeper's heart.` | yes |
+| Script line 4159 | `Action	objectiveid	1	stormhaven-o02	Cross the inlet by the stone bridges.` | yes |
+| Script line 4160 | `Action	objectiveid	1	stormhaven-o03	Prevent the keepers from joining forces.` | yes |
+| Script line 4397 | `Action	win	1` | yes |
+| Script line 4402 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4404 | `Action	win	1` | yes |
+| Script line 4511 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1380,9 +1380,9 @@ File: `levels/campaign/SwarmNight.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 1483 | `Action	objectiveid	1	swarmnight-o01	Survive the swarm for 13 minutes.` | yes |
-| Script line 1484 | `Action	objectiveid	1	swarmnight-o02	Protect your heart.` | yes |
-| Script line 1599 | `Action	win	1` | yes |
+| Script line 1564 | `Action	objectiveid	1	swarmnight-o01	Survive the swarm for 13 minutes.` | yes |
+| Script line 1565 | `Action	objectiveid	1	swarmnight-o02	Protect your heart.` | yes |
+| Script line 1680 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1423,14 +1423,14 @@ File: `levels/campaign/Thornreach.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 5931 | `Action	objectiveid	1	thornreach-o01	Defeat every rival keeper.` | yes |
-| Advisory hint line 5932 | `Action	hint	1	Dig and burn through the thorn maze.` | not an objective; no state required |
-| Script line 5933 | `Action	objectiveid	1	thornreach-o03	Protect your heart while the keepers fight.` | yes |
-| Script line 6056 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 6074 | `Action	win	1` | yes |
-| Script line 6079 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 6081 | `Action	win	1` | yes |
-| Script line 6167 | `Action	win	1` | yes |
+| Script line 6072 | `Action	objectiveid	1	thornreach-o01	Defeat every rival keeper.` | yes |
+| Advisory hint line 6073 | `Action	hint	1	Dig and burn through the thorn maze.` | not an objective; no state required |
+| Script line 6074 | `Action	objectiveid	1	thornreach-o03	Protect your heart while the keepers fight.` | yes |
+| Script line 6197 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 6215 | `Action	win	1` | yes |
+| Script line 6220 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 6222 | `Action	win	1` | yes |
+| Script line 6308 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1518,8 +1518,8 @@ File: `levels/campaign/TwistingHalls.level`.
 | Source | Exact requirement | Match |
 | --- | --- | --- |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 3178 | `Action	objectiveid	1	twistinghalls-o01	Reach the north-east exit before time runs out.` | yes |
-| Script line 3202 | `Action	win	1` | yes |
+| Script line 3217 | `Action	objectiveid	1	twistinghalls-o01	Reach the north-east exit before time runs out.` | yes |
+| Script line 3241 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1604,14 +1604,14 @@ File: `levels/campaign/Wolfscar.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4645 | `Action	objectiveid	1	wolfscar-o01	Destroy every rival keeper's heart.` | yes |
-| Script line 4646 | `Action	objectiveid	1	wolfscar-o02	Cross the south ravine by a stone bridge.` | yes |
-| Script line 4647 | `Action	objectiveid	1	wolfscar-o03	Protect your heart.` | yes |
-| Script line 4761 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4779 | `Action	win	1` | yes |
-| Script line 4784 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4786 | `Action	win	1` | yes |
-| Script line 4944 | `Action	win	1` | yes |
+| Script line 4792 | `Action	objectiveid	1	wolfscar-o01	Destroy every rival keeper's heart.` | yes |
+| Script line 4793 | `Action	objectiveid	1	wolfscar-o02	Cross the south ravine by a stone bridge.` | yes |
+| Script line 4794 | `Action	objectiveid	1	wolfscar-o03	Protect your heart.` | yes |
+| Script line 4908 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4926 | `Action	win	1` | yes |
+| Script line 4931 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4933 | `Action	win	1` | yes |
+| Script line 5091 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
@@ -1652,14 +1652,14 @@ File: `levels/campaign/Wraithwood.level`.
 | --- | --- | --- |
 | [Goals] | `KillAllEnemies	NULL` | yes |
 | [Goals] | `ProtectDungeonTemple	NULL` | yes |
-| Script line 4772 | `Action	objectiveid	1	wraithwood-o01	Destroy the witch-warden's heart in the north-west.` | yes |
-| Script line 4773 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
-| Script line 4774 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
-| Script line 4835 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4851 | `Action	win	1` | yes |
-| Script line 4856 | `Cond	goal	1	KillAllEnemies` | yes |
-| Script line 4859 | `Action	win	1` | yes |
-| Script line 4924 | `Action	win	1` | yes |
+| Script line 4838 | `Action	objectiveid	1	wraithwood-o01	Destroy the witch-warden's heart in the north-west.` | yes |
+| Script line 4839 | `Action	objectiveid	1	wraithwood-o02	Destroy the rival heart in the north-east.` | yes |
+| Script line 4840 | `Action	objectiveid	1	wraithwood-o03	Defend your heart against the kingdom's heroes.` | yes |
+| Script line 4901 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4917 | `Action	win	1` | yes |
+| Script line 4922 | `Cond	goal	1	KillAllEnemies` | yes |
+| Script line 4925 | `Action	win	1` | yes |
+| Script line 4990 | `Action	win	1` | yes |
 
 ### Main and optional goals
 
