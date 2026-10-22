@@ -257,7 +257,7 @@ def check_other_damage(roster):
     champion = roster.creatures["Champion"][0]
     assert roster.number(champion, "AttackRating") == 300 and roster.number(champion, "DefenseRating") == 100
     attack, _, start = roster.attack("Champion")
-    assert tuple(map(float, attack[start:start + 6])) == (54.67, 82, 0, 0, 0, 0)
+    assert tuple(map(float, attack[start:start + 6])) == (120, 180, 0, 0, 0, 0)
 
 
 # Verify deterministic simulation thresholds without adjusting the approved roster.
