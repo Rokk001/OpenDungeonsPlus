@@ -48,7 +48,7 @@ void renderPreview(const std::string& repo,const std::string& prefix){
  Ogre::NameValuePairList options;options["hidden"]="true";options["vsync"]="false";
  auto* window=root.createRenderWindow("Low nest traversal",640,360,false,&options);
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
- for(const auto& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics",true);
+ for(const std::string& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics",true);
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  auto& materials=Ogre::MaterialManager::getSingleton();auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
  OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
