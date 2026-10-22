@@ -27,6 +27,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 
 class CreatureDefinition;
@@ -152,6 +155,10 @@ public:
 
     inline uint32_t getMaxCreaturesPerSeatDefault() const
     { return mMaxCreaturesPerSeatDefault; }
+
+    //! \brief Creatures more a seat can control for each of its portals (global.cfg CreaturesPerPortal)
+    inline uint32_t getCreaturesPerPortal() const
+    { return mCreaturesPerPortal; }
 
     inline int32_t getCreatureBaseMood() const
     { return mCreatureBaseMood; }
@@ -382,6 +389,41 @@ public:
     //! every seat starts with it at level 1 (its level 1 costs no research points).
     bool isSkillFreeLevelOne(const std::string& res) const;
 
+    //! \brief How a line of the [ResearchEffects] block of skills.cfg changes the base value:
+    //! mul = base x value, add = base + value, dev = 1 + (base - 1) x value.
+    enum class ResearchEffectMode
+    {
+        mul,
+        add,
+        dev
+    };
+
+    //! \brief One line of the [ResearchEffects] block of skills.cfg: the mode and the values for research levels 1, 2 and 3
+    struct ResearchEffectLine
+    {
+        ResearchEffectLine() :
+            mMode(ResearchEffectMode::mul)
+        {
+            for(uint32_t i = 0; i < RESEARCH_LEVELS; ++i)
+                mValues[i] = 1.0;
+        }
+
+        ResearchEffectMode mMode;
+        double mValues[3];
+    };
+
+    //! \brief Number of research levels of a skill (the number of values of a [ResearchEffects] line)
+    static const uint32_t RESEARCH_LEVELS = 3;
+
+    //! \brief The [ResearchEffects] line of skills.cfg for the skill with the given name and the given effect.
+    //! \return The line, or nullptr when skills.cfg has none for them (the effect then leaves the base unchanged)
+    const ResearchEffectLine* getResearchEffect(const std::string& skill, const std::string& effect) const;
+
+    //! \brief All [ResearchEffects] lines of the skill with the given name, in the order of skills.cfg:
+    //! pairs of the effect name and the line.
+    void getResearchEffects(const std::string& skill,
+        std::vector<std::pair<std::string, ResearchEffectLine> >& effects) const;
+
     //! \brief Research cost used when skills.cfg has no entry for a skill
     static const int32_t SKILL_POINTS_MISSING_ENTRY = 1500;
 
@@ -506,6 +548,8 @@ private:
     uint32_t mCreatureDeathCounter;
     uint32_t mMaxCreaturesPerSeatAbsolute;
     uint32_t mMaxCreaturesPerSeatDefault;
+    //! \brief Creatures more a seat can control for each of its portals
+    uint32_t mCreaturesPerPortal;
     int32_t mCreatureBaseMood;
     int32_t mCreatureMoodHappy;
     int32_t mCreatureMoodUpset;
@@ -565,6 +609,8 @@ private:
     std::map<const std::string, int32_t> mSkillPoints;
     //! \brief Names of the skills of the [FreeLevelOne] block of skills.cfg
     std::set<std::string> mSkillsFreeLevelOne;
+    //! \brief The [ResearchEffects] block of skills.cfg: skill name, effect name and the line, in file order
+    std::vector<std::pair<std::pair<std::string, std::string>, ResearchEffectLine> > mResearchEffects;
 
     //! \brief Default definition for the editor. At map loading, it will spawn a creature from
     //! the default seat worker depending on seat faction

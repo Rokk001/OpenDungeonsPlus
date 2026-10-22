@@ -22,10 +22,14 @@
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+
+#include <cmath>
 
 #include <set>
 
@@ -132,6 +136,7 @@ TrapTrigger::TrapTrigger(GameMap* gameMap) :
     setMeshName("");
 }
 
+//! \brief Sets off the traps of the owner around the trigger; the radius follows the trigger trap research.
 bool TrapTrigger::shoot(Tile* tile)
 {
     // Pressure trigger: the trap only fires when an enemy creature stands on its tile,
@@ -150,9 +155,12 @@ bool TrapTrigger::shoot(Tile* tile)
     }
 
     bool fired = false;
-    for(int dx = -1; dx <= 1; ++dx)
+    // Every tile within the radius (largest of the x and y distance) except the own tile; the research widens it
+    const int radius = static_cast<int>(std::lround(SkillManager::getResearchValue(getSeat(), SkillType::trapTrigger,
+        ConfigManager::getSingleton().getTrapConfigDouble("TriggerRadius"), ResearchEffect::Radius)));
+    for(int dx = -radius; dx <= radius; ++dx)
     {
-        for(int dy = -1; dy <= 1; ++dy)
+        for(int dy = -radius; dy <= radius; ++dy)
         {
             if((dx == 0) && (dy == 0))
                 continue;

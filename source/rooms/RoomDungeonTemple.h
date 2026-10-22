@@ -59,6 +59,8 @@ public:
     //! \brief Configured health of an undamaged heart, independent of the number of tiles of the
     //! room and of the floor tiles' own durability.
     double getHeartMaxHP() const;
+    //! \brief The factor of the heart health research of the owner (1 without the research)
+    double getHeartHPFactor() const;
     //! \brief Remaining heart health divided by getHeartMaxHP(), from 0 to 1.
     double getHeartHealthFraction() const;
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage,
@@ -128,8 +130,8 @@ private:
 
     //! One health pool for the heart, independent of individual floor tiles.
     double mHeartHP;
-    //! Health a living, damaged heart regains per second
-    static const double HEART_HEAL_PER_SECOND;
+    //! The factor of the heart health research that the current health was last scaled with
+    double mHeartHPFactor;
     //! Share of the maximum at or below which the owner is warned that the heart is critical
     static const double HEART_CRITICAL_FRACTION;
 

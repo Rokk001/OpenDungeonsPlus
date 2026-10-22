@@ -80,6 +80,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mCreatureDeathCounter(10),
     mMaxCreaturesPerSeatAbsolute(30),
     mMaxCreaturesPerSeatDefault(10),
+    mCreaturesPerPortal(5),
     mCreatureBaseMood(1000),
     mCreatureMoodHappy(1200),
     mCreatureMoodUpset(0),
@@ -549,6 +550,13 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mMaxCreaturesPerSeatDefault = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreaturesPerPortal")
+        {
+            configFile >> nextParam;
+            mCreaturesPerPortal = Helper::toUInt32(nextParam);
             // Not mandatory
         }
 
@@ -1386,6 +1394,44 @@ bool ConfigManager::loadSkills(const std::string& fileName)
             mSkillsFreeLevelOne.insert(nextParam);
         }
     }
+
+    // The optional block with the effect of each research level on rooms, traps, doors, spells and the keeper
+    mResearchEffects.clear();
+    if(defFile >> nextParam)
+    {
+        if(nextParam != "[ResearchEffects]")
+        {
+            OD_LOG_ERR("Invalid ResearchEffects start format. Line was " + nextParam);
+            return false;
+        }
+
+        while(defFile >> nextParam)
+        {
+            if(nextParam == "[/ResearchEffects]")
+                break;
+
+            std::string effect;
+            std::string mode;
+            ResearchEffectLine line;
+            defFile >> effect >> mode;
+            if(mode == "mul")
+                line.mMode = ResearchEffectMode::mul;
+            else if(mode == "add")
+                line.mMode = ResearchEffectMode::add;
+            else if(mode == "dev")
+                line.mMode = ResearchEffectMode::dev;
+            else
+            {
+                OD_LOG_ERR("Invalid research effect mode=" + mode + " for " + nextParam + " " + effect);
+                return false;
+            }
+
+            for(uint32_t i = 0; i < RESEARCH_LEVELS; ++i)
+                defFile >> line.mValues[i];
+
+            mResearchEffects.push_back(std::make_pair(std::make_pair(nextParam, effect), line));
+        }
+    }
     return true;
 }
 
@@ -2074,6 +2120,29 @@ int32_t ConfigManager::getSkillPoints(const std::string& res) const
 bool ConfigManager::isSkillFreeLevelOne(const std::string& res) const
 {
     return mSkillsFreeLevelOne.find(res) != mSkillsFreeLevelOne.end();
+}
+
+const ConfigManager::ResearchEffectLine* ConfigManager::getResearchEffect(const std::string& skill,
+    const std::string& effect) const
+{
+    for(const std::pair<std::pair<std::string, std::string>, ResearchEffectLine>& entry : mResearchEffects)
+    {
+        if((entry.first.first == skill) && (entry.first.second == effect))
+            return &entry.second;
+    }
+
+    return nullptr;
+}
+
+void ConfigManager::getResearchEffects(const std::string& skill,
+    std::vector<std::pair<std::string, ResearchEffectLine> >& effects) const
+{
+    effects.clear();
+    for(const std::pair<std::pair<std::string, std::string>, ResearchEffectLine>& entry : mResearchEffects)
+    {
+        if(entry.first.first == skill)
+            effects.push_back(std::make_pair(entry.first.second, entry.second));
+    }
 }
 
 const CreatureDefinition* ConfigManager::getCreatureDefinition(const std::string& name) const

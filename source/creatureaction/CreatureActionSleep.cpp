@@ -25,6 +25,7 @@
 #include "entities/Tile.h"
 #include "rooms/Room.h"
 #include "rooms/RoomDormitory.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
@@ -35,6 +36,7 @@ std::function<bool()> CreatureActionSleep::action()
         std::ref(mCreature), getNbTurnsActive());
 }
 
+//! \brief Lets the creature sleep; wakefulness and health per turn follow the research of the dormitory it sleeps in.
 bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
 {
     if (creature.getHomeTile() == nullptr)
@@ -83,9 +85,10 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
         // Improve wakefulness
         Room* sleepingRoom = creature.getHomeTile()->getCoveringRoom();
         const Seat* sleepingSeat = sleepingRoom == nullptr ? nullptr : sleepingRoom->getSeat();
-        creature.increaseWakefulness(SkillManager::getResearchValue(sleepingSeat, SkillType::roomDormitory, 1.5));
+        creature.increaseWakefulness(SkillManager::getResearchValue(sleepingSeat, SkillType::roomDormitory,
+            ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWakefulnessPerTurn"), ResearchEffect::SleepRecovery));
         creature.setHP(creature.getHP() + SkillManager::getResearchValue(
-            sleepingSeat, SkillType::roomDormitory, creature.getDefinition()->getSleepHeal()));
+            sleepingSeat, SkillType::roomDormitory, creature.getDefinition()->getSleepHeal(), ResearchEffect::SleepRecovery));
 
         creature.computeCreatureOverlayHealthValue();
 

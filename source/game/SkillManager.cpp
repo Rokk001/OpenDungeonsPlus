@@ -39,7 +39,9 @@
 #include <CEGUI/Window.h>
 #include <CEGUI/widgets/PushButton.h>
 #include <algorithm>
+#include <cmath>
 #include <functional>
+#include <map>
 #include <utility>
 
 namespace
@@ -826,147 +828,280 @@ void SkillManager::listTabSkills(SkillTab tab, std::vector<SkillType>& skills)
     skills = getSkillManager().mTabSkills.at(static_cast<uint32_t>(tab));
 }
 
-double SkillManager::getResearchValue(const Seat* seat, SkillType type, double base, bool secondary)
+double SkillManager::getResearchValue(const Seat* seat, SkillType type, double base, const std::string& effect)
 {
-    return getResearchValue(type, seat == nullptr ? 1 : seat->getSkillLevel(type), base, secondary);
+    return getResearchValue(type, seat == nullptr ? 0 : seat->getSkillLevel(type), base, effect);
 }
 
-double SkillManager::getResearchValue(SkillType type, uint32_t level, double base, bool secondary)
+double SkillManager::getResearchValue(SkillType type, uint32_t level, double base, const std::string& effect)
 {
-    const uint32_t step = std::max(1U, std::min(3U, level)) - 1;
+    // A skill that is not researched changes nothing
+    if(level == 0)
+        return base;
+
+    const ConfigManager::ResearchEffectLine* line = ConfigManager::getSingleton().getResearchEffect(
+        Skills::toString(type), effect);
+    if(line == nullptr)
+        return base;
+
+    const uint32_t maxLevel = ConfigManager::RESEARCH_LEVELS;
+    const double value = line->mValues[std::min(level, maxLevel) - 1];
+    switch(line->mMode)
+    {
+        case ConfigManager::ResearchEffectMode::add:
+            return base + value;
+        case ConfigManager::ResearchEffectMode::dev:
+            return 1.0 + (base - 1.0) * value;
+        default:
+            return base * value;
+    }
+}
+
+namespace
+{
+//! \brief The config file a base value of a research effect is read from
+enum class ResearchBaseSource
+{
+    //! rooms.cfg
+    rooms,
+    //! rooms.cfg, the base is one divided by the value (chickens per tile from tiles per chicken)
+    roomsInverse,
+    //! traps.cfg
+    traps,
+    //! spells.cfg
+    spells,
+    //! global.cfg MaxCreaturesPerSeatDefault
+    creatureLimit,
+    //! No config value: the effect is a factor that starts at one
+    factor
+};
+
+//! \brief Where the tooltip finds the base value of one research effect of a skill
+struct ResearchBase
+{
+    SkillType mType;
+    const char* mEffect;
+    ResearchBaseSource mSource;
+    //! Config key of the base value (the largest value when mKeyMin is set), empty for a factor
+    const char* mKey;
+    //! Config key of the smallest value of a range, empty when the effect is a single value
+    const char* mKeyMin;
+};
+
+//! \brief The base value of every research effect of skills.cfg, as the code of the room, trap, door or spell reads it
+static const ResearchBase RESEARCH_BASES[] =
+{
+    {SkillType::roomTreasury, "GoldPerTile", ResearchBaseSource::rooms, "TreasuryGoldPerTile", ""},
+    {SkillType::roomDormitory, "SleepRecovery", ResearchBaseSource::rooms, "DormitoryWakefulnessPerTurn", ""},
+    {SkillType::roomHatchery, "LayInterval", ResearchBaseSource::rooms, "HatcheryChickenSpawnRate", ""},
+    {SkillType::roomHatchery, "Capacity", ResearchBaseSource::roomsInverse, "HatcheryTilesPerChicken", ""},
+    {SkillType::roomLibrary, "PointsPerWork", ResearchBaseSource::rooms, "LibraryPointsPerWork", ""},
+    {SkillType::roomTrainingHall, "XpPerHit", ResearchBaseSource::rooms, "TrainHallXpPerAttack", ""},
+    {SkillType::roomWorkshop, "PointsPerWork", ResearchBaseSource::rooms, "WorkshopPointsPerWork", ""},
+    {SkillType::roomGuardRoom, "WakefulnessPerDuty", ResearchBaseSource::rooms, "GuardRoomWakefulnessPerDuty", ""},
+    {SkillType::roomCasino, "Fee", ResearchBaseSource::rooms, "CasinoFee", ""},
+    {SkillType::roomCasino, "Mood", ResearchBaseSource::rooms, "CasinoMoodSmiles", ""},
+    {SkillType::roomArena, "LevelCap", ResearchBaseSource::rooms, "ArenaMaxTrainingLevel", ""},
+    {SkillType::roomPrison, "Capacity", ResearchBaseSource::factor, "", ""},
+    {SkillType::roomPrison, "SkeletonLevel", ResearchBaseSource::rooms, "PrisonSkeletonBaseLevel", ""},
+    {SkillType::roomCrypt, "RotTime", ResearchBaseSource::rooms, "CryptRotNbTurns", ""},
+    {SkillType::roomBridgeWooden, "ClaimResistance", ResearchBaseSource::factor, "", ""},
+    {SkillType::roomBridgeStone, "ClaimResistance", ResearchBaseSource::factor, "", ""},
+    {SkillType::roomTorture, "ConversionSpeed", ResearchBaseSource::factor, "", ""},
+    {SkillType::roomTemple, "PrayerMana", ResearchBaseSource::rooms, "TemplePrayerManaPerSecond", ""},
+    {SkillType::keeperDominion, "CreatureLimit", ResearchBaseSource::creatureLimit, "", ""},
+    {SkillType::trapCannon, "Damage", ResearchBaseSource::traps, "CannonDamagePerHitMax", "CannonDamagePerHitMin"},
+    {SkillType::trapSpike, "Damage", ResearchBaseSource::traps, "SpikeDamagePerHitMax", "SpikeDamagePerHitMin"},
+    {SkillType::trapBoulder, "Damage", ResearchBaseSource::traps, "BoulderDamagePerHitMax", "BoulderDamagePerHitMin"},
+    {SkillType::trapGas, "Damage", ResearchBaseSource::traps, "GasDamagePerHitMax", "GasDamagePerHitMin"},
+    {SkillType::trapLightning, "Damage", ResearchBaseSource::traps, "LightningDamagePerHitMax", "LightningDamagePerHitMin"},
+    {SkillType::trapFireburst, "Damage", ResearchBaseSource::traps, "FireburstDamagePerHitMax", "FireburstDamagePerHitMin"},
+    {SkillType::trapAlarm, "Reload", ResearchBaseSource::traps, "AlarmReloadTurns", ""},
+    {SkillType::trapFear, "Duration", ResearchBaseSource::traps, "FearDurationTurns", ""},
+    {SkillType::trapFreeze, "Duration", ResearchBaseSource::traps, "FreezeDurationTurns", ""},
+    {SkillType::trapWatchBanner, "AuraRadius", ResearchBaseSource::traps, "WatchBannerAuraTiles", ""},
+    {SkillType::trapTrigger, "Radius", ResearchBaseSource::traps, "TriggerRadius", ""},
+    {SkillType::trapDoorWooden, "HP", ResearchBaseSource::traps, "WoodenDoorHP", ""},
+    {SkillType::trapDoorIronbound, "HP", ResearchBaseSource::traps, "IronboundDoorHP", ""},
+    {SkillType::trapDoorSteel, "HP", ResearchBaseSource::traps, "SteelDoorHP", ""},
+    {SkillType::trapDoorBarricade, "HP", ResearchBaseSource::traps, "BarricadeDoorHP", ""},
+    {SkillType::trapDoorSecret, "HP", ResearchBaseSource::traps, "SecretDoorHP", ""},
+    {SkillType::trapDoorRuned, "HP", ResearchBaseSource::traps, "RunedDoorHP", ""},
+    {SkillType::trapDoorRuned, "Damage", ResearchBaseSource::traps, "RunedDoorDamage", "RunedDoorDamageMin"},
+    {SkillType::keeperHeartFortitude, "HeartHP", ResearchBaseSource::rooms, "DungeonHeartHP", ""},
+    {SkillType::keeperHeartMending, "HeartHeal", ResearchBaseSource::rooms, "DungeonHeartHealPerSecond", ""},
+    {SkillType::keeperManaFlow, "HeartMana", ResearchBaseSource::rooms, "DungeonHeartManaPerSecond", ""},
+    {SkillType::spellSummonWorker, "Price", ResearchBaseSource::spells, "SummonWorkerBasePrice", ""},
+    {SkillType::spellCreatureHeal, "HealPerTurn", ResearchBaseSource::spells, "CreatureHealValue", ""},
+    {SkillType::spellCreatureHaste, "Speed", ResearchBaseSource::spells, "CreatureHasteValue", ""},
+    {SkillType::spellEyeEvil, "Duration", ResearchBaseSource::spells, "EyeEvilNbTurns", ""},
+    {SkillType::spellEyeEvil, "Radius", ResearchBaseSource::spells, "EyeEvilRadiusTiles", ""},
+    {SkillType::spellCreatureDefense, "Bonus", ResearchBaseSource::spells, "CreatureDefenseValue", ""},
+    {SkillType::spellCreatureStrength, "Factor", ResearchBaseSource::spells, "CreatureStrengthValue", ""},
+    {SkillType::spellCreatureWeak, "Factor", ResearchBaseSource::spells, "CreatureWeakValue", ""},
+    {SkillType::spellCreatureSlow, "Factor", ResearchBaseSource::spells, "CreatureSlowValue", ""},
+    {SkillType::spellCallToWar, "Lifetime", ResearchBaseSource::spells, "CallToWarNbTurnsMax", ""},
+    {SkillType::spellLightning, "Damage", ResearchBaseSource::spells, "LightningDamage", "LightningDamageMin"},
+    {SkillType::spellCreatureExplosion, "Damage", ResearchBaseSource::spells, "CreatureExplosionValue", ""},
+    {SkillType::spellTremor, "Damage", ResearchBaseSource::spells, "TremorDamage", "TremorDamageMin"},
+    {SkillType::spellInferno, "Damage", ResearchBaseSource::spells, "InfernoDamagePerTurn", "InfernoDamagePerTurnMin"},
+    {SkillType::spellPossess, "ManaPerSecond", ResearchBaseSource::factor, "", ""},
+    {SkillType::spellDefector, "Duration", ResearchBaseSource::spells, "DefectorNbTurns", ""},
+    {SkillType::spellHexenHen, "Duration", ResearchBaseSource::spells, "HexenHenNbTurns", ""},
+    {SkillType::spellCreateGold, "Gold", ResearchBaseSource::spells, "CreateGoldValue", ""}
+};
+
+//! \brief Reads the base value a config key of the given source holds
+//! \param source The config file of the key
+//! \param key The config key; empty for a factor, which starts at one
+//! \return The base value
+static double readResearchBase(ResearchBaseSource source, const std::string& key)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    switch(source)
+    {
+        case ResearchBaseSource::rooms:
+            return config.getRoomConfigDouble(key);
+        case ResearchBaseSource::roomsInverse:
+            return 1.0 / std::max(1.0, config.getRoomConfigDouble(key));
+        case ResearchBaseSource::traps:
+            return config.getTrapConfigDouble(key);
+        case ResearchBaseSource::spells:
+            return config.getSpellConfigDouble(key);
+        case ResearchBaseSource::creatureLimit:
+            return static_cast<double>(config.getMaxCreaturesPerSeatDefault());
+        default:
+            return 1.0;
+    }
+}
+
+//! \brief The player visible text of an effect name of skills.cfg
+//! \param effect The effect name, one of the ResearchEffect constants
+//! \return The text in front of the value in a tooltip
+static std::string getResearchEffectText(const std::string& effect)
+{
+    static std::map<std::string, std::string> texts;
+    if(texts.empty())
+    {
+        texts[ResearchEffect::GoldPerTile] = "Storage per tile";
+        texts[ResearchEffect::SleepRecovery] = "Sleep recovery";
+        texts[ResearchEffect::LayInterval] = "Egg laying time";
+        texts[ResearchEffect::Capacity] = "Capacity";
+        texts[ResearchEffect::PointsPerWork] = "Points per work";
+        texts[ResearchEffect::XpPerHit] = "Experience per hit";
+        texts[ResearchEffect::WakefulnessPerDuty] = "Tiredness per duty turn";
+        texts[ResearchEffect::Fee] = "Keeper fee";
+        texts[ResearchEffect::Mood] = "Mood gain";
+        texts[ResearchEffect::LevelCap] = "Level cap";
+        texts[ResearchEffect::SkeletonLevel] = "Skeleton level";
+        texts[ResearchEffect::RotTime] = "Rot time";
+        texts[ResearchEffect::ClaimResistance] = "Claim resistance";
+        texts[ResearchEffect::ConversionSpeed] = "Conversion speed";
+        texts[ResearchEffect::PrayerMana] = "Prayer mana";
+        texts[ResearchEffect::CreatureLimit] = "Creature limit";
+        texts[ResearchEffect::Damage] = "Damage";
+        texts[ResearchEffect::Reload] = "Reload time";
+        texts[ResearchEffect::Duration] = "Duration";
+        texts[ResearchEffect::AuraRadius] = "Alarm radius";
+        texts[ResearchEffect::Radius] = "Radius";
+        texts[ResearchEffect::HP] = "Health";
+        texts[ResearchEffect::HeartHP] = "Heart health";
+        texts[ResearchEffect::HeartHeal] = "Heart healing per second";
+        texts[ResearchEffect::HeartMana] = "Heart mana per second";
+        texts[ResearchEffect::Price] = "Price";
+        texts[ResearchEffect::HealPerTurn] = "Healing per turn";
+        texts[ResearchEffect::Speed] = "Speed";
+        texts[ResearchEffect::Bonus] = "Defense bonus";
+        texts[ResearchEffect::Factor] = "Factor";
+        texts[ResearchEffect::Lifetime] = "Duration";
+        texts[ResearchEffect::ManaPerSecond] = "Mana per second";
+        texts[ResearchEffect::Gold] = "Gold";
+    }
+
+    std::map<std::string, std::string>::const_iterator it = texts.find(effect);
+    return (it == texts.end()) ? effect : it->second;
+}
+
+//! \brief The description sentence of a keeper skill, empty for every other skill
+//! \param type The skill
+static std::string getKeeperDescription(SkillType type)
+{
     switch(type)
     {
-        case SkillType::roomTreasury:
-        case SkillType::roomBridgeWooden:
-        case SkillType::roomArena:
-            return base * (1.0 + 0.25 * step);
-        case SkillType::roomBridgeStone:
-        case SkillType::trapDoorWooden:
-        case SkillType::spellEyeEvil:
-            return base * (1.0 + 0.5 * step);
-        case SkillType::roomHatchery:
-        case SkillType::roomCrypt:
-            return base * (step == 0 ? 1.0 : (step == 1 ? 0.8 : 2.0 / 3.0));
-        case SkillType::roomPrison:
-            return base + step;
-        case SkillType::roomDormitory:
-        case SkillType::roomLibrary:
-        case SkillType::roomTrainingHall:
-        case SkillType::roomWorkshop:
-        case SkillType::roomCasino:
-        case SkillType::roomTorture:
-        case SkillType::trapCannon:
-        case SkillType::trapBoulder:
-        case SkillType::spellCreatureDefense:
-        case SkillType::spellCreatureHeal:
-            return base * (1.0 + 0.2 * step);
-        case SkillType::trapSpike:
-            return base * (step == 0 ? 1.0 : (step == 1 ? (secondary ? 4.0 / 3.0 : 1.3) : 1.6));
-        case SkillType::spellSummonWorker:
-        case SkillType::spellCreatureSlow:
-            return base * (1.0 - 0.1 * step);
-        case SkillType::spellCallToWar:
-            return base * (1.0 + 0.3 * step);
-        case SkillType::spellCreatureExplosion:
-            return base * (1.0 + (3.0 / 14.0) * step);
-        case SkillType::spellCreatureHaste:
-            return base * (1.0 + 0.1 * step);
-        case SkillType::spellCreatureStrength:
-        case SkillType::spellCreatureWeak:
-            return 1.0 + (base - 1.0) * (1.0 + 0.5 * step);
+        case SkillType::keeperDominion:
+            return "More creatures in your dungeon.";
+        case SkillType::keeperHeartFortitude:
+            return "Your dungeon heart has more health.";
+        case SkillType::keeperHeartMending:
+            return "Your dungeon heart heals faster.";
+        case SkillType::keeperManaFlow:
+            return "Your dungeon heart gives more mana.";
         default:
-            return base;
+            return "";
     }
+}
+
+//! \brief The value of a research effect for the tooltip: whole for the effects that are rounded in the game
+//! \param effect The effect name
+//! \param value The value after the research level was applied
+//! \return The value as text
+static std::string getResearchValueText(const std::string& effect, double value)
+{
+    if((effect == ResearchEffect::LevelCap) || (effect == ResearchEffect::AuraRadius))
+        value = std::floor(value + 0.5);
+
+    return Helper::toString(value);
+}
 }
 
 std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
 {
     const ConfigManager& config = ConfigManager::getSingleton();
-    const std::function<std::string(double)> value = [type, level](double base, bool secondary = false)
-    { return Helper::toString(getResearchValue(type, level, base, secondary)); };
-    const std::function<std::string(const char*)> room = [&config, &value](const char* key)
-    { return value(config.getRoomConfigDouble(key)); };
-    const std::function<std::string(const char*)> spell = [&config, &value](const char* key)
-    { return value(config.getSpellConfigDouble(key)); };
-    switch(type)
+    std::string description = getKeeperDescription(type);
+    std::vector<std::pair<std::string, ConfigManager::ResearchEffectLine> > lines;
+    config.getResearchEffects(Skills::toString(type), lines);
+    for(const std::pair<std::string, ConfigManager::ResearchEffectLine>& line : lines)
     {
-        case SkillType::roomTreasury: return "Storage: " + value(1000) + " gold per tile.";
-        case SkillType::roomHatchery: return "Chicken spawn interval: " + room("HatcheryChickenSpawnRate") + " turns.";
-        case SkillType::roomDormitory: return "Sleep recovery: " + value(1.5) + " wakefulness per turn; healing x" + value(1) + ".";
-        case SkillType::roomLibrary: return "Research work points: " + room("LibraryPointsPerWork") + " before creature efficiency.";
-        case SkillType::roomTrainingHall: return "Training experience per hit: " + room("TrainHallXpPerAttack") + ".";
-        case SkillType::roomWorkshop: return "Production work points: " + room("WorkshopPointsPerWork") + " before creature efficiency.";
-        case SkillType::roomBridgeWooden:
-        case SkillType::roomBridgeStone: return "Enemy claiming resistance: x" + value(1) + ".";
-        case SkillType::roomCrypt: return "Corpse processing interval: " + room("CryptRotNbTurns") + " turns.";
-        case SkillType::roomPrison: return "New converted creatures start at level " + value(1) + ".";
-        case SkillType::roomArena: return "Arena training cap: level " + value(config.getRoomConfigUInt32("ArenaMaxTrainingLevel")) + ".";
-        case SkillType::roomCasino: return "Keeper share of bets: " + value(config.getRoomConfigDouble("CasinoFee") * 100) + "%.";
-        case SkillType::roomTorture: return "Conversion speed: x" + value(1) + ".";
-        case SkillType::trapDoorWooden: return "Door health: " + value(10) + ".";
-        case SkillType::trapCannon:
-        case SkillType::trapSpike:
-        case SkillType::trapBoulder:
+        const ResearchBase* researchBase = nullptr;
+        for(const ResearchBase& candidate : RESEARCH_BASES)
         {
-            const std::string prefix = type == SkillType::trapCannon ? "Cannon" :
-                (type == SkillType::trapSpike ? "Spike" : "Boulder");
-            return "Damage: " + value(config.getTrapConfigDouble(prefix + "DamagePerHitMin")) + "-" +
-                Helper::toString(getResearchValue(type, level, config.getTrapConfigDouble(prefix + "DamagePerHitMax"), true)) + ".";
+            if((candidate.mType == type) && (line.first == candidate.mEffect))
+            {
+                researchBase = &candidate;
+                break;
+            }
         }
-        case SkillType::spellSummonWorker: return "Paid-worker base cost: " + spell("SummonWorkerBasePrice") + " mana, plus one more base cost for every worker above the heart's four.";
-        case SkillType::spellCallToWar: return "Maximum lifetime: " + spell("CallToWarNbTurnsMax") + " turns.";
-        case SkillType::spellCreatureDefense: return "Added physical defense: " + spell("CreatureDefenseValue") + ".";
-        case SkillType::spellCreatureExplosion: return "Damage per turn: " + spell("CreatureExplosionValue") + ".";
-        case SkillType::spellCreatureHaste: return "Movement speed: x" + spell("CreatureHasteValue") + ".";
-        case SkillType::spellCreatureHeal: return "Healing per turn: " + spell("CreatureHealValue") + ".";
-        case SkillType::spellCreatureSlow: return "Target movement speed: x" + spell("CreatureSlowValue") + ".";
-        case SkillType::spellCreatureStrength: return "Strength: x" + spell("CreatureStrengthValue") + ".";
-        case SkillType::spellCreatureWeak: return "Target strength: x" + spell("CreatureWeakValue") + ".";
-        case SkillType::spellEyeEvil: return "Revealed-area lifetime: " + spell("EyeEvilNbTurns") + " turns.";
-        case SkillType::spellCreateGold: return "Gold per cast: " + spell("CreateGoldValue") + ".";
-        // The health of every door type grows with the wooden door research level (TrapDoor::getHP)
-        case SkillType::trapDoorIronbound: return "Door health: " + value(config.getTrapConfigDouble("IronboundDoorHP")) + " before Wooden door upgrades.";
-        case SkillType::trapDoorSteel: return "Door health: " + value(config.getTrapConfigDouble("SteelDoorHP")) + " before Wooden door upgrades.";
-        case SkillType::trapDoorBarricade: return "Barricade health: " + value(config.getTrapConfigDouble("BarricadeDoorHP")) + " before Wooden door upgrades.";
-        case SkillType::trapDoorSecret: return "Door health: " + value(config.getTrapConfigDouble("SecretDoorHP")) +
-            " before Wooden door upgrades; enemies see a wall until they see one of your creatures pass.";
-        case SkillType::trapDoorRuned: return "Door health: " + value(config.getTrapConfigDouble("RunedDoorHP")) +
-            " before Wooden door upgrades; deals " + value(config.getTrapConfigDouble("RunedDoorDamage")) +
-            " fire damage to enemies on the door every " + value(config.getTrapConfigDouble("RunedDoorReloadTurns")) + " turns.";
-        case SkillType::roomGuardRoom: return "Wakefulness cost per duty turn: " + room("GuardRoomWakefulnessPerDuty") + ".";
-        case SkillType::roomTemple: return "Default prayer mana per second: " + room("TemplePrayerManaPerSecond") + "; most creature types have their own value.";
-        case SkillType::trapAlarm: return "Reload time: " + value(config.getTrapConfigDouble("AlarmReloadTurns")) + " turns.";
-        case SkillType::trapFear: return "Enemies within " + value(config.getTrapConfigDouble("FearRadius")) +
-            " tiles run away for " + value(config.getTrapConfigDouble("FearDurationTurns")) + " turns.";
-        case SkillType::trapGas: return "Damage: " + value(config.getTrapConfigDouble("GasDamagePerHitMin")) +
-            " to every creature nearby (radius " + value(config.getTrapConfigDouble("GasRadius")) + ").";
-        case SkillType::trapLightning: return "Damage: " + value(config.getTrapConfigDouble("LightningDamagePerHitMin")) +
-            " to one enemy within " + value(config.getTrapConfigDouble("LightningRange")) + " tiles, stunned for " +
-            value(config.getTrapConfigDouble("LightningStunTurns")) + " turns.";
-        case SkillType::trapFireburst: return "Damage: " + value(config.getTrapConfigDouble("FireburstDamagePerHitMin")) +
-            " to every creature nearby (radius " + value(config.getTrapConfigDouble("FireburstRadius")) + ").";
-        case SkillType::trapFreeze: return "Enemies on the tile are paralysed for " + value(config.getTrapConfigDouble("FreezeDurationTurns")) +
-            " turns; those below " + value(config.getTrapConfigDouble("FreezeShatterHpPercent")) + "% health shatter.";
-        case SkillType::spellLightning: return "Damage: " + spell("LightningDamage") + " to one enemy creature, which is stunned.";
-        case SkillType::spellTremor: return "Damage: " + spell("TremorDamage") + " to enemies within " + spell("TremorRadiusTiles") +
-            " tiles, knocked down for " + spell("TremorNbTurns") + " turns.";
-        case SkillType::trapWatchBanner: return "One idle fighter stands guard on each post and returns to it after a fight.";
-        case SkillType::trapTrigger: return "Sets off every trap and door weapon of yours on the eight surrounding tiles, "
-            "and any trigger trap next to it, when an enemy steps on it. No damage.";
-        case SkillType::spellDefector: return "One enemy creature on your claimed land fights for you for " +
-            spell("DefectorNbTurns") + " turns.";
-        case SkillType::spellHexenHen: return "One enemy creature becomes a harmless chicken for " +
-            spell("HexenHenNbTurns") + " turns.";
-        case SkillType::spellInferno: return "Damage: " + spell("InfernoDamagePerTurn") + " per turn to enemy creatures within " +
-            spell("InfernoRadiusTiles") + " tiles, which burn for " + spell("InfernoNbTurns") + " turns.";
-        case SkillType::spellSummonChampion: return "Summons one champion that cannot be hurt and charges at the enemies. Costs " +
-            spell("SummonChampionPrice") + " mana, free for " + Helper::toString(config.getSpellConfigDouble("SummonChampionPrice") /
-            config.getSpellConfigDouble("SummonChampionDrainPerSecond")) + " seconds, then " + spell("SummonChampionDrainPerSecond") +
-            " mana per second. Unlocked by the complete Heartstone.";
-        case SkillType::spellPossess: return "Control one of your creatures in first person; free for " +
-            spell("PossessFreeSeconds") + " seconds after the cast, then a mana drain per second that depends on the creature.";
-        default: return "";
+        if(researchBase == nullptr)
+        {
+            OD_LOG_ERR("No base value for the research effect " + line.first + " of skill=" + Skills::toString(type));
+            continue;
+        }
+
+        std::string value = getResearchValueText(line.first, getResearchValue(type, level,
+            readResearchBase(researchBase->mSource, researchBase->mKey), line.first));
+        // A range (damage) shows the smallest and the largest value
+        if(researchBase->mKeyMin[0] != '\0')
+        {
+            value = getResearchValueText(line.first, getResearchValue(type, level,
+                readResearchBase(researchBase->mSource, researchBase->mKeyMin), line.first)) + "-" + value;
+        }
+
+        if(!description.empty())
+            description += "\n";
+        description += getResearchEffectText(line.first) + ": " + value;
     }
+
+    // The champion is not researched and has no effect line: it keeps its text
+    if(type == SkillType::spellSummonChampion)
+    {
+        description = "Summons one champion that cannot be hurt and charges at the enemies. Costs " +
+            Helper::toString(config.getSpellConfigDouble("SummonChampionPrice")) + " mana, free for " +
+            Helper::toString(config.getSpellConfigDouble("SummonChampionPrice") /
+            config.getSpellConfigDouble("SummonChampionDrainPerSecond")) + " seconds, then " +
+            Helper::toString(config.getSpellConfigDouble("SummonChampionDrainPerSecond")) +
+            " mana per second. Unlocked by the complete Heartstone.";
+    }
+    return description;
 }
 
 void SkillManager::buildRandomPendingSkillsForSeat(std::vector<SkillType>& skills,

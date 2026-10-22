@@ -396,6 +396,7 @@ void RoomTrainingHall::doUpkeep()
         refreshCreaturesDummies();
 }
 
+//! \brief A creature trains; the experience per hit follows the training hall research.
 bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
 {
     std::map<Creature*,Tile*>::iterator it = mCreaturesDummies.find(&creature);
@@ -446,7 +447,8 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
     // We add a bonus per wall active spots
     double coef = 1.0 + static_cast<double>(mNumActiveSpots - mCentralActiveSpotTiles.size()) * ConfigManager::getSingleton().getRoomConfigDouble("TrainHallBonusWallActiveSpot");
     double expReceived = creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
-        getSeat(), SkillType::roomTrainingHall, ConfigManager::getSingleton().getRoomConfigDouble("TrainHallXpPerAttack"));
+        getSeat(), SkillType::roomTrainingHall, ConfigManager::getSingleton().getRoomConfigDouble("TrainHallXpPerAttack"),
+        ResearchEffect::XpPerHit);
     expReceived *= coef;
 
     // A higher level friend training in the same room teaches the creature

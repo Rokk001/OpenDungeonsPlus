@@ -29,11 +29,12 @@ temple_header = read('source/rooms/RoomDungeonTemple.h')
 treasury_object = read('source/entities/TreasuryObject.cpp')
 
 constants = temple[
-    temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):
+    temple.index('const double RoomDungeonTemple::HEART_CRITICAL_FRACTION'):
     temple.index('RoomDungeonTemple::RoomDungeonTemple(')
 ]
 get_heart_tile = function(temple, 'Tile* RoomDungeonTemple::getHeartTile(')
-get_heart_max_hp = function(temple, 'double RoomDungeonTemple::getHeartMaxHP(')
+get_heart_max_hp = (function(temple, 'double RoomDungeonTemple::getHeartHPFactor(') + '\n' +
+                    function(temple, 'double RoomDungeonTemple::getHeartMaxHP('))
 get_hp = function(temple, 'double RoomDungeonTemple::getHP(')
 get_ring_center_tile = function(temple, 'Tile* RoomDungeonTemple::getRingCenterTile(')
 is_treasury_tile = function(temple, 'bool RoomDungeonTemple::isTreasuryTile(')
@@ -144,6 +145,7 @@ struct Room:Building {
  Tile* central=nullptr;
  Room(GameMap* m):map(m){}
  GameMap* getGameMap()const{return map;}
+ Seat* getSeat()const{return nullptr;}
  Tile* getCentralTile()const{return central;}
  uint32_t numCoveredTiles()const{return static_cast<uint32_t>(mCoveredTiles.size());}
  virtual void doUpkeep(){++doUpkeeps;}void announceKeeperWealth(Tile*){}
@@ -172,8 +174,9 @@ struct RoomDungeonTemple:Room {
  int tierChecks=0;
  void checkHeartHealthTier(){++tierChecks;}
  RoomDungeonTemple(GameMap* m):Room(m){}
- static const double HEART_HEAL_PER_SECOND;
  static const double HEART_CRITICAL_FRACTION;
+ double mHeartHPFactor=1.0;
+ double getHeartHPFactor()const;
  double getHeartMaxHP()const;
  double getHP(Tile*)const;
  Tile* getHeartTile() const;

@@ -60,7 +60,7 @@ private:
     //! \brief Radius in tiles in which enemy creatures get scared
     uint32_t mRadius;
     //! \brief Number of turns the scared creatures run away
-    uint32_t mFearTurns;
+    double mFearTurns;
 };
 
 #endif // TRAPFEAR_H

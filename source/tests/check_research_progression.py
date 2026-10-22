@@ -88,9 +88,15 @@ class ConfigManager {
 public:
     std::map<std::string,int> points;
     std::set<std::string> freeLevelOne;
+    enum class ResearchEffectMode {mul,add,dev};
+    struct ResearchEffectLine {ResearchEffectMode mMode=ResearchEffectMode::mul;double mValues[3]={1.0,1.0,1.0};};
+    static const uint32_t RESEARCH_LEVELS = 3;
+    std::map<std::string,ResearchEffectLine> effects;
     static ConfigManager& getSingleton(){static ConfigManager c;return c;}
     int getSkillPoints(const std::string& key) const {return points.at(key);}
     bool isSkillFreeLevelOne(const std::string& key) const {return freeLevelOne.count(key)>0;}
+    const ResearchEffectLine* getResearchEffect(const std::string& skill,const std::string& effect) const {
+        std::map<std::string,ResearchEffectLine>::const_iterator it=effects.find(skill+" "+effect);return it==effects.end()?nullptr:&it->second;}
 };
 enum class SkillFamily {rooms,traps,spells,keeper,nb};
 enum class SkillTab {rooms,traps,spells,nb};
@@ -114,8 +120,8 @@ struct SkillManager {
     static SkillTab getSkillTab(SkillType);
     static void listTabSkills(SkillTab,std::vector<SkillType>&);
     static bool isAllSkillsDoneForSeat(const Seat*);
-    static double getResearchValue(SkillType,uint32_t,double,bool=false);
-    static double getResearchValue(const Seat*,SkillType,double,bool=false);
+    static double getResearchValue(SkillType,uint32_t,double,const std::string&);
+    static double getResearchValue(const Seat*,SkillType,double,const std::string&);
     static void buildRandomPendingSkillsForSeat(std::vector<SkillType>&,const Seat*);
 };
 SkillManager& getSkillManager(){static SkillManager m;return m;}
@@ -183,11 +189,18 @@ int checks=0;
 void check(bool value,const std::string& name){++checks;if(!value)throw std::runtime_error(name);}
 void near(double a,double b,const std::string& name){check(std::abs(a-b)<1e-7,name);}
 int main(int argc,char** argv){try {
-    std::ifstream config(argv[1]);std::string line;bool inFree=false;
+    std::ifstream config(argv[1]);std::string line;bool inFree=false,inEffects=false;
     while(std::getline(config,line)){line=line.substr(0,line.find('#'));std::istringstream row(line);std::string key;int points;
         if(line.find("[FreeLevelOne]")!=std::string::npos){inFree=true;continue;}
         if(line.find("[/FreeLevelOne]")!=std::string::npos){inFree=false;continue;}
+        if(line.find("[ResearchEffects]")!=std::string::npos){inEffects=true;continue;}
+        if(line.find("[/ResearchEffects]")!=std::string::npos){inEffects=false;continue;}
         if(inFree){if(row>>key)ConfigManager::getSingleton().freeLevelOne.insert(key);continue;}
+        if(inEffects){std::string effect,mode;ConfigManager::ResearchEffectLine entry;
+            if(row>>key>>effect>>mode>>entry.mValues[0]>>entry.mValues[1]>>entry.mValues[2]){
+                entry.mMode=mode=="add"?ConfigManager::ResearchEffectMode::add:(mode=="dev"?ConfigManager::ResearchEffectMode::dev:ConfigManager::ResearchEffectMode::mul);
+                ConfigManager::getSingleton().effects[key+" "+effect]=entry;}
+            continue;}
         if(row>>key>>points && key[0]!='#')ConfigManager::getSingleton().points[key]=points;}
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
@@ -310,29 +323,45 @@ int main(int argc,char** argv){try {
     host.addSkillPoints(200);ODPacket stale;stale<<uint32_t(1)<<SkillType::trapCannon<<uint32_t(2);
     check(requestSkills(stale) && host.mSkillPending.empty(),"stale II request cannot silently queue III");
     using T=SkillType;
-    struct Effect{T type;double base,second,third;bool secondary;};
+    // The effect of each research level comes from the [ResearchEffects] lines of skills.cfg (mul, add and dev modes);
+    // a level 0 skill and a skill/effect pair without a line leave the base unchanged
+    struct Effect{T type;const char* effect;double base,first,second,third;};
     const Effect effects[]={
-        {T::roomTreasury,1000,1250,1500,false},{T::roomHatchery,15,12,10,false},
-        {T::roomDormitory,1.5,1.8,2.1,false},{T::roomLibrary,5,6,7,false},
-        {T::roomTrainingHall,5,6,7,false},{T::roomWorkshop,5,6,7,false},
-        {T::roomBridgeWooden,1,1.25,1.5,false},{T::roomBridgeStone,1,1.5,2,false},
-        {T::roomCrypt,30,24,20,false},{T::roomPrison,1,2,3,false},
-        {T::roomArena,20,25,30,false},{T::roomCasino,.1,.12,.14,false},{T::roomTorture,.1,.12,.14,false},
-        {T::trapCannon,10,12,14,false},{T::trapCannon,15,18,21,true},
-        {T::trapSpike,10,13,16,false},{T::trapSpike,15,20,24,true},
-        {T::trapBoulder,100,120,140,false},{T::trapBoulder,120,144,168,true},
-        {T::trapDoorWooden,10,15,20,false},{T::spellSummonWorker,1500,1350,1200,false},
-        {T::spellCallToWar,50,65,80,false},{T::spellCreatureDefense,5,6,7,false},
-        {T::spellCreatureExplosion,14,17,20,false},{T::spellCreatureHaste,1.5,1.65,1.8,false},
-        {T::spellCreatureHeal,5,6,7,false},{T::spellCreatureSlow,.5,.45,.4,false},
-        {T::spellCreatureStrength,1.1,1.15,1.2,false},{T::spellCreatureWeak,.9,.85,.8,false},
-        {T::spellEyeEvil,10,15,20,false}};
+        {T::roomTreasury,"GoldPerTile",1000,1000,1250,1500},{T::roomDormitory,"SleepRecovery",1.5,1.5,1.8,2.1},
+        {T::roomHatchery,"LayInterval",15,15,12,12},{T::roomHatchery,"Capacity",1,1,1,1.5},
+        {T::roomLibrary,"PointsPerWork",5,5,6,7},{T::roomTrainingHall,"XpPerHit",5,5,6,7},{T::roomWorkshop,"PointsPerWork",5,5,6,7},
+        {T::roomGuardRoom,"WakefulnessPerDuty",0.5,0.5,0.4,0.3335},{T::roomCasino,"Fee",.1,.1,.12,.14},{T::roomCasino,"Mood",180,180,216,252},
+        {T::roomArena,"LevelCap",20,20,25,30},{T::roomPrison,"Capacity",1,1,1.5,2},{T::roomPrison,"SkeletonLevel",1,1,2,3},
+        {T::roomCrypt,"RotTime",30,30,24,20.01},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
+        {T::roomTorture,"ConversionSpeed",1,1,1.2,1.4},{T::roomTemple,"PrayerMana",60,60,72,84},
+        {T::keeperDominion,"CreatureLimit",10,12,14,16},
+        {T::trapCannon,"Damage",20.5,92.25,217.915,386.63},{T::trapSpike,"Damage",10,45,106.3,188.6},
+        {T::trapAlarm,"Reload",100,100,80,66.7},{T::trapFear,"Duration",20,20,25,30},{T::trapFreeze,"Duration",28,28,35,42},
+        {T::trapWatchBanner,"AuraRadius",7,7,8.75,10.5},{T::trapTrigger,"Radius",1,1,2,3},
+        {T::trapDoorWooden,"HP",200,368,576.4,1808.8},{T::trapDoorRuned,"HP",1200,2208,3458.4,10852.8},{T::trapDoorRuned,"Damage",30.75,138.375,326.8725,579.945},
+        {T::keeperHeartFortitude,"HeartHP",10000,16980,24740,60000},{T::keeperHeartMending,"HeartHeal",2.5,4.245,6.185,15},{T::keeperManaFlow,"HeartMana",30,33,36,39},
+        {T::spellSummonWorker,"Price",1400,1400,1260,1120},{T::spellCreatureHeal,"HealPerTurn",10.25,46.125,108.9575,193.315},
+        {T::spellCreatureHaste,"Speed",1.5,1.5,1.65,1.8},{T::spellEyeEvil,"Duration",10,10,15,20},{T::spellEyeEvil,"Radius",3,3,4,5},
+        {T::spellCreatureDefense,"Bonus",5,20.8,44.55,79.2},{T::spellCreatureStrength,"Factor",1.1,1.1,1.15,1.2},{T::spellCreatureWeak,"Factor",.9,.9,.85,.8},
+        {T::spellCreatureSlow,"Factor",.5,.5,.45,.4},{T::spellCallToWar,"Lifetime",50,50,65,80},
+        {T::spellCreatureExplosion,"Damage",14,63,148.82,264.04},{T::spellPossess,"ManaPerSecond",40,40,32,26.68},
+        {T::spellDefector,"Duration",35,35,43.75,52.5},{T::spellCreateGold,"Gold",1000,1000,1250,1500}};
     for(const auto& effect:effects){
-        near(SkillManager::getResearchValue(effect.type,0,effect.base,effect.secondary),effect.base,"preplaced baseline");
-        near(SkillManager::getResearchValue(effect.type,1,effect.base,effect.secondary),effect.base,"I unchanged");
-        near(SkillManager::getResearchValue(effect.type,2,effect.base,effect.secondary),effect.second,"approved II effect");
-        near(SkillManager::getResearchValue(effect.type,3,effect.base,effect.secondary),effect.third,"approved III effect");
+        const std::string name=Skills::toString(effect.type)+" "+effect.effect;
+        near(SkillManager::getResearchValue(effect.type,0,effect.base,effect.effect),effect.base,name+": not researched leaves the base");
+        near(SkillManager::getResearchValue(effect.type,1,effect.base,effect.effect),effect.first,name+": level I");
+        near(SkillManager::getResearchValue(effect.type,2,effect.base,effect.effect),effect.second,name+": level II");
+        near(SkillManager::getResearchValue(effect.type,3,effect.base,effect.effect),effect.third,name+": level III");
+        near(SkillManager::getResearchValue(effect.type,3,effect.base,"NoSuchEffect"),effect.base,name+": an effect without a line leaves the base");
     }
+    near(SkillManager::getResearchValue(T::trapCannon,3,10,"Reload"),10,"a skill without a line for the effect leaves the base");
+    // The seat overload uses the level the seat has researched; a missing seat counts as not researched
+    {Seat researched;researched.setSkillsDone({T::trapCannon});researched.mResearchLevels[T::trapCannon]=2;
+     near(SkillManager::getResearchValue(&researched,T::trapCannon,10,"Damage"),106.3,"the seat level selects the value");
+     near(SkillManager::getResearchValue(&researched,T::trapSpike,10,"Damage"),10,"a skill the seat has not researched leaves the base");
+     near(SkillManager::getResearchValue(static_cast<const Seat*>(nullptr),T::trapCannon,10,"Damage"),10,"no seat leaves the base");}
+    // The mode dev keeps the distance from one: 1 + (base - 1) x value
+    near(SkillManager::getResearchValue(T::spellCreatureStrength,2,1.2,"Factor"),1.3,"dev mode scales the deviation from one");
     std::cout<<"CHECKS="<<checks<<" FAILURES=0\n";
 }catch(const std::exception& e){std::cerr<<"CHECK "<<checks<<": "<<e.what()<<"\n";return 1;}}
 '''

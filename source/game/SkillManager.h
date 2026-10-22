@@ -60,6 +60,45 @@ enum class SkillTab
     nb
 };
 
+//! \brief The effect names of the [ResearchEffects] block of skills.cfg; the second part of a line key
+//! (see SkillManager::getResearchValue)
+namespace ResearchEffect
+{
+    static const std::string GoldPerTile = "GoldPerTile";
+    static const std::string SleepRecovery = "SleepRecovery";
+    static const std::string LayInterval = "LayInterval";
+    static const std::string Capacity = "Capacity";
+    static const std::string PointsPerWork = "PointsPerWork";
+    static const std::string XpPerHit = "XpPerHit";
+    static const std::string WakefulnessPerDuty = "WakefulnessPerDuty";
+    static const std::string Fee = "Fee";
+    static const std::string Mood = "Mood";
+    static const std::string LevelCap = "LevelCap";
+    static const std::string SkeletonLevel = "SkeletonLevel";
+    static const std::string RotTime = "RotTime";
+    static const std::string ClaimResistance = "ClaimResistance";
+    static const std::string ConversionSpeed = "ConversionSpeed";
+    static const std::string PrayerMana = "PrayerMana";
+    static const std::string CreatureLimit = "CreatureLimit";
+    static const std::string Damage = "Damage";
+    static const std::string Reload = "Reload";
+    static const std::string Duration = "Duration";
+    static const std::string AuraRadius = "AuraRadius";
+    static const std::string Radius = "Radius";
+    static const std::string HP = "HP";
+    static const std::string HeartHP = "HeartHP";
+    static const std::string HeartHeal = "HeartHeal";
+    static const std::string HeartMana = "HeartMana";
+    static const std::string Price = "Price";
+    static const std::string HealPerTurn = "HealPerTurn";
+    static const std::string Speed = "Speed";
+    static const std::string Bonus = "Bonus";
+    static const std::string Factor = "Factor";
+    static const std::string Lifetime = "Lifetime";
+    static const std::string ManaPerSecond = "ManaPerSecond";
+    static const std::string Gold = "Gold";
+}
+
 //! \brief Local class that will be used to store Skill data and link it to the gui
 class SkillDef;
 
@@ -118,8 +157,17 @@ public:
     //! The reward skills have no entry in the tree.
     static void listTabSkills(SkillTab tab, std::vector<SkillType>& skills);
 
-    static double getResearchValue(SkillType type, uint32_t level, double base, bool secondary = false);
-    static double getResearchValue(const Seat* seat, SkillType type, double base, bool secondary = false);
+    //! \brief The base value changed by the [ResearchEffects] line of skills.cfg for the given skill and effect, at the
+    //! given research level. Level 0 (not researched) and a skill/effect pair without a line return base unchanged.
+    //! \param type The researched skill
+    //! \param level The research level of the skill (0 to 3)
+    //! \param base The value of the room, trap, door or spell in its own config file
+    //! \param effect The effect name, one of the ResearchEffect constants
+    static double getResearchValue(SkillType type, uint32_t level, double base, const std::string& effect);
+    //! \brief Same as above with the research level the seat has for the skill (0 when the seat is null)
+    static double getResearchValue(const Seat* seat, SkillType type, double base, const std::string& effect);
+    //! \brief The tooltip text of the skill at the given level: one line "<effect text>: <value>" for every
+    //! [ResearchEffects] line of the skill, with the real values of the config files
     static std::string getResearchDescription(SkillType type, uint32_t level);
 
     //! \brief Lists all the skills and calls the given function for each one with parameters:

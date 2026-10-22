@@ -41,6 +41,9 @@ public:
         return false;
     }
 
+    //! \brief The reload time of the alarm shortened by the alarm trap research of its owner (not rounded).
+    virtual double getResearchedReloadTime() const override;
+
     //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
