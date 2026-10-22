@@ -219,7 +219,7 @@ int main()
 with tempfile.TemporaryDirectory(prefix='odp-cosmetic-') as directory:
     work = Path(directory)
     (work / 'probe.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}',
                     f'/I{prefix / "include"}', f'/I{prefix / "include/OGRE"}', 'probe.cpp',
                     str(root / 'source/network/CosmeticEvent.cpp'), str(root / 'source/network/ODPacket.cpp'),
                     '/Feprobe.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'sfml-network.lib', 'sfml-system.lib',

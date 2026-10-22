@@ -656,11 +656,11 @@ def run(executable, arguments, work):
 with tempfile.TemporaryDirectory(prefix='odp-heart-burst-') as directory:
     work = Path(directory)
     (work / 'pure.cpp').write_text(pure)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/W1', '/I', str(repo / 'source'), 'pure.cpp', '/Fepure.exe'],
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(repo / 'source'), 'pure.cpp', '/Fepure.exe'],
                    cwd=work, check=True)
     run('pure.exe', [], work)
     (work / 'render.cpp').write_text(render)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/W1', '/I', str(deps / 'install/include/OGRE'),
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(deps / 'install/include/OGRE'),
                     '/I', str(deps / 'install/include/OGRE/RTShaderSystem'), '/I', str(repo / 'source'),
                     'render.cpp', '/Ferender.exe', '/link', '/LIBPATH:' + str(deps / 'install/lib'),
                     'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'],

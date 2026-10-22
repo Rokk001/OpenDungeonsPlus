@@ -295,7 +295,7 @@ def run_probe(code):
     with tempfile.TemporaryDirectory(prefix='odp-room-capture-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(code)
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         for attempt in range(4):
             try:

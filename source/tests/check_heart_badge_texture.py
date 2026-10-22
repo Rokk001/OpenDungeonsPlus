@@ -194,7 +194,7 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     include = deps / 'install/include'
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/W1', '/I', str(include / 'OGRE'),
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(include / 'OGRE'),
                     '/I', str(include / 'OGRE/RTShaderSystem'), '/I', str(include / 'cegui-0'), 'check.cpp', '/Fecheck.exe', '/link',
                     '/LIBPATH:' + str(deps / 'install/lib'), 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib', 'CEGUIBase-0.lib',
                     'CEGUIOgreRenderer-0.lib'],

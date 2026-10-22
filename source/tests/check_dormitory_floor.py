@@ -104,7 +104,7 @@ out = repo / 'build/dormitory-floor-check'
 out.mkdir(parents=True, exist_ok=True)
 (out / 'check.cpp').write_text(probe)
 with (out / 'compile.log').open('w') as log:
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{prefix / "include/OGRE"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{prefix / "include/OGRE"}',
                     'check.cpp', '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'],
                    cwd=out, stdout=log, stderr=subprocess.STDOUT, check=True)
 with (out / 'result.log').open('w') as log:

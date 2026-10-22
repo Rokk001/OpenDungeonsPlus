@@ -57,5 +57,5 @@ with tempfile.TemporaryDirectory(prefix="menu-hand-") as directory:
     cpp = work / "check.cpp"
     cpp.write_text(probe, encoding="utf-8")
     executable = work / "check.exe"
-    subprocess.run(["cl", "/nologo", "/EHsc", "/std:c++14", str(cpp), f"/Fe:{executable}"], cwd=work, check=True)
+    subprocess.run(["cl", "/nologo", "/EHsc", "/std:c++17", str(cpp), f"/Fe:{executable}"], cwd=work, check=True)
     subprocess.run([str(executable)], cwd=work, check=True)

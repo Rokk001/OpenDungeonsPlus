@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix="feather-material-") as directory:
     cpp = work / "check.cpp"
     cpp.write_text(probe, encoding="utf-8")
     executable = work / "check.exe"
-    subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++14", f"/I{prefix / 'include/OGRE'}",
+    subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++17", f"/I{prefix / 'include/OGRE'}",
                     f"/I{prefix / 'include/OGRE/RTShaderSystem'}", str(cpp), f"/Fe:{executable}",
                     "/link", f"/LIBPATH:{prefix / 'lib'}", "OgreMain.lib", "OgreRTShaderSystem.lib", "OgreBites.lib"], cwd=work, check=True)
     result = subprocess.run([str(executable), str(root), str(prefix)], cwd=work, capture_output=True, text=True)

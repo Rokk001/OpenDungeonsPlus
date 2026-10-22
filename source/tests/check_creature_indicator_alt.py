@@ -180,6 +180,6 @@ with tempfile.TemporaryDirectory(prefix='odp-indicator-alt-') as directory:
     (work / 'check.cpp').write_text(probe)
     for backend in ('OIS', 'SFML'):
         definitions = ['/DOD_USE_SFML_WINDOW'] if backend == 'SFML' else []
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', *definitions,
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', *definitions,
                         'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
         subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

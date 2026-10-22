@@ -68,6 +68,6 @@ with tempfile.TemporaryDirectory(prefix='odp-desktop-key-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     for name, flags in [('windows', ['/DOIS_WIN32_PLATFORM']), ('other', [])]:
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', *flags,
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', *flags,
             'check.cpp', f'/Fe{name}.exe'], cwd=work, check=True)
         subprocess.run([str(work / f'{name}.exe')], cwd=work, check=True)

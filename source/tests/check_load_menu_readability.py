@@ -48,7 +48,7 @@ with tempfile.TemporaryDirectory(prefix='odp-load-menu-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     cegui = prefix.parent / 'src/cegui/cegui'
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/DCEGUINULLRENDERER_EXPORTS',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/DCEGUINULLRENDERER_EXPORTS',
         f'/I{prefix / "include/cegui-0"}', f'/I{cegui / "include"}', f'/I{prefix / "include/OGRE"}',
         'check.cpp', *[str(cegui / 'src/RendererModules/Null' / (name+'.cpp')) for name in ('Renderer','GeometryBuffer','Texture','TextureTarget')],
         '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'CEGUIBase-0.lib', 'CEGUIOgreRenderer-0.lib', 'OgreMain.lib'], cwd=work, check=True)

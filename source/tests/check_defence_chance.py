@@ -320,7 +320,7 @@ if '--probe' in sys.argv:
     with tempfile.TemporaryDirectory(prefix='odp-defence-') as directory:
         work = Path(directory)
         (work / 'probe.cpp').write_text(probe_source())
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'],
                        cwd=work, check=True)
         subprocess.run([str(work / 'probe.exe')], cwd=work, check=True)
 

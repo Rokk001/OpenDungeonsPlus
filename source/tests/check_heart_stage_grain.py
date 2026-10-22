@@ -219,7 +219,7 @@ int main()
     with tempfile.TemporaryDirectory(prefix='odp-heart-stage-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(probe)
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         result = subprocess.run([str(work / 'check.exe')], cwd=work, capture_output=True, text=True)
         sys.stdout.write(result.stdout)

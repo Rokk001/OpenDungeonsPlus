@@ -109,7 +109,7 @@ for(const Ogre::Vector3& p:digging[0].points)check(std::abs(p.z-2.02f)<.00001f,"
 with tempfile.TemporaryDirectory(prefix='odp-construction-preview-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
 
 game = (repo / 'source/modes/GameMode.cpp').read_text()
