@@ -23,6 +23,10 @@
     Move    move the game cursor to client position -X,-Y (corner calibration)
     Press   left mouse button press and release at the current cursor position
     Click   Move to -X,-Y, then Press
+    Text    type the string -Text key by key into the focused game input (for example the console opened with Key 0x7B = F12,
+            then Key 0x0D for Enter). Only characters that need no Shift work: the game does not see a Shift key that is
+            sent from outside, so capitals and characters such as ( ) arrive as the unshifted key. The first character after
+            the console opened is swallowed by the console itself
     Print   press the game's Print key and copy the newest game screenshot to -OutFile
     Stop    end the game process started by Start
 
@@ -33,13 +37,14 @@
     .\ingame-input.ps1 -Action Stop
 #>
 param(
-    [Parameter(Mandatory = $true)][ValidateSet('Start', 'Key', 'Move', 'Press', 'Click', 'Print', 'Stop')][string]$Action,
+    [Parameter(Mandatory = $true)][ValidateSet('Start', 'Key', 'Move', 'Press', 'Click', 'Text', 'Print', 'Stop')][string]$Action,
     [string]$Exe = '',
     [string]$Level = '',
     [uint32]$Seed = 12345,
     [int]$Seconds = 90,
     [int]$Wait = 25,
     [int]$Vk = 0,
+    [string]$Text = '',
     [int]$X = 0,
     [int]$Y = 0,
     [string]$OutFile = '',
@@ -54,6 +59,22 @@ Add-Type -Namespace OdInput -Name Native -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
 [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
 [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int cmd);
+[DllImport("user32.dll")] public static extern short VkKeyScan(char ch);
+[StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx, dy; public uint mouseData, dwFlags, time; public IntPtr dwExtraInfo; }
+[StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr dwExtraInfo; }
+[StructLayout(LayoutKind.Explicit)] public struct INPUTUNION { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; }
+[StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public INPUTUNION u; }
+[DllImport("user32.dll", SetLastError = true)] public static extern uint SendInput(uint count, INPUT[] inputs, int size);
+// Sends one hardware-style key event by scan code (what DirectInput sees); up = key release.
+public static void Scan(ushort scan, bool up)
+{
+    INPUT[] input = new INPUT[1];
+    input[0].type = 1;
+    input[0].u.ki.wScan = scan;
+    input[0].u.ki.dwFlags = 8u | (up ? 2u : 0u);
+    SendInput(1, input, System.Runtime.InteropServices.Marshal.SizeOf(typeof(INPUT)));
+}
+[DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
 '@
 
 # Reads the process id and appData folder written by the Start action.
@@ -90,6 +111,25 @@ function Send-Key([byte]$vk, [byte]$scan, [uint32]$downFlags, [uint32]$upFlags)
     [OdInput.Native]::keybd_event($vk, $scan, $downFlags, [UIntPtr]::Zero)
     Start-Sleep -Milliseconds 120
     [OdInput.Native]::keybd_event($vk, $scan, $upFlags, [UIntPtr]::Zero)
+}
+
+# Types a text key by key by scan code: the key of every character comes from the keyboard layout (Shift is sent, but the game ignores it).
+function Send-Text([string]$text)
+{
+    foreach($ch in $text.ToCharArray())
+    {
+        $scanned = [OdInput.Native]::VkKeyScan($ch)
+        if($scanned -eq -1) { throw "Character '$ch' cannot be typed with the current keyboard layout." }
+        $vk = [byte]($scanned -band 0xFF)
+        $shift = (($scanned -shr 8) -band 1) -eq 1
+        $scan = [byte][OdInput.Native]::MapVirtualKey($vk, 0)
+        if($shift) { [OdInput.Native]::Scan(0x2A, $false); Start-Sleep -Milliseconds 80 }
+        [OdInput.Native]::Scan($scan, $false)
+        Start-Sleep -Milliseconds 80
+        [OdInput.Native]::Scan($scan, $true)
+        if($shift) { Start-Sleep -Milliseconds 40; [OdInput.Native]::Scan(0x2A, $true) }
+        Start-Sleep -Milliseconds 60
+    }
 }
 
 # Moves the game cursor to a client position: corner first (relative move beyond the window), then 1:1 relative delta.
@@ -138,9 +178,10 @@ if(-not (Set-GameForeground $state.Process)) { 'ABORT: game window is not in the
 
 switch($Action)
 {
-    'Key'   { Send-Key ([byte]$Vk) 0 0 2; 'key sent' }
+    'Key'   { Send-Key ([byte]$Vk) ([byte][OdInput.Native]::MapVirtualKey([uint32]$Vk, 0)) 0 2; 'key sent' }
     'Move'  { Move-GameCursor $X $Y; "cursor at client ($X,$Y)" }
     'Press' { Press-GameButton; 'pressed' }
+    'Text'  { Send-Text $Text; "typed $($Text.Length) characters" }
     'Click' { Move-GameCursor $X $Y; Press-GameButton; "clicked client ($X,$Y)" }
     'Print'
     {
