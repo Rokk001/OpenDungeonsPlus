@@ -170,6 +170,10 @@ public:
     inline double getSlapDamagePercent() const
     { return mSlapDamagePercent; }
 
+    //! \brief Damage per second a creature takes while standing on lava without a bridge
+    inline double getLavaDamagePerSecond() const
+    { return mLavaDamagePerSecond; }
+
     inline uint32_t getSlapEffectDuration() const
     { return mSlapEffectDuration; }
 
@@ -502,6 +506,7 @@ private:
     int32_t mCreatureMoodAngry;
     int32_t mCreatureMoodFurious;
     double mSlapDamagePercent;
+    double mLavaDamagePerSecond;
     uint32_t mSlapEffectDuration;
     double mTiredWakefulness;
     double mTiredWalkSpeedFactor;
