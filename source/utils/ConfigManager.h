@@ -302,11 +302,21 @@ public:
     inline double getClaimingWallPenalty() const
     { return mClaimingWallPenalty; }
 
-    inline double getDigCoefGold() const
-    { return mDigCoefGold; }
+    //! \brief Returns the gold held by one gold seam tile at density 100 percent
+    inline double getGoldPerSeamTile() const
+    { return mGoldPerSeamTile; }
 
-    inline double getDigCoefGem() const
-    { return mDigCoefGem; }
+    //! \brief Returns the gold a worker mines from a gold tile in one dig step at density 100 percent
+    inline double getGoldPerDigStep() const
+    { return mGoldPerDigStep; }
+
+    //! \brief Returns the gold a worker mines from a gem tile in one dig step
+    inline double getGemGoldPerDigStep() const
+    { return mGemGoldPerDigStep; }
+
+    //! \brief Returns the share of the carry capacity one dig step must reach to make a worker cheer
+    inline double getWorkerCheerGoldShare() const
+    { return mWorkerCheerGoldShare; }
 
     inline double getDigCoefClaimedWall() const
     { return mDigCoefClaimedWall; }
@@ -534,8 +544,14 @@ private:
     double mManaWellBonusPerTile;
     double mBedStepMaxHeight;
     double mClaimingWallPenalty;
-    double mDigCoefGold;
-    double mDigCoefGem;
+    //! \brief Gold of one gold seam tile at density 100 percent (GoldPerSeamTile)
+    double mGoldPerSeamTile;
+    //! \brief Gold mined from a gold tile in one dig step at density 100 percent (GoldPerDigStep)
+    double mGoldPerDigStep;
+    //! \brief Gold mined from a gem tile in one dig step (GemGoldPerDigStep)
+    double mGemGoldPerDigStep;
+    //! \brief Share of the carry capacity a dig step must reach to make a worker cheer (WorkerCheerGoldShare)
+    double mWorkerCheerGoldShare;
     double mDigCoefClaimedWall;
     int32_t mNbTurnsKoCreatureAttacked;
     std::string mDefaultWorkerRogue;

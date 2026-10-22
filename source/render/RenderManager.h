@@ -158,7 +158,18 @@ public:
     static const Ogre::Real BLENDER_UNITS_PER_OGRE_UNIT;
     static const Ogre::Real KEEPER_HAND_WORLD_Z;
     static const Ogre::Real DRAGGABLE_NODE_HEIGHT;
-    
+
+    //! \brief Returns the name of the material of a gold wall of the given density: Gold, Gold50 or Gold150.
+    //! \param density The gold density of the tile in percent.
+    //! \param lifted True for the clone used by the tiles of the editor drag container (LiftedGold, LiftedGold50, ...).
+    static std::string goldWallMaterialName(uint32_t density, bool lifted);
+
+    //! \brief Creates the lifted clones of the gold wall materials of every density (editor drag container).
+    static void createLiftedGoldMaterials();
+
+    //! \brief Removes the lifted clones of the gold wall materials of every density from the material manager.
+    static void removeLiftedGoldMaterials();
+
     //! Debug function to be used for dev only. Beware, it should not be called from the server thread
     static std::string consoleListAnimationsForMesh(const std::string& meshName);
 

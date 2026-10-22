@@ -63,6 +63,19 @@ std::function<bool()> CreatureActionDigTile::action()
         std::ref(mCreature), std::ref(mTileDig), std::ref(mTilePos));
 }
 
+//! \brief Gives the gold of one dig step to the worker, the seat statistics and the level script. The worker carries the
+//! whole part, the fraction stays in its remainder; the statistics and the script get the whole part as well.
+//! \param creature The mining worker.
+//! \param tileDig The mined tile.
+//! \param gold The gold of this step, may have a fraction.
+static void payMinedGold(Creature& creature, Tile& tileDig, double gold)
+{
+    int32_t wholeGold = creature.addGoldCarriedFraction(gold);
+    creature.getSeat()->addGoldMined(wholeGold);
+    creature.getGameMap()->getLevelScript().observeGoldMined(creature.getSeat()->getId(),
+        tileDig.getX(), tileDig.getY(), wholeGold);
+}
+
 //! \brief Performs digging with unchanged timing and reports actual gold and the interval to the next step.
 bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos)
 {
@@ -109,7 +122,12 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         creature.addCreatureEffect(creature.mDiggingEffect);
     }
     creature.setAnimationState(EntityAnimation::dig_anim, true, walkDirection);    
-    double amountDug = tileDig.digOut(creature.getDigRate());
+    // Gold walls are mined by gold per step (not by the dig rate of the worker), every other tile is dug as before
+    double amountDug = 0.0;
+    if(tileDig.getType() == TileType::gold)
+        amountDug = tileDig.digOutGold();
+    else
+        amountDug = tileDig.digOut(creature.getDigRate());
     if(amountDug > 0.0)
     {
         creature.receiveExp(1.5 * creature.getDigRate() / 20.0);
@@ -119,12 +137,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         {
             case TileType::gold:
             {
-                static const double digCoefGold = ConfigManager::getSingleton().getDigCoefGold();
-                double tempDouble = digCoefGold * amountDug * creature.getGameMap()->getGoldDensityPercent() / 100.0;
-                creature.addGoldCarried(static_cast<int>(tempDouble));
-                creature.getSeat()->addGoldMined(static_cast<int>(tempDouble));
-                creature.getGameMap()->getLevelScript().observeGoldMined(creature.getSeat()->getId(),
-                    tileDig.getX(), tileDig.getY(), static_cast<int>(tempDouble));
+                // The gold of this step is the amount the tile paid (density, skirmish setting and last step included)
+                payMinedGold(creature, tileDig, amountDug);
                 if(tileDig.getFullness() <= 0.0)
                     ++creature.getSeat()->getStatistics().mGoldTilesMined;
 
@@ -134,12 +148,9 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             }
             case TileType::gem:
             {
-                static const double digCoefGem = ConfigManager::getSingleton().getDigCoefGem();
-                double tempDouble = digCoefGem * amountDug;
-                creature.addGoldCarried(static_cast<int>(tempDouble));
-                creature.getSeat()->addGoldMined(static_cast<int>(tempDouble));
-                creature.getGameMap()->getLevelScript().observeGoldMined(creature.getSeat()->getId(),
-                    tileDig.getX(), tileDig.getY(), static_cast<int>(tempDouble));
+                // Gem tiles are endless and pay a fixed gold per step, independent of the worker level
+                static const double gemGoldPerDigStep = ConfigManager::getSingleton().getGemGoldPerDigStep();
+                payMinedGold(creature, tileDig, gemGoldPerDigStep);
                 // Receive experience for digging
                 creature.receiveExp(creature.getDigRate() / 20.0);
                 break;
@@ -174,7 +185,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
     }
 
     // Check to see if we are carrying the maximum amount of gold we can carry, and if so, try to take it to a treasury.
-    if (creature.getGoldCarried() >= creature.getDefinition()->getMaxGoldCarryable())
+    if (creature.getGoldCarried() >= creature.getGoldCapacity())
     {
         // We create the treasury object and push action to deposit it
         TreasuryObject* obj = new TreasuryObject(creature.getGameMap(), creature.getGoldCarried());

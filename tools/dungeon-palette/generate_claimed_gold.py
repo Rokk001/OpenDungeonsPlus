@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generates the claimed floor and the gold vein textures (materials/textures/Claimed.png, ClaimedNormal.png,
-Gold.png, GoldNormal.png).
+Gold.png, GoldNormal.png, and the gold vein textures of the densities 50 % and 150 %: Gold50.png, Gold50Normal.png,
+Gold150.png, Gold150Normal.png).
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
 byte-identical files. Needs numpy and Pillow.
@@ -12,20 +13,29 @@ frame. The only trace of the tile grid is a very faint joint. The ownership mark
 metal stud; the shader blends the seat colour into the masked area.
 
 Gold vein: dark rock with irregular veins and nuggets of gold. Periodic, so it tiles seamlessly both with the
-world space UV of upward facing surfaces (one repeat per tile) and with the mesh UV of the side faces.
+world space UV of upward facing surfaces (one repeat per tile) and with the mesh UV of the side faces. The look
+shows the gold density of a wall: GOLD_SETS holds one parameter set per density (how much of the veins is kept, the
+width of the veins, the nugget and the glint thresholds); the 100 % set is the original look.
 
-Both come with a tangent space normal map (red = -d height / dx, green = +d height / dy, image y pointing down).
+All come with a tangent space normal map (red = -d height / dx, green = +d height / dy, image y pointing down).
 
 Usage: python generate_claimed_gold.py [output folder] [--check] [--mask=<ClaimedMask.png>]
+--check writes into a temporary folder (never into materials/textures), compares the generated Gold.png and
+GoldNormal.png byte by byte with the committed files in materials/textures and prints the cover and glint share of
+the three density sets.
 """
 
+import filecmp
 import os
+import shutil
 import sys
+import tempfile
 
 import numpy as np
 from PIL import Image
 
 N = 512
+COMMITTED_TEXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials', 'textures')
 MASK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'materials', 'textures', 'ClaimedMask.png')
 
 # Target tones (8 bit) and the claimed floor tone.
@@ -34,6 +44,20 @@ ROCK_BASE = np.array([52.0, 46.0, 42.0])
 GOLD_DARK = np.array([178.0, 124.0, 16.0])
 GOLD_MID = np.array([246.0, 186.0, 38.0])
 GOLD_GLINT = np.array([252.0, 208.0, 84.0])
+
+# Gold vein parameters per wall density (percent). keep: smoothstep limits of the share of the veins that exists;
+# width: factor on the half width of a vein; nugget_lo: lower threshold of the nuggets (upper = lower + 0.25);
+# glint_lo: lower threshold of the glints (upper = lower + 0.5). The 100 % set is the original look.
+GOLD_SETS = {
+    50: {'keep_lo': -0.2, 'keep_hi': 0.6, 'width': 0.6, 'nugget_lo': 1.4, 'glint_lo': 1.7},
+    100: {'keep_lo': -0.7, 'keep_hi': 0.1, 'width': 1.0, 'nugget_lo': 1.0, 'glint_lo': 1.7},
+    150: {'keep_lo': -1.2, 'keep_hi': -0.4, 'width': 1.35, 'nugget_lo': 0.8, 'glint_lo': 1.45},
+}
+# The output name of the textures of each density (100 % keeps the original name)
+GOLD_NAMES = {50: 'Gold50', 100: 'Gold', 150: 'Gold150'}
+# The offsets of the upper thresholds of the nuggets and the glints
+NUGGET_SPAN = 0.25
+GLINT_SPAN = 0.5
 
 
 def smoothstep(a, b, x):
@@ -126,7 +150,11 @@ def claimed():
     return rgb, normal_map(height, 0.8) * 255.0
 
 
-def gold():
+def gold(params=None):
+    """Gold vein texture of one density; params is an entry of GOLD_SETS (default: the 100 % set).
+    Returns the colour image, the normal map, the mean cover and the mean glint share."""
+    if params is None:
+        params = GOLD_SETS[100]
     # rock: dark, cool, calm (soft mottling, a few cracks)
     rock_lum = 1.0 + 0.12 * fbm(21, 4.0, 3) + 0.07 * fbm(22, 50.0, 2)
     cracks = 1.0 - smoothstep(0.0, 0.04, np.abs(fbm(23, 5.0, 2)))
@@ -139,24 +167,24 @@ def gold():
     dist_px = np.abs(field) / np.maximum(np.hypot(gx, gy), 1e-4)
     dist_px = dist_px + 2.5 * fbm(41, 25.0, 2)
     swell = smoothstep(-1.0, 1.0, fbm(33, 3.0, 2))
-    keep = smoothstep(-0.7, 0.1, fbm(34, 2.0, 2))
-    half_w = (7.5 + 12.0 * swell) * keep
+    keep = smoothstep(params['keep_lo'], params['keep_hi'], fbm(34, 2.0, 2))
+    half_w = (7.5 + 12.0 * swell) * keep * params['width']
     seam = 1.0 - smoothstep(half_w - 1.5, half_w + 0.5, dist_px)
     # nuggets: a handful of rounded lumps, a bit larger than the seam width
-    nugget = smoothstep(1.0, 1.25, fbm(35, 8.0, 2))
+    nugget = smoothstep(params['nugget_lo'], params['nugget_lo'] + NUGGET_SPAN, fbm(35, 8.0, 2))
     cover = np.clip(np.maximum(seam, nugget), 0.0, 1.0)
     # gold: smooth, warm, with soft shading across the seams and a few small glints
     shade = np.clip(0.55 + 0.20 * fbm(27, 14.0, 3) + 0.10 * fbm(28, 60.0, 2), 0.0, 1.0)
     core = np.clip(blur(cover, 5.0) * 1.6, 0.0, 1.0)
     shade = np.clip(shade * 0.65 + 0.45 * core, 0.0, 1.0)
     gold_rgb = GOLD_DARK[None, None, :] * (1.0 - shade[..., None]) + GOLD_MID[None, None, :] * shade[..., None]
-    glint = smoothstep(1.7, 2.2, fbm(29, 45.0, 2)) * cover
+    glint = smoothstep(params['glint_lo'], params['glint_lo'] + GLINT_SPAN, fbm(29, 45.0, 2)) * cover
     gold_rgb = gold_rgb * (1.0 - glint[..., None]) + GOLD_GLINT[None, None, :] * glint[..., None]
     rim = np.clip(blur(cover, 1.6), 0, 1)
     rgb = rock * (1.0 - cover[..., None]) + gold_rgb * cover[..., None]
     rgb = rgb * (1.0 - 0.30 * (rim * (1.0 - rim) * 4.0 * cover)[..., None])
     height = 2.0 * blur(cover, 1.5) + 0.20 * fbm(30, 40.0, 3) - 0.5 * cracks
-    return rgb, normal_map(height, 1.0) * 255.0
+    return rgb, normal_map(height, 1.0) * 255.0, float(cover.mean()), float(glint.mean())
 
 
 def main():
@@ -170,10 +198,19 @@ def main():
             MASK_PATH = arg[len('--mask='):]
         else:
             out = arg
+    if check:
+        # The check never writes into the texture folder of the repository
+        out = tempfile.mkdtemp()
     os.makedirs(out, exist_ok=True)
-    jobs = (('Claimed', claimed), ('Gold', gold))
-    for name, fn in jobs:
-        rgb, nrm = fn()
+    shares = {}
+    jobs = [('Claimed', None)]
+    for density in sorted(GOLD_NAMES):
+        jobs.append((GOLD_NAMES[density], GOLD_SETS[density]))
+    for name, params in jobs:
+        result = claimed() if params is None else gold(params)
+        rgb, nrm = result[0], result[1]
+        if len(result) > 2:
+            shares[name] = (result[2], result[3])
         save(os.path.join(out, name + '.png'), rgb)
         save(os.path.join(out, name + 'Normal.png'), nrm)
         if check:
@@ -183,6 +220,14 @@ def main():
             sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1), 0).mean()
             print('%-8s mean rgb %s  Y %.1f  sat %.2f  max %d' % (name, a.reshape(-1, 3).mean(0).round(1), y.mean(), sat,
                                                                a.max()))
+    if check:
+        for density in sorted(GOLD_NAMES):
+            cover, glint = shares[GOLD_NAMES[density]]
+            print('density %d cover %.4f glint %.4f' % (density, cover, glint))
+        for fname in ('Gold.png', 'GoldNormal.png'):
+            same = filecmp.cmp(os.path.join(out, fname), os.path.join(COMMITTED_TEXTURES, fname), shallow=False)
+            print('%s %s' % ('UNCHANGED' if same else 'CHANGED', fname))
+        shutil.rmtree(out, ignore_errors=True)
 
 
 if __name__ == '__main__':
