@@ -1246,7 +1246,9 @@ static void setShadowingEnabledParameters(bool enabled)
                             if(pass->getTextureUnitState(unit)->getContentType() == Ogre::TextureUnitState::CONTENT_SHADOW)
                                 hasShadowTexture = true;
                         }
-                        parameters->setNamedConstant("shadowingEnabled", enabled && hasShadowTexture);
+                        // OGRE 14 rejects an int overload for a bool uniform, so the value goes in as a one element array
+                        const int shadowingValue = (enabled && hasShadowTexture) ? 1 : 0;
+                        parameters->setNamedConstant("shadowingEnabled", &shadowingValue, 1);
                     }
                 }
             }
