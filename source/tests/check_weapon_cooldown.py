@@ -165,9 +165,11 @@ EXPECTED_COOLDOWN = {
     ('Gnome', 'Melee'): 2, ('TentacleAlbine', 'Melee'): 2, ('TentacleGreen', 'Melee'): 2, ('Dragon', 'Melee'): 4,
     ('Champion', 'Melee'): 6,
     ('LizardMan', 'MissileLaunch'): 3, ('Lich', 'MissileLaunch'): 2, ('Wizard', 'MissileLaunch'): 3,
-    ('DarkElf', 'MissileLaunch'): 3, ('DarkElf', 'GuidedBolt'): 3, ('Elf', 'MissileLaunch'): 3,
-    ('Elf', 'GuidedBolt'): 2, ('Elf', 'Grenade'): 10, ('Dragon', 'MissileLaunch'): 22, ('Kreatur', 'MissileLaunch'): 3,
+    ('DarkElf', 'MissileLaunch'): 3, ('Elf', 'MissileLaunch'): 3,
+    ('Dragon', 'MissileLaunch'): 22, ('Kreatur', 'MissileLaunch'): 3,
 }
+# The GuidedBolt and Grenade lines of the archers are skills of the Bow path now (their cooldown in turns)
+EXPECTED_TREE_COOLDOWN = {'ARC_A2': '3', 'ARC_A3': '10'}
 
 
 # Parry values (percent) per weapon: the three weapons of the unskilled model carriers parry badly, all others keep the
@@ -315,6 +317,10 @@ for (name, skill), expected in EXPECTED_COOLDOWN.items():
     assert name in creatures and skill in creatures[name]['skills'], (name, skill)
     assert cooldown_of(creatures[name], equipments, skill) == expected, \
         (name, skill, cooldown_of(creatures[name], equipments, skill), expected)
+tree_config = read('config/creatureSkills.cfg')
+for skill_id, expected in EXPECTED_TREE_COOLDOWN.items():
+    tree_block = re.search(r'^Id\s+' + skill_id + r'\s*$(.*?)^\[/Skill\]', tree_config, re.M | re.S).group(1)
+    assert re.search(r'^Cooldown\s+' + expected + r'\s*$', tree_block, re.M), (skill_id, expected)
 # A creature with weapons has the weapon cooldown in its melee row too, so both sources agree
 for name, creature in creatures.items():
     if creature['weapons'] and 'Melee' in creature['skills']:
