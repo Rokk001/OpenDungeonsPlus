@@ -130,112 +130,152 @@ class MeshBuilder:
                 uv.data[loop_index].uv=(point[axes[0]]*0.5,point[axes[1]]*0.5)
         bpy.context.view_layer.objects.active=obj
         obj.select_set(True)
+        if self.name not in ("MenuBanner", "MenuBackdrop", "MenuCrystalSpire"):
+            bevel=obj.modifiers.new("Stone edge wear", "BEVEL")
+            bevel.width=0.025
+            bevel.segments=1
         return obj
 
 
-# Build the central arch, its raised portcullis and suspension chains.
+
+# Build a tall, backed gatehouse with deep masonry, full-height grille and hanging chains.
 def gate():
     b=MeshBuilder("MenuGate")
+    spring,radius,outer=6.0,4.5,6.2
+    poly=[(radius,0),(outer,0),(outer,spring)]
+    poly.extend((outer*math.cos(i*math.pi/32),spring+outer*math.sin(i*math.pi/32)) for i in range(1,33))
+    poly.extend([(-outer,0),(-radius,0),(-radius,spring)])
+    poly.extend((radius*math.cos(math.pi-i*math.pi/28),spring+radius*math.sin(math.pi-i*math.pi/28)) for i in range(1,29))
+    b.prism(poly,0.0,3.5,"MenuDarkStone")
     for side in (-1,1):
-        for z in range(8):
-            b.box((side*4.45,0,z+0.48),(1.65,2.2,0.94))
-        b.box((side*4.45,-0.1,0.25),(2.0,2.6,0.5))
-        b.box((side*4.45,-0.1,7.85),(2.0,2.6,0.35))
-        for i in range(22):
-            t=i/21
-            b.link((side*(4.6+4.8*t),-0.55,7.5-1.0*math.sin(t*math.pi)),0.20,bool(i%2))
-    b.arch(0,0,4.35,3.65,0.85,2.3,22)
-    for x in range(-7,8):
-        ztop=4.35+math.sqrt(max(0,3.55**2-(x*0.46)**2))
-        b.box((x*0.46,0.2,(4.3+ztop)/2),(0.09,0.12,ztop-4.3),"MenuIron")
-        b.column((x*0.46,0.2,4.02),0.10,0.3,0,"MenuIron",4)
-    for z in (4.55,5.4,6.3):
-        width=2*math.sqrt(max(0,3.55**2-(z-4.35)**2))
-        b.box((0,0.17,z),(width,0.14,0.10),"MenuIron")
+        for row in range(12):
+            for col in range(2):
+                b.box((side*(5.14+col*1.15),-0.38,row*0.97+0.48),(1.11,1.03,0.92))
+        b.box((side*5.9,-0.52,0.3),(3.0,1.55,0.6))
+        for x in (side*5.0,side*6.8):
+            b.box((x,-0.42,6.2),(0.28,1.26,12.4))
+        for i in range(23):
+            t=i/22
+            b.link((side*(5.8+3.2*t),-0.75,11.5-1.2*math.sin(t*math.pi)),0.26,bool(i%2))
+    b.arch(0,-0.48,spring,radius,1.20,1.2,30)
+    b.arch(0,-0.57,spring,radius+1.28,0.22,1.3,34)
+    for x in (-5.4,-4.1,-2.7,-1.35,0,1.35,2.7,4.1,5.4):
+        z=spring+math.sqrt(max(0,outer*outer-x*x))
+        b.box((x,0.2,z+0.38),(0.72,2.5,0.75))
+    for i in range(23):
+        x=-4.4+i*0.4
+        top=spring+math.sqrt(max(0,radius*radius-x*x))-0.14
+        b.box((x,0.42,(0.4+top)/2),(0.11,0.18,top-0.4),"MenuIron")
+        b.column((x,0.42,0.18),0.13,0.38,0,"MenuIron",5)
+    for z in (0.9,2.8,4.8,6.6,8.3):
+        width=2*radius if z<=spring else 2*math.sqrt(radius*radius-(z-spring)**2)
+        b.box((0,0.35,z),(width,0.22,0.15),"MenuIron")
+    for side in (-1,1):
+        b.box((side*3.8,2.6,4.1),(0.3,0.15,3.2),"MenuWindowGlow")
     return b.finish()
 
 
-# Build a battlemented wall with buttresses, an archive alcove and a workshop nook.
+# Build tall buttressed masonry retaining the left archive and right workshop alcoves.
 def wall():
     b=MeshBuilder("MenuWallSegment")
-    for row in range(7):
-        for col in range(8):
-            x=-4.5+col*1.28+(0.18 if row%2 else 0)
-            if 1<=col<=3 and row<4:
+    for row in range(11):
+        for col in range(16):
+            x=-10.2+col*1.34+(0.22 if row%2 else 0)
+            if 6<=col<=8 and row<4:
                 continue
-            b.box((x,0,row*0.73+0.36),(1.24,1.4,0.69))
-    b.box((0,0.0,5.28),(10.6,1.85,0.35))
-    for x in (-5,-3,-1,1,3,5):
-        b.box((x,0,5.85),(0.8,1.6,0.9))
-    for x in (-4.9,4.9):
-        b.box((x,-0.4,2.5),(0.7,2.0,5.0))
-    b.arch(-1.9,-0.3,1.9,1.5,0.45,1.4,12)
+            b.box((x,0.5,row*0.88+0.44),(1.30,2.8,0.83))
+    b.box((0,0.5,9.83),(22.0,3.45,0.5))
+    for x in range(-10,11,2):
+        b.box((x,0.15,10.65),(0.96,2.9,1.15))
+    for x in (-9.7,-5.0,4.5,9.7):
+        b.box((x,-0.65,4.8),(1.05,4.1,9.6))
+        b.box((x,-1.4,0.5),(1.5,4.4,1.0))
+    b.arch(-1.2,-0.8,2.0,1.9,0.62,2.5,18)
     for z in (0.55,1.25,1.95):
-        b.box((-1.9,0.65,z),(2.6,0.9,0.12),"MenuWood")
-        for x in (-2.8,-2.35,-1.9,-1.45,-1.0):
-            b.column((x,0.6,z+0.08),0.10,0.36,material="MenuParchment",sides=8)
-    b.box((2.2,-0.85,1.15),(2.8,0.9,0.18),"MenuWood")
-    for x in (1.1,3.3):
-        b.box((x,-0.85,0.55),(0.15,0.65,1.1),"MenuWood")
-    for x in (1.6,2.2,2.8):
-        b.box((x,-0.65,1.45),(0.08,0.08,0.6),"MenuWood")
-        b.box((x,-0.65,1.77),(0.4,0.12,0.15),"MenuIron")
+        b.box((-1.2,1.0,z),(3.3,0.9,0.12),"MenuWood")
+        for x in (-2.4,-1.85,-1.3,-0.75,-0.2):
+            b.column((x,0.9,z+0.08),0.10,0.36,material="MenuParchment",sides=8)
+    b.box((4.0,-1.35,1.15),(3.0,1.0,0.20),"MenuWood")
+    for x in (2.8,5.2):
+        b.box((x,-1.35,0.55),(0.16,0.75,1.1),"MenuWood")
+    for x in (3.3,4.0,4.7):
+        b.box((x,-1.15,1.45),(0.08,0.08,0.6),"MenuWood")
+        b.box((x,-1.15,1.77),(0.4,0.12,0.15),"MenuIron")
+    for x in (-7,7):
+        b.box((x,-0.94,7.2),(0.42,0.03,1.8),"MenuWindowGlow")
+        b.arch(x,-1.04,8.1,0.23,0.18,0.25,9)
     return b.finish()
 
 
-# Build the pointed fortress tower with an accessible battlement platform.
+# Build a massive masonry tower with slit windows and an accessible battlement platform.
 def tower():
     b=MeshBuilder("MenuTower")
-    b.box((0,0,4.7),(3.0,3.0,9.4))
-    for z in (0.4,3.0,6.0,9.3):
-        b.box((0,0,z),(3.3,3.3,0.25))
-    b.box((0,0,9.65),(3.8,3.8,0.40))
+    for row in range(13):
+        for col in range(4):
+            b.box((-1.74+col*1.16,-0.25,row*0.94+0.46),(1.12,4.4,0.89))
+    for z in (0.5,4.4,8.5,12.3):
+        b.box((0,-0.25,z),(5.2,4.95,0.32))
+    b.box((0,-0.25,12.8),(5.8,5.7,0.65))
     for side in (-1,1):
-        for x in (-1.55,0,1.55):
-            b.box((x,side*1.6,10.15),(0.65,0.65,0.8))
-        b.box((side*1.6,0,10.15),(0.65,0.65,0.8))
-    b.column((0,0.65,9.9),0.85,4.4,0,"MenuDarkStone",8)
-    for z in (3.5,6.5):
-        b.box((0,-1.52,z),(0.45,0.02,1.2),"MenuBlack")
-        b.arch(0,-1.6,z+0.6,0.23,0.14,0.15,8)
+        for x in (-2.35,0,2.35):
+            b.box((x,side*2.3-0.25,13.75),(0.9,0.95,1.35))
+        b.box((side*2.35,-0.25,13.75),(0.95,0.95,1.35))
+    for z in (4.2,7.8,10.7):
+        b.box((0,-2.48,z),(0.4,0.025,1.45),"MenuWindowGlow")
+        b.arch(0,-2.58,z+0.73,0.22,0.19,0.2,9)
+    b.column((0,0.9,13.15),0.82,3.4,0,"MenuDarkStone",9)
     return b.finish()
 
 
-# Sculpt an original crouched stone guardian with batlike wings and a blunt muzzle.
+# Sculpt a large crouched winged stone sentinel on a high carved foreground pedestal.
 def statue():
     b=MeshBuilder("MenuStatue")
-    b.box((0,0,0.28),(2.4,2.1,0.56))
-    b.box((0,0,1.25),(1.85,1.6,1.4))
-    b.box((0,0,2.05),(2.15,1.9,0.25))
-    b.oval((0,0,3.35),(0.73,0.55,1.15))
-    b.oval((0,-0.18,4.32),(0.58,0.52,0.65))
-    b.oval((0,-0.67,4.17),(0.50,0.4,0.27))
-    b.box((0,-0.86,4.05),(0.64,0.18,0.12),"MenuDarkStone")
-    for s in (-1,1):
-        b.oval((s*0.53,-0.22,2.8),(0.39,0.55,0.60))
-        b.oval((s*0.52,-0.6,2.40),(0.4,0.62,0.23))
-        b.oval((s*0.68,-0.25,3.45),(0.20,0.28,0.75))
-        b.oval((s*0.7,-0.59,2.91),(0.25,0.40,0.20))
-        b.column((s*0.35,0.0,4.66),0.20,0.7,0,sides=5)
-        b.oval((s*0.24,-0.63,4.42),(0.17,0.06,0.055),"MenuDarkStone")
-        wing=[(s*0.47,3.75),(s*0.9,4.9),(s*2.25,5.75),(s*2.03,4.65),(s*2.50,4.32),(s*1.80,4.17),(s*1.66,3.58),(s*1.17,3.89),(s*0.80,3.15)]
-        b.prism(wing,0.25,0.48)
-        for i in range(3):
-            b.oval((s*(0.40+i*0.12),-1.06,2.38),(0.07,0.24,0.07))
+    b.box((0,0,0.30),(3.4,3.0,0.60))
+    b.box((0,0,0.82),(3.0,2.7,0.42))
+    b.box((0,0,2.0),(2.55,2.2,2.0))
+    for side in (-1,1):
+        b.box((side*1.13,-0.9,2.0),(0.28,0.32,1.75),"MenuDarkStone")
+    b.box((0,0,3.18),(3.2,2.8,0.40))
+    b.box((0,0,3.50),(2.8,2.5,0.26))
+    b.oval((0,0.15,5.3),(0.98,0.73,1.65),sides=18,rings=10)
+    b.oval((0,-0.30,6.72),(0.77,0.68,0.85),sides=18,rings=10)
+    b.oval((0,-1.03,6.48),(0.69,0.56,0.37),sides=16,rings=8)
+    b.box((0,-1.39,6.34),(0.90,0.12,0.12),"MenuDarkStone")
+    b.oval((0,-0.95,6.95),(0.46,0.21,0.22),sides=14,rings=7)
+    for side in (-1,1):
+        b.oval((side*0.73,-0.2,4.44),(0.52,0.82,0.79),sides=16,rings=8)
+        b.oval((side*0.74,-0.87,3.91),(0.57,0.81,0.26),sides=16,rings=7)
+        b.oval((side*0.89,-0.25,5.24),(0.28,0.37,1.03),sides=14,rings=8)
+        b.oval((side*0.92,-0.86,4.45),(0.33,0.55,0.26),sides=14,rings=7)
+        b.column((side*0.47,-0.04,7.18),0.24,1.10,0,sides=7)
+        b.oval((side*0.33,-1.03,6.92),(0.25,0.08,0.09),"MenuDarkStone",12,6)
+        for i in range(4):
+            b.oval((side*(0.43+i*0.16),-1.48,3.88),(0.08,0.32,0.09),"MenuIron",8,5)
+        wing=[(side*0.63,5.74),(side*1.12,7.34),(side*2.95,8.76),(side*2.65,7.16),(side*3.18,6.72),(side*2.25,6.34),(side*2.12,5.57),(side*1.58,5.86),(side*1.0,4.92)]
+        b.prism(wing,0.49,0.72)
+        for x,z in ((1.14,7.1),(1.80,7.64),(2.45,8.13)):
+            b.oval((side*x,0.47,z),(0.11,0.10,0.57),"MenuDarkStone",8,5)
     return b.finish()
 
 
-# Build an iron bowl on a carved stone plinth for the looping flame emitter.
+# Build a heavy coal bowl with original sculpted flame tongues on its low pedestal.
 def brazier():
     b=MeshBuilder("MenuBrazier")
-    b.box((0,0,0.15),(1.4,1.4,0.3))
-    b.column((0,0,0.3),0.42,1.25,0.28)
-    b.column((0,0,1.55),0.3,0.42,0.78,"MenuIron",16)
-    b.column((0,0,1.96),0.78,0.09,material="MenuIron",sides=16)
-    b.column((0,0,2.06),0.61,0.07,material="MenuEmber",sides=16)
-    for i in range(8):
-        a=i*math.pi/4
-        b.column((0.68*math.cos(a),0.68*math.sin(a),1.96),0.06,0.55,0,"MenuIron",5)
+    b.box((0,0,0.18),(1.65,1.65,0.36))
+    b.column((0,0,0.36),0.50,2.35,0.34,sides=12)
+    b.column((0,0,2.71),0.35,0.48,0.94,"MenuIron",18)
+    b.column((0,0,3.19),0.94,0.12,material="MenuIron",sides=18)
+    b.column((0,0,3.31),0.78,0.10,material="MenuEmber",sides=16)
+    for i in range(10):
+        a=i*math.pi/5
+        b.column((0.84*math.cos(a),0.84*math.sin(a),3.13),0.065,0.44,material="MenuIron",sides=6)
+    for i in range(9):
+        a=i*2.399
+        x,y=0.46*math.cos(a),0.46*math.sin(a)
+        h=0.95+0.38*math.sin(i*1.8)
+        poly=[(x-0.22,3.38),(x+0.24,3.38),(x+0.15,3.75),(x-0.09,3.38+h)]
+        b.prism(poly,y-0.16,y+0.16,"MenuFlame")
+        b.column((x*0.55,y*0.55,3.35),0.18,0.62+0.1*(i%3),0,"MenuFlameCore",7)
     return b.finish()
 
 
@@ -245,8 +285,8 @@ def banner():
     b.box((0,0,0),(2.4,0.13,0.13),"MenuIron")
     for row in range(13):
         for col in range(7):
-            x=-1+col/3
-            z=-row*0.26
+            x=-1.4+col*(2.8/6)
+            z=-row*0.40
             y=0.10*math.sin(x*5)+0.03*row*math.sin(x*4)
             if row==12:
                 z-=0.22*(col%2)
@@ -300,59 +340,103 @@ def banner():
     return obj,arm
 
 
-# Build the open left-side arcade used as the gathering place.
+
+# Build the left gathering arcade as a deep stone structure with dark recesses.
 def arches():
     b=MeshBuilder("MenuArches")
-    for x in (-6,-2,2,6):
-        b.box((x,0,2.3),(0.75,1.6,4.6))
-        b.box((x,0,0.25),(1.2,2.0,0.5))
-    for x in (-4,0,4):
-        b.arch(x,0,4.6,1.62,0.4,1.6,12)
-    b.box((0,0,6.68),(13.4,1.9,0.45))
+    b.box((0,0,4.1),(15.7,4.0,8.2),"MenuDarkStone")
+    for x in (-7,-2.34,2.34,7):
+        b.box((x,0,12.1),(1.15,3.1,7.8))
+        b.box((x,0,0.35),(1.65,3.65,0.70))
+    for x in (-4.67,0,4.67):
+        b.arch(x,0,16.0,1.75,0.60,3.1,18)
+    b.box((0,0,18.6),(15.7,3.7,0.55))
+    for x in (-6,-3,0,3,6):
+        b.box((x,0,19.25),(0.85,3.4,0.8))
     return b.finish()
 
 
-# Build a dark rock pedestal crowned by a cluster of green crystal shards.
+# Build a rough dark outcrop carrying separate faceted green crystals with visible side faces.
 def crystal():
     b=MeshBuilder("MenuCrystalSpire")
-    b.column((0,0,0),2.5,4.0,1.5,"MenuDarkStone",9)
-    b.column((0,0,4),0.85,7.8,0,"MenuCrystal",5)
-    for i in range(7):
-        a=i*2*math.pi/7
-        x,y=1.2*math.cos(a),1.2*math.sin(a)
-        b.column((x,y,2.8),0.45,4.5+(i%3)*0.8,0,"MenuCrystal",5)
+    rng=random.Random(64)
+    for i in range(20):
+        a=i*2.399
+        r=rng.uniform(0.2,4.0)
+        b.oval((r*math.cos(a),r*math.sin(a),rng.uniform(0.4,4.0)),(rng.uniform(1.3,3.5),rng.uniform(1.3,3.5),rng.uniform(2.0,5.3)),"MenuDarkStone",9,6)
+    for i in range(11):
+        a=i*2.399
+        r=0 if i==0 else rng.uniform(0.7,2.8)
+        x,y=r*math.cos(a),r*math.sin(a)
+        h=19.0 if i==0 else rng.uniform(9.0,16.5)
+        z=5.0+rng.uniform(0,1.5)
+        sides=5
+        start=len(b.vertices)
+        radius=1.25 if i==0 else rng.uniform(0.55,0.95)
+        for level,rr in ((z,radius*0.8),(z+h*0.77,radius)):
+            b.vertices.extend((x+rr*math.cos(j*2*math.pi/sides),y+rr*math.sin(j*2*math.pi/sides),level) for j in range(sides))
+        b.vertices.append((x+0.3*math.sin(a),y+0.2*math.cos(a),z+h))
+        b.faces.append(tuple(start+j for j in reversed(range(sides))))
+        b.face_materials.append("MenuCrystal")
+        for j in range(sides):
+            k=(j+1)%sides
+            b.faces.append((start+j,start+k,start+sides+k,start+sides+j))
+            b.face_materials.append("MenuCrystalDark" if j%3==0 else "MenuCrystal")
+            b.faces.append((start+sides+j,start+sides+k,start+sides*2))
+            b.face_materials.append("MenuCrystalBright" if j%2 else "MenuCrystal")
     return b.finish()
 
 
-# Build individually edged irregular flagstones with foreground rock debris.
+# Build irregular wet flagstones, broken fissures and layered rubble along both foreground edges.
 def courtyard():
     b=MeshBuilder("MenuCourtyard")
     rng=random.Random(71)
-    for row in range(26):
-        y=-31+row*1.55
-        for col in range(25):
-            x=-20+col*1.65+(0.76 if row%2 else 0)
-            b.box((x,y,-0.15+rng.uniform(-0.025,0.025)),(1.60,1.49,0.25),"MenuWetStone")
+    for row in range(30):
+        y=-29+row*1.65
+        for col in range(30):
+            x=-25+col*1.75+(0.82 if row%2 else 0)
+            sx,sy=1.67+rng.uniform(-0.10,0.05),1.55+rng.uniform(-0.10,0.05)
+            z=-0.10+rng.uniform(-0.04,0.025)
+            poly=[(x-sx/2,z-0.11),(x+sx/2,z-0.11),(x+sx/2-0.025,z+0.07),(x-sx/2+0.025,z+0.07)]
+            b.prism(poly,y-sy/2,y+sy/2,"MenuWetStone")
     for side in (-1,1):
-        for i in range(24):
-            b.oval((side*rng.uniform(11,19),rng.uniform(-28,-3),rng.uniform(0,0.6)),(rng.uniform(0.2,1.2),rng.uniform(0.25,0.9),rng.uniform(0.25,1)),"MenuDarkStone",7,4)
+        for i in range(48):
+            position=(side*rng.uniform(8.8,23),rng.uniform(-23,-3),rng.uniform(-0.05,0.9))
+            scale=(rng.uniform(0.25,1.65),rng.uniform(0.3,1.5),rng.uniform(0.25,1.4))
+            if i<3:
+                x,y,z,size=((5.5,-10.2,0.45,(1.3,0.9,0.7)),(6.7,-8.7,0.65,(1.0,0.9,1.0)),(8.6,-5.5,0.35,(1.5,1.1,0.6)))[i]
+                position=(side*x,y,z)
+                scale=size
+            b.oval(position,scale,"MenuDarkStone",9,5)
     return b.finish()
 
 
-# Build distant mountains, needle towers and a dark faceted cloud canopy.
+# Build far sculpted mountain ridges, needle towers and low-reflectance storm clouds.
 def backdrop():
     b=MeshBuilder("MenuBackdrop")
     rng=random.Random(31)
-    b.oval((0,5,0),(150,150,90),"MenuSky",32,16)
-    for i in range(24):
-        x=-65+i*5.8
-        b.column((x,40+rng.uniform(0,10),-2),rng.uniform(5,12),rng.uniform(12,29),0,"MenuMountain",7)
-    for x in (-39,-31,-23,24,32,41):
-        b.column((x,27,0),1.2,rng.uniform(13,20),material="MenuDarkStone",sides=7)
-        b.column((x,27,16),1.7,rng.uniform(5,10),0,"MenuDarkStone",6)
-    for i in range(34):
-        b.oval((rng.uniform(-75,75),rng.uniform(-10,80),rng.uniform(30,42)),(rng.uniform(8,18),rng.uniform(5,12),rng.uniform(1,3)),"MenuCloud",12,5)
+    b.oval((0,45,0),(190,190,115),"MenuSky",48,24)
+    for layer in range(3):
+        y=67+layer*20
+        points=[(-120,-6)]
+        for i in range(32):
+            x=-120+i*7.75
+            points.extend([(x,rng.uniform(13,23)+layer*3),(x+3.5,rng.uniform(25,42)+layer*3)])
+        points.append((124,-6))
+        b.prism(points,y,y+12,"MenuMountain")
+        for i in range(20):
+            x=rng.uniform(-100,100)
+            b.oval((x,y-2,rng.uniform(8,22)),(rng.uniform(6,12),rng.uniform(4,9),rng.uniform(7,14)),"MenuMountain",9,6)
+    for x,y,h in ((-42,50,28),(-34,57,36),(-28,62,25),(28,60,31),(37,57,39),(47,64,28)):
+        b.column((x,y,0),1.8,h,material="MenuDistantStone",sides=10)
+        b.column((x,y,h),2.3,7.5,0,"MenuDistantStone",8)
+        for j in range(4):
+            a=j*math.pi/2
+            b.column((x+2.2*math.cos(a),y+2.2*math.sin(a),h-2),0.55,5.5,0,"MenuDistantStone",7)
+    for i in range(35):
+        b.oval((rng.uniform(-100,100),rng.uniform(38,125),rng.uniform(35,58)),(rng.uniform(13,29),rng.uniform(7,18),rng.uniform(2.5,6)),"MenuCloud",16,7)
     return b.finish()
+
 
 
 # Build the vaulted hall beyond the gate without obstructing the entry flight.
@@ -400,7 +484,7 @@ def cave():
 
 
 MODELS=(gate,wall,tower,statue,brazier,banner,arches,crystal,courtyard,backdrop,hall,table,cave)
-COLOURS={"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7)}
+COLOURS={"MenuDistantStone":(0.003,0.004,0.006),"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7),"MenuWindowGlow":(0.8,0.12,0.018),"MenuFlame":(1.0,0.11,0.008),"MenuFlameCore":(1.0,0.42,0.035),"MenuCrystalDark":(0.005,0.12,0.018),"MenuCrystalBright":(0.12,0.8,0.035)}
 
 
 # Save every model privately first, copy it into the source tree and export its mesh.

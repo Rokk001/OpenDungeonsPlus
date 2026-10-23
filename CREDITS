@@ -1292,3 +1292,5 @@ materials/textures/menu/MenuStone.png, materials/textures/menu/MenuStoneNormal.p
 materials/textures/menu/MenuCampaignMap.png OD Team             GPLv3+                  Exact reuse of this project's AI-generated gui/campaign/world_base.png, credited above, on the campaign table; no changes to the map.
 tools/blender-assets/menu_scene_models.py OD Team                GPLv3+                  Original AI-generated Blender source generator for the fortress models.
 materials/scripts/MenuScene.material, particles/MenuScene.particle OD Team GPLv3+       Original scene materials and looping atmosphere effects generated for this project; existing project particle textures retain their credits above.
+assets-src/menu-scene/MenuSceneAssembly.blend OD Team            GPLv3+                  Own AI-authored Blender assembly of this project's thirteen fortress source models at the configured positions, camera and lights; existing source assets keep their credits above.
+tools/blender-assets/menu_scene_assembly.py OD Team               GPLv3+                  Own AI-authored Blender assembly and Eevee preview script for the existing configured fortress scene.

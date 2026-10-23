@@ -9,7 +9,7 @@ particle_system MenuBrazierFire
     sorted true
     emitter Box
     {
-        position 0 0 2.15
+        position 0 0 3.6
         width 0.85
         height 0.85
         depth 0.05
@@ -111,7 +111,7 @@ particle_system MenuCrystalGlow
     billboard_type point
     emitter Box
     {
-        position 0 0 8
+        position 0 0 16
         width 2.8
         height 2.8
         depth 6
@@ -131,5 +131,36 @@ particle_system MenuCrystalGlow
         green -0.25
         blue -0.05
         alpha -0.3
+    }
+}
+
+// Layered dark storm smoke behind the distant fortress silhouettes.
+particle_system MenuStormClouds
+{
+    material RoomAmbSmoke
+    particle_width 34
+    particle_height 13
+    quota 70
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position 0 85 40
+        width 145
+        height 65
+        depth 22
+        direction 1 0 0.02
+        angle 5
+        emission_rate 10
+        time_to_live_min 25
+        time_to_live_max 40
+        velocity_min 0.08
+        velocity_max 0.2
+        colour_range_start 0.015 0.018 0.025 0.65
+        colour_range_end 0.008 0.012 0.018 0.5
+    }
+    affector ColourFader
+    {
+        alpha -0.014
     }
 }
