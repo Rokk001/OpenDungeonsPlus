@@ -145,13 +145,14 @@ int main(int argc,char** argv){try{
   for(std::map<SkillType,Skill>::const_iterator it=data.begin();it!=data.end();++it){const Skill& node=it->second;
    CEGUI::Window* button=root->getChild("SkillTreeWindow/Skills/"+node.path);CEGUI::Window* parent=button->getParent();
    for(size_t d=0;d<node.parents.size();++d){const Skill* dependency=node.parents[d];
-    for(int part=0;part<3;++part){
+    for(int part=0;part<9;++part){
      const std::string linkName="ResearchLink_"+std::to_string(int(dependency->type))+"_"+std::to_string(int(it->first))+"_"+std::to_string(part);
      if(dependency->tab!=node.tab){check(!parent->isChild(linkName),"a parent in another tab has no path");continue;}
+     const bool sameRow=dependency->tier==node.tier;
+     const int bars=sameRow?1:2*std::max(1,node.tier-dependency->tier)+1;
+     if(part>=bars){check(!parent->isChild(linkName)||!parent->getChild(linkName)->isVisible(),"a path has one bar per straight stretch and no more");continue;}
      CEGUI::Window* line=parent->getChild(linkName);
      check(line->isMousePassThroughEnabled(),"connections do not intercept clicks");
-     const bool sameRow=dependency->tier==node.tier;
-     if(sameRow&&part>0){check(!line->isVisible(),"a same-row path has one bar");continue;}
      check(line->getPixelSize().d_width>0&&line->getPixelSize().d_height>0,"each immediate edge has positive geometry");
      check(line->getProperty("ImageColours").find(level>0?"FFE8862E":"FF6E5232")!=CEGUI::String::npos,"permanent paths reflect actual prerequisite completion");
     }
@@ -203,7 +204,7 @@ int main(int argc,char** argv){try{
  map.player.seat.level=0;map.player.seat.current=true;map.player.seat.queue=2;
  SkillManager::listAllSkills([&](const std::string& n,const std::string& c,const std::string& b,SkillType t){game.refreshSkillButtonState(n,c,b,t);});
  game.mIsSkillWindowOpen=true;game.refreshSkillConnections();
- for(const auto size:{CEGUI::Sizef(800,600),CEGUI::Sizef(1280,720),CEGUI::Sizef(1920,1200)})for(float user:{.8f,1.f,1.2f}){
+ for(const CEGUI::Sizef size:std::vector<CEGUI::Sizef>{CEGUI::Sizef(640,480),CEGUI::Sizef(800,600),CEGUI::Sizef(1024,768),CEGUI::Sizef(1280,720),CEGUI::Sizef(1920,1200),CEGUI::Sizef(7680,4320)})for(float user:{.8f,1.f,1.2f}){
   renderer.setDisplaySize(size);const float scale=std::min(size.d_width/1024.f,size.d_height/768.f)*user;
   auto fonts=CEGUI::FontManager::getSingleton().getIterator();
   while(!fonts.isAtEnd()){fonts.getCurrentValue()->setNativeResolution(CEGUI::Sizef(800/user,600/user));fonts.getCurrentValue()->setAutoScaled(CEGUI::ASM_Min);++fonts;}
@@ -227,7 +228,8 @@ int main(int argc,char** argv){try{
     check(button->getProperty("ResearchTileImage")=="OpenDungeonsSkin/ResearchTileWorking","active node highlighted");
     check(bar->isVisible()&&bar->getProgress()==.5f&&bar->getAlpha()==1,"real progress visible on active node");}
    for(size_t d=0;d<p.second.parents.size();++d){const Skill* dep=p.second.parents[d];if(dep->tab!=p.second.tab)continue;
-    for(int part=0;part<3;++part){if(dep->tier==p.second.tier&&part>0)continue;
+    const int bars=dep->tier==p.second.tier?1:2*std::max(1,p.second.tier-dep->tier)+1;
+    for(int part=0;part<bars;++part){
      CEGUI::Window* line=parent->getChild("ResearchLink_"+std::to_string(int(dep->type))+"_"+std::to_string(int(p.first))+"_"+std::to_string(part));
      check(line->isVisible(),"all prerequisite paths stay visible without hover");
      CEGUI::Rectf edge=line->getUnclippedOuterRect().get();

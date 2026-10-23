@@ -218,6 +218,17 @@ static const std::string RESEARCH_LINK_COLOUR_WAITING = "FF6E5232";
 //! Research level at which a node gets the bronze frame and the one with the gold frame
 static const uint32_t RESEARCH_LEVEL_BRONZE = 2;
 static const uint32_t RESEARCH_LEVEL_GOLD = 3;
+//! Layout of the research tree: the widest share of the page width a node may take, the share of the page height
+//! left free above the first and below the last row, the least number of rows a page is laid out for, the bar
+//! thickness of a path as a share of the page width, the free pixels kept between a bar and a node, and the most
+//! bars one path is made of (across and down for every tier it spans, plus the first bar down)
+static const float RESEARCH_NODE_MAX_WIDTH = .22f;
+static const float RESEARCH_TREE_TOP = .055f;
+static const float RESEARCH_TREE_BOTTOM = .02f;
+static const uint32_t RESEARCH_TREE_MIN_ROWS = 4;
+static const float RESEARCH_LINK_BAR_WIDTH = .012f;
+static const float RESEARCH_LINK_CLEARANCE = 3.0f;
+static const unsigned RESEARCH_LINK_MAX_BARS = 9;
 
 //! \brief Returns the frame colour of a research node: gold from the gold level, bronze at the bronze level, otherwise none.
 //! \param level The research level of the node.
@@ -4038,6 +4049,10 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
     getModeManager().getGui().arrangeActionButtonPanels(mRootWindow);
 }
 
+//! \brief Places the research nodes of every tab and draws the paths between them.
+//! The size of the nodes and the row spacing are computed from the size of the tab page so that all rows with
+//! their level counters fit on the page. A path that spans more than one tier runs through the gaps between the
+//! nodes of the rows it passes, never through a node.
 void GameMode::refreshSkillConnections()
 {
     std::map<SkillType, CEGUI::Window*> buttons;
@@ -4050,9 +4065,9 @@ void GameMode::refreshSkillConnections()
     {
         std::vector<SkillType> tabSkills;
         SkillManager::listTabSkills(static_cast<SkillTab>(tabIndex), tabSkills);
+        if(tabSkills.empty())
+            continue;
 
-        // A row fits four nodes at the default size; a page with a longer row uses smaller nodes.
-        // A page fits four rows at the default spacing.
         std::map<uint32_t, uint32_t> rowSizes;
         uint32_t widestRow = 0;
         uint32_t deepestRow = 0;
@@ -4065,41 +4080,96 @@ void GameMode::refreshSkillConnections()
             deepestRow = std::max(deepestRow, row);
         }
 
+        // The size of a node is not fixed: it is the largest square that fits the width of the widest row
+        // (with a free gap for a path between two neighbours) and the height of the page (all rows, the
+        // level counter under every node and a free channel for the paths between two rows).
+        const CEGUI::Sizef pageSize = skills->getChild(SkillManager::getTreeButtonPath(tabSkills.front()))->getParent()->getPixelSize();
+        const float pageWidth = pageSize.d_width;
+        const float pageHeight = pageSize.d_height;
+        if(pageWidth <= 0 || pageHeight <= 0)
+            continue;
+        const float barPixels = RESEARCH_LINK_BAR_WIDTH * pageWidth;
+        const float freeSpace = barPixels + 2.0f * RESEARCH_LINK_CLEARANCE;
+        const uint32_t rowCount = std::max(deepestRow + 1, RESEARCH_TREE_MIN_ROWS);
+        const float available = pageHeight * (1.0f - RESEARCH_TREE_TOP - RESEARCH_TREE_BOTTOM);
+        const float widthLimit = std::min(RESEARCH_NODE_MAX_WIDTH * pageWidth, pageWidth / static_cast<float>(widestRow) - freeSpace);
+        CEGUI::Font* badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_NORMAL);
+        float badgeHeight = badgeFont->getLineSpacing() + 2.0f;
+        float nodePixels = std::min(widthLimit,
+            (available - static_cast<float>(rowCount - 1) * freeSpace) / static_cast<float>(rowCount) - badgeHeight);
+        // The nodes of a wide row are close together: use the smaller font when the
+        // counter would otherwise touch the counter of the neighbouring node.
+        if(badgeFont->getTextExtent("3/3") + SKILL_BADGE_NODE_GAP > nodePixels)
+        {
+            badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_SMALL);
+            badgeHeight = badgeFont->getLineSpacing() + 2.0f;
+            nodePixels = std::min(widthLimit,
+                (available - static_cast<float>(rowCount - 1) * freeSpace) / static_cast<float>(rowCount) - badgeHeight);
+        }
+        nodePixels = std::max(nodePixels, 1.0f);
+        const float width = nodePixels / pageWidth;
+        const float height = nodePixels / pageHeight;
+        const float rowStep = (available - nodePixels - badgeHeight) / static_cast<float>(rowCount - 1) / pageHeight;
+
         std::map<uint32_t, uint32_t> rowPlaced;
         for(SkillType type : tabSkills)
         {
             CEGUI::Window* button = skills->getChild(SkillManager::getTreeButtonPath(type));
             buttons[type] = button;
-            CEGUI::Window* parent = button->getParent();
             const uint32_t row = SkillManager::getSkillTier(type) - 1;
             // The x-centre of entry i of n entries of a row is (i + 0.5) / n of the page width
             const float centre = (static_cast<float>(rowPlaced[row]) + .5f) / static_cast<float>(rowSizes[row]);
             ++rowPlaced[row];
             button->setUserString("ResearchCentre", Helper::toString(centre));
-            const float width = std::min(.22f, .9f / static_cast<float>(widestRow));
-            const float height = width * parent->getPixelSize().d_width / parent->getPixelSize().d_height;
-            const float rowStep = deepestRow > 3 ? .795f / static_cast<float>(deepestRow) : .265f;
             button->setArea(CEGUI::UVector2(CEGUI::UDim(centre - width * .5f, 0),
-                CEGUI::UDim(.055f + row * rowStep, 0)),
+                CEGUI::UDim(RESEARCH_TREE_TOP + row * rowStep, 0)),
                 CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
             if(button->isChild("ResearchLevel"))
             {
                 // The badge is sized for the widest text it can show and sits below the node
                 CEGUI::Window* badge = button->getChild("ResearchLevel");
-                // The nodes of a wide row are close together: use the smaller font when the
-                // counter would otherwise touch the counter of the neighbouring node.
-                const float nodePitch = width * parent->getPixelSize().d_width;
-                CEGUI::Font* badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_NORMAL);
-                if(badgeFont->getTextExtent("3/3") + SKILL_BADGE_NODE_GAP > nodePitch)
-                    badgeFont = &CEGUI::FontManager::getSingleton().get(SKILL_BADGE_FONT_SMALL);
                 badge->setFont(badgeFont);
-                const float badgeWidth = badge->getFont()->getTextExtent("3/3") + SKILL_BADGE_WIDTH_PADDING;
-                const float badgeHeight = badge->getFont()->getLineSpacing() + 2.0f;
+                // The digits differ in width, so the widest of the counters 0/3 to 3/3 decides
+                float badgeWidth = 0;
+                for(uint32_t shown = 0; shown <= RESEARCH_LEVEL_GOLD; ++shown)
+                    badgeWidth = std::max(badgeWidth, badge->getFont()->getTextExtent(Helper::toString(shown) + "/3"));
+                badgeWidth += SKILL_BADGE_WIDTH_PADDING;
                 badge->setArea(CEGUI::UVector2(CEGUI::UDim(.5f, -badgeWidth * .5f), CEGUI::UDim(1, 0)),
                     CEGUI::USize(CEGUI::UDim(0, badgeWidth), CEGUI::UDim(0, badgeHeight)));
             }
         }
     }
+
+    // Where the nodes and counters of every row of every tab stand, to find the channels between the rows and
+    // the gaps between the nodes of a row. The key is the tab and the row (tier - 1).
+    struct RowGeometry
+    {
+        float mTop;
+        float mContentBottom;
+        std::vector<std::pair<float, float> > mNodes;
+    };
+    std::map<std::pair<uint32_t, uint32_t>, RowGeometry> rowGeometry;
+    for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
+    {
+        const CEGUI::Rectf rect = entry.second->getUnclippedOuterRect().get();
+        float contentBottom = rect.bottom();
+        if(entry.second->isChild("ResearchLevel"))
+            contentBottom = std::max(contentBottom, entry.second->getChild("ResearchLevel")->getUnclippedOuterRect().get().bottom());
+        std::pair<uint32_t, uint32_t> key(static_cast<uint32_t>(SkillManager::getSkillTab(entry.first)),
+            SkillManager::getSkillTier(entry.first) - 1);
+        std::map<std::pair<uint32_t, uint32_t>, RowGeometry>::iterator found = rowGeometry.find(key);
+        if(found == rowGeometry.end())
+        {
+            RowGeometry created;
+            created.mTop = rect.top();
+            created.mContentBottom = contentBottom;
+            found = rowGeometry.insert(std::make_pair(key, created)).first;
+        }
+        found->second.mContentBottom = std::max(found->second.mContentBottom, contentBottom);
+        found->second.mNodes.push_back(std::make_pair(rect.left(), rect.right()));
+    }
+    for(std::map<std::pair<uint32_t, uint32_t>, RowGeometry>::iterator it = rowGeometry.begin(); it != rowGeometry.end(); ++it)
+        std::sort(it->second.mNodes.begin(), it->second.mNodes.end());
 
     // A path is drawn from a parent to a child only when both stand in the same tab. A parent in another
     // tab is listed in the tooltip of the child instead.
@@ -4118,34 +4188,111 @@ void GameMode::refreshSkillConnections()
                 continue;
 
             const CEGUI::Rectf start = buttons.at(dependency->getType())->getUnclippedOuterRect().get();
-            const float x1 = (start.left() + start.getWidth() * .5f - parentRect.left()) / parentRect.getWidth();
-            const float x2 = (end.left() + end.getWidth() * .5f - parentRect.left()) / parentRect.getWidth();
-            const float y1 = (start.bottom() - parentRect.top()) / parentRect.getHeight();
-            const float y2 = (end.top() - parentRect.top()) / parentRect.getHeight();
-            const float middle = (y1 + y2) * .5f;
-            // The path from a parent to the skill has three bars: down from the
-            // parent, across at half height and down into the skill. width is the
-            // bar thickness as a fraction of the graph width.
-            const float width = .012f;
-            const float height = width * parentRect.getWidth() / parentRect.getHeight();
-            float segments[3][4] = {{x1 - width * .5f, y1, width, middle - y1 + height},
-                {std::min(x1, x2) - width * .5f, middle, std::abs(x2 - x1) + width, height},
-                {x2 - width * .5f, middle, width, y2 - middle}};
+            // The bar thickness is a fraction of the graph width.
+            const float barPixels = RESEARCH_LINK_BAR_WIDTH * parentRect.getWidth();
+            const float x1 = start.left() + start.getWidth() * .5f;
+            const float x2 = end.left() + end.getWidth() * .5f;
+            const uint32_t tab = static_cast<uint32_t>(SkillManager::getSkillTab(entry.first));
+            const uint32_t startRow = SkillManager::getSkillTier(dependency->getType()) - 1;
+            const uint32_t endRow = SkillManager::getSkillTier(entry.first) - 1;
             // A parent in the same row (Heart Fortitude and Heart Mending) is joined by one horizontal bar
             // from the right edge of the left node to the left edge of the right node
-            const bool sameRow = SkillManager::getSkillTier(dependency->getType()) == SkillManager::getSkillTier(entry.first);
+            const bool sameRow = startRow == endRow;
+            // Every bar as (left, top, width, height) in pixels of the window
+            std::vector<std::vector<float> > bars;
             if(sameRow)
             {
                 const bool parentIsLeft = start.left() < end.left();
-                const float xStart = ((parentIsLeft ? start.right() : end.right()) - parentRect.left()) / parentRect.getWidth();
-                const float xEnd = ((parentIsLeft ? end.left() : start.left()) - parentRect.left()) / parentRect.getWidth();
-                const float yRow = ((start.top() + start.bottom()) * .5f - parentRect.top()) / parentRect.getHeight();
-                segments[0][0] = xStart;
-                segments[0][1] = yRow - height * .5f;
-                segments[0][2] = xEnd - xStart;
-                segments[0][3] = height;
+                const float xStart = parentIsLeft ? start.right() : end.right();
+                const float xEnd = parentIsLeft ? end.left() : start.left();
+                const float yRow = (start.top() + start.bottom()) * .5f;
+                const float row[4] = {xStart, yRow - barPixels * .5f, xEnd - xStart, barPixels};
+                bars.push_back(std::vector<float>(row, row + 4));
             }
-            for(unsigned part = 0; part < 3; ++part)
+            else
+            {
+                // The path is a chain of points: down from the parent into the channel below its row, then for
+                // every row it passes across to a gap between two nodes of that row, down through the gap and
+                // into the next channel, and finally across and down into the skill.
+                const uint32_t span = endRow > startRow ? endRow - startRow : 1;
+                std::vector<float> channelY;
+                std::vector<float> gapX;
+                for(uint32_t step = 0; step < span; ++step)
+                {
+                    const uint32_t upper = startRow + step;
+                    std::map<std::pair<uint32_t, uint32_t>, RowGeometry>::const_iterator upperRow = rowGeometry.find(std::make_pair(tab, upper));
+                    std::map<std::pair<uint32_t, uint32_t>, RowGeometry>::const_iterator lowerRow = rowGeometry.find(std::make_pair(tab, upper + 1));
+                    const float upperBottom = upperRow != rowGeometry.end() ? upperRow->second.mContentBottom : start.bottom();
+                    const float lowerTop = lowerRow != rowGeometry.end() ? lowerRow->second.mTop : end.top();
+                    channelY.push_back((upperBottom + lowerTop) * .5f);
+                    if(step + 1 >= span)
+                        continue;
+
+                    // The row the path passes: the free interval between two nodes (or beside the outer
+                    // nodes) that is closest to the straight line and wide enough for the bar
+                    const float wanted = x1 + (x2 - x1) * static_cast<float>(step + 1) / static_cast<float>(span);
+                    std::vector<std::pair<float, float> > nodes;
+                    if(lowerRow != rowGeometry.end())
+                        nodes = lowerRow->second.mNodes;
+                    float freeLeft = parentRect.left();
+                    float bestX = wanted;
+                    float bestDistance = -1.0f;
+                    for(size_t i = 0; i <= nodes.size(); ++i)
+                    {
+                        const float freeRight = i < nodes.size() ? nodes[i].first : parentRect.right();
+                        if(freeRight - freeLeft >= barPixels + 2.0f)
+                        {
+                            const float candidate = (freeLeft + freeRight) * .5f;
+                            if(bestDistance < 0 || std::abs(candidate - wanted) < bestDistance)
+                            {
+                                bestDistance = std::abs(candidate - wanted);
+                                bestX = candidate;
+                            }
+                        }
+                        if(i < nodes.size())
+                            freeLeft = nodes[i].second;
+                    }
+                    gapX.push_back(bestX);
+                }
+
+                std::vector<std::pair<float, float> > points;
+                points.push_back(std::make_pair(x1, start.bottom()));
+                points.push_back(std::make_pair(x1, channelY[0]));
+                for(size_t i = 0; i < gapX.size(); ++i)
+                {
+                    points.push_back(std::make_pair(gapX[i], channelY[i]));
+                    points.push_back(std::make_pair(gapX[i], channelY[i + 1]));
+                }
+                points.push_back(std::make_pair(x2, channelY.back()));
+                points.push_back(std::make_pair(x2, end.top()));
+                for(size_t i = 0; i + 1 < points.size(); ++i)
+                {
+                    const std::pair<float, float>& from = points[i];
+                    const std::pair<float, float>& to = points[i + 1];
+                    float bar[4];
+                    if(from.first == to.first)
+                    {
+                        // A vertical bar reaches half a bar thickness into the horizontal bars it joins
+                        const float top = from.second - (i == 0 ? 0.0f : barPixels * .5f);
+                        const float bottom = to.second + (i + 2 == points.size() ? 0.0f : barPixels * .5f);
+                        bar[0] = from.first - barPixels * .5f;
+                        bar[1] = top;
+                        bar[2] = barPixels;
+                        bar[3] = bottom - top;
+                    }
+                    else
+                    {
+                        bar[0] = std::min(from.first, to.first) - barPixels * .5f;
+                        bar[1] = from.second - barPixels * .5f;
+                        bar[2] = std::abs(to.first - from.first) + barPixels;
+                        bar[3] = barPixels;
+                    }
+                    bars.push_back(std::vector<float>(bar, bar + 4));
+                }
+            }
+
+            // The windows of the bars a path does not need are hidden
+            for(unsigned part = 0; part < RESEARCH_LINK_MAX_BARS; ++part)
             {
                 const std::string name = "ResearchLink_" + Helper::toString(static_cast<uint32_t>(dependency->getType())) +
                     "_" + Helper::toString(static_cast<uint32_t>(entry.first)) + "_" + Helper::toString(part);
@@ -4154,6 +4301,8 @@ void GameMode::refreshSkillConnections()
                     line = parent->getChild(name);
                 else
                 {
+                    if(part >= bars.size())
+                        continue;
                     line = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", name);
                     line->setProperty("FrameEnabled", "False");
                     line->setProperty("BackgroundEnabled", "False");
@@ -4163,10 +4312,13 @@ void GameMode::refreshSkillConnections()
                     parent->addChild(line);
                     line->moveToBack();
                 }
-                // The bars 1 and 2 of a same-row path are not used
-                line->setVisible(!sameRow || part == 0);
-                line->setArea(CEGUI::UVector2(CEGUI::UDim(segments[part][0], 0), CEGUI::UDim(segments[part][1], 0)),
-                    CEGUI::USize(CEGUI::UDim(segments[part][2], 0), CEGUI::UDim(segments[part][3], 0)));
+                line->setVisible(part < bars.size());
+                if(part >= bars.size())
+                    continue;
+                const std::vector<float>& bar = bars[part];
+                line->setArea(CEGUI::UVector2(CEGUI::UDim((bar[0] - parentRect.left()) / parentRect.getWidth(), 0),
+                    CEGUI::UDim((bar[1] - parentRect.top()) / parentRect.getHeight(), 0)),
+                    CEGUI::USize(CEGUI::UDim(bar[2] / parentRect.getWidth(), 0), CEGUI::UDim(bar[3] / parentRect.getHeight(), 0)));
                 const bool linkReady = seat->getSkillLevel(dependency->getType()) > 0;
                 line->setProperty("ImageColours",
                     linkReady ? RESEARCH_LINK_COLOUR_READY : RESEARCH_LINK_COLOUR_WAITING);
