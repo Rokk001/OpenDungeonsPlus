@@ -57,9 +57,11 @@ enum class RelationshipEvent
 //! config/relationships.cfg is missing or lacks an entry.
 struct RelationshipSettings
 {
+    //! Lowest and highest value a pair can have
     static const int32_t VALUE_MIN;
     static const int32_t VALUE_MAX;
 
+    //! \brief Creates the settings with the default values of the game.
     RelationshipSettings();
 
     //! \brief Reads the settings from the key/value pairs of config/relationships.cfg.
@@ -244,9 +246,12 @@ public:
     //! Returns the gender of the creature with the given name: "Male", "Female" or empty
     typedef std::function<std::string(const std::string&)> GenderLookup;
 
+    //! \brief Creates an empty table with the default settings.
     CreatureRelationships();
+    //! \brief Creates an empty table with the given settings.
     explicit CreatureRelationships(const RelationshipSettings& settings);
 
+    //! \brief Returns the settings (thresholds, drift, event amounts) of this table.
     const RelationshipSettings& getSettings() const
     { return mSettings; }
 
@@ -285,6 +290,7 @@ public:
     bool isLovers(const std::string& creatureA, const std::string& creatureB) const;
     //! The lover of the creature or an empty string.
     std::string getPartner(const std::string& creature) const;
+    //! \brief True if the pair is at least friends.
     bool isFriend(const std::string& creatureA, const std::string& creatureB) const;
     bool isNemesis(const std::string& creatureA, const std::string& creatureB) const;
     //! True for the tiers hated and nemesis.
@@ -331,6 +337,7 @@ public:
     //! \brief Client side: stores the tier sent by the server.
     void setTier(const std::string& creatureA, const std::string& creatureB, RelationshipTier tier);
 
+    //! \brief Returns the number of pairs that are stored (pairs with value 0 do not exist).
     size_t getNbPairs() const
     { return mPairs.size(); }
 
@@ -354,7 +361,10 @@ private:
         bool mLovers;
     };
 
+    //! \brief Builds the key of a pair; the order of the two names does not matter.
     static Pair makePair(const std::string& creatureA, const std::string& creatureB);
+    //! \brief Stores the value (clamped; 0 removes the pair). isEvent tells that the value came from
+    //! an event, which restarts the drift idle time of the pair.
     void setValue(const Pair& pair, int32_t value, int64_t turn, bool isEvent);
     //! Lets the weakest relationship of a tier fall back while the creature has too many of it
     void enforceLimits(const std::string& creature, int64_t turn);
@@ -370,6 +380,7 @@ private:
     void updateLovers(const Pair& pair);
     //! Ends the lovers state of the pair (sets the flag false, records the tier change)
     void clearLovers(const Pair& pair, PairData& data);
+    //! \brief Returns one value that lies in the given tier (used by clients that only know the tier).
     int32_t representativeValue(RelationshipTier tier) const;
 
     RelationshipSettings mSettings;

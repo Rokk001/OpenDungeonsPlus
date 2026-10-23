@@ -45,6 +45,7 @@ GiftBoxEntity::GiftBoxEntity(GameMap* gameMap) :
 {
 }
 
+//! \brief Creates a gift box whose type is already known, used when loading from a stream
 GiftBoxEntity::GiftBoxEntity(GameMap* gameMap, GiftBoxType type) :
     RenderedMovableEntity(gameMap),
     mGiftBoxType(type)

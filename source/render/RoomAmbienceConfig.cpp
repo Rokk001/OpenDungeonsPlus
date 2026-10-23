@@ -27,6 +27,23 @@
 namespace
 {
 
+//! \brief Default seconds between two scans of the visible rooms and objects
+const double DEFAULT_SCAN_INTERVAL = 0.4;
+//! \brief Default limit of looping particle systems running at once
+const uint32_t DEFAULT_MAX_PARTICLES = 48;
+//! \brief Default limit of looping particle systems running at once in the mode reduced
+const uint32_t DEFAULT_MAX_PARTICLES_REDUCED = 10;
+//! \brief Default limit of objects moved by motions at once
+const uint32_t DEFAULT_MAX_MOTIONS = 40;
+//! \brief Default limit of one-shot particle systems running at once
+const uint32_t DEFAULT_MAX_ONE_SHOTS = 8;
+//! \brief Default distance in tiles within which a creature counts as close to an object or tile
+const double DEFAULT_OCCUPIED_RADIUS = 2.2;
+//! \brief Default factor that shortens the view distance of every effect in the mode reduced
+const double DEFAULT_REDUCED_DISTANCE_FACTOR = 0.55;
+//! \brief The smallest squared length of a motion axis that can still be normalised
+const float MIN_AXIS_SQUARED_LENGTH = 0.0001f;
+
 //! \brief Reads the next not empty line and splits it in words. Returns false at the end of the file
 bool readWords(std::istream& file, std::vector<std::string>& words)
 {
@@ -43,6 +60,7 @@ bool readWords(std::istream& file, std::vector<std::string>& words)
     return true;
 }
 
+//! \brief Reads a yes/no value of the configuration file ("yes", "true" and "1" are true)
 bool toBool(const std::string& text)
 {
     return (text == "yes") || (text == "true") || (text == "1");
@@ -51,15 +69,15 @@ bool toBool(const std::string& text)
 } // namespace
 
 RoomAmbienceConfig::RoomAmbienceConfig() :
-    mScanInterval(0.4),
-    mMaxParticles(48),
-    mMaxParticlesReduced(10),
-    mMaxMotions(40),
-    mMaxOneShots(8),
+    mScanInterval(DEFAULT_SCAN_INTERVAL),
+    mMaxParticles(DEFAULT_MAX_PARTICLES),
+    mMaxParticlesReduced(DEFAULT_MAX_PARTICLES_REDUCED),
+    mMaxMotions(DEFAULT_MAX_MOTIONS),
+    mMaxOneShots(DEFAULT_MAX_ONE_SHOTS),
     mMaxMarks(6),
     mMaxFlights(6),
-    mOccupiedRadius(2.2),
-    mReducedDistanceFactor(0.55)
+    mOccupiedRadius(DEFAULT_OCCUPIED_RADIUS),
+    mReducedDistanceFactor(DEFAULT_REDUCED_DISTANCE_FACTOR)
 {
 }
 
@@ -395,7 +413,7 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         else if((key == "Axis") && (words.size() >= 4))
         {
             effect.mAxis = Ogre::Vector3(Helper::toFloat(words[1]), Helper::toFloat(words[2]), Helper::toFloat(words[3]));
-            if(effect.mAxis.squaredLength() > 0.0001f)
+            if(effect.mAxis.squaredLength() > MIN_AXIS_SQUARED_LENGTH)
                 effect.mAxis.normalise();
             else
                 effect.mAxis = Ogre::Vector3::UNIT_X;

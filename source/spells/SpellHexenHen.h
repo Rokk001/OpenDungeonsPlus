@@ -29,12 +29,23 @@ class InputManager;
 class SpellHexenHen : public Spell
 {
 public:
+    //! \brief Shows the price and highlights the enemy creature under the cursor while the player aims the spell,
+    //! and sends the cast request when the player confirms on an enemy outside prison on claimed land of their own.
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
+    //! \brief Server side cast: takes the mana and turns the target creature into a chicken for a while.
+    //! \return true if the spell was cast, false if the creature is not a valid target, is already a chicken
+    //! or the mana is not enough.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
+    //! \brief The spell is instant and has no entity, so it can never be read from a stream (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
+
+    //! \brief The spell is instant and has no entity, so it can never be read from a packet (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
 
+    //! The spell type handled by this class.
     static const SpellType mSpellType;
 };
 

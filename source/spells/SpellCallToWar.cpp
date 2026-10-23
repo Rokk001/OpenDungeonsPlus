@@ -140,6 +140,7 @@ void SpellCallToWar::checkSpellCast(GameMap* gameMap, const InputManager& inputM
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; its lifetime follows the call to war research.
 bool SpellCallToWar::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     Tile* tile = gameMap->tileFromPacket(packet);
@@ -163,7 +164,7 @@ bool SpellCallToWar::castSpellOnTile(GameMap* gameMap, Player* player, Tile* til
     spell->setSeat(player->getSeat());
     spell->setDuration(static_cast<int32_t>(std::round(SkillManager::getResearchValue(
         player->getSeat(), SkillType::spellCallToWar,
-        ConfigManager::getSingleton().getSpellConfigInt32("CallToWarNbTurnsMax")))));
+        ConfigManager::getSingleton().getSpellConfigInt32("CallToWarNbTurnsMax"), ResearchEffect::Lifetime))));
     spell->addToGameMap();
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
                                 static_cast<Ogre::Real>(tile->getY()),

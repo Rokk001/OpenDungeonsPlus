@@ -273,6 +273,7 @@ void RoomPrison::absorbRoom(Room *r)
     Room::absorbRoom(r);
 }
 
+//! \brief Handles the prisoners; a dead prisoner is raised as a skeleton of the level that the prison research gives.
 void RoomPrison::doUpkeep()
 {
     Room::doUpkeep();
@@ -361,7 +362,8 @@ void RoomPrison::doUpkeep()
             // Create a new creature and copy over the class-based creature parameters.
             Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
             newCreature->setLevel(static_cast<uint32_t>(SkillManager::getResearchValue(
-                getSeat(), SkillType::roomPrison, 1.0)));
+                getSeat(), SkillType::roomPrison, ConfigManager::getSingleton().getRoomConfigDouble("PrisonSkeletonBaseLevel"),
+                ResearchEffect::SkeletonLevel)));
             newCreature->setHP(newCreature->getMaxHp());
 
             // Add the creature to the gameMap and create meshes so it is visible.
@@ -758,6 +760,7 @@ bool RoomPrison::hasOpenCreatureSpot(Creature* creature)
     return true;
 }
 
+//! \brief Number of prisoners the prison holds: the inner tiles plus one, times the capacity of the prison research.
 uint32_t RoomPrison::getCapacity() const
 {
     // The first inner tile holds two prisoners, every other inner tile one more.
@@ -765,7 +768,8 @@ uint32_t RoomPrison::getCapacity() const
     if(mActualTiles.empty())
         return 0;
 
-    return static_cast<uint32_t>(mActualTiles.size()) + 1;
+    return static_cast<uint32_t>(std::floor(static_cast<double>(mActualTiles.size() + 1) *
+        SkillManager::getResearchValue(getSeat(), SkillType::roomPrison, 1.0, ResearchEffect::Capacity)));
 }
 
 bool RoomPrison::addCreatureUsingRoom(Creature* creature)

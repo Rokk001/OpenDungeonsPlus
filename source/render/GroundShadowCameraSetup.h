@@ -15,10 +15,12 @@
 class GroundShadowCameraSetup : public Ogre::ShadowCameraSetup
 {
 public:
+    //! \brief Uses the dungeon floor (the plane z = 0) as the plane the shadow camera is fitted to.
     GroundShadowCameraSetup() : mGroundPlane(Ogre::Vector3::UNIT_Z, 0.0f)
     {
     }
 
+    //! \brief Fits shadowCamera to the ground plane and keeps its culling frustum in sync.
     void getShadowCamera(const Ogre::SceneManager* scene, const Ogre::Camera* camera,
         const Ogre::Viewport* viewport, const Ogre::Light* light, Ogre::Camera* shadowCamera,
         size_t iteration) const override
@@ -38,6 +40,7 @@ public:
     }
 
 private:
+    //! The floor plane handed to Ogre's plane-optimal shadow camera setup.
     Ogre::MovablePlane mGroundPlane;
 };
 

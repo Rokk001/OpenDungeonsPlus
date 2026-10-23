@@ -197,9 +197,10 @@ enum class ServerNotificationType
     //! human players when the places of the hatchery change and once to a client that joined or loaded.
     //! Inserted before trapEffect; trapEffect and timeLimit retain their existing positions.
     hatcheryNests,
-    //! Rooster flight: name, start and goal Vector3, total turns, elapsed turns.
+    //! Rooster flight to or from a coop roof: string name, start Vector3, goal Vector3, uint32_t total turns,
+    //! float turns that are over (a client that joins in the middle starts there).
     chickenRoofFlight,
-    //! Exact rooster/hen pair for the mounting pose: two animal names.
+    //! Exact rooster/hen pair for the mounting pose: two animal names (rooster, hen).
     chickenMount,
     //! Presentation-only effect of a trap or door, sent to the human seats that see the tile:
     //! + int32_t kind (TrapEffectKind), int32_t tileX, int32_t tileY, string type name of the trap or door

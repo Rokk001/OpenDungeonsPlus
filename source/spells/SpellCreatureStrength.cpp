@@ -128,6 +128,7 @@ void SpellCreatureStrength::checkSpellCast(GameMap* gameMap, const InputManager&
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the strength factor follows the strength research.
 bool SpellCreatureStrength::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -175,7 +176,7 @@ bool SpellCreatureStrength::castSpell(GameMap* gameMap, Player* player, ODPacket
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureStrengthDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureStrength,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureStrengthValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureStrengthValue"), ResearchEffect::Factor);
     CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(duration, value, "SpellCreatureStrength");
     creature->addCreatureEffect(effect);
     fireSpellEffect(*pos, "Strength", "StrengthCast");

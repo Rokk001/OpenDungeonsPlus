@@ -30,13 +30,22 @@ class InputManager;
 class SpellLightning : public Spell
 {
 public:
+    //! \brief Shows the price and highlights the enemy creature under the cursor while the player aims the spell,
+    //! and sends the cast request when the player confirms on an enemy standing on claimed land of their own.
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
     //! \brief Casts the spell using its configured damage range for each damage application.
+    //! Server side: takes the mana, damages the target creature and knocks it down for a few turns.
+    //! \return true if the spell was cast, false if the creature is not a valid target or the mana is not enough.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
+    //! \brief The spell is instant and has no entity, so it can never be read from a stream (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
+    //! \brief The spell is instant and has no entity, so it can never be read from a packet (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
 
+    //! The spell type handled by this class.
     static const SpellType mSpellType;
 };
 

@@ -8,7 +8,7 @@ FileSystem=particles
 FileSystem=shaders
 
 # Internal shadow programs must also be visible to OGRE's global resource pool.
-# Keep Main in Graphics above for game shader includes with strict group lookup.
+# Main is listed only here: OGRE 14 defines shared parameter sets in its scripts, so a second group would load them twice.
 [OgreInternal]
 FileSystem=@OD_OGRE_MEDIA_DIR@/RTShaderLib/../Main
 

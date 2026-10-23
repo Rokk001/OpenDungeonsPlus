@@ -21,6 +21,8 @@
 #include "entities/CreatureDefinition.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
 #include "ODApplication.h"
@@ -34,6 +36,7 @@ std::function<bool()> CreatureActionPossessed::action()
         std::ref(mCreature));
 }
 
+//! \brief Keeps a possession going; after the free seconds the mana drain follows the possess research.
 bool CreatureActionPossessed::handlePossessed(Creature& creature)
 {
     if(!creature.isPossessed())
@@ -63,7 +66,8 @@ bool CreatureActionPossessed::handlePossessed(Creature& creature)
     if(static_cast<double>(turns) <= (freeSeconds * ODApplication::turnsPerSecond))
         return false;
 
-    double drainPerSecond = creature.getDefinition()->getPossessManaCost();
+    double drainPerSecond = SkillManager::getResearchValue(creature.getSeat(), SkillType::spellPossess,
+        creature.getDefinition()->getPossessManaCost(), ResearchEffect::ManaPerSecond);
     double drainPerTurn = drainPerSecond / ODApplication::turnsPerSecond;
     if((creature.getSeat()->getMana() < drainPerSecond) || !creature.getSeat()->takeMana(drainPerTurn))
     {

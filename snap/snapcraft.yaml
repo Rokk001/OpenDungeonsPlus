@@ -34,8 +34,7 @@ apps:
       - wayland
       - pulseaudio
     environment:
-      ALSOFT_DRIVERS: pulse
-      LD_LIBRARY_PATH: "${SNAP}/usr/lib:${SNAP}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}:${SNAP}/usr/lib/openal:${SNAP}/usr/lib/cegui-0.9999:${LD_LIBRARY_PATH}"   # ← FIX (compressed to valid form)
+      LD_LIBRARY_PATH: "${SNAP}/usr/lib:${SNAP}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}:${SNAP}/usr/lib/cegui-0.9999:${LD_LIBRARY_PATH}"   # ← FIX (compressed to valid form)
       OGRE_PLUGIN_DIR: "${SNAP}/usr/lib/OGRE"
       OGRE_CONFIG_DIR: "${SNAP}/usr/share/OGRE"
       CEGUI_DIR: "${SNAP}/usr"
@@ -44,7 +43,6 @@ apps:
       XDG_CONFIG_HOME: "${SNAP_USER_DATA}"
       CEGUI_MODULE_DIR: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/cegui-0.9999"
       DISPLAY: :0
-      ALSOFT_LOGLEVEL: 3
       OGRE_RTSHADER_CACHE_DIR: "$SNAP_USER_DATA/shaderCache"
     extensions: [gnome]
 
@@ -66,12 +64,12 @@ parts:
       - libx11-dev
 
   ######################################################################
-  # OGRE 13.6.5
+  # OGRE 14.6.1
   ######################################################################
   ogre:
     plugin: cmake
     source: https://github.com/OGRECave/ogre.git
-    source-tag: v13.6.5
+    source-tag: v14.6.1
     source-depth: 1
 
     cmake-parameters:
@@ -135,7 +133,6 @@ parts:
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE=Debug
       - -DCMAKE_INSTALL_PREFIX=/usr
-      - -DCMAKE_CXX_FLAGS=-std=c++11
 
       # Correct multiarch installation
       - -DINSTALL_LIB_DIR=lib/${SNAPCRAFT_ARCH_TRIPLET}
@@ -184,13 +181,16 @@ parts:
     after: [ogre]
 
   ########################################################################
-  # SFML 2.5.1 (AUDIO ENABLED, PULSEAUDIO DISABLED)
+  # SFML 3.1.0 (AUDIO ENABLED)
   ########################################################################
   sfml:
     plugin: cmake
     source: https://github.com/SFML/SFML.git
-    source-tag: 2.5.1
+    source-tag: 3.1.0
     source-depth: 1
+
+    # SFML 3 needs CMake >= 3.28 (core22 ships 3.22)
+    build-snaps: [cmake/latest/stable]
 
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE=Release
@@ -199,12 +199,6 @@ parts:
 
       # Enable audio (required by OpenDungeons)
       - -DSFML_BUILD_AUDIO=ON
-
-      # Disable PulseAudio backend completely
-      - -DSFML_USE_PULSE=FALSE
-
-      # Force OpenAL audio backend only
-      - -DSFML_USE_OPENAL=TRUE
 
       # Enable needed modules
       - -DSFML_BUILD_GRAPHICS=ON
@@ -216,7 +210,6 @@ parts:
       - -DSFML_BUILD_EXAMPLES=OFF
 
     build-packages:
-      - libopenal-dev
       - libflac-dev
       - libvorbis-dev
       - libogg-dev
@@ -235,7 +228,6 @@ parts:
       - mesa-common-dev
 
     stage-packages:
-      - libopenal1
       - libflac8
       - libvorbis0a
       - libvorbisenc2

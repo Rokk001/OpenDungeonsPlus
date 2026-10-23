@@ -36,15 +36,18 @@ const int32_t TEAM = 0;
 //! A small map for the placement. Everything is solid and unowned until a room or a corridor is added.
 struct TestMap
 {
+    //! \brief Creates a map of MAP_SIZE * MAP_SIZE tiles without walls, rooms or open tiles
     TestMap() :
         mTiles(static_cast<size_t>(MAP_SIZE) * static_cast<size_t>(MAP_SIZE))
     {}
 
+    //! \brief Returns the info of the tile (x, y), which must be inside of the map
     WallTorchTileInfo& at(int32_t x, int32_t y)
     {
         return mTiles[static_cast<size_t>(y) * static_cast<size_t>(MAP_SIZE) + static_cast<size_t>(x)];
     }
 
+    //! \brief Makes the tile a reinforced wall of the test seat and team
     void setWall(int32_t x, int32_t y)
     {
         at(x, y).mWallSeatId = WALL_SEAT;
@@ -72,12 +75,14 @@ struct TestMap
         }
     }
 
+    //! \brief Turns the wall tile into a tile without reinforcement (a destroyed or never built wall)
     void removeWall(int32_t x, int32_t y)
     {
         at(x, y).mWallSeatId = -1;
         at(x, y).mWallTeamId = -1;
     }
 
+    //! \brief Returns the torches the placement computes for the map with the default placement values
     std::vector<WallTorch> compute() const
     {
         std::vector<WallTorch> torches;
@@ -89,6 +94,7 @@ struct TestMap
     std::vector<WallTorchTileInfo> mTiles;
 };
 
+//! \brief Returns true if there is a torch on the wall tile (x, y) that faces the direction dir
 bool hasTorch(const std::vector<WallTorch>& torches, int32_t x, int32_t y, int32_t dir)
 {
     for(const WallTorch& torch : torches)
@@ -99,6 +105,7 @@ bool hasTorch(const std::vector<WallTorch>& torches, int32_t x, int32_t y, int32
     return false;
 }
 
+//! \brief Returns how many of the torches face the direction dir
 size_t countDir(const std::vector<WallTorch>& torches, int32_t dir)
 {
     size_t count = 0;
@@ -110,7 +117,8 @@ size_t countDir(const std::vector<WallTorch>& torches, int32_t dir)
     return count;
 }
 
-//! Every torch hangs on a reinforced wall and faces an open tile, and no two torches are closer than 3 tiles
+//! \brief Checks that every torch hangs on a reinforced wall and faces an open tile, and that no two torches are
+//! closer than the default minimum distance (3 tiles)
 void checkRules(TestMap& map, const std::vector<WallTorch>& torches)
 {
     for(size_t i = 0; i < torches.size(); ++i)
@@ -124,12 +132,13 @@ void checkRules(TestMap& map, const std::vector<WallTorch>& torches)
         for(size_t j = i + 1; j < torches.size(); ++j)
         {
             int32_t distance = std::abs(torch.mX - torches[j].mX) + std::abs(torch.mY - torches[j].mY);
-            BOOST_CHECK(distance >= 3);
+            BOOST_CHECK(distance >= static_cast<int32_t>(DEFAULT_TORCH_MIN_DISTANCE));
         }
     }
 }
 } // namespace
 
+//! \brief The same map always gives the same torches in the same order (the clients rely on stable keys).
 BOOST_AUTO_TEST_CASE(test_SameInputSamePositions)
 {
     TestMap map;
@@ -146,6 +155,7 @@ BOOST_AUTO_TEST_CASE(test_SameInputSamePositions)
     }
 }
 
+//! \brief A room side of length L gets L / divisor torches, spread over the side and facing into the room.
 BOOST_AUTO_TEST_CASE(test_RoomSides)
 {
     // 4x4: one torch per side, in the middle of the section (index 2 of 0..3)
@@ -197,6 +207,7 @@ BOOST_AUTO_TEST_CASE(test_RoomSides)
     checkRules(room8, torches);
 }
 
+//! \brief A torch that would stand in front of a blocked tile moves to the next fitting wall tile of the side.
 BOOST_AUTO_TEST_CASE(test_MovingAside)
 {
     // The wanted wall tile (7,4) is an opening: the torch moves to the right first (growing x)
@@ -228,6 +239,7 @@ BOOST_AUTO_TEST_CASE(test_MovingAside)
     checkRules(object, torches);
 }
 
+//! \brief Two torches are never closer than the minimum distance, also not around a corner.
 BOOST_AUTO_TEST_CASE(test_MinimumDistanceAroundCorners)
 {
     // The torch of the lower side moved to (8,4). The right side can only use (9,5), which is two steps away
@@ -245,6 +257,7 @@ BOOST_AUTO_TEST_CASE(test_MinimumDistanceAroundCorners)
     checkRules(map, torches);
 }
 
+//! \brief Outside of rooms a straight run of reinforced wall gets one torch at the corridor spacing.
 BOOST_AUTO_TEST_CASE(test_Corridors)
 {
     // A straight corridor along x: open tiles at y = 10 with a reinforced wall at y = 9. Every fourth wall tile
@@ -271,6 +284,7 @@ BOOST_AUTO_TEST_CASE(test_Corridors)
     checkRules(map, torches);
 }
 
+//! \brief No torch faces a door, a bridge, water or lava.
 BOOST_AUTO_TEST_CASE(test_NoTorchOnDoorBridgeWaterLava)
 {
     // Such a tile in front of the wanted wall tile (7,4) is not an open claimed tile: the torch moves aside
@@ -293,6 +307,7 @@ BOOST_AUTO_TEST_CASE(test_NoTorchOnDoorBridgeWaterLava)
     BOOST_CHECK(foreign.compute().empty());
 }
 
+//! \brief Torches follow the walls: a destroyed wall loses its torch, a side without reinforcement has none.
 BOOST_AUTO_TEST_CASE(test_Lifetime)
 {
     TestMap map;
@@ -316,6 +331,7 @@ BOOST_AUTO_TEST_CASE(test_Lifetime)
     BOOST_CHECK_EQUAL(torches.size(), 3u);
 }
 
+// A tile counts as lit when a torch of any owner is within the radius; the row ends of the map are not neighbours.
 BOOST_AUTO_TEST_CASE(test_LitByTorchInRange)
 {
     const int32_t sizeX = MAP_SIZE;

@@ -107,10 +107,10 @@ for excluded in ('bow', 'crossbow', 'staff', 'wand', 'orb', 'tool', 'throwing', 
 global_cfg = read('config/global.cfg')
 config_cpp = read('source/utils/ConfigManager.cpp')
 config_h = read('source/utils/ConfigManager.h')
-KEYS = (('DodgeBase', '3', 'mDodgeBase(3.0)', 100), ('DodgePerLevel', '0.5', 'mDodgePerLevel(0.5)', 10),
-        ('DodgeMax', '15', 'mDodgeMax(15.0)', 100), ('ParryBase', '3', 'mParryBase(3.0)', 100),
-        ('ParryPerLevel', '0.5', 'mParryPerLevel(0.5)', 10), ('ParryMax', '15', 'mParryMax(15.0)', 100),
-        ('ShieldBlockBase', '6', 'mShieldBlockBase(6.0)', 100), ('ShieldBlockPerLevel', '1', 'mShieldBlockPerLevel(1.0)', 10),
+KEYS = (('DodgeBase', '10.5', 'mDodgeBase(10.5)', 100), ('DodgePerLevel', '0', 'mDodgePerLevel(0.0)', 10),
+        ('DodgeMax', '15', 'mDodgeMax(15.0)', 100), ('ParryBase', '10.5', 'mParryBase(10.5)', 100),
+        ('ParryPerLevel', '0', 'mParryPerLevel(0.0)', 10), ('ParryMax', '15', 'mParryMax(15.0)', 100),
+        ('ShieldBlockBase', '21', 'mShieldBlockBase(21.0)', 100), ('ShieldBlockPerLevel', '0', 'mShieldBlockPerLevel(0.0)', 10),
         ('ShieldBlockMax', '25', 'mShieldBlockMax(25.0)', 100))
 assert re.search(r'^# .*\n(?:# .*\n)?\s+MeleeDodgeParry\t1\s*$', global_cfg, re.M), 'MeleeDodgeParry'
 assert 'nextParam == "MeleeDodgeParry"' in config_cpp and 'mMeleeDodgeParry(true)' in config_cpp
@@ -118,7 +118,8 @@ assert 'inline bool getMeleeDodgeParry() const' in config_h
 for key, value, member, limit in KEYS:
     assert re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp and member in config_cpp, key
-    assert 'std::max(0.0, std::min(%d.0, m%s))' % (limit, key) in config_h, key
+    limit_name = 'ChanceMax' if limit == 100 else 'ChancePerLevelMax'
+    assert 'std::max(ChanceMin, std::min(%s, m%s))' % (limit_name, key) in config_h, key
     assert 'inline double get' + key + '() const' in config_h, key
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -162,8 +163,8 @@ accuracy = function_body(creature, 'bool Creature::rollAttackHit(')
 assert accuracy.index('if(possessed)') < accuracy.index('Random::Double(0.0, 100.0)')
 assert 'DefenceChance::hitChance(attackRating, getDefenseRating(),' in accuracy
 use_attack = function_body(creature, 'void Creature::useAttack(')
-assert 'skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();' in use_attack
-assert 'skillData.mCooldown = getAppliedCooldownNbTurns(*skillData.mSkill);' in use_attack
+assert 'skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();' in use_attack
+assert 'skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);' in use_attack
 # The older kind still follows for old clients: no damage means "blocked" for them
 assert 'event.mValue = (damageDone <= 0.0) ? 2 :' in body
 # Only single-target creature shots roll; traps and area blasts bypass accuracy and avoidance.
@@ -319,7 +320,7 @@ if '--probe' in sys.argv:
     with tempfile.TemporaryDirectory(prefix='odp-defence-') as directory:
         work = Path(directory)
         (work / 'probe.cpp').write_text(probe_source())
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'],
                        cwd=work, check=True)
         subprocess.run([str(work / 'probe.exe')], cwd=work, check=True)
 

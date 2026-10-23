@@ -46,7 +46,9 @@ struct InputCommand {int selected=0,failures=0;void unselectAllTiles(){selected=
 std::string formatBuildRoom(int,int){return "build";}
 METHOD
 void hover(GameMap* gameMap,const InputManager& inputManager,InputCommand& inputCommand){HOVER}
-int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++failures;};
+int checks=0,failures=0;
+void check(bool ok){++checks;if(!ok)++failures;}
+int main(){
  GameMap map;Tile tile{&map};Seat seat;Object heart{"",{58,102}};
  map.objects={&heart};map.hovered=&tile;
  // Every health tier mesh blocks the tiles under its measured footprint (the 5x5 heart with its pedestal, +-1.733 around the centre).
@@ -71,6 +73,6 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok){++checks;if(!ok)++fai
 with tempfile.TemporaryDirectory(prefix='odp-heart-build-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{repo / "source"}', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

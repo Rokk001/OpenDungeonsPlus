@@ -38,6 +38,7 @@
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
+#include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
 #include "gamemap/LevelScriptRunner.h"
@@ -91,13 +92,22 @@
 #include <string>
 
 const std::string DEFAULT_NICK = "You";
+//! Highest value of the roll (0 to this value) that is compared with a chance in percent for a nemesis brawl
+static const int32_t BRAWL_CHANCE_ROLL_MAX = 99;
+
+//! \brief Definitions of the skirmish limits that are used by reference (std::min, std::max). The values are set in
+//! the class, gcc needs these definitions for them.
+const uint32_t GameMap::SKIRMISH_SPEED_MIN;
+const uint32_t GameMap::SKIRMISH_SPEED_MAX;
+const uint32_t GameMap::SKIRMISH_DURATION_MAX;
+const uint32_t GameMap::SKIRMISH_PERCENT_MIN;
+const uint32_t GameMap::SKIRMISH_PERCENT_MAX;
+const uint32_t GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND;
 
 using namespace std;
 
 namespace
 {
-//! Mana the dungeon heart produces on its own, per second.
-const double MANA_HEART_INCOME_PER_SECOND = 30.0;
 //! The tile part of the mana income is capped: one mana per second per claimed
 //! tile, up to this many tiles.
 const double MANA_INCOME_TILES_CAP = 500.0;
@@ -133,7 +143,10 @@ bool hasCompletedWinningGoal(Seat* seat)
 
 //! \brief Mana a seat gains per second: the heart plus one per claimed tile,
 //! the tile part capped. The tiles of the heart area are not counted again.
-double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTiles)
+//! \param numClaimedTiles The claimed tiles of the seat
+//! \param numHeartTiles The tiles of the heart area of the seat
+//! \param heartIncome Mana the dungeon heart produces on its own, per second (with the research of the seat)
+double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTiles, double heartIncome)
 {
     const unsigned int tiles = numClaimedTiles > numHeartTiles
         ? numClaimedTiles - numHeartTiles
@@ -141,7 +154,7 @@ double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTi
     double tilesIncome = static_cast<double>(tiles);
     if (tilesIncome > MANA_INCOME_TILES_CAP)
         tilesIncome = MANA_INCOME_TILES_CAP;
-    return MANA_HEART_INCOME_PER_SECOND + tilesIncome;
+    return heartIncome + tilesIncome;
 }
 
 //! \brief Mana per second the workers of a seat cost together. The first four are free.
@@ -235,12 +248,12 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         everVisitedFlagPool(nullptr),
         mIsServerGameMap(isServerGameMap),
         mNodeType(nt),
-        mGoldDensityPercent(100),
-        mManaRegenerationPercent(100),
+        mGoldDensityPercent(SKIRMISH_PERCENT_DEFAULT),
+        mManaRegenerationPercent(SKIRMISH_PERCENT_DEFAULT),
         mMaxCreaturesSetting(0),
-        mGameSpeedPercent(100),
+        mGameSpeedPercent(SKIRMISH_SPEED_DEFAULT),
         mGameDurationMinutes(0),
-        mHeartDestroyedReward(0),
+        mHeartDestroyedReward(SKIRMISH_HEART_REWARD_MANA),
         mGameDurationAnnounced(false),
         mTimeLimitSentSeconds(-1),
         mWaveCountdownSentSeconds(-1),
@@ -250,6 +263,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mLocalPlayer(nullptr),
         mLocalPlayerNick(DEFAULT_NICK),
         mTurnNumber(-1),
+        mSavedTurnNumber(0),
         mIsPaused(false),
         mTimePayDay(0),
         mIsSandbox(false),
@@ -411,14 +425,15 @@ void GameMap::clearAll()
 
         mLocalPlayerNick = DEFAULT_NICK;
         mTurnNumber = -1;
+        mSavedTurnNumber = 0;
         resetUniqueNumbers();
         mIsFOWActivated = true;
-        mGoldDensityPercent = 100;
-        mManaRegenerationPercent = 100;
+        mGoldDensityPercent = SKIRMISH_PERCENT_DEFAULT;
+        mManaRegenerationPercent = SKIRMISH_PERCENT_DEFAULT;
         mMaxCreaturesSetting = 0;
-        mGameSpeedPercent = 100;
+        mGameSpeedPercent = SKIRMISH_SPEED_DEFAULT;
         mGameDurationMinutes = 0;
-        mHeartDestroyedReward = 0;
+        mHeartDestroyedReward = SKIRMISH_HEART_REWARD_MANA;
         mGameDurationAnnounced = false;
         mTimeLimitSentSeconds = -1;
         mWaveCountdownSentSeconds = -1;
@@ -1284,7 +1299,7 @@ void GameMap::checkRelationshipBrawls()
         if(!isWithinBrawlDistance(dx, dy, settings))
             continue;
 
-        if(!brawlChanceHit(Random::Int(0, 99), settings))
+        if(!brawlChanceHit(Random::Int(0, BRAWL_CHANCE_ROLL_MAX), settings))
             continue;
 
         if(!pathExists(creatureA, tileA, tileB))
@@ -1686,6 +1701,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         }
     }
 
+    // Tiles revealed by game events (like a tortured creature) stay visible for their number of turns
     for (Seat* seat : mSeats)
         seat->applyRevealedTiles();
 
@@ -1786,6 +1802,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     return timeTaken;
 }
 
+//! \brief Computes the mana income and upkeep of the seat; the heart part of the income follows the mana flow research.
 void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn)
 {
     // The one-off mana taken this turn joins the turns of the last second, the HUD shows their
@@ -1826,7 +1843,10 @@ void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSi
 
     // The skirmish mana regeneration setting scales the income, not the worker upkeep
     // Each claimed mana well tile adds its bonus on top of the claimed tile income
-    seat->mManaIncomePerSecond = (manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles)
+    // The heart produces the mana of the config (rooms.cfg DungeonHeartManaPerSecond), raised by the Mana Flow research
+    const double heartIncome = SkillManager::getResearchValue(seat, SkillType::keeperManaFlow,
+        ConfigManager::getSingleton().getRoomConfigDouble("DungeonHeartManaPerSecond"), ResearchEffect::HeartMana);
+    seat->mManaIncomePerSecond = (manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles, heartIncome)
         + nbManaWellTiles * ConfigManager::getSingleton().getManaWellBonusPerTile())
         * mManaRegenerationPercent / 100.0;
     // The armed traps keep draining mana as well
@@ -2811,11 +2831,12 @@ bool GameMap::moveTrapProductionOrder(Seat* seat, const std::string& name, bool 
 {
     if(seat == nullptr || !isServerGameMap() || isInEditorMode())
         return false;
-    std::vector<Trap*>::iterator selected = std::find_if(mTraps.begin(), mTraps.end(), [&](Trap* trap)
+    std::vector<Trap*>::iterator selected = mTraps.begin();
+    while(selected != mTraps.end() && !((*selected)->getName() == name &&
+        (*selected)->getSeat() == seat && (*selected)->getNbNeededCraftedTrap() > 0))
     {
-        return trap->getName() == name && trap->getSeat() == seat &&
-            trap->getNbNeededCraftedTrap() > 0;
-    });
+        ++selected;
+    }
     if(selected == mTraps.end())
         return false;
     std::vector<Trap*>::iterator adjacent = selected;
@@ -3976,6 +3997,7 @@ const TileSetValue& GameMap::getMeshForTile(const Tile* tile)
     return mTileSet->getTileValues(tile->getTileVisual()).at(index).at(random_number) ;
 }
 
+//! \brief The number of creatures the seat can control: default or setting, its portals and the dominion research, at most the absolute limit.
 uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
 {
     uint32_t nbCreatures = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
@@ -3989,14 +4011,18 @@ uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
         nbCreatures += roomPortal->getNbCreatureMaxIncrease();
     }
 
+    // The Dominion research raises the limit further, up to the absolute limit
+    nbCreatures = static_cast<uint32_t>(std::max(0.0, SkillManager::getResearchValue(seat, SkillType::keeperDominion,
+        static_cast<double>(nbCreatures), ResearchEffect::CreatureLimit)));
+
     return std::min(nbCreatures, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
 }
 
 void GameMap::setSkirmishSettings(uint32_t goldDensityPercent, uint32_t manaRegenerationPercent,
     uint32_t maxCreaturesSetting)
 {
-    mGoldDensityPercent = std::min<uint32_t>(std::max<uint32_t>(goldDensityPercent, 10), 500);
-    mManaRegenerationPercent = std::min<uint32_t>(std::max<uint32_t>(manaRegenerationPercent, 10), 500);
+    mGoldDensityPercent = std::min<uint32_t>(std::max<uint32_t>(goldDensityPercent, SKIRMISH_PERCENT_MIN), SKIRMISH_PERCENT_MAX);
+    mManaRegenerationPercent = std::min<uint32_t>(std::max<uint32_t>(manaRegenerationPercent, SKIRMISH_PERCENT_MIN), SKIRMISH_PERCENT_MAX);
     mMaxCreaturesSetting = std::min<uint32_t>(maxCreaturesSetting, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
 }
 
@@ -4004,10 +4030,10 @@ void GameMap::setGameRules(uint32_t gameSpeedPercent, uint32_t gameDurationMinut
     uint32_t heartDestroyedReward)
 {
     // The game turn ranges from 25 % to 400 % of its default rate
-    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, 25), 400);
-    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, 9999);
+    mGameSpeedPercent = std::min<uint32_t>(std::max<uint32_t>(gameSpeedPercent, SKIRMISH_SPEED_MIN), SKIRMISH_SPEED_MAX);
+    mGameDurationMinutes = std::min<uint32_t>(gameDurationMinutes, SKIRMISH_DURATION_MAX);
     mIsFOWActivated = fogOfWar;
-    mHeartDestroyedReward = std::min<uint32_t>(heartDestroyedReward, 2);
+    mHeartDestroyedReward = std::min<uint32_t>(heartDestroyedReward, SKIRMISH_HEART_REWARD_ROOMS_AND_LAND);
 }
 
 uint32_t GameMap::getCreatureClassLimit(const std::string& className) const
@@ -4071,6 +4097,7 @@ void GameMap::applySkirmishSkillStates()
         if(seat->isRogueSeat())
             continue;
 
+        // Index 0 is nullSkillType, it is no skill
         for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
         {
             // What the host did not change stays as the level defines it for each seat

@@ -1,6 +1,7 @@
 """Exercise actual CMake resource generation without starting the game."""
 import argparse
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -36,8 +37,10 @@ with tempfile.TemporaryDirectory(prefix='odp-resource-generation-') as directory
     work = Path(directory)
     media = work / 'SDK with spaces/Media'
     prefix = work / 'not-installed'
-    for name in ('RTShaderLib/GLSL', 'Main'):
+    for name in ('RTShaderLib', 'Main'):
         (media / name).mkdir(parents=True)
+    for name in ('OgreUnifiedShader.h', 'GLSL_GL3Support.glsl', 'HLSL_SM4Support.hlsl', 'DefaultShaders.metal'):
+        (media / 'Main' / name).write_text('')
     script = work / 'check.cmake'
 
     def configure(windows):
@@ -52,16 +55,18 @@ with tempfile.TemporaryDirectory(prefix='odp-resource-generation-') as directory
         check(configure(True).returncode == 0, 'Windows configuration succeeds repeatedly')
         generated = paths(work / 'resources.cfg')
         graphics = [path.resolve() for path in generated['Graphics'] if path.is_absolute()]
-        check(graphics == [media / 'RTShaderLib', media / 'RTShaderLib/GLSL', media / 'Main'],
+        check(graphics == [media / 'RTShaderLib'],
               'Windows uses installed media, excluding absent optional shader folders')
+        check(Path('ogre-includes') in generated['Graphics'] and (work / 'ogre-includes/OgreUnifiedShader.h').is_file(),
+              'Windows copies the shared shader includes of Main into the game resource group')
         check([path.resolve() for path in generated['OgreInternal']] == [media / 'Main'],
               'Internal shadow programs use the same installed Main directory')
         check(Path('models') in generated['Graphics'] and Path('gui') in generated['GUI'],
               'Existing relative game resources are preserved')
-    for name in ('HLSL', 'HLSL_Cg', 'materials'):
+    for name in ('materials',):
         (media / 'RTShaderLib' / name).mkdir()
     check(configure(True).returncode == 0, 'Additional installed shader directories are supported')
-    check(len([path for path in paths(work / 'resources.cfg')['Graphics'] if path.is_absolute()]) == 6,
+    check(len([path for path in paths(work / 'resources.cfg')['Graphics'] if path.is_absolute()]) == 2,
           'All installed shader directories remain available')
     check(configure(False).returncode == 0, 'Non-Windows generation does not require an existing install prefix')
     generated = paths(work / 'resources.cfg')
@@ -69,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix='odp-resource-generation-') as directory
           'Non-Windows retains its install-prefix resource layout')
     check(generated['OgreInternal'][0].resolve() == prefix / 'share/OGRE/Media/Main',
           'Non-Windows internal shadow location is retained')
-    (media / 'Main').rmdir()
+    shutil.rmtree(media / 'Main')
     failed = configure(True)
     check(failed.returncode != 0 and 'OGRE Main media is missing' in failed.stderr,
           'Missing required Windows media fails configuration instead of game startup')

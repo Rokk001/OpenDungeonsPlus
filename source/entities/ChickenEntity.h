@@ -52,10 +52,18 @@ public:
     ChickenEntity(GameMap* gameMap);
 
     virtual void doUpkeep() override;
+    //! \brief Client side: moves a flying rooster along the same curve as the server, frame by frame.
     virtual void update(Ogre::Real timeSinceLastFrame) override;
+    //! \brief Client side: the roof flight clip is stretched to the length of the flight.
     virtual double getAnimationSpeedFactor() const override;
+    //! \brief Client side: starts (or joins, for a late arrival) the flight of the rooster the server tells about.
+    //! \param from Start of the flight.
+    //! \param to Goal of the flight.
+    //! \param turns Length of the whole flight in turns.
+    //! \param elapsed Turns of the flight that are over already.
     void startRoofFlightFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to,
         uint32_t turns, Ogre::Real elapsed);
+    //! \brief Client side: an authoritative move (pickup, drop, another action) ends the flight.
     virtual void setPosition(const Ogre::Vector3& position, GameMap* gameMap = nullptr) override;
 
     virtual double getMoveSpeed() const override
@@ -66,6 +74,8 @@ public:
     virtual bool tryPickup(Seat* seat) override;
     virtual void pickup() override;
     virtual bool tryDrop(Seat* seat, Tile* tile) override;
+    //! \brief Drops the chicken at the position. On the server, a hen dropped outside a hatchery gets gift
+    //! turns, in which she is offered to a creature that is not hungry.
     virtual void drop(const Ogre::Vector3& v) override;
 
     //! \brief Turns left in which this chicken, dropped by the keeper outside a hatchery, is offered to
@@ -80,6 +90,7 @@ public:
     //! \brief An enemy creature tramples the egg: it is gone at once. Only free eggs can be trampled.
     bool trample(Creature* creature);
 
+    //! \brief The stage of life of this animal (hen, chick, rooster or egg).
     inline ChickenKind getKind() const
     { return mKind; }
 
@@ -94,6 +105,7 @@ public:
     inline bool isFighting() const
     { return mFighting; }
 
+    //! \brief Marks the rooster as fighting (or no longer fighting) another rooster.
     inline void setFighting(bool fighting)
     { mFighting = fighting; }
 
@@ -119,6 +131,7 @@ public:
     inline uint32_t getAge() const
     { return mAge; }
 
+    //! \brief Adds one turn to the age and returns the new age.
     inline uint32_t incrementAge()
     { return ++mAge; }
 
@@ -135,6 +148,7 @@ public:
     void setStageDuration(uint32_t turns)
     { mStageDuration = turns; }
 
+    //! \brief Sets the turns until a hen lays her next egg.
     inline void setLayTimer(uint32_t turns)
     { mNbTurnLay = turns; }
 
@@ -154,13 +168,18 @@ public:
     void playPose(const std::string& pose, uint32_t turns);
     //! \brief Stops both birds and announces mating poses with the same facing direction.
     void mountHen(ChickenEntity& hen);
+    //! \brief The name of the hen the rooster mounts (empty when he does not).
     const std::string& getMountHenName() const
     { return mMountHenName; }
+    //! \brief Client side: remembers the hen the server says the rooster mounts.
     void setMountHenFromServer(const std::string& name)
     { mMountHenName = name; }
 
     //! Plays the coop entrance pose, then walks through its door to the hatchery floor.
+    //! \param door The place of the door in front of the coop.
+    //! \param exit The free place on the floor where the animal ends up.
     void emergeFromCoop(const Ogre::Vector2& door, const Ogre::Vector2& exit);
+    //! \brief True while the animal is on its way out of the coop.
     inline bool isLeavingCoop() const
     { return mLeavingCoop; }
 
@@ -168,29 +187,35 @@ public:
     inline bool isBusy() const
     { return (mBusyTurns > 0) || (mHopTurnsLeft > 0) || mLeavingCoop; }
 
+    //! \brief True while the animal flies to or from a roof.
     inline bool isHopping() const
     { return mHopTurnsLeft > 0; }
 
     //! \brief A hen runs away to the spot (a hungry creature comes close) and does not scatter again for a while.
     bool scatterTo(const Ogre::Vector2& spot, uint32_t turns);
 
+    //! \brief True while a hen that ran away from a hungry creature does not scatter again.
     inline bool isScattering() const
     { return mScatterTurns > 0; }
 
     //! \brief The hatchery tells a chick which animal to follow (the one in front of it in the line).
     void setFollowTarget(const Ogre::Vector2& target, double gap);
+    //! \brief The chick no longer follows anybody.
     void clearFollowTarget();
 
     //! \brief The hatchery controls the rooster itself (perching, guarding, chasing). Otherwise he struts around.
     inline void setRoomDriven(bool driven)
     { mRoomDriven = driven; }
 
+    //! \brief The current mood of the rooster.
     inline RoosterMood getMood() const
     { return mMood; }
 
+    //! \brief Turns left of the current mood.
     inline uint32_t getMoodTurns() const
     { return mMoodTurns; }
 
+    //! \brief Sets the mood of the rooster for the given number of turns.
     inline void setMood(RoosterMood mood, uint32_t turns)
     {
         mMood = mood;
@@ -204,12 +229,15 @@ public:
             --mMoodTurns;
     }
 
+    //! \brief Turns since the rooster crowed last.
     inline uint32_t getSinceCrow() const
     { return mSinceCrow; }
 
+    //! \brief Counts one more turn since the last crow.
     inline void incrementSinceCrow()
     { ++mSinceCrow; }
 
+    //! \brief The rooster crowed just now.
     inline void resetSinceCrow()
     { mSinceCrow = 0; }
 
@@ -217,9 +245,11 @@ public:
     inline uint32_t countApproachTurn()
     { return ++mApproachTurns; }
 
+    //! \brief The rooster starts a new way to a coop roof.
     inline void resetApproachTurns()
     { mApproachTurns = 0; }
 
+    //! \brief True while the rooster sits on a coop roof.
     inline bool isOnRoof() const
     { return mOnRoof; }
 
@@ -264,7 +294,9 @@ public:
     inline const std::string& getSnatchedFrom() const
     { return mSnatchedFrom; }
 
+    //! \brief Writes the entity and its kind to a packet for the clients.
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
+    //! \brief Reads the entity and its kind from a packet sent by the server.
     virtual void importFromPacket(ODPacket& is) override;
 
     static ChickenEntity* getChickenEntityFromStream(GameMap* gameMap, std::istream& is);
@@ -272,7 +304,9 @@ public:
     //! \brief Describes the saved animal fields including its life-stage duration.
     static std::string getChickenEntityStreamFormat();
 protected:
+    //! \brief Client side: creates the mesh and adds the scaled and tinted look of the animal.
     void createMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
+    //! \brief Client side: removes the look of the animal and then the mesh.
     void destroyMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
     //! \brief Saves the animal including its individually drawn life-stage duration.
     void exportToStream(std::ostream& os) const override;
@@ -287,7 +321,9 @@ private:
         dying
     };
     //! Starts the roof flight; server ticks and client frames sample the same continuous curve.
+    //! \param target The goal of the flight.
     void startHop(const Ogre::Vector3& target);
+    //! \brief Server side: one turn of the flight; the animal lands in the last one.
     void continueHop();
     //! Puts the animal at the position and tells the clients, without touching the animation
     void moveTo(const Ogre::Vector3& position);
@@ -299,6 +335,7 @@ private:
     //! Individual incubation/growth duration, preserved across save/load and cleared on a kind transition.
     uint32_t mStageDuration;
     uint32_t mBusyTurns;
+    //! The animal is on its way out of the coop (pose, then a walk through the door)
     bool mLeavingCoop;
     Ogre::Vector2 mCoopDoor;
     Ogre::Vector2 mCoopExit;
@@ -327,12 +364,18 @@ private:
     int32_t mNbTurnDie;
     bool mIsSlapped;
     bool mLockedEat;
+    //! Turns left in which a hen dropped by the keeper outside a hatchery is offered to a creature that
+    //! is not hungry (0 = not offered, see offerGift)
     uint32_t mGiftTurns;
     //! Turns until the hen may peck (and take grain) again
     uint32_t mPeckWait;
+    //! Name of the creature that holds the lock on this chicken, empty while it is not locked
     std::string mLockOwner;
+    //! Name of the creature that lost the lock on this chicken to another one, empty if nobody did
     std::string mSnatchedFrom;
+    //! The state of the flight from a hungry creature (see ChickenFlight.h)
     ChickenFlight::State mFlight;
+    //! The hen the rooster mounts (server: while the pose lasts; clients: told by the server)
     std::string mMountHenName;
 
     //! \brief Server side: the chicken was dropped by the keeper. Offers it to the closest idle creature of

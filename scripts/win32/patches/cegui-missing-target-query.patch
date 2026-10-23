@@ -1,0 +1,73 @@
+diff --git a/cmake/CEGUIMacros.cmake b/cmake/CEGUIMacros.cmake
+index 2aca3ff3d..0488e8e40 100644
+--- a/cmake/CEGUIMacros.cmake
++++ b/cmake/CEGUIMacros.cmake
+@@ -46,18 +46,28 @@ macro (cegui_find_libraries _LIBS_VAR _LIB_LIST)
+ endmacro()
+ 
+ #
++# Store the type of a target in a variable, or leave it empty when the target does not exist
++# (get_target_property on a missing target is an error with current CMake versions)
++macro (cegui_target_type _VAR _TARGET)
++    if (TARGET ${_TARGET})
++        get_target_property(${_VAR} ${_TARGET} TYPE)
++    else()
++        set(${_VAR})
++    endif()
++endmacro()
++
+ # Add libs to a target, and correctly handles static versions of libs built by the project
+ #
+ macro (cegui_target_link_libraries _TARGET_NAME)
+     target_link_libraries(${_TARGET_NAME} ${ARGN})
+ 
+-    get_target_property(_TARGET_EXISTS ${_TARGET_NAME}_Static TYPE)
++    cegui_target_type(_TARGET_EXISTS ${_TARGET_NAME}_Static)
+     if (_TARGET_EXISTS)
+         foreach(_LIB ${ARGN})
+             if (${_LIB} STREQUAL optimized OR ${_LIB} STREQUAL debug OR ${_LIB} STREQUAL general)
+                 set (_BUILD ${_LIB})
+             else()
+-                get_target_property(_LIB_IS_IN_PROJECT ${_LIB}_Static TYPE)
++                cegui_target_type(_LIB_IS_IN_PROJECT ${_LIB}_Static)
+ 
+                 if (_LIB_IS_IN_PROJECT)
+                     target_link_libraries(${_TARGET_NAME}_Static ${_BUILD} ${_LIB}_Static)
+@@ -73,11 +83,15 @@ endmacro()
+ # add dynamic dependency libraries to a target
+ #
+ macro (cegui_add_dependency_dynamic_libs _TARGET_NAME _DEP_NAME)
+-    get_target_property(_TARGET_EXISTS ${_TARGET_NAME} TYPE)
++    cegui_target_type(_TARGET_EXISTS ${_TARGET_NAME})
+ 
+     if (_TARGET_EXISTS)
+         if (${_DEP_NAME}_LIBRARIES)
+-            if (${_DEP_NAME}_LIBRARIES_DBG)
++            list(FIND ${_DEP_NAME}_LIBRARIES optimized _LIB_HAS_KEYWORD)
++            if (NOT _LIB_HAS_KEYWORD EQUAL -1)
++                # the find module already marked release and debug libraries
++                target_link_libraries(${_TARGET_NAME} ${${_DEP_NAME}_LIBRARIES})
++            elseif (${_DEP_NAME}_LIBRARIES_DBG)
+                 foreach(_LIB ${${_DEP_NAME}_LIBRARIES})
+                     target_link_libraries(${_TARGET_NAME} optimized ${_LIB})
+                 endforeach()
+@@ -98,7 +112,7 @@ endmacro()
+ # if static do not exist)
+ #
+ macro (cegui_add_dependency_static_libs _TARGET_NAME _DEP_NAME)
+-    get_target_property(_TARGET_EXISTS ${_TARGET_NAME} TYPE)
++    cegui_target_type(_TARGET_EXISTS ${_TARGET_NAME})
+ 
+     if (_TARGET_EXISTS)
+         if (${_DEP_NAME}_LIBRARIES_STATIC)
+@@ -137,8 +151,8 @@ endmacro()
+ #
+ macro (cegui_add_dependency _TARGET_NAME _DEP_NAME)
+ # Optional additional arguments: "SCOPE" "IS_SYSTEM"
+-    get_target_property(_DYNAMIC_EXISTS ${_TARGET_NAME} TYPE)
+-    get_target_property(_STATIC_EXISTS ${_TARGET_NAME}_Static TYPE)
++    cegui_target_type(_DYNAMIC_EXISTS ${_TARGET_NAME})
++    cegui_target_type(_STATIC_EXISTS ${_TARGET_NAME}_Static)
+     if ("${ARGC}" GREATER 2)
+         if (("${ARGC}" GREATER 3) AND "${ARGV3}")
+             if (_DYNAMIC_EXISTS)

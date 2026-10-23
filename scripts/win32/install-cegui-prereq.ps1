@@ -1,9 +1,19 @@
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
 $taskRoot = $taskDependencyRoot
-$taskCmake = "$taskRoot\tools\cmake-3.31.8-windows-x86_64\bin\cmake.exe"
+$taskCmake = $taskCmakeExe
+$taskCeguiCommit = 'd8c7290c0eabc62e4319af4168a81757c6267403'
+$taskCeguiHead = (& git -C "$taskRoot\src\cegui" rev-parse HEAD)
+if ($taskCeguiHead -ne $taskCeguiCommit) { throw "CEGUI source at $taskRoot\src\cegui is $taskCeguiHead, expected $taskCeguiCommit" }
 $taskPatch = Join-Path $PSScriptRoot 'patches/cegui-msvc-snprintf.patch'
+$taskHitTestPatch = Join-Path $PSScriptRoot 'patches/cegui-list-hit-test.patch'
 $ErrorActionPreference = 'Continue'
+& git -C "$taskRoot\src\cegui" apply --reverse --check $taskHitTestPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying CEGUI list row hit-test fix'
+    & git -C "$taskRoot\src\cegui" apply $taskHitTestPatch
+    if ($LASTEXITCODE -ne 0) { throw 'CEGUI list hit-test patch failed' }
+}
 & git -C "$taskRoot\src\cegui" apply --reverse --check $taskPatch *> $null
 if ($LASTEXITCODE -ne 0) {
     Write-Output 'Applying CEGUI snprintf compatibility fix for modern MSVC'
@@ -17,9 +27,30 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\cegui" apply $taskClippingPatch
     if ($LASTEXITCODE -ne 0) { throw 'CEGUI clipping patch failed' }
 }
+$taskTargetQueryPatch = Join-Path $PSScriptRoot 'patches/cegui-missing-target-query.patch'
+& git -C "$taskRoot\src\cegui" apply --reverse --check $taskTargetQueryPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Guarding CEGUI target queries against missing targets'
+    & git -C "$taskRoot\src\cegui" apply $taskTargetQueryPatch
+    if ($LASTEXITCODE -ne 0) { throw 'CEGUI target query patch failed' }
+}
+$taskPolicyPatch = Join-Path $PSScriptRoot 'patches/cegui-current-cmake-policies.patch'
+& git -C "$taskRoot\src\cegui" apply --reverse --check $taskPolicyPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Dropping CEGUI CMake policy settings that current CMake rejects'
+    & git -C "$taskRoot\src\cegui" apply $taskPolicyPatch
+    if ($LASTEXITCODE -ne 0) { throw 'CEGUI CMake policy patch failed' }
+}
+$taskForwardPatch = Join-Path $PSScriptRoot 'patches/cegui-ogre-forward-declarations.patch'
+& git -C "$taskRoot\src\cegui" apply --reverse --check $taskForwardPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Using the Ogre forward declarations instead of CEGUI copies'
+    & git -C "$taskRoot\src\cegui" apply $taskForwardPatch
+    if ($LASTEXITCODE -ne 0) { throw 'CEGUI Ogre forward declaration patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskOptions = @('-S', "$taskRoot\src\cegui", '-B', "$taskRoot\build\cegui",
-    '-G', 'Visual Studio 17 2022', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",
+    '-G', 'Visual Studio 18 2026', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",
     "-DCMAKE_PREFIX_PATH=$taskRoot\install", '-DCMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /W3 /GR /EHsc /MP4',
     '-DCEGUI_BUILD_RENDERER_OGRE=ON', '-DCEGUI_BUILD_RENDERER_OPENGL=OFF',
     '-DCEGUI_BUILD_RENDERER_OPENGL3=OFF', '-DCEGUI_BUILD_RENDERER_OPENGLES=OFF',
@@ -32,9 +63,9 @@ $taskOptions = @('-S', "$taskRoot\src\cegui", '-B', "$taskRoot\build\cegui",
     '-DCEGUI_LIB_INSTALL_DIR:PATH=lib', '-DCEGUI_INCLUDE_INSTALL_DIR:PATH=include/cegui-0',
     "-DFREETYPE_LIB_DBG=$taskRoot/install/lib/freetyped.lib",
     "-DEXPAT_LIB_DBG=$taskRoot/install/lib/libexpatd.lib",
-    "-DPCRE_LIB_DBG=$taskRoot/install/lib/pcred.lib",
-    "-DBOOST_ROOT=$taskRoot/install", "-DBOOST_INCLUDEDIR=$taskRoot/install/include/boost-1_82",
-    "-DPYTHON_EXECUTABLE=$taskPythonCmakeRoot/python.exe")
+    "-DBOOST_ROOT=$taskRoot/install", "-DBOOST_INCLUDEDIR=$taskRoot/install/include/boost-1_92",
+    "-DPYTHON_EXECUTABLE=C:/Users/mario/AppData/Local/Programs/Python/Python314/python.exe",
+    '-DCMAKE_DISABLE_FIND_PACKAGE_SFML=ON', '-DCEGUI_HAS_PCRE_REGEX=OFF','-DCEGUI_HAS_STD11_REGEX=ON', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5')
 Write-Output 'Configuring CEGUI'
 $ErrorActionPreference = 'Continue'
 & $taskCmake @taskOptions *> "$taskRoot\logs\cegui-configure.log"
@@ -43,7 +74,7 @@ if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\cegui-config
 foreach ($taskConfiguration in @('Release', 'Debug')) {
     Write-Output "Building and installing CEGUI ($taskConfiguration)"
     $ErrorActionPreference = 'Continue'
-    & $taskCmake --build "$taskRoot\build\cegui" --config $taskConfiguration --target INSTALL --parallel 4 *> "$taskRoot\logs\cegui-$taskConfiguration.log"
+    & $taskCmake --build "$taskRoot\build\cegui" --config $taskConfiguration --target INSTALL --parallel 2 *> "$taskRoot\logs\cegui-$taskConfiguration.log"
     $ErrorActionPreference = 'Stop'
     if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\cegui-$taskConfiguration.log" -Tail 60; throw "CEGUI $taskConfiguration build failed" }
 }

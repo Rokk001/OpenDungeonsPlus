@@ -38,8 +38,14 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
 #include <istream>
 #include <ostream>
+
+//! \brief Value of TrapReloadByWorkers when the trap config has no entry (1.0 means workers reload traps)
+static const double DEFAULT_RELOAD_BY_WORKERS = 1.0;
+//! \brief Reload price of a trap type without an own entry when the trap config has no TrapReloadCostDefault
+static const double DEFAULT_RELOAD_COST = 150.0;
 
 void TrapTileData::fireSeatsSawTriggering()
 {
@@ -151,6 +157,7 @@ void Trap::doUpkeep()
     }
 }
 
+//! \brief Fires the trap on the tile and starts the reload; the part of the last reload period that was used up is kept.
 bool Trap::fireTile(Tile* tile, TrapTileData* trapTileData)
 {
     // A trap fizzles if its owner cannot pay the mana needed to fire
@@ -169,8 +176,10 @@ bool Trap::fireTile(Tile* tile, TrapTileData* trapTileData)
         fireTrapEffect(TrapEffectKind::fired, tile, 1.0);
 
     ++getSeat()->getStatistics().mTrapsFired;
-    trapTileData->setReloadTime(mReloadTime);
-    if((mReloadTime > 0) && !isDoor())
+    // A new period adds its time on top of the part of the last period that was already used up (zero or less)
+    const double reloadTime = getResearchedReloadTime();
+    trapTileData->setReloadTime(std::min(0.0, trapTileData->getReloadTime()) + reloadTime);
+    if((reloadTime > 0.0) && !isDoor())
         fireTrapEffect(TrapEffectKind::reloading, tile, 1.0);
     if(!trapTileData->decreaseShoot())
     {
@@ -436,7 +445,7 @@ bool Trap::canBeReloadedByWorker(Tile* tile, const Creature* worker) const
     if(isDoor() || !getGameMap()->isServerGameMap() || getGameMap()->isInEditorMode())
         return false;
 
-    if(ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadByWorkers", 1.0) <= 0.0)
+    if(ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadByWorkers", DEFAULT_RELOAD_BY_WORKERS) <= 0.0)
         return false;
 
     if(std::find(mCoveredTiles.begin(), mCoveredTiles.end(), tile) == mCoveredTiles.end())
@@ -494,7 +503,7 @@ int32_t Trap::getReloadPrice() const
 {
     // Price per trap type (<Trap>ReloadCost), a type without an entry pays TrapReloadCostDefault
     ConfigManager& config = ConfigManager::getSingleton();
-    double defaultPrice = config.getTrapConfigDoubleOrDefault("TrapReloadCostDefault", 150.0);
+    double defaultPrice = config.getTrapConfigDoubleOrDefault("TrapReloadCostDefault", DEFAULT_RELOAD_COST);
     double price = defaultPrice;
     switch(getType())
     {
@@ -538,6 +547,7 @@ int32_t Trap::getReloadPrice() const
     return static_cast<int32_t>(std::max(0.0, price));
 }
 
+//! \brief Sets the trap up on the tiles; every tile starts with the reload time of the trap.
 void Trap::setupTrap(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles)
 {
     setIsOnMap(true);
@@ -551,7 +561,7 @@ void Trap::setupTrap(const std::string& name, Seat* seat, const std::vector<Tile
         TrapTileData* trapTileData = createTileData(tile);
         mTileData[tile] = trapTileData;
         trapTileData->mHP = getDefaultTileHP();
-        trapTileData->setReloadTime(mReloadTime);
+        trapTileData->setReloadTime(getResearchedReloadTime());
         // Allied seats with the creator do see the trap from the start
         trapTileData->seatsSawTriggering(alliedSeats);
         tile->setCoveringBuilding(this);
@@ -745,6 +755,7 @@ void Trap::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileDa
     os << "\t" << (trapTileData->isExhausted() ? 1 : 0);
 }
 
+//! \brief Reads the data of a tile of the trap, including the reload time (a fraction of a turn is kept).
 bool Trap::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tileData)
 {
     TrapTileData* trapTileData = static_cast<TrapTileData*>(tileData);
@@ -766,7 +777,7 @@ bool Trap::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tile
 
     // We read saved trap state
     double tileHealth;
-    uint32_t reloadTime;
+    double reloadTime;
     int32_t nbShootsBeforeDeactivation;
     int32_t nbSeatsVision;
     if(!(is >> tileHealth))

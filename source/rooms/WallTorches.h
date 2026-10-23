@@ -39,6 +39,7 @@ struct WallTorch
 //! \brief What the placement needs to know about one tile. The server fills it from the map.
 struct WallTorchTileInfo
 {
+    //! \brief Creates the info of a tile that is neither a wall nor part of a room nor open
     WallTorchTileInfo() :
         mWallSeatId(-1),
         mWallTeamId(-1),
@@ -60,13 +61,21 @@ struct WallTorchTileInfo
     bool mBlocked;
 };
 
+//! \brief Default room side divisor of the placement: a room side of length L gets L / 4 torches
+const uint32_t DEFAULT_TORCH_ROOM_SIDE_DIVISOR = 4;
+//! \brief Default corridor spacing of the placement: every 4th wall tile of a straight run gets a torch
+const uint32_t DEFAULT_TORCH_CORRIDOR_SPACING = 4;
+//! \brief Default smallest distance in steps between two torches
+const uint32_t DEFAULT_TORCH_MIN_DISTANCE = 3;
+
 //! \brief Values of the placement (see WallTorchConfig for the config keys)
 struct WallTorchPlacement
 {
+    //! \brief Creates the placement with the default values
     WallTorchPlacement() :
-        mRoomSideDivisor(4),
-        mCorridorSpacing(4),
-        mMinDistance(3)
+        mRoomSideDivisor(DEFAULT_TORCH_ROOM_SIDE_DIVISOR),
+        mCorridorSpacing(DEFAULT_TORCH_CORRIDOR_SPACING),
+        mMinDistance(DEFAULT_TORCH_MIN_DISTANCE)
     {}
 
     //! A room side of length L gets L / mRoomSideDivisor torches
@@ -84,8 +93,9 @@ class WallTorches
 public:
     static const int32_t NB_DIRECTIONS = 4;
 
-    //! \brief Direction 0: +y, 1: -y, 2: +x, 3: -x
+    //! \brief X step of a direction. Direction 0: +y, 1: -y, 2: +x, 3: -x
     static int32_t getDirX(int32_t dir);
+    //! \brief Y step of the direction (see getDirX)
     static int32_t getDirY(int32_t dir);
 
     //! \brief Number that identifies a torch (wall tile and side); equal torches have equal keys

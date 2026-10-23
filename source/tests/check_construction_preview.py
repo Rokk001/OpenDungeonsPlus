@@ -5,8 +5,19 @@ import tempfile
 
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/render/RenderManager.cpp').read_text()
-method = source[source.index('void RenderManager::rrDrawTilePreview('):
-                source.index('\nbool RenderManager::getKeeperHandPosition(')]
+# The preview renderer starts with its wall border helpers when the file has them, else with the method itself
+start = source.find('static const float WALL_BORDER_LIFT')
+if start < 0:
+    start = source.index('void RenderManager::rrDrawTilePreview(')
+method = source[start:source.index('\nbool RenderManager::getKeeperHandPosition(')]
+# The floor height and the line helper of the preview lie far above in the file; they are taken along when it has them
+preamble = ''
+height_at = source.find('const float TILE_PREVIEW_FLOOR_HEIGHT')
+if height_at >= 0:
+    preamble += source[height_at:source.index('\n', height_at) + 1]
+line_at = source.find('void addPreviewLine(')
+if line_at >= 0:
+    preamble += source[line_at:source.index('\n}\n', line_at) + 3]
 code = r'''
 #include <functional>
 #include <algorithm>
@@ -63,17 +74,17 @@ int main(){int checks=0,failures=0;auto check=[&](bool pass,const char* label){+
  render.rrDrawTilePreview({&floor,&wall},{1,1,1});
  check(scene.object.sections.size()==1&&scene.object.sections[0].points.size()==32,"non-construction unchanged");
  render.rrDrawTilePreview({&wall},{.35f,.3f,1},false,true);
- auto& digging=scene.object.sections;
+ std::vector<Ogre::ManualObject::Section>& digging=scene.object.sections;
  check(digging.size()==2,"digging adds filled frame bands");
  check(digging[1].points.size()==24,"digging frames only the top face of the wall, no side faces");
 check(digging[0].points.size()==8,"digging outline is four top edges, no bottom or vertical edges");
 for(const Ogre::Vector3& p:digging[0].points)check(std::abs(p.z-2.02f)<.00001f,"digging outline lies flat on the top face");
- for(const auto& p:digging[1].points){
+ for(const Ogre::Vector3& p:digging[1].points){
   check(std::abs(p.x-5)<=.5051f&&std::abs(p.y-6)<=.5051f,"dig frame stays on the selected wall surface");
   check(std::abs(p.z-2.02f)<.00001f,"dig frame lies flat on the wall top");
  }
  float topArea=0;
- for(size_t i=0;i<digging[1].points.size();i+=3){const auto& a=digging[1].points[i];const auto& b=digging[1].points[i+1];const auto& c=digging[1].points[i+2];
+ for(size_t i=0;i<digging[1].points.size();i+=3){const Ogre::Vector3& a=digging[1].points[i];const Ogre::Vector3& b=digging[1].points[i+1];const Ogre::Vector3& c=digging[1].points[i+2];
   if(a.z==2.02f&&b.z==a.z&&c.z==a.z)topArea+=((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))*.5f;}
  check(std::abs(topArea-(1-.88f*.88f))<.0001f,"digging top has the accepted construction border width");
  render.rrDrawTilePreview({&wall,&wall},{.35f,.3f,1},false,true);
@@ -94,11 +105,11 @@ for(const Ogre::Vector3& p:digging[0].points)check(std::abs(p.z-2.02f)<.00001f,"
   "drag outline reaches full selection maximum");
  render.rrDrawTilePreview({}, {1,1,1},true);check(scene.object.sections.empty(),"cancel clears ribbon and lines");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;}
-'''.replace('METHOD', method)
+'''.replace('METHOD', preamble + method)
 with tempfile.TemporaryDirectory(prefix='odp-construction-preview-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
 
 game = (repo / 'source/modes/GameMode.cpp').read_text()

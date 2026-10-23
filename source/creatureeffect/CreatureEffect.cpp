@@ -20,16 +20,20 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
 #include <istream>
 
 bool CreatureEffect::upkeepEffect(Creature& creature)
 {
-    if(mNbTurnsEffect < 0)
+    if(mNbTurnsEffect < 0.0)
         return true;
-    if(mNbTurnsEffect == 0)
+    if(mNbTurnsEffect <= 0.0)
         return false;
-    
-    --mNbTurnsEffect;
+
+    // The effect ends after the turn in which its remaining time reaches 0; in that last turn only the fraction
+    // of the turn that was left counts for the per-turn amounts
+    mTurnFraction = std::min(1.0, mNbTurnsEffect);
+    mNbTurnsEffect = std::max(0.0, mNbTurnsEffect - 1.0);
     applyEffect(creature);
     return true;
 }

@@ -14,7 +14,8 @@ client = (root / 'source/network/ODClient.cpp').read_text()
 for token in ('direction = hen.getWalkDirection()',
               'hen.setAnimationState(ChickenPose::cackle, true, direction, false)',
               'setAnimationState(ChickenPose::mount, true, direction, false)',
-              'hen.playPose(ChickenPose::cackle, 3)', 'mMountHenName = hen.getName()',
+              'hen.playPose(ChickenPose::cackle, MOUNT_POSE_TURNS)', 'MOUNT_POSE_TURNS = 3;',
+              'mMountHenName = hen.getName()',
               'notification->mPacket << getName() << hen.getName()', 'is >> mMountHenName'):
     assert token in chicken, token
 assert 'rooster->mountHen(*target)' in room
@@ -28,8 +29,8 @@ assert 'RoomObjectPath::clearPoint(obstacles, position)' in room, 'takeoff only 
 assert 'rooster->walkToward(approach, 0.0, ChickenPose::strut)' in room
 assert 'RoomObjectNavigation::collect(*getGameMap(), clearance)' in room
 # The technical clearance follows the existing rooster scale, never a new balance setting.
-assert chicken.count('0.4f * static_cast<Ogre::Real>') == 1
-assert room.count('0.4f * static_cast<Ogre::Real>') == 2
+assert chicken.count('ROOF_FLIGHT_CLEARANCE * static_cast<Ogre::Real>') == 1
+assert room.count('ROOSTER_CLEARANCE_PER_SCALE * static_cast<Ogre::Real>') == 2
 
 
 def ease(x):
@@ -66,7 +67,9 @@ radius = max(math.hypot(float(p.get('x')), float(p.get('y'))) for p in rooster.i
 assert radius < clearance
 # Use the actual coop bounds and the existing generic furniture scaling.
 furniture = (root / 'source/gamemap/RoomObjectBounds.h').read_text()
-assert 'float width = 0.6f, depth = 0.6f;' in furniture
+assert 'float width = furnitureFootprint, depth = furnitureFootprint;' in furniture
+# the named furniture footprint keeps the value 0.6 tiles
+assert 'constexpr float furnitureFootprint = 0.6f;' in furniture
 factor = min(1.0, 0.6 / (max(p[0] for p in points) - min(p[0] for p in points)),
              0.6 / (max(p[1] for p in points) - min(p[1] for p in points)))
 min_x = min(p[0] for p in points) * factor

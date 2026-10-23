@@ -64,18 +64,30 @@ public:
     static void stopAll(CreatureReactions& reactions);
 
 private:
+    //! \brief Returns true if the reaction framework is on and its config is loaded
     static bool isActive(const CreatureReactions& reactions);
+    //! \brief Returns true if the creature exists and is a worker
     static bool isWorker(const Creature* creature);
+    //! \brief Starts the event on a living creature that stands on the map
     static bool show(CreatureReactions& reactions, Creature* creature, const std::string& eventName);
+    //! \brief Queues the event to be shown after a delay
     static void later(CreatureReactions& reactions, Creature* creature, const std::string& eventName, double delay);
+    //! \brief Shows the queued reactions whose delay is over
     static void processLater(CreatureReactions& reactions);
+    //! \brief Looks at each worker on the map and forgets the ones that are gone
     static void tick(CreatureReactions& reactions);
+    //! \brief Looks at one worker
     static void tickWorker(CreatureReactions& reactions, Creature* worker);
+    //! \brief Shows the hit effect of the material the worker digs
     static void showDigHit(CreatureReactions& reactions, Creature* worker);
+    //! \brief Shows the claiming reaction that fits the surroundings
     static void showClaim(CreatureReactions& reactions, Creature* worker);
     static void noteRoomTakeover(CreatureReactions& reactions, const CosmeticEvent& event);
+    //! \brief Keeps the model of gold on the back of the worker in step with the gold it carries
     static void updateGoldBody(CreatureReactions& reactions, Creature* worker, bool visible);
+    //! \brief Removes the model of gold from the back of one worker
     static void removeGoldBody(const std::string& workerName);
+    //! \brief Removes the models of gold from the backs of all workers
     static void removeAllGoldBodies();
 };
 

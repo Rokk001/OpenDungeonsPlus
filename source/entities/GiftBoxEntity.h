@@ -78,6 +78,7 @@ public:
     virtual void applyEffect()
     {}
 
+    //! \brief Returns the type of this gift box
     inline GiftBoxType getGiftBoxType() const
     { return mGiftBoxType; }
 

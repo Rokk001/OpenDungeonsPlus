@@ -25,6 +25,12 @@
 #include <iosfwd>
 #include <cstdint>
 
+//! \brief Lowest speed factor of the walk clips of a creature type (WalkClipRate, WalkHurtClipRate)
+static const double WALK_CLIP_RATE_MIN = 0.2;
+
+//! \brief Highest speed factor of the walk clips of a creature type (WalkClipRate, WalkHurtClipRate)
+static const double WALK_CLIP_RATE_MAX = 8.0;
+
 class CreatureBehaviour;
 class CreatureMood;
 class CreatureSkill;
@@ -34,6 +40,9 @@ enum class RoomType;
 
 //! \brief The maximum level of a creature
 static const uint32_t MAX_LEVEL = 30;
+
+//! \brief GUI text markup of the crown picture that is shown instead of the level of the champion
+static const std::string CHAMPION_CROWN_MARKUP = "[image-size='w:16 h:16'][image='ChampionCrown/Crown']";
 
 class CreatureRoomAffinity
 {
@@ -152,7 +161,9 @@ public:
 
     static CreatureJob creatureJobFromString(const std::string& s);
     static std::string creatureJobToString(CreatureJob c);
+    //! \brief Converts the name of a combat class (as written in the configuration) to the enum value
     static CombatClass combatClassFromString(const std::string& s);
+    //! \brief Converts a combat class to the name used in the configuration
     static std::string combatClassToString(CombatClass c);
     //! \brief Converts a configured avoidance name to its mechanism; unknown names use none.
     static Avoidance avoidanceFromString(const std::string& s);
@@ -185,22 +196,28 @@ public:
     inline CreatureJob          getCreatureJob  () const    { return mCreatureJob; }
     inline CombatClass          getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
+    //! \brief True for creatures that are never scared by a Fear trap.
     inline bool                 isFearless      () const    { return mFearless; }
+    //! \brief True for the champion definition (the creature the Summon champion spell calls).
     inline bool                 isChampion      () const    { return mChampion; }
+    //! \brief Mana taken per second while a player possesses a creature of this definition (after the free period).
     inline double               getPossessManaCost () const { return mPossessManaCost; }
+    //! \brief Seconds a captured enemy of this kind must be tortured at level 1 before it changes side
     inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
     //! \brief Own walk speed factor of a badly hurt creature of this type, negative when the global value applies
     inline double               getLowHealthWalkSpeedFactor () const    { return mLowHealthWalkSpeedFactor; }
     //! \brief Speed factor of the walk clips of this type on the client (1 = as authored), limited to 0.2 - 8.0
-    inline double               getWalkClipRate () const    { return std::max(0.2, std::min(8.0, mWalkClipRate)); }
+    inline double               getWalkClipRate () const    { return std::max(WALK_CLIP_RATE_MIN, std::min(WALK_CLIP_RATE_MAX, mWalkClipRate)); }
     //! \brief Speed factor of the WalkHurt clip of this type on the client, limited to 0.2 - 8.0. Without an own value
     //! (key WalkHurtClipRate not set) it is the walk clip rate
     inline double               getWalkHurtClipRate () const
     {
         if(mWalkHurtClipRate < 0.0)
             return getWalkClipRate();
-        return std::max(0.2, std::min(8.0, mWalkHurtClipRate));
+        return std::max(WALK_CLIP_RATE_MIN, std::min(WALK_CLIP_RATE_MAX, mWalkHurtClipRate));
     }
+    //! \brief Factor on every damage the skills of this type deal (Explosion, HailStorm, GasCloud, Grenade, GuidedBolt)
+    inline double               getSkillDamageFactor () const   { return mSkillDamageFactor; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -321,6 +338,10 @@ private:
     //! \brief Optional (WalkHurtClipRate): speed factor of the WalkHurt clip only, matching its own stride length.
     //! Negative when not set, then mWalkClipRate is used
     double mWalkHurtClipRate;
+
+    //! \brief Optional (SkillDamageFactor): factor on every damage the skills of this type deal (Explosion, HailStorm,
+    //! GasCloud, Grenade, GuidedBolt). 1 when not set
+    double mSkillDamageFactor;
 
     //! \brief The name of the creatures class
     std::string mClassName;

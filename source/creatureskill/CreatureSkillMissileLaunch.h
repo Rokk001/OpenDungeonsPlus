@@ -79,6 +79,11 @@ public:
     virtual bool importFromStream(std::istream& is) override;
 
 protected:
+    //! \brief Tells whether the damage of this skill is multiplied by the SkillDamageFactor of the creature type.
+    //! The plain missile attack is not (its damage is already set per type); grenades and guided bolts override it.
+    virtual bool appliesSkillDamageFactor() const
+    { return false; }
+
     //! \brief Creates the missile to launch. Skills based on MissileLaunch override it to launch another kind of missile
     virtual MissileOneHit* createMissile(GameMap& gameMap, Creature* creature, const Ogre::Vector3& direction,
         double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject, bool ko,

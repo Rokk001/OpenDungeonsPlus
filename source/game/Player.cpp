@@ -55,6 +55,9 @@ const float BATTLE_TIME_COUNT = 10.0f;
 //! Note that the distance is squared (100 would mean 10 tiles)
 const int MIN_DIST_EVENT_SQUARED = 100;
 
+//! \brief Share (percent) of the counted workers that may reload traps when the trap config has no TrapReloadWorkerSharePercent
+static const double DEFAULT_RELOAD_WORKER_SHARE_PERCENT = 20.0;
+
 //! \brief The number of seconds the local player will not be notified again if the skill queue is empty
 const float NO_RESEARCH_TIME_COUNT = 60.0f;
 
@@ -712,10 +715,10 @@ void Player::notifyNoSkillInQueue()
     {
         mNoSkillInQueueTime = NO_RESEARCH_TIME_COUNT;
 
-        std::string chatMsg = "Your skill queue is empty, while there are still skills that could be unlocked.";
+        std::string chatMsg = "Warning: your library has nothing to research. Choose the next research in the research tree.";
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, this);
-        serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
+        serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutSkills;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }
@@ -1211,6 +1214,6 @@ bool Player::isWorkerReloadShareOpen() const
             getNbWorkersDoing(CreatureActionType::searchWallTileToClaim),
             getNbWorkersDoing(CreatureActionType::searchEntityToCarry), nbWorkersReloading);
 
-    double share = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadWorkerSharePercent", 20.0);
+    double share = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadWorkerSharePercent", DEFAULT_RELOAD_WORKER_SHARE_PERCENT);
     return WorkerShare::isReloadShareOpen(nbWorkersReloading, nbWorkersTotal, share);
 }

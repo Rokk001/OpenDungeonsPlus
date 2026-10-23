@@ -9,18 +9,18 @@ $taskResourcesFile = Join-Path $taskBuild 'resources.cfg'
 # the transitive dependencies of the installed Release libraries.
 $taskRuntimeNames = @(
     'OgreBites.dll', 'OgreRTShaderSystem.dll', 'OgreOverlay.dll', 'OgreMain.dll'
-    'OIS.dll', 'sfml-audio-2.dll', 'sfml-network-2.dll', 'sfml-system-2.dll'
+    'OIS.dll', 'sfml-audio-3.dll', 'sfml-network-3.dll', 'sfml-system-3.dll'
     'CEGUIBase-0.dll', 'CEGUIOgreRenderer-0.dll'
     'CEGUICoreWindowRendererSet.dll', 'CEGUIExpatParser.dll'
     'Plugin_ParticleFX.dll', 'Plugin_OctreeSceneManager.dll'
     'Codec_STBI.dll', 'RenderSystem_GL3Plus.dll'
-    'freetype.dll', 'libexpat.dll', 'pcre.dll', 'openal32.dll'
+    'freetype.dll', 'libexpat.dll'
 )
 $taskRuntimeSources = @($taskRuntimeNames | ForEach-Object { Join-Path "$taskPrefix\bin" $_ })
-$taskRuntimeSources += Join-Path $taskPythonRoot 'python310.dll'
+$taskRuntimeSources += Join-Path $taskPythonRoot 'python314.dll'
 $taskRuntimeSources += Join-Path $taskPythonRoot 'python3.dll'
 foreach ($taskPath in ($taskRuntimeSources + @($taskResourcesFile, "$taskPythonRoot\Lib", "$taskPythonRoot\DLLs",
-    "$taskPrefix\Media\RTShaderLib\GLSL", "$taskPrefix\Media\Main"))) {
+    "$taskPrefix\Media\RTShaderLib", "$taskPrefix\Media\Main"))) {
     if (-not (Test-Path -LiteralPath $taskPath)) { throw "Required runtime input is missing: $taskPath" }
 }
 
@@ -56,5 +56,5 @@ foreach ($taskSource in $taskRuntimeSources) {
 # Resolve the existing Python installation without a prepared shell or PATH.
 # The paths apply only to the Python DLL beside this Release executable.
 $taskPythonPaths = @('.', $taskPythonRoot, "$taskPythonRoot\Lib", "$taskPythonRoot\DLLs", 'import site')
-[System.IO.File]::WriteAllLines((Join-Path $taskBuild 'python310._pth'), [string[]]$taskPythonPaths)
+[System.IO.File]::WriteAllLines((Join-Path $taskBuild 'python314._pth'), [string[]]$taskPythonPaths)
 Write-Output "Release runtime prepared in $taskBuild; open opendungeons-plus.exe to test the game."

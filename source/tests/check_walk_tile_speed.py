@@ -17,7 +17,9 @@ movable_h = read('source/entities/MovableGameEntity.h')
 # Ratio: same tile speed the client moves with (bridge = ground, else tile default), ground speed as reference, clamped
 ratio = creature[creature.index('double Creature::getTileSpeedRatio'):creature.index('void Creature::updateClientPose')]
 assert 'tile->getHasBridge() ? groundSpeed : tile->getCreatureSpeedDefault(this)' in ratio
-assert 'tileSpeed / groundSpeed' in ratio and 'std::max(0.2, std::min(4.0' in ratio
+assert 'tileSpeed / groundSpeed' in ratio and 'std::max(TILE_SPEED_RATIO_MIN, std::min(TILE_SPEED_RATIO_MAX' in ratio
+# the named limits keep the values 0.2 and 4.0
+assert 'static const double TILE_SPEED_RATIO_MIN = 0.2;' in creature and 'static const double TILE_SPEED_RATIO_MAX = 4.0;' in creature
 assert 'groundSpeed <= 0.0' in ratio and 'tileSpeed <= 0.0' in ratio and 'return 1.0;' in ratio
 # no tired / hurt factor inside the ratio (they are applied once in getClientPoseSpeedFactor)
 for word in ('Tired', 'LowHealth', 'getMoveSpeed('):
@@ -26,7 +28,8 @@ for word in ('Tired', 'LowHealth', 'getMoveSpeed('):
 # Blend: starts without blending, resets when the walk clip stops, bounded step per frame
 blend = creature[creature.index('void Creature::updateClientPose'):creature.index('double Creature::getClientPoseSpeedFactor')]
 assert 'getAnimationStateName() != EntityAnimation::walk_anim' in blend and 'mClientTileSpeedRatio = -1.0;' in blend
-assert 'mClientTileSpeedRatio = target;' in blend and 'timeSinceLastFrame' in blend and '* 4.0' in blend
+assert 'mClientTileSpeedRatio = target;' in blend and 'timeSinceLastFrame' in blend and '* TILE_SPEED_RATIO_MAX_CHANGE_PER_SECOND' in blend
+assert 'static const double TILE_SPEED_RATIO_MAX_CHANGE_PER_SECOND = 4.0;' in creature
 assert 'mClientTileSpeedRatio    (-1.0)' in creature and creature.count('mClientTileSpeedRatio    (-1.0),') == 2
 assert 'double                          mClientTileSpeedRatio;' in creature_h
 assert 'virtual void updateClientPose(double timeSinceLastFrame) override;' in creature_h

@@ -58,7 +58,15 @@
 
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
-#include <fileapi.h>
+// MinGW's libstdc++ predefines NOMINMAX, and the game builds with -Werror:
+// an unconditional redefinition is fatal there.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 #include <OgreEntity.h>
@@ -546,14 +554,17 @@ void EditorMode::activate()
     // Hide also the Replay check-box as it doesn't make sense for the editor
     guiSheet->getChild("ConfirmExit/SaveReplayCheckbox")->hide();
     guiSheet->getChild("GameChatWindow/GameChatEditBox")->hide();
+    // Start the file dialogs in the folder the player's own levels are saved to.
+    // $HOME is not set on Windows, where the dialogs would open on nothing.
+    const std::string userLevelPath = ResourceManager::getSingleton().getUserLevelPathSkirmish();
     guiSheet->getChild("MenuEditorLoad")->hide();
     guiSheet->getChild("MenuEditorLoad")->getChild("LevelWindowFrame")
-    ->getChild("FilePath")->setText(getEnv("HOME"));
+    ->getChild("FilePath")->setText(userLevelPath);
     guiSheet->getChild("MenuEditorLoad")->getChild("LevelWindowFrame")
     ->getChild("FilePath")->fireEvent(CEGUI::Editbox::EventTextAccepted,args); 
     guiSheet->getChild("MenuEditorSave")->hide();
     guiSheet->getChild("MenuEditorSave")->getChild("LevelWindowFrame")
-    ->getChild("FilePath")->setText(getEnv("HOME"));
+    ->getChild("FilePath")->setText(userLevelPath);
     guiSheet->getChild("MenuEditorSave")->getChild("LevelWindowFrame")
     ->getChild("FilePath")->fireEvent(CEGUI::Editbox::EventTextAccepted,args);     
     CEGUI::Combobox* levelTypeCb = static_cast<CEGUI::Combobox*>
@@ -1887,12 +1898,24 @@ void EditorMode::onEditDelete()
     ODClient::getSingleton().queueClientNotification(notif1);
 }
 
-void EditorMode::askRegionEdit(int32_t operation, const std::string& name,
+namespace
+{
+    //! \brief The colour of the frame drawn around a region marker of the level script (RGBA)
+    const uint32_t REGION_FRAME_COLOUR_RGBA = 0x00FF99FF;
+
+    //! \brief How far the frame of a region reaches beyond the centres of its border tiles, in tiles
+    const Ogre::Real REGION_FRAME_MARGIN = 0.5;
+
+    //! \brief The height of the frame of a region marker above the floor
+    const Ogre::Real REGION_FRAME_HEIGHT = 1.0;
+}
+
+void EditorMode::askRegionEdit(EditorRegionOperation operation, const std::string& name,
     int32_t x1, int32_t y1, int32_t x2, int32_t y2)
 {
     ClientNotification *clientNotification = new ClientNotification(
         ClientNotificationType::editorRegionEdit);
-    clientNotification->mPacket << operation << name << x1 << y1 << x2 << y2;
+    clientNotification->mPacket << static_cast<int32_t>(operation) << name << x1 << y1 << x2 << y2;
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
@@ -1914,7 +1937,7 @@ void EditorMode::markRegion()
     int32_t x2 = static_cast<int32_t>(mTileMarker.getMaxX());
     int32_t y2 = static_cast<int32_t>(mTileMarker.getMaxY());
     std::string name = mGameMap->getLevelScript().getFreeRegionName();
-    askRegionEdit(1, name, x1, y1, x2, y2);
+    askRegionEdit(EditorRegionOperation::set, name, x1, y1, x2, y2);
 
     mModifiedMapBit = true;
     std::stringstream message;
@@ -1933,7 +1956,7 @@ void EditorMode::unmarkRegion()
         return;
     }
 
-    askRegionEdit(2, name, 0, 0, 0, 0);
+    askRegionEdit(EditorRegionOperation::remove, name, 0, 0, 0, 0);
     mModifiedMapBit = true;
     displayText(Ogre::ColourValue::White, name + " removed. Save the level to keep the change.");
 }
@@ -1954,18 +1977,19 @@ void EditorMode::onFrameStarted(const Ogre::FrameEvent& evt)
     if(!mRegionsRequested && ODClient::getSingleton().isConnected() && (mGameMap->getMapSizeX() > 0))
     {
         mRegionsRequested = true;
-        askRegionEdit(0, std::string(), 0, 0, 0, 0);
+        askRegionEdit(EditorRegionOperation::list, std::string(), 0, 0, 0, 0);
     }
 
     for(const LevelScriptRegion& region : mGameMap->getLevelScript().getRegions())
     {
         Ogre::AxisAlignedBox box(
-            Ogre::Vector3(static_cast<Ogre::Real>(std::min(region.mX1, region.mX2)) - 0.5,
-                          static_cast<Ogre::Real>(std::min(region.mY1, region.mY2)) - 0.5, 0.0),
-            Ogre::Vector3(static_cast<Ogre::Real>(std::max(region.mX1, region.mX2)) + 0.5,
-                          static_cast<Ogre::Real>(std::max(region.mY1, region.mY2)) + 0.5, 1.0));
+            Ogre::Vector3(static_cast<Ogre::Real>(std::min(region.mX1, region.mX2)) - REGION_FRAME_MARGIN,
+                          static_cast<Ogre::Real>(std::min(region.mY1, region.mY2)) - REGION_FRAME_MARGIN, 0.0),
+            Ogre::Vector3(static_cast<Ogre::Real>(std::max(region.mX1, region.mX2)) + REGION_FRAME_MARGIN,
+                          static_cast<Ogre::Real>(std::max(region.mY1, region.mY2)) + REGION_FRAME_MARGIN,
+                          REGION_FRAME_HEIGHT));
         Ogre::ColourValue regionColour;
-        regionColour.setAsRGBA(0x00FF99FF);
+        regionColour.setAsRGBA(REGION_FRAME_COLOUR_RGBA);
         DebugDrawer::getSingleton().drawCuboid(box.getAllCorners().data(), regionColour, false);
     }
     if( mTileMarker.isVisible )
@@ -2338,7 +2362,7 @@ bool EditorMode::loadMenuFilePathTextChanged( const CEGUI::EventArgs& /*arg*/)
                 int nn = 1;
                 for (directory_entry& xx : directory_iterator(pp))
                 {
-                    if(!(isFileHidden(xx.path().filename().generic_string())
+                    if(!(isFileHidden(xx.path())
                          && !isCheckboxSelected("MenuEditorLoad/LevelWindowFrame/HiddenFiles")))
                     {
                         if(xx.path().has_extension() && xx.path().extension().compare(L".level") == 0)
@@ -2492,7 +2516,7 @@ bool EditorMode::saveMenuFilePathTextChanged(const CEGUI::EventArgs& /*arg*/)
                 int nn = 1;
                 for (directory_entry& xx : directory_iterator(pp))
                 {
-                    if(!(isFileHidden(xx.path().filename().generic_string()) && !isCheckboxSelected("MenuEditorSave/LevelWindowFrame/HiddenFiles")))
+                    if(!(isFileHidden(xx.path()) && !isCheckboxSelected("MenuEditorSave/LevelWindowFrame/HiddenFiles")))
                     {
                         if(xx.path().has_extension() && xx.path().extension().compare(std::string(".level")) == 0)
                         {
@@ -2586,7 +2610,9 @@ void EditorMode::refreshGuiSkill()
     SkillManager::listAllSkills([&](const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
     {
-        guiSheet->getChild(castButtonName)->show();
+        // A keeper skill has no cast button (its name is empty)
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->show();
     });
 
 
@@ -2804,22 +2830,6 @@ bool EditorMode::updateDescription(const CEGUI::EventArgs&)
     return true;
 }
 
-std::string EditorMode::getEnv( const std::string & var )
-{
-    // WINDOWS:
-    // "you could look at HOMEDRIVE, HOMEPATH or USERPROFILE
-    // env variables on windows. or i guess SHGetFolderPathA()"
-    const char * val = std::getenv( var.c_str() );
-    if ( val == nullptr )
-    { // invalid to assign nullptr to std::string
-        return "";
-    }
-    else
-    {
-        return val;
-    }
-}
-
 
 void EditorMode::uninstallCreaturesMenuButtons()
 {
@@ -2938,16 +2948,20 @@ bool EditorMode::isCheckboxSelected(const CEGUI::String& checkbox)
 }
 
 
-bool EditorMode::isFileHidden(std::string path)
+//! \brief Tells whether a file is hidden: the hidden or system attribute on Windows, a leading dot elsewhere.
+//! \param path The whole path of the file, because Windows keeps the flag as a file attribute.
+bool EditorMode::isFileHidden(const boost::filesystem::path& path)
 {
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
-    
-    //DWORD attributes = GetFileAttributes(path);
-    //return (attributes & FILE_ATTRIBUTE_HIDDEN);
-    return false;
+    const DWORD attributes = GetFileAttributesA(path.string().c_str());
+    if(attributes == INVALID_FILE_ATTRIBUTES)
+        return false;
+
+    return (attributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) != 0;
 #else
-    return (path[0] == '.');
-#endif    
+    const std::string filename = path.filename().string();
+    return !filename.empty() && (filename[0] == '.');
+#endif
 }
 
 

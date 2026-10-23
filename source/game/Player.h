@@ -288,9 +288,11 @@ public:
     inline const std::string& getPossessedCreatureName() const
     { return mPossessedCreatureName; }
 
+    //! \brief Remembers the name of the creature the player possesses, an empty name means none
     inline void setPossessedCreatureName(const std::string& name)
     { mPossessedCreatureName = name; }
 
+    //! \brief True if the player currently possesses a creature
     inline bool isPossessing() const
     { return !mPossessedCreatureName.empty(); }
 
@@ -307,6 +309,7 @@ public:
 
 private:
     //! \brief Shared part of the defeat: chat messages, sounds, defeat sequence and statistics
+    //! \param hasTeamLost true when no dungeon temple of the team is left, so the whole team has lost
     void notifyDefeat(bool hasTeamLost);
 
     //! \brief Player ID is only used during seat configuration phase

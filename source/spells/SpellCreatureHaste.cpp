@@ -128,6 +128,7 @@ void SpellCreatureHaste::checkSpellCast(GameMap* gameMap, const InputManager& in
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the speed follows the haste research.
 bool SpellCreatureHaste::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -175,7 +176,7 @@ bool SpellCreatureHaste::castSpell(GameMap* gameMap, Player* player, ODPacket& p
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureHasteDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureHaste,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureHasteValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureHasteValue"), ResearchEffect::Speed);
     CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(duration, value, "SpellCreatureHaste");
     creature->addCreatureEffect(effect);
 

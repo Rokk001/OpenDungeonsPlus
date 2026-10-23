@@ -206,6 +206,7 @@ const char* levelScriptCompareToken(LevelScriptCompare op);
 //! Reads an operator, false if the text is none of them
 bool levelScriptParseCompare(const std::string& token, LevelScriptCompare& op);
 
+//! \brief The kinds of conditions a trigger can test (see the format above).
 enum class LevelScriptConditionType
 {
     time,
@@ -285,6 +286,7 @@ enum class LevelScriptObjectiveState
 //! \brief Returns the stable stream and display spelling of an objective state.
 const char* levelScriptObjectiveStateName(LevelScriptObjectiveState state);
 
+//! \brief The kinds of actions a trigger can run (see the format above).
 enum class LevelScriptActionType
 {
     message,
@@ -323,8 +325,10 @@ enum class LevelScriptActionType
     keyDoor
 };
 
+//! \brief One condition of a trigger. The fields that are used depend on the type.
 struct LevelScriptCondition
 {
+    //! \brief Creates a time condition with every value zero or "any seat".
     LevelScriptCondition() :
         mType(LevelScriptConditionType::time),
         mSeatId(-1),
@@ -411,6 +415,7 @@ struct LevelScriptAction
 //! and the conditions and actions of the triggers refer to them by name.
 struct LevelScriptRegion
 {
+    //! \brief Creates a region with all corners at tile 0,0.
     LevelScriptRegion() :
         mX1(0),
         mY1(0),
@@ -418,6 +423,7 @@ struct LevelScriptRegion
         mY2(0)
     {}
 
+    //! \brief Creates a region with that name between the two corners (any order).
     LevelScriptRegion(const std::string& name, int32_t x1, int32_t y1, int32_t x2, int32_t y2) :
         mName(name),
         mX1(x1),
@@ -436,8 +442,10 @@ struct LevelScriptRegion
     int32_t mY2;
 };
 
+//! \brief A trigger: conditions that must all hold, the actions to run then and how often it may fire.
 struct LevelScriptTrigger
 {
+    //! \brief Creates a trigger that fires once and has not fired yet.
     LevelScriptTrigger() :
         mRepeat(false),
         mCooldownSeconds(0),
@@ -458,6 +466,7 @@ struct LevelScriptTrigger
 //! \brief The standing order of a creature, given by an order action (the AI of the creature carries it out)
 struct LevelScriptOrder
 {
+    //! \brief Creates an empty order: no seat set (-1) and index 0.
     LevelScriptOrder() :
         mSeatId(-1),
         mIndex(0)
@@ -476,6 +485,7 @@ struct LevelScriptOrder
 //! A timer that an action started: it counts game turns while it runs
 struct LevelScriptTimer
 {
+    //! \brief Creates a timer that is stopped and at turn 0.
     LevelScriptTimer() :
         mRunning(false),
         mTurns(0)
@@ -613,59 +623,80 @@ public:
     inline bool isEmpty() const
     { return mTriggers.empty() && mFlags.empty() && mTimers.empty() && mEvents.empty() && mObjectiveStates.empty() && mVictoryRequests.empty() && mCrossingProgress.empty() && mFatalShots.empty() && mSpawnObservations.empty() && mMinedGold.empty() && mCreatureDeathTiles.empty() && !mFreePossession && mPortalOff.empty() && mBlocked.empty() && mRegions.empty() && (mTimeLimitSeconds == TIME_LIMIT_NOT_SET) && (mCountdownSeconds == COUNTDOWN_NOT_SET) && (mWaveCountdownSeconds == COUNTDOWN_NOT_SET) && mOrders.empty() && mSlaps.empty() && (mSlapLimit < 0) && mStoneCarriers.empty(); }
 
+    //! \brief The triggers of the script. The caller may change them.
     inline std::vector<LevelScriptTrigger>& getTriggers()
     {
         mWatchedValid = false;
         return mTriggers;
     }
 
+    //! \brief The triggers of the script.
     inline const std::vector<LevelScriptTrigger>& getTriggers() const
     { return mTriggers; }
 
+    //! \brief The value of the flag, 0 if it was never set.
     int64_t getFlag(const std::string& name) const;
+    //! \brief Sets the flag to the value.
     void setFlag(const std::string& name, int64_t value);
 
     //! Timers: a timer that was never started does not exist and counts 0 turns
     int64_t getTimerTurns(const std::string& name) const;
+    //! \brief Starts the timer with the given name (or restarts it) and sets it to the given number of turns.
     void startTimer(const std::string& name, int64_t turns);
 
     //! Adds one turn to every running timer
     void advanceTimers();
 
+    //! \brief All timers that were started.
     inline const std::map<std::string, LevelScriptTimer>& getTimers() const
     { return mTimers; }
 
-    //! A level that starts with a possession (Action possess) does not drain mana for it
+    //! \brief True if the level starts with a possession (Action possess): it does not drain mana for it
     inline bool isFreePossession() const
     { return mFreePossession; }
 
+    //! \brief Sets whether the possession of the level is free of mana costs
+    //! \param free true to let the possession cost no mana
     inline void setFreePossession(bool free)
     { mFreePossession = free; }
 
     //! Portals of a seat that are switched off
+    //! \brief Switches the portals of a seat off or on again (the portal action)
+    //! \param seatId The seat whose portals change
+    //! \param off true to stop the portals from attracting creatures
     void setPortalOff(int32_t seatId, bool off);
+    //! \brief True if the portals of the seat are switched off by the script
     bool isPortalOff(int32_t seatId) const;
 
     //! Creature classes that cannot come to the dungeon of a seat
+    //! \brief Keeps a creature class away from the dungeon of a seat or lets it come again (the available action)
+    //! \param seatId The seat whose portals attract the class
+    //! \param className The creature class
+    //! \param blocked true to keep the class away
     void setCreatureBlocked(int32_t seatId, const std::string& className, bool blocked);
+    //! \brief True if the script keeps the creature class away from the dungeon of the seat
     bool isCreatureBlocked(int32_t seatId, const std::string& className) const;
 
     //! Counts an event of a creature (and of the party it belongs to). Only the creatures and parties
     //! that a condition of the script names are counted.
     void recordEvent(const std::string& creatureName, const std::string& eventName);
+    //! \brief Gets how often the event was counted for a creature name or a party tag, 0 if never.
     int64_t getEventCount(const std::string& tag, const std::string& eventName) const;
 
     //! Puts a creature into a party
     void addPartyMember(const std::string& party, const std::string& creatureName);
 
+    //! \brief All counted events, by (creature name or party tag, event name), with their counts.
     inline const std::map<std::pair<std::string, std::string>, int64_t>& getEvents() const
     { return mEvents; }
 
+    //! \brief All party memberships, by creature name, with the name of the party of the creature.
     inline const std::map<std::string, std::string>& getPartyMembers() const
     { return mPartyMembers; }
 
     //! Standing orders of the creatures (by creature name)
     void setOrder(const std::string& creatureName, const LevelScriptOrder& order);
+    //! \brief Removes the standing order of the creature, if it has one.
     void clearOrder(const std::string& creatureName);
     //! Returns nullptr if the creature has no order
     const LevelScriptOrder* getOrder(const std::string& creatureName) const;
@@ -677,16 +708,21 @@ public:
 
     //! Counts a slap the player of the seat tries. Returns false if the slap limit refuses it.
     bool registerSlap(int32_t seatId);
+    //! \brief Gets how many slaps the player of the seat tried so far, 0 if none.
     int64_t getSlaps(int32_t seatId) const;
+    //! \brief Gets the number of slaps each player may do, a negative value means there is no limit.
     inline int64_t getSlapLimit() const
     { return mSlapLimit; }
 
+    //! \brief Sets the number of slaps each player may do, a negative value removes the limit.
     inline void setSlapLimit(int64_t limit)
     { mSlapLimit = limit; }
 
+    //! \brief All flags that were set.
     inline const std::map<std::string, int64_t>& getFlags() const
     { return mFlags; }
 
+    //! \brief All named regions of the level.
     inline const std::vector<LevelScriptRegion>& getRegions() const
     { return mRegions; }
 
@@ -708,6 +744,7 @@ public:
     //! \brief Replaces all the regions, used by the editor when the server sends them
     void setRegions(const std::vector<LevelScriptRegion>& regions);
 
+    //! \brief All slap counts, by seat id.
     inline const std::map<int32_t, int64_t>& getSlapCounts() const
     { return mSlaps; }
 
@@ -716,13 +753,23 @@ public:
 
     //! Creatures that carry a portal stone (it drops where they die)
     void addStoneCarrier(const std::string& creatureName);
+
+    //! \brief Removes a creature from the stone carriers and forgets its last known tile.
+    //! \param creatureName Name of the creature; nothing happens if it is not a carrier.
     void removeStoneCarrier(const std::string& creatureName);
 
+    //! \brief The names of all creatures that carry a portal stone.
     inline const std::set<std::string>& getStoneCarriers() const
     { return mStoneCarriers; }
 
     //! The last tile a stone carrier was seen on (not saved)
     void setStoneCarrierTile(const std::string& creatureName, int32_t x, int32_t y);
+
+    //! \brief Reads the last tile a stone carrier was seen on.
+    //! \param creatureName Name of the stone carrier.
+    //! \param x Receives the tile x coordinate when a tile is known.
+    //! \param y Receives the tile y coordinate when a tile is known.
+    //! \return True if a tile is known for that creature, false otherwise.
     bool getStoneCarrierTile(const std::string& creatureName, int32_t& x, int32_t& y) const;
 
     static const int64_t TIME_LIMIT_NOT_SET = -1;
@@ -734,6 +781,8 @@ public:
     inline int64_t getTimeLimitSeconds() const
     { return mTimeLimitSeconds; }
 
+    //! \brief Sets the time limit
+    //! \param seconds The level second at which it runs out, TIME_LIMIT_NOT_SET or TIME_LIMIT_REMOVED
     inline void setTimeLimitSeconds(int64_t seconds)
     { mTimeLimitSeconds = seconds; }
 
@@ -744,6 +793,8 @@ public:
     inline int64_t getCountdownSeconds() const
     { return mCountdownSeconds; }
 
+    //! \brief Sets the HUD countdown
+    //! \param seconds The level second at which it ends, or COUNTDOWN_NOT_SET
     inline void setCountdownSeconds(int64_t seconds)
     { mCountdownSeconds = seconds; }
 
@@ -752,6 +803,8 @@ public:
     inline int64_t getWaveCountdownSeconds() const
     { return mWaveCountdownSeconds; }
 
+    //! \brief Sets the HUD wave countdown
+    //! \param seconds The level second at which it ends, or COUNTDOWN_NOT_SET
     inline void setWaveCountdownSeconds(int64_t seconds)
     { mWaveCountdownSeconds = seconds; }
 

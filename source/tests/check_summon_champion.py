@@ -22,7 +22,7 @@ price = float(values["SummonChampionPrice"])
 drain = float(values["SummonChampionDrainPerSecond"])
 assert (price, drain) == (108000.0, 2250.0), "price and drain per second"
 assert price / drain == 48.0, "free period of 48 seconds"
-assert values["SummonChampionCooldown"] == "0"
+assert values["SummonChampionCooldown"] == "884"
 
 # The creature definition
 creatures = read("config/creatures.cfg")
@@ -77,6 +77,9 @@ spells_tab = ET.parse(repo / "gui/WindowTabSpells.layout").find('.//Window[@name
 assert spells_tab is not None
 tree = ET.parse(repo / "gui/WindowSkillTree.layout").find('.//Window[@name="SummonChampionButton"]')
 assert tree.find('Property[@name="Visible"]').get("value") == "False", "no tree node for a reward"
+spells_page = ET.parse(repo / "gui/WindowSkillTree.layout").find('.//Window[@name="Spells"]')
+assert spells_page.find('.//Window[@name="SummonChampionButton"]') is not None, "the hidden node stands in the Spells page"
+assert 'new SkillDefSpell(TREE_PREFIX_SPELLS, "SummonChampionButton"' in manager, "its path prefix is the Spells tab"
 assert 'name="SummonChampionButton"' in read("gui/ODIcons.imageset")
 assert '"SummonChampionButton"' in read("source/render/Gui.cpp")
 print("summon champion checks passed")

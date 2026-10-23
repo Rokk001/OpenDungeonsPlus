@@ -26,6 +26,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 
 class CreatureDefinition;
@@ -76,9 +80,22 @@ const std::string LIGHT_FACTOR = "LightFactor";
 const std::string CREATURE_REACTIONS = "CreatureReactions";
 const std::string UI_SCALE = "UI Scale";
 const std::string BLOOD_EFFECTS = "Blood Effects";
+//! The game option that sets how many room effects are shown (full, reduced or off)
 const std::string ROOM_AMBIENCE = "RoomAmbience";
 const std::string TREASURY_DETAIL = "TreasuryDetail";
 }
+
+//! \brief Lowest walk speed factor of a badly hurt creature (1 = no slowdown), also used for the per type factor
+static const double LOW_HEALTH_WALK_SPEED_FACTOR_MIN = 0.2;
+
+//! \brief Highest walk speed factor of a badly hurt creature (1 = no slowdown)
+static const double LOW_HEALTH_WALK_SPEED_FACTOR_MAX = 1.0;
+
+//! \brief Lowest health percent that can be set as the limit below which a creature is badly hurt
+static const double LOW_HEALTH_WALK_THRESHOLD_PERCENT_MIN = 1.0;
+
+//! \brief Percent value of the full health, highest limit of the threshold below which a creature is badly hurt
+static const double FULL_HEALTH_PERCENT = 100.0;
 
 typedef std::map<TileVisual,std::map<int,float>> HighMap;
 
@@ -102,6 +119,24 @@ public:
     static const std::string DEFAULT_TILESET_NAME;
     static const std::string DEFAULT_KEEPER_VOICE;
 
+    //! Lowest and highest angular speed in degrees per second of the turn to the target before a blow
+    static const double AttackTurnSpeedMin;
+    static const double AttackTurnSpeedMax;
+    //! Lowest and highest number of seconds the strike clip waits for the turn to the target
+    static const double AttackTurnMaxDelayMin;
+    static const double AttackTurnMaxDelayMax;
+    //! Lowest value of the glancing and strong hit shares
+    static const double HitShareMin;
+    //! Highest value of the glancing hit share
+    static const double HitGlanceShareMax;
+    //! Highest value of the strong hit share
+    static const double HitStrongShareMax;
+    //! Lowest and highest value of a dodge, parry or shield block chance in percent
+    static const double ChanceMin;
+    static const double ChanceMax;
+    //! Highest value of the chance in percent that every level adds
+    static const double ChancePerLevelMax;
+
     const Ogre::ColourValue& getColorFromId(const std::string& id) const;
 
     inline const std::map<std::string, CreatureDefinition*>& getCreatureDefinitions() const
@@ -121,6 +156,10 @@ public:
     inline uint32_t getMaxCreaturesPerSeatDefault() const
     { return mMaxCreaturesPerSeatDefault; }
 
+    //! \brief Creatures more a seat can control for each of its portals (global.cfg CreaturesPerPortal)
+    inline uint32_t getCreaturesPerPortal() const
+    { return mCreaturesPerPortal; }
+
     inline int32_t getCreatureBaseMood() const
     { return mCreatureBaseMood; }
 
@@ -139,6 +178,10 @@ public:
     inline double getSlapDamagePercent() const
     { return mSlapDamagePercent; }
 
+    //! \brief Damage per second a creature takes while standing on lava without a bridge
+    inline double getLavaDamagePerSecond() const
+    { return mLavaDamagePerSecond; }
+
     inline uint32_t getSlapEffectDuration() const
     { return mSlapEffectDuration; }
 
@@ -148,19 +191,40 @@ public:
 
     //! \brief Factor on the walking speed of a tired creature (1 = no slowdown), limited to 0.2 - 1
     inline double getTiredWalkSpeedFactor() const
-    { return std::max(0.2, std::min(1.0, mTiredWalkSpeedFactor)); }
+    {
+        // Slowest speed factor a tired creature can be given
+        const double minTiredWalkSpeedFactor = 0.2;
+        return std::max(minTiredWalkSpeedFactor, std::min(1.0, mTiredWalkSpeedFactor));
+    }
 
     //! \brief How much bigger than its base size a creature of the highest level is shown (0.10 = 10 percent), limited to 0 - 1
     inline double getCreatureLevelGrowthMax() const
     { return std::max(0.0, std::min(1.0, mCreatureLevelGrowthMax)); }
+    //! \brief Growth factor of the creature damage curve (CreatureDamageGrowth in global.cfg)
+    inline double getCreatureDamageGrowth() const
+    { return mCreatureDamageGrowth; }
+    //! \brief Exponent of the creature damage curve (CreatureDamageExponent in global.cfg)
+    inline double getCreatureDamageExponent() const
+    { return mCreatureDamageExponent; }
+    //! \brief Extra health growth per level on top of the damage curve (CreatureHpGrowthPerLevel in global.cfg)
+    inline double getCreatureHpGrowthPerLevel() const
+    { return mCreatureHpGrowthPerLevel; }
+    //! \brief Share of an attack or skill cooldown saved per level above 1 (CooldownReductionPerLevel in global.cfg), limited to 0 - 1
+    inline double getCooldownReductionPerLevel() const
+    { return std::max(0.0, std::min(1.0, mCooldownReductionPerLevel)); }
+    //! \brief Limits a walk speed factor of a badly hurt creature to LOW_HEALTH_WALK_SPEED_FACTOR_MIN - LOW_HEALTH_WALK_SPEED_FACTOR_MAX
+    //! \param factor The factor to limit (1 = no slowdown)
+    //! \return The limited factor
+    static inline double limitLowHealthWalkSpeedFactor(double factor)
+    { return std::max(LOW_HEALTH_WALK_SPEED_FACTOR_MIN, std::min(LOW_HEALTH_WALK_SPEED_FACTOR_MAX, factor)); }
 
     //! \brief Factor on the walking speed of a badly hurt creature (1 = no slowdown), limited to 0.2 - 1
     inline double getLowHealthWalkSpeedFactor() const
-    { return std::max(0.2, std::min(1.0, mLowHealthWalkSpeedFactor)); }
+    { return limitLowHealthWalkSpeedFactor(mLowHealthWalkSpeedFactor); }
 
     //! \brief A creature with less than this percent of its health is badly hurt and walks slower, limited to 1 - 100
     inline double getLowHealthWalkThresholdPercent() const
-    { return std::max(1.0, std::min(100.0, mLowHealthWalkThresholdPercent)); }
+    { return std::max(LOW_HEALTH_WALK_THRESHOLD_PERCENT_MIN, std::min(FULL_HEALTH_PERCENT, mLowHealthWalkThresholdPercent)); }
 
     //! \brief Number of steps of the heart health that the keepers who see a heart are told, limited to 2 - 20
     inline int32_t getHeartHealthStages() const
@@ -176,11 +240,11 @@ public:
 
     //! \brief A blow that lets through less than this share of its damage counts as glancing (0.01 - 0.9)
     inline double getHitGlanceShare() const
-    { return std::max(0.01, std::min(0.9, mHitGlanceShare)); }
+    { return std::max(HitShareMin, std::min(HitGlanceShareMax, mHitGlanceShare)); }
 
     //! \brief A hit that takes at least this share of the maximum health of its target is a strong one (0.01 - 1)
     inline double getHitStrongShare() const
-    { return std::max(0.01, std::min(1.0, mHitStrongShare)); }
+    { return std::max(HitShareMin, std::min(HitStrongShareMax, mHitStrongShare)); }
 
     //! \brief True if the server tells the keepers that a creature turns to its target before a blow (cosmetic event attackTurn)
     inline bool getAttackTurnEvents() const
@@ -188,11 +252,11 @@ public:
 
     //! \brief Angular speed in degrees per second of the turn to the target before a blow (client, 90 - 1440)
     inline double getAttackTurnSpeed() const
-    { return std::max(90.0, std::min(1440.0, mAttackTurnSpeed)); }
+    { return std::max(AttackTurnSpeedMin, std::min(AttackTurnSpeedMax, mAttackTurnSpeed)); }
 
     //! \brief The most seconds the strike clip waits for the turn to the target (client, 0 - 0.6, 0 = no waiting)
     inline double getAttackTurnMaxDelay() const
-    { return std::max(0.0, std::min(0.6, mAttackTurnMaxDelay)); }
+    { return std::max(AttackTurnMaxDelayMin, std::min(AttackTurnMaxDelayMax, mAttackTurnMaxDelay)); }
 
     //! \brief Master switch for creature dodge, parry and shield block, decided by the server.
     inline bool getMeleeDodgeParry() const
@@ -200,39 +264,39 @@ public:
 
     //! \brief Base dodge chance of creature types configured to dodge, in percent (0 - 100).
     inline double getDodgeBase() const
-    { return std::max(0.0, std::min(100.0, mDodgeBase)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mDodgeBase)); }
 
     //! \brief Dodge chance in percent that every level adds (0 - 10)
     inline double getDodgePerLevel() const
-    { return std::max(0.0, std::min(10.0, mDodgePerLevel)); }
+    { return std::max(ChanceMin, std::min(ChancePerLevelMax, mDodgePerLevel)); }
 
     //! \brief Highest dodge chance in percent (0 - 100)
     inline double getDodgeMax() const
-    { return std::max(0.0, std::min(100.0, mDodgeMax)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mDodgeMax)); }
 
     //! \brief Parry chance with a weapon in percent, base value (0 - 100)
     inline double getParryBase() const
-    { return std::max(0.0, std::min(100.0, mParryBase)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mParryBase)); }
 
     //! \brief Parry chance in percent that every level adds (0 - 10)
     inline double getParryPerLevel() const
-    { return std::max(0.0, std::min(10.0, mParryPerLevel)); }
+    { return std::max(ChanceMin, std::min(ChancePerLevelMax, mParryPerLevel)); }
 
     //! \brief Highest parry chance with a weapon in percent (0 - 100)
     inline double getParryMax() const
-    { return std::max(0.0, std::min(100.0, mParryMax)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mParryMax)); }
 
     //! \brief Base chance of blocking with a shield, in percent (0 - 100).
     inline double getShieldBlockBase() const
-    { return std::max(0.0, std::min(100.0, mShieldBlockBase)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mShieldBlockBase)); }
 
     //! \brief Shield block chance added per level, in percent (0 - 10).
     inline double getShieldBlockPerLevel() const
-    { return std::max(0.0, std::min(10.0, mShieldBlockPerLevel)); }
+    { return std::max(ChanceMin, std::min(ChancePerLevelMax, mShieldBlockPerLevel)); }
 
     //! \brief Highest shield block chance, in percent (0 - 100).
     inline double getShieldBlockMax() const
-    { return std::max(0.0, std::min(100.0, mShieldBlockMax)); }
+    { return std::max(ChanceMin, std::min(ChanceMax, mShieldBlockMax)); }
 
     inline int64_t getTimePayDay() const
     { return mTimePayDay; }
@@ -252,6 +316,7 @@ public:
     inline double getMaxManaPerSeat() const
     { return mMaxManaPerSeat; }
 
+    //! \brief Returns the extra mana per second each claimed mana well tile gives its owner
     inline double getManaWellBonusPerTile() const
     { return mManaWellBonusPerTile; }
 
@@ -273,6 +338,7 @@ public:
     inline int32_t getNbTurnsKoCreatureAttacked() const
     { return mNbTurnsKoCreatureAttacked; }
 
+    //! \brief The system configuration path, with the trailing separator
     inline const std::string& getConfigPath() const
     { return mConfigPath; }
 
@@ -312,6 +378,7 @@ public:
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
 
     //! \brief Key/value pairs of config/relationships.cfg (empty if the file is missing).
+    //! \brief Key/value pairs of config/relationships.cfg (empty if the file is missing).
     const std::map<std::string, std::string>& getRelationshipsConfig() const
     { return mRelationshipsConfig; }
 
@@ -330,7 +397,51 @@ public:
     int32_t getSpellConfigInt32(const std::string& param) const;
     double getSpellConfigDouble(const std::string& param) const;
 
+    //! \brief Level-1 research cost of the skill with the given name (tier cost, see skills.cfg).
+    //! A missing entry is logged as an error and costs SKILL_POINTS_MISSING_ENTRY.
     int32_t getSkillPoints(const std::string& res) const;
+
+    //! \brief True when the skill with the given name is listed in the [FreeLevelOne] block of skills.cfg:
+    //! every seat starts with it at level 1 (its level 1 costs no research points).
+    bool isSkillFreeLevelOne(const std::string& res) const;
+
+    //! \brief How a line of the [ResearchEffects] block of skills.cfg changes the base value:
+    //! mul = base x value, add = base + value, dev = 1 + (base - 1) x value.
+    enum class ResearchEffectMode
+    {
+        mul,
+        add,
+        dev
+    };
+
+    //! \brief One line of the [ResearchEffects] block of skills.cfg: the mode and the values for research levels 1, 2 and 3
+    struct ResearchEffectLine
+    {
+        ResearchEffectLine() :
+            mMode(ResearchEffectMode::mul)
+        {
+            for(uint32_t i = 0; i < RESEARCH_LEVELS; ++i)
+                mValues[i] = 1.0;
+        }
+
+        ResearchEffectMode mMode;
+        double mValues[3];
+    };
+
+    //! \brief Number of research levels of a skill (the number of values of a [ResearchEffects] line)
+    static const uint32_t RESEARCH_LEVELS = 3;
+
+    //! \brief The [ResearchEffects] line of skills.cfg for the skill with the given name and the given effect.
+    //! \return The line, or nullptr when skills.cfg has none for them (the effect then leaves the base unchanged)
+    const ResearchEffectLine* getResearchEffect(const std::string& skill, const std::string& effect) const;
+
+    //! \brief All [ResearchEffects] lines of the skill with the given name, in the order of skills.cfg:
+    //! pairs of the effect name and the line.
+    void getResearchEffects(const std::string& skill,
+        std::vector<std::pair<std::string, ResearchEffectLine> >& effects) const;
+
+    //! \brief Research cost used when skills.cfg has no entry for a skill
+    static const int32_t SKILL_POINTS_MISSING_ENTRY = 1500;
 
     inline const CreatureDefinition* getCreatureDefinitionDefaultWorker() const
     { return mCreatureDefinitionDefaultWorker; }
@@ -453,17 +564,28 @@ private:
     uint32_t mCreatureDeathCounter;
     uint32_t mMaxCreaturesPerSeatAbsolute;
     uint32_t mMaxCreaturesPerSeatDefault;
+    //! \brief Creatures more a seat can control for each of its portals
+    uint32_t mCreaturesPerPortal;
     int32_t mCreatureBaseMood;
     int32_t mCreatureMoodHappy;
     int32_t mCreatureMoodUpset;
     int32_t mCreatureMoodAngry;
     int32_t mCreatureMoodFurious;
     double mSlapDamagePercent;
+    double mLavaDamagePerSecond;
     uint32_t mSlapEffectDuration;
     double mTiredWakefulness;
     double mTiredWalkSpeedFactor;
     double mLowHealthWalkSpeedFactor;
     double mCreatureLevelGrowthMax;
+    //! Growth factor of the creature damage curve (global.cfg CreatureDamageGrowth)
+    double mCreatureDamageGrowth;
+    //! Exponent of the creature damage curve (global.cfg CreatureDamageExponent)
+    double mCreatureDamageExponent;
+    //! Extra health growth per level on top of the damage curve (global.cfg CreatureHpGrowthPerLevel)
+    double mCreatureHpGrowthPerLevel;
+    //! Share of the cooldown saved per level above 1 (global.cfg CooldownReductionPerLevel)
+    double mCooldownReductionPerLevel;
     double mLowHealthWalkThresholdPercent;
     int32_t mHeartHealthStages;
     bool mHeartHealthStageEvents;
@@ -487,6 +609,7 @@ private:
     int64_t mTimePayDay;
     int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;
+    //! \brief Extra mana per second for each claimed mana well tile
     double mManaWellBonusPerTile;
     double mBedStepMaxHeight;
     double mClaimingWallPenalty;
@@ -509,6 +632,10 @@ private:
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;
     std::map<const std::string, int32_t> mSkillPoints;
+    //! \brief Names of the skills of the [FreeLevelOne] block of skills.cfg
+    std::set<std::string> mSkillsFreeLevelOne;
+    //! \brief The [ResearchEffects] block of skills.cfg: skill name, effect name and the line, in file order
+    std::vector<std::pair<std::pair<std::string, std::string>, ResearchEffectLine> > mResearchEffects;
 
     //! \brief Default definition for the editor. At map loading, it will spawn a creature from
     //! the default seat worker depending on seat faction

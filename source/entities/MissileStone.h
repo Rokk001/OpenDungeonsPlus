@@ -37,9 +37,11 @@ public:
     //! \brief Creates a legacy-compatible stone for stream or packet loading.
     MissileStone(GameMap* gameMap);
 
+    //! \brief The type that is written to saved games and packets
     virtual MissileObjectType getMissileType() const override
     { return MissileObjectType::stone; }
 
+    //! \brief The stone is never removed after it stopped
     virtual bool staysWhenStopped() const override
     { return true; }
 
@@ -62,6 +64,7 @@ public:
 
     //! \brief Loads a complete stone, returning null for malformed saved data.
     static MissileStone* getMissileStoneFromStream(GameMap* gameMap, std::istream& is);
+    //! \brief Reads a stone from a network packet
     static MissileStone* getMissileStoneFromPacket(GameMap* gameMap, ODPacket& is);
 protected:
     //! \brief Saves optional transport metadata; carried objects retain their current ground coordinates.

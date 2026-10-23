@@ -39,6 +39,9 @@ pieces = [e for e in entries if 'Heartstone=0' not in e]
 assert len(pieces) == 4 and all('Province=B0' in e for e in pieces)
 assert 'Province=B05' in [e for e in entries if 'Heartstone=0' in e][0]
 assert 'key == "Heartstone"' in read('source/game/Campaign.cpp')
+# The complete Heartstone gives the keepers the Summon champion spell when a campaign level starts
+server = read('source/network/ODServer.cpp')
+assert 'isHeartstoneComplete()' in server and 'SkillType::spellSummonChampion, true, true' in server
 # Victory keeps its authoritative goal list and saves progress before notifying the client.
 victory = game_map[game_map.index('void GameMap::addWinningSeat('):game_map.index('bool GameMap::seatIsAWinner(')]
 assert victory.index('mWinningSeats.push_back(s)') < victory.index('getGoalsStringForPlayer(player)')
@@ -109,7 +112,7 @@ with Image.open(repo / 'gui' / atlas.get('imagefile')) as artwork:
             assert any(g > 140 and g > r * 1.5 and g > b * 1.5 and a > 200 for r, g, b, a in pixels)
         if state == 'Failed':
             assert any(r > 160 and r > g * 1.5 and r > b * 1.5 and a > 200 for r, g, b, a in pixels)
-assert 'name.compare(0, 11, "GoalStatus/") == 0' in read('source/render/Gui.cpp')
+assert 'startsWith(name, "GoalStatus/")' in read('source/render/Gui.cpp')
 assert 'gui/GoalStatus.svg, gui/GoalStatus.png' in read('CREDITS')
 briefing = read('source/modes/MenuModeCampaign.cpp')
 assert "[image='GoalStatus/Open'] " in briefing

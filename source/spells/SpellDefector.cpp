@@ -24,6 +24,8 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -33,6 +35,8 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+
+#include <cmath>
 
 const std::string SpellDefectorName = "defector";
 const std::string SpellDefectorNameDisplay = "Defector";
@@ -138,6 +142,7 @@ void SpellDefector::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the time follows the defector research.
 bool SpellDefector::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -198,7 +203,8 @@ bool SpellDefector::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("DefectorNbTurns"));
+    int32_t nbTurns = static_cast<int32_t>(std::lround(SkillManager::getResearchValue(player->getSeat(), SkillType::spellDefector,
+        ConfigManager::getSingleton().getSpellConfigDouble("DefectorNbTurns"), ResearchEffect::Duration)));
     int originalSeatId = creature->getSeat()->getId();
     int newSeatId = player->getSeat()->getId();
     creature->changeSeat(player->getSeat());

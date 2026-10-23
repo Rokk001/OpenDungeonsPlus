@@ -29,7 +29,7 @@ namespace sf {
 
 class AbstractApplicationMode;
 
-//! Initialize the shared SFML-to-CEGUI/OIS key mapping.
+//! \brief Initialise the table that translates between CEGUI (and OIS) and SFML key codes
 void initKeyTable(std::array<CEGUI::Key::Scan, sf::Keyboard::KeyCount>& keyMap);
 
 //! \brief A class that receives SFML events and translates them to OIS events which are then distributed to

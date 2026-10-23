@@ -162,6 +162,15 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             continue;
         }
 
+        param = "TurnNumber\t";
+        if (nextParam.compare(0, param.size(), param) == 0)
+        {
+            int64_t turnNumber = Helper::toInt(nextParam.substr(param.size()));
+            gameMap.setSavedTurnNumber(turnNumber);
+            OD_LOG_INF("Saved at turn: " + Helper::toString(turnNumber));
+            continue;
+        }
+
         param = "Sandbox\t";
         if (nextParam.compare(0, param.size(), param) == 0)
         {
@@ -635,7 +644,9 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         if(relationships == nullptr)
             relationships = &dropped;
 
-        if(!relationships->readFromStream(levelFile, gameMap.getTurnNumber()))
+        // A resumed saved game continues at its saved turn; the map itself is still at turn -1 while loading
+        int64_t relationshipTurn = (gameMap.getSavedTurnNumber() > 0) ? gameMap.getSavedTurnNumber() : gameMap.getTurnNumber();
+        if(!relationships->readFromStream(levelFile, relationshipTurn))
         {
             OD_LOG_WRN("Invalid Relationships section");
             return false;
@@ -740,7 +751,12 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     // Only saved games record the option, levels written by the editor do not
     bool isGameSave = gameMap.isServerGameMap() && !gameMap.isInEditorMode();
     if(isGameSave)
+    {
         levelFile << "Relationships\t" << (gameMap.isRelationshipsEnabled() ? "On" : "Off") << std::endl;
+        // A saved game goes on from its current turn when it is loaded again. Levels written
+        // by the editor have to start from the beginning, so they carry no turn.
+        levelFile << "TurnNumber\t" << gameMap.getTurnNumber() << std::endl;
+    }
 
     levelFile << "[/Info]" << std::endl;
 

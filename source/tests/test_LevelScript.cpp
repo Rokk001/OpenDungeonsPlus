@@ -317,6 +317,7 @@ BOOST_AUTO_TEST_CASE(identified_objective_invalid_state)
     BOOST_CHECK(!script.importFromStream(input));
 }
 
+//! \brief A [Triggers] section (without the opening tag) that uses every kind of line of the model
 static const std::string sample =
     "# comment\n"
     "Flag\tgateOpen\t1\n"
@@ -380,6 +381,7 @@ static const std::string sample =
     "[/Trigger]\n"
     "[/Triggers]\n";
 
+//! \brief The triggers, conditions and actions of the sample are read with the values written there
 BOOST_AUTO_TEST_CASE(test_parse)
 {
     LevelScript script;
@@ -503,6 +505,7 @@ BOOST_AUTO_TEST_CASE(test_time_limit)
     BOOST_CHECK_EQUAL(again.getTimeLimitSeconds(), LevelScript::TIME_LIMIT_NOT_SET);
 }
 
+//! \brief Regions: the corners may come in any order, names are unique and the editor helpers work
 BOOST_AUTO_TEST_CASE(test_regions)
 {
     LevelScript script;
@@ -539,6 +542,7 @@ BOOST_AUTO_TEST_CASE(test_regions)
     BOOST_CHECK(!onlyRegion.isEmpty());
 }
 
+//! \brief Writing a script and reading it again gives the same text
 BOOST_AUTO_TEST_CASE(test_roundtrip)
 {
     LevelScript script;
@@ -561,6 +565,7 @@ BOOST_AUTO_TEST_CASE(test_roundtrip)
     BOOST_CHECK_EQUAL(written, os2.str());
 }
 
+//! \brief Malformed sections are refused
 BOOST_AUTO_TEST_CASE(test_invalid)
 {
     const char* invalid[] = {
@@ -668,6 +673,7 @@ BOOST_AUTO_TEST_CASE(test_region_level)
     BOOST_CHECK(actions.count(static_cast<int>(LevelScriptActionType::win)) == 1);
 }
 
+//! \brief A section with only the end tag is valid and empty
 BOOST_AUTO_TEST_CASE(test_empty)
 {
     LevelScript script;
@@ -893,6 +899,7 @@ BOOST_AUTO_TEST_CASE(test_creature_events)
 }
 
 //! Tiles, tags, possession, boulders and the actions that change the level
+//! \brief Tile kind and tagged tile conditions and the terrain action are read, written and refused when malformed
 BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
 {
     static const std::string text =
@@ -998,6 +1005,41 @@ BOOST_AUTO_TEST_CASE(test_terrain_and_world_actions)
         std::istringstream isBad(entry);
         BOOST_CHECK_MESSAGE(!invalid.importFromStream(isBad), entry);
     }
+}
+
+//! \brief The discover action that reveals a bonus level of the campaign is read and written, and refused
+//! without a level file
+BOOST_AUTO_TEST_CASE(test_discover_action)
+{
+    static const std::string text =
+        "[Trigger]\n"
+        "Name\tbonus\n"
+        "Mode\tonce\n"
+        "Cond\ttime\t60\n"
+        "Action\tdiscover\tcampaign/Bonus1.level\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 1u);
+    BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::discoverLevel);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mText, "campaign/Bonus1.level");
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK_EQUAL(os2.str(), written);
+
+    LevelScript invalid;
+    std::istringstream isBad("[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tdiscover\n[/Trigger]\n[/Triggers]\n");
+    BOOST_CHECK(!invalid.importFromStream(isBad));
 }
 
 //! A level that starts with a scripted possession does not drain mana
@@ -1827,4 +1869,39 @@ BOOST_AUTO_TEST_CASE(remaining_key_door_reward_and_victory_round_trip)
             BOOST_CHECK(restored.areMainObjectivesReached(1));
         }
     }
+}
+
+//! \brief The keepminion action that lets the strongest fighter of a seat come along to the next campaign level
+//! is read and written, and refused without a seat
+BOOST_AUTO_TEST_CASE(test_keep_minion_action)
+{
+    static const std::string text =
+        "[Trigger]\n"
+        "Name\tkeep\n"
+        "Mode\tonce\n"
+        "Cond\ttime\t60\n"
+        "Action\tkeepminion\t1\n"
+        "[/Trigger]\n"
+        "[/Triggers]\n";
+    LevelScript script;
+    std::istringstream is(text);
+    BOOST_REQUIRE(script.importFromStream(is));
+    const LevelScriptTrigger& trigger = script.getTriggers()[0];
+    BOOST_REQUIRE_EQUAL(trigger.mActions.size(), 1u);
+    BOOST_CHECK(trigger.mActions[0].mType == LevelScriptActionType::keepMinion);
+    BOOST_CHECK_EQUAL(trigger.mActions[0].mSeatId, 1);
+
+    std::ostringstream os;
+    script.exportToStream(os);
+    std::string written = os.str();
+    LevelScript again;
+    std::istringstream is2(written.substr(11));
+    BOOST_REQUIRE(again.importFromStream(is2));
+    std::ostringstream os2;
+    again.exportToStream(os2);
+    BOOST_CHECK_EQUAL(os2.str(), written);
+
+    LevelScript invalid;
+    std::istringstream isBad("[Trigger]\nName\tx\nMode\tonce\nCond\ttime\t1\nAction\tkeepminion\n[/Trigger]\n[/Triggers]\n");
+    BOOST_CHECK(!invalid.importFromStream(isBad));
 }

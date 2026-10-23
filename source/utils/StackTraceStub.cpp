@@ -17,7 +17,7 @@
 
 #include "utils/StackTracePrint.h"
 
-#include <SFML/System.hpp>
+#include <mutex>
 
 class StackTracePrintPrivateData
 {
@@ -27,13 +27,14 @@ public:
     }
 };
 
-static sf::Mutex gMutex;
+static std::mutex gMutex;
 
 StackTracePrintPrivateData* StackTracePrint::mPrivateData = nullptr;
 
+//! \brief Installs the crash handler; guarded by a standard mutex so only one instance is created.
 StackTracePrint::StackTracePrint(const std::string& crashFilePath)
 {
-    sf::Lock lock(gMutex);
+    std::lock_guard<std::mutex> lock(gMutex);
 
     if(mPrivateData != nullptr)
         throw std::exception();

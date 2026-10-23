@@ -19,6 +19,7 @@
 #define WALLTORCHVIEW_H
 
 #include "render/WallTorchSpot.h"
+#include "rooms/WallTorchConfig.h"
 
 #include <OgrePrerequisites.h>
 #include <OgreVector3.h>
@@ -47,6 +48,10 @@ public:
         off
     };
 
+    //! The parts of a torch: bracket, flame, smoke
+    static const uint32_t NB_TORCH_PARTS = 3;
+
+    //! \brief Creates the view without any torch; the settings are read when the first torches arrive
     WallTorchView();
 
     //! \brief Replaces the shown torches by the given list
@@ -58,12 +63,14 @@ public:
     //! \brief Removes every particle system and light. The spots are kept
     void stopAll();
 
+    //! \brief Number of torches that currently cast a real light
     inline uint32_t getNbLights() const
     { return mNbLights; }
 
 private:
     struct Part
     {
+        //! \brief Creates a part that has no scene node, particle system or model yet
         Part() :
             mNode(nullptr), mSystem(nullptr), mEntity(nullptr), mBaseWidth(1.0), mBaseHeight(1.0)
         {}
@@ -78,6 +85,7 @@ private:
 
     struct Torch
     {
+        //! \brief Creates a torch that is not shown and has no parts, light or sound yet
         Torch() :
             mPosition(Ogre::Vector3::ZERO), mDirection(Ogre::Vector3::ZERO), mLightPosition(Ogre::Vector3::ZERO), mPhase(0.0), mDistance(0.0), mShown(false),
             mLightNode(nullptr), mLight(nullptr), mSoundHandle(0)
@@ -93,7 +101,7 @@ private:
         double mDistance;
         bool mShown;
         //! Bracket, flame, smoke (an unused part has no node)
-        Part mParts[3];
+        Part mParts[NB_TORCH_PARTS];
         Ogre::SceneNode* mLightNode;
         Ogre::Light* mLight;
         //! Handle of the running crackling loop, 0 if none
@@ -102,9 +110,13 @@ private:
 
     struct Settings
     {
+        //! \brief Creates the settings with the default values of the wall torch configuration
         Settings() :
-            mActiveLights(4), mActiveLightsReduced(2), mSoundLoops(4), mRange(6.0), mIntensity(1.0),
-            mColourR(1.0), mColourG(0.62), mColourB(0.28), mFlickerStrength(0.25), mFlickerSpeed(2.3)
+            mActiveLights(DEFAULT_TORCH_ACTIVE_LIGHTS), mActiveLightsReduced(DEFAULT_TORCH_ACTIVE_LIGHTS_REDUCED),
+            mSoundLoops(DEFAULT_TORCH_SOUND_LOOPS), mRange(DEFAULT_TORCH_LIGHT_RADIUS),
+            mIntensity(DEFAULT_TORCH_LIGHT_INTENSITY), mColourR(DEFAULT_TORCH_LIGHT_COLOR_R),
+            mColourG(DEFAULT_TORCH_LIGHT_COLOR_G), mColourB(DEFAULT_TORCH_LIGHT_COLOR_B),
+            mFlickerStrength(DEFAULT_TORCH_FLICKER_STRENGTH), mFlickerSpeed(DEFAULT_TORCH_FLICKER_SPEED)
         {}
 
         uint32_t mActiveLights;
@@ -119,17 +131,27 @@ private:
         double mFlickerSpeed;
     };
 
+    //! \brief Reads the torch settings once (WallTorchConfig)
     void loadSettings();
+    //! \brief Chooses which torches are shown and which of them get a light, from their distance to the camera
     void refresh(Mode mode, Ogre::Camera* camera);
+    //! \brief Creates particle system number index of the torch (flame, smoke) beside the holder
     void createPart(Torch& torch, uint32_t index, const std::string& name);
     //! Creates the bracket model; false if the mesh cannot be loaded
     bool createModel(Torch& torch, const std::string& name);
+    //! \brief Removes one particle system of a torch
     void destroyPart(Part& part);
+    //! \brief Gives the torch a real flickering light
     void createLight(Torch& torch, const std::string& name);
+    //! \brief Removes the light of the torch
     void destroyLight(Torch& torch);
+    //! \brief Starts the crackling loop at the torch
     void startSound(Torch& torch);
+    //! \brief Stops the crackling loop at the torch
     void stopSound(Torch& torch);
+    //! \brief Lets the lights flicker
     void animate();
+    //! \brief Removes everything that belongs to the torch: parts, light and sound
     void destroyTorch(Torch& torch);
 
     std::map<uint64_t, Torch> mTorches;

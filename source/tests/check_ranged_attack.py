@@ -17,14 +17,14 @@ for text in ('entityAttack.getObjectType() == GameEntityType::creature',
              'getRangeMax(this, &entityAttack) > 1.0', 'EntityAnimation::ranged_attack_anim',
              'EntityAnimation::combat_attack_anim', 'Pathfinding::distanceTile(*myTile, tileAttack)',
              '&entityAttack, &tileAttack, ko, notifyPlayerIfHit',
-             'skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();',
-             'skillData.mCooldown = getAppliedCooldownNbTurns(*skillData.mSkill);',
+             'skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();',
+             'skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);',
              'std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)',
              'mAttackRecoveryTurns = mAttackRecoveryDuration;', '++mAttackRecoverySerial;',
              'mNeedFireRefresh = true;', 'decreaseWakefulness(0.5);', 'receiveExp(1.5);'):
     assert text in method, text
 assert method.index('fireAttackTurn(') < method.index('setAnimationState(') < method.index('tryUseFight(')
-assert method.index('tryUseFight(') < method.index('skillData.mWarmup =') < method.index('skillData.mCooldown =')
+assert method.index('tryUseFight(') < method.index('skillData.mWarmup +=') < method.index('skillData.mCooldown +=')
 assert 'rollAttackHit' not in method and 'takeDamage' not in method, 'hit resolution stays in the individual skills'
 if '--probe' not in sys.argv:
     print('Ranged/melee dispatch, target aiming and attack recovery source checks passed; compiled dispatch probe not executed')
@@ -97,6 +97,6 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 with tempfile.TemporaryDirectory(prefix='odp-ranged-attack-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{prefix / "include/OGRE"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{prefix / "include/OGRE"}',
                     'check.cpp', '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

@@ -21,6 +21,7 @@
 #include "creatureeffect/CreatureEffectAreaDamage.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
@@ -33,16 +34,20 @@ const std::string CreatureSkillHailStormName = "HailStorm";
 
 namespace
 {
+//! \brief Factory that registers an area damage skill under the given name (GasCloud or HailStorm)
 class CreatureSkillAreaDamageFactory : public CreatureSkillFactory
 {
 public:
+    //! \brief Creates a factory for the skill with the given name
     CreatureSkillAreaDamageFactory(const std::string& skillName) :
         mSkillName(skillName)
     {}
 
+    //! \brief Creates a new, empty area damage skill with the name of this factory
     CreatureSkill* createCreatureSkill() const override
     { return new CreatureSkillAreaDamage(mSkillName); }
 
+    //! \brief Returns the name under which the skill is registered
     const std::string& getCreatureSkillName() const override
     { return mSkillName; }
 
@@ -82,9 +87,11 @@ bool CreatureSkillAreaDamage::tryUseFight(GameMap& gameMap, Creature* creature, 
     }
 
     // The zone is centred on the target and is kept by the caster
+    // The damage follows the SkillDamageFactor of the creature type
+    const double damageFactor = creature->getDefinition()->getSkillDamageFactor();
     CreatureEffectAreaDamage* effect = new CreatureEffectAreaDamage(static_cast<int32_t>(mNbTurns),
-        attackedTile->getX(), attackedTile->getY(), mRadius, mDamagePerTurn, mParticleScript);
-    effect->setDamageMin(mDamagePerTurnMin);
+        attackedTile->getX(), attackedTile->getY(), mRadius, mDamagePerTurn * damageFactor, mParticleScript);
+    effect->setDamageMin(mDamagePerTurnMin * damageFactor);
     creature->addCreatureEffect(effect);
 
     return true;

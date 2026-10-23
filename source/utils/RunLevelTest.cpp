@@ -380,6 +380,7 @@ namespace
         sAwaitingClient = true;
     }
 
+    //! \brief Runs on its own thread and reports a timeout if no result was reported within the time limit.
     void watchdog()
     {
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();

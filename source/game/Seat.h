@@ -30,6 +30,7 @@
 #include <iosfwd>
 #include <cstdint>
 #include <map>
+#include <utility>
 
 class Building;
 class ConfigManager;
@@ -221,7 +222,8 @@ public:
 
     void setDraggableMapSize(int x, int y);
     
-    //! \brief Returns the next fighter creature class to spawn.
+    //! \brief Returns the next fighter creature class to spawn. Classes that reached the limit set in the
+    //! skirmish game settings are skipped.
     const CreatureDefinition* getNextFighterClassToSpawn(const GameMap& gameMap, const ConfigManager& configManager );
 
     //! \brief Announces the first actual arrival of each class, once per seat.
@@ -279,6 +281,8 @@ public:
     void notifyOwnCreatureVision(Tile* tile);
 
     //! \brief Records visibility and starts the fog deadline once on first discovery from any source.
+    //! \param tile The tile that is seen.
+    //! \param nt Tells whether the tile belongs to the map tiles or to a draggable tile container.
     void notifyVisionOnTile(Tile* tile, NodeType nt);
     void notifyTileClaimedByEnemy(Tile* tile);
     void clearVisionForGameMap(DraggableTileContainer* dtc);
@@ -334,6 +338,22 @@ public:
     void setSkillAvailability(SkillType type, bool allowed, bool done);
 
     uint32_t getSkillLevel(SkillType type) const;
+
+    //! \brief Tells whether the entry may be queued for the given research level. The same rules are used
+    //! by the server queue validation, the client research buttons and the AI list building.
+    //! - Level 1: every parent is at level 1 (done or queued earlier); a parent the level does not allow counts as fulfilled.
+    //! - Level 2: the entry has level 1 and at least half (rounded up) of the allowed entries of its tab have level 1.
+    //! - Level 3: the entry has level 2 and every allowed entry of its tab has level 1.
+    //! \param type The research entry
+    //! \param level The level to reach (1 to 3)
+    //! \param queuedBefore The (entry, level) pairs queued earlier in the same queue; they count as done
+    //! \return True if the entry may be queued
+    bool canResearchLevel(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const;
+
+    //! \brief The (entry, level) pairs a queue reaches: each entry of the queue gets the level after its current one
+    //! \param queue The research queue
+    std::vector<std::pair<SkillType, int> > getQueuedLevels(const std::vector<SkillType>& queue) const;
+
     void setResearchLevels(const std::map<SkillType, uint32_t>& levels);
 
     //! \brief Called when the skill entity reaches its destination. From there, the
@@ -555,6 +575,19 @@ private:
     //! researchedType is the currently researched type if any (nullSkillType if none)
     void setNextSkill(SkillType researchedType);
     void completeResearch(SkillType type);
+
+    //! \brief The level an entry has once the queued entries are done: the higher of its own level and its queued level
+    //! \param type The research entry
+    //! \param queuedBefore The (entry, level) pairs queued earlier in the same queue
+    uint32_t getQueuedSkillLevel(SkillType type, const std::vector<std::pair<SkillType, int> >& queuedBefore) const;
+
+    //! \brief Why an entry may not be queued for the given level, see canResearchLevel
+    //! \return A short reason text or nullptr if the entry may be queued
+    const char* getResearchGateFailure(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const;
+
+    //! \brief Adds the free level one skills (skills.cfg) that the level does not forbid to the given done list
+    //! \param skills The done list to extend
+    void addFreeLevelOneSkills(std::vector<SkillType>& skills) const;
 
     //! Fills mTilesStateLoaded with the tiles of the given tileVisual is the given istream.
     //! Returns 0 if the seat end tile has been reached, 1 if the read success and -1 if there is an error

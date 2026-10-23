@@ -48,7 +48,7 @@ void renderPreview(const std::string& repo,const std::string& prefix){
  Ogre::NameValuePairList options;options["hidden"]="true";options["vsync"]="false";
  auto* window=root.createRenderWindow("Low nest traversal",640,360,false,&options);
  auto& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
- for(const auto& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib/GLSL"})groups.addResourceLocation(path,"FileSystem","Graphics",true);
+ for(const std::string& path:{repo+"/models",repo+"/materials/textures",prefix+"/Media/Main",prefix+"/Media/RTShaderLib"})groups.addResourceLocation(path,"FileSystem","Graphics",true);
  Ogre::RTShader::ShaderGenerator::initialize();groups.initialiseAllResourceGroups();
  auto& materials=Ogre::MaterialManager::getSingleton();auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
  OgreBites::SGTechniqueResolverListener resolver(shaders);materials.addListener(&resolver);
@@ -124,7 +124,7 @@ int main(int argc,char** argv){
 with tempfile.TemporaryDirectory(prefix='odp-low-step-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/std:c++14', f'/I{repo / "source"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)
     result = subprocess.run([str(work / 'check.exe')] + ([str(repo), str(prefix)] if '--render' in sys.argv else []), cwd=work, capture_output=True, text=True)

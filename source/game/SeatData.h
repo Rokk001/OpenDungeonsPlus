@@ -91,6 +91,7 @@ public:
     inline double getManaUpkeepPerSecond() const
     { return mManaUpkeepPerSecond; }
 
+    //! \brief The one-off mana taken (spells, trap shots, possession, ...) averaged over the last second, shown on the HUD.
     inline double getManaOneOffPerSecond() const
     { return mManaOneOffPerSecond; }
 

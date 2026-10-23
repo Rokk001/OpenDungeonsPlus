@@ -87,6 +87,8 @@ struct ODApplication {static double turnsPerSecond;};double ODApplication::turns
 //! \brief Inactive level test, as in a normal game.
 struct RunLevelTest {static bool isActive(){return false;}static void onRecoveryFrame(bool,uint32_t){}};
 enum class CreatureOverlays {health,experience,recovery,status};
+const uint32_t PROGRESS_ATLAS_COLUMNS=8;
+const uint32_t PROGRESS_ATLAS_LAST_FRAME=PROGRESS_ATLAS_COLUMNS*PROGRESS_ATLAS_COLUMNS-1;
 struct MovableTextOverlay {
  unsigned frames[4]={};bool shown[4]={};
  void displayOverlay(uint32_t id,int t){shown[id]=t!=0;}
@@ -156,7 +158,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
 with tempfile.TemporaryDirectory(prefix='odp-progress-') as directory:
     work = Path(directory)
     (work / 'probe.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}',
                     f'/I{prefix / "include"}', f'/I{prefix / "include/OGRE"}', 'probe.cpp',
                     str(root / 'source/network/ODPacket.cpp'), '/Feprobe.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'sfml-network.lib', 'sfml-system.lib', 'OgreMain.lib'], cwd=work, check=True)

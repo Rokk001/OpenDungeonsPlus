@@ -162,7 +162,7 @@ assert 'leftHand ? isLeftArmBone(boneName) : isRightArmBone(boneName)' in attack
 assert 'leftHand ? isLeftForearmBone(boneName) : isRightForearmBone(boneName)' in attack
 # A mirrored clip (source name + "Left") is the source of a left-hand blow, the arm deformation is only the fallback
 assert 'const std::string MIRRORED_CLIP_SUFFIX = "Left";' in render
-assert 'leftHand && blow != 0 && skeleton->hasAnimation(original + MIRRORED_CLIP_SUFFIX)' in attack
+assert 'leftHand && blow != COMBAT_BLOW_PLAIN && skeleton->hasAnimation(original + MIRRORED_CLIP_SUFFIX)' in attack
 assert 'getAnimation(mirroredClip ? original + MIRRORED_CLIP_SUFFIX : original)' in attack, 'the clip is preferred'
 assert 'if(mirroredClip) armScale = 1.0f;' in attack, 'TwoWeaponArmStrength is only for the fallback'
 assert 'leftHand ? (mirroredClip ? "M" : "L") : ""' in attack, 'own cache name for the mirrored clip'
@@ -200,7 +200,8 @@ for key in ('TwoWeaponMode', 'TwoWeaponArmStrength'):
     assert '"' + key + '"' in read('source/render/CreatureReactionConfig.cpp'), key + ' not read'
     assert '"' + key + '"' in read('tools/check_creature_reactions.py'), key + ' not allowed by the format check'
 config_cpp = read('source/render/CreatureReactionConfig.cpp')
-assert 'mTwoWeaponMode(1)' in config_cpp and 'mTwoWeaponArmStrength(1.0)' in config_cpp
+assert 'mTwoWeaponMode(DEFAULT_TWO_WEAPON_MODE)' in config_cpp and 'mTwoWeaponArmStrength(DEFAULT_TWO_WEAPON_ARM_STRENGTH)' in config_cpp
+assert 'DEFAULT_TWO_WEAPON_MODE = 1;' in config_cpp and 'DEFAULT_TWO_WEAPON_ARM_STRENGTH = 1.0;' in config_cpp
 
 if '--probe' in sys.argv:
     probe = r'''
@@ -241,7 +242,7 @@ int main()
     with tempfile.TemporaryDirectory(prefix='odp-two-weapons-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(probe)
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         result = subprocess.run([str(work / 'check.exe')], cwd=work, capture_output=True, text=True)
         sys.stdout.write(result.stdout)

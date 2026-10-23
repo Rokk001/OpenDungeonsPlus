@@ -48,6 +48,11 @@ namespace
 class TrapDoorFactory : public TrapFactory
 {
 public:
+    //! \brief Creates the factory of one door type.
+    //! \param doorType The door type this factory builds.
+    //! \param name The internal name used in level files and the config.
+    //! \param nameReadable The name shown to the player.
+    //! \param configPrefix The prefix of the config keys of this door type (for example Wooden for WoodenDoorCostPerTile).
     TrapDoorFactory(TrapType doorType, const std::string& name, const std::string& nameReadable,
             const std::string& configPrefix) :
         mDoorType(doorType),
@@ -328,11 +333,35 @@ static TrapRegister regRuned(new TrapDoorFactory(TrapType::doorRuned, "DoorRuned
 const std::string TrapDoor::ANIMATION_OPEN = "Open";
 const std::string TrapDoor::ANIMATION_CLOSE = "Close";
 
-double TrapDoor::getHP(Tile* tile) const
+//! \brief The research skill that sets the health of a door type: every door type has its own
+//! \param doorType The type of the door
+//! \return The skill of that door type
+static SkillType getDoorSkill(TrapType doorType)
 {
-    return SkillManager::getResearchValue(getSeat(), SkillType::trapDoorWooden, Building::getHP(tile));
+    switch(doorType)
+    {
+        case TrapType::doorIronbound:
+            return SkillType::trapDoorIronbound;
+        case TrapType::doorSteel:
+            return SkillType::trapDoorSteel;
+        case TrapType::doorBarricade:
+            return SkillType::trapDoorBarricade;
+        case TrapType::doorSecret:
+            return SkillType::trapDoorSecret;
+        case TrapType::doorRuned:
+            return SkillType::trapDoorRuned;
+        default:
+            return SkillType::trapDoorWooden;
+    }
 }
 
+//! \brief The health of the door tile with the health research of its own door type.
+double TrapDoor::getHP(Tile* tile) const
+{
+    return SkillManager::getResearchValue(getSeat(), getDoorSkill(mDoorType), Building::getHP(tile), ResearchEffect::HP);
+}
+
+//! \brief Damages the door; the health is stored in base units, the damage is divided by the health research of its own door type.
 double TrapDoor::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage,
     double elementDamage, Tile* tileTakingDamage, bool ko)
 {
@@ -340,7 +369,7 @@ double TrapDoor::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         return 0.0;
 
     // Store health in base units, preserving its fraction across research and ownership changes.
-    const double factor = SkillManager::getResearchValue(getSeat(), SkillType::trapDoorWooden, 1.0);
+    const double factor = SkillManager::getResearchValue(getSeat(), getDoorSkill(mDoorType), 1.0, ResearchEffect::HP);
     double damageDone = Building::takeDamage(attacker, absoluteDamage / factor, physicalDamage / factor,
         magicalDamage / factor, elementDamage / factor, tileTakingDamage, ko) * factor;
 
@@ -407,6 +436,7 @@ double TrapDoor::getDefaultTileHP() const
     }
 }
 
+//! \brief The runed door burns the enemies on it; the damage follows the runed door research.
 bool TrapDoor::shoot(Tile* tile)
 {
     if(mDoorType == TrapType::doorSecret)
@@ -446,8 +476,10 @@ bool TrapDoor::shoot(Tile* tile)
         return true;
 
     fireTrapEffect(TrapEffectKind::fired, tile, 1.0);
-    const double damageMin = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamageMin");
-    const double damageMax = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamage");
+    const double damageMin = SkillManager::getResearchValue(getSeat(), SkillType::trapDoorRuned,
+        ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamageMin"), ResearchEffect::Damage);
+    const double damageMax = SkillManager::getResearchValue(getSeat(), SkillType::trapDoorRuned,
+        ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorDamage"), ResearchEffect::Damage);
     for(GameEntity* target : enemyCreatures)
     {
         const double damage = Random::Double(damageMin, damageMax);

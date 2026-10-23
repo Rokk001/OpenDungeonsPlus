@@ -59,8 +59,59 @@
 
 namespace
 {
+//! Resolution the layout files and images are designed for. The GUI scales relative to it.
 const float LAYOUT_DESIGN_WIDTH = 1024.0f;
 const float LAYOUT_DESIGN_HEIGHT = 768.0f;
+
+// Layout of the room, trap and spell buttons in unscaled pixels.
+const float ACTION_BUTTON_MARGIN_X = 20.0f;
+const float ACTION_BUTTON_MARGIN_Y = 6.0f;
+const float ACTION_BUTTON_SPACING = 4.0f;
+const float LARGE_ACTION_BUTTON_SIDE = 102.0f;
+const float SMALL_ACTION_BUTTON_SIDE = 52.0f;
+//! Vertical distance between the two rows of small buttons.
+const float SMALL_ACTION_BUTTON_ROW_PITCH = 56.0f;
+//! Most buttons that are still shown large, in a single row.
+const size_t MAX_LARGE_ACTION_BUTTONS = 6;
+
+// Properties and user strings the layouts use to mark the navigation frame.
+const std::string NAVIGATION_FRAME_NAME = "NavigationFrame";
+const std::string NAVIGATION_COLOUR_NAME = "NavigationColour";
+const std::string NAVIGATION_IMAGE_NAME = "NavigationImage";
+
+//! User string of a scrollable pane that limits its scrolling to the visible controls.
+const char* const VISIBLE_CONTROL_EXTENT_STRING = "VisibleControlExtent";
+//! Name of the edit box that every combobox creates automatically.
+const char* const COMBOBOX_EDITBOX_NAME = "__auto_editbox__";
+
+//! \brief Sets the scrollable area of the pane to the area covered by its visible controls.
+//! Only the closed part of a combobox counts, not its drop down list. A pane with the
+//! "TrimLeadingSpace" user string also starts at its first visible control.
+void limitScrollingToVisibleControls(CEGUI::ScrollablePane* pane)
+{
+    const CEGUI::ScrolledContainer* content = pane->getContentPane();
+    const CEGUI::Vector2f origin = content->getUnclippedOuterRect().get().getPosition();
+    CEGUI::Rectf extent(0, 0, 0, 0);
+    bool firstVisibleControl = true;
+    for(size_t i = 0; i < content->getChildCount(); ++i)
+    {
+        CEGUI::Window* child = content->getChildAtIdx(i);
+        if(!child->isVisible())
+            continue;
+        CEGUI::Rectf area = child->getUnclippedOuterRect().get();
+        if(dynamic_cast<CEGUI::Combobox*>(child) != nullptr)
+            area.d_max.d_y = child->getChild(COMBOBOX_EDITBOX_NAME)->getUnclippedOuterRect().get().bottom();
+        if(pane->isUserStringDefined("TrimLeadingSpace"))
+            extent.d_min.d_y = firstVisibleControl ? area.top() - origin.d_y :
+                std::min(extent.top(), area.top() - origin.d_y);
+        firstVisibleControl = false;
+        extent.d_max.d_x = std::max(extent.right(), area.right() - origin.d_x);
+        extent.d_max.d_y = std::max(extent.bottom(), area.bottom() - origin.d_y);
+    }
+    pane->setContentPaneArea(extent);
+}
+
+//! Resolution the fonts are designed for.
 const float FONT_DESIGN_WIDTH = 800.0f;
 const float FONT_DESIGN_HEIGHT = 600.0f;
 //! Name of the child window the tab control creates to hold its tab buttons
@@ -70,10 +121,22 @@ const char* const CATEGORY_TOOLTIP_FONT = "MedievalSharp-13";
 //! Space between the hand cursor and its tooltip, as a share of the tooltip font height
 const float TOOLTIP_HAND_GAP_FACTOR = 0.25f;
 
+// Prohibition image, in pixels of its generated texture.
+const int PROHIBITION_IMAGE_SIZE = 64;
+const float PROHIBITION_RING_OUTER_RADIUS = 28.0f;
+const float PROHIBITION_RING_INNER_RADIUS = 21.0f;
+const float PROHIBITION_SLASH_LENGTH_RADIUS = 24.0f;
+const float PROHIBITION_SLASH_HALF_WIDTH = 3.5f;
+//! Scales the distance to the diagonal x == y (|dx - dy| / sqrt(2)).
+const float INVERSE_SQRT_TWO = 0.70710678f;
+const unsigned char PROHIBITION_RED = 210;
+const unsigned char PROHIBITION_GREEN = 32;
+const unsigned char PROHIBITION_BLUE = 48;
+
 void createHandFeedbackImage()
 {
     // Project artwork: a prohibition shape, without copied assets.
-    const int size = 64;
+    const int size = PROHIBITION_IMAGE_SIZE;
     std::vector<unsigned char> pixels(size * size * 4, 0);
     for(int y = 0; y < size; ++y)
     {
@@ -82,13 +145,14 @@ void createHandFeedbackImage()
             const float dx = x + 0.5f - size * 0.5f;
             const float dy = y + 0.5f - size * 0.5f;
             const float radius = std::sqrt(dx * dx + dy * dy);
-            const float ring = std::min(28.0f - radius, radius - 21.0f);
-            const float slash = std::min(24.0f - radius, 3.5f - std::abs(dx - dy) * 0.70710678f);
+            const float ring = std::min(PROHIBITION_RING_OUTER_RADIUS - radius, radius - PROHIBITION_RING_INNER_RADIUS);
+            const float slash = std::min(PROHIBITION_SLASH_LENGTH_RADIUS - radius,
+                PROHIBITION_SLASH_HALF_WIDTH - std::abs(dx - dy) * INVERSE_SQRT_TWO);
             const float coverage = std::max(0.0f, std::min(1.0f, std::max(ring, slash) + 0.5f));
             const int i = (y * size + x) * 4;
-            pixels[i] = 210;
-            pixels[i + 1] = 32;
-            pixels[i + 2] = 48;
+            pixels[i] = PROHIBITION_RED;
+            pixels[i + 1] = PROHIBITION_GREEN;
+            pixels[i + 2] = PROHIBITION_BLUE;
             pixels[i + 3] = static_cast<unsigned char>(coverage * 255.0f);
         }
     }
@@ -100,6 +164,7 @@ void createHandFeedbackImage()
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
+//! Round button that fills a corner of the minimap frame: it only reacts outside the round map.
 class MiniMapCornerButton : public CEGUI::PushButton
 {
 public:
@@ -110,6 +175,8 @@ public:
     {
         if(!CEGUI::PushButton::isHit(position, allowDisabled))
             return false;
+        if(getParent() == nullptr || !getParent()->isChild("MiniMap"))
+            return true;
         // Use the actual map bounds: pixel rounding can differ from this button.
         const CEGUI::Rectf& map = getParent()->getChild("MiniMap")->getUnclippedOuterRect().get();
         const float x = (position.d_x - map.left() - map.getWidth() * 0.5f) / (map.getWidth() * 0.5f);
@@ -1278,6 +1345,7 @@ void createNavigationImages()
     }
 }
 
+//! Scales only the absolute part (offset) of a dimension; the relative part follows the parent window.
 void scaleDimension(CEGUI::UDim& dimension, float scale)
 {
     dimension.d_offset *= scale;
@@ -1301,16 +1369,22 @@ CEGUI::USize scaleSize(const CEGUI::USize& size, float scale)
     return scaled;
 }
 
+//! \brief Checks whether the text begins with the given prefix.
+bool startsWith(const std::string& text, const std::string& prefix)
+{
+    return text.compare(0, prefix.size(), prefix) == 0;
+}
+
 //! \brief Applies display and user scaling to the registered GUI image families.
 bool shouldScaleImage(const CEGUI::String& ceguiName)
 {
     const std::string name(ceguiName.c_str());
-    return name.compare(0, 17, "OpenDungeonsSkin/") == 0
-        || name.compare(0, 18, "OpenDungeonsIcons/") == 0
-        || name.compare(0, 11, "GoalStatus/") == 0
-        || name.compare(0, 17, "ODMainMenuButton/") == 0
-        || name.compare(0, 13, "ODHudSurface/") == 0
-        || name.compare(0, 7, "ODLogo/") == 0;
+    return startsWith(name, "OpenDungeonsSkin/")
+        || startsWith(name, "OpenDungeonsIcons/")
+        || startsWith(name, "GoalStatus/")
+        || startsWith(name, "ODMainMenuButton/")
+        || startsWith(name, "ODHudSurface/")
+        || startsWith(name, "ODLogo/");
 }
 
 //! \brief Scales the w: and h: values of every [image-size='...'] tag in a CEGUI formatted text by the given factor.
@@ -1375,13 +1449,7 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     createHandFeedbackImage();
     createNavigationImages();
 
-    float configuredScalePercent = 100.0f;
-    std::istringstream scaleParser(ConfigManager::getSingleton().getGameValue(Config::UI_SCALE, "100", false));
-    if(!(scaleParser >> configuredScalePercent))
-        configuredScalePercent = 100.0f;
-    configuredScalePercent = std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), configuredScalePercent));
-    mUserScale = configuredScalePercent / 100.0f;
+    mUserScale = getConfiguredUiScalePercent() / static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
     updateResourceScaling(renderer.getDisplaySize());
 
     // We want Ogre overlays to be displayed in front of CEGUI. According to
@@ -1397,7 +1465,9 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
     context.getMouseCursor().setDefaultImage("OpenDungeonsSkin/MouseArrow");
     context.getMouseCursor().setVisible(true);
     context.setDefaultTooltipType("OD/Tooltip");
-    context.getDefaultTooltipObject()->subscribeEvent(CEGUI::Window::EventMoved,
+    CEGUI::Tooltip* defaultTooltip = context.getDefaultTooltipObject();
+    if(defaultTooltip != nullptr)
+        defaultTooltip->subscribeEvent(CEGUI::Window::EventMoved,
         CEGUI::Event::Subscriber([](const CEGUI::EventArgs& e)
         {
             CEGUI::Tooltip* tooltip = static_cast<CEGUI::Tooltip*>(
@@ -1526,34 +1596,35 @@ void Gui::registerWindowHierarchy(CEGUI::Window* window)
 
 void Gui::registerWindow(CEGUI::Window* window)
 {
-    if(window->isPropertyPresent("NavigationFrame"))
+    if(window->isPropertyPresent(NAVIGATION_FRAME_NAME))
     {
         for(CEGUI::Window* parent = window->getParent(); parent != nullptr; parent = parent->getParent())
         {
-            if(parent->isUserStringDefined("NavigationFrame") && parent->getUserString("NavigationFrame") == "true")
+            if(parent->isUserStringDefined(NAVIGATION_FRAME_NAME) &&
+               parent->getUserString(NAVIGATION_FRAME_NAME) == "true")
             {
-                window->setProperty("NavigationFrame", "True");
+                window->setProperty(NAVIGATION_FRAME_NAME, "True");
                 break;
             }
         }
     }
     CEGUI::TabButton* tabButton = dynamic_cast<CEGUI::TabButton*>(window);
-    if(window->isPropertyPresent("NavigationColour"))
+    if(window->isPropertyPresent(NAVIGATION_COLOUR_NAME))
     {
         CEGUI::Window* colourSource = tabButton == nullptr ? nullptr : tabButton->getTargetWindow();
-        if(colourSource == nullptr || !colourSource->isUserStringDefined("NavigationColour"))
+        if(colourSource == nullptr || !colourSource->isUserStringDefined(NAVIGATION_COLOUR_NAME))
         {
             for(colourSource = window->getParent(); colourSource != nullptr; colourSource = colourSource->getParent())
             {
-                if(colourSource->isUserStringDefined("NavigationColour"))
+                if(colourSource->isUserStringDefined(NAVIGATION_COLOUR_NAME))
                     break;
             }
         }
-        if(colourSource != nullptr && colourSource->isUserStringDefined("NavigationColour"))
-            window->setProperty("NavigationColour", colourSource->getUserString("NavigationColour"));
-        if(tabButton != nullptr && colourSource != nullptr && colourSource->isUserStringDefined("NavigationImage") &&
-           window->isPropertyPresent("NavigationImage"))
-            window->setProperty("NavigationImage", colourSource->getUserString("NavigationImage"));
+        if(colourSource != nullptr && colourSource->isUserStringDefined(NAVIGATION_COLOUR_NAME))
+            window->setProperty(NAVIGATION_COLOUR_NAME, colourSource->getUserString(NAVIGATION_COLOUR_NAME));
+        if(tabButton != nullptr && colourSource != nullptr && colourSource->isUserStringDefined(NAVIGATION_IMAGE_NAME) &&
+           window->isPropertyPresent(NAVIGATION_IMAGE_NAME))
+            window->setProperty(NAVIGATION_IMAGE_NAME, colourSource->getUserString(NAVIGATION_IMAGE_NAME));
     }
     if(!window->isAutoWindow() && mScaledWindows.find(window) == mScaledWindows.end())
     {
@@ -1627,6 +1698,21 @@ const float PROFILE_ROW_GAP = 4.0f;
 const float PROFILE_LINE_PADDING = 4.0f;
 //! Scroll step of the profile page (design pixels), about two lines
 const float PROFILE_SCROLL_STEP = 28.0f;
+//! Width the rows of the profile page leave free next to the text: 16 design pixels on each side
+const float PROFILE_ROW_INSET_TOTAL = 32.0f;
+//! Distance of the rows of the profile page from the left and the right edge (design pixels)
+const float PROFILE_SIDE_MARGIN = 16.0f;
+//! Height of one text line if the window has no font (design pixels)
+const float PROFILE_FALLBACK_LINE_HEIGHT = 16.0f;
+//! Number of rows with a label and links (friends, foe) and the most windows in such a row (label and two links)
+const std::size_t PROFILE_LINK_ROWS = 2;
+const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
+//! Tolerance (design pixels) before the rows count as higher than the page
+const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
+//! Names of the rows that flow from top to bottom and so change their position when the texts change
+const char* const PROFILE_FLOW_ROWS[] = {"BioText", "LikesText", "DislikesText", "RelationsText", "FriendsLabel",
+    "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
+const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
 //! \brief Number of lines the window text occupies when CEGUI wraps it at the given pixel width
 std::size_t countWrappedLines(const CEGUI::Window* window, float width)
@@ -1641,7 +1727,7 @@ float getProfileLinesHeight(const CEGUI::Window* window, std::size_t lines, floa
 {
     const CEGUI::Font* font = window->getFont();
     if(font == nullptr)
-        return PROFILE_LINE_PADDING + 16.0f * static_cast<float>(lines);
+        return PROFILE_LINE_PADDING + PROFILE_FALLBACK_LINE_HEIGHT * static_cast<float>(lines);
 
     return font->getLineSpacing() * static_cast<float>(lines) / scale + PROFILE_LINE_PADDING;
 }
@@ -1654,12 +1740,13 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
 
     // The row spans the page minus 16 design pixels on each side; the text uses that whole width
     const CEGUI::Window* parent = window->getParent();
-    const float width = (parent != nullptr) ? parent->getPixelSize().d_width - 32.0f * scale :
-        window->getPixelSize().d_width;
+    float width = window->getPixelSize().d_width;
+    if(parent != nullptr)
+        width = parent->getPixelSize().d_width - PROFILE_ROW_INSET_TOTAL * scale;
     const std::size_t lines = countWrappedLines(window, width);
     const float height = getProfileLinesHeight(window, lines, scale);
-    setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, 16), CEGUI::UDim(0, y),
-        CEGUI::UDim(1, -16), CEGUI::UDim(0, y + height)));
+    setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
+        CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y + height)));
     return y + height + PROFILE_ROW_GAP;
 }
 
@@ -1672,12 +1759,12 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     // picture come last, so they never move the status and the latest post (the creature card has a fixed height).
     const char* const textRowsBefore[] = {"BioText", "LikesText", "DislikesText", "RelationsText"};
     const char* const textRowsAfter[] = {"StatusText", "LatestText", "QuirksText"};
-    const char* const linkRows[2][3] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
+    const char* const linkRows[PROFILE_LINK_ROWS][PROFILE_LINK_ROW_WINDOWS] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
 
     for(std::size_t i = 0; i < 4; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);
 
-    for(std::size_t row = 0; row < 2; ++row)
+    for(std::size_t row = 0; row < PROFILE_LINK_ROWS; ++row)
     {
         CEGUI::Window* label = page->getChild(linkRows[row][0]);
         if(!label->isVisible())
@@ -1686,19 +1773,20 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
         // The label shares its line with the first link, further links follow below
         const float lineHeight = getProfileLinesHeight(label, 1, scale);
         float linkY = y;
-        for(std::size_t i = 1; (i < 3) && (linkRows[row][i] != nullptr); ++i)
+        for(std::size_t i = 1; (i < PROFILE_LINK_ROW_WINDOWS) && (linkRows[row][i] != nullptr); ++i)
         {
             CEGUI::Window* link = page->getChild(linkRows[row][i]);
             if(!link->isVisible())
                 continue;
 
             setScaledArea(link, CEGUI::URect(CEGUI::UDim(0, PROFILE_LINK_LEFT), CEGUI::UDim(0, linkY),
-                CEGUI::UDim(1, -16), CEGUI::UDim(0, linkY + lineHeight)));
+                CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, linkY + lineHeight)));
             linkY += lineHeight;
         }
         const bool hasLinks = (linkY > y);
-        setScaledArea(label, CEGUI::URect(CEGUI::UDim(0, 16), CEGUI::UDim(0, y),
-            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -16), CEGUI::UDim(0, y + lineHeight)));
+        setScaledArea(label, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
+            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -PROFILE_SIDE_MARGIN),
+            CEGUI::UDim(0, y + lineHeight)));
         y = std::max(y + lineHeight, linkY) + PROFILE_ROW_GAP;
     }
 
@@ -1707,8 +1795,6 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
 
     // Remember where every row sits without scrolling. The rows laid out above are fresh, the rows of the
     // header (portrait to experience bar) are never moved by the layout and are noted once.
-    const char* const flowRows[] = {"BioText", "LikesText", "DislikesText", "RelationsText", "FriendsLabel",
-        "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
     for(std::size_t i = 0; i < page->getChildCount(); ++i)
     {
         CEGUI::Window* child = page->getChildAtIdx(i);
@@ -1716,8 +1802,8 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
             continue;
 
         bool isFlowRow = false;
-        for(std::size_t k = 0; k < 12; ++k)
-            isFlowRow = isFlowRow || (child->getName() == flowRows[k]);
+        for(std::size_t k = 0; k < PROFILE_FLOW_ROW_COUNT; ++k)
+            isFlowRow = isFlowRow || (child->getName() == PROFILE_FLOW_ROWS[k]);
 
         std::map<CEGUI::Window*, WindowScaleData>::const_iterator data = mScaledWindows.find(child);
         if((data != mScaledWindows.end()) && (isFlowRow || (mProfileBaseAreas.find(child) == mProfileBaseAreas.end())))
@@ -1728,12 +1814,13 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     // appears, so no row is ever cut off without a way to reach it
     CEGUI::Window* bar = page->getChild("ProfileScrollbar");
     const float viewport = page->getPixelSize().d_height / scale;
-    const bool overflow = (y > viewport + 0.5f);
+    const bool overflow = (y > viewport + PROFILE_OVERFLOW_TOLERANCE);
     float offset = 0.0f;
     if(overflow)
     {
         CEGUI::Scrollbar* scrollbar = static_cast<CEGUI::Scrollbar*>(bar);
         offset = std::max(0.0f, std::min(scrollbar->getScrollPosition(), y - viewport));
+        // Setting the position below must not scroll the rows a second time through onProfileScrolled
         page->setUserString("ProfileScrolling", "true");
         scrollbar->setDocumentSize(y);
         scrollbar->setPageSize(viewport);
@@ -1808,15 +1895,32 @@ float Gui::getLayoutScale() const
     return std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH, displaySize.d_height / LAYOUT_DESIGN_HEIGHT) * mUserScale;
 }
 
+float Gui::getConfiguredUiScalePercent()
+{
+    float scalePercent = static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
+    std::istringstream scaleParser(ConfigManager::getSingleton().getGameValue(Config::UI_SCALE, "100", false));
+    if(!(scaleParser >> scalePercent))
+        scalePercent = static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
+    return std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
+        std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), scalePercent));
+}
+
 void Gui::setUserScalePercent(float scalePercent)
 {
-    if(scalePercent != scalePercent)
-        scalePercent = 100.0f;
+    if(std::isnan(scalePercent))
+        scalePercent = static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
 
     scalePercent = std::max(static_cast<float>(MIN_UI_SCALE_PERCENT),
         std::min(static_cast<float>(MAX_UI_SCALE_PERCENT), scalePercent));
-    mUserScale = scalePercent / 100.0f;
+    mUserScale = scalePercent / static_cast<float>(DEFAULT_UI_SCALE_PERCENT);
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
+}
+
+void Gui::arrangeActionButtonPanels(CEGUI::Window* gameSheet)
+{
+    arrangeRoomButtons(gameSheet->getChild(TAB_ROOMS));
+    arrangeTrapButtons(gameSheet->getChild(TAB_TRAPS));
+    arrangeSpellButtons(gameSheet->getChild(TAB_SPELLS));
 }
 
 void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
@@ -1858,18 +1962,24 @@ void Gui::arrangeActionButtons(CEGUI::Window* panel, std::initializer_list<const
             buttons.push_back(button);
     }
 
-    const bool large = buttons.size() <= 6 &&
-        (20.0f + 106.0f * buttons.size() - 4.0f) * scale <= panel->getPixelSize().d_width;
-    const float side = large ? 102.0f : 52.0f;
+    const bool large = buttons.size() <= MAX_LARGE_ACTION_BUTTONS &&
+        (ACTION_BUTTON_MARGIN_X + (LARGE_ACTION_BUTTON_SIDE + ACTION_BUTTON_SPACING) * buttons.size() -
+        ACTION_BUTTON_SPACING) * scale <= panel->getPixelSize().d_width;
+    const float side = large ? LARGE_ACTION_BUTTON_SIDE : SMALL_ACTION_BUTTON_SIDE;
     for(size_t index = 0; index < buttons.size(); ++index)
     {
         CEGUI::Window* button = buttons[index];
-        const float x = 20.0f + (side + 4.0f) * static_cast<float>(large ? index : index / 2);
-        const float y = 6.0f + (large ? 0.0f : 56.0f * static_cast<float>(index % 2));
-        WindowScaleData& data = mScaledWindows.at(button);
+        const size_t column = large ? index : index / 2;
+        const float x = ACTION_BUTTON_MARGIN_X + (side + ACTION_BUTTON_SPACING) * static_cast<float>(column);
+        const float y = ACTION_BUTTON_MARGIN_Y +
+            (large ? 0.0f : SMALL_ACTION_BUTTON_ROW_PITCH * static_cast<float>(index % 2));
+        std::map<CEGUI::Window*, WindowScaleData>::iterator scaled = mScaledWindows.find(button);
+        if(scaled == mScaledWindows.end())
+            continue;
+        WindowScaleData& data = scaled->second;
         data.area = CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
             CEGUI::UDim(0, x + side), CEGUI::UDim(0, y + side));
-        applyScale(button, data, scale);
+        applyScaleToWindow(button, data, scale);
     }
 }
 
@@ -1897,48 +2007,81 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     updateResourceScaling(displaySize);
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
-        applyScale(scaledWindow.first, scaledWindow.second, scale);
+        applyScaleToWindow(scaledWindow.first, scaledWindow.second, scale);
 
     const std::map<guiSheet, CEGUI::Window*>::iterator gameSheet = mSheets.find(inGameMenu);
     if(gameSheet != mSheets.end())
     {
-        arrangeRoomButtons(gameSheet->second->getChild(TAB_ROOMS));
-        arrangeTrapButtons(gameSheet->second->getChild(TAB_TRAPS));
-        arrangeSpellButtons(gameSheet->second->getChild(TAB_SPELLS));
+        arrangeActionButtonPanels(gameSheet->second);
     }
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
     {
         CEGUI::ScrollablePane* pane = dynamic_cast<CEGUI::ScrollablePane*>(scaledWindow.first);
-        if(pane == nullptr || !pane->isUserStringDefined("VisibleControlExtent"))
+        if(pane == nullptr || !pane->isUserStringDefined(VISIBLE_CONTROL_EXTENT_STRING))
             continue;
-        const CEGUI::ScrolledContainer* content = pane->getContentPane();
-        const CEGUI::Vector2f origin = content->getUnclippedOuterRect().get().getPosition();
-        CEGUI::Rectf extent(0, 0, 0, 0);
-        bool firstVisibleControl = true;
-        for(size_t i = 0; i < content->getChildCount(); ++i)
-        {
-            CEGUI::Window* child = content->getChildAtIdx(i);
-            if(!child->isVisible())
-                continue;
-            CEGUI::Rectf area = child->getUnclippedOuterRect().get();
-            if(dynamic_cast<CEGUI::Combobox*>(child) != nullptr)
-                area.d_max.d_y = child->getChild("__auto_editbox__")->getUnclippedOuterRect().get().bottom();
-            if(pane->isUserStringDefined("TrimLeadingSpace"))
-                extent.d_min.d_y = firstVisibleControl ? area.top() - origin.d_y :
-                    std::min(extent.top(), area.top() - origin.d_y);
-            firstVisibleControl = false;
-            extent.d_max.d_x = std::max(extent.right(), area.right() - origin.d_x);
-            extent.d_max.d_y = std::max(extent.bottom(), area.bottom() - origin.d_y);
-        }
-        pane->setContentPaneArea(extent);
+        limitScrollingToVisibleControls(pane);
     }
 
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
 }
 
-void Gui::applyScale(CEGUI::Window* window, const WindowScaleData& data, float scale)
+bool Gui::isScreenSizedContainer(const CEGUI::Window* window) const
 {
+    // No window above means the screen itself
+    if(window == nullptr)
+        return true;
+
+    std::map<CEGUI::Window*, WindowScaleData>::const_iterator it = mScaledWindows.find(const_cast<CEGUI::Window*>(window));
+    if(it == mScaledWindows.end())
+        return false;
+
+    const CEGUI::URect& area = it->second.area;
+    const bool fillsParent = (area.d_min.d_x == CEGUI::UDim(0, 0)) && (area.d_min.d_y == CEGUI::UDim(0, 0)) &&
+        (area.d_max.d_x == CEGUI::UDim(1, 0)) && (area.d_max.d_y == CEGUI::UDim(1, 0));
+    return fillsParent && isScreenSizedContainer(window->getParent());
+}
+
+float Gui::getWindowFitFactor(const CEGUI::Window* window) const
+{
+    // Find the window that sits directly in a container as large as the screen: that is the one that has to fit
+    const CEGUI::Window* top = window;
+    while(top != nullptr && !isScreenSizedContainer(top->getParent()))
+        top = top->getParent();
+    if(top == nullptr || isScreenSizedContainer(top))
+        return 1.0f;
+
+    std::map<CEGUI::Window*, WindowScaleData>::const_iterator it = mScaledWindows.find(const_cast<CEGUI::Window*>(top));
+    if(it == mScaledWindows.end())
+        return 1.0f;
+
+    const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float scale = getLayoutScale();
+    const CEGUI::URect& area = it->second.area;
+    const float relativeWidth = area.d_max.d_x.d_scale - area.d_min.d_x.d_scale;
+    const float relativeHeight = area.d_max.d_y.d_scale - area.d_min.d_y.d_scale;
+    const float offsetWidth = (area.d_max.d_x.d_offset - area.d_min.d_x.d_offset) * scale;
+    const float offsetHeight = (area.d_max.d_y.d_offset - area.d_min.d_y.d_offset) * scale;
+
+    float factor = 1.0f;
+    // A window as wide as its parent plus a few pixels is a deliberate bleed and cannot be shrunk by scaling
+    if(offsetWidth > 0.0f && relativeWidth < 1.0f)
+    {
+        const float available = std::max(0.0f, (1.0f - relativeWidth) * displaySize.d_width);
+        factor = std::min(factor, available / offsetWidth);
+    }
+    if(offsetHeight > 0.0f && relativeHeight < 1.0f)
+    {
+        const float available = std::max(0.0f, (1.0f - relativeHeight) * displaySize.d_height);
+        factor = std::min(factor, available / offsetHeight);
+    }
+    return factor;
+}
+
+void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float layoutScale)
+{
+    // A window never gets larger than the screen: its absolute sizes and those of its children shrink together
+    const float scale = layoutScale * getWindowFitFactor(window);
     window->setMinSize(scaleSize(data.minSize, scale));
     window->setMaxSize(scaleSize(data.maxSize, scale));
     window->setArea(scaleRect(data.area, scale));
@@ -2028,6 +2171,7 @@ bool Gui::playButtonClickSound(const CEGUI::EventArgs&)
 /* These constants are used to access the GUI element
  * NOTE: when add/remove/rename a GUI element, don't forget to change it here
  */
+const std::string Gui::INFO_WINDOW_TEXT = "TextDisplay";
 const std::string Gui::DISPLAY_GOLD = "HorizontalPipe/GoldDisplay";
 const std::string Gui::DISPLAY_MANA = "HorizontalPipe/ManaDisplay";
 const std::string Gui::DISPLAY_TERRITORY = "PlayerSettingsWindow/TerritoryDisplay";
@@ -2046,6 +2190,7 @@ const std::string Gui::TAB_SPELLS = "MainTabControl/Spells";
 const std::string Gui::TAB_CREATURES = "MainTabControl/Creatures";
 const std::string Gui::BUTTON_CREATURE_WORKER = "MainTabControl/Creatures/WorkerButton";
 const std::string Gui::BUTTON_CREATURE_FIGHTER = "MainTabControl/Creatures/FighterButton";
+const std::string Gui::USER_STRING_CONTEXT_HELP = "ContextHelp";
 const std::string Gui::TAB_COMBAT = "MainTabControl/Combat";
 
 const std::string Gui::MM_BACKGROUND = "Background";
