@@ -124,7 +124,7 @@ with tempfile.TemporaryDirectory(prefix="trap-production-") as directory:
     cpp.write_text(probe, encoding="utf-8")
     executable = work / "check.exe"
     subprocess.run([
-        "cl", "/nologo", "/EHsc", "/MD", "/std:c++14",
+        "cl", "/nologo", "/EHsc", "/MD", "/std:c++17",
         f"/I{root / 'source'}", f"/I{prefix / 'include'}", f"/I{prefix / 'include/OGRE'}",
         str(cpp), str(root / "source/game/TrapProductionData.cpp"),
         str(root / "source/network/ODPacket.cpp"), str(root / "source/traps/TrapType.cpp"),

@@ -7,6 +7,9 @@ import tempfile
 import math
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from probe_config_stub import config_manager_stub
+
 root = Path(__file__).resolve().parents[2]
 source = (root / 'source/entities/Creature.cpp').read_text()
 
@@ -92,6 +95,7 @@ for name, filename in [('melee', 'CreatureSkillMeleeFight.cpp'), ('ranged', 'Cre
     damage += 'std::vector<double> ' + name + '(Creature* creature){\n' + skill[start:stop] + '\nreturn {phyAtk,magAtk,eleAtk};}\n'
 
 probe = r'''
+CONFIG_STUB
 #include "entities/CreatureProgression.h"
 #include <cmath>
 #include <iostream>
@@ -152,10 +156,10 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  c.definition.needed=0;c.mExp=500;c.checkLevelUp();check(c.mLevel==1,"invalid threshold cannot loop");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
-'''.replace('METHODS', methods).replace('DAMAGE', damage).replace('CASES', ','.join(cases))
+'''.replace('CONFIG_STUB', config_manager_stub(root)).replace('METHODS', methods).replace('DAMAGE', damage).replace('CASES', ','.join(cases))
 with tempfile.TemporaryDirectory(prefix='odp-levels-') as directory:
     work = Path(directory)
     (work / 'probe.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'probe.exe')], cwd=work, check=True)
 print(f'XP_TABLE_CHECKS={checks} SPECIES={len(cases)}')

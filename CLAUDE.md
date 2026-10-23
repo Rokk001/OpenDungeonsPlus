@@ -22,6 +22,10 @@ These instructions apply to every change made to this repository with an AI assi
 - Keep changes focused on what was asked; do not reformat or restyle code that the
   change does not need to touch.
 
+## Branches
+
+- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when Mario explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
+
 ## Protected content
 
 - Never copy or derive levels, maps, graphics, models, sounds, texts or data tables from
@@ -54,11 +58,12 @@ These instructions apply to every change made to this repository with an AI assi
 
 ## Tool-Pfade
 
-- OgreXMLConverter.exe: `C:\Users\mario\od-deps\build\ogre\bin\release\OgreXMLConverter.exe`
+- Dependency root: `C:\Users\mario\od-deps-next` (default in `scripts/win32/windows-paths.ps1`, overridable with `OD_DEPS_ROOT`); Python 3.14 at `C:\Users\mario\AppData\Local\Programs\Python\Python314`
+- OgreXMLConverter.exe: `C:\Users\mario\od-deps-next\install\bin\OgreXMLConverter.exe`
 - blender.exe: `C:\Users\mario\AppData\Local\Microsoft\WindowsApps\blender-launcher.exe` (Store-App, `blender.exe` selbst ist nicht direkt ausfuehrbar; Aufruf `--background <blend> --python <script>`)
-- cl.exe: `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe`
-- vcvars64.bat: `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat`
-- cmake.exe: `C:\Users\mario\od-deps\tools\cmake-3.31.8-windows-x86_64\bin\cmake.exe`
+- cl.exe (VS 2026 Build Tools): `C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\bin\Hostx64\x64\cl.exe`
+- vcvars64.bat: `C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat`
+- cmake.exe (4.4.1; CMake generator `Visual Studio 18 2026`): `C:\Users\mario\od-deps-next\tools\cmake-4.4.1-windows-x86_64\bin\cmake.exe`
 
 Diese Pfade direkt verwenden, nie danach suchen.
 

@@ -62,11 +62,28 @@
 namespace
 {
 
+//! \brief Scale that turns a ratio into percent (creature health condition)
+static const double PERCENT_SCALE = 100.0;
+
+//! \brief Fullness of a solid tile in percent
+static const double TILE_FULLNESS_SOLID = 100.0;
+
+//! \brief Amount of gold a creature steals at once when its definition gives none
+static const int32_t DEFAULT_STEAL_GOLD_AMOUNT = 200;
+
+//! \brief Distance in tiles inside which a creature counts as near the heart and stays to fight
+static const int32_t NEAR_HEART_DISTANCE = 4;
+
+//! \brief Distance in tiles inside which a creature counts as arrived at the tile it walks to
+static const int32_t ARRIVED_DISTANCE = 2;
+
+//! \brief Converts level seconds to game turns.
 int64_t secondsToTurns(int64_t seconds)
 {
     return static_cast<int64_t>(static_cast<double>(seconds) * ODApplication::turnsPerSecond);
 }
 
+//! \brief True if the creature belongs to the seat; seat -1 matches every creature.
 bool isSeatMatching(const Creature* creature, int32_t seatId)
 {
     if(seatId < 0)
@@ -188,6 +205,10 @@ bool areGroundPointsConnected(GameMap& gameMap, const LevelScriptCondition& cond
 }
 
 //! \brief Evaluates gameplay conditions, living captivity and read-only objective presentation predicates.
+//! \param gameMap The server game map.
+//! \param script The level script (flags, timers, regions).
+//! \param cond The condition to test.
+//! \return True if the condition holds now.
 bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScriptCondition& cond)
 {
     switch(cond.mType)
@@ -603,7 +624,7 @@ bool isConditionMet(GameMap& gameMap, const LevelScript& script, const LevelScri
             if((creature == nullptr) || !creature->isAlive() || (creature->getMaxHp() <= 0.0))
                 return false;
 
-            int64_t percent = static_cast<int64_t>(100.0 * creature->getHP() / creature->getMaxHp());
+            int64_t percent = static_cast<int64_t>(PERCENT_SCALE * creature->getHP() / creature->getMaxHp());
             return levelScriptCompare(percent, cond.mCompare, cond.mNumber);
         }
         case LevelScriptConditionType::spellKnown:
@@ -786,6 +807,7 @@ std::vector<Player*> getTargetPlayers(GameMap& gameMap, int32_t seatId)
     return players;
 }
 
+//! \brief Sends a chat message to the players an action is meant for.
 void sendMessage(GameMap& gameMap, int32_t seatId, const std::string& text)
 {
     for(Player* player : getTargetPlayers(gameMap, seatId))
@@ -890,6 +912,9 @@ void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action,
     }
 }
 
+//! The number of turns the tiles of a revealed region stay visible: shown once, then they count as seen
+const uint32_t REVEAL_REGION_TURNS = 1;
+
 //! \brief The tiles of the region stay visible to the seat, as the tiles revealed by a
 //! tortured creature do: they are shown once and then count as seen.
 void revealRegion(GameMap& gameMap, const LevelScript& script, const LevelScriptAction& action)
@@ -913,7 +938,7 @@ void revealRegion(GameMap& gameMap, const LevelScript& script, const LevelScript
     }
 
     for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
-        player->getSeat()->revealTiles(tiles, 1);
+        player->getSeat()->revealTiles(tiles, REVEAL_REGION_TURNS);
 }
 
 //! \brief A room, trap, door or spell becomes available to the seat, as if it was researched.
@@ -971,6 +996,8 @@ void buildBridge(GameMap& gameMap, const LevelScriptAction& action)
     }
 }
 
+//! Changes the tiles of the rectangle, as digging or claiming does: the tile is recomputed and
+//! sent to every seat that sees it
 void alterTerrain(GameMap& gameMap, const LevelScriptAction& action)
 {
     if(action.mText == "bridge")
@@ -983,25 +1010,25 @@ void alterTerrain(GameMap& gameMap, const LevelScriptAction& action)
     double fullness = 0.0;
     bool claim = false;
     if(action.mText == "rock")
-        fullness = 100.0;
+        fullness = TILE_FULLNESS_SOLID;
     else if(action.mText == "path")
         fullness = 0.0;
     else if(action.mText == "claimed")
         claim = true;
     else if(action.mText == "wall")
     {
-        fullness = 100.0;
+        fullness = TILE_FULLNESS_SOLID;
         claim = true;
     }
     else if(action.mText == "gold")
     {
         type = TileType::gold;
-        fullness = 100.0;
+        fullness = TILE_FULLNESS_SOLID;
     }
     else if(action.mText == "gems")
     {
         type = TileType::gem;
-        fullness = 100.0;
+        fullness = TILE_FULLNESS_SOLID;
     }
     else if(action.mText == "water")
         type = TileType::water;
@@ -1010,7 +1037,7 @@ void alterTerrain(GameMap& gameMap, const LevelScriptAction& action)
     else if(action.mText == "impenetrable")
     {
         type = TileType::rock;
-        fullness = 100.0;
+        fullness = TILE_FULLNESS_SOLID;
     }
     else if(action.mText == "manawell")
     {
@@ -1225,6 +1252,7 @@ std::vector<std::string> resolveCreatureNames(GameMap& gameMap, const LevelScrip
 //! Running creatures move this much faster than walking ones (own tuning value)
 const double RUN_SPEED_FACTOR = 1.5;
 
+//! The creatures (names or party tags) run or walk again (the speed action)
 void changeCreatureSpeed(GameMap& gameMap, const LevelScript& script, const LevelScriptAction& action)
 {
     std::vector<std::string> names = resolveCreatureNames(gameMap, script, action.mCreatureNames);
@@ -1238,6 +1266,7 @@ void changeCreatureSpeed(GameMap& gameMap, const LevelScript& script, const Leve
     }
 }
 
+//! The creatures (names or party tags) get the standing order of the action (the order action)
 void giveCreatureOrder(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action)
 {
     LevelScriptOrder order;
@@ -1294,6 +1323,7 @@ void keepMinion(GameMap& gameMap, int32_t seatId)
         Campaign::getSingleton().setKeptMinion(best->getDefinition()->getClassName(), best->getLevel());
 }
 
+//! \brief The creature with that name leaves the map (the remove action). Nothing happens if there is none on the map.
 void removeCreature(GameMap& gameMap, const std::string& name)
 {
     Creature* creature = gameMap.getCreature(name);
@@ -1498,7 +1528,7 @@ void LevelScriptRunner::spawnKeptMinion(GameMap& gameMap)
                 continue;
 
             std::string className;
-            uint32_t level;
+            uint32_t level = 0;
             if(!Campaign::getSingleton().takeKeptMinion(className, level))
                 return;
 
@@ -1625,6 +1655,7 @@ bool walkToNearest(Creature& creature, Tile* myTile, const std::vector<Tile*>& t
     return true;
 }
 
+//! True if the tiles are at most that many tiles apart in both directions
 bool isNear(const Tile* first, const Tile* second, int32_t distance)
 {
     return (std::abs(first->getX() - second->getX()) <= distance) && (std::abs(first->getY() - second->getY()) <= distance);
@@ -1699,7 +1730,7 @@ bool LevelScriptRunner::doCreatureOrder(Creature& creature)
         // Near the heart the creature stays and fights what comes
         for(Tile* tile : tiles)
         {
-            if(isNear(myTile, tile, 4))
+            if(isNear(myTile, tile, NEAR_HEART_DISTANCE))
                 return true;
         }
 
@@ -1736,7 +1767,7 @@ bool LevelScriptRunner::doCreatureOrder(Creature& creature)
             return false;
 
         Tile* target = nearest->getPositionTile();
-        if(isNear(myTile, target, 2) || !gameMap->pathExists(&creature, myTile, target))
+        if(isNear(myTile, target, ARRIVED_DISTANCE) || !gameMap->pathExists(&creature, myTile, target))
             return false;
 
         return walkToTile(creature, target);
@@ -1765,7 +1796,7 @@ bool LevelScriptRunner::doCreatureOrder(Creature& creature)
         {
             int32_t amount = static_cast<int32_t>(creature.getDefinition()->getStealGold());
             if(amount <= 0)
-                amount = 200;
+                amount = DEFAULT_STEAL_GOLD_AMOUNT;
 
             int32_t gold = room->withdrawGold(amount);
             creature.addGoldCarried(gold);

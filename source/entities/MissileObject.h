@@ -57,6 +57,7 @@ public:
 
     virtual ~MissileObject();
 
+    //! \brief Moves the missile for one turn. A target or creature is hit once, and the flight ends on the tile of the hit.
     virtual void doUpkeep() override;
 
     /*! brief Function called when the missile hits a wall. If it returns true, the missile direction
@@ -77,7 +78,7 @@ public:
     virtual void hitTargetEntity(Tile* tile, GameEntity* entityTarget)
     {}
 
-    /*! brief Function called for each tile on the path of the missile. If it returns true, the missile stops
+    /*! \brief Function called for each tile on the path of the missile. If it returns true, the missile stops
      * on that tile
      */
     virtual bool stopsOnTile(Tile* tile)
@@ -88,6 +89,8 @@ public:
     { return false; }
 
     //! \brief Sends a missile that stopped on its way again
+    //! \param direction The direction the missile flies in
+    //! \param speed The speed in tiles per turn
     void launch(const Ogre::Vector3& direction, double speed);
 
     virtual GameEntityType getObjectType() const override;
@@ -128,12 +131,15 @@ protected:
     virtual void missileStopped()
     {}
 
+    //! \brief The entity the missile was aimed at, nullptr if it has no target
     GameEntity* getEntityTarget() const
     { return mEntityTarget; }
 
+    //! \brief Changes the flight direction of the missile, used by missiles that follow their target
     void setDirection(const Ogre::Vector3& direction)
     { mDirection = direction; }
 
+    //! \brief Changes the speed of the missile in tiles per turn
     void setSpeed(double speed)
     { mSpeed = speed; }
 

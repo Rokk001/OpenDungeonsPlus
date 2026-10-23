@@ -23,6 +23,8 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -132,6 +134,7 @@ void SpellInferno::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the damage follows the inferno research.
 bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     int x;
@@ -152,8 +155,10 @@ bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     fireSpellEffect(*tileTarget, "Inferno", "InfernoCast");
 
     int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoRadiusTiles"));
-    double damagePerTurn = ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurn");
-    const double damagePerTurnMin = ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurnMin");
+    double damagePerTurn = SkillManager::getResearchValue(player->getSeat(), SkillType::spellInferno,
+        ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurn"), ResearchEffect::Damage);
+    const double damagePerTurnMin = SkillManager::getResearchValue(player->getSeat(), SkillType::spellInferno,
+        ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurnMin"), ResearchEffect::Damage);
     int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoNbTurns"));
 
     // Enemy creatures in the area catch fire. We copy the list to be safe if creatures are removed.

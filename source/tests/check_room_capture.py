@@ -61,7 +61,9 @@ check(config_value('RoomConvertClaimRate') == imp_claim,
       'RoomConvertClaimRate must be the claim rate of the worker (' + imp_claim + ')')
 check(config_value('RoomRepairFactor') == '5.0', 'an own worker repairs 5 times faster than an enemy wears down (20000 against 4000)')
 check(config_value('PortalFirstSpawnSeconds') == '25', 'the first creature of a taken over portal comes after 25 seconds')
-check('"RoomsClaimableByEnemies", 1.0)' in room_source, 'without the setting the default behaviour applies')
+check('"RoomsClaimableByEnemies", DEFAULT_ROOMS_CLAIMABLE_BY_ENEMIES)' in room_source
+      and 'static const double DEFAULT_ROOMS_CLAIMABLE_BY_ENEMIES = 1.0;' in room_source,
+      'without the setting the default behaviour applies')
 turns_per_second = re.search(r'double ODApplication::turnsPerSecond = ([0-9.]+);', read('source/ODApplication.cpp')).group(1)
 
 # Wiring
@@ -191,19 +193,19 @@ static int turnsToTake(double danceRate, double secondsPerTile, uint32_t tiles, 
 
 int main()
 {
-    const double impRate = REFERENCE;
-    double seconds = turnsToTake(impRate, ENEMY, 25, 1) / TPS;
+    const double workerRate = REFERENCE;
+    double seconds = turnsToTake(workerRate, ENEMY, 25, 1) / TPS;
     check(std::fabs(seconds - 62.5) < 1.0, "a 25 tile enemy room takes one worker about 62.5 seconds");
-    seconds = turnsToTake(impRate, ENEMY, 9, 1) / TPS;
+    seconds = turnsToTake(workerRate, ENEMY, 9, 1) / TPS;
     check(std::fabs(seconds - 22.5) < 1.0, "a 9 tile portal takes one worker about 22.5 seconds");
-    seconds = turnsToTake(impRate, NEUTRAL, 25, 1) / TPS;
+    seconds = turnsToTake(workerRate, NEUTRAL, 25, 1) / TPS;
     check(std::fabs(seconds - 12.5) < 1.0, "a 25 tile neutral room takes one worker about 12.5 seconds");
-    check(turnsToTake(impRate, ENEMY, 25, 1) > 4 * turnsToTake(impRate, NEUTRAL, 25, 1), "neutral rooms are about 5 times faster");
-    int one = turnsToTake(impRate, ENEMY, 25, 1);
-    int five = turnsToTake(impRate, ENEMY, 25, 5);
+    check(turnsToTake(workerRate, ENEMY, 25, 1) > 4 * turnsToTake(workerRate, NEUTRAL, 25, 1), "neutral rooms are about 5 times faster");
+    int one = turnsToTake(workerRate, ENEMY, 25, 1);
+    int five = turnsToTake(workerRate, ENEMY, 25, 5);
     check(std::abs(one - 5 * five) <= 5, "five workers need a fifth of the time");
-    check(turnsToTake(impRate + 0.06 * 4, ENEMY, 25, 1) < turnsToTake(impRate, ENEMY, 25, 1), "a level 5 worker is faster");
-    check(turnsToTake(impRate, ENEMY, 50, 1) > 1.9 * turnsToTake(impRate, ENEMY, 25, 1), "twice the tiles take twice the time");
+    check(turnsToTake(workerRate + 0.06 * 4, ENEMY, 25, 1) < turnsToTake(workerRate, ENEMY, 25, 1), "a level 5 worker is faster");
+    check(turnsToTake(workerRate, ENEMY, 50, 1) > 1.9 * turnsToTake(workerRate, ENEMY, 25, 1), "twice the tiles take twice the time");
     check(RoomClaim::takeoverSeconds(ENEMY, 25) == ENEMY * 25.0, "the pool is the number of tiles times the duration of one tile");
 
     // A room that is worn down halfway and then shrinks to half the tiles keeps its share of the pool:
@@ -212,13 +214,13 @@ int main()
     int turns = 0;
     while(health > 0.5)
     {
-        health -= RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 50);
+        health -= RoomClaim::healthLostPerDance(workerRate, REFERENCE, ENEMY, TPS, 50);
         ++turns;
     }
     int turnsLeft = 0;
     while(health > 0.0 && turnsLeft < 100000)
     {
-        health -= RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25);
+        health -= RoomClaim::healthLostPerDance(workerRate, REFERENCE, ENEMY, TPS, 25);
         ++turnsLeft;
     }
     check(std::fabs(turnsLeft / TPS - 0.5 * 25 * ENEMY) < 1.0, "the time left follows the new size of the room");
@@ -226,22 +228,22 @@ int main()
 
     // A bridge is one room: its pool is all its squares times the duration of one square
     check(std::fabs(RoomClaim::takeoverSeconds(ENEMY, 8) - 8 * ENEMY) < 1e-9, "a bridge of 8 squares has the pool of 8 tiles");
-    check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 8) > RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25),
+    check(RoomClaim::healthLostPerDance(workerRate, REFERENCE, ENEMY, TPS, 8) > RoomClaim::healthLostPerDance(workerRate, REFERENCE, ENEMY, TPS, 25),
           "a short bridge is taken faster than a big room");
 
-    check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25) > 0.0, "a dance lowers the pool");
-    check(RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 0) >= 1.0, "a room without tiles is taken at once");
+    check(RoomClaim::healthLostPerDance(workerRate, REFERENCE, ENEMY, TPS, 25) > 0.0, "a dance lowers the pool");
+    check(RoomClaim::healthLostPerDance(workerRate, REFERENCE, ENEMY, TPS, 0) >= 1.0, "a room without tiles is taken at once");
 
     // Repair: one worker repairs five times faster than one worker wears down, so one repairing worker
     // outweighs four enemy workers and the room refills from empty in a fifth of the time
-    double lost = RoomClaim::healthLostPerDance(impRate, REFERENCE, ENEMY, TPS, 25);
-    double repaired = RoomClaim::healthRepairedPerDance(impRate, REFERENCE, ENEMY, TPS, 25, REPAIR);
+    double lost = RoomClaim::healthLostPerDance(workerRate, REFERENCE, ENEMY, TPS, 25);
+    double repaired = RoomClaim::healthRepairedPerDance(workerRate, REFERENCE, ENEMY, TPS, 25, REPAIR);
     check(std::fabs(repaired - 5.0 * lost) < 1e-12, "repairing is 5 times the wearing down");
     check(repaired > 4.0 * lost, "one repairing worker outweighs four enemy workers");
     check(repaired < 5.5 * lost, "but not much more");
     seconds = 1.0 / (repaired * TPS);
     check(std::fabs(seconds - 12.5) < 0.1, "a 25 tile room is repaired from empty by one worker in 12.5 seconds");
-    check(RoomClaim::healthRepairedPerDance(impRate, REFERENCE, ENEMY, TPS, 0, REPAIR) >= 1.0, "a room without tiles is repaired at once");
+    check(RoomClaim::healthRepairedPerDance(workerRate, REFERENCE, ENEMY, TPS, 0, REPAIR) >= 1.0, "a room without tiles is repaired at once");
 
     check(RoomClaim::isClaimableBy(true, false, false), "an enemy room is claimable");
     check(!RoomClaim::isClaimableBy(true, true, false), "an allied room is not claimable");
@@ -293,7 +295,7 @@ def run_probe(code):
     with tempfile.TemporaryDirectory(prefix='odp-room-capture-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(code)
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         for attempt in range(4):
             try:

@@ -39,7 +39,13 @@ def check(condition, message):
 # Config keys: every key read by the code is in rooms.cfg, with the default of the code
 config_cpp = read("source", "rooms", "WallTorchConfig.cpp")
 rooms_cfg = read("config", "rooms.cfg")
-reads = re.findall(r'read(?:Count|Clamped)\("(WallTorch\w+)",\s*([0-9.]+)', config_cpp)
+# The defaults are named constants (DEFAULT_TORCH_*) in WallTorchConfig.h and WallTorches.h
+constants = dict(re.findall(r"const\s+(?:double|float|uint32_t|int32_t)\s+(\w+)\s*=\s*([0-9.]+)f?;",
+                            read("source", "rooms", "WallTorchConfig.h") + read("source", "rooms", "WallTorches.h")))
+reads = []
+for key, default in re.findall(r'read(?:Count|Clamped)\("(WallTorch\w+)",\s*([A-Za-z_0-9.]+)', config_cpp):
+    check(default in constants or re.match(r"^[0-9.]+$", default), "WallTorchConfig: unknown default " + default)
+    reads.append((key, constants.get(default, default)))
 check(len(reads) >= 12, "WallTorchConfig reads fewer than 12 keys")
 for key, default in reads:
     match = re.search(r"^\s*%s\s+([0-9.]+)\s*$" % key, rooms_cfg, re.M)
@@ -202,7 +208,7 @@ check("RoomTorches" not in tests_cmake, "source/tests/CMakeLists.txt still names
 
 # Crackling loop: nearest N torches, loop family from the real recording, stopped on removal / stopAll / hide
 sounds = read("source", "sound", "SoundEffectsManager.cpp")
-check("startSpatialLoop" in sounds and "stopSpatialLoop" in sounds and "setLoop(true)" in sounds,
+check("startSpatialLoop" in sounds and "stopSpatialLoop" in sounds and "setLooping(true)" in sounds,
       "SoundEffectsManager has no start/stop for positioned loops")
 check(os.path.exists(os.path.join(ROOT, "sounds", "Spatial", "Rooms", "Torch", "Loop", "FxWallTorchLoop01.ogg")),
       "the torch loop recording is missing")

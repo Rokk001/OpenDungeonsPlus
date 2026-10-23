@@ -460,7 +460,7 @@ print('STYLE OK: no auto in the new code')
 with tempfile.TemporaryDirectory(prefix='odp-defeat-sequence-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
                    cwd=work, check=True)
     # Windows may block a freshly compiled executable (WinError 4551) for a moment
     for attempt in range(4):

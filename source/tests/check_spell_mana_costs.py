@@ -4,7 +4,8 @@ The costs use one own scale (mana cap 200,000, prices in 50 mana steps, see docs
 Summon worker 1,400 per step, Call to war 9,200, Heal 5,400, Eye of evil 4,600, Lightning 6,600,
 Tremor 27,600, Defector 21,600, Hexen hen 10,600, Inferno 46,400, Create gold
 14,000, Possess 450, Summon champion 108,000 plus 2,250 per second. The worker price grows by one base price per worker above
-the four the heart supplies."""
+the four the heart supplies. The creature spells use the same own scale (prices in 50 mana steps): Explosion 4,600,
+Haste 2,200, Defense 2,650, Slow 1,800, Strength 2,300 and Weak 2,150, each with its own recharge turns."""
 from pathlib import Path
 import re
 import subprocess
@@ -28,7 +29,7 @@ expected = {
     "InfernoPrice": "46400", "InfernoCooldown": "78",
     "CreateGoldPrice": "14000", "CreateGoldCooldown": "0",
     "PossessPrice": "450", "PossessFreeSeconds": "20",
-    "SummonChampionPrice": "108000", "SummonChampionDrainPerSecond": "2250", "SummonChampionCooldown": "0",
+    "SummonChampionPrice": "108000", "SummonChampionDrainPerSecond": "2250", "SummonChampionCooldown": "884",
     "CreatureHastePrice": "2200", "CreatureHasteCooldown": "13",
     "CreatureSlowPrice": "1800", "CreatureSlowCooldown": "11",
     "CreatureDefensePrice": "2650", "CreatureDefenseCooldown": "17",
@@ -88,6 +89,6 @@ int main()
 with tempfile.TemporaryDirectory(prefix="odp-spell-costs-") as directory:
     work = Path(directory)
     (work / "check.cpp").write_text(probe)
-    subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++14", "check.cpp", "/Fecheck.exe"], cwd=work, check=True)
+    subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++17", "check.cpp", "/Fecheck.exe"], cwd=work, check=True)
     subprocess.run([str(work / "check.exe")], cwd=work, check=True)
 print("SPELL COSTS OK")

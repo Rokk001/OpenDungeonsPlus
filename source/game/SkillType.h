@@ -94,6 +94,12 @@ enum class SkillType
     trapFreeze,
     spellSummonChampion,
 
+    // Keeper skills: they change the keeper (creature limit, dungeon heart, mana) and have no room, trap or spell
+    keeperDominion,
+    keeperHeartFortitude,
+    keeperHeartMending,
+    keeperManaFlow,
+
     // This should be the last
     countSkill
 };

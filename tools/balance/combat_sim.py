@@ -14,6 +14,12 @@ MAX_LEVEL = 30
 DUEL_LIMIT = 5000
 GROUP_LIMIT = 20000
 HP_SCALE = 2.05
+# Mirror of the level curves of config/global.cfg (CreatureDamageGrowth, CreatureDamageExponent,
+# CreatureHpGrowthPerLevel, CooldownReductionPerLevel); the creature check asserts that they match the file.
+DAMAGE_GROWTH = 0.221
+DAMAGE_EXPONENT = 1.167
+HP_GROWTH_PER_LEVEL = 0.018
+COOLDOWN_REDUCTION_PER_LEVEL = 0.0
 
 
 # Read named configuration blocks, ignoring comments and section delimiters.
@@ -34,12 +40,12 @@ def definitions(path, section, tag):
 # Evaluate the separate level curves within the server's level bounds.
 def multiplier(level, kind):
     level = max(1, min(MAX_LEVEL, level))
-    if kind == "hp":
-        return 1 + 0.173 * (level - 1) ** 1.37
     if kind == "damage":
-        return 1 + 0.278 * (level - 1) ** 1.02
+        return 1 + DAMAGE_GROWTH * (level - 1) ** DAMAGE_EXPONENT
+    if kind == "hp":
+        return multiplier(level, "damage") * (1 + HP_GROWTH_PER_LEVEL * (level - 1))
     if kind == "attack":
-        return 1 + 0.847 * (level - 1) ** 1.13
+        return float(level)
     if kind == "defense":
         return float(level)
     raise ValueError(kind)
@@ -145,7 +151,7 @@ class Roster:
         timing_factor = weapon_cooldown / skill_cooldown if weapon_cooldown > skill_cooldown > 0 else 1
         minimum = [value * timing_factor for value in minimum]
         maximum = [value * timing_factor for value in maximum]
-        cooldown = max(1, cooldown * (1 - 0.0075 * (level - 1))) if cooldown else 0
+        cooldown = max(1, cooldown * (1 - COOLDOWN_REDUCTION_PER_LEVEL * (level - 1))) if cooldown else 0
         parry = 0
         shield = False
         for item in items:
@@ -209,7 +215,8 @@ def blow(roster, attacker, target, rng):
     return low + rng.random() * (high - low)
 
 
-# Repeat the reference duel scheduler; only a surviving defender answers.
+# Repeat the reference duel scheduler; only a surviving defender answers. The next attack turn keeps the fraction
+# of the cooldown: max(previous, turn - 1) + cooldown.
 def duel(roster, first, second, fights, rng):
     wins = 0
     for _ in range(fights):
@@ -218,14 +225,33 @@ def duel(roster, first, second, fights, rng):
         for turn in range(1, DUEL_LIMIT + 1):
             if turn >= next_a:
                 b.hp -= blow(roster, a, b, rng)
-                next_a = turn + a.cooldown
+                next_a = max(next_a, turn - 1) + a.cooldown
             if b.hp > 0 and turn >= next_b:
                 a.hp -= blow(roster, b, a, rng)
-                next_b = turn + b.cooldown
+                next_b = max(next_b, turn - 1) + b.cooldown
             if a.hp <= 0 or b.hp <= 0:
                 break
         wins += a.hp > 0
     return wins / fights
+
+
+# Same scheduler as duel, but returns the mean turn at which a fight ends instead of the win share.
+def duel_turns(roster, first, second, fights, rng):
+    total = 0
+    for _ in range(fights):
+        a, b = replace(first), replace(second)
+        next_a = next_b = 0
+        for turn in range(1, DUEL_LIMIT + 1):
+            if turn >= next_a:
+                b.hp -= blow(roster, a, b, rng)
+                next_a = max(next_a, turn - 1) + a.cooldown
+            if b.hp > 0 and turn >= next_b:
+                a.hp -= blow(roster, b, a, rng)
+                next_b = max(next_b, turn - 1) + b.cooldown
+            if a.hp <= 0 or b.hp <= 0:
+                break
+        total += turn
+    return total / fights
 
 
 # Repeat the reference group scheduler, including simultaneous reply ordering.
@@ -239,11 +265,11 @@ def fight_group(roster, first, opponent, count, fights, rng):
         for turn in range(1, GROUP_LIMIT + 1):
             if turn >= next_a:
                 opponents[0].hp -= blow(roster, a, opponents[0], rng)
-                next_a = turn + a.cooldown
+                next_a = max(next_a, turn - 1) + a.cooldown
             for i, b in enumerate(opponents):
                 if turn >= clocks[i]:
                     a.hp -= blow(roster, b, a, rng)
-                    clocks[i] = turn + b.cooldown
+                    clocks[i] = max(clocks[i], turn - 1) + b.cooldown
             survivors = [i for i, b in enumerate(opponents) if b.hp > 0]
             opponents = [opponents[i] for i in survivors]
             clocks = [clocks[i] for i in survivors]

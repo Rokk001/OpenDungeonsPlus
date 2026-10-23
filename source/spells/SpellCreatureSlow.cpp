@@ -129,6 +129,7 @@ void SpellCreatureSlow::checkSpellCast(GameMap* gameMap, const InputManager& inp
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the speed factor follows the slow research.
 bool SpellCreatureSlow::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -176,7 +177,7 @@ bool SpellCreatureSlow::castSpell(GameMap* gameMap, Player* player, ODPacket& pa
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureSlowDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureSlow,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureSlowValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureSlowValue"), ResearchEffect::Factor);
     CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(duration, value, "SpellCreatureSlow");
     creature->addCreatureEffect(effect);
 

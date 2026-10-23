@@ -1,3 +1,6 @@
+// One step of the 24-bit shadow depth buffer.
+const float SHADOW_DEPTH_STEP = 1.0 / 16777215.0;
+
 // Shadow texture coordinates have biased X/Y and OpenGL clip-space Z.
 float sampleShadow(sampler2D shadowMap, vec4 lightPosition)
 {
@@ -10,5 +13,5 @@ float sampleShadow(sampler2D shadowMap, vec4 lightPosition)
         return 1.0;
 
     // Allow one depth-buffer step for the 24-bit shadow texture.
-    return step(shadowPosition.z - 1.0 / 16777215.0, texture(shadowMap, shadowPosition.xy).r);
+    return step(shadowPosition.z - SHADOW_DEPTH_STEP, texture(shadowMap, shadowPosition.xy).r);
 }

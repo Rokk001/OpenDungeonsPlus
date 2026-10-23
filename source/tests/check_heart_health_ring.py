@@ -127,8 +127,9 @@ struct RoomDungeonTemple : Room {
     double mHeartHP;
     RoomDungeonTemple(GameMap* map, Seat* seat) : Room(RoomType::dungeonTemple, seat), mMap(map), mHeartHP(-1.0) {}
     GameMap* getGameMap() const {return mMap;}
-    static const double HEART_HEAL_PER_SECOND;
     static const double HEART_CRITICAL_FRACTION;
+    double mHeartHPFactor = 1.0;
+    double getHeartHPFactor() const;
     double getHeartMaxHP() const;
     double getHP(Tile* tile) const override;
     double getHeartHealthFraction() const;
@@ -531,9 +532,9 @@ int main()
 }
 '''
 
-temple_methods = temple[temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
+temple_methods = temple[temple.index('const double RoomDungeonTemple::HEART_CRITICAL_FRACTION'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
 temple_methods += '\n'.join(function(temple, signature) for signature in (
-    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
+    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartHPFactor(', 'double RoomDungeonTemple::getHeartMaxHP(', 'double RoomDungeonTemple::getHeartHealthFraction(',
     'void RoomDungeonTemple::exportToStream(', 'bool RoomDungeonTemple::importFromStream('))
 badge_start = gui.index('const int BADGE_SIZE = 128;')
 badge_helpers = ('float badgeClamp(', 'void badgeMix(', 'void badgeSet(', 'float badgeNoise(', 'float badgeSmoothstep(', 'float badgeSmoothMin(',
@@ -621,5 +622,5 @@ probe = configure_heart_probe(probe)
 with tempfile.TemporaryDirectory(prefix='odp-heart-ring-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     run([str(work / 'check.exe')], work)

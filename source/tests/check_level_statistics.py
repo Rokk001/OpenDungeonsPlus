@@ -665,7 +665,7 @@ def run_probe(name, code):
     with tempfile.TemporaryDirectory(prefix='odp-level-statistics-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(code)
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         for attempt in range(4):
             try:

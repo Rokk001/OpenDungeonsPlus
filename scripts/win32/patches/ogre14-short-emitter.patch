@@ -1,0 +1,39 @@
+Fix: a timed particle emitter loses the particles accrued in the last frame of its duration.
+
+Description
+  OGRE 14 changed ParticleEmitter::genConstantEmissionCount so that the particles accrued in a frame
+  (mEmissionRate * timeElapsed, kept in mRemainder) are handed out one frame later, and setEnabled() starts an
+  emitter with mRemainder = 1 so that its first particle appears at once. When the duration runs out in a frame,
+  the emitter is disabled with setEnabled(false), which overwrites mRemainder with 1 and discards everything
+  accrued in that last frame. The emitter therefore emits about emission_rate * duration minus up to one frame of
+  rate (OGRE 13 handed the accrual out in the same frame and emitted up to one frame more). For short timed
+  emitters this is a large share of the burst: "emission_rate 40, duration 0.1" gave 4 instead of 5 particles at
+  30 fps, "emission_rate 1000, duration 0.1" gave 101 instead of 133. Emitters without duration, with a negative
+  duration (single shot) or with a long duration are not affected visibly.
+
+  The fix returns the whole particles still pending in mRemainder together with the request of the last frame
+  before the emitter is disabled. It is the only change; the particle scripts stay as they are.
+
+Affected OGRE file
+  OgreMain/src/OgreParticleEmitter.cpp, ParticleEmitter::genConstantEmissionCount, the block
+  "if (mDurationRemain <= 0)" (around line 332 of the OGRE 14 tree used here).
+
+Reproduction
+  Load any particle system with an emitter "emission_rate 40" and "duration 0.1" (or an equivalent script) and
+  count the emitted particles with a fixed 30 fps clock (ParticleSystem::_update(1/30) repeatedly). Without the
+  patch the emitter emits 4, with the patch 6 (OGRE 13: 5; the extra one is the first particle that OGRE 14
+  emits on enabling). The same holds for every timed emitter whose last frame accrues one or more whole particles.
+
+diff --git a/OgreMain/src/OgreParticleEmitter.cpp b/OgreMain/src/OgreParticleEmitter.cpp
+--- a/OgreMain/src/OgreParticleEmitter.cpp
++++ b/OgreMain/src/OgreParticleEmitter.cpp
+@@ -331,5 +331,9 @@ namespace Ogre
+                 mDurationRemain -= timeElapsed;
+                 if (mDurationRemain <= 0) 
+                 {
++                    // Hand out the whole particles accrued in the last frame; setEnabled(false) below resets
++                    // mRemainder and would drop them
++                    intRequest += (unsigned short)mRemainder;
+                     // Disable, duration is out (takes effect next time)
+                     setEnabled(false);
+                 }

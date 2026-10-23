@@ -203,14 +203,14 @@ private:
     //! \brief Updates the portal mesh position.
     void updatePortalPosition();
 
-    //! \brief Finds the best diggable path between tileStart and tileDest.
-    //! Note that a path is returned even if tileDest is not reachable. It should go around
-    //! the undiggable tiles
-    //! Returns true if a path was found to the dungeon and false otherwise
+    //! \brief Finds the shortest path between tileStart and tileDest through tiles the
+    //! creature can walk on or dig, and fills tiles with the ones that have to be dug.
+    //! Returns false, with tiles left empty, if there is no such path.
     bool findBestDiggablePath(Tile* tileStart, Tile* tileDest, Creature* creature, std::vector<Tile*>& tiles);
 
     //! \brief Spawns a wave
     //! Announces a class only on its first successful arrival for a human owner.
+    //! If spawnedNames is not null, the names of the created creatures are added to it.
     void spawnWave(RoomPortalWaveData* roomPortalWaveData, uint32_t maxCreaturesToSpawn,
         std::vector<std::string>* spawnedNames = nullptr);
 

@@ -293,13 +293,18 @@ void RoomTorture::removeCreatureUsingRoom(Creature* creature)
 //! \brief Torture time multipliers in percent for the creature levels 1 to 10 (higher levels use the last one)
 static const double TORTURE_LEVEL_PERCENT[] = {100.0, 105.0, 110.0, 115.0, 120.0, 130.0, 140.0, 150.0, 200.0, 300.0};
 
+//! \brief Computes how many turns a creature must be tortured before it changes side.
+//! \param creature The tortured creature; its kind and level set the time
+//! \param torturingSeat The seat that tortures it; its torture research makes the conversion faster
+//! \return The number of turns of torture needed
 static double tortureTurnsToConvert(const Creature& creature, const Seat* torturingSeat)
 {
     uint32_t nbLevels = sizeof(TORTURE_LEVEL_PERCENT) / sizeof(TORTURE_LEVEL_PERCENT[0]);
     uint32_t index = std::min(std::max(creature.getLevel(), 1u), nbLevels) - 1;
     double seconds = creature.getDefinition()->getTortureTimeToConvert() * TORTURE_LEVEL_PERCENT[index] / 100.0;
     // The torture research makes the conversion faster
-    double speed = SkillManager::getResearchValue(torturingSeat, SkillType::roomTorture, 1.0);
+    double speed = SkillManager::getResearchValue(torturingSeat, SkillType::roomTorture, 1.0,
+        ResearchEffect::ConversionSpeed);
     return seconds * ODApplication::turnsPerSecond / speed;
 }
 
@@ -334,6 +339,8 @@ void RoomTorture::doUpkeep()
     }
 }
 
+//! \brief A tortured enemy creature that is about to die gives away one room of its owner that was not seen yet.
+//! \param creature The tortured creature
 void RoomTorture::revealEnemyInformation(Creature& creature)
 {
     if(creature.getSeat() == getSeat())

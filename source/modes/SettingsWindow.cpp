@@ -51,6 +51,65 @@
 #include <sstream>
 #include <functional>
 
+//! Top of the first custom video option in the video tab, in pixels below the standard widgets.
+const uint32_t CUSTOM_VIDEO_OPTIONS_TOP = 238;
+
+//! Height of the label of a custom video option and distance between two custom video options.
+const uint32_t CUSTOM_VIDEO_LABEL_HEIGHT = 34;
+const uint32_t CUSTOM_VIDEO_ROW_DISTANCE = 40;
+
+//! Names of the renderer options that do not need a new render window when changed.
+const std::string OPTION_VSYNC_INTERVAL = "VSync Interval";
+const std::string OPTION_REVERSED_Z_BUFFER = "Reversed Z-Buffer";
+const std::string OPTION_SEPARATE_SHADER_OBJECTS = "Separate Shader Objects";
+const std::string OPTION_DEBUG_LAYER = "Debug Layer";
+
+//! Whether a changed video option needs a new render window. The listed options apply to the open window.
+static bool requiresWindowRecreation(const std::string& optionName)
+{
+    return optionName != Config::VSYNC
+        && optionName != OPTION_VSYNC_INTERVAL
+        && optionName != OPTION_REVERSED_Z_BUFFER
+        && optionName != OPTION_SEPARATE_SHADER_OBJECTS
+        && optionName != OPTION_DEBUG_LAYER;
+}
+
+// Layout of the settings window when it is shown as a page of the main menu (pixels).
+static const float MENU_WINDOW_HALF_WIDTH = 400.0f;
+static const float MENU_WINDOW_TOP_OFFSET = 60.0f;
+static const float MENU_WINDOW_BOTTOM_MARGIN = 16.0f;
+static const float MENU_TABS_MARGIN = 10.0f;
+static const float MENU_TABS_TOP = 72.0f;
+static const float MENU_TITLE_HEIGHT = 60.0f;
+
+// Layout of the settings window when it is shown inside the game (pixels).
+static const float GAME_WINDOW_TOP = 64.0f;
+static const float GAME_WINDOW_BOTTOM_MARGIN = 192.0f;
+static const float GAME_PAGE_MARGIN = 8.0f;
+static const float GAME_TABS_TOP = 64.0f;
+static const float GAME_TITLE_BOTTOM = 48.0f;
+static const float GAME_MUSIC_CONTROL_LEFT = 32.0f;
+static const float GAME_MUSIC_CONTROL_RIGHT_MARGIN = 48.0f;
+static const float GAME_MUSIC_TEXT_TOP = 40.0f;
+static const float GAME_MUSIC_TEXT_BOTTOM = 66.0f;
+static const float GAME_MUSIC_SLIDER_TOP = 78.0f;
+static const float GAME_MUSIC_SLIDER_BOTTOM = 104.0f;
+
+//! Distance between the bottom of the tab control and the bottom of the settings window (pixels).
+static const float PAGE_TABS_BOTTOM_MARGIN = 108.0f;
+
+//! \brief Returns the title shown above the settings page with the given tab name.
+static std::string getPageTitle(const std::string& tabName)
+{
+    if(tabName == "Video")
+        return "Graphics Options";
+    if(tabName == "Audio")
+        return "Sound Options";
+    if(tabName == "Input")
+        return "Control Options";
+    return "Game Options";
+}
+
 SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPages, bool gamePage):
     mSettingsWindow(nullptr),
     mApplyWindow(nullptr),
@@ -75,53 +134,49 @@ SettingsWindow::SettingsWindow(CEGUI::Window* rootWindow, Gui& gui, bool menuPag
     if(menuPages)
     {
         mSettingsWindow->setLookNFeel("OD/MenuPageWindow");
-        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -400), CEGUI::UDim(0.5f, -60),
-            CEGUI::UDim(0.5f, 400), CEGUI::UDim(1, -16)));
+        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0.5f, -MENU_WINDOW_HALF_WIDTH),
+            CEGUI::UDim(0.5f, -MENU_WINDOW_TOP_OFFSET), CEGUI::UDim(0.5f, MENU_WINDOW_HALF_WIDTH),
+            CEGUI::UDim(1, -MENU_WINDOW_BOTTOM_MARGIN)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
         tabs->setTabHeight(CEGUI::UDim(0, 0));
-        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, 10), CEGUI::UDim(0, 72),
-            CEGUI::UDim(1, -10), CEGUI::UDim(1, -108)));
+        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, MENU_TABS_MARGIN), CEGUI::UDim(0, MENU_TABS_TOP),
+            CEGUI::UDim(1, -MENU_TABS_MARGIN), CEGUI::UDim(1, -PAGE_TABS_BOTTOM_MARGIN)));
         tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
         for(const char* page : {"Video", "Audio", "Input", "Game"})
             tabs->getChild(std::string(page) + "/" + page + "SP")->setUserString("TrimLeadingSpace", "true");
         CEGUI::Window* title = wmgr->createWindow("OD/MenuTitle", "PageTitle");
         title->setFont("MedievalSharp-20");
         title->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
-            CEGUI::UDim(1, 0), CEGUI::UDim(0, 60)));
+            CEGUI::UDim(1, 0), CEGUI::UDim(0, MENU_TITLE_HEIGHT)));
         title->setMousePassThroughEnabled(true);
         mSettingsWindow->addChild(title);
     }
     else if(gamePage)
     {
         mSettingsWindow->setLookNFeel("OD/GameSettingsWindow");
-        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 64),
-            CEGUI::UDim(1, 0), CEGUI::UDim(1, -192)));
+        mSettingsWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, GAME_WINDOW_TOP),
+            CEGUI::UDim(1, 0), CEGUI::UDim(1, -GAME_WINDOW_BOTTOM_MARGIN)));
         CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
-        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, 8), CEGUI::UDim(0, 64),
-            CEGUI::UDim(1, -8), CEGUI::UDim(1, -108)));
+        tabs->setArea(CEGUI::URect(CEGUI::UDim(0, GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_TABS_TOP),
+            CEGUI::UDim(1, -GAME_PAGE_MARGIN), CEGUI::UDim(1, -PAGE_TABS_BOTTOM_MARGIN)));
         tabs->getChild("__auto_TabPane__")->setLookNFeel("OD/MenuPageContent");
         CEGUI::Window* title = wmgr->createWindow("OD/StaticText", "PageTitle");
         title->setFont("MedievalSharp-20");
         title->setProperty("FrameEnabled", "False");
         title->setProperty("BackgroundEnabled", "False");
-        title->setArea(CEGUI::URect(CEGUI::UDim(0, 8), CEGUI::UDim(0, 8),
-            CEGUI::UDim(1, -8), CEGUI::UDim(0, 48)));
+        title->setArea(CEGUI::URect(CEGUI::UDim(0, GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_PAGE_MARGIN),
+            CEGUI::UDim(1, -GAME_PAGE_MARGIN), CEGUI::UDim(0, GAME_TITLE_BOTTOM)));
         title->setMousePassThroughEnabled(true);
         mSettingsWindow->addChild(title);
-        std::function<bool(const CEGUI::EventArgs&)> updateTitle = [tabs, title](const CEGUI::EventArgs&)
-        {
-            const CEGUI::String& name = tabs->getTabContentsAtIndex(tabs->getSelectedTabIndex())->getName();
-            title->setText(name == "Video" ? "Graphics Options" : name == "Audio" ? "Sound Options" :
-                name == "Input" ? "Control Options" : "Game Options");
-            return true;
-        };
         addEventConnection(tabs->subscribeEvent(CEGUI::TabControl::EventSelectionChanged,
-            CEGUI::Event::Subscriber(updateTitle)));
-        updateTitle(CEGUI::EventArgs());
+            CEGUI::Event::Subscriber(&SettingsWindow::onSelectedTabChanged, this)));
+        onSelectedTabChanged(CEGUI::EventArgs());
         tabs->getChild("Audio/AudioSP/MusicText")->setArea(CEGUI::URect(
-            CEGUI::UDim(0.5f, 32), CEGUI::UDim(0, 40), CEGUI::UDim(1, -48), CEGUI::UDim(0, 66)));
+            CEGUI::UDim(0.5f, GAME_MUSIC_CONTROL_LEFT), CEGUI::UDim(0, GAME_MUSIC_TEXT_TOP),
+            CEGUI::UDim(1, -GAME_MUSIC_CONTROL_RIGHT_MARGIN), CEGUI::UDim(0, GAME_MUSIC_TEXT_BOTTOM)));
         tabs->getChild("Audio/AudioSP/MusicSlider")->setArea(CEGUI::URect(
-            CEGUI::UDim(0.5f, 32), CEGUI::UDim(0, 78), CEGUI::UDim(1, -48), CEGUI::UDim(0, 104)));
+            CEGUI::UDim(0.5f, GAME_MUSIC_CONTROL_LEFT), CEGUI::UDim(0, GAME_MUSIC_SLIDER_TOP),
+            CEGUI::UDim(1, -GAME_MUSIC_CONTROL_RIGHT_MARGIN), CEGUI::UDim(0, GAME_MUSIC_SLIDER_BOTTOM)));
     }
 
     mApplyWindow = wmgr->loadLayoutFromFile("WindowApplyChanges.layout");
@@ -473,15 +528,11 @@ void SettingsWindow::initConfig()
         mRootWindow->getChild("SettingsWindow/MainTabControl/Video/VideoSP/UIScaleCombobox"));
     uiScaleCb->setReadOnly(true);
     uiScaleCb->resetList();
-    int configuredUiScale = 100;
-    std::istringstream uiScaleParser(config.getGameValue(Config::UI_SCALE, "100", false));
-    if(!(uiScaleParser >> configuredUiScale))
-        configuredUiScale = 100;
-    configuredUiScale = std::max(static_cast<int>(Gui::MIN_UI_SCALE_PERCENT),
-        std::min(static_cast<int>(Gui::MAX_UI_SCALE_PERCENT), configuredUiScale));
-    configuredUiScale = (configuredUiScale + 5) / 10 * 10;
+    int configuredUiScale = static_cast<int>(Gui::getConfiguredUiScalePercent());
+    configuredUiScale = (configuredUiScale + Gui::UI_SCALE_STEP_PERCENT / 2)
+        / Gui::UI_SCALE_STEP_PERCENT * Gui::UI_SCALE_STEP_PERCENT;
     for(uint32_t uiScale = Gui::MIN_UI_SCALE_PERCENT;
-        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += 10)
+        uiScale <= Gui::MAX_UI_SCALE_PERCENT; uiScale += Gui::UI_SCALE_STEP_PERCENT)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(
             Helper::toString(uiScale) + "%", uiScale);
@@ -534,13 +585,14 @@ void SettingsWindow::initConfig()
 
         // The text next to the combobox
         CEGUI::DefaultWindow* videoCbText = static_cast<CEGUI::DefaultWindow*>(videoTab->createChild("OD/StaticText", optionName + "_Text"));
-        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.4, 0), CEGUI::UDim(0, 34));
+        videoCbText->setArea(CEGUI::UDim(0, 20), CEGUI::UDim(0, CUSTOM_VIDEO_OPTIONS_TOP + offset), CEGUI::UDim(0.4, 0),
+                             CEGUI::UDim(0, CUSTOM_VIDEO_LABEL_HEIGHT));
         videoCbText->setText(optionName + ": ");
         videoCbText->setProperty("FrameEnabled", "False");
         videoCbText->setProperty("BackgroundEnabled", "False");
 
         CEGUI::Combobox* videoCb = static_cast<CEGUI::Combobox*>(videoTab->createChild("OD/Combobox", optionName));
-        videoCb->setArea(CEGUI::UDim(0.45, 0), CEGUI::UDim(0, 238 + offset), CEGUI::UDim(0.55, -48),
+        videoCb->setArea(CEGUI::UDim(0.5, 0), CEGUI::UDim(0, CUSTOM_VIDEO_OPTIONS_TOP + offset), CEGUI::UDim(0.5, -20),
                          CEGUI::UDim(0, config.possibleValues.size() * 17 + 30));
         videoCb->setReadOnly(true);
         videoCb->setSortingEnabled(true);
@@ -564,7 +616,7 @@ void SettingsWindow::initConfig()
             }
             ++cbIndex;
         }
-        offset += 40;
+        offset += CUSTOM_VIDEO_ROW_DISTANCE;
     }
 
     mGui.registerWindowHierarchy(mSettingsWindow);
@@ -715,12 +767,8 @@ bool SettingsWindow::saveConfig()
             resizeRenderWindow = true;
             continue;
         }
-        if(selected.first != Config::VSYNC && selected.first != "VSync Interval"
-            && selected.first != "Reversed Z-Buffer"
-            && selected.first != "Separate Shader Objects" && selected.first != "Debug Layer")
-        {
+        if(requiresWindowRecreation(selected.first))
             recreateRenderWindow = true;
-        }
     }
 
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
@@ -764,30 +812,14 @@ bool SettingsWindow::saveConfig()
                 frameListener.windowResized(window);
             }
             window->setVSyncInterval(static_cast<unsigned int>(Helper::toInt(
-                config.getVideoValue("VSync Interval", "1", false))));
+                config.getVideoValue(OPTION_VSYNC_INTERVAL, "1", false))));
             window->setVSyncEnabled(vsCheckBox->isSelected());
         }
     }
     catch(const std::exception& error)
     {
         OD_LOG_ERR("Could not apply video settings: " + std::string(error.what()));
-        std::map<std::string, std::string>::const_iterator fullscreen =
-            previousRendererOptions.find(Config::FULL_SCREEN);
-        if(fullscreen != previousRendererOptions.end())
-            renderer->setConfigOption(fullscreen->first, fullscreen->second);
-        std::map<std::string, std::string>::const_iterator videoMode =
-            previousRendererOptions.find(Config::VIDEO_MODE);
-        if(videoMode != previousRendererOptions.end())
-            renderer->setConfigOption(videoMode->first, videoMode->second);
-        for(const std::pair<const std::string, std::string>& option : previousRendererOptions)
-        {
-            if(option.first == Config::FULL_SCREEN || option.first == Config::VIDEO_MODE)
-                continue;
-            renderer->setConfigOption(option.first, option.second);
-        }
-        for(const std::pair<const std::string, std::string>& option : previousVideoConfig)
-            config.setVideoValue(option.first, option.second);
-        config.saveUserConfig();
+        ODFrameListener::restoreVideoSettings(previousRendererOptions, previousVideoConfig);
         initConfig();
         return false;
     }
@@ -808,11 +840,21 @@ void SettingsWindow::show()
 
 void SettingsWindow::showPage(const std::string& name)
 {
+    if(mSettingsWindow == nullptr)
+        return;
+
     show();
     static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"))->setSelectedTab(name);
-    mSettingsWindow->setText(name == "Video" ? "Graphics Options" :
-        name == "Audio" ? "Sound Options" : name == "Input" ? "Control Options" : "Game Options");
+    mSettingsWindow->setText(getPageTitle(name));
     mSettingsWindow->getChild("PageTitle")->setText(mSettingsWindow->getText());
+}
+
+bool SettingsWindow::onSelectedTabChanged(const CEGUI::EventArgs&)
+{
+    CEGUI::TabControl* tabs = static_cast<CEGUI::TabControl*>(mSettingsWindow->getChild("MainTabControl"));
+    const std::string name = tabs->getTabContentsAtIndex(tabs->getSelectedTabIndex())->getName().c_str();
+    mSettingsWindow->getChild("PageTitle")->setText(getPageTitle(name));
+    return true;
 }
 
 void SettingsWindow::hide()

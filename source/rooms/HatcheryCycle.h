@@ -33,6 +33,7 @@ struct HatcheryCycleSettings
         mGrowTurns(84),
         mCoopWait(15),
         mTilesPerChicken(1),
+        mCapacityFactor(1.0),
         mCareLightPercent(10),
         mCareCalmPercent(15),
         mTramplePercent(30),
@@ -58,6 +59,8 @@ struct HatcheryCycleSettings
     uint32_t mCoopWait;
     //! Number of hatchery tiles needed for one hen, chick or egg.
     uint32_t mTilesPerChicken;
+    //! Factor on the number of chickens that fit in the hatchery (the research of the hatchery raises it above 1).
+    double mCapacityFactor;
     //! Percent by which the laying times are shorter while a light (map light or wall torch) is close to the claimed hatchery.
     uint32_t mCareLightPercent;
     //! Percent by which the laying times are shorter while the claimed hatchery has no enemy in it. Adds to mCareLightPercent.
@@ -77,6 +80,7 @@ struct HatcheryCycleSettings
 //! \brief How well the keeper looks after a hatchery.
 struct HatcheryCare
 {
+    //! \brief Starts with no care at all: not claimed, not lit, no enemies.
     HatcheryCare() :
         mClaimed(false),
         mLit(false),
@@ -94,6 +98,7 @@ struct HatcheryCare
 //! \brief Number of animals of a hatchery per kind.
 struct HatcheryCounts
 {
+    //! \brief Starts with zero hens, chicks, eggs and roosters.
     HatcheryCounts() :
         mHens(0),
         mChicks(0),

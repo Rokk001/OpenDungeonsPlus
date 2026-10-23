@@ -99,7 +99,8 @@ def add_feather(buffers, faces, assignments, index, side, feather, root_uv, tip_
 # Add complete folded feather fans without changing existing geometry, skinning or material assignments.
 def author_mesh(source, skeleton_path, destination):
     skeleton = ET.parse(skeleton_path).getroot()
-    bones = {bone.get('name'): int(bone.get('id')) for bone in skeleton.find('bones')}
+    # OGRE 14 writes no id attribute; the bone index is then the order in the file.
+    bones = {bone.get('name'): int(bone.get('id', index)) for index, bone in enumerate(skeleton.find('bones'))}
     tree = ET.parse(source)
     mesh = tree.getroot()
     geometry = mesh.find('sharedgeometry')

@@ -61,6 +61,6 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 with tempfile.TemporaryDirectory(prefix='odp-combat-facing-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{prefix / "include/OGRE"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{prefix / "include/OGRE"}',
                     'check.cpp', '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

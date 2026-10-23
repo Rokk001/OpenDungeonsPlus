@@ -64,6 +64,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
+#include <optional>
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -145,6 +146,7 @@ void ODApplication::startServer()
     server.stopServer();
 }
 
+//! \brief Creates the window and runs the client main loop (SFML 3 window and event handling).
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -203,14 +205,20 @@ void ODApplication::startClient()
 #ifdef OD_USE_SFML_WINDOW
     
     // Check if the config specifies fullscreen or windowed
-    sf::Uint32 style = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes" && sf::VideoMode(w, h).isValid() ? sf::Style::Fullscreen : sf::Style::Default;
+    const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes" && sf::VideoMode({w, h}).isValid();
 
     // Create an SFML window
     // we make sure to grab the right bit depth from the current desktop mode as otherwise full screen
     // can end up not working properly.
     // TODO: Check anti-aliasing settings here.
-    sf::RenderWindow sfmlWindow(sf::VideoMode(w, h, sf::VideoMode::getDesktopMode().bitsPerPixel)
-                                , windowTitle, style, sf::ContextSettings(32, 0, 2, 1));
+    sf::ContextSettings contextSettings;
+    contextSettings.depthBits = 32;
+    contextSettings.stencilBits = 0;
+    contextSettings.antiAliasingLevel = 2;
+    contextSettings.majorVersion = 1;
+    contextSettings.minorVersion = 1;
+    sf::RenderWindow sfmlWindow(sf::VideoMode({w, h}, sf::VideoMode::getDesktopMode().bitsPerPixel)
+                                , windowTitle, sf::Style::Default, fullscreen ? sf::State::Fullscreen : sf::State::Windowed, contextSettings);
 
     // sfmlWindow.setActive(true);
     sfmlWindow.setMouseCursorVisible(false);
@@ -221,7 +229,7 @@ void ODApplication::startClient()
     Ogre::RenderWindow* renderWindow = [&](){
 		Ogre::NameValuePairList misc;
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
-		size_t winHandle = reinterpret_cast<size_t>(sfmlWindow.getSystemHandle());
+		size_t winHandle = reinterpret_cast<size_t>(sfmlWindow.getNativeHandle());
 		size_t winGlContext = reinterpret_cast<size_t>(wglGetCurrentContext());
 		misc["externalWindowHandle"] = Helper::toString(winHandle);
 		misc["externalGLContext"] = Helper::toString(winGlContext);
@@ -229,11 +237,11 @@ void ODApplication::startClient()
 #else
                 // misc["currentGLContext"] = Ogre::String("true");
                 misc["externalWindowHandle"] =
-    Helper::toString(reinterpret_cast<size_t>(sfmlWindow.getSystemHandle()));
+    Helper::toString(reinterpret_cast<size_t>(sfmlWindow.getNativeHandle()));
 
     
 #endif
-        return ogreRoot.createRenderWindow(windowTitle, w, h, style == sf::Style::Fullscreen, &misc);
+        return ogreRoot.createRenderWindow(windowTitle, w, h, fullscreen, &misc);
     }();
     renderWindow->setVisible(true);
 #else /* OD_USE_SFML_WINDOW */
@@ -316,21 +324,21 @@ void ODApplication::startClient()
     bool running = true;
     while(running)
     {
-        sf::Event event;
-        while (sfmlWindow.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
+        while (const std::optional<sf::Event> event = sfmlWindow.pollEvent()) {
+            if (event->is<sf::Event::Closed>())
             {
                 frameListener.requestExit();
                 break;
             }
             else
             {
-                if (event.type == sf::Event::Resized)
+                const sf::Event::Resized* resized = event->getIf<sf::Event::Resized>();
+                if (resized != nullptr)
                 {
-                    renderWindow->resize(event.size.width, event.size.height);
+                    renderWindow->resize(resized->size.x, resized->size.y);
                     frameListener.windowResized(renderWindow);
                 }
-                frameListener.getModeManager()->getInputManager().handleSFMLEvent(event);
+                frameListener.getModeManager()->getInputManager().handleSFMLEvent(*event);
             }
         }
         if(RunLevelTest::isFinished())

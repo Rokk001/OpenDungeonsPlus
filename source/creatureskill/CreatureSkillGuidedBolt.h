@@ -27,14 +27,21 @@
 class CreatureSkillGuidedBolt : public CreatureSkillMissileLaunch
 {
 public:
+    //! \brief Destroys the skill.
     virtual ~CreatureSkillGuidedBolt()
     {}
 
+    //! \brief Returns the name under which the skill is registered.
     virtual const std::string& getSkillName() const override;
 
+    //! \brief Returns a copy of the skill with the same parameters.
     virtual CreatureSkillGuidedBolt* clone() const override;
 
 protected:
+    //! \brief The guided bolt damage is multiplied by the SkillDamageFactor of the creature type.
+    virtual bool appliesSkillDamageFactor() const override
+    { return true; }
+
     //! \brief Creates a guided single-target shot and records the shooter for hit-result events.
     virtual MissileOneHit* createMissile(GameMap& gameMap, Creature* creature, const Ogre::Vector3& direction,
         double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject, bool ko,

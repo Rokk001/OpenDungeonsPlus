@@ -1,4 +1,4 @@
-"""Noncompiling regression for the top-square profile view and uniform UI fit."""
+"""Noncompiling regression for whole square portraits, unchanged fallback crop and uniform UI fit."""
 from pathlib import Path
 import math
 import re
@@ -11,7 +11,9 @@ assert 'CEGUI::Rectf(0.0f, 0.0f, side, side)' in helper
 assert 'left' not in helper and 'rotate' not in helper
 appearance = (root / 'source/render/CreatureAppearancePicture.cpp').read_text()
 portrait = (root / 'source/render/CreaturePortrait.cpp').read_text()
-assert 'image.setArea(getProfilePortraitArea(static_cast<float>(width), static_cast<float>(height)))' in appearance
+assert 'image.setArea(CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)))' in appearance
+assert 'width != 1024 || height != 1024' in appearance
+assert 'getProfilePortraitArea(' not in appearance
 profile = portrait[portrait.index('const CEGUI::Image& getCreatureProfilePortraitImage('):]
 assert profile.count('return getProfileFallbackImage(portraitKey);') == 2
 assert 'image.setArea(getProfilePortraitArea(static_cast<float>(width), static_cast<float>(height)))' in profile
@@ -47,4 +49,4 @@ for width, height in [(887,1774), (221,443), (512,1024), (256,256), (443,221)]:
         # Top-left and rightward source coordinates remain unchanged, y0 is zero.
         source = [(0,0), (side,0), (0,side), (side,side)]
         assert source[1][0] > source[0][0] and source[0][1] == 0
-print('profile portrait crop ok: composed/tinted/raw fallback, top square and uniform fit')
+print('profile portrait crop ok: whole JPEG square, unchanged tinted/raw fallback and uniform fit')

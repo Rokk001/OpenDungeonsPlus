@@ -8,6 +8,8 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Rebuilt research tree with three tabs, four tiers and gates for levels 2 and 3; research levels scale rooms, traps, doors and spells; new keeper research Dominion, Heart Fortitude, Heart Mending and Mana Flow.
+* Windows are now limited to the screen size at every UI scale
 * Equip twelve creature types with fitted weapons without additional weapon damage or defence, classify held equipment by type and occupied hands, and preserve raw melee damage per second before armour when weapon recovery is longer. Preserve original animation precision when adding weapon mounts.
 
 * Give hens five seconds to lay, eggs thirty seconds to hatch and chicks sixty seconds to grow at normal game speed; preserve each full life stage instead of aging it on its creation turn, intentionally slowing food production.
@@ -26,6 +28,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 * Leave transparent gaps for depleted creature health segments so they no longer obscure creature details
 * The size shown beside a multi-tile selection now matches the width and height of the marked tiles
 * Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
+* Creature strength follows the wage: a creature with twice the wage is as strong as two of half the wage; the Champion fights at level 30 with a crown instead of a level.
 
 ### Version 0.7.3 - 20 September 2026
 

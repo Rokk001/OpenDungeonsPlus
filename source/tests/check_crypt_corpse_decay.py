@@ -26,6 +26,7 @@ models = sorted(set(re.findall(r'^\s*MeshName\s+(\S+)',
 probe = r'''
 #include <Ogre.h>
 #include <OgreDefaultHardwareBufferManager.h>
+#include <OgreScriptCompiler.h>
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -39,11 +40,12 @@ bool sameRotation(const Ogre::Quaternion& a,const Ogre::Quaternion& b){
 }
 HELPERS
 enum class GameEntityType {creature,other};
+struct BuildingObject {};
 namespace EntityAnimation {const std::string rot_anim="Rot",die_anim="Die";}
 struct Room;
 struct Tile {int x,y;Room* room=nullptr;int getX(){return x;}int getY(){return y;}Room* getCoveringRoom(){return room;}};
 struct GameMap {Tile destination{4,5};std::map<std::pair<int,int>,Tile*> extra;
- Tile* getTile(int x,int y){if(x==4&&y==5)return &destination;auto i=extra.find({x,y});return i==extra.end()?nullptr:i->second;}};
+ Tile* getTile(int x,int y){if(x==4&&y==5)return &destination;std::map<std::pair<int,int>,Tile*>::iterator i=extra.find({x,y});return i==extra.end()?nullptr:i->second;}};
 struct GameEntity {GameEntityType type=GameEntityType::creature;GameEntityType getObjectType(){return type;}
  std::string getName(){return "test";}};
 struct Creature:GameEntity {
@@ -56,10 +58,9 @@ struct Creature:GameEntity {
 };
 enum class ActiveSpotPlace {activeSpotCenter,other};
 struct Room {void notifyActiveSpotRemoved(ActiveSpotPlace,Tile*){}};
-struct BuildingObject {};
 struct RoomCrypt:Room {
- GameMap map;std::map<Tile*,std::pair<Creature*,int32_t>> mRottingCreatures;
- std::map<Tile*,BuildingObject*> objects;const auto& getBuildingObjects(){return objects;}
+ GameMap map;std::map<Tile*,std::pair<Creature*,double>> mRottingCreatures;
+ std::map<Tile*,BuildingObject*> objects;const std::map<Tile*,BuildingObject*>& getBuildingObjects(){return objects;}
  RoomCrypt(){map.destination.room=this;}
  GameMap* getGameMap(){return &map;}std::string getName(){return "crypt";}
  Tile* getDeliveryTile(Tile*);bool hasCarryEntitySpot(GameEntity*);Tile* askSpotForCarriedEntity(GameEntity*);
@@ -87,11 +88,11 @@ int main(int argc,char** argv){try{
  room.mRottingCreatures[&spot]={&corpse,-1};room.notifyActiveSpotRemoved(ActiveSpotPlace::activeSpotCenter,&spot);
  check(corpse.state=="unchanged","removing a reserved but unused spot leaves carried corpse unchanged");
 
- RoomCrypt delivery;Tile grave{4,6},side{3,6,&delivery};Creature body;BuildingObject blocker;
+ BuildingObject marker;RoomCrypt delivery;Tile grave{4,6},side{3,6,&delivery};Creature body;
  delivery.mRottingCreatures[&grave]={nullptr,-1};delivery.map.extra[{3,6}]=&side;
  check(delivery.hasCarryEntitySpot(&body),"available empty delivery tile is advertised");
  body.alive=true;check(!delivery.hasCarryEntitySpot(&body),"crypt still rejects living creatures");body.alive=false;
- delivery.objects[&delivery.map.destination]=&blocker;
+ delivery.objects[&delivery.map.destination]=&marker;
  check(delivery.askSpotForCarriedEntity(&body)==&side,"statue redirects reservation to free side tile");
  check(delivery.mRottingCreatures[&grave].first==&body&&!delivery.hasCarryEntitySpot(&body),"one corpse reserves one grave");
  carrier.tile=&delivery.map.destination;body.tile=carrier.tile;
@@ -100,7 +101,7 @@ int main(int argc,char** argv){try{
  check(delivery.askSpotForCarriedEntity(&body)==&side,"interrupted reservation can be reused");
  carrier.tile=body.tile=&side;delivery.notifyCarryingStateChanged(&carrier,&body);
  check(body.state=="Rot"&&!body.onTile&&delivery.mRottingCreatures[&grave].second==0,"free side delivery starts unchanged decay");
- delivery.mRottingCreatures[&grave]={nullptr,-1};delivery.objects[&side]=&blocker;
+ delivery.mRottingCreatures[&grave]={nullptr,-1};delivery.objects[&side]=&marker;
  check(!delivery.hasCarryEntitySpot(&body)&&delivery.askSpotForCarriedEntity(&body)==nullptr,"blocked grave is never reserved");
  delivery.objects.clear();delivery.map.destination.room=nullptr;side.room=nullptr;
  check(delivery.getDeliveryTile(&grave)==nullptr,"delivery never targets another room or outside the map");
@@ -144,7 +145,7 @@ int main(int argc,char** argv){try{
  Ogre::MaterialManager::getSingleton().create("CorpseFlies","Graphics");
  std::ifstream stream(std::string(argv[1])+"/particles/CorpseDecay.particle");
  Ogre::DataStreamPtr data(new Ogre::FileStreamDataStream("CorpseDecay.particle",&stream,false));
- Ogre::ParticleSystemManager::getSingleton().parseScript(data,"Graphics");
+ Ogre::ScriptCompilerManager::getSingleton().parseScript(data,"Graphics");
  Ogre::ParticleSystem* effect=scene->createParticleSystem("corpse","CorpseDecay");
  check(effect->getParticleQuota()==24,"fly count is bounded");
  check(effect->getNumEmitters()==1&&effect->getNumAffectors()==1,"fly script parses with emitter and movement affector");
@@ -166,7 +167,7 @@ probe = probe.replace('MODELS', ','.join('"' + model + '"' for model in models))
 with tempfile.TemporaryDirectory(prefix='odp-crypt-decay-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work,

@@ -1,0 +1,20 @@
+diff --git a/cegui/include/CEGUI/RendererModules/Ogre/Renderer.h b/cegui/include/CEGUI/RendererModules/Ogre/Renderer.h
+index 9fd52af0c..48ecf9339 100644
+--- a/cegui/include/CEGUI/RendererModules/Ogre/Renderer.h
++++ b/cegui/include/CEGUI/RendererModules/Ogre/Renderer.h
+@@ -49,12 +49,11 @@
+ #   pragma warning(disable : 4251)
+ #endif
+ 
++// Ogre declares these classes itself; in debug builds they live in an inline namespace, so they must not be forward declared here
++#include <OgrePrerequisites.h>
++
+ namespace Ogre
+ {
+-class Root;
+-class RenderSystem;
+-class RenderTarget;
+-class Pass;
+ #if (CEGUI_OGRE_VERSION < ((1 << 16) | (9 << 8) | 0))
+ class TexturePtr;
+ #else

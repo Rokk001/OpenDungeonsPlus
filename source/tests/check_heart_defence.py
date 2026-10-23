@@ -286,5 +286,5 @@ assert sorted(offenders) == ["source/game/Seat.cpp", "source/game/Seat.h", "sour
 with tempfile.TemporaryDirectory(prefix="odp-heart-defence-") as directory:
     work = Path(directory)
     (work / "check.cpp").write_text(probe)
-    subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++14", "check.cpp", "/Fecheck.exe"], cwd=work, check=True)
+    subprocess.run(["cl", "/nologo", "/EHsc", "/MD", "/std:c++17", "check.cpp", "/Fecheck.exe"], cwd=work, check=True)
     subprocess.run([str(work / "check.exe")], cwd=work, check=True)

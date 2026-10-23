@@ -83,6 +83,7 @@ def check_catalogue(events, error):
 
 
 def read_lines(path):
+    """Returns the lines of the file as lists of words, without comments and empty lines."""
     lines = []
     with open(path, encoding="utf-8") as handle:
         for raw in handle:
@@ -93,6 +94,7 @@ def read_lines(path):
 
 
 def is_number(text):
+    """True if the text can be read as a number."""
     try:
         float(text)
         return True
@@ -101,6 +103,7 @@ def is_number(text):
 
 
 def creature_names():
+    """Returns the names of all creatures of config/creatures.cfg."""
     names = set()
     with open(os.path.join(ROOT, "config", "creatures.cfg"), encoding="utf-8") as handle:
         for raw in handle:
@@ -111,6 +114,7 @@ def creature_names():
 
 
 def collect(pattern, directory, extension):
+    """Returns what the regular expression finds in all files of the directory with this extension."""
     found = set()
     for name in os.listdir(os.path.join(ROOT, directory)):
         if not name.endswith(extension):
@@ -121,6 +125,7 @@ def collect(pattern, directory, extension):
 
 
 def main():
+    """Checks the whole file, prints every problem and returns the exit code."""
     errors = []
     lines = read_lines(os.path.join(ROOT, "config", "creatureReactions.cfg"))
     creatures = creature_names()
@@ -128,6 +133,7 @@ def main():
     particles = collect(r"^\s*particle_system\s+(\S+)", "particles", ".particle")
 
     def error(text):
+        """Remembers one problem."""
         errors.append(text)
 
     if not lines or lines[0] != ["[CreatureReactions]"] or lines[-1] != ["[/CreatureReactions]"]:
@@ -291,6 +297,7 @@ def check_drag_events(events, error):
 
 
 def check_variant(key, words, variant, event, creatures, groups, materials, particles, error):
+    """Checks one line of a variant: known key, value types and that icons, effects, creatures, groups and jobs exist."""
     where = "event %s" % (event["Name"] if event else "?")
     if key not in VARIANT_KEYS:
         error("%s: unknown variant key %s" % (where, key))
@@ -366,6 +373,7 @@ def check_material_lookups(error):
 
 
 def finish(errors, nb_events=0):
+    """Prints the problems (or the summary) and returns the exit code."""
     if errors:
         for text in errors:
             print("ERROR: " + text)

@@ -21,6 +21,8 @@
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "ODApplication.h"
 #include "rooms/RoomManager.h"
@@ -177,6 +179,7 @@ Tile* RoomGuardRoom::getPostForCreature(Creature& creature)
     return post;
 }
 
+//! \brief A guard stands duty or patrols; the duty makes it tired by the amount the guard room research sets.
 bool RoomGuardRoom::useRoom(Creature& creature, bool forced)
 {
     Tile* post = getPostForCreature(creature);
@@ -197,8 +200,8 @@ bool RoomGuardRoom::useRoom(Creature& creature, bool forced)
         return false;
     }
 
-    // On duty: the guard stands still, watching. Enemies in sight are handled by the
-    // creature behaviours that run before this action.
+    // On duty: the guard stands still, watching, until it is time to patrol. Enemies in sight are
+    // handled by the creature behaviours that run before this action.
     // After a while on duty the guard patrols to a watch banner
     int64_t turn = getGameMap()->getTurnNumber();
     std::map<Creature*, int64_t>::iterator patrolIt = mNextPatrolTurn.find(&creature);
@@ -219,7 +222,8 @@ bool RoomGuardRoom::useRoom(Creature& creature, bool forced)
     }
 
     creature.setAnimationState(EntityAnimation::idle_anim);
-    creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomWakefulnessPerDuty"));
+    creature.jobDone(SkillManager::getResearchValue(getSeat(), SkillType::roomGuardRoom,
+        ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomWakefulnessPerDuty"), ResearchEffect::WakefulnessPerDuty));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMax")));
 

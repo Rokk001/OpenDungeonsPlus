@@ -13,10 +13,10 @@
 
 //! \brief Settings of the Dungeonbook appearance (config/dungeonbook-appearance.cfg).
 //! Pure source without any Ogre dependency. Line based, TAB separated, '#' starts a comment:
-//!   AssetRoot<TAB>folder with the <catalog-id>/manifest.cfg files, relative paths are resolved by the caller
+//!   AssetRoot<TAB>folder with the <catalog-id>/index.cfg files, relative paths are resolved by the caller
 //!                 against the game data path
-//!   MaxCachedPictures<TAB>number of composed pictures kept at the same time
-//!   MaxCacheMegabytes<TAB>memory limit of the composed pictures
+//!   MaxCachedPictures<TAB>number of whole portraits kept at the same time
+//!   MaxCacheMegabytes<TAB>memory limit of the whole portraits
 //! Missing or bad entries keep their default and are listed in getWarnings(); the caller logs them once.
 class DungeonbookAppearanceConfig
 {
@@ -32,7 +32,7 @@ public:
     //! \brief Same for a stream, source only names the file in the warnings.
     void loadFromStream(std::istream& is, const std::string& source);
 
-    //! Empty if the config does not name one, then the caller uses materials/portraits/variants
+    //! Empty if the config does not name one, then the caller uses materials/portraits/whole
     const std::string& getAssetRoot() const
     { return mAssetRoot; }
 

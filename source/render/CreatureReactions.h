@@ -56,6 +56,7 @@ enum class GameEntityType;
 class CreatureReactions : public Ogre::Singleton<CreatureReactions>
 {
 public:
+    //! \brief How much of the reactions a client shows (the client option "Creature reactions").
     enum class Mode
     {
         //! Everything is shown
@@ -66,12 +67,19 @@ public:
         off
     };
 
+    //! \brief Creates the reactions of a client and reads creatureReactions.cfg from the config path.
+    //! \param gameMap The client game map whose creatures react.
+    //! \param configPath The system config path with the trailing separator.
     CreatureReactions(GameMap* gameMap, const std::string& configPath);
+    //! \brief Destroys the reactions.
     ~CreatureReactions();
 
+    //! \brief Converts the option text ("full", "reduced", "off") to a mode; unknown text gives full.
     static Mode modeFromString(const std::string& text);
+    //! \brief Converts a mode to the option text ("full", "reduced", "off").
     static std::string modeToString(Mode mode);
 
+    //! \brief Returns the current mode.
     inline Mode getMode() const
     { return mMode; }
 
@@ -180,9 +188,11 @@ public:
     //! \brief True if the creature is on the screen and not too far from the camera
     bool isCreatureNearCamera(Creature* creature) const;
 
+    //! \brief Returns the loaded reaction configuration.
     inline const CreatureReactionConfig& getConfig() const
     { return mConfig; }
 
+    //! \brief Returns the number of reactions that are running at the moment.
     inline uint32_t getNbRunning() const
     { return static_cast<uint32_t>(mRunning.size()); }
 
@@ -363,6 +373,7 @@ private:
     };
 
     //! \brief Starts the configured reaction, using articulated resting clips when available.
+    //! Returns false if nothing could be shown.
     bool startReaction(Creature* creature, const ReactionEvent& event, const ReactionVariant& variant,
         bool forced);
     //! \brief Chooses a variant that fits the creature, randomly weighted. nullptr if none fits.
@@ -390,16 +401,19 @@ private:
     //! \brief The event that is shown now and then while the creature goes on with what the animation
     //! shows (empty if the creature does not do such a thing)
     std::string getOngoingEvent(const Creature* creature, const std::string& clip) const;
+    //! \brief Remembers that the creature goes on with the work of the event, to try a reaction now and then
     void startOngoing(Creature* creature, const std::string& eventName);
     //! \brief The creature starts to do something else than before (newEvent is empty or the event of the
     //! new ongoing work): the work it was doing ends and may have a done moment
     void finishOngoing(Creature* creature, const std::string& newEvent);
+    //! \brief Tries the reaction of every ongoing work whose time has come
     void updateOngoing();
     //! \brief While a bout goes on in an arena, the creatures of its keeper that watch it from within the spectator
     //! distance cheer, and the crowd of the arena cheers (confetti and shouting of the room ambience)
     void scanArenaSpectators();
     //! \brief True if the creature stands in a room where the work is done with the attack animation
     bool isWorkingInRoom(const Creature* creature) const;
+    //! \brief True if the creature type, group, job and sleep need allow the variant.
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;
     //! \brief "happy", "neutral" or "unhappy": the mood of the creature as far as the client knows it. A creature
     //! that just arrived through a portal uses the mood the server told for the arrival.
@@ -441,15 +455,29 @@ private:
     static bool areFacingEachOther(const Creature* first, const Creature* second);
 
     //! \brief Another idle creature close by shows the event a moment later (the yawn that spreads)
+    //! \param creature The creature that shows the event first
+    //! \param eventName The event the neighbours show
     void spreadTo(Creature* creature, const std::string& eventName);
     //! \brief Shows the event on the creature and lets it turn its head to the point
+    //! \param creature The creature that shows the event
+    //! \param eventName The event to show
+    //! \param target The point the creature turns its head to
+    //! \return True if the reaction was started
     bool triggerLook(Creature* creature, const std::string& eventName, const Ogre::Vector3& target);
+    //! \brief True if the event (a victory or a level up) makes a creature proud for a while
     static bool isProudEvent(const std::string& eventName);
+    //! \brief True if the motion needs the creature to stand where it is (it does not move the model away)
     static bool isStandingMotion(ReactionMotion::Type type);
 
     //! \brief Sprite props (balls, a coin, pebbles, ...) of the bored creatures
+    //! \param reaction The running reaction that owns the props
+    //! \param creature The creature the props belong to
+    //! \param variant The variant that names the prop, its sprite, count and size
+    //! \return False if the sprite is missing or the creature has no model to attach the props to
     bool createProps(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
+    //! \brief Moves the sprites of the props of a reaction to the place of the current moment
     void updateProps(RunningReaction& reaction, Creature* creature);
+    //! \brief Destroys the sprites and the scene node of the props of a reaction, if it has any
     void removeProps(RunningReaction& reaction);
     //! \brief Small models that fall off the creature and lie on the floor (shackles of a converted prisoner)
     bool createFallingProps(RunningReaction& reaction, Creature* creature, const ReactionProp& prop);
@@ -471,16 +499,24 @@ private:
     bool startClip(RunningReaction& reaction, Creature* creature, const ReactionVariant& variant);
     //! \brief Removes an overlay while keeping a clip enabled if gameplay now uses it as its base.
     void stopClip(RunningReaction& reaction, Creature* creature);
+    //! \brief Lifts the creature scene node by the height the procedural motion (hop) has reached now.
     void applyMotion(RunningReaction& reaction, Creature* creature);
     //! \brief Removes the pose offset while preserving the reaction clock.
     void clearMotion(RunningReaction& reaction, Creature* creature);
+    //! \brief Attaches the named particle effect to the creature; returns false if it does not exist.
     bool addParticles(RunningReaction& reaction, Creature* creature, const std::string& effect);
+    //! \brief Destroys the particle systems the reaction created.
     void removeParticles(RunningReaction& reaction);
 
+    //! \brief Returns the running reaction of the creature, or nullptr if it has none.
     RunningReaction* findRunning(const std::string& creatureName);
+    //! \brief Removes the running reaction of the creature from the list.
     void eraseRunning(const std::string& creatureName);
+    //! \brief Returns the render entity of the creature, or nullptr if it has none.
     Ogre::Entity* getCreatureEntity(const Creature* creature) const;
+    //! \brief Logs a missing clip, icon or effect once per kind and name.
     void logMissingOnce(const std::string& kind, const std::string& name);
+    //! \brief Deletes the cooldown entries that are over.
     void pruneCooldowns();
 
     GameMap* mGameMap;

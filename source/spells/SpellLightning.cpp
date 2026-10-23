@@ -24,6 +24,8 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -131,6 +133,7 @@ void SpellLightning::checkSpellCast(GameMap* gameMap, const InputManager& inputM
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the damage follows the lightning research.
 bool SpellLightning::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -175,8 +178,10 @@ bool SpellLightning::castSpell(GameMap* gameMap, Player* player, ODPacket& packe
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    double damage = Random::Double(ConfigManager::getSingleton().getSpellConfigDouble("LightningDamageMin"),
-        ConfigManager::getSingleton().getSpellConfigDouble("LightningDamage"));
+    double damage = Random::Double(SkillManager::getResearchValue(player->getSeat(), SkillType::spellLightning,
+        ConfigManager::getSingleton().getSpellConfigDouble("LightningDamageMin"), ResearchEffect::Damage),
+        SkillManager::getResearchValue(player->getSeat(), SkillType::spellLightning,
+        ConfigManager::getSingleton().getSpellConfigDouble("LightningDamage"), ResearchEffect::Damage));
     creature->takeDamage(nullptr, damage, 0.0, 0.0, 0.0, pos, false);
     creature->stun(creature->getDefinition()->getTurnsStunDropped());
     fireSpellEffect(*pos, "Lightning", "LightningCast");

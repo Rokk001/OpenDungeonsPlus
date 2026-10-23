@@ -65,7 +65,8 @@ struct Creature:GameEntity {CreatureDefinition definition;Creature(Seat* s,bool 
  const CreatureDefinition* getDefinition()const{return &definition;}};
 struct GameMap {bool editor=false;int fights=0;
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}
- void addManaToSeat(int,int){}uint32_t getHeartDestroyedReward()const{return 0;}};
+ void addManaToSeat(int,int){}uint32_t getHeartDestroyedReward()const{return 0;}
+ static const uint32_t SKIRMISH_HEART_REWARD_SPECIALS=1;static const uint32_t SKIRMISH_HEART_REWARD_ROOMS_AND_LAND=2;};
 struct TreasuryObject {TreasuryObject(GameMap*,int){}void addToGameMap(){}void createMesh(){}void setPosition(Ogre::Vector3){}};
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):tile(t){}Tile* getPositionTile(){return tile;}bool notifyRemoveAsked(){return true;}};
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
@@ -97,7 +98,7 @@ struct RoomDungeonTemple:Room {
  bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);Tile* getHeartTile()const;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  INLINE_METHODS
- static const double HEART_HEAL_PER_SECOND;static const double HEART_CRITICAL_FRACTION;double getHeartMaxHP()const;
+ static const double HEART_CRITICAL_FRACTION;double mHeartHPFactor=1.0;double getHeartHPFactor()const;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -112,8 +113,9 @@ HEART_OBJECT;
 bool RoomDungeonTemple::isTreasuryTile(Tile*)const{return false;}
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*){}
 Tile* RoomDungeonTemple::getHeartTile()const{return nullptr;}
-int main(){int checks=0,failures=0;
- auto check=[&](bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}};
+int checks=0,failures=0;
+void check(bool ok,const char* msg){++checks;if(!ok){++failures;std::cout<<"FAIL "<<msg<<'\n';}}
+int main(){
  Player ownerPlayer;Seat owner{1,&ownerPlayer},ally{1},enemy{2,nullptr,5};Tile centre,floor;BuildingObject object{&centre};
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre,"DungeonHeartObjectHealthy");
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
@@ -135,6 +137,19 @@ int main(){int checks=0,failures=0;
  check(heart.takeHeartDamage(&attacker,99,0,0,0,&floor)==0,"enemy cannot damage the floor");
  check(core.takeDamage(&attacker,4,5,6,7,&centre,false)==16,"actual heart entity receives damage");
  check(heart.getHP(nullptr)==9984&&heart.floorHP==250,"heart damage never reduces floor health");
+ // The research of the heart: the maximum follows the heart health factor, the current health grows with it, the healing follows its own factor
+ {RoomDungeonTemple h(&map,&owner);h.mHeartHP=5000;gResearchHeartHP=1.698;h.doUpkeep();
+  check(std::abs(h.getHeartMaxHP()-16980.0)<1e-6,"the heart health research raises the maximum");
+  check(std::abs(h.getHP(nullptr)-(5000*1.698+2.5/1.4))<1e-6,"the current health grows with the maximum when a level is reached");
+  gResearchHeartHP=2.474;h.doUpkeep();
+  check(std::abs(h.getHP(nullptr)-((5000*1.698+2.5/1.4)*2.474/1.698+2.5/1.4))<1e-6,"the next level scales by the ratio of the factors");
+  gResearchHeartHP=1.0;
+  RoomDungeonTemple fresh(&map,&owner);gResearchHeartHP=1.698;fresh.doUpkeep();
+  check(std::abs(fresh.getHP(nullptr)-16980.0)<1e-6,"an undamaged heart is at the new maximum");
+  gResearchHeartHP=1.0;
+  RoomDungeonTemple mender(&map,&owner);mender.mHeartHP=1000;gResearchHeartHeal=2.0;mender.doUpkeep();
+  check(std::abs(mender.getHP(nullptr)-(1000+2*2.5/1.4))<1e-9,"the heart healing research multiplies the healing per second");
+  gResearchHeartHeal=1.0;}
  check(heart.dead==0&&map.fights==1,"nonlethal hit reports combat without death");
  heart.doUpkeep();check(heart.removed==0&&heart.upkeep==1,"living heart retains all floor tiles");
  check(std::abs(heart.getHP(nullptr)-(9984+2.5/1.4))<1e-9,"a living damaged heart heals 2.5 per second, per turn 2.5 / turnsPerSecond");
@@ -236,11 +251,11 @@ inline = '\n'.join(function(header, sig) for sig in
 methods = '\n'.join(function(source, sig) for sig in (
     'double RoomDungeonTemple::getHeartHealthFraction(', 'HeartHealthTier RoomDungeonTemple::computeHeartHealthTier(',
     'void RoomDungeonTemple::checkHeartHealthTier(',
-    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
+    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartHPFactor(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
     'bool RoomDungeonTemple::importFromStream('))
-methods = source[source.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
+methods = source[source.index('const double RoomDungeonTemple::HEART_CRITICAL_FRACTION'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
 probe = probe.replace('INLINE_METHODS', inline).replace('METHODS', methods)
 probe = probe.replace('HEART_OBJECT', function(source, 'class DungeonHeartObject :'))
 # The reward for destroying a heart is a file-local helper called by takeHeartDamage
@@ -259,5 +274,5 @@ probe = configure_heart_probe(probe)
 with tempfile.TemporaryDirectory(prefix='odp-heart-combat-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
