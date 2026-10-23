@@ -192,4 +192,188 @@ assert 'getSkillName() != "Grenade"' in launch, 'the grenade keeps the creature 
 assert 'isFirstAttackSkill(this)' in launch and '"spell%"' in launch
 assert 'bool CreatureDefinition::isFirstAttackSkill(' in definition_cpp
 
+
+# ---- Part H: values per creature type (section 4) and the heart (section 9)
+# Group table of section 4: Str, Dex, Life, Mana, Str/L, Dex/L, Life/L, Mana/L, ManaPerPoint
+GROUP_VALUES = {
+    'blocker': (30.0, 20.0, 25.0, 10.0, 2.0, 1.0, 1.0, 1.0, 1.0),
+    'blitzer': (25.0, 20.0, 25.0, 26.6667, 2.0, 1.0, 1.0, 1.0, 1.5),
+    'flanker': (20.0, 20.0, 20.0, 25.0, 1.0, 2.0, 1.0, 1.0, 1.75),
+    'archer': (20.0, 25.0, 20.0, 15.0, 0.0, 3.0, 1.0, 1.0, 1.5),
+    'caster': (10.0, 25.0, 10.0, 35.0, 0.0, 1.0, 2.0, 2.0, 2.0),
+    'worker': (15.0, 25.0, 15.0, 25.0, 1.0, 2.0, 1.0, 1.0, 2.0),
+}
+GROUP_MEMBERS = {
+    'blocker': 'Orc LavaSpawn PitDemon Troll Skeleton Scarab Monk Dwarf1 Dwarf2 Knight RunelordDwarf NatureMonster Defender '
+               'TentacleAlbine TentacleGreen',
+    'blitzer': 'Dragon',
+    'flanker': 'Rat Goblin Roach Spider Cultist CaveHornet Slime Adventurer Wyvern Gnome',
+    'archer': 'DarkElf Elf',
+    'caster': 'LizardMan Lich Wizard Kreatur',
+    'worker': 'Kobold DwarfWorker',
+}
+FAMILY_MEMBERS = {
+    'greenskin': 'Orc Troll Goblin', 'dwarf': 'Dwarf1 Dwarf2 RunelordDwarf', 'undead': 'Skeleton Lich',
+    'vermin': 'Rat Roach Spider CaveHornet Scarab', 'tentacle': 'TentacleAlbine TentacleGreen', 'demon': 'LavaSpawn PitDemon',
+    'elf': 'Elf DarkElf', 'human': 'Adventurer Monk Knight Defender', 'arcane': 'Cultist Wizard Gnome Kreatur',
+    'dragonkin': 'LizardMan Wyvern Dragon', 'wild': 'Slime NatureMonster', 'workfolk': 'Kobold DwarfWorker',
+}
+PRE_SKILLS = {
+    'Lich': 'UND_1', 'Dragon': 'DRK_1', 'Slime': 'WLD_1', 'CaveHornet': 'VRM_1', 'Goblin': 'FLK_A2', 'Gnome': 'FLK_A2',
+    'Wizard': 'CST_B1', 'Elf': 'ARC_A3', 'DarkElf': 'ARC_A2', 'Kobold': 'WRK_C1', 'DwarfWorker': 'WRK_C1',
+}
+STAT_KEYS = ('Strength', 'Dexterity', 'Life', 'Mana', 'StrengthPerLevel', 'DexterityPerLevel', 'LifePerLevel', 'ManaPerLevel',
+             'ManaPerPoint')
+CHAMPION_CRIT_BONUS = 15.0
+# Level-file creature classes use the values of the type whose mesh they use
+LEVEL_FILE_CLASSES = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
+HEART_HP = 15100.0
+HEART_HEAL_PER_SECOND = 3.775
+LEGACY_HEART_HEALTH_SCALE = 10000.0
+
+
+def stats_blocks(source):
+    """Return {creature name: {key: value}} of the [Stats] part of every [Creature] block in the text."""
+    result = {}
+    for block in re.findall(r'\[Creature\]\r?\n(.*?)\[/Creature\]', source, re.S):
+        name = re.search(r'^\s*Name\s+(\S+)', block, re.M)[1]
+        stats = block[block.index('[Stats]'):block.index('[/Stats]')]
+        values = {}
+        for line in stats.splitlines()[1:]:
+            parts = line.split()
+            if len(parts) >= 2 and not parts[0].startswith('#'):
+                values[parts[0]] = parts[1]
+        values['_block'] = block
+        result[name] = values
+    return result
+
+
+def heart_health_after_load(marker, value, max_hp, research_factor):
+    """Mirror of RoomDungeonTemple::importFromStream for the share marker and the HeartHealth10000 marker."""
+    if marker == 'HeartHealthShare':
+        return min(1.0, max(0.0, value)) * max_hp
+    assert marker == 'HeartHealth10000'
+    return min(1.0, value / (LEGACY_HEART_HEALTH_SCALE * research_factor)) * max_hp
+
+
+def check_part_h():
+    """Values per creature type of section 4 (also in the level files) and the heart values and save markers of section 9."""
+    creatures = stats_blocks(creatures_cfg)
+    assert len(creatures) == 35, len(creatures)
+    group_of = {}
+    for group, members in GROUP_MEMBERS.items():
+        for member in members.split():
+            assert member not in group_of, member
+            group_of[member] = group
+    family_of = {}
+    for family, members in FAMILY_MEMBERS.items():
+        for member in members.split():
+            assert member not in family_of, member
+            family_of[member] = family
+    assert set(group_of) | {'Champion'} == set(creatures), set(creatures) ^ (set(group_of) | {'Champion'})
+    assert set(family_of) == set(group_of), 'every type has a family'
+    # Every group gives 5 attribute points per level
+    for group, values in GROUP_VALUES.items():
+        assert sum(values[4:8]) == 5.0, (group, values)
+
+    def check_values(name, stats, group, skill_group, family, pre_skill, tier_four):
+        wanted = GROUP_VALUES[group]
+        for key, value in zip(STAT_KEYS, wanted):
+            assert key in stats and abs(float(stats[key]) - value) < 1e-9, (name, key, stats.get(key), value)
+        assert sum(float(stats[key]) for key in STAT_KEYS[4:8]) == 5.0, (name, 'points per level')
+        assert stats.get('SkillGroup') == skill_group, (name, 'SkillGroup', stats.get('SkillGroup'))
+        assert stats.get('SkillFamily') == family, (name, 'SkillFamily', stats.get('SkillFamily'))
+        assert stats.get('PreSkill') == pre_skill, (name, 'PreSkill', stats.get('PreSkill'))
+        assert stats.get('TierFourSkill') == tier_four, (name, 'TierFourSkill', stats.get('TierFourSkill'))
+
+    for name, group in group_of.items():
+        stats = creatures[name]
+        check_values(name, stats, group, group, family_of[name], PRE_SKILLS.get(name, 'none'), 'T4_' + name)
+        assert 'CritChanceBonus' not in stats, (name, 'only the Champion has a critical chance bonus')
+        # The group follows the combat class and the job of the type
+        combat_class = stats.get('CombatClass')
+        if group == 'worker':
+            assert stats['CreatureJob'] == 'Worker', name
+        else:
+            assert stats['CreatureJob'] == 'Fighter', name
+        if group == 'blitzer':
+            assert combat_class == 'Blitzer', name
+        elif group == 'flanker':
+            assert combat_class == 'Flanker', name
+        elif group == 'blocker':
+            assert combat_class in ('Blocker', 'Support'), name
+        elif group in ('archer', 'caster'):
+            assert combat_class == 'Support', name
+        if group == 'archer':
+            assert 'Bow' in stats['_block'] or 'Crossbow' in stats['_block'], name
+    # Champion: blitzer attribute values, no skill tree, critical chance bonus 15
+    champion = creatures['Champion']
+    check_values('Champion', champion, 'blitzer', 'none', 'none', 'none', 'none')
+    assert float(champion['CritChanceBonus']) == CHAMPION_CRIT_BONUS
+    # Worker hit points are not changed by this plan
+    assert creatures['Kobold']['MinHP'] == '62' and creatures['DwarfWorker']['MinHP'] == '62'
+
+    # Level-file creature definitions: the values of the type whose mesh they use
+    found_classes = set()
+    for level_file in sorted((root / 'levels').rglob('*.level')):
+        level_text = level_file.read_text(encoding='utf-8', errors='replace')
+        if '[Creature]' not in level_text:
+            continue
+        for name, stats in stats_blocks(level_text).items():
+            if 'MinHP' not in stats:
+                # A partial override of a known type (e.g. only a weapon) takes the attribute values from the type
+                assert name in group_of and not set(STAT_KEYS) & set(stats), (level_file.name, name)
+                continue
+            assert name in LEVEL_FILE_CLASSES, (level_file.name, name, 'a level-file creature definition without attribute values')
+            base = LEVEL_FILE_CLASSES[name]
+            mesh = stats['MeshName'].split('.')[0]
+            assert mesh == base, (name, mesh, base)
+            check_values(name, stats, group_of[base], group_of[base], family_of[base], PRE_SKILLS.get(base, 'none'), 'T4_' + base)
+            found_classes.add(name)
+    assert found_classes == set(LEVEL_FILE_CLASSES), found_classes
+
+    # ---- Heart (section 9): values, share record and the conversion of old saves
+    rooms_cfg = text('config/rooms.cfg')
+    assert float(config_value(rooms_cfg, 'DungeonHeartHP')) == HEART_HP
+    assert float(config_value(rooms_cfg, 'DungeonHeartHealPerSecond')) == HEART_HEAL_PER_SECOND
+    # The same share of the health per second as before: 2.5 of 10000
+    assert abs(HEART_HEAL_PER_SECOND / HEART_HP - 2.5 / LEGACY_HEART_HEALTH_SCALE) < 1e-12
+    # The rounded-up building damage factor of the worst type: 10000 x 1.5073 = 15073, next hundred
+    assert HEART_HP == -(-int(10000 * 1.5073) // 100) * 100.0
+    temple = text('source/rooms/RoomDungeonTemple.cpp')
+    assert 'getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in temple
+    export = function(temple, 'void RoomDungeonTemple::exportToStream(')
+    assert '"HeartHealthShare "' in export and 'getHeartHealthFraction()' in export and 'HeartHealth10000' not in export
+    import_function = function(temple, 'bool RoomDungeonTemple::importFromStream(')
+    assert 'marker == "HeartHealthShare"' in import_function
+    assert 'std::min(1.0, std::max(0.0, value)) * getHeartMaxHP()' in import_function
+    assert 'marker == "HeartHealth10000"' in import_function
+    assert 'std::min(1.0, value / (LEGACY_HEART_HEALTH_SCALE * getHeartHPFactor())) * getHeartMaxHP()' in import_function
+    assert re.search(r'LEGACY_HEART_HEALTH_SCALE = 10000\.0;', temple)
+    for marker in ('HeartHealth"', 'HeartHP"'):
+        assert 'marker == "' + marker in import_function, marker
+    # Old saves: a full heart loads as 15100, a half heart as 7550, with the heart health research the same share
+    assert heart_health_after_load('HeartHealth10000', 10000.0, HEART_HP, 1.0) == 15100.0
+    assert heart_health_after_load('HeartHealth10000', 5000.0, HEART_HP, 1.0) == 7550.0
+    assert heart_health_after_load('HeartHealth10000', 0.0, HEART_HP, 1.0) == 0.0
+    assert heart_health_after_load('HeartHealth10000', 99999.0, HEART_HP, 1.0) == 15100.0
+    factor = 1.698
+    assert abs(heart_health_after_load('HeartHealth10000', 10000.0 * factor, HEART_HP * factor, factor) - HEART_HP * factor) < 1e-9
+    assert abs(heart_health_after_load('HeartHealth10000', 5000.0 * factor, HEART_HP * factor, factor) - HEART_HP * factor / 2) < 1e-9
+    # New saves round-trip their share, also with the research and for a ruin
+    for max_hp in (HEART_HP, HEART_HP * factor, HEART_HP * 2.474):
+        for health in (0.0, 1.0, 3775.0, max_hp / 3.0, max_hp):
+            share = health / max_hp
+            assert abs(heart_health_after_load('HeartHealthShare', float(repr(share)), max_hp, 1.0) - health) < 1e-9, (max_hp, health)
+    assert heart_health_after_load('HeartHealthShare', 2.0, HEART_HP, 1.0) == HEART_HP
+    assert heart_health_after_load('HeartHealthShare', 0.5, HEART_HP, 1.0) == 7550.0
+    # The probe of check_dungeon_heart_combat.py runs the same cases against the production functions
+    heart_probe = text('source/tests/check_dungeon_heart_combat.py')
+    for marker in ('HeartHealthShare 0.5', 'HeartHealth10000 10000', 'HeartHealth10000 5000'):
+        assert marker in heart_probe, marker
+    print('check_creature_attributes (part H): ok')
+
+
+check_part_h()
+
 print('check_creature_attributes (part A): ok')

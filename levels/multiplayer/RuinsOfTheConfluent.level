@@ -2201,6 +2201,19 @@ NatureMonster	5
     AttackRating	233
     DefenseRating	78
     Avoidance	none
+    Strength	30
+    Dexterity	20
+    Life	25
+    Mana	10
+    StrengthPerLevel	2
+    DexterityPerLevel	1
+    LifePerLevel	1
+    ManaPerLevel	1
+    ManaPerPoint	1
+    SkillGroup	blocker
+    SkillFamily	vermin
+    PreSkill	none
+    TierFourSkill	T4_Scarab
     [/Stats]
     [RoomAffinity]
     TrainingHall	100	1.2

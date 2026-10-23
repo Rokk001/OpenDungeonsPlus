@@ -117,7 +117,7 @@ def documented(text, key):
 
 
 for key, expected in (("TreasuryGoldPerTile", 1000), ("DormitoryWakefulnessPerTurn", 1.5), ("PrisonSkeletonBaseLevel", 1),
-                      ("DungeonHeartHealPerSecond", 2.5), ("DungeonHeartManaPerSecond", 30)):
+                      ("DungeonHeartHealPerSecond", 3.775), ("DungeonHeartManaPerSecond", 30)):
     assert value(rooms_cfg, key) == expected, key
     assert documented(rooms_cfg, key), "%s is documented in the header of rooms.cfg" % key
 assert value(global_cfg, "CreaturesPerPortal") == 5

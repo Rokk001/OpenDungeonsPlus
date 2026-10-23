@@ -154,8 +154,8 @@ def check_buildings(roster):
             damage = sum(building_stat(float(attack[start + 2 * channel]) + float(attack[start + 2 * channel + 1]), float(attack[start + 2 * channel + 1]), level) for channel in range(3))
             assert math.isclose(damage, wanted, abs_tol=1e-9), (name, level, damage, wanted)
     rooms = read("config/rooms.cfg")
-    assert re.search(r"^\s*DungeonHeartHP\s+10000\s*$", rooms, re.M)
-    assert 'ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0)' in read("source/rooms/RoomDungeonTemple.cpp")
+    assert re.search(r"^\s*DungeonHeartHP\s+15100\s*$", rooms, re.M)
+    assert 'ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in read("source/rooms/RoomDungeonTemple.cpp")
     assert re.search(r"DEFAULT_TILE_HP\s*=\s*10(?:\.0)?\s*;", read("source/entities/Building.cpp"))
 
 
@@ -231,7 +231,7 @@ def check_other_damage(roster):
         "spells": {"LightningDamageMin": 20.5, "LightningDamage": 30.75, "TremorDamageMin": 13.67,
                    "TremorDamage": 20.5, "InfernoDamagePerTurnMin": 39.05, "InfernoDamagePerTurn": 58.57,
                    "CreatureHealValue": 10.25},
-        "rooms": {"PrisonDamagePerTurnMin": .082, "PrisonDamagePerTurn": .123, "DungeonHeartHP": 10000,
+        "rooms": {"PrisonDamagePerTurnMin": .082, "PrisonDamagePerTurn": .123, "DungeonHeartHP": 15100,
                   "HatcheryHpRecoveredPerChicken": 10.25, "HatcheryGiftHpRecoveredPerChicken": 4.1},
         "traps": {"BoulderDamagePerHitMin": 205, "BoulderDamagePerHitMax": 246,
                   "CannonDamagePerHitMin": 20.5, "CannonDamagePerHitMax": 30.75,

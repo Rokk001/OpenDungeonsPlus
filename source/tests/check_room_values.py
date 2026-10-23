@@ -21,7 +21,7 @@ expected = {
     "StoneBridgeCostPerTile": "540", "ArenaCostPerTile": "230", "CasinoCostPerTile": "290",
     "GuardRoomCostPerTile": "210", "TempleCostPerTile": "930",
     "PrisonDamagePerTurn": "0.123", "PrisonDamagePerTurnMin": "0.082",
-    "ArenaDamageTakenPercent": "0.2", "DungeonHeartHP": "10000",
+    "ArenaDamageTakenPercent": "0.2", "DungeonHeartHP": "15100",
     "HatcheryHpRecoveredPerChicken": "10.25", "HatcheryGiftHpRecoveredPerChicken": "4.1",
     "TortureDamagePercentPerSecond": "0.0067",
 }
