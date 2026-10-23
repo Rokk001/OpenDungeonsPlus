@@ -19,6 +19,7 @@
 
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/CreatureProgression.h"
 #include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
