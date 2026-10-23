@@ -44,6 +44,8 @@ Ogre::Rectangle2D* loadingRectangle = nullptr;
 Ogre::MaterialPtr previousMaterial;
 Ogre::MaterialPtr loadingMaterial;
 Ogre::uint8 previousQueue = Ogre::RENDER_QUEUE_SKIES_EARLY;
+//! Rectangle visibility restored after a load returns to the same menu scene.
+bool previousRectangleVisible = true;
 int previousImage = -1;
 CEGUI::Window* hiddenRoot = nullptr;
 CEGUI::Window* loadingText = nullptr;
@@ -163,7 +165,7 @@ Ogre::MaterialPtr createLoadingMaterial(const std::string& texture)
 }
 }
 
-//! \brief Shows a uniformly selected picture, excluding the previous one, then presents it immediately.
+//! \brief Saves the background visibility and immediately presents a uniformly selected nonrepeating picture.
 LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(false)
 {
     try
@@ -183,6 +185,7 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
                 ->getSceneNode("Background")->getAttachedObject(0));
             previousMaterial = loadingRectangle->getMaterial();
             previousQueue = loadingRectangle->getRenderQueueGroup();
+            previousRectangleVisible = loadingRectangle->isVisible();
             loadingMaterial = createLoadingMaterial(LOADING_TEXTURES[image]);
             previousImage = image;
         }
@@ -216,7 +219,7 @@ void LoadingScreen::continueLoading()
     mContinueLoading = true;
 }
 
-//! \brief Restores the game or menu material, texture coordinates and interface after loading.
+//! \brief Restores the game or menu material, rectangle visibility, texture coordinates and interface after loading.
 void LoadingScreen::finish()
 {
     if(loadingRectangle == nullptr)
@@ -227,6 +230,7 @@ void LoadingScreen::finish()
         : Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics");
     loadingRectangle->setMaterial(material);
     loadingRectangle->setRenderQueueGroup(previousQueue);
+    loadingRectangle->setVisible(frame != nullptr && frame->getIsMainMenuCreated() ? previousRectangleVisible : true);
     loadingRectangle->setUVs(Ogre::Vector2(0, 0), Ogre::Vector2(0, 1), Ogre::Vector2(1, 0), Ogre::Vector2(1, 1));
     loadingRectangle->setCorners(-1, 1, 1, -1);
     loadingRectangle = nullptr;
@@ -237,7 +241,7 @@ void LoadingScreen::finish()
         frame->updateMenuScene(0.0f);
 }
 
-//! \brief Covers the world with the fitted picture, retaining only the layout's own loading text.
+//! \brief Shows the fitted picture above the world or 3D menu, retaining only the layout's own loading text.
 void LoadingScreen::update()
 {
     if(loadingRectangle == nullptr)
@@ -245,6 +249,7 @@ void LoadingScreen::update()
     ODFrameListener* frame = ODFrameListener::getSingletonPtr();
     Ogre::RenderWindow* window = frame->getRenderWindow();
     loadingRectangle->setMaterial(loadingMaterial);
+    loadingRectangle->setVisible(true);
     loadingRectangle->setRenderQueueGroup(RenderManager::OD_RENDER_QUEUE_ID_GUI - 1);
     fitLoadingImage(*loadingRectangle, window->getWidth(), window->getHeight());
     CEGUI::Window* root = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
