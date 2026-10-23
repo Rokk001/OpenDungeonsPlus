@@ -21,6 +21,7 @@
 #include "entities/Creature.h"
 #include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
+#include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
 #include "utils/LogManager.h"
