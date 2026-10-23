@@ -1120,6 +1120,7 @@ public:
     //! If tilesFilter is empty, the creature will consider moving on visible tiles. If not, it will consider
     //! moving on the given tiles only
     //! If no suitable target is found, returns false. Prefers body-free legal attack positions before crowded fallback.
+    //! Never returns a position tile the creature cannot enter (locked door, barricade, fence), because no path leads there.
     bool searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
         Tile*& attackedTile, Tile*& positionTile, CreatureSkillData*& creatureSkillData);
 

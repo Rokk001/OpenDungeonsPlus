@@ -2408,6 +2408,10 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
             if(!getGameMap()->pathExists(this, myTile, tile))
                 continue;
 
+            // A tile this creature cannot enter (locked door, barricade, fence) has no walkable path
+            if((tile != myTile) && !canGoThroughTile(tile))
+                continue;
+
             std::vector<Ogre::Vector2> standing{tile->getPosition2d()};
             const bool freeTile = RoomObjectNavigation::separate(*this, standing);
             if(!freeTile && (freePosition || inRange))
@@ -2482,6 +2486,10 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
                 continue;
 
             if(!getGameMap()->pathExists(this, myTile, tile))
+                continue;
+
+            // A tile this creature cannot enter has no walkable path
+            if((tile != myTile) && !canGoThroughTile(tile))
                 continue;
 
             int distFoeTmp = Pathfinding::squaredDistanceTile(*tile, *tileEntityFlee);
