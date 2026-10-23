@@ -27,7 +27,7 @@ class CreatureEffectInvisible : public CreatureEffect
 {
 public:
     //! \brief Creates the effect with its parameters.
-    CreatureEffectInvisible(int32_t nbTurnsEffect) :
+    CreatureEffectInvisible(double nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "")
     {}
 

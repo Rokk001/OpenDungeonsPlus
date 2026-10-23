@@ -93,8 +93,8 @@ public:
     //! \brief Creates the counters for the given skill.
     //! \param skill The skill (not owned).
     //! \param cooldown Turns left until the skill can be used again (may be a fraction of a turn).
-    //! \param warmup Turns left of the warmup before the skill takes effect.
-    CreatureSkillData(const CreatureSkill* skill, double cooldown, uint32_t warmup) :
+    //! \param warmup Turns left of the warmup before the skill takes effect (may be a fraction of a turn).
+    CreatureSkillData(const CreatureSkill* skill, double cooldown, double warmup) :
         mSkill(skill),
         mCooldown(cooldown),
         mWarmup(warmup)
@@ -104,7 +104,8 @@ public:
     const CreatureSkill* mSkill;
     //! \brief Turns left until the skill can be used again; fractions of a turn are possible (level scaled cooldown)
     double mCooldown;
-    uint32_t mWarmup;
+    //! \brief Turns left of the warmup before the skill takes effect; fractions of a turn are kept like in mCooldown
+    double mWarmup;
 };
 
 //! Class used on server side to link creature effects (spells, slap, ...) with particle effects

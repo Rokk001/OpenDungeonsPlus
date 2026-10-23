@@ -53,7 +53,9 @@ void CreatureEffectBurn::applyEffect(Creature& creature)
         return;
 
     Tile* posTile = creature.getPositionTile();
-    creature.takeDamage(nullptr, Random::Double(mDamagePerTurnMin, mDamagePerTurn), 0.0, 0.0, 0.0, posTile, false);
+    // In the last turn of the effect only the fraction of the turn that was left counts
+    creature.takeDamage(nullptr, Random::Double(mDamagePerTurnMin, mDamagePerTurn) * getTurnFraction(),
+        0.0, 0.0, 0.0, posTile, false);
 }
 
 CreatureEffectBurn* CreatureEffectBurn::load(std::istream& is)

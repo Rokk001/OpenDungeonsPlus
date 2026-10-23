@@ -91,6 +91,10 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTiredWalkSpeedFactor(0.8),
     mLowHealthWalkSpeedFactor(0.7),
     mCreatureLevelGrowthMax(0.10),
+    mCreatureDamageGrowth(0.221),
+    mCreatureDamageExponent(1.167),
+    mCreatureHpGrowthPerLevel(0.018),
+    mCooldownReductionPerLevel(0.0),
     mLowHealthWalkThresholdPercent(50.0),
     mHeartHealthStages(5),
     mHeartHealthStageEvents(true),
@@ -101,14 +105,14 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mAttackTurnSpeed(DEFAULT_ATTACK_TURN_SPEED),
     mAttackTurnMaxDelay(DEFAULT_ATTACK_TURN_MAX_DELAY),
     mMeleeDodgeParry(true),
-    mDodgeBase(3.0),
-    mDodgePerLevel(0.5),
+    mDodgeBase(10.5),
+    mDodgePerLevel(0.0),
     mDodgeMax(15.0),
-    mParryBase(3.0),
-    mParryPerLevel(0.5),
+    mParryBase(10.5),
+    mParryPerLevel(0.0),
     mParryMax(15.0),
-    mShieldBlockBase(6.0),
-    mShieldBlockPerLevel(1.0),
+    mShieldBlockBase(21.0),
+    mShieldBlockPerLevel(0.0),
     mShieldBlockMax(25.0),
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
@@ -717,6 +721,34 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCreatureLevelGrowthMax = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureDamageGrowth")
+        {
+            configFile >> nextParam;
+            mCreatureDamageGrowth = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureDamageExponent")
+        {
+            configFile >> nextParam;
+            mCreatureDamageExponent = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureHpGrowthPerLevel")
+        {
+            configFile >> nextParam;
+            mCreatureHpGrowthPerLevel = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CooldownReductionPerLevel")
+        {
+            configFile >> nextParam;
+            mCooldownReductionPerLevel = Helper::toDouble(nextParam);
             // Not mandatory
         }
 

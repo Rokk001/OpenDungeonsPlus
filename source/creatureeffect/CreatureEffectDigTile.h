@@ -23,7 +23,7 @@
 class CreatureEffectDigTile : public CreatureEffect
 {
 public:
-    CreatureEffectDigTile(int32_t nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
+    CreatureEffectDigTile(double nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
         mEffectValue(effectValue)
     {}

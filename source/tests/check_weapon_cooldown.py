@@ -88,11 +88,15 @@ def stat(base, per_level, level):
     return max(base + (max(1, level) - 1) * per_level, base * power_multiplier(level))
 
 
+# Mirror of CooldownReductionPerLevel in global.cfg (0 = the same cooldown at every level).
+COOLDOWN_REDUCTION_PER_LEVEL = 0.0
+
+
 def cooldown_at_level(base_turns, level):
     """Mirror of CreatureProgression::cooldownAtLevel."""
     if base_turns == 0:
         return 0.0
-    return max(1.0, base_turns * (1.0 - 0.0075 * (max(1, level) - 1)))
+    return max(1.0, base_turns * (1.0 - COOLDOWN_REDUCTION_PER_LEVEL * (max(1, level) - 1)))
 
 
 # Skills whose damage is built from the creature skill row and the carried weapons
@@ -168,8 +172,8 @@ EXPECTED_COOLDOWN = {
 
 # Parry values (percent) per weapon: the three weapons of the unskilled model carriers parry badly, all others keep the
 # values global.cfg had (3 / 0.5 / 15); shields have no parry fields
-WEAK_PARRY = (1.5, 0.25, 7.5)
-GLOBAL_PARRY = (3.0, 0.5, 15.0)
+WEAK_PARRY = (5.25, 0.0, 7.5)
+GLOBAL_PARRY = (10.5, 0.0, 15.0)
 SHIELD_BLOCK = (6.0, 1.0, 25.0)
 WEAK_PARRY_WEAPONS = {'KoboldPick': 'Kobold', 'Pickaxe': 'DwarfWorker', 'DefenderWeapon': 'Defender'}
 
@@ -284,8 +288,8 @@ for weapon_name, carrier in WEAK_PARRY_WEAPONS.items():
             assert weapon_name not in level_file.read_text(encoding='utf-8', errors='ignore'), (weapon_name, level_file)
 # The shield values and the fallback values stay in global.cfg unchanged
 global_cfg_text = read('config/global.cfg')
-for key, value in (('ParryBase', '3'), ('ParryPerLevel', '0.5'), ('ParryMax', '15'), ('ShieldBlockBase', '6'),
-                   ('ShieldBlockPerLevel', '1'), ('ShieldBlockMax', '25')):
+for key, value in (('ParryBase', '10.5'), ('ParryPerLevel', '0'), ('ParryMax', '15'), ('ShieldBlockBase', '21'),
+                   ('ShieldBlockPerLevel', '0'), ('ShieldBlockMax', '25')):
     assert re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg_text, re.M), key
 assert 'ParryBase' in header and 'ParryPerLevel' in header and 'ParryMax' in header and 'Shields have no parry' in header
 # Only the two configured parry types use weapon parry; other types have no weapon parry.
@@ -295,15 +299,15 @@ for name, creature in creatures.items():
         if creature['avoidance'] != 'parry':
             expected = 0.0
         elif any(w in WEAK_PARRY_WEAPONS for w in creature['weapons']):
-            expected = max(0.0, min(7.5, 1.5 + 0.25 * level))
+            expected = max(0.0, min(7.5, 5.25 + 0.0 * level))
         elif creature['weapons'] == base_creatures[name]['weapons']:
-            expected = max(0.0, min(15.0, 3.0 + 0.5 * level))
+            expected = max(0.0, min(15.0, 10.5 + 0.0 * level))
         else:
             continue
         assert abs(now - expected) < 1e-9, (name, level, now, expected)
-assert abs(parry_of(creatures['Defender'], equipments, 1) - 1.75) < 1e-9
-assert abs(parry_of(creatures['Defender'], equipments, 30) - 7.5) < 1e-9
-assert abs(parry_of(creatures['Goblin'], equipments, 1) - 3.5) < 1e-9
+assert abs(parry_of(creatures['Defender'], equipments, 1) - 5.25) < 1e-9
+assert abs(parry_of(creatures['Defender'], equipments, 30) - 5.25) < 1e-9
+assert abs(parry_of(creatures['Goblin'], equipments, 1) - 10.5) < 1e-9
 
 # ---------------------------------------------------------------- cooldown values per creature skill
 
@@ -359,16 +363,17 @@ if zero_damage:
 # ---------------------------------------------------------------- level formula
 
 progression = read('source/entities/CreatureProgression.h')
-assert 'const double COOLDOWN_REDUCTION_PER_LEVEL = 0.0075;' in progression
+assert 'COOLDOWN_REDUCTION_PER_LEVEL' not in progression
+assert re.search(r'^\s+CooldownReductionPerLevel\t0\s*$', read('config/global.cfg'), re.M)
 body = function_body(progression, 'inline double cooldownAtLevel(uint32_t baseTurns, uint32_t level)')
-assert '1.0 - COOLDOWN_REDUCTION_PER_LEVEL * (std::max(1u, level) - 1)' in body
+assert '1.0 - ConfigManager::getSingleton().getCooldownReductionPerLevel() * (std::max(1u, level) - 1)' in body
 assert 'std::max(1.0, baseTurns * factor)' in body
 assert 'if(baseTurns == 0)' in body
 assert cooldown_at_level(1, 30) == 1.0, 'never below one turn'
-assert abs(cooldown_at_level(2, 30) - 2 * 0.7825) < 1e-9
-assert abs(cooldown_at_level(6, 11) - 6 * 0.925) < 1e-9
+assert cooldown_at_level(2, 30) == 2.0
+assert cooldown_at_level(6, 11) == 6.0
 assert cooldown_at_level(4, 1) == 4.0
-assert abs(cooldown_at_level(22, 2) - 22 * 0.9925) < 1e-9, 'no rounding to whole turns'
+assert cooldown_at_level(22, 2) == 22.0, 'the cooldown is the same at every level'
 assert cooldown_at_level(0, 30) == 0.0
 
 # ---------------------------------------------------------------- loader, writer and packet
@@ -425,7 +430,7 @@ for word in ('CreatureSkillMeleeFight', '"MissileLaunch"', '"GuidedBolt"', '"Gre
 
 # Both the stored cooldown and the recovery clock use the applied value, in fractions of turns
 use_attack = function_body(creature, 'void Creature::useAttack(')
-assert 'skillData.mCooldown = getAppliedCooldownNbTurns(*skillData.mSkill);' in use_attack
+assert 'skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);' in use_attack
 assert 'mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);' in use_attack
 assert 'mAttackRecoveryTurns = mAttackRecoveryDuration;' in use_attack
 assert 'CreatureSkillData skillData(skill, getAppliedCooldownNbTurns(*skill), 0);' in creature
@@ -433,8 +438,9 @@ creature_h = read('source/entities/Creature.h')
 assert 'double mCooldown;' in creature_h and 'double mAttackRecoveryTurns = 0.0;' in creature_h
 assert 'double mAttackRecoveryDuration = 0.0;' in creature_h
 assert 'double getAttackRecoveryTurns() const' in creature_h and 'double getAttackRecoveryDuration() const' in creature_h
-# the countdown never goes below zero and counts down in whole turns from a fractional start
-assert creature.count('skillData.mCooldown = std::max(0.0, skillData.mCooldown - 1.0);') == 2
+# the countdown runs only while positive and keeps the negative remainder (no clamp to zero)
+assert creature.count('skillData.mCooldown -= 1.0;') == 2
+assert 'std::max(0.0, skillData.mCooldown - 1.0)' not in creature
 assert 'mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);' in creature
 # The network carries the recovery as a real number
 export_body = function_body(creature, 'void Creature::exportProgressToPacket(')
@@ -443,7 +449,7 @@ assert 'const double duration = working ? static_cast<double>(mJobCooldownDurati
 import_body = function_body(creature, 'void Creature::importProgressFromPacket(')
 assert 'double remaining = 0.0;' in import_body and 'double duration = 0.0;' in import_body
 # Support skills (not melee, no weapon cooldown) keep their definition cooldown
-assert creature.count('skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();') == 2
+assert creature.count('skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();') == 2
 # The clock reads the stored duration, nothing else, and does not run past a fractional remainder
 overlay = read('source/render/CreatureOverlayStatus.cpp')
 assert 'const double duration = mCreature->getAttackRecoveryDuration();' in overlay

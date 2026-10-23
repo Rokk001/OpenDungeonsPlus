@@ -30,7 +30,7 @@ class CreatureEffectAreaDamage : public CreatureEffect
 {
 public:
     //! \brief Creates a fixed damage effect whose minimum may be supplied separately.
-    CreatureEffectAreaDamage(int32_t nbTurnsEffect, int32_t tileX, int32_t tileY, double radius,
+    CreatureEffectAreaDamage(double nbTurnsEffect, int32_t tileX, int32_t tileY, double radius,
             double damagePerTurn, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
         mTileX(tileX),

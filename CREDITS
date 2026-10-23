@@ -24,6 +24,8 @@ Name                                   Author                  License          
 
 Name                                   Author                  License                 Source URL
 ------------------------------------------------------------------------------------------------------------------------
+ChampionCrownIcon.png                  Mario                   GPLv3+                  Drawn from simple shapes by tools/gen_champion_crown.py (script generated, original work)
+ChampionCrown.imageset                 Mario                   GPLv3+                  Written for this project
 OD.project                             Bertram                 GPLv3+                  CEED Project file.
 OD.looknfeel                           OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 ODAdvertisment.imageset                Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
@@ -179,6 +181,7 @@ textures/
 -> CasinoPokerTale.png                 Danimal                 CC-BY-SA 3.0            http://opengameart.org/users/danimal
 -> Cavehornet*.png                     Skorpio                 CC-BY-SA 3.0, GPLv3+
 -> CelticCross*.png                    Yughues                 CC0                     http://forum.freegamedev.net/viewtopic.php?p=60771#p60771
+-> ChampionCrown.png                   Mario                   GPLv3+                  Drawn from simple shapes by tools/gen_champion_crown.py (script generated, original work)
 -> ChickenCoop*.png                    Dm3d                    CC-BY-SA 3.0            http://opengameart.org/content/chicken-coop (ChickenCoop.png recoloured by tools/room-objects/restyle_chicken_coop.py)
 -> Chicken.png
 -> Chimney*.png                        Daniel74, Nobiax        CC0                     http://forum.freegamedev.net/viewtopic.php?p=59775#p59775

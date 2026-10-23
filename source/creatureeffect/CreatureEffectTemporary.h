@@ -29,7 +29,7 @@ class CreatureEffectTemporary : public CreatureEffect
 {
 public:
     //! \brief Creates the effect that makes the creature fall apart after the given number of turns.
-    CreatureEffectTemporary(int32_t nbTurnsEffect) :
+    CreatureEffectTemporary(double nbTurnsEffect) :
         CreatureEffect(nbTurnsEffect, "")
     {}
 

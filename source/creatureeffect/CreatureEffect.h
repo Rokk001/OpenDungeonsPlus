@@ -29,8 +29,9 @@ class CreatureEffect
 public:
     // If particleEffectName is not empty, the corresponding particle effect will be
     // sent when the effect is added to the creature for nbTurnsEffect turns.
-    CreatureEffect(int32_t nbTurnsEffect, const std::string& particleEffectScript) :
+    CreatureEffect(double nbTurnsEffect, const std::string& particleEffectScript) :
         mNbTurnsEffect(nbTurnsEffect),
+        mTurnFraction(1.0),
         mParticleEffectScript(particleEffectScript)
     {}
 
@@ -39,8 +40,14 @@ public:
 
     virtual const std::string& getEffectName() const = 0;
 
-    inline int32_t getNbTurnsEffect() const
+    //! \brief Turns the effect still lasts (may be a fraction of a turn, negative means it lasts until released)
+    inline double getNbTurnsEffect() const
     { return mNbTurnsEffect; }
+
+    //! \brief Share of the current turn that the effect is active, 1 except in its last turn when only a fraction of
+    //! a turn was left. Per-turn amounts (damage, healing) are multiplied by it while the effect is applied.
+    inline double getTurnFraction() const
+    { return mTurnFraction; }
 
     inline const std::string& getParticleEffectScript() const
     { return mParticleEffectScript; }
@@ -74,12 +81,16 @@ protected:
     //! the wanted effect
     virtual void applyEffect(Creature& creature) = 0;
     CreatureEffect() :
-        mNbTurnsEffect(0)
+        mNbTurnsEffect(0),
+        mTurnFraction(1.0)
     {}
 
-    //! Number of turns the effect lasts. Protected so that derived effects (Defector, Hexen Hen) can check the remaining
-    //! time and end themselves early.
-    int32_t mNbTurnsEffect;
+    //! Number of turns the effect lasts (a fraction of a turn is possible). Protected so that derived effects
+    //! (Defector, Hexen Hen) can check the remaining time and end themselves early.
+    double mNbTurnsEffect;
+
+    //! Share of the current turn the effect is active (see getTurnFraction)
+    double mTurnFraction;
 
 private:
     std::string mParticleEffectScript;

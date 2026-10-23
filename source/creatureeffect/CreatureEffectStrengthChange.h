@@ -23,7 +23,7 @@
 class CreatureEffectStrengthChange : public CreatureEffect
 {
 public:
-    CreatureEffectStrengthChange(int32_t nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
+    CreatureEffectStrengthChange(double nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
         mEffectValue(effectValue)
     {}

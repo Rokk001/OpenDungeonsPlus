@@ -53,7 +53,8 @@ void CreatureEffectHeal::applyEffect(Creature& creature)
     if(!creature.isHurt())
         return;
 
-    creature.heal(mEffectValue);
+    // In the last turn of the effect only the fraction of the turn that was left counts
+    creature.heal(mEffectValue * getTurnFraction());
 }
 
 CreatureEffectHeal* CreatureEffectHeal::load(std::istream& is)
