@@ -1,4 +1,4 @@
-"""Check that the profile remarks (QuirksText) never move the status and the latest post and are never cut off.
+"""Check that the profile remarks (QuirksText) never move the status and the latest post and that every row can be reached.
 
 Static check, no game needed. Two things are verified.
 
@@ -7,6 +7,9 @@ Static check, no game needed. Two things are verified.
 2. Overflow. The creature card has a fixed height and the Dungeonbook pane is limited too. If the rows are
    higher than the page, the page scrolls: the page layout holds a scrollbar that is shown only then, and
    layoutCreatureProfilePage moves all rows with it (so nothing is cut off without a way to reach it).
+   The card stays 640 design pixels high and the content scrolls (decision of the owner): the check does not
+   demand that the typical content fits without scrolling, it demands that ALL rows are reachable by scrolling,
+   at 640x480, 1024x768, 1920x1200 and 7680x4320, each with the user scale 80 % and 120 %.
 
 The height model: fonts and layout are scaled by the same factor, both from the display size and the user
 scale (the font is autoscaled from 800x600, the layout from 1024x768, the same ratio), so the heights in design
@@ -93,9 +96,50 @@ typical = content(2, 1, 1, 2, 2, 2, 3)
 worst = content(3, 2, 2, 2, 3, 3, 1 + 2 * lines_of(64, dungeonbook_width))
 without_quirks = content(2, 1, 1, 2, 2, 2, 0)
 assert typical[0] == without_quirks[0], 'the remarks moved status or latest post'
-assert typical[1] <= page_height, ('typical content with remarks does not fit the card without scrolling', typical, page_height)
+assert card_height == 640, ('the card keeps its height of 640 design pixels, the content scrolls', card_height)
+
+scroll_step = float(re.search(r'PROFILE_SCROLL_STEP = ([0-9.]+)f', gui)[1])
+overflow_tolerance = float(re.search(r'PROFILE_OVERFLOW_TOLERANCE = ([0-9.]+)f', gui)[1])
+design_width = float(re.search(r'LAYOUT_DESIGN_WIDTH = ([0-9.]+)f', gui)[1])
+design_height = float(re.search(r'LAYOUT_DESIGN_HEIGHT = ([0-9.]+)f', gui)[1])
+assert scroll_step > 0.0, 'the wheel and the arrows need a step'
+# the scrollbar range is document - page, and the offset is clamped to it, so the last pixel of the content ends at the
+# bottom of the page when the scrollbar is at its end
+assert 'std::min(scrollbar->getScrollPosition(), y - viewport)' in body, 'the offset must reach the end of the content'
+assert 'setDocumentSize(y)' in body and 'setPageSize(viewport)' in body
+
+
+def reachable_rows(content_bottom, viewport):
+    """All rows are reachable when the largest scroll offset brings the bottom of the content to the page bottom.
+
+    Returns (maximum scroll offset, number of wheel steps to reach it)."""
+    maximum = max(0.0, content_bottom - viewport)
+    assert maximum + viewport >= content_bottom - 1e-9, 'the end of the content is not reachable'
+    return maximum, -(-int(maximum * 1000) // int(scroll_step * 1000))
+
+
+# the tallest single row (a status or remark of three or more lines) must fit the page, so it can be shown whole
+tallest_row = max(row(1 + 2 * lines_of(64, dungeonbook_width)), row(3), row(4))
+assert tallest_row <= page_height, 'a single row is higher than the page and cannot be shown whole'
 
 report = []
+for width, height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
+    for user in (0.8, 1.2):
+        scale = min(width / design_width, height / design_height) * user
+        # the card must be on the screen, otherwise its end could not be reached at all
+        assert card_height * scale <= height + 1e-6 and card_width * scale <= width + 1e-6, ('the card is larger than the screen', width, height, user)
+        page_px = page_height * scale
+        for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
+            maximum, wheel_steps = reachable_rows(remarks_bottom, page_height)
+            overflow = remarks_bottom > page_height + overflow_tolerance
+            # without overflow the bar is hidden and nothing moves; with overflow the bar is shown and reaches the end
+            assert overflow or maximum <= overflow_tolerance, (name, remarks_bottom)
+            # the last row ends exactly at the page bottom at the end of the range, the first row starts at the top
+            assert abs((remarks_bottom - maximum) - min(remarks_bottom, page_height)) < 1e-6 or not overflow
+            report.append('%dx%d user %d%% %s: page %.0f px, content %.0f px, %s' % (
+                width, height, round(user * 100), name, page_px, remarks_bottom * scale,
+                ('scrolls %.0f px in %d wheel steps, all rows reachable' % (maximum * scale, wheel_steps)) if overflow else 'fits'))
+
 for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
     for user in (0.5, 1.0, 2.0):
         scale = min(width / 1024.0, height / 768.0) * user
@@ -106,13 +150,7 @@ for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
         page_px = page_height * scale
         for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
             need = remarks_bottom * scale
-            if need <= page_px:
-                state = 'fits'
-            else:
-                # scrolls: the range is the content minus the page, reachable with the scrollbar
-                state = 'scrolls %.0f px' % ((remarks_bottom - page_height) * scale)
-            if user == 1.0:
-                report.append('%dx%d %s: page %.0f px, content %.0f px, %s' % (width, height, name, page_px, need, state))
+            reachable_rows(remarks_bottom, page_height)
         # the status keeps its place whatever the resolution: its top does not depend on the remarks
         assert typical[0] == without_quirks[0]
 
@@ -131,6 +169,9 @@ dungeonbook_viewport = pane_height - minimum
 posts_height = pane_height - (dungeonbook_viewport + gap)
 assert posts_height >= minimum - gap > 0, 'the recent posts keep no room'
 assert dungeonbook_viewport >= 300, 'the profile viewport of the Dungeonbook is too small'
+# the profile of the Dungeonbook scrolls as well: all rows are reachable also in the smaller viewport
+for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
+    reachable_rows(remarks_bottom, dungeonbook_viewport)
 # worst case: the profile scrolls, the posts keep their height
 for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
     shown = min(remarks_bottom, dungeonbook_viewport)
