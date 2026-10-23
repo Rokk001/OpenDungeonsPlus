@@ -36,7 +36,6 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
-#include <cmath>
 
 const std::string SpellHexenHenName = "hexenhen";
 const std::string SpellHexenHenNameDisplay = "Hexen Hen";
@@ -189,8 +188,8 @@ bool SpellHexenHen::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    int32_t nbTurns = static_cast<int32_t>(std::lround(SkillManager::getResearchValue(player->getSeat(), SkillType::spellHexenHen,
-        ConfigManager::getSingleton().getSpellConfigDouble("HexenHenNbTurns"), ResearchEffect::Duration)));
+    double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellHexenHen,
+        ConfigManager::getSingleton().getSpellConfigDouble("HexenHenNbTurns"), ResearchEffect::Duration);
     creature->addCreatureEffect(new CreatureEffectHexenHen(nbTurns));
     fireSpellEffect(*pos, "Hen", "HexenHenCast");
 

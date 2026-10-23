@@ -277,9 +277,9 @@ public:
     inline double getDigRate() const
     { return mDigRate; }
 
-    //! \brief Gets the current claim rate
-    inline double getClaimRate() const
-    { return mClaimRate; }
+    //! \brief Gets the current claim rate: the rate of the creature type and level times 1 + claim% / 100 (claim% passives
+    //! of the skill tree). Every reader of the claim rate uses this value.
+    double getClaimRate() const;
 
     //! \brief Gets pointer to the Weapon in left hand
     inline const Weapon* getWeaponL() const
@@ -1241,7 +1241,7 @@ public:
     void flee();
 
     //! \brief Makes the creature run away from fearTile for nbTurns turns (fear trap)
-    void fleeFromTile(Tile* fearTile, int32_t nbTurns);
+    void fleeFromTile(Tile* fearTile, double nbTurns);
 
     //! \brief Stuns the creature for nbTurns turns (lightning trap). A stunned creature does nothing,
     //! like a creature that was just dropped. Does nothing if the creature is dead or already KO.
