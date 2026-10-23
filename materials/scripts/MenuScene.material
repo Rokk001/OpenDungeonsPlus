@@ -252,3 +252,31 @@ material MenuDistantStone
         specular 0 0 0 1 1
     } }
 }
+
+// Dark textured carved stone keeps the guardians stone-coloured under local firelight.
+material MenuCarvedStone : MenuStone
+{
+    technique
+    {
+        pass decal
+        {
+            ambient 0.22 0.24 0.26 1
+            diffuse 0.22 0.24 0.26 1
+            specular 0.03 0.03 0.03 1 8
+        }
+    }
+}
+
+// Rough dark textured stone replaces the untextured foreground rubble surfaces.
+material MenuRoughStone : MenuStone
+{
+    technique
+    {
+        pass decal
+        {
+            ambient 0.20 0.22 0.24 1
+            diffuse 0.20 0.22 0.24 1
+            specular 0.025 0.025 0.025 1 6
+        }
+    }
+}

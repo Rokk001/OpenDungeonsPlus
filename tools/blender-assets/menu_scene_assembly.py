@@ -34,8 +34,8 @@ def material_values(text, name):
     if re.search(r"\blighting\s+off\b", block):
         values["unlit"] = True
     values["name"] = name
-    values["normal"] = "MenuStoneNormal.png" if name in ("MenuStone", "MenuWetStone") else None
-    values["texture"] = "MenuStone.png" if name in ("MenuStone", "MenuWetStone") else ("MenuCampaignMap.png" if name == "MenuCampaignMap" else None)
+    values["normal"] = "MenuStoneNormal.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone") else None
+    values["texture"] = "MenuStone.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone") else ("MenuCampaignMap.png" if name == "MenuCampaignMap" else None)
     return values
 
 
@@ -145,13 +145,13 @@ def configure_material(material, values, repo, images):
 
 # Create low nonuniform participating fog that catches the existing orange and green light.
 def add_ground_fog(collection):
-    bpy.ops.mesh.primitive_cube_add(size=2,location=(0,3,0.75))
+    bpy.ops.mesh.primitive_cube_add(size=2,location=(0,3,1.15))
     fog=bpy.context.object
     fog.name="Courtyard drifting volume"
     for parent in list(fog.users_collection):
         parent.objects.unlink(fog)
     collection.objects.link(fog)
-    fog.scale=(27,35,1.30)
+    fog.scale=(27,35,1.65)
     fog["engine_particle_script"]="MenuCourtyardFog"
     material=bpy.data.materials.new("Courtyard volume")
     material.use_nodes=True
@@ -161,7 +161,7 @@ def add_ground_fog(collection):
     output=nodes.new("ShaderNodeOutputMaterial")
     volume=nodes.new("ShaderNodeVolumePrincipled")
     volume.inputs["Color"].default_value=(0.50,0.55,0.60,1)
-    volume.inputs["Anisotropy"].default_value=0.25
+    volume.inputs["Anisotropy"].default_value=0.35
     coordinates=nodes.new("ShaderNodeTexCoord")
     noise=nodes.new("ShaderNodeTexNoise")
     noise.inputs["Scale"].default_value=0.24
@@ -173,7 +173,7 @@ def add_ground_fog(collection):
     ramp.color_ramp.elements[0].position=0.3
     ramp.color_ramp.elements[0].color=(0,0,0,1)
     ramp.color_ramp.elements[1].position=0.75
-    ramp.color_ramp.elements[1].color=(0.15,0.15,0.15,1)
+    ramp.color_ramp.elements[1].color=(0.34,0.34,0.34,1)
     links.new(noise.outputs["Fac"],ramp.inputs[0])
     separate=nodes.new("ShaderNodeSeparateXYZ")
     links.new(coordinates.outputs["Generated"],separate.inputs[0])

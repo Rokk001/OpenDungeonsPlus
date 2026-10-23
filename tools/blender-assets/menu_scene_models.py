@@ -83,6 +83,26 @@ class MeshBuilder:
             self.faces.append((last+i,last+(i+1)%sides,top))
             self.face_materials.append(material)
 
+    # Connect two anatomical points with a tapering carved stone limb or wing rib.
+    def segment(self, start, end, radius, top, material="MenuCarvedStone", sides=12):
+        axis=Vector(end)-Vector(start)
+        direction=axis.normalized()
+        across=direction.cross(Vector((0,1,0)))
+        if across.length<0.01:
+            across=direction.cross(Vector((1,0,0)))
+        across.normalize()
+        up=direction.cross(across).normalized()
+        first=len(self.vertices)
+        for centre,width in ((Vector(start),radius),(Vector(end),top)):
+            for i in range(sides):
+                point=centre+width*(across*math.cos(i*2*math.pi/sides)+up*math.sin(i*2*math.pi/sides))
+                self.vertices.append(tuple(point))
+        self.faces.extend([tuple(first+i for i in reversed(range(sides))),tuple(first+sides+i for i in range(sides))])
+        for i in range(sides):
+            j=(i+1)%sides
+            self.faces.append((first+i,first+j,first+sides+j,first+sides+i))
+        self.face_materials.extend([material]*(sides+2))
+
     # Add a curved row of separate wedge-shaped masonry blocks.
     def arch(self, x, y, spring, radius, thickness, depth, count=18):
         for i in range(count):
@@ -123,6 +143,8 @@ class MeshBuilder:
         uv=mesh.uv_layers.new(name="UVMap")
         for face, name in zip(mesh.polygons,self.face_materials):
             face.material_index=names.index(name)
+            if name in ("MenuCarvedStone","MenuRoughStone"):
+                face.use_smooth=True
             dominant=max(range(3),key=lambda i:abs(face.normal[i]))
             axes=((1,2),(0,2),(0,1))[dominant]
             for loop_index in face.loop_indices:
@@ -227,7 +249,7 @@ def tower():
     return b.finish()
 
 
-# Sculpt a large crouched winged stone sentinel on a high carved foreground pedestal.
+# Carve a readable crouched winged guardian with separate head, chest, bent limbs and hooked claws.
 def statue():
     b=MeshBuilder("MenuStatue")
     b.box((0,0,0.30),(3.4,3.0,0.60))
@@ -237,24 +259,34 @@ def statue():
         b.box((side*1.13,-0.9,2.0),(0.28,0.32,1.75),"MenuDarkStone")
     b.box((0,0,3.18),(3.2,2.8,0.40))
     b.box((0,0,3.50),(2.8,2.5,0.26))
-    b.oval((0,0.15,5.3),(0.98,0.73,1.65),sides=18,rings=10)
-    b.oval((0,-0.30,6.72),(0.77,0.68,0.85),sides=18,rings=10)
-    b.oval((0,-1.03,6.48),(0.69,0.56,0.37),sides=16,rings=8)
-    b.box((0,-1.39,6.34),(0.90,0.12,0.12),"MenuDarkStone")
-    b.oval((0,-0.95,6.95),(0.46,0.21,0.22),sides=14,rings=7)
+    stone="MenuCarvedStone"
+    b.oval((0,0.15,5.10),(0.88,0.72,1.28),stone,24,14)
+    b.oval((0,-0.24,5.75),(1.03,0.69,0.85),stone,24,14)
+    b.segment((0,-0.12,5.9),(0,-0.52,6.85),0.55,0.43)
+    b.oval((0,-0.65,7.08),(0.67,0.63,0.76),stone,24,14)
+    b.oval((0,-1.23,6.97),(0.48,0.57,0.30),stone,24,12)
+    b.oval((0,-1.27,6.65),(0.46,0.45,0.16),stone,20,10)
+    b.box((0,-1.57,6.79),(0.64,0.09,0.075),"MenuBlack")
     for side in (-1,1):
-        b.oval((side*0.73,-0.2,4.44),(0.52,0.82,0.79),sides=16,rings=8)
-        b.oval((side*0.74,-0.87,3.91),(0.57,0.81,0.26),sides=16,rings=7)
-        b.oval((side*0.89,-0.25,5.24),(0.28,0.37,1.03),sides=14,rings=8)
-        b.oval((side*0.92,-0.86,4.45),(0.33,0.55,0.26),sides=14,rings=7)
-        b.column((side*0.47,-0.04,7.18),0.24,1.10,0,sides=7)
-        b.oval((side*0.33,-1.03,6.92),(0.25,0.08,0.09),"MenuDarkStone",12,6)
-        for i in range(4):
-            b.oval((side*(0.43+i*0.16),-1.48,3.88),(0.08,0.32,0.09),"MenuIron",8,5)
-        wing=[(side*0.63,5.74),(side*1.12,7.34),(side*2.95,8.76),(side*2.65,7.16),(side*3.18,6.72),(side*2.25,6.34),(side*2.12,5.57),(side*1.58,5.86),(side*1.0,4.92)]
-        b.prism(wing,0.49,0.72)
-        for x,z in ((1.14,7.1),(1.80,7.64),(2.45,8.13)):
-            b.oval((side*x,0.47,z),(0.11,0.10,0.57),"MenuDarkStone",8,5)
+        b.oval((side*0.37,-1.12,7.33),(0.26,0.16,0.10),"MenuDarkStone",16,8)
+        b.segment((side*0.10,-1.09,7.48),(side*0.60,-0.98,7.51),0.12,0.07)
+        b.segment((side*0.49,-0.45,7.54),(side*0.81,-0.20,8.28),0.18,0.015)
+        b.oval((side*0.78,0.05,4.42),(0.59,0.81,0.81),stone,22,14)
+        b.segment((side*0.83,-0.15,4.55),(side*0.72,-0.98,3.97),0.34,0.24)
+        b.oval((side*0.78,-1.03,3.88),(0.48,0.61,0.22),stone,20,10)
+        b.segment((side*0.92,-0.18,5.77),(side*1.15,-0.60,4.90),0.34,0.23)
+        b.segment((side*1.15,-0.60,4.90),(side*0.94,-1.15,4.05),0.23,0.15)
+        b.oval((side*0.94,-1.16,4.03),(0.29,0.30,0.18),stone,18,10)
+        for i in range(3):
+            x=side*(0.56+i*0.22)
+            b.segment((x,-1.27,3.94),(x,-1.72,3.78),0.105,0.035)
+            b.segment((x,-1.72,3.78),(x,-1.83,3.58),0.035,0.004)
+        wing=[(side*0.65,5.8),(side*1.25,7.42),(side*3.20,9.08),(side*2.95,7.50),(side*3.43,6.88),(side*2.37,6.65),(side*2.22,5.71),(side*1.60,6.05),(side*0.90,5.1)]
+        b.prism(wing,0.52,0.72,stone)
+        b.segment((side*0.68,0.48,5.76),(side*1.30,0.47,7.42),0.23,0.15)
+        b.segment((side*1.30,0.47,7.42),(side*3.20,0.49,9.08),0.15,0.025)
+        for x,z in ((2.95,7.50),(3.43,6.88),(2.37,6.65),(2.22,5.71)):
+            b.segment((side*1.30,0.45,7.42),(side*x,0.45,z),0.105,0.025)
     return b.finish()
 
 
@@ -407,7 +439,12 @@ def courtyard():
                 x,y,z,size=((5.5,-10.2,0.45,(1.3,0.9,0.7)),(6.7,-8.7,0.65,(1.0,0.9,1.0)),(8.6,-5.5,0.35,(1.5,1.1,0.6)))[i]
                 position=(side*x,y,z)
                 scale=size
-            b.oval(position,scale,"MenuDarkStone",9,5)
+            start=len(b.vertices)
+            b.oval(position,scale,"MenuRoughStone",18,11)
+            for vertex in range(start,len(b.vertices)):
+                point=b.vertices[vertex]
+                shift=1+rng.uniform(-0.14,0.14)
+                b.vertices[vertex]=tuple(position[k]+(point[k]-position[k])*shift for k in range(3))
     return b.finish()
 
 
@@ -484,7 +521,7 @@ def cave():
 
 
 MODELS=(gate,wall,tower,statue,brazier,banner,arches,crystal,courtyard,backdrop,hall,table,cave)
-COLOURS={"MenuDistantStone":(0.003,0.004,0.006),"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7),"MenuWindowGlow":(0.8,0.12,0.018),"MenuFlame":(1.0,0.11,0.008),"MenuFlameCore":(1.0,0.42,0.035),"MenuCrystalDark":(0.005,0.12,0.018),"MenuCrystalBright":(0.12,0.8,0.035)}
+COLOURS={"MenuCarvedStone":(0.22,0.24,0.26),"MenuRoughStone":(0.20,0.22,0.24),"MenuDistantStone":(0.003,0.004,0.006),"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7),"MenuWindowGlow":(0.8,0.12,0.018),"MenuFlame":(1.0,0.11,0.008),"MenuFlameCore":(1.0,0.42,0.035),"MenuCrystalDark":(0.005,0.12,0.018),"MenuCrystalBright":(0.12,0.8,0.035)}
 
 
 # Save every model privately first, copy it into the source tree and export its mesh.
