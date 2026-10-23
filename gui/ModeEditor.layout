@@ -111,9 +111,31 @@
                 </Window>
             </Window>
 
+            <Window type="OD/StaticText" name="GoldDensityDisplay" >
+                <Property name="AlwaysOnTop" value="True" />
+                <Property name="Area" value="{{0,210},{0,0},{0,405},{0,25}}" />
+                <Property name="Text" value="Gold density (G): 100%" />
+                <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                <Property name="TooltipText" value="(50% / 100% / 150% of the gold of a gold wall tile)" />
+                <Property name="HorzFormatting" value="RightAligned" />
+                <Property name="ClippedByParent" value="False" />
+                <Property name="VerticalAlignment" value="Centre" />
+                <Window type="OD/StaticImage" name="Icon" >
+                    <Property name="Area" value="{{0,0},{0,0},{0,30},{0,30}}" />
+                    <Property name="Image" value="OpenDungeonsIcons/GoldCoin" />
+                    <Property name="MaxSize" value="{{1,0},{1,0}}" />
+                    <Property name="AlwaysOnTop" value="True" />
+                    <Property name="TooltipText" value="(50% / 100% / 150% of the gold of a gold wall tile)" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="ClippedByParent" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+
+                </Window>
+            </Window>
+
             <Window type="OD/StaticText" name="PositionDisplay" >
                 <Property name="AlwaysOnTop" value="True" />
-                <Property name="Area" value="{{0,210},{0,0},{0,410},{0,25}}" />
+                <Property name="Area" value="{{0,415},{0,0},{0,615},{0,25}}" />
                 <Property name="Text" value="Cursor Position: 0, 0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="TooltipText" value="" />
@@ -134,7 +156,7 @@
             </Window>
             <Window type="OD/StaticText" name="SeatIdDisplay" >
                 <Property name="AlwaysOnTop" value="True" />
-                <Property name="Area" value="{{0,430},{0,0},{0,560},{0,25}}" />
+                <Property name="Area" value="{{0,635},{0,0},{0,765},{0,25}}" />
                 <Property name="Text" value="Seat id (Y): 0" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="TooltipText" value="Selected Seat Id" />
@@ -155,7 +177,7 @@
             </Window>
             <Window type="OD/StaticText" name="CreatureSpawnDisplay" >
                 <Property name="AlwaysOnTop" value="True" />
-                <Property name="Area" value="{{0,570},{0,0},{0,800},{0,25}}" />
+                <Property name="Area" value="{{0,775},{0,0},{0,1005},{0,25}}" />
                 <Property name="Text" value="Creature (C): ?, level (L): 1" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="TooltipText" value="Selected Creature to spawn" />

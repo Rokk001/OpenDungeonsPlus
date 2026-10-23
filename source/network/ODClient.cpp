@@ -1735,13 +1735,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 TileVisual tileVisual;
                 double tileFullness;
                 int seatId;
+                uint32_t goldDensity = Tile::GOLD_DENSITY_DEFAULT;
                 Seat* seatPtr;
                 while(nbTiles > 0)
                 {
-                
+
                     --nbTiles;
                     Tile* gameTile = draggableTileContainer->tileFromPacket(packetReceived);
-                    OD_ASSERT_TRUE( packetReceived >> tileType >> tileFullness >> seatId >> tileVisual  );
+                    OD_ASSERT_TRUE( packetReceived >> tileType >> tileFullness >> seatId >> tileVisual >> goldDensity );
                     if(gameTile == nullptr)
                         continue;                    
                     if(seatId != -1)
@@ -1752,6 +1753,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                     // xx = xx - draggableTileContainer->getPosition().x;
                     // yy = yy - draggableTileContainer->getPosition().y;
                     gameTile->setType(tileType);
+                    gameTile->setGoldDensity(goldDensity);
                     gameTile->setFullness(tileFullness);
                     gameTile->setSeat(seatPtr);
                     gameTile->setTileVisualIfArgNotNull(tileVisual);

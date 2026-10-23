@@ -2460,8 +2460,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             TileType tileType;
             double tileFullness;
             int seatId;
+            uint32_t goldDensity = Tile::GOLD_DENSITY_DEFAULT;
 
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> tileType >> tileFullness >> seatId);
+            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> tileType >> tileFullness >> seatId >> goldDensity);
             Tile* selectedTile = gameMap->getTile(x1,y1);
             Seat* seat = nullptr;
             if(seatId != -1)
@@ -2475,6 +2476,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             {            
                 selectedTile->setType(tileType);
+                // The density only applies to gold tiles (setType reset it for every other type)
+                if(tileType == TileType::gold)
+                    selectedTile->setGoldDensity(goldDensity);
                 selectedTile->setFullness(tileFullness);
                 if(seat != nullptr)
                     selectedTile->claimTile(seat);
@@ -2514,8 +2518,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             TileType tileType;
             double tileFullness;
             int seatId;
+            uint32_t goldDensity = Tile::GOLD_DENSITY_DEFAULT;
 
-            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2 >> tileType >> tileFullness >> seatId);
+            OD_ASSERT_TRUE(packetReceived >> x1 >> y1 >> x2 >> y2 >> tileType >> tileFullness >> seatId >> goldDensity);
             std::vector<Tile*> selectedTiles = gameMap->rectangularRegion(x1, y1, x2, y2);
             std::vector<Tile*> affectedTiles;
             Seat* seat = nullptr;
@@ -2533,6 +2538,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
                 affectedTiles.push_back(tile);
                 tile->setType(tileType);
+                // The density only applies to gold tiles (setType reset it for every other type)
+                if(tileType == TileType::gold)
+                    tile->setGoldDensity(goldDensity);
                 tile->setFullness(tileFullness);
                 if(seat != nullptr)
                     tile->claimTile(seat);
@@ -2763,7 +2771,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                         {
                             Tile* tile = mDraggableTileContainer->getTile(ii,jj);
                             mDraggableTileContainer->tileToPacket(notif.mPacket, tile);
-                            notif.mPacket << tile->getType() << tile->getFullness() << ((tile->getSeat() == nullptr) ? -1 : tile->getSeat()->getId()) << tile->getTileVisual();
+                            notif.mPacket << tile->getType() << tile->getFullness() << ((tile->getSeat() == nullptr) ? -1 : tile->getSeat()->getId()) << tile->getTileVisual() << tile->getGoldDensity();
                         }
                     sendAsyncMsg(notif);
                 }

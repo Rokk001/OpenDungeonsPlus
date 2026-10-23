@@ -544,6 +544,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
+    mGoldRemainder           (0.0),
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
     mBedNotified             (-1),
@@ -655,6 +656,7 @@ Creature::Creature(GameMap* gameMap) :
     mJobCooldown             (0),
     mGoldFee                 (0),
     mGoldCarried             (0),
+    mGoldRemainder           (0.0),
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
     mBedNotified             (-1),
@@ -1674,6 +1676,9 @@ void Creature::doUpkeep()
         return;
     }
 
+    // An old save can carry more gold than the capacity allows: the excess is dropped as a pile
+    dropExcessGold();
+
     // The ground under the creature or under its walk path may have stopped being walkable
     // (a sold or burnt bridge), and bare lava hurts a creature that cannot walk on it
     if(getIsOnServerMap())
@@ -1746,7 +1751,7 @@ void Creature::doUpkeep()
     {
         mGoldCarriedCosmeticNotified = mGoldCarried;
         fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::carriedGold), mGoldCarried,
-            getDefinition()->getMaxGoldCarryable(), false);
+            getGoldCapacity(), false);
     }
 
     // The clients show a creature without a bed lying down in the open. They are told when that changes and, for a
@@ -6995,6 +7000,47 @@ void Creature::dismissChampion()
     clearDestinations(EntityAnimation::idle_anim, true, true);
     removeFromGameMap();
     deleteYourself();
+}
+
+//! \brief Returns the gold the creature can carry before it has to haul it to a treasury. Every reader of the
+//! capacity uses this function so that the capacity can depend on more than the definition.
+int32_t Creature::getGoldCapacity() const
+{
+    return mDefinition->getMaxGoldCarryable();
+}
+
+//! \brief Adds mined gold with a fraction: the whole part goes to the carried gold, the rest is kept for the next step.
+//! \param gold The mined gold of this step (not negative).
+//! \return The whole part that was added to the carried gold.
+int32_t Creature::addGoldCarriedFraction(double gold)
+{
+    mGoldRemainder += gold;
+    double wholePart = std::floor(mGoldRemainder);
+    mGoldRemainder -= wholePart;
+    int32_t added = static_cast<int32_t>(wholePart);
+    addGoldCarried(added);
+    return added;
+}
+
+//! \brief Drops the carried gold above the capacity as a gold pile on the tile of the creature. Only creatures that
+//! can carry gold (capacity above 0) are affected; thieves, wages and casino gold of other creatures stay untouched.
+void Creature::dropExcessGold()
+{
+    int32_t capacity = getGoldCapacity();
+    if((capacity <= 0) || (mGoldCarried <= capacity))
+        return;
+
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return;
+
+    TreasuryObject* obj = new TreasuryObject(getGameMap(), mGoldCarried - capacity);
+    mGoldCarried = capacity;
+    Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(myTile->getX()),
+                                static_cast<Ogre::Real>(myTile->getY()), 0.0f);
+    obj->addToGameMap();
+    obj->createMesh();
+    obj->setPosition(spawnPosition);
 }
 
 void Creature::endPossession()

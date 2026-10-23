@@ -123,6 +123,7 @@ EditorMode::EditorMode(ModeManager* modeManager):
     draggableTileContainer(nullptr),
     mCurrentTileVisual(TileVisual::nullTileVisual),
     mCurrentFullness(100.0),
+    mCurrentGoldDensity(Tile::GOLD_DENSITY_DEFAULT),
     mCurrentCreatureIndex(0),
     mCurrentCreatureLevel(1),
     mPortalWaveTileX(-1),
@@ -1038,6 +1039,12 @@ void EditorMode::updateCursorText()
     textSS << "Tile Fullness (T): " << mCurrentFullness << "%";
     posWin->setText(textSS.str());
 
+    // Update the gold density info
+    posWin = mRootWindow->getChild(Gui::EDITOR_GOLD_DENSITY);
+    textSS.str("");
+    textSS << "Gold density (G): " << mCurrentGoldDensity << "%";
+    posWin->setText(textSS.str());
+
     // Update the cursor position
     posWin = mRootWindow->getChild(Gui::EDITOR_CURSOR_POS);
     textSS.str("");
@@ -1096,6 +1103,7 @@ void EditorMode::fillControlsWindow()
 
     txt << "Tiles" << std::endl;
     txt << "    T - switch between full and empty tiles" << std::endl;
+    txt << "    G - gold wall density 50/100/150 %" << std::endl;
     txt << "    Y - next seat, Shift + Y - previous seat" << std::endl;
     txt << std::endl;
 
@@ -1646,6 +1654,12 @@ bool EditorMode::keyPressed(const OIS::KeyEvent &arg)
     //Toggle mCurrentFullness
     case OIS::KC_T:
         mCurrentFullness = Tile::nextTileFullness(static_cast<int>(mCurrentFullness));
+        updateCursorText();
+        break;
+
+    //Cycle the density of the gold tiles to be placed
+    case OIS::KC_G:
+        mCurrentGoldDensity = Tile::nextGoldDensity(mCurrentGoldDensity);
         updateCursorText();
         break;
 
@@ -2215,7 +2229,7 @@ bool EditorMode::onYesConfirmMenu(const CEGUI::EventArgs& /*arg*/)
 bool EditorMode::loadLevelFromFile(const std::string& fileName)
 {
     // Ogre::MaterialManager::getSingletonPtr()->unload("LiftedGold");    
-    Ogre::MaterialManager::getSingletonPtr()->remove("LiftedGold","Graphics");
+    RenderManager::removeLiftedGoldMaterials();
     Ogre::TextureManager::getSingletonPtr()->remove("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 
 
@@ -2787,6 +2801,7 @@ void EditorMode::handlePlayerActionChangeTile()
     clientNotification->mPacket << tileType;
     clientNotification->mPacket << fullness;
     clientNotification->mPacket << seatId;
+    clientNotification->mPacket << mCurrentGoldDensity;
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 

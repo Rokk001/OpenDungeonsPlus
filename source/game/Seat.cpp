@@ -2366,6 +2366,12 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
     os << tileSeatId;
     os << meshName;
     os << tileState.mTileVisual;
+
+    // The gold density travels last (read in Tile::updateFromPacket). Only a gold wall the seat knows about shows it.
+    uint32_t goldDensity = Tile::GOLD_DENSITY_DEFAULT;
+    if(tileState.mTileVisual == TileVisual::goldFull)
+        goldDensity = tile->getGoldDensity();
+    os << goldDensity;
 }
 
 void Seat::notifyBuildingRemovedFromGameMap(Building* building, Tile* tile)

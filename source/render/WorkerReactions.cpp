@@ -33,6 +33,7 @@
 #include "render/WorkerExtras.h"
 #include "rooms/Room.h"
 #include "traps/TrapType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 
 #include <OgreAnimationState.h>
@@ -83,8 +84,6 @@ const double YIELD_RADIUS = 1.0;
 const double SOURCE_MEMORY = 8.0;
 const double LOOT_MEMORY = 25.0;
 const double SOURCE_RADIUS = 3.0;
-//! The share of the carry capacity that is a big find when it comes in one go
-const double BIG_FIND_SHARE = 0.1;
 //! The share of the width of a worker that the gold on its body takes
 const double GOLD_BODY_WIDTH = 0.6;
 //! How often a reaction that did not start is tried again, and for how long
@@ -478,8 +477,9 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
         state.mGold = event.mValue;
         state.mMaxGold = event.mValue2;
 
-        // A big find in one go
-        int32_t threshold = static_cast<int32_t>(static_cast<double>(std::max(event.mValue2, 1)) * BIG_FIND_SHARE);
+        // A big find in one go: the share of the carry capacity (WorkerCheerGoldShare) that a rich seam step reaches
+        int32_t threshold = static_cast<int32_t>(static_cast<double>(std::max(event.mValue2, 1)) *
+            ConfigManager::getSingleton().getWorkerCheerGoldShare());
         if((event.mValue - oldGold) >= std::max(threshold, 1))
             later(reactions, worker, "GoldCheer", GOLD_CHEER_DELAY);
         // The gold is gone but not put into a treasury: it was thrown off

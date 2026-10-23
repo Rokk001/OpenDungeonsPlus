@@ -29,6 +29,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 * The size shown beside a multi-tile selection now matches the width and height of the marked tiles
 * Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
 * Creature strength follows the wage: a creature with twice the wage is as strong as two of half the wage; the Champion fights at level 30 with a crown instead of a level.
+* Gold seams hold 3000 gold in three visible densities, gem seams are endless, workers carry 100 gold; every level has enough gold for a game of at least four hours.
 
 ### Version 0.7.3 - 20 September 2026
 

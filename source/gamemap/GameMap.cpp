@@ -4618,6 +4618,7 @@ bool GameMap::askServerCopyTilesWithOffsetFrom(const DraggableTileContainer& dtc
                 clientNotification->mPacket << rhs->getType();
                 clientNotification->mPacket << rhs->getFullness();
                 clientNotification->mPacket << ((rhs->getSeat()==nullptr ) ? -1 : rhs->getSeat()->getId());
+                clientNotification->mPacket << rhs->getGoldDensity();
                 ODClient::getSingleton().queueClientNotification(clientNotification);
             }
             else
