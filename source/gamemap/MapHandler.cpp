@@ -644,7 +644,9 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         if(relationships == nullptr)
             relationships = &dropped;
 
-        if(!relationships->readFromStream(levelFile, gameMap.getTurnNumber()))
+        // A resumed saved game continues at its saved turn; the map itself is still at turn -1 while loading
+        int64_t relationshipTurn = (gameMap.getSavedTurnNumber() > 0) ? gameMap.getSavedTurnNumber() : gameMap.getTurnNumber();
+        if(!relationships->readFromStream(levelFile, relationshipTurn))
         {
             OD_LOG_WRN("Invalid Relationships section");
             return false;
