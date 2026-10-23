@@ -24,10 +24,14 @@
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+
+#include <cmath>
 
 const std::string TrapFearName = "Fear";
 const std::string TrapFearNameDisplay = "Fear trap";
@@ -124,10 +128,11 @@ TrapFear::TrapFear(GameMap* gameMap) :
     mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("FearReloadTurns");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("FearNbShootsBeforeDeactivation");
     mRadius = ConfigManager::getSingleton().getTrapConfigUInt32("FearRadius");
-    mFearTurns = ConfigManager::getSingleton().getTrapConfigUInt32("FearDurationTurns");
+    mFearTurns = ConfigManager::getSingleton().getTrapConfigDouble("FearDurationTurns");
     setMeshName("");
 }
 
+//! \brief Scares the enemies in sight; the time they run follows the fear trap research.
 bool TrapFear::shoot(Tile* tile)
 {
     std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(mRadius));
@@ -147,7 +152,8 @@ bool TrapFear::shoot(Tile* tile)
         if(creature->isActionInList(CreatureActionType::flee))
             continue;
 
-        creature->fleeFromTile(tile, static_cast<int32_t>(mFearTurns));
+        creature->fleeFromTile(tile, static_cast<int32_t>(std::lround(SkillManager::getResearchValue(
+            getSeat(), SkillType::trapFear, mFearTurns, ResearchEffect::Duration))));
         scared = true;
     }
 

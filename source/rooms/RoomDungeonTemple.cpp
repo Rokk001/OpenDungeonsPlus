@@ -29,6 +29,7 @@
 #include "ODApplication.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/RoomObjectBounds.h"
@@ -391,7 +392,6 @@ class RoomDungeonTempleFactory : public RoomFactory
 static RoomRegister reg(new RoomDungeonTempleFactory);
 }
 
-const double RoomDungeonTemple::HEART_HEAL_PER_SECOND = 2.5;
 const double RoomDungeonTemple::HEART_CRITICAL_FRACTION = 0.11;
 
 // The treasury ring of a 5x5 heart stores a fixed amount of gold per ring tile
@@ -406,6 +406,7 @@ RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
     Room(gameMap),
     mTempleObject(nullptr),
     mHeartHP(-1.0),
+    mHeartHPFactor(1.0),
     mCriticalWarningSent(false),
     mCurrentHeartTier(HeartHealthTier::healthy),
     mGoldChanged(false)
@@ -423,9 +424,16 @@ Tile* RoomDungeonTemple::getHeartTile() const
     return mTempleObject != nullptr ? mTempleObject->getPositionTile() : nullptr;
 }
 
+//! \brief The factor of the heart health research of the owner (1 without the research).
+double RoomDungeonTemple::getHeartHPFactor() const
+{
+    return SkillManager::getResearchValue(getSeat(), SkillType::keeperHeartFortitude, 1.0, ResearchEffect::HeartHP);
+}
+
+//! \brief The health of an undamaged heart: the configured value times the factor of the heart health research.
 double RoomDungeonTemple::getHeartMaxHP() const
 {
-    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0);
+    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0) * getHeartHPFactor();
 }
 
 double RoomDungeonTemple::getHeartHealthFraction() const
@@ -530,6 +538,7 @@ bool RoomDungeonTemple::removeCoveredTile(Tile* tile)
     return Room::removeCoveredTile(tile);
 }
 
+//! \brief Handles the heart object and the health: scales it when a research level was reached and heals a living heart.
 void RoomDungeonTemple::doUpkeep()
 {
     if(getHP(nullptr) <= 0.0 && mTempleObject != nullptr && mTempleObject->notifyRemoveAsked())
@@ -542,11 +551,22 @@ void RoomDungeonTemple::doUpkeep()
         removeAllBuildingObjects();
         mTempleObject = nullptr;
     }
+    // When the research of the heart health reached a new level, the current health grows with the maximum
+    const double heartHPFactor = getHeartHPFactor();
+    if(heartHPFactor != mHeartHPFactor)
+    {
+        if(mHeartHP > 0.0)
+            mHeartHP = std::min(mHeartHP * heartHPFactor / mHeartHPFactor, getHeartMaxHP());
+        mHeartHPFactor = heartHPFactor;
+    }
+
     // A living heart heals up to its maximum; a destroyed one (0) never does
     if(mHeartHP > 0.0 && mHeartHP < getHeartMaxHP())
     {
+        const double healPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::keeperHeartMending,
+            ConfigManager::getSingleton().getRoomConfigDouble("DungeonHeartHealPerSecond"), ResearchEffect::HeartHeal);
         mHeartHP = std::min(getHeartMaxHP(),
-            mHeartHP + HEART_HEAL_PER_SECOND / ODApplication::turnsPerSecond);
+            mHeartHP + healPerSecond / ODApplication::turnsPerSecond);
         // Healing above the critical level re-arms the warning for the next drop below it
         if(mHeartHP > HEART_CRITICAL_FRACTION * getHeartMaxHP())
             mCriticalWarningSent = false;
@@ -584,12 +604,14 @@ void RoomDungeonTemple::exportToStream(std::ostream& os) const
         os << "HeartHealth10000 " << getHP(nullptr) << '\n';
 }
 
+//! \brief Reads the room and the health of the heart; the health is limited to the maximum of the owner.
 bool RoomDungeonTemple::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
         return false;
     // Old maps and saves have no room-level health record: their heart starts
     // undamaged, without interpreting the following room as health.
+    mHeartHPFactor = getHeartHPFactor();
     mHeartHP = getHeartMaxHP();
     is >> std::ws;
     if(is.peek() == 'H')

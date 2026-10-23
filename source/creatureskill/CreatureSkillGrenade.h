@@ -55,6 +55,10 @@ public:
     virtual bool importFromStream(std::istream& is) override;
 
 protected:
+    //! \brief The grenade damage is multiplied by the SkillDamageFactor of the creature type.
+    virtual bool appliesSkillDamageFactor() const override
+    { return true; }
+
     //! \brief Creates the exploding missile that hurts every enemy within the blast radius.
     virtual MissileOneHit* createMissile(GameMap& gameMap, Creature* creature, const Ogre::Vector3& direction,
         double phyAtk, double magAtk, double eleAtk, GameEntity* attackedObject, bool ko,

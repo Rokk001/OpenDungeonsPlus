@@ -529,6 +529,16 @@ public:
     inline void setTurnNumber(int64_t turnNumber)
     { mTurnNumber = turnNumber; }
 
+    //! \brief The turn the level file was saved at, 0 for a level that was never played.
+    //! A saved game goes on from it, so that whatever is scheduled on turn numbers keeps
+    //! its timing.
+    inline int64_t getSavedTurnNumber() const
+    { return mSavedTurnNumber; }
+
+    //! \brief Sets the turn the level file was saved at (see getSavedTurnNumber).
+    inline void setSavedTurnNumber(int64_t turnNumber)
+    { mSavedTurnNumber = turnNumber; }
+
     inline bool isServerGameMap() const
     { return mIsServerGameMap; }
     
@@ -862,6 +872,9 @@ private:
 
     //! \brief The current server turn number.
     int64_t mTurnNumber;
+
+    //! \brief The turn the level file was saved at (see getSavedTurnNumber).
+    int64_t mSavedTurnNumber;
 
     //! \brief Unique numbers to ensure names are unique
     int mUniqueNumberCreature;

@@ -715,10 +715,10 @@ void Player::notifyNoSkillInQueue()
     {
         mNoSkillInQueueTime = NO_RESEARCH_TIME_COUNT;
 
-        std::string chatMsg = "Your skill queue is empty, while there are still skills that could be unlocked.";
+        std::string chatMsg = "Warning: your library has nothing to research. Choose the next research in the research tree.";
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, this);
-        serverNotification->mPacket << chatMsg << EventShortNoticeType::genericGameInfo;
+        serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutSkills;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }

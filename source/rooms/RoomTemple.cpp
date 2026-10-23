@@ -23,6 +23,8 @@
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "giftboxes/GiftBoxBonus.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -211,6 +213,7 @@ Tile* RoomTemple::getPrayerSpotForCreature(Creature& creature)
     return spot;
 }
 
+//! \brief A creature prays; the prayer mana per second follows the temple research.
 bool RoomTemple::useRoom(Creature& creature, bool forced)
 {
     Tile* spot = getPrayerSpotForCreature(creature);
@@ -241,6 +244,7 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     double defaultManaPerSecond = configManager.getRoomConfigDouble("TemplePrayerManaPerSecond");
     double manaPerSecond = configManager.getRoomConfigDoubleOrDefault(
         "TemplePrayerMana" + creature.getDefinition()->getClassName(), defaultManaPerSecond);
+    manaPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::roomTemple, manaPerSecond, ResearchEffect::PrayerMana);
     mPrayerManaPending += manaPerSecond / ODApplication::turnsPerSecond;
     int32_t mana = static_cast<int32_t>(mPrayerManaPending);
     mPrayerManaPending -= mana;

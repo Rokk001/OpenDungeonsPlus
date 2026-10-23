@@ -61,7 +61,7 @@ public:
 
 private:
     //! \brief How many turns the creatures on the tile stay frozen
-    int32_t mFreezeTurns;
+    double mFreezeTurns;
 
     //! \brief A creature whose health is at or below this percentage of its maximum health shatters
     double mShatterHpPercent;

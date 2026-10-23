@@ -303,7 +303,8 @@ static double tortureTurnsToConvert(const Creature& creature, const Seat* tortur
     uint32_t index = std::min(std::max(creature.getLevel(), 1u), nbLevels) - 1;
     double seconds = creature.getDefinition()->getTortureTimeToConvert() * TORTURE_LEVEL_PERCENT[index] / 100.0;
     // The torture research makes the conversion faster
-    double speed = SkillManager::getResearchValue(torturingSeat, SkillType::roomTorture, 1.0);
+    double speed = SkillManager::getResearchValue(torturingSeat, SkillType::roomTorture, 1.0,
+        ResearchEffect::ConversionSpeed);
     return seconds * ODApplication::turnsPerSecond / speed;
 }
 

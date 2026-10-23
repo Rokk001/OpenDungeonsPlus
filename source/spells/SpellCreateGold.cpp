@@ -21,6 +21,8 @@
 #include "entities/TreasuryObject.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -29,6 +31,8 @@
 #include "spells/SpellManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+
+#include <cmath>
 
 const std::string SpellCreateGoldName = "createGold";
 const std::string SpellCreateGoldNameDisplay = "Create gold";
@@ -113,6 +117,7 @@ void SpellCreateGold::checkSpellCast(GameMap* gameMap, const InputManager& input
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the gold follows the create gold research.
 bool SpellCreateGold::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     Tile* tile = gameMap->tileFromPacket(packet);
@@ -131,7 +136,8 @@ bool SpellCreateGold::castSpell(GameMap* gameMap, Player* player, ODPacket& pack
     if(!player->getSeat()->takeMana(manaCost))
         return false;
 
-    int32_t goldValue = ConfigManager::getSingleton().getSpellConfigInt32("CreateGoldValue");
+    int32_t goldValue = static_cast<int32_t>(std::lround(SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreateGold,
+        ConfigManager::getSingleton().getSpellConfigDouble("CreateGoldValue"), ResearchEffect::Gold)));
     TreasuryObject* obj = new TreasuryObject(gameMap, goldValue);
     obj->addToGameMap();
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
