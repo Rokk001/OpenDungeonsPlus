@@ -248,7 +248,8 @@ assert '"SkillTreeWindow/Skills/SkillTabs"' in game and 'setSelectedTab("Rooms")
 connections = game[game.index("void GameMode::refreshSkillConnections()"):game.index("void GameMode::refreshSpellButtonCoolDowns()")]
 assert "SkillManager::getSkillTier(type) - 1" in connections, "the row is the tier"
 assert "(static_cast<float>(rowPlaced[row]) + .5f) / static_cast<float>(rowSizes[row])" in connections, "x-centre (i + 0.5) / n"
-assert "std::min(.22f, .9f / static_cast<float>(widestRow))" in connections
+assert "pageWidth / static_cast<float>(widestRow) - freeSpace" in connections, "node size from the page: width of the widest row"
+assert "(available - static_cast<float>(rowCount - 1) * freeSpace) / static_cast<float>(rowCount) - badgeHeight" in connections, "node size from the page: all rows with their counters fit the height"
 assert "getSkillTab(dependency->getType()) != SkillManager::getSkillTab(entry.first)" in connections, "paths only inside a tab"
 assert "ResearchJunction" not in game
 assert "Needs: " in game and "SkillManager::getTabTitle(parentTab)" in game
