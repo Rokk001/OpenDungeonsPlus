@@ -785,8 +785,8 @@ def check_part_g():
     sound = root / 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg'
     assert sound.is_file() and sound.stat().st_size > 0
     assert 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg' in credits
-    assert 'tools/gen_critical_hit_sound.py' in credits
-    assert (root / 'tools/gen_critical_hit_sound.py').is_file()
+    assert 'opengameart.org/content/37-hitspunches' in credits, 'real recording with source URL'
+    assert not (root / 'tools/gen_critical_hit_sound.py').exists(), 'no generator any more'
 
     # ---- 11 the stats text: after "Level:" the attributes, critical chance, mana, path and skills
     stats = function(creature, 'std::string Creature::getStatsText()')
