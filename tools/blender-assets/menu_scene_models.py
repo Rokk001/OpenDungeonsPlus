@@ -54,6 +54,13 @@ class MeshBuilder:
         lean = self.rng.uniform(-0.045,0.045) * VARIANT_DAMAGE
         polygon = [(x+px*math.cos(lean)-pz*math.sin(lean), z+px*math.sin(lean)+pz*math.cos(lean)) for px,pz in polygon]
         self.prism(polygon,y-b,y+b,material)
+        if material in ("MenuStone", "MenuDarkStone", "MenuCarvedStone", "MenuRoughStone") and self.rng.random()<0.32:
+            seam_x=x+self.rng.uniform(-a*0.55,a*0.55)
+            seam_z=z+self.rng.uniform(-c*0.30,c*0.30)
+            self.prism([(seam_x-0.022,seam_z-c*0.65),(seam_x+0.09,seam_z-c*0.16),
+                (seam_x-0.03,seam_z+c*0.32),(seam_x+0.11,seam_z+c*0.73),
+                (seam_x+0.075,seam_z+c*0.76),(seam_x-0.075,seam_z+c*0.32),
+                (seam_x+0.045,seam_z-c*0.16)],y-b-0.015,y-b-0.009,"MenuBlack")
         if material in ("MenuStone", "MenuDarkStone", "MenuCarvedStone", "MenuRoughStone") and z<8 and self.rng.random()<0.17:
             seam = "MenuMoss" if z<4 else "MenuLichen"
             self.prism([(x-a+chip,z-c+0.015),(x+a*0.45,z-c+0.028),
@@ -214,7 +221,7 @@ class MeshBuilder:
         obj.select_set(True)
         if self.name not in ("MenuBanner", "MenuBackdrop", "MenuGreenTower"):
             bevel=obj.modifiers.new("Stone edge wear", "BEVEL")
-            bevel.width=0.025
+            bevel.width=0.012 if self.name=="MenuStatue" else 0.025
             bevel.segments=1
         # Native noise displacement stays editable and is evaluated by both Eevee and the Ogre exporter.
         worn = obj.vertex_groups.new(name="Weathered surface")
@@ -225,6 +232,12 @@ class MeshBuilder:
                 deform.update(face.vertices)
         if deform:
             worn.add(sorted(deform), 1.0, "REPLACE")
+            delicate=set()
+            for face in mesh.polygons:
+                if mesh.materials[face.material_index].name in ("MenuDemonStone","MenuIron","MenuCorrodedIron"):
+                    delicate.update(face.vertices)
+            if delicate:
+                worn.add(sorted(delicate),0.18,"REPLACE")
             texture = bpy.data.textures.new(self.name+" fracture noise",type="CLOUDS")
             texture.noise_scale = 0.46
             texture.noise_depth = 2
@@ -250,7 +263,30 @@ def weather_marks(builder, x, y, z, width, height):
                 (last[0]+0.018,last[1]),(last[0]-0.018,last[1])],y-0.025,y-0.018,"MenuBlack")
 
 
+# Suspend an empty corroded cage from a visibly sagging, partly broken chain.
+def hanging_cage(builder, x, y, z, damage):
+    for i in range(9):
+        builder.link((x+0.10*math.sin(i*0.7),y,z+1.65+i*0.18),0.12,bool(i%2))
+    for level,radius in ((0,0.55),(0.18,0.58),(1.26,0.52)):
+        for i in range(9):
+            angle=i*2*math.pi/9
+            next_angle=(i+1)*2*math.pi/9
+            builder.segment((x+radius*math.cos(angle),y+radius*math.sin(angle),z+level),
+                (x+radius*math.cos(next_angle),y+radius*math.sin(next_angle),z+level),0.035,0.035,"MenuCorrodedIron",5)
+    for i in range(9):
+        angle=i*2*math.pi/9
+        bottom=(x+0.55*math.cos(angle),y+0.55*math.sin(angle),z)
+        top=(x+0.52*math.cos(angle),y+0.52*math.sin(angle),z+1.26)
+        if i==damage:
+            builder.segment(bottom,(top[0]+0.18,top[1]-0.11,z+0.73),0.033,0.024,"MenuCorrodedIron",5)
+        else:
+            builder.segment(bottom,top,0.033,0.033,"MenuCorrodedIron",5)
+        builder.segment(top,(x,y,z+1.65),0.030,0.020,"MenuCorrodedIron",5)
+        builder.segment(bottom,(x,y,z-0.12),0.027,0.020,"MenuCorrodedIron",5)
+
+
 # Build a ruined gatehouse with a horned skull crown, iron points and worn hanging chains.
+# Give the fractured gate arch a rusty spike grille and a chained bestial crown.
 def gate():
     b=MeshBuilder("MenuGate")
     rng=random.Random(207)
@@ -298,19 +334,46 @@ def gate():
             b.oval((side*rng.uniform(4.8,7.1),rng.uniform(-2.4,-0.6),rng.uniform(0.05,0.22)),
                 (rng.uniform(0.18,0.48),rng.uniform(0.18,0.43),rng.uniform(0.15,0.36)),"MenuRoughStone",10,6)
     crown_start=len(b.vertices)
-    b.oval((0,-1.20,12.25),(0.84,0.48,0.86),"MenuCarvedStone",22,14)
-    b.oval((0,-1.48,11.68),(0.58,0.28,0.29),"MenuCarvedStone",18,10)
+    b.prism([(-0.39,11.46),(-0.80,12.32),(-0.70,13.32),(-0.36,13.83),
+        (0.13,13.96),(0.61,13.61),(0.82,12.57),(0.49,11.55),(0,11.16)],-1.71,-0.76,"MenuCarvedStone")
+    b.segment((0,-1.33,13.36),(-0.08,-1.90,12.43),0.30,0.25,"MenuCarvedStone",5)
+    b.segment((-0.08,-1.90,12.43),(-0.05,-2.66,11.56),0.26,0.20,"MenuCarvedStone",5)
+    b.prism([(-0.18,11.75),(0.10,11.68),(0.15,11.48),(-0.07,11.32),
+        (-0.21,11.52)],-2.86,-2.65,"MenuBlack")
     for side in (-1,1):
-        b.oval((side*0.34,-1.61,12.36),(0.25,0.11,0.24),"MenuBlack",16,10)
-        b.segment((side*0.65,-1.15,12.65),(side*1.16,-1.05,13.21),0.27,0.20,"MenuCarvedStone",12)
-        b.segment((side*1.16,-1.05,13.21),(side*1.40,-0.88,13.92),0.20,0.11,"MenuCarvedStone",12)
-        b.segment((side*1.40,-0.88,13.92),(side*1.14,-0.78,14.33),0.11,0.01,"MenuCarvedStone",10)
-    b.prism([(-0.11,12.17),(0.11,12.17),(0,11.93)],-1.69,-1.58,"MenuBlack")
-    for x in (-0.36,-0.18,0,0.18,0.36):
-        b.box((x,-1.73,11.62),(0.10,0.09,0.17),"MenuDarkStone")
+        b.prism([(side*0.15,12.89),(side*0.65,13.14),(side*0.71,12.88),
+            (side*0.54,12.51),(side*0.27,12.42)],-1.77,-1.70,"MenuBlack")
+        b.prism([(side*0.23,12.83),(side*0.58,13.01),(side*0.49,12.73),
+            (side*0.30,12.57)],-1.79,-1.77,"MenuWindowGlow")
+        b.segment((side*0.10,-1.90,13.08),(side*0.83,-1.65,13.25),0.14,0.10,"MenuCarvedStone",5)
+        b.segment((side*0.72,-1.64,12.48),(side*0.49,-2.30,11.43),0.17,0.09,"MenuCarvedStone",5)
+        b.segment((side*0.49,-2.30,11.43),(side*0.25,-2.65,11.07),0.10,0.06,"MenuCarvedStone",5)
+        horn=[(side*0.56,-1.17,13.43),(side*1.13,-1.09,13.75),
+            (side*1.51,-1.04,14.31),(side*1.60,-0.98,14.91),(side*1.37,-1.0,15.28)]
+        if side<0:
+            horn=horn[:4]
+        for index in range(len(horn)-1):
+            b.segment(horn[index],horn[index+1],0.32-index*0.070,
+                0.25-index*0.070 if index<len(horn)-2 else (0.10 if side<0 else 0.006),"MenuCarvedStone",7)
+            if index>0:
+                x,y,z=horn[index]
+                b.prism([(x-side*0.15,z-0.11),(x+side*0.24,z+0.20),
+                    (x+side*0.19,z-0.14)],y-0.20,y+0.11,"MenuCarvedStone")
+        b.segment((side*0.32,-2.51,11.35),(side*0.30,-2.58,10.96 if side<0 else 11.13),0.095,0.004,"MenuCarvedStone",5)
+        for i in range(6):
+            b.link((side*(0.83+i*0.18),-1.28+i*0.05,12.48-i*0.11),0.13,bool(i%2))
+        b.segment((side*0.63,-1.85,12.08),(side*1.28,-0.68,11.67),0.075,0.075,"MenuCorrodedIron",4)
+        b.box((side*1.25,-0.76,11.75),(0.27,0.22,0.48),"MenuCorrodedIron")
+    for x in (-0.16,0.04):
+        b.segment((x,-2.65,11.33),(x-0.02,-2.69,11.03),0.065,0.003,"MenuCarvedStone",5)
+    b.prism([(-0.06,13.89),(0.0,13.79),(-0.11,13.28),(0.06,12.99),
+        (0.03,12.95),(-0.17,13.27),(-0.05,13.77)],-1.745,-1.73,"MenuBlack")
+    b.segment((-0.56,-1.80,13.58),(0.51,-1.80,13.48),0.062,0.062,"MenuCorrodedIron",4)
+    for x in (-1.1,-0.75,-0.43,0.49,0.84,1.16):
+        b.segment((x,-1.15,11.48),(x*1.07,-1.20,10.82),0.11,0.003,"MenuCorrodedIron",5)
     for index in range(crown_start,len(b.vertices)):
         x,y,z=b.vertices[index]
-        b.vertices[index]=(x*1.16,y-0.18,12.2+(z-12.2)*1.10)
+        b.vertices[index]=(x*1.12,y-0.18,12.2+(z-12.2)*1.02)
     return b.finish()
 
 
@@ -355,6 +418,10 @@ def wall():
         b.arch(x,-1.04,8.1,0.23,0.18,0.25,9)
     for x in (-4.8,2.4,9.1):
         weather_marks(b,x,-0.925,4.5,0.68,2.0)
+    for x,z in ((-6.1,5.6),(7.8,4.1)):
+        hanging_cage(b,x,-1.95,z,int(abs(x))%9)
+    for x in (-9.6,-8.7,-4.3,-2.0,0.8,3.6,5.4,9.4):
+        weather_marks(b,x,-0.925,1.25,0.65,2.2)
     for i in range(24):
         b.oval((rng.uniform(-10.7,10.7),rng.uniform(-2.9,-1.2),rng.uniform(0,0.20)),
             (rng.uniform(0.12,0.65),rng.uniform(0.15,0.47),rng.uniform(0.12,0.43)),"MenuRoughStone",10,6)
@@ -398,6 +465,9 @@ def tower():
         b.box((0,-2.48,z),(0.4,0.025,1.45),"MenuWindowGlow")
         b.arch(0,-2.58,z+0.73,0.22,0.19,0.2,9)
     weather_marks(b,-1.6,-2.505,6.0,0.55,2.8)
+    hanging_cage(b,-1.48 if collapsed else 1.42,-3.28,6.05 if collapsed else 7.12,2 if collapsed else 6)
+    for x in (-1.72,-0.85,0.78,1.65):
+        weather_marks(b,x,-2.505,1.4,0.55,2.35)
     for i in range(15):
         b.oval((rng.uniform(-3,3),rng.uniform(-3.4,-2.5),rng.uniform(0,0.2)),
             (rng.uniform(0.14,0.58),rng.uniform(0.14,0.44),rng.uniform(0.13,0.41)),"MenuRoughStone",10,6)
@@ -411,7 +481,7 @@ def tower():
     return b.finish()
 
 
-# Carve a weathered winged guardian with a fractured wingtip, fissures and readable anatomy.
+# Carve an angular, crouching skeletal guardian with open jaws and torn bat membranes.
 def statue():
     b=MeshBuilder("MenuStatue")
     b.box((0,0,0.30),(3.4,3.0,0.60))
@@ -421,46 +491,98 @@ def statue():
         b.box((side*1.13,-0.9,2.0),(0.28,0.32,1.75),"MenuDarkStone")
     b.box((0,0,3.18),(3.2,2.8,0.40))
     b.box((0,0,3.50),(2.8,2.5,0.26))
-    stone="MenuCarvedStone"
-    b.oval((0,0.15,5.10),(0.88,0.72,1.28),stone,24,14)
-    b.oval((0,-0.24,5.75),(1.03,0.69,0.85),stone,24,14)
-    b.segment((0,-0.12,5.9),(0,-0.52,6.85),0.55,0.43)
-    b.oval((0,-0.65,7.08),(0.67,0.63,0.76),stone,24,14)
-    b.oval((0,-1.23,6.97),(0.48,0.57,0.30),stone,24,12)
-    b.oval((0,-1.27,6.65),(0.46,0.45,0.16),stone,20,10)
-    b.box((0,-1.57,6.79),(0.64,0.09,0.075),"MenuBlack")
+    stone="MenuDemonStone"
+    damaged=VARIANT_DAMAGE>1.3
+    lean=-0.17 if damaged else 0.13
+    b.prism([(-0.42,4.35),(0.43,4.30),(0.27,5.06),(0.42,5.64),
+        (0.86,6.27),(0.61,6.72),(-0.56,6.78),(-0.88,6.29),(-0.38,5.61),(-0.23,5.05)],-0.39,0.38,stone)
+    b.segment((lean,0.29,4.57),(lean,0.40,6.71),0.16,0.20,stone,6)
+    for row in range(5):
+        z=5.52+row*0.19
+        width=0.45+row*0.065
+        for side in (-1,1):
+            b.segment((side*0.06,-0.47,z-0.13),(side*width,-0.51,z+0.08),0.065,0.075,stone,5)
+            b.segment((side*width,-0.51,z+0.08),(side*(width+0.09),0.06,z+0.16),0.075,0.045,stone,5)
+    b.segment((0,-0.52,5.68),(lean,-0.60,6.62),0.065,0.09,stone,5)
+    b.segment((lean,0.03,6.44),(lean,-0.91,7.02),0.32,0.25,stone,7)
+    b.prism([(lean-0.36,7.02),(lean-0.42,7.48),(lean-0.19,7.79),
+        (lean+0.16,7.75),(lean+0.40,7.46),(lean+0.31,7.03),(lean,6.87)],-1.08,-0.33,stone)
+    b.segment((lean,-0.55,7.63),(lean,-1.49,7.32),0.29,0.21,stone,5)
+    b.segment((lean,-1.04,7.30),(lean,-1.95,7.13),0.27,0.20,stone,5)
     for side in (-1,1):
-        b.oval((side*0.37,-1.12,7.33),(0.26,0.16,0.10),"MenuDarkStone",16,8)
-        b.segment((side*0.10,-1.09,7.48),(side*0.60,-0.98,7.51),0.12,0.07)
-        b.segment((side*0.49,-0.45,7.54),(side*0.81,-0.20,8.28),0.18,0.015)
-        b.oval((side*0.78,0.05,4.42),(0.59,0.81,0.81),stone,22,14)
-        b.segment((side*0.83,-0.15,4.55),(side*0.72,-0.98,3.97),0.34,0.24)
-        b.oval((side*0.78,-1.03,3.88),(0.48,0.61,0.22),stone,20,10)
-        b.segment((side*0.92,-0.18,5.77),(side*1.15,-0.60,4.90),0.34,0.23)
-        b.segment((side*1.15,-0.60,4.90),(side*0.94,-1.15,4.05),0.23,0.15)
-        b.oval((side*0.94,-1.16,4.03),(0.29,0.30,0.18),stone,18,10)
-        for i in range(3):
-            x=side*(0.56+i*0.22)
-            b.segment((x,-1.27,3.94),(x,-1.72,3.78),0.105,0.035)
-            b.segment((x,-1.72,3.78),(x,-1.83,3.58),0.035,0.004)
+        b.prism([(lean+side*0.07,7.20),(lean+side*0.19,7.13),
+            (lean+side*0.13,7.04),(lean+side*0.04,7.09)],-2.16,-2.13,"MenuBlack")
+    b.prism([(lean-0.37,7.03),(lean+0.34,7.03),(lean+0.26,6.58),
+        (lean-0.04,6.43),(lean-0.31,6.58)],-1.99,-1.73,"MenuBlack")
+    b.segment((lean-0.37,-1.21,6.93),(lean-0.25,-2.01,6.47),0.10,0.095,stone,5)
+    b.segment((lean+0.34,-1.21,6.93),(lean+0.21,-2.01,6.47),0.10,0.075,stone,5)
+    b.segment((lean-0.25,-2.01,6.47),(lean+0.21,-2.01,6.47),0.095,0.075,stone,5)
+    for i in range(7):
+        x=lean-0.27+i*0.083
+        if not (damaged and i in (1,5)):
+            b.segment((x,-2.05,7.10),(x+0.025,-2.08,6.81-(0.09 if i in (0,6) else 0)),0.045,0.003,stone,5)
+        if i%2==0:
+            b.segment((x,-2.03,6.50),(x-0.01,-2.08,6.69),0.035,0.002,stone,5)
+    for side in (-1,1):
+        b.prism([(lean+side*0.12,7.43),(lean+side*0.39,7.62),
+            (lean+side*0.42,7.43),(lean+side*0.28,7.28),(lean+side*0.17,7.29)],-1.105,-1.07,"MenuBlack")
+        b.segment((lean+side*0.09,-1.16,7.49),(lean+side*0.43,-1.04,7.70),0.105,0.055,stone,5)
+        b.segment((lean+side*0.48,-0.90,7.20),(lean+side*0.34,-1.47,7.04),0.12,0.045,stone,5)
+        horn=[(lean+side*0.34,-0.48,7.70),(lean+side*0.69,-0.22,8.13),
+            (lean+side*0.91,-0.10,8.65),(lean+side*0.80,-0.24,9.02),(lean+side*0.57,-0.44,9.20)]
+        if side==(-1 if damaged else 1):
+            horn=horn[:3]
+        for index in range(len(horn)-1):
+            b.segment(horn[index],horn[index+1],0.19-index*0.042,
+                0.15-index*0.042 if index<len(horn)-2 else (0.075 if len(horn)==3 else 0.002),stone,6)
+        b.segment((side*0.79,0.04,6.38),(side*1.26,-0.18,5.33),0.24,0.15,stone,6)
+        b.segment((side*1.26,-0.18,5.33),(side*1.03,-1.03,4.03),0.15,0.105,stone,6)
+        b.segment((side*1.03,-1.03,4.03),(side*0.91,-1.33,3.86),0.13,0.10,stone,5)
+        b.segment((side*0.38,0.13,4.66),(side*1.10,0.19,4.98),0.28,0.20,stone,6)
+        b.segment((side*1.10,0.19,4.98),(side*0.91,-0.90,3.88),0.20,0.13,stone,6)
+        b.segment((side*0.91,-0.90,3.88),(side*0.89,-1.52,3.70),0.15,0.09,stone,6)
+        for i in range(4):
+            x=side*(0.64+i*0.18)
+            y=-1.42-0.16*math.sin(i*0.9)
+            b.segment((x,y,3.92),(x+side*0.045,y-0.45,3.74),0.060,0.038,stone,5)
+            b.segment((x+side*0.045,y-0.45,3.74),(x+side*0.035,y-0.64,3.46),0.038,0.002,stone,5)
+        b.prism([(side*0.33,6.70),(side*1.05,6.36),(side*0.88,5.99)],0.36,0.64,stone)
+        for i in range(4):
+            b.segment((side*0.58,0.47,6.48-i*0.17),(side*(0.89+i*0.07),0.57,6.71-i*0.10),0.075,0.002,stone,5)
         broken_side = -1 if VARIANT_SEED%2==0 else 1
-        tip=(1.95,7.94) if side==broken_side else (3.04,8.73)
-        wing=[(side*0.65,5.8),(side*1.25,7.42),(side*tip[0],tip[1])]
+        root=(side*0.79,0.55,6.15)
+        knuckle=(side*1.42,0.65,8.13)
+        tips=[(side*2.18,0.77,9.10),(side*3.10,0.83,8.12),
+            (side*3.38,0.78,6.90),(side*2.83,0.70,5.70),(side*1.88,0.60,5.11)]
         if side==broken_side:
-            wing.extend([(side*1.72,7.62),(side*2.12,7.40),(side*1.93,7.20),
-                (side*2.68,6.85),(side*2.37,6.65)])
-        else:
-            wing.extend([(side*2.95,7.50),(side*3.43,6.88),(side*2.37,6.65)])
-        wing.extend([(side*2.22,5.71),(side*1.60,6.05),(side*0.90,5.1)])
-        b.prism(wing,0.52,0.72,stone)
-        b.segment((side*0.68,0.48,5.76),(side*1.30,0.47,7.42),0.23,0.15)
-        b.segment((side*1.30,0.47,7.42),(side*tip[0],0.49,tip[1]),0.15,0.025)
-        for x,z in ((2.14,7.20),(2.60,6.88),(2.37,6.65),(2.22,5.71)):
-            b.segment((side*1.30,0.45,7.42),(side*x,0.45,z),0.105,0.025)
-        b.prism([(side*1.74,7.33),(side*1.80,7.34),(side*1.96,6.91),(side*1.88,6.69),
-            (side*2.15,6.49),(side*2.10,6.43),(side*1.81,6.67),(side*1.87,6.91)],0.495,0.51,"MenuBlack")
+            tips[0]=(side*1.79,0.70,8.43)
+            tips[2]=(side*2.76,0.78,6.94)
+        b.segment(root,knuckle,0.17,0.12,stone,6)
+        for tip in tips:
+            b.segment(knuckle,tip,0.11,0.012,stone,5)
+        for index in range(len(tips)-1):
+            tip_a,tip_b=Vector(tips[index]),Vector(tips[index+1])
+            middle=(tip_a+tip_b)*0.5
+            notch=middle+(Vector(knuckle)-middle)*(0.28 if damaged else 0.20)
+            vertices=[Vector(knuckle),tip_a,tip_a.lerp(notch,0.82),
+                notch+Vector((side*0.11,-0.02,0.05)),tip_b.lerp(notch,0.74),tip_b]
+            centre=sum(vertices,Vector())/len(vertices)
+            inner=[centre+(v-centre)*(0.23 if damaged else 0.15) for v in vertices]
+            for edge in range(len(vertices)):
+                next_edge=(edge+1)%len(vertices)
+                if damaged and index==2 and edge in (2,3):
+                    continue
+                first=len(b.vertices)
+                b.vertices.extend(tuple(v) for v in (vertices[edge],vertices[next_edge],inner[next_edge],inner[edge]))
+                b.faces.extend([(first,first+1,first+2),(first,first+2,first+3)])
+                b.face_materials.extend([stone,stone])
+            mid=(vertices[1]+vertices[2])*0.5
+            inward=mid+(Vector(knuckle)-mid)*0.23
+            b.segment(tuple(mid),tuple(inward),0.025,0.012,stone,5)
+    for z in (4.66,5.0,5.36,5.73,6.09,6.45):
+        b.segment((lean,0.51,z),(lean+0.08,0.91,z+0.27),0.10,0.003,stone,5)
     b.prism([(-0.28,6.20),(-0.23,6.21),(-0.11,5.87),(-0.20,5.59),(0.04,5.29),
-        (-0.02,5.25),(-0.27,5.59),(-0.18,5.87)],-0.98,-0.95,"MenuBlack")
+        (-0.02,5.25),(-0.27,5.59),(-0.18,5.87)],-0.545,-0.53,"MenuBlack")
     for i in range(7):
         x=-1.25+((i*0.51+VARIANT_SEED*0.17)%2.5)
         b.oval((x,-1.15,3.68),(0.12,0.13,0.07),"MenuChippedStone",7,4)
@@ -606,11 +728,25 @@ def green_tower():
         b.arch(0,-2.48,z+0.85,0.22,0.17,0.30,9)
         b.box((-2.59,-0.65,z+0.25),(0.025,0.26,1.45),"MenuSpireGlow")
     b.box((0,0,18.0),(5.2,5.3,0.42),"MenuDarkStone")
-    b.column((0,0,18.2),2.65,7.6,0,"MenuDarkStone",16)
+    b.column((0,0,18.2),1.03,3.1,0.78,"MenuDarkStone",9)
+    b.column((0.04,-0.02,21.3),0.80,2.8,0.42,"MenuDarkStone",7)
+    b.column((0.06,-0.03,24.1),0.44,1.7,0,"MenuCorrodedIron",7)
     summit=b.vertices[-1]
+    for index in range(7):
+        angle=index*2*math.pi/7
+        x,y=1.80*math.cos(angle),1.82*math.sin(angle)
+        height=(5.5,3.8,4.8,2.7,5.9,4.2,5.1)[index]
+        b.column((x,y,18.2),0.39,height-1.8,0.23,"MenuDarkStone",6)
+        b.column((x+0.07,y-0.05,16.4+height),0.25,1.8,0,"MenuCorrodedIron",6)
+        b.segment((x*1.15,y*1.15,17.4),(x*0.43,y*0.43,22.7),0.18,0.075,"MenuDarkStone",5)
+        if index%2:
+            b.box((x,y-0.38,19.3),(0.09,0.025,1.65),"MenuSpireGlow")
     for x,y,z,height in ((-3.4,-0.2,10.8,8.8),(3.2,0.6,13.2,8.6),(-1.2,3.0,14.4,8.7),(2.5,-2.4,10.5,7.4)):
         b.column((x,y,3.0),0.86,z-3.0,0.75,"MenuDarkStone",12)
-        b.column((x,y,z),1.12,height,0,"MenuDarkStone",12)
+        b.column((x,y,z),0.77,height-2.5,0.42,"MenuDarkStone",7)
+        b.column((x+0.09,y-0.04,z+height-2.5),0.44,2.5,0,"MenuCorrodedIron",6)
+        for side in (-1,1):
+            b.segment((x+side*0.73,y,z-0.7),(x+side*0.29,y,z+height-1.7),0.13,0.05,"MenuDarkStone",5)
         b.box((x,y-0.87,z-1.6),(0.18,0.035,1.2),"MenuSpireGlow")
     for x,z in ((-1.3,5.0),(0.9,10.2),(-1.1,14.8)):
         b.prism([(x-0.035,z-1.3),(x+0.10,z-0.4),(x-0.03,z+0.4),(x+0.22,z+1.25),
@@ -640,13 +776,20 @@ def courtyard():
             else:
                 poly=[(x-sx/2,z-0.11),(x+sx/2,z-0.11),(x+sx/2-0.025,z+0.07+rng.uniform(-0.04,0.05)),(x-sx/2+0.025,z+0.07)]
                 b.prism(poly,y-sy/2,y+sy/2,"MenuWetStone")
-            if -20<y<8 and rng.random()<0.14:
+            if -24<y<11 and rng.random()<0.24:
                 edge=x+sx/2+0.03
-                first=len(b.vertices)
-                b.vertices.extend([(edge-0.018,y-sy*0.43,z-0.02),(edge+0.018,y-sy*0.40,z-0.02),
-                    (edge+0.014,y+sy*0.40,z-0.02),(edge-0.022,y+sy*0.43,z-0.02)])
-                b.faces.append(tuple(first+i for i in range(4)))
-                b.face_materials.append("MenuEmberCrack")
+                path=[(edge+rng.uniform(-0.014,0.014),y-sy*0.46+j*sy*0.23,z-0.025) for j in range(5)]
+                if rng.random()<0.55:
+                    path.extend([(edge+0.03,y+sy*0.48,z-0.025),
+                        (x+sx*0.20,y+sy*0.5+0.045,z-0.025),
+                        (x-sx*0.21,y+sy*0.5+0.03,z-0.025)])
+                for a,c in zip(path,path[1:]):
+                    direction=Vector(c)-Vector(a)
+                    normal=Vector((-direction.y,direction.x,0)).normalized()*rng.uniform(0.012,0.028)
+                    first=len(b.vertices)
+                    b.vertices.extend(tuple(point) for point in (Vector(a)-normal,Vector(c)-normal,Vector(c)+normal,Vector(a)+normal))
+                    b.faces.append(tuple(first+i for i in range(4)))
+                    b.face_materials.append("MenuEmberCrack")
     b.box((0,-4,-0.39),(56,58,0.12),"MenuDarkStone")
     for i in range(23):
         x,y=rng.uniform(-20,20),rng.uniform(-24,13)
@@ -659,13 +802,13 @@ def courtyard():
         b.faces.append(tuple(start+j for j in range(9)))
         b.face_materials.append("MenuPuddle")
     # Large foreground rocks have separate unique source files and are configured individually.
-    for i in range(42):
+    for i in range(76):
         x,y=rng.uniform(-22,22),rng.uniform(-20,13)
         b.box((x,y,rng.uniform(-0.03,0.11)),(rng.uniform(0.12,0.65),rng.uniform(0.15,0.58),rng.uniform(0.12,0.40)),"MenuRoughStone")
-    for i in range(62):
+    for i in range(109):
         b.oval((rng.uniform(-18,18),rng.uniform(-22,12),rng.uniform(-0.09,0.05)),
             (rng.uniform(0.06,0.23),rng.uniform(0.07,0.28),rng.uniform(0.05,0.19)),"MenuRoughStone",8,5)
-    for i in range(12):
+    for i in range(23):
         x,y=rng.uniform(-15,15),rng.uniform(-19,10)
         if i%2:
             b.segment((x,y,0.01),(x+0.39,y+0.17,0.07),0.06,0.055,"MenuBone",8)
@@ -678,7 +821,7 @@ def courtyard():
     return b.finish()
 
 
-# Build far sculpted mountain ridges, needle towers and low-reflectance storm clouds.
+# Build layered fractured ridges, distant fortress needles and a far left ruined arcade bridge.
 def backdrop():
     b=MeshBuilder("MenuBackdrop")
     rng=random.Random(31)
@@ -692,20 +835,105 @@ def backdrop():
     for layer in range(3):
         y=67+layer*20
         points=[(-120,-6)]
-        for i in range(32):
-            x=-120+i*7.75
-            points.extend([(x,rng.uniform(13,23)+layer*3),(x+3.5,rng.uniform(25,42)+layer*3)])
+        for i in range(97):
+            x=-120+i*2.55
+            ridge=18+7*math.sin(i*0.11+layer*1.3)+4*math.sin(i*0.28+layer)
+            ridge-=10*math.exp(-(x/23)**2)
+            points.append((x,ridge+rng.uniform(-1.6,2.1)+layer*2))
         points.append((124,-6))
         b.prism(points,y,y+12,"MenuMountain")
-        for i in range(20):
+        for i in range(27):
             x=rng.uniform(-100,100)
-            b.oval((x,y-2,rng.uniform(8,22)),(rng.uniform(6,12),rng.uniform(4,9),rng.uniform(7,14)),"MenuMountain",9,6)
-    for x,y,h in ((-42,50,28),(-34,57,36),(-28,62,25),(28,60,31),(37,57,39),(47,64,28)):
-        b.column((x,y,0),1.8,h,material="MenuDistantStone",sides=10)
-        b.column((x,y,h),2.3,7.5,0,"MenuDistantStone",8)
-        for j in range(4):
-            a=j*math.pi/2
-            b.column((x+2.2*math.cos(a),y+2.2*math.sin(a),h-2),0.55,5.5,0,"MenuDistantStone",7)
+            height=rng.uniform(12,27)*(0.45 if abs(x)<20 else 1)
+            width=rng.uniform(3.5,7)
+            b.prism([(x-width,1),(x-width*0.65,height*0.39),
+                (x-width*0.60,height*0.68),(x-width*0.29,height*0.64),
+                (x-width*0.20,height*0.85),(x+width*0.13,height),
+                (x+width*0.23,height*0.74),(x+width*0.44,height*0.77),
+                (x+width*0.58,height*0.46),(x+width,2)],y-3,y+rng.uniform(2,6),"MenuMountain")
+    for cluster,(cx,cy,base_height) in enumerate(((-42,64,28),(-28,76,25),(31,73,29),(47,85,23))):
+        for index in range(13):
+            x=cx+rng.uniform(-8,8)
+            y=cy+rng.uniform(-4,5)
+            h=base_height+rng.uniform(-13,4)
+            radius=rng.uniform(0.42,1.05)
+            b.column((x,y,0),radius*1.25,h*0.67,top=radius,material="MenuDistantStone",sides=7)
+            b.column((x+0.11,y,h*0.67),radius*1.12,h*0.33,top=radius*0.72,material="MenuDistantStone",sides=7)
+            b.column((x+0.14,y,h),radius*0.86,rng.uniform(2.5,5.0),0,"MenuDistantStone",6)
+            for j in range(3):
+                a=j*2*math.pi/3+cluster*0.7
+                dx,dy=radius*math.cos(a),radius*math.sin(a)
+                b.column((x+dx,y+dy,h-1.6),radius*0.23,rng.uniform(2,4),0,"MenuDistantStone",5)
+            if index%3==0:
+                b.prism([(x-radius*1.4,h*0.20),(x+radius*1.2,h*0.20),
+                    (x+radius*1.3,h*0.37),(x+radius*0.7,h*0.34),
+                    (x,h*0.40),(x-radius*1.4,h*0.36)],y-0.8,y+0.8,"MenuDistantStone")
+    # This remote broken bridge is scenery behind the existing, unchanged gathering arches.
+    for index in range(6):
+        x=-60+index*6.5
+        y=48+index*1.9
+        spring=13.3+index*0.31
+        radius=2.62
+        for side in (-1,1):
+            pier_x=x+side*3.04
+            b.prism([(pier_x-0.47,0),(pier_x+0.53,0),(pier_x+0.43,spring+0.12),
+                (pier_x-0.36,spring+0.28),(pier_x-0.52,spring*0.53)],y-0.82,y+0.82,"MenuDistantStone")
+        for wedge in range(16):
+            if index==1 and wedge in (3,4):
+                continue
+            a=math.pi*wedge/16+0.014
+            c=math.pi*(wedge+1)/16-0.014
+            b.prism([(x+radius*math.cos(a),spring+radius*math.sin(a)),
+                (x+(radius+0.43)*math.cos(a),spring+(radius+0.43)*math.sin(a)),
+                (x+(radius+0.43)*math.cos(c),spring+(radius+0.43)*math.sin(c)),
+                (x+radius*math.cos(c),spring+radius*math.sin(c))],y-0.80,y+0.80,"MenuDistantStone")
+        deck=spring+radius+0.61
+        b.prism([(x-3.25,deck-0.27),(x+3.25,deck-0.27),
+            (x+3.21,deck+0.17),(x+1.09,deck+0.07),(x-1.20,deck+0.23),
+            (x-3.25,deck+0.16)],y-0.92,y+0.92,"MenuDistantStone")
+        for post in range(4):
+            if (index+post)%5==0:
+                continue
+            b.column((x-2.85+post*1.73,y-0.87,deck+0.12),0.10,
+                0.45+(post%2)*0.30,0,"MenuDistantStone",5)
+    for index in range(9):
+        x=35+index*3.9+rng.uniform(-1.5,1.5)
+        y=61+index*3.4+rng.uniform(-3,3)
+        peak=rng.uniform(22,33)
+        # Each crag has three spatially offset fractured needles, never a flat extruded profile.
+        for spur in range(3):
+            cx=x+(spur-1)*rng.uniform(1.1,2.0)
+            cy=y+rng.uniform(-2.3,2.3)
+            height=peak*(1 if spur==1 else rng.uniform(0.58,0.84))
+            width=rng.uniform(1.3,2.5)*(1 if spur==1 else 0.63)
+            depth=width*rng.uniform(0.61,1.25)
+            lean_x=rng.uniform(-1.6,1.6)
+            lean_y=rng.uniform(-1.2,1.2)
+            first=len(b.vertices)
+            sides=7
+            for row,(level,spread) in enumerate(((0.0,1.0),(0.34,0.87),(0.60,0.56),(0.79,0.49),(0.93,0.21))):
+                for edge in range(sides):
+                    angle=edge*2*math.pi/sides+row*0.11
+                    fracture=rng.uniform(0.72,1.19)
+                    notch=0.49 if (edge+row+index+spur)%6==0 else 1
+                    b.vertices.append((cx+width*spread*fracture*notch*math.cos(angle)+lean_x*level,
+                        cy+depth*spread*fracture*math.sin(angle)+lean_y*level,
+                        2+height*level+rng.uniform(-0.65,0.65)))
+            b.faces.append(tuple(first+edge for edge in reversed(range(sides))))
+            b.face_materials.append("MenuMountain")
+            for row in range(4):
+                for edge in range(sides):
+                    a=first+row*sides+edge
+                    c=first+row*sides+(edge+1)%sides
+                    d=first+(row+1)*sides+(edge+1)%sides
+                    e=first+(row+1)*sides+edge
+                    b.faces.extend(((a,c,d),(a,d,e)))
+                    b.face_materials.extend(("MenuMountain","MenuMountain"))
+            tip=len(b.vertices)
+            b.vertices.append((cx+lean_x+rng.uniform(-0.3,0.3),cy+lean_y,2+height))
+            for edge in range(sides):
+                b.faces.append((first+4*sides+edge,first+4*sides+(edge+1)%sides,tip))
+                b.face_materials.append("MenuMountain")
     for i in range(35):
         b.oval((rng.uniform(-100,100),rng.uniform(38,125),rng.uniform(35,58)),(rng.uniform(13,29),rng.uniform(7,18),rng.uniform(2.5,6)),"MenuCloud",16,7)
     return b.finish()
@@ -797,6 +1025,7 @@ COLOURS.update({"MenuMoss":(0.035,0.055,0.022),"MenuLichen":(0.065,0.070,0.045),
     "MenuWaterStain":(0.035,0.031,0.026),"MenuChippedStone":(0.14,0.13,0.11),
     "MenuAgedWood":(0.075,0.046,0.026),"MenuClothFadedA":(0.12,0.018,0.014),
     "MenuClothFadedB":(0.085,0.025,0.020),"MenuBone":(0.12,0.105,0.075),"MenuCorrodedIron":(0.075,0.048,0.028)})
+COLOURS["MenuDemonStone"]=(0.14,0.15,0.15)
 COLOURS.update({"MenuSpireGlow":(0.025,0.8,0.055),"MenuSpireBeam":(0.04,0.95,0.09),
     "MenuEmberCrack":(0.65,0.055,0.004),"MenuBannerSymbol":(0.32,0.21,0.085),
     "MenuHorizonGlow":(0.08,0.012,0.002),"MenuHorizonDark":(0.018,0.007,0.004)})
@@ -829,6 +1058,8 @@ def main():
     repo,private=map(Path,arguments[:2])
     sys.path.insert(0,str(repo/"tools/blender-assets"))
     import odp_ogre_io as exporter
+    from menu_scene_assembly import configure_material, material_values
+    material_text=(repo/"materials/scripts/MenuScene.material").read_text(encoding="utf-8")
     source=repo/"assets-src/menu-scene"
     work=repo/"out/menu-scene/xml"
     for folder in (source,work,private):
@@ -847,6 +1078,9 @@ def main():
         wet.diffuse_color=(0.30,0.29,0.28,1)
         result=build()
         obj,arm=result if isinstance(result,tuple) else (result,None)
+        images={}
+        for material in obj.data.materials:
+            configure_material(material,material_values(material_text,material.name),repo,images)
         obj.name=name
         obj.data.name=name
         obj["menu_source_family"]=family
