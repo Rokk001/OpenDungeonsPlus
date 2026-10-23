@@ -17,11 +17,17 @@ namespace
 {
 typedef std::map<std::string, CreatureAppearance> ClientAppearances;
 
+//! \brief Selects the first available image so snapshot fixtures stay deterministic.
+uint32_t chooseFirstImage(uint32_t lower, uint32_t)
+{
+    return lower;
+}
+
 //! \brief Writes the same name/token pairs used by full creature data on join and load.
 void writeSnapshot(ODPacket& packet, const ClientAppearances& server)
 {
     packet << static_cast<uint32_t>(server.size());
-    for(const auto& creature : server)
+    for(const ClientAppearances::value_type& creature : server)
         packet << creature.first << CreatureAppearanceLogic::toToken(creature.second);
 }
 
@@ -46,7 +52,7 @@ void checkSameView(const PortraitCatalog& catalog, const DungeonbookQuirks& quir
     const ClientAppearances& server, const ClientAppearances& client)
 {
     BOOST_REQUIRE(server == client);
-    for(const auto& creature : server)
+    for(const ClientAppearances::value_type& creature : server)
     {
         if(creature.second.isEmpty())
             continue;
@@ -73,7 +79,7 @@ BOOST_AUTO_TEST_CASE(two_clients_and_late_join_snapshot)
     for(uint32_t n = 0; n < 2; ++n)
     {
         CreatureAppearance next = CreatureAppearanceLogic::pickRandom(catalog, "Goblin.mesh",
-            [](uint32_t lower, uint32_t) { return lower; }, taken);
+            chooseFirstImage, taken);
         taken.push_back(next);
         server["Goblin" + std::to_string(n)] = next;
     }

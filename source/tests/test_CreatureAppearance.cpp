@@ -29,6 +29,12 @@ uint32_t chooseFirst(uint32_t lower, uint32_t upper)
     return lower;
 }
 
+//! \brief Lists the fixture catalogs used to verify gender fallback.
+bool fixtureCatalogExists(const std::string& id)
+{
+    return id == "Elf.mesh-male" || id == "Goblin.mesh";
+}
+
 //! \brief Uses all fifty images before a duplicate and scopes uniqueness to the keeper's catalog.
 BOOST_AUTO_TEST_CASE(unique_fifty_then_duplicate)
 {
@@ -78,9 +84,7 @@ BOOST_AUTO_TEST_CASE(stable_migration_and_save_roundtrip)
 //! \brief Retains gender fallback, bounded retries and absence of invented images in empty catalogs.
 BOOST_AUTO_TEST_CASE(fallback_and_retry)
 {
-    CreatureAppearanceLogic::CatalogExistsFunction exists = [](const std::string& id) {
-        return id == "Elf.mesh-male" || id == "Goblin.mesh";
-    };
+    CreatureAppearanceLogic::CatalogExistsFunction exists = fixtureCatalogExists;
     BOOST_CHECK_EQUAL(CreatureAppearanceLogic::resolveCatalogId("Elf.mesh", "Male", exists), "Elf.mesh-male");
     BOOST_CHECK_EQUAL(CreatureAppearanceLogic::resolveCatalogId("Goblin.mesh", "Female", exists), "Goblin.mesh");
     BOOST_CHECK(CreatureAppearanceLogic::resolveCatalogId("Missing.mesh", "Male", exists).empty());
