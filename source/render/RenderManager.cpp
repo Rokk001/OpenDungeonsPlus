@@ -2196,6 +2196,7 @@ void RenderManager::setWorldAmbientLightingFactor(float lightFactor)
     mSceneManager->setAmbientLight(factoredLighting);
 }
 
+//! \brief Adds a menu point light with its own scene node so several lights can coexist.
 Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogre::Vector3& pos,
         const Ogre::ColourValue& diffuse, const Ogre::ColourValue& specular, Ogre::Real attenuationRange,
         Ogre::Real attenuationConstant, Ogre::Real attenuationLinear, Ogre::Real attenuationQuadratic)
@@ -2207,7 +2208,7 @@ Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogr
     }
 
     Ogre::Light* light = mSceneManager->createLight(name);
-    Ogre::SceneNode* sn =  mSceneManager->getRootSceneNode()->createChildSceneNode("PointLightMenuSceneNode",pos);
+    Ogre::SceneNode* sn = mSceneManager->getRootSceneNode()->createChildSceneNode("PointLightMenuSceneNode_" + name, pos);
     sn->attachObject(light);
     light->setType(Ogre::Light::LT_POINT);
     light->setDiffuseColour(diffuse);
@@ -2216,10 +2217,12 @@ Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogr
     return light;
 }
 
+//! \brief Removes a menu point light and the root child node that owns it.
 void RenderManager::removePointLightMenu(Ogre::Light* light)
 {
+    Ogre::SceneNode* node = light->getParentSceneNode();
     mSceneManager->destroyLight(light);
-    mSceneManager->getRootSceneNode()->removeAndDestroyChild("PointLightMenuSceneNode");
+    mSceneManager->getRootSceneNode()->removeAndDestroyChild(node->getName());
 }
 
 Ogre::Entity* RenderManager::addEntityMenu(const std::string& meshName, const std::string& entityName,
