@@ -7796,7 +7796,7 @@ void Creature::flee()
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
 }
 
-void Creature::fleeFromTile(Tile* fearTile, int32_t nbTurns)
+void Creature::fleeFromTile(Tile* fearTile, double nbTurns)
 {
     // Fear breaks the possession of the creature
     if(isPossessed())

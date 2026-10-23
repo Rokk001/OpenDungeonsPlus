@@ -31,7 +31,6 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
-#include <cmath>
 
 const std::string TrapFearName = "Fear";
 const std::string TrapFearNameDisplay = "Fear trap";
@@ -152,8 +151,8 @@ bool TrapFear::shoot(Tile* tile)
         if(creature->isActionInList(CreatureActionType::flee))
             continue;
 
-        creature->fleeFromTile(tile, static_cast<int32_t>(std::lround(SkillManager::getResearchValue(
-            getSeat(), SkillType::trapFear, mFearTurns, ResearchEffect::Duration))));
+        creature->fleeFromTile(tile, SkillManager::getResearchValue(
+            getSeat(), SkillType::trapFear, mFearTurns, ResearchEffect::Duration));
         scared = true;
     }
 

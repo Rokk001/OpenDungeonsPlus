@@ -1241,7 +1241,7 @@ public:
     void flee();
 
     //! \brief Makes the creature run away from fearTile for nbTurns turns (fear trap)
-    void fleeFromTile(Tile* fearTile, int32_t nbTurns);
+    void fleeFromTile(Tile* fearTile, double nbTurns);
 
     //! \brief Stuns the creature for nbTurns turns (lightning trap). A stunned creature does nothing,
     //! like a creature that was just dropped. Does nothing if the creature is dead or already KO.
