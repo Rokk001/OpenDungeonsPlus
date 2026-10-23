@@ -198,11 +198,7 @@ material MenuWetStone : MenuStone
 {
     technique
     {
-        pass lighting
-        {
-            specular 0.28 0.29 0.30 1 36
-        }
-        pass decal
+        pass
         {
             specular 0.28 0.29 0.30 1 36
         }
