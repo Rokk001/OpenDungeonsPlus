@@ -97,7 +97,7 @@ material MenuCloth
 {
     technique
     {
-        pass
+        pass cloth
         {
             cull_hardware none
             ambient 0.25 0.025 0.028 1
@@ -304,4 +304,90 @@ material MenuPuddle : MenuStone
             specular 0.42 0.42 0.40 1 64
         }
     }
+}
+
+// Damp moss gathers in broken joints; its colour is a dark surface response, never light.
+material MenuMoss : MenuStone
+{
+    technique { pass decal {
+        ambient 0.045 0.055 0.028 1
+        diffuse 0.045 0.055 0.028 1
+        specular 0.012 0.012 0.008 1 5
+    } }
+}
+
+// Muted mineral lichen occupies weathered stone recesses and retains the stone grain.
+material MenuLichen : MenuStone
+{
+    technique { pass decal {
+        ambient 0.075 0.071 0.041 1
+        diffuse 0.075 0.071 0.041 1
+        specular 0.012 0.012 0.010 1 5
+    } }
+}
+
+// Rain runoff darkens irregular tracks beneath broken masonry without emitting light.
+material MenuWaterStain : MenuStone
+{
+    technique { pass decal {
+        ambient 0.050 0.045 0.040 1
+        diffuse 0.050 0.045 0.040 1
+        specular 0.14 0.13 0.11 1 40
+    } }
+}
+
+// Exposed chipped faces remain dark and granular rather than clean pale cut stone.
+material MenuChippedStone : MenuStone
+{
+    technique { pass decal {
+        ambient 0.17 0.17 0.15 1
+        diffuse 0.17 0.17 0.15 1
+        specular 0.018 0.018 0.016 1 6
+    } }
+}
+
+// Rotten timber and broken weapon handles retain grain in a subdued weathered brown.
+material MenuAgedWood : MenuStone
+{
+    technique { pass decal {
+        ambient 0.085 0.066 0.045 1
+        diffuse 0.085 0.066 0.045 1
+        specular 0.010 0.009 0.007 1 5
+    } }
+}
+
+// Uneven corroded iron catches fire only at worn edges; rust is not emissive.
+material MenuCorrodedIron : MenuStone
+{
+    technique { pass decal {
+        ambient 0.052 0.042 0.032 1
+        diffuse 0.052 0.042 0.032 1
+        specular 0.07 0.06 0.05 1 8
+    } }
+}
+
+// Old courtyard bones are stained dark by soil and rain instead of bright clean ivory.
+material MenuBone : MenuStone
+{
+    technique { pass decal {
+        ambient 0.12 0.10 0.07 1
+        diffuse 0.12 0.10 0.07 1
+        specular 0.010 0.009 0.007 1 5
+    } }
+}
+
+// Independent desaturated red remnants keep the two torn banners visibly different.
+material MenuClothFadedA : MenuCloth
+{
+    technique { pass cloth {
+        ambient 0.10 0.024 0.019 1
+        diffuse 0.10 0.024 0.019 1
+    } }
+}
+material MenuClothFadedB : MenuCloth
+{
+    technique { pass cloth {
+        ambient 0.065 0.026 0.021 1
+        diffuse 0.065 0.026 0.021 1
+    } }
 }

@@ -8,6 +8,10 @@ import sys
 import bpy
 from mathutils import Vector
 
+VARIANT_SEED = 0
+VARIANT_DAMAGE = 1.0
+VARIANT_NAME = ""
+
 
 # Build disconnected closed surfaces with material slots and world-sized planar UVs.
 class MeshBuilder:
@@ -17,6 +21,7 @@ class MeshBuilder:
         self.vertices = []
         self.faces = []
         self.face_materials = []
+        self.rng = random.Random(1901 + VARIANT_SEED + sum(ord(value) for value in name))
 
     # Append a solid polygon extruded along Y.
     def prism(self, polygon, front, back, material="MenuStone"):
@@ -24,6 +29,11 @@ class MeshBuilder:
         count = len(polygon)
         self.vertices.extend((x, front, z) for x, z in polygon)
         self.vertices.extend((x, back, z) for x, z in polygon)
+        if material in ("MenuStone", "MenuDarkStone", "MenuCarvedStone", "MenuRoughStone", "MenuWetStone", "MenuWood", "MenuIron", "MenuDistantStone", "MenuMountain"):
+            strength = 0.045 * VARIANT_DAMAGE
+            for index in range(start, len(self.vertices)):
+                point = self.vertices[index]
+                self.vertices[index] = tuple(point[axis] + self.rng.uniform(-strength, strength) for axis in range(3))
         self.faces.append(tuple(start + i for i in range(count)))
         self.faces.append(tuple(start + count + i for i in reversed(range(count))))
         for i in range(count):
@@ -31,27 +41,48 @@ class MeshBuilder:
             self.faces.append((start+i, start+count+i, start+count+j, start+j))
         self.face_materials.extend([material] * (count+2))
 
-    # Add an axis-aligned block whose supplied position is its centre.
+    # Add a chipped, tilted masonry block with genuinely clipped irregular corners.
     def box(self, centre, size, material="MenuStone"):
         x, y, z = centre
         a, b, c = (v/2 for v in size)
-        self.prism([(x-a,z-c),(x+a,z-c),(x+a,z+c),(x-a,z+c)],y-b,y+b,material)
+        if material in ("MenuWindowGlow", "MenuFlame", "MenuFlameCore", "MenuEmber", "MenuParchment", "MenuCampaignMap"):
+            self.prism([(x-a,z-c),(x+a,z-c),(x+a,z+c),(x-a,z+c)],y-b,y+b,material)
+            return
+        chip = min(a, c) * self.rng.uniform(0.14, 0.43)
+        polygon = [(-a+chip,-c),(a-chip*0.6,-c),(a,-c+chip*1.3),(a,c-chip),
+            (a-chip*1.2,c),(-a+chip*0.7,c),(-a,c-chip*0.6),(-a,-c+chip)]
+        lean = self.rng.uniform(-0.045,0.045) * VARIANT_DAMAGE
+        polygon = [(x+px*math.cos(lean)-pz*math.sin(lean), z+px*math.sin(lean)+pz*math.cos(lean)) for px,pz in polygon]
+        self.prism(polygon,y-b,y+b,material)
+        if material in ("MenuStone", "MenuDarkStone", "MenuCarvedStone", "MenuRoughStone") and z<8 and self.rng.random()<0.17:
+            seam = "MenuMoss" if z<4 else "MenuLichen"
+            self.prism([(x-a+chip,z-c+0.015),(x+a*0.45,z-c+0.028),
+                (x+a*0.28,z-c+0.072),(x-a*0.2,z-c+0.046),(x-a+chip*1.2,z-c+0.10)],
+                y-b-0.018,y-b-0.010,seam)
 
-    # Add a tapered vertical polygonal column or pointed spire.
+    # Add a visibly worn, off-axis tapered column or pointed spire.
     def column(self, centre, radius, height, top=None, material="MenuStone", sides=12):
         x, y, z = centre
         top = radius if top is None else top
+        irregular = material not in ("MenuFlame", "MenuFlameCore", "MenuEmber", "MenuCrystal", "MenuCrystalBright", "MenuCrystalDark")
+        lean_x = self.rng.uniform(-0.13,0.13) * VARIANT_DAMAGE if irregular else 0
+        lean_y = self.rng.uniform(-0.09,0.09) * VARIANT_DAMAGE if irregular else 0
         start = len(self.vertices)
         if top == 0:
             self.vertices.extend((x+radius*math.cos(i*2*math.pi/sides),y+radius*math.sin(i*2*math.pi/sides),z) for i in range(sides))
-            self.vertices.append((x,y,z+height))
+            self.vertices.append((x+lean_x,y+lean_y,z+height))
             self.faces.append(tuple(start+i for i in reversed(range(sides))))
             for i in range(sides):
                 self.faces.append((start+i,start+(i+1)%sides,start+sides))
             self.face_materials.extend([material]*(sides+1))
             return
         for level, r in ((z,radius),(z+height,top)):
-            self.vertices.extend((x+r*math.cos(i*2*math.pi/sides),y+r*math.sin(i*2*math.pi/sides),level) for i in range(sides))
+            for i in range(sides):
+                wear = self.rng.uniform(0.82,1.11) if irregular else 1
+                shift = 1 if level != z else 0
+                jitter=self.rng.uniform(-0.055,0.055)*shift if irregular else 0
+                self.vertices.append((x+r*wear*math.cos(i*2*math.pi/sides)+lean_x*shift,
+                    y+r*wear*math.sin(i*2*math.pi/sides)+lean_y*shift,level+jitter))
         self.faces.extend([tuple(start+i for i in reversed(range(sides))),tuple(start+sides+i for i in range(sides))])
         for i in range(sides):
             j = (i+1)%sides
@@ -106,10 +137,14 @@ class MeshBuilder:
     # Add a curved row of separate wedge-shaped masonry blocks.
     def arch(self, x, y, spring, radius, thickness, depth, count=18):
         for i in range(count):
+            gap = int(count * (0.24 + (VARIANT_SEED % 4)*0.10))
+            if radius > 1.4 and i in (gap, gap+1) and self.name != "MenuGate":
+                continue
             a=math.pi*i/count+0.012
             b=math.pi*(i+1)/count-0.012
             poly=[(x+radius*math.cos(a),spring+radius*math.sin(a)),(x+(radius+thickness)*math.cos(a),spring+(radius+thickness)*math.sin(a)),(x+(radius+thickness)*math.cos(b),spring+(radius+thickness)*math.sin(b)),(x+radius*math.cos(b),spring+radius*math.sin(b))]
-            self.prism(poly,y-depth/2,y+depth/2)
+            sag = self.rng.uniform(-0.12,0.08)*VARIANT_DAMAGE
+            self.prism([(px,pz+sag) for px,pz in poly],y-depth/2,y+depth/2)
 
     # Add a worn elliptical chain link, with occasional broken sections closed by fracture caps.
     def link(self, centre, radius, alternate=False):
@@ -138,13 +173,27 @@ class MeshBuilder:
             self.faces.append(tuple(start+3*ring+j for j in reversed(range(ring))))
             self.face_materials.extend(["MenuIron","MenuIron"])
 
-    # Produce the Blender mesh with per-face materials and a planar UV layer.
+    # Produce worn surfaces with baked per-object texture rotation and non-repeating local UV offsets.
     def finish(self):
         mesh=bpy.data.meshes.new(self.name)
         mesh.from_pydata(self.vertices,[],self.faces)
         mesh.update()
         obj=bpy.data.objects.new(self.name,mesh)
         bpy.context.scene.collection.objects.link(obj)
+        for index, material in enumerate(self.face_materials):
+            if material not in ("MenuStone", "MenuDarkStone", "MenuCarvedStone", "MenuRoughStone"):
+                continue
+            face = mesh.polygons[index]
+            center = face.center
+            patch = math.sin(center.x*1.71+VARIANT_SEED)+math.sin(center.z*0.73+center.y*0.91)
+            if center.z < 3.8 and patch > 0.75:
+                self.face_materials[index] = "MenuMoss"
+            elif patch < -1.50:
+                self.face_materials[index] = "MenuLichen"
+            elif math.sin(center.x*7.9+center.y*4.1+VARIANT_SEED) > 0.93:
+                self.face_materials[index] = "MenuWaterStain"
+            elif self.rng.random() < 0.06:
+                self.face_materials[index] = "MenuChippedStone"
         names=list(dict.fromkeys(self.face_materials))
         for name in names:
             mesh.materials.append(bpy.data.materials[name])
@@ -157,13 +206,33 @@ class MeshBuilder:
             axes=((1,2),(0,2),(0,1))[dominant]
             for loop_index in face.loop_indices:
                 point=mesh.vertices[mesh.loops[loop_index].vertex_index].co
-                uv.data[loop_index].uv=(point[axes[0]]*0.5,point[axes[1]]*0.5)
+                angle = 0.317 * (VARIANT_SEED % 19) + 0.19*int(face.center.x*1.8+face.center.z*0.7)
+                u,v=point[axes[0]]*0.5,point[axes[1]]*0.5
+                uv.data[loop_index].uv=(u*math.cos(angle)-v*math.sin(angle)+VARIANT_SEED*0.173,
+                    u*math.sin(angle)+v*math.cos(angle)+VARIANT_SEED*0.219)
         bpy.context.view_layer.objects.active=obj
         obj.select_set(True)
         if self.name not in ("MenuBanner", "MenuBackdrop", "MenuCrystalSpire"):
             bevel=obj.modifiers.new("Stone edge wear", "BEVEL")
             bevel.width=0.025
             bevel.segments=1
+        # Native noise displacement stays editable and is evaluated by both Eevee and the Ogre exporter.
+        worn = obj.vertex_groups.new(name="Weathered surface")
+        deform = set()
+        for face in mesh.polygons:
+            material = mesh.materials[face.material_index].name
+            if material not in ("MenuFlame", "MenuFlameCore", "MenuEmber", "MenuCrystal", "MenuCrystalBright", "MenuCrystalDark", "MenuWindowGlow", "MenuCampaignMap", "MenuPuddle", "MenuSky", "MenuCloud"):
+                deform.update(face.vertices)
+        if deform:
+            worn.add(sorted(deform), 1.0, "REPLACE")
+            texture = bpy.data.textures.new(self.name+" fracture noise",type="CLOUDS")
+            texture.noise_scale = 0.46
+            texture.noise_depth = 2
+            displacement = obj.modifiers.new("Eroded stone noise", "DISPLACE")
+            displacement.texture = texture
+            displacement.vertex_group = worn.name
+            displacement.strength = 0.11*VARIANT_DAMAGE
+            displacement.mid_level = 0.52
         return obj
 
 
@@ -243,23 +312,24 @@ def gate():
 # Build damaged buttressed masonry with broken spiked crenels while retaining both menu alcoves.
 def wall():
     b=MeshBuilder("MenuWallSegment")
-    rng=random.Random(307)
+    rng=random.Random(307+VARIANT_SEED)
     for row in range(11):
         for col in range(16):
             x=-10.2+col*1.34+(0.22 if row%2 else 0)
             if 6<=col<=8 and row<4:
                 continue
-            if (row,col) in ((8,2),(6,12),(9,13),(4,4)):
+            fracture_x = -3.5+math.sin(row*1.21+VARIANT_SEED)*0.7
+            crown = 9.3 - 2.5*math.exp(-((x-(4.5 if VARIANT_SEED%2 else -5.7))/3.1)**2)
+            if (row,col) in ((8,2),(6,12),(9,13),(4,4)) or row*0.88 > crown or (row>2 and abs(x-fracture_x)<0.70):
                 continue
             b.box((x+rng.uniform(-0.06,0.06),0.5+rng.uniform(-0.08,0.06),row*0.88+0.44),
                 (1.30+rng.uniform(-0.10,0.02),2.8,0.83+rng.uniform(-0.08,0.02)))
-    b.box((0,0.5,9.83),(22.0,3.45,0.5))
-    for x in range(-10,11,2):
-        if x in (-6,4):
-            b.prism([(x-0.48,10.08),(x+0.48,10.08),(x+0.44,10.42),(x-0.15,10.77)],-1.30,1.6)
-        else:
-            b.box((x,0.15,10.65+rng.uniform(-0.13,0.10)),(0.96,2.9,1.15))
-            b.column((x,-0.92,11.22),0.18,0.80+rng.uniform(-0.14,0.20),0,"MenuIron",7)
+    for x in range(-10,11):
+        top = 9.6 - 2.5*math.exp(-((x-(4.5 if VARIANT_SEED%2 else -5.7))/3.1)**2)
+        b.box((x,0.5,top),(0.94,3.45,rng.uniform(0.24,0.60)))
+        if x%2 == 0 and rng.random()>0.35:
+            b.prism([(x-0.48,top),(x+0.48,top),(x+0.24,top+rng.uniform(0.25,1.1)),(x-0.22,top+rng.uniform(0.3,1.3))],-1.30,1.6)
+            b.column((x,-0.92,top+0.8),0.18,rng.uniform(0.20,1.0),0,"MenuCorrodedIron",7)
     for x in (-9.7,-5.0,4.5,9.7):
         b.box((x,-0.65,4.8),(1.05,4.1,9.6))
         b.box((x,-1.4,0.5),(1.5,4.4,1.0))
@@ -289,24 +359,35 @@ def wall():
 # Build a weathered tower with missing masonry, broken iron-tipped crenels and an accessible platform.
 def tower():
     b=MeshBuilder("MenuTower")
-    rng=random.Random(407)
+    rng=random.Random(407+VARIANT_SEED)
+    collapsed = VARIANT_DAMAGE > 1.3
     for row in range(13):
         for col in range(4):
-            if (row,col) in ((8,0),(10,3),(3,1)):
+            if (row,col) in ((8,0),(10,3),(3,1)) or (collapsed and row>=8 and col<2) or (row>=11 and col==0):
                 continue
             b.box((-1.74+col*1.16+rng.uniform(-0.045,0.045),-0.25+rng.uniform(-0.05,0.04),row*0.94+0.46),
                 (1.12+rng.uniform(-0.09,0.025),4.4,0.89+rng.uniform(-0.05,0.02)))
     for z in (0.5,4.4,8.5,12.3):
-        b.box((0,-0.25,z),(5.2,4.95,0.32))
-    b.box((0,-0.25,12.8),(5.8,5.7,0.65))
+        if collapsed and z>8:
+            b.box((1.40,-0.25,z),(2.4,4.95,0.32))
+        else:
+            b.box((0,-0.25,z),(5.2,4.95,0.32))
+    if collapsed:
+        b.box((1.35,0.35,12.8),(2.8,4.4,0.65))
+        b.box((-0.4,0.4,10.1),(1.1,2.3,0.65))
+    else:
+        b.box((0,-0.25,12.8),(5.8,5.7,0.65))
     for side in (-1,1):
         for x in (-2.35,0,2.35):
+            if collapsed and x<=0:
+                continue
             if side<0 and x==2.35:
                 b.prism([(x-0.45,13.07),(x+0.45,13.07),(x+0.18,13.61),(x-0.31,13.37)],side*2.3-0.73,side*2.3+0.23)
             else:
                 b.box((x,side*2.3-0.25,13.75+rng.uniform(-0.12,0.07)),(0.9,0.95,1.35))
                 b.column((x,side*2.3-0.25,14.42),0.19,0.90+rng.uniform(-0.1,0.20),0,"MenuIron",7)
-        b.box((side*2.35,-0.25,13.75),(0.95,0.95,1.35))
+        if not collapsed or side>0:
+            b.box((side*2.35,-0.25,13.75),(0.95,0.95,1.35))
     for z in (4.2,7.8,10.7):
         weather_marks(b,0,-2.51,z+1.55,0.98,1.1)
         b.box((0,-2.48,z),(0.4,0.025,1.45),"MenuWindowGlow")
@@ -315,7 +396,13 @@ def tower():
     for i in range(15):
         b.oval((rng.uniform(-3,3),rng.uniform(-3.4,-2.5),rng.uniform(0,0.2)),
             (rng.uniform(0.14,0.58),rng.uniform(0.14,0.44),rng.uniform(0.13,0.41)),"MenuRoughStone",10,6)
-    b.column((0,0.9,13.15),0.82,3.4,0,"MenuDarkStone",9)
+    if collapsed:
+        b.column((1.4,0.9,13.15),0.55,1.25,0,"MenuDarkStone",9)
+        for i in range(18):
+            b.oval((rng.uniform(-4.2,-1),rng.uniform(-3.5,0),rng.uniform(0.1,0.6)),
+                (rng.uniform(0.3,0.8),rng.uniform(0.3,0.9),rng.uniform(0.2,0.65)),"MenuRoughStone",9,6)
+    else:
+        b.column((0.15,0.9,13.15),0.82,2.8,0,"MenuDarkStone",9)
     return b.finish()
 
 
@@ -351,20 +438,27 @@ def statue():
             x=side*(0.56+i*0.22)
             b.segment((x,-1.27,3.94),(x,-1.72,3.78),0.105,0.035)
             b.segment((x,-1.72,3.78),(x,-1.83,3.58),0.035,0.004)
-        tip=(2.88,8.52) if side<0 else (3.20,9.08)
+        broken_side = -1 if VARIANT_SEED%2==0 else 1
+        tip=(1.95,7.94) if side==broken_side else (3.04,8.73)
         wing=[(side*0.65,5.8),(side*1.25,7.42),(side*tip[0],tip[1])]
-        if side<0:
-            wing.extend([(side*2.69,8.41),(side*2.91,8.17)])
-        wing.extend([(side*2.95,7.50),(side*3.43,6.88),(side*2.37,6.65),(side*2.22,5.71),(side*1.60,6.05),(side*0.90,5.1)])
+        if side==broken_side:
+            wing.extend([(side*1.72,7.62),(side*2.12,7.40),(side*1.93,7.20),
+                (side*2.68,6.85),(side*2.37,6.65)])
+        else:
+            wing.extend([(side*2.95,7.50),(side*3.43,6.88),(side*2.37,6.65)])
+        wing.extend([(side*2.22,5.71),(side*1.60,6.05),(side*0.90,5.1)])
         b.prism(wing,0.52,0.72,stone)
         b.segment((side*0.68,0.48,5.76),(side*1.30,0.47,7.42),0.23,0.15)
         b.segment((side*1.30,0.47,7.42),(side*tip[0],0.49,tip[1]),0.15,0.025)
-        for x,z in ((2.95,7.50),(3.43,6.88),(2.37,6.65),(2.22,5.71)):
+        for x,z in ((2.14,7.20),(2.60,6.88),(2.37,6.65),(2.22,5.71)):
             b.segment((side*1.30,0.45,7.42),(side*x,0.45,z),0.105,0.025)
         b.prism([(side*1.74,7.33),(side*1.80,7.34),(side*1.96,6.91),(side*1.88,6.69),
             (side*2.15,6.49),(side*2.10,6.43),(side*1.81,6.67),(side*1.87,6.91)],0.495,0.51,"MenuBlack")
     b.prism([(-0.28,6.20),(-0.23,6.21),(-0.11,5.87),(-0.20,5.59),(0.04,5.29),
         (-0.02,5.25),(-0.27,5.59),(-0.18,5.87)],-0.98,-0.95,"MenuBlack")
+    for i in range(7):
+        x=-1.25+((i*0.51+VARIANT_SEED*0.17)%2.5)
+        b.oval((x,-1.15,3.68),(0.12,0.13,0.07),"MenuChippedStone",7,4)
     return b.finish()
 
 
@@ -377,8 +471,10 @@ def brazier():
     b.column((0,0,3.19),0.94,0.12,material="MenuIron",sides=18)
     b.column((0,0,3.31),0.78,0.10,material="MenuEmber",sides=16)
     for i in range(10):
+        if i in ((VARIANT_SEED%7),((VARIANT_SEED%7)+3)%10):
+            continue
         a=i*math.pi/5
-        b.column((0.84*math.cos(a),0.84*math.sin(a),3.13),0.065,0.44,material="MenuIron",sides=6)
+        b.column((0.84*math.cos(a),0.84*math.sin(a),3.13),0.065,0.24+0.2*abs(math.sin(i+VARIANT_SEED)),material="MenuCorrodedIron",sides=6)
     for i in range(9):
         a=i*2.399
         x,y=0.46*math.cos(a),0.46*math.sin(a)
@@ -396,7 +492,8 @@ def banner():
     for row in range(13):
         for col in range(7):
             x=-1.4+col*(2.8/6)
-            z=-row*0.40
+            length=0.34 if VARIANT_SEED%2 else 0.43
+            z=-row*length
             y=0.10*math.sin(x*5)+0.03*row*math.sin(x*4)
             if row>=10:
                 z-=0.10*(col%3)+0.13*math.sin(col*2.8+row)
@@ -406,11 +503,11 @@ def banner():
     start=len(b.vertices)-13*7
     for row in range(12):
         for col in range(6):
-            if (row,col) in ((6,1),(7,1),(10,5),(11,5),(11,0)):
+            if (row,col) in ((6,1),(7,1),(10,5),(11,5),(11,0)) or (VARIANT_SEED%2 and (row,col) in ((4,4),(5,4),(8,2),(9,2),(10,2),(11,2))):
                 continue
             i=start+row*7+col
             b.faces.append((i,i+1,i+8,i+7))
-            b.face_materials.append("MenuCloth")
+            b.face_materials.append("MenuClothFadedB" if VARIANT_SEED%2 else "MenuClothFadedA")
     obj=b.finish()
     arm_data=bpy.data.armatures.new("BannerArmature")
     arm=bpy.data.objects.new("BannerArmature",arm_data)
@@ -458,13 +555,16 @@ def banner():
 # Build the left gathering arcade as a deep stone structure with dark recesses.
 def arches():
     b=MeshBuilder("MenuArches")
-    b.box((0,0,4.1),(15.7,4.0,8.2),"MenuDarkStone")
+    for row in range(8):
+        for col in range(8):
+            if (row,col) in ((6,2),(7,2),(3,6)):
+                continue
+            b.box((-6.9+col*1.95,0,row+0.5),(1.84,4.0,0.94),"MenuDarkStone")
     for x in (-7,-2.34,2.34,7):
         b.box((x,0,12.1),(1.15,3.1,7.8))
         b.box((x,0,0.35),(1.65,3.65,0.70))
-    for x in (-4.67,0,4.67):
-        b.arch(x,0,16.0,1.75,0.60,3.1,18)
-    b.box((0,0,18.6),(15.7,3.7,0.55))
+    for x in (-6.8,-4.1,-1.4,2.2,4.9,7.1):
+        b.box((x,0,17.9+0.13*math.sin(x)),(1.8+0.4*math.sin(x),3.7,0.48))
     for x in (-6,-3,0,3,6):
         b.box((x,0,19.25),(0.85,3.4,0.8))
     return b.finish()
@@ -508,12 +608,12 @@ def courtyard():
     for row in range(30):
         y=-29+row*1.65
         for col in range(30):
-            x=-25+col*1.75+(0.82 if row%2 else 0)
-            sx,sy=1.67+rng.uniform(-0.10,0.05),1.55+rng.uniform(-0.10,0.05)
-            z=-0.10+rng.uniform(-0.13,0.065)
-            if rng.random()<0.045:
+            x=-25+col*1.75+(0.82 if row%2 else 0)+rng.uniform(-0.15,0.15)
+            sx,sy=1.57+rng.uniform(-0.21,0.11),1.47+rng.uniform(-0.20,0.10)
+            z=-0.10+rng.uniform(-0.24,0.12)
+            if rng.random()<0.075:
                 continue
-            if rng.random()<0.16:
+            if rng.random()<0.33:
                 b.prism([(x-sx/2,z-0.11),(x+0.12,z-0.11),(x-0.08,z+0.07),(x-sx/2+0.025,z+0.11)],
                     y-sy/2,y+sy/2,"MenuWetStone")
                 b.prism([(x+0.20,z-0.19),(x+sx/2,z-0.19),(x+sx/2-0.025,z-0.03),(x+0.01,z+0.005)],
@@ -532,23 +632,23 @@ def courtyard():
             b.vertices.append((x+rx*math.cos(angle)*rough,y+ry*math.sin(angle)*rough,-0.19))
         b.faces.append(tuple(start+j for j in range(9)))
         b.face_materials.append("MenuPuddle")
-    for side in (-1,1):
-        for i in range(48):
-            position=(side*rng.uniform(8.8,23),rng.uniform(-23,-3),rng.uniform(-0.05,0.9))
-            scale=(rng.uniform(0.25,1.65),rng.uniform(0.3,1.5),rng.uniform(0.25,1.4))
-            if i<3:
-                x,y,z,size=((5.5,-10.2,0.45,(1.3,0.9,0.7)),(6.7,-8.7,0.65,(1.0,0.9,1.0)),(8.6,-5.5,0.35,(1.5,1.1,0.6)))[i]
-                position=(side*x,y,z)
-                scale=size
-            start=len(b.vertices)
-            b.oval(position,scale,"MenuRoughStone",18,11)
-            for vertex in range(start,len(b.vertices)):
-                point=b.vertices[vertex]
-                shift=1+rng.uniform(-0.14,0.14)
-                b.vertices[vertex]=tuple(position[k]+(point[k]-position[k])*shift for k in range(3))
+    # Large foreground rocks have separate unique source files and are configured individually.
+    for i in range(42):
+        x,y=rng.uniform(-22,22),rng.uniform(-20,13)
+        b.box((x,y,rng.uniform(-0.03,0.11)),(rng.uniform(0.12,0.65),rng.uniform(0.15,0.58),rng.uniform(0.12,0.40)),"MenuRoughStone")
     for i in range(62):
         b.oval((rng.uniform(-18,18),rng.uniform(-22,12),rng.uniform(-0.09,0.05)),
             (rng.uniform(0.06,0.23),rng.uniform(0.07,0.28),rng.uniform(0.05,0.19)),"MenuRoughStone",8,5)
+    for i in range(12):
+        x,y=rng.uniform(-15,15),rng.uniform(-19,10)
+        if i%2:
+            b.segment((x,y,0.01),(x+0.39,y+0.17,0.07),0.06,0.055,"MenuBone",8)
+            for dx in (0,0.39):
+                b.oval((x+dx,y+(0.17 if dx else 0),0.06),(0.09,0.12,0.08),"MenuBone",8,5)
+        else:
+            b.prism([(x,0.07),(x+0.17,0.12),(x+0.58,0.04),(x+0.47,-0.01)],y,y+0.07,"MenuCorrodedIron")
+            b.segment((x-0.2,y,0.04),(x,y,0.07),0.055,0.05,"MenuAgedWood",7)
+            b.segment((x-0.02,y-0.19,0.06),(x+0.06,y+0.23,0.06),0.035,0.02,"MenuCorrodedIron",6)
     return b.finish()
 
 
@@ -585,8 +685,16 @@ def hall():
     b=MeshBuilder("MenuCampaignHall")
     b.box((0,0,-0.15),(13,16,0.3))
     for side in (-1,1):
-        b.box((side*6.4,0,3.8),(0.7,16,7.6))
-    b.box((0,7.8,3.8),(13,0.7,7.6))
+        for row in range(7):
+            for col in range(9):
+                if (row,col,side) in ((5,3,-1),(6,3,-1),(4,7,1)):
+                    continue
+                b.box((side*6.4,-7+col*1.75,row+0.5),(0.7,1.64,0.93))
+    for row in range(7):
+        for col in range(8):
+            if row>3 and col in (2,3):
+                continue
+            b.box((-5.7+col*1.6,7.8,row+0.5),(1.5,0.7,0.92))
     for y in (-6,-2,2,6):
         b.arch(0,y,5.0,5.8,0.45,0.5,18)
         for side in (-1,1):
@@ -597,10 +705,11 @@ def hall():
 # Build the campaign table with a separate plane for the existing map image.
 def table():
     b=MeshBuilder("MenuMapTable")
-    b.box((0,0,1.55),(4.4,3.2,0.24),"MenuWood")
+    b.box((0,0,1.55),(4.4,3.2,0.24),"MenuAgedWood")
     for x in (-1.75,1.75):
         for y in (-1.15,1.15):
-            b.box((x,y,0.75),(0.24,0.24,1.5),"MenuWood")
+            b.box((x,y,0.75),(0.24,0.24,1.5),"MenuAgedWood")
+    b.segment((-1.8,-1.20,0.08),(-1.1,-1.7,0.05),0.10,0.06,"MenuAgedWood",7)
     b.box((0,0,1.68),(4.05,2.85,0.03),"MenuParchment")
     start=len(b.vertices)
     b.vertices.extend([(-1.9,-1.3,1.705),(1.9,-1.3,1.705),(1.9,1.3,1.705),(-1.9,1.3,1.705)])
@@ -621,15 +730,67 @@ def cave():
             b.oval((side*(2.25+0.16*math.sin(z)),0,z*0.9),(0.90,2.3,0.75),"MenuDarkStone",8,5)
     b.arch(0,0,3.4,1.8,1.1,4.2,11)
     b.box((0,1.2,-0.15),(5.8,7.0,0.3))
+    for i in range(13):
+        b.oval((-3.8+(i*1.31)%7.5,-1.3+(i*0.67)%4.0,-0.07+(i%3)*0.08),
+            (0.16+(i%3)*0.11,0.28,0.19),"MenuRoughStone",8,5)
+    return b.finish()
+
+
+# Build one independently fractured foreground boulder instead of mirrored parent-mesh rocks.
+def rock():
+    b=MeshBuilder("MenuRuinRock")
+    rng=random.Random(VARIANT_SEED)
+    b.oval((0,0,0.65),(rng.uniform(1.0,1.6),rng.uniform(0.8,1.35),rng.uniform(0.75,1.35)),"MenuRoughStone",17,10)
+    for index, point in enumerate(b.vertices):
+        scale=1+rng.uniform(-0.22,0.21)
+        b.vertices[index]=tuple(value*scale for value in point)
+    b.prism([(-0.7,0.3),(-0.56,0.85),(-0.12,1.30),(0.05,0.97),(-0.40,0.67)],-0.72,-0.56,"MenuChippedStone")
+    return b.finish()
+
+
+# Build one separately exported damaged arcade arch with a unique missing-keystone pattern.
+def arcade_arch():
+    b=MeshBuilder("MenuArcadeArch")
+    index=(VARIANT_SEED-801)%3
+    x=(-4.67,0,4.67)[index]
+    b.arch(x,0,15.75+0.13*index,1.75,0.63,3.1,19+index)
+    if index==1:
+        b.box((x+1.1,-0.4,16.8),(0.43,1.8,0.5))
+    b.box((x-0.5,-1.8,0.25),(0.68,0.9,0.44),"MenuRoughStone")
     return b.finish()
 
 
 MODELS=(gate,wall,tower,statue,brazier,banner,arches,crystal,courtyard,backdrop,hall,table,cave)
 COLOURS={"MenuSoot":(0.009,0.007,0.005),"MenuPuddle":(0.05,0.05,0.045),"MenuCarvedStone":(0.22,0.24,0.26),"MenuRoughStone":(0.20,0.22,0.24),"MenuDistantStone":(0.003,0.004,0.006),"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7),"MenuWindowGlow":(0.8,0.12,0.018),"MenuFlame":(1.0,0.11,0.008),"MenuFlameCore":(1.0,0.42,0.035),"MenuCrystalDark":(0.005,0.12,0.018),"MenuCrystalBright":(0.12,0.8,0.035)}
+COLOURS.update({"MenuMoss":(0.035,0.055,0.022),"MenuLichen":(0.065,0.070,0.045),
+    "MenuWaterStain":(0.035,0.031,0.026),"MenuChippedStone":(0.14,0.13,0.11),
+    "MenuAgedWood":(0.075,0.046,0.026),"MenuClothFadedA":(0.12,0.018,0.014),
+    "MenuClothFadedB":(0.085,0.025,0.020),"MenuBone":(0.12,0.105,0.075),"MenuCorrodedIron":(0.075,0.048,0.028)})
+
+
+# Enumerate the thirteen base families and every independently authored visible instance variant.
+def model_specs():
+    specs=[]
+    for index,build in enumerate(MODELS):
+        family=("MenuGate","MenuWallSegment","MenuTower","MenuStatue","MenuBrazier","MenuBanner","MenuArches", "MenuCrystalSpire","MenuCourtyard","MenuBackdrop","MenuCampaignHall","MenuMapTable","MenuSideCave")[index]
+        damage=1.8 if build in (tower,statue) else 1.15
+        specs.append((build,family,family,1000+index*10,damage))
+    variants=((wall,"MenuWallSegmentRight","MenuWallSegment"),(tower,"MenuTowerRight","MenuTower"),
+        (statue,"MenuStatueRight","MenuStatue"),(banner,"MenuBannerRight","MenuBanner"),
+        (brazier,"MenuBrazierRight","MenuBrazier"),(brazier,"MenuBrazierGateLeft","MenuBrazier"),
+        (brazier,"MenuBrazierGateRight","MenuBrazier"))
+    for index,(build,name,family) in enumerate(variants):
+        specs.append((build,name,family,2001+index*10,0.85+index*0.045))
+    for index in range(8):
+        specs.append((rock,"MenuRuinRock%02d"%(index+1),"MenuCourtyard",701+index,1.35))
+    for index in range(3):
+        specs.append((arcade_arch,"MenuArcadeArch%02d"%(index+1),"MenuArches",801+index,1.1+index*0.23))
+    return specs
 
 
 # Save every model privately first, copy it into the source tree and export its mesh.
 def main():
+    global VARIANT_SEED, VARIANT_DAMAGE, VARIANT_NAME
     arguments=sys.argv[sys.argv.index("--")+1:]
     repo,private=map(Path,arguments[:2])
     sys.path.insert(0,str(repo/"tools/blender-assets"))
@@ -640,21 +801,31 @@ def main():
         folder.mkdir(parents=True,exist_ok=True)
     bpy.context.preferences.filepaths.save_version=0
     report=[]
-    for build in MODELS:
-        if len(arguments)>2 and build.__name__ not in arguments[2:]:
+    for build,name,family,seed,damage in model_specs():
+        if len(arguments)>2 and build.__name__ not in arguments[2:] and name not in arguments[2:]:
             continue
+        VARIANT_SEED,VARIANT_DAMAGE,VARIANT_NAME=seed,damage,name
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        for name,colour in COLOURS.items():
-            mat=bpy.data.materials.new(name)
+        for material_name,colour in COLOURS.items():
+            mat=bpy.data.materials.new(material_name)
             mat.diffuse_color=(*colour,1)
         wet=bpy.data.materials.new("MenuWetStone")
         wet.diffuse_color=(0.30,0.29,0.28,1)
         result=build()
         obj,arm=result if isinstance(result,tuple) else (result,None)
-        name=obj.name
+        obj.name=name
+        obj.data.name=name
+        obj["menu_source_family"]=family
+        obj["menu_variant_seed"]=seed
+        obj["menu_damage_strength"]=damage
+        if arm:
+            arm.name=name+"Armature"
         bpy.context.scene.render.fps=24
         bpy.context.scene.frame_start=0
         bpy.context.scene.frame_end=96
+        assert obj.name==name
+        if (private/(name+".blend")).exists() or (private/(name+".mesh.xml")).exists():
+            raise FileExistsError("Use a fresh model destination: "+name)
         bpy.ops.wm.save_as_mainfile(filepath=str(private/(name+".blend")))
         shutil.copyfile(private/(name+".blend"),source/(name+".blend"))
         stats=exporter.export_mesh_xml(obj,arm,str(private/(name+".mesh.xml")),name+".skeleton" if arm else None,smooth=False)

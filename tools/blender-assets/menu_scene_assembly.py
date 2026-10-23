@@ -12,6 +12,15 @@ import bpy
 from mathutils import Quaternion
 
 
+# The authored families remain complete while their placed ruins use separate exported variants.
+SOURCE_FAMILIES = {
+    "MenuGate", "MenuWallSegment", "MenuTower", "MenuStatue", "MenuBrazier", "MenuBanner",
+    "MenuArches", "MenuCrystalSpire", "MenuCourtyard", "MenuBackdrop", "MenuCampaignHall",
+    "MenuMapTable", "MenuSideCave"
+}
+EXPECTED_CONFIGURED_ENTITY_COUNT = 31
+
+
 # Return one existing material definition, including its inherited scalar properties.
 def material_values(text, name):
     match = re.search(r"\bmaterial\s+" + re.escape(name) + r"\s*(?::\s*([\w/]+))?\s*\{", text)
@@ -34,8 +43,12 @@ def material_values(text, name):
     if re.search(r"\blighting\s+off\b", block):
         values["unlit"] = True
     values["name"] = name
-    values["normal"] = "MenuStoneNormal.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone", "MenuDarkStone", "MenuPuddle") else None
-    values["texture"] = "MenuStone.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone", "MenuDarkStone", "MenuPuddle") else ("MenuCampaignMap.png" if name == "MenuCampaignMap" else None)
+    if name == "MenuStone":
+        values["normal"] = "MenuStoneNormal.png"
+        values["texture"] = "MenuStone.png"
+    elif name == "MenuCampaignMap":
+        values["texture"] = "MenuCampaignMap.png"
+    # Child stone materials retain their parent's texture and the source mesh's varied UVs.
     return values
 
 
@@ -50,7 +63,7 @@ def texture_image(repo, filename, images):
 
 
 
-# Translate the dark scene materials with physical highlights and no flat ambient self-lighting.
+# Translate inherited dark surfaces using their exported UVs, without ambient self-lighting.
 def configure_material(material, values, repo, images):
     material.use_nodes = True
     nodes=material.node_tree.nodes
@@ -406,16 +419,24 @@ def main():
     definitions = [line.split() for line in (repo / "config/mainmenuscene.cfg").read_text().splitlines() if line.strip() and not line.lstrip().startswith("#")]
     entities = [words for words in definitions if words[0] == "AddEntity"]
     filenames = sorted({Path(words[2]).stem + ".blend" for words in entities})
-    assert len(filenames) == 13 and len(entities) == 20
+    assert len(entities) == EXPECTED_CONFIGURED_ENTITY_COUNT
+    assert len({words[1] for words in entities}) == len(entities)
+    assert len(filenames) == len(entities), "Every placed ruin must have its own exported model"
     prototypes = {}
+    source_families = set()
     for filename in filenames:
         with bpy.data.libraries.load(str(repo / "assets-src/menu-scene" / filename), link=False) as (available, loaded):
             loaded.objects = list(available.objects)
         objects = [obj for obj in loaded.objects if obj is not None]
-        assert objects and any(obj.type == "MESH" for obj in objects)
+        meshes = [obj for obj in objects if obj.type == "MESH"]
+        assert len(meshes) == 1, "Each ruin source must contain one complete exported mesh: " + filename
+        family = meshes[0].get("menu_source_family")
+        assert family in SOURCE_FAMILIES, "Missing original source family: " + filename
+        source_families.add(family)
         for obj in objects:
             sources.objects.link(obj)
         prototypes[Path(filename).stem] = objects
+    assert source_families == SOURCE_FAMILIES, "The complete thirteen-family ruin pass is required"
     materials = {}
     engine_materials = (repo / "materials/scripts/MenuScene.material").read_text()
     images = {}
@@ -453,7 +474,7 @@ def main():
     lights = [add_light(words, instances) for words in definitions if words[0] == "AddPointLight"]
     assert len(lights) == 17
     scene.frame_set(24)
-    assert len([obj for obj in instances.objects if obj.type == "MESH"]) == 20
+    assert len([obj for obj in instances.objects if obj.type == "MESH"]) == len(entities)
     assert len(images) == 3 and all(image.packed_file for image in images.values())
     atmosphere=bpy.data.collections.new("Configured atmospheric effects")
     scene.collection.children.link(atmosphere)
@@ -485,12 +506,13 @@ def main():
     compositor.links.new(glow.outputs["Image"],final.inputs["Image"])
     scene["ember_particles"]=ember_count
     scene["configuration"] = "config/mainmenuscene.cfg"
-    scene["source_model_count"] = 13
-    scene["configured_entity_count"] = 20
+    scene["source_model_count"] = len(filenames)
+    scene["source_family_count"] = len(source_families)
+    scene["configured_entity_count"] = len(entities)
     scene["preview_limit"] = "Blender Eevee atmosphere preview. Configured ground fog and ember emitters are represented as participating volume and instanced points. CLQ falloff is matched at half-range only."
     scene.render.filepath = "//menu-scene-eevee-1920x1080.png"
     bpy.ops.wm.save_as_mainfile(filepath=str(assembly))
-    report = {"source_models": filenames, "entities": entity_report, "camera_position_rotation": camera_values, "vertical_fov_degrees": math.degrees(camera_data.angle_y), "resolution": [1920, 1080], "engine": scene.render.engine, "lights": lights, "packed_images": sorted(images), "sample_seconds": 1, "limits": scene["preview_limit"], "ambient_mapping": "No ambient self-emission on stone or architecture. Faint world and configured distant night rim preserve dark silhouettes.", "light_mapping": "E = max(diffuse) * 4*pi^2*d^2/(c+l*d+q*d^2), d=range/2; colour normalised by its largest channel. This matches unnormalised Ogre Lambert radiance to Blender's normalised Lambert response at the reference distance only.", "colour_management": "AgX, neutral look, zero exposure adjustment"}
+    report = {"source_models": filenames, "source_families": sorted(source_families), "additional_variant_count": len(filenames) - len(source_families), "entities": entity_report, "camera_position_rotation": camera_values, "vertical_fov_degrees": math.degrees(camera_data.angle_y), "resolution": [1920, 1080], "engine": scene.render.engine, "lights": lights, "packed_images": sorted(images), "sample_seconds": 1, "limits": scene["preview_limit"], "ambient_mapping": "No ambient self-emission on stone or architecture. Faint world and configured distant night rim preserve dark silhouettes.", "light_mapping": "E = max(diffuse) * 4*pi^2*d^2/(c+l*d+q*d^2), d=range/2; colour normalised by its largest channel. This matches unnormalised Ogre Lambert radiance to Blender's normalised Lambert response at the reference distance only.", "colour_management": "AgX, neutral look, zero exposure adjustment"}
     (output / "assembly-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     scene.render.filepath = str(rendered)
     if not args.save_only:
@@ -500,7 +522,7 @@ def main():
         assert (repo / "assets-src/menu-scene/MenuSceneAssembly.blend").stat().st_size > 0
     shutil.copyfile(assembly, destination)
     assert assembly.read_bytes() == destination.read_bytes()
-    print("ASSEMBLY_DONE", json.dumps({"models": 13, "entities": 20, "lights": len(lights), "render": str(rendered)}), flush=True)
+    print("ASSEMBLY_DONE", json.dumps({"models": len(filenames), "families": len(source_families), "entities": len(entities), "lights": len(lights), "render": str(rendered)}), flush=True)
 
 
 if __name__ == "__main__":
