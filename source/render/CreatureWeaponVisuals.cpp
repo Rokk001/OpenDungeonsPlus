@@ -788,7 +788,9 @@ void noteHitResult(CreatureReactions& reactions, const CosmeticEvent& event)
     switch(event.mValue)
     {
         case static_cast<int32_t>(CosmeticHitResult::hit):
-            // The target flinches, a strong hit makes it stagger
+        case static_cast<int32_t>(CosmeticHitResult::critical):
+            // The target flinches, a strong hit makes it stagger (a critical hit flinches like a hit; against a wall
+            // or building there is no target creature, so nothing happens here)
             if(target != nullptr)
                 CreatureCombatReactions::noteHitEvent(reactions, attacker, target, info.mStrong, info.mMissile);
             break;

@@ -122,14 +122,25 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         creature.addCreatureEffect(creature.mDiggingEffect);
     }
     creature.setAnimationState(EntityAnimation::dig_anim, true, walkDirection);    
+    // One critical roll per dig step: a critical step removes CritDamageMultiplier times the fullness of a dirt or wall
+    // tile and pays that many times the step gold on a gold or gem wall (on a gold wall at most what is left)
+    const bool critical = creature.rollCritical();
+    const double criticalFactor = critical ? ConfigManager::getSingleton().getCritDamageMultiplier() : 1.0;
+    // The dig% passives speed up the digging and raise the gold of a step; the experience below does not use them
+    const double digFactor = creature.getDigFactor();
     // Gold walls are mined by gold per step (not by the dig rate of the worker), every other tile is dug as before
     double amountDug = 0.0;
     if(tileDig.getType() == TileType::gold)
-        amountDug = tileDig.digOutGold();
+        amountDug = tileDig.digOutGold(digFactor * criticalFactor);
     else
-        amountDug = tileDig.digOut(creature.getDigRate());
+        amountDug = tileDig.digOut(creature.getDigRate() * digFactor * criticalFactor);
     if(amountDug > 0.0)
     {
+        if(critical)
+        {
+            creature.fireCriticalOnStructure("dig", Ogre::Vector3(static_cast<Ogre::Real>(tileDig.getX()),
+                static_cast<Ogre::Real>(tileDig.getY()), 0.0f));
+        }
         creature.receiveExp(1.5 * creature.getDigRate() / 20.0);
 
         // If the tile is a gold tile accumulate gold for this creature.
@@ -150,7 +161,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             {
                 // Gem tiles are endless and pay a fixed gold per step, independent of the worker level
                 static const double gemGoldPerDigStep = ConfigManager::getSingleton().getGemGoldPerDigStep();
-                payMinedGold(creature, tileDig, gemGoldPerDigStep);
+                payMinedGold(creature, tileDig, gemGoldPerDigStep * digFactor * criticalFactor);
                 // Receive experience for digging
                 creature.receiveExp(creature.getDigRate() / 20.0);
                 break;

@@ -197,7 +197,7 @@ def check_sources():
     assert hurt.index("rollAttackHit(") < hurt.index("rollMeleeDefence(true)") < hurt.index("CombatDamage::roll(")
     assert "mHasCreatureDamageRange && entity->getObjectType() == GameEntityType::creature" in hurt
     assert "takeDamage(this, damage, 0.0, 0.0, 0.0" in hurt
-    assert "takeDamage(this, 0.0, mPhysicalDamage, mMagicalDamage, mElementDamage" in hurt
+    assert "takeDamage(this, 0.0, mPhysicalDamage * criticalFactor, mMagicalDamage * criticalFactor" in hurt
     for signature in ("void MissileOneHit::exportToStream(", "bool MissileOneHit::importFromStream("):
         body = function(missile, signature)
         assert body.index("CreatureDamageRange") < body.index("ShotAccuracy"), signature

@@ -23,6 +23,7 @@
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -122,7 +123,15 @@ bool CreatureActionTunnel::handleTunnel(Creature& creature)
 
         Ogre::Vector3 walkDirection(tile->getX() - myTile->getX(), tile->getY() - myTile->getY(), 0);
         creature.setAnimationState(EntityAnimation::dig_anim, true, walkDirection);
-        tile->digOut(creature.getDigRate());
+        // One critical roll per dig step: a critical step removes CritDamageMultiplier times the fullness
+        const bool critical = creature.rollCritical();
+        const double criticalFactor = critical ? ConfigManager::getSingleton().getCritDamageMultiplier() : 1.0;
+        tile->digOut(creature.getDigRate() * creature.getDigFactor() * criticalFactor);
+        if(critical)
+        {
+            creature.fireCriticalOnStructure("dig", Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+                static_cast<Ogre::Real>(tile->getY()), 0.0f));
+        }
         if(tile->getFullness() <= 0.0)
             creature.setDestination(tile);
 
