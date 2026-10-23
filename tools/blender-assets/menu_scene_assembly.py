@@ -87,7 +87,7 @@ def configure_material(material, values, repo, images):
             decal=nodes.new("ShaderNodeBsdfPrincipled")
             links.new(base,decal.inputs["Base Color"])
             links.new(base,decal.inputs["Emission Color"])
-            decal.inputs["Emission Strength"].default_value=0.25
+            decal.inputs["Emission Strength"].default_value=0.65
             decal.inputs["Metallic"].default_value=0.65
             decal.inputs["Roughness"].default_value=0.46
         else:
@@ -408,7 +408,10 @@ def add_smoke_and_fog_patches(collection,definitions):
     positions={words[1]:tuple(float(v) for v in words[3:6]) for words in definitions if words[0]=="AddEntity"}
     for index,words in enumerate(words for words in definitions if words[0]=="AddParticleEffect" and words[2]=="MenuBrazierFire"):
         x,y,z=positions[words[1]]
-        add_soft_volume(collection,words[1]+" advecting smoke",(x+0.45,y,z+7.4),(1.4,1.2,4.0),(0.07,0.065,0.058),0.72,(0,0,0),0,index*1.7)
+        add_soft_volume(collection,words[1]+" lower dense smoke",(x+0.20,y,z+5.6),(1.15,1.0,2.35),(0.22,0.18,0.14),2.0,(0.025,0.006,0.001),0.025,index*1.7)
+        add_soft_volume(collection,words[1]+" advecting smoke",(x+0.85,y,z+9.0),(1.9,1.5,3.7),(0.16,0.14,0.12),1.65,(0.012,0.004,0.001),0.025,index*1.7+0.7)
+    x,y,z=positions["GateBeast"]
+    add_soft_volume(collection,"Dim backlit gate haze",(x,y+1.8,z+4.3),(3.6,1.0,3.4),(0.18,0.07,0.018),0.7,(0.16,0.018,0.002),0.30,4.2)
     for index,(position,scale) in enumerate((((-12,-12,0.85),(7,5,0.65)),((11,-5,0.80),(6,6,0.60)),((-5,6,0.85),(8,4,0.65)),((3,-20,0.55),(7,3,0.40)))):
         add_soft_volume(collection,"Low drifting fog bank %d"%index,position,scale,(0.48,0.51,0.49),1.0,(0,0,0),0,index*2.3)
 
@@ -426,10 +429,10 @@ def add_volcanic_smoke(collection,definitions):
     origin=next(tuple(float(v) for v in words[3:6]) for words in definitions if words[0]=="AddEntity" and words[1]=="VolcanicRuins")
     for index,(offset,scale) in enumerate((((-24,-1,10),(4.0,3.5,8.0)),((-2,3,12),(3.5,4.0,9.0)),((22,5,9),(4.5,3.5,8.0)))):
         position=tuple(origin[axis]+offset[axis] for axis in range(3))
-        add_soft_volume(collection,"Distant burning ruin smoke %d"%index,position,scale,(0.04,0.035,0.03),0.22,(0.22,0.022,0.002),0.035,index*2.1)
+        add_soft_volume(collection,"Distant burning ruin smoke %d"%index,position,scale,(0.04,0.035,0.03),0.22,(0.22,0.022,0.002),0.12,index*2.1)
 
 
-# Match the engine's smoke-alpha billboards in front of the moon without adding courtyard haze.
+# Match engine smoke-alpha particles locally at the bowls and in front of the distant moon.
 def add_moon_cloud_tatters(collection,definitions,repo,images):
     x,y,z=next(tuple(float(v) for v in words[3:6]) for words in definitions if words[0]=="AddEntity" and words[1]=="BloodMoon")
     image=bpy.data.images.load(str(repo/"materials/textures/RoomAmbSmoke.png"),check_existing=True)
@@ -465,18 +468,41 @@ def add_moon_cloud_tatters(collection,definitions,repo,images):
     links.new(transparent.outputs[0],mix.inputs[1])
     links.new(dark.outputs[0],mix.inputs[2])
     links.new(mix.outputs[0],output.inputs["Surface"])
-    for index,(offset,scale) in enumerate((((1.5,-6,2.0),(8.0,1.3,1.5)),((0.7,-8,-3.0),(6.5,1.1,0.95)))):
-        position=(x+offset[0],y+offset[1],z+offset[2])
-        mesh=bpy.data.meshes.new("Moon cloud billboard %d"%index)
+    # Create one depth-positioned particle quad using the shared smoke texture and its actual alpha.
+    def smoke_quad(name,position,scale,surface,system):
+        mesh=bpy.data.meshes.new(name+" billboard")
         mesh.from_pydata(((-scale[0],0,-scale[2]),(scale[0],0,-scale[2]),(scale[0],0,scale[2]),(-scale[0],0,scale[2])),[],((0,1,2,3),))
         uv=mesh.uv_layers.new(name="UVMap")
         for loop_index,coordinate in enumerate(((0,0),(1,0),(1,1),(0,1))):
             uv.data[loop_index].uv=coordinate
-        mesh.materials.append(material)
-        cloud=bpy.data.objects.new("Moon foreground cloud tatter %d"%index,mesh)
+        mesh.materials.append(surface)
+        cloud=bpy.data.objects.new(name,mesh)
         collection.objects.link(cloud)
         cloud.location=position
-        cloud["engine_particle_script"]="MenuMoonCloudTatters"
+        cloud["engine_particle_script"]=system
+        return cloud
+    for index,(offset,scale) in enumerate((((1.5,-6,2.0),(8.0,1.3,1.5)),((0.7,-8,-3.0),(6.5,1.1,0.95)))):
+        smoke_quad("Moon foreground cloud tatter %d"%index,(x+offset[0],y+offset[1],z+offset[2]),scale,material,"MenuMoonCloudTatters")
+    plume=material.copy()
+    plume.name="Dense charcoal bowl particles"
+    nodes=plume.node_tree.nodes
+    links=plume.node_tree.links
+    next(node for node in nodes if node.type=="EMISSION").inputs["Color"].default_value=(0.012,0.008,0.005,1)
+    mix=next(node for node in nodes if node.type=="MIX_SHADER")
+    amount=nodes.new("ShaderNodeMath")
+    amount.operation="MULTIPLY"
+    amount.inputs[1].default_value=0.58
+    links.new(mix.inputs[0].links[0].from_socket,amount.inputs[0])
+    links.new(amount.outputs[0],mix.inputs[0])
+    positions={words[1]:tuple(float(v) for v in words[3:6]) for words in definitions if words[0]=="AddEntity"}
+    for words in (words for words in definitions if words[0]=="AddParticleEffect" and words[2]=="MenuBrazierSmoke"):
+        bx,by,bz=positions[words[1]]
+        side=-1 if bx<0 else 1
+        for index in range(6):
+            position=(bx+side*index*0.17,by+0.4+index*0.45,bz+5.2+index*1.65)
+            size=1.0+index*0.20
+            cloud=smoke_quad(words[1]+" rising smoke particle %d"%index,position,(size,1,size*1.25),plume,"MenuBrazierSmoke")
+            cloud.driver_add("location",0).driver.expression="%.5f+sin(frame/24*0.7+%d)*0.16"%(position[0],index)
 
 
 # Place drifting dark ash as tiny native facets corresponding to the capped engine ash particle system.
@@ -989,6 +1015,10 @@ def add_light(words, collection):
         data.volume_factor = 0.3
     elif name in ("BoneGlutLeft","BoneGlutRight","FlankGlutLeft","FlankGlutRight"):
         data.volume_factor = 0.12
+    if name in ("CageGlut","PilloryGlut","StakeGlutLeft","StakeGlutRight","WeaponGlut","HandsGlut","WebGlutLeft","WebGlutRight","TitleOrange","TitleGreen","BannerEdgeLeft","BannerEdgeRight"):
+        data.shadow_soft_size = 0.28
+        data.specular_factor = max(specular) / magnitude
+        data.volume_factor = 0
     data.use_custom_distance = True
     data.cutoff_distance = distance_range
     obj = bpy.data.objects.new(name, data)

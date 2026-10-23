@@ -1,4 +1,4 @@
-// PC menu effects: all configured systems total at most 1,928 particles, including five grave emitters.
+// PC menu effects: all configured systems total at most 1,968 particles, including five grave emitters.
 // Continuous fire, low grave fog, windblown embers and the tower's vertical green shaft.
 particle_system MenuBrazierFire
 {
@@ -157,8 +157,8 @@ particle_system MenuBrazierSmoke
         time_to_live_max 5.8
         velocity_min 0.55
         velocity_max 1.1
-        colour_range_start 0.075 0.067 0.055 0.22
-        colour_range_end 0.045 0.042 0.038 0.14
+        colour_range_start 0.20 0.15 0.11 0.65
+        colour_range_end 0.12 0.10 0.08 0.42
     }
     affector ColourFader
     {
@@ -168,6 +168,34 @@ particle_system MenuBrazierSmoke
     {
         rate 0.3
     }
+}
+
+// A dim warm background reveals the creature silhouette behind the grille without lighting the court.
+particle_system MenuGateHaze
+{
+    material RoomAmbSmoke
+    particle_width 2.8
+    particle_height 3.5
+    quota 40
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position 0 1.8 4.3
+        width 5.6
+        height 1.0
+        depth 4.8
+        direction 0.05 0 1
+        angle 8
+        emission_rate 4
+        time_to_live_min 6
+        time_to_live_max 9
+        velocity_min 0.04
+        velocity_max 0.10
+        colour_range_start 0.18 0.028 0.004 0.22
+        colour_range_end 0.10 0.012 0.002 0.12
+    }
+    affector ColourFader { alpha -0.02 }
 }
 
 // Thin low vapour is rooted in each opened grave or broken slab, never in a full-screen overlay.

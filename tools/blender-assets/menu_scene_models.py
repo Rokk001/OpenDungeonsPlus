@@ -7,6 +7,7 @@ import shutil
 import sys
 
 import bpy
+import bmesh
 from mathutils import Vector, Quaternion
 from mathutils.bvhtree import BVHTree
 
@@ -651,10 +652,29 @@ def banner():
     for polygon in symbols:
         first=len(b.vertices)
         for x,z in polygon:
-            y=0.10*math.sin(x*5)+0.03*(-z/length)*math.sin(x*4)-0.16
+            x*=1.38
+            z=-1.85+(z+1.85)*1.18
+            y=0.10*math.sin(x*5)+0.03*(-z/length)*math.sin(x*4)-0.20
             b.vertices.append((x,y,z))
         b.faces.append(tuple(first+i for i in range(len(polygon))))
         b.face_materials.append("MenuBannerSymbol")
+    # Dark eye and jaw cuts keep the enlarged skull heraldry readable at the overview distance.
+    for polygon in (((-0.54,-1.31),(-0.10,-1.42),(-0.17,-1.64),(-0.45,-1.59)),
+            ((0.05,-1.41),(0.45,-1.30),(0.39,-1.60),(0.14,-1.64)),
+            ((-0.30,-1.86),(-0.19,-2.02),(-0.09,-1.91),(0.02,-2.06),(0.16,-1.88))):
+        first=len(b.vertices)
+        for x,z in polygon:
+            y=0.10*math.sin(x*5)+0.03*(-z/length)*math.sin(x*4)-0.245
+            b.vertices.append((x,y,z))
+        b.faces.append(tuple(first+i for i in range(len(polygon))))
+        b.face_materials.append("MenuBlack")
+    # Frayed threads and scorched tears remain geometry rather than a blurred colour patch.
+    for index in range(17):
+        x=-1.35+index*0.165
+        bottom=-12*length-0.12*math.sin(index*1.9)
+        b.segment((x,0.06,bottom+0.18),(x+0.04,0.07,bottom-0.16-0.11*(index%3)),0.009,0.002,"MenuSoot",4)
+    for index,(x,y,z) in enumerate(b.vertices):
+        b.vertices[index]=(x*1.12,y,z)
     obj=b.finish()
     arm_data=bpy.data.armatures.new("BannerArmature")
     arm=bpy.data.objects.new("BannerArmature",arm_data)
@@ -780,7 +800,7 @@ def courtyard():
             x=-25+col*1.75+(0.82 if row%2 else 0)+rng.uniform(-0.15,0.15)
             sx,sy=1.57+rng.uniform(-0.21,0.11),1.47+rng.uniform(-0.20,0.10)
             z=-0.10+rng.uniform(-0.24,0.12)
-            if any(abs(x-gx)<sx/2+1.02 and abs(y-gy)<sy/2+1.62 for gx,gy in ((-12.6,-9.7),(12.5,-8.3))):
+            if any(abs(x-gx)<sx/2+1.02 and abs(y-gy)<sy/2+1.62 for gx,gy in ((-5.8,-9.7),(5.7,-9.8))):
                 continue
             b.box((x,y,-0.56),(sx+0.23,sy+0.22,0.46),"MenuDarkStone")
             if rng.random()<0.075:
@@ -1428,13 +1448,13 @@ def polish_prop():
         for spoke in range(13):
             angle=spoke*2*math.pi/13
             end=center+Vector((1.2*math.cos(angle),0,1.2*math.sin(angle)))
-            b.segment(tuple(center),tuple(end),0.008,0.004,"MenuWeb",4)
+            b.segment(tuple(center),tuple(end),0.018,0.010,"MenuWeb",4)
         for ring in range(1,5):
             radius=ring*0.25
             for spoke in range(13):
                 a=spoke*2*math.pi/13; c=(spoke+1)*2*math.pi/13
                 b.segment(tuple(center+Vector((radius*math.cos(a),0,radius*math.sin(a)))),
-                    tuple(center+Vector((radius*math.cos(c),0,radius*math.sin(c)))),0.006,0.005,"MenuWeb",4)
+                    tuple(center+Vector((radius*math.cos(c),0,radius*math.sin(c)))),0.014,0.010,"MenuWeb",4)
         dead_skeleton(b,(0,0.08,0.0),0.54,"chained")
         for z in (0.35,0.56,0.75,0.94):
             b.segment((-0.27,-0.10,z),(0.31,-0.10,z+0.06),0.020,0.010,"MenuWeb",5)
@@ -1457,9 +1477,11 @@ def polish_prop():
             b.prism([(-0.8,0.0),(0.1,-0.12),(-0.15,0.28),(-0.63,0.46)],-0.70,0.72,"MenuWetStone")
             b.prism([(0.2,-0.12),(0.85,-0.03),(0.63,0.51),(0.34,0.23)],-0.68,0.68,"MenuWetStone")
     elif kind=="GateBeast":
-        b.prism([(-2.7,0),(-2.8,2),(-1.9,4.2),(-0.7,6.6),(0.30,6.9),(1.5,4.8),(2.5,3.5),(3.0,0)],-0.02,0.02,"MenuBlack")
-        for x in (-0.52,0.52,-1.64,1.39):
-            b.oval((x,-0.05,5.0 if abs(x)<1 else 2.9),(0.10,0.035,0.055),"MenuGateEyes",8,4)
+        b.prism([(-2.7,0),(-2.8,2),(-2.3,4.2),(-1.2,5.4),(-1.55,7.0),
+            (-0.75,6.45),(-0.5,6.0),(0.40,6.1),(1.25,7.2),(1.12,5.5),
+            (2.15,4.8),(2.5,3.5),(3.0,0)],-0.02,0.02,"MenuBlack")
+        for x,z in ((-0.47,5.45),(0.44,5.45),(-1.76,3.1),(-1.28,3.1),(1.45,2.55),(1.93,2.55)):
+            b.oval((x,-0.075,z),(0.16,0.05,0.075),"MenuGateEyes",10,4)
     elif kind=="LavaWall":
         for index in range(8):
             z=0.2+index*0.50
@@ -1476,6 +1498,9 @@ def polish_prop():
                 (x-0.3,h-0.9),(x-1.4,h+0.3)],0,3,"MenuDistantStone")
             for slit in range(3):
                 b.box((x-0.7+slit*0.6,-0.04,h*0.55),(0.22,0.04,1.5),"MenuLavaCrack")
+            for tongue in range(3):
+                fx=x-0.65+tongue*0.61
+                b.segment((fx,0.10,h-0.35),(fx+0.30,0.1,h+0.8+rng.uniform(0.1,1.1)),0.32,0.025,"MenuFlame",5)
         b.prism([(-13,-1),(-7,5),(-4,10),(-2,13),(0,11),(3,5),(9,0)],4,8,"MenuMountain")
         for index in range(7):
             b.segment((-2+index*0.12,3.94,12-index*1.3),(-2.4+index*0.22,3.94,10.7-index*1.3),0.05,0.025,"MenuLavaCrack",5)
@@ -1485,26 +1510,37 @@ def polish_prop():
             b.segment((x,y,z),(x-0.28,y+0.05,z+0.16),0.035,0.008,"MenuCrowBlack",4)
             b.segment((x,y,z),(x+0.23,y+0.04,z+0.19),0.035,0.008,"MenuCrowBlack",4)
     elif kind=="TitlePlaque":
-        b.prism([(-7.2,-1.70),(6.9,-1.70),(7.25,-1.2),(7.05,1.63),
-            (5.0,1.76),(-6.9,1.65),(-7.3,1.1)],-0.05,0.33,"MenuTitleIron")
+        outline=[(-7.2,-2.10),(-5.0,-2.27),(5.9,-2.18),(7.25,-1.65),
+            (7.05,1.96),(5.0,2.23),(-6.9,2.08),(-7.3,1.42)]
+        b.prism(outline,-0.10,0.58,"MenuTitleIron")
+        for index in range(6):
+            x=-5.75+index*2.30
+            b.box((x,-0.16,0),(2.24,0.15,3.65),"MenuDarkStone")
+        for index,a in enumerate(outline):
+            c=outline[(index+1)%len(outline)]
+            b.segment((a[0],-0.28,a[1]),(c[0],-0.28,c[1]),0.14,0.12,"MenuCorrodedIron",5)
+        for index in range(15):
+            x=-6.65+index*0.94
+            for z in (-1.93,1.90):
+                b.oval((x,-0.35,z),(0.105,0.11,0.105),"MenuCorrodedIron",7,4)
         for side in (-1,1):
             for index in range(18):
                 t=index/17
-                tx=side*(5.7+(1.8 if side<0 else 3.0)*t)
+                tx=side*(6.5+(1.0 if side<0 else 2.2)*t)
                 first_link=len(b.vertices)
-                b.link((tx,0.14+3.85*t,1.65+1.53*t-0.35*math.sin(t*math.pi)),0.16,bool(index%2))
+                b.link((tx,-0.80+1.85*t,2.40+0.78*t-0.25*math.sin(t*math.pi)),0.22,bool(index%2))
                 if index>=16:
                     pinned.extend(range(first_link,len(b.vertices)))
             anchor_x=side*(7.5 if side<0 else 8.7)
             first_anchor=len(b.vertices)
-            b.segment((anchor_x,3.99,3.18),(anchor_x,5.25,3.18),0.10,0.10,"MenuCorrodedIron",7)
-            b.box((anchor_x,5.25,3.18),(0.29,0.25,0.32),"MenuCorrodedIron")
+            b.segment((anchor_x,1.05,3.18),(anchor_x,2.35,3.18),0.10,0.10,"MenuCorrodedIron",7)
+            b.box((anchor_x,2.35,3.18),(0.29,0.25,0.32),"MenuCorrodedIron")
             pinned.extend(range(first_anchor,len(b.vertices)))
             for z in (-0.88,0.88):
                 b.oval((side*6.60,-0.08,z),(0.12,0.07,0.12),"MenuCorrodedIron",7,4)
         # The title canvas is a single replaceable 3:1 texture, separate from its physical backing.
         start=len(b.vertices)
-        b.vertices.extend(((-5.8,-0.085,-1.94),(5.8,-0.085,-1.94),(5.8,-0.085,1.9267),(-5.8,-0.085,1.9267)))
+        b.vertices.extend(((-6.55,-0.43,-2.08),(6.55,-0.43,-2.08),(6.55,-0.43,2.2867),(-6.55,-0.43,2.2867)))
         b.faces.append((start,start+1,start+2,start+3)); b.face_materials.append("MenuTitleLetters")
         bones=[("Swing",(0,0.14,3.05),range(len(b.vertices)),None)]
     elif kind=="TitleCrest":
@@ -1550,36 +1586,36 @@ def polish_prop():
 
 # Give every new placed prop its own source, mesh, position and distinct deterministic damage.
 POLISH_SPECS=[
-    ("MenuSkullHeapA",(-4.5,-8.0,-0.16),"SkullHeap"),("MenuSkullHeapB",(4.5,-12.0,-0.16),"SkullHeap"),
-    ("MenuGraspingHands",(-3.4,-13.5,-0.16),"GraspingHands"),("MenuRisingRibcage",(5.1,-15.3,-0.16),"RisingRibcage"),
-    ("MenuCrawlingDead",(-11.5,-11.6,-0.16),"CrawlingDead"),
+    ("MenuSkullHeapA",(-2.8, -10.0, -0.16),"SkullHeap"),("MenuSkullHeapB",(3.3, -12.2, -0.16),"SkullHeap"),
+    ("MenuGraspingHands",(-1.7, -9.5, -0.16),"GraspingHands"),("MenuRisingRibcage",(3.8, -8.0, -0.16),"RisingRibcage"),
+    ("MenuCrawlingDead",(-4.2, -11.3, -0.16),"CrawlingDead"),
     ("MenuChainedDeadLeft",(-6.7,4.5,1.5),"ChainedDead"),("MenuChainedDeadRight",(6.4,4.6,2.1),"ChainedDead"),
     ("MenuCagedDead",(-5.5,4.8,5.2),"CagedDead"),
     ("MenuEmptyCageLeft",(-13.0,6.0,4.2),"EmptyCage"),("MenuEmptyCageRight",(17.8,5.8,3.5),"EmptyCage"),
     ("MenuImpaledBonesLeft",(-7.3,7.2,13.12),"ImpaledBones"),("MenuImpaledBonesRight",(10.6,6.5,12.5),"ImpaledBones"),
-    ("MenuGravestoneA",(-11.5,-12.4,-0.16),"Gravestone"),("MenuGravestoneB",(-15.0,-6.1,-0.16),"Gravestone"),
-    ("MenuGravestoneC",(11.6,-10.9,-0.16),"Gravestone"),("MenuGravestoneD",(15.8,-4.3,-0.16),"Gravestone"),
-    ("MenuOpenGraveLeft",(-12.6,-9.7,-0.10),"OpenGrave"),("MenuOpenGraveRight",(12.5,-8.3,-0.10),"OpenGrave"),
-    ("MenuCrypt",(-16.6,-0.8,-0.16),"Crypt"),("MenuCoffinLeft",(-10.6,-13.4,-0.16),"Coffin"),
-    ("MenuCoffinRight",(11.3,-11.6,-0.16),"Coffin"),("MenuEarthBonesLeft",(-15.7,-8.0,-0.16),"EarthBones"),
+    ("MenuGravestoneA",(-5.4, -6.0, -0.16),"Gravestone"),("MenuGravestoneB",(-15.0,-6.1,-0.16),"Gravestone"),
+    ("MenuGravestoneC",(5.7, -6.4, -0.16),"Gravestone"),("MenuGravestoneD",(15.8,-4.3,-0.16),"Gravestone"),
+    ("MenuOpenGraveLeft",(-5.8, -9.7, -0.1),"OpenGrave"),("MenuOpenGraveRight",(5.7, -9.8, -0.1),"OpenGrave"),
+    ("MenuCrypt",(-16.6,-0.8,-0.16),"Crypt"),("MenuCoffinLeft",(-5.0, -13.1, -0.16),"Coffin"),
+    ("MenuCoffinRight",(6.6, -14.3, -0.16),"Coffin"),("MenuEarthBonesLeft",(-15.7,-8.0,-0.16),"EarthBones"),
     ("MenuEarthBonesRight",(14.2,-6.9,-0.16),"EarthBones"),
-    ("MenuBrokenSwordA",(-5.0,-10.7,-0.16),"BrokenSword"),("MenuBrokenSwordB",(4.0,-17.3,-0.16),"BrokenSword"),
-    ("MenuBrokenAxe",(6.6,-8.9,-0.16),"BrokenAxe"),("MenuArmourHeapLeft",(-13.3,-5.8,-0.16),"ArmourHeap"),
+    ("MenuBrokenSwordA",(-4.0, -10.7, -0.16),"BrokenSword"),("MenuBrokenSwordB",(3.1, -15.3, -0.16),"BrokenSword"),
+    ("MenuBrokenAxe",(2.8, -7.9, -0.16),"BrokenAxe"),("MenuArmourHeapLeft",(-13.3,-5.8,-0.16),"ArmourHeap"),
     ("MenuArmourHeapRight",(10.0,-9.2,-0.16),"ArmourHeap"),("MenuTatteredSpear",(13.1,-4.1,-0.16),"TatteredSpear"),
-    ("MenuBrokenRam",(3.2,2.3,-0.16),"BrokenRam"),("MenuPillory",(-15.0,3.7,-0.16),"Pillory"),
-    ("MenuHeadStakeA",(-12.5,-2.4,-0.16),"HeadStake"),("MenuHeadStakeB",(14.7,-3.0,-0.16),"HeadStake"),
+    ("MenuBrokenRam",(3.2,2.3,-0.16),"BrokenRam"),("MenuPillory",(-4.4, 1.0, -0.16),"Pillory"),
+    ("MenuHeadStakeA",(-4.8, -4.0, -0.16),"HeadStake"),("MenuHeadStakeB",(4.9, -3.3, -0.16),"HeadStake"),
     ("MenuGallows",(17.0,-0.3,-0.16),"Gallows"),("MenuWallHooksLeft",(-24.5,5.5,3.1),"WallHooks"),
     ("MenuWallHooksRight",(22.3,5.4,2.5),"WallHooks"),
-    ("MenuCrowA",(-11.5,-12.4,1.47),"Crow"),("MenuCrowB",(11.6,-10.9,1.50),"Crow"),
+    ("MenuCrowA",(-5.4, -6.0, 1.47),"Crow"),("MenuCrowB",(5.7, -6.4, 1.5),"Crow"),
     ("MenuCrowC",(-12.1,8.4,10.0),"Crow"),("MenuCrowD",(10.4,6.9,14.3),"Crow"),
     ("MenuRatA",(-6.8,-13.4,-0.10),"Rat"),("MenuRatB",(8.7,-11.2,-0.10),"Rat"),("MenuRatC",(-13.0,1.6,-0.10),"Rat"),
-    ("MenuWebVictimLeft",(-20.5,8.05,0.30),"WebVictim"),("MenuWebVictimRight",(23.2,6.15,0.24),"WebVictim"),
+    ("MenuWebVictimLeft",(-20.5, 5.6, 0.3),"WebVictim"),("MenuWebVictimRight",(23.2, 5.4, 0.24),"WebVictim"),
     ("MenuBloodTrail",(-0.8,-10.6,0.045),"BloodTrail"),("MenuDragTrail",(1.0,-7.4,0.055),"DragTrail"),
     ("MenuBurntTorchA",(-8.0,-6.2,-0.15),"BurntTorch"),("MenuBurntTorchB",(8.7,-6.8,-0.15),"BurntTorch"),
-    ("MenuCharredRemains",(6.9,-7.5,-0.16),"CharredRemains"),
+    ("MenuCharredRemains",(7.1,-5.8,-0.16),"CharredRemains"),
     ("MenuBrokenSlabLeft",(-4.6,-16.8,-0.16),"BrokenSlab"),("MenuBrokenSlabRight",(4.5,-11.1,-0.16),"BrokenSlab"),
-    ("MenuGateBeast",(0,29.2,-0.18),"GateBeast"),("MenuLavaWallLeft",(-14.1,5.89,0),"LavaWall"),
-    ("MenuLavaWallRight",(15.0,5.79,0),"LavaWall"),("MenuVolcanicRuins",(0,95,23.0),"VolcanicRuins"),
+    ("MenuGateBeast",(0, 13.2, -0.18),"GateBeast"),("MenuLavaWallLeft",(-14.1,5.89,0),"LavaWall"),
+    ("MenuLavaWallRight",(15.0,5.79,0),"LavaWall"),("MenuVolcanicRuins",(-65, 110, 27.0),"VolcanicRuins"),
     ("MenuHorizonCrows",(-12,65,24),"HorizonCrows"),("MenuTitlePlaque",(0,2.95,10.9),"TitlePlaque"),
     ("MenuTitleCrest",(0,2.9,8.5),"TitleCrest"),("MenuBloodMoon",(-33,83,35),"BloodMoon")]
 
@@ -1648,6 +1684,34 @@ def main():
         wet.diffuse_color=(0.30,0.29,0.28,1)
         result=build()
         obj,arm=result if isinstance(result,tuple) else (result,None)
+        # Coat the actual broken paving so blood and drag traces cannot disappear below slabs.
+        if name in ("MenuBloodTrail","MenuDragTrail"):
+            origin=Vector(next(position for model,position,kind in POLISH_SPECS if model==name))
+            with bpy.data.libraries.load(str(source/"MenuCourtyard.blend"),link=False) as (available,loaded):
+                loaded.objects=list(available.objects)
+            supports=[item for item in loaded.objects if item.type=="MESH"]
+            assert len(supports)==1
+            support=supports[0]
+            bpy.context.scene.collection.objects.link(support)
+            bpy.context.view_layer.update()
+            evaluated=support.evaluated_get(bpy.context.evaluated_depsgraph_get())
+            supported=set()
+            for vertex in obj.data.vertices:
+                point=origin+vertex.co
+                hit,local,normal,index=evaluated.ray_cast(Vector((point.x,point.y,10)),Vector((0,0,-1)),distance=30)
+                if hit:
+                    supported.add(vertex.index)
+                    vertex.co.z=local.z-origin.z+0.014
+            # Missing paving is an actual hole: omit the trace there instead of bridging empty air.
+            edit=bmesh.new()
+            edit.from_mesh(obj.data)
+            for face in list(edit.faces):
+                if any(vertex.index not in supported for vertex in face.verts):
+                    edit.faces.remove(face)
+            assert edit.faces,name
+            edit.to_mesh(obj.data)
+            edit.free()
+            bpy.data.objects.remove(support,do_unlink=True)
         images={}
         for material in obj.data.materials:
             configure_material(material,material_values(material_text,material.name),repo,images)
