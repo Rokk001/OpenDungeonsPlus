@@ -1282,3 +1282,13 @@ models/PitDemon.skeleton                                 OD Team  GPLv3+  Own wo
 source/tests/check_creature_armament.py                 OD Team  GPLv3+  Own work: static creature armament config, asset and source verification
 tools/blender-assets/armament_preview.py                  OD Team  GPLv3+  Own work: configured creature and weapon animation previews with the game attachment transform
 models/Troll.skeleton                                    OD Team  GPLv3+  Own work: fitted right-hand weapon rest position and rotation, converted with OgreXMLConverter; existing data keeps its existing licence; original native animation keys retained byte for byte
+
+=======================================================
+== Original fortress menu scene ==
+=======================================================
+assets-src/menu-scene/*.blend          OD Team                 GPLv3+                  Original fortress source models, independently AI-authored for this project with Blender; one model per file.
+models/Menu*.mesh, models/MenuBanner.skeleton OD Team            GPLv3+                  Original fortress geometry and looping cloth skeleton, generated for this project with tools/blender-assets/menu_scene_models.py and the existing Ogre exporter.
+materials/textures/menu/MenuStone.png, materials/textures/menu/MenuStoneNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; seamless dark stone albedo and matching normal map.
+materials/textures/menu/MenuCampaignMap.png OD Team             GPLv3+                  Exact reuse of this project's AI-generated gui/campaign/world_base.png, credited above, on the campaign table; no changes to the map.
+tools/blender-assets/menu_scene_models.py OD Team                GPLv3+                  Original AI-generated Blender source generator for the fortress models.
+materials/scripts/MenuScene.material, particles/MenuScene.particle OD Team GPLv3+       Original scene materials and looping atmosphere effects generated for this project; existing project particle textures retain their credits above.
