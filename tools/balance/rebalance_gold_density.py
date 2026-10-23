@@ -20,7 +20,9 @@ Usage:
   rebalance_gold_density.py [--root DIR]               rewrite the level files in DIR (run once)
   rebalance_gold_density.py --check [BASE_COMMIT]      recompute from the levels at the commit and compare only the
                                                        gold lines (type 2) of [Tiles] with the files; prints one
-                                                       summary line per level
+                                                       summary line per level; a level that does not exist
+                                                       at BASE_COMMIT is read from NEW_LEVELS_BASE_COMMIT
+                                                       (2ad2f5762, where the community levels lie unchanged)
 """
 
 import argparse
