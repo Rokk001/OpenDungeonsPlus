@@ -1674,6 +1674,14 @@ void Creature::doUpkeep()
         return;
     }
 
+    // The ground under the creature or under its walk path may have stopped being walkable
+    // (a sold or burnt bridge), and bare lava hurts a creature that cannot walk on it
+    if(getIsOnServerMap())
+    {
+        checkWalkPathIsStillValid();
+        applyLavaDamage();
+    }
+
     // Check to see if we have earned enough experience to level up.
     checkLevelUp();
 
@@ -4968,6 +4976,72 @@ bool Creature::setDestination(Tile* tile)
     }
     pushAction(Utils::make_unique<CreatureActionWalkToTile>(*this));
     return true;
+}
+
+void Creature::checkWalkPathIsStillValid()
+{
+    if(mWalkQueue.empty())
+        return;
+
+    bool isPathBlocked = false;
+    for(const Ogre::Vector2& step : mWalkQueue)
+    {
+        Tile* tile = getGameMap()->getTile(Helper::round(step.x), Helper::round(step.y));
+        if(tile == nullptr)
+            continue;
+
+        if(canGoThroughTile(tile))
+            continue;
+
+        // A building that does not let the creature through (closed door, prison) is meant to stop it
+        if(tile->getCoveringBuilding() != nullptr)
+            continue;
+
+        isPathBlocked = true;
+        break;
+    }
+
+    if(!isPathBlocked)
+        return;
+
+    const Ogre::Vector2& lastStep = mWalkQueue.back();
+    Tile* destination = getGameMap()->getTile(Helper::round(lastStep.x), Helper::round(lastStep.y));
+
+    OD_LOG_INF("creature=" + getName() + " cannot walk its path anymore, destination="
+        + Tile::displayAsString(destination));
+
+    // Stop where we are rather than walk into what is now lava or water
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+
+    if((destination == nullptr) || !canGoThroughTile(destination))
+        return;
+
+    std::list<Tile*> result = getGameMap()->path(this, destination);
+    if(result.size() <= 1)
+        return;
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(result, path, true, 0.0);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+}
+
+void Creature::applyLavaDamage()
+{
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return;
+
+    if(myTile->getTileVisual() != TileVisual::lavaGround)
+        return;
+
+    if(myTile->getCoveringBuilding() != nullptr)
+        return;
+
+    if(getMoveSpeedLava() > 0.0)
+        return;
+
+    double lavaDamagePerSecond = ConfigManager::getSingleton().getLavaDamagePerSecond();
+    takeDamage(nullptr, lavaDamagePerSecond / ODApplication::turnsPerSecond, 0.0, 0.0, 0.0, myTile, false);
 }
 
 bool Creature::wanderRandomly(const std::string& animationState)

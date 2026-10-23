@@ -87,6 +87,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mCreatureMoodAngry(-1000),
     mCreatureMoodFurious(-2000),
     mSlapDamagePercent(15),
+    mLavaDamagePerSecond(50),
     mSlapEffectDuration(15),
     mTiredWakefulness(20.0),
     mTiredWalkSpeedFactor(0.8),
@@ -568,6 +569,13 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mSlapDamagePercent = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "LavaDamagePerSecond")
+        {
+            configFile >> nextParam;
+            mLavaDamagePerSecond = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
