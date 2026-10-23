@@ -21,6 +21,8 @@
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
@@ -118,11 +120,17 @@ static TrapRegister reg(new TrapAlarmFactory);
 TrapAlarm::TrapAlarm(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("AlarmReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("AlarmReloadTurns");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("AlarmNbShootsBeforeDeactivation");
     setMeshName("");
 }
 
+double TrapAlarm::getResearchedReloadTime() const
+{
+    return SkillManager::getResearchValue(getSeat(), SkillType::trapAlarm, mReloadTime, ResearchEffect::Reload);
+}
+
+//! \brief Warns the owner when an enemy is within the alarm radius.
 bool TrapAlarm::shoot(Tile* tile)
 {
     uint32_t radius = ConfigManager::getSingleton().getTrapConfigUInt32("AlarmRadius");

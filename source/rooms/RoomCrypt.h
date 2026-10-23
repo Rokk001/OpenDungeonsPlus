@@ -57,7 +57,7 @@ private:
     //! \return The default delivery tile, or the first free neighbouring tile of this crypt if a
     //! building object stands on it. nullptr if no such tile exists.
     Tile* getDeliveryTile(Tile* spot);
-    std::map<Tile*,std::pair<Creature*, int32_t> > mRottingCreatures;
+    std::map<Tile*,std::pair<Creature*, double> > mRottingCreatures;
     int32_t mRottenPoints;
 };
 

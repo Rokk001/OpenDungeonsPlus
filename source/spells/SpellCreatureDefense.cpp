@@ -129,6 +129,7 @@ void SpellCreatureDefense::checkSpellCast(GameMap* gameMap, const InputManager& 
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the defense bonus follows the creature defense research.
 bool SpellCreatureDefense::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -176,7 +177,7 @@ bool SpellCreatureDefense::castSpell(GameMap* gameMap, Player* player, ODPacket&
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureDefenseDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureDefense,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureDefenseValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureDefenseValue"), ResearchEffect::Bonus);
     CreatureEffectDefense* effect = new CreatureEffectDefense(duration, value, 0.0, 0.0, "SpellCreatureDefense");
     creature->addCreatureEffect(effect);
 

@@ -144,6 +144,7 @@ void SpellCreatureExplosion::checkSpellCast(GameMap* gameMap, const InputManager
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the damage follows the creature explosion research.
 bool SpellCreatureExplosion::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     uint32_t nbCreatures;
@@ -209,7 +210,7 @@ bool SpellCreatureExplosion::castSpell(GameMap* gameMap, Player* player, ODPacke
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureExplosionDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureExplosion,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureExplosionValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureExplosionValue"), ResearchEffect::Damage);
     for(Creature* creature : creatures)
     {
         CreatureEffectExplosion* effect = new CreatureEffectExplosion(duration, value, "SpellCreatureExplosion");

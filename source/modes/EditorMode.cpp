@@ -2599,7 +2599,9 @@ void EditorMode::refreshGuiSkill()
     SkillManager::listAllSkills([&](const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
     {
-        guiSheet->getChild(castButtonName)->show();
+        // A keeper skill has no cast button (its name is empty)
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->show();
     });
 
 
