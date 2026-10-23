@@ -2946,7 +2946,7 @@ bool EditorMode::isCheckboxSelected(const CEGUI::String& checkbox)
 }
 
 
-//! \brief Tells whether a file is hidden: the hidden attribute on Windows, a leading dot elsewhere.
+//! \brief Tells whether a file is hidden: the hidden or system attribute on Windows, a leading dot elsewhere.
 //! \param path The whole path of the file, because Windows keeps the flag as a file attribute.
 bool EditorMode::isFileHidden(const boost::filesystem::path& path)
 {
@@ -2955,7 +2955,7 @@ bool EditorMode::isFileHidden(const boost::filesystem::path& path)
     if(attributes == INVALID_FILE_ATTRIBUTES)
         return false;
 
-    return (attributes & FILE_ATTRIBUTE_HIDDEN) != 0;
+    return (attributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) != 0;
 #else
     const std::string filename = path.filename().string();
     return !filename.empty() && (filename[0] == '.');
