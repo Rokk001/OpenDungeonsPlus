@@ -2026,8 +2026,62 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
 }
 
-void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float scale)
+bool Gui::isScreenSizedContainer(const CEGUI::Window* window) const
 {
+    // No window above means the screen itself
+    if(window == nullptr)
+        return true;
+
+    std::map<CEGUI::Window*, WindowScaleData>::const_iterator it = mScaledWindows.find(const_cast<CEGUI::Window*>(window));
+    if(it == mScaledWindows.end())
+        return false;
+
+    const CEGUI::URect& area = it->second.area;
+    const bool fillsParent = (area.d_min.d_x == CEGUI::UDim(0, 0)) && (area.d_min.d_y == CEGUI::UDim(0, 0)) &&
+        (area.d_max.d_x == CEGUI::UDim(1, 0)) && (area.d_max.d_y == CEGUI::UDim(1, 0));
+    return fillsParent && isScreenSizedContainer(window->getParent());
+}
+
+float Gui::getWindowFitFactor(const CEGUI::Window* window) const
+{
+    // Find the window that sits directly in a container as large as the screen: that is the one that has to fit
+    const CEGUI::Window* top = window;
+    while(top != nullptr && !isScreenSizedContainer(top->getParent()))
+        top = top->getParent();
+    if(top == nullptr || isScreenSizedContainer(top))
+        return 1.0f;
+
+    std::map<CEGUI::Window*, WindowScaleData>::const_iterator it = mScaledWindows.find(const_cast<CEGUI::Window*>(top));
+    if(it == mScaledWindows.end())
+        return 1.0f;
+
+    const CEGUI::Sizef displaySize = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float scale = getLayoutScale();
+    const CEGUI::URect& area = it->second.area;
+    const float relativeWidth = area.d_max.d_x.d_scale - area.d_min.d_x.d_scale;
+    const float relativeHeight = area.d_max.d_y.d_scale - area.d_min.d_y.d_scale;
+    const float offsetWidth = (area.d_max.d_x.d_offset - area.d_min.d_x.d_offset) * scale;
+    const float offsetHeight = (area.d_max.d_y.d_offset - area.d_min.d_y.d_offset) * scale;
+
+    float factor = 1.0f;
+    // A window as wide as its parent plus a few pixels is a deliberate bleed and cannot be shrunk by scaling
+    if(offsetWidth > 0.0f && relativeWidth < 1.0f)
+    {
+        const float available = std::max(0.0f, (1.0f - relativeWidth) * displaySize.d_width);
+        factor = std::min(factor, available / offsetWidth);
+    }
+    if(offsetHeight > 0.0f && relativeHeight < 1.0f)
+    {
+        const float available = std::max(0.0f, (1.0f - relativeHeight) * displaySize.d_height);
+        factor = std::min(factor, available / offsetHeight);
+    }
+    return factor;
+}
+
+void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float layoutScale)
+{
+    // A window never gets larger than the screen: its absolute sizes and those of its children shrink together
+    const float scale = layoutScale * getWindowFitFactor(window);
     window->setMinSize(scaleSize(data.minSize, scale));
     window->setMaxSize(scaleSize(data.maxSize, scale));
     window->setArea(scaleRect(data.area, scale));

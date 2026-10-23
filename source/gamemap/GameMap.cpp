@@ -38,6 +38,7 @@
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
 #include "game/Skill.h"
+#include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
 #include "gamemap/LevelScriptRunner.h"
@@ -107,8 +108,6 @@ using namespace std;
 
 namespace
 {
-//! Mana the dungeon heart produces on its own, per second.
-const double MANA_HEART_INCOME_PER_SECOND = 30.0;
 //! The tile part of the mana income is capped: one mana per second per claimed
 //! tile, up to this many tiles.
 const double MANA_INCOME_TILES_CAP = 500.0;
@@ -144,7 +143,10 @@ bool hasCompletedWinningGoal(Seat* seat)
 
 //! \brief Mana a seat gains per second: the heart plus one per claimed tile,
 //! the tile part capped. The tiles of the heart area are not counted again.
-double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTiles)
+//! \param numClaimedTiles The claimed tiles of the seat
+//! \param numHeartTiles The tiles of the heart area of the seat
+//! \param heartIncome Mana the dungeon heart produces on its own, per second (with the research of the seat)
+double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTiles, double heartIncome)
 {
     const unsigned int tiles = numClaimedTiles > numHeartTiles
         ? numClaimedTiles - numHeartTiles
@@ -152,7 +154,7 @@ double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTi
     double tilesIncome = static_cast<double>(tiles);
     if (tilesIncome > MANA_INCOME_TILES_CAP)
         tilesIncome = MANA_INCOME_TILES_CAP;
-    return MANA_HEART_INCOME_PER_SECOND + tilesIncome;
+    return heartIncome + tilesIncome;
 }
 
 //! \brief Mana per second the workers of a seat cost together. The first four are free.
@@ -261,6 +263,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mLocalPlayer(nullptr),
         mLocalPlayerNick(DEFAULT_NICK),
         mTurnNumber(-1),
+        mSavedTurnNumber(0),
         mIsPaused(false),
         mTimePayDay(0),
         mIsSandbox(false),
@@ -422,6 +425,7 @@ void GameMap::clearAll()
 
         mLocalPlayerNick = DEFAULT_NICK;
         mTurnNumber = -1;
+        mSavedTurnNumber = 0;
         resetUniqueNumbers();
         mIsFOWActivated = true;
         mGoldDensityPercent = SKIRMISH_PERCENT_DEFAULT;
@@ -1798,6 +1802,7 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     return timeTaken;
 }
 
+//! \brief Computes the mana income and upkeep of the seat; the heart part of the income follows the mana flow research.
 void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSinceLastTurn)
 {
     // The one-off mana taken this turn joins the turns of the last second, the HUD shows their
@@ -1838,7 +1843,10 @@ void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSi
 
     // The skirmish mana regeneration setting scales the income, not the worker upkeep
     // Each claimed mana well tile adds its bonus on top of the claimed tile income
-    seat->mManaIncomePerSecond = (manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles)
+    // The heart produces the mana of the config (rooms.cfg DungeonHeartManaPerSecond), raised by the Mana Flow research
+    const double heartIncome = SkillManager::getResearchValue(seat, SkillType::keeperManaFlow,
+        ConfigManager::getSingleton().getRoomConfigDouble("DungeonHeartManaPerSecond"), ResearchEffect::HeartMana);
+    seat->mManaIncomePerSecond = (manaIncomePerSecond(seat->getNumClaimedTiles(), numHeartTiles, heartIncome)
         + nbManaWellTiles * ConfigManager::getSingleton().getManaWellBonusPerTile())
         * mManaRegenerationPercent / 100.0;
     // The armed traps keep draining mana as well
@@ -3989,6 +3997,7 @@ const TileSetValue& GameMap::getMeshForTile(const Tile* tile)
     return mTileSet->getTileValues(tile->getTileVisual()).at(index).at(random_number) ;
 }
 
+//! \brief The number of creatures the seat can control: default or setting, its portals and the dominion research, at most the absolute limit.
 uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
 {
     uint32_t nbCreatures = ConfigManager::getSingleton().getMaxCreaturesPerSeatDefault();
@@ -4001,6 +4010,10 @@ uint32_t GameMap::getMaxNumberCreatures(Seat* seat) const
         const RoomPortal* roomPortal = static_cast<const RoomPortal*>(room);
         nbCreatures += roomPortal->getNbCreatureMaxIncrease();
     }
+
+    // The Dominion research raises the limit further, up to the absolute limit
+    nbCreatures = static_cast<uint32_t>(std::max(0.0, SkillManager::getResearchValue(seat, SkillType::keeperDominion,
+        static_cast<double>(nbCreatures), ResearchEffect::CreatureLimit)));
 
     return std::min(nbCreatures, ConfigManager::getSingleton().getMaxCreaturesPerSeatAbsolute());
 }

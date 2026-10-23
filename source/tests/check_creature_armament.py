@@ -114,7 +114,7 @@ def check_equipment(equipment):
                       'MagicalDefense', 'ElementDefense', 'PhysicalDamageMin', 'MagicalDamageMin',
                       'ElementDamageMin', 'AttackRating', 'DefenseRating'):
             assert float(item.get(field, '0')) == 0, (name, field)
-        assert tuple(float(item[key]) for key in ('ParryBase', 'ParryPerLevel', 'ParryMax')) == (3, .5, 15), name
+        assert tuple(float(item[key]) for key in ('ParryBase', 'ParryPerLevel', 'ParryMax')) == (10.5, 0, 15), name
     for name in ('BasicSword', 'BasicAxe', 'BasicHammer', 'Staff', 'BasicAxeOrc',
                  'BasicHammerDwarf2', 'StaffLich'):
         for field in ('PhysicalDamage', 'PhysicalDamageMin', 'MagicalDamage', 'MagicalDamageMin',

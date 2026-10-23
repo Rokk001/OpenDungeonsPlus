@@ -457,10 +457,9 @@ set(OD_SOURCEFILES
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
     ${SRC}/render/PortraitTint.cpp
-    ${SRC}/render/PortraitManifest.cpp
-    ${SRC}/render/AppearanceCompose.cpp
+    ${SRC}/render/PortraitCatalog.cpp
     ${SRC}/render/CreatureAppearancePicture.cpp
-    ${SRC}/render/PortraitManifestRegistry.cpp
+    ${SRC}/render/PortraitCatalogRegistry.cpp
     ${SRC}/render/DungeonbookAppearanceConfig.cpp
     ${SRC}/render/DungeonbookQuirks.cpp
     ${SRC}/render/CreaturePanel.cpp
@@ -601,6 +600,10 @@ IF (MINGW)
     SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${SRC}/utils/StackTraceWinMinGW.cpp)
 ELSEIF(MSVC)
     SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${SRC}/utils/StackTraceWinMSVC.cpp)
+ELSEIF(APPLE)
+    # StackTraceUnix relies on struct sigcontext and the deprecated ucontext
+    # routines, neither of which exists on macOS.
+    SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${SRC}/utils/StackTraceStub.cpp)
 ELSEIF(UNIX)
     SET(OD_SOURCEFILES ${OD_SOURCEFILES} ${SRC}/utils/StackTraceUnix.cpp)
 ELSE()

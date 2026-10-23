@@ -6,7 +6,7 @@
 #include "render/DungeonbookQuirks.h"
 
 #include "game/CreatureAppearance.h"
-#include "render/PortraitManifest.h"
+#include "render/PortraitCatalog.h"
 
 #include <algorithm>
 #include <fstream>
@@ -14,6 +14,7 @@
 
 namespace
 {
+//! \brief Trims whitespace around configuration columns.
 std::string trimBlanks(const std::string& text)
 {
     std::string::size_type first = text.find_first_not_of(" \t\r");
@@ -30,6 +31,7 @@ struct ScoredRemark
     std::size_t mIndex;
 };
 
+//! \brief Orders remark candidates by their stable score and original position.
 bool isLowerScore(const ScoredRemark& a, const ScoredRemark& b)
 {
     if(a.mScore != b.mScore)
@@ -37,12 +39,14 @@ bool isLowerScore(const ScoredRemark& a, const ScoredRemark& b)
     return a.mIndex < b.mIndex;
 }
 
+//! \brief Restores the original order of selected remarks.
 bool isLowerIndex(const ScoredRemark& a, const ScoredRemark& b)
 {
     return a.mIndex < b.mIndex;
 }
 }
 
+//! \brief Loads tag-keyed remarks, preserving missing-file warnings.
 bool DungeonbookQuirks::loadFromFile(const std::string& path)
 {
     mTexts.clear();
@@ -57,6 +61,7 @@ bool DungeonbookQuirks::loadFromFile(const std::string& path)
     return true;
 }
 
+//! \brief Reads unique TAB-separated feature-tag and remark pairs.
 void DungeonbookQuirks::loadFromStream(std::istream& is, const std::string& source)
 {
     mTexts.clear();
@@ -89,53 +94,51 @@ void DungeonbookQuirks::loadFromStream(std::istream& is, const std::string& sour
 
         std::ostringstream where;
         where << source << ":" << lineNumber << ": ";
-        if((columns.size() != 3) || columns[0].empty() || columns[1].empty() || columns[2].empty())
+        if((columns.size() != 2) || columns[0].empty() || columns[1].empty())
         {
-            mWarnings.push_back(where.str() + "expected slot, option name and text separated by TAB, line dropped");
+            mWarnings.push_back(where.str() + "expected feature tag and text separated by TAB, line dropped");
             continue;
         }
 
-        std::pair<std::string, std::string> key(columns[0], columns[1]);
+        const std::string& key = columns[0];
         if(mTexts.count(key) != 0)
         {
-            mWarnings.push_back(where.str() + "repeated entry " + columns[0] + " " + columns[1] + ", line dropped");
+            mWarnings.push_back(where.str() + "repeated entry " + columns[0] + ", line dropped");
             continue;
         }
-        mTexts[key] = columns[2];
+        mTexts[key] = columns[1];
     }
 }
 
-const std::string* DungeonbookQuirks::find(const std::string& slot, const std::string& optionName) const
+//! \brief Finds the remark matching one tag painted into a whole portrait.
+const std::string* DungeonbookQuirks::find(const std::string& tag) const
 {
-    std::map<std::pair<std::string, std::string>, std::string>::const_iterator it =
-        mTexts.find(std::pair<std::string, std::string>(slot, optionName));
-    if(it == mTexts.end())
-        return nullptr;
-    return &it->second;
+    std::map<std::string, std::string>::const_iterator it = mTexts.find(tag);
+    return it == mTexts.end() ? nullptr : &it->second;
 }
 
 namespace DungeonbookQuirkLogic
 {
 const uint32_t MAX_REMARKS = 2;
 
-std::vector<std::string> collectRemarks(const DungeonbookQuirks& quirks, const PortraitManifest& manifest,
+//! \brief Collects tags of the stored whole image, so missing images never invent character details.
+std::vector<std::string> collectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance)
 {
     std::vector<std::string> candidates;
-    const std::vector<CreatureAppearance::Choice>& choices = appearance.getChoices();
-    for(std::vector<CreatureAppearance::Choice>::const_iterator it = choices.begin(); it != choices.end(); ++it)
+    const PortraitCatalog::Image* image = catalog.findImage(appearance.getImageNumber());
+    if(image == nullptr)
+        return candidates;
+    for(const std::string& tag : image->mTags)
     {
-        const PortraitManifest::Option* option = manifest.findOption(it->mSlot, it->mNumber);
-        if(option == nullptr)
-            continue;
-
-        const std::string* text = quirks.find(it->mSlot, option->mName);
+        const std::string* text = quirks.find(tag);
         if(text != nullptr)
             candidates.push_back(*text);
     }
     return candidates;
 }
 
+//! \brief Selects at most maxCount remarks using the stable name and image token.
 std::vector<std::string> pickRemarks(const std::vector<std::string>& candidates, const std::string& creatureName,
     const CreatureAppearance& appearance, uint32_t maxCount)
 {
@@ -162,12 +165,14 @@ std::vector<std::string> pickRemarks(const std::vector<std::string>& candidates,
     return result;
 }
 
-std::vector<std::string> selectRemarks(const DungeonbookQuirks& quirks, const PortraitManifest& manifest,
+//! \brief Selects stable remarks for the stored whole-image feature tags.
+std::vector<std::string> selectRemarks(const DungeonbookQuirks& quirks, const PortraitCatalog& catalog,
     const CreatureAppearance& appearance, const std::string& creatureName)
 {
-    return pickRemarks(collectRemarks(quirks, manifest, appearance), creatureName, appearance, MAX_REMARKS);
+    return pickRemarks(collectRemarks(quirks, catalog, appearance), creatureName, appearance, MAX_REMARKS);
 }
 
+//! \brief Formats the selected remarks for the existing profile label.
 std::string formatRemarks(const std::vector<std::string>& remarks)
 {
     if(remarks.empty())

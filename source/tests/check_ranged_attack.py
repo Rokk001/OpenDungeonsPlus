@@ -17,14 +17,14 @@ for text in ('entityAttack.getObjectType() == GameEntityType::creature',
              'getRangeMax(this, &entityAttack) > 1.0', 'EntityAnimation::ranged_attack_anim',
              'EntityAnimation::combat_attack_anim', 'Pathfinding::distanceTile(*myTile, tileAttack)',
              '&entityAttack, &tileAttack, ko, notifyPlayerIfHit',
-             'skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();',
-             'skillData.mCooldown = getAppliedCooldownNbTurns(*skillData.mSkill);',
+             'skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();',
+             'skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);',
              'std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)',
              'mAttackRecoveryTurns = mAttackRecoveryDuration;', '++mAttackRecoverySerial;',
              'mNeedFireRefresh = true;', 'decreaseWakefulness(0.5);', 'receiveExp(1.5);'):
     assert text in method, text
 assert method.index('fireAttackTurn(') < method.index('setAnimationState(') < method.index('tryUseFight(')
-assert method.index('tryUseFight(') < method.index('skillData.mWarmup =') < method.index('skillData.mCooldown =')
+assert method.index('tryUseFight(') < method.index('skillData.mWarmup +=') < method.index('skillData.mCooldown +=')
 assert 'rollAttackHit' not in method and 'takeDamage' not in method, 'hit resolution stays in the individual skills'
 if '--probe' not in sys.argv:
     print('Ranged/melee dispatch, target aiming and attack recovery source checks passed; compiled dispatch probe not executed')

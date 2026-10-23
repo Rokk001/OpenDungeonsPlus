@@ -357,7 +357,7 @@ print('approved 5/30/60-second stages, fallback defaults and game speed checked'
 
 # Current cadence contract: room area, immediate nest dispatch, one draw per saved stage, adults only.
 capacity_body = body(cycle_cpp, 'uint32_t HatcheryCycle::capacity')
-assert 'nbTiles / tilesPerChicken' in capacity_body and 'nbCoops' not in capacity_body
+assert 'nbTiles) / tilesPerChicken * settings.mCapacityFactor' in capacity_body and 'nbCoops' not in capacity_body
 assert 'counts.mHens == 0' in body(cycle_cpp, 'bool HatcheryCycle::needCoopHen')
 assert 'std::min<uint32_t>(1, capacity)' in body(cycle_cpp, 'uint32_t HatcheryCycle::coopHenCount')
 assert 'capacity - counts.population()' in doUpkeep

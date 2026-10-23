@@ -29,11 +29,12 @@ static const uint32_t ROUNDING_STEPS = 1000;
 static const uint32_t WHOLE_PERCENT = 100;
 }
 
-//! \brief Limits hens, chicks and eggs by room area, independently of decorative coop count.
+//! \brief Limits hens, chicks and eggs by room area, independently of decorative coop count. The hatchery research
+//! raises the number of chickens per tile through the capacity factor of the settings.
 uint32_t HatcheryCycle::capacity(uint32_t nbTiles, uint32_t, const HatcheryCycleSettings& settings)
 {
     uint32_t tilesPerChicken = std::max<uint32_t>(1, settings.mTilesPerChicken);
-    return nbTiles / tilesPerChicken;
+    return static_cast<uint32_t>(std::floor(static_cast<double>(nbTiles) / tilesPerChicken * settings.mCapacityFactor));
 }
 
 bool HatcheryCycle::canLay(const HatcheryCounts& counts, uint32_t capacity)

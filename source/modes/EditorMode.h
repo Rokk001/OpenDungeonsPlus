@@ -128,7 +128,6 @@ public:
 
     void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
     bool updateDescription(const CEGUI::EventArgs& e = {});
-    std::string getEnv( const std::string & var );
     bool isCheckboxSelected(const CEGUI::String& checkbox);
 
     //! \brief Shows the waves of a wave portal, as the server has just described them.
@@ -292,7 +291,7 @@ private:
     //! \brief Loads an editor map with its existing status text above the loading picture.
     bool loadLevelFromFile(const std::string&);
     //! \brief file path to currently choosen file via load / save menu
-    bool isFileHidden(std::string path);
+    bool isFileHidden(const boost::filesystem::path& path);
     void addPathNameToList(boost::filesystem::directory_entry& xx, CEGUI::Listbox* levelSelectList, CEGUI::Colour cc, int& nn );
     std::string dialogFullPath;
 

@@ -148,6 +148,7 @@ void RoomArena::absorbRoom(Room *r)
     OD_ASSERT_TRUE_MSG(rc->mCreaturesFighting.empty(), "room=" + getName() + ", roomAbs=" + rc->getName() + ", creature=" + Helper::toString(rc->mCreaturesFighting.size()));
 }
 
+//! \brief True if the creature may train in the arena: enemies always, own creatures below the level cap (raised by the arena research).
 bool RoomArena::hasOpenCreatureSpot(Creature* c)
 {
     // We allow up to number central active spots creatures fighting
@@ -160,7 +161,7 @@ bool RoomArena::hasOpenCreatureSpot(Creature* c)
 
     // We allow using arena only if level is not too high
     if (c->getLevel() >= std::min(static_cast<double>(MAX_LEVEL), std::round(SkillManager::getResearchValue(
-        getSeat(), SkillType::roomArena, ConfigManager::getSingleton().getRoomConfigUInt32("ArenaMaxTrainingLevel")))))
+        getSeat(), SkillType::roomArena, ConfigManager::getSingleton().getRoomConfigUInt32("ArenaMaxTrainingLevel"), ResearchEffect::LevelCap))))
         return false;
 
     return true;

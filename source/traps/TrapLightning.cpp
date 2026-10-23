@@ -22,6 +22,8 @@
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
@@ -132,6 +134,7 @@ TrapLightning::TrapLightning(GameMap* gameMap) :
     setMeshName("");
 }
 
+//! \brief Strikes one enemy in range; the damage follows the lightning trap research.
 bool TrapLightning::shoot(Tile* tile)
 {
     std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(mRange));
@@ -144,7 +147,9 @@ bool TrapLightning::shoot(Tile* tile)
     Tile* targetTile = target->getCoveredTile(0);
 
     // Water conducts the bolt: the damage doubles for a target standing in water
-    double damage = Random::Double(mMinDamage, mMaxDamage);
+    double damage = Random::Double(
+        SkillManager::getResearchValue(getSeat(), SkillType::trapLightning, mMinDamage, ResearchEffect::Damage),
+        SkillManager::getResearchValue(getSeat(), SkillType::trapLightning, mMaxDamage, ResearchEffect::Damage));
     if((targetTile != nullptr) && (targetTile->getType() == TileType::water))
         damage *= WATER_DAMAGE_FACTOR;
 

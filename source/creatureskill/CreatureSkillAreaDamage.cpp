@@ -21,6 +21,7 @@
 #include "creatureeffect/CreatureEffectAreaDamage.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
@@ -86,9 +87,11 @@ bool CreatureSkillAreaDamage::tryUseFight(GameMap& gameMap, Creature* creature, 
     }
 
     // The zone is centred on the target and is kept by the caster
+    // The damage follows the SkillDamageFactor of the creature type
+    const double damageFactor = creature->getDefinition()->getSkillDamageFactor();
     CreatureEffectAreaDamage* effect = new CreatureEffectAreaDamage(static_cast<int32_t>(mNbTurns),
-        attackedTile->getX(), attackedTile->getY(), mRadius, mDamagePerTurn, mParticleScript);
-    effect->setDamageMin(mDamagePerTurnMin);
+        attackedTile->getX(), attackedTile->getY(), mRadius, mDamagePerTurn * damageFactor, mParticleScript);
+    effect->setDamageMin(mDamagePerTurnMin * damageFactor);
     creature->addCreatureEffect(effect);
 
     return true;

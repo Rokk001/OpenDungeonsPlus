@@ -376,6 +376,7 @@ bool RoomHatchery::importFromStream(std::istream& is)
     return true;
 }
 
+//! \brief The settings of the hatchery from the config, with the laying times and the capacity of the hatchery research.
 HatcheryCycleSettings RoomHatchery::getCycleSettings() const
 {
     const ConfigManager& config = ConfigManager::getSingleton();
@@ -397,9 +398,11 @@ HatcheryCycleSettings RoomHatchery::getCycleSettings() const
     // The research of the hatchery shortens the waiting times
     double coopWait = config.getRoomConfigDoubleOrDefault("HatcheryChickenSpawnRate", settings.mCoopWait);
     double researchedWait = std::max(1.0, std::round(SkillManager::getResearchValue(
-        getSeat(), SkillType::roomHatchery, coopWait)));
+        getSeat(), SkillType::roomHatchery, coopWait, ResearchEffect::LayInterval)));
     settings.mCoopWait = static_cast<uint32_t>(researchedWait);
     double factor = (coopWait > 0.0) ? (researchedWait / coopWait) : 1.0;
+    // The research also raises the number of chickens that fit on a tile
+    settings.mCapacityFactor = SkillManager::getResearchValue(getSeat(), SkillType::roomHatchery, 1.0, ResearchEffect::Capacity);
     return HatcheryCycle::scaled(settings, factor);
 }
 

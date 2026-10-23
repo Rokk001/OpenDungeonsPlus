@@ -417,6 +417,7 @@ void RoomCasino::removeCreatureUsingRoom(Creature* creature)
     }
 }
 
+//! \brief Cheers up or annoys the creatures in the casino and plays the games; the keeper fee and the mood gain follow the casino research.
 void RoomCasino::doUpkeep()
 {
     Room::doUpkeep();
@@ -427,6 +428,9 @@ void RoomCasino::doUpkeep()
     // Every creature in the casino gets cheered up (smiles) or annoyed (money), in mood points per second
     double moodPerSecond = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(
         (mPayout == CasinoPayout::smiles) ? "CasinoMoodSmiles" : "CasinoMoodMoney", 0.0);
+    // The research raises the mood the smiles payout gives, not the annoyance of the money payout
+    if(mPayout == CasinoPayout::smiles)
+        moodPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::roomCasino, moodPerSecond, ResearchEffect::Mood);
     double moodPerTurn = moodPerSecond / ODApplication::turnsPerSecond;
     for(Creature* creature : mCreaturesUsingRoom)
         creature->addCasinoMood(moodPerTurn);
@@ -462,7 +466,7 @@ void RoomCasino::doUpkeep()
         uint32_t cooldown = Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("CasinoCooldownWorkMin"),
             ConfigManager::getSingleton().getRoomConfigUInt32("CasinoCooldownWorkMax"));
         double feePercent = std::min(SkillManager::getResearchValue(getSeat(), SkillType::roomCasino,
-            getFeeForPayout(mPayout)), 1.0);
+            getFeeForPayout(mPayout), ResearchEffect::Fee), 1.0);
         double wakefullness = ConfigManager::getSingleton().getRoomConfigDouble("CasinoWakefulnessPerWork");
         int32_t creatureBet = ConfigManager::getSingleton().getRoomConfigInt32("CasinoBet");
         creatureBet = std::min(creatureBet, p.second.mCreature1.mCreature->getGoldCarried());

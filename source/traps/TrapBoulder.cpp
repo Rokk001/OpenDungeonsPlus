@@ -129,6 +129,7 @@ TrapBoulder::TrapBoulder(GameMap* gameMap) :
     setMeshName("");
 }
 
+//! \brief Rolls a boulder at the enemies; the damage follows the boulder trap research.
 bool TrapBoulder::shoot(Tile* tile)
 {
     std::vector<Tile*> tiles = tile->getAllNeighbors();
@@ -159,8 +160,8 @@ bool TrapBoulder::shoot(Tile* tile)
     direction.normalise();
     MissileBoulder* missile = new MissileBoulder(getGameMap(), getSeat(), getName(), "Boulder",
         direction, ConfigManager::getSingleton().getTrapConfigDouble("BoulderSpeed"),
-        Random::Double(SkillManager::getResearchValue(getSeat(), SkillType::trapBoulder, mMinDamage),
-            SkillManager::getResearchValue(getSeat(), SkillType::trapBoulder, mMaxDamage)), nullptr, true);
+        Random::Double(SkillManager::getResearchValue(getSeat(), SkillType::trapBoulder, mMinDamage, ResearchEffect::Damage),
+            SkillManager::getResearchValue(getSeat(), SkillType::trapBoulder, mMaxDamage, ResearchEffect::Damage)), nullptr, true);
     missile->addToGameMap();
     missile->createMesh();
     missile->setPosition(position);

@@ -22,6 +22,8 @@
 #include "entities/TrapEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
@@ -128,6 +130,7 @@ TrapGas::TrapGas(GameMap* gameMap) :
     setMeshName("");
 }
 
+//! \brief Poisons every creature in the radius; the damage follows the gas trap research.
 bool TrapGas::shoot(Tile* tile)
 {
     // Pressure trigger: the trap only fires when an enemy creature stands on its tile
@@ -148,7 +151,9 @@ bool TrapGas::shoot(Tile* tile)
     for(GameEntity* target : victims)
     {
         Tile* targetTile = target->getCoveredTile(0);
-        target->takeDamage(this, 0.0, 0.0, 0.0, Random::Double(mMinDamage, mMaxDamage), targetTile, false);
+        target->takeDamage(this, 0.0, 0.0, 0.0, Random::Double(
+            SkillManager::getResearchValue(getSeat(), SkillType::trapGas, mMinDamage, ResearchEffect::Damage),
+            SkillManager::getResearchValue(getSeat(), SkillType::trapGas, mMaxDamage, ResearchEffect::Damage)), targetTile, false);
         target->notifyFightPlayer(targetTile);
     }
 

@@ -151,6 +151,7 @@ void SpellCreatureHeal::checkSpellCast(GameMap* gameMap, const InputManager& inp
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the healing per turn follows the creature heal research.
 bool SpellCreatureHeal::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     uint32_t nbCreatures;
@@ -242,7 +243,7 @@ bool SpellCreatureHeal::castSpellOnCreatures(GameMap* gameMap, Player* player, s
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureHealDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureHeal,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureHealValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureHealValue"), ResearchEffect::HealPerTurn);
     std::vector<Tile*> affectedTiles;
     for(Creature* creature : creatures)
     {

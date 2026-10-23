@@ -118,6 +118,13 @@ std::string itemPageName(SkillType type)
         return "Doors";
     if(name.compare(0, 4, "trap") == 0)
         return "Traps";
+    // The keeper skills stand in the tab of the research tree that holds them
+    if(type == SkillType::keeperDominion)
+        return "Rooms";
+    if((type == SkillType::keeperHeartFortitude) || (type == SkillType::keeperHeartMending))
+        return "Traps";
+    if(type == SkillType::keeperManaFlow)
+        return "Spells";
 
     return "";
 }

@@ -11,6 +11,12 @@ def check_heart_configuration(repo):
     source = (repo / 'source/rooms/RoomDungeonTemple.cpp').read_text()
     assert '#include "utils/ConfigManager.h"' in source, 'heart configuration requires its complete declaration'
     assert 'getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0)' in source
+    # The heal rate and the research of the heart health and healing come from the configuration and skills.cfg
+    values = re.findall(r'^\s*DungeonHeartHealPerSecond\s+(\S+)', rooms, re.M)
+    assert len(values) == 1 and float(values[0]) == 2.5, 'configured heart healing'
+    assert 'getRoomConfigDouble("DungeonHeartHealPerSecond")' in source
+    assert 'HEART_HEAL_PER_SECOND' not in source
+    assert 'ResearchEffect::HeartHP' in source and 'ResearchEffect::HeartHeal' in source
     assert 'const double RoomDungeonTemple::HEART_MAX_HP' not in source
     assert 'physicalDamage - getPhysicalDefense()' in source
     assert 'magicalDamage - getMagicalDefense()' in source
@@ -26,11 +32,27 @@ def configure_heart_probe(probe):
     getter = '''
  // Return the checked default health without loading unrelated game configuration.
  double getRoomConfigDoubleOrDefault(const std::string&, double fallback) const { return fallback; }
+ // Return the configured heal rate (the only room value the heart reads with this getter).
+ double getRoomConfigDouble(const std::string& key) const { return key == "DungeonHeartHealPerSecond" ? 2.5 : 0.0; }
 '''
+    # The research of the heart: the fixture skill manager applies a factor per effect (1 = no research); the skill
+    # type arguments of the production code are replaced by a plain number because the fixtures declare no skill types
+    research = '''
+#include <string>
+namespace ResearchEffect { static const std::string HeartHP = "HeartHP"; static const std::string HeartHeal = "HeartHeal"; }
+// Factors of the fixture research, set by the checks.
+static double gResearchHeartHP = 1.0;
+static double gResearchHeartHeal = 1.0;
+struct SkillManager {
+ template<class SeatType, class SkillArg>
+ static double getResearchValue(SeatType, SkillArg, double base, const std::string& effect)
+ { return base * (effect == ResearchEffect::HeartHP ? gResearchHeartHP : (effect == ResearchEffect::HeartHeal ? gResearchHeartHeal : 1.0)); }
+};
+'''
+    probe = probe.replace('SkillType::keeperHeartFortitude', '0').replace('SkillType::keeperHeartMending', '0')
     if 'struct ConfigManager {' in probe:
-        return probe.replace('struct ConfigManager {', 'struct ConfigManager {' + getter, 1)
-    return '''#include <string>
-struct ConfigManager {
+        return probe.replace('struct ConfigManager {', research + 'struct ConfigManager {' + getter, 1)
+    return research + '''struct ConfigManager {
  // Provide the configuration singleton used by the extracted production getter.
  static ConfigManager& getSingleton() { static ConfigManager config; return config; }
 ''' + getter + '};\n' + probe
