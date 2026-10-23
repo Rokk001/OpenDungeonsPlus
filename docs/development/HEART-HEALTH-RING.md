@@ -12,8 +12,8 @@ While the heart is under attack the badge glows magenta behind the heart; the gl
 switched off after 3 seconds without a further message and never shows on a destroyed heart.
 
 `healthFraction` is the remaining heart health divided by the health of an undamaged heart,
-`RoomDungeonTemple::getHeartMaxHP` (`getHeartHealthFraction`), a fixed 10000. A living heart
-heals 2.5 per second up to that maximum (`RoomDungeonTemple::doUpkeep`).
+`RoomDungeonTemple::getHeartMaxHP` (`getHeartHealthFraction`), a fixed 15100 (`DungeonHeartHP` in rooms.cfg). A living heart
+heals 3.775 per second (`DungeonHeartHealPerSecond`) up to that maximum (`RoomDungeonTemple::doUpkeep`).
 
 ## Look of the top-left HUD
 
