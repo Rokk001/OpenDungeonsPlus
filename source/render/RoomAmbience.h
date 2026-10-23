@@ -40,6 +40,11 @@ class RenderedMovableEntity;
 class Seat;
 class Tile;
 
+//! \brief Default seconds a new flight (bolt or projectile) needs to arrive
+const double DEFAULT_FLIGHT_DURATION = 0.4;
+//! \brief Default flickers per second of a new bolt
+const double DEFAULT_FLIGHT_FLICKER_RATE = 20.0;
+
 /*! \brief Cosmetic life in the rooms (dust, glow, sparks, moving objects), client side only.
  *
  * Nothing here is known to the server or saved: the effects are derived from what the client map
@@ -118,8 +123,10 @@ public:
     //! \brief Moves the camera by the current shake. Called just before the frame is rendered; clearShake()
     //! takes it away again after the frame, so nothing else ever sees the shaken camera.
     void applyShake();
+    //! \brief Takes the offset of applyShake() from the camera again; does nothing when no shake was applied
     void clearShake();
 
+    //! \brief The number of particle systems that run now (for the console)
     inline uint32_t getNbParticleSystems() const
     { return static_cast<uint32_t>(mEmitters.size() + mOneShots.size() + mMarks.size()); }
     inline uint32_t getNbMovedObjects() const
@@ -174,31 +181,43 @@ private:
     //! door) and then sinks into the floor
     struct Collapse
     {
+        //! \brief Creates remains that are not attached to a scene node yet
         Collapse() :
             mNode(nullptr), mEntity(nullptr), mAge(0.0), mBaseHeight(0.0)
         {}
 
+        //! The scene node of the ghost copy of the door
         Ogre::SceneNode* mNode;
+        //! The ghost copy of the door that plays the clip
         Ogre::Entity* mEntity;
+        //! Seconds since the clip started
         double mAge;
+        //! Height of the node at the start, from which it sinks
         double mBaseHeight;
+        //! Name of the clip that is played
         std::string mClip;
     };
 
     //! \brief A cannon (or another object of an effect of kind turn) that follows creatures in range with its barrel
     struct Turret
     {
+        //! \brief Creates a turret that is not attached to an object yet
         Turret() :
             mEffect(0), mPosition(Ogre::Vector3::ZERO), mRestFront(Ogre::Vector3::NEGATIVE_UNIT_Y), mSeat(nullptr),
             mGeneration(0)
         {}
 
+        //! Name of the scene node of the object that is turned
         std::string mNodeName;
+        //! Index of the effect (kind turn) that drives the turret
         uint32_t mEffect;
+        //! Where the object stands
         Ogre::Vector3 mPosition;
         //! Direction (flat) the object looked in when it was first seen, where it turns back to
         Ogre::Vector3 mRestFront;
+        //! The seat the object belongs to, to tell enemies from friends
         Seat* mSeat;
+        //! Scan in which the object was last seen; an older turret is sent back to rest and removed
         uint32_t mGeneration;
     };
 
@@ -223,35 +242,52 @@ private:
     //! \brief Where a creature was at the last scan and whose it is
     struct CreatureSpot
     {
+        //! \brief Creates a spot at the origin that belongs to nobody
         CreatureSpot() :
             mPosition(Ogre::Vector3::ZERO), mSeat(nullptr)
         {}
 
+        //! Where the creature was
         Ogre::Vector3 mPosition;
+        //! The seat the creature belongs to
         Seat* mSeat;
     };
 
     //! \brief A bolt (kind beam) or a flying object (kind projectile) on its way to the target
     struct Flight
     {
+        //! \brief Creates a flight that is not attached to a scene node yet
         Flight() :
             mNode(nullptr), mEntity(nullptr), mTrailNode(nullptr), mTrailSystem(nullptr), mBeam(false),
-            mStart(Ogre::Vector3::ZERO), mEnd(Ogre::Vector3::ZERO), mAge(0.0), mDuration(0.4), mWidth(1.0),
-            mArc(0.0), mFlickerRate(20.0), mFlickerClock(0.0)
+            mStart(Ogre::Vector3::ZERO), mEnd(Ogre::Vector3::ZERO), mAge(0.0), mDuration(DEFAULT_FLIGHT_DURATION), mWidth(1.0),
+            mArc(0.0), mFlickerRate(DEFAULT_FLIGHT_FLICKER_RATE), mFlickerClock(0.0)
         {}
 
+        //! The scene node that carries the mesh
         Ogre::SceneNode* mNode;
+        //! The mesh of the bolt or of the flying object (none for a trail only)
         Ogre::Entity* mEntity;
+        //! The scene node of the trail
         Ogre::SceneNode* mTrailNode;
+        //! The particle system that trails behind a projectile
         Ogre::ParticleSystem* mTrailSystem;
+        //! True for a bolt, false for a projectile
         bool mBeam;
+        //! Where it starts
         Ogre::Vector3 mStart;
+        //! The target
         Ogre::Vector3 mEnd;
+        //! Seconds since the start
         double mAge;
+        //! Seconds it needs to arrive (a bolt stays that long)
         double mDuration;
+        //! Width of a bolt
         double mWidth;
+        //! Height of the arc of a projectile
         double mArc;
+        //! Flickers per second of a bolt
         double mFlickerRate;
+        //! Seconds since the last flicker of a bolt
         double mFlickerClock;
         //! Event raised at the target on arrival (projectile)
         std::string mLand;
@@ -341,6 +377,7 @@ private:
     void scan();
     //! \brief Hands the torch list of the client map to mWallTorches when it has changed
     void syncWallTorches();
+    //! \brief Finds the objects near the camera that have effects and collects the candidates for them
     void scanObjects(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
     void scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& lookPoint);
     void scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition);
@@ -350,29 +387,40 @@ private:
     //! shows it, has gone down since the last scan
     void scanHeartHit();
     void reconcile();
+    //! \brief Plays the clips of the objects whose time has come
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
+    //! \brief Ends the one-shot effects of the list whose time is over
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
     void updatePendingSounds();
     //! \brief Lets a destroyed door (the door entity of the given type on the tile, which the server is about to
     //! remove) play the clip Collapse (barricade) or Destroyed (every other door) of its skeleton on a ghost copy
     void startCollapse(int32_t tileX, int32_t tileY, const std::string& typeName);
+    //! \brief Moves the clips of the remains of destroyed doors on, lets them lie a moment and sinks them
     void updateCollapses(double timeSinceLastFrame);
+    //! \brief Removes the ghost copy of a destroyed door from the scene
     void destroyCollapse(Collapse& collapse);
     //! \brief Lets the objects of effects of kind turn follow the creatures near them, or go back to rest
     void updateTurrets(double timeSinceLastFrame);
+    //! \brief Turns the object of a turret back to the direction it looked in when it was first seen
     void restoreTurret(const Turret& turret);
     //! \brief Starts a rolling object of the effect (kind roll) at the given place; true if it was started
     bool startRoll(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position);
     void updateRollers(double timeSinceLastFrame);
     //! \brief Ends a roller: the object goes; with leaveEffects its fragments and the last dust stay for a moment
     void finishRoller(Roller& roller, bool leaveEffects);
+    //! \brief Lets a running view shake fade out and moves its phase on
     void updateShake(double timeSinceLastFrame);
     //! \brief Starts a beam or a projectile (effect kinds beam and projectile) for an event at the given place
     void startFlight(const AmbienceEffect& effect, const Ogre::Vector3& position);
+    //! \brief Moves the bolts and flying objects on and raises the landing events of those that arrived
     void updateFlights(double timeSinceLastFrame);
+    //! \brief Removes the scene objects of a bolt or flying object
     void destroyFlight(Flight& flight);
     //! \brief Starts a view shake of the effect (kind shake) for an event at the given place
+    //! \param effect The shake effect; Amount is its strength at the middle of the view.
+    //! \param position Where the event happened.
+    //! \param lookPoint The point on the floor the camera looks at, from which the distance is measured.
     void startShake(const AmbienceEffect& effect, const Ogre::Vector3& position, const Ogre::Vector3& lookPoint);
     void updateMotions(double timeSinceLastFrame);
     void destroyEmitter(Emitter& emitter);
@@ -398,17 +446,30 @@ private:
     void stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect);
     //! \brief True if the dungeon heart at the position belongs to the local keeper and its health fraction (as the
     //! heart badge shows it) is below the given value
+    //! \param position Where the heart stands.
+    //! \param below The health fraction (0 to 1) under which the heart counts as low.
     bool isLocalHeartBelow(const Ogre::Vector3& position, double below) const;
     //! \brief Updates and returns the state "no creature for a while" of a target
     bool isIdleLongEnough(const std::string& key, bool busy, double after);
-    //! \brief The state "Empty" or "Vacated" of a target, depending on the effect
+    //! \brief The state "Empty" (When Empty) or "Vacated" (When Vacated) of a target, depending on the effect
+    //! \param effect The effect; mWhen tells which of the two is asked and mAfter is the time in seconds.
+    //! \param key The key under which the state of the target is kept.
+    //! \param busy True if a creature is close to the target now.
+    //! \return For When Empty true once no creature was close for mAfter seconds; for When Vacated the same, but only
+    //! for a target that was used at some time while it was watched.
     bool isIdleState(const AmbienceEffect& effect, const std::string& key, bool busy);
     double getDistanceLimit(const AmbienceEffect& effect) const;
     bool isEffectUsable(const AmbienceEffect& effect) const;
+    //! \brief Creates a particle system from the named template at the position and attaches it to a new scene node.
+    //! Returns false if the template is unknown; on success node and particleSystem are set
     bool createParticleSystem(const std::string& system, const Ogre::Vector3& position, const std::string& baseName,
         Ogre::SceneNode*& node, Ogre::ParticleSystem*& particleSystem);
+    //! \brief The effects of the given kind for the objects with the given mesh name, remembered per mesh
     const std::vector<uint32_t>& getObjectEffects(const std::string& meshName, const std::string& kind);
+    //! \brief The effects for a bridge tile, found by the mesh of its bridge and the visual of the ground under it
     std::vector<uint32_t> getBridgeEffects(Tile* tile) const;
+    //! \brief True if the position is at most limit away from the camera position and a box of the given radius
+    //! around it is inside the view of the camera
     bool isVisibleNear(Ogre::Camera* camera, const Ogre::Vector3& cameraPosition, const Ogre::Vector3& position,
         double radius, double limit) const;
 
@@ -432,19 +493,26 @@ private:
     std::vector<uint32_t> mNoEffects;
     std::vector<uint32_t> mObjectWildcardEffects;
     double mScanRadius;
+    //! \brief How fast a dungeon heart beats, as told by RoomAmbienceExtras
     struct HeartRate
     {
+        //! \brief Creates the beat of the heart at the given position
+        //! \param position Where the heart stands.
+        //! \param factor Beats per second as a multiple of the calm beat.
         HeartRate(const Ogre::Vector3& position, double factor) :
             mPosition(position), mFactor(factor)
         {}
 
+        //! Where the heart stands
         Ogre::Vector3 mPosition;
+        //! Beats per second as a multiple of the calm beat
         double mFactor;
     };
 
     //! \brief Beat factor of the heart nearest to position, 1 if there is none within a few tiles
     double getHeartRateFactor(const Ogre::Vector3& position) const;
 
+    //! How fast the dungeon hearts beat, found at the last scan
     std::vector<HeartRate> mHeartRates;
 
     //! The grain of one hatchery as last told by the server
@@ -480,6 +548,7 @@ private:
     //! Time until which a trap (key "x,y" of its tile) keeps its turn, because the server aims it for a shot
     std::map<std::string, double> mTurretHoldUntil;
     std::vector<Roller> mRollers;
+    //! Where the creatures were at the last scan
     std::vector<CreatureSpot> mCreatureSpots;
     std::map<std::string, BusyInfo> mBusy;
     std::map<std::string, double> mLastEventTime;
@@ -499,7 +568,9 @@ private:
     //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
+    //! The remains of destroyed doors that are shown
     std::vector<Collapse> mCollapses;
+    //! The bolts and flying objects that are on their way
     std::vector<Flight> mFlights;
 
     //! Positions of the creatures on the map at the last scan

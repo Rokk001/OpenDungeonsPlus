@@ -40,6 +40,32 @@ const std::string ConfigManager::DEFAULT_TILESET_NAME = "Default";
 
 const std::string ConfigManager::DEFAULT_KEEPER_VOICE = "Default";
 
+//! \brief Default extra mana per second for each claimed mana well tile; global.cfg can override it.
+static const double DEFAULT_MANA_WELL_BONUS_PER_TILE = 10.0;
+
+const double ConfigManager::AttackTurnSpeedMin = 90.0;
+const double ConfigManager::AttackTurnSpeedMax = 1440.0;
+const double ConfigManager::AttackTurnMaxDelayMin = 0.0;
+const double ConfigManager::AttackTurnMaxDelayMax = 0.6;
+const double ConfigManager::HitShareMin = 0.01;
+const double ConfigManager::HitGlanceShareMax = 0.9;
+const double ConfigManager::HitStrongShareMax = 1.0;
+const double ConfigManager::ChanceMin = 0.0;
+const double ConfigManager::ChanceMax = 100.0;
+const double ConfigManager::ChancePerLevelMax = 10.0;
+
+namespace
+{
+//! Default angular speed in degrees per second of the turn to the target before a blow
+static const double DEFAULT_ATTACK_TURN_SPEED = 540.0;
+//! Default most seconds the strike clip waits for the turn to the target
+static const double DEFAULT_ATTACK_TURN_MAX_DELAY = 0.25;
+//! Default share of the damage below which a blow counts as glancing
+static const double DEFAULT_HIT_GLANCE_SHARE = 0.34;
+//! Default share of the maximum health of the target from which a hit counts as strong
+static const double DEFAULT_HIT_STRONG_SHARE = 0.15;
+}
+
 const std::string ConfigManager::DefaultWorkerCreatureDefinition = "DefaultWorker";
 
 template<> ConfigManager* Ogre::Singleton<ConfigManager>::msSingleton = nullptr;
@@ -54,40 +80,46 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mCreatureDeathCounter(10),
     mMaxCreaturesPerSeatAbsolute(30),
     mMaxCreaturesPerSeatDefault(10),
+    mCreaturesPerPortal(5),
     mCreatureBaseMood(1000),
     mCreatureMoodHappy(1200),
     mCreatureMoodUpset(0),
     mCreatureMoodAngry(-1000),
     mCreatureMoodFurious(-2000),
     mSlapDamagePercent(15),
+    mLavaDamagePerSecond(50),
     mSlapEffectDuration(15),
     mTiredWakefulness(20.0),
     mTiredWalkSpeedFactor(0.8),
     mLowHealthWalkSpeedFactor(0.7),
     mCreatureLevelGrowthMax(0.10),
+    mCreatureDamageGrowth(0.221),
+    mCreatureDamageExponent(1.167),
+    mCreatureHpGrowthPerLevel(0.018),
+    mCooldownReductionPerLevel(0.0),
     mLowHealthWalkThresholdPercent(50.0),
     mHeartHealthStages(5),
     mHeartHealthStageEvents(true),
     mHitEvents(true),
-    mHitGlanceShare(0.34),
-    mHitStrongShare(0.15),
+    mHitGlanceShare(DEFAULT_HIT_GLANCE_SHARE),
+    mHitStrongShare(DEFAULT_HIT_STRONG_SHARE),
     mAttackTurnEvents(true),
-    mAttackTurnSpeed(540.0),
-    mAttackTurnMaxDelay(0.25),
+    mAttackTurnSpeed(DEFAULT_ATTACK_TURN_SPEED),
+    mAttackTurnMaxDelay(DEFAULT_ATTACK_TURN_MAX_DELAY),
     mMeleeDodgeParry(true),
-    mDodgeBase(3.0),
-    mDodgePerLevel(0.5),
+    mDodgeBase(10.5),
+    mDodgePerLevel(0.0),
     mDodgeMax(15.0),
-    mParryBase(3.0),
-    mParryPerLevel(0.5),
+    mParryBase(10.5),
+    mParryPerLevel(0.0),
     mParryMax(15.0),
-    mShieldBlockBase(6.0),
-    mShieldBlockPerLevel(1.0),
+    mShieldBlockBase(21.0),
+    mShieldBlockPerLevel(0.0),
     mShieldBlockMax(25.0),
     mTimePayDay(300),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
-    mManaWellBonusPerTile(10.0),
+    mManaWellBonusPerTile(DEFAULT_MANA_WELL_BONUS_PER_TILE),
     mBedStepMaxHeight(0.09),
     mClaimingWallPenalty(0.8),
     mDigCoefGold(5.0),
@@ -526,10 +558,24 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "CreaturesPerPortal")
+        {
+            configFile >> nextParam;
+            mCreaturesPerPortal = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
         if(nextParam == "SlapDamagePercent")
         {
             configFile >> nextParam;
             mSlapDamagePercent = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "LavaDamagePerSecond")
+        {
+            configFile >> nextParam;
+            mLavaDamagePerSecond = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
@@ -691,6 +737,34 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCreatureLevelGrowthMax = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureDamageGrowth")
+        {
+            configFile >> nextParam;
+            mCreatureDamageGrowth = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureDamageExponent")
+        {
+            configFile >> nextParam;
+            mCreatureDamageExponent = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CreatureHpGrowthPerLevel")
+        {
+            configFile >> nextParam;
+            mCreatureHpGrowthPerLevel = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "CooldownReductionPerLevel")
+        {
+            configFile >> nextParam;
+            mCooldownReductionPerLevel = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
@@ -1340,6 +1414,63 @@ bool ConfigManager::loadSkills(const std::string& fileName)
             break;
 
         defFile >> mSkillPoints[NameAliases::resolve(nextParam)];
+    }
+
+    // The optional block with the skills every seat starts with at level 1
+    mSkillsFreeLevelOne.clear();
+    if(defFile >> nextParam)
+    {
+        if(nextParam != "[FreeLevelOne]")
+        {
+            OD_LOG_ERR("Invalid FreeLevelOne start format. Line was " + nextParam);
+            return false;
+        }
+
+        while(defFile >> nextParam)
+        {
+            if(nextParam == "[/FreeLevelOne]")
+                break;
+
+            mSkillsFreeLevelOne.insert(nextParam);
+        }
+    }
+
+    // The optional block with the effect of each research level on rooms, traps, doors, spells and the keeper
+    mResearchEffects.clear();
+    if(defFile >> nextParam)
+    {
+        if(nextParam != "[ResearchEffects]")
+        {
+            OD_LOG_ERR("Invalid ResearchEffects start format. Line was " + nextParam);
+            return false;
+        }
+
+        while(defFile >> nextParam)
+        {
+            if(nextParam == "[/ResearchEffects]")
+                break;
+
+            std::string effect;
+            std::string mode;
+            ResearchEffectLine line;
+            defFile >> effect >> mode;
+            if(mode == "mul")
+                line.mMode = ResearchEffectMode::mul;
+            else if(mode == "add")
+                line.mMode = ResearchEffectMode::add;
+            else if(mode == "dev")
+                line.mMode = ResearchEffectMode::dev;
+            else
+            {
+                OD_LOG_ERR("Invalid research effect mode=" + mode + " for " + nextParam + " " + effect);
+                return false;
+            }
+
+            for(uint32_t i = 0; i < RESEARCH_LEVELS; ++i)
+                defFile >> line.mValues[i];
+
+            mResearchEffects.push_back(std::make_pair(std::make_pair(nextParam, effect), line));
+        }
     }
     return true;
 }
@@ -2020,10 +2151,38 @@ int32_t ConfigManager::getSkillPoints(const std::string& res) const
     if(it == mSkillPoints.end())
     {
         OD_LOG_ERR("Unknown parameter res=" + res);
-        return 0;
+        return SKILL_POINTS_MISSING_ENTRY;
     }
 
     return it->second;
+}
+
+bool ConfigManager::isSkillFreeLevelOne(const std::string& res) const
+{
+    return mSkillsFreeLevelOne.find(res) != mSkillsFreeLevelOne.end();
+}
+
+const ConfigManager::ResearchEffectLine* ConfigManager::getResearchEffect(const std::string& skill,
+    const std::string& effect) const
+{
+    for(const std::pair<std::pair<std::string, std::string>, ResearchEffectLine>& entry : mResearchEffects)
+    {
+        if((entry.first.first == skill) && (entry.first.second == effect))
+            return &entry.second;
+    }
+
+    return nullptr;
+}
+
+void ConfigManager::getResearchEffects(const std::string& skill,
+    std::vector<std::pair<std::string, ResearchEffectLine> >& effects) const
+{
+    effects.clear();
+    for(const std::pair<std::pair<std::string, std::string>, ResearchEffectLine>& entry : mResearchEffects)
+    {
+        if(entry.first.first == skill)
+            effects.push_back(std::make_pair(entry.first.second, entry.second));
+    }
 }
 
 const CreatureDefinition* ConfigManager::getCreatureDefinition(const std::string& name) const

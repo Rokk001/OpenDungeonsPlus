@@ -29,6 +29,14 @@ class KeeperAI : public BaseAI
 {
 
 public:
+    //! \brief Creates a keeper AI. The cooldown pairs are the range of turns between two checks of the
+    //! defense, of saving wounded creatures and of looking for rooms.
+    //! \param reactionPercent Reaction time in percent of the base cooldowns (lower is faster)
+    //! \param minHpPercentToFight Creatures below this percentage of their max HP are not sent to fight
+    //! \param minFightersToAttack The AI attacks with more healthy fighters than this (0 = never attacks)
+    //! \param minCreatureLevel Fighters below this level are too weak for an attack
+    //! \param maxTrapTiles Maximum number of trap tiles (without doors) the AI owns
+    //! \param maxDoors Maximum number of doors the AI owns
     KeeperAI(GameMap& gameMap, Player& player, int cooldownDefenseMin, int cooldownDefenseMax,
              int cooldownSaveWoundedCreaturesMin, int cooldownSaveWoundedCreaturesMax,
              int cooldownLookingForRoomsMin, int cooldownLookingForRoomsMax,
@@ -60,7 +68,8 @@ protected:
 
     //! \brief Offensive state machine: once enough healthy fighters are available, digs toward the
     //! closest enemy dungeon temple and rallies the fighters there with a call to war banner.
-    //! Retreats (removes the banner) when too many fighters were lost.
+    //! Retreats (removes the banner) when too many fighters were lost. It only starts with more healthy fighters
+    //! than the attack threshold and while not too many of them are below the minimum creature level.
     void handleAttack();
 
     //! \brief Places researched traps and wooden doors at the entrances of the AI rooms and in the

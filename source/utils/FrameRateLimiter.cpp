@@ -21,8 +21,8 @@
 
 namespace
 {
-    const sf::Int64 divisor = boost::micro::den;
-    const sf::Int64 minDifference = divisor / 1000;
+    const std::int64_t divisor = boost::micro::den;
+    const std::int64_t minDifference = divisor / 1000;
 
     template<typename T>
     T fromFrameRate(T frameRate)
@@ -35,16 +35,18 @@ namespace
 #define toFrameRate fromFrameRate
 }
 
-FrameRateLimiter::FrameRateLimiter(sf::Int64 frameRate)
+//! \brief Creates a limiter for the given frame rate (64-bit integer type).
+FrameRateLimiter::FrameRateLimiter(std::int64_t frameRate)
   : mMinFrameTime(fromFrameRate(frameRate))
 {
     setFrameRate(frameRate);
 }
 
 
+//! \brief Sleeps for the rest of the frame time if the last frame was shorter than the minimum.
 void FrameRateLimiter::sleepIfEarly()
 {
-    sf::Int64 timeSinceLast = mClock.getElapsedTime().asMicroseconds();
+    std::int64_t timeSinceLast = mClock.getElapsedTime().asMicroseconds();
     if(mMinFrameTime - timeSinceLast > minDifference)
     {
         boost::this_thread::sleep_for(boost::chrono::microseconds(mMinFrameTime - timeSinceLast));

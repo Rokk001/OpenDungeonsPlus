@@ -33,15 +33,18 @@ fog_block = fog_block[:fog_block.index('// We rescale and set the orientation')]
 assert fog_block.index('createInstancedEntity("Fog")') < fog_block.index('tile.getFogOfWarCloud()->setVisible(!isMarked)')
 assert 'if(tile.getFogOfWarCloud() != nullptr)' in fog_block
 tile = read('source/entities/Tile.cpp')
-assert 'Ogre::Vector4(0.65f, 0.45f, 1.0f, 0.5f)' in tile
+assert 'DIG_MARK_COLOUR(0.65f, 0.45f, 1.0f, 0.5f)' in tile
 # Blend the same opaque earth texture through the existing half-alpha overlay, on identical vertices.
 assert '*markPass = *technique->getPass(0);' in render
 assert 'markPass->setDepthWriteEnabled(false)' in render
 preview = render[render.index('void RenderManager::rrDrawTilePreview('):render.index('bool RenderManager::getKeeperHandPosition')]
 rectangle = preview[preview.index('if(singleRectangle)'):preview.index('    return;\n    }')]
 assert 'if(construction || digging)' in rectangle and 'OT_TRIANGLE_LIST' in rectangle
-assert 'minX - 0.44f' in rectangle and 'maxX + 0.44f' in rectangle
-assert 'minX - 0.5f' in rectangle and 'maxX + 0.5f' in rectangle
+assert 'minX - PREVIEW_BORDER_INNER_HALF' in rectangle and 'maxX + PREVIEW_BORDER_INNER_HALF' in rectangle
+assert 'minX - PREVIEW_TILE_HALF' in rectangle and 'maxX + PREVIEW_TILE_HALF' in rectangle
+# The named values keep the half tile width 0.5 and the inner frame edge 0.44.
+assert 'static const float PREVIEW_TILE_HALF = 0.5f;' in render
+assert 'static const float PREVIEW_BORDER_INNER_HALF = 0.44f;' in render
 
 # Mario replaced the height-1.33211 flat cuboid with the exact ordinary earth surface.
 # Read real mesh positions instead; retain every original translated-neighbour assertion below.
@@ -89,7 +92,7 @@ release = game_mode[game_mode.index('void GameMode::handlePlayerActionSelectTile
 release = release[:release.index('void GameMode::resetSkillTree()')]
 assert release.index('unselectAllTiles();') < release.index('ClientNotificationType::askMarkTiles')
 assert 'markPass->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA)' in render
-assert 'Ogre::ColourValue markColor(0.65f, 0.45f, 1.0f, 0.5f)' in render
+assert 'Ogre::ColourValue markColor(Tile::DIG_MARK_COLOUR)' in render
 # Every fog tile is markable everywhere, on the client as well as on the server, and the mark is shown.
 set_mark = tile[tile.index('void Tile::setMarkedForDigging('):]
 set_mark = set_mark[:set_mark.index('bool Tile::getMarkedForDigging')]

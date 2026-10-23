@@ -95,6 +95,23 @@ const double DROP_DELAY = 0.3;
 const double WEAPON_GRAVITY = 14.0;
 const double WEAPON_LIE_TIME = 4.5;
 const double WEAPON_VANISH_TIME = 0.7;
+//! Fall time (seconds) a fallen weapon starts with before the real fall time is worked out
+const double FALLEN_FALL_TIME_DEFAULT = 0.2;
+//! A weapon that was drawn less than this long ago is not cut off by the look of a blow
+const double WEAPON_DRAW_PROTECT_SECONDS = 0.45;
+//! Time a shot needs at least before it lands, however close the target is
+const double HIT_DELAY_SHOT_BASE = 0.15;
+//! A dropped weapon lands up to this far (world units) aside of the hand in both directions
+const double FALLEN_SCATTER = 0.3;
+//! Lowest drop height (world units) for which the fall time is worked out, and the fall time used below it
+const double FALLEN_DROP_MIN_HEIGHT = 0.05;
+const double FALLEN_FALL_TIME_SHORT = 0.15;
+//! A facing direction (flat length) shorter than this counts as no direction, so no target in front is searched
+const float FORWARD_LENGTH_MIN = 0.01f;
+//! Targets closer than this (world units) are taken as in front without the facing check
+const double FRONT_CHECK_MIN_DISTANCE = 0.5;
+//! The vanishing weapon never shrinks below this share of its size
+const double WEAPON_VANISH_MIN_SHARE = 0.01;
 //! At most this many reactions run when a combat reaction is added (they are cheap, but a big fight has many)
 const uint32_t MAX_RUNNING = 12;
 const uint32_t MAX_PENDING = 64;
@@ -109,17 +126,20 @@ std::mt19937& combatRng()
     return rng;
 }
 
+//! \brief Returns a cosmetic random number in [min, max] from the dice of this file
 double combatRandom(double min, double max)
 {
     std::uniform_real_distribution<double> distribution(min, max);
     return distribution(combatRng());
 }
 
+//! \brief Returns true if text begins with prefix
 bool startsWith(const std::string& text, const std::string& prefix)
 {
     return text.compare(0, prefix.size(), prefix) == 0;
 }
 
+//! \brief Returns the text with all letters in lower case
 std::string toLower(const std::string& text)
 {
     std::string result = text;
@@ -128,6 +148,7 @@ std::string toLower(const std::string& text)
     return result;
 }
 
+//! \brief Returns true if part occurs anywhere in text
 bool contains(const std::string& text, const std::string& part)
 {
     return text.find(part) != std::string::npos;
@@ -148,6 +169,7 @@ std::string weaponKind(const Weapon* weapon)
     return "Sword";
 }
 
+//! \brief Returns true if the creature carries a shield in one of its hands
 bool hasShield(const Creature* creature)
 {
     const Weapon* weapons[2] = {creature->getWeaponR(), creature->getWeaponL()};
@@ -175,6 +197,7 @@ std::string mainWeaponKind(const Creature* creature)
     return std::string();
 }
 
+//! \brief Returns true if the creature definition has the MissileLaunch skill (it shoots)
 bool hasMissileSkill(const Creature* creature)
 {
     const CreatureDefinition* definition = creature->getDefinition();
@@ -195,11 +218,13 @@ bool hasExternalImpactEffects()
     return Ogre::ParticleSystemManager::getSingleton().getTemplate("CombatSparks") != nullptr;
 }
 
+//! \brief Returns the name of the scene entity of the weapon in the given hand ("L" or "R") of the creature
 std::string weaponEntityName(const Creature* creature, const std::string& hand)
 {
     return "Weapon_" + hand + "_" + creature->getName();
 }
 
+//! Per creature memory of the fight: when it struck, when it was struck and whether its weapons are put away
 struct CombatState
 {
     CombatState() :
@@ -239,6 +264,7 @@ struct PendingHit
     bool mShield;
 };
 
+//! A creature that died: after a moment its weapons are let go
 struct PendingDrop
 {
     std::string mCreature;
@@ -250,7 +276,7 @@ struct FallenWeapon
 {
     FallenWeapon() :
         mElapsed(0.0),
-        mFallTime(0.2),
+        mFallTime(FALLEN_FALL_TIME_DEFAULT),
         mScale(Ogre::Vector3::UNIT_SCALE),
         mLocalCenter(Ogre::Vector3::ZERO),
         mStartCenter(Ogre::Vector3::ZERO),
@@ -278,6 +304,7 @@ std::vector<FallenWeapon> sFallen;
 double sTickTimer = 0.0;
 uint32_t sNextFallenId = 0;
 
+//! \brief Returns the combat state of the creature with that name and creates it (calm, as of now) if it is new
 CombatState& getState(const std::string& name, double now)
 {
     std::map<std::string, CombatState>::iterator it = sStates.find(name);
@@ -292,6 +319,7 @@ CombatState& getState(const std::string& name, double now)
     return it->second;
 }
 
+//! \brief Multiplies the vector component by component with the scale
 Ogre::Vector3 scaleVector(const Ogre::Vector3& value, const Ogre::Vector3& scale)
 {
     return Ogre::Vector3(value.x * scale.x, value.y * scale.y, value.z * scale.z);
@@ -299,11 +327,14 @@ Ogre::Vector3 scaleVector(const Ogre::Vector3& value, const Ogre::Vector3& scale
 
 } // namespace
 
+//! \brief Returns true if the reactions are switched to full and their configuration is loaded
 bool CreatureCombatReactions::isActive(const CreatureReactions& reactions)
 {
     return (reactions.mMode == CreatureReactions::Mode::full) && reactions.mConfigLoaded;
 }
 
+//! \brief Starts the reaction on the creature if it is alive, near the camera and not busy with a death touch or a hand reaction
+//! \return true if the reaction was started
 bool CreatureCombatReactions::show(CreatureReactions& reactions, Creature* creature, const std::string& eventName)
 {
     if((creature == nullptr) || !creature->isAlive() || !creature->getIsOnMap())
@@ -331,6 +362,10 @@ bool CreatureCombatReactions::show(CreatureReactions& reactions, Creature* creat
     return reactions.trigger(creature, eventName, true);
 }
 
+//! \brief Looks for the closest living enemy in front of the attacker within the range
+//! \param target Receives the enemy found
+//! \param distance Receives the distance to it
+//! \return true if there is one
 bool CreatureCombatReactions::findTarget(CreatureReactions& reactions, Creature* attacker, double range,
         Creature*& target, double& distance)
 {
@@ -340,7 +375,7 @@ bool CreatureCombatReactions::findTarget(CreatureReactions& reactions, Creature*
 
     Ogre::Vector3 forward = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
     forward.z = 0.0f;
-    if(forward.length() < 0.01f)
+    if(forward.length() < FORWARD_LENGTH_MIN)
         return false;
 
     forward.normalise();
@@ -362,7 +397,7 @@ bool CreatureCombatReactions::findTarget(CreatureReactions& reactions, Creature*
             continue;
 
         // The creature has to be in front of the attacker
-        if(length > 0.5)
+        if(length > FRONT_CHECK_MIN_DISTANCE)
         {
             Ogre::Vector3 direction = difference / static_cast<Ogre::Real>(length);
             if(forward.dotProduct(direction) < FRONT_COSINE)
@@ -378,6 +413,7 @@ bool CreatureCombatReactions::findTarget(CreatureReactions& reactions, Creature*
     return found;
 }
 
+//! \brief Returns the name of the reaction that gives the blow its look, chosen by the weapon the attacker carries
 std::string CreatureCombatReactions::chooseAttackEvent(const CreatureReactions& reactions, const Creature* attacker,
         bool ranged)
 {
@@ -567,7 +603,7 @@ void CreatureCombatReactions::processAttacks(CreatureReactions& reactions)
         {
             // The weapon that was just drawn is not cut off
             CreatureReactions::RunningReaction* running = reactions.findRunning(attacker->getName());
-            if((running == nullptr) || (running->mEventName != "WeaponDraw") || (running->mElapsed > 0.45))
+            if((running == nullptr) || (running->mEventName != "WeaponDraw") || (running->mElapsed > WEAPON_DRAW_PROTECT_SECONDS))
             {
                 if(show(reactions, attacker, chooseAttackEvent(reactions, attacker, ranged)))
                     state.mNextStyle = reactions.mTime + STYLE_INTERVAL;
@@ -581,7 +617,7 @@ void CreatureCombatReactions::processAttacks(CreatureReactions& reactions)
         targetState.mLastAttacked = reactions.mTime;
         draw(reactions, target, true);
 
-        double delay = ranged ? (0.15 + distance * HIT_DELAY_PER_UNIT) : 0.0;
+        double delay = ranged ? (HIT_DELAY_SHOT_BASE + distance * HIT_DELAY_PER_UNIT) : 0.0;
         // With the hit events of the server the hit is shown when the server says it landed (noteHitEvent)
         if(!CreatureWeaponVisuals::hasHitEvents())
             scheduleHit(reactions, target, 0, !ranged && hasShield(target), delay, ranged ? nullptr : attacker);
@@ -660,6 +696,7 @@ void CreatureCombatReactions::processHits(CreatureReactions& reactions)
     }
 }
 
+//! \brief Lets the weapons of the creatures that died fall: each model leaves the hand and moves to a node of its own
 void CreatureCombatReactions::processDrops(CreatureReactions& reactions)
 {
     for(std::vector<PendingDrop>::iterator it = sDrops.begin(); it != sDrops.end();)
@@ -732,11 +769,12 @@ void CreatureCombatReactions::processDrops(CreatureReactions& reactions)
             double halfThickness = 0.5 * static_cast<double>(thinnest) *
                 static_cast<double>(std::min(fallen.mScale.x, std::min(fallen.mScale.y, fallen.mScale.z)));
             fallen.mEndCenter = Ogre::Vector3(
-                fallen.mStartCenter.x + static_cast<Ogre::Real>(combatRandom(-0.3, 0.3)),
-                fallen.mStartCenter.y + static_cast<Ogre::Real>(combatRandom(-0.3, 0.3)),
+                fallen.mStartCenter.x + static_cast<Ogre::Real>(combatRandom(-FALLEN_SCATTER, FALLEN_SCATTER)),
+                fallen.mStartCenter.y + static_cast<Ogre::Real>(combatRandom(-FALLEN_SCATTER, FALLEN_SCATTER)),
                 static_cast<Ogre::Real>(floorHeight + halfThickness));
             double dropHeight = static_cast<double>(fallen.mStartCenter.z - fallen.mEndCenter.z);
-            fallen.mFallTime = (dropHeight > 0.05) ? std::sqrt(2.0 * dropHeight / WEAPON_GRAVITY) : 0.15;
+            fallen.mFallTime = (dropHeight > FALLEN_DROP_MIN_HEIGHT) ?
+                std::sqrt(2.0 * dropHeight / WEAPON_GRAVITY) : FALLEN_FALL_TIME_SHORT;
 
             // The model leaves the hand and moves to a node of its own in the same place
             weaponEntity->detachFromParent();
@@ -750,6 +788,7 @@ void CreatureCombatReactions::processDrops(CreatureReactions& reactions)
     }
 }
 
+//! \brief Moves the fallen weapons along their fall, lets them lie and shrinks them away at the end
 void CreatureCombatReactions::updateFallen(CreatureReactions& reactions, double timeSinceLastFrame)
 {
     (void)reactions;
@@ -801,7 +840,7 @@ void CreatureCombatReactions::updateFallen(CreatureReactions& reactions, double 
         if(fallen.mElapsed > vanishStart)
         {
             double remaining = 1.0 - (fallen.mElapsed - vanishStart) / WEAPON_VANISH_TIME;
-            scale = scale * static_cast<Ogre::Real>(std::max(0.01, remaining));
+            scale = scale * static_cast<Ogre::Real>(std::max(WEAPON_VANISH_MIN_SHARE, remaining));
         }
 
         node->setOrientation(orientation);
@@ -811,6 +850,7 @@ void CreatureCombatReactions::updateFallen(CreatureReactions& reactions, double 
     }
 }
 
+//! \brief Removes all fallen weapons from the scene at once
 void CreatureCombatReactions::removeFallen(CreatureReactions& reactions)
 {
     (void)reactions;
@@ -833,6 +873,7 @@ void CreatureCombatReactions::removeFallen(CreatureReactions& reactions)
     sFallen.clear();
 }
 
+//! \brief Returns true if a weapon model of the creature exists in the scene
 bool CreatureCombatReactions::hasWeaponModel(CreatureReactions& reactions, const Creature* creature)
 {
     (void)reactions;
@@ -841,6 +882,7 @@ bool CreatureCombatReactions::hasWeaponModel(CreatureReactions& reactions, const
         sceneManager->hasEntity(weaponEntityName(creature, "R"));
 }
 
+//! \brief Shows or hides the weapon models of the creature
 void CreatureCombatReactions::applyVisibility(CreatureReactions& reactions, const Creature* creature, bool visible)
 {
     (void)reactions;
@@ -854,6 +896,7 @@ void CreatureCombatReactions::applyVisibility(CreatureReactions& reactions, cons
     }
 }
 
+//! \brief Remembers that the creature has put its weapons away (or drawn them) and applies it to the models
 void CreatureCombatReactions::setSheathed(CreatureReactions& reactions, Creature* creature, bool sheathed)
 {
     CombatState& state = getState(creature->getName(), reactions.mTime);
@@ -861,6 +904,7 @@ void CreatureCombatReactions::setSheathed(CreatureReactions& reactions, Creature
     applyVisibility(reactions, creature, !sheathed);
 }
 
+//! \brief Takes the weapons of the creature out of the sheath; with announce a visible creature also plays the drawing flourish
 void CreatureCombatReactions::draw(CreatureReactions& reactions, Creature* creature, bool announce)
 {
     CombatState& state = getState(creature->getName(), reactions.mTime);
@@ -876,6 +920,7 @@ void CreatureCombatReactions::draw(CreatureReactions& reactions, Creature* creat
         show(reactions, creature, "WeaponDraw");
 }
 
+//! \brief Returns true if a living creature of a seat that is not allied is within the radius
 bool CreatureCombatReactions::isEnemyNear(CreatureReactions& reactions, const Creature* creature, double radius)
 {
     for(Creature* other : reactions.mGameMap->getCreatures())
@@ -894,6 +939,7 @@ bool CreatureCombatReactions::isEnemyNear(CreatureReactions& reactions, const Cr
     return false;
 }
 
+//! \brief Follows the sheathing and drawing reactions so the models are hidden or shown also when the event was started by hand
 void CreatureCombatReactions::watchEvents(CreatureReactions& reactions)
 {
     // The weapon is put away or drawn by the event too when it was started by hand (console)
@@ -916,6 +962,7 @@ void CreatureCombatReactions::watchEvents(CreatureReactions& reactions)
     }
 }
 
+//! \brief Looks at all creatures: puts the weapons of calm ones away, draws them when an enemy comes near and starts the stance between blows
 void CreatureCombatReactions::tick(CreatureReactions& reactions)
 {
     double now = reactions.mTime;

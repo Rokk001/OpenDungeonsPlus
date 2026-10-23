@@ -1,5 +1,26 @@
 include(BoostTestTargets)
 
+# The aa-*/ab-* tests are integration tests: each test binary is a game client
+# that expects a headless game server listening on localhost:32222 and hosting
+# the multiplayer level named after the two-letter test prefix
+# (levels/multiplayer/aa.level, ab.level, ...). The 00-* tests are plain unit
+# tests and need no server.
+# On Unix we wrap the integration tests in a launcher script that starts and
+# stops that server, so they can be run through a plain `ctest` (or by running
+# scripts/unix/run_unit_tests.sh from the build directory). On Windows, use
+# scripts/win32/OpenDungeonsTests.bat instead.
+if(UNIX)
+    set(SERVER_LAUNCHER_AA LAUNCHER
+        ${CMAKE_SOURCE_DIR}/scripts/unix/run_boost_test_with_server.sh
+        $<TARGET_FILE:${PROJECT_BINARY_NAME}> aa.level)
+    set(SERVER_LAUNCHER_AB LAUNCHER
+        ${CMAKE_SOURCE_DIR}/scripts/unix/run_boost_test_with_server.sh
+        $<TARGET_FILE:${PROJECT_BINARY_NAME}> ab.level)
+else()
+    set(SERVER_LAUNCHER_AA)
+    set(SERVER_LAUNCHER_AB)
+endif()
+
 add_boost_test(00-Random
         SOURCES
         test_Random.cpp
@@ -70,69 +91,45 @@ add_boost_test(00-CreatureRelationships
         ${Boost_FILESYSTEM_LIBRARY_RELEASE}
         ${Boost_SYSTEM_LIBRARY_RELEASE})
 
-add_boost_test(00-PortraitManifest
+add_boost_test(00-PortraitCatalog
         SOURCES
-        test_PortraitManifest.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/render/DungeonbookAppearanceConfig.h
+        test_PortraitCatalog.cpp
+        ${SRC}/render/PortraitCatalog.cpp
         ${SRC}/render/DungeonbookAppearanceConfig.cpp)
 
 add_boost_test(00-CreatureAppearance
         SOURCES
         test_CreatureAppearance.cpp
-        ${SRC}/game/CreatureAppearance.h
         ${SRC}/game/CreatureAppearance.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/render/PortraitManifestRegistry.h
-        ${SRC}/render/PortraitManifestRegistry.cpp
-        ${SRC}/network/ODPacket.h
-        ${SRC}/network/ODPacket.cpp
-        LIBRARIES
-        ${SFML_LIBRARIES})
-
-add_boost_test(00-AppearanceCompose
-        SOURCES
-        test_AppearanceCompose.cpp
-        ${SRC}/render/AppearanceCompose.h
-        ${SRC}/render/AppearanceCompose.cpp
-        ${SRC}/render/PortraitTint.h
-        ${SRC}/render/PortraitTint.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/game/CreatureAppearance.h
-        ${SRC}/game/CreatureAppearance.cpp
-        ${SRC}/social/SocialRng.h)
+        ${SRC}/render/PortraitCatalog.cpp
+        ${SRC}/render/PortraitCatalogRegistry.cpp)
 
 add_boost_test(00-DungeonbookQuirks
         SOURCES
         test_DungeonbookQuirks.cpp
-        ${SRC}/render/DungeonbookQuirks.h
         ${SRC}/render/DungeonbookQuirks.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/game/CreatureAppearance.h
+        ${SRC}/render/PortraitCatalog.cpp
         ${SRC}/game/CreatureAppearance.cpp)
 
 add_boost_test(00-DungeonbookMultiplayer
         SOURCES
         test_DungeonbookMultiplayer.cpp
-        ${SRC}/network/ODPacket.h
         ${SRC}/network/ODPacket.cpp
-        ${SRC}/render/AppearanceCompose.h
-        ${SRC}/render/AppearanceCompose.cpp
-        ${SRC}/render/PortraitTint.h
-        ${SRC}/render/PortraitTint.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/render/DungeonbookQuirks.h
+        ${SRC}/render/PortraitCatalog.cpp
         ${SRC}/render/DungeonbookQuirks.cpp
-        ${SRC}/game/CreatureAppearance.h
         ${SRC}/game/CreatureAppearance.cpp
-        ${SRC}/social/SocialRng.h
         LIBRARIES
         ${SFML_LIBRARIES})
+
+add_boost_test(00-WholePortraitJpeg
+        SOURCES
+        test_WholePortraitJpeg.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES})
+if(DEFINED 00-WholePortraitJpeg_TARGET_NAME)
+    target_compile_definitions(${00-WholePortraitJpeg_TARGET_NAME} PRIVATE
+        OD_WHOLE_PORTRAIT_SAMPLE="${CMAKE_SOURCE_DIR}/materials/portraits/whole/Elf.mesh/01.jpg")
+endif()
 
 add_boost_test(00-RelationshipHooks
         SOURCES
@@ -189,6 +186,7 @@ add_boost_test(00-WallTorches
         ${SRC}/rooms/WallTorches.cpp)
 
 add_boost_test(aa-LaunchGame
+        ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
         ${SRC}/game/SeatData.cpp
@@ -210,6 +208,7 @@ add_boost_test(aa-LaunchGame
         ${OGRE_LIBRARIES})
 
 add_boost_test(aa-TestCreatures
+        ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
         ${SRC}/game/SeatData.cpp
@@ -231,6 +230,7 @@ add_boost_test(aa-TestCreatures
         ${OGRE_LIBRARIES})
 
 add_boost_test(aa-TestRooms
+        ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
         ${SRC}/game/SeatData.cpp
@@ -253,6 +253,7 @@ add_boost_test(aa-TestRooms
         ${OGRE_LIBRARIES})
 
 add_boost_test(aa-TestRoomSplit
+        ${SERVER_LAUNCHER_AA}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
         ${SRC}/game/SeatData.cpp
@@ -275,6 +276,7 @@ add_boost_test(aa-TestRoomSplit
         ${OGRE_LIBRARIES})
 
 add_boost_test(ab-TestTraps
+        ${SERVER_LAUNCHER_AB}
         SOURCES
         ${SRC}/tests/mocks/ODClientTest.cpp
         ${SRC}/game/SeatData.cpp
@@ -296,3 +298,15 @@ add_boost_test(ab-TestTraps
         ${Boost_SYSTEM_LIBRARY_RELEASE}
         ${OGRE_LIBRARIES})
 
+
+if(UNIX)
+    # The integration tests all use the same server port: prevent ctest from
+    # running two of them concurrently (e.g. with ctest -j).
+    set_tests_properties(
+        aa-LaunchGame-boost_test
+        aa-TestCreatures-boost_test
+        aa-TestRooms-boost_test
+        aa-TestRoomSplit-boost_test
+        ab-TestTraps-boost_test
+        PROPERTIES RESOURCE_LOCK od-test-server)
+endif()

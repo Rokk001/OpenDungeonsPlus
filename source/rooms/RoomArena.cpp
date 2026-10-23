@@ -124,6 +124,9 @@ static RoomRegister reg(new RoomArenaFactory);
 
 static const Ogre::Real OFFSET_DUMMY = 0.3;
 
+//! \brief Radius in tiles in which a creature counts as spectator of a pit fight when the room config has no PitSpectatorRadius
+static const double DEFAULT_PIT_SPECTATOR_RADIUS = 4.0;
+
 RoomArena::RoomArena(GameMap* gameMap) :
     FencedRoom(gameMap),
     mFightOngoing(false)
@@ -145,6 +148,7 @@ void RoomArena::absorbRoom(Room *r)
     OD_ASSERT_TRUE_MSG(rc->mCreaturesFighting.empty(), "room=" + getName() + ", roomAbs=" + rc->getName() + ", creature=" + Helper::toString(rc->mCreaturesFighting.size()));
 }
 
+//! \brief True if the creature may train in the arena: enemies always, own creatures below the level cap (raised by the arena research).
 bool RoomArena::hasOpenCreatureSpot(Creature* c)
 {
     // We allow up to number central active spots creatures fighting
@@ -157,7 +161,7 @@ bool RoomArena::hasOpenCreatureSpot(Creature* c)
 
     // We allow using arena only if level is not too high
     if (c->getLevel() >= std::min(static_cast<double>(MAX_LEVEL), std::round(SkillManager::getResearchValue(
-        getSeat(), SkillType::roomArena, ConfigManager::getSingleton().getRoomConfigUInt32("ArenaMaxTrainingLevel")))))
+        getSeat(), SkillType::roomArena, ConfigManager::getSingleton().getRoomConfigUInt32("ArenaMaxTrainingLevel"), ResearchEffect::LevelCap))))
         return false;
 
     return true;
@@ -322,7 +326,7 @@ void RoomArena::updatePitMood()
 
         // Creatures of the owner watching the fight are cheered up
         double spectator = config.getRoomConfigDoubleOrDefault("PitMoodSpectator", 0.0);
-        double radius = config.getRoomConfigDoubleOrDefault("PitSpectatorRadius", 4.0);
+        double radius = config.getRoomConfigDoubleOrDefault("PitSpectatorRadius", DEFAULT_PIT_SPECTATOR_RADIUS);
         double squaredRadius = radius * radius;
         double moodPerTurn = spectator / ODApplication::turnsPerSecond;
         const std::vector<Creature*>& creatures = getGameMap()->getCreatures();

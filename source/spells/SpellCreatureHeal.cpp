@@ -35,6 +35,7 @@
 #include "game/SkillType.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Random.h"
 
 const std::string SpellCreatureHealName = "creatureHeal";
 const std::string SpellCreatureHealNameDisplay = "Creature heal";
@@ -104,20 +105,11 @@ void SpellCreatureHeal::checkSpellCast(GameMap* gameMap, const InputManager& inp
     }
 
     if(inputManager.mCommandState != InputCommandState::validated)
-    {
-        std::vector<Tile*> targetTiles;
-        for(GameEntity* target : targets)
-        {
-            Tile* tile = target->getPositionTile();
-            if(std::find(targetTiles.begin(), targetTiles.end(), tile) == targetTiles.end())
-                targetTiles.push_back(tile);
-        }
-        inputCommand.selectTiles(targetTiles);
-    }
+        inputCommand.selectTilesOfEntities(targets);
 
     // Preview must not consume random numbers or change which creatures a later click affects.
     if(inputManager.mCommandState == InputCommandState::validated)
-        std::random_shuffle(targets.begin(), targets.end());
+        Random::shuffle(targets.begin(), targets.end());
     std::vector<Creature*> creatures;
     for(GameEntity* target : targets)
     {
@@ -159,6 +151,7 @@ void SpellCreatureHeal::checkSpellCast(GameMap* gameMap, const InputManager& inp
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the healing per turn follows the creature heal research.
 bool SpellCreatureHeal::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     uint32_t nbCreatures;
@@ -250,7 +243,7 @@ bool SpellCreatureHeal::castSpellOnCreatures(GameMap* gameMap, Player* player, s
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureHealDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureHeal,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureHealValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureHealValue"), ResearchEffect::HealPerTurn);
     std::vector<Tile*> affectedTiles;
     for(Creature* creature : creatures)
     {

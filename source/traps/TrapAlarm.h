@@ -21,20 +21,30 @@
 #include "Trap.h"
 #include "traps/TrapType.h"
 
+//! \brief A trap that warns its owner when an enemy creature comes near. It does no damage.
 class TrapAlarm : public Trap
 {
 public:
+    //! \brief Creates an alarm trap and reads its reload time and number of warnings from the config.
     TrapAlarm(GameMap* gameMap);
 
+    //! \brief The type of this trap.
     virtual const TrapType getType() const override
     { return TrapType::alarm; }
 
+    //! \brief Warns the owner when an enemy creature is within the alarm radius of the given tile.
+    //! \return True if the alarm went off, false if no enemy was near.
     virtual bool shoot(Tile* tile) override;
+    //! \brief The alarm cannot be attacked.
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The reload time of the alarm shortened by the alarm trap research of its owner (not rounded).
+    virtual double getResearchedReloadTime() const override;
+
+    //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -43,8 +53,10 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Creates the entity shown on the given tile.
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief The trap type of the alarm trap.
     static const TrapType mTrapType;
 };
 

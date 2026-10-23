@@ -128,6 +128,7 @@ void SpellCreatureWeak::checkSpellCast(GameMap* gameMap, const InputManager& inp
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the strength factor follows the weak research.
 bool SpellCreatureWeak::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -175,7 +176,7 @@ bool SpellCreatureWeak::castSpell(GameMap* gameMap, Player* player, ODPacket& pa
 
     uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureWeakDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureWeak,
-        ConfigManager::getSingleton().getSpellConfigDouble("CreatureWeakValue"));
+        ConfigManager::getSingleton().getSpellConfigDouble("CreatureWeakValue"), ResearchEffect::Factor);
     CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(duration, value, "SpellCreatureWeak");
     creature->addCreatureEffect(effect);
     fireSpellEffect(*pos, "Weak", "WeakCast");

@@ -1,10 +1,12 @@
-"""Exercise extracted server shutdown with real SFML threads, without a game."""
+"""Exercise extracted server shutdown with real threads, without a game."""
 import argparse
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 
+# Seconds a probe scenario may run before it counts as hung
+SCENARIO_TIMEOUT_SECONDS = 5
 repo = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source-ref', help='Compare an older implementation')
@@ -37,6 +39,7 @@ probe = r'''
 #include <deque>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 #define OD_LOG_INF(message) do {} while(false)
 #define OD_LOG_ERR(message) do {} while(false)
@@ -49,7 +52,7 @@ struct Selector {int cleared=0;void clear(){++cleared;}};
 struct Listener {int closed=0;void close(){++closed;}};
 class ODSocketServer {
 public:
-    sf::Thread* mThread=nullptr;
+    std::thread* mThread=nullptr;
     RUNNING_TYPE mIsConnected{false};
     Selector mSockSelector; Listener mSockListener;
     std::vector<ODSocketClient*> mSockClients;
@@ -81,7 +84,7 @@ struct ODServer:ODSocketServer {
         processServerNotifications();
         finished=true;
     }
-    void launch(){mIsConnected=true;mThread=new sf::Thread(&ODServer::work,this);mThread->launch();
+    void launch(){mIsConnected=true;mThread=new std::thread(&ODServer::work,this);
         while(!ready)sf::sleep(sf::milliseconds(1));}
 };
 FUNCTIONS
@@ -142,16 +145,16 @@ failed = False
 with tempfile.TemporaryDirectory(prefix='odp-server-shutdown-') as temporary:
     work = Path(temporary)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/DNDEBUG', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/O2', '/DNDEBUG', '/std:c++17',
                     f'/I{prefix / "include"}', 'check.cpp', '/Fecheck.exe',
                     '/link', f'/LIBPATH:{prefix / "lib"}', 'sfml-system.lib'],
                    cwd=work, check=True)
     for scenario in ('queued-exit', 'notify-exit', 'owner-stop'):
         try:
-            result = subprocess.run([str(work / 'check.exe'), scenario], cwd=work, timeout=5)
+            result = subprocess.run([str(work / 'check.exe'), scenario], cwd=work, timeout=SCENARIO_TIMEOUT_SECONDS)
             failed |= result.returncode != 0
         except subprocess.TimeoutExpired:
-            print('FAIL', scenario, 'hung for 5 seconds', flush=True)
+            print('FAIL', scenario, 'hung for the scenario timeout', flush=True)
             failed = True
 
 # Guard the actual production loop, not just the isolated worker fixture.

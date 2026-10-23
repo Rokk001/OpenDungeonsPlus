@@ -24,14 +24,17 @@ namespace
 {
 static const uint32_t STAGE_MIN_PERCENT = 80;
 static const uint32_t STAGE_MAX_PERCENT = 120;
+//! \brief Number of steps into which the fraction of a lay interval is divided when it is rounded up by chance.
+static const uint32_t ROUNDING_STEPS = 1000;
 static const uint32_t WHOLE_PERCENT = 100;
 }
 
-//! \brief Limits hens, chicks and eggs by room area, independently of decorative coop count.
+//! \brief Limits hens, chicks and eggs by room area, independently of decorative coop count. The hatchery research
+//! raises the number of chickens per tile through the capacity factor of the settings.
 uint32_t HatcheryCycle::capacity(uint32_t nbTiles, uint32_t, const HatcheryCycleSettings& settings)
 {
     uint32_t tilesPerChicken = std::max<uint32_t>(1, settings.mTilesPerChicken);
-    return nbTiles / tilesPerChicken;
+    return static_cast<uint32_t>(std::floor(static_cast<double>(nbTiles) / tilesPerChicken * settings.mCapacityFactor));
 }
 
 bool HatcheryCycle::canLay(const HatcheryCounts& counts, uint32_t capacity)
@@ -173,7 +176,7 @@ uint32_t HatcheryCycle::layInterval(const HatcheryCycleSettings& settings, uint3
     const double value = (minTurns + (random % span)) * std::max(0.0, settings.mLayFactor);
     const uint32_t whole = static_cast<uint32_t>(value);
     // The fraction decides by chance whether the time is rounded up, so the average time is exact
-    const bool roundUp = static_cast<double>((random / span) % 1000) < (value - whole) * 1000.0;
+    const bool roundUp = static_cast<double>((random / span) % ROUNDING_STEPS) < (value - whole) * ROUNDING_STEPS;
     return std::max<uint32_t>(1, whole + (roundUp ? 1 : 0));
 }
 

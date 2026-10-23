@@ -23,6 +23,7 @@
 #include "gamemap/LevelScript.h"
 #include "gamemap/TileMarker.h"
 #include "modes/InputCommand.h"
+#include "network/ClientNotification.h"
 #include "modes/SettingsWindow.h"
 #include "rooms/RoomPortalWave.h"
 
@@ -56,6 +57,8 @@ class EditorMode final: public GameEditorModeBase, public InputCommand
 friend class ODClient;
     
 public:
+    //! \brief Creates the level editor mode and its widgets.
+    //! \param modeManager The manager that owns the mode.
     EditorMode(ModeManager* modeManager);
 
     virtual ~EditorMode();
@@ -64,10 +67,12 @@ public:
     virtual bool mouseMoved     (const OIS::MouseEvent &arg) override;
     virtual bool mousePressed   (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
     virtual bool mouseReleased  (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+    //! \brief Handles the keyboard shortcuts of the editor (including R for the region markers).
     virtual bool keyPressed     (const OIS::KeyEvent &arg) override;
     virtual bool keyReleased    (const OIS::KeyEvent &arg) override;
     virtual void handleHotkeys  (OIS::KeyCode keycode) override;
 
+    //! \brief Asks for the region markers once the level has arrived and draws the markers and the tile marker.
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
     void onFrameEnded(const Ogre::FrameEvent& evt) override;
 
@@ -122,7 +127,6 @@ public:
 
     void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
     bool updateDescription(const CEGUI::EventArgs& e = {});
-    std::string getEnv( const std::string & var );
     bool isCheckboxSelected(const CEGUI::String& checkbox);
 
     //! \brief Shows the waves of a wave portal, as the server has just described them.
@@ -198,7 +202,8 @@ private:
     void handleMouseWheel(const OIS::MouseEvent& arg);
 
     //! \brief Updates the text seen next to the cursor position.
-    //! This text gives the tile position, and the current left-click action
+    //! This text gives the tile position (with the name of the region marker on it, if any),
+    //! and the current left-click action
     void updateCursorText();
 
     //! \brief Asks the server to give the creatures currently held in the hand the level
@@ -220,9 +225,14 @@ private:
     //! They only exist on the server, so the window can only be filled once it answers.
     void askPortalWaveData(Tile* tile);
 
-    //! \brief Sends a region marker change to the server: operation 0 asks for the list,
-    //! 1 sets the region with that name to the rectangle, 2 removes it.
-    void askRegionEdit(int32_t operation, const std::string& name,
+    //! \brief Sends a region marker change to the server.
+    //! \param operation Whether to list the markers, set the region with the name to the rectangle or remove it.
+    //! \param name The name of the region (not used by list).
+    //! \param x1 The first corner of the rectangle (used by set only).
+    //! \param y1 The first corner of the rectangle (used by set only).
+    //! \param x2 The opposite corner of the rectangle (used by set only).
+    //! \param y2 The opposite corner of the rectangle (used by set only).
+    void askRegionEdit(EditorRegionOperation operation, const std::string& name,
         int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
     //! \brief Makes the marked tiles a region with a new name (key R)
@@ -279,7 +289,7 @@ private:
     
     bool loadLevelFromFile(const std::string&);
     //! \brief file path to currently choosen file via load / save menu
-    bool isFileHidden(std::string path);
+    bool isFileHidden(const boost::filesystem::path& path);
     void addPathNameToList(boost::filesystem::directory_entry& xx, CEGUI::Listbox* levelSelectList, CEGUI::Colour cc, int& nn );
     std::string dialogFullPath;
 

@@ -19,6 +19,7 @@
 
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/CreatureProgression.h"
 #include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
@@ -106,9 +107,12 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
 
     MissileOneHit* missile = createMissile(gameMap, creature, missileDirection, phyAtk, magAtk, eleAtk,
         attackedObject, ko, notifyPlayerIfHit);
-    double phyMin = mPhyMin, phyMax = mPhyMax;
-    double magMin = mMagMin, magMax = mMagMax;
-    double eleMin = mEleMin, eleMax = mEleMax;
+    // Grenades and guided bolts follow the SkillDamageFactor of the creature type; the factor applies to the skill
+    // damage only, not to the weapon damage added by the scaler
+    const double damageFactor = appliesSkillDamageFactor() ? creature->getDefinition()->getSkillDamageFactor() : 1.0;
+    double phyMin = mPhyMin * damageFactor, phyMax = mPhyMax * damageFactor;
+    double magMin = mMagMin * damageFactor, magMax = mMagMax * damageFactor;
+    double eleMin = mEleMin * damageFactor, eleMax = mEleMax * damageFactor;
     CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax);
     missile->setCreatureDamageRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
         creature->getModifierStrength());

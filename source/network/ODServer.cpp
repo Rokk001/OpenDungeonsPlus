@@ -54,6 +54,7 @@
 #include "rooms/RoomPortalWave.h"
 #include "rooms/RoomWorkshop.h"
 #include "rooms/RoomType.h"
+#include "spells/Spell.h"
 #include "spells/SpellManager.h"
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
@@ -690,6 +691,8 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
             if(!socket->supportsCreaturePanel())
                 continue;
             Player* player = socket->getPlayer();
+            if(player == nullptr)
+                continue;
             CreaturePanelData data;
             for(Creature* creature : gameMap->getCreaturesBySeat(player->getSeat()))
             {
@@ -766,14 +769,16 @@ void ODServer::serverThread()
                 }
 
                 // Every client is connected and ready, we can launch the game
-                // Send turn 0 to init the map
+                // Send the first turn to init the map. A new level starts at turn 0, a saved
+                // game goes on from the turn it was saved at.
+                int64_t firstTurn = gameMap->getSavedTurnNumber();
                 ServerNotification* serverNotification = new ServerNotification(
                     ServerNotificationType::turnStarted, nullptr);
-                serverNotification->mPacket << static_cast<int64_t>(0);
+                serverNotification->mPacket << firstTurn;
                 queueServerNotification(serverNotification);
 
-                OD_LOG_INF("Server ready, starting game");
-                gameMap->setTurnNumber(0);
+                OD_LOG_INF("Server ready, starting game at turn " + Helper::toString(firstTurn));
+                gameMap->setTurnNumber(firstTurn);
                 gameMap->setGamePaused(false);
 
                 // In editor mode, we give vision on all the gamemap tiles
@@ -1391,9 +1396,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
 
             // The skirmish game settings follow the seats
-            uint32_t goldDensityPercent;
-            uint32_t manaRegenerationPercent;
-            uint32_t maxCreaturesSetting;
+            uint32_t goldDensityPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
+            uint32_t manaRegenerationPercent = GameMap::SKIRMISH_PERCENT_DEFAULT;
+            uint32_t maxCreaturesSetting = 0;
             OD_ASSERT_TRUE(packetReceived >> goldDensityPercent);
             OD_ASSERT_TRUE(packetReceived >> manaRegenerationPercent);
             OD_ASSERT_TRUE(packetReceived >> maxCreaturesSetting);
@@ -1409,7 +1414,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             uint32_t gameSpeedPercent;
             uint32_t gameDurationMinutes;
             uint32_t fogOfWar;
-            uint32_t heartDestroyedReward;
+            uint32_t heartDestroyedReward = GameMap::SKIRMISH_SETTING_UNCHOSEN;
             OD_ASSERT_TRUE(packetReceived >> gameSpeedPercent);
             OD_ASSERT_TRUE(packetReceived >> gameDurationMinutes);
             OD_ASSERT_TRUE(packetReceived >> fogOfWar);
@@ -1698,7 +1703,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // Old clients identify only the tile. New clients identify the held object too.
             if(!packetReceived.endOfPacket())
             {
-                int32_t entityType;
+                int32_t entityType = 0;
                 std::string entityName;
                 if(!(packetReceived >> entityType >> entityName))
                 {
@@ -1983,7 +1988,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             // The keeper's hand throws a spark, only now that the spell was accepted (cosmetic, only for the caster).
             // Like the spell effects it travels as a sound family with the prefix "SpellFx/", no new notification type
             ServerNotification* handNotification = new ServerNotification(ServerNotificationType::playSpatialSound, player);
-            handNotification->mPacket << std::string("SpellFx/HandCast") << 0 << 0;
+            handNotification->mPacket << (Spell::SPELL_EFFECT_PREFIX + Spell::HAND_CAST_EFFECT_NAME) << 0 << 0;
             ODServer::getSingleton().queueServerNotification(handNotification);
 
             uint32_t newCooldown = SpellManager::getSpellCooldown(spellType);
@@ -3080,19 +3085,23 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             }
             Player* player = clientSocket->getPlayer();
-            int32_t operation;
+            int32_t operation = 0;
             std::string regionName;
-            int32_t x1;
-            int32_t y1;
-            int32_t x2;
-            int32_t y2;
-            OD_ASSERT_TRUE(packetReceived >> operation >> regionName >> x1 >> y1 >> x2 >> y2);
+            int32_t x1 = 0;
+            int32_t y1 = 0;
+            int32_t x2 = 0;
+            int32_t y2 = 0;
+            if(!(packetReceived >> operation >> regionName >> x1 >> y1 >> x2 >> y2))
+            {
+                OD_LOG_ERR("Truncated editorRegionEdit packet");
+                break;
+            }
 
             // The markers belong to the level script, which is saved from the server side
             LevelScript& levelScript = gameMap->getLevelScript();
-            if(operation == 1)
+            if(operation == static_cast<int32_t>(EditorRegionOperation::set))
                 levelScript.setRegion(LevelScriptRegion(regionName, x1, y1, x2, y2));
-            else if(operation == 2)
+            else if(operation == static_cast<int32_t>(EditorRegionOperation::remove))
                 levelScript.removeRegion(regionName);
 
             ServerNotification notif(ServerNotificationType::editorRegionData, player);
@@ -3190,6 +3199,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
         case ClientNotificationType::askCasinoPayout:
         {
             Player* player = clientSocket->getPlayer();
+            if(player == nullptr)
+                break;
+
             int xx;
             int yy;
             uint32_t level;
@@ -3302,11 +3314,12 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
     return true;
 }
 
+//! \brief Accepts a new client connection; returns nullptr if accepting fails or the server state does not allow it.
 ODSocketClient* ODServer::notifyNewConnection(sf::TcpListener& sockListener)
 {
     ODSocketClient* newClient = new ODSocketClient;
     sf::Socket::Status status = sockListener.accept(newClient->getSockClient());
-    if (status != sf::Socket::Done)
+    if (status != sf::Socket::Status::Done)
     {
         OD_LOG_ERR("Error while listening to socket status=" + Helper::toString(static_cast<uint32_t>(status)));
         delete newClient;
@@ -3465,13 +3478,15 @@ ODSocketClient* ODServer::getClientFromPlayerId(int32_t playerId)
     return nullptr;
 }
 
+//! \brief Waits (joins the server thread) until the game ends; false if the server is not launched.
 bool ODServer::waitEndGame()
 {
     // If the server is not launched, we don't allow to wait for end of game
     if(mServerState == ServerState::StateNone)
         return false;
 
-    mThread->wait();
+    if(mThread->joinable())
+        mThread->join();
     return true;
 }
 
@@ -3538,6 +3553,7 @@ void ODServer::fireSeatConfigurationRefresh()
     for(const CreatureDefinition* def : fighterDefs)
         packetSend << def->getClassName() << mGameMap->getCreatureClassLimit(def->getClassName());
 
+    // The availability of each skill. Index 0 is nullSkillType, it is no skill
     const std::vector<GameMap::SkirmishItemState>& skillStates = mGameMap->getSkirmishSkillStates();
     uint32_t nbSkillStates = static_cast<uint32_t>(SkillType::countSkill) - 1;
     packetSend << nbSkillStates;

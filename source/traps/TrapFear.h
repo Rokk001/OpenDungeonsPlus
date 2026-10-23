@@ -21,21 +21,28 @@
 #include "Trap.h"
 #include "traps/TrapType.h"
 
+#include <cstdint>
+
 //! \brief A trap that scares the enemy creatures in sight and makes them run away. It deals no damage.
 class TrapFear : public Trap
 {
 public:
+    //! \brief Creates a fear trap on the given map
     TrapFear(GameMap* gameMap);
 
+    //! \brief Returns the trap type (fear)
     virtual const TrapType getType() const override
     { return TrapType::fear; }
 
+    //! \brief Scares every enemy creature in sight of the tile so that it runs away; fearless creatures are skipped
     virtual bool shoot(Tile* tile) override;
+    //! \brief The fear trap cannot be attacked
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The trap mesh is shown on the tile
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -44,6 +51,7 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Creates the entity that shows the trap on the tile
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
     static const TrapType mTrapType;
@@ -52,7 +60,7 @@ private:
     //! \brief Radius in tiles in which enemy creatures get scared
     uint32_t mRadius;
     //! \brief Number of turns the scared creatures run away
-    uint32_t mFearTurns;
+    double mFearTurns;
 };
 
 #endif // TRAPFEAR_H

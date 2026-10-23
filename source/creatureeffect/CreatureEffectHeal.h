@@ -23,7 +23,7 @@
 class CreatureEffectHeal : public CreatureEffect
 {
 public:
-    CreatureEffectHeal(int32_t nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
+    CreatureEffectHeal(double nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
         mEffectValue(effectValue)
     {}

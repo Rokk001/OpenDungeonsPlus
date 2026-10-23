@@ -140,6 +140,7 @@ TrapCannon::TrapCannon(GameMap* gameMap) :
     setMeshName("");
 }
 
+//! \brief Fires a cannonball at an enemy; the damage follows the cannon research.
 bool TrapCannon::shoot(Tile* tile)
 {
     std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), mRange);
@@ -164,8 +165,8 @@ bool TrapCannon::shoot(Tile* tile)
     direction.normalise();
     MissileOneHit* missile = new MissileOneHit(getGameMap(), getSeat(), getName(), "Cannonball",
         "", direction, ConfigManager::getSingleton().getTrapConfigDouble("CannonSpeed"),
-        Random::Double(SkillManager::getResearchValue(getSeat(), SkillType::trapCannon, mMinDamage),
-            SkillManager::getResearchValue(getSeat(), SkillType::trapCannon, mMaxDamage)),
+        Random::Double(SkillManager::getResearchValue(getSeat(), SkillType::trapCannon, mMinDamage, ResearchEffect::Damage),
+            SkillManager::getResearchValue(getSeat(), SkillType::trapCannon, mMaxDamage, ResearchEffect::Damage)),
         0.0, 0.0, nullptr, false, false, true);
     missile->addToGameMap();
     missile->createMesh();

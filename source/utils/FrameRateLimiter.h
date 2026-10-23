@@ -19,18 +19,21 @@
 #define FRAMERATELIMITER_H
 
 #include <SFML/System/Clock.hpp>
+#include <SFML/System/Time.hpp>
+
+#include <cstdint>
 
 //! \brief Wrapper class to limit framerates
 class FrameRateLimiter
 {
 public:
-    FrameRateLimiter(sf::Int64 frameRate);
+    FrameRateLimiter(std::int64_t frameRate);
     //! \brief Sleep if there is time left since last time the function was called.
     void sleepIfEarly();
     unsigned int getFrameRate();
     void setFrameRate(unsigned int frameRate);
 private:
-    sf::Int64 mMinFrameTime;
+    std::int64_t mMinFrameTime;
     sf::Clock mClock;
 };
 

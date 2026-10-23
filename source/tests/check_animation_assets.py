@@ -97,9 +97,16 @@ def check_loop_velocity(path, selected, selected_bones=None):
                 check_track_velocity(keys, (path.name, name, bone))
             position = end
     assert checked == set(selected)
+
+
+# Map bone names to bone indices; OGRE 14 writes no id attribute, the index is then the order in the file.
+def bone_ids(skeleton):
+    return {bone.get('name'): bone.get('id', str(index)) for index, bone in enumerate(skeleton.find('bones'))}
+
+
 # Verify append-only feather geometry, complete wing weights and every exported vertex channel.
 def check_wings(mesh, skeleton):
-    bones = {bone.get('name'): bone.get('id') for bone in skeleton.find('bones')}
+    bones = bone_ids(skeleton)
     geometry = mesh.find('sharedgeometry')
     count = int(geometry.get('vertexcount'))
     added = wings.FEATHER_COUNT * 2 * 10
@@ -263,7 +270,7 @@ def main():
     socket = next(track for clip in wizard.find('animations') if clip.get('name') == 'Idle'
                   for track in clip.find('tracks') if track.get('bone') == 'Weapon_L')
     matching_keys(list(socket.find('keyframes'))[0], list(socket.find('keyframes'))[-1])
-    bone = next(int(bone.get('id')) for bone in wizard.find('bones') if bone.get('name') == 'Weapon_L')
+    bone = int(bone_ids(wizard)['Weapon_L'])
     check_loop_velocity(ROOT / 'models/Wizard.skeleton', ('Idle',), {bone})
     check_splice()
     check_track_splice()

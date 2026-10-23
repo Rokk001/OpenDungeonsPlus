@@ -29,8 +29,10 @@
 #include "ODApplication.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectBounds.h"
 #include "giftboxes/GiftBoxBonus.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -59,11 +61,20 @@ const TileVisual RoomDungeonTemple::mRoomVisual = TileVisual::dungeonTempleRoom;
 
 namespace
 {
+//! Tiles from the centre of a heart to the edge of its whole 5x5 area (core and treasury ring).
+const int HEART_AREA_RADIUS = 2;
+
 //! \brief Distance in tiles from the heart centre to each of the four special objects
 const int HEART_REWARD_SPECIAL_DISTANCE = 2;
 
+//! \brief Number of special objects placed around a destroyed heart: one north, east, south and west
+const int HEART_REWARD_NB_SPECIALS = 4;
+
 //! \brief A dance rate large enough to hand a room tile over at once
 const double HEART_REWARD_TAKE_AT_ONCE = 1000000.0;
+
+//! \brief Upper limit of the rounds that look for a room of the loser that is still to hand over
+const int HEART_REWARD_MAX_ROUNDS = 10000;
 
 //! \brief A special that can drop when a heart is destroyed, with its weight in the draw
 struct HeartRewardSpecial
@@ -111,14 +122,17 @@ GiftBoxType pickHeartRewardSpecial()
 }
 
 //! \brief Puts four gift boxes of a random type 2 tiles north, east, south and west of the heart
+//! \param gameMap The game map
+//! \param winnerSeat The seat that owns the gift boxes
+//! \param heartTile The tile of the destroyed heart. Nothing happens if it is nullptr
 void placeHeartRewardSpecials(GameMap* gameMap, Seat* winnerSeat, Tile* heartTile)
 {
     if(heartTile == nullptr)
         return;
 
-    const int offsetX[4] = {0, HEART_REWARD_SPECIAL_DISTANCE, 0, -HEART_REWARD_SPECIAL_DISTANCE};
-    const int offsetY[4] = {-HEART_REWARD_SPECIAL_DISTANCE, 0, HEART_REWARD_SPECIAL_DISTANCE, 0};
-    for(int i = 0; i < 4; ++i)
+    const int offsetX[HEART_REWARD_NB_SPECIALS] = {0, HEART_REWARD_SPECIAL_DISTANCE, 0, -HEART_REWARD_SPECIAL_DISTANCE};
+    const int offsetY[HEART_REWARD_NB_SPECIALS] = {-HEART_REWARD_SPECIAL_DISTANCE, 0, HEART_REWARD_SPECIAL_DISTANCE, 0};
+    for(int i = 0; i < HEART_REWARD_NB_SPECIALS; ++i)
     {
         Tile* tile = gameMap->getTile(heartTile->getX() + offsetX[i], heartTile->getY() + offsetY[i]);
         if(tile == nullptr || tile->isFullTile())
@@ -136,11 +150,14 @@ void placeHeartRewardSpecials(GameMap* gameMap, Seat* winnerSeat, Tile* heartTil
 
 //! \brief Every room of the loser except the dungeon heart changes to the winner, using the room's own
 //! ownership change, then every other tile of the loser without a building becomes the winner's.
+//! \param gameMap The game map
+//! \param loserSeat The seat that lost its heart
+//! \param winnerSeat The seat that destroyed the heart
 void giveHeartRewardRoomsAndLand(GameMap* gameMap, Seat* loserSeat, Seat* winnerSeat)
 {
     // A room can be cut in two by the hand over, so we search again until none is left
     std::set<Room*> notTaken;
-    for(int nbRounds = 0; nbRounds < 10000; ++nbRounds)
+    for(int nbRounds = 0; nbRounds < HEART_REWARD_MAX_ROUNDS; ++nbRounds)
     {
         Room* room = nullptr;
         for(Room* candidate : gameMap->getRooms())
@@ -187,6 +204,10 @@ void giveHeartRewardRoomsAndLand(GameMap* gameMap, Seat* loserSeat, Seat* winner
 //! \brief The keeper that destroys a dungeon heart receives all the mana stored by the owner of
 //! the heart (up to the maximum). The skirmish setting can add four specials around the heart or the
 //! rooms and the land of the owner.
+//! \param gameMap The game map
+//! \param loserSeat The seat that lost its heart
+//! \param winnerSeat The seat that destroyed the heart. Nothing happens if it is nullptr or the same seat
+//! \param heartTile The tile of the destroyed heart
 void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSeat, Tile* heartTile)
 {
     if(winnerSeat == nullptr || winnerSeat == loserSeat || winnerSeat->isRogueSeat())
@@ -200,9 +221,9 @@ void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSea
     }
 
     const uint32_t reward = gameMap->getHeartDestroyedReward();
-    if(reward == 1)
+    if(reward == GameMap::SKIRMISH_HEART_REWARD_SPECIALS)
         placeHeartRewardSpecials(gameMap, winnerSeat, heartTile);
-    else if(reward >= 2)
+    else if(reward >= GameMap::SKIRMISH_HEART_REWARD_ROOMS_AND_LAND)
         giveHeartRewardRoomsAndLand(gameMap, loserSeat, winnerSeat);
 
     Player* winner = winnerSeat->getPlayer();
@@ -219,9 +240,7 @@ void giveDestroyedHeartReward(GameMap* gameMap, Seat* loserSeat, Seat* winnerSea
 //! \brief The heart's three health-tier mesh variants. Each has its own rig and
 //! a baked "Pulse" animation running at a tier-specific speed (see assets-src/DungeonHeartObject.blend).
 //! Every mesh also holds the temple's pedestal the heart stands on (see tools/heart-on-temple).
-const std::string HeartMeshNameHealthy = "DungeonHeartObjectHealthy";
-const std::string HeartMeshNameDamaged = "DungeonHeartObjectDamaged";
-const std::string HeartMeshNameCritical = "DungeonHeartObjectCritical";
+//! The mesh names are RoomObjectPath::HEART_MESH_HEALTHY, HEART_MESH_DAMAGED and HEART_MESH_CRITICAL.
 
 class DungeonHeartObject : public PersistentObject
 {
@@ -307,9 +326,9 @@ class RoomDungeonTempleFactory : public RoomFactory
         const int centreY = (inputManager.mYPos + inputManager.mLStartDragY) / 2;
 
         std::vector<Tile*> buildableTiles;
-        for(int x = centreX - 2; x <= centreX + 2; x++)
+        for(int x = centreX - HEART_AREA_RADIUS; x <= centreX + HEART_AREA_RADIUS; x++)
         {
-            for(int y = centreY - 2; y <= centreY + 2; y++)
+            for(int y = centreY - HEART_AREA_RADIUS; y <= centreY + HEART_AREA_RADIUS; y++)
             {
                 Tile* tile = gameMap->getTile(x, y);
                 if(tile == nullptr)
@@ -373,7 +392,6 @@ class RoomDungeonTempleFactory : public RoomFactory
 static RoomRegister reg(new RoomDungeonTempleFactory);
 }
 
-const double RoomDungeonTemple::HEART_HEAL_PER_SECOND = 2.5;
 const double RoomDungeonTemple::HEART_CRITICAL_FRACTION = 0.11;
 
 // The treasury ring of a 5x5 heart stores a fixed amount of gold per ring tile
@@ -381,10 +399,14 @@ const double RoomDungeonTemple::HEART_CRITICAL_FRACTION = 0.11;
 // the ring is part of the heart, not a buildable treasury.
 static const int treasuryTileCapacity = 1000;
 
+// Tiles from the heart tile to the edge of the 3x3 core; everything beyond it is the ring.
+static const int HEART_CORE_RADIUS = 1;
+
 RoomDungeonTemple::RoomDungeonTemple(GameMap* gameMap) :
     Room(gameMap),
     mTempleObject(nullptr),
     mHeartHP(-1.0),
+    mHeartHPFactor(1.0),
     mCriticalWarningSent(false),
     mCurrentHeartTier(HeartHealthTier::healthy),
     mGoldChanged(false)
@@ -402,9 +424,16 @@ Tile* RoomDungeonTemple::getHeartTile() const
     return mTempleObject != nullptr ? mTempleObject->getPositionTile() : nullptr;
 }
 
+//! \brief The factor of the heart health research of the owner (1 without the research).
+double RoomDungeonTemple::getHeartHPFactor() const
+{
+    return SkillManager::getResearchValue(getSeat(), SkillType::keeperHeartFortitude, 1.0, ResearchEffect::HeartHP);
+}
+
+//! \brief The health of an undamaged heart: the configured value times the factor of the heart health research.
 double RoomDungeonTemple::getHeartMaxHP() const
 {
-    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0);
+    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0) * getHeartHPFactor();
 }
 
 double RoomDungeonTemple::getHeartHealthFraction() const
@@ -509,6 +538,7 @@ bool RoomDungeonTemple::removeCoveredTile(Tile* tile)
     return Room::removeCoveredTile(tile);
 }
 
+//! \brief Handles the heart object and the health: scales it when a research level was reached and heals a living heart.
 void RoomDungeonTemple::doUpkeep()
 {
     if(getHP(nullptr) <= 0.0 && mTempleObject != nullptr && mTempleObject->notifyRemoveAsked())
@@ -521,11 +551,22 @@ void RoomDungeonTemple::doUpkeep()
         removeAllBuildingObjects();
         mTempleObject = nullptr;
     }
+    // When the research of the heart health reached a new level, the current health grows with the maximum
+    const double heartHPFactor = getHeartHPFactor();
+    if(heartHPFactor != mHeartHPFactor)
+    {
+        if(mHeartHP > 0.0)
+            mHeartHP = std::min(mHeartHP * heartHPFactor / mHeartHPFactor, getHeartMaxHP());
+        mHeartHPFactor = heartHPFactor;
+    }
+
     // A living heart heals up to its maximum; a destroyed one (0) never does
     if(mHeartHP > 0.0 && mHeartHP < getHeartMaxHP())
     {
+        const double healPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::keeperHeartMending,
+            ConfigManager::getSingleton().getRoomConfigDouble("DungeonHeartHealPerSecond"), ResearchEffect::HeartHeal);
         mHeartHP = std::min(getHeartMaxHP(),
-            mHeartHP + HEART_HEAL_PER_SECOND / ODApplication::turnsPerSecond);
+            mHeartHP + healPerSecond / ODApplication::turnsPerSecond);
         // Healing above the critical level re-arms the warning for the next drop below it
         if(mHeartHP > HEART_CRITICAL_FRACTION * getHeartMaxHP())
             mCriticalWarningSent = false;
@@ -563,12 +604,14 @@ void RoomDungeonTemple::exportToStream(std::ostream& os) const
         os << "HeartHealth10000 " << getHP(nullptr) << '\n';
 }
 
+//! \brief Reads the room and the health of the heart; the health is limited to the maximum of the owner.
 bool RoomDungeonTemple::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
         return false;
     // Old maps and saves have no room-level health record: their heart starts
     // undamaged, without interpreting the following room as health.
+    mHeartHPFactor = getHeartHPFactor();
     mHeartHP = getHeartMaxHP();
     is >> std::ws;
     if(is.peek() == 'H')
@@ -623,7 +666,8 @@ bool RoomDungeonTemple::isTreasuryTile(Tile* tile) const
     // only the outer ring of a 5x5 heart stores gold.
     const int dx = tile->getX() - center->getX();
     const int dy = tile->getY() - center->getY();
-    if(dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1)
+    if(dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS
+        && dy >= -HEART_CORE_RADIUS && dy <= HEART_CORE_RADIUS)
         return false;
 
     for(Tile* covered : mCoveredTiles)
@@ -897,12 +941,12 @@ const std::string& RoomDungeonTemple::getMeshNameForHeartTier(HeartHealthTier ti
     switch(tier)
     {
         case HeartHealthTier::damaged:
-            return HeartMeshNameDamaged;
+            return RoomObjectPath::HEART_MESH_DAMAGED;
         case HeartHealthTier::critical:
-            return HeartMeshNameCritical;
+            return RoomObjectPath::HEART_MESH_CRITICAL;
         case HeartHealthTier::healthy:
         default:
-            return HeartMeshNameHealthy;
+            return RoomObjectPath::HEART_MESH_HEALTHY;
     }
 }
 

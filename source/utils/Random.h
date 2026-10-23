@@ -23,6 +23,8 @@
 #ifndef RANDOM_H_
 #define RANDOM_H_
 
+#include <utility>
+
 namespace Random
 {
     //! \brief initializes the semaphore and seeds the generator
@@ -63,6 +65,20 @@ namespace Random
      *  \return a gaussian distributed random double value in [-1,1]
      */
     double gaussianRandomDouble();
+
+    /*! \brief shuffles the elements of a range in random order (replaces std::random_shuffle, removed in C++17)
+     *
+     *  \param first, last The range to shuffle, [first, last)
+     */
+    template<typename RandomIt>
+    void shuffle(RandomIt first, RandomIt last)
+    {
+        for(unsigned int i = static_cast<unsigned int>(last - first); i > 1; --i)
+        {
+            unsigned int j = Uint(0, i - 1);
+            std::swap(first[i - 1], first[j]);
+        }
+    }
 }
 
 #endif // RANDOM_H_

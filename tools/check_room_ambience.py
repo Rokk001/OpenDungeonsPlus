@@ -255,6 +255,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
     when = effect.get("When", ["Always"])[0]
     if when not in WHENS:
         problems.append("%s: bad When %s" % (where, when))
+    if when == "Vacated" and target == "Event":
+        problems.append("%s: When Vacated does not work on events" % where)
     if target == "Event":
         counts["events"] += 1
         if "Event" not in effect:

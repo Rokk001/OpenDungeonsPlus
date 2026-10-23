@@ -200,6 +200,9 @@ void Spell::fireSpellSound(Tile& tile, const std::string& soundFamily)
     }
 }
 
+const std::string Spell::SPELL_EFFECT_PREFIX = "SpellFx/";
+const std::string Spell::HAND_CAST_EFFECT_NAME = "HandCast";
+
 void Spell::fireSpellEffect(Tile& tile, const std::string& effectName, const std::string& soundFamily)
 {
     if(!soundFamily.empty())
@@ -207,7 +210,7 @@ void Spell::fireSpellEffect(Tile& tile, const std::string& effectName, const std
 
     // The effect travels as a sound family with the prefix "SpellFx/". The client shows the
     // effect and does not look for a sound
-    std::string effect = "SpellFx/" + effectName;
+    std::string effect = SPELL_EFFECT_PREFIX + effectName;
     for(Seat* seat : tile.getSeatsWithVision())
     {
         if(seat->getPlayer() == nullptr)

@@ -6,6 +6,7 @@ repo = Path(__file__).resolve().parents[2]
 
 
 def read(path):
+    """Returns the text of a file of the repository."""
     return (repo / path).read_text(encoding='utf-8')
 
 
@@ -27,18 +28,29 @@ assert 'case ClientNotificationType::editorRegionEdit:' in client_cpp
 assert server_h.split('};')[0].rstrip().endswith('campaignVictory') and 'editorRegionData,' in server_h, 'server message appended out of order'
 assert 'case ServerNotificationType::editorRegionData:' in server_cpp
 
-# The server only edits regions in editor mode and always answers with the full list.
+# The three operations of the request are named, the editor and the server use the names.
+operations = client_h.split('enum class EditorRegionOperation')[1].split('};')[0]
+for name in ('list', 'set', 'remove'):
+    assert name + (',' if name != 'remove' else '') in operations, 'operation missing: ' + name
+assert 'EditorRegionOperation::set' in od_server and 'EditorRegionOperation::remove' in od_server
+assert 'EditorRegionOperation::list' in editor and 'EditorRegionOperation::set' in editor
+assert 'EditorRegionOperation::remove' in editor
+
+# The server only edits regions in editor mode, reads the request completely and always answers
+# with the full list.
 handler = od_server[od_server.index('case ClientNotificationType::editorRegionEdit:'):]
 handler = handler[:handler.index('case ClientNotificationType::askSetSkillTree:')]
 assert 'ServerMode::ModeEditor' in handler
 assert 'setRegion(' in handler and 'removeRegion(' in handler
 assert 'ServerNotificationType::editorRegionData' in handler
+assert 'Truncated editorRegionEdit packet' in handler
 
 # The client reads exactly what the server writes: name and four corners per region.
 reply = od_client[od_client.index('case ServerNotificationType::editorRegionData:'):]
 reply = reply[:reply.index('case ServerNotificationType::possessionEnd:')]
 assert 'region.mName >> region.mX1 >> region.mY1 >> region.mX2 >> region.mY2' in reply
 assert 'setRegions(' in reply
+assert 'Truncated editorRegionData packet' in reply
 assert 'region.mName << region.mX1 << region.mY1 << region.mX2 << region.mY2' in handler
 
 # The editor: key R marks, Shift + R removes, the markers are drawn and listed in the help.

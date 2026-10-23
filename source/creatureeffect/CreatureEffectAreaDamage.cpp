@@ -32,11 +32,14 @@ static const std::string CreatureEffectAreaDamageName = "AreaDamage";
 
 namespace
 {
+//! \brief Creates area damage effects when the configuration names "AreaDamage"
 class CreatureEffectAreaDamageFactory : public CreatureEffectFactory
 {
+    //! \brief Creates an empty area damage effect
     CreatureEffect* createCreatureEffect() const override
     { return new CreatureEffectAreaDamage; }
 
+    //! \brief The effect name used in the configuration
     const std::string& getCreatureEffectName() const override
     {
         return CreatureEffectAreaDamageName;
@@ -78,7 +81,9 @@ void CreatureEffectAreaDamage::applyEffect(Creature& creature)
         if(((dx * dx) + (dy * dy)) > radiusSquared)
             continue;
 
-        target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn), 0.0, 0.0, 0.0, targetTile, false);
+        // In the last turn of the effect only the fraction of the turn that was left counts
+        target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn) * getTurnFraction(),
+            0.0, 0.0, 0.0, targetTile, false);
     }
 }
 

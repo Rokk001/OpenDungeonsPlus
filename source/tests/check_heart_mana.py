@@ -57,7 +57,8 @@ struct ODApplication {static double turnsPerSecond;};double ODApplication::turns
 struct ConfigManager {double maxManaPerSeat=200000.0;double manaWellBonusPerTile=100.0;
  static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}
  double getMaxManaPerSeat()const{return maxManaPerSeat;}
- double getManaWellBonusPerTile()const{return manaWellBonusPerTile;}};
+ double getManaWellBonusPerTile()const{return manaWellBonusPerTile;}
+ double getRoomConfigDouble(const std::string& key)const{return key=="DungeonHeartManaPerSecond"?30.0:0.0;}};
 struct SeatStatistics {uint32_t mKeepersDefeated=0,mCreaturesKilled=0,mHeroesDestroyed=0,mRoomsCaptured=0,mItemsMade=0,mCreaturesConverted=0;};
 struct Player;
 struct GameMap;
@@ -74,7 +75,7 @@ struct Seat {
  std::vector<uint32_t> mNbRooms=std::vector<uint32_t>(static_cast<uint32_t>(RoomType::nbRooms),0);
  double mMana=0.0,mManaDelta=0.0,mManaIncomePerSecond=0.0,mManaUpkeepPerSecond=0.0,mManaOneOffPending=0.0,mManaOneOffPerSecond=0.0;
  std::vector<double> mManaOneOffWindow;
- double mManaShortageSeconds=0.0,mWorkerPopCountdown=-1.0;
+ double mManaShortageSeconds=0.0,mWorkerPopCountdown=-1.0;double manaFlowFactor=1.0;
  unsigned int mNumClaimedTiles=0;int mNumCreaturesWorkers=0;bool mHadLibrary=false;
  Seat(int t,int i):team(t),id(i){}
  struct CompletedGoal{std::string getName()const{return std::string();}};unsigned int numCompletedGoals()const{return 0;}CompletedGoal* getCompletedGoal(unsigned int){return nullptr;}
@@ -145,6 +146,10 @@ struct SpellSummonWorker {static int32_t nextPrice;
 int32_t SpellSummonWorker::nextPrice=1500;
 struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):GameEntity(nullptr),tile(t){}
  Tile* getPositionTile(){return tile;}};
+enum class SkillType {keeperManaFlow};
+namespace ResearchEffect {static const std::string HeartMana="HeartMana";}
+struct SkillManager {static double getResearchValue(const Seat* seat,SkillType,double base,const std::string& effect)
+ {return effect==ResearchEffect::HeartMana?base*seat->manaFlowFactor:base;}};
 MANA_HELPERS
 METHODS
 int checks=0,failures=0;
@@ -157,14 +162,15 @@ int main(){
  ConfigManager& config=ConfigManager::getSingleton();
 
  // The income formula, below and above the tile cap, the heart tiles never counted twice
- check(manaIncomePerSecond(0,0)==30.0,"the heart alone produces 30 per second");
- check(manaIncomePerSecond(100,0)==130.0,"one mana per second per claimed tile");
- check(manaIncomePerSecond(500,0)==530.0,"the tile part reaches the cap at 500 tiles");
- check(manaIncomePerSecond(600,0)==530.0,"the tile part stays capped above 500 tiles");
- check(manaIncomePerSecond(9,9)==30.0,"a 3x3 heart yields 30, not 30 plus its 9 tiles");
- check(manaIncomePerSecond(100,9)==121.0,"the heart tiles are not counted again");
- check(manaIncomePerSecond(509,9)==530.0,"the cap applies after the heart tiles are removed");
- check(manaIncomePerSecond(3,9)==30.0,"fewer claimed tiles than heart tiles is just the heart");
+ check(manaIncomePerSecond(0,0,30.0)==30.0,"the heart alone produces 30 per second");
+ check(manaIncomePerSecond(100,0,30.0)==130.0,"one mana per second per claimed tile");
+ check(manaIncomePerSecond(500,0,30.0)==530.0,"the tile part reaches the cap at 500 tiles");
+ check(manaIncomePerSecond(600,0,30.0)==530.0,"the tile part stays capped above 500 tiles");
+ check(manaIncomePerSecond(9,9,30.0)==30.0,"a 3x3 heart yields 30, not 30 plus its 9 tiles");
+ check(manaIncomePerSecond(100,9,30.0)==121.0,"the heart tiles are not counted again");
+ check(manaIncomePerSecond(509,9,30.0)==530.0,"the cap applies after the heart tiles are removed");
+ check(manaIncomePerSecond(3,9,30.0)==30.0,"fewer claimed tiles than heart tiles is just the heart");
+ check(manaIncomePerSecond(100,0,39.0)==139.0,"the heart part is the value that is given, so the research can raise it");
 
  // The worker upkeep
  check(manaUpkeepPerSecond(0)==0.0,"no worker costs nothing");
@@ -206,6 +212,10 @@ int main(){
  map.updateSeatMana(&owner,0,0.0);
  check(near(owner.mManaIncomePerSecond,65.0),"the mana regeneration setting scales the income");
  map.mManaRegenerationPercent=100;
+ owner.manaFlowFactor=1.3;
+ map.updateSeatMana(&owner,0,0.0);
+ check(near(owner.mManaIncomePerSecond,139.0),"the heart mana research raises only the heart part of the income");
+ owner.manaFlowFactor=1.0;
 
  // A seat without a heart gains nothing and loses nothing
  Seat orphan(3,9);Player orphanPlayer(&orphan,false);
@@ -400,7 +410,7 @@ methods += '\n' + '\n'.join([
     function(player, 'void Player::notifyDefeat('),
     function(player, 'void Player::sendLevelStatistics('),
 ])
-mana_helpers = game_map[game_map.index('const double MANA_HEART_INCOME_PER_SECOND')
+mana_helpers = game_map[game_map.index('const double MANA_INCOME_TILES_CAP')
     : game_map.index('double manaUpkeepPerSecond(') + len(function(game_map, 'double manaUpkeepPerSecond('))]
 probe = probe.replace('RECORD', function(player_header, 'inline void recordHeartDestroyed('))
 probe = probe.replace('MANA_HELPERS', 'namespace {\n' + mana_helpers + '\n}')
@@ -444,5 +454,5 @@ print('WIRING OK: redemption on the server drop, per second mana on the HUD, tra
 with tempfile.TemporaryDirectory(prefix='odp-heart-mana-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

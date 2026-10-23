@@ -56,6 +56,11 @@
 #include <istream>
 #include <ostream>
 
+//! \brief Highest research level of a skill
+static const int RESEARCH_LEVEL_MAX = 3;
+//! \brief The research level that needs half of the entries of its tab at level 1
+static const int RESEARCH_LEVEL_SECOND = 2;
+
 const std::string Seat::PLAYER_TYPE_HUMAN = "Human";
 const std::string Seat::PLAYER_TYPE_AI = "AI";
 const std::string Seat::PLAYER_TYPE_INACTIVE = "Inactive";
@@ -295,12 +300,16 @@ void Seat::clearTilesWithVision()
     
 }
 
+//! \brief Gives this seat vision on the given tiles for the given number of turns (server side).
+//! \param tiles The tiles to reveal
+//! \param turns For how many turns the tiles stay visible
 void Seat::revealTiles(const std::vector<Tile*>& tiles, uint32_t turns)
 {
     for(Tile* tile : tiles)
         mRevealedTiles.push_back(std::pair<Tile*, uint32_t>(tile, turns));
 }
 
+//! \brief Applies the vision granted by revealTiles and counts the remaining turns down.
 void Seat::applyRevealedTiles()
 {
     std::vector<std::pair<Tile*, uint32_t> >::iterator it = mRevealedTiles.begin();
@@ -317,6 +326,8 @@ void Seat::applyRevealedTiles()
     }
 }
 
+//! \brief Returns true if this seat has been notified about the given tile at least once (server side).
+//! \param tile The tile to look up
 bool Seat::hasSeenTile(Tile* tile)
 {
     return getTileStateNotified(tile) != nullptr;
@@ -523,6 +534,9 @@ void Seat::initSeat()
     // We use a temporary vector to allow the corresponding functions to check the vector validity
     // and reject its content if it is not valid
     std::vector<SkillType> skills = mSkillDone;
+    // Every seat starts with the free level one skills, except in sandbox mode where the level gives what is present
+    if(!mGameMap->isSandbox())
+        addFreeLevelOneSkills(skills);
     mSkillDone.clear();
     setSkillsDone(skills);
     // Pending skills whose dependencies are neither done nor pending before them cannot be researched
@@ -538,7 +552,7 @@ void Seat::initSeat()
         for(std::vector<SkillType>::iterator it = pendingToCheck.begin(); it != pendingToCheck.end(); ++it)
         {
             const Skill* skill = SkillManager::getSkill(*it);
-            if((skill != nullptr) && !isSkillDone(*it) && !skill->canBeSkilled(skillsDoneInTree))
+            if((skill != nullptr) && !isSkillDone(*it) && !skill->canBeSkilled(skillsDoneInTree, mSkillNotAllowed))
                 continue;
 
             skills.push_back(*it);
@@ -1750,6 +1764,92 @@ uint32_t Seat::getSkillLevel(SkillType type) const
     return level == mResearchLevels.end() ? 1 : level->second;
 }
 
+uint32_t Seat::getQueuedSkillLevel(SkillType type, const std::vector<std::pair<SkillType, int> >& queuedBefore) const
+{
+    uint32_t level = getSkillLevel(type);
+    for(const std::pair<SkillType, int>& queued : queuedBefore)
+    {
+        if((queued.first == type) && (queued.second > static_cast<int>(level)))
+            level = static_cast<uint32_t>(queued.second);
+    }
+    return level;
+}
+
+std::vector<std::pair<SkillType, int> > Seat::getQueuedLevels(const std::vector<SkillType>& queue) const
+{
+    std::vector<std::pair<SkillType, int> > levels;
+    for(SkillType type : queue)
+        levels.push_back(std::make_pair(type, static_cast<int>(getSkillLevel(type)) + 1));
+    return levels;
+}
+
+const char* Seat::getResearchGateFailure(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const
+{
+    static const char* const REASON_NOT_ALLOWED = "not allowed by the level";
+    static const char* const REASON_PARENT_MISSING = "parent missing";
+    static const char* const REASON_TAB_NEEDS_MORE = "tab needs more entries at level 1";
+
+    const Skill* skill = SkillManager::getSkill(type);
+    if((skill == nullptr) || Skills::isRewardSkill(type) || isSkillNotAllowed(type) || (level < 1) || (level > RESEARCH_LEVEL_MAX))
+        return REASON_NOT_ALLOWED;
+
+    // The entry has to be at the level before the asked one
+    if(static_cast<int>(getQueuedSkillLevel(type, queuedBefore)) != level - 1)
+        return REASON_PARENT_MISSING;
+
+    if(level == 1)
+    {
+        // Every parent needs level 1; a parent the level does not allow counts as fulfilled
+        for(const Skill* parent : skill->getDependencies())
+        {
+            if(isSkillNotAllowed(parent->getType()))
+                continue;
+            if(getQueuedSkillLevel(parent->getType(), queuedBefore) < 1)
+                return REASON_PARENT_MISSING;
+        }
+        return nullptr;
+    }
+
+    // Levels 2 and 3 need a share of the allowed entries of the tab at level 1: half (rounded up) for level 2, all for level 3
+    std::vector<SkillType> tabSkills;
+    SkillManager::listTabSkills(SkillManager::getSkillTab(type), tabSkills);
+    uint32_t nbAllowed = 0;
+    uint32_t nbAtLevelOne = 0;
+    for(SkillType tabSkill : tabSkills)
+    {
+        if(isSkillNotAllowed(tabSkill))
+            continue;
+        ++nbAllowed;
+        if(getQueuedSkillLevel(tabSkill, queuedBefore) >= 1)
+            ++nbAtLevelOne;
+    }
+    const uint32_t nbNeeded = (level == RESEARCH_LEVEL_SECOND) ? (nbAllowed + 1) / 2 : nbAllowed;
+    if(nbAtLevelOne < nbNeeded)
+        return REASON_TAB_NEEDS_MORE;
+
+    return nullptr;
+}
+
+bool Seat::canResearchLevel(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const
+{
+    return getResearchGateFailure(type, level, queuedBefore) == nullptr;
+}
+
+void Seat::addFreeLevelOneSkills(std::vector<SkillType>& skills) const
+{
+    for(uint32_t index = 1; index < static_cast<uint32_t>(SkillType::countSkill); ++index)
+    {
+        const SkillType type = static_cast<SkillType>(index);
+        const Skill* skill = SkillManager::getSkill(type);
+        if((skill == nullptr) || !skill->isFreeLevelOne() || isSkillNotAllowed(type))
+            continue;
+        if(std::find(skills.begin(), skills.end(), type) != skills.end())
+            continue;
+
+        skills.push_back(type);
+    }
+}
+
 void Seat::setResearchLevels(const std::map<SkillType, uint32_t>& levels)
 {
     mResearchLevels.clear();
@@ -1971,45 +2071,32 @@ void Seat::setSkillTree(const std::vector<SkillType>& skills)
 {
     if(mGameMap->isServerGameMap())
     {
-        // We check if all the skills in the vector are allowed. If not, we don't update the list
-        std::vector<SkillType> skillsDoneInTree = mSkillDone;
-        std::vector<SkillType> seen;
+        // We check each skill of the vector in order: the entries queued before count as done for the
+        // following ones. An invalid entry is dropped with a warning, the valid ones are kept
+        std::vector<SkillType> validSkills;
+        std::vector<std::pair<SkillType, int> > queuedBefore;
         for(SkillType skillType : skills)
         {
-            if(getSkillLevel(skillType) >= 3 || std::find(seen.begin(), seen.end(), skillType) != seen.end())
-                return;
-            if(Skills::isRewardSkill(skillType))
-                return;
-            seen.push_back(skillType);
-            // We check if the skill is allowed
-            if(std::find(mSkillNotAllowed.begin(), mSkillNotAllowed.end(), skillType) != mSkillNotAllowed.end())
+            const int level = static_cast<int>(getSkillLevel(skillType)) + 1;
+            if((level > RESEARCH_LEVEL_MAX) || (getQueuedSkillLevel(skillType, queuedBefore) >= static_cast<uint32_t>(level)))
             {
-                // Invalid skill. This might be allowed in the gui to enter invalid
-                // values. In this case, we should remove the assert
-                OD_LOG_ERR("Unallowed skill: " + Skills::toString(skillType));
-                return;
-            }
-            const Skill* skill = SkillManager::getSkill(skillType);
-            if(skill == nullptr)
-            {
-                // We found an unknown skill
-                OD_LOG_ERR("Unknown skill: " + Skills::toString(skillType));
-                return;
+                OD_LOG_WRN("Skill " + Skills::toString(skillType) + " dropped from the research queue: duplicate or maximum level");
+                continue;
             }
 
-            if(!isSkillDone(skillType) && !skill->canBeSkilled(skillsDoneInTree))
+            const char* failure = getResearchGateFailure(skillType, level, queuedBefore);
+            if(failure != nullptr)
             {
-                // Invalid skill. This might happen if the level has a skill pending with a non skillable dependency.
-                // In this case, we don't use the skill tree
-                OD_LOG_ERR("Unallowed skill: " + Skills::toString(skillType));
-                return;
+                OD_LOG_WRN("Skill " + Skills::toString(skillType) + " dropped from the research queue: " + failure);
+                continue;
             }
 
             // This skill is valid. We add it in the list and we check if the next one also is
-            skillsDoneInTree.push_back(skillType);
+            validSkills.push_back(skillType);
+            queuedBefore.push_back(std::make_pair(skillType, level));
         }
 
-        mSkillPending = skills;
+        mSkillPending = validSkills;
         if((getPlayer() != nullptr) && getPlayer()->getIsHuman())
         {
             // We notify the client

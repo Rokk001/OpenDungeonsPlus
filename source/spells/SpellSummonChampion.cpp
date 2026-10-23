@@ -36,6 +36,11 @@ const std::string SpellSummonChampionNameDisplay = "Summon champion";
 const std::string SpellSummonChampionCooldownKey = "SummonChampionCooldown";
 const std::string SpellSummonChampionCreatureClass = "Champion";
 const SpellType SpellSummonChampion::mSpellType = SpellType::summonChampion;
+//! Turns the look of the champion that was just summoned stays on it
+static const int32_t CHAMPION_AURA_TURNS = 12;
+
+//! \brief Number of turns the summon particle effect stays on the new champion
+static const int32_t SUMMON_EFFECT_NB_TURNS = 3;
 
 namespace
 {
@@ -80,6 +85,7 @@ bool SpellSummonChampion::hasChampion(GameMap* gameMap, const Seat* seat)
     return false;
 }
 
+//! \brief Shows the cast preview on the hovered tile and queues the cast request when the player clicks.
 void SpellSummonChampion::checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand)
 {
     Player* player = gameMap->getLocalPlayer();
@@ -126,6 +132,7 @@ void SpellSummonChampion::checkSpellCast(GameMap* gameMap, const InputManager& i
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Server side cast: pays the price and spawns the champion on the requested tile.
 bool SpellSummonChampion::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     Tile* tile = gameMap->tileFromPacket(packet);
@@ -151,12 +158,15 @@ bool SpellSummonChampion::castSpell(GameMap* gameMap, Player* player, ODPacket& 
 
     Creature* champion = new Creature(gameMap, definition, player->getSeat());
     OD_LOG_INF("Summoning the champion, name=" + champion->getName() + ", seatId=" + Helper::toString(player->getSeat()->getId()));
+    // The champion always fights at the highest level; set it before it enters the map, like a portal wave creature.
+    champion->setLevel(MAX_LEVEL);
+    champion->setHP(champion->getMaxHp());
     champion->addToGameMap();
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
                                 static_cast<Ogre::Real>(tile->getY()),
                                 static_cast<Ogre::Real>(0.0));
-    champion->addParticleEffect("SummonWorker", 3);
-    champion->addParticleEffect("SpellCreatureChampion", 12);
+    champion->addParticleEffect("SummonWorker", SUMMON_EFFECT_NB_TURNS);
+    champion->addParticleEffect("SpellCreatureChampion", CHAMPION_AURA_TURNS);
     champion->createMesh();
     champion->setPosition(spawnPosition);
     player->getSeat()->notifyCreatureArrival(definition->getClassName());
@@ -165,12 +175,14 @@ bool SpellSummonChampion::castSpell(GameMap* gameMap, Player* player, ODPacket& 
     return true;
 }
 
+//! \brief The champion is not a saved spell, so reading it from a stream is not supported.
 Spell* SpellSummonChampion::getSpellFromStream(GameMap* gameMap, std::istream &is)
 {
     OD_LOG_ERR("SpellSummonChampion cannot be read from stream");
     return nullptr;
 }
 
+//! \brief The champion is not a sent spell, so reading it from a packet is not supported.
 Spell* SpellSummonChampion::getSpellFromPacket(GameMap* gameMap, ODPacket &is)
 {
     OD_LOG_ERR("SpellSummonChampion cannot be read from packet");

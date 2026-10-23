@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(prefix="odp-feeding-limb-") as temporary:
     directory = Path(temporary)
     cpp = directory / "check.cpp"
     cpp.write_text(probe, encoding="utf-8")
-    subprocess.run(["cl.exe", "/nologo", "/EHsc", "/MD", "/std:c++14",
+    subprocess.run(["cl.exe", "/nologo", "/EHsc", "/MD", "/std:c++17",
                     f"/I{prefix / 'include/OGRE'}", str(cpp), "/Fecheck.exe",
                     "/link", f"/LIBPATH:{prefix / 'lib'}", "OgreMain.lib"],
                    cwd=directory, check=True)

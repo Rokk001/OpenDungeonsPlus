@@ -125,11 +125,11 @@ for family in casts + others:
 
 # 6. Possession aura ends with the spell
 spell_possess = read("source", "spells", "SpellPossess.cpp")
-if not re.search(r'addParticleEffect\("SpellCreaturePossess",\s*-1\)', spell_possess):
+if not re.search(r'addParticleEffect\(Creature::POSSESSION_AURA_SCRIPT,\s*-1\)', spell_possess):
     problems.append("the possession aura must last until the possession ends")
 creature = read("source", "entities", "Creature.cpp")
 end_possession = creature[creature.index("void Creature::endPossession"):creature.index("void Creature::formPossessionGroup")]
-if 'endParticleEffectsByScript("SpellCreaturePossess")' not in end_possession:
+if 'endParticleEffectsByScript(POSSESSION_AURA_SCRIPT)' not in end_possession or 'POSSESSION_AURA_SCRIPT = "SpellCreaturePossess"' not in creature:
     problems.append("the server does not end the possession aura")
 # The aura is permanent on the clients, a refresh never removes a missing effect and the turn deletes the ended effect
 # before the refresh of the turn is built: the other keepers are told at once, while the effect is still there
@@ -140,12 +140,14 @@ if "mPacket << lost" not in end_possession or "const bool lost = !isAlive() || i
 client = read("source", "network", "ODClient.cpp")
 end = client[client.index("case ServerNotificationType::possessionEnd:"):]
 end = end[:end.index("default:")]
-for needle in ('endParticleEffectsByScript("SpellCreaturePossess")', "creatureLost", "SpellFxPossessLost", "SpellFxPossessEnd"):
+for needle in ('endParticleEffectsByScript(Creature::POSSESSION_AURA_SCRIPT)', "creatureLost", "POSSESSION_LOST_EVENT", "POSSESSION_END_EVENT"):
     if needle not in end:
         problems.append("possessionEnd lacks %s" % needle)
 if "packetReceived >> creatureLost" not in end or "isAlive()" in end:
     problems.append("possessionEnd must take the fallen creature from the server message, not guess it")
-if end.index("SpellFxPossessEnd") > end.index("setPossessedCreatureName"):
+if 'POSSESSION_END_EVENT = "SpellFxPossessEnd"' not in client or 'POSSESSION_LOST_EVENT = "SpellFxPossessLost"' not in client:
+    problems.append("the possession end events do not have the names the config uses")
+if end.index("POSSESSION_END_EVENT") > end.index("setPossessedCreatureName"):
     problems.append("the effect must be raised before the possessed name is cleared")
 entity = read("source", "entities", "GameEntity.cpp")
 part = entity[entity.index("uint32_t GameEntity::endParticleEffectsByScript"):entity.index("void GameEntity::restoreEntityState")]

@@ -59,13 +59,16 @@ public:
     static void configure(const std::string& levelFile, int32_t seconds, uint32_t seed = 0,
         const std::string& scenario = std::string());
 
+    //! \brief True if the level test mode was activated on the command line.
     static bool isActive();
 
     //! \brief True once a result was reported. The main loop then ends the game.
     static bool isFinished();
 
+    //! \brief Returns the process exit code of the reported result (see Code).
     static int getExitCode();
 
+    //! \brief Returns the level file given on the command line.
     static const std::string& getLevelFile();
 
     //! \brief Reports a failure. Only the first result (pass or fail) of a run counts.

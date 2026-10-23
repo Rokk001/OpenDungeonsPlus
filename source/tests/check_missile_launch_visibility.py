@@ -5,6 +5,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from probe_config_stub import config_manager_stub
+
 repo = Path(__file__).resolve().parents[2]
 launch_source = (repo / 'source/creatureskill/CreatureSkillMissileLaunch.cpp').read_text()
 launch = launch_source.split('bool CreatureSkillMissileLaunch::tryUseFight(', 1)[1].split('\nCreatureSkillMissileLaunch* CreatureSkillMissileLaunch::clone()', 1)[0]
@@ -23,6 +26,7 @@ def origin_method(signature):
 origin_methods = origin_method('void MissileObject::exportToStream(') + origin_method('bool MissileObject::importFromStream(')
 probe = r'''
 #include <OgreVector.h>
+CONFIG_STUB
 #include "entities/CreatureProgression.h"
 #include <algorithm>
 #include <functional>
@@ -64,8 +68,13 @@ struct Weapon {
  // Return the elemental minimum for the launch scaler.
  double getElementDamageMin()const{return 0;}
 };
+// Creature type data read by the launch method: the SkillDamageFactor of the type (1 = unchanged).
+struct CreatureDefinition {double getSkillDamageFactor()const{return 1.0;}};
 // Creature launch state used by the actual skill method.
 struct Creature {
+ CreatureDefinition definition;
+ // Return the type data that holds the SkillDamageFactor.
+ const CreatureDefinition* getDefinition()const{return &definition;}
  Tile tile;Seat* seat;Ogre::Vector3 position{2.25f,3.2f,0};bool invalid=false,possessed=false;
  // Report actual possession at the launch boundary.
  bool isPossessed(){return possessed;}
@@ -98,6 +107,8 @@ const Ogre::Real CANNON_MISSILE_HEIGHT=.3f;
 struct CreatureSkillMissileLaunch {
  std::string mMissileMesh,mMissilePartScript="MissileMagic";double mMissileSpeed=3,mPhyAtk=0,mPhyAtkPerLvl=0,mMagAtk=13,mMagAtkPerLvl=.25,mEleAtk=0,mEleAtkPerLvl=0;
  double mPhyMin=0,mPhyMax=0,mMagMin=13.25,mMagMax=13.25,mEleMin=0,mEleMax=0;
+ // The plain missile attack does not apply the SkillDamageFactor (grenades and guided bolts do).
+ bool appliesSkillDamageFactor()const{return false;}
  bool tryUseFight(GameMap&,Creature*,float,GameEntity*,Tile*,bool,bool)const;
  MissileOneHit* createMissile(GameMap&,Creature*,const Ogre::Vector3&,double,double,double,GameEntity*,bool,bool)const;
 };
@@ -172,7 +183,7 @@ int main(){int checks=0,failures=0;std::function<void(bool,const char*)> check=[
 }
 '''.replace('VISIBILITY', visibility).replace('LAUNCH', launch).replace('ORIGIN_METHODS', origin_methods)
 damage_scale = 'inline void scale(' + damage_source.split('inline void scale(', 1)[1].split('\n}\n', 1)[0] + '\n}'
-probe = probe.replace('DAMAGE_SCALE', damage_scale)
+probe = probe.replace('DAMAGE_SCALE', damage_scale).replace('CONFIG_STUB', config_manager_stub(repo))
 
 # Source validation runs without compiling; the optional fixture retains the runtime assertions.
 ordering = ('missile->setCreatureDamageRange(', 'missile->setCreatureShot(', 'missile->addToGameMap();',
@@ -195,6 +206,6 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 with tempfile.TemporaryDirectory(prefix='odp-missile-launch-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{repo / "source"}', f'/I{prefix / "include/OGRE"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}', f'/I{prefix / "include/OGRE"}',
                     'check.cpp', '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

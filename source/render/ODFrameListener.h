@@ -102,6 +102,7 @@ public:
     inline const std::string& getPendingRestartLevel() const
     { return mPendingRestartLevel; }
 
+    //! \brief Sets the level that the main menu starts as soon as it is shown (empty string clears it).
     inline void setPendingRestartLevel(const std::string& level)
     { mPendingRestartLevel = level; }
 
@@ -134,7 +135,7 @@ public:
     bool frameStarted(const Ogre::FrameEvent& evt) override;
     
     //! \brief From Ogre::RenderQueueListener
-    void renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& invocation,
+    void renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& cameraName,
         bool& skipThisInvocation) override;
 
     //! \brief Exit the game.
@@ -169,9 +170,16 @@ public:
     inline Ogre::RenderWindow* getRenderWindow()
     { return mWindow; }
 
+    //! \brief Replaces the render window at the end of the next frame, so that changed video options apply.
+    //! \param previousRendererOptions The renderer options to restore if the new window cannot be created.
+    //! \param previousVideoConfig The video config values to restore in that case.
     void requestRenderWindowRecreation(
         const std::map<std::string, std::string>& previousRendererOptions,
         const std::map<std::string, std::string>& previousVideoConfig);
+
+    //! \brief Sets the given renderer options and video config values again and saves the user config.
+    static void restoreVideoSettings(const std::map<std::string, std::string>& rendererOptions,
+        const std::map<std::string, std::string>& videoConfig);
 
     //! \brief Release window-dependent objects before ODApplication destroys the primary window.
     void prepareRenderWindowShutdown();
@@ -245,9 +253,16 @@ private:
     //! \brief The first window owns the main OpenGL context and remains alive as an anchor.
     Ogre::RenderWindow* mPrimaryWindow;
 
+    //! \brief Whether the render window is to be replaced at the end of this frame.
     bool mRenderWindowRecreationPending;
+
+    //! \brief Counts the created windows to give each of them a unique name.
     uint32_t mRenderWindowSequence;
+
+    //! \brief The renderer options and video config values to restore if replacing the render window fails.
     std::map<std::string, std::string> mPreviousRendererOptions;
+
+    //! \brief Video config values to restore if the pending window recreation fails.
     std::map<std::string, std::string> mPreviousVideoConfig;
 
     //! \brief Foreign reference to gui.
@@ -255,6 +270,7 @@ private:
 
     std::unique_ptr<GameMap>       mGameMap;
     std::unique_ptr<CreatureReactions> mCreatureReactions;
+    //! The cosmetic life in the rooms (client side only)
     std::unique_ptr<RoomAmbience>  mRoomAmbience;
     std::unique_ptr<ModeManager>   mModeManager;
     std::unique_ptr<RenderSceneMenu>   mMainScene;
@@ -281,7 +297,10 @@ private:
     //! \brief Actually exit application
     void exitApplication();
 
+    //! \brief Replaces the render window if requested. The old window is kept if the new one cannot be set up.
     void applyPendingRenderWindowRecreation();
+
+    //! \brief Restores the stored previous renderer options and video config values.
     void restorePreviousVideoSettings();
 
     //! \brief Updates server-turn independent creature animation, audio, and overall rendering.

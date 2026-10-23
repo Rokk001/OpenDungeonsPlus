@@ -250,7 +250,7 @@ ODPacket& ODPacket::operator <<(const Ogre::Vector3&   data)
 
 ODPacket::operator bool() const
 {
-    return mPacket;
+    return static_cast<bool>(mPacket);
 }
 
 void ODPacket::clear()

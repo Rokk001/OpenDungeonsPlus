@@ -128,6 +128,7 @@ TrapSpike::TrapSpike(GameMap* gameMap) :
     setMeshName("");
 }
 
+//! \brief Hurts the creatures on the spikes; the damage follows the spike trap research.
 bool TrapSpike::shoot(Tile* tile)
 {
     std::vector<Tile*> visibleTiles;
@@ -144,8 +145,8 @@ bool TrapSpike::shoot(Tile* tile)
     {
         Tile* tile = target->getCoveredTile(0);
         target->takeDamage(this, 0.0, Random::Double(
-            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMinDamage),
-            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMaxDamage, true)), 0.0, 0.0, tile, false);
+            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMinDamage, ResearchEffect::Damage),
+            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMaxDamage, ResearchEffect::Damage)), 0.0, 0.0, tile, false);
         target->notifyFightPlayer(tile);
     }
     std::vector<GameEntity*> alliedCreatures = getGameMap()->getVisibleCreatures(visibleTiles, getSeat(), false);
@@ -153,8 +154,8 @@ bool TrapSpike::shoot(Tile* tile)
     {
         Tile* tile = target->getCoveredTile(0);
         target->takeDamage(this, 0.0, Random::Double(
-            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMinDamage),
-            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMaxDamage, true)), 0.0, 0.0, tile, false);
+            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMinDamage, ResearchEffect::Damage),
+            SkillManager::getResearchValue(getSeat(), SkillType::trapSpike, mMaxDamage, ResearchEffect::Damage)), 0.0, 0.0, tile, false);
         target->notifyFightPlayer(tile);
     }
     return true;

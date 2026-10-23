@@ -29,11 +29,12 @@ temple_header = read('source/rooms/RoomDungeonTemple.h')
 treasury_object = read('source/entities/TreasuryObject.cpp')
 
 constants = temple[
-    temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):
+    temple.index('const double RoomDungeonTemple::HEART_CRITICAL_FRACTION'):
     temple.index('RoomDungeonTemple::RoomDungeonTemple(')
 ]
 get_heart_tile = function(temple, 'Tile* RoomDungeonTemple::getHeartTile(')
-get_heart_max_hp = function(temple, 'double RoomDungeonTemple::getHeartMaxHP(')
+get_heart_max_hp = (function(temple, 'double RoomDungeonTemple::getHeartHPFactor(') + '\n' +
+                    function(temple, 'double RoomDungeonTemple::getHeartMaxHP('))
 get_hp = function(temple, 'double RoomDungeonTemple::getHP(')
 get_ring_center_tile = function(temple, 'Tile* RoomDungeonTemple::getRingCenterTile(')
 is_treasury_tile = function(temple, 'bool RoomDungeonTemple::isTreasuryTile(')
@@ -52,7 +53,8 @@ mesh_name = function(treasury_object, 'const char* TreasuryObject::getMeshNameFo
 
 # The ring is part of the heart: fixed capacity, no treasury skill involved.
 assert 'static const int treasuryTileCapacity = 1000;' in temple
-assert 'dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1' in temple
+assert 'static const int HEART_CORE_RADIUS = 1;' in temple
+assert 'dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS' in temple
 assert 'center = getCentralTile();' in temple
 # The gold virtuals are declared in the header so the carry system sees them.
 for symbol in ('getTotalGoldStorage', 'getTotalGoldStored', 'depositGold', 'withdrawGold'):
@@ -143,6 +145,7 @@ struct Room:Building {
  Tile* central=nullptr;
  Room(GameMap* m):map(m){}
  GameMap* getGameMap()const{return map;}
+ Seat* getSeat()const{return nullptr;}
  Tile* getCentralTile()const{return central;}
  uint32_t numCoveredTiles()const{return static_cast<uint32_t>(mCoveredTiles.size());}
  virtual void doUpkeep(){++doUpkeeps;}void announceKeeperWealth(Tile*){}
@@ -171,8 +174,9 @@ struct RoomDungeonTemple:Room {
  int tierChecks=0;
  void checkHeartHealthTier(){++tierChecks;}
  RoomDungeonTemple(GameMap* m):Room(m){}
- static const double HEART_HEAL_PER_SECOND;
  static const double HEART_CRITICAL_FRACTION;
+ double mHeartHPFactor=1.0;
+ double getHeartHPFactor()const;
  double getHeartMaxHP()const;
  double getHP(Tile*)const;
  Tile* getHeartTile() const;
@@ -431,7 +435,7 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-ring-') as tmp:
     probe_path.write_text(probe)
     exe = Path(tmp) / 'check.exe'
     cmd = (
-        'cl /nologo /EHsc /MD /std:c++14 /I source /Fo"{}" {} /Fe"{}"'
+        'cl /nologo /EHsc /MD /std:c++17 /I source /Fo"{}" {} /Fe"{}"'
     ).format(
         str(Path(tmp) / 'check.obj'),
         str(probe_path),

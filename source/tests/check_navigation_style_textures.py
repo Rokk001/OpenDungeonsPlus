@@ -111,7 +111,7 @@ def brightness(p):
 with tempfile.TemporaryDirectory(prefix='odp-navigation-style-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++14', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True,
+    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True,
                    stdout=subprocess.DEVNULL)
     subprocess.run([str(work / 'check.exe'), str(work)], check=True)
 

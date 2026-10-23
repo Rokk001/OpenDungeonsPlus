@@ -166,7 +166,7 @@ struct RoomDungeonTemple:Room {
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
  RoomType getType() const override{return RoomType::dungeonTemple;}
  INLINE_METHODS
- static const double HEART_HEAL_PER_SECOND;static const double HEART_CRITICAL_FRACTION;double getHeartMaxHP()const;
+ static const double HEART_CRITICAL_FRACTION;double mHeartHPFactor=1.0;double getHeartHPFactor()const;double getHeartMaxHP()const;
  bool canAttackHeart(Tile*,Seat*)const;double getHP(Tile*)const override;
  double takeHeartDamage(GameEntity*,double,double,double,double,Tile*);
  bool removeCoveredTile(Tile*)override;void doUpkeep()override;
@@ -277,7 +277,11 @@ int main(){
   check(living.importFromStream(damaged)&&living.getHP(nullptr)==100,"damaged heart round trip");
   int asked=g_removeAsked;living.updateActiveSpots(&map);living.restoreInitialEntityState();
   check(living.added==1&&living.mTempleObject!=nullptr&&living.restored==1,"living loaded heart gets its object back");
-  check(g_removeAsked==asked&&errorsLogged==errorsBefore,"living loaded heart is not asked to disappear");}
+  check(g_removeAsked==asked&&errorsLogged==errorsBefore,"living loaded heart is not asked to disappear");
+  // The research of the heart health: the maximum and the current health grow with the factor of the reached level
+  gResearchHeartHP=1.698;living.doUpkeep();
+  check(std::abs(living.getHeartMaxHP()-16980.0)<1e-6&&living.mHeartHP>169.8&&living.mHeartHP<171.0,"the heart health research raises the maximum and the current health");
+  gResearchHeartHP=1.0;}
 
  // Removal is retried while a seat that saw the heart has no vision on it
  {map.mRooms.clear();RoomDungeonTemple late(&map,&owner);RoomTreasuryTileData lateCentre,lateFloor;addFloor(late,&centre,&floor,&lateCentre,&lateFloor);
@@ -299,12 +303,14 @@ int main(){
 '''
 inline = '\n'.join(function(temple_header, sig) for sig in
                    ('bool canSeatSellBuilding(', 'bool isAttackable(', 'double takeDamage('))
-methods = temple[temple.index('const double RoomDungeonTemple::HEART_HEAL_PER_SECOND'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
-methods += temple[temple.index('const std::string HeartMeshNameHealthy'):temple.index('class DungeonHeartObject :')]
+methods = temple[temple.index('const double RoomDungeonTemple::HEART_CRITICAL_FRACTION'):temple.index('RoomDungeonTemple::RoomDungeonTemple(')]
+# The heart mesh names are defined once in the room object bounds header (namespace RoomObjectPath)
+bounds = read('source/gamemap/RoomObjectBounds.h')
+methods += 'namespace RoomObjectPath\n{\n' + bounds[bounds.index('static const std::string HEART_MESH_HEALTHY'):bounds.index('//! Returns true if name is the mesh of the dungeon heart')] + '}\n'
 methods += '\n'.join(function(temple, sig) for sig in (
     'double RoomDungeonTemple::getHeartHealthFraction(', 'HeartHealthTier RoomDungeonTemple::computeHeartHealthTier(',
     'const std::string& RoomDungeonTemple::getMeshNameForHeartTier(', 'void RoomDungeonTemple::checkHeartHealthTier(',
-    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
+    'double RoomDungeonTemple::getHP(', 'double RoomDungeonTemple::getHeartHPFactor(', 'double RoomDungeonTemple::getHeartMaxHP(', 'bool RoomDungeonTemple::canAttackHeart(',
     'double RoomDungeonTemple::takeHeartDamage(', 'bool RoomDungeonTemple::removeCoveredTile(',
     'void RoomDungeonTemple::doUpkeep(', 'Tile* RoomDungeonTemple::getHeartTile(',
     'Tile* RoomDungeonTemple::getRingCenterTile(', 'bool RoomDungeonTemple::isTreasuryTile(',
@@ -348,5 +354,5 @@ probe = configure_heart_probe(probe)
 with tempfile.TemporaryDirectory(prefix='odp-heart-ruin-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'], cwd=work, check=True)
     subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

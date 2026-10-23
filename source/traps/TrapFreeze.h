@@ -21,22 +21,30 @@
 #include "Trap.h"
 #include "traps/TrapType.h"
 
+#include <cstdint>
+
 //! \brief A pressure trap that paralyses every enemy creature standing on its tile when it fires.
 //! Frozen creatures can neither move nor fight. A creature that is low on health when caught shatters and dies.
 class TrapFreeze : public Trap
 {
 public:
+    //! \brief Creates a freeze trap and reads its reload time, number of shots, freeze time and shatter limit from the config.
     TrapFreeze(GameMap* gameMap);
 
+    //! \brief The type of this trap.
     virtual const TrapType getType() const override
     { return TrapType::freeze; }
 
+    //! \brief Freezes every enemy creature standing on the tile; one with little health left shatters.
+    //! \return True if at least one creature was frozen or shattered.
     virtual bool shoot(Tile* tile) override;
+    //! \brief The freeze trap cannot be attacked.
     virtual bool isAttackable(Tile* tile, Seat* seat) const override
     {
         return false;
     }
 
+    //! \brief The tile mesh is displayed under the trap.
     virtual bool displayTileMesh() const override
     { return true; }
 
@@ -45,13 +53,15 @@ public:
     virtual bool shouldDisplayGroundTile() const override
     { return true; }
 
+    //! \brief Creates the entity shown on the given tile.
     virtual TrapEntity* getTrapEntity(Tile* tile) override;
 
+    //! \brief The trap type of the freeze trap.
     static const TrapType mTrapType;
 
 private:
     //! \brief How many turns the creatures on the tile stay frozen
-    int32_t mFreezeTurns;
+    double mFreezeTurns;
 
     //! \brief A creature whose health is at or below this percentage of its maximum health shatters
     double mShatterHpPercent;

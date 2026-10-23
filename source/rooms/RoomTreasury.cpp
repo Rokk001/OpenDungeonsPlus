@@ -266,8 +266,6 @@ class RoomTreasuryFactory : public RoomFactory
 static RoomRegister reg(new RoomTreasuryFactory);
 }
 
-static const int maxGoldinTile = 1000;
-
 RoomTreasury::RoomTreasury(GameMap* gameMap) :
     Room(gameMap),
     mGoldChanged(false),
@@ -361,9 +359,11 @@ int RoomTreasury::getTotalGoldStorage() const
     return numCoveredTiles() * getGoldCapacityPerTile();
 }
 
+//! \brief Gold one tile stores: the configured value times the factor of the treasury research.
 int RoomTreasury::getGoldCapacityPerTile() const
 {
-    return static_cast<int>(SkillManager::getResearchValue(getSeat(), SkillType::roomTreasury, maxGoldinTile));
+    return static_cast<int>(SkillManager::getResearchValue(getSeat(), SkillType::roomTreasury,
+        ConfigManager::getSingleton().getRoomConfigDouble("TreasuryGoldPerTile"), ResearchEffect::GoldPerTile));
 }
 
 int RoomTreasury::getTotalGoldStored() const

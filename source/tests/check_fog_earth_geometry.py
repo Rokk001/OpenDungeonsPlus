@@ -183,7 +183,7 @@ def verify(sources):
             tileMeshEnt->setCastShadows(false);
             if(tile.getTileVisual() == TileVisual::claimedGround)
                 tileMeshEnt->setLightMask(~ROOM_LIGHT_MASK);
-            else tileMeshEnt->setLightMask(0xFFFFFFFF);
+            else tileMeshEnt->setLightMask(ALL_LIGHTS_MASK);
             if(!tileSetValue.getMaterialName().empty())
                 tileMeshEnt->setMaterialName(tileSetValue.getMaterialName());
             if(tileSetValue.getMaterialName() == "Gold" && nt == NodeType::MDTC_NODE)
@@ -197,14 +197,15 @@ def verify(sources):
     mark = overlay[overlay.index('if(markedForDigging)'):]
     assert '*markPass = *technique->getPass(0);' in mark
     assert 'markPass->setVertexProgram' not in mark
-    assert 'Ogre::ColourValue markColor(0.65f, 0.45f, 1.0f, 0.5f)' in mark
+    assert 'Ogre::ColourValue markColor(Tile::DIG_MARK_COLOUR)' in mark
     assert 'markPass->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA)' in mark
     assert 'markPass->setDepthWriteEnabled(false)' in mark
     preview = function(render, 'void RenderManager::rrDrawTilePreview(')
     assert 'if(tile->getEverVisible() && !tile->getHasFogOfWar())' not in preview
     assert 'if(!tile->getHasFogOfWar())' in preview
-    assert preview.count('if(!tile->getEverVisible() || tile->isFullTile())') == 2
-    assert preview.count('getWorldBoundingBox(true).getMaximum().z + 0.02f') == 3
+    assert preview.count('if((!tile->getEverVisible() || tile->isFullTile()) && !getWallPreviewHeight(') == 2
+    assert preview.count('getWorldBoundingBox(true).getMaximum().z + WALL_BORDER_LIFT') == 1
+    assert 'getWorldBoundingBox(true).getMaximum().z + WALL_BORDER_LIFT' in function(render, 'static bool getWallPreviewHeight(')
     picking = function(sources['picker'], 'bool ODFrameListener::findTilePositionFromMouse(')
     assert 'if(!tile->getEverVisible() || tile->isFullTile())' in picking
     assert 'wall->getWorldBoundingBox(true).getMaximum().z' in picking

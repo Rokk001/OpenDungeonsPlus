@@ -94,12 +94,13 @@ public:
     { return mSoundBuffer; }
 
 private:
+    //! \brief The corresponding sound buffer, must not be destroyed
+    //! before the sound object itself is deleted. Declared before the sound
+    //! object because the sound is constructed with it.
+    sf::SoundBuffer* mSoundBuffer;
+
     //! \brief The Main sound object
     sf::Sound* mSound;
-
-    //! \brief The corresponding sound buffer, must not be destroyed
-    //! before the sound object itself is deleted.
-    sf::SoundBuffer* mSoundBuffer;
 
     //! \brief The sound filename
     std::string mFilename;

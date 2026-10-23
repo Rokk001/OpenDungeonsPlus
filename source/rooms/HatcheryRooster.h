@@ -29,9 +29,13 @@ enum class RoosterMood : uint32_t
     guard   //! Defends the flock against a threat
 };
 
+//! \brief Default for one in how many turns a chick of the hatchery peeps.
+const uint32_t DEFAULT_CHICK_PEEP_CHANCE = 12;
+
 //! \brief Times and chances for the rooster, read from the config.
 struct RoosterSettings
 {
+    //! \brief Sets the built-in default times, chances and day length of the rooster.
     RoosterSettings() :
         mCrowMin(40),
         mCrowMax(90),
@@ -45,7 +49,7 @@ struct RoosterSettings
         mCatchDistance(0.55),
         mWalkGap(0.3),
         mHopDistance(0.6),
-        mChickPeepChance(12),
+        mChickPeepChance(DEFAULT_CHICK_PEEP_CHANCE),
         mScatterAttempts(4),
         mScatterMargin(1.0),
         mFightStandFactor(0.5)
@@ -84,6 +88,7 @@ struct RoosterSettings
 //! \brief What the rooster sees around him.
 struct RoosterContext
 {
+    //! \brief Starts with the strut mood and nothing seen around the rooster.
     RoosterContext() :
         mTurn(0),
         mMood(RoosterMood::strut),
@@ -111,6 +116,7 @@ struct RoosterContext
     uint32_t mRoll;
 };
 
+//! \brief What the rooster does next: the mood to start and for how many turns it lasts.
 struct RoosterPlan
 {
     RoosterMood mMood;

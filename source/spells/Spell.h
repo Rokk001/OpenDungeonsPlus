@@ -66,6 +66,12 @@ public:
     //! the family "Spells/<soundFamily>". Nothing else changes in the game.
     static void fireSpellEffect(Tile& tile, const std::string& effectName, const std::string& soundFamily);
 
+    //! The prefix of the sound family under which a cosmetic spell effect travels to the clients (the clients show
+    //! the effect and do not look for a sound)
+    static const std::string SPELL_EFFECT_PREFIX;
+    //! The name of the effect that makes the keeper's hand throw a spark (sent to the caster of an accepted spell)
+    static const std::string HAND_CAST_EFFECT_NAME;
+
     static std::string getSpellStreamFormat();
 
 protected:

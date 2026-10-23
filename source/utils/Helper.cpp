@@ -168,6 +168,8 @@ namespace Helper
         return true;
     }
 
+    //! \brief Reads a whole text file into a stream, removing trailing carriage returns and optionally comments.
+    //! \return false if the file could not be opened.
     bool readFile(const std::string& fileName, std::stringstream& stream, bool withoutComments)
     {
         // Try to open the input file for reading and throw an error if we can't.
@@ -184,6 +186,12 @@ namespace Helper
         while (baseLevelFile.good())
         {
             std::getline(baseLevelFile, nextParam);
+
+            // A file written on Windows ends its lines with a carriage return before the
+            // line feed; strip it so that a file reads the same wherever it was written.
+            if(!nextParam.empty() && (*nextParam.rbegin() == '\r'))
+                nextParam.erase(nextParam.size() - 1);
+
             /* Find the first occurrence of the comment symbol on the
              * line and return everything before that character.
              */
@@ -284,7 +292,7 @@ namespace Helper
     {
         return TTostring(d);
     }
-    #if defined(__OpenBSD__) && defined(__LP64__)
+    #if defined(__APPLE__) || (defined(__OpenBSD__) && defined(__LP64__))
     std::string toString(size_t d)
     {
         return TTostring(d);

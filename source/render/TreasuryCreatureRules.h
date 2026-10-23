@@ -26,8 +26,9 @@
 #include <cmath>
 #include <map>
 
-//! \brief Client side rules for creatures walking on the treasury gold: how far they are lifted,
-//! when a step splashes coins and how many splashes a room may show at once. Nothing here
+//! \brief Client side rules for creatures and effects on the treasury gold: how far creatures are lifted, when a step
+//! splashes coins, how a worker pours out its gold, how a pile settles when gold is added or taken, how deep objects
+//! stand in the gold, when coins slide, roll or sparkle and how many effects a room may show at once. Nothing here
 //! touches the renderer, the server or the creature position used for pathing.
 //! The tunable numbers live in config/treasury.cfg (see TreasurySettings.h); the constants below are references
 //! to the live values, so a value is read when it is used.
@@ -54,7 +55,38 @@ static const float pourClimbEnd = 0.3f;
 static const float pourDescendStart = 0.85f;
 //! Clip time kept free at the end of a clip so that it never counts as ended before the phase changes
 static const float pourClipMargin = 0.1f;
+//! \brief Extra height in tiles per pile level that a pouring worker climbs above the gold surface.
+static const float pourRiseHeightPerLevel = 0.035f;
+//! \brief Share of the pour time (0..1) at which the worker has tipped over the heap completely.
+static const float pourTipEnd = 0.5f;
+//! \brief Forward lean in radians of a worker that tips over the heap (negative leans forward).
+static const float pourTipLean = -0.5f;
+//! \brief Full circle in radians, used for the rocking and the swaying while pouring.
+static const float pourFullCircle = 6.2831853f;
+//! \brief Number of rocking swings of a pouring worker while the coins run out.
+static const float pourRockCycles = 3.0f;
+//! \brief Size in radians of the rocking of a pouring worker.
+static const float pourRockAmplitude = 0.07f;
+//! \brief Share of the pour time (0..1) at which the rocking starts and at which it has built up fully.
+static const float pourRockStart = 0.45f;
+static const float pourRockFull = 0.55f;
+//! \brief Share of the pour time (0..1) at which the rocking starts to fade and at which it has faded out.
+static const float pourRockFadeStart = 0.8f;
+static const float pourRockFadeEnd = 0.9f;
+//! \brief Number of swings of the sideways sway while the worker climbs.
+static const float pourSwayCycles = 6.0f;
+//! \brief Size in radians of the sideways sway while the worker climbs.
+static const float pourSwayAmplitude = 0.12f;
+//! \brief Share of the pour time (0..1) at which the sway of the climb up has built up fully.
+static const float pourSwayUpEnd = 0.1f;
+//! \brief Share of the pour time (0..1) at which the sway of the climb up has faded out.
+static const float pourSwayUpFadeEnd = 0.4f;
+//! \brief Share of the pour time (0..1) at which the sway of the climb down has built up fully.
+static const float pourSwayDownEnd = 0.9f;
+//! \brief Share of the pour time (0..1) at which the sway of the climb down starts to fade.
+static const float pourSwayDownFadeStart = 0.97f;
 
+//! A smooth ramp from 0 at edgeStart to 1 at edgeEnd (cubic, flat at both ends)
 inline float smoothStep(float edgeStart, float edgeEnd, float t)
 {
     if(t <= edgeStart)
@@ -69,9 +101,9 @@ inline float smoothStep(float edgeStart, float edgeEnd, float t)
 //! top of the heap, held while pouring, then down again. Higher piles are climbed higher.
 inline float pourRise(float t, int level)
 {
-    const float amplitude = 0.035f * static_cast<float>(level < 0 ? 0 : level);
+    const float amplitude = pourRiseHeightPerLevel * static_cast<float>(level < 0 ? 0 : level);
     const float progress = t / pourDuration;
-    return amplitude * (smoothStep(0.0f, 0.3f, progress) - smoothStep(0.85f, 1.0f, progress));
+    return amplitude * (smoothStep(0.0f, pourClimbEnd, progress) - smoothStep(pourDescendStart, 1.0f, progress));
 }
 
 //! Forward lean (radians, negative leans forward) of a pouring worker: tips over the heap, rocks a little
@@ -79,19 +111,20 @@ inline float pourRise(float t, int level)
 inline float pourLean(float t)
 {
     const float progress = t / pourDuration;
-    const float tip = smoothStep(0.3f, 0.5f, progress) - smoothStep(0.85f, 1.0f, progress);
-    const float rock = std::sin(progress * 6.2831853f * 3.0f) * 0.07f * smoothStep(0.45f, 0.55f, progress)
-        * (1.0f - smoothStep(0.8f, 0.9f, progress));
-    return -0.5f * tip + rock;
+    const float tip = smoothStep(pourClimbEnd, pourTipEnd, progress) - smoothStep(pourDescendStart, 1.0f, progress);
+    const float rock = std::sin(progress * pourFullCircle * pourRockCycles) * pourRockAmplitude
+        * smoothStep(pourRockStart, pourRockFull, progress)
+        * (1.0f - smoothStep(pourRockFadeStart, pourRockFadeEnd, progress));
+    return pourTipLean * tip + rock;
 }
 
 //! Sideways sway (radians) of the climb: the worker wobbles while it scrambles up and down the heap
 inline float pourSway(float t)
 {
     const float progress = t / pourDuration;
-    const float climbing = smoothStep(0.0f, 0.1f, progress) * (1.0f - smoothStep(0.3f, 0.4f, progress))
-        + smoothStep(0.85f, 0.9f, progress) * (1.0f - smoothStep(0.97f, 1.0f, progress));
-    return std::sin(progress * 6.2831853f * 6.0f) * 0.12f * climbing;
+    const float climbing = smoothStep(0.0f, pourSwayUpEnd, progress) * (1.0f - smoothStep(pourClimbEnd, pourSwayUpFadeEnd, progress))
+        + smoothStep(pourDescendStart, pourSwayDownEnd, progress) * (1.0f - smoothStep(pourSwayDownFadeStart, 1.0f, progress));
+    return std::sin(progress * pourFullCircle * pourSwayCycles) * pourSwayAmplitude * climbing;
 }
 
 //! Phase of the delivery clip at time t (seconds): 0 climb up, 1 pour, 2 climb down (the climb clip backwards)
@@ -128,6 +161,7 @@ inline float pourClipTime(float t, float climbLength, float pourLength)
     return time < 0.0f ? 0.0f : time;
 }
 
+//! True when the gold of the given pile level is deep enough to splash
 inline bool isDeep(int level)
 {
     return level >= deepLevel;
@@ -148,7 +182,7 @@ inline bool stepDue(float dx, float dy)
     return dx * dx + dy * dy >= stepDistance * stepDistance;
 }
 
-//! Particle budget of one room by the "Treasury detail" option
+//! Particle budget of one room by the "Treasury detail" option (number of splashes it may show at once)
 inline int splashBudget(TreasuryGoldMesh::Detail detail)
 {
     switch(detail)
@@ -167,6 +201,7 @@ inline int splashBudget(TreasuryGoldMesh::Detail detail)
 static const float& dustInterval = TreasurySettings::current().dustInterval;
 static const float& dustLifetime = TreasurySettings::current().dustLifetime;
 
+//! Number of dust puffs one room may show at once at the given "Treasury detail" option
 inline int dustBudget(TreasuryGoldMesh::Detail detail)
 {
     switch(detail)
@@ -189,6 +224,7 @@ static const float portalDustHeight = 0.9f;
 //! The dungeon heart of a rich keeper uses the same rule; its dust floats this high above the heart.
 static const float heartDustHeight = 1.8f;
 
+//! True when a keeper with that gold and treasury capacity counts as rich (dust over its portal and heart)
 inline bool isRichKeeper(int gold, int goldMax)
 {
     return KeeperWealth::tier(gold, goldMax) > 0;
@@ -205,6 +241,7 @@ static const int& ambientBudgetReduced = TreasurySettings::current().ambientBudg
 static const int& slideLevel = TreasurySettings::current().slideLevel;
 static const int& glintLevel = TreasurySettings::current().glintLevel;
 
+//! Number of ambient effects one room may show at once at the given "Treasury detail" option
 inline int ambientBudget(TreasuryGoldMesh::Detail detail)
 {
     switch(detail)
@@ -249,13 +286,17 @@ inline float localDentFactor(float t)
     return smoothStep(0.0f, dentShare, progress) * (1.0f - smoothStep(dentShare, 1.0f, progress));
 }
 
+//! The start height factor of a settling pile is kept in this range, so that any change of the level looks sane
+static const float settleFromMin = 0.4f;
+static const float settleFromMax = 1.6f;
+
 //! The old level over the new one as a start height factor, kept in a range that looks sane for any change
 inline float pileSettleFrom(int oldLevel, int newLevel)
 {
     if(oldLevel <= 0 || newLevel <= 0)
         return 1.0f;
     const float ratio = static_cast<float>(oldLevel) / static_cast<float>(newLevel);
-    return ratio < 0.4f ? 0.4f : (ratio > 1.6f ? 1.6f : ratio);
+    return ratio < settleFromMin ? settleFromMin : (ratio > settleFromMax ? settleFromMax : ratio);
 }
 
 //! Objects standing in the gold (room objects, gold lying on the floor of a treasury) are drawn partly buried:
@@ -341,6 +382,8 @@ static const int& lodSwitchesPerUpdate = TreasurySettings::current().lodSwitches
 //! Piles and floor gold heaps rebuilt per frame after the "Treasury detail" option changed
 static const int& rebuildPerFrame = TreasurySettings::current().rebuildPerFrame;
 
+//! True when a pile at the given distance uses the reduced mesh (a reduced pile only leaves it again below the
+//! hysteresis distance)
 inline bool lodReducedAt(bool currentlyReduced, float distance)
 {
     return distance > (currentlyReduced ? lodFarDistance - lodHysteresis : lodFarDistance);
@@ -362,6 +405,7 @@ public:
         return true;
     }
 
+    //! Gives one place of the room back
     void release(const void* room)
     {
         std::map<const void*, int>::iterator it = mActive.find(room);
@@ -372,12 +416,14 @@ public:
             mActive.erase(it);
     }
 
+    //! Number of places of the room in use
     int active(const void* room) const
     {
         std::map<const void*, int>::const_iterator it = mActive.find(room);
         return it == mActive.end() ? 0 : it->second;
     }
 
+    //! Forgets every place of every room
     void clear()
     {
         mActive.clear();

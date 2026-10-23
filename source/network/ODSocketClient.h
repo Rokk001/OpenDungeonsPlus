@@ -82,7 +82,9 @@ class ODSocketClient
 
         Player* getPlayer() { return mPlayer; }
         void setPlayer(Player* player) { mPlayer = player; }
+        //! \brief Whether the other side agreed to nickname changes during the game.
         bool supportsLiveNickname() const { return mSupportsLiveNickname; }
+        //! \brief Stores whether the other side agreed to nickname changes during the game.
         void setSupportsLiveNickname(bool supported) { mSupportsLiveNickname = supported; }
         bool supportsCreatureMood() const { return mSupportsCreatureMood; }
         void setSupportsCreatureMood(bool supported) { mSupportsCreatureMood = supported; }
@@ -94,13 +96,18 @@ class ODSocketClient
         bool supportsCreatureProgress() const { return mSupportsCreatureProgress; }
         void setSupportsCreatureProgress(bool supported) { mSupportsCreatureProgress = supported; }
         bool supportsCosmeticEvents() const { return mSupportsCosmeticEvents; }
+        //! \brief Records whether the client negotiated cosmetic events (see CosmeticEvent.h)
         void setSupportsCosmeticEvents(bool supported) { mSupportsCosmeticEvents = supported; }
         int64_t getLastTurnAck() { return mLastTurnAck; }
         void setLastTurnAck(int64_t lastTurnAck) { mLastTurnAck = lastTurnAck; }
         //! \brief Heart health fraction of the last heartHealth message sent, negative if none
         float getHeartHealthSent() const { return mHeartHealthSent; }
         void setHeartHealthSent(float fraction) { mHeartHealthSent = fraction; }
+        //! \brief Tells whether the client already got the current relationship tiers from the server
+        //! \return True once the tiers were received
         bool getRelationshipsSynced() const { return mRelationshipsSynced; }
+        //! \brief Remembers whether the client got the current relationship tiers from the server
+        //! \param synced True once the tiers were received
         void setRelationshipsSynced(bool synced) { mRelationshipsSynced = synced; }
         bool getWallTorchesSynced() const { return mWallTorchesSynced; }
         void setWallTorchesSynced(bool synced) { mWallTorchesSynced = synced; }

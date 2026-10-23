@@ -181,9 +181,9 @@ with tempfile.TemporaryDirectory(prefix="workshop-order-") as directory:
     source.write_text(probe, encoding="utf-8")
     executable = path / "check.exe"
     if Path(args.compiler).stem.lower() == "cl":
-        command = [args.compiler, "/nologo", "/EHsc", "/std:c++14", str(source), f"/Fe:{executable}"]
+        command = [args.compiler, "/nologo", "/EHsc", "/std:c++17", str(source), f"/Fe:{executable}"]
     else:
-        command = [args.compiler, "-std=c++14", str(source), "-o", str(executable)]
+        command = [args.compiler, "-std=c++17", str(source), "-o", str(executable)]
     subprocess.run(command, cwd=path, check=True)
     result = subprocess.run([str(executable)], cwd=path)
     raise SystemExit(result.returncode)

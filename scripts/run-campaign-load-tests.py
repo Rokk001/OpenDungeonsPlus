@@ -14,13 +14,13 @@ import subprocess
 import sys
 
 
-# Inherit the integrator runner's dependency paths and disable modal loader errors.
+# Put the dependency DLL folders (OD_DEPS_ROOT, default od-deps-next) on PATH and disable modal loader errors.
 def probe_environment():
     if os.name != 'nt':
         raise RuntimeError('Campaign load probes require the Windows integration host')
     ctypes.windll.kernel32.SetErrorMode(0x0001 | 0x0002 | 0x8000)
     environment = dict(os.environ)
-    dependency_root = Path.home() / 'od-deps'
+    dependency_root = Path(os.environ.get('OD_DEPS_ROOT') or Path.home() / 'od-deps-next')
     dll_paths = [dependency_root / 'install/bin', dependency_root / 'build/ogre/bin/release']
     environment['PATH'] = os.pathsep.join([str(path) for path in dll_paths]
                                           + [environment.get('PATH', '')])
@@ -49,9 +49,16 @@ def game_is_running(executable):
         raise RuntimeError('Game process detection requires the Windows integration host')
     result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq ' + executable.name,
                              '/FO', 'CSV', '/NH'], stdin=subprocess.DEVNULL,
-                            capture_output=True, text=True, timeout=30, check=True)
+                            capture_output=True, timeout=30, check=True)
+    # tasklist writes console-codepage bytes (e.g. the umlaut of the localized "no tasks"
+    # message when the game is not running); decode UTF-8 first, then the OEM codepage,
+    # never fail on odd bytes.
+    try:
+        output = result.stdout.decode('utf-8')
+    except UnicodeDecodeError:
+        output = result.stdout.decode('oem', errors='replace')
     return any(row and row[0].casefold() == executable.name.casefold()
-               for row in csv.reader(result.stdout.splitlines()))
+               for row in csv.reader(output.splitlines()))
 
 
 # Run every configured map once, retaining logs and real process exit codes.
