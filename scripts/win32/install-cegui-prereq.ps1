@@ -74,7 +74,7 @@ if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\cegui-config
 foreach ($taskConfiguration in @('Release', 'Debug')) {
     Write-Output "Building and installing CEGUI ($taskConfiguration)"
     $ErrorActionPreference = 'Continue'
-    & $taskCmake --build "$taskRoot\build\cegui" --config $taskConfiguration --target INSTALL --parallel 2 *> "$taskRoot\logs\cegui-$taskConfiguration.log"
+    & $taskCmake --build "$taskRoot\build\cegui" --config $taskConfiguration --target INSTALL --parallel 1 *> "$taskRoot\logs\cegui-$taskConfiguration.log"
     $ErrorActionPreference = 'Stop'
     if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\cegui-$taskConfiguration.log" -Tail 60; throw "CEGUI $taskConfiguration build failed" }
 }
