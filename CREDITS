@@ -347,7 +347,6 @@ textures/
 -> CreatureExperience.png, CreatureRecovery.png    AI-generated           GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 -> DungeonHeart{Healthy,Damaged,Critical}{,Normal,Glow}.pngMario                   GPLv3+                  Procedural, tools/heart-textures/generate_heart_textures.py
 -> DefeatFireball.png                  AI-generated            GPLv3+                  AI-generated, created for this project (first commit 2c05e6eb2); see "Generated assets" below
--> MainMenuBackground.png              AI-generated with Codex  GPLv3+                  Added 2026 (first commit b04544ed8)
 -> portrait-*.png                      AI-generated with Codex  GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 
 ======================
@@ -1286,11 +1285,11 @@ models/Troll.skeleton                                    OD Team  GPLv3+  Own wo
 =======================================================
 == Original fortress menu scene ==
 =======================================================
-assets-src/menu-scene/*.blend          OD Team                 GPLv3+                  Original fortress source models, independently AI-authored for this project with Blender; one model per file.
-models/Menu*.mesh, models/MenuBanner.skeleton OD Team            GPLv3+                  Original fortress geometry and looping cloth skeleton, generated for this project with tools/blender-assets/menu_scene_models.py and the existing Ogre exporter.
+assets-src/menu-scene/*.blend          OD Team                 GPLv3+                  Original fortress source models, independently AI-authored for this project with Blender; one model per file. Revised with damaged weathered masonry, worn chains, a horned skull crown, broken guardians, torn cloth and a ruined rain-soaked courtyard.
+models/Menu*.mesh, models/MenuBanner.skeleton OD Team            GPLv3+                  Original fortress geometry and looping cloth skeleton, generated for this project with tools/blender-assets/menu_scene_models.py and the existing Ogre exporter; revised decay details retain the original source and licence.
 materials/textures/menu/MenuStone.png, materials/textures/menu/MenuStoneNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; seamless dark stone albedo and matching normal map.
 materials/textures/menu/MenuCampaignMap.png OD Team             GPLv3+                  Exact reuse of this project's AI-generated gui/campaign/world_base.png, credited above, on the campaign table; no changes to the map.
 tools/blender-assets/menu_scene_models.py OD Team                GPLv3+                  Original AI-generated Blender source generator for the fortress models.
-materials/scripts/MenuScene.material, particles/MenuScene.particle OD Team GPLv3+       Original scene materials and looping atmosphere effects generated for this project; existing project particle textures retain their credits above.
-assets-src/menu-scene/MenuSceneAssembly.blend OD Team            GPLv3+                  Own AI-authored Blender assembly of this project's thirteen fortress source models at the configured positions, camera and lights; existing source assets keep their credits above.
+materials/scripts/MenuScene.material, particles/MenuScene.particle OD Team GPLv3+       Original scene materials and looping atmosphere effects generated for this project; revised dark weathered stone, soot and rain-pool materials reuse the credited stone textures. Existing project particle textures retain their credits above.
+assets-src/menu-scene/MenuSceneAssembly.blend OD Team            GPLv3+                  Own AI-authored Blender assembly of this project's thirteen fortress source models at the configured positions, camera and lights; updated with the weathered fortress geometry and dark surface materials. Existing source assets keep their credits above.
 tools/blender-assets/menu_scene_assembly.py OD Team               GPLv3+                  Own AI-authored Blender assembly and Eevee preview script for the existing configured fortress scene.

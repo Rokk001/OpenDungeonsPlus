@@ -374,12 +374,14 @@ void ODFrameListener::prepareRenderWindowShutdown()
     Ogre::WindowEventUtilities::_removeRenderWindow(mPrimaryWindow);
 }
 
+//! \brief Releases the native menu while its renderer and camera are alive, then shuts down the session.
 void ODFrameListener::exitApplication()
 {
     OD_LOG_INF("Closing down.");
 
     ODClient::getSingleton().notifyExit();
     ODServer::getSingleton().notifyExit();
+    freeMainMenuScene();
     mGameMap->clearAll();
 
     OD_LOG_INF("Remove listener registration");
@@ -725,15 +727,29 @@ void ODFrameListener::freeMainMenuScene()
     mCameraManager.setMainMenuProjection(false);
 }
 
+//! \brief Starts the configured outside-to-overview arrival using the active scene camera.
 void ODFrameListener::startMainMenuFlight()
 {
     if(!mIsMainMenuCreated)
         return;
 
-    if(mMainScene->startFlight())
+    if(mMainScene->startFlight(mCameraManager))
         mMainScene->updateMenu(mCameraManager, *mRenderManager, 0.0f);
 }
 
+//! \brief Starts a named destination or return flight only while the native menu scene exists.
+bool ODFrameListener::flyMainMenuTo(const std::string& place)
+{
+    return mIsMainMenuCreated && mMainScene->flyTo(mCameraManager, place);
+}
+
+//! \brief Returns the settled place without exposing scene ownership to application modes.
+std::string ODFrameListener::getMainMenuPlace() const
+{
+    return mIsMainMenuCreated ? mMainScene->getCurrentPlace() : std::string();
+}
+
+//! \brief Reports whether the native menu camera is still following a configured path.
 bool ODFrameListener::isMainMenuFlightActive() const
 {
     return mIsMainMenuCreated && mMainScene->isFlightActive();

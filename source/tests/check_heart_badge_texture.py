@@ -19,7 +19,6 @@ import os
 import re
 import subprocess
 import tempfile
-import time
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--menu-scene', action='store_true', help='Also render the configured menu scene at 1920x1080')
@@ -40,6 +39,7 @@ gui = (repo / 'source/render/Gui.cpp').read_text()
 rules = repo / 'source/game/HeartHealthRing.h'
 
 
+# Extract one complete production function for the existing native probe.
 def function(text, signature):
     start = text.index(signature)
     end = text.index('{', start) + 1
@@ -67,6 +67,7 @@ probe = r'''
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <map>
 #include <Ogre.h>
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/RendererModules/Ogre/Renderer.h>
@@ -79,6 +80,9 @@ probe = r'''
 
 BADGE_CODE
 UPDATE
+//! \brief Records each assertion from the badge and optional menu probes.
+void check(bool ok, const std::string& msg);
+MENU_HELPERS
 
 int gChecks = 0, gFailures = 0;
 void check(bool ok, const std::string& msg) {++gChecks;if(!ok){++gFailures;std::cout << "FAIL " << msg << '\n';}}
@@ -205,9 +209,228 @@ int main(int argc, char** argv)
     return gFailures ? 1 : 0;
 }
 '''
-# Render only the commands used by the current menu configuration in this existing Ogre scene.
+# Keep the existing native asset setup while exercising production camera and menu navigation below.
 menu_render = ''
+menu_helpers = ''
 if args.menu_scene:
+    menu_helpers = r'''
+#include "renderscene/RenderSceneMenu.h"
+#include <OgreRectangle2D.h>
+#include <CEGUI/widgets/ButtonBase.h>
+#include <CEGUI/widgets/FrameWindow.h>
+
+//! \brief Exposes the real probe camera hierarchy to the extracted production menu functions.
+class CameraManager
+{
+public:
+    enum Direction {fullStop};
+    Ogre::Camera* mActiveCamera = nullptr;
+    Ogre::SceneNode* mActiveCameraNode = nullptr;
+    Ogre::Viewport* mViewport = nullptr;
+    bool mMainMenuProjection = true;
+    Ogre::Radian mMainMenuBaseFovY = Ogre::Degree(45.0f);
+    //! \brief Returns the attached native camera.
+    Ogre::Camera* getActiveCamera() {return mActiveCamera;}
+    //! \brief Returns the native position node used by production path sampling.
+    Ogre::SceneNode* getActiveCameraNode() const {return mActiveCameraNode;}
+    //! \brief Returns the native render viewport.
+    Ogre::Viewport* getViewport() {return mViewport;}
+    //! \brief Stops gameplay movement, which the isolated native camera does not use.
+    void move(Direction) {}
+    //! \brief Keeps the production projection function in this probe.
+    void setViewportSize(unsigned int width, unsigned int height);
+};
+
+//! \brief Supplies native scene ownership and unchanged hand hooks to the menu code.
+class RenderManager
+{
+public:
+    Ogre::SceneManager* mSceneManager = nullptr;
+    bool mHandVisible = true;
+    //! \brief Returns the same native scene that owns the probe entities and lights.
+    Ogre::SceneManager* getSceneManager() {return mSceneManager;}
+    //! \brief Reports the native menu's hand visibility state.
+    bool isKeeperHandVisible() const {return mHandVisible;}
+    //! \brief Retains the production menu's hand-visibility lifecycle.
+    void rrToggleHandSelectorVisibility() {mHandVisible = !mHandVisible;}
+    //! \brief Leaves hand mesh animation outside the isolated camera/navigation checks.
+    void rrSetHandPose(bool, bool) {}
+};
+
+//! \brief The existing asset loader owns render commands; these adapters delimit their parsed groups.
+class RenderSceneGroup
+{
+public:
+    //! \brief Reads one native scene group, already instantiated by the original asset probe below.
+    static RenderSceneGroup* load(std::istream& input)
+    {
+        std::string line;
+        if(!std::getline(input, line))
+            return nullptr;
+        while(std::getline(input, line))
+            if(line == "[/RenderSceneGroup]")
+                return new RenderSceneGroup();
+        return nullptr;
+    }
+    //! \brief Leaves original native asset setup in the existing menu probe.
+    void reset(CameraManager&, RenderManager&) {}
+    //! \brief Leaves original native asset cleanup in the existing menu probe.
+    void freeGroup(CameraManager&, RenderManager&) {}
+    //! \brief Keeps independently sampled particles and banners outside camera state assertions.
+    void update(CameraManager&, RenderManager&, Ogre::Real) {}
+    //! \brief Accepts the real listener relationship without mocking camera paths.
+    void setRenderSceneListener(RenderSceneListener*) {}
+    //! \brief Accepts native synchronization unrelated to the menu's camera paths.
+    void notifySyncPost(const std::string&) {}
+};
+
+namespace Helper
+{
+//! \brief Reads the actual configuration while removing its comment-only lines.
+bool readFile(const std::string& name, std::stringstream& output, bool)
+{
+    std::ifstream input(name);
+    std::string line;
+    while(std::getline(input, line))
+    {
+        const std::size_t comment = line.find('#');
+        if(comment != std::string::npos)
+            line.erase(comment);
+        if(line.find_first_not_of(" \t\r") != std::string::npos)
+            output << line << '\n';
+    }
+    return !input.bad() && input.is_open();
+}
+//! \brief Reads a nonempty trimmed configuration command.
+bool readNextLineNotEmpty(std::istream& input, std::string& line)
+{
+    while(std::getline(input, line))
+    {
+        const std::size_t first = line.find_first_not_of(" \t\r");
+        if(first == std::string::npos)
+            continue;
+        line = line.substr(first, line.find_last_not_of(" \t\r") - first + 1);
+        return true;
+    }
+    return false;
+}
+}
+#define OD_LOG_ERR(message) throw std::runtime_error(message)
+#define OD_LOG_WRN(message) throw std::runtime_error(message)
+PRODUCTION_MENU_CODE
+PRODUCTION_PROJECTION
+
+//! \brief Existing menu destinations used by the extracted callbacks.
+struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY, ADVERTISMENT};};
+//! \brief Supplies only the existing menu-sheet lookup used by the real callbacks.
+class Gui
+{
+public:
+    enum GuiSheet {mainMenu};
+    CEGUI::Window* mRoot = nullptr;
+    //! \brief Returns the same native CEGUI sheet throughout the flight.
+    CEGUI::Window* getGuiSheet(GuiSheet) {return mRoot;}
+};
+//! \brief Records a child mode for the production back-history guard.
+class AbstractApplicationMode
+{
+public:
+    AbstractModeManager::ModeType mMode = AbstractModeManager::MENU_REPLAY;
+    //! \brief Returns the current child mode while its root is hidden during return.
+    AbstractModeManager::ModeType getModeType() const {return mMode;}
+};
+//! \brief Connects production menu navigation with the production three-dimensional scene.
+class ODFrameListener
+{
+public:
+    RenderSceneMenu* mMenu = nullptr;
+    CameraManager* mCamera = nullptr;
+    //! \brief Returns the fixture listener owning the real camera path state.
+    static ODFrameListener& getSingleton() {static ODFrameListener listener;return listener;}
+    //! \brief Reads the production path timer.
+    bool isMainMenuFlightActive() const {return mMenu->isFlightActive();}
+    //! \brief Requests a production configured destination.
+    bool flyMainMenuTo(const std::string& name) {return mMenu->flyTo(*mCamera, name);}
+    //! \brief Reads the destination published only at actual arrival.
+    const std::string& getMainMenuPlace() const {return mMenu->getCurrentPlace();}
+};
+//! \brief Provides the exact history members needed by the extracted previous-mode guard.
+class ModeManager : public AbstractModeManager
+{
+public:
+    Gui mGui;
+    bool mMainMenuReturnPending = false;
+    std::string mMenuArrivalPlace;
+    ModeType mRequestedMode = NONE;
+    AbstractApplicationMode* mCurrentApplicationMode = nullptr;
+    std::vector<ModeType> mPreviousModeTypes;
+    bool mStoreCurrentModeAtChange = true;
+    //! \brief Returns the real CEGUI sheet adapter.
+    Gui& getGui() {return mGui;}
+    //! \brief Keeps the production back-history guard in the native menu probe.
+    void requestPreviousMode();
+};
+#define OD_ASSERT_TRUE(condition) do {if(!(condition)) throw std::runtime_error("menu assertion");} while(false)
+NAV_CONSTANTS
+//! \brief Hosts unchanged callback bodies against native CEGUI windows and the production scene.
+class MenuModeMain
+{
+public:
+    ModeManager mManager;
+    bool mSkirmishSubMenuPending = false;
+    std::string mPendingSubMenu;
+    AbstractModeManager::ModeType mPendingMode = AbstractModeManager::NONE;
+    AbstractModeManager::ModeType mLastMode = AbstractModeManager::NONE;
+    //! \brief Returns the same manager used by all extracted callbacks.
+    ModeManager& getModeManager() {return mManager;}
+    //! \brief Records the original target action rather than replacing it with a new pane.
+    bool changeModeEvent(AbstractModeManager::ModeType mode, const CEGUI::EventArgs&) {mLastMode = mode;return true;}
+    //! \brief Leaves campaign confirmation controls unchanged outside the tested navigation.
+    void showNewCampaignConfirm(bool) {}
+    //! \brief Runs the production delayed-pane completion callback.
+    void onFrameStarted(const Ogre::FrameEvent&);
+    //! \brief Runs production immediate Quit or delayed Replay navigation.
+    bool changeModeAfterFlight(AbstractModeManager::ModeType, const CEGUI::EventArgs&);
+    //! \brief Starts the production submenu destination request.
+    bool toggleSubMenu(const std::string&);
+    //! \brief Reveals the existing submenu through its production callback.
+    void showSubMenu(const std::string&);
+    //! \brief Applies the unchanged production button visibility rule.
+    void showMainMenuButtons(bool);
+    //! \brief Runs the production submenu Back/Escape return request.
+    bool goBack(const CEGUI::EventArgs& e = {});
+};
+PRODUCTION_NAVIGATION
+
+//! \brief Advances production camera and menu timing with a bounded number of ordinary frames.
+void finishMenuFlight(RenderSceneMenu& menu, CameraManager& camera, RenderManager& render, MenuModeMain& navigation)
+{
+    Ogre::FrameEvent frame;
+    frame.timeSinceLastFrame = 0.05f;
+    frame.timeSinceLastEvent = 0.05f;
+    unsigned int frames = 0;
+    while(menu.isFlightActive() && frames < 200)
+    {
+        navigation.onFrameStarted(frame);
+        menu.updateMenu(camera, render, frame.timeSinceLastFrame);
+        ++frames;
+    }
+    check(frames < 200 && !menu.isFlightActive(), "the configured menu flight terminates");
+    navigation.onFrameStarted(frame);
+}
+
+//! \brief Checks a settled camera against the actual authored endpoint and orientation.
+void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::string& name)
+{
+    Ogre::Vector3 position = Ogre::Vector3::ZERO;
+    Ogre::Quaternion orientation = Ogre::Quaternion::IDENTITY;
+    check(menu.getCameraPose(name, position, orientation), "configured endpoint exists: " + name);
+    check(camera.getActiveCamera()->getDerivedPosition().positionEquals(position, 0.001f), "camera reaches endpoint: " + name);
+    check(std::abs(camera.getActiveCamera()->getDerivedOrientation().Dot(orientation)) > 0.99999f,
+        "camera reaches endpoint orientation: " + name);
+    check(menu.getCurrentPlace() == name, "settled menu place matches: " + name);
+}
+'''
     menu_render = r'''
     const std::string repository = argv[2];
     const std::string output = argv[3];
@@ -230,16 +453,24 @@ if args.menu_scene:
         throw std::runtime_error("cannot open menu scene configuration");
     unsigned int entityCount = 0, lightCount = 0, particleCount = 0, animationCount = 0, cameraCount = 0;
     std::string line;
+    bool cameraMetadata = false;
     while(std::getline(definition, line))
     {
         std::istringstream command(line);
         std::string type;
         command >> type;
+        if(type == "[MenuCamera]" || type == "[/MenuCamera]")
+        {
+            cameraMetadata = (type == "[MenuCamera]");
+            continue;
+        }
+        if(cameraMetadata)
+            continue;
         if(type.empty() || type[0] == '#' || type == "[RenderSceneGroup]" || type == "[/RenderSceneGroup]")
             continue;
         if(type == "CameraMove")
         {
-            Ogre::Vector3 position, rotation;
+            Ogre::Vector3 position = Ogre::Vector3::ZERO, rotation = Ogre::Vector3::ZERO;
             if(!(command >> position.x >> position.y >> position.z >> rotation.x >> rotation.y >> rotation.z))
                 throw std::runtime_error("invalid menu camera command");
             cameraPosition->setPosition(position);
@@ -252,11 +483,11 @@ if args.menu_scene:
         else if(type == "AddEntity")
         {
             std::string name, meshName;
-            Ogre::Vector3 position;
+            Ogre::Vector3 position = Ogre::Vector3::ZERO;
             if(!(command >> name >> meshName >> position.x >> position.y >> position.z))
                 throw std::runtime_error("invalid menu entity command");
             Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().load(meshName, "Graphics");
-            unsigned short source;
+            unsigned short source = 0;
             if(!mesh->suggestTangentVectorBuildParams(source))
                 mesh->buildTangentVectors(source);
             Ogre::Entity* entity = scene->createEntity(name, mesh);
@@ -266,9 +497,9 @@ if args.menu_scene:
         else if(type == "AddPointLight")
         {
             std::string name;
-            Ogre::Vector3 position;
-            Ogre::ColourValue diffuse, specular;
-            Ogre::Real range, constant, linear, quadratic;
+            Ogre::Vector3 position = Ogre::Vector3::ZERO;
+            Ogre::ColourValue diffuse = Ogre::ColourValue::Black, specular = Ogre::ColourValue::Black;
+            Ogre::Real range = 0, constant = 0, linear = 0, quadratic = 0;
             if(!(command >> name >> position.x >> position.y >> position.z >> diffuse.r >> diffuse.g >> diffuse.b
                 >> specular.r >> specular.g >> specular.b >> range >> constant >> linear >> quadratic))
                 throw std::runtime_error("invalid menu point light command");
@@ -293,7 +524,7 @@ if args.menu_scene:
         else if(type == "AnimationTime")
         {
             std::string name, clip;
-            Ogre::Real duration;
+            Ogre::Real duration = 0;
             if(!(command >> name >> clip >> duration))
                 throw std::runtime_error("invalid menu animation command");
             Ogre::AnimationState* animation = scene->getEntity(name)->getAnimationState(clip);
@@ -316,13 +547,134 @@ if args.menu_scene:
     Ogre::Viewport* viewport = target->addViewport(camera);
     viewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
     viewport->setBackgroundColour(Ogre::ColourValue::Black);
+    // The original native setup supplies render objects; all camera/navigation state below is production code.
+    Ogre::Rectangle2D* background = new Ogre::Rectangle2D("MenuProbeBackground", true);
+    background->setMaterial(Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics"));
+    scene->getRootSceneNode()->createChildSceneNode("Background")->attachObject(background);
+    CameraManager menuCamera;
+    menuCamera.mActiveCamera = camera;
+    menuCamera.mActiveCameraNode = cameraPosition;
+    menuCamera.mViewport = viewport;
+    menuCamera.setViewportSize(1920, 1080);
+    RenderManager menuRenderer;
+    menuRenderer.mSceneManager = scene;
+    const Ogre::ColourValue savedAmbient = scene->getAmbientLight();
+    RenderSceneMenu menuScene;
+    menuScene.readSceneMenu(repository + "/config/mainmenuscene.cfg");
+    menuScene.resetMenu(menuCamera, menuRenderer);
+    check(!background->isVisible() && scene->getAmbientLight() == Ogre::ColourValue::Black,
+        "production menu activation hides the world rectangle and disables uniform ambient lighting");
+    checkMenuPose(menuScene, menuCamera, "overview");
+
+    CEGUI::WindowManager& windows = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* menuRoot = windows.createWindow("DefaultWindow", "MenuProbeRoot");
+    CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(menuRoot);
+    for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS,
+        BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER, BUTTON_START_REPLAY, BUTTON_MAPEDITOR,
+        BUTTON_SETTINGS, BUTTON_QUIT})
+        menuRoot->addChild(windows.createWindow("DefaultWindow", name));
+    for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS})
+        menuRoot->getChild(name)->hide();
+    MenuModeMain navigation;
+    navigation.mManager.mGui.mRoot = menuRoot;
+    ODFrameListener::getSingleton().mMenu = &menuScene;
+    ODFrameListener::getSingleton().mCamera = &menuCamera;
+    const std::string paneNames[] = {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS};
+    const std::string placeNames[] = {PLACE_CAMPAIGN, PLACE_SKIRMISH, PLACE_MULTIPLAYER, PLACE_EDITOR, PLACE_SETTINGS};
+    for(unsigned int index = 0; index < 5; ++index)
+    {
+        navigation.toggleSubMenu(paneNames[index]);
+        check(menuScene.isFlightActive() && !menuRoot->getChild(paneNames[index])->isVisible(),
+            "submenu remains hidden while flying: " + placeNames[index]);
+        check(!menuScene.flyTo(menuCamera, "settings"), "a second destination is rejected during a flight");
+        finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
+        checkMenuPose(menuScene, menuCamera, placeNames[index]);
+        check(menuRoot->getChild(paneNames[index])->isVisible(), "existing submenu is visible at arrival: " + placeNames[index]);
+        navigation.goBack();
+        check(menuScene.isFlightActive() && !menuRoot->getChild(paneNames[index])->isVisible(),
+            "Back hides the submenu and starts its return route");
+        finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
+        checkMenuPose(menuScene, menuCamera, "overview");
+    }
+    navigation.changeModeAfterFlight(AbstractModeManager::MENU_REPLAY, CEGUI::EventArgs());
+    check(navigation.mLastMode == AbstractModeManager::NONE && menuScene.isFlightActive(), "replay mode waits for its archive flight");
+    finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
+    checkMenuPose(menuScene, menuCamera, "replay");
+    check(navigation.mLastMode == AbstractModeManager::MENU_REPLAY, "replay pane is requested at archive arrival");
+    AbstractApplicationMode replayMode;
+    navigation.mManager.mCurrentApplicationMode = &replayMode;
+    navigation.mManager.mPreviousModeTypes.push_back(AbstractModeManager::MENU_MAIN);
+    navigation.mManager.mPreviousModeTypes.push_back(AbstractModeManager::MENU_MAIN);
+    navigation.mManager.requestPreviousMode();
+    check(navigation.mManager.mRequestedMode == AbstractModeManager::MENU_MAIN &&
+        navigation.mManager.mPreviousModeTypes.size() == 1, "child Back consumes exactly one history entry");
+    navigation.mManager.requestPreviousMode();
+    check(navigation.mManager.mPreviousModeTypes.size() == 1, "repeated Escape cannot consume return history twice");
+    check(menuScene.flyTo(menuCamera, "overview"), "the replay pane can return through its authored overview route");
+    finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
+    checkMenuPose(menuScene, menuCamera, "overview");
+
+    navigation.mLastMode = AbstractModeManager::NONE;
+    navigation.toggleSubMenu(WINDOW_CAMPAIGN);
+    navigation.changeModeAfterFlight(AbstractModeManager::ADVERTISMENT, CEGUI::EventArgs());
+    check(navigation.mLastMode == AbstractModeManager::ADVERTISMENT && menuScene.isFlightActive(),
+        "Quit keeps its original immediate action during a flight");
+    check(navigation.mPendingSubMenu.empty() && navigation.mPendingMode == AbstractModeManager::NONE &&
+        !navigation.mSkirmishSubMenuPending, "Quit clears deferred actions that could replace it");
+    finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
+    check(navigation.mLastMode == AbstractModeManager::ADVERTISMENT && !menuRoot->getChild(WINDOW_CAMPAIGN)->isVisible(),
+        "completed flight cannot overwrite Quit or reveal its canceled pane");
+    check(menuScene.flyTo(menuCamera, "overview"), "restore overview after the Quit timing assertion");
+    finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
+    check(menuScene.startFlight(menuCamera), "the configured outside arrival starts");
+    check(!menuScene.startFlight(menuCamera), "a second outside arrival is rejected");
+    finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
+    checkMenuPose(menuScene, menuCamera, "overview");
+
+    const unsigned int widths[] = {1920, 1440, 2520};
+    const float referenceTangent = std::tan(Ogre::Degree(45.0f).valueRadians() * 0.5f);
+    for(unsigned int index = 0; index < 3; ++index)
+    {
+        menuCamera.setViewportSize(widths[index], 1080);
+        const float verticalTangent = std::tan(camera->getFOVy().valueRadians() * 0.5f);
+        check(verticalTangent + 0.00001f >= referenceTangent &&
+            verticalTangent * camera->getAspectRatio() + 0.00001f >= referenceTangent * 16.0f / 9.0f,
+            "production projection preserves both dimensions of the authored overview");
+    }
+    menuCamera.setViewportSize(1920, 1080);
     target->update(false);
     target->update(false);
     target->writeContentsToFile(output + "/menu-scene-1920x1080.png");
+    menuScene.freeMenu(menuCamera, menuRenderer);
+    check(background->isVisible() && background->getMaterial() ==
+        Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics") && scene->getAmbientLight() == savedAmbient,
+        "production teardown restores the world background and previous ambient lighting");
+    menuScene.resetMenu(menuCamera, menuRenderer);
+    checkMenuPose(menuScene, menuCamera, "overview");
+    menuScene.freeMenu(menuCamera, menuRenderer);
+    CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(nullptr);
+    windows.destroyWindow(menuRoot);
+    background->getParentSceneNode()->detachObject(background);
+    delete background;
     target->removeAllViewports();
     Ogre::TextureManager::getSingleton().remove(rendered->getHandle());
 '''
+    menu_source = (repo / 'source/renderscene/RenderSceneMenu.cpp').read_text()
+    menu_source = re.sub(r'^#include[^\n]*\n', '', menu_source, flags=re.MULTILINE)
+    camera_source = (repo / 'source/camera/CameraManager.cpp').read_text()
+    projection_constants = '\n'.join(re.findall(r'^const (?:Ogre::Real MAIN_MENU_REFERENCE_ASPECT_RATIO|float MAIN_MENU_DEFAULT_FOV_Y_DEGREES) = [^;]+;', camera_source, re.MULTILINE))
+    projection = projection_constants + '\n' + function(camera_source, 'void CameraManager::setViewportSize(')
+    navigation_source = (repo / 'source/modes/MenuModeMain.cpp').read_text()
+    navigation_constants = '\n'.join(re.findall(r'^(?:static )?const std::string [^;]+;', navigation_source, re.MULTILINE))
+    navigation_functions = '\n'.join(function(navigation_source, signature) for signature in (
+        'void MenuModeMain::onFrameStarted(', 'bool MenuModeMain::changeModeAfterFlight(',
+        'bool MenuModeMain::toggleSubMenu(', 'void MenuModeMain::showSubMenu(',
+        'void MenuModeMain::showMainMenuButtons(', 'bool MenuModeMain::goBack('))
+    navigation_functions += '\n' + function((repo / 'source/modes/ModeManager.cpp').read_text(), 'void ModeManager::requestPreviousMode(')
+    menu_helpers = menu_helpers.replace('PRODUCTION_MENU_CODE', menu_source).replace('PRODUCTION_PROJECTION', projection)
+    menu_helpers = menu_helpers.replace('NAV_CONSTANTS', navigation_constants).replace('PRODUCTION_NAVIGATION', navigation_functions)
 probe = probe.replace('MENU_PLUGINS', 'root->loadPlugin(prefix + "/bin/Codec_STBI");\n    root->loadPlugin(prefix + "/bin/Plugin_ParticleFX");' if args.menu_scene else '')
+probe = probe.replace('MENU_HELPERS', menu_helpers)
 probe = probe.replace('MENU_RENDER', menu_render)
 # Style of the fixture itself (the extracted production code is compiled as it is)
 assert re.search(r'\bauto\b', probe) is None and '[&]' not in probe
@@ -339,26 +691,16 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
         args.menu_output.mkdir(parents=True, exist_ok=True)
     include = deps / 'install/include'
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(include / 'OGRE'),
-                    '/I', str(include / 'OGRE/RTShaderSystem'), '/I', str(include / 'cegui-0'), 'check.cpp', '/Fecheck.exe', '/link',
+                    '/I', str(include / 'OGRE/RTShaderSystem'), '/I', str(include / 'cegui-0'), '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe', '/link',
                     '/LIBPATH:' + str(deps / 'install/lib'), 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib', 'CEGUIBase-0.lib',
                     'CEGUIOgreRenderer-0.lib'],
-                   cwd=work, check=True)
+                   cwd=work, check=True, stdin=subprocess.DEVNULL, timeout=120)
     environment = dict(os.environ)
     environment['PATH'] = str(deps / 'install/bin') + os.pathsep + environment.get('PATH', '')
-    # Windows may block a freshly compiled executable (WinError 4551) for a moment
-    for attempt in range(4):
-        try:
-            command = [str(work / 'check.exe'), str(deps / 'install').replace('\\', '/')]
-            if args.menu_scene:
-                command.extend([repo.as_posix(), args.menu_output.resolve().as_posix()])
-            subprocess.run(command, cwd=work, check=True,
-                           env=environment)
-            break
-        except OSError as error:
-            if attempt == 3:
-                raise
-            print('retrying after', error)
-            time.sleep(2)
+    command = [str(work / 'check.exe'), str(deps / 'install').replace('\\', '/')]
+    if args.menu_scene:
+        command.extend([repo.as_posix(), args.menu_output.resolve().as_posix()])
+    subprocess.run(command, cwd=work, check=True, env=environment, stdin=subprocess.DEVNULL, timeout=180)
 
 if args.menu_scene:
     from PIL import Image

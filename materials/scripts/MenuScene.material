@@ -19,9 +19,9 @@ material MenuStone : RTSS/NormalMapping_MultiPass
         }
         pass decal
         {
-            ambient 0.8 0.8 0.8 1
-            diffuse 0.8 0.8 0.8 1
-            specular 0.08 0.08 0.08 1 24
+            ambient 0.28 0.27 0.25 1
+            diffuse 0.28 0.27 0.25 1
+            specular 0.035 0.035 0.035 1 12
             texture_unit decalmap
             {
                 texture menu/MenuStone.png
@@ -31,14 +31,15 @@ material MenuStone : RTSS/NormalMapping_MultiPass
     }
 }
 
-material MenuDarkStone
+material MenuDarkStone : MenuStone
 {
     technique
     {
-        pass
+        pass decal
         {
             ambient 0.11 0.12 0.13 1
             diffuse 0.11 0.12 0.13 1
+            specular 0.018 0.018 0.018 1 6
         }
     }
 }
@@ -170,9 +171,9 @@ material MenuSky
         {
             lighting off
             cull_hardware none
-            ambient 0.012 0.018 0.022 1
-            diffuse 0.012 0.018 0.022 1
-            emissive 0.004 0.005 0.006
+            ambient 0.012 0.010 0.008 1
+            diffuse 0.012 0.010 0.008 1
+            emissive 0.004 0.003 0.002
         }
     }
 }
@@ -277,6 +278,30 @@ material MenuRoughStone : MenuStone
             ambient 0.20 0.22 0.24 1
             diffuse 0.20 0.22 0.24 1
             specular 0.025 0.025 0.025 1 6
+        }
+    }
+}
+
+// Soot and fire-blackened fissures remain dark surface marks without emitted light.
+material MenuSoot
+{
+    technique { pass {
+        ambient 0.009 0.007 0.005 1
+        diffuse 0.009 0.007 0.005 1
+        specular 0.004 0.004 0.004 1 4
+    } }
+}
+
+// Irregular rain pools collect in sunken courtyard joints and catch only local scene light.
+material MenuPuddle : MenuStone
+{
+    technique
+    {
+        pass decal
+        {
+            ambient 0.05 0.05 0.045 1
+            diffuse 0.05 0.05 0.045 1
+            specular 0.42 0.42 0.40 1 64
         }
     }
 }

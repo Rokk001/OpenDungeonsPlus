@@ -8,6 +8,8 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Explore a ruined fortress in the main menu, with flights to each menu location and back to the courtyard, firelight, green crystals, mist and embers.
+
 * Equip twelve creature types with fitted weapons without additional weapon damage or defence, classify held equipment by type and occupied hands, and preserve raw melee damage per second before armour when weapon recovery is longer. Preserve original animation precision when adding weapon mounts.
 
 * Give hens five seconds to lay, eggs thirty seconds to hatch and chicks sixty seconds to grow at normal game speed; preserve each full life stage instead of aging it on its creation turn, intentionally slowing food production.

@@ -20,8 +20,10 @@ start = renderer.index("void RenderManager::rrToggleHandSelectorVisibility()")
 toggle = renderer[start:renderer.index("void RenderManager::setEntityOpacity(", start)]
 start = header.index("bool isKeeperHandVisible()")
 visible = header[start:header.index("}", start) + 1]
-start = menu.index("{", menu.index("void RenderSceneMenu::resetMenu(")) + 1
-entry = menu[start:menu.index("    Ogre::Rectangle2D* background", start)]
+start = menu.index("    if(!renderManager.isKeeperHandVisible())", menu.index("void RenderSceneMenu::resetMenu("))
+# Keep the real hand-restoration guard independent of the scene and camera setup around it.
+end = menu.index("renderManager.rrToggleHandSelectorVisibility();", start)
+entry = menu[start:menu.index(";", end) + 1]
 probe = r'''
 #include <cstdint>
 #include <iostream>

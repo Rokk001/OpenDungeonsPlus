@@ -22,8 +22,10 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+//! \brief Creates a parsed group without any activated render commands.
 RenderSceneGroup::RenderSceneGroup() :
     mIsRepeat(false),
+    mIsActive(false),
     mIndexSceneRepeat(0),
     mIndexScene(0)
 {
@@ -82,6 +84,7 @@ RenderSceneGroup* RenderSceneGroup::load(std::istream& defFile)
     return nullptr;
 }
 
+//! \brief Frees the previous run and activates commands through the first unfinished one.
 void RenderSceneGroup::reset(CameraManager& cameraManager, RenderManager& renderManager)
 {
     freeGroup(cameraManager, renderManager);
@@ -94,6 +97,7 @@ void RenderSceneGroup::reset(CameraManager& cameraManager, RenderManager& render
     if(mIndexScene >= mScenes.size())
         return;
 
+    mIsActive = true;
     while(mIndexScene < mScenes.size())
     {
         RenderScene* scene = mScenes.at(mIndexScene);
@@ -104,14 +108,20 @@ void RenderSceneGroup::reset(CameraManager& cameraManager, RenderManager& render
     }
 }
 
+//! \brief Frees the current unfinished command and every preceding command in reverse activation order.
 void RenderSceneGroup::freeGroup(CameraManager& cameraManager, RenderManager& renderManager)
 {
+    if(!mIsActive)
+        return;
+    if(mIndexScene < mScenes.size())
+        mScenes.at(mIndexScene)->freeRessources(cameraManager, renderManager);
     while(mIndexScene > 0)
     {
         --mIndexScene;
         RenderScene* scene = mScenes.at(mIndexScene);
         scene->freeRessources(cameraManager, renderManager);
     }
+    mIsActive = false;
 }
 
 void RenderSceneGroup::update(CameraManager& cameraManager, RenderManager& renderManager,

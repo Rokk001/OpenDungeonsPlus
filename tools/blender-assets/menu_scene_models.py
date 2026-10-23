@@ -111,24 +111,32 @@ class MeshBuilder:
             poly=[(x+radius*math.cos(a),spring+radius*math.sin(a)),(x+(radius+thickness)*math.cos(a),spring+(radius+thickness)*math.sin(a)),(x+(radius+thickness)*math.cos(b),spring+(radius+thickness)*math.sin(b)),(x+radius*math.cos(b),spring+radius*math.sin(b))]
             self.prism(poly,y-depth/2,y+depth/2)
 
-    # Add one elliptical iron chain link in the vertical XZ plane.
+    # Add a worn elliptical chain link, with occasional broken sections closed by fracture caps.
     def link(self, centre, radius, alternate=False):
         cx,cy,cz=centre
         sides=12
         ring=6
         start=len(self.vertices)
+        broken=int(abs(cx)*13+abs(cz)*7)%7==0
         for i in range(sides):
             a=i*2*math.pi/sides
             for j in range(ring):
                 b=j*2*math.pi/ring
-                x=(radius+0.045*math.cos(b))*math.cos(a)
-                z=(radius*0.65+0.045*math.cos(b))*math.sin(a)
-                y=0.045*math.sin(b)
+                wear=0.045*(0.76+0.18*math.sin(i*1.9+j*0.8))
+                x=(radius+wear*math.cos(b))*math.cos(a)
+                z=(radius*0.65+wear*math.cos(b))*math.sin(a)
+                y=wear*math.sin(b)
                 self.vertices.append((cx+(y if alternate else x),cy+(x if alternate else y),cz+z))
         for i in range(sides):
+            if broken and i==2:
+                continue
             for j in range(ring):
                 self.faces.append((start+i*ring+j,start+((i+1)%sides)*ring+j,start+((i+1)%sides)*ring+(j+1)%ring,start+i*ring+(j+1)%ring))
                 self.face_materials.append("MenuIron")
+        if broken:
+            self.faces.append(tuple(start+2*ring+j for j in range(ring)))
+            self.faces.append(tuple(start+3*ring+j for j in reversed(range(ring))))
+            self.face_materials.extend(["MenuIron","MenuIron"])
 
     # Produce the Blender mesh with per-face materials and a planar UV layer.
     def finish(self):
@@ -160,9 +168,23 @@ class MeshBuilder:
 
 
 
-# Build a tall, backed gatehouse with deep masonry, full-height grille and hanging chains.
+# Add branching soot-dark fissures and an irregular scorched patch to a masonry face.
+def weather_marks(builder, x, y, z, width, height):
+    builder.prism([(x-width*0.48,z-height*0.48),(x+width*0.40,z-height*0.37),
+        (x+width*0.29,z+height*0.22),(x+width*0.10,z+height*0.55),
+        (x-width*0.18,z+height*0.39),(x-width*0.40,z-height*0.07)],y-0.012,y,"MenuSoot")
+    for side in (-1,1):
+        points=[(x+side*width*0.55,z+height*0.7),(x+side*width*0.24,z+height*0.33),
+            (x+side*width*0.31,z+height*0.03),(x+side*width*0.11,z-height*0.37)]
+        for first,last in zip(points,points[1:]):
+            builder.prism([(first[0]-0.025,first[1]),(first[0]+0.025,first[1]),
+                (last[0]+0.018,last[1]),(last[0]-0.018,last[1])],y-0.025,y-0.018,"MenuBlack")
+
+
+# Build a ruined gatehouse with a horned skull crown, iron points and worn hanging chains.
 def gate():
     b=MeshBuilder("MenuGate")
+    rng=random.Random(207)
     spring,radius,outer=6.0,4.5,6.2
     poly=[(radius,0),(outer,0),(outer,spring)]
     poly.extend((outer*math.cos(i*math.pi/32),spring+outer*math.sin(i*math.pi/32)) for i in range(1,33))
@@ -172,18 +194,25 @@ def gate():
     for side in (-1,1):
         for row in range(12):
             for col in range(2):
-                b.box((side*(5.14+col*1.15),-0.38,row*0.97+0.48),(1.11,1.03,0.92))
+                if (side,row,col) in ((-1,8,1),(1,3,0),(1,10,1)):
+                    continue
+                b.box((side*(5.14+col*1.15)+rng.uniform(-0.035,0.035),-0.38+rng.uniform(-0.055,0.045),row*0.97+0.48),
+                    (1.11+rng.uniform(-0.08,0.03),1.03,0.92+rng.uniform(-0.07,0.02)))
         b.box((side*5.9,-0.52,0.3),(3.0,1.55,0.6))
         for x in (side*5.0,side*6.8):
             b.box((x,-0.42,6.2),(0.28,1.26,12.4))
         for i in range(23):
             t=i/22
-            b.link((side*(5.8+3.2*t),-0.75,11.5-1.2*math.sin(t*math.pi)),0.26,bool(i%2))
+            b.link((side*(5.8+3.2*t),-0.75+0.07*math.sin(i*1.7),11.5-(1.35 if side<0 else 0.95)*math.sin(t*math.pi)),0.26+rng.uniform(-0.025,0.015),bool(i%2))
     b.arch(0,-0.48,spring,radius,1.20,1.2,30)
     b.arch(0,-0.57,spring,radius+1.28,0.22,1.3,34)
     for x in (-5.4,-4.1,-2.7,-1.35,0,1.35,2.7,4.1,5.4):
         z=spring+math.sqrt(max(0,outer*outer-x*x))
-        b.box((x,0.2,z+0.38),(0.72,2.5,0.75))
+        if x in (-2.7,4.1):
+            b.prism([(x-0.36,z),(x+0.36,z),(x+0.24,z+0.31),(x-0.18,z+0.62)],-1.05,1.45)
+        else:
+            b.box((x,0.2,z+0.38),(0.72,2.5,0.75))
+            b.column((x,-0.70,z+0.75),0.17,0.75+rng.uniform(-0.13,0.20),0,"MenuIron",7)
     for i in range(23):
         x=-4.4+i*0.4
         top=spring+math.sqrt(max(0,radius*radius-x*x))-0.14
@@ -194,21 +223,43 @@ def gate():
         b.box((0,0.35,z),(width,0.22,0.15),"MenuIron")
     for side in (-1,1):
         b.box((side*3.8,2.6,4.1),(0.3,0.15,3.2),"MenuWindowGlow")
+        weather_marks(b,side*5.7,-0.915,4.4,0.88,2.1)
+        for i in range(7):
+            b.oval((side*rng.uniform(4.8,7.1),rng.uniform(-2.4,-0.6),rng.uniform(0.05,0.22)),
+                (rng.uniform(0.18,0.48),rng.uniform(0.18,0.43),rng.uniform(0.15,0.36)),"MenuRoughStone",10,6)
+    b.oval((0,-1.20,12.25),(0.84,0.48,0.86),"MenuCarvedStone",22,14)
+    b.oval((0,-1.48,11.68),(0.58,0.28,0.29),"MenuCarvedStone",18,10)
+    for side in (-1,1):
+        b.oval((side*0.34,-1.61,12.36),(0.25,0.11,0.24),"MenuBlack",16,10)
+        b.segment((side*0.65,-1.15,12.65),(side*1.16,-1.05,13.21),0.27,0.20,"MenuCarvedStone",12)
+        b.segment((side*1.16,-1.05,13.21),(side*1.40,-0.88,13.92),0.20,0.11,"MenuCarvedStone",12)
+        b.segment((side*1.40,-0.88,13.92),(side*1.14,-0.78,14.33),0.11,0.01,"MenuCarvedStone",10)
+    b.prism([(-0.11,12.17),(0.11,12.17),(0,11.93)],-1.69,-1.58,"MenuBlack")
+    for x in (-0.36,-0.18,0,0.18,0.36):
+        b.box((x,-1.73,11.62),(0.10,0.09,0.17),"MenuDarkStone")
     return b.finish()
 
 
-# Build tall buttressed masonry retaining the left archive and right workshop alcoves.
+# Build damaged buttressed masonry with broken spiked crenels while retaining both menu alcoves.
 def wall():
     b=MeshBuilder("MenuWallSegment")
+    rng=random.Random(307)
     for row in range(11):
         for col in range(16):
             x=-10.2+col*1.34+(0.22 if row%2 else 0)
             if 6<=col<=8 and row<4:
                 continue
-            b.box((x,0.5,row*0.88+0.44),(1.30,2.8,0.83))
+            if (row,col) in ((8,2),(6,12),(9,13),(4,4)):
+                continue
+            b.box((x+rng.uniform(-0.06,0.06),0.5+rng.uniform(-0.08,0.06),row*0.88+0.44),
+                (1.30+rng.uniform(-0.10,0.02),2.8,0.83+rng.uniform(-0.08,0.02)))
     b.box((0,0.5,9.83),(22.0,3.45,0.5))
     for x in range(-10,11,2):
-        b.box((x,0.15,10.65),(0.96,2.9,1.15))
+        if x in (-6,4):
+            b.prism([(x-0.48,10.08),(x+0.48,10.08),(x+0.44,10.42),(x-0.15,10.77)],-1.30,1.6)
+        else:
+            b.box((x,0.15,10.65+rng.uniform(-0.13,0.10)),(0.96,2.9,1.15))
+            b.column((x,-0.92,11.22),0.18,0.80+rng.uniform(-0.14,0.20),0,"MenuIron",7)
     for x in (-9.7,-5.0,4.5,9.7):
         b.box((x,-0.65,4.8),(1.05,4.1,9.6))
         b.box((x,-1.4,0.5),(1.5,4.4,1.0))
@@ -224,32 +275,51 @@ def wall():
         b.box((x,-1.15,1.45),(0.08,0.08,0.6),"MenuWood")
         b.box((x,-1.15,1.77),(0.4,0.12,0.15),"MenuIron")
     for x in (-7,7):
+        weather_marks(b,x,-0.99,9.0,0.8,1.7)
         b.box((x,-0.94,7.2),(0.42,0.03,1.8),"MenuWindowGlow")
         b.arch(x,-1.04,8.1,0.23,0.18,0.25,9)
+    for x in (-4.8,2.4,9.1):
+        weather_marks(b,x,-0.925,4.5,0.68,2.0)
+    for i in range(24):
+        b.oval((rng.uniform(-10.7,10.7),rng.uniform(-2.9,-1.2),rng.uniform(0,0.20)),
+            (rng.uniform(0.12,0.65),rng.uniform(0.15,0.47),rng.uniform(0.12,0.43)),"MenuRoughStone",10,6)
     return b.finish()
 
 
-# Build a massive masonry tower with slit windows and an accessible battlement platform.
+# Build a weathered tower with missing masonry, broken iron-tipped crenels and an accessible platform.
 def tower():
     b=MeshBuilder("MenuTower")
+    rng=random.Random(407)
     for row in range(13):
         for col in range(4):
-            b.box((-1.74+col*1.16,-0.25,row*0.94+0.46),(1.12,4.4,0.89))
+            if (row,col) in ((8,0),(10,3),(3,1)):
+                continue
+            b.box((-1.74+col*1.16+rng.uniform(-0.045,0.045),-0.25+rng.uniform(-0.05,0.04),row*0.94+0.46),
+                (1.12+rng.uniform(-0.09,0.025),4.4,0.89+rng.uniform(-0.05,0.02)))
     for z in (0.5,4.4,8.5,12.3):
         b.box((0,-0.25,z),(5.2,4.95,0.32))
     b.box((0,-0.25,12.8),(5.8,5.7,0.65))
     for side in (-1,1):
         for x in (-2.35,0,2.35):
-            b.box((x,side*2.3-0.25,13.75),(0.9,0.95,1.35))
+            if side<0 and x==2.35:
+                b.prism([(x-0.45,13.07),(x+0.45,13.07),(x+0.18,13.61),(x-0.31,13.37)],side*2.3-0.73,side*2.3+0.23)
+            else:
+                b.box((x,side*2.3-0.25,13.75+rng.uniform(-0.12,0.07)),(0.9,0.95,1.35))
+                b.column((x,side*2.3-0.25,14.42),0.19,0.90+rng.uniform(-0.1,0.20),0,"MenuIron",7)
         b.box((side*2.35,-0.25,13.75),(0.95,0.95,1.35))
     for z in (4.2,7.8,10.7):
+        weather_marks(b,0,-2.51,z+1.55,0.98,1.1)
         b.box((0,-2.48,z),(0.4,0.025,1.45),"MenuWindowGlow")
         b.arch(0,-2.58,z+0.73,0.22,0.19,0.2,9)
+    weather_marks(b,-1.6,-2.505,6.0,0.55,2.8)
+    for i in range(15):
+        b.oval((rng.uniform(-3,3),rng.uniform(-3.4,-2.5),rng.uniform(0,0.2)),
+            (rng.uniform(0.14,0.58),rng.uniform(0.14,0.44),rng.uniform(0.13,0.41)),"MenuRoughStone",10,6)
     b.column((0,0.9,13.15),0.82,3.4,0,"MenuDarkStone",9)
     return b.finish()
 
 
-# Carve a readable crouched winged guardian with separate head, chest, bent limbs and hooked claws.
+# Carve a weathered winged guardian with a fractured wingtip, fissures and readable anatomy.
 def statue():
     b=MeshBuilder("MenuStatue")
     b.box((0,0,0.30),(3.4,3.0,0.60))
@@ -281,12 +351,20 @@ def statue():
             x=side*(0.56+i*0.22)
             b.segment((x,-1.27,3.94),(x,-1.72,3.78),0.105,0.035)
             b.segment((x,-1.72,3.78),(x,-1.83,3.58),0.035,0.004)
-        wing=[(side*0.65,5.8),(side*1.25,7.42),(side*3.20,9.08),(side*2.95,7.50),(side*3.43,6.88),(side*2.37,6.65),(side*2.22,5.71),(side*1.60,6.05),(side*0.90,5.1)]
+        tip=(2.88,8.52) if side<0 else (3.20,9.08)
+        wing=[(side*0.65,5.8),(side*1.25,7.42),(side*tip[0],tip[1])]
+        if side<0:
+            wing.extend([(side*2.69,8.41),(side*2.91,8.17)])
+        wing.extend([(side*2.95,7.50),(side*3.43,6.88),(side*2.37,6.65),(side*2.22,5.71),(side*1.60,6.05),(side*0.90,5.1)])
         b.prism(wing,0.52,0.72,stone)
         b.segment((side*0.68,0.48,5.76),(side*1.30,0.47,7.42),0.23,0.15)
-        b.segment((side*1.30,0.47,7.42),(side*3.20,0.49,9.08),0.15,0.025)
+        b.segment((side*1.30,0.47,7.42),(side*tip[0],0.49,tip[1]),0.15,0.025)
         for x,z in ((2.95,7.50),(3.43,6.88),(2.37,6.65),(2.22,5.71)):
             b.segment((side*1.30,0.45,7.42),(side*x,0.45,z),0.105,0.025)
+        b.prism([(side*1.74,7.33),(side*1.80,7.34),(side*1.96,6.91),(side*1.88,6.69),
+            (side*2.15,6.49),(side*2.10,6.43),(side*1.81,6.67),(side*1.87,6.91)],0.495,0.51,"MenuBlack")
+    b.prism([(-0.28,6.20),(-0.23,6.21),(-0.11,5.87),(-0.20,5.59),(0.04,5.29),
+        (-0.02,5.25),(-0.27,5.59),(-0.18,5.87)],-0.98,-0.95,"MenuBlack")
     return b.finish()
 
 
@@ -311,7 +389,7 @@ def brazier():
     return b.finish()
 
 
-# Create an irregular cloth banner with a skeletal looping wave animation.
+# Create a torn, holed cloth banner with an uneven hem and its existing looping wave animation.
 def banner():
     b=MeshBuilder("MenuBanner")
     b.box((0,0,0),(2.4,0.13,0.13),"MenuIron")
@@ -320,12 +398,16 @@ def banner():
             x=-1.4+col*(2.8/6)
             z=-row*0.40
             y=0.10*math.sin(x*5)+0.03*row*math.sin(x*4)
+            if row>=10:
+                z-=0.10*(col%3)+0.13*math.sin(col*2.8+row)
             if row==12:
-                z-=0.22*(col%2)
+                z+=0.14+(0.36 if col in (1,5) else -0.12)
             b.vertices.append((x,y,z))
     start=len(b.vertices)-13*7
     for row in range(12):
         for col in range(6):
+            if (row,col) in ((6,1),(7,1),(10,5),(11,5),(11,0)):
+                continue
             i=start+row*7+col
             b.faces.append((i,i+1,i+8,i+7))
             b.face_materials.append("MenuCloth")
@@ -419,7 +501,7 @@ def crystal():
     return b.finish()
 
 
-# Build irregular wet flagstones, broken fissures and layered rubble along both foreground edges.
+# Build broken, sunken and uneven flagstones with irregular puddles and scattered rubble.
 def courtyard():
     b=MeshBuilder("MenuCourtyard")
     rng=random.Random(71)
@@ -428,9 +510,28 @@ def courtyard():
         for col in range(30):
             x=-25+col*1.75+(0.82 if row%2 else 0)
             sx,sy=1.67+rng.uniform(-0.10,0.05),1.55+rng.uniform(-0.10,0.05)
-            z=-0.10+rng.uniform(-0.04,0.025)
-            poly=[(x-sx/2,z-0.11),(x+sx/2,z-0.11),(x+sx/2-0.025,z+0.07),(x-sx/2+0.025,z+0.07)]
-            b.prism(poly,y-sy/2,y+sy/2,"MenuWetStone")
+            z=-0.10+rng.uniform(-0.13,0.065)
+            if rng.random()<0.045:
+                continue
+            if rng.random()<0.16:
+                b.prism([(x-sx/2,z-0.11),(x+0.12,z-0.11),(x-0.08,z+0.07),(x-sx/2+0.025,z+0.11)],
+                    y-sy/2,y+sy/2,"MenuWetStone")
+                b.prism([(x+0.20,z-0.19),(x+sx/2,z-0.19),(x+sx/2-0.025,z-0.03),(x+0.01,z+0.005)],
+                    y-sy/2+0.08,y+sy/2-0.05,"MenuWetStone")
+            else:
+                poly=[(x-sx/2,z-0.11),(x+sx/2,z-0.11),(x+sx/2-0.025,z+0.07+rng.uniform(-0.04,0.05)),(x-sx/2+0.025,z+0.07)]
+                b.prism(poly,y-sy/2,y+sy/2,"MenuWetStone")
+    b.box((0,-4,-0.39),(56,58,0.12),"MenuDarkStone")
+    for i in range(23):
+        x,y=rng.uniform(-20,20),rng.uniform(-24,13)
+        rx,ry=rng.uniform(0.40,1.8),rng.uniform(0.26,1.1)
+        start=len(b.vertices)
+        for j in range(9):
+            angle=j*2*math.pi/9
+            rough=rng.uniform(0.75,1.15)
+            b.vertices.append((x+rx*math.cos(angle)*rough,y+ry*math.sin(angle)*rough,-0.19))
+        b.faces.append(tuple(start+j for j in range(9)))
+        b.face_materials.append("MenuPuddle")
     for side in (-1,1):
         for i in range(48):
             position=(side*rng.uniform(8.8,23),rng.uniform(-23,-3),rng.uniform(-0.05,0.9))
@@ -445,6 +546,9 @@ def courtyard():
                 point=b.vertices[vertex]
                 shift=1+rng.uniform(-0.14,0.14)
                 b.vertices[vertex]=tuple(position[k]+(point[k]-position[k])*shift for k in range(3))
+    for i in range(62):
+        b.oval((rng.uniform(-18,18),rng.uniform(-22,12),rng.uniform(-0.09,0.05)),
+            (rng.uniform(0.06,0.23),rng.uniform(0.07,0.28),rng.uniform(0.05,0.19)),"MenuRoughStone",8,5)
     return b.finish()
 
 
@@ -521,7 +625,7 @@ def cave():
 
 
 MODELS=(gate,wall,tower,statue,brazier,banner,arches,crystal,courtyard,backdrop,hall,table,cave)
-COLOURS={"MenuCarvedStone":(0.22,0.24,0.26),"MenuRoughStone":(0.20,0.22,0.24),"MenuDistantStone":(0.003,0.004,0.006),"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7),"MenuWindowGlow":(0.8,0.12,0.018),"MenuFlame":(1.0,0.11,0.008),"MenuFlameCore":(1.0,0.42,0.035),"MenuCrystalDark":(0.005,0.12,0.018),"MenuCrystalBright":(0.12,0.8,0.035)}
+COLOURS={"MenuSoot":(0.009,0.007,0.005),"MenuPuddle":(0.05,0.05,0.045),"MenuCarvedStone":(0.22,0.24,0.26),"MenuRoughStone":(0.20,0.22,0.24),"MenuDistantStone":(0.003,0.004,0.006),"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7),"MenuWindowGlow":(0.8,0.12,0.018),"MenuFlame":(1.0,0.11,0.008),"MenuFlameCore":(1.0,0.42,0.035),"MenuCrystalDark":(0.005,0.12,0.018),"MenuCrystalBright":(0.12,0.8,0.035)}
 
 
 # Save every model privately first, copy it into the source tree and export its mesh.

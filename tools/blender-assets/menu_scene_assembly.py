@@ -34,8 +34,8 @@ def material_values(text, name):
     if re.search(r"\blighting\s+off\b", block):
         values["unlit"] = True
     values["name"] = name
-    values["normal"] = "MenuStoneNormal.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone") else None
-    values["texture"] = "MenuStone.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone") else ("MenuCampaignMap.png" if name == "MenuCampaignMap" else None)
+    values["normal"] = "MenuStoneNormal.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone", "MenuDarkStone", "MenuPuddle") else None
+    values["texture"] = "MenuStone.png" if name in ("MenuStone", "MenuWetStone", "MenuCarvedStone", "MenuRoughStone", "MenuDarkStone", "MenuPuddle") else ("MenuCampaignMap.png" if name == "MenuCampaignMap" else None)
     return values
 
 
@@ -115,9 +115,14 @@ def configure_material(material, values, repo, images):
     surface=nodes.new("ShaderNodeBsdfPrincipled")
     links.new(base,surface.inputs["Base Color"])
     specular=values.get("specular",(0,0,0,1,0))
-    surface.inputs["Roughness"].default_value=0.16 if name=="MenuWetStone" else min(1,math.sqrt(2/(specular[4]+2)))
-    surface.inputs["Specular IOR Level"].default_value=0.5 if name=="MenuWetStone" else max(0.18,sum(specular[:3])/3)
-    if name=="MenuWetStone":
+    if name=="MenuPuddle":
+        surface.inputs["Roughness"].default_value=0.07
+    elif name=="MenuWetStone":
+        surface.inputs["Roughness"].default_value=0.16
+    else:
+        surface.inputs["Roughness"].default_value=min(1,math.sqrt(2/(specular[4]+2)))
+    surface.inputs["Specular IOR Level"].default_value=0.5 if name in ("MenuWetStone","MenuPuddle") else max(0.18,sum(specular[:3])/3)
+    if name in ("MenuWetStone","MenuPuddle"):
         surface.inputs["Coat Weight"].default_value=0.85
         surface.inputs["Coat Roughness"].default_value=0.08
     if "emissive" in values and max(values["emissive"][:3])>0:
@@ -355,11 +360,12 @@ def add_light(words, collection):
     return {"name": name, "position": position, "diffuse": diffuse, "specular": specular, "attenuation": [distance_range, constant, linear, quadratic], "eevee_energy_watts": data.energy, "reference_distance": reference_distance}
 
 
-# Assemble exactly the configured overview, save the portable scene privately and render it with Eevee.
+# Assemble the configured overview, save it privately and optionally render it with Eevee.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--save-only", action="store_true", help="Update the portable assembly without producing another checkpoint render")
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
     repo = args.repo.resolve()
     output = args.output.resolve()
@@ -386,7 +392,7 @@ def main():
     scene.view_settings.gamma = 1
     world = bpy.data.worlds.new("Black exterior")
     world.use_nodes = True
-    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.008, 0.012, 0.018, 1)
+    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.012, 0.008, 0.004, 1)
     world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.03
     scene.eevee.use_raytracing = True
     scene.eevee.shadow_pool_size = "1024"
@@ -487,7 +493,8 @@ def main():
     report = {"source_models": filenames, "entities": entity_report, "camera_position_rotation": camera_values, "vertical_fov_degrees": math.degrees(camera_data.angle_y), "resolution": [1920, 1080], "engine": scene.render.engine, "lights": lights, "packed_images": sorted(images), "sample_seconds": 1, "limits": scene["preview_limit"], "ambient_mapping": "No ambient self-emission on stone or architecture. Faint world and configured distant night rim preserve dark silhouettes.", "light_mapping": "E = max(diffuse) * 4*pi^2*d^2/(c+l*d+q*d^2), d=range/2; colour normalised by its largest channel. This matches unnormalised Ogre Lambert radiance to Blender's normalised Lambert response at the reference distance only.", "colour_management": "AgX, neutral look, zero exposure adjustment"}
     (output / "assembly-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     scene.render.filepath = str(rendered)
-    bpy.ops.render.render(write_still=True)
+    if not args.save_only:
+        bpy.ops.render.render(write_still=True)
     destination = repo / "assets-src/menu-scene/MenuSceneAssembly.blend"
     if destination.exists():
         assert (repo / "assets-src/menu-scene/MenuSceneAssembly.blend").stat().st_size > 0
