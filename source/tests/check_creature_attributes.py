@@ -409,7 +409,7 @@ def mana_cost_model(group, skill_name, is_first_attack, carries_bow, manacost_pe
         return 0.0
     caster = is_first_attack
     if group != 'none':
-        caster = group in ('caster', 'archer')
+        caster = group == 'caster'
     base = caster_shot if caster else second_shot
     return base * max(0.0, 1.0 - manacost_percent / 100.0)
 
@@ -428,7 +428,10 @@ def check_mana_part_b():
     assert 'if(mManaFromSave)' in setup and 'mMana = std::min(mMana, getMaxMana());' in setup
     assert 'else\n            mMana = getMaxMana();' in setup, 'old saves and level files load with full mana'
     set_level = function(creature, 'void Creature::setLevel(')
-    assert 'setCurrentMana(mMana);' in set_level, 'a level-up caps the mana at the new pool size'
+    assert 'const double previousMaxMana = getMaxMana();' in set_level and set_level.index('previousMaxMana = getMaxMana()') < set_level.index('mLevel = ')
+    assert 'setCurrentMana(mMana * getMaxMana() / previousMaxMana);' in set_level, 'a level-up keeps the mana share like the HP'
+    assert 'if(previousMaxMana > 0.0)' in set_level and 'setCurrentMana(mMana);' in set_level, 'pool of 0 does not divide'
+    assert abs(30.0 * 90.0 / 60.0 - 45.0) < 1e-9, 'half the pool stays half the pool after the pool grows'
 
     # 6.2 regeneration: max / (ManaRefillSeconds x turns per second) every turn, capped, always running
     regen = function(creature, 'void Creature::regenerateMana()')
@@ -460,6 +463,7 @@ def check_mana_part_b():
     assert mana_cost_model('blitzer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 5.0, 'level file lists the shot first'
     assert mana_cost_model('none', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
     assert mana_cost_model('archer', 'MissileLaunch', True, True, 0, caster_shot, second_shot) == 0.0, 'bow shot is free'
+    assert mana_cost_model('archer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == second_shot, 'no archer special rule'
     assert mana_cost_model('caster', 'Melee', True, False, 0, caster_shot, second_shot) == 0.0
     assert mana_cost_model('blitzer', 'Explosion', False, False, 0, caster_shot, second_shot) == 0.0, 'Champion line is free'
     assert mana_cost_model('caster', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
@@ -491,7 +495,7 @@ def check_mana_part_b():
             if first_value(block, 'Name') == 'DragonBoss':
                 names = [name for name in skill_names(block) if name in ('Melee', 'MissileLaunch')]
                 assert names == ['MissileLaunch', 'Melee'], level_name
-    assert 'if(group != "none")' in cost and '(group == "caster") || (group == "archer")' in cost
+    assert 'if(group != "none")' in cost and 'casterShot = (group == "caster");' in cost and '"archer"' not in cost, 'no special rule for an archer without bow'
 
     # 6.4 not enough mana: the skill is not used, as with a cooldown; 6.5 mana is subtracted when the skill starts
     assert 'bool Creature::hasManaFor(' in creature and 'return mMana >= getSkillManaCost(skill);' in creature

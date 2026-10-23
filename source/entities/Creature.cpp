@@ -1510,9 +1510,13 @@ void Creature::computeVisibleTiles()
     }
 }
 
-//! \brief Sets the level, spends the skill points the level pays and rebuilds the stats.
+//! \brief Sets the level, spends the skill points the level pays and rebuilds the stats. The current hit points and the
+//! current mana keep their share of the maximum when the maximum grows.
 void Creature::setLevel(unsigned int level)
 {
+    // The size of the mana pool before the new level, to keep the mana share
+    const double previousMaxMana = getMaxMana();
+
     // Reset XP once the level has been acquired.
     mLevel = std::max(1u, std::min(MAX_LEVEL, level));
     mExp = 0.0;
@@ -1525,8 +1529,12 @@ void Creature::setLevel(unsigned int level)
     if(mHp > 0.0 && previousMaxHP > 0.0)
         mHp = std::min(mMaxHP, mHp * mMaxHP / previousMaxHP);
 
-    // The pool grows with the level; the mana the creature has stays (capped at the new size)
-    setCurrentMana(mMana);
+    // The pool grows with the level; the mana keeps its share of the pool like the hit points (a pool of 0 before
+    // the level-up keeps the mana as it is, then capped at the new size)
+    if(previousMaxMana > 0.0)
+        setCurrentMana(mMana * getMaxMana() / previousMaxMana);
+    else
+        setCurrentMana(mMana);
 
     mNeedFireRefresh = true;
 }
@@ -3719,13 +3727,13 @@ double Creature::getSkillManaCost(const CreatureSkill& skill) const
     if(firstAttack && carriesBowOrCrossbow())
         return 0.0;
 
-    // The shot of a caster (or an archer without its bow) costs the caster rate. A type with a skill group is
+    // The shot of a caster costs the caster rate. A type with a skill group is
     // told by its group, because a level file may list the Dragon's spell shot before its melee line; a type
     // without a group is told by the line order: the first attack line is the spell shot.
     const std::string& group = mDefinition->getSkillGroup();
     bool casterShot = firstAttack;
     if(group != "none")
-        casterShot = (group == "caster") || (group == "archer");
+        casterShot = (group == "caster");
 
     if(casterShot)
         return getManaCost(ConfigManager::getSingleton().getManaPerCasterShot());
