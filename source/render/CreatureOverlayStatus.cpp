@@ -47,6 +47,8 @@ enum class CreatureOverlays
     crown,
     //! Mood symbol
     status,
+    //! Mana ring, drawn right of the health ring
+    mana,
     nbCreatureOverlays
 };
 
@@ -67,6 +69,18 @@ const std::string CROWN_MATERIAL_NAME = "ChampionCrown";
 const Ogre::Real CROWN_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the crown picture
 const Ogre::Real CROWN_SIZE = 64;
+//! Material the mana ring is tinted from; it is the experience ring picture, so no new graphic is needed
+const std::string MANA_RING_BASE_MATERIAL = "CreatureExperience";
+//! Colour channels (0 to 255) of the mana ring: the colour of the mana number in the game HUD
+const Ogre::Real MANA_RING_RED = 127.0f;
+const Ogre::Real MANA_RING_GREEN = 227.0f;
+const Ogre::Real MANA_RING_BLUE = 166.0f;
+//! Highest value of a colour channel
+const Ogre::Real COLOUR_CHANNEL_MAX = 255.0f;
+//! Width and height in pixels of the area of the mana ring (as for the other rings)
+const Ogre::Real MANA_RING_SIZE = 64;
+//! Horizontal shift in pixels of the mana ring: right of the health ring, touching it
+const Ogre::Real MANA_RING_OFFSET_X = 64;
 
 //! \brief Shows the level of a creature in the recovery overlay: the level number, or for the champion an empty
 //! caption and the crown.
@@ -145,6 +159,18 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mMovableTextOverlay->setMaterialName(statusId, CREATURE_OVERLAY_STATUS_PREFIX + "1");
     mMovableTextOverlay->displayOverlay(statusId, 0);
 
+    // The mana ring is built like the experience ring, tinted with the HUD mana colour and shifted right of the health ring
+    const Ogre::ColourValue manaColour(MANA_RING_RED / COLOUR_CHANNEL_MAX, MANA_RING_GREEN / COLOUR_CHANNEL_MAX,
+        MANA_RING_BLUE / COLOUR_CHANNEL_MAX);
+    const std::string manaMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(MANA_RING_BASE_MATERIAL,
+        manaColour);
+    uint32_t manaId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
+        Ogre::ColourValue::White, manaMaterial, false);
+    mOverlayIds[static_cast<uint32_t>(CreatureOverlays::mana)] = manaId;
+    mMovableTextOverlay->forceTextArea(manaId, MANA_RING_SIZE, MANA_RING_SIZE);
+    mMovableTextOverlay->setOffset(manaId, MANA_RING_OFFSET_X, 0.0f);
+    mMovableTextOverlay->setAtlasFrame(manaId, 0, PROGRESS_ATLAS_COLUMNS);
+    mMovableTextOverlay->displayOverlay(manaId, -1);
 }
 
 CreatureOverlayStatus::~CreatureOverlayStatus()
@@ -217,9 +243,14 @@ void CreatureOverlayStatus::updateHealth()
 
 }
 
-//! \brief Updates the experience ring and the recovery clock, and reports the shown clock frame to the level test.
+//! \brief Updates the experience ring, the mana ring and the recovery clock, and reports the shown clock frame to the level test.
 void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
 {
+    const uint32_t manaId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::mana)];
+    const double maxMana = mCreature->getMaxMana();
+    const double manaShare = maxMana > 0.0 ? std::max(0.0, std::min(1.0, mCreature->getCurrentMana() / maxMana)) : 0.0;
+    mMovableTextOverlay->setAtlasFrame(manaId, static_cast<uint32_t>(manaShare * Creature::MANA_RING_STEPS),
+        PROGRESS_ATLAS_COLUMNS);
     const uint32_t experienceId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::experience)];
     const uint32_t recoveryId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)];
     const bool known = mCreature->hasProgressInformation();

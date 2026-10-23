@@ -1710,8 +1710,8 @@ const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
 //! Tolerance (design pixels) before the rows count as higher than the page
 const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
 //! Names of the rows that flow from top to bottom and so change their position when the texts change
-const char* const PROFILE_FLOW_ROWS[] = {"BioText", "LikesText", "DislikesText", "RelationsText", "FriendsLabel",
-    "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
+const char* const PROFILE_FLOW_ROWS[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", "LikesText",
+    "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
 const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
 //! \brief Number of lines the window text occupies when CEGUI wraps it at the given pixel width
@@ -1755,13 +1755,14 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     const float scale = getLayoutScale();
     float y = PROFILE_FLOW_TOP;
 
-    // Bio, likes and dislikes, then the rows with friends and foe, then status and latest post. The quirks of the
-    // picture come last, so they never move the status and the latest post (the creature card has a fixed height).
-    const char* const textRowsBefore[] = {"BioText", "LikesText", "DislikesText", "RelationsText"};
+    // Attributes, equipment, path and skills, then bio, likes and dislikes, then the rows with friends and foe, then
+    // status and latest post. The quirks of the picture come last, so they never move the status and the latest post (the creature card has a fixed height).
+    const char* const textRowsBefore[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", "LikesText",
+        "DislikesText", "RelationsText"};
     const char* const textRowsAfter[] = {"StatusText", "LatestText", "QuirksText"};
     const char* const linkRows[PROFILE_LINK_ROWS][PROFILE_LINK_ROW_WINDOWS] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
 
-    for(std::size_t i = 0; i < 4; ++i)
+    for(std::size_t i = 0; i < 8; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);
 
     for(std::size_t row = 0; row < PROFILE_LINK_ROWS; ++row)

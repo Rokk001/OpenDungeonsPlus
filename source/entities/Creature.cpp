@@ -143,6 +143,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <iomanip>
 #include <sstream>
 #include <utility>
 
@@ -3081,6 +3082,92 @@ std::string Creature::getSkillTemplateName() const
     return templ->mName;
 }
 
+//! \brief Text shown for an empty template, skill list or hand in the displays.
+static const std::string DISPLAY_NONE_TEXT = "none";
+//! \brief Number of decimals of the attribute values and the critical chance in the displays.
+static const int32_t DISPLAY_DECIMALS = 1;
+//! \brief Text a value with DISPLAY_DECIMALS decimals ends with when the decimals are zero.
+static const std::string DISPLAY_ZERO_DECIMALS_SUFFIX = ".0";
+
+//! \brief Writes a number with exactly DISPLAY_DECIMALS decimals.
+//! \param value The number to write.
+static std::string formatFixedNumber(double value)
+{
+    std::stringstream text;
+    text << std::fixed << std::setprecision(DISPLAY_DECIMALS) << value;
+    return text.str();
+}
+
+//! \brief Writes a number with DISPLAY_DECIMALS decimals; a whole number is written without decimals.
+//! \param value The number to write.
+static std::string formatDisplayNumber(double value)
+{
+    std::string result = formatFixedNumber(value);
+    if(result.size() > DISPLAY_ZERO_DECIMALS_SUFFIX.size() &&
+       result.compare(result.size() - DISPLAY_ZERO_DECIMALS_SUFFIX.size(), DISPLAY_ZERO_DECIMALS_SUFFIX.size(),
+           DISPLAY_ZERO_DECIMALS_SUFFIX) == 0)
+    {
+        result.erase(result.size() - DISPLAY_ZERO_DECIMALS_SUFFIX.size());
+    }
+    return result;
+}
+
+//! \brief Returns the template name for the displays ("none" while the creature follows no template).
+std::string Creature::getSkillPathText() const
+{
+    const std::string templateName = getSkillTemplateName();
+    if(templateName.empty())
+        return DISPLAY_NONE_TEXT;
+
+    return templateName;
+}
+
+//! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none).
+std::string Creature::getSkillListText() const
+{
+    const CreatureSkillTree::SkillTreeConfig& config = ConfigManager::getSingleton().getCreatureSkillTree();
+    std::string result;
+    for(std::map<std::string, uint32_t>::const_iterator it = mSkillBuild.mRanks.begin();
+        it != mSkillBuild.mRanks.end(); ++it)
+    {
+        if(it->second == 0)
+            continue;
+
+        std::string skillName = it->first;
+        const CreatureSkillTree::SkillDef* skill = config.findSkill(it->first);
+        const CreatureSkillTree::TierFourDef* tierFour = config.findTierFourById(it->first);
+        if(skill != nullptr)
+            skillName = skill->mName;
+        else if(tierFour != nullptr)
+            skillName = tierFour->mName;
+
+        if(!result.empty())
+            result += ", ";
+        result += skillName + " " + Helper::toString(it->second);
+    }
+    if(result.empty())
+        return DISPLAY_NONE_TEXT;
+
+    return result;
+}
+
+//! \brief Returns the attribute line of the displays: "Strength s - Dexterity d - Life l - Mana m -
+//! Critical x.x %".
+std::string Creature::getAttributeSummaryText() const
+{
+    return "Strength " + formatDisplayNumber(getStrength()) + " - Dexterity " + formatDisplayNumber(getDexterity())
+        + " - Life " + formatDisplayNumber(getLife()) + " - Mana " + formatDisplayNumber(getMana())
+        + " - Critical " + formatFixedNumber(getCritChance()) + " %";
+}
+
+//! \brief Returns the carried items for the displays as "<right> / <left>" ("none" for an empty hand).
+std::string Creature::getEquipmentText() const
+{
+    const std::string right = (mWeaponR == nullptr) ? DISPLAY_NONE_TEXT : mWeaponR->getName();
+    const std::string left = (mWeaponL == nullptr) ? DISPLAY_NONE_TEXT : mWeaponL->getName();
+    return right + " / " + left;
+}
+
 //! \brief Fills the skill group, family, pre-skill and tier 4 skill of the type of the creature (empty = none).
 CreatureSkillTree::TypeInfo Creature::getSkillTypeInfo() const
 {
@@ -4477,6 +4564,10 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     }
     page->getChild("FromText")->setText("From: " + profile.mHometown);
     page->getChild("JobText")->setText("Job: " + profile.mJob);
+    page->getChild("AttributesText")->setText(getAttributeSummaryText());
+    page->getChild("EquipmentText")->setText("Equipment: " + getEquipmentText());
+    page->getChild("PathText")->setText("Path: " + getSkillPathText());
+    page->getChild("SkillsText")->setText("Skills: " + getSkillListText());
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
     std::vector<std::string> likes(profile.mLikes, profile.mLikes + PROFILE_LIST_SIZE);
     std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + PROFILE_LIST_SIZE);
@@ -4640,6 +4731,14 @@ std::string Creature::getStatsText()
         tempSS << "Level: " << CHAMPION_CROWN_MARKUP << std::endl;
     else
         tempSS << "Level: " << getLevel() << std::endl;
+    tempSS << "Strength / Dexterity / Life / Mana: " << formatDisplayNumber(getStrength()) << " / "
+        << formatDisplayNumber(getDexterity()) << " / " << formatDisplayNumber(getLife()) << " / "
+        << formatDisplayNumber(getMana()) << std::endl;
+    tempSS << "Critical chance: " << formatFixedNumber(getCritChance()) << " %" << std::endl;
+    tempSS << "Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
+        << std::endl;
+    tempSS << "Path: " << getSkillPathText() << std::endl;
+    tempSS << "Skills: " << getSkillListText() << std::endl;
     tempSS << "Experience: " << mExp << std::endl;
     tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
     tempSS << "Gold: " << mGoldCarried << std::endl;

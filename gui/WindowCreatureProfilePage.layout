@@ -92,6 +92,38 @@
             <Property name="CurrentProgress" value="0.0" />
             <Property name="TooltipText" value="Progress to the next level" />
         </Window>
+        <Window type="OD/StaticText" name="AttributesText" >
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="HorzFormatting" value="LeftAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="EquipmentText" >
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="HorzFormatting" value="LeftAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="PathText" >
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="HorzFormatting" value="LeftAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="SkillsText" >
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="HorzFormatting" value="LeftAligned" />
+        </Window>
         <Window type="OD/StaticText" name="BioText" >
             <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,214}}" />
             <Property name="FrameEnabled" value="False" />

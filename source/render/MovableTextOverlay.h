@@ -109,6 +109,11 @@ private:
 
     //! Whether the caption is centred within the child overlay area
     bool mCenterCaption;
+
+    //! Horizontal shift in pixels (at scale 1) of the drawing; it does not change where the next child is centred
+    Ogre::Real mOffsetX = 0.0f;
+    //! Vertical shift in pixels (at scale 1) of the drawing; it does not change where the next child is centred
+    Ogre::Real mOffsetY = 0.0f;
 };
 
 class MovableTextOverlay
@@ -148,6 +153,12 @@ public:
     void setCaptionOutline(uint32_t childOverlayId, const Ogre::ColourValue& colour);
 
     void setMaterialName(uint32_t childOverlayId, const Ogre::String& materialName);
+    //! \brief Shifts the drawing of a child overlay by a pixel offset (at scale 1, scaled with the marker).
+    //! Only the drawing moves: the next child overlay is still centred on the unshifted box of this one.
+    //! \param childOverlayId The child overlay to shift
+    //! \param x Horizontal offset in pixels, positive to the right
+    //! \param y Vertical offset in pixels, positive downwards
+    void setOffset(uint32_t childOverlayId, Ogre::Real x, Ogre::Real y);
     //! \brief Shows one cell of the material texture, which is a square grid of columns x columns cells.
     //! The frame number enumerates the cells row by row from the top left to the bottom right square.
     //! The cell is shown by mapping the overlay to its u,v texture coordinates in [0..1]x[0..1].
