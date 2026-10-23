@@ -28,6 +28,7 @@
 #include "network/ODServer.h"
 #include "network/ODClient.h"
 #include "render/Gui.h"
+#include "render/LoadingScreen.h"
 #include "render/ODFrameListener.h"
 #include "sound/MusicPlayer.h"
 #include "utils/ConfigManager.h"
@@ -472,6 +473,7 @@ bool MenuModeConfigureSeats::itemStateClicked(const CEGUI::EventArgs& ea)
     return true;
 }
 
+//! \brief Opens seat configuration and restores the menu when player input is required.
 void MenuModeConfigureSeats::activate()
 {
     // Loads the corresponding Gui sheet.
@@ -664,8 +666,11 @@ void MenuModeConfigureSeats::activate()
 
     // We notify the server we are ready to receive players and configure them
     ODClient::getSingleton().queueClientNotification(ClientNotificationType::readyForSeatConfiguration);
+    if(!Campaign::getSingleton().isActive() && !RunLevelTest::isActive())
+        LoadingScreen::finish();
 }
 
+//! \brief Presents the loading image before asking the server to start the configured map.
 bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     // We send to the server the associations faction/seat/player
@@ -673,8 +678,10 @@ bool MenuModeConfigureSeats::launchSelectedButtonPressed(const CEGUI::EventArgs&
     if(!mIsActivePlayerConfig)
         return true;
 
+    LoadingScreen loading;
     ClientNotification* notif = new ClientNotification(ClientNotificationType::seatConfigurationSet);
     ODClient::getSingleton().queueClientNotification(notif);
+    loading.continueLoading();
     return true;
 }
 

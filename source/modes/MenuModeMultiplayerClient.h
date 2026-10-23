@@ -29,6 +29,7 @@ public:
     //! Used to call the corresponding Gui Sheet.
     void activate() final override;
 
+    //! \brief Shows loading status before connecting to the entered server.
     bool clientButtonPressed(const CEGUI::EventArgs&);
 };
 

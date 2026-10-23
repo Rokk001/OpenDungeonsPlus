@@ -117,6 +117,7 @@ public:
     bool onClickYesQuitMenu(const CEGUI::EventArgs& arg = {});
     bool hideConfirmMenu(const CEGUI::EventArgs& /*arg*/);
     bool onYesConfirmMenu(const CEGUI::EventArgs& /*arg*/);
+    //! \brief Creates and opens a new editor map while retaining the loading presentation.
     bool launchNewLevelPressed(const CEGUI::EventArgs&);
     void setTileVisualIfArgNotNull(TileVisual tileVisual)
     { mCurrentTileVisual = tileVisual; }
@@ -288,6 +289,7 @@ private:
     // bool onMouseEntersMenuItem(const CEGUI::EventArgs& e);
     // bool onMouseLeavesMenuItem(const CEGUI::EventArgs& e);
     
+    //! \brief Loads an editor map with its existing status text above the loading picture.
     bool loadLevelFromFile(const std::string&);
     //! \brief file path to currently choosen file via load / save menu
     bool isFileHidden(std::string path);

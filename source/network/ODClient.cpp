@@ -51,6 +51,7 @@
 #include "render/CreatureReactions.h"
 #include "render/RoomAmbience.h"
 #include "render/ODFrameListener.h"
+#include "render/LoadingScreen.h"
 #include "render/RenderManager.h"
 #include "render/RoomAmbience.h"
 #include "rooms/HatcheryNestField.h"
@@ -154,8 +155,10 @@ void ODClient::updateHeartStageHits(float timeSinceLastFrame)
     }
 }
 
+//! \brief Restores the presentation and reports a lost server connection.
 void ODClient::playerDisconnected()
 {
+    LoadingScreen::finish();
     std::string message = getPlayer() ? getPlayer()->getNick() + " disconnected from the server." : "A player disconnected.";
     // Place an event in the queue to inform the user about the disconnection.
     addEventMessage(new EventMessage(message));
@@ -198,6 +201,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
     {
         case ServerNotificationType::loadLevel:
         {
+            LoadingScreen loading;
             // The map may still hold a previous session (a reconnection, or launching a
             // level twice from the same menu). createNewMap only rebuilds the tiles, so
             // without this the seats, creature classes and weapons pile up, and the
@@ -333,6 +337,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             ODPacket packSend;
             packSend << ClientNotificationType::levelOK;
             send(packSend);
+            loading.continueLoading();
             break;
         }
 
@@ -548,6 +553,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::clientRejected:
         {
+            LoadingScreen::finish();
             // If should be in seat configuration. If we are rejected, we regress mode
             ModeManager::ModeType modeType = frameListener->getModeManager()->getCurrentModeType();
             if(modeType != ModeManager::ModeType::MENU_CONFIGURE_SEATS)
@@ -563,6 +569,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::startGameMode:
         {
+            LoadingScreen loading;
             int seatId;
             OD_ASSERT_TRUE(packetReceived >> seatId);
             const std::vector<Player*>& players = gameMap->getPlayers();
@@ -2288,6 +2295,7 @@ void ODClient::refreshMainUI(const std::string& goalsString)
     // Note: Later, we can handle other modes here if necessary.
 }
 
+//! \brief Presents a loading frame before connecting and keeps it through the map handshake.
 bool ODClient::connect(const std::string& host, const int port, uint32_t timeout, const std::string& outputReplayFilename)
 {
     mIsPlayerConfig = false;
@@ -2298,6 +2306,7 @@ bool ODClient::connect(const std::string& host, const int port, uint32_t timeout
         return false;
     }
 
+    LoadingScreen loading;
     if(!ODSocketClient::connect(host, port, timeout, outputReplayFilename))
         return false;
 
@@ -2306,6 +2315,7 @@ bool ODClient::connect(const std::string& host, const int port, uint32_t timeout
     packSend << ClientNotificationType::hello
         << std::string("OpenDungeons V ") + ODApplication::VERSION;
     send(packSend);
+    loading.continueLoading();
 
     return true;
 }
@@ -2343,8 +2353,10 @@ void ODClient::requestNicknameChange(const std::string& nickname)
     queueClientNotification(ClientNotificationType::changeNick, nickname);
 }
 
+//! \brief Restores the normal presentation and disconnects from the server or replay.
 void ODClient::disconnect(bool keepReplay)
 {
+    LoadingScreen::finish();
     ODSocketClient::disconnect(keepReplay);
     while(!mClientNotificationQueue.empty())
     {

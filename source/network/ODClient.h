@@ -183,6 +183,7 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! the carrier as carrying or not carrying on the client.
     //! \return true if the notification was processed.
     bool processMessage(ServerNotificationType cmd, ODPacket& packetReceived) override;
+    //! \brief Restores any loading presentation and reports the lost connection.
     void playerDisconnected() override;
 
  private:

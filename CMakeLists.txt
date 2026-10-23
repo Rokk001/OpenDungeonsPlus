@@ -453,6 +453,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/WorkerReactions.cpp
     ${SRC}/render/WorkerExtras.cpp
     ${SRC}/render/DebugDrawer.cpp    
+    ${SRC}/render/LoadingScreen.cpp
     ${SRC}/render/Gui.cpp
     ${SRC}/render/CreaturePortrait.cpp
     ${SRC}/render/PortraitTint.cpp
