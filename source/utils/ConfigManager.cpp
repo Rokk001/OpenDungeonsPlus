@@ -80,6 +80,7 @@ template<> ConfigManager* Ogre::Singleton<ConfigManager>::msSingleton = nullptr;
 ConfigManager::ConfigManager(const std::string& configPath, const std::string& userConfigPath,
         const std::string& soundPath) :
     mConfigPath(configPath),
+    mFilenameCreatureSkills("creatureSkills.cfg"),
     mNetworkPort(0),
     mClientConnectionTimeout(5000),
     mBaseSpawnPoint(10),
@@ -208,6 +209,12 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     if(!loadSkills(fileName))
     {
         OD_LOG_ERR("Couldn't read loadSkills");
+        exit(1);
+    }
+    fileName = configPath + mFilenameCreatureSkills;
+    if(!loadCreatureSkills(fileName))
+    {
+        OD_LOG_ERR("Couldn't read loadCreatureSkills");
         exit(1);
     }
     fileName = configPath + mFilenameTilesets;
@@ -418,6 +425,11 @@ bool ConfigManager::loadGlobalConfigDefinitionFiles(std::stringstream& configFil
         {
             mFilenameSkills = fileName;
             filesOk |= 0x080;
+        }
+        else if(type == "CreatureSkills")
+        {
+            // Optional entry: without it the default file name is used
+            mFilenameCreatureSkills = fileName;
         }
         else if(type == "Tilesets")
         {
@@ -1531,6 +1543,27 @@ bool ConfigManager::loadSpellConfig(const std::string& fileName)
             break;
 
         defFile >> mSpellConfig[NameAliases::resolve(nextParam)];
+    }
+
+    return true;
+}
+
+//! \brief Reads the creature skill trees: the [Skill], [TierFour] and [Template] blocks of creatureSkills.cfg.
+bool ConfigManager::loadCreatureSkills(const std::string& fileName)
+{
+    OD_LOG_INF("Load creature skills file: " + fileName);
+    std::stringstream defFile;
+    if(!Helper::readFile(fileName, defFile, true))
+    {
+        OD_LOG_ERR("Couldn't read " + fileName);
+        return false;
+    }
+
+    std::string error;
+    if(!mCreatureSkillTree.load(defFile, error))
+    {
+        OD_LOG_ERR("Invalid creature skills file " + fileName + ": " + error);
+        return false;
     }
 
     return true;
