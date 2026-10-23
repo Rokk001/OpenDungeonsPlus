@@ -70,69 +70,45 @@ add_boost_test(00-CreatureRelationships
         ${Boost_FILESYSTEM_LIBRARY_RELEASE}
         ${Boost_SYSTEM_LIBRARY_RELEASE})
 
-add_boost_test(00-PortraitManifest
+add_boost_test(00-PortraitCatalog
         SOURCES
-        test_PortraitManifest.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/render/DungeonbookAppearanceConfig.h
+        test_PortraitCatalog.cpp
+        ${SRC}/render/PortraitCatalog.cpp
         ${SRC}/render/DungeonbookAppearanceConfig.cpp)
 
 add_boost_test(00-CreatureAppearance
         SOURCES
         test_CreatureAppearance.cpp
-        ${SRC}/game/CreatureAppearance.h
         ${SRC}/game/CreatureAppearance.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/render/PortraitManifestRegistry.h
-        ${SRC}/render/PortraitManifestRegistry.cpp
-        ${SRC}/network/ODPacket.h
-        ${SRC}/network/ODPacket.cpp
-        LIBRARIES
-        ${SFML_LIBRARIES})
-
-add_boost_test(00-AppearanceCompose
-        SOURCES
-        test_AppearanceCompose.cpp
-        ${SRC}/render/AppearanceCompose.h
-        ${SRC}/render/AppearanceCompose.cpp
-        ${SRC}/render/PortraitTint.h
-        ${SRC}/render/PortraitTint.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/game/CreatureAppearance.h
-        ${SRC}/game/CreatureAppearance.cpp
-        ${SRC}/social/SocialRng.h)
+        ${SRC}/render/PortraitCatalog.cpp
+        ${SRC}/render/PortraitCatalogRegistry.cpp)
 
 add_boost_test(00-DungeonbookQuirks
         SOURCES
         test_DungeonbookQuirks.cpp
-        ${SRC}/render/DungeonbookQuirks.h
         ${SRC}/render/DungeonbookQuirks.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/game/CreatureAppearance.h
+        ${SRC}/render/PortraitCatalog.cpp
         ${SRC}/game/CreatureAppearance.cpp)
 
 add_boost_test(00-DungeonbookMultiplayer
         SOURCES
         test_DungeonbookMultiplayer.cpp
-        ${SRC}/network/ODPacket.h
         ${SRC}/network/ODPacket.cpp
-        ${SRC}/render/AppearanceCompose.h
-        ${SRC}/render/AppearanceCompose.cpp
-        ${SRC}/render/PortraitTint.h
-        ${SRC}/render/PortraitTint.cpp
-        ${SRC}/render/PortraitManifest.h
-        ${SRC}/render/PortraitManifest.cpp
-        ${SRC}/render/DungeonbookQuirks.h
+        ${SRC}/render/PortraitCatalog.cpp
         ${SRC}/render/DungeonbookQuirks.cpp
-        ${SRC}/game/CreatureAppearance.h
         ${SRC}/game/CreatureAppearance.cpp
-        ${SRC}/social/SocialRng.h
         LIBRARIES
         ${SFML_LIBRARIES})
+
+add_boost_test(00-WholePortraitJpeg
+        SOURCES
+        test_WholePortraitJpeg.cpp
+        LIBRARIES
+        ${OGRE_LIBRARIES})
+if(DEFINED 00-WholePortraitJpeg_TARGET_NAME)
+    target_compile_definitions(${00-WholePortraitJpeg_TARGET_NAME} PRIVATE
+        OD_WHOLE_PORTRAIT_SAMPLE="${CMAKE_SOURCE_DIR}/materials/portraits/whole/Elf.mesh/01.jpg")
+endif()
 
 add_boost_test(00-RelationshipHooks
         SOURCES

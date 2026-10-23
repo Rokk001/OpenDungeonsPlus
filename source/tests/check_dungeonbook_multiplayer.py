@@ -6,7 +6,7 @@ alike, and the code that turns appearance and name into pixels and remarks has n
 between clients (no random numbers, clock, hash of the standard library, seat or local player).
 
 The runtime part (packet round trips of two clients and a late joiner fed from one server state, same
-picture key, same pixels, same remarks) is the boost test 00-DungeonbookMultiplayer. A real run with two
+picture key, same selected JPEG, same remarks) is the boost test 00-DungeonbookMultiplayer. A real run with two
 game instances is not part of this check; that stays a manual test.
 """
 from pathlib import Path
@@ -64,7 +64,7 @@ assert not re.search(r'[Cc]reature[^;\n]*exportToPacket\(', server), 'creature d
 # The pixels and remarks are a function of the appearance and the name only
 forbidden = (r'\bRandom::', r'\brand\(', r'\bsrand\(', r'std::hash', r'<random>', r'\btime\(', r'std::chrono', r'getLocalPlayer',
              r'getSeat\(', r'ODFrameListener', r'getTurnNumber', r'std::random_device')
-for name in ('source/render/AppearanceCompose.cpp', 'source/render/DungeonbookQuirks.cpp',
+for name in ('source/render/DungeonbookQuirks.cpp',
              'source/game/CreatureAppearance.cpp', 'source/render/CreatureAppearancePicture.cpp'):
     text = re.sub(r'//.*', '', read(name))
     # Only the appearance picture code may be checked for the random pick: CreatureAppearance takes the
@@ -89,8 +89,8 @@ assert 'appearanceImage' in fill
 
 # The tests that give the runtime part are part of the build
 tests = read('source/tests/CMakeLists.txt')
-for test in ('00-DungeonbookMultiplayer', '00-DungeonbookQuirks', '00-CreatureAppearance', '00-AppearanceCompose',
-             '00-PortraitManifest'):
+for test in ('00-DungeonbookMultiplayer', '00-DungeonbookQuirks', '00-CreatureAppearance', '00-PortraitCatalog',
+             '00-WholePortraitJpeg'):
     assert 'add_boost_test(%s' % test in tests, test
 
 print('dungeonbook multiplayer wiring ok')
