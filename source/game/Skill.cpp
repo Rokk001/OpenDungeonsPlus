@@ -17,34 +17,38 @@
 
 #include "game/Skill.h"
 
+#include <algorithm>
+
 #include "game/Player.h"
 #include "game/SkillType.h"
 #include "network/ODPacket.h"
 #include "utils/Helper.h"
 
 
-Skill::Skill(SkillType type, int32_t neededSkillPoints, const std::vector<const Skill*>& skillDepends):
+Skill::Skill(SkillType type, int32_t neededSkillPoints, const std::vector<const Skill*>& skillDepends, bool freeLevelOne):
     mType(type),
     mNeededSkillPoints(neededSkillPoints),
-    mSkillDepends(skillDepends)
+    mSkillDepends(skillDepends),
+    mFreeLevelOne(freeLevelOne)
 {
 }
 
 int32_t Skill::getNeededSkillPoints(uint32_t level) const
 {
     if(level <= 1)
-        return mNeededSkillPoints;
-    int32_t base = mNeededSkillPoints;
-    if(base == 0)
-        base = (mType == SkillType::roomLibrary || mType == SkillType::spellSummonWorker) ? 150 : 100;
-    return base * (level == 2 ? 2 : 4);
+        return mFreeLevelOne ? 0 : mNeededSkillPoints;
+    return mNeededSkillPoints * (level == 2 ? 2 : 4);
 }
 
-bool Skill::canBeSkilled(const std::vector<SkillType>& skillsDone) const
+bool Skill::canBeSkilled(const std::vector<SkillType>& skillsDone, const std::vector<SkillType>& skillsNotAllowed) const
 {
     for(const Skill* skill : mSkillDepends)
     {
         if(std::find(skillsDone.begin(), skillsDone.end(), skill->getType()) != skillsDone.end())
+            continue;
+
+        // A parent the level does not allow counts as fulfilled
+        if(std::find(skillsNotAllowed.begin(), skillsNotAllowed.end(), skill->getType()) != skillsNotAllowed.end())
             continue;
 
         return false;
@@ -52,7 +56,8 @@ bool Skill::canBeSkilled(const std::vector<SkillType>& skillsDone) const
     return true;
 }
 
-void Skill::buildDependencies(const std::vector<SkillType>& skillsDone, std::vector<SkillType>& dependencies) const
+void Skill::buildDependencies(const std::vector<SkillType>& skillsDone, const std::vector<SkillType>& skillsNotAllowed,
+        std::vector<SkillType>& dependencies) const
 {
     // If the current skill is already in the dependencies list, no need to process it
     if(std::find(dependencies.begin(), dependencies.end(), getType()) != dependencies.end())
@@ -64,10 +69,14 @@ void Skill::buildDependencies(const std::vector<SkillType>& skillsDone, std::vec
         if(std::find(skillsDone.begin(), skillsDone.end(), resType) != skillsDone.end())
             continue;
 
+        // A parent the level does not allow counts as fulfilled
+        if(std::find(skillsNotAllowed.begin(), skillsNotAllowed.end(), resType) != skillsNotAllowed.end())
+            continue;
+
         if(std::find(dependencies.begin(), dependencies.end(), resType) != dependencies.end())
             continue;
 
-        skill->buildDependencies(skillsDone, dependencies);
+        skill->buildDependencies(skillsDone, skillsNotAllowed, dependencies);
     }
 
     if(std::find(dependencies.begin(), dependencies.end(), getType()) == dependencies.end())

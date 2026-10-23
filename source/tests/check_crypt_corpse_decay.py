@@ -59,7 +59,7 @@ struct Creature:GameEntity {
 enum class ActiveSpotPlace {activeSpotCenter,other};
 struct Room {void notifyActiveSpotRemoved(ActiveSpotPlace,Tile*){}};
 struct RoomCrypt:Room {
- GameMap map;std::map<Tile*,std::pair<Creature*,int32_t>> mRottingCreatures;
+ GameMap map;std::map<Tile*,std::pair<Creature*,double>> mRottingCreatures;
  std::map<Tile*,BuildingObject*> objects;const std::map<Tile*,BuildingObject*>& getBuildingObjects(){return objects;}
  RoomCrypt(){map.destination.room=this;}
  GameMap* getGameMap(){return &map;}std::string getName(){return "crypt";}

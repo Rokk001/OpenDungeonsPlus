@@ -100,7 +100,7 @@
 #include "render/CreatureReactions.h"
 #include "render/DungeonbookAppearanceConfig.h"
 #include "render/DungeonbookQuirks.h"
-#include "render/PortraitManifestRegistry.h"
+#include "render/PortraitCatalogRegistry.h"
 #include "render/RenderManager.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
@@ -196,11 +196,11 @@ const uint32_t APPEARANCE_RETRY_TURNS = 200;
 //! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
 const int64_t BED_STATUS_REPEAT_TURNS = 200;
 
-//! \brief Server side registry of the portrait manifests used to assign the Dungeonbook appearance.
+//! \brief Server side registry of the whole-image catalogs used to assign the Dungeonbook appearance.
 //! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
-PortraitManifestRegistry& getAppearanceRegistry()
+PortraitCatalogRegistry& getAppearanceRegistry()
 {
-    static PortraitManifestRegistry registry;
+    static PortraitCatalogRegistry registry;
     static bool initialized = false;
     if(!initialized)
     {
@@ -219,7 +219,7 @@ PortraitManifestRegistry& getAppearanceRegistry()
 
         std::string root = config.getAssetRoot();
         if(root.empty())
-            root = "materials/portraits/variants";
+            root = "materials/portraits/whole";
 
         bool isAbsolute = (root.size() > 1) && ((root[1] == ':') || (root[0] == '/') || (root[0] == '\\'));
         if(!isAbsolute)
@@ -964,14 +964,15 @@ bool Creature::importFromStream(std::istream& is)
     return true;
 }
 
+//! \brief Assigns a unique whole portrait on spawn or stably migrates a saved image number.
 void Creature::assignAppearance(bool firstSpawn)
 {
     if(!getIsOnServerMap() || (mDefinition == nullptr))
         return;
 
-    PortraitManifestRegistry& registry = getAppearanceRegistry();
+    PortraitCatalogRegistry& registry = getAppearanceRegistry();
     CreatureAppearanceLogic::CatalogExistsFunction exists =
-        std::bind(&PortraitManifestRegistry::hasCatalog, &registry, std::placeholders::_1);
+        std::bind(&PortraitCatalogRegistry::hasCatalog, &registry, std::placeholders::_1);
     std::string catalogId = CreatureAppearanceLogic::resolveCatalogId(mDefinition->getMeshName(), getGender(), exists);
     if(catalogId.empty())
     {
@@ -981,15 +982,15 @@ void Creature::assignAppearance(bool firstSpawn)
     }
     mAppearanceNoCatalog = false;
 
-    const PortraitManifest* manifest = registry.getManifest(catalogId);
+    const PortraitCatalog* catalog = registry.getCatalog(catalogId);
     std::vector<std::string> messages = registry.takeMessages();
     for(std::vector<std::string>::const_iterator it = messages.begin(); it != messages.end(); ++it)
     {
         OD_LOG_WRN("Dungeonbook appearance: " + *it);
     }
 
-    // No manifest (yet): the appearance is derived later like for old saves, a stored one is kept
-    if(manifest == nullptr)
+    // No catalog (yet): the appearance is derived later like for old saves, a stored one is kept
+    if(catalog == nullptr)
         return;
 
     if(firstSpawn)
@@ -1003,19 +1004,20 @@ void Creature::assignAppearance(bool firstSpawn)
                 taken.push_back(other);
         }
 
-        mAppearance = CreatureAppearanceLogic::pickRandom(*manifest, catalogId, getAppearanceRandom, taken);
+        mAppearance = CreatureAppearanceLogic::pickRandom(*catalog, catalogId, getAppearanceRandom, taken);
         mAppearanceValidated = true;
         return;
     }
 
     if(mAppearance.isEmpty())
-        mAppearance = CreatureAppearanceLogic::pickStable(*manifest, catalogId, getName());
+        mAppearance = CreatureAppearanceLogic::pickStable(*catalog, catalogId, getName());
     else
-        CreatureAppearanceLogic::validate(*manifest, catalogId, getName(), mAppearance);
+        CreatureAppearanceLogic::validate(*catalog, catalogId, getName(), mAppearance);
 
     mAppearanceValidated = true;
 }
 
+//! \brief Retries unavailable whole catalogs and sends an updated appearance only when it changes.
 void Creature::retryAppearance()
 {
     // A creature without catalog id is only looked at when the catalog generation changed: no waiting period
@@ -1026,7 +1028,7 @@ void Creature::retryAppearance()
     }
     mAppearanceRetryTurns = APPEARANCE_RETRY_TURNS;
 
-    // A manifest that was missing or invalid at spawn may be there now: the registry looks again, then the
+    // A catalog that was missing or invalid at spawn may be there now: the registry looks again, then the
     // appearance is derived like for old saves
     getAppearanceRegistry().retryFailed();
     CreatureAppearance before = mAppearance;
@@ -1422,7 +1424,7 @@ void Creature::dropCarriedEquipment()
 void Creature::doUpkeep()
 {
     // No manifest was available when the creature spawned: assign the appearance as soon as it is
-    // (or the stored one was never checked against a manifest): the appearance is derived or checked as soon as one is
+    // (or the stored one was never checked against a catalog): the appearance is derived or checked as soon as one is
     if(getIsOnServerMap())
     {
         // New catalog folders are looked for once per retry period for all creatures together, never per creature
@@ -1672,6 +1674,14 @@ void Creature::doUpkeep()
         return;
     }
 
+    // The ground under the creature or under its walk path may have stopped being walkable
+    // (a sold or burnt bridge), and bare lava hurts a creature that cannot walk on it
+    if(getIsOnServerMap())
+    {
+        checkWalkPathIsStillValid();
+        applyLavaDamage();
+    }
+
     // Check to see if we have earned enough experience to level up.
     checkLevelUp();
 
@@ -1850,11 +1860,13 @@ void Creature::doUpkeep()
         // The creature skills keep recovering while the player controls the creature
         for(CreatureSkillData& skillData : mSkillData)
         {
-            if(skillData.mWarmup > 0)
-                --skillData.mWarmup;
+            // The timers keep their fractions: they count down while positive and are not clamped to 0,
+            // so the negative remainder carries over to the next use
+            if(skillData.mWarmup > 0.0)
+                skillData.mWarmup -= 1.0;
 
             if(skillData.mCooldown > 0.0)
-                skillData.mCooldown = std::max(0.0, skillData.mCooldown - 1.0);
+                skillData.mCooldown -= 1.0;
         }
 
         std::function<bool()> possessedFunc = mActions.back()->action();
@@ -1866,17 +1878,18 @@ void Creature::doUpkeep()
     // We use creature skills if we can
     for(CreatureSkillData& skillData : mSkillData)
     {
-        if(skillData.mWarmup > 0)
+        if(skillData.mWarmup > 0.0)
         {
-            --skillData.mWarmup;
+            skillData.mWarmup -= 1.0;
             isWarmUp = true;
         }
 
+        // The cooldown counts down while positive (no clamp to 0); the skill is usable when it is <= 0
         if(skillData.mCooldown > 0.0)
-        {
-            skillData.mCooldown = std::max(0.0, skillData.mCooldown - 1.0);
+            skillData.mCooldown -= 1.0;
+
+        if(skillData.mCooldown > 0.0)
             continue;
-        }
 
         if(!skillData.mSkill->canBeUsedBy(this))
             continue;
@@ -1884,15 +1897,16 @@ void Creature::doUpkeep()
         if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
             continue;
 
-        skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
-        skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+        // The new cooldown and warmup are added, so the remainder of the last turn carries over
+        skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
+        skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
         // Successful self-casts use the same recovery display as attacks.
         mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
         mAttackRecoveryTurns = mAttackRecoveryDuration;
         ++mAttackRecoverySerial;
         mNeedFireRefresh = true;
 
-        if(skillData.mWarmup > 0)
+        if(skillData.mWarmup > 0.0)
             isWarmUp = true;
     }
 
@@ -3438,8 +3452,12 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     }
     page->getChild("NameText")->setText(profile.getFullName());
 
-    std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter") +
-        " - Level " + Helper::toString(getLevel());
+    // The champion shows a crown instead of its level
+    std::string handle = makeProfileHandle(profile) + " - " + (definition->isWorker() ? "Worker" : "Fighter");
+    if(definition->isChampion())
+        handle += " - " + CHAMPION_CROWN_MARKUP;
+    else
+        handle += " - Level " + Helper::toString(getLevel());
     page->getChild("HandleText")->setText(handle);
 
     std::string age = (profile.mAgeText == Helper::toString(profile.mAge)) ? "Age " + profile.mAgeText : profile.mAgeText;
@@ -3623,7 +3641,10 @@ std::string Creature::getStatsText()
 
     std::stringstream tempSS;
     tempSS << formatTitleOn << "Characteristics" << formatTitleOff << std::endl;
-    tempSS << "Level: " << getLevel() << std::endl;
+    if(getDefinition()->isChampion())
+        tempSS << "Level: " << CHAMPION_CROWN_MARKUP << std::endl;
+    else
+        tempSS << "Level: " << getLevel() << std::endl;
     tempSS << "Experience: " << mExp << std::endl;
     tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
     tempSS << "Gold: " << mGoldCarried << std::endl;
@@ -4488,8 +4509,9 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     // We use the skill
     skillData.mSkill->tryUseFight(*getGameMap(), this, range,
         &entityAttack, &tileAttack, ko, notifyPlayerIfHit);
-    skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
-    skillData.mCooldown = getAppliedCooldownNbTurns(*skillData.mSkill);
+    // The new timers are added, so the remainder of the last turn carries over (fractions are kept)
+    skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
+    skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);
 
     // Both timers count down together; either can postpone the next attack.
     mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
@@ -4954,6 +4976,72 @@ bool Creature::setDestination(Tile* tile)
     }
     pushAction(Utils::make_unique<CreatureActionWalkToTile>(*this));
     return true;
+}
+
+void Creature::checkWalkPathIsStillValid()
+{
+    if(mWalkQueue.empty())
+        return;
+
+    bool isPathBlocked = false;
+    for(const Ogre::Vector2& step : mWalkQueue)
+    {
+        Tile* tile = getGameMap()->getTile(Helper::round(step.x), Helper::round(step.y));
+        if(tile == nullptr)
+            continue;
+
+        if(canGoThroughTile(tile))
+            continue;
+
+        // A building that does not let the creature through (closed door, prison) is meant to stop it
+        if(tile->getCoveringBuilding() != nullptr)
+            continue;
+
+        isPathBlocked = true;
+        break;
+    }
+
+    if(!isPathBlocked)
+        return;
+
+    const Ogre::Vector2& lastStep = mWalkQueue.back();
+    Tile* destination = getGameMap()->getTile(Helper::round(lastStep.x), Helper::round(lastStep.y));
+
+    OD_LOG_INF("creature=" + getName() + " cannot walk its path anymore, destination="
+        + Tile::displayAsString(destination));
+
+    // Stop where we are rather than walk into what is now lava or water
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+
+    if((destination == nullptr) || !canGoThroughTile(destination))
+        return;
+
+    std::list<Tile*> result = getGameMap()->path(this, destination);
+    if(result.size() <= 1)
+        return;
+
+    std::vector<Ogre::Vector2> path;
+    tileToVector2(result, path, true, 0.0);
+    setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
+}
+
+void Creature::applyLavaDamage()
+{
+    Tile* myTile = getPositionTile();
+    if(myTile == nullptr)
+        return;
+
+    if(myTile->getTileVisual() != TileVisual::lavaGround)
+        return;
+
+    if(myTile->getCoveringBuilding() != nullptr)
+        return;
+
+    if(getMoveSpeedLava() > 0.0)
+        return;
+
+    double lavaDamagePerSecond = ConfigManager::getSingleton().getLavaDamagePerSecond();
+    takeDamage(nullptr, lavaDamagePerSecond / ODApplication::turnsPerSecond, 0.0, 0.0, 0.0, myTile, false);
 }
 
 bool Creature::wanderRandomly(const std::string& animationState)
@@ -6113,7 +6201,7 @@ void Creature::addCreatureEffect(CreatureEffect* effect)
     OD_LOG_INF("Added CreatureEffect name=" + effectName + " on creature=" + getName());
 
     CreatureParticleEffect* particleEffect = new CreatureParticleEffect(*this, effectName, effect->getParticleEffectScript(),
-        effect->getNbTurnsEffect(), effect);
+        static_cast<int32_t>(std::ceil(effect->getNbTurnsEffect())), effect);
     mEntityParticleEffects.push_back(particleEffect);
 
     mNeedFireRefresh = true;
@@ -6553,7 +6641,7 @@ bool Creature::isWarmup() const
 {
     for(const CreatureSkillData& skillData : mSkillData)
     {
-        if(skillData.mWarmup > 0)
+        if(skillData.mWarmup > 0.0)
             return true;
     }
 
@@ -7093,7 +7181,7 @@ bool isPossessedBasicAttack(const CreatureSkill& skill)
 //! \param skillData The state of the skill (cooldown and warmup turns left).
 bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
 {
-    return (skillData.mCooldown <= 0.0) && (skillData.mWarmup == 0) &&
+    return (skillData.mCooldown <= 0.0) && (skillData.mWarmup <= 0.0) &&
         skillData.mSkill->canBeUsedBy(&creature);
 }
 }
@@ -7242,8 +7330,8 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
             if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
                 return;
 
-            skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();
-            skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();
+            skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
+            skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
             // Report a successful self-cast exactly as in normal creature control.
             mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);
             mAttackRecoveryTurns = mAttackRecoveryDuration;

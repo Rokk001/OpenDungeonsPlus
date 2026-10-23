@@ -29,7 +29,7 @@ expected = {
     "InfernoPrice": "46400", "InfernoCooldown": "78",
     "CreateGoldPrice": "14000", "CreateGoldCooldown": "0",
     "PossessPrice": "450", "PossessFreeSeconds": "20",
-    "SummonChampionPrice": "108000", "SummonChampionDrainPerSecond": "2250", "SummonChampionCooldown": "0",
+    "SummonChampionPrice": "108000", "SummonChampionDrainPerSecond": "2250", "SummonChampionCooldown": "884",
     "CreatureHastePrice": "2200", "CreatureHasteCooldown": "13",
     "CreatureSlowPrice": "1800", "CreatureSlowCooldown": "11",
     "CreatureDefensePrice": "2650", "CreatureDefenseCooldown": "17",

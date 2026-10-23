@@ -51,7 +51,7 @@ attack = function_body(creature, 'void Creature::useAttack(')
 assert attack.index('fireAttackTurn(entityAttack.getName(), walkDirection);') < attack.index('setAnimationState(ranged')
 assert attack.index('walkDirection.normalise();') < attack.index('fireAttackTurn(')
 assert attack.index('fireAttackTurn(') < attack.index('tryUseFight('), 'announced before the damage is calculated'
-assert 'mWarmup = skillData.mSkill->getWarmupNbTurns();' in attack, 'timing of the server unchanged'
+assert 'mWarmup += skillData.mSkill->getWarmupNbTurns();' in attack, 'timing of the server unchanged'
 # Only through the common path: negotiated clients that see the creature; old servers send nothing, old clients skip the kind
 assert 'fireCosmeticEvent(event, false)' in fire
 assert '!supportsCosmeticEvents() || !event.isKnownType()' in client

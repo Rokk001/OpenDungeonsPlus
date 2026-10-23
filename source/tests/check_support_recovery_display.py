@@ -15,8 +15,8 @@ def check(text):
         guard = "continue;" if "doUpkeep" in signature else "return;"
         statements = (
             guard,
-            "skillData.mCooldown = skillData.mSkill->getCooldownNbTurns();",
-            "skillData.mWarmup = skillData.mSkill->getWarmupNbTurns();",
+            "skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();",
+            "skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();",
             "mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown);",
             "mAttackRecoveryTurns = mAttackRecoveryDuration;",
             "++mAttackRecoverySerial;",

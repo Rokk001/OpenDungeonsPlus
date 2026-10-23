@@ -330,11 +330,12 @@ bool RoomBridge::isClaimable(Seat* seat) const
     return !getSeat()->isAlliedSeat(seat);
 }
 
+//! \brief Lets the seat claim the bridge; the claim research of the owner makes the dance slower.
 void RoomBridge::claimForSeat(Seat* seat, Tile* tile, double danceRate)
 {
     const SkillType research = getType() == RoomType::bridgeStone ?
         SkillType::roomBridgeStone : SkillType::roomBridgeWooden;
-    danceRate /= SkillManager::getResearchValue(getSeat(), research, 1.0);
+    danceRate /= SkillManager::getResearchValue(getSeat(), research, 1.0, ResearchEffect::ClaimResistance);
     // A dance on any square lowers the pool of the whole bridge (squares x RoomConvertSecondsPerTile)
     // and all squares change hands together when it is empty, like in every other room.
     Room::claimForSeat(seat, tile, danceRate);

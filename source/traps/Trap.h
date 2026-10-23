@@ -87,15 +87,17 @@ public:
     inline TrapEntity* getTrapEntity() const
     { return mTrapEntity; }
 
+    //! \brief Counts the reload time down by one turn while it is above zero. The time keeps its fractions: it may
+    //! end below zero, and that part is carried into the next reload period (see Trap::fireTile).
+    //! \return True while the trap is still reloading
     bool decreaseReloadTime()
     {
-        if (mReloadTime > 1)
+        if (mReloadTime > 0.0)
         {
-            --mReloadTime;
-            return true;
+            mReloadTime -= 1.0;
+            return mReloadTime > 0.0;
         }
 
-        mReloadTime = 0;
         return false;
     }
 
@@ -119,10 +121,11 @@ public:
     inline bool isActivated() const
     { return mIsActivated; }
 
-    inline uint32_t getReloadTime() const
+    //! \brief The turns left until the trap is reloaded (zero or less when it is ready)
+    inline double getReloadTime() const
     { return mReloadTime; }
 
-    inline void setReloadTime(uint32_t reloadTime)
+    inline void setReloadTime(double reloadTime)
     { mReloadTime = reloadTime; }
 
     inline void setNbShootsBeforeDeactivation(int32_t nbShoot)
@@ -181,7 +184,7 @@ public:
 
 private:
     bool mIsActivated;
-    uint32_t mReloadTime;
+    double mReloadTime;
     CraftedTrap* mCraftedTrap;
     int32_t mNbShootsBeforeDeactivation;
     TrapEntity* mTrapEntity;
@@ -243,6 +246,11 @@ public:
     //! brief Mana taken from the owner each time the trap fires. The trap does not
     //! fire while the owner has less mana than that. 0 for traps that cost no mana.
     virtual double getManaToFire() const;
+
+    //! \brief The turns the trap needs to reload after a shot, with the research of its owner. A trap without
+    //! research gives its configured reload time.
+    virtual double getResearchedReloadTime() const
+    { return mReloadTime; }
 
     //! \brief Mana per second the owner pays for each armed tile of this trap. 0 for traps that cost nothing to hold.
     double getManaUpkeepPerSecond() const;
@@ -330,7 +338,8 @@ protected:
     virtual void notifyActiveSpotRemoved(Tile* tile);
 
     uint32_t mNbShootsBeforeDeactivation;
-    uint32_t mReloadTime;
+    //! Turns a trap needs to reload after a shot (a double, because the research can give fractions)
+    double mReloadTime;
     double mMinDamage;
     double mMaxDamage;
 

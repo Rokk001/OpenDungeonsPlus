@@ -5,34 +5,37 @@
 #include <cstdint>
 #include <cmath>
 
+#include "utils/ConfigManager.h"
+
 namespace CreatureProgression
 {
-//! Combat growth coefficients and exponents for health, damage and accuracy.
-static const double HP_GROWTH = 0.173;
-static const double HP_EXPONENT = 1.37;
-static const double DAMAGE_GROWTH = 0.278;
-static const double DAMAGE_EXPONENT = 1.02;
-static const double ATTACK_RATING_GROWTH = 0.847;
-static const double ATTACK_RATING_EXPONENT = 1.13;
+//! The growth coefficients and exponents of the curves (CreatureDamageGrowth, CreatureDamageExponent,
+//! CreatureHpGrowthPerLevel, CooldownReductionPerLevel) are read from global.cfg through the ConfigManager;
+//! this header only holds the formulas.
 //! Highest creature level; the power curve is spread over the levels 1 to this value.
 const uint32_t MAX_POWER_LEVEL = 30;
 
-//! \brief Returns the creature health multiplier, clamped to levels 1 through 30.
-inline double hpMultiplier(uint32_t level)
-{
-    return 1.0 + HP_GROWTH * std::pow(std::max(1u, std::min(MAX_POWER_LEVEL, level)) - 1, HP_EXPONENT);
-}
-
-//! \brief Returns the creature damage and defense multiplier, clamped to levels 1 through 30.
+//! \brief Returns the creature damage and defense multiplier, clamped to levels 1 through 30:
+//! 1 + CreatureDamageGrowth x (level - 1) ^ CreatureDamageExponent.
 inline double damageMultiplier(uint32_t level)
 {
-    return 1.0 + DAMAGE_GROWTH * std::pow(std::max(1u, std::min(MAX_POWER_LEVEL, level)) - 1, DAMAGE_EXPONENT);
+    const ConfigManager& config = ConfigManager::getSingleton();
+    return 1.0 + config.getCreatureDamageGrowth() *
+        std::pow(std::max(1u, std::min(MAX_POWER_LEVEL, level)) - 1, config.getCreatureDamageExponent());
 }
 
-//! \brief Returns the attack rating multiplier, clamped to levels 1 through 30.
+//! \brief Returns the creature health multiplier, clamped to levels 1 through 30: the damage multiplier times
+//! 1 + CreatureHpGrowthPerLevel x (level - 1), so health grows slightly faster than damage.
+inline double hpMultiplier(uint32_t level)
+{
+    const double steps = std::max(1u, std::min(MAX_POWER_LEVEL, level)) - 1;
+    return damageMultiplier(level) * (1.0 + ConfigManager::getSingleton().getCreatureHpGrowthPerLevel() * steps);
+}
+
+//! \brief Returns the attack rating multiplier, which is the level clamped to 1 through 30 (as the defense rating).
 inline double attackRatingMultiplier(uint32_t level)
 {
-    return 1.0 + ATTACK_RATING_GROWTH * std::pow(std::max(1u, std::min(MAX_POWER_LEVEL, level)) - 1, ATTACK_RATING_EXPONENT);
+    return std::max(1u, std::min(MAX_POWER_LEVEL, level));
 }
 
 //! \brief Returns the defense rating multiplier, clamped to levels 1 through 30.
@@ -73,11 +76,9 @@ inline double stat(double base, double perLevel, uint32_t level)
         base * powerMultiplier(level));
 }
 
-//! Share of the cooldown that is saved per level above 1 (0.75 percent).
-const double COOLDOWN_REDUCTION_PER_LEVEL = 0.0075;
-
 //! Returns the cooldown of an attack at the given level: the base cooldown times
-//! 1 - 0.0075 x (level - 1), not rounded to whole turns, but never below 1 turn.
+//! 1 - CooldownReductionPerLevel x (level - 1) (global.cfg, 0 = the same cooldown at every level),
+//! not rounded to whole turns, but never below 1 turn.
 //! A base cooldown of 0 stays 0.
 //! \param baseTurns The cooldown at level 1 in turns.
 //! \param level The creature level.
@@ -87,7 +88,7 @@ inline double cooldownAtLevel(uint32_t baseTurns, uint32_t level)
     if(baseTurns == 0)
         return 0.0;
 
-    const double factor = 1.0 - COOLDOWN_REDUCTION_PER_LEVEL * (std::max(1u, level) - 1);
+    const double factor = 1.0 - ConfigManager::getSingleton().getCooldownReductionPerLevel() * (std::max(1u, level) - 1);
     return std::max(1.0, baseTurns * factor);
 }
 }

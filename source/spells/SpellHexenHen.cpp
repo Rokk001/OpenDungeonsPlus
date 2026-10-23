@@ -24,6 +24,8 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -33,6 +35,8 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+
+#include <cmath>
 
 const std::string SpellHexenHenName = "hexenhen";
 const std::string SpellHexenHenNameDisplay = "Hexen Hen";
@@ -129,6 +133,7 @@ void SpellHexenHen::checkSpellCast(GameMap* gameMap, const InputManager& inputMa
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the time follows the hexen hen research.
 bool SpellHexenHen::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -184,7 +189,8 @@ bool SpellHexenHen::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("HexenHenNbTurns"));
+    int32_t nbTurns = static_cast<int32_t>(std::lround(SkillManager::getResearchValue(player->getSeat(), SkillType::spellHexenHen,
+        ConfigManager::getSingleton().getSpellConfigDouble("HexenHenNbTurns"), ResearchEffect::Duration)));
     creature->addCreatureEffect(new CreatureEffectHexenHen(nbTurns));
     fireSpellEffect(*pos, "Hen", "HexenHenCast");
 

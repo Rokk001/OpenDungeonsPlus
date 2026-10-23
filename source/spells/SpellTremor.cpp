@@ -24,6 +24,8 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
@@ -133,6 +135,7 @@ void SpellTremor::checkSpellCast(GameMap* gameMap, const InputManager& inputMana
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the damage follows the tremor research.
 bool SpellTremor::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     int x;
@@ -153,7 +156,10 @@ bool SpellTremor::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     fireSpellEffect(*tileTarget, "Tremor", "TremorCast");
 
     int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("TremorRadiusTiles"));
-    double damage = ConfigManager::getSingleton().getSpellConfigDouble("TremorDamage");
+    double damage = SkillManager::getResearchValue(player->getSeat(), SkillType::spellTremor,
+        ConfigManager::getSingleton().getSpellConfigDouble("TremorDamage"), ResearchEffect::Damage);
+    const double damageMin = SkillManager::getResearchValue(player->getSeat(), SkillType::spellTremor,
+        ConfigManager::getSingleton().getSpellConfigDouble("TremorDamageMin"), ResearchEffect::Damage);
     int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("TremorNbTurns"));
 
     // Enemy creatures in the area are hurt and knocked down. We copy the list because
@@ -171,7 +177,7 @@ bool SpellTremor::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
         if((pos == nullptr) || !isTileInRadius(pos, x, y, radius))
             continue;
 
-        creature->takeDamage(nullptr, Random::Double(ConfigManager::getSingleton().getSpellConfigDouble("TremorDamageMin"), damage),
+        creature->takeDamage(nullptr, Random::Double(damageMin, damage),
             0.0, 0.0, 0.0, pos, false);
         creature->stun(nbTurns);
     }

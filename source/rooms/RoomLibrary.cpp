@@ -337,6 +337,7 @@ void RoomLibrary::doUpkeep()
     }
 }
 
+//! \brief A creature researches in the library; the points per work follow the library research.
 bool RoomLibrary::useRoom(Creature& creature, bool forced)
 {
     int32_t skillEntityPoints = ConfigManager::getSingleton().getRoomConfigInt32("LibrarySkillPointsBook");
@@ -389,7 +390,8 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
         + ", creatureRoomAffinityType=" + Helper::toString(static_cast<int>(creatureRoomAffinity.getRoomType())));
 
     int32_t pointsEarned = static_cast<int32_t>(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
-        getSeat(), SkillType::roomLibrary, ConfigManager::getSingleton().getRoomConfigDouble("LibraryPointsPerWork")));
+        getSeat(), SkillType::roomLibrary, ConfigManager::getSingleton().getRoomConfigDouble("LibraryPointsPerWork"),
+        ResearchEffect::PointsPerWork));
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("LibraryWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax")));

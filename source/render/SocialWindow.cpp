@@ -80,6 +80,8 @@ struct CreatureListEntry
     std::string mSortKey;
     std::string mText;
     std::string mName;
+    //! Crown markup appended after the shortened text, empty for every creature but the champion
+    std::string mCrownMarkup;
 };
 
 bool isEntryBefore(const CreatureListEntry& a, const CreatureListEntry& b)
@@ -485,9 +487,14 @@ void SocialWindow::rebuildCreatureList()
             const social::CreatureProfile& profile = cache.getProfile(creature->getName(), className, isWorker);
             std::ostringstream text;
             text << profile.getFullName() << " (" << social::SocialGenerator::displayClassName(cache.getData(), className) <<
-                ")  L" << creature->getLevel();
-
+                ")  ";
             CreatureListEntry entry;
+            // The champion shows a crown instead of its level
+            if(creature->getDefinition()->isChampion())
+                entry.mCrownMarkup = CHAMPION_CROWN_MARKUP;
+            else
+                text << "L" << creature->getLevel();
+
             entry.mSortKey = className + "|" + profile.getFullName() + "|" + creature->getName();
             entry.mText = text.str();
             entry.mName = creature->getName();
@@ -508,9 +515,20 @@ void SocialWindow::rebuildCreatureList()
     for(std::size_t i = 0; i < entries.size(); ++i)
     {
         mListedCreatures.push_back(entries[i].mName);
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(elideToWidth(list->getFont(), entries[i].mText, maxTextWidth),
-            static_cast<CEGUI::uint>(i));
-        item->setTextParsingEnabled(false);
+        CEGUI::ListboxTextItem* item = nullptr;
+        if(entries[i].mCrownMarkup.empty())
+        {
+            item = new CEGUI::ListboxTextItem(elideToWidth(list->getFont(), entries[i].mText, maxTextWidth),
+                static_cast<CEGUI::uint>(i));
+            item->setTextParsingEnabled(false);
+        }
+        else
+        {
+            // Only the name part is shortened and escaped, the crown markup is appended afterwards and has to be parsed
+            item = new CEGUI::ListboxTextItem(escapeMarkup(elideToWidth(list->getFont(), entries[i].mText, maxTextWidth)) +
+                entries[i].mCrownMarkup, static_cast<CEGUI::uint>(i));
+            item->setTextParsingEnabled(true);
+        }
         item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
         list->addItem(item);
         if(entries[i].mName == mSelectedCreature)

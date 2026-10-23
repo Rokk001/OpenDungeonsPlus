@@ -82,9 +82,11 @@ SpellEyeEvil::~SpellEyeEvil()
 {
 }
 
+//! \brief Reveals the tiles around the eye; the radius follows the eye of evil research.
 void SpellEyeEvil::computeVisibleTiles()
 {
-    uint32_t radius = ConfigManager::getSingleton().getSpellConfigUInt32("EyeEvilRadiusTiles");
+    uint32_t radius = static_cast<uint32_t>(std::round(SkillManager::getResearchValue(getSeat(), SkillType::spellEyeEvil,
+        ConfigManager::getSingleton().getSpellConfigDouble("EyeEvilRadiusTiles"), ResearchEffect::Radius)));
     Tile* posTile = getPositionTile();
     if(posTile == nullptr)
     {
@@ -134,6 +136,7 @@ void SpellEyeEvil::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the spell; the duration follows the eye of evil research.
 bool SpellEyeEvil::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     Tile* tile = gameMap->tileFromPacket(packet);
@@ -152,7 +155,7 @@ bool SpellEyeEvil::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     spell->setSeat(player->getSeat());
     spell->setDuration(static_cast<int32_t>(std::round(SkillManager::getResearchValue(
         player->getSeat(), SkillType::spellEyeEvil,
-        ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilNbTurns")))));
+        ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilNbTurns"), ResearchEffect::Duration))));
     spell->addToGameMap();
     fireSpellEffect(*tile, "EyeEvil", "EyeEvilCast");
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),

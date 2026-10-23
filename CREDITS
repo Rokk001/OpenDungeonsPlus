@@ -24,6 +24,8 @@ Name                                   Author                  License          
 
 Name                                   Author                  License                 Source URL
 ------------------------------------------------------------------------------------------------------------------------
+ChampionCrownIcon.png                  Mario                   GPLv3+                  Drawn from simple shapes by tools/gen_champion_crown.py (script generated, original work)
+ChampionCrown.imageset                 Mario                   GPLv3+                  Written for this project
 OD.project                             Bertram                 GPLv3+                  CEED Project file.
 OD.looknfeel                           OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 ODAdvertisment.imageset                Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
@@ -145,6 +147,23 @@ skirmish/
 -> Wyrmhollow.level                    OD Team                 GPLv3+
 
 template.level                         OD Team                 GPLv3+
+-> CrownofEmbers.level                 Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> EmberBasin.level                    Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> FourWinds.level                     Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> KingdomsFall.level                  Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> LongWinter.level                    Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> SunkenHalls.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheBreach.level                     Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheBrokenSeal.level                 Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheEightThrones.level               Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheEndlessTide.level                Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheFourGates.level                  Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheGreatWarren.level                Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheIronCross.level                  Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheLastGate.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheSaltLake.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheShatteredRing.level              Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> ThievesGold.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
 
 
 =================================================
@@ -179,6 +198,7 @@ textures/
 -> CasinoPokerTale.png                 Danimal                 CC-BY-SA 3.0            http://opengameart.org/users/danimal
 -> Cavehornet*.png                     Skorpio                 CC-BY-SA 3.0, GPLv3+
 -> CelticCross*.png                    Yughues                 CC0                     http://forum.freegamedev.net/viewtopic.php?p=60771#p60771
+-> ChampionCrown.png                   Mario                   GPLv3+                  Drawn from simple shapes by tools/gen_champion_crown.py (script generated, original work)
 -> ChickenCoop*.png                    Dm3d                    CC-BY-SA 3.0            http://opengameart.org/content/chicken-coop (ChickenCoop.png recoloured by tools/room-objects/restyle_chicken_coop.py)
 -> Chicken.png
 -> Chimney*.png                        Daniel74, Nobiax        CC0                     http://forum.freegamedev.net/viewtopic.php?p=59775#p59775
@@ -991,32 +1011,8 @@ logo.svg                               Svenskmand              CC-BY-SA 3.0
 ====================================================
 == Portrait feature assets: materials/portraits/  ==
 materials/portraits/neutral-bases/*.png  AI-generated with Codex  GPLv3+  AI-generated neutral Dungeonbook bases from this project's portrait references; exact prompts and provenance in materials/portraits/neutral-bases/generation-records.json; originals preserved.
-materials/portraits/generated-helmets/  AI-generated with Codex  GPLv3+  16 isolated helmet variants from this project's portrait references; exact prompts and provenance in catalog.json; source copies unchanged.
-materials/portraits/helmet-variants/     AI-generated with Codex  GPLv3+  Derived placements and diagnostic composites of the above helmet assets and this project's neutral bases.
 ====================================================
 
-materials/portraits/generated-features/ AI-generated with Codex  GPLv3+                  AI-generated isolated feature assets based on this project's portraits; exact prompts and source provenance are recorded in each portrait folder; original generator outputs preserved.
-materials/portraits/variants/Kobold.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Goblin.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Orc.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Dwarf1.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Dwarf2.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/RunelordDwarf.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Gnome.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Adventurer.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Monk.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Defender.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Wizard.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Elf.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/DarkElf.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Troll.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Lizardman.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Knight.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/variants/Cultist.mesh*/*.png  AI-generated with Codex  GPLv3+  AI-generated source features; resized and positioned only from materials/portraits/generated-features/; originals preserved.
-materials/portraits/neutral-variants/  AI-generated with Codex  GPLv3+  Derived neutral-base delivery copies, registered isolated source features, alpha masks and diagnostic composites; original generated sources preserved.
-materials/portraits/generated-outfits/  AI-generated with Codex  GPLv3+  Newly generated isolated clothing and armor layers with exact prompts and provenance; unmodified generator copies.
-materials/portraits/variants/*/outfit-*.png  AI-generated with Codex  GPLv3+  Registered clothing layers and locally fitted build copies from generated-outfits; original sources preserved.
-materials/portraits/variants/*/review/  AI-generated with Codex  GPLv3+  Native-resolution and 50x100 diagnostic composites of the preserved AI-generated portrait sources and their derived registrations.
 OD-Logo.ico                            AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
 opendungeons-plus.appdata.xml          Remi Verschelde         GPLv3+                  Added 2015 (first commit)
 
@@ -1298,3 +1294,50 @@ tools/blender-assets/menu_scene_models.py OD Team                GPLv3+         
 materials/scripts/MenuScene.material, particles/MenuScene.particle OD Team GPLv3+       Original AI-authored scene materials and looping atmosphere effects generated for this project; separate credited fortress stone, paving, guardian stone, rusted iron and frayed red cloth texture pairs supply albedo and matching normals. Original green inner glow, broad soft smoke shaft, turbulent ember horizon, pavement fissures, fire smoke, low fog and moving fire retain the project's credited particle textures.
 assets-src/menu-scene/MenuSceneAssembly.blend OD Team            GPLv3+                  Own AI-authored Blender assembly of this project's thirteen fortress source families and their individual damage variants at the configured positions, camera and lights; each placed ruin uses its own source mesh. Native animated fire volumes and point-light flicker, layered ankle-low participating fog, advecting bowl smoke, turbulent distant clouds and broad soft green scattering volumes map the original scene effects. Packed surfaces use the five credited albedo/normal pairs and existing campaign map. Existing source assets keep their credits above.
 tools/blender-assets/menu_scene_assembly.py OD Team               GPLv3+                  Own AI-authored Blender assembly and Eevee preview script for the existing configured fortress scene.
+materials/portraits/whole/**/*.jpg  AI-generated with Codex  GPLv3+  Original project creature portraits edited from the project neutral bases with simple existing clothing; no external artwork used.
+materials/portraits/whole/Goblin.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male goblin portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Elf.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original female woodland elf portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Elf.mesh-male/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male elf portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Kobold.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male kobold portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Goblin.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female goblin portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Kobold.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female kobold portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Orc.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female orc portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Orc.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male orc portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/DarkElf.mesh-male/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male dark elf portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Adventurer.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male adventurer portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/DarkElf.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female dark elf portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Monk.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male monk portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Adventurer.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female adventurer portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Monk.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female monk portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Wizard.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female wizard portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Wizard.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male wizard portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Defender.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female defender portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Defender.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male defender portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+materials/portraits/whole/Knight.mesh/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project male knight portraits, directly edited from the project clothed neutral base.
+materials/portraits/whole/Knight.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project female knight portraits, directly edited from the project clothed neutral base.
+materials/portraits/whole/Cultist.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project female cultist portraits, directly edited from the project clothed neutral base.
+materials/portraits/whole/Cultist.mesh/*.jpg	AI-generated with Codex	GPLv3+	Fifty original project male cultist portraits, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Troll.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female stone troll portraits with distinct faces and natural granite shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Troll.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male stone troll portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Lizardman.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female reptile portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Lizardman.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male reptile portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Gnome.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male gnome portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Dwarf1.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male brown-bearded dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Gnome.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female gnome portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Dwarf1.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female brown-haired dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Dwarf2.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male white-bearded dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/Dwarf2.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female white-haired dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/RunelordDwarf.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female rune dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
+
+materials/portraits/whole/RunelordDwarf.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male rune dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
