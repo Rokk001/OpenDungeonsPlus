@@ -284,8 +284,17 @@ private:
     //! \brief Scales all registered windows and the fonts and images for the given display size.
     void applyScale(const CEGUI::Sizef& displaySize);
 
-    //! \brief Scales one window from its stored unscaled layout.
-    void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float scale);
+    //! \brief True if the window and all windows above it fill their parent completely, so it is as large as the
+    //! screen (a missing window counts as the screen itself).
+    bool isScreenSizedContainer(const CEGUI::Window* window) const;
+
+    //! \brief Factor (at most 1) that keeps the window, or the window it belongs to that sits in a screen-sized
+    //! container, inside the screen at the current UI scale; 1 if it fits already.
+    float getWindowFitFactor(const CEGUI::Window* window) const;
+
+    //! \brief Scales one window from its stored unscaled layout and keeps it inside the screen.
+    //! \param layoutScale Scale from display size and user scale, before the fit to the screen.
+    void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float layoutScale);
 
     //! \brief Sets the native resolution of fonts and skin images from the user scale.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
