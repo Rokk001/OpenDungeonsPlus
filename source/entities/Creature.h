@@ -538,6 +538,15 @@ public:
     uint32_t getSkillPointsSpent() const;
     //! \brief Returns the name of the template the creature follows, empty while it follows none.
     std::string getSkillTemplateName() const;
+    //! \brief Returns the template name for the displays ("none" while the creature follows no template).
+    std::string getSkillPathText() const;
+    //! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none).
+    std::string getSkillListText() const;
+    //! \brief Returns the attribute line of the displays: "Strength s - Dexterity d - Life l - Mana m -
+    //! Critical x.x %".
+    std::string getAttributeSummaryText() const;
+    //! \brief Returns the carried items for the displays as "<right> / <left>" ("none" for an empty hand).
+    std::string getEquipmentText() const;
     //! \brief Fills what the skill rules need to know about the type of the creature.
     CreatureSkillTree::TypeInfo getSkillTypeInfo() const;
     //! \brief Counts one eaten chicken for the skill reset (server side).

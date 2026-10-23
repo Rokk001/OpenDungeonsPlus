@@ -63,6 +63,8 @@ page_height = card_height - int(holder[1]) + int(holder[2])
 text_width = card_width - 32
 
 LINE, PAD, GAP, TOP = 18.0, 4.0, 4.0, 174.0
+# attributes, equipment, path and skills: four one line rows above the bio
+ATTRIBUTE_ROWS = 4
 CHAR = 8.2  # design pixels of an average character of the font
 
 
@@ -76,7 +78,7 @@ def lines_of(chars, width):
 
 def content(bio, likes, dislikes, friends, status, latest, quirks):
     """Returns (bottom of the latest post, bottom of the remarks) in design pixels."""
-    y = TOP + row(bio) + row(likes) + row(dislikes)
+    y = TOP + ATTRIBUTE_ROWS * row(1) + row(bio) + row(likes) + row(dislikes)
     y += max(LINE + PAD, friends * (LINE + PAD)) + GAP  # friends label and one button per friend
     y += row(1) - GAP + GAP  # foe row
     y += row(status)

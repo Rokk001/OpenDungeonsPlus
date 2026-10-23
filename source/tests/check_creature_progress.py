@@ -80,22 +80,25 @@ struct Creature {
  double getAttackRecoveryDuration()const{return mAttackRecoveryDuration;}
  uint32_t getAttackRecoverySerial()const{return mAttackRecoverySerial;}
  Definition* getDefinition()const{return mDefinition;}
+ //! \brief Mocked mana pool of the creature, shown by the mana ring.
+ static constexpr uint32_t MANA_RING_STEPS=63;double mMana=0,mMaxMana=0;
+ double getMaxMana()const{return mMaxMana;}double getCurrentMana()const{return mMana;}
 };
 METHODS
 namespace Ogre {using Real=float;}
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=1.4;
 //! \brief Inactive level test, as in a normal game.
 struct RunLevelTest {static bool isActive(){return false;}static void onRecoveryFrame(bool,uint32_t){}};
-enum class CreatureOverlays {health,experience,recovery,status};
+enum class CreatureOverlays {health,experience,recovery,status,mana};
 const uint32_t PROGRESS_ATLAS_COLUMNS=8;
 const uint32_t PROGRESS_ATLAS_LAST_FRAME=PROGRESS_ATLAS_COLUMNS*PROGRESS_ATLAS_COLUMNS-1;
 struct MovableTextOverlay {
- unsigned frames[4]={};bool shown[4]={};
+ unsigned frames[5]={};bool shown[5]={};
  void displayOverlay(uint32_t id,int t){shown[id]=t!=0;}
  void setAtlasFrame(uint32_t id,uint32_t frame,uint32_t cols){if(cols!=8||frame>63)throw 1;frames[id]=frame;}
 };
 struct CreatureOverlayStatus {
- Creature* mCreature;MovableTextOverlay* mMovableTextOverlay;std::vector<uint32_t> mOverlayIds{0,1,2,3};
+ Creature* mCreature;MovableTextOverlay* mMovableTextOverlay;std::vector<uint32_t> mOverlayIds{0,1,2,3,4};
  double mRecoveryTurns=0;uint32_t mRecoverySerial=0;float mRecoveryElapsed=0;
  void updateProgress(float);
 };
@@ -151,6 +154,9 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
   status.updateProgress(.35f);check(overlay.frames[2]>1&&overlay.frames[2]<63,"worker interval sweeps within the server turn");
   unsigned paused=overlay.frames[2];status.updateProgress(0);check(overlay.frames[2]==paused,"worker recovery freezes while paused");
  }
+ b.mMaxMana=40;for(double mana:{0.,20.,40.,60.,-5.}){b.mMana=mana;status.updateProgress(0);
+  check(overlay.frames[4]==(mana<=0?0u:mana>=40?63u:unsigned(mana/40*63)),"mana ring follows current mana, clamped to the ring");}
+ b.mMaxMana=0;b.mMana=10;status.updateProgress(0);check(overlay.frames[4]==0,"no mana pool shows an empty ring");
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }

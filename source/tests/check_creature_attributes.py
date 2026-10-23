@@ -713,4 +713,134 @@ def check_part_e():
 
 import math
 check_part_e()
+
+def check_part_g():
+    """Part G: the client side. The mana ring in the overhead status (6.7), the critical hit feedback with the sound
+    (8.5 client and 8.6 file) and the displays of attributes, mana, path and skills (11)."""
+    overlay_h = text('source/render/MovableTextOverlay.h')
+    overlay_cpp = text('source/render/MovableTextOverlay.cpp')
+    status = text('source/render/CreatureOverlayStatus.cpp')
+    creature = text('source/entities/Creature.cpp')
+    creature_h = text('source/entities/Creature.h')
+    visuals = text('source/render/CreatureWeaponVisuals.cpp')
+    event_h = text('source/network/CosmeticEvent.h')
+    gui = text('source/render/Gui.cpp')
+    layout = text('gui/WindowCreatureProfilePage.layout')
+    reactions = text('config/creatureReactions.cfg')
+    credits = text('CREDITS')
+
+    # ---- 6.7 the offset mechanism: the drawing moves, the next child still centres on the unshifted box
+    assert 'Ogre::Real mOffsetX = 0.0f;' in overlay_h and 'Ogre::Real mOffsetY = 0.0f;' in overlay_h
+    assert 'void setOffset(uint32_t childOverlayId, Ogre::Real x, Ogre::Real y);' in overlay_h
+    set_offset = function(overlay_cpp, 'void MovableTextOverlay::setOffset(')
+    assert 'mOffsetX = x;' in set_offset and 'mOffsetY = y;' in set_offset
+    update = function(overlay_cpp, 'void MovableTextOverlay::update(')
+    assert ('childPosition.x + childOverlay.mOffsetX * childOverlay.mScale / '
+            'Ogre::OverlayManager::getSingleton().getViewportWidth()') in update
+    assert ('childPosition.y + childOverlay.mOffsetY * childOverlay.mScale / '
+            'Ogre::OverlayManager::getSingleton().getViewportHeight()') in update
+    assert 'previousPosition = childPosition;' in update, 'the next child centres on the unshifted position'
+
+    # ---- 6.7 the mana ring: built like the experience ring, HUD mana colour, right of the health ring
+    enum_body = status[status.index('enum class CreatureOverlays'):status.index('};', status.index('enum class CreatureOverlays'))]
+    assert enum_body.index('mana,') < enum_body.index('nbCreatureOverlays'), 'enum value mana before nbCreatureOverlays'
+    constructor = function(status, 'CreatureOverlayStatus::CreatureOverlayStatus(')
+    assert constructor.rindex('CreatureOverlays::mana') > constructor.rindex('CreatureOverlays::status'), 'created last'
+    assert 'createChildOverlay("MedievalSharp", 30,\n        Ogre::ColourValue::White, manaMaterial, false)' in constructor
+    assert 'forceTextArea(manaId, MANA_RING_SIZE, MANA_RING_SIZE)' in constructor
+    assert 'setOffset(manaId, MANA_RING_OFFSET_X, 0.0f)' in constructor and 'displayOverlay(manaId, -1)' in constructor
+    assert 'rrBuildTintedMaterial(MANA_RING_BASE_MATERIAL' in constructor
+    assert 'MANA_RING_BASE_MATERIAL = "CreatureExperience"' in status
+    assert 'MANA_RING_SIZE = 64;' in status and 'MANA_RING_OFFSET_X = 64;' in status
+    channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_RING_RED', 'MANA_RING_GREEN', 'MANA_RING_BLUE')]
+    assert channels == [127, 227, 166]
+    hud = text('gui/ModeGame.layout')
+    assert 'FF%02X%02X%02X' % tuple(channels) == 'FF7FE3A6' and 'value="FF7FE3A6"' in hud, 'the colour of the HUD mana number'
+    progress = function(status, 'void CreatureOverlayStatus::updateProgress(')
+    assert 'getCurrentMana() / maxMana' in progress and 'Creature::MANA_RING_STEPS' in progress
+    assert 'setAtlasFrame(manaId' in progress
+    assert re.search(r'MANA_RING_STEPS = 63;', creature), 'the 64 frame atlas'
+    assert 'PROGRESS_ATLAS_COLUMNS * PROGRESS_ATLAS_COLUMNS - 1' in status
+
+    # ---- 8.5 client: value 7 and the feedback (sparks on the target creature, else on the attacker, plus the sound)
+    assert 'critical = 7' in event_h
+    feedback = function(visuals, 'void showCriticalFeedback(')
+    assert 'Creature* shown = (target != nullptr) ? target : attacker;' in feedback
+    assert 'queueReaction(reactions, shown->getName(), CRITICAL_REACTION_EVENT, CRITICAL_DELAY)' in feedback
+    assert 'playSpatialSound(CRITICAL_SOUND_FAMILY' in feedback
+    assert 'CRITICAL_REACTION_EVENT = "CriticalHit"' in visuals and 'CRITICAL_SOUND_FAMILY = "Creatures/Default/Critical"' in visuals
+    hit_result = function(visuals, 'void noteHitResult(')
+    case = hit_result[hit_result.index('CosmeticHitResult::critical'):]
+    case = case[:case.index('break;')]
+    assert 'showCriticalFeedback(reactions, target, attacker);' in case
+    assert 'noteHitEvent(reactions, attacker, target' in case, 'a critical hit flinches like a hit'
+    assert 'damage' not in feedback.lower(), 'no damage number'
+    event = reactions[reactions.index('Name        CriticalHit'):]
+    event = event[:event.index('[/Event]')]
+    assert 'Effect  ReactionSparks' in event
+    for forbidden in ('Clip', 'Fallback', 'Emote', 'Motion'):
+        assert forbidden not in event, 'no new animation or picture: ' + forbidden
+
+    # ---- 8.6 the sound file and its CREDITS row
+    sound = root / 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg'
+    assert sound.is_file() and sound.stat().st_size > 0
+    assert 'sounds/Spatial/Creatures/Default/Critical/FxCriticalHit01.ogg' in credits
+    assert 'tools/gen_critical_hit_sound.py' in credits
+    assert (root / 'tools/gen_critical_hit_sound.py').is_file()
+
+    # ---- 11 the stats text: after "Level:" the attributes, critical chance, mana, path and skills
+    stats = function(creature, 'std::string Creature::getStatsText()')
+    order = ['"Level: " << getLevel()', '"Strength / Dexterity / Life / Mana: "', '"Critical chance: "',
+             '"Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())',
+             '"Path: " << getSkillPathText()', '"Skills: " << getSkillListText()', '"Experience: "']
+    positions = [stats.index(part) for part in order]
+    assert positions == sorted(positions), 'stats text order'
+    assert 'formatFixedNumber(getCritChance()) << " %"' in stats, 'x.x %'
+    assert 'tempSS << "Weapons:"' in stats, 'the weapon lines stay'
+    assert 'DISPLAY_NONE_TEXT = "none"' in creature, 'none when empty'
+    skills = function(creature, 'std::string Creature::getSkillListText() const')
+    assert 'it->second == 0' in skills and 'result += skillName + " " + Helper::toString(it->second);' in skills
+    assert 'result += ", "' in skills and 'findTierFourById' in skills and 'DISPLAY_NONE_TEXT' in skills
+    attributes = function(creature, 'std::string Creature::getAttributeSummaryText() const')
+    parts = ['"Strength "', '" - Dexterity "', '" - Life "', '" - Mana "', '" - Critical "', '" %"']
+    positions = [attributes.index(part) for part in parts]
+    assert positions == sorted(positions)
+    equipment = function(creature, 'std::string Creature::getEquipmentText() const')
+    assert equipment.index('right + " / " + left') > 0 and 'mWeaponR->getName()' in equipment
+    for name in ('getSkillPathText', 'getSkillListText', 'getAttributeSummaryText', 'getEquipmentText'):
+        assert 'std::string ' + name + '() const;' in creature_h
+
+    # ---- 11 the Dungeonbook profile: four lines below "Job:" in the order of the plan
+    profile = function(creature, 'float Creature::fillProfilePage(')
+    lines = ['setText("Job: " + profile.mJob)', 'getChild("AttributesText")->setText(getAttributeSummaryText())',
+             'getChild("EquipmentText")->setText("Equipment: " + getEquipmentText())',
+             'getChild("PathText")->setText("Path: " + getSkillPathText())',
+             'getChild("SkillsText")->setText("Skills: " + getSkillListText())', 'getChild("BioText")']
+    positions = [profile.index(line) for line in lines]
+    assert positions == sorted(positions), 'profile lines order'
+    windows = {}
+    for match in re.finditer(r'<Window type="OD/StaticText" name="(\w+)" >(.*?)</Window>', layout, re.S):
+        windows[match[1]] = match[2]
+    job = windows['JobText']
+    for name in ('AttributesText', 'EquipmentText', 'PathText', 'SkillsText'):
+        block = windows[name]
+        assert 'value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}"' in block, name
+        for key in ('FrameEnabled', 'BackgroundEnabled', 'Font', 'VertFormatting', 'HorzFormatting'):
+            assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == re.search(
+                r'name="' + key + r'" value="([^"]*)"', job)[1], name + ' ' + key
+    names = re.findall(r'<Window type="OD/\w+" name="(\w+)"', layout)
+    assert names.index('AttributesText') + 1 == names.index('EquipmentText') and names.index('PathText') < names.index('SkillsText')
+    assert 'name="FrameEnabled" value="False"' in windows['AttributesText'] and 'MedievalSharp-8' in windows['AttributesText']
+    flow = gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):]
+    flow = flow[:flow.index('};')]
+    assert flow.index('"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText"') > 0
+    layout_function = function(gui, 'float Gui::layoutCreatureProfilePage(')
+    assert ('const char* const textRowsBefore[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", '
+            '"LikesText",\n        "DislikesText", "RelationsText"};') in layout_function
+    assert 'for(std::size_t i = 0; i < 8; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function
+
+
+check_part_g()
+print('check_creature_attributes (part G): ok')
+
 print('check_creature_attributes (part E): ok')
