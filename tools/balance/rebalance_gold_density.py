@@ -32,6 +32,9 @@ import sys
 
 # Merge base of the branch with origin/integration/all at branch creation; used by --check without an argument.
 BASE_COMMIT = "ed7f0db36cb0a9b9943753be38eb60ab2bfb68d0"
+# Commit of origin/integration/all that holds the levels which do not exist at BASE_COMMIT in their original state
+# (the community levels that arrived with the upstream ports); --check reads those levels from here.
+NEW_LEVELS_BASE_COMMIT = "2ad2f576294eaf429d8aaf7a1b3a354633d3476d"
 
 GOLD_TARGET_PER_KEEPER_SEAT = 300000
 GOLD_PER_SEAM_TILE = 3000
@@ -266,6 +269,13 @@ def read_lines(path):
     return path.read_text(encoding="utf-8").split("\n")
 
 
+# True when the level file exists at the commit.
+def exists_at(root, commit, name):
+    return subprocess.run(["git", "--no-pager", "cat-file", "-e", commit + ":" + name], cwd=str(root),
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                          timeout=GIT_TIMEOUT_SECONDS).returncode == 0
+
+
 # Reads a level as it was at a commit.
 def read_lines_at(root, commit, name):
     output = subprocess.run(["git", "--no-pager", "show", commit + ":" + name], cwd=str(root), check=True,
@@ -319,7 +329,9 @@ def run_apply(root):
 def run_check(root, commit):
     failures = 0
     for name in level_paths(root):
-        base_lines = read_lines_at(root, commit, name)
+        # A level that did not exist at the base commit is read from the commit that introduced it
+        source_commit = commit if exists_at(root, commit, name) else NEW_LEVELS_BASE_COMMIT
+        base_lines = read_lines_at(root, source_commit, name)
         level = Level(base_lines)
         if not level.starts:
             continue
