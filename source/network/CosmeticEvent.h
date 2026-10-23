@@ -141,7 +141,11 @@ enum class CosmeticHitResult : int32_t
     //! do not know the value 4 or 5 show nothing for it; the older kind meleeResult follows and tells them "no damage".
     parried = 5,
     //! A landed blow or shot was blocked by a carried shield, with no damage.
-    shieldBlocked = 6
+    shieldBlocked = 6,
+    //! A critical hit that did damage. Clients that do not know the value 7 ignore it, like 4 to 6. Against a creature
+    //! the event is sent for the target as for every other result. Against a building or a wall (a dug tile) mObject is
+    //! empty, mText is "melee", "missile" or "dig", mPosition the struck tile, and the event is sent for the attacker.
+    critical = 7
 };
 
 //! \brief The data of one cosmetic event. Every kind uses the same layout on the wire, so a

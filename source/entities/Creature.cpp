@@ -2883,6 +2883,33 @@ double Creature::getEquipmentCritChance() const
     return equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::critChance);
 }
 
+//! \brief Returns the critical chance in percent: CritChancePerDexterity x (start Dexterity of the type + equipment
+//! Dexterity) + CritChancePerLevel x (level - 1) + CritChanceBonus + crit passives + equipment critical chance.
+double Creature::getCritChance() const
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    const double dexterity = mDefinition->getDexterity() +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity);
+    return config.getCritChancePerDexterity() * dexterity +
+        config.getCritChancePerLevel() * static_cast<double>(mLevel - 1) +
+        mDefinition->getCritChanceBonus() + getSkillPassive("crit") + getEquipmentCritChance();
+}
+
+//! \brief Rolls one critical hit against the critical chance; a chance of 0 or less never rolls.
+bool Creature::rollCritical() const
+{
+    const double chance = getCritChance();
+    if(chance <= 0.0)
+        return false;
+    return Random::Double(0.0, 100.0) < chance;
+}
+
+//! \brief Returns 1 + dig% / 100: the factor of the dig% passives on the dig rate and on the gold of a dig step.
+double Creature::getDigFactor() const
+{
+    return 1.0 + getSkillPassive("dig%") / 100.0;
+}
+
 //! \brief Returns true if one of the held items has the weapon type bow or crossbow.
 bool Creature::carriesBowOrCrossbow() const
 {
@@ -6044,17 +6071,21 @@ void Creature::fireAttackTurn(const std::string& targetName, const Ogre::Vector3
     fireCosmeticEvent(event, false);
 }
 
-void Creature::fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile)
+void Creature::fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile,
+    bool critical)
 {
     if(!ConfigManager::getSingleton().getHitEvents())
         return;
 
-    // The share of the damage that got through the defense decides between a hit, a glancing blow and a blocked one
+    // The share of the damage that got through the defense decides between a hit, a glancing blow and a blocked one;
+    // a critical blow that did damage is reported as critical
     double share = (rawDamage > 0.0) ? damageDone / rawDamage : 0.0;
     share = std::max(0.0, std::min(1.0, share));
     CosmeticHitResult result = CosmeticHitResult::hit;
     if(damageDone <= 0.0)
         result = CosmeticHitResult::blocked;
+    else if(critical)
+        result = CosmeticHitResult::critical;
     else if(share < ConfigManager::getSingleton().getHitGlanceShare())
         result = CosmeticHitResult::glanced;
 
@@ -6069,6 +6100,38 @@ void Creature::fireHitResult(const std::string& attackerName, double damageDone,
     event.mText = missile ? "missile" : "melee";
     event.mValue = static_cast<int32_t>(result);
     event.mValue2 = static_cast<int32_t>(healthShare * 1000.0 + 0.5);
+    event.mPosition = getPosition();
+    fireCosmeticEvent(event, false);
+}
+
+//! \brief Reports a critical hit of this creature on a building or a wall; the event has no target creature, so the
+//! client plays the feedback on this (the attacking) creature.
+void Creature::fireCriticalOnStructure(const std::string& kind, const Ogre::Vector3& position)
+{
+    if(!ConfigManager::getSingleton().getHitEvents())
+        return;
+
+    CosmeticEvent event(CosmeticEventType::hitResult);
+    event.mSubject = getName();
+    event.mText = kind;
+    event.mValue = static_cast<int32_t>(CosmeticHitResult::critical);
+    event.mValue2 = 0;
+    event.mPosition = position;
+    fireCosmeticEvent(event, false);
+}
+
+//! \brief Reports a critical spell or area damage on this creature (no damage share, the damage follows by effect).
+void Creature::fireCriticalSpell(const std::string& attackerName)
+{
+    if(!ConfigManager::getSingleton().getHitEvents())
+        return;
+
+    CosmeticEvent event(CosmeticEventType::hitResult);
+    event.mSubject = attackerName;
+    event.mObject = getName();
+    event.mText = "spell";
+    event.mValue = static_cast<int32_t>(CosmeticHitResult::critical);
+    event.mValue2 = 0;
     event.mPosition = getPosition();
     fireCosmeticEvent(event, false);
 }
@@ -7256,11 +7319,24 @@ void Creature::dismissChampion()
     deleteYourself();
 }
 
+//! Tolerance that keeps an exact capacity such as 129 from being rounded down to 128 by floating point error.
+static const double GOLD_CAPACITY_ROUNDING_EPSILON = 1e-9;
+
 //! \brief Returns the gold the creature can carry before it has to haul it to a treasury. Every reader of the
-//! capacity uses this function so that the capacity can depend on more than the definition.
+//! capacity uses this function so that the capacity can depend on more than the definition. A creature with
+//! MaxGoldCarryable above 0 carries MaxGoldCarryable x (1 + GoldCarryPerStrength x (Strength - start Strength))
+//! x (1 + carry% / 100), rounded down.
 int32_t Creature::getGoldCapacity() const
 {
-    return mDefinition->getMaxGoldCarryable();
+    const int32_t baseCapacity = mDefinition->getMaxGoldCarryable();
+    if(baseCapacity <= 0)
+        return baseCapacity;
+
+    const double strengthGain = std::max(0.0, getStrength() - mDefinition->getStrength());
+    const double strengthFactor = 1.0 + ConfigManager::getSingleton().getGoldCarryPerStrength() * strengthGain;
+    const double carryFactor = 1.0 + getSkillPassive("carry%") / 100.0;
+    const double capacity = static_cast<double>(baseCapacity) * strengthFactor * carryFactor;
+    return static_cast<int32_t>(std::floor(capacity + GOLD_CAPACITY_ROUNDING_EPSILON));
 }
 
 //! \brief Adds mined gold with a fraction: the whole part goes to the carried gold, the rest is kept for the next step.

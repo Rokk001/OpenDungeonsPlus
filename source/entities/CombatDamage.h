@@ -4,6 +4,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureProgression.h"
 #include "entities/Weapon.h"
+#include "utils/ConfigManager.h"
 #include "utils/Random.h"
 
 #include <algorithm>
@@ -61,6 +62,29 @@ inline void scale(const Creature& attacker, double& phyMin, double& phyMax,
         eleMin += weapon->getElementDamageMin();
         eleMax += weapon->getElementDamage();
     }
+}
+
+//! \brief Rolls a critical hit for a chance in percent (a chance of 0 or less never rolls). Used by shots that carry
+//! the chance of their shooter from the launch.
+inline bool rollCriticalChance(double chancePercent)
+{
+    if(chancePercent <= 0.0)
+        return false;
+    return Random::Double(0.0, 100.0) < chancePercent;
+}
+
+//! \brief Multiplies every damage value of the six-value range by CritDamageMultiplier. Called for a critical hit
+//! before the defense of the target is subtracted (see roll()).
+inline void applyCriticalToRange(double& phyMin, double& phyMax, double& magMin, double& magMax,
+    double& eleMin, double& eleMax)
+{
+    const double factor = ConfigManager::getSingleton().getCritDamageMultiplier();
+    phyMin *= factor;
+    phyMax *= factor;
+    magMin *= factor;
+    magMax *= factor;
+    eleMin *= factor;
+    eleMax *= factor;
 }
 
 //! \brief Reads an optional appended six-column range, retaining the legacy values at end of line.

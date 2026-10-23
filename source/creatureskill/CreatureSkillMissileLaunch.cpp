@@ -122,6 +122,8 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
         damageLevel, spellLine ? "spell%" : "dmg%");
     missile->setCreatureDamageRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
         creature->getModifierStrength());
+    // The shot carries the critical chance of its shooter; it rolls it when it hits
+    missile->setShotCritChance(creature->getCritChance());
     // The plain missile tells the clients what the shot did (cosmetic event hitResult). Guided bolts set their
     // shooter in their factory; area blasts do their own damage and report nothing.
     if(missile->getMissileType() == MissileObjectType::oneHit)

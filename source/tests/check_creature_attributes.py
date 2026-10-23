@@ -554,3 +554,163 @@ def check_mana_part_b():
 
 check_mana_part_b()
 print('check_creature_attributes (part B, mana): ok')
+
+def check_part_e():
+    """Part E: the critical hit formula and roll at every damage source, digging crits, the cosmetic value, and the
+    worker gold capacity and dig% formulas (sections 8.1-8.5 server side and 7.4 of the plan)."""
+    creature = text('source/entities/Creature.cpp')
+    creature_h = text('source/entities/Creature.h')
+    combat = text('source/entities/CombatDamage.h')
+    melee = text('source/creatureskill/CreatureSkillMeleeFight.cpp')
+    one_hit = text('source/entities/MissileOneHit.cpp')
+    launch = text('source/creatureskill/CreatureSkillMissileLaunch.cpp')
+    explosion = text('source/creatureskill/CreatureSkillExplosion.cpp')
+    area = text('source/creatureeffect/CreatureEffectAreaDamage.cpp')
+    dig = text('source/creatureaction/CreatureActionDigTile.cpp')
+    tunnel = text('source/creatureaction/CreatureActionTunnel.cpp')
+    tile = text('source/entities/Tile.cpp')
+    event_h = text('source/network/CosmeticEvent.h')
+
+    # ---- 8.1 chance formula: CritChancePerDexterity x (start Dexterity + equipment Dexterity) + CritChancePerLevel x (L - 1)
+    # + CritChanceBonus + crit passives + equipment CritChance, no upper limit
+    per_dexterity = float(config_value(global_cfg, 'CritChancePerDexterity'))
+    per_level = float(config_value(global_cfg, 'CritChancePerLevel'))
+
+    def crit_chance(start_dexterity, level, bonus=0.0, passives=0.0, equipment_dexterity=0.0, equipment_crit=0.0):
+        return per_dexterity * (start_dexterity + equipment_dexterity) + per_level * (level - 1) + bonus + passives + equipment_crit
+
+    assert abs(crit_chance(20, 1) - 4.0) < 1e-9 and abs(crit_chance(25, 1) - 5.0) < 1e-9
+    assert abs(crit_chance(20, 30) - (4.0 + 0.3 * 29)) < 1e-9, 'the level part grows the same for every group'
+    assert abs(crit_chance(25, 10, bonus=15.0) - (5.0 + 2.7 + 15.0)) < 1e-9, 'Champion bonus 15'
+    assert crit_chance(20, 30, passives=40.0, equipment_crit=60.0) > 100.0, 'no upper limit'
+    chance = function(creature, 'double Creature::getCritChance() const')
+    assert 'getCritChancePerDexterity() * dexterity' in chance
+    assert 'mDefinition->getDexterity() +' in chance and 'EquipmentAttribute::dexterity' in chance
+    assert 'getCritChancePerLevel() * static_cast<double>(mLevel - 1)' in chance
+    assert 'mDefinition->getCritChanceBonus()' in chance and 'getSkillPassive("crit")' in chance
+    assert 'getEquipmentCritChance()' in chance
+    assert 'std::min' not in chance and 'std::max' not in chance, 'no upper limit'
+    roll = function(creature, 'bool Creature::rollCritical() const')
+    assert 'Random::Double(0.0, 100.0) < chance' in roll and 'chance <= 0.0' in roll
+    assert 'double getCritChance() const;' in creature_h and 'bool rollCritical() const;' in creature_h
+    assert 'inline bool rollCriticalChance(double chancePercent)' in combat
+
+    # ---- 8.3 the multiplier acts on every damage value before the defense of the target is subtracted
+    assert config_value(global_cfg, 'CritDamageMultiplier') == '2'
+
+    def after_defense(minimum, maximum, defense, multiplier):
+        return max(minimum * multiplier - defense, 0.0), max(maximum * multiplier - defense, 0.0)
+
+    assert after_defense(10, 20, 6, 2) == (14, 34), 'multiplied first, then the defense is subtracted'
+    assert after_defense(10, 20, 6, 2) != tuple(2 * max(v - 6, 0) for v in (10, 20))
+    apply = function(combat, 'inline void applyCriticalToRange(')
+    for name in ('phyMin', 'phyMax', 'magMin', 'magMax', 'eleMin', 'eleMax'):
+        assert name + ' *= factor;' in apply, name
+    assert 'getCritDamageMultiplier()' in apply
+    melee_body = function(melee, 'bool CreatureSkillMeleeFight::tryUseFight(')
+    assert melee_body.index('CombatDamage::scale(') < melee_body.index('applyCriticalToRange(') < melee_body.index('CombatDamage::roll(')
+    assert melee_body.index('CombatDamage::roll(') < melee_body.index('* modifier'), 'the strength modifier follows the roll'
+    assert melee_body.index('rollMeleeDefence(false)') < melee_body.rindex('creature->rollCritical()'), 'never critical when missed or avoided'
+    assert melee_body.count('creature->rollCritical()') == 2, 'one roll for a creature target, one for a building'
+    assert 'phyAtk *= criticalFactor;' in melee_body and 'eleAtk *= criticalFactor;' in melee_body, 'building damage x multiplier'
+    hurt = function(one_hit, 'void MissileOneHit::hurt(')
+    assert hurt.index('rollMeleeDefence(true)') < hurt.index('rollCriticalChance(mShotCritChance)') < hurt.index('applyCriticalToRange(') < hurt.index('CombatDamage::roll(')
+    assert 'mPhysicalDamage * criticalFactor' in hurt, 'building damage of a shot x multiplier'
+    assert 'setShotCritChance(creature->getCritChance())' in launch, 'the shot carries the chance of its shooter'
+
+    # ---- 8.4 sources roll, the excluded sources do not
+    sources = {'source/creatureskill/CreatureSkillMeleeFight.cpp', 'source/creatureskill/CreatureSkillExplosion.cpp',
+               'source/creatureeffect/CreatureEffectAreaDamage.cpp', 'source/creatureaction/CreatureActionDigTile.cpp',
+               'source/creatureaction/CreatureActionTunnel.cpp', 'source/entities/MissileOneHit.cpp'}
+    users = set()
+    for path in (root / 'source').rglob('*.cpp'):
+        if 'tests' in path.parts:
+            continue
+        body = path.read_text(encoding='utf-8', errors='replace')
+        if 'rollCritical()' in body or 'rollCriticalChance(' in body:
+            users.add(path.relative_to(root).as_posix())
+    users.discard('source/entities/Creature.cpp')
+    assert sources <= users, sources - users
+    excluded = ('source/creatureskill/CreatureSkillDrain.cpp', 'source/creatureeffect/CreatureEffectSlap.cpp',
+                'source/creatureeffect/CreatureEffectBurn.cpp', 'source/creatureeffect/CreatureEffectFrozen.cpp',
+                'source/creatureeffect/CreatureEffectHeal.cpp', 'source/creatureskill/CreatureSkillHealSelf.cpp',
+                'source/rooms/RoomTorture.cpp', 'source/rooms/RoomPrison.cpp', 'source/spells/SpellLightning.cpp',
+                'source/spells/SpellTremor.cpp', 'source/traps/TrapSpike.cpp', 'source/traps/TrapFireburst.cpp',
+                'source/traps/TrapGas.cpp', 'source/traps/TrapLightning.cpp', 'source/traps/TrapDoor.cpp',
+                'source/traps/TrapFreeze.cpp', 'source/entities/MissileBoulder.cpp',
+                'source/creatureaction/CreatureActionClaimGroundTile.cpp',
+                'source/creatureaction/CreatureActionClaimWallTile.cpp')
+    for name in excluded:
+        assert name not in users, name + ' must not roll critical hits (percent sources, heals, traps, spells, claiming)'
+    explosion_body = function(explosion, 'bool CreatureSkillExplosion::tryUseFight(')
+    assert explosion_body.index('creature->rollCritical()') < explosion_body.index('new CreatureEffectExplosion(')
+    assert 'damageFactor *= ConfigManager::getSingleton().getCritDamageMultiplier();' in explosion_body
+    area_body = function(area, 'void CreatureEffectAreaDamage::applyEffect(')
+    assert 'creature.rollCritical()' in area_body and area_body.index('rollCritical()') < area_body.index('takeDamage(')
+
+    # ---- 8.4 digging: one roll per dig step; a critical step removes 2 x the fullness on dirt and walls and pays 2 x the
+    # step gold on gold and gem walls (on a gold wall at most what is left); experience stays as it is
+    handle = function(dig, 'bool CreatureActionDigTile::handleDigTile(')
+    assert handle.count('creature.rollCritical()') == 1, 'one roll per dig step'
+    assert handle.index('creature.rollCritical()') < handle.index('digOutGold(digFactor * criticalFactor)')
+    assert 'getCritDamageMultiplier()' in handle
+    assert 'receiveExp(1.5 * creature.getDigRate() / 20.0)' in handle and 'receiveExp(creature.getDigRate() / 20.0)' in handle
+    assert not re.search(r'receiveExp\([^;]*(digFactor|criticalFactor|getDigFactor)', handle), 'experience ignores dig% and crits'
+    assert 'fireCriticalOnStructure("dig"' in handle
+    tunnel_body = function(tunnel, 'bool CreatureActionTunnel::handleTunnel(') if 'bool CreatureActionTunnel::handleTunnel(' in tunnel else tunnel
+    assert tunnel_body.count('creature.rollCritical()') == 1
+    assert 'tile->digOut(creature.getDigRate() * creature.getDigFactor() * criticalFactor)' in tunnel_body
+    gold_step = float(config_value(global_cfg, 'GoldPerDigStep'))
+    gem_step = float(config_value(global_cfg, 'GemGoldPerDigStep'))
+    seam = float(config_value(global_cfg, 'GoldPerSeamTile'))
+
+    def gold_step_pay(remaining, dig_percent, critical):
+        """Mirrors Tile::digOutGold with the factor of the caller: the last step pays what is left."""
+        step = gold_step * (1.0 + dig_percent / 100.0) * (float(config_value(global_cfg, 'CritDamageMultiplier')) if critical else 1.0)
+        return min(step, remaining)
+
+    assert gold_step_pay(seam, 0, False) == 25.0 and gold_step_pay(seam, 0, True) == 50.0
+    assert abs(gold_step_pay(seam, 25, True) - 62.5) < 1e-9, 'dig% and a critical step multiply'
+    assert gold_step_pay(30.0, 0, True) == 30.0, 'at most what is left on a gold wall'
+    assert abs(gem_step * 2 - 33.34) < 1e-9
+    assert 'skirmishPercent / 100.0 * stepFactor;' in function(tile, 'double Tile::digOutGold(double stepFactor)')
+
+    # ---- 8.5 cosmetic value 7, the event for buildings and walls, no damage number
+    assert re.search(r'critical = 7\b', event_h)
+    fire = function(creature, 'void Creature::fireHitResult(')
+    assert 'CosmeticHitResult::critical' in fire and fire.index('damageDone <= 0.0') < fire.index('else if(critical)')
+    structure = function(creature, 'void Creature::fireCriticalOnStructure(')
+    assert 'CosmeticHitResult::critical' in structure and 'event.mText = kind;' in structure and 'mObject' not in structure
+    assert 'void fireCriticalOnStructure(' in creature_h and 'void fireCriticalSpell(' in creature_h
+
+    # ---- 7.4 workers and gold: capacity = MaxGoldCarryable x (1 + GoldCarryPerStrength x (Strength - start Strength))
+    # x (1 + carry% / 100), rounded down; the epsilon keeps exact products such as 113 from falling to 112
+    carry_per_strength = float(config_value(global_cfg, 'GoldCarryPerStrength'))
+    epsilon = 1e-9
+
+    def capacity(max_carry, strength_gain, carry_percent):
+        return int(math.floor(max_carry * (1.0 + carry_per_strength * strength_gain) * (1.0 + carry_percent / 100.0) + epsilon))
+
+    assert capacity(100, 0, 0) == 100
+    assert capacity(100, 29, 0) == 129, 'level 30 worker without skills'
+    assert capacity(100, 29, 50) == 193, 'Deep Pockets rank 5 at most 193'
+    assert capacity(100, 13, 0) == 113 and int(math.floor(100 * (1.0 + carry_per_strength * 13))) == 112
+    assert capacity(0, 29, 50) == 0, 'a creature that cannot carry gold stays at 0'
+    cap = function(creature, 'int32_t Creature::getGoldCapacity() const')
+    assert 'if(baseCapacity <= 0)' in cap and 'return baseCapacity;' in cap
+    assert 'getStrength() - mDefinition->getStrength()' in cap and 'getGoldCarryPerStrength()' in cap
+    assert 'getSkillPassive("carry%")' in cap and 'std::floor(capacity + GOLD_CAPACITY_ROUNDING_EPSILON)' in cap
+    assert re.search(r'GOLD_CAPACITY_ROUNDING_EPSILON = 1e-9;', creature)
+    assert 'double Creature::getDigFactor() const' in creature and 'getSkillPassive("dig%")' in creature
+
+    # ---- the shot keeps its chance in the save: written after the accuracy, read only when present
+    export = function(one_hit, 'void MissileOneHit::exportToStream')
+    load = function(one_hit, 'bool MissileOneHit::importFromStream')
+    assert export.index('ShotAccuracy') < export.index('CritChance') and 'mShotCritChance' in export
+    assert '"CritChance"' in load and 'mShotCritChance = critChance;' in load
+    assert 'mShotCritChance(0.0)' in one_hit and one_hit.count('mShotCritChance(0.0)') == 2
+
+
+import math
+check_part_e()
+print('check_creature_attributes (part E): ok')

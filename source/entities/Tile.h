@@ -240,7 +240,9 @@ public:
     //! \brief Mines one dig step from a gold wall tile: removes the step gold (GoldPerDigStep x density / 100 x
     //! skirmish gold setting / 100) from the tile and lowers its fullness by its share of the tile total. The last
     //! step pays what is left and the tile becomes ground. Returns the gold paid, 0 if the tile cannot be mined.
-    double digOutGold();
+    //! \param stepFactor Factor on the step gold: the worker's dig% factor, times CritDamageMultiplier on a critical
+    //! step (the seam then loses that much more, at most what is left). 1.0 is the plain step.
+    double digOutGold(double stepFactor = 1.0);
 
     //! \brief Returns the tile type (rock, claimed, etc.).
     inline TileType getType() const

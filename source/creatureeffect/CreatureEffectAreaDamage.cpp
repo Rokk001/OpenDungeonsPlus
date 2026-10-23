@@ -25,6 +25,7 @@
 #include "entities/Tile.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "utils/ConfigManager.h"
 
 #include <vector>
 
@@ -81,9 +82,14 @@ void CreatureEffectAreaDamage::applyEffect(Creature& creature)
         if(((dx * dx) + (dy * dy)) > radiusSquared)
             continue;
 
+        // Every damage application on a target may be critical (the damage is absolute, so there is no defense)
+        const bool critical = creature.rollCritical();
+        const double criticalFactor = critical ? ConfigManager::getSingleton().getCritDamageMultiplier() : 1.0;
         // In the last turn of the effect only the fraction of the turn that was left counts
-        target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn) * getTurnFraction(),
-            0.0, 0.0, 0.0, targetTile, false);
+        target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn) * getTurnFraction() *
+            criticalFactor, 0.0, 0.0, 0.0, targetTile, false);
+        if(critical)
+            target->fireCriticalSpell(creature.getName());
     }
 }
 

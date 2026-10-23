@@ -468,6 +468,17 @@ public:
     double getManaLevel() const;
     //! \brief Returns the critical chance bonus in percent that the carried items add.
     double getEquipmentCritChance() const;
+    //! \brief Returns the critical chance in percent: CritChancePerDexterity x (start Dexterity of the type + equipment
+    //! Dexterity) + CritChancePerLevel x (level - 1) + CritChanceBonus of the type + crit passives + equipment
+    //! critical chance. There is no upper limit.
+    double getCritChance() const;
+    //! \brief Server side. Rolls once whether the next damage this creature causes is a critical hit (chance in
+    //! getCritChance()). The caller rolls it only for a landed, not avoided blow or for damage without a hit roll.
+    //! \return True if the damage is critical.
+    bool rollCritical() const;
+    //! \brief Returns the factor (1 + dig% / 100) of the dig% passives. It multiplies the dig rate on dirt and walls
+    //! and the gold of a dig step on gold and gem walls; the experience of a dig step does not use it.
+    double getDigFactor() const;
     //! \brief Returns true if a carried item is a bow or a crossbow (its weapon type), which makes the
     //! missile attack lines of the creature use the Dexterity attribute level.
     bool carriesBowOrCrossbow() const;
@@ -813,8 +824,19 @@ public:
     void fireCosmeticEvent(int32_t type, int32_t value, int32_t value2, bool alliedOnly);
     //! \brief This creature was just hit by a blow or a shot of the attacker (cosmetic event hitResult). damageDone
     //! is what takeDamage returned and rawDamage the damage before the defense; missile tells a shot from a
-    //! melee blow. Only reports what the damage calculation gave, it changes nothing.
-    void fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile);
+    //! melee blow. Only reports what the damage calculation gave, it changes nothing. With critical set, a blow that
+    //! did damage is reported as CosmeticHitResult::critical instead of hit or glanced.
+    void fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile,
+        bool critical = false);
+    //! \brief Tells the keepers who see this creature that it landed a critical hit on a building or a wall (cosmetic
+    //! event hitResult with the value critical and an empty mObject, so the client plays the feedback on this creature).
+    //! \param kind "melee", "missile" or "dig" (mText of the event).
+    //! \param position The position of the struck building or wall tile.
+    void fireCriticalOnStructure(const std::string& kind, const Ogre::Vector3& position);
+    //! \brief This creature was just hit by a critical spell or area damage of the attacker (cosmetic event hitResult
+    //! with the value critical, mText "spell"). Used where the damage is done later by an effect, so there is no
+    //! damage share to report. Only reports, it changes nothing.
+    void fireCriticalSpell(const std::string& attackerName);
     //! \brief Reports a missed melee blow or missile without changing combat timing.
     void fireHitMissed(const std::string& attackerName, bool missile = true);
     //! \brief Server: this creature is about to strike at the target in the given direction and turns to it first
@@ -905,7 +927,9 @@ public:
     inline void addGoldCarried(int32_t gold)
     { mGoldCarried += gold; }
 
-    //! \brief Returns how much gold the creature can carry before it has to haul it to a treasury (MaxGoldCarryable)
+    //! \brief Returns how much gold the creature can carry before it has to haul it to a treasury: MaxGoldCarryable
+    //! x (1 + GoldCarryPerStrength x (Strength - start Strength)) x (1 + carry% / 100), rounded down (0 for a
+    //! creature that cannot carry gold).
     int32_t getGoldCapacity() const;
 
     //! \brief Adds mined gold that may have a fraction. The whole part is added to the carried gold, the rest stays in
