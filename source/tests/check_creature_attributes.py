@@ -4,6 +4,7 @@ Part A: the [Stats] fields of creatures.cfg, the equipment fields, the global.cf
 and the places that use the attribute level instead of the creature level. Other parts are added by later packages.
 """
 from pathlib import Path
+import glob
 import re
 import sys
 
@@ -706,6 +707,15 @@ def check_part_e():
     assert 'getSkillPassive("carry%")' in cap and 'std::floor(capacity + GOLD_CAPACITY_ROUNDING_EPSILON)' in cap
     assert re.search(r'GOLD_CAPACITY_ROUNDING_EPSILON = 1e-9;', creature)
     assert 'double Creature::getDigFactor() const' in creature and 'getSkillPassive("dig%")' in creature
+
+    # claim%: the claim rate is the config rate x (1 + claim% / 100) for every reader
+    claim = function(creature, 'double Creature::getClaimRate() const')
+    assert 'mClaimRate * (1.0 + getSkillPassive("claim%") / 100.0)' in claim
+    assert 'double getClaimRate() const;' in text('source/entities/Creature.h')
+    assert abs(1.5 * (1.0 + 20 / 100.0) - 1.8) < 1e-9, 'claim% 20 on a rate of 1.5'
+    assert 'mClaimRate' not in creature.replace(claim, '').replace('mClaimRate = mDefinition->getClaimRate();', '').replace('mClaimRate += mDefinition->getClaimRatePerLevel()', '').replace('mClaimRate               (0.0)', '').replace('os << mClaimRate;', '').replace('is >> mClaimRate', ''), 'all readers use getClaimRate()'
+    for action_file in glob.glob(str(root / 'source/creatureaction/*.cpp')):
+        assert 'mClaimRate' not in open(action_file, encoding='utf-8').read(), action_file
 
     # ---- the shot keeps its chance in the save: written after the accuracy, read only when present
     export = function(one_hit, 'void MissileOneHit::exportToStream')

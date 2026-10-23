@@ -277,9 +277,9 @@ public:
     inline double getDigRate() const
     { return mDigRate; }
 
-    //! \brief Gets the current claim rate
-    inline double getClaimRate() const
-    { return mClaimRate; }
+    //! \brief Gets the current claim rate: the rate of the creature type and level times 1 + claim% / 100 (claim% passives
+    //! of the skill tree). Every reader of the claim rate uses this value.
+    double getClaimRate() const;
 
     //! \brief Gets pointer to the Weapon in left hand
     inline const Weapon* getWeaponL() const

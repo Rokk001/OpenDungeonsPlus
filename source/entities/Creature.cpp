@@ -3024,6 +3024,12 @@ bool Creature::rollCritical() const
     return Random::Double(0.0, 100.0) < chance;
 }
 
+//! \brief Returns the claim rate of the creature: the config rate with the level bonus times 1 + claim% / 100.
+double Creature::getClaimRate() const
+{
+    return mClaimRate * (1.0 + getSkillPassive("claim%") / 100.0);
+}
+
 //! \brief Returns 1 + dig% / 100: the factor of the dig% passives on the dig rate and on the gold of a dig step.
 double Creature::getDigFactor() const
 {
@@ -4772,7 +4778,7 @@ std::string Creature::getStatsText()
     if (getDefinition()->isWorker())
     {
         tempSS << "Dig rate: " << getDigRate() << std::endl;
-        tempSS << "Dance rate: " << mClaimRate << std::endl;
+        tempSS << "Dance rate: " << getClaimRate() << std::endl;
     }
 
     tempSS << formatTitleOn << "\nDebugging information" << formatTitleOff << std::endl;
@@ -5948,14 +5954,14 @@ void Creature::drop(const Ogre::Vector3& v)
             return;
         }
 
-        if((tileToClaim != nullptr) && (mClaimRate > 0.0))
+        if((tileToClaim != nullptr) && (getClaimRate() > 0.0))
         {
             pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimGroundTile>(*this, *tileToClaim));
             return;
         }
 
-        if((tileWallNotClaimed != nullptr) && (mClaimRate > 0.0))
+        if((tileWallNotClaimed != nullptr) && (getClaimRate() > 0.0))
         {
             pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimWallTile>(*this, *tileWallNotClaimed));
