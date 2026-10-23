@@ -193,3 +193,180 @@ assert 'isFirstAttackSkill(this)' in launch and '"spell%"' in launch
 assert 'bool CreatureDefinition::isFirstAttackSkill(' in definition_cpp
 
 print('check_creature_attributes (part A): ok')
+
+
+# ---- Part B: mana pool, costs, regeneration, save and network (plan sections 6.1-6.6)
+def config_blocks(source, block_name):
+    """Return the text of every [block_name] ... [/block_name] block of a cfg or level file."""
+    return re.findall(r'^\[' + block_name + r'\]\n(.*?)^\[/' + block_name + r'\]', source, re.M | re.S)
+
+
+def first_value(block, key):
+    match = re.search(r'^\s*' + re.escape(key) + r'\s+(\S+)', block, re.M)
+    return match[1] if match else None
+
+
+def skill_names(block):
+    """Skill names of the [CreatureSkills] list of a creature block, in file order."""
+    lists = re.search(r'\[CreatureSkills\](.*?)\[/CreatureSkills\]', block, re.S)
+    names = []
+    for line in lists[1].splitlines():
+        line = line.strip()
+        if line and not line.startswith('#'):
+            names.append(line.split()[0])
+    return names
+
+
+def mana_cost_model(group, skill_name, is_first_attack, carries_bow, manacost_percent, caster_shot, second_shot):
+    """The cost rules of 6.3 as Creature::getSkillManaCost applies them."""
+    if skill_name != 'MissileLaunch':
+        return 0.0
+    if is_first_attack and carries_bow:
+        return 0.0
+    caster = is_first_attack
+    if group != 'none':
+        caster = group in ('caster', 'archer')
+    base = caster_shot if caster else second_shot
+    return base * max(0.0, 1.0 - manacost_percent / 100.0)
+
+
+def check_mana_part_b():
+    # 6.1 pool: Mana attribute x ManaPerPoint, full at spawn (start values of the section 4 table)
+    max_mana = function(creature, 'double Creature::getMaxMana() const')
+    assert 'getMana() * mDefinition->getManaPerPoint()' in max_mana
+    assert abs(attribute_value(26.6667, 1, 1, 0.0) * 1.5 - 40.0) < 0.001, 'blitzer: 40 mana at level 1, never rounded'
+    assert abs(attribute_value(35, 2, 1, 0.0) * 2 - 70.0) < 1e-9
+    assert abs(attribute_value(10, 1, 30, 0.0) * 1 - 39.0) < 1e-9
+    assert abs(attribute_value(25, 1, 10, 6.0) * 1.75 - (25 + 9 + 6) * 1.75) < 1e-9, 'equipment mana counts in the pool'
+    constructor = creature.split('Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition')[1].split('\nCreature::Creature(GameMap* gameMap)')[0]
+    assert 'mMana = getMaxMana();' in constructor, 'a spawned creature has full mana'
+    setup = function(creature, 'void Creature::setupDefinition(')
+    assert 'if(mManaFromSave)' in setup and 'mMana = std::min(mMana, getMaxMana());' in setup
+    assert 'else\n            mMana = getMaxMana();' in setup, 'old saves and level files load with full mana'
+    set_level = function(creature, 'void Creature::setLevel(')
+    assert 'setCurrentMana(mMana);' in set_level, 'a level-up caps the mana at the new pool size'
+
+    # 6.2 regeneration: max / (ManaRefillSeconds x turns per second) every turn, capped, always running
+    regen = function(creature, 'void Creature::regenerateMana()')
+    assert 'getManaRefillSeconds() * ODApplication::turnsPerSecond' in regen
+    assert 'maxMana / refillTurns' in regen and 'mMana >= maxMana' in regen
+    upkeep = function(creature, 'void Creature::doUpkeep()')
+    assert 'regenerateMana();' in upkeep and upkeep.index('regenerateMana();') > upkeep.index('checkLevelUp();')
+    turns_per_second = float(re.search(r'turnsPerSecond = ([\d.]+);', text('source/ODApplication.cpp'))[1])
+    refill_seconds = float(config_value(global_cfg, 'ManaRefillSeconds'))
+    pool, mana, turns = 70.0, 0.0, 0
+    while mana < pool:
+        mana = min(pool, mana + pool / (refill_seconds * turns_per_second))
+        turns += 1
+    assert turns == int(refill_seconds * turns_per_second + 0.5) or turns == int(refill_seconds * turns_per_second) + 1, turns
+    assert mana == pool and min(pool, mana + pool / (refill_seconds * turns_per_second)) == pool, 'never above the pool'
+
+    # 6.3 costs: caster shot 2.5, the second MissileLaunch 5, free normal attacks, manacost% on every cost
+    caster_shot = float(config_value(global_cfg, 'ManaPerCasterShot'))
+    second_shot = float(config_value(global_cfg, 'ManaPerDragonSecondShot'))
+    assert (caster_shot, second_shot) == (2.5, 5.0)
+    cost = function(creature, 'double Creature::getSkillManaCost(const CreatureSkill& skill) const')
+    assert 'getManaPerCasterShot()' in cost and 'getManaPerDragonSecondShot()' in cost
+    assert 'skill.getSkillName() != "MissileLaunch"' in cost, 'Melee and every other line is free here'
+    manacost = function(creature, 'double Creature::getManaCost(double baseCost) const')
+    assert 'getSkillPassive("manacost%")' in manacost and '1.0 - getSkillPassive("manacost%") / 100.0' in manacost
+    assert mana_cost_model('caster', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 2.5
+    assert mana_cost_model('caster', 'MissileLaunch', True, False, 30, caster_shot, second_shot) == 1.75
+    assert mana_cost_model('blitzer', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
+    assert mana_cost_model('blitzer', 'MissileLaunch', True, False, 0, caster_shot, second_shot) == 5.0, 'level file lists the shot first'
+    assert mana_cost_model('none', 'MissileLaunch', False, False, 0, caster_shot, second_shot) == 5.0
+    assert mana_cost_model('archer', 'MissileLaunch', True, True, 0, caster_shot, second_shot) == 0.0, 'bow shot is free'
+    assert mana_cost_model('caster', 'Melee', True, False, 0, caster_shot, second_shot) == 0.0
+    assert mana_cost_model('blitzer', 'Explosion', False, False, 0, caster_shot, second_shot) == 0.0, 'Champion line is free'
+    assert mana_cost_model('caster', 'MissileLaunch', True, False, 100, caster_shot, second_shot) == 0.0
+    # The cost classes of the real type lists: casters pay per first shot, only the Dragon has a second shot
+    weapon_types = {}
+    for block in config_blocks(text('config/equipments.cfg'), 'Equipment'):
+        weapon_types[first_value(block, 'Name')] = first_value(block, 'WeaponType')
+    caster_types, second_line_types, bow_types = set(), set(), set()
+    for block in config_blocks(creatures_cfg, 'Creature'):
+        names = skill_names(block)
+        attack_names = [name for name in names if name in ('Melee', 'MissileLaunch')]
+        if 'MissileLaunch' not in attack_names:
+            continue
+        type_name = first_value(block, 'Name')
+        spawn = [first_value(block, 'WeaponSpawnL'), first_value(block, 'WeaponSpawnR')]
+        has_bow = any(weapon_types.get(weapon) in ('bow', 'crossbow') for weapon in spawn)
+        if attack_names[0] != 'MissileLaunch':
+            second_line_types.add(type_name)
+        elif has_bow:
+            bow_types.add(type_name)
+        else:
+            caster_types.add(type_name)
+    assert caster_types == {'LizardMan', 'Lich', 'Wizard', 'Kreatur'}, caster_types
+    assert second_line_types == {'Dragon'}, second_line_types
+    assert bow_types == {'DarkElf', 'Elf'}, bow_types
+    # A level-file Dragon lists the shot before the melee line: the cost follows its skill group, not the line order
+    for level_name in ('levels/campaign/Bonus1.level', 'levels/skirmish/TestSingleplayerSmall.level'):
+        for block in config_blocks(text(level_name), 'Creature'):
+            if first_value(block, 'Name') == 'DragonBoss':
+                names = [name for name in skill_names(block) if name in ('Melee', 'MissileLaunch')]
+                assert names == ['MissileLaunch', 'Melee'], level_name
+    assert 'if(group != "none")' in cost and '(group == "caster") || (group == "archer")' in cost
+
+    # 6.4 not enough mana: the skill is not used, as with a cooldown; 6.5 mana is subtracted when the skill starts
+    assert 'bool Creature::hasManaFor(' in creature and 'return mMana >= getSkillManaCost(skill);' in creature
+    search = function(creature, 'bool Creature::searchBestTargetInList(')
+    assert 'hasManaFor(*skillDataTmp.mSkill)' in search
+    assert search.index('canBeUsedBy(this)') < search.index('hasManaFor(*skillDataTmp.mSkill)') < search.index('getRangeMax(this, entityAttackCheck)')
+    support = upkeep[upkeep.index('We use creature skills if we can'):]
+    assert support.index('hasManaFor(*skillData.mSkill)') < support.index('tryUseSupport') < support.index('payManaFor(*skillData.mSkill)')
+    use_attack = function(creature, 'void Creature::useAttack(')
+    assert use_attack.index('payManaFor(*skillData.mSkill);') < use_attack.index('skillData.mSkill->tryUseFight(')
+    assert 'creature.hasManaFor(*skillData.mSkill)' in function(creature, 'bool isPossessedSkillReady(')
+    possessed = function(creature, 'void Creature::possessedUseSkill(')
+    assert possessed.index('tryUseSupport') < possessed.index('payManaFor(*skillData.mSkill);')
+    pay = function(creature, 'void Creature::payManaFor(')
+    assert 'setCurrentMana(mMana - cost);' in pay
+    # No hard-coded mana number in the code paths
+    for body in (cost, regen, pay):
+        assert not re.search(r'\b(2\.5|5\.0|120)\b', body)
+
+    # 6.6 save and load: a labelled token after the optional appearance, old saves end without it
+    export_stream = function(creature, 'void Creature::exportToStream(std::ostream& os) const')
+    assert 'os << "\\t" << MANA_SAVE_LABEL << mMana;' in export_stream
+    assert export_stream.index('toToken(mAppearance)') < export_stream.index('MANA_SAVE_LABEL << mMana')
+    import_stream = function(creature, 'bool Creature::importFromStream(std::istream& is)')
+    assert 'while(is >> appearanceToken)' in import_stream and 'mManaFromSave = true;' in import_stream
+    assert import_stream.index('MANA_SAVE_LABEL.size()') < import_stream.index('fromToken(appearanceToken')
+    assert 'static const std::string MANA_SAVE_LABEL = "Mana=";' in creature
+    label = 'Mana='
+    for mana_text, expected in (('Mana=12.5', 12.5), ('Mana=0', 0.0)):
+        assert mana_text.startswith(label) and float(mana_text[len(label):]) == expected
+    # Same parse rule as the loader: the token is read as a number and rejects text and negative values
+    for bad in ('Mana=', 'Mana=abc', 'Mana=-3'):
+        value = bad[len(label):]
+        try:
+            ok = float(value) >= 0.0
+        except ValueError:
+            ok = False
+        assert not ok, bad
+
+    # 6.6 network: the current mana travels in the full and the update packet, before the appearance and the gold
+    full_export = function(creature, 'void Creature::exportToPacket(ODPacket& os, const Seat* seat) const')
+    full_import = function(creature, 'void Creature::importFromPacket(ODPacket& is)')
+    update_export = function(creature, 'void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)')
+    update_import = function(creature, 'void Creature::updateFromPacket(ODPacket& is)')
+    assert full_export.index('exportProgressToPacket(os, seat);') < full_export.index('os << mMana;') < full_export.index('toToken(mAppearance)')
+    assert full_import.index('importProgressFromPacket(is);') < full_import.index('is >> mMana') < full_import.index('is >> appearanceToken')
+    assert update_export.index('exportProgressToPacket(os, seat);') < update_export.index('os << mMana;') < update_export.index('os << mGoldCarried;')
+    assert update_export.rstrip().rstrip('}').rstrip().endswith('os << mGoldCarried;'), 'the carried gold stays the last field'
+    assert update_import.index('importProgressFromPacket(is);') < update_import.index('is >> mMana') < update_import.index('is >> mGoldCarried')
+    # The clients are told when the ring crosses a step; the ring has 64 frames (steps 0..63)
+    assert 'const uint32_t Creature::MANA_RING_STEPS = 63;' in creature
+    set_mana = function(creature, 'void Creature::setCurrentMana(double mana)')
+    assert 'step != mManaRingStepNotified' in set_mana and 'mNeedFireRefresh = true;' in set_mana
+    assert 'std::max(0.0, std::min(mana, maxMana))' in set_mana, 'clamped to 0 .. max'
+    for member in ('double          mMana;', 'bool            mManaFromSave;', 'uint32_t        mManaRingStepNotified;',
+                   'static const uint32_t MANA_RING_STEPS;'):
+        assert member in creature_h, member
+    assert creature.count('mMana                    (0.0)') == 2, 'both constructors initialise the mana'
+
+
+check_mana_part_b()
+print('check_creature_attributes (part B, mana): ok')

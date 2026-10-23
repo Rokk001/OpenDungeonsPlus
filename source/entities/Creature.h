@@ -153,6 +153,9 @@ public:
 
     static const uint32_t NB_OVERLAY_HEALTH_VALUES;
 
+    //! \brief Number of steps of the mana ring: the clients are updated whenever the mana crosses a step
+    static const uint32_t MANA_RING_STEPS;
+
     //! The script of the aura of a possessed creature, which ends with the possession
     static const std::string POSSESSION_AURA_SCRIPT;
 
@@ -472,6 +475,29 @@ public:
     //! "spell%", "alldmg%", ...), 0 while the creature has no passive skill of that stat.
     //! \param stat The passive stat name.
     double getSkillPassive(const std::string& stat) const;
+
+    //! \brief Returns the size of the mana pool: Mana attribute (with equipment) x ManaPerPoint of the type.
+    double getMaxMana() const;
+    //! \brief Returns the mana the creature has right now (0 .. getMaxMana()).
+    double getCurrentMana() const;
+    //! \brief Sets the current mana, clamped to 0 .. getMaxMana(), and tells the clients when the mana ring changes.
+    //! \param mana The new current mana.
+    void setCurrentMana(double mana);
+    //! \brief Returns a mana cost after the manacost% passives: baseCost x (1 - manacost% / 100), never below 0.
+    //! \param baseCost The cost before the passives.
+    double getManaCost(double baseCost) const;
+    //! \brief Returns the mana the skill costs this creature now: the shot cost of a caster's first MissileLaunch
+    //! or of a second MissileLaunch line (both with manacost%), 0 for every free attack.
+    //! \param skill The skill or attack line to price.
+    double getSkillManaCost(const CreatureSkill& skill) const;
+    //! \brief Returns true if the current mana covers the cost of the skill (a free skill is always affordable).
+    //! \param skill The skill or attack line to check.
+    bool hasManaFor(const CreatureSkill& skill) const;
+    //! \brief Subtracts the mana cost of the skill; called when the skill or shot starts.
+    //! \param skill The skill or attack line that starts.
+    void payManaFor(const CreatureSkill& skill);
+    //! \brief Adds one turn of mana regeneration: max mana / (ManaRefillSeconds x turns per second), capped at max.
+    void regenerateMana();
 
     //! \brief Check whether a creature has earned one level. If yes, handle leveling it up
     void checkLevelUp();
@@ -1306,6 +1332,12 @@ private:
 
     //! \brief Counter to let the creature stay some turns after its death
     unsigned int    mDeathCounter;
+    //! \brief Current mana. Starts full, regenerates every turn, is saved and sent to the clients
+    double          mMana;
+    //! \brief True when the mana was read from a save, so the creature does not start with a full pool
+    bool            mManaFromSave;
+    //! \brief Server side: the mana ring step (0 .. MANA_RING_STEPS) the clients were last told about
+    uint32_t        mManaRingStepNotified;
     //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep), not saved
     uint32_t        mChampionTurns;
     int             mJobCooldown;
