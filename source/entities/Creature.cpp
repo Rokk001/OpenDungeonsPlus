@@ -141,6 +141,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 
 
 
@@ -261,6 +262,22 @@ static const uint32_t MAX_PATH_CHECK_TARGET_TRIES = 5;
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
+//! \brief The mana ring is an atlas of 64 frames (0 empty .. 63 full): steps 0..63 of the current/max mana share
+const uint32_t Creature::MANA_RING_STEPS = 63;
+//! \brief Label in front of the current mana in a creature save, so it cannot be mistaken for the appearance token
+static const std::string MANA_SAVE_LABEL = "Mana=";
+
+//! \brief Returns the mana ring step 0 .. Creature::MANA_RING_STEPS for a mana value: floor(mana / maxMana x steps).
+//! \param mana The current mana.
+//! \param maxMana The size of the mana pool; a pool of 0 or less counts as empty.
+static uint32_t manaRingStep(double mana, double maxMana)
+{
+    if(maxMana <= 0.0)
+        return 0;
+
+    const double share = std::max(0.0, std::min(1.0, mana / maxMana));
+    return static_cast<uint32_t>(share * static_cast<double>(Creature::MANA_RING_STEPS));
+}
 const std::string Creature::POSSESSION_AURA_SCRIPT = "SpellCreaturePossess";
 const double Creature::WOUNDED_DRAG_LAY_TURNS_DEFAULT = 12.0;
 const double Creature::WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT = 6.0;
@@ -540,6 +557,9 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mMana                    (0.0),
+    mManaFromSave            (false),
+    mManaRingStepNotified    (MANA_RING_STEPS),
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
@@ -620,6 +640,9 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
 
     setupDefinition(*gameMap, *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 
+    // A new creature spawns with a full mana pool
+    mMana = getMaxMana();
+
     if(!getIsOnServerMap())
     {
         registerObserver(GameEditorModeConsole::getSingleton());
@@ -652,6 +675,9 @@ Creature::Creature(GameMap* gameMap) :
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mMana                    (0.0),
+    mManaFromSave            (false),
+    mManaRingStepNotified    (MANA_RING_STEPS),
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
@@ -884,6 +910,9 @@ void Creature::exportToStream(std::ostream& os) const
     // Optional last token, missing in old saves and for creatures without appearance
     if(!mAppearance.isEmpty())
         os << "\t" << CreatureAppearanceLogic::toToken(mAppearance);
+
+    // Current mana as a labelled token after the appearance, missing in old saves (they load with full mana)
+    os << "\t" << MANA_SAVE_LABEL << mMana;
 }
 
 bool Creature::importFromStream(std::istream& is)
@@ -953,10 +982,28 @@ bool Creature::importFromStream(std::istream& is)
         addCreatureEffect(effect);
     }
 
-    // Optional appearance token. Old saves end after the effects.
+    // Optional trailing tokens. Old saves end after the effects. The labelled mana token (see exportToStream) can
+    // follow the appearance token or stand alone when the creature has no appearance.
     std::string appearanceToken;
-    if(is >> appearanceToken)
+    while(is >> appearanceToken)
     {
+        if(appearanceToken.compare(0, MANA_SAVE_LABEL.size(), MANA_SAVE_LABEL) == 0)
+        {
+            const std::string manaValue = appearanceToken.substr(MANA_SAVE_LABEL.size());
+            char* parseEnd = nullptr;
+            const double loadedMana = std::strtod(manaValue.c_str(), &parseEnd);
+            if(!manaValue.empty() && (parseEnd != nullptr) && (*parseEnd == '\0') && (loadedMana >= 0.0))
+            {
+                mMana = loadedMana;
+                mManaFromSave = true;
+            }
+            else
+            {
+                OD_LOG_WRN("Invalid mana token=" + appearanceToken);
+            }
+            continue;
+        }
+
         if(!CreatureAppearanceLogic::fromToken(appearanceToken, mAppearance))
         {
             OD_LOG_WRN("Invalid appearance token=" + appearanceToken);
@@ -1168,6 +1215,8 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
+    // Current mana (the maximum follows from type, level and equipment on the client)
+    os << mMana;
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
     // Last field: the carried gold, shown as a sack on the thief
@@ -1228,6 +1277,7 @@ void Creature::importFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
+    OD_ASSERT_TRUE(is >> mMana);
     // The client only takes over the appearance the server has chosen, it never rolls one itself
     std::string appearanceToken;
     OD_ASSERT_TRUE(is >> appearanceToken);
@@ -1377,6 +1427,9 @@ void Creature::setLevel(unsigned int level)
     buildStats();
     if(mHp > 0.0 && previousMaxHP > 0.0)
         mHp = std::min(mMaxHP, mHp * mMaxHP / previousMaxHP);
+
+    // The pool grows with the level; the mana the creature has stays (capped at the new size)
+    setCurrentMana(mMana);
 
     mNeedFireRefresh = true;
 }
@@ -1690,6 +1743,9 @@ void Creature::doUpkeep()
 
     computeCreatureOverlayHealthValue();
 
+    // The mana pool refills a little every turn, always
+    regenerateMana();
+
     // Rogue creatures are not affected by wakefulness/hunger
     if(!getSeat()->isRogueSeat())
     {
@@ -1891,8 +1947,15 @@ void Creature::doUpkeep()
         if(!skillData.mSkill->canBeUsedBy(this))
             continue;
 
+        // A skill that costs more mana than the creature has is not used, like a skill on cooldown
+        if(!hasManaFor(*skillData.mSkill))
+            continue;
+
         if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
             continue;
+
+        // The mana is paid when the skill starts
+        payManaFor(*skillData.mSkill);
 
         // The new cooldown and warmup are added, so the remainder of the last turn carries over
         skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
@@ -2322,6 +2385,10 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
                 continue;
 
             if(!skillDataTmp.mSkill->canBeUsedBy(this))
+                continue;
+
+            // A shot or skill that costs more mana than the creature has is skipped, like a skill on cooldown
+            if(!hasManaFor(*skillDataTmp.mSkill))
                 continue;
 
             double skillRange = skillDataTmp.mSkill->getRangeMax(this, entityAttackCheck);
@@ -2838,6 +2905,111 @@ double Creature::getSkillPassive(const std::string& stat) const
     return 0.0;
 }
 
+//! \brief Returns the size of the mana pool: Mana attribute (with equipment) x ManaPerPoint of the type.
+double Creature::getMaxMana() const
+{
+    return std::max(0.0, getMana() * mDefinition->getManaPerPoint());
+}
+
+//! \brief Returns the mana the creature has right now (0 .. getMaxMana()).
+double Creature::getCurrentMana() const
+{
+    return mMana;
+}
+
+//! \brief Sets the current mana, clamped to 0 .. getMaxMana(), and tells the clients when the mana ring changes.
+//! \param mana The new current mana.
+void Creature::setCurrentMana(double mana)
+{
+    const double maxMana = getMaxMana();
+    mMana = std::max(0.0, std::min(mana, maxMana));
+
+    if(!getIsOnServerMap())
+        return;
+
+    const uint32_t step = manaRingStep(mMana, maxMana);
+    if(step != mManaRingStepNotified)
+    {
+        mManaRingStepNotified = step;
+        mNeedFireRefresh = true;
+    }
+}
+
+//! \brief Returns a mana cost after the manacost% passives: baseCost x (1 - manacost% / 100), never below 0.
+//! \param baseCost The cost before the passives.
+double Creature::getManaCost(double baseCost) const
+{
+    const double factor = std::max(0.0, 1.0 - getSkillPassive("manacost%") / 100.0);
+    return std::max(0.0, baseCost) * factor;
+}
+
+//! \brief Returns the mana the skill costs this creature now: the shot cost of a caster's first MissileLaunch
+//! or of a second MissileLaunch line like the Dragon's (both with manacost%), 0 for every free attack.
+//! \param skill The skill or attack line to price.
+double Creature::getSkillManaCost(const CreatureSkill& skill) const
+{
+    // Only the MissileLaunch attack lines cost mana per shot; Melee and the weapon shots of the first line are free
+    if(skill.getSkillName() != "MissileLaunch")
+        return 0.0;
+
+    const bool firstAttack = mDefinition->isFirstAttackSkill(&skill);
+    if(firstAttack && carriesBowOrCrossbow())
+        return 0.0;
+
+    // The shot of a caster (or an archer without its bow) costs the caster rate. A type with a skill group is
+    // told by its group, because a level file may list the Dragon's spell shot before its melee line; a type
+    // without a group is told by the line order: the first attack line is the spell shot.
+    const std::string& group = mDefinition->getSkillGroup();
+    bool casterShot = firstAttack;
+    if(group != "none")
+        casterShot = (group == "caster") || (group == "archer");
+
+    if(casterShot)
+        return getManaCost(ConfigManager::getSingleton().getManaPerCasterShot());
+
+    return getManaCost(ConfigManager::getSingleton().getManaPerDragonSecondShot());
+}
+
+//! \brief Returns true if the current mana covers the cost of the skill (a free skill is always affordable).
+//! \param skill The skill or attack line to check.
+bool Creature::hasManaFor(const CreatureSkill& skill) const
+{
+    return mMana >= getSkillManaCost(skill);
+}
+
+//! \brief Subtracts the mana cost of the skill; called when the skill or shot starts.
+//! \param skill The skill or attack line that starts.
+void Creature::payManaFor(const CreatureSkill& skill)
+{
+    const double cost = getSkillManaCost(skill);
+    if(cost <= 0.0)
+        return;
+
+    setCurrentMana(mMana - cost);
+}
+
+//! \brief Adds one turn of mana regeneration: max mana / (ManaRefillSeconds x turns per second), capped at max.
+void Creature::regenerateMana()
+{
+    const double maxMana = getMaxMana();
+    if(mMana >= maxMana)
+    {
+        // The pool may have shrunk (equipment removed): the mana above the new size is lost
+        if(mMana > maxMana)
+            setCurrentMana(maxMana);
+        return;
+    }
+
+    const double refillTurns = ConfigManager::getSingleton().getManaRefillSeconds() * ODApplication::turnsPerSecond;
+    if(refillTurns <= 0.0)
+    {
+        setCurrentMana(maxMana);
+        return;
+    }
+
+    setCurrentMana(mMana + maxMana / refillTurns);
+}
+
 double Creature::getPhysicalDefense() const
 {
     double defense = mPhysicalDefense;
@@ -2927,6 +3099,8 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
+    // Current mana, next to the health value (the maximum follows from type, level and equipment)
+    os << mMana;
     // Last field: the carried gold, shown as a sack on the thief
     os << mGoldCarried;
 }
@@ -3010,6 +3184,7 @@ void Creature::updateFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
+    OD_ASSERT_TRUE(is >> mMana);
     OD_ASSERT_TRUE(is >> mGoldCarried);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
@@ -4646,6 +4821,9 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     Tile* myTile = getPositionTile();
     float range = Pathfinding::distanceTile(*myTile, tileAttack);
 
+    // The mana is paid when the shot or skill starts
+    payManaFor(*skillData.mSkill);
+
     // We use the skill
     skillData.mSkill->tryUseFight(*getGameMap(), this, range,
         &entityAttack, &tileAttack, ko, notifyPlayerIfHit);
@@ -5742,6 +5920,13 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             mHp = Helper::toDouble(mHpString);
 
         computeCreatureOverlayHealthValue();
+
+        // The mana comes from the save, or the pool is full (old saves and creatures from a level file)
+        if(mManaFromSave)
+            mMana = std::min(mMana, getMaxMana());
+        else
+            mMana = getMaxMana();
+        mManaRingStepNotified = manaRingStep(mMana, getMaxMana());
     }
 }
 
@@ -7291,13 +7476,13 @@ bool isPossessedBasicAttack(const CreatureSkill& skill)
 }
 
 //! \brief Tells whether a possessed creature can use the skill now: no cooldown (including a fraction of a
-//! turn) and no warmup left, and the skill is usable by the creature.
+//! turn) and no warmup left, the skill is usable by the creature and the creature has the mana for it.
 //! \param creature The possessed creature that wants to use the skill.
 //! \param skillData The state of the skill (cooldown and warmup turns left).
 bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
 {
     return (skillData.mCooldown <= 0.0) && (skillData.mWarmup <= 0.0) &&
-        skillData.mSkill->canBeUsedBy(&creature);
+        skillData.mSkill->canBeUsedBy(&creature) && creature.hasManaFor(*skillData.mSkill);
 }
 }
 
@@ -7444,6 +7629,9 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
         {
             if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
                 return;
+
+            // The mana is paid when the skill starts
+            payManaFor(*skillData.mSkill);
 
             skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
             skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();
