@@ -76,7 +76,8 @@ public:
 private:
     double mMaxRange;
     uint32_t mCreatureLevelMin;
-    uint32_t mEffectDuration;
+    //! \brief Turns the freeze lasts (a fraction of a turn is possible: the skill tree scales it)
+    double mEffectDuration;
 
 };
 

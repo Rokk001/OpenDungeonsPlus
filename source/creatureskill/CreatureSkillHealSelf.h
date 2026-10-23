@@ -34,7 +34,8 @@ public:
     CreatureSkillHealSelf() :
         mCreatureLevelMin(0),
         mEffectDuration(0),
-        mEffectValue(0.0)
+        mEffectValue(0.0),
+        mHealPercent(0.0)
     {}
 
     virtual ~CreatureSkillHealSelf()
@@ -62,7 +63,9 @@ private:
     uint32_t mCreatureLevelMin;
     uint32_t mEffectDuration;
     double mEffectValue;
-
+    //! \brief Optional (last column): when above 0 the creature heals this percent of its MinHP times the damage
+    //! multiplier of its Mana attribute level, spread over the duration, instead of EffectValue per turn
+    double mHealPercent;
 };
 
 #endif // CREATURESKILLHEALSELF_H

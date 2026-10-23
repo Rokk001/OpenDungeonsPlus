@@ -56,12 +56,14 @@ bool CreatureSkillHasteSelf::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Speeds the creature up; the effect is tagged with the id of a skill tree skill so that a repeated cast only refreshes it.
 bool CreatureSkillHasteSelf::tryUseSupport(GameMap& gameMap, Creature* creature) const
 {
     if(!creature->isAlive())
         return false;
 
     CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(mEffectDuration, mEffectValue, "SpellCreatureHaste");
+    tagEffect(effect);
     creature->addCreatureEffect(effect);
 
     for(Tile* tile : creature->getCoveredTiles())

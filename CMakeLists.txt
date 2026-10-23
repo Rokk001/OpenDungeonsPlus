@@ -309,14 +309,19 @@ set(OD_SOURCEFILES
     ${SRC}/creaturemood/CreatureMoodTurnsWithoutFight.cpp
 
     ${SRC}/creatureskill/CreatureSkill.cpp
+    ${SRC}/creatureskill/CreatureSkillAuraAlly.cpp
     ${SRC}/creatureskill/CreatureSkillDefenseSelf.cpp
     ${SRC}/creatureskill/CreatureSkillExplosion.cpp
     ${SRC}/creatureskill/CreatureSkillHasteSelf.cpp
+    ${SRC}/creatureskill/CreatureSkillHealAlly.cpp
+    ${SRC}/creatureskill/CreatureSkillHealArea.cpp
     ${SRC}/creatureskill/CreatureSkillHealSelf.cpp
     ${SRC}/creatureskill/CreatureSkillManager.cpp
     ${SRC}/creatureskill/CreatureSkillMeleeFight.cpp
     ${SRC}/creatureskill/CreatureSkillMissileLaunch.cpp
     ${SRC}/creatureskill/CreatureSkillSlow.cpp
+    ${SRC}/creatureskill/CreatureSkillStrike.cpp
+    ${SRC}/creatureskill/CreatureSkillTree.cpp
     ${SRC}/creatureskill/CreatureSkillFreeze.cpp
     ${SRC}/creatureskill/CreatureSkillDrain.cpp
     ${SRC}/creatureskill/CreatureSkillInvisible.cpp

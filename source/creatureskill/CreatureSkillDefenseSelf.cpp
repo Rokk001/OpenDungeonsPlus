@@ -57,6 +57,7 @@ bool CreatureSkillDefenseSelf::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Raises the defenses of the creature while it fights (a skill of the skill tree only when its effect is not running).
 bool CreatureSkillDefenseSelf::tryUseSupport(GameMap& gameMap, Creature* creature) const
 {
     if(!creature->isAlive())
@@ -66,7 +67,12 @@ bool CreatureSkillDefenseSelf::tryUseSupport(GameMap& gameMap, Creature* creatur
     if(!creature->isActionInList(CreatureActionType::fight))
         return false;
 
+    // A skill of the skill tree is not used again while its effect runs
+    if(isTreeSkill() && creature->hasActiveEffectSource(getTreeSkillId()))
+        return false;
+
     CreatureEffectDefense* effect = new CreatureEffectDefense(mEffectDuration, mPhy, mMag, mEle, "SpellCreatureDefense");
+    tagEffect(effect);
     creature->addCreatureEffect(effect);
 
     for(Tile* tile : creature->getCoveredTiles())

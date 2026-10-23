@@ -17,6 +17,7 @@
 
 #include "creatureskill/CreatureSkill.h"
 
+#include "creatureeffect/CreatureEffect.h"
 #include "creatureskill/CreatureSkillExplosion.h"
 #include "creatureskill/CreatureSkillHealSelf.h"
 #include "creatureskill/CreatureSkillMeleeFight.h"
@@ -26,6 +27,12 @@
 #include "utils/LogManager.h"
 
 #include <istream>
+
+void CreatureSkill::tagEffect(CreatureEffect* effect) const
+{
+    if(isTreeSkill())
+        effect->setSourceId(mTreeSkillId);
+}
 
 void CreatureSkill::getFormatString(std::string& format) const
 {
