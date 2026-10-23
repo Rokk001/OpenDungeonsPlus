@@ -152,6 +152,38 @@ public:
 
     static const uint32_t NB_OVERLAY_HEALTH_VALUES;
 
+    //! The script of the aura of a possessed creature, which ends with the possession
+    static const std::string POSSESSION_AURA_SCRIPT;
+
+    //! \brief Defaults of the dormitory settings for carrying and pulling hurt creatures to their bed. They are used
+    //! when the key is missing in the room config (the name of each key is the one without the _DEFAULT suffix).
+    //! Number of turns a pulled creature may take to slide into its bed (DormitoryWoundedDragLayTurns)
+    static const double WOUNDED_DRAG_LAY_TURNS_DEFAULT;
+    //! Radius in tiles around a hurt creature in which a hostile creature stops the carrying (DormitoryWoundedCarryEnemyRadius)
+    static const double WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT;
+    //! Number of turns after which a worker gives up pulling (DormitoryWoundedCarryMaxTurns)
+    static const double WOUNDED_CARRY_MAX_TURNS_DEFAULT;
+    //! Distance in tiles at which the worker lets go of a creature that is left behind (DormitoryWoundedDragMaxDistance)
+    static const double WOUNDED_DRAG_MAX_DISTANCE_DEFAULT;
+    //! Distance in tiles the pulled creature keeps behind the worker (DormitoryWoundedDragGap)
+    static const double WOUNDED_DRAG_GAP_DEFAULT;
+    //! Speed factor of the pulled creature against a worker, so that it can follow (DormitoryWoundedDragFollowSpeedFactor)
+    static const double WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT;
+    //! Speed factor of a worker that pulls a creature (DormitoryWoundedDragWorkerSpeedFactor)
+    static const double WOUNDED_DRAG_WORKER_SPEED_FACTOR_DEFAULT;
+    //! Radius in tiles in which a worker looks for a hurt creature (DormitoryWoundedCarryRadius)
+    static const double WOUNDED_CARRY_RADIUS_DEFAULT;
+    //! Priority against the other things a worker can carry (DormitoryWoundedCarryPriority)
+    static const double WOUNDED_CARRY_PRIORITY_DEFAULT;
+    //! Percent of health below which a creature is hurt enough to be carried (DormitoryWoundedCarryHpPercent)
+    static const double WOUNDED_CARRY_HP_PERCENT_DEFAULT;
+    //! Whether a creature knocked out for a while may be carried, 1 = yes (DormitoryWoundedCarryTempKo)
+    static const double WOUNDED_CARRY_TEMP_KO_DEFAULT;
+    //! Number of turns before a creature can be pulled again (DormitoryWoundedCarryCooldown)
+    static const double WOUNDED_CARRY_COOLDOWN_DEFAULT;
+    //! Factor that turns a fraction into percent
+    static const double PERCENT_FACTOR;
+
     virtual GameEntityType getObjectType() const override;
 
     virtual void addToGameMap(GameMap* gameMap = nullptr) override;
@@ -273,9 +305,11 @@ public:
     inline int32_t getNbTurnsOutOfWork() const
     { return mNbTurnsOutOfWork; }
 
+    //! \brief Counts one more turn in which the creature wanted to work but found no job
     inline void increaseNbTurnsOutOfWork()
     { ++mNbTurnsOutOfWork; }
 
+    //! \brief Forgets the turns without a job, called when the creature works again
     inline void resetNbTurnsOutOfWork()
     { mNbTurnsOutOfWork = 0; }
 
@@ -338,6 +372,11 @@ public:
     //! \param timeSinceLastFrame the elapsed time since last displayed frame in seconds.
     virtual void update(Ogre::Real timeSinceLastFrame) override;
 
+    //! \brief Walks to the tile next to a wall tile and parks a fifth of a tile towards the wall, so that a digging
+    //! worker stands well in front of the wall and not half inside it.
+    //! \param wallTile the wall tile the creature works on.
+    //! \param nTile the neighbouring tile the creature walks to first.
+    //! \return false if a tile is missing or the creature has no position tile, true once the walk and the parking action are set.
     bool parkToWallTile(Tile* wallTile, Tile* nTile);
     bool wallDigPath(Tile* wallTile, Tile* nTile, uint32_t slot, std::vector<Ogre::Vector2>& path);
     
@@ -518,7 +557,9 @@ public:
     //! Server side. Starts the brawl restored by setRelationshipState once both fighters can take
     //! part, gives up after a while.
     void resumeBrawl();
-    //! \brief Applies damage and records actual hostile creature hits for regional script observers.
+    //! \brief Applies damage and records actual hostile creature hits for regional script observers. On the server it
+    //! also counts the attacked, incapacitated and killed events for the conditions of the level script and the
+    //! creatures lost in the statistics of the seat.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -582,10 +623,12 @@ public:
 
     //! \brief In a sandbox level, the player can pick up and drop the heroes of the hero seat
     bool isSandboxHeroFor(const Seat* seat) const;
-    //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile.
+    //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile. It also counts the
+    //! pickup in the statistics of the seat and the pickedup event for the level script.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
-    //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes.
+    //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes. It also counts the
+    //! drop in the statistics of the seat.
     void drop(const Ogre::Vector3& v) override;
     bool resizeMeshAfterDrop() override;
 
@@ -696,6 +739,8 @@ public:
     bool isHostileNear(double radius) const;
 
     bool canSlap(Seat* seat) override;
+    //! \brief Server side: the creature is slapped. It also counts the slap in the statistics of the seat and the
+    //! slapped event for the level script.
     void slap() override;
 
     void fireCreatureSound(CreatureSound sound);
@@ -888,7 +933,8 @@ public:
     //! Called on server side to add an effect (spell, slap, ...) to this creature
     void addCreatureEffect(CreatureEffect* effect);
 
-    //! Called on server side to add a finite presentation-only particle effect.
+    //! Called on server side to add a presentation-only particle effect. A negative number of turns means
+    //! that the effect stays until something ends it (see GameEntity::endParticleEffectsByScript).
     void addParticleEffect(const std::string& effectScript, int32_t nbTurns);
 
     bool removeCreatureEffect(CreatureEffect* effectForDeletion);
@@ -946,6 +992,8 @@ public:
     //! example if a door is closed)
     void checkWalkPathValid(bool includeWalkDistortion = false);
 
+    //! \brief True if the creature is tired: on the server when its wakefulness is at or below the configured
+    //! limit, on the client when the mood bit Tired is set.
     bool isTired() const;
 
     //! \brief Share of its normal speed this creature walks at because it is badly hurt (1 = not slowed).
@@ -970,6 +1018,7 @@ public:
     void knockOutToDeath();
 
     //! \brief Knocks the creature down for the given number of turns (server side). Does nothing if dead or KO.
+    //! \param nbTurns How many turns the creature stays knocked down; values of zero or less are ignored.
     void stun(int32_t nbTurns);
 
     //! \brief Called when the creature is set in jail by dropping or brought by
@@ -1038,7 +1087,10 @@ public:
     void fleeFromTile(Tile* fearTile, int32_t nbTurns);
 
     //! \brief Stuns the creature for nbTurns turns (lightning trap). A stunned creature does nothing,
-    //! like a creature that was just dropped.
+    //! like a creature that was just dropped. Does nothing if the creature is dead or already KO.
+    //! Unlike stun(), which can lengthen a stun that is already running, this only starts a stun on a
+    //! creature that is not KO, sets the counter to nbTurns and also stops the walking of the creature.
+    //! \param nbTurns How many turns the creature stays stunned.
     void stunForTurns(int32_t nbTurns);
 
     void sleep();
@@ -1061,7 +1113,8 @@ public:
     bool searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
         Tile*& attackedTile, Tile*& positionTile, CreatureSkillData*& creatureSkillData);
 
-    //! \brief Called when the creature changes seat (for example when it becomes rogue or after torture)
+    //! \brief Called when the creature changes seat (for example when it becomes rogue or after torture). A neutral
+    //! creature that joins a keeper counts as claimed for the level script.
     void changeSeat(Seat* newSeat);
 
     void stopWalking();
@@ -1089,6 +1142,7 @@ public:
     inline bool isPossessed() const
     { return mPossessor != nullptr; }
 
+    //! Called on server side. The player that controls this creature, nullptr if nobody does
     inline Player* getPossessor() const
     { return mPossessor; }
 
@@ -1352,6 +1406,7 @@ private:
 
     //! Name of the creature this one brawls with (relationships), empty if there is no brawl
     std::string                     mBrawlOpponent;
+    //! Turn on which the current brawl started (relationships), used to end it after the longest allowed time
     int64_t                         mBrawlStartTurn = 0;
     //! Brawl restored from a saved game: the opponent and the turns it may still last. Starts as
     //! soon as both creatures can fight (see resumeBrawl), empty if there is none.
@@ -1468,11 +1523,12 @@ private:
     //! \brief A sub-function called by doTurn()
     //! While the seat's heart defence is on, the runners (the workers and the two cheap,
     //! fast scout creatures) drop their current job and run to the seat's fighters, or to
-    //! the heart while it is damaged.
+    //! the heart while it is damaged. A runner that is already fighting or fleeing keeps doing so.
     void handleHeartDefence();
 
     //! \brief A sub-function called by doTurn()
-    //! This functions will handle the creature idle action logic.
+    //! This functions will handle the creature idle action logic. A standing order of the level
+    //! script comes before the needs of the creature.
     //! \return true when another action should handled after that one.
     bool handleIdleAction();
 

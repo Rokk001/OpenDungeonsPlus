@@ -78,6 +78,7 @@ std::map<std::pair<int, int>, RegisteredPile> registeredPiles;
 //! replaces it can tell whether gold was added or taken
 std::map<std::pair<int, int>, int> lastLevels;
 
+//! The tile that holds the map position (x, y)
 std::pair<int, int> tileOf(float x, float y)
 {
     return std::make_pair(static_cast<int>(std::floor(x + 0.5f)), static_cast<int>(std::floor(y + 0.5f)));
@@ -135,6 +136,8 @@ void addBand(RoundSurface& surface, int inner, int outer)
     }
 }
 
+//! Builds the round surface of the pile (lowered by the dent, when there is one) with the given number of rings: the
+//! middle point, a fan to the first ring and a band from ring to ring. The outer ring is the irregular foot of the heap.
 void buildRoundSurface(const TreasuryGoldLayer::PileShape& shape, int rings, const Dent* dent, RoundSurface& surface)
 {
     surface.mPoint.clear();
@@ -187,6 +190,8 @@ float roundHeightAt(const TreasuryGoldLayer::PileShape& shape, const RoundSurfac
     return TreasuryGoldLayer::heightAt(shape, u, v);
 }
 
+//! The point on the pile (with the dent, when there is one) at (u, v), relative to the middle of the tile
+//! \param u,v Position inside the tile, each from 0 to 1.
 Ogre::Vector3 pilePoint(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent = nullptr)
 {
     return Ogre::Vector3(u - 0.5f, v - 0.5f, dentedHeight(shape, u, v, dent));
@@ -202,7 +207,7 @@ Ogre::Vector3 detailPoint(const TreasuryGoldLayer::PileShape& shape, float u, fl
     return point;
 }
 
-//! Normal of the pile surface from the neighbouring heights
+//! Normal of the pile surface (with the dent, when there is one) from the neighbouring heights
 Ogre::Vector3 pileNormal(const TreasuryGoldLayer::PileShape& shape, float u, float v, const Dent* dent = nullptr)
 {
     const float step = 0.02f;
@@ -213,6 +218,8 @@ Ogre::Vector3 pileNormal(const TreasuryGoldLayer::PileShape& shape, float u, flo
     return normal;
 }
 
+//! \brief The colour of one coin: a gold tone that varies a little with its position, so neighbouring coins differ.
+//! \param a,b Position of the coin in the tile (0 to 1), used as the seed of the variation.
 Ogre::ColourValue goldColour(float a, float b)
 {
     const float shade = 0.8f + 0.3f * TreasuryGoldLayer::hash01(static_cast<int>(a * 1000.0f),
@@ -300,6 +307,9 @@ void addGem(Ogre::ManualObject* object, const Ogre::Vector3& centre, float size,
     }
 }
 
+//! \brief The colour of one gem: red, green, blue or purple, chosen from the pile variant and the index of the gem.
+//! \param variant Variant of the pile shape.
+//! \param index Number of the gem in the pile.
 Ogre::ColourValue gemColour(int variant, int index)
 {
     switch((variant + index) % 4)
@@ -440,6 +450,9 @@ void fillPile(Ogre::ManualObject* object, const TreasuryGoldLayer::PileShape& sh
     }
 }
 
+//! Builds the mesh of a pile with the given number of divisions and stores it under the resource name.
+//! \param resourceName Name the mesh gets in the Graphics group.
+//! \param divisions Grid cells per side (fewer for the reduced detail).
 void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resourceName,
     const TreasuryGoldLayer::PileShape& shape, int divisions, bool withDetail)
 {
@@ -453,6 +466,7 @@ void buildPileMesh(Ogre::SceneManager* sceneManager, const std::string& resource
 const int DentDivisions = 12;
 }
 
+//! \brief Reads the detail option text ("full", "reduced" or "off"); anything else means full.
 Detail detailFromString(const std::string& text)
 {
     if(text == "reduced")
@@ -462,6 +476,7 @@ Detail detailFromString(const std::string& text)
     return Detail::full;
 }
 
+//! \brief The option text of the detail ("full", "reduced" or "off").
 const char* detailToString(Detail detail)
 {
     switch(detail)
@@ -475,11 +490,13 @@ const char* detailToString(Detail detail)
     }
 }
 
+//! \brief Sets how much of the gold layer is drawn; the piles are built with this detail from now on.
 void setDetail(Detail detail)
 {
     currentDetail = detail;
 }
 
+//! \brief The detail the gold layer is drawn with at the moment.
 Detail getDetail()
 {
     return currentDetail;
@@ -550,7 +567,7 @@ std::string pileNameForClassicStack(const std::string& meshName, float x, float 
     const std::pair<int, int> tile = tileOf(x, y);
     TreasuryGoldLayer::PileShape shape;
     shape.mLevel = level;
-    shape.mVariant = (tile.first * 7 + tile.second * 13) % TreasuryGoldLayer::variantCount;
+    shape.mVariant = (tile.first * TreasuryGoldLayer::variantHashX + tile.second * TreasuryGoldLayer::variantHashY) % TreasuryGoldLayer::variantCount;
     return TreasuryGoldLayer::meshName(shape);
 }
 

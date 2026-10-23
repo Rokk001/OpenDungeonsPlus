@@ -26,6 +26,9 @@ def function(signature):
         end += 1
     return game[start:end]
 
+# The named colours and helper functions of the research tree that the production methods use.
+research_colours = game[game.index('//! Colours of the research tree'):game.index('//! '+chr(92)+'brief Whether the window under the mouse')]
+
 # Read the actual constructor's ordered dependency lists, not diagram row guesses.
 dependencies = {'emptyDepends': []}
 model = {}
@@ -192,7 +195,7 @@ int main(int argc,char** argv){try{
  windows.destroyWindow(root);CEGUI::System::destroy();CEGUI::NullRenderer::destroy(renderer);
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
-'''.replace('METHODS', function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')).replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end])
+'''.replace('METHODS', research_colours+chr(10)+function('void GameMode::refreshSkillButtonState(')+'\n'+function('void GameMode::refreshSkillConnections(')).replace('INITIALIZERS', initializers).replace('NAMES', skill_names[names_start:names_end])
 if args.render:
     probe = probe.replace('#include <CEGUI/RendererModules/Null/Renderer.h>', '#include <CEGUI/RendererModules/Ogre/Renderer.h>\n#include <CEGUI/BasicImage.h>\n#include <Ogre.h>\n#include <OgreRenderTexture.h>\n#include <OgreHardwarePixelBuffer.h>\n#include <RTShaderSystem/OgreShaderGenerator.h>\n#include <Bites/OgreSGTechniqueResolverListener.h>')
     probe = probe.replace('auto& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));', r'''
@@ -202,7 +205,7 @@ if args.render:
  Ogre::NameValuePairList options;options["hidden"]="true";
  auto* window=ogre.createRenderWindow("Research graph preview",1280,960,false,&options);window->setAutoUpdated(false);
  resources.addResourceLocation(std::string(argv[2])+"/Media/Main","FileSystem","OgreInternal");
- resources.addResourceLocation(std::string(argv[2])+"/Media/RTShaderLib/GLSL","FileSystem","General");
+ resources.addResourceLocation(std::string(argv[2])+"/Media/RTShaderLib","FileSystem","General");
  resources.initialiseAllResourceGroups();
  Ogre::RTShader::ShaderGenerator::initialize();auto* shaders=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
  OgreBites::SGTechniqueResolverListener listener(shaders);Ogre::MaterialManager::getSingleton().addListener(&listener);
@@ -240,7 +243,7 @@ with tempfile.TemporaryDirectory(prefix='odp-research-tree-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     cegui_source = prefix.parent / 'src/cegui/cegui'
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/DCEGUINULLRENDERER_EXPORTS',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/DCEGUINULLRENDERER_EXPORTS',
         f'/I{repo / "source"}', f'/I{prefix / "include/cegui-0"}', f'/I{cegui_source / "include"}', f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}',
         'check.cpp', *[str(cegui_source / 'src/RendererModules/Null' / (name+'.cpp')) for name in ('Renderer','GeometryBuffer','Texture','TextureTarget')],
         '/Fecheck.exe', '/link', f'/LIBPATH:{prefix / "lib"}', 'CEGUIBase-0.lib', 'CEGUIOgreRenderer-0.lib', 'OgreMain.lib', 'OgreRTShaderSystem.lib', 'OgreBites.lib'], cwd=work, check=True)

@@ -162,7 +162,8 @@ public:
 
 private:
     //! Computes the position of the head of the followed entity in the screen coordinates. Returns true if
-    //! the entity is on screen and position contains the position where the text should be displayed and false otherwise
+    //! the entity is on screen and position contains the position where the text should be displayed and false otherwise.
+    //! scale receives the size factor of the marker for the distance of the entity (at least 1)
     bool computeOverlayPositionHead(Ogre::Vector2& position, Ogre::Real& scale);
 
     const Ogre::String mName;

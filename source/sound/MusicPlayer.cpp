@@ -44,7 +44,7 @@ bool ODMusic::loadFromFile(const std::string& filename)
     // Set convenient values for our use.
     mMusic.setVolume(MAX_VOLUME);
     mMusic.setAttenuation(0);
-    mMusic.setLoop(true);
+    mMusic.setLooping(true);
 
     mMusicState = STOPPED;
     return true;

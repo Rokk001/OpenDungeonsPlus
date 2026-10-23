@@ -51,6 +51,37 @@ static const std::array<const char*, 12> CRITERION_NAMES = {{
     "Guarding", "Other activities", "Happy", "Unhappy", "Angry"
 }};
 
+// Layout of the population panel in unscaled pixels.
+const float PANEL_TOP = 4.0f;
+const float PANEL_BOTTOM = 116.0f;
+const float PANEL_RIGHT_MARGIN = -48.0f;
+const float WORKER_ROW_PITCH = 27.0f;
+const float WORKER_ICON_X = 2.0f;
+const float WORKER_ICON_Y = 3.0f;
+const float WORKER_ICON_SIZE = 20.0f;
+const float WORKER_COUNT_X = 24.0f;
+const float WORKER_COUNT_WIDTH = 48.0f;
+const float COUNT_HEIGHT = 26.0f;
+const float VIEW_BUTTON_X = 76.0f;
+const float VIEW_BUTTON_SIZE = 26.0f;
+const float SCROLL_BUTTON_X = 106.0f;
+const float SCROLL_BUTTON_WIDTH = 24.0f;
+const float SCROLL_BUTTON_HEIGHT = 26.0f;
+const float PREVIOUS_BUTTON_Y = 27.0f;
+const float NEXT_BUTTON_Y = 56.0f;
+
+//! Window that raised the event.
+CEGUI::Window* getEventWindow(const CEGUI::EventArgs& args)
+{
+    return static_cast<const CEGUI::WindowEventArgs&>(args).window;
+}
+
+//! Mouse button of a click event.
+CEGUI::MouseButton getClickedButton(const CEGUI::EventArgs& args)
+{
+    return static_cast<const CEGUI::MouseEventArgs&>(args).button;
+}
+
 //! Creates a child window of parent at the given pixel position and size
 CEGUI::Window* createWindow(CEGUI::Window* parent, const std::string& type,
     const std::string& name, float x, float y, float width, float height)
@@ -83,16 +114,20 @@ int selectedLevelOrder()
         return 0;
     const bool higher = keyboard.isKeyDown(OIS::KC_PERIOD);
     const bool lower = keyboard.isKeyDown(OIS::KC_COMMA);
-    return higher == lower ? 0 : (higher ? 1 : -1);
+    if(higher == lower)
+        return 0;
+    if(higher)
+        return 1;
+    return -1;
 }
 }
 
 CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) :
     mGameMap(gameMap), mGui(gui)
 {
-    mWindow = createWindow(parent, "DefaultWindow", "PopulationPanel", 0, 0, 1, 112);
-    mWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 4),
-        CEGUI::UDim(1, -48), CEGUI::UDim(0, 116)));
+    mWindow = createWindow(parent, "DefaultWindow", "PopulationPanel", 0, 0, 1, PANEL_BOTTOM - PANEL_TOP);
+    mWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, PANEL_TOP),
+        CEGUI::UDim(1, PANEL_RIGHT_MARGIN), CEGUI::UDim(0, PANEL_BOTTOM)));
     mWindow->setUserString("AllowEdgeScrolling", "true");
     CEGUI::Window* workerBackground = createWindow(mWindow, "OD/StaticImage", "WorkerBackground",
         0, 0, 74, ROW_HEIGHT);
@@ -105,24 +140,20 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
     for(size_t i = 0; i < mWorkerCounts.size(); ++i)
     {
         CEGUI::Window* icon = createWindow(mWindow, "OD/StaticImage", "WorkerIcon" + std::to_string(i),
-            2, static_cast<float>(i * 27 + 3), 20, 20);
+            WORKER_ICON_X, static_cast<float>(i) * WORKER_ROW_PITCH + WORKER_ICON_Y, WORKER_ICON_SIZE, WORKER_ICON_SIZE);
         icon->setProperty("FrameEnabled", "False");
         icon->setProperty("BackgroundEnabled", "False");
         icon->setProperty("Image", "OpenDungeonsIcons/" + std::string(workerIcons[i]));
         icon->setMousePassThroughEnabled(true);
         CEGUI::Window* count = createWindow(mWindow, "OD/StaticText", "WorkerCount" + std::to_string(i),
-            24, static_cast<float>(i * 27), 48, 26);
+            WORKER_COUNT_X, static_cast<float>(i) * WORKER_ROW_PITCH, WORKER_COUNT_WIDTH, COUNT_HEIGHT);
         prepareCount(count);
         count->setTooltipText("Workers");
-        count->setUserString("ContextHelp", std::string("Workers: ") + CRITERION_NAMES[static_cast<size_t>(WORKER_CRITERIA[i])]);
+        count->setUserString(Gui::USER_STRING_CONTEXT_HELP, std::string("Workers: ") + CRITERION_NAMES[static_cast<size_t>(WORKER_CRITERIA[i])]);
+        count->setID(static_cast<CEGUI::uint>(i));
         mWorkerCounts[i] = count;
         mConnections.emplace_back(count->subscribeEvent(CEGUI::Window::EventMouseClick,
-            CEGUI::Event::Subscriber([this, i](const CEGUI::EventArgs& args)
-            {
-                if(static_cast<const CEGUI::MouseEventArgs&>(args).button == CEGUI::LeftButton)
-                    pickUp("", WORKER_CRITERIA[i], true);
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&CreaturePanel::onWorkerCountClicked, this)));
     }
 
     const char* viewNames[] = {"Total", "Jobs", "Fighting", "Moods"};
@@ -130,23 +161,26 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
     for(size_t i = 0; i < mViewButtons.size(); ++i)
     {
         CEGUI::Window* button = createWindow(mWindow, "OD/GameTabButton", "View" + std::to_string(i),
-            76, static_cast<float>(i * 27), 26, 26);
+            VIEW_BUTTON_X, static_cast<float>(i) * WORKER_ROW_PITCH, VIEW_BUTTON_SIZE, VIEW_BUTTON_SIZE);
         button->setProperty("NormalImage", "OpenDungeonsIcons/" + std::string(viewIcons[i]));
         button->setTooltipText(viewNames[i]);
+        button->setID(static_cast<CEGUI::uint>(i));
         mViewButtons[i] = button;
         mConnections.emplace_back(button->subscribeEvent(CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber([this, i](const CEGUI::EventArgs&) { selectView(i); return true; })));
+            CEGUI::Event::Subscriber(&CreaturePanel::onViewButtonClicked, this)));
     }
-    mPrevious = createWindow(mWindow, "OD/Button", "PreviousTypes", 106, 27, 24, 26);
+    mPrevious = createWindow(mWindow, "OD/Button", "PreviousTypes", SCROLL_BUTTON_X, PREVIOUS_BUTTON_Y,
+        SCROLL_BUTTON_WIDTH, SCROLL_BUTTON_HEIGHT);
     mPrevious->setText("<");
     mPrevious->setTooltipText("Previous creature types");
-    mNext = createWindow(mWindow, "OD/Button", "NextTypes", 106, 56, 24, 26);
+    mNext = createWindow(mWindow, "OD/Button", "NextTypes", SCROLL_BUTTON_X, NEXT_BUTTON_Y,
+        SCROLL_BUTTON_WIDTH, SCROLL_BUTTON_HEIGHT);
     mNext->setText(">");
     mNext->setTooltipText("Next creature types");
     mConnections.emplace_back(mPrevious->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&) { scroll(-1); return true; })));
+        CEGUI::Event::Subscriber(&CreaturePanel::onPreviousClicked, this)));
     mConnections.emplace_back(mNext->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&) { scroll(1); return true; })));
+        CEGUI::Event::Subscriber(&CreaturePanel::onNextClicked, this)));
     mStrip = createWindow(mWindow, "DefaultWindow", "Types", 134, 0, 1, ROW_HEIGHT);
     mStrip->setArea(CEGUI::URect(CEGUI::UDim(0, 134), CEGUI::UDim(0, 0),
         CEGUI::UDim(1, 0), CEGUI::UDim(0, ROW_HEIGHT)));
@@ -198,35 +232,70 @@ void CreaturePanel::addSlot()
     // Keep the original model proportions; the surrounding frame fills the column.
     slot.portrait->setProperty("HorzFormatting", "Stretched");
     slot.portrait->setProperty("VertFormatting", "Stretched");
+    slot.portrait->setID(static_cast<CEGUI::uint>(index));
     mConnections.emplace_back(slot.portrait->subscribeEvent(CEGUI::Window::EventMouseClick,
-        CEGUI::Event::Subscriber([this, index](const CEGUI::EventArgs& args)
-        {
-            const CEGUI::MouseButton button = static_cast<const CEGUI::MouseEventArgs&>(args).button;
-            if(button == CEGUI::RightButton)
-                focus(mSlots[index].type);
-            else if(button == CEGUI::LeftButton && selectedLevelOrder() != 0)
-                pickUp(mSlots[index].type, Criterion::Total, false, selectedLevelOrder());
-            return true;
-        })));
+        CEGUI::Event::Subscriber(&CreaturePanel::onPortraitClicked, this)));
     for(size_t row = 0; row < slot.counts.size(); ++row)
     {
         CEGUI::Window* count = createWindow(slot.window, "OD/StaticText", "Count" + std::to_string(row),
             0, static_cast<float>(row * 26), SLOT_WIDTH, 26);
         prepareCount(count);
+        count->setID(static_cast<CEGUI::uint>(index * SLOT_COUNT_ROWS + row));
         slot.counts[row] = count;
         mConnections.emplace_back(count->subscribeEvent(CEGUI::Window::EventMouseClick,
-            CEGUI::Event::Subscriber([this, index, row](const CEGUI::EventArgs& args)
-            {
-                const CEGUI::MouseButton button = static_cast<const CEGUI::MouseEventArgs&>(args).button;
-                if(button == CEGUI::LeftButton && row < VIEW_CRITERIA[mView].size())
-                    pickUp(mSlots[index].type, VIEW_CRITERIA[mView][row], false, selectedLevelOrder());
-                else if(button == CEGUI::RightButton)
-                    focus(mSlots[index].type);
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&CreaturePanel::onCountClicked, this)));
     }
     mSlots.push_back(slot);
     mGui.registerWindowHierarchy(slot.window);
+}
+
+bool CreaturePanel::onWorkerCountClicked(const CEGUI::EventArgs& args)
+{
+    if(getClickedButton(args) == CEGUI::LeftButton)
+        pickUp("", WORKER_CRITERIA[getEventWindow(args)->getID()], true);
+    return true;
+}
+
+bool CreaturePanel::onViewButtonClicked(const CEGUI::EventArgs& args)
+{
+    selectView(getEventWindow(args)->getID());
+    return true;
+}
+
+bool CreaturePanel::onPreviousClicked(const CEGUI::EventArgs&)
+{
+    scroll(-1);
+    return true;
+}
+
+bool CreaturePanel::onNextClicked(const CEGUI::EventArgs&)
+{
+    scroll(1);
+    return true;
+}
+
+bool CreaturePanel::onPortraitClicked(const CEGUI::EventArgs& args)
+{
+    const size_t index = getEventWindow(args)->getID();
+    const CEGUI::MouseButton button = getClickedButton(args);
+    if(button == CEGUI::RightButton)
+        focus(mSlots[index].type);
+    else if(button == CEGUI::LeftButton && selectedLevelOrder() != 0)
+        pickUp(mSlots[index].type, Criterion::Total, false, selectedLevelOrder());
+    return true;
+}
+
+bool CreaturePanel::onCountClicked(const CEGUI::EventArgs& args)
+{
+    const size_t id = getEventWindow(args)->getID();
+    const size_t index = id / SLOT_COUNT_ROWS;
+    const size_t row = id % SLOT_COUNT_ROWS;
+    const CEGUI::MouseButton button = getClickedButton(args);
+    if(button == CEGUI::LeftButton && row < VIEW_CRITERIA[mView].size())
+        pickUp(mSlots[index].type, VIEW_CRITERIA[mView][row], false, selectedLevelOrder());
+    else if(button == CEGUI::RightButton)
+        focus(mSlots[index].type);
+    return true;
 }
 
 void CreaturePanel::update()
@@ -284,7 +353,7 @@ void CreaturePanel::update()
         const CreatureDefinition* definition = mGameMap.getClassDescription(slot.type);
         slot.portrait->setProperty("Image", getCreaturePanelPortraitImage(definition->getMeshName()).getName());
         slot.portrait->setTooltipText(slot.type);
-        slot.portrait->setUserString("ContextHelp", slot.type + ": right-click to locate");
+        slot.portrait->setUserString(Gui::USER_STRING_CONTEXT_HELP, slot.type + ": right-click to locate");
         const std::vector<Criterion>& criteria = VIEW_CRITERIA[mView];
         for(size_t row = 0; row < slot.counts.size(); ++row)
         {
@@ -298,7 +367,7 @@ void CreaturePanel::update()
             countWindow->setText(Helper::toString(count));
             countWindow->setEnabled(count > 0);
             countWindow->setTooltipText(slot.type);
-            countWindow->setUserString("ContextHelp", slot.type + ": " + CRITERION_NAMES[static_cast<size_t>(criterion)] +
+            countWindow->setUserString(Gui::USER_STRING_CONTEXT_HELP, slot.type + ": " + CRITERION_NAMES[static_cast<size_t>(criterion)] +
                 "\nLeft-click to pick up; right-click to locate");
         }
     }
@@ -306,7 +375,7 @@ void CreaturePanel::update()
 
 void CreaturePanel::pickUp(const std::string& type, CreaturePanelCriterion criterion, bool workersOnly, int levelOrder)
 {
-    if(!ODClient::getSingleton().isConnected())
+    if(!ODClient::getSingleton().isConnected() || mGameMap.getLocalPlayer() == nullptr)
         return;
     Seat* seat = mGameMap.getLocalPlayer()->getSeat();
     Creature* selected = nullptr;
@@ -334,6 +403,8 @@ void CreaturePanel::pickUp(const std::string& type, CreaturePanelCriterion crite
 
 void CreaturePanel::focus(const std::string& type)
 {
+    if(mGameMap.getLocalPlayer() == nullptr)
+        return;
     for(Creature* creature : mGameMap.getCreaturesBySeat(mGameMap.getLocalPlayer()->getSeat()))
     {
         if(creature->getDefinition()->getClassName() != type || !creature->getIsOnMap())

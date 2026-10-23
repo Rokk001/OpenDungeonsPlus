@@ -211,6 +211,7 @@ private:
 
     //! \brief Spawns a wave
     //! Announces a class only on its first successful arrival for a human owner.
+    //! If spawnedNames is not null, the names of the created creatures are added to it.
     void spawnWave(RoomPortalWaveData* roomPortalWaveData, uint32_t maxCreaturesToSpawn,
         std::vector<std::string>* spawnedNames = nullptr);
 

@@ -153,6 +153,7 @@ public:
     inline bool isExhausted() const
     { return mIsExhausted; }
 
+    //! \brief Sets whether the trap tile has used up its shots
     inline void setExhausted(bool exhausted)
     { mIsExhausted = exhausted; }
 
@@ -160,6 +161,7 @@ public:
     inline Creature* getReloadWorker() const
     { return mReloadWorker; }
 
+    //! \brief Sets the worker that reloads this tile (nullptr to free it)
     inline void setReloadWorker(Creature* worker)
     { mReloadWorker = worker; }
 
@@ -167,6 +169,7 @@ public:
     inline int64_t getReloadNextTurn() const
     { return mReloadNextTurn; }
 
+    //! \brief Sets the turn number before which no worker reloads this tile
     inline void setReloadNextTurn(int64_t turn)
     { mReloadNextTurn = turn; }
 
@@ -268,6 +271,7 @@ public:
 
     //! \brief The worker that reserved the tile for reloading (nullptr if none)
     Creature* getReloadWorker(Tile* tile) const;
+    //! \brief Reserves the tile for the worker (nullptr frees it)
     void setReloadWorker(Tile* tile, Creature* worker);
 
     //! \brief No worker reloads the tile before the given turn number

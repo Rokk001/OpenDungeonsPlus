@@ -468,7 +468,7 @@ with tempfile.TemporaryDirectory(prefix='odp-defeat-click-') as directory:
         sources.append(source.name)
     shutil.copy(null_source / 'RenderTarget.inl', work / 'RenderTarget.inl')
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/W1', '/DCEGUINULLRENDERER_EXPORTS',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/DCEGUINULLRENDERER_EXPORTS',
                     '/I', str(work), '/I', str(cegui_include), '/I', str(repo / 'source'), 'check.cpp'] + sources +
                    ['/Fecheck.exe', '/link', '/LIBPATH:' + str(cegui_lib), 'CEGUIBase-0.lib'],
                    cwd=work, check=True)

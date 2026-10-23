@@ -81,20 +81,68 @@ multiplayer/
 -> TheBridge.level                     OD Team                 GPLv3+
 -> UnitTest.level                      OD Team                 GPLv3+
 
+campaign/
+-> Ashcombe.level                      OD Team                 GPLv3+
+-> Bellwick.level                      OD Team                 GPLv3+
+-> Bonus1.level                        OD Team                 GPLv3+
+-> BoulderCourse.level                 OD Team                 GPLv3+
+-> Brackenford.level                   OD Team                 GPLv3+
+-> Campaign1.level                     OD Team                 GPLv3+
+-> Campaign2.level                     OD Team                 GPLv3+
+-> Campaign3.level                     OD Team                 GPLv3+
+-> Cinderhollow.level                  OD Team                 GPLv3+
+-> Coldwell.level                      OD Team                 GPLv3+
+-> CrowshotGallery.level               OD Team                 GPLv3+
+-> Dunmarrow.level                     OD Team                 GPLv3+
+-> Ebonrook.level                      OD Team                 GPLv3+
+-> Goldspire.level                     OD Team                 GPLv3+
+-> Greywater.level                     OD Team                 GPLv3+
+-> Highcairn.level                     OD Team                 GPLv3+
+-> HollinFen.level                     OD Team                 GPLv3+
+-> HollowmarkCitadel.level             OD Team                 GPLv3+
+-> Ironbridge.level                    OD Team                 GPLv3+
+-> Kingsfall.level                     OD Team                 GPLv3+
+-> Lanternhill.level                   OD Team                 GPLv3+
+-> Mirewatch.level                     OD Team                 GPLv3+
+-> Mossgate.level                      OD Team                 GPLv3+
+-> Ravensledge.level                   OD Team                 GPLv3+
+-> Saltmere.level                      OD Team                 GPLv3+
+-> Silverdeep.level                    OD Team                 GPLv3+
+-> SkittleCavern.level                 OD Team                 GPLv3+
+-> Stormhaven.level                    OD Team                 GPLv3+
+-> SwarmNight.level                    OD Team                 GPLv3+
+-> Thornreach.level                    OD Team                 GPLv3+
+-> Tinmoor.level                       OD Team                 GPLv3+
+-> TwistingHalls.level                 OD Team                 GPLv3+
+-> VarnsCrossing.level                 OD Team                 GPLv3+
+-> Wolfscar.level                      OD Team                 GPLv3+
+-> Wraithwood.level                    OD Team                 GPLv3+
+
 skirmish/
+-> Barrackdeep.level                   OD Team                 GPLv3+
 -> DuelToDeath.level                   OD Team                 GPLv3+
+-> Embervault.level                    OD Team                 GPLv3+
 -> FallingKeeper.level                 OD Team                 GPLv3+
 -> ForgottenTreasures.level            OD Team                 GPLv3+
 -> FourThrones.level                   OD Team                 GPLv3+
+-> Gloomkeep.level                     OD Team                 GPLv3+
+-> GrandDelve.level                    OD Team                 GPLv3+
+-> Lanternreach.level                  OD Team                 GPLv3+
+-> Quietcrag.level                     OD Team                 GPLv3+
 -> Sandbox.level                       OD Team                 GPLv3+
+-> SandboxEverything.level            OD Team                 GPLv3+
+-> Splitstone.level                    OD Team                 GPLv3+
 -> StonekeepSiege.level                OD Team                 GPLv3+
 -> TestLegacy.level                    OD Team                 GPLv3+
+-> TestLevelScripting.level            OD Team                 GPLv3+
 -> TestModelsFair.level                OD Team                 GPLv3+
--> TestSingleplayerSmall.level         OD Team                 GPLv3+
+-> TestRegionScripting.level           OD Team                 GPLv3+
+-> TestSingleplayerSmall.level        OD Team                 GPLv3+
 -> TestSingleplayerSmallEmpty.level    OD Team                 GPLv3+
 -> TestSingleplayerSmallPassability.level OD Team              GPLv3+
 -> TriadDeeps.level                    OD Team                 GPLv3+
 -> TwinDelve.level                     OD Team                 GPLv3+
+-> Wyrmhollow.level                    OD Team                 GPLv3+
 
 template.level                         OD Team                 GPLv3+
 
@@ -105,8 +153,6 @@ template.level                         OD Team                 GPLv3+
 
 Name                                   Author                  License                 Source URL
 ------------------------------------------------------------------------------------------------------------------------
-RTShaderLib/*                          The Ogre 3D Team        MIT                     http://www.ogre3d.org/licensing
-
 scripts/
 -> *.material                          OD Team                 GPLv3+
 
@@ -172,6 +218,7 @@ textures/
 -> DungeonClaimedWall*.png             Nobiax, Danimal         CC-BY-SA 3.0            http://opengameart.org/users/danimal  (regraded darker and to a cool blue-grey, top surface replaced, by tools/dungeon-palette/generate_wall_textures.py)
 -> DirtWall.png, DirtWallNormal.png   OD Team   CC0   Procedurally generated by tools/dungeon-palette/generate_wall_textures.py
 -> Dragon{,Normal}.png
+-> DungeonHeartPedestal.png            Mario                   GPLv3+                  Procedural, tools/heart-textures/generate_pedestal_texture.py
 -> DungeonTemple*.png
 -> Dwarf*.png
 -> DarkElf*.png                        Contmike, Danimal       CC-BY-SA 3.0
@@ -217,6 +264,8 @@ textures/
 -> MysteryBox*.png                     Nobiax, Danimal         CC-BY-SA 3.0            http://opengameart.org/users/danimal
 -> OrcBed*.png                         Bart, p0ss              CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=60191#p60191
 -> Orc{,Normal}.png
+-> Panels_Diffuse.png                  The Ogre 3D Team        MIT                     https://github.com/OGRECave/ogre - Samples/Media/materials/textures
+-> Panels_Normal_Tangent.png           The Ogre 3D Team        MIT                     https://github.com/OGRECave/ogre - Samples/Media/materials/textures
 -> PitDemon*.png
 -> Podium*.png
 -> Portal{,Normal}.png                 Yughues                 CC0                     http://opengameart.org/users/yughues
@@ -295,7 +344,7 @@ textures/
 -> NatureMonster*.png                  Tomasz Luchowski        GPLv3+                  Added 2024 (first commit)
 -> CreaturePrisoner.png                AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> Creature{Angry,Furious,Hungry,KO,Leaving,Paid,Sleepy,Unhappy}.pngAI-generated with Codex  GPLv3+                  AI-generated mood icons (tools/artwork/CreatureMoodAtlas.png), see "Generated assets" below
--> CreatureExperience.png, CreatureRecovery.pngAI-generated              GPLv3+                  AI-generated, created for this project; see "Generated assets" below
+-> CreatureExperience.png, CreatureRecovery.png    AI-generated           GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 -> DungeonHeart{Healthy,Damaged,Critical}{,Normal,Glow}.pngMario                   GPLv3+                  Procedural, tools/heart-textures/generate_heart_textures.py
 -> DefeatFireball.png                  AI-generated            GPLv3+                  AI-generated, created for this project (first commit 2c05e6eb2); see "Generated assets" below
 -> MainMenuBackground.png              AI-generated with Codex  GPLv3+                  Added 2026 (first commit b04544ed8)
@@ -629,6 +678,7 @@ config/creatureReactions.cfg           OD Team                 GPLv3+
 materials/scripts/CreatureReactions.material   OD Team        GPLv3+
 particles/CreatureReactions.particle   OD Team                 GPLv3+
 particles/TreasuryCoins.particle        OD Team                 CC0                     Coin splash and coin pour particles of the treasury, reuse the existing coin sprite (original work)
+particles/CreatureCombatReactions.particle   OD Team          GPLv3+
 particles/WorkerReactions.particle   OD Team                   GPLv3+
 materials/textures/CreatureEmote*.png  OD Team                 GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work)
 materials/textures/ReactionParticle*.png  OD Team              GPLv3+                  Drawn from simple shapes by tools/gen_creature_reaction_art.py (script generated, original work)
@@ -677,6 +727,7 @@ tools/gen_dwarf_pick_texture.py         OD Team                 GPLv3+
 tools/gen_short_sword.py                 OD Team                 GPLv3+
 tools/gen_walk_hurt.py                   OD Team                 GPLv3+
 tools/gen_walk_hurt_hover.py             OD Team                 GPLv3+
+tools/gen_tentacle_glide.py              OD Team                 GPLv3+
 tools/fix_walk_feet.py                  OD Team                 GPLv3+
 tools/fix_walk_feet_rigs.py             OD Team                 GPLv3+
 tools/fix_walk_hurt_feet.py             OD Team                 GPLv3+
@@ -747,6 +798,7 @@ materials/textures/RoomAmb*.png        OD Team                 GPLv3+           
 tools/gen_room_ambience_art.py         OD Team                 GPLv3+
 materials/textures/RoomAmbFlame.png, RoomAmbBracket.png, RoomAmbGear.png, RoomAmbRat.png, RoomAmbRatL.png, RoomAmbRumple.png, RoomAmbSoftRing.png   OD Team   GPLv3+   Drawn from simple shapes and gradients by tools/gen_room_effects_art.py (script generated, original work)
 tools/gen_room_effects_art.py          OD Team                 GPLv3+
+source/tests/check_view_shake.py       OD Team                 GPLv3+
 tools/check_room_ambience.py           OD Team                 GPLv3+
 materials/textures/RoomAmbRing.png      OD Team                 GPLv3+                  Thin glowing ring drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work)
 materials/textures/RoomAmbRingRunes.png  OD Team                 GPLv3+                  Double ring with tick marks drawn from gradients, lines and noise by tools/gen_spell_marks.py (script generated, original work)
@@ -759,6 +811,7 @@ materials/textures/SpellBolt.png                OD Team                 GPLv3+  
 tools/gen_spell_bolt.py                 OD Team                 GPLv3+
 models/SpellBolt.mesh                   OD Team                 GPLv3+                  Zigzag lightning bolt of crossed ribbons, AI-generated with a Blender script (tools/blender-assets/spell_bolt.py, original work, material SpellBolt)
 tools/blender-assets/spell_bolt.py      OD Team                 GPLv3+
+tools/blender-assets/banner_droop_clip.py  OD Team             GPLv3+
 particles/RoomAmbienceSpellsExtra.particle  OD Team             GPLv3+                  Particle scripts of the heal, haste, defense, slow, flight trail and end effects (original work, only existing sprites)
 source/tests/check_spell_tier_c.py      OD Team                 GPLv3+
 
@@ -907,6 +960,7 @@ materials/scripts/DoorTypes.material   OD Team                 GPLv3+
 tools/gen_door_textures.py             OD Team                 GPLv3+
 tools/blender-assets/door_meshes.py    OD Team                 GPLv3+
 tools/blender-assets/door_skeletons.py OD Team                 GPLv3+
+tools/blender-assets/door_blend_sync.py OD Team                GPLv3+
 
 =============================================================
 ==  Own trap models                                        ==

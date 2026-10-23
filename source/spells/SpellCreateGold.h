@@ -29,12 +29,22 @@ class InputManager;
 class SpellCreateGold : public Spell
 {
 public:
+    //! \brief Shows the price and the target tile while the player aims the spell and sends the cast request
+    //! when the player confirms on a valid claimed tile of their own.
     static void checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand);
+    //! \brief Server side cast: takes the mana and drops a pile of gold on the claimed target tile.
+    //! \return true if the spell was cast, false if the tile is invalid or the mana is not enough.
     static bool castSpell(GameMap* gameMap, Player* player, ODPacket& packet);
 
+    //! \brief The spell is instant and has no entity, so it can never be read from a stream (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromStream(GameMap* gameMap, std::istream &is);
+
+    //! \brief The spell is instant and has no entity, so it can never be read from a packet (logs an error).
+    //! \return Always nullptr.
     static Spell* getSpellFromPacket(GameMap* gameMap, ODPacket &is);
 
+    //! The spell type handled by this class.
     static const SpellType mSpellType;
 };
 

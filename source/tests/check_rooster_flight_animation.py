@@ -10,9 +10,10 @@ root = Path(__file__).resolve().parents[2]
 chicken = (root / 'source/entities/ChickenEntity.cpp').read_text()
 pose = (root / 'source/entities/ChickenPose.h').read_text()
 client = (root / 'source/network/ODClient.cpp').read_text()
-for token in ('(progress - 0.12f) / 0.73f', 'lateral * lateral * (3.0f - 2.0f * lateral)', 'position.z = high;',
+for token in ('(progress - ROOF_FLIGHT_CROUCH_PART) / ROOF_FLIGHT_TRAVEL_PART',
+              'lateral * lateral * (3.0f - 2.0f * lateral)', 'position.z = high;',
               'ServerNotificationType::chickenRoofFlight', 'mHopFrom << mHopTo << turns << mHopElapsed',
-              'timeSinceLastFrame * getGameMap()->getGameSpeedFactor()', '4.0f * mHopElapsed / mHopTurns'):
+              'timeSinceLastFrame * getGameMap()->getGameSpeedFactor()', 'ROOF_FLIGHT_CLIP_SECONDS * mHopElapsed / mHopTurns'):
     assert token in chicken, token
 assert 'startRoofFlightFromServer(from, to, turns, elapsed)' in client
 assert 'return "RoofFlight";' in pose

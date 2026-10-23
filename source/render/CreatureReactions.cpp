@@ -68,9 +68,13 @@ template<> CreatureReactions* Ogre::Singleton<CreatureReactions>::msSingleton = 
 namespace
 {
 
+//! Prefix of the material of an emote icon (the emote name follows)
 const std::string EMOTE_MATERIAL_PREFIX = "CreatureEmote_";
+//! Prefix of the scene name of a particle system a reaction creates (a counter follows)
 const std::string PARTICLE_NAME_PREFIX = "CreatureReaction_";
+//! Seconds between two runs that delete the cooldown entries that are over
 const double PRUNE_INTERVAL = 30.0;
+//! Pi, used for the hop motion
 const double PI_VALUE = 3.14159265358979323846;
 //! Seconds after an attack animation during which the creature counts as one of the fighters
 const double ATTACK_MEMORY = 3.0;
@@ -85,8 +89,22 @@ const double HAND_DROP_MEMORY = 120.0;
 //! Seconds a reaction waits at most for the creature to finish what it is doing
 const double PENDING_WAIT_MAX = 5.0;
 const double PENDING_WAIT_STEP = 0.25;
+//! Largest squared distance at which a node still counts as being where the motion left it
+const double MOTION_UNCHANGED_SQUARED_TOLERANCE = 0.00000001;
+//! Share of the squash by which the model grows sideways while it gets lower
+const double SQUASH_SIDE_GROWTH = 0.5;
+//! Shortest distance (world units) at which the direction to the camera or the front is used
+const double TURN_MIN_LENGTH = 0.01;
+//! Share of the turn motion spent turning towards the camera, and again turning back
+const double TURN_PHASE = 0.25;
+//! Smallest change of the turn angle (radians) that is applied to the node
+const double ROTATION_EPSILON = 0.00001;
 //! Seconds a done moment waits at most for the creature to finish its get-up or meal
 const double DONE_WAIT_MAX = 8.0;
+//! Seconds after the end of the meal animation in the hatchery before the creature shows how it liked it
+const double HATCHERY_MEAL_DONE_DELAY = 0.5;
+//! Value of the wait time of a queued reaction that stands for the usual waiting time
+const double USUAL_WAIT_TIME = -1.0;
 //! Seconds a creature has to sleep or pray until the end of it is shown
 const double SLEEP_DONE_MIN = 6.0;
 const double PRAYER_DONE_MIN = 8.0;
@@ -95,6 +113,12 @@ const double CLAIM_DONE_MIN = 2.5;
 const double MEAL_FALLBACK_DELAY = 4.5;
 //! Seconds a creature has to run away until it sulks over the lost fight
 const double FLEE_DONE_MIN = 2.0;
+//! Seconds before the winners start to cheer when the loser ran away
+const double VICTORY_FLED_DELAY = 0.6;
+//! Seconds before the winners start to cheer when the loser went down
+const double VICTORY_DELAY = 0.8;
+//! Seconds before the other creatures nearby join in the cheering
+const double GROUP_VICTORY_DELAY = 1.8;
 //! Seconds between a prisoner breaking under torture and the first sign of its new loyalty
 const double CONVERTED_DELAY = 2.8;
 //! A creature that delivers gold this many times within the window is out of breath
@@ -109,8 +133,40 @@ const double ROOM_RESULT_DELAY = 0.7;
 //! Seconds between two tries to show the work reaction of a creature that does something for a while
 const double ONGOING_MIN = 5.0;
 const double ONGOING_MAX = 9.0;
+//! Shortest wait before the first try when a creature starts to do something for a while
+const double ONGOING_FIRST_MIN = 2.0;
+//! Juggling balls: laps per second of the balls and the progress after which the first ball is dropped
+const double JUGGLE_LAPS_PER_SECOND = 0.75;
+const double JUGGLE_DROP_PROGRESS = 0.78;
+//! Share of the reaction time spent sinking down, and again getting up, for the sit motion
+const double SIT_RAMP = 0.12;
+//! Share of the sit motion by which the model grows sideways while it gets lower
+const double SIT_SIDE_GROWTH = 0.4;
+//! Share of the startle motion spent nodding off, the rest is the jump
+const double STARTLE_NOD_SHARE = 0.7;
+//! Share of the nod by which the model grows sideways while it gets lower
+const double STARTLE_SIDE_GROWTH = 0.5;
+//! Height (world units) of the jump at the end of the startle motion
+const double STARTLE_JUMP_HEIGHT = 0.15;
+//! Upper bound of the random number that picks one of the four sides next to a creature
+const double WALL_SIDE_RANDOM_MAX = 3.999;
+//! Number of tiles next to a tile that share an edge with it
+const uint32_t NB_WALL_SIDES = 4;
+//! Distance (world units) from the middle of a tile to the face of the wall next to it
+const float WALL_FACE_OFFSET = 0.5f;
+//! Prefix of the material of a prop sprite (the prop name follows)
 const std::string PROP_MATERIAL_PREFIX = "CreatureProp_";
+//! Prefix of the scene name of a prop sprite a reaction creates (a counter follows)
 const std::string PROP_NAME_PREFIX = "CreatureReactionProp_";
+//! Shortest and tallest creature height (world units) the size of the prop sprites follows
+static const double PROP_HEIGHT_MIN = 0.3;
+static const double PROP_HEIGHT_MAX = 6.0;
+//! Distance (world units) in front of a creature the props use as their target when there is no wall to turn to
+static const float PROP_FRONT_DISTANCE = 0.9f;
+//! Shortest length of a direction vector that can still be normalised
+static const float DIRECTION_MIN_LENGTH = 0.01f;
+//! Number of juggling balls that have a colour of their own
+static const uint32_t NB_BALL_COLOURS = 3;
 //! The reactions of the moods and the habits leave this many places of the simultaneous ones to the events
 const uint32_t MOOD_RESERVED_SLOTS = 2;
 //! Health stage (0 is unhurt, 7 is dead) from which a creature counts as hurt
@@ -156,21 +212,65 @@ const double SLAP_DUCK_MEMORY = 90.0;
 const uint32_t HEAL_MIN_STEPS = 2;
 //! Standing creatures this close to an ally that went down mourn it (world units)
 const double ALLY_DEATH_RADIUS = 8.0;
+//! Seconds the mourning creatures wait (staggered) after the ally went down
+const double ALLY_DEATH_DELAY = 1.2;
+//! Seconds a fleeing creature waits before it shows the panic
+const double FLEE_PANIC_DELAY = 0.4;
 //! The sight of an enemy lets the standing creatures of the keeper close by react at most this often
 const double ENEMY_SPOTTED_INTERVAL = 20.0;
 //! Creatures that walk towards each other and are this close (world units) bump into each other
 const double BUMP_RADIUS = 1.3;
 //! A worker waves at a fighter that passes within this share more than the meeting radius
 const double WAVE_RADIUS_FACTOR = 1.3;
+//! Standing creatures laugh at a slapped creature at most this often (seconds)
+const double SLAP_LAUGH_INTERVAL = 3.0;
+//! Shortest and longest wait (seconds) of the answer of a chat partner
+const double CHAT_REPLY_DELAY_MIN = 0.9;
+const double CHAT_REPLY_DELAY_SPREAD = 0.6;
+//! Seconds the answer to a sparring push, a wave and a grumble waits
+const double SPAR_REPLY_DELAY = 0.5;
+const double WAVE_REPLY_DELAY = 0.7;
+const double GRUMBLE_REPLY_DELAY = 0.4;
+//! Kept off the upper end of the range so that the random choice never indexes past the last option
+const double CHOICE_RANGE_MARGIN = 0.001;
+//! Creatures closer than this (world units) have no usable direction to each other
+const float FACING_MIN_LENGTH = 0.01f;
+//! Dot product above which a creature looks at the other one (and below its negative the other looks back)
+const float FACING_MIN_DOT = 0.3f;
+//! Meeting kinds the dice choose from
+const uint32_t MEETING_CHAT = 0;
+const uint32_t MEETING_SPAR = 1;
+const uint32_t MEETING_WAVE = 2;
+const uint32_t MEETING_GRUMBLE = 3;
 //! Creatures that are on the map when the game starts did not arrive: nothing is shown in this time
 const double ARRIVAL_QUIET_TIME = 3.0;
+//! Seconds the reactions of a picked up, a dropped and an arrived creature wait for the creature to be ready
+const double PICKED_UP_DELAY = 0.4;
+const double DROPPED_DELAY = 0.35;
+const double ARRIVAL_DELAY = 0.9;
 //! Seconds the mood told for an arrival counts, how recent a delivery has to be to belong to a full treasury,
 //! and how close to the last deposit the worker has to stand
 const double ARRIVAL_MOOD_MEMORY = 30.0;
 const double FULL_DELIVERY_MEMORY = 6.0;
 const double FULL_TREASURY_RADIUS = 3.0;
+//! Seconds the creature waits before it shows a reaction to a cosmetic event of the server
+const double TREASURY_FULL_DELAY = 0.3;
+const double MOOD_CHANGE_DELAY = 1.0;
+const double SCARED_DELAY = 0.8;
+const double IMPATIENT_DELAY = 0.3;
+//! Seconds a creature waits after the last healing step in the temple before it shows that it is done
+const double TEMPLE_DONE_DELAY = 0.6;
 //! Distance (tiles) up to which a creature of the keeper catches a chicken that the keeper drops
 const double CHICKEN_CATCH_RADIUS = 3.0;
+//! Share of the reaction time spent tipping over, and again getting up, for the lie motion
+static const double LIE_RAMP = 0.15;
+//! Most creatures that turn their head to the same event
+static const uint32_t MAX_LOOKERS = 3;
+//! Seconds before the creatures look at the next fight, and at the next fall of gold
+static const double FIGHT_LOOK_INTERVAL = 4.0;
+static const double GOLD_LOOK_INTERVAL = 1.0;
+//! Chance (0 to 1) that a small habit comes before a change of the idle pose
+static const double HABIT_FIRST_CHANCE = 0.5;
 
 //! Cosmetic dice of their own: the reactions must not draw from the generator the game logic uses
 std::mt19937& cosmeticRng()
@@ -179,17 +279,20 @@ std::mt19937& cosmeticRng()
     return rng;
 }
 
+//! \brief Returns an evenly distributed random number from the cosmetic generator between min and max.
 double cosmeticRandom(double min, double max)
 {
     std::uniform_real_distribution<double> distribution(min, max);
     return distribution(cosmeticRng());
 }
 
+//! \brief True if the text begins with the prefix.
 bool startsWith(const std::string& text, const std::string& prefix)
 {
     return text.compare(0, prefix.size(), prefix) == 0;
 }
 
+//! \brief True if the list holds the value.
 bool contains(const std::vector<std::string>& list, const std::string& value)
 {
     return std::find(list.begin(), list.end(), value) != list.end();
@@ -215,6 +318,7 @@ struct PropFrame
     Ogre::Vector3 mForward;
     double mHeight;
 
+    //! \brief The offset of a point from the creature: sideways, ahead and up, each in shares of the height
     Ogre::Vector3 at(double sideways, double ahead, double up) const
     {
         return mRight * static_cast<Ogre::Real>(sideways * mHeight) +
@@ -247,6 +351,7 @@ CreatureReactions::CreatureReactions(GameMap* gameMap, const std::string& config
         OD_LOG_WRN("Creature reactions are not available");
 }
 
+//! \brief Destroys the reactions. The members clean up themselves, so the body is empty.
 CreatureReactions::~CreatureReactions()
 {
 }
@@ -486,20 +591,20 @@ bool CreatureReactions::findWall(const Creature* creature, Ogre::Vector3& point)
     if(tile == nullptr)
         return false;
 
-    static const int offsets[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    static const int offsets[NB_WALL_SIDES][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     // Start at another side each time, so that the creature does not always pick the same wall
-    uint32_t start = static_cast<uint32_t>(cosmeticRandom(0.0, 3.999));
-    for(uint32_t i = 0; i < 4; ++i)
+    uint32_t start = static_cast<uint32_t>(cosmeticRandom(0.0, WALL_SIDE_RANDOM_MAX));
+    for(uint32_t i = 0; i < NB_WALL_SIDES; ++i)
     {
-        uint32_t index = (start + i) % 4;
+        uint32_t index = (start + i) % NB_WALL_SIDES;
         Tile* neighbour = mGameMap->getTile(tile->getX() + offsets[index][0], tile->getY() + offsets[index][1]);
         if((neighbour == nullptr) || (neighbour->getFullness() <= 0.0))
             continue;
 
         // The face of the wall is half a tile away from the middle of the tile the creature stands on
-        point = Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()) + 0.5f * static_cast<Ogre::Real>(offsets[index][0]),
-            static_cast<Ogre::Real>(tile->getY()) + 0.5f * static_cast<Ogre::Real>(offsets[index][1]), 0.0f);
+        point = Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()) + WALL_FACE_OFFSET * static_cast<Ogre::Real>(offsets[index][0]),
+            static_cast<Ogre::Real>(tile->getY()) + WALL_FACE_OFFSET * static_cast<Ogre::Real>(offsets[index][1]), 0.0f);
         return true;
     }
 
@@ -1070,11 +1175,11 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     // Whoever moves or scales the creature sets the position or scale, so what we added is lost
     // then. We only take our own share away if the node still is the way we left it.
     Ogre::Vector3 position = node->getPosition();
-    if((position - reaction.mMotionLastPosition).squaredLength() < 0.00000001)
+    if((position - reaction.mMotionLastPosition).squaredLength() < MOTION_UNCHANGED_SQUARED_TOLERANCE)
         position -= reaction.mMotionPosition;
 
     Ogre::Vector3 scale = node->getScale();
-    if((scale - reaction.mMotionLastScale).squaredLength() < 0.00000001)
+    if((scale - reaction.mMotionLastScale).squaredLength() < MOTION_UNCHANGED_SQUARED_TOLERANCE)
         scale = scale / reaction.mMotionScale;
 
     Ogre::Vector3 addedPosition = Ogre::Vector3::ZERO;
@@ -1101,8 +1206,8 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
             case ReactionMotion::Type::squash:
             {
                 double share = motion.mAmount * wave;
-                addedScale.x = static_cast<Ogre::Real>(1.0 + 0.5 * share);
-                addedScale.y = static_cast<Ogre::Real>(1.0 + 0.5 * share);
+                addedScale.x = static_cast<Ogre::Real>(1.0 + SQUASH_SIDE_GROWTH * share);
+                addedScale.y = static_cast<Ogre::Real>(1.0 + SQUASH_SIDE_GROWTH * share);
                 addedScale.z = static_cast<Ogre::Real>(1.0 - share);
                 break;
             }
@@ -1122,9 +1227,9 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
             }
             case ReactionMotion::Type::sit:
             {
-                double share = motion.mAmount * plateau(progress, 0.12);
-                addedScale.x = static_cast<Ogre::Real>(1.0 + 0.4 * share);
-                addedScale.y = static_cast<Ogre::Real>(1.0 + 0.4 * share);
+                double share = motion.mAmount * plateau(progress, SIT_RAMP);
+                addedScale.x = static_cast<Ogre::Real>(1.0 + SIT_SIDE_GROWTH * share);
+                addedScale.y = static_cast<Ogre::Real>(1.0 + SIT_SIDE_GROWTH * share);
                 addedScale.z = static_cast<Ogre::Real>(1.0 - share);
                 break;
             }
@@ -1139,24 +1244,23 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
                         reaction.mMotionAxis = forward.normalisedCopy();
                 }
 
-                angle = motion.mAmount * PI_VALUE / 180.0 * plateau(progress, 0.15);
+                angle = motion.mAmount * PI_VALUE / 180.0 * plateau(progress, LIE_RAMP);
                 break;
             }
             case ReactionMotion::Type::startle:
             {
                 // Nods off a few times, then jumps up
-                const double nodShare = 0.7;
-                if(progress < nodShare)
+                if(progress < STARTLE_NOD_SHARE)
                 {
-                    double share = motion.mAmount * std::fabs(std::sin(PI_VALUE * motion.mCount * progress / nodShare));
-                    addedScale.x = static_cast<Ogre::Real>(1.0 + 0.5 * share);
-                    addedScale.y = static_cast<Ogre::Real>(1.0 + 0.5 * share);
+                    double share = motion.mAmount * std::fabs(std::sin(PI_VALUE * motion.mCount * progress / STARTLE_NOD_SHARE));
+                    addedScale.x = static_cast<Ogre::Real>(1.0 + STARTLE_SIDE_GROWTH * share);
+                    addedScale.y = static_cast<Ogre::Real>(1.0 + STARTLE_SIDE_GROWTH * share);
                     addedScale.z = static_cast<Ogre::Real>(1.0 - share);
                 }
                 else
                 {
-                    double jump = (progress - nodShare) / (1.0 - nodShare);
-                    addedPosition.z = static_cast<Ogre::Real>(0.15 * std::sin(PI_VALUE * jump));
+                    double jump = (progress - STARTLE_NOD_SHARE) / (1.0 - STARTLE_NOD_SHARE);
+                    addedPosition.z = static_cast<Ogre::Real>(STARTLE_JUMP_HEIGHT * std::sin(PI_VALUE * jump));
                 }
                 break;
             }
@@ -1206,7 +1310,7 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
                         Ogre::Vector3 forward = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
                         toCamera.z = 0.0f;
                         forward.z = 0.0f;
-                        if((toCamera.length() > 0.01f) && (forward.length() > 0.01f))
+                        if((toCamera.length() > TURN_MIN_LENGTH) && (forward.length() > TURN_MIN_LENGTH))
                         {
                             toCamera.normalise();
                             forward.normalise();
@@ -1218,10 +1322,10 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
 
                 // Turns in the first quarter, stays, and turns back in the last quarter
                 double envelope = 1.0;
-                if(progress < 0.25)
-                    envelope = progress / 0.25;
-                else if(progress > 0.75)
-                    envelope = (1.0 - progress) / 0.25;
+                if(progress < TURN_PHASE)
+                    envelope = progress / TURN_PHASE;
+                else if(progress > (1.0 - TURN_PHASE))
+                    envelope = (1.0 - progress) / TURN_PHASE;
                 envelope = envelope * envelope * (3.0 - 2.0 * envelope);
                 angle = reaction.mMotionTurnAngle * envelope;
                 break;
@@ -1239,7 +1343,7 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     reaction.mMotionLastScale = node->getScale();
 
     double deltaAngle = angle - reaction.mMotionAngle;
-    if(std::fabs(deltaAngle) > 0.00001)
+    if(std::fabs(deltaAngle) > ROTATION_EPSILON)
     {
         // The creature tips over onto its side around the axis it looks along, everything else turns around the vertical
         Ogre::Vector3 axis = (motion.mType == ReactionMotion::Type::lie) ? reaction.mMotionAxis : Ogre::Vector3::UNIT_Z;
@@ -1598,7 +1702,7 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
 
         // A prisoner that struggles is not fleeing
         if(!creature->isInContainment())
-            queueReaction(creature, "FleePanic", -1.0, 0.4);
+            queueReaction(creature, "FleePanic", -1.0, FLEE_PANIC_DELAY);
 
         CreatureCombatReactions::noteAlarm(*this, creature);
     }
@@ -1617,7 +1721,7 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         // The meal in the hatchery is over when the animation is: then the creature shows how it liked it
         mMealClipSeen[creature->getName()] = mTime;
         mMealEnds.erase(creature->getName());
-        queueReaction(creature, "HatcheryMealDone", DONE_WAIT_MAX, 0.5);
+        queueReaction(creature, "HatcheryMealDone", DONE_WAIT_MAX, HATCHERY_MEAL_DONE_DELAY);
     }
     else if(startsWith(clip, "Attack") || (clip == "CombatAttack") || (clip == "RangedAttack") ||
             startsWith(clip, "Cast"))
@@ -1629,7 +1733,7 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
             CreatureCombatReactions::noteAttack(*this, creature, clip);
 
             // The creatures that stand around look at the fight
-            noteNearbyEvent("AmbientLookFight", creature->getPosition(), creature, 4.0);
+            noteNearbyEvent("AmbientLookFight", creature->getPosition(), creature, FIGHT_LOOK_INTERVAL);
         }
         else
         {
@@ -1840,7 +1944,7 @@ void CreatureReactions::startOngoing(Creature* creature, const std::string& even
     OngoingWork work;
     work.mEventName = eventName;
     work.mSince = mTime;
-    work.mNext = mTime + cosmeticRandom(2.0, ONGOING_MAX);
+    work.mNext = mTime + cosmeticRandom(ONGOING_FIRST_MIN, ONGOING_MAX);
     mOngoing[creature->getName()] = work;
 }
 
@@ -2078,11 +2182,11 @@ void CreatureReactions::celebrateVictory(Creature* loser, bool fled)
         const std::vector<Creature*>& winners = it->second;
         if(fled)
         {
-            triggerGroup("VictoryFled", winners, false, 0.6);
+            triggerGroup("VictoryFled", winners, false, VICTORY_FLED_DELAY);
             continue;
         }
 
-        triggerGroup("Victory", winners, false, 0.8);
+        triggerGroup("Victory", winners, false, VICTORY_DELAY);
 
         // The battle is over if no fighter of the loser's side is left close by. Then the others
         // of the winning side nearby join in the cheering.
@@ -2109,7 +2213,7 @@ void CreatureReactions::celebrateVictory(Creature* loser, bool fled)
         }
 
         if(battleOver && (neighbours.size() >= 2))
-            triggerGroup("GroupVictory", neighbours, false, 1.8);
+            triggerGroup("GroupVictory", neighbours, false, GROUP_VICTORY_DELAY);
     }
 }
 
@@ -2161,7 +2265,7 @@ void CreatureReactions::noteCreatureUpdate(Creature* creature, uint32_t oldLevel
         uint32_t steps = oldHealth - health;
         bool inTemple = (getRoomName(creature) == "Temple");
         if(inTemple && (health == 0) && (oldHealth >= HURT_STAGE))
-            queueReaction(creature, "TempleDone", DONE_WAIT_MAX, 0.6);
+            queueReaction(creature, "TempleDone", DONE_WAIT_MAX, TEMPLE_DONE_DELAY);
         else if((steps >= HEAL_MIN_STEPS) || ((steps >= 1) && (oldHealth >= HURT_STAGE) && inTemple))
             trigger(creature, "Healed");
     }
@@ -2257,7 +2361,7 @@ void CreatureReactions::noteRelease(Creature* carrier, GameEntity* carried)
     }
 
     // The work with the gold follows the done moment (it is queued first, the running reaction would refuse it)
-    queueReaction(carrier, "TreasuryWork", -1.0, TREASURY_WORK_DELAY);
+    queueReaction(carrier, "TreasuryWork", USUAL_WAIT_TIME, TREASURY_WORK_DELAY);
     trigger(carrier, "GoldDelivered");
 }
 
@@ -2310,7 +2414,7 @@ void CreatureReactions::noteHandDrop(GameEntity* entity, Tile* tile)
     if(type == GameEntityType::treasuryObject)
     {
         noteNearbyEvent("AmbientLookGold", Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
-            static_cast<Ogre::Real>(tile->getY()), 0.0f), nullptr, 1.0);
+            static_cast<Ogre::Real>(tile->getY()), 0.0f), nullptr, GOLD_LOOK_INTERVAL);
     }
 }
 
@@ -2386,7 +2490,7 @@ void CreatureReactions::noteCreatureAdded(Creature* creature)
         Tile* tile = creature->getPositionTile();
         Room* room = (tile != nullptr) ? tile->getCoveringRoom() : nullptr;
         if((room != nullptr) && ((room->getType() == RoomType::portal) || (room->getType() == RoomType::portalWave)))
-            queueReaction(creature, "PortalArrival", DONE_WAIT_MAX, 0.9);
+            queueReaction(creature, "PortalArrival", DONE_WAIT_MAX, ARRIVAL_DELAY);
 
         return;
     }
@@ -2448,7 +2552,7 @@ void CreatureReactions::noteAllyDied(Creature* dead)
     }
 
     if(!mourners.empty())
-        triggerGroup("AllyDied", mourners, false, 1.2);
+        triggerGroup("AllyDied", mourners, false, ALLY_DEATH_DELAY);
 }
 
 void CreatureReactions::noteSlapRequest(GameEntity* entity)
@@ -2501,7 +2605,7 @@ void CreatureReactions::noteSlapped(const Ogre::Vector3& handPosition)
     WorkerReactions::noteHandled(*this, target);
 
     // Some of the creatures that stand around laugh at it
-    noteNearbyEvent("LaughAtSlapped", target->getPosition(), target, 3.0);
+    noteNearbyEvent("LaughAtSlapped", target->getPosition(), target, SLAP_LAUGH_INTERVAL);
 }
 
 void CreatureReactions::noteHandPicked(Creature* creature)
@@ -2510,7 +2614,7 @@ void CreatureReactions::noteHandPicked(Creature* creature)
         return;
 
     // The creature is in the hand after a moment, the reaction waits for the hand to be ready
-    queueReaction(creature, "PickedUp", DONE_WAIT_MAX, 0.4);
+    queueReaction(creature, "PickedUp", DONE_WAIT_MAX, PICKED_UP_DELAY);
     WorkerReactions::noteHandled(*this, creature);
 }
 
@@ -2519,7 +2623,7 @@ void CreatureReactions::noteHandDropped(Creature* creature)
     if((mMode == Mode::off) || !mConfigLoaded)
         return;
 
-    queueReaction(creature, "Dropped", DONE_WAIT_MAX, 0.35);
+    queueReaction(creature, "Dropped", DONE_WAIT_MAX, DROPPED_DELAY);
 }
 
 void CreatureReactions::noteRelationshipTier(Creature* first, Creature* second, RelationshipTier oldTier,
@@ -2618,7 +2722,7 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
         }
 
         if(best != nullptr)
-            queueReaction(best, "TreasuryFull", DONE_WAIT_MAX, 0.3);
+            queueReaction(best, "TreasuryFull", DONE_WAIT_MAX, TREASURY_FULL_DELAY);
 
         return;
     }
@@ -2647,23 +2751,23 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
         int32_t newLevel = event.mValue;
         int32_t oldLevel = event.mValue2;
         if((newLevel == static_cast<int32_t>(CreatureMoodLevel::Happy)) && (oldLevel != newLevel))
-            queueReaction(creature, "MoodHappy", DONE_WAIT_MAX, 1.0);
+            queueReaction(creature, "MoodHappy", DONE_WAIT_MAX, MOOD_CHANGE_DELAY);
         else if((newLevel == static_cast<int32_t>(CreatureMoodLevel::Upset)) && (oldLevel < newLevel))
-            queueReaction(creature, "MoodUpset", DONE_WAIT_MAX, 1.0);
+            queueReaction(creature, "MoodUpset", DONE_WAIT_MAX, MOOD_CHANGE_DELAY);
     }
     else if(event.is(CosmeticEventType::scared))
     {
         // It runs first, the cowering follows when it stands again
-        queueReaction(creature, "MoodScared", DONE_WAIT_MAX, 0.8);
+        queueReaction(creature, "MoodScared", DONE_WAIT_MAX, SCARED_DELAY);
     }
     else if(event.is(CosmeticEventType::impatient))
     {
-        queueReaction(creature, "MoodImpatient", DONE_WAIT_MAX, 0.3);
+        queueReaction(creature, "MoodImpatient", DONE_WAIT_MAX, IMPATIENT_DELAY);
     }
     else if(event.is(CosmeticEventType::calmed))
     {
         // The prayer in the temple took the anger away: soft light and relaxed shoulders
-        queueReaction(creature, "TempleDone", DONE_WAIT_MAX, 0.6);
+        queueReaction(creature, "TempleDone", DONE_WAIT_MAX, TEMPLE_DONE_DELAY);
     }
     else if(event.is(CosmeticEventType::bedStatus))
     {
@@ -2734,7 +2838,7 @@ void CreatureReactions::noteNearbyEvent(const std::string& eventName, const Ogre
     uint32_t nbLooking = 0;
     for(Creature* creature : candidates)
     {
-        if(nbLooking >= 3)
+        if(nbLooking >= MAX_LOOKERS)
             break;
 
         if(triggerLook(creature, eventName, position))
@@ -2921,7 +3025,7 @@ void CreatureReactions::examineMood(Creature* creature)
     // Small habits of the kind of creature and small changes of the idle pose, in a changing order
     if(idle && (idleFor >= mConfig.getAmbientAfter()))
     {
-        if(cosmeticRandom(0.0, 1.0) < 0.5)
+        if(cosmeticRandom(0.0, 1.0) < HABIT_FIRST_CHANCE)
         {
             events.push_back("AmbientHabit");
             events.push_back("AmbientIdle");
@@ -2976,7 +3080,7 @@ bool CreatureReactions::areFacingEachOther(const Creature* first, const Creature
 
     Ogre::Vector3 toSecond = second->getPosition() - first->getPosition();
     toSecond.z = 0.0f;
-    if(toSecond.length() < 0.01f)
+    if(toSecond.length() < FACING_MIN_LENGTH)
         return false;
 
     toSecond.normalise();
@@ -2984,12 +3088,12 @@ bool CreatureReactions::areFacingEachOther(const Creature* first, const Creature
     Ogre::Vector3 secondForward = secondNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
     firstForward.z = 0.0f;
     secondForward.z = 0.0f;
-    if((firstForward.length() < 0.01f) || (secondForward.length() < 0.01f))
+    if((firstForward.length() < FACING_MIN_LENGTH) || (secondForward.length() < FACING_MIN_LENGTH))
         return false;
 
     firstForward.normalise();
     secondForward.normalise();
-    return (firstForward.dotProduct(toSecond) > 0.3f) && (secondForward.dotProduct(toSecond) < -0.3f);
+    return (firstForward.dotProduct(toSecond) > FACING_MIN_DOT) && (secondForward.dotProduct(toSecond) < -FACING_MIN_DOT);
 }
 
 bool CreatureReactions::startMeeting(Creature* first, const std::string& firstEvent, Creature* second,
@@ -3074,31 +3178,32 @@ void CreatureReactions::examineInteraction(Creature* creature, bool idle, bool m
     // One of the meetings that is possible now, chosen by chance
     std::vector<uint32_t> options;
     if(chatPartner != nullptr)
-        options.push_back(0);
+        options.push_back(MEETING_CHAT);
     if(sparPartner != nullptr)
-        options.push_back(1);
+        options.push_back(MEETING_SPAR);
     if(passingFighter != nullptr)
-        options.push_back(2);
+        options.push_back(MEETING_WAVE);
     if(bumpPartner != nullptr)
-        options.push_back(3);
+        options.push_back(MEETING_GRUMBLE);
 
     if(options.empty())
         return;
 
-    uint32_t choice = options[static_cast<size_t>(cosmeticRandom(0.0, static_cast<double>(options.size()) - 0.001))];
+    uint32_t choice = options[static_cast<size_t>(cosmeticRandom(0.0, static_cast<double>(options.size()) - CHOICE_RANGE_MARGIN))];
     switch(choice)
     {
-        case 0:
-            startMeeting(creature, "Chat", chatPartner, "ChatReply", 0.9 + cosmeticRandom(0.0, 0.6));
+        case MEETING_CHAT:
+            startMeeting(creature, "Chat", chatPartner, "ChatReply",
+                CHAT_REPLY_DELAY_MIN + cosmeticRandom(0.0, CHAT_REPLY_DELAY_SPREAD));
             break;
-        case 1:
-            startMeeting(creature, "SparPush", sparPartner, "SparStumble", 0.5);
+        case MEETING_SPAR:
+            startMeeting(creature, "SparPush", sparPartner, "SparStumble", SPAR_REPLY_DELAY);
             break;
-        case 2:
-            startMeeting(creature, "WaveAtFighter", passingFighter, "NodBack", 0.7);
+        case MEETING_WAVE:
+            startMeeting(creature, "WaveAtFighter", passingFighter, "NodBack", WAVE_REPLY_DELAY);
             break;
         default:
-            startMeeting(creature, "Grumble", bumpPartner, "GrumbleBack", 0.4);
+            startMeeting(creature, "Grumble", bumpPartner, "GrumbleBack", GRUMBLE_REPLY_DELAY);
             break;
     }
 }
@@ -3123,16 +3228,16 @@ bool CreatureReactions::createProps(RunningReaction& reaction, Creature* creatur
 
     // The size of the sprites follows the size of the creature
     double height = static_cast<double>(entity->getWorldBoundingBox(true).getSize().z);
-    height = std::max(0.3, std::min(6.0, height));
+    height = std::max(PROP_HEIGHT_MIN, std::min(PROP_HEIGHT_MAX, height));
 
     // Without a wall to turn to, the props use a point in front of the creature
     if(!reaction.mHasLookTarget)
     {
         Ogre::Vector3 forward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
         forward.z = 0.0f;
-        if(forward.length() > 0.01f)
+        if(forward.length() > DIRECTION_MIN_LENGTH)
             forward.normalise();
-        reaction.mLookTarget = creature->getPosition() + forward * 0.9f;
+        reaction.mLookTarget = creature->getPosition() + forward * PROP_FRONT_DISTANCE;
         reaction.mHasLookTarget = true;
     }
 
@@ -3165,13 +3270,13 @@ bool CreatureReactions::createProps(RunningReaction& reaction, Creature* creatur
     }
 
     // The balls of the juggler have colours of their own
-    const Ogre::ColourValue ballColours[3] = {Ogre::ColourValue(1.0f, 0.45f, 0.4f), Ogre::ColourValue(0.5f, 0.9f, 0.5f),
+    const Ogre::ColourValue ballColours[NB_BALL_COLOURS] = {Ogre::ColourValue(1.0f, 0.45f, 0.4f), Ogre::ColourValue(0.5f, 0.9f, 0.5f),
         Ogre::ColourValue(0.5f, 0.65f, 1.0f)};
     for(uint32_t i = 0; i < nbSprites; ++i)
     {
         Ogre::ColourValue colour = Ogre::ColourValue::White;
         if(prop.mPath == ReactionProp::Path::juggle)
-            colour = ballColours[i % 3];
+            colour = ballColours[i % NB_BALL_COLOURS];
 
         set->createBillboard(Ogre::Vector3::ZERO, colour);
     }
@@ -3216,7 +3321,7 @@ void CreatureReactions::updateProps(RunningReaction& reaction, Creature* creatur
     frame.mHeight = reaction.mPropHeight;
     frame.mForward = creatureNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;
     frame.mForward.z = 0.0f;
-    if(frame.mForward.length() > 0.01f)
+    if(frame.mForward.length() > DIRECTION_MIN_LENGTH)
         frame.mForward.normalise();
     frame.mRight = frame.mForward.crossProduct(Ogre::Vector3::UNIT_Z);
 
@@ -3247,13 +3352,13 @@ void CreatureReactions::updateProps(RunningReaction& reaction, Creature* creatur
             case ReactionProp::Path::juggle:
             {
                 // Balls go round from hand to hand; in the end the first one is dropped
-                double angle = 2.0 * PI_VALUE * (0.75 * time + index / count);
+                double angle = 2.0 * PI_VALUE * (JUGGLE_LAPS_PER_SECOND * time + index / count);
                 double sideways = 0.2 * std::cos(angle);
                 double up = 0.5 + 0.3 * std::fabs(std::sin(angle));
-                if((i == 0) && (progress > 0.78))
+                if((i == 0) && (progress > JUGGLE_DROP_PROGRESS))
                 {
-                    double dropAngle = 2.0 * PI_VALUE * 0.75 * 0.78 * seconds;
-                    double fall = (progress - 0.78) * seconds;
+                    double dropAngle = 2.0 * PI_VALUE * JUGGLE_LAPS_PER_SECOND * JUGGLE_DROP_PROGRESS * seconds;
+                    double fall = (progress - JUGGLE_DROP_PROGRESS) * seconds;
                     sideways = 0.2 * std::cos(dropAngle) + 0.15 * fall;
                     up = std::max(0.03, 0.5 + 0.3 * std::fabs(std::sin(dropAngle)) - 2.5 * fall * fall);
                 }
@@ -3352,7 +3457,7 @@ void CreatureReactions::updateProps(RunningReaction& reaction, Creature* creatur
             {
                 // The shadow on the wall flaps and fades in and out
                 Ogre::Vector3 towards = target;
-                if(towards.length() > 0.01f)
+                if(towards.length() > DIRECTION_MIN_LENGTH)
                     towards = towards - towards.normalisedCopy() * 0.08f;
                 offset = towards + Ogre::Vector3(0.0f, 0.0f, static_cast<Ogre::Real>(0.62 * reaction.mPropHeight));
                 width = size * static_cast<Ogre::Real>(1.0 + 0.15 * std::sin(2.0 * PI_VALUE * 2.0 * time));

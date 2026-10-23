@@ -21,7 +21,6 @@
 #include "camera/CameraInput.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
-#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/RenderedMovableEntity.h"
@@ -103,6 +102,70 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 
 //! Width of the screen border that scrolls the camera, as a fraction of the screen size
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
+//! Seconds between two refreshes of the open trap production window.
+const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
+
+// Text colours (ARGB) of the mana change next to the mana display.
+const std::string MANA_GAIN_TEXT_COLOUR = "FF7FE3A6";
+const std::string MANA_LOSS_TEXT_COLOUR = "FFFF4848";
+
+//! Text colour of the time limit display (ARGB)
+static const char* const TIME_LIMIT_COLOUR = "FFF6CB62";
+//! Text colour of the time limit display during its last minute (ARGB)
+static const char* const TIME_LIMIT_WARNING_COLOUR = "FFE05A4A";
+//! From this many seconds left the time limit is shown in the warning colour
+static const int32_t TIME_LIMIT_WARNING_SECONDS = 60;
+//! Tooltip of the display while it shows a countdown that ends without a defeat
+static const char* const TIME_LIMIT_TOOLTIP_COUNTDOWN = "Time left until the next stage of the level";
+//! Tooltip of the display while it shows a time limit
+static const char* const TIME_LIMIT_TOOLTIP_LIMIT = "Time left until the level is lost";
+
+// Message tabs are laid out in units of the message queue height; the queue is designed
+// for tabs of this height in pixels.
+const float MESSAGE_QUEUE_DESIGN_HEIGHT = 52.0f;
+const float MESSAGE_TAB_DESIGN_WIDTH = 32.0f;
+const float MESSAGE_TAB_DESIGN_SPACING = 36.0f;
+//! Speed at which a new message tab slides in, in queue heights per second.
+const float MESSAGE_TAB_SLIDE_SPEED = 12.5f;
+//! Unread message tabs blink: one period in seconds, shown highlighted in its second half.
+const float MESSAGE_FLASH_PERIOD = 0.5f;
+const float MESSAGE_FLASH_HIGHLIGHT_START = 0.25f;
+const std::string MESSAGE_UNREAD_IMAGE = "OpenDungeonsIcons/NavigationMessages";
+const std::string MESSAGE_READ_IMAGE = "OpenDungeonsIcons/NavigationMessagesRead";
+
+// The hand feedback is laid out for an action icon of this unscaled width; all offsets
+// below are in pixels at that size and scale with the icon.
+const float HAND_ACTION_ICON_DESIGN_SIZE = 50.0f;
+const float POINTER_TEXT_OFFSET_X = 145.0f;
+const float POINTER_TEXT_OFFSET_Y = 24.0f;
+const float ACTION_ICON_OFFSET_X = 90.0f;
+const float ACTION_ICON_OFFSET_Y = 8.0f;
+const float HELD_CREATURE_ICON_OFFSET_Y = 58.0f;
+const float HELD_CREATURE_ICON_SIZE = 32.0f;
+const size_t HELD_CREATURE_ICONS_PER_ROW = 4;
+
+//! Distance in pixels between the mouse cursor and the detail view shown next to it on the full map.
+const float MAP_DETAIL_CURSOR_OFFSET = 12.0f;
+
+//! Elapsed time reported to the minimap when it is redrawn right after a zoom change.
+const float MINIMAP_ZOOM_REFRESH_SECONDS = 0.5f;
+
+//! Character height of the pointer info text at unscaled GUI size, as set when its text box is created.
+const float POINTER_TEXT_BASE_HEIGHT = 16.0f;
+
+//! Degrees the camera orbits per pixel of mouse movement while X or the middle mouse button is held.
+const float MOUSE_ORBIT_DEGREES_PER_PIXEL = 0.25f;
+
+//! Zoom distance per pixel of vertical mouse movement while Z is held.
+const float MOUSE_ZOOM_PER_PIXEL = 0.025f;
+
+//! Wheel units OIS reports per notch.
+const float OIS_WHEEL_UNITS_PER_NOTCH = 120.0f;
+
+//! Degrees per second the keys change the view in the user camera window.
+const float USER_VIEW_ADJUST_SPEED = 90.0f;
+
+//! Seconds the right mouse button must be held to drop all held creatures instead of one.
 const float HAND_DROP_ALL_HOLD_DURATION = 0.35f;
 const std::string DEFEAT_EXPLOSION_EFFECT_NAME = "DefeatHeartExplosion";
 //! The particle systems of the heart burst (particles/HeartExplosion.particle), all created at the burst
@@ -114,6 +177,20 @@ const std::string DEFEAT_CAMERA_MARKER_IMAGE = "OpenDungeonsIcons/CameraIcon";
 const std::string DEFEAT_FIRST_SUBTITLE = "Your dungeon heart has been destroyed.";
 const std::string DEFEAT_SECOND_SUBTITLE = "That's it for today. Until next time.";
 const std::string DEFEAT_DEBRIEFING_ELAPSED = "Time elapsed: ";
+
+//! \brief Skill slots sent to the server when the possession keys 1 to 4 are pressed
+const uint32_t POSSESSION_SKILL_SLOT_FIRST = 0;
+const uint32_t POSSESSION_SKILL_SLOT_SECOND = 1;
+const uint32_t POSSESSION_SKILL_SLOT_THIRD = 2;
+const uint32_t POSSESSION_SKILL_SLOT_FOURTH = 3;
+//! \brief Squared length below which the possession movement direction counts as "not moving"
+const float POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
+//! \brief Dot product of the old and the new movement direction below which the direction counts as changed
+const float POSSESSION_DIRECTION_CHANGE_DOT = 0.99f;
+//! \brief Seconds after which the current movement direction is sent again while the player keeps moving
+const float POSSESSION_MOVE_RESEND_SECONDS = 0.5f;
+//! \brief Minimum seconds between two sent changes of the movement direction
+const float POSSESSION_MOVE_MIN_SEND_SECONDS = 0.1f;
 
 //! Returns the autoscroll strength for one screen axis: 0 away from the border, growing linearly
 //! to 1 on the outermost pixel. minimumEdge selects the left/top border instead of the right/bottom one.
@@ -127,6 +204,50 @@ static double getAutoscrollIntensity(int mousePosition, int screenSize, bool min
     return std::max(0.0, std::min(1.0, (edgeSize - distanceFromEdge) / edgeSize));
 }
 
+//! Colours of the research tree (CEGUI ARGB strings). The state icon colours mark finished,
+//! impossible and running research, the frame colours the research level and the link colours
+//! whether the prerequisites of a path are complete.
+static const std::string RESEARCH_ICON_COLOUR_DONE = "FF3CB46E";
+static const std::string RESEARCH_ICON_COLOUR_UNAVAILABLE = "FFC4472A";
+static const std::string RESEARCH_ICON_COLOUR_WORKING = "FFC8A030";
+static const std::string RESEARCH_FRAME_COLOUR_NONE = "00FFFFFF";
+static const std::string RESEARCH_FRAME_COLOUR_BRONZE = "FFC98A4A";
+static const std::string RESEARCH_FRAME_COLOUR_GOLD = "FFFFC947";
+static const std::string RESEARCH_LINK_COLOUR_READY = "FFE8862E";
+static const std::string RESEARCH_LINK_COLOUR_WAITING = "FF6E5232";
+static const std::string RESEARCH_JUNCTION_COLOUR_READY = "FFEEBE5C";
+static const std::string RESEARCH_JUNCTION_COLOUR_WAITING = "FF8A6A40";
+//! Research level at which a node gets the bronze frame and the one with the gold frame
+static const uint32_t RESEARCH_LEVEL_BRONZE = 2;
+static const uint32_t RESEARCH_LEVEL_GOLD = 3;
+
+//! \brief Returns the frame colour of a research node: gold from the gold level, bronze at the bronze level, otherwise none.
+//! \param level The research level of the node.
+static const std::string& getResearchFrameColour(uint32_t level)
+{
+    if(level >= RESEARCH_LEVEL_GOLD)
+        return RESEARCH_FRAME_COLOUR_GOLD;
+    if(level == RESEARCH_LEVEL_BRONZE)
+        return RESEARCH_FRAME_COLOUR_BRONZE;
+    return RESEARCH_FRAME_COLOUR_NONE;
+}
+
+//! \brief Returns the tile image of a research node for its state: working, queued, learned or locked.
+//! \param state The research state of the node ("Researching", "Queued" or another one).
+//! \param level The research level of the node, above 0 means learned.
+static std::string getResearchTileImage(const std::string& state, uint32_t level)
+{
+    if(state == "Researching")
+        return "OpenDungeonsSkin/ResearchTileWorking";
+    if(state == "Queued")
+        return "OpenDungeonsSkin/ResearchTileQueued";
+    if(level > 0)
+        return "OpenDungeonsSkin/ResearchTileLearned";
+    return "OpenDungeonsSkin/ResearchTileLocked";
+}
+
+//! \brief Whether the window under the mouse stops edge scrolling. Windows opt out of this
+//! with the user string AllowEdgeScrolling set to true on themselves or on a parent.
 static bool blocksEdgeScrolling(CEGUI::Window* window)
 {
     if(window == nullptr || window->getName() == "Root")
@@ -196,6 +317,12 @@ const float MIDDLE_CLICK_MAX_DRAG = 6.0f;
 const float MIDDLE_CLICK_PICK_RADIUS = 0.7f;
 //! \brief Height above the floor at which the pointer ray is checked against creatures and other entities
 const float MIDDLE_CLICK_BODY_HEIGHT = 0.4f;
+//! \brief Display height for which MIDDLE_CLICK_MAX_DRAG is meant, the allowed drag grows above it
+const float MIDDLE_CLICK_REFERENCE_DISPLAY_HEIGHT = 1080.0f;
+//! \brief Number of points after the first one at which the pointer ray is sampled to find the tiles it crosses
+const int MIDDLE_CLICK_RAY_STEPS = 6;
+//! \brief Distance in height between two of those points
+const float MIDDLE_CLICK_RAY_STEP_HEIGHT = 0.25f;
 
 //! \brief Font of the research level counter under a node of the research tree
 const std::string SKILL_BADGE_FONT_NORMAL = "MedievalSharp-10";
@@ -212,7 +339,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mDigSetBool(false),
     mIndexEvent(0),
     mSettings(mRootWindow, modeManager->getGui(), false, true),
-    mSandboxHeroLevel(1),
+    mSandboxHeroLevel(SandboxMode::MIN_HERO_LEVEL),
     mIsSkillWindowOpen(false),
     mIsLibraryLostShown(false),
     mCurrentSkillType(SkillType::nullSkillType),
@@ -234,12 +361,7 @@ GameMode::GameMode(ModeManager *modeManager):
         if(dynamic_cast<CEGUI::FrameWindow*>(window) == nullptr)
             continue;
         addEventConnection(window->subscribeEvent(CEGUI::Window::EventShown,
-            CEGUI::Event::Subscriber([window](const CEGUI::EventArgs&)
-            {
-                window->setAlwaysOnTop(true);
-                window->moveToFront();
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&GameMode::raiseShownDialog, this)));
     }
 
     addEventConnection(mRootWindow->getChild("MiniMapZoomButton")->subscribeEvent(
@@ -258,11 +380,9 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(mRootWindow->getChild("ProductionWindow/Orders")->subscribeEvent(
         CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&GameMode::updateTrapProductionButtons, this)));
     addEventConnection(mRootWindow->getChild("ProductionWindow/MoveUp")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        { return moveTrapProductionOrder(true); })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::moveTrapProductionOrderEarlier, this)));
     addEventConnection(mRootWindow->getChild("ProductionWindow/MoveDown")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        { return moveTrapProductionOrder(false); })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::moveTrapProductionOrderLater, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::closeMap, this)));
     addEventConnection(mRootWindow->getChild("MapWindow")->subscribeEvent(
@@ -309,33 +429,13 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(guiSheet->getChild("PanelToggleButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleControlPanel, this)));
     addEventConnection(guiSheet->getChild("GameEventText/Close")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        {
-            mRootWindow->getChild("GameEventText")->hide();
-            return true;
-        })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::onEventCloseClicked, this)));
     addEventConnection(guiSheet->getChild("GameEventText/Dismiss")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-        {
-            dismissEventMessage(mSelectedEventMessage);
-            return true;
-        })));
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::onEventDismissClicked, this)));
     guiSheet->getChild("GameEventText")->hide();
 
-    SkillManager::listAllRooms([this](RoomType type, const std::string& buttonName)
-    {
-        addEventConnection(mRootWindow->getChild(buttonName)->subscribeEvent(
-            CEGUI::Window::EventMouseClick,
-            CEGUI::Event::Subscriber([this, type](const CEGUI::EventArgs& args)
-            {
-                const CEGUI::MouseButton button = static_cast<const CEGUI::MouseEventArgs&>(args).button;
-                if(button != CEGUI::RightButton)
-                    return false;
-                if(!cameraInputBlocked())
-                    focusRoom(type);
-                return true;
-            })));
-    });
+    SkillManager::listAllRooms(std::bind(&GameMode::connectRoomButton, this,
+        std::placeholders::_1, std::placeholders::_2));
 
     //Help window
     addEventConnection(
@@ -611,8 +711,8 @@ GameMode::GameMode(ModeManager *modeManager):
                             std::make_pair(Gui::BUTTON_CREATURE_FIGHTER, "Fighters")})
     {
         CEGUI::Window* button = mRootWindow->getChild(entry.first);
-        if(!button->isUserStringDefined("ContextHelp"))
-            button->setUserString("ContextHelp", button->getTooltipText());
+        if(!button->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP))
+            button->setUserString(Gui::USER_STRING_CONTEXT_HELP, button->getTooltipText());
         button->setTooltipText(entry.second);
     }
     mCreaturePanel.reset(new CreaturePanel(*mGameMap, modeManager->getGui(),
@@ -653,7 +753,7 @@ GameMode::~GameMode()
             RenderManager::getSingleton().rrToggleHandSelectorVisibility();
         CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(true);
     }
-    TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, 16.0f);
+    TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING, POINTER_TEXT_BASE_HEIGHT);
     for(const MessageTab& tab : mMessageTabs)
         CEGUI::WindowManager::getSingleton().destroyWindow(tab.window);
     mReturningToSettingsNavigation = false;
@@ -850,20 +950,20 @@ bool GameMode::mouseMoved(const OIS::MouseEvent &arg)
     {
         CameraManager* camera = ODFrameListener::getSingleton().getCameraManager();
         if(getKeyboard()->isKeyDown(OIS::KC_X))
-            camera->orbitBy(mouseDelta.x * 0.25f, 0.0f);
+            camera->orbitBy(mouseDelta.x * MOUSE_ORBIT_DEGREES_PER_PIXEL, 0.0f);
         else if(getKeyboard()->isKeyDown(OIS::KC_Z))
-            camera->zoomBy(-mouseDelta.y * 0.025f);
+            camera->zoomBy(-mouseDelta.y * MOUSE_ZOOM_PER_PIXEL);
         else if(inputManager.mMMouseDown)
-            camera->orbitBy(mouseDelta.x * 0.25f, mouseDelta.y * 0.25f);
+            camera->orbitBy(mouseDelta.x * MOUSE_ORBIT_DEGREES_PER_PIXEL, mouseDelta.y * MOUSE_ORBIT_DEGREES_PER_PIXEL);
     }
 
     // If we have a room/trap/spell selected, show it
     // TODO: This should be changed, or combined with an icon or something later.
     TextRenderer& textRenderer = TextRenderer::getSingleton();
-    const float pointerScale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
+    const float pointerScale = getHandFeedbackScale();
     textRenderer.moveText(ODApplication::POINTER_INFO_STRING,
-        static_cast<Ogre::Real>(mouseEvent.x + 145.0f * pointerScale),
-        static_cast<Ogre::Real>(mouseEvent.y + 24.0f * pointerScale));
+        static_cast<Ogre::Real>(mouseEvent.x + POINTER_TEXT_OFFSET_X * pointerScale),
+        static_cast<Ogre::Real>(mouseEvent.y + POINTER_TEXT_OFFSET_Y * pointerScale));
 
     handleMouseWheel(toSFMLMouseWheel(arg));
 
@@ -907,10 +1007,10 @@ void GameMode::handleMouseWheel(const MouseWheelEvent &arg)
     if(cameraInputBlocked())
         return;
 
-    // Native OIS reports 120 units per wheel notch; the SFML bridge reports notches.
+    // Native OIS reports OIS_WHEEL_UNITS_PER_NOTCH units per wheel notch; the SFML bridge reports notches.
     float wheelNotches = static_cast<float>(arg.delta);
 #ifndef OD_USE_SFML_WINDOW
-    wheelNotches /= 120.0f;
+    wheelNotches /= OIS_WHEEL_UNITS_PER_NOTCH;
 #endif
     // Every wheel notch is one zoom level.
     int wheelStepCount = std::max(1, static_cast<int>(std::floor(std::abs(wheelNotches) + 0.5f)));
@@ -1036,17 +1136,24 @@ void GameMode::openStatsWindowUnderPointer(const OIS::MouseEvent& arg)
 
     // The pointer ray is checked against the bodies of the entities. Intersecting it with a plane at a fixed
     // height misses a creature that is clicked on its body, because the ray reaches that plane in front of it.
+    if(mGameMap->getLocalPlayer() == nullptr)
+        return;
+
+    Ogre::Camera* camera = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera();
+    if(camera == nullptr)
+        return;
+
     const CEGUI::Vector2f mouse = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
-    const Ogre::Ray ray = ODFrameListener::getSingleton().getCameraManager()->getActiveCamera()->getCameraToViewportRay(
-        mouse.d_x / arg.state.width, mouse.d_y / arg.state.height);
+    const Ogre::Ray ray = camera->getCameraToViewportRay(mouse.d_x / arg.state.width, mouse.d_y / arg.state.height);
     if(ray.getDirection().z >= 0)
         return;
 
     // The tiles the ray crosses between the floor and above the creatures
     std::vector<Tile*> tiles;
-    for(int step = 0; step <= 6; ++step)
+    for(int step = 0; step <= MIDDLE_CLICK_RAY_STEPS; ++step)
     {
-        const Ogre::Vector3 point = ray.getPoint((ray.getOrigin().z - 0.25f * static_cast<float>(step)) / -ray.getDirection().z);
+        const float height = MIDDLE_CLICK_RAY_STEP_HEIGHT * static_cast<float>(step);
+        const Ogre::Vector3 point = ray.getPoint((ray.getOrigin().z - height) / -ray.getDirection().z);
         Tile* tile = mGameMap->getTile(Helper::round(point.x), Helper::round(point.y));
         if((tile != nullptr) && (std::find(tiles.begin(), tiles.end(), tile) == tiles.end()))
             tiles.push_back(tile);
@@ -1381,7 +1488,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     {
         // A middle click that did not move is a request for the stats window. mMMouseDown is only set when
         // the press was on the map, so a press on a GUI window never gets here as a click
-        float maxDrag = MIDDLE_CLICK_MAX_DRAG * std::max(1.0f, static_cast<float>(arg.state.height) / 1080.0f);
+        float maxDrag = MIDDLE_CLICK_MAX_DRAG * std::max(1.0f, static_cast<float>(arg.state.height) / MIDDLE_CLICK_REFERENCE_DISPLAY_HEIGHT);
         bool isClick = inputManager.mMMouseDown && (mMiddleDragDistance <= maxDrag);
         inputManager.mMMouseDown = false;
         ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
@@ -1524,6 +1631,8 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
         break;
     case OIS::KC_F4:
     case OIS::KC_F6:
+        // F4 loads user camera 1 and F6 user camera 3; F5 saves the game. The key code distance
+        // from F4 is the slot.
         if(!cameraInputBlocked())
             frameListener.getCameraManager()->loadUserView(arg.key - OIS::KC_F4);
         break;
@@ -1702,8 +1811,8 @@ void GameMode::refreshMainUI()
     tempSS << mySeat->getGold();
     widget->setText(tempSS.str());
     tempSS << "/" << mySeat->getGoldMax();
-    widget->setUserString("ContextHelp", "Your Gold: " + tempSS.str());
-    widget->getChild("Icon")->setUserString("ContextHelp", widget->getUserString("ContextHelp"));
+    widget->setUserString(Gui::USER_STRING_CONTEXT_HELP, "Your Gold: " + tempSS.str());
+    widget->getChild("Icon")->setUserString(Gui::USER_STRING_CONTEXT_HELP, widget->getUserString(Gui::USER_STRING_CONTEXT_HELP));
 
     widget = guiSheet->getChild(Gui::DISPLAY_MANA);
     tempSS.str("");
@@ -1716,7 +1825,8 @@ void GameMode::refreshMainUI()
         << " / -" << static_cast<long>(mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond());
     widget->getChild("Change")->setText(tempSS.str());
     widget->getChild("Change")->setProperty("TextColours",
-        mySeat->getManaIncomePerSecond() >= mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond() ? "FF7FE3A6" : "FFFF4848");
+        mySeat->getManaIncomePerSecond() >= mySeat->getManaUpkeepPerSecond() + mySeat->getManaOneOffPerSecond() ?
+        MANA_GAIN_TEXT_COLOUR : MANA_LOSS_TEXT_COLOUR);
     unsigned int workers = 0;
     unsigned int fighters = 0;
     for(Creature* creature : mGameMap->getCreaturesBySeat(mySeat))
@@ -1818,9 +1928,9 @@ void GameMode::updateCameraControls(float elapsed)
             && ODFrameListener::getSingleton().getRenderWindow()->isActive()
             && getKeyboard()->isModifierDown(OIS::Keyboard::Ctrl))
         {
-            camera->adjustUserView((float(down(OIS::KC_INSERT)) - float(down(OIS::KC_DELETE))) * 90.0f * elapsed,
-                (float(down(OIS::KC_PGUP)) - float(down(OIS::KC_PGDOWN))) * 90.0f * elapsed,
-                (float(down(OIS::KC_HOME)) - float(down(OIS::KC_END))) * 90.0f * elapsed);
+            camera->adjustUserView((float(down(OIS::KC_INSERT)) - float(down(OIS::KC_DELETE))) * USER_VIEW_ADJUST_SPEED * elapsed,
+                (float(down(OIS::KC_PGUP)) - float(down(OIS::KC_PGDOWN))) * USER_VIEW_ADJUST_SPEED * elapsed,
+                (float(down(OIS::KC_HOME)) - float(down(OIS::KC_END))) * USER_VIEW_ADJUST_SPEED * elapsed);
         }
         return;
     }
@@ -1915,14 +2025,14 @@ bool GameMode::zoomMiniMap(const CEGUI::EventArgs& arg)
     if(dynamic_cast<MiniMapDrawnFull*>(mMiniMap) != nullptr)
         level = std::max(0, level);
     mMiniMap->setZoomLevel(level);
-    mMiniMap->update(0.5f, mCameraTilesIntersections);
+    mMiniMap->update(MINIMAP_ZOOM_REFRESH_SECONDS, mCameraTilesIntersections);
     return true;
 }
 
 void GameMode::updateTimeLimitTooltip(bool isCountdown)
 {
     CEGUI::Window* timeLimitDisplay = mRootWindow->getChild("HorizontalPipe/TimeLimitDisplay");
-    timeLimitDisplay->setTooltipText(isCountdown ? "Time left until the next stage of the level" : "Time left until the level is lost");
+    timeLimitDisplay->setTooltipText(isCountdown ? TIME_LIMIT_TOOLTIP_COUNTDOWN : TIME_LIMIT_TOOLTIP_LIMIT);
 }
 
 bool GameMode::clickHeartBadge(const CEGUI::EventArgs& arg)
@@ -1946,8 +2056,8 @@ void GameMode::updateMapDetail()
     if(!detail->isVisible())
         return;
     const CEGUI::Sizef size = detail->getPixelSize();
-    const float x = std::max(0.0f, std::min(area.getWidth() - size.d_width, mouse.d_x - area.left() + 12.0f));
-    const float y = std::max(0.0f, std::min(area.getHeight() - size.d_height, mouse.d_y - area.top() + 12.0f));
+    const float x = std::max(0.0f, std::min(area.getWidth() - size.d_width, mouse.d_x - area.left() + MAP_DETAIL_CURSOR_OFFSET));
+    const float y = std::max(0.0f, std::min(area.getHeight() - size.d_height, mouse.d_y - area.top() + MAP_DETAIL_CURSOR_OFFSET));
     detail->setPosition(CEGUI::UVector2(CEGUI::UDim(0, x), CEGUI::UDim(0, y)));
     static_cast<MiniMapCamera*>(mMiniMap)->setViewCenter(mFullMap->camera_2dPositionFromClick(
         static_cast<int>(mouse.d_x), static_cast<int>(mouse.d_y)));
@@ -2007,9 +2117,7 @@ void GameMode::focusRoom(RoomType type)
 
 bool GameMode::showUserCameras(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     CEGUI::Window* window = mRootWindow->getChild("UserCamerasWindow");
     window->show();
@@ -2110,7 +2218,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     if(mRootWindow->getChild("ProductionWindow")->isVisible())
     {
         mProductionRefreshElapsed += evt.timeSinceLastFrame;
-        if(mProductionRefreshElapsed >= 1.0f)
+        if(mProductionRefreshElapsed >= TRAP_PRODUCTION_REFRESH_INTERVAL)
             requestTrapProductionQueue();
     }
     if(mFullMap)
@@ -2189,7 +2297,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         mTimeLimitShown = timeLimitReceived;
         timeLimitDisplay->setText(formatDebriefingTime(timeLimitSeconds));
         // The last minute of a time limit is shown in red
-        timeLimitDisplay->setProperty("TextColours", (!isCountdown && timeLimitSeconds <= 60) ? "FFE05A4A" : "FFF6CB62");
+        timeLimitDisplay->setProperty("TextColours", (!isCountdown && timeLimitSeconds <= TIME_LIMIT_WARNING_SECONDS) ? TIME_LIMIT_WARNING_COLOUR : TIME_LIMIT_COLOUR);
         updateTimeLimitTooltip(isCountdown);
         timeLimitDisplay->show();
     }
@@ -2356,9 +2464,7 @@ bool GameMode::onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/)
 
 bool GameMode::showObjectivesWindow(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     CEGUI::Window* objectives = mRootWindow->getChild("ObjectivesWindow");
     objectives->show();
     objectives->moveToFront();
@@ -2482,7 +2588,7 @@ bool GameMode::onSandboxHeroLevelClicked(const CEGUI::EventArgs& e)
     const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(e);
     if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < SandboxMode::MAX_HERO_LEVEL))
         ++mSandboxHeroLevel;
-    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > 1))
+    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > SandboxMode::MIN_HERO_LEVEL))
         --mSandboxHeroLevel;
 
     mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));
@@ -2606,9 +2712,7 @@ bool GameMode::onSandboxStay(const CEGUI::EventArgs&)
 
 bool GameMode::showPlayerSettingsWindow(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     // Before showing the player settings, we reset to the values in the seat. That's
     // because only the server can change them and the values in the Seat are the
@@ -2670,13 +2774,18 @@ bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
     return true;
 }
 
+void GameMode::closeAllTopWindows()
+{
+    while(closeTopWindow())
+    {
+    }
+}
+
 bool GameMode::showTrapProductionQueue(const CEGUI::EventArgs&)
 {
     CEGUI::Window* production = mRootWindow->getChild("ProductionWindow");
     const bool wasVisible = production->isVisible();
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     if(wasVisible)
         return true;
     production->show();
@@ -3161,6 +3270,16 @@ void GameMode::fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows)
     area->show();
 }
 
+bool GameMode::moveTrapProductionOrderEarlier(const CEGUI::EventArgs&)
+{
+    return moveTrapProductionOrder(true);
+}
+
+bool GameMode::moveTrapProductionOrderLater(const CEGUI::EventArgs&)
+{
+    return moveTrapProductionOrder(false);
+}
+
 bool GameMode::hideSkillWindow(const CEGUI::EventArgs&)
 {
     closeSkillWindow(false);
@@ -3205,9 +3324,7 @@ bool GameMode::toggleSkillWindow(const CEGUI::EventArgs& e)
 bool GameMode::showOptionsWindow(const CEGUI::EventArgs&)
 {
     setOptionsPage(false);
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
     options->show();
     options->moveToFront();
@@ -3338,17 +3455,13 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     mEventMessages.emplace_back(event);
     CEGUI::Window* tab = CEGUI::WindowManager::getSingleton().createWindow("OD/GameTabButton");
     tab->setProperty("NavigationFrame", "True");
-    tab->setProperty("NormalImage", "OpenDungeonsIcons/NavigationMessages");
+    tab->setProperty("NormalImage", MESSAGE_UNREAD_IMAGE);
     tab->setTooltipText("Message");
-    tab->setUserString("ContextHelp", "Message: left-click to read, right-click to dismiss");
+    tab->setUserString(Gui::USER_STRING_CONTEXT_HELP, "Message: left-click to read, right-click to dismiss");
     tab->setRiseOnClickEnabled(false);
     tab->setUserData(event);
     tab->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([this, event](const CEGUI::EventArgs&)
-        {
-            showEventMessage(event, true);
-            return true;
-        }));
+        CEGUI::Event::Subscriber(&GameMode::onEventMessageTabClicked, this));
     tab->subscribeEvent(CEGUI::Window::EventMouseClick,
         CEGUI::Event::Subscriber(&GameMode::onEventMessagesClicked, this));
     mRootWindow->getChild("MessageQueue")->addChild(tab);
@@ -3426,9 +3539,9 @@ void GameMode::updateEventMessageIndicator(float elapsed)
         return;
     const float width = queue->getPixelSize().d_width;
     const float entry = (width - queue->getChild("Receiver")->getPixelSize().d_width) / height;
-    const float tabWidth = 32.0f / 52.0f;
-    const float spacing = 36.0f / 52.0f;
-    mEventMessageFlashTime = std::fmod(mEventMessageFlashTime + std::max(0.0f, elapsed), 0.5f);
+    const float tabWidth = MESSAGE_TAB_DESIGN_WIDTH / MESSAGE_QUEUE_DESIGN_HEIGHT;
+    const float spacing = MESSAGE_TAB_DESIGN_SPACING / MESSAGE_QUEUE_DESIGN_HEIGHT;
+    mEventMessageFlashTime = std::fmod(mEventMessageFlashTime + std::max(0.0f, elapsed), MESSAGE_FLASH_PERIOD);
     float precedingPosition = -spacing;
     for(size_t i = 0; i < mMessageTabs.size(); ++i)
     {
@@ -3443,21 +3556,46 @@ void GameMode::updateEventMessageIndicator(float elapsed)
         }
         if(tab.position < 0)
             tab.position = std::max(entry, precedingPosition + spacing);
-        tab.position = std::max(destination, tab.position - std::max(0.0f, elapsed) * 12.5f);
+        tab.position = std::max(destination, tab.position - std::max(0.0f, elapsed) * MESSAGE_TAB_SLIDE_SPEED);
         precedingPosition = tab.position;
         tab.window->setArea(CEGUI::UDim(0, tab.position * height), CEGUI::UDim(0, 0),
             CEGUI::UDim(0, tabWidth * height), CEGUI::UDim(1, 0));
-        tab.window->setProperty("NormalImage", !tab.read && mEventMessageFlashTime >= 0.25f
-            ? "OpenDungeonsIcons/NavigationMessages" : "OpenDungeonsIcons/NavigationMessagesRead");
+        const bool highlighted = !tab.read && mEventMessageFlashTime >= MESSAGE_FLASH_HIGHLIGHT_START;
+        tab.window->setProperty("NormalImage", highlighted ? MESSAGE_UNREAD_IMAGE : MESSAGE_READ_IMAGE);
         tab.window->show();
     }
 }
 
+bool GameMode::onEventMessageTabClicked(const CEGUI::EventArgs& arg)
+{
+    const CEGUI::WindowEventArgs& windowArgs = static_cast<const CEGUI::WindowEventArgs&>(arg);
+    showEventMessage(static_cast<EventMessage*>(windowArgs.window->getUserData()), true);
+    return true;
+}
+
+bool GameMode::onEventCloseClicked(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("GameEventText")->hide();
+    return true;
+}
+
+bool GameMode::onEventDismissClicked(const CEGUI::EventArgs&)
+{
+    dismissEventMessage(mSelectedEventMessage);
+    return true;
+}
+
+bool GameMode::raiseShownDialog(const CEGUI::EventArgs& e)
+{
+    CEGUI::Window* window = static_cast<const CEGUI::WindowEventArgs&>(e).window;
+    window->setAlwaysOnTop(true);
+    window->moveToFront();
+    return true;
+}
+
 bool GameMode::showSettingsFromOptions(const CEGUI::EventArgs& /*e*/)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
     navigation->setModalState(true);
@@ -3470,64 +3608,71 @@ void GameMode::initializeSettingsNavigation()
 {
     CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
     navigation->hide();
-    std::function<void()> closeNavigation = [navigation]()
-    {
-        navigation->setModalState(false);
-        navigation->hide();
-    };
-    for(const std::string& page : {"Video", "Audio", "Input", "Game"})
+    for(const char* page : {"Video", "Audio", "Input", "Game"})
     {
         addEventConnection(navigation->getChild(page)->subscribeEvent(CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber([this, closeNavigation, page](const CEGUI::EventArgs&)
-            {
-                closeNavigation();
-                mReturningToSettingsNavigation = true;
-                mSettings.showPage(page);
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&GameMode::openSettingsNavigationPage, this)));
     }
     addEventConnection(navigation->getChild("Cameras")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([this, closeNavigation](const CEGUI::EventArgs& e)
-        {
-            closeNavigation();
-            mReturningToSettingsNavigation = true;
-            return showUserCameras(e);
-        })));
+        CEGUI::Event::Subscriber(&GameMode::openSettingsNavigationCameras, this)));
     addEventConnection(navigation->getChild("Continue")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber([closeNavigation](const CEGUI::EventArgs&)
-        {
-            closeNavigation();
-            return true;
-        })));
-    std::function<bool(const CEGUI::EventArgs&)> back = [this, closeNavigation](const CEGUI::EventArgs& e)
-    {
-        closeNavigation();
-        return showOptionsWindow(e);
-    };
+        CEGUI::Event::Subscriber(&GameMode::closeSettingsNavigation, this)));
     addEventConnection(navigation->getChild("Back")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(back)));
+        CEGUI::Event::Subscriber(&GameMode::backFromSettingsNavigation, this)));
     addEventConnection(navigation->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked,
-        CEGUI::Event::Subscriber(back)));
+        CEGUI::Event::Subscriber(&GameMode::backFromSettingsNavigation, this)));
     for(const char* name : {"SettingsWindow", "UserCamerasWindow"})
     {
         addEventConnection(mRootWindow->getChild(name)->subscribeEvent(CEGUI::Window::EventHidden,
-            CEGUI::Event::Subscriber([this](const CEGUI::EventArgs&)
-            {
-                if(mReturningToSettingsNavigation)
-                {
-                    mReturningToSettingsNavigation = false;
-                    showSettingsFromOptions();
-                }
-                return true;
-            })));
+            CEGUI::Event::Subscriber(&GameMode::returnToSettingsNavigation, this)));
     }
+}
+
+bool GameMode::closeSettingsNavigation(const CEGUI::EventArgs&)
+{
+    CEGUI::Window* navigation = mRootWindow->getChild("SettingsNavigationWindow");
+    navigation->setModalState(false);
+    navigation->hide();
+    return true;
+}
+
+bool GameMode::openSettingsNavigationPage(const CEGUI::EventArgs& e)
+{
+    // The navigation buttons are named like the settings pages they open.
+    const CEGUI::WindowEventArgs& windowArgs = static_cast<const CEGUI::WindowEventArgs&>(e);
+    const std::string page = windowArgs.window->getName().c_str();
+    closeSettingsNavigation(e);
+    mReturningToSettingsNavigation = true;
+    mSettings.showPage(page);
+    return true;
+}
+
+bool GameMode::openSettingsNavigationCameras(const CEGUI::EventArgs& e)
+{
+    closeSettingsNavigation(e);
+    mReturningToSettingsNavigation = true;
+    return showUserCameras(e);
+}
+
+bool GameMode::backFromSettingsNavigation(const CEGUI::EventArgs& e)
+{
+    closeSettingsNavigation(e);
+    return showOptionsWindow(e);
+}
+
+bool GameMode::returnToSettingsNavigation(const CEGUI::EventArgs&)
+{
+    if(mReturningToSettingsNavigation)
+    {
+        mReturningToSettingsNavigation = false;
+        showSettingsFromOptions();
+    }
+    return true;
 }
 
 bool GameMode::showHelpWindow(const CEGUI::EventArgs&)
 {
-    while(closeTopWindow())
-    {
-    }
+    closeAllTopWindows();
     mRootWindow->getChild("GameOptionsWindow")->hide();
     mRootWindow->getChild("GameHelpWindow")->show();
     return true;
@@ -3664,7 +3809,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->show();
         skillButton->setText("");
         skillButton->setProperty("StateImage", okIcon);
-        skillButton->setProperty("StateImageColour", "FF3CB46E");
+        skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_DONE);
         skillButton->setEnabled(false);
         skillProgressBar->hide();
     }
@@ -3673,7 +3818,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->show();
         skillButton->setText("");
         skillButton->setProperty("StateImage", abortIcon);
-        skillButton->setProperty("StateImageColour", "FFC4472A");
+        skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_UNAVAILABLE);
         skillButton->setEnabled(false);
         skillProgressBar->hide();
     }
@@ -3687,7 +3832,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
             skillButton->setText(Helper::toString(queueNumber));
 
         skillButton->setProperty("StateImage", workIcon);
-        skillButton->setProperty("StateImageColour", "FFC8A030");
+        skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_WORKING);
         skillButton->setEnabled(true);
         if (curSkillProgress > 0.0f)
         {
@@ -3729,8 +3874,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     skillButton->setText("");
     skillButton->setProperty("ButtonImageColour", level == 0 ? "FF666666" : "FFFFFFFF");
-    skillButton->setProperty("ResearchLevelColour", level >= 3 ? "FFFFC947" :
-        level == 2 ? "FFC98A4A" : "00FFFFFF");
+    skillButton->setProperty("ResearchLevelColour", getResearchFrameColour(level));
     CEGUI::Window* levelBadge;
     if(skillButton->isChild("ResearchLevel"))
         levelBadge = skillButton->getChild("ResearchLevel");
@@ -3782,9 +3926,17 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     }
     else
         description += "\nNo prerequisites.";
-    const std::string state = !isAllowed ? "Unavailable" : isDone ? "Complete" :
-        resType == curResType ? "Researching" : queueNumber > 0 ? "Queued" :
-        !prerequisitesReady ? "Locked" : "Available";
+    std::string state = "Available";
+    if(!isAllowed)
+        state = "Unavailable";
+    else if(isDone)
+        state = "Complete";
+    else if(resType == curResType)
+        state = "Researching";
+    else if(queueNumber > 0)
+        state = "Queued";
+    else if(!prerequisitesReady)
+        state = "Locked";
     description += "\nStatus: " + state + (mIsSkillWindowOpen && queueNumber > 0 && resType != curResType ?
         " (Apply saves queue changes)." : ".");
     skillButton->setUserString("ResearchDetails", description);
@@ -3792,9 +3944,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     // Keep explanations optional; the main tree communicates through its nodes and paths.
     skillButton->setTooltipText(description);
     skillButton->setUserString("ContextHelp", Skills::skillTypeToPlayerVisibleString(resType));
-    skillButton->setProperty("ResearchTileImage", state == "Researching" ? "OpenDungeonsSkin/ResearchTileWorking" :
-        state == "Queued" ? "OpenDungeonsSkin/ResearchTileQueued" :
-        level > 0 ? "OpenDungeonsSkin/ResearchTileLearned" : "OpenDungeonsSkin/ResearchTileLocked");
+    skillButton->setProperty("ResearchTileImage", getResearchTileImage(state, level));
     skillProgressBar->setArea(CEGUI::UVector2(CEGUI::UDim(.12f, 0), CEGUI::UDim(.82f, 0)),
         CEGUI::USize(CEGUI::UDim(.76f, 0), CEGUI::UDim(.09f, 0)));
     skillProgressBar->setProperty("VerticalProgress", "False");
@@ -3855,9 +4005,7 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
         refreshSkillButtonState(skillButtonName, castButtonName, skillProgressBarName, resType);
     });
     refreshSkillConnections();
-    getModeManager().getGui().arrangeRoomButtons(mRootWindow->getChild(Gui::TAB_ROOMS));
-    getModeManager().getGui().arrangeTrapButtons(mRootWindow->getChild(Gui::TAB_TRAPS));
-    getModeManager().getGui().arrangeSpellButtons(mRootWindow->getChild(Gui::TAB_SPELLS));
+    getModeManager().getGui().arrangeActionButtonPanels(mRootWindow);
 }
 
 void GameMode::refreshSkillConnections()
@@ -3868,6 +4016,8 @@ void GameMode::refreshSkillConnections()
     SkillManager::listAllSkills([&](const std::string& name, const std::string&,
         const std::string&, SkillType type) { if(!Skills::isRewardSkill(type)) buttons[type] = skills->getChild(name); });
     Seat* seat = mGameMap->getLocalPlayer()->getSeat();
+    // The depth of a skill is the length of its longest chain of prerequisites. It sets the
+    // row of the node. One pass per skill is enough to settle all chains.
     std::map<SkillType, unsigned> depths;
     for(size_t pass = 0; pass < buttons.size(); ++pass)
         for(const std::pair<const SkillType, CEGUI::Window*>& entry : buttons)
@@ -3903,6 +4053,7 @@ void GameMode::refreshSkillConnections()
             CEGUI::USize(CEGUI::UDim(width, 0), CEGUI::UDim(height, 0)));
         if(button->isChild("ResearchLevel"))
         {
+            // The badge is sized for the widest text it can show and sits below the node
             CEGUI::Window* badge = button->getChild("ResearchLevel");
             // The nodes of a wide row are close together: use the smaller font when the
             // counter would otherwise touch the counter of the neighbouring node.
@@ -3928,8 +4079,12 @@ void GameMode::refreshSkillConnections()
         if(parentRect.getWidth() <= 0 || parentRect.getHeight() <= 0)
             continue;
         const std::vector<const Skill*>& required = SkillManager::getSkill(entry.first)->getDependencies();
-        const bool allReady = std::all_of(required.begin(), required.end(), [seat](const Skill* prerequisite)
-            { return seat->getSkillLevel(prerequisite->getType()) > 0; });
+        bool allReady = true;
+        for(const Skill* prerequisite : required)
+        {
+            if(seat->getSkillLevel(prerequisite->getType()) == 0)
+                allReady = false;
+        }
         for(const Skill* dependency : required)
         {
             const CEGUI::Rectf start = buttons.at(dependency->getType())->getUnclippedOuterRect().get();
@@ -3938,6 +4093,9 @@ void GameMode::refreshSkillConnections()
             const float y1 = (start.bottom() - parentRect.top()) / parentRect.getHeight();
             const float y2 = (end.top() - parentRect.top()) / parentRect.getHeight();
             const float middle = (y1 + y2) * .5f;
+            // The path from a prerequisite to the skill has three bars: down from the
+            // prerequisite, across at half height and down into the skill. width is the
+            // bar thickness as a fraction of the graph width.
             const float width = .012f;
             const float height = width * parentRect.getWidth() / parentRect.getHeight();
             const float segments[][4] = {{x1 - width * .5f, y1, width, middle - y1 + height},
@@ -3963,8 +4121,9 @@ void GameMode::refreshSkillConnections()
                 }
                 line->setArea(CEGUI::UVector2(CEGUI::UDim(segments[part][0], 0), CEGUI::UDim(segments[part][1], 0)),
                     CEGUI::USize(CEGUI::UDim(segments[part][2], 0), CEGUI::UDim(segments[part][3], 0)));
+                const bool linkReady = part == 0 ? seat->getSkillLevel(dependency->getType()) > 0 : allReady;
                 line->setProperty("ImageColours",
-                    (part == 0 ? seat->getSkillLevel(dependency->getType()) > 0 : allReady) ? "FFE8862E" : "FF6E5232");
+                    linkReady ? RESEARCH_LINK_COLOUR_READY : RESEARCH_LINK_COLOUR_WAITING);
             }
         }
         if(required.size() > 1)
@@ -3988,10 +4147,11 @@ void GameMode::refreshSkillConnections()
             }
             const CEGUI::Rectf start = buttons.at(required.front()->getType())->getUnclippedOuterRect().get();
             const float middle = (start.bottom() + end.top() - 2 * parentRect.top()) / (2 * parentRect.getHeight());
+            // The junction is a square of .075 of the graph width, centred horizontally
             const float height = .075f * parentRect.getWidth() / parentRect.getHeight();
             junction->setArea(CEGUI::UVector2(CEGUI::UDim(.4625f, 0), CEGUI::UDim(middle - height * .5f, 0)),
                 CEGUI::USize(CEGUI::UDim(.075f, 0), CEGUI::UDim(height, 0)));
-            junction->setProperty("TextColours", allReady ? "FFEEBE5C" : "FF8A6A40");
+            junction->setProperty("TextColours", allReady ? RESEARCH_JUNCTION_COLOUR_READY : RESEARCH_JUNCTION_COLOUR_WAITING);
         }
     }
 }
@@ -4022,6 +4182,24 @@ void GameMode::refreshSpellButtonCoolDowns()
     });
 }
 
+float GameMode::getHandFeedbackScale() const
+{
+    return mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / HAND_ACTION_ICON_DESIGN_SIZE;
+}
+
+void GameMode::setHighlightedCreature(Creature* creature)
+{
+    InputManager& inputManager = mModeManager->getInputManager();
+    if(inputManager.mHighlightedCreature == creature)
+        return;
+
+    if(inputManager.mHighlightedCreature != nullptr)
+        inputManager.mHighlightedCreature->normalizeAmbient();
+    inputManager.mHighlightedCreature = creature;
+    if(creature != nullptr)
+        creature->maxAmbient();
+}
+
 //! \brief Refreshes action feedback and the eligible pointer target without executing an action.
 void GameMode::refreshActionFeedback(float elapsed)
 {
@@ -4044,8 +4222,8 @@ void GameMode::refreshActionFeedback(float elapsed)
         if(hover != nullptr)
         {
             SkillManager::updateCostTooltip(mGameMap, mRootWindow, hover);
-            mActionTargetText = hover->isUserStringDefined("ContextHelp") ?
-                hover->getUserString("ContextHelp").c_str() : "";
+            mActionTargetText = hover->isUserStringDefined(Gui::USER_STRING_CONTEXT_HELP) ?
+                hover->getUserString(Gui::USER_STRING_CONTEXT_HELP).c_str() : "";
             std::replace(mActionTargetText.begin(), mActionTargetText.end(), '\n', ' ');
         }
         if(inputManager.mHighlightedCreature != nullptr)
@@ -4086,14 +4264,7 @@ void GameMode::refreshActionFeedback(float elapsed)
             Tile* hoveredTile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
             Creature* creature = hoveredTile != nullptr ?
                 hoveredTile->getClosestCreature(inputManager.mCreatureTypeForOutliner) : nullptr;
-            if(inputManager.mHighlightedCreature != creature)
-            {
-                if(inputManager.mHighlightedCreature != nullptr)
-                    inputManager.mHighlightedCreature->normalizeAmbient();
-                inputManager.mHighlightedCreature = creature;
-                if(creature != nullptr)
-                    creature->maxAmbient();
-            }
+            setHighlightedCreature(creature);
         }
         // A release leaves validated in the input manager: a frame must never repeat it.
         const InputCommandState previousState = inputManager.mCommandState;
@@ -4130,15 +4301,15 @@ void GameMode::refreshActionFeedback(float elapsed)
     {
         icon->setProperty("Image", prohibited ? "OpenDungeonsIcons/Prohibition" :
             mRootWindow->getChild(button)->getProperty("NormalImage"));
-        const float scale = icon->getPixelSize().d_width / 50.0f;
-        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale),
-            CEGUI::UDim(0, pointer.d_y + 8.0f * scale)));
+        const float scale = getHandFeedbackScale();
+        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + ACTION_ICON_OFFSET_X * scale),
+            CEGUI::UDim(0, pointer.d_y + ACTION_ICON_OFFSET_Y * scale)));
     }
-    const float pointerScale = icon->getPixelSize().d_width / 50.0f;
+    const float pointerScale = getHandFeedbackScale();
     TextRenderer::getSingleton().setCharacterHeight(ODApplication::POINTER_INFO_STRING,
-        16.0f * pointerScale);
+        POINTER_TEXT_BASE_HEIGHT * pointerScale);
     TextRenderer::getSingleton().moveText(ODApplication::POINTER_INFO_STRING,
-        pointer.d_x + 145.0f * pointerScale, pointer.d_y + 24.0f * pointerScale);
+        pointer.d_x + POINTER_TEXT_OFFSET_X * pointerScale, pointer.d_y + POINTER_TEXT_OFFSET_Y * pointerScale);
     Tile* tile = mGameMap->getTile(inputManager.mXPos, inputManager.mYPos);
     const bool digging = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
@@ -4204,7 +4375,7 @@ void GameMode::refreshHeldCreatureIcons()
             CEGUI::Window* icon = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage",
                 "HeldCreatureIcon" + std::to_string(count));
             icon->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0),
-                CEGUI::UDim(0, 32), CEGUI::UDim(0, 32)));
+                CEGUI::UDim(0, HELD_CREATURE_ICON_SIZE), CEGUI::UDim(0, HELD_CREATURE_ICON_SIZE)));
             icon->setAlwaysOnTop(true);
             icon->setMousePassThroughEnabled(true);
             icon->setProperty("ClippedByParent", "False");
@@ -4220,16 +4391,17 @@ void GameMode::refreshHeldCreatureIcons()
     }
 
     const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
-    const float scale = mRootWindow->getChild("HandActionIcon")->getPixelSize().d_width / 50.0f;
-    const float side = 32.0f * scale;
+    const float scale = getHandFeedbackScale();
+    const float side = HELD_CREATURE_ICON_SIZE * scale;
     for(size_t i = 0; i < mHeldCreatureIcons.size(); ++i)
     {
         CEGUI::Window* icon = mHeldCreatureIcons[i];
         icon->setVisible(i < count && RenderManager::getSingleton().isKeeperHandVisible());
         icon->setSize(CEGUI::USize(CEGUI::UDim(0, side), CEGUI::UDim(0, side)));
         // Keep the existing action/prohibition area clear even when it is hidden.
-        icon->setPosition(CEGUI::UVector2(CEGUI::UDim(0, pointer.d_x + 90.0f * scale + (i % 4) * side),
-            CEGUI::UDim(0, pointer.d_y + 58.0f * scale + (i / 4) * side)));
+        icon->setPosition(CEGUI::UVector2(
+            CEGUI::UDim(0, pointer.d_x + ACTION_ICON_OFFSET_X * scale + (i % HELD_CREATURE_ICONS_PER_ROW) * side),
+            CEGUI::UDim(0, pointer.d_y + HELD_CREATURE_ICON_OFFSET_Y * scale + (i / HELD_CREATURE_ICONS_PER_ROW) * side)));
     }
 }
 
@@ -4297,9 +4469,18 @@ void GameMode::updateSelectedTiles()
 {
     const bool building = mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
         mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap;
+    // Selling is a room demolition as soon as the preview contains a room tile.
+    bool previewHasRoom = false;
+    for(Tile* tile : mPreviewTiles)
+    {
+        if(tile->getIsRoom())
+        {
+            previewHasRoom = true;
+            break;
+        }
+    }
     const bool roomDemolition = mPlayerSelection.getCurrentAction() == SelectedAction::destroyRoom ||
-        (mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding &&
-         std::any_of(mPreviewTiles.begin(), mPreviewTiles.end(), [](Tile* tile) { return tile->getIsRoom(); }));
+        (mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding && previewHasRoom);
     const bool digging = mPlayerSelection.getCurrentAction() == SelectedAction::none ||
         mPlayerSelection.getCurrentAction() == SelectedAction::selectTile;
     bool rectangle = mPlayerSelection.getCurrentAction() == SelectedAction::selectTile ||
@@ -4402,22 +4583,22 @@ bool GameMode::handlePossessionKey(OIS::KeyCode key, bool pressed)
     // The creature skills (other than its attack, which is on the left mouse button)
     case OIS::KC_1:
         if (pressed)
-            sendPossessionSkill(0);
+            sendPossessionSkill(POSSESSION_SKILL_SLOT_FIRST);
         return true;
 
     case OIS::KC_2:
         if (pressed)
-            sendPossessionSkill(1);
+            sendPossessionSkill(POSSESSION_SKILL_SLOT_SECOND);
         return true;
 
     case OIS::KC_3:
         if (pressed)
-            sendPossessionSkill(2);
+            sendPossessionSkill(POSSESSION_SKILL_SLOT_THIRD);
         return true;
 
     case OIS::KC_4:
         if (pressed)
-            sendPossessionSkill(3);
+            sendPossessionSkill(POSSESSION_SKILL_SLOT_FOURTH);
         return true;
 
     // These keys move the RTS camera, which is not used while possessing
@@ -4462,7 +4643,7 @@ void GameMode::updatePossessionInput(float timeSinceLastFrame)
     if (mPossessKeyLeft)
         direction -= right;
 
-    bool isMoving = (direction.squaredLength() > 0.0001f);
+    bool isMoving = (direction.squaredLength() > POSSESSION_MIN_DIRECTION_SQUARED_LENGTH);
     if (isMoving)
         direction.normalise();
     else
@@ -4473,12 +4654,13 @@ void GameMode::updatePossessionInput(float timeSinceLastFrame)
     // The server walks the creature toward a point a few tiles away, so we have to keep sending
     // the direction while the player moves. A stop is sent at once, a change of direction at most
     // ten times per second.
-    bool wasMoving = (mPossessLastDirection.squaredLength() > 0.0001f);
-    bool hasChanged = (isMoving != wasMoving) || (isMoving && (direction.dotProduct(mPossessLastDirection) < 0.99f));
-    if (!hasChanged && !(isMoving && (mPossessTimeSinceSent > 0.5f)))
+    bool wasMoving = (mPossessLastDirection.squaredLength() > POSSESSION_MIN_DIRECTION_SQUARED_LENGTH);
+    bool hasChanged = (isMoving != wasMoving) ||
+        (isMoving && (direction.dotProduct(mPossessLastDirection) < POSSESSION_DIRECTION_CHANGE_DOT));
+    if (!hasChanged && !(isMoving && (mPossessTimeSinceSent > POSSESSION_MOVE_RESEND_SECONDS)))
         return;
 
-    if (hasChanged && isMoving && (mPossessTimeSinceSent < 0.1f))
+    if (hasChanged && isMoving && (mPossessTimeSinceSent < POSSESSION_MOVE_MIN_SEND_SECONDS))
         return;
 
     mPossessLastDirection = direction;
@@ -4591,31 +4773,48 @@ void GameMode::checkInputCommand()
         unselectAllTiles();
 }
 
-bool GameMode::toggleQuery(const CEGUI::EventArgs& e)
+void GameMode::toggleSelectedAction(SelectedAction action)
 {
     if(!isConnected() || mGameMap->getGamePaused())
-        return true;
+        return;
 
     InputManager& inputManager = mModeManager->getInputManager();
     inputManager.mLMouseDown = false;
     inputManager.mCommandState = InputCommandState::infoOnly;
-    mPlayerSelection.setCurrentAction(mPlayerSelection.getCurrentAction() == SelectedAction::queryEntity ?
-        SelectedAction::none : SelectedAction::queryEntity);
+    if(mPlayerSelection.getCurrentAction() == action)
+        mPlayerSelection.setCurrentAction(SelectedAction::none);
+    else
+        mPlayerSelection.setCurrentAction(action);
     unselectAllTiles();
+}
+
+bool GameMode::toggleQuery(const CEGUI::EventArgs& e)
+{
+    toggleSelectedAction(SelectedAction::queryEntity);
     return true;
 }
 
 bool GameMode::toggleSell(const CEGUI::EventArgs& e)
 {
-    if(!isConnected() || mGameMap->getGamePaused())
-        return true;
+    toggleSelectedAction(SelectedAction::sellBuilding);
+    return true;
+}
 
-    InputManager& inputManager = mModeManager->getInputManager();
-    inputManager.mLMouseDown = false;
-    inputManager.mCommandState = InputCommandState::infoOnly;
-    mPlayerSelection.setCurrentAction(mPlayerSelection.getCurrentAction() == SelectedAction::sellBuilding ?
-        SelectedAction::none : SelectedAction::sellBuilding);
-    unselectAllTiles();
+void GameMode::connectRoomButton(RoomType type, const std::string& buttonName)
+{
+    CEGUI::Window* button = mRootWindow->getChild(buttonName);
+    button->setID(static_cast<CEGUI::uint>(type));
+    addEventConnection(button->subscribeEvent(CEGUI::Window::EventMouseClick,
+        CEGUI::Event::Subscriber(&GameMode::onRoomButtonClicked, this)));
+}
+
+bool GameMode::onRoomButtonClicked(const CEGUI::EventArgs& args)
+{
+    const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(args);
+    if(mouseArgs.button != CEGUI::RightButton)
+        return false;
+    if(!cameraInputBlocked())
+        focusRoom(static_cast<RoomType>(mouseArgs.window->getID()));
     return true;
 }
 
@@ -4763,16 +4962,7 @@ void GameMode::handlePlayerActionNone()
                     mActionTargetText += ". Claim this ground before building.";
             }
         }
-        InputManager& mutableInput = mModeManager->getInputManager();
-        Creature* creature = dynamic_cast<Creature*>(closest);
-        if(mutableInput.mHighlightedCreature != creature)
-        {
-            if(mutableInput.mHighlightedCreature != nullptr)
-                mutableInput.mHighlightedCreature->normalizeAmbient();
-            mutableInput.mHighlightedCreature = creature;
-            if(creature != nullptr)
-                creature->maxAmbient();
-        }
+        setHighlightedCreature(dynamic_cast<Creature*>(closest));
         TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
         return;
     }

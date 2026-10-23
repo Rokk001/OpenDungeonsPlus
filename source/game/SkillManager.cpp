@@ -34,6 +34,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/Random.h"
 
 #include <CEGUI/Window.h>
 #include <CEGUI/widgets/PushButton.h>
@@ -1108,7 +1109,7 @@ void SkillManager::buildRandomPendingSkillsForSeat(std::vector<SkillType>& skill
     // Now, availableSkills only contains skills that can be done (but unsorted).
     // We need to shuffle that and fill skills.
     doneSkills = seat->getSkillDone();
-    std::random_shuffle(availableSkills.begin(), availableSkills.end());
+    Random::shuffle(availableSkills.begin(), availableSkills.end());
     for(const SkillDef* skill : availableSkills)
     {
         if(seat->isSkillDone(skill->mSkill->getType()))
@@ -1213,7 +1214,7 @@ void SkillManager::updateCostTooltip(GameMap* gameMap, CEGUI::Window* rootWindow
         const std::string cost = skill->getCostText(gameMap);
         const CEGUI::String text = hoveredWindow->getUserString("CostBaseDescription") +
             (cost.empty() ? "" : " (" + cost + ")");
-        hoveredWindow->setUserString("ContextHelp", text);
+        hoveredWindow->setUserString(Gui::USER_STRING_CONTEXT_HELP, text);
         if(hoveredWindow->getTooltipText() != skill->getTooltipTitle())
             hoveredWindow->setTooltipText(skill->getTooltipTitle());
         return;
@@ -1222,8 +1223,8 @@ void SkillManager::updateCostTooltip(GameMap* gameMap, CEGUI::Window* rootWindow
 
 std::string SkillManager::getSelectedButton(const PlayerSelection& playerSelection)
 {
-    SkillFamily family;
-    uint32_t type;
+    SkillFamily family = SkillFamily::nb;
+    uint32_t type = 0;
     switch(playerSelection.getCurrentAction())
     {
         case SelectedAction::buildRoom:

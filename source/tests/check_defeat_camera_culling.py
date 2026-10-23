@@ -239,7 +239,7 @@ print('BYTES OK: no stray control characters')
 with tempfile.TemporaryDirectory(prefix='odp-defeat-camera-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/W1', '/I', str(deps / 'install/include/OGRE'),
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/I', str(deps / 'install/include/OGRE'),
                     '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe', '/link',
                     '/LIBPATH:' + str(deps / 'install/lib'), 'OgreMain.lib'],
                    cwd=work, check=True)

@@ -34,8 +34,13 @@ for key, value in (('LowHealthWalkSpeedFactor', 0.7), ('LowHealthWalkThresholdPe
     assert float(re.search(r'^    ' + key + r'\t([\d.]+)', global_cfg, re.M)[1]) == value, key
     assert ('"' + key + '"') in config_cpp, key + ' not read'
 assert 'mLowHealthWalkSpeedFactor(0.7)' in config_cpp and 'mLowHealthWalkThresholdPercent(50.0)' in config_cpp
-assert 'std::max(0.2, std::min(1.0, mLowHealthWalkSpeedFactor))' in config_h
-assert 'std::max(1.0, std::min(100.0, mLowHealthWalkThresholdPercent))' in config_h
+assert 'limitLowHealthWalkSpeedFactor(mLowHealthWalkSpeedFactor)' in config_h
+assert 'std::max(LOW_HEALTH_WALK_SPEED_FACTOR_MIN, std::min(LOW_HEALTH_WALK_SPEED_FACTOR_MAX, factor))' in config_h
+assert 'std::max(LOW_HEALTH_WALK_THRESHOLD_PERCENT_MIN, std::min(FULL_HEALTH_PERCENT, mLowHealthWalkThresholdPercent))' in config_h
+for name, value in (('LOW_HEALTH_WALK_SPEED_FACTOR_MIN', '0.2'), ('LOW_HEALTH_WALK_SPEED_FACTOR_MAX', '1.0'),
+                    ('LOW_HEALTH_WALK_THRESHOLD_PERCENT_MIN', '1.0'), ('FULL_HEALTH_PERCENT', '100.0')):
+    assert 'static const double ' + name + ' = ' + value + ';' in config_h, name
+assert 'static const double HEALTH_STAGE_ROUNDING_TOLERANCE = 0.000001;' in creature
 
 # One rule on the health stage (known on server and clients, no new message)
 rule = (function_body(creature, 'bool Creature::isLowHealthWalkStage(uint32_t healthStage)') + ' ' +
@@ -44,13 +49,19 @@ assert 'mOverlayHealthValue' in rule or 'isLowHealthWalking()' in rule and 'getL
 assert 'getLowHealthWalkSpeedFactor()' in rule and 'getIsOnServerMap' not in rule
 assert 'double getLowHealthWalkFactor() const;' in creature_h
 assert 'NB_OVERLAY_HEALTH_VALUES = 8' in creature
+stage = function_body(creature, 'bool Creature::isLowHealthWalkStage(uint32_t healthStage)')
+assert 'NB_OVERLAY_HEALTH_VALUES - 2' in stage
+assert 'getIsOnServerMap' not in stage
+factor = function_body(creature, 'double Creature::getLowHealthWalkFactor() const')
+assert 'isLowHealthWalking()' in factor and 'getLowHealthWalkSpeedFactor()' in factor
 
 
 def first_stage(percent, nb_steps=6):
     return math.ceil((100.0 - percent) / 100.0 * nb_steps - 0.000001) + 1
 
 
-assert 'std::ceil((100.0 - thresholdPercent) / 100.0 * nbSteps - 0.000001) + 1.0' in rule
+assert ('std::ceil((FULL_HEALTH_PERCENT - thresholdPercent) / FULL_HEALTH_PERCENT * nbSteps\n'
+        '        - HEALTH_STAGE_ROUNDING_TOLERANCE) + 1.0') in rule
 assert 'NB_OVERLAY_HEALTH_VALUES - 2' in rule
 assert first_stage(50) == 4        # default: below half of the health = stage 4, the stage of the hurt walk reaction
 assert first_stage(100) == 1 and first_stage(1) == 7 and first_stage(34) == 5 and first_stage(17) == 6
@@ -64,7 +75,9 @@ assert speed.count('* tiredFactor') == 4
 # The walk clip keeps up exactly once; standing keeps its slower breathing
 pose = function_body(creature, 'double Creature::getClientPoseSpeedFactor() const')
 assert pose.count('getLowHealthWalkFactor()') == 1
-assert 'EntityAnimation::idle_anim' in pose and 'factor = 0.78;' in pose
+assert 'EntityAnimation::idle_anim' in pose and 'factor = IDLE_BREATH_FACTOR_HEAVY;' in pose
+# The named breathing factor keeps the value 0.78.
+assert 'static const double IDLE_BREATH_FACTOR_HEAVY = 0.78;' in creature
 assert 'CreatureMoodValues::Tired' in pose and pose.count('getTiredWalkSpeedFactor()') == 1
 else_part = pose[pose.index('else\n    {'):]
 assert 'getLowHealthWalkFactor()' in else_part and 'factor = 0.' not in else_part   # no stage factor on top of the real one

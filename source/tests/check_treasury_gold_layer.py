@@ -189,7 +189,7 @@ with tempfile.TemporaryDirectory(prefix='odp-treasury-gold-') as tmp:
     probe_path = Path(tmp) / 'check.cpp'
     probe_path.write_text(probe)
     exe = Path(tmp) / 'check.exe'
-    cmd = 'cl /nologo /EHsc /MD /std:c++14 /I source /Fo"{}" {} /Fe"{}"'.format(
+    cmd = 'cl /nologo /EHsc /MD /std:c++17 /I source /Fo"{}" {} /Fe"{}"'.format(
         str(Path(tmp) / 'check.obj'), str(probe_path), str(exe))
     build = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=str(repo))
     if build.returncode != 0:

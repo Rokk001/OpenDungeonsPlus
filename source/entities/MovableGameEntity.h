@@ -134,7 +134,8 @@ public:
     //! \brief Updates the entity path, movement, and direction. Note that entities
     //! are not expected to remove themselves or other entities from the gamemap
     //! in the update function. If they do, it might lead to crashes as the gamemap
-    //! will iterate the movable entities vector
+    //! will iterate the movable entities vector. On the clients, the animation and the walking
+    //! follow the game speed of the game settings.
     //! \param timeSinceLastFrame the elapsed time since last displayed frame in seconds.
     //! Deferred strikes use the same game-time scale as movement and skeletal clips.
     //! \brief Advances animation and walking; only real server walk steps feed crossing observers.

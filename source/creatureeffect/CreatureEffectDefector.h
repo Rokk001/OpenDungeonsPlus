@@ -26,12 +26,17 @@
 class CreatureEffectDefector : public CreatureEffect
 {
 public:
+    //! \brief Creates the effect.
+    //! \param nbTurnsEffect How many turns the creature stays converted.
+    //! \param originalSeatId Id of the seat the creature belongs to before the conversion.
+    //! \param newSeatId Id of the seat the creature was converted to.
     CreatureEffectDefector(int32_t nbTurnsEffect, int originalSeatId, int newSeatId) :
         CreatureEffect(nbTurnsEffect, "SpellCreatureDefector"),
         mOriginalSeatId(originalSeatId),
         mNewSeatId(newSeatId)
     {}
 
+    //! \brief Creates an empty effect, to be filled from a stream.
     CreatureEffectDefector() :
         CreatureEffect(),
         mOriginalSeatId(-1),
@@ -41,18 +46,26 @@ public:
     virtual ~CreatureEffectDefector()
     {}
 
+    //! \brief Returns the name under which this effect is registered and saved.
     virtual const std::string& getEffectName() const override;
 
+    //! \brief Writes the effect, including both seat ids, to the stream.
     virtual void exportToStream(std::ostream& os) const override;
+    //! \brief Reads the effect, including both seat ids, from the stream.
+    //! \return true if everything could be read.
     virtual bool importFromStream(std::istream& is) override;
 
+    //! \brief Creates the effect from the stream (used when loading a saved game).
     static CreatureEffectDefector* load(std::istream& is);
 
 protected:
+    //! \brief When the effect has ended, gives the creature back to its original seat.
     virtual void applyEffect(Creature& creature) override;
 
 private:
+    //! Id of the seat the creature belongs to before the conversion.
     int mOriginalSeatId;
+    //! Id of the seat the creature was converted to.
     int mNewSeatId;
 };
 

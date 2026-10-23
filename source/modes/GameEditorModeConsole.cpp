@@ -51,6 +51,7 @@ namespace py = pybind11;
 
 namespace
 {
+// Python snippet that saves modules, path, arguments, streams and builtins into _session_state when a console starts
 const char* const BEGIN_SCRIPT_SESSION = R"python(
 import sys as _sys
 import builtins as _builtins
@@ -65,6 +66,7 @@ _session_state = {
 del _sys, _builtins
 )python";
 
+// Python snippet that restores everything saved by BEGIN_SCRIPT_SESSION when the console is destroyed
 const char* const END_SCRIPT_SESSION = R"python(
 import sys as _sys
 import builtins as _builtins

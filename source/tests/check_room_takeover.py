@@ -36,7 +36,10 @@ defaults = {'RoomTakeoverGuardRadius': '5', 'RoomTakeoverCostPercent': '0'}
 for key, value in defaults.items():
     assert re.search(r'^\s+' + key + r'\s+' + value + r'\s*$', rooms_cfg, re.M), key
     assert re.search(r'^\s+# ' + key + r'\s', rooms_cfg, re.M), key + ' is not documented'
-    assert '"' + key + '", ' + value + '.0)' in room, key + ' needs the same default in the source'
+    constant = {'RoomTakeoverGuardRadius': 'DEFAULT_ROOM_TAKEOVER_GUARD_RADIUS',
+                'RoomTakeoverCostPercent': 'DEFAULT_ROOM_TAKEOVER_COST_PERCENT'}[key]
+    assert '"' + key + '", ' + constant + ')' in room, key + ' is read with its named default'
+    assert 'static const double ' + constant + ' = ' + value + '.0;' in room, key + ' needs the same default in the source'
 
 # Server decides; rooms of nobody, the client and the heart are not touched by the new rules
 blocked = function_body(room, 'bool Room::isTakeoverBlocked(')
@@ -225,7 +228,7 @@ int main()
     with tempfile.TemporaryDirectory(prefix='odp-room-takeover-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(probe)
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         result = subprocess.run([str(work / 'check.exe')], cwd=work, capture_output=True, text=True)
         sys.stdout.write(result.stdout)

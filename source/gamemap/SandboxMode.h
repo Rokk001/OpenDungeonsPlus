@@ -68,6 +68,7 @@ enum class SandboxBonusKind
 //! \brief An objective that gives extra points once, as the two sub-objectives of a realm do
 struct SandboxBonus
 {
+    //! \brief Creates an unawarded bonus of the first kind (slaps) with a zero count and zero points.
     SandboxBonus() :
         mKind(SandboxBonusKind::slaps),
         mCount(0),
@@ -100,7 +101,9 @@ public:
     static const uint32_t NB_WAVES;
     //! \brief Number of heroes in a wave
     static const uint32_t NB_HEROES_PER_WAVE;
-    //! \brief Highest level of a hero (the level selector of the toolbox goes from 1 to this)
+    //! \brief Lowest level of a hero (the level selector of the toolbox starts here)
+    static const uint32_t MIN_HERO_LEVEL;
+    //! \brief Highest level of a hero (the level selector of the toolbox goes up to this)
     static const uint32_t MAX_HERO_LEVEL;
 
     //! \brief Score values of the sandbox: a hero killed, a tile of land owned (also lost
@@ -113,6 +116,8 @@ public:
     static const int32_t SCORE_CREATURE_ENTERED;
     static const int32_t SCORE_CREATURE_CONVERTED;
 
+    //! \brief Creates the sandbox logic of the given map. No wave is launched yet.
+    //! \param gameMap The map whose sandbox state this object manages
     SandboxMode(GameMap& gameMap);
 
     //! \brief Forgets the waves, the toolbox heroes, the score and the realm settings of the level
@@ -140,6 +145,7 @@ public:
     //! \brief Tells if the given seat belongs to the hero faction
     static bool isHeroSeat(const Seat* seat);
 
+    //! \brief The current score of the sandbox, never below 0
     inline int32_t getScore() const
     { return mScore; }
 
@@ -155,9 +161,11 @@ public:
     inline const std::string& getNextLevel() const
     { return mNextLevel; }
 
+    //! \brief The bonus objectives of the level, with the information if each one is awarded already
     inline const std::vector<SandboxBonus>& getBonuses() const
     { return mBonuses; }
 
+    //! \brief True once the score stayed at the target for a moment and the realm is complete
     inline bool isRealmComplete() const
     { return mIsRealmComplete; }
 
@@ -167,14 +175,17 @@ public:
     std::string getNextRoomName(int32_t& secondsLeft) const;
 
 private:
+    //! \brief The map this sandbox logic belongs to
     GameMap& mGameMap;
     //! \brief Number of waves already launched. The next one is mNbWavesLaunched + 1.
     uint32_t mNbWavesLaunched;
+    //! \brief True while a continual invasion goes through its waves
     bool mIsContinual;
     //! \brief True from the launch of a wave until its last hero is dead
     bool mIsWaveActive;
     //! \brief Turns before the next wave of a continual invasion is launched
     int32_t mTurnsBeforeNextWave;
+    //! \brief Turns before the heroes of the current wave are checked again
     int32_t mTurnsBeforeCheck;
     //! \brief Turns since the sandbox started (restored from a saved game): the room unlocks go by this time
     int64_t mTurnsElapsed;
@@ -213,6 +224,7 @@ private:
     uint32_t mSentBonusMask;
     std::string mSentNextRoom;
 
+    //! \brief Returns the first seat of the hero faction, or nullptr if the level has none
     Seat* getHeroSeat() const;
     //! \brief The seats of the human keepers
     std::vector<Seat*> getKeeperSeats() const;
@@ -224,16 +236,24 @@ private:
     void updateScore(const std::vector<Seat*>& keeperSeats);
     //! \brief Awards the bonus objectives that are reached
     void updateBonuses(const std::vector<Seat*>& keeperSeats);
+    //! \brief Tells if the objective of a bonus is fulfilled by the given keeper seat
+    //! \param bonus The bonus objective to test
+    //! \param seat The keeper seat whose statistics, rooms and creatures are checked
     bool isBonusReached(const SandboxBonus& bonus, const Seat* seat) const;
     //! \brief Tells the realm is complete once the score stayed at the target for a moment
     void updateRealmComplete();
     //! \brief Sends the score and the room timer to the clients when they changed
     void sendStatus();
+    //! \brief The awarded bonuses as a bit mask: bit n is set if the bonus with index n is awarded
+    //! (only the first 32 bonuses fit into the mask)
     uint32_t getBonusMask() const;
     //! \brief Launches the given wave. Returns false if it could not be launched.
     bool launchWave(uint32_t waveNumber);
     //! \brief Sends a message to every human player
     void sendMessage(const std::string& message) const;
+    //! \brief Sends a message to the given player only
+    //! \param player The player who gets the message
+    //! \param message The text of the message
     void sendMessage(Player* player, const std::string& message) const;
 };
 

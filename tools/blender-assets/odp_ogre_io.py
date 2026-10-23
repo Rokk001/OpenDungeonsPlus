@@ -46,9 +46,10 @@ def _fmt(v):
 def read_skeleton(path):
     root = ET.parse(path).getroot()
     bones = []
-    for b in root.find("bones").findall("bone"):
+    # OGRE 14 writes no id attribute; the bone index is then the order in the file.
+    for index, b in enumerate(root.find("bones").findall("bone")):
         bones.append({
-            "id": int(b.get("id")), "name": b.get("name"),
+            "id": int(b.get("id", index)), "name": b.get("name"),
             "pos": _vec(b.find("position")), "rot": _quat(b.find("rotation")),
             "scale": _vec(b.find("scale"), (1, 1, 1)),
         })

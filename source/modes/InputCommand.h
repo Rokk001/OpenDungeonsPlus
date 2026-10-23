@@ -26,6 +26,7 @@ namespace Ogre
 class ColourValue;
 }
 
+class GameEntity;
 class Tile;
 class Seat;
 
@@ -40,7 +41,12 @@ public:
     virtual void unselectAllTiles() = 0;
     //! \brief Notify the InputCommand that we want to display the given text to the local player
     virtual void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) = 0;
+    //! \brief Notify the InputCommand that we want to display the given text next to the pointer.
+    //! Does nothing unless the client has a pointer to show it at.
     virtual void displayPointerText(const Ogre::ColourValue&, const std::string&) {}
+
+    //! Selects the distinct tiles the given entities stand on.
+    void selectTilesOfEntities(const std::vector<GameEntity*>& entities);
 
     //! Explain why an empty room/trap selection cannot be built on the hovered tile.
     void displayTileBuildFailure(const Tile* tile, Seat* seat);

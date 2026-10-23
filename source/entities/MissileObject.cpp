@@ -235,6 +235,8 @@ void MissileObject::doUpkeep()
     }
 
     path.push_back(Ogre::Vector2(destination.x,destination.y));
+    // The last argument is walkDistortion: off, so the flight endpoint is not randomly displaced
+    // and the missile ends exactly on the tile where it hit.
     setWalkPath(EntityAnimation::idle_anim, EntityAnimation::idle_anim, true, true, path, false);
 
     // The missile stopped during this turn (a hit, a wall or the end of the map)

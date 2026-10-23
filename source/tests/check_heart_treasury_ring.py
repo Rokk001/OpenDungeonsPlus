@@ -52,7 +52,8 @@ mesh_name = function(treasury_object, 'const char* TreasuryObject::getMeshNameFo
 
 # The ring is part of the heart: fixed capacity, no treasury skill involved.
 assert 'static const int treasuryTileCapacity = 1000;' in temple
-assert 'dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1' in temple
+assert 'static const int HEART_CORE_RADIUS = 1;' in temple
+assert 'dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS' in temple
 assert 'center = getCentralTile();' in temple
 # The gold virtuals are declared in the header so the carry system sees them.
 for symbol in ('getTotalGoldStorage', 'getTotalGoldStored', 'depositGold', 'withdrawGold'):
@@ -431,7 +432,7 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-ring-') as tmp:
     probe_path.write_text(probe)
     exe = Path(tmp) / 'check.exe'
     cmd = (
-        'cl /nologo /EHsc /MD /std:c++14 /I source /Fo"{}" {} /Fe"{}"'
+        'cl /nologo /EHsc /MD /std:c++17 /I source /Fo"{}" {} /Fe"{}"'
     ).format(
         str(Path(tmp) / 'check.obj'),
         str(probe_path),

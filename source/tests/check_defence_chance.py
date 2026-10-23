@@ -118,7 +118,8 @@ assert 'inline bool getMeleeDodgeParry() const' in config_h
 for key, value, member, limit in KEYS:
     assert re.search(r'^\s+' + key + r'\t' + re.escape(value) + r'\s*$', global_cfg, re.M), key
     assert 'nextParam == "' + key + '"' in config_cpp and member in config_cpp, key
-    assert 'std::max(0.0, std::min(%d.0, m%s))' % (limit, key) in config_h, key
+    limit_name = 'ChanceMax' if limit == 100 else 'ChancePerLevelMax'
+    assert 'std::max(ChanceMin, std::min(%s, m%s))' % (limit_name, key) in config_h, key
     assert 'inline double get' + key + '() const' in config_h, key
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -319,7 +320,7 @@ if '--probe' in sys.argv:
     with tempfile.TemporaryDirectory(prefix='odp-defence-') as directory:
         work = Path(directory)
         (work / 'probe.cpp').write_text(probe_source())
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'],
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{root / "source"}', 'probe.cpp', '/Feprobe.exe'],
                        cwd=work, check=True)
         subprocess.run([str(work / 'probe.exe')], cwd=work, check=True)
 

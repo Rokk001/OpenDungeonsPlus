@@ -146,6 +146,21 @@
 
 static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 
+//! \brief Squared length below which a possession move direction counts as no movement
+static const Ogre::Real POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
+//! \brief Squared length below which a possession aim direction counts as no aim
+static const Ogre::Real POSSESSION_MIN_AIM_SQUARED_LENGTH = 0.0001f;
+//! \brief Pit mood points lost per second when the room config has no PitMoodDecay
+static const double DEFAULT_PIT_MOOD_DECAY_PER_SECOND = 3.0;
+//! \brief Largest pit mood (positive or negative) when the room config has no PitMoodMax
+static const double DEFAULT_PIT_MOOD_MAX = 1500.0;
+//! \brief Radius in tiles of the hated company check when the room config has no HatedCompanyRadius
+static const double DEFAULT_HATED_COMPANY_RADIUS = 5.0;
+//! \brief Squared distance in tiles (3 tiles) up to which a creature in a possession group stays where it is instead of walking to the leader
+static const int POSSESSION_GROUP_MAX_SQUARED_DISTANCE = 9;
+//! \brief Distance in tiles below which a target is too close for the aim direction check of a possession skill
+static const Ogre::Real POSSESSION_AIM_MIN_DISTANCE = 0.5;
+
 // Target selection by combat class: the distance to an enemy support creature is multiplied by this
 // factor for blitzers and flankers, so they prefer it over closer enemies
 static const double COMBAT_CLASS_SUPPORT_TARGET_FACTOR = 0.5;
@@ -221,8 +236,45 @@ uint32_t getAppearanceRandom(uint32_t min, uint32_t max)
 }
 }
 
+//! \brief Lowest ratio between the speed of the tile under a creature and its ground speed (see getTileSpeedRatio)
+static const double TILE_SPEED_RATIO_MIN = 0.2;
+
+//! \brief Highest ratio between the speed of the tile under a creature and its ground speed (see getTileSpeedRatio)
+static const double TILE_SPEED_RATIO_MAX = 4.0;
+
+//! \brief Most the shown tile speed ratio of the walk clips changes per second (see updateClientPose)
+static const double TILE_SPEED_RATIO_MAX_CHANGE_PER_SECOND = 4.0;
+
+//! \brief Health stages (see mOverlayHealthValue) from which a standing creature breathes slower, from the worst to the lightest
+static const uint32_t IDLE_BREATH_STAGE_HEAVY = 6;
+static const uint32_t IDLE_BREATH_STAGE_MEDIUM = 5;
+static const uint32_t IDLE_BREATH_STAGE_LIGHT = 4;
+
+//! \brief Speed factors of the idle clip of a hurt creature in the stages IDLE_BREATH_STAGE_HEAVY, _MEDIUM and _LIGHT
+static const double IDLE_BREATH_FACTOR_HEAVY = 0.78;
+static const double IDLE_BREATH_FACTOR_MEDIUM = 0.85;
+static const double IDLE_BREATH_FACTOR_LIGHT = 0.92;
+//! \brief Tolerance that keeps a health border that falls exactly on a stage in the lower stage (see isLowHealthWalkStage)
+static const double HEALTH_STAGE_ROUNDING_TOLERANCE = 0.000001;
+//! \brief Number of closest targets for which a path is tried when a creature looks for a destination
+static const uint32_t MAX_PATH_CHECK_TARGET_TRIES = 5;
+
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
+const std::string Creature::POSSESSION_AURA_SCRIPT = "SpellCreaturePossess";
+const double Creature::WOUNDED_DRAG_LAY_TURNS_DEFAULT = 12.0;
+const double Creature::WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT = 6.0;
+const double Creature::WOUNDED_CARRY_MAX_TURNS_DEFAULT = 400.0;
+const double Creature::WOUNDED_DRAG_MAX_DISTANCE_DEFAULT = 3.5;
+const double Creature::WOUNDED_DRAG_GAP_DEFAULT = 0.9;
+const double Creature::WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT = 1.3;
+const double Creature::WOUNDED_DRAG_WORKER_SPEED_FACTOR_DEFAULT = 0.6;
+const double Creature::WOUNDED_CARRY_RADIUS_DEFAULT = 8.0;
+const double Creature::WOUNDED_CARRY_PRIORITY_DEFAULT = 1.0;
+const double Creature::WOUNDED_CARRY_HP_PERCENT_DEFAULT = 35.0;
+const double Creature::WOUNDED_CARRY_TEMP_KO_DEFAULT = 1.0;
+const double Creature::WOUNDED_CARRY_COOLDOWN_DEFAULT = 150.0;
+const double Creature::PERCENT_FACTOR = 100.0;
 
 namespace
 {
@@ -231,6 +283,11 @@ const uint32_t PROFILE_FRIEND_MIN_AFFINITY = 600;
 //! \brief The foe is the creature with an affinity below this value
 const uint32_t PROFILE_FOE_MAX_AFFINITY = 150;
 const uint32_t PROFILE_MAX_FRIENDS = 2;
+//! \brief The handle of the card gets a number from PROFILE_HANDLE_MIN_NUMBER to PROFILE_HANDLE_MIN_NUMBER + PROFILE_HANDLE_NUMBER_COUNT - 1
+const int PROFILE_HANDLE_MIN_NUMBER = 10;
+const int PROFILE_HANDLE_NUMBER_COUNT = 90;
+//! \brief Number of likes and of dislikes in a profile
+const std::size_t PROFILE_LIST_SIZE = 2;
 
 typedef std::pair<uint32_t, std::string> ProfileAffinity;
 
@@ -313,7 +370,8 @@ std::string makeProfileHandle(const social::CreatureProfile& profile)
         else if((c >= 'A') && (c <= 'Z'))
             handle += static_cast<char>(c - 'A' + 'a');
     }
-    handle += Helper::toString(10 + static_cast<int>(social::fnv1a64(profile.mCreatureName + "|handle") % 90));
+    handle += Helper::toString(PROFILE_HANDLE_MIN_NUMBER +
+        static_cast<int>(social::fnv1a64(profile.mCreatureName + "|handle") % PROFILE_HANDLE_NUMBER_COUNT));
     return handle;
 }
 
@@ -350,6 +408,7 @@ struct ProfileRelations
     bool mHasNemesis;
 };
 
+//! \brief Orders two (creature name, relationship value) pairs: the stronger value first, equal values by name.
 bool isStrongerRelationship(const std::pair<std::string, int32_t>& a, const std::pair<std::string, int32_t>& b)
 {
     if(a.second != b.second)
@@ -358,6 +417,12 @@ bool isStrongerRelationship(const std::pair<std::string, int32_t>& a, const std:
     return a.first < b.first;
 }
 
+//! \brief Fills the relations of a creature from the tiers of the client: who is close to it (friends, best friends,
+//! partner), who is against it (hated, nemesis) and the text that is shown per creature.
+//! \param gameMap The map the creatures are looked up in
+//! \param relationships The relationship table of the map
+//! \param name Name of the creature the profile belongs to
+//! \param result Receives the lists and texts
 void collectProfileRelations(GameMap* gameMap, CreatureRelationships& relationships, const std::string& name,
     ProfileRelations& result)
 {
@@ -1729,7 +1794,7 @@ void Creature::doUpkeep()
     // The pit mood fades towards 0
     if(mPitMood != 0.0)
     {
-        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodDecay", 3.0)
+        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodDecay", DEFAULT_PIT_MOOD_DECAY_PER_SECOND)
             / ODApplication::turnsPerSecond;
         if(mPitMood > 0.0)
             mPitMood = std::max(0.0, mPitMood - decay);
@@ -2462,7 +2527,7 @@ double Creature::getMoveSpeed(Tile* tile) const
         double workerSpeed = (workerDefinition != nullptr) ? workerDefinition->getMoveSpeedGround() : 1.0;
         ConfigManager& config = ConfigManager::getSingleton();
         return workerSpeed * getDragWorkerSpeedFactor() *
-            std::max(1.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragFollowSpeedFactor", 1.3));
+            std::max(1.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragFollowSpeedFactor", WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT));
     }
 
     if(getIsOnServerMap())
@@ -2484,7 +2549,7 @@ double Creature::getMoveSpeed(Tile* tile) const
 
 double Creature::getDragWorkerSpeedFactor()
 {
-    double factor = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragWorkerSpeedFactor", 0.6);
+    double factor = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragWorkerSpeedFactor", WOUNDED_DRAG_WORKER_SPEED_FACTOR_DEFAULT);
     return std::max(0.1, std::min(1.0, factor));
 }
 
@@ -2495,7 +2560,8 @@ bool Creature::isLowHealthWalkStage(uint32_t healthStage)
     // a creature is badly hurt from the first stage that lies completely below the configured percent
     const double nbSteps = static_cast<double>(NB_OVERLAY_HEALTH_VALUES - 2);
     double thresholdPercent = ConfigManager::getSingleton().getLowHealthWalkThresholdPercent();
-    double firstStage = std::ceil((100.0 - thresholdPercent) / 100.0 * nbSteps - 0.000001) + 1.0;
+    double firstStage = std::ceil((FULL_HEALTH_PERCENT - thresholdPercent) / FULL_HEALTH_PERCENT * nbSteps
+        - HEALTH_STAGE_ROUNDING_TOLERANCE) + 1.0;
     return static_cast<double>(healthStage) >= firstStage;
 }
 
@@ -2523,7 +2589,7 @@ double Creature::getTileSpeedRatio() const
     if(tileSpeed <= 0.0)
         return 1.0;
 
-    return std::max(0.2, std::min(4.0, tileSpeed / groundSpeed));
+    return std::max(TILE_SPEED_RATIO_MIN, std::min(TILE_SPEED_RATIO_MAX, tileSpeed / groundSpeed));
 }
 
 void Creature::updateClientPose(double timeSinceLastFrame)
@@ -2542,7 +2608,7 @@ void Creature::updateClientPose(double timeSinceLastFrame)
     }
 
     // The ratio changes by 4 per second at most, so a step between two tile types takes a fraction of a second
-    double maxStep = std::max(0.0, timeSinceLastFrame) * 4.0;
+    double maxStep = std::max(0.0, timeSinceLastFrame) * TILE_SPEED_RATIO_MAX_CHANGE_PER_SECOND;
     double diff = target - mClientTileSpeedRatio;
     if(std::abs(diff) <= maxStep)
         mClientTileSpeedRatio = target;
@@ -2556,12 +2622,12 @@ double Creature::getClientPoseSpeedFactor() const
     if(getAnimationStateName() == EntityAnimation::idle_anim)
     {
         // Hurt creatures breathe a little slower when they stand
-        if(mOverlayHealthValue >= 6)
-            factor = 0.78;
-        else if(mOverlayHealthValue == 5)
-            factor = 0.85;
-        else if(mOverlayHealthValue == 4)
-            factor = 0.92;
+        if(mOverlayHealthValue >= IDLE_BREATH_STAGE_HEAVY)
+            factor = IDLE_BREATH_FACTOR_HEAVY;
+        else if(mOverlayHealthValue == IDLE_BREATH_STAGE_MEDIUM)
+            factor = IDLE_BREATH_FACTOR_MEDIUM;
+        else if(mOverlayHealthValue == IDLE_BREATH_STAGE_LIGHT)
+            factor = IDLE_BREATH_FACTOR_LIGHT;
     }
     else
     {
@@ -2994,7 +3060,9 @@ void Creature::importActivityFromPacket(ODPacket& is)
     if(!activity.known)
         return;
 
-    int32_t action, task, room;
+    int32_t action = 0;
+    int32_t task = 0;
+    int32_t room = 0;
     if(!(is >> action >> task >> room >> activity.inAssignedRoom))
     {
         OD_LOG_ERR("Incomplete creature activity for " + getName());
@@ -3399,8 +3467,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     page->getChild("FromText")->setText("From: " + profile.mHometown);
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
-    std::vector<std::string> likes(profile.mLikes, profile.mLikes + 2);
-    std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + 2);
+    std::vector<std::string> likes(profile.mLikes, profile.mLikes + PROFILE_LIST_SIZE);
+    std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + PROFILE_LIST_SIZE);
     page->getChild("LikesText")->setText("Likes: " + joinProfileList(likes));
     page->getChild("DislikesText")->setText("Dislikes: " + joinProfileList(dislikes));
     // Remarks that match the parts of the picture, only for the composed picture
@@ -3482,6 +3550,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
             cachedFriends = cache.findFriendsAndFoe(getName(), rosterVersion);
         }
     }
+    if(cachedFriends == nullptr)
+        return gui.layoutCreatureProfilePage(page);
     // Each name is a button of its own, so no name is cut off; the label shares the first line with the first name
     std::size_t nbFriendLinks = 0;
     for(std::size_t i = 0; (i < cachedFriends->mFriends.size()) && (nbFriendLinks < PROFILE_MAX_FRIENDS); ++i)
@@ -3842,7 +3912,9 @@ void Creature::reportLeavingToBestFriend()
 
     int32_t chance = isPartner ? relationships->getSettings().mLeavePartnerChancePercent :
         relationships->getSettings().mLeaveTogetherChancePercent;
-    if(Random::Int(0, 99) >= chance)
+    // The chance is in percent: a roll from 0 to 99 below it succeeds
+    const int32_t maxPercentRoll = 99;
+    if(Random::Int(0, maxPercentRoll) >= chance)
         return;
 
     OD_LOG_INF("creature=" + friendCreature->getName() + " leaves its dungeon together with its " +
@@ -4952,7 +5024,7 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
     {
         Tile* myTile = getPositionTile();
         Tile* carrierTile = carrier->getPositionTile();
-        double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryRadius", 8.0);
+        double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryRadius", WOUNDED_CARRY_RADIUS_DEFAULT);
         if((myTile == nullptr) || (carrierTile == nullptr) ||
            (Pathfinding::squaredDistanceTile(*myTile, *carrierTile) > (radius * radius)))
         {
@@ -4961,7 +5033,7 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 
         // The priority against the other things a worker can carry is configurable:
         // 0 = lowest, 1 = like gold, 2 = like a creature knocked out to death
-        int32_t priority = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryPriority", 1.0));
+        int32_t priority = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryPriority", WOUNDED_CARRY_PRIORITY_DEFAULT));
         if(priority <= 0)
             return EntityCarryType::woundedCreature;
         if(priority == 1)
@@ -4982,12 +5054,12 @@ bool Creature::isWoundedForBedCarry() const
 
     ConfigManager& config = ConfigManager::getSingleton();
     // 0 percent switches the whole behaviour off
-    double hpPercent = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryHpPercent", 35.0);
-    if((hpPercent <= 0.0) || (getMaxHp() <= 0.0) || ((getHP() * 100.0) >= (getMaxHp() * hpPercent)))
+    double hpPercent = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryHpPercent", WOUNDED_CARRY_HP_PERCENT_DEFAULT);
+    if((hpPercent <= 0.0) || (getMaxHp() <= 0.0) || ((getHP() * PERCENT_FACTOR) >= (getMaxHp() * hpPercent)))
         return false;
 
     // A creature knocked out for a while may be carried too, unless the config says no
-    if((mKoTurnCounter != 0) && (config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryTempKo", 1.0) <= 0.0))
+    if((mKoTurnCounter != 0) && (config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryTempKo", WOUNDED_CARRY_TEMP_KO_DEFAULT) <= 0.0))
         return false;
 
     // Creatures knocked out to death are handled by isKoToDeathForBedPull
@@ -5013,7 +5085,7 @@ bool Creature::isWoundedForBedCarry() const
         return false;
     }
 
-    double enemyRadius = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", 6.0);
+    double enemyRadius = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT);
     return !isHostileNear(enemyRadius);
 }
 
@@ -5041,7 +5113,7 @@ bool Creature::isKoToDeathForBedPull() const
     if(!hasOwnBedInDormitory())
         return false;
 
-    double enemyRadius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", 6.0);
+    double enemyRadius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT);
     return !isHostileNear(enemyRadius);
 }
 
@@ -5111,7 +5183,7 @@ void Creature::notifyDragEnd()
 
     // The pause before it can be pulled again, whatever the end of the drag was
     // (a creature knocked out to death has its own, usually longer, pause)
-    double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", 150.0);
+    double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", WOUNDED_CARRY_COOLDOWN_DEFAULT);
     if(mKoTurnCounter < 0)
         cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedKoDeathCooldown", 150.0);
     mWoundedCarryNextTurn = getGameMap()->getTurnNumber() + static_cast<int64_t>(std::max(0.0, cooldown));
@@ -5840,7 +5912,7 @@ void Creature::addCasinoMood(double points)
 
 void Creature::addPitMood(double points)
 {
-    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodMax", 1500.0);
+    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodMax", DEFAULT_PIT_MOOD_MAX);
     mPitMood = std::max(-maxPoints, std::min(maxPoints, mPitMood + points));
 }
 
@@ -5861,7 +5933,7 @@ bool Creature::isHatedCompanyNear() const
         return false;
 
     bool isGood = isGoodAligned();
-    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatedCompanyRadius", 5.0);
+    double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatedCompanyRadius", DEFAULT_HATED_COMPANY_RADIUS);
     double squaredRadius = radius * radius;
     const std::vector<Creature*>& creatures = getGameMap()->getCreatures();
     for(Creature* other : creatures)
@@ -6804,7 +6876,7 @@ bool Creature::handleChampionIdle()
     uint32_t nbTries = 0;
     for(const std::pair<int, Tile*>& target : targets)
     {
-        if(nbTries >= 5)
+        if(nbTries >= MAX_PATH_CHECK_TARGET_TRIES)
             break;
         ++nbTries;
 
@@ -6849,7 +6921,7 @@ void Creature::endPossession()
     player->setPossessedCreatureName(std::string());
     // Whether the creature fell (dead, knocked out or gone), so the client does not have to guess it
     const bool lost = !isAlive() || isKo() || !getIsOnMap();
-    endParticleEffectsByScript("SpellCreaturePossess");
+    endParticleEffectsByScript(POSSESSION_AURA_SCRIPT);
     // The aura is permanent on the clients and a refresh never removes an effect that is missing from it. The turn
     // deletes the ended effect before the refresh of the turn is built, so the clients are told now, while the effect
     // is still there with no turns left
@@ -6957,7 +7029,7 @@ bool Creature::followPossessionLeader()
         return true;
 
     // The creature stays around the leader. If it is further than 3 tiles, it walks to him
-    if(Pathfinding::squaredDistanceTile(*myTile, *leaderTile) <= 9)
+    if(Pathfinding::squaredDistanceTile(*myTile, *leaderTile) <= POSSESSION_GROUP_MAX_SQUARED_DISTANCE)
         return true;
 
     if(!getGameMap()->pathExists(this, myTile, leaderTile))
@@ -6983,7 +7055,7 @@ void Creature::possessedMove(const Ogre::Vector2& direction)
     Ogre::Vector2 position(mPosition.x, mPosition.y);
     Ogre::Vector2 destination = position;
     bool canMove = false;
-    if(direction.squaredLength() > 0.0001f)
+    if(direction.squaredLength() > POSSESSION_MIN_DIRECTION_SQUARED_LENGTH)
     {
         Ogre::Vector2 dir = direction;
         dir.normalise();
@@ -7019,6 +7091,8 @@ bool isPossessedBasicAttack(const CreatureSkill& skill)
 
 //! \brief Tells whether a possessed creature can use the skill now: no cooldown (including a fraction of a
 //! turn) and no warmup left, and the skill is usable by the creature.
+//! \param creature The possessed creature that wants to use the skill.
+//! \param skillData The state of the skill (cooldown and warmup turns left).
 bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
 {
     return (skillData.mCooldown <= 0.0) && (skillData.mWarmup == 0) &&
@@ -7035,7 +7109,7 @@ bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkill
     if(myTile == nullptr)
         return false;
 
-    if(aim.squaredLength() < 0.0001f)
+    if(aim.squaredLength() < POSSESSION_MIN_AIM_SQUARED_LENGTH)
         return false;
 
     Ogre::Vector2 aimDir = aim;
@@ -7080,7 +7154,7 @@ bool Creature::possessedFindTarget(const Ogre::Vector2& aim, const CreatureSkill
 
             Ogre::Vector2 toTile(tile->getX() - mPosition.x, tile->getY() - mPosition.y);
             Ogre::Real dist = toTile.length();
-            if(dist > 0.5f)
+            if(dist > POSSESSION_AIM_MIN_DISTANCE)
             {
                 toTile /= dist;
                 if(toTile.dotProduct(aimDir) < minCos)

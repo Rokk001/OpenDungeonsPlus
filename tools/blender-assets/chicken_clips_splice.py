@@ -21,9 +21,10 @@ def blocks(text):
 
 def structure(path):
     root = ET.parse(path).getroot()
-    bones = [(b.get("id"), b.get("name"), tuple(sorted(b.find("position").attrib.items())),
+    # OGRE 14 writes no id attribute; the bone index is then the order in the file.
+    bones = [(b.get("id", str(index)), b.get("name"), tuple(sorted(b.find("position").attrib.items())),
               tuple(sorted(b.find("rotation").find("axis").attrib.items())), b.find("rotation").get("angle"))
-             for b in root.find("bones").findall("bone")]
+             for index, b in enumerate(root.find("bones").findall("bone"))]
     return bones, [(h.get("bone"), h.get("parent")) for h in root.find("bonehierarchy").findall("boneparent")]
 
 

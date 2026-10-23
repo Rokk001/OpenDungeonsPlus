@@ -207,18 +207,18 @@ void ODFrameListener::requestRenderWindowRecreation(
     mRenderWindowRecreationPending = true;
 }
 
-void ODFrameListener::restorePreviousVideoSettings()
+void ODFrameListener::restoreVideoSettings(const std::map<std::string, std::string>& rendererOptions,
+    const std::map<std::string, std::string>& videoConfig)
 {
     Ogre::RenderSystem* renderer = Ogre::Root::getSingleton().getRenderSystem();
-    std::map<std::string, std::string>::const_iterator fullscreen =
-        mPreviousRendererOptions.find(Config::FULL_SCREEN);
-    if(fullscreen != mPreviousRendererOptions.end())
+    // The full screen flag and the video mode go first because other options depend on them.
+    std::map<std::string, std::string>::const_iterator fullscreen = rendererOptions.find(Config::FULL_SCREEN);
+    if(fullscreen != rendererOptions.end())
         renderer->setConfigOption(fullscreen->first, fullscreen->second);
-    std::map<std::string, std::string>::const_iterator videoMode =
-        mPreviousRendererOptions.find(Config::VIDEO_MODE);
-    if(videoMode != mPreviousRendererOptions.end())
+    std::map<std::string, std::string>::const_iterator videoMode = rendererOptions.find(Config::VIDEO_MODE);
+    if(videoMode != rendererOptions.end())
         renderer->setConfigOption(videoMode->first, videoMode->second);
-    for(const std::pair<const std::string, std::string>& option : mPreviousRendererOptions)
+    for(const std::pair<const std::string, std::string>& option : rendererOptions)
     {
         if(option.first == Config::FULL_SCREEN || option.first == Config::VIDEO_MODE)
             continue;
@@ -226,9 +226,14 @@ void ODFrameListener::restorePreviousVideoSettings()
     }
 
     ConfigManager& config = ConfigManager::getSingleton();
-    for(const std::pair<const std::string, std::string>& option : mPreviousVideoConfig)
+    for(const std::pair<const std::string, std::string>& option : videoConfig)
         config.setVideoValue(option.first, option.second);
     config.saveUserConfig();
+}
+
+void ODFrameListener::restorePreviousVideoSettings()
+{
+    restoreVideoSettings(mPreviousRendererOptions, mPreviousVideoConfig);
     mPreviousRendererOptions.clear();
     mPreviousVideoConfig.clear();
 }
@@ -530,10 +535,11 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     return true;
 }
 
-void ODFrameListener::renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& invocation,
+void ODFrameListener::renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& cameraName,
     bool&)
 {
-    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI && invocation.empty())
+    // Ogre 14 passes the camera name here; shadow-texture passes are detected via the render stage (was invocation == "SHADOWS" in Ogre 13).
+    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI && mRenderManager->getSceneManager()->_getCurrentRenderStage() != Ogre::SceneManager::IRS_RENDER_TO_TEXTURE)
     {
         Ogre::Root::getSingleton().getRenderSystem()->clearFrameBuffer(Ogre::FBT_DEPTH);
         CEGUI::System::getSingleton().renderAllGUIContexts();

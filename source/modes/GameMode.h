@@ -161,19 +161,24 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Shows the Dungeonbook above the other windows with the creature selected, used by the
     //! creature card (the card stays open)
     void showSocialWindow(const std::string& selectedCreature);
-    //! \brief Sandbox panel: toggles the window, changes the level of the heroes (left click up,
-    //! right click down), takes a hero in the hand and starts hero invasions
+    //! \brief Sandbox panel: shows or hides the window
     bool toggleSandboxWindow(const CEGUI::EventArgs& = {});
+    //! \brief Sandbox panel: hides the window
     bool hideSandboxWindow(const CEGUI::EventArgs& = {});
+    //! \brief Sandbox panel: changes the level of the heroes (left click up, right click down)
     bool onSandboxHeroLevelClicked(const CEGUI::EventArgs& e);
+    //! \brief Sandbox panel: asks the server for the selected hero at the chosen level in the hand
     bool takeSandboxHero(const CEGUI::EventArgs& = {});
+    //! \brief Sandbox panel: asks the server for a single hero wave
     bool startSandboxSingleInvasion(const CEGUI::EventArgs& = {});
+    //! \brief Sandbox panel: asks the server for all hero waves one after the other
     bool startSandboxContinualInvasion(const CEGUI::EventArgs& = {});
     //! \brief Shows the score and the room timer the server sent (on the HUD and in the sandbox window) and
     //! opens the prompt when the server tells that the realm is complete
     void updateSandboxStatus();
     //! \brief The prompt after a completed realm: leave for the next realm, or stay in this one
     bool onSandboxNextRealm(const CEGUI::EventArgs& = {});
+    //! \brief Stays in the current realm: closes the realm prompt window and keeps playing.
     bool onSandboxStay(const CEGUI::EventArgs& = {});
 
     //! \brief Shows/hides/toggles the player settings window
@@ -200,6 +205,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool unselectAllSkillWindow(const CEGUI::EventArgs& = {});
     bool autoFillSkillWindow(const CEGUI::EventArgs& = {});
     void closeSkillWindow(bool saveSkill);
+    //! \brief Shows the data received from the server in the production window and keeps
+    //! the selected order selected.
     void refreshTrapProductionQueue(const TrapProductionData& data);
 
     //! \brief Entry point of the defeat sequence, called once when the server reports that the local
@@ -221,8 +228,12 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool showOptionsWindow(const CEGUI::EventArgs& = {});
     bool hideOptionsWindow(const CEGUI::EventArgs& = {});
     bool toggleOptionsWindow(const CEGUI::EventArgs& = {});
+    //! \brief Closing the options window goes back from the end game page, otherwise hides it.
     bool closeOptionsWindow(const CEGUI::EventArgs& = {});
+    //! \brief Switches the options window to the end game page.
     bool showEndGameFromOptions(const CEGUI::EventArgs& = {});
+    //! \brief Shows the buttons of the end game page (true) or of the options page (false).
+    //! \param endGame True to show the end game page, false to show the normal options page.
     void setOptionsPage(bool endGame);
     bool toggleControlPanel(const CEGUI::EventArgs& = {});
 
@@ -240,6 +251,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void unselectAllTiles() override;
 
     void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
+    //! \brief Displays the text next to the pointer (for example a price) rather than in the context line.
     void displayPointerText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
 
     //! \brief Called when the skill window is displayed. This function will call the Seat to get
@@ -279,21 +291,38 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void notifyPossessionEnded();
 
 protected:
+    //! \brief Leaves the game: starts the level again when that was asked, to the desktop, to the campaign menu while a campaign level is played, otherwise to the main menu
     bool onClickYesQuitMenu(const CEGUI::EventArgs& /*arg*/);
 
-    //! \brief The different Game Options Menu handlers
+    //! \brief The different Game Options Menu handlers.
+    //! showQuitMenuFromOptions asks for confirmation before leaving the game to the main menu.
     bool showQuitMenuFromOptions(const CEGUI::EventArgs& e = {});
     //! \brief Options menu handler that marks the exit as a level restart (not a quit) and opens the exit confirmation popup
     //! \param e CEGUI event arguments, not used
     //! \return true, the event was handled
     bool showRestartLevelFromOptions(const CEGUI::EventArgs& e = {});
+    //! \brief Asks for confirmation before the application is closed.
     bool showExitApplicationFromOptions(const CEGUI::EventArgs& e = {});
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
     bool saveGame(const CEGUI::EventArgs& e = {});
+    //! \brief Opens the saved game browser on top of the running game.
     bool loadGame(const CEGUI::EventArgs& e = {});
     bool showSettingsFromOptions(const CEGUI::EventArgs& e = {});
+    //! \brief Connects the buttons of the settings navigation window.
     void initializeSettingsNavigation();
+    //! \brief Closes the modal settings navigation window.
+    bool closeSettingsNavigation(const CEGUI::EventArgs& e = {});
+    //! \brief Opens the settings page named like the clicked navigation button.
+    bool openSettingsNavigationPage(const CEGUI::EventArgs& e);
+    //! \brief Opens the camera list from the settings navigation window.
+    bool openSettingsNavigationCameras(const CEGUI::EventArgs& e);
+    //! \brief Closes the settings navigation window and returns to the options window.
+    bool backFromSettingsNavigation(const CEGUI::EventArgs& e);
+    //! \brief Shows the settings navigation window again when a page opened from it was closed.
+    bool returnToSettingsNavigation(const CEGUI::EventArgs& e);
+    //! \brief Brings a dialog that was just shown above the HUD and older dialogs.
+    bool raiseShownDialog(const CEGUI::EventArgs& e);
 
     //! \brief Handle the keyboard input in normal mode
     virtual bool keyPressedNormal   (const OIS::KeyEvent &arg);
@@ -309,27 +338,47 @@ private:
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::unique_ptr<SocialWindow> mSocialWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
+    //! \brief Creates, updates and places the held creature portraits.
     void refreshHeldCreatureIcons();
     //! \brief Label next to the hand showing the width x height of the area being dragged
     CEGUI::Window* mSelectionSizeLabel = nullptr;
     void refreshSelectionSizeLabel();
+    //! \brief Event messages stay until the player dismisses them.
     bool shouldExpireEventMessages() const override { return false; }
+    //! \brief Opens the message window without a selected message.
     void showEventMessages();
+    //! \brief Shows the text of the message and marks it as read.
+    //! \param raiseWindow Whether the message window is brought in front of the other windows.
     void showEventMessage(EventMessage* message, bool raiseWindow);
+    //! \brief Removes the message and its tab and deletes the message.
     void dismissEventMessage(EventMessage* message);
+    //! \brief Right-clicking a message tab dismisses its message.
     bool onEventMessagesClicked(const CEGUI::EventArgs& arg);
+    //! \brief Left-clicking a message tab shows its message. The message is the user data of the tab.
+    bool onEventMessageTabClicked(const CEGUI::EventArgs& arg);
+    bool onEventCloseClicked(const CEGUI::EventArgs& arg);
+    bool onEventDismissClicked(const CEGUI::EventArgs& arg);
+    //! \brief Slides the message tabs into place, hides those that do not fit and blinks the unread ones.
+    //! \param elapsed Time since the last call in seconds.
     void updateEventMessageIndicator(float elapsed);
+    //! \brief A pending event message and the tab that presents it in the message queue.
     struct MessageTab
     {
         EventMessage* message;
         CEGUI::Window* window;
+        //! \brief Whether the player has opened the message.
         bool read;
+        //! \brief Left edge of the tab in queue heights, or -1 while it is not placed yet.
         float position;
     };
+    //! \brief The pending messages in the order received.
     std::vector<MessageTab> mMessageTabs;
+    //! \brief The message shown in the message window, or nullptr.
     EventMessage* mSelectedEventMessage = nullptr;
+    //! \brief Time within the blink period of the unread message tabs, in seconds.
     float mEventMessageFlashTime = 0.0f;
 
+    //! \brief The saved game browser shown on top of the game, created on first use.
     std::unique_ptr<MenuModeLoad> mLoadMenu;
     //! \brief Whether the pending exit confirmation should leave to the desktop
     //! rather than back to the main menu. Set by the button that opened the
@@ -348,9 +397,13 @@ private:
     //! this value is based on the first marked flag tile selected.
     bool mDigSetBool;
 
+    //! \brief Explanation of the current target shown in the context line.
     std::string mActionTargetText;
+    //! \brief Whether the current action can be executed on the current target.
     bool mActionTargetValid = false;
+    //! \brief Tiles the current action would affect, collected while checking the input.
     std::vector<Tile*> mPreviewTiles;
+    //! \brief Tiles currently outlined in the world.
     std::vector<Tile*> mSelectedTiles;
 
     //! \brief Index of the event in the game event queue (for zooming automatically)
@@ -358,6 +411,8 @@ private:
 
     //! \brief The settings window.
     SettingsWindow mSettings;
+    //! \brief True while a settings page or the camera list was opened from the settings
+    //! navigation window, so that closing it shows the navigation window again.
     bool mReturningToSettingsNavigation = false;
 
     //! \brief The level of the heroes taken from the sandbox hero toolbox
@@ -391,6 +446,7 @@ private:
     //! \brief Pointer movement in pixels since the middle button was pressed. A middle click that moved
     //! is a camera rotation and must not open a stats window.
     float mMiddleDragDistance;
+    //! \brief Pointer position in pixels where the middle button went down
     float mMiddlePressX;
     float mMiddlePressY;
 
@@ -409,6 +465,7 @@ private:
     void handleMouseWheel(const MouseWheelEvent& arg);
 
     //! \brief Set the state of the given skill button accordingly to the skill type given.
+    //! The cast button is shown only once the skill has been researched at least to level 1.
     //! \note: Called by refreshGuiSkill() for each skillType.
     void refreshSkillButtonState(const std::string& skillButton, const std::string& castButton,
         const std::string& skillProgressBar, SkillType resType);
@@ -418,10 +475,20 @@ private:
     bool isMouseDownOnCEGUIWindow();
     bool isMouseWheelOnCEGUIWindow();
 
+    //! \brief Reads the held camera keys and the mouse position (edge scrolling) once per frame
+    //! and hands them to the camera. Adjusts the user view while the user camera window is open.
     void updateCameraControls(float elapsed) override;
+
+    //! \brief Opens the window to define a user camera.
     bool showUserCameras(const CEGUI::EventArgs& = {});
+
+    //! \brief Closes the window to define a user camera.
     bool closeUserCameras(const CEGUI::EventArgs& = {});
+
+    //! \brief Selects the user camera whose button was clicked and shows its stored view.
     bool selectUserCamera(const CEGUI::EventArgs&);
+
+    //! \brief Stores the current view in the selected user camera.
     bool storeUserCamera(const CEGUI::EventArgs&);
     //! \brief The player pressed the button of a stored special: asks the server to use it
     bool useSpecial(const CEGUI::EventArgs& args);
@@ -429,6 +496,7 @@ private:
     void refreshSpecialButtons();
     //! \brief The number of stored specials the buttons show, indexed by gift box type
     std::vector<uint32_t> mSpecialCountsShown;
+    //! \brief The user camera (0 to 2) the window to define user cameras edits.
     unsigned int mUserCameraSlot = 0;
 
     //! Restarts the inactivity timer and stops a running idle hand effect; called on every input event.
@@ -441,27 +509,53 @@ private:
     //! Keys currently held down, so that a held key counts as input even without repeat events.
     std::set<OIS::KeyCode> mIdleHandKeys;
 
+    //! \brief Closes every open GUI layer, topmost first.
+    void closeAllTopWindows();
     bool showTrapProductionQueue(const CEGUI::EventArgs& = {});
     bool closeTrapProductionQueue(const CEGUI::EventArgs& = {});
+    //! \brief Enables the move buttons according to the selected order.
     bool updateTrapProductionButtons(const CEGUI::EventArgs& = {});
+    //! \brief Asks the server to move the selected order one place earlier or later.
     bool moveTrapProductionOrder(bool earlier);
+    //! \brief Button handlers: ask the server to move the selected order before or after its neighbour.
+    bool moveTrapProductionOrderEarlier(const CEGUI::EventArgs&);
+    bool moveTrapProductionOrderLater(const CEGUI::EventArgs&);
+    //! \brief Asks the server for the production data, unless a request is still open.
     void requestTrapProductionQueue();
+    //! The last data received from the server. The ids of the list items in the window
+    //! are indices into mTrapProductionData.orders.
     TrapProductionData mTrapProductionData;
+    //! Seconds since the last request while the production window is open.
     float mProductionRefreshElapsed = 0.0f;
+    //! True from sending a request until the server answer is shown.
     bool mProductionRequestPending = false;
 
+    //! \brief Opens the full map window, or closes it when it is already open.
     bool toggleMap(const CEGUI::EventArgs& = {});
+    //! \brief Closes the full map window and restores the regular minimap.
     bool closeMap(const CEGUI::EventArgs& = {});
+    //! \brief Left click on the full map moves the camera there, right click closes the map.
     bool clickMap(const CEGUI::EventArgs&);
+    //! \brief Left click on the minimap zoom button zooms in, right click zooms out.
     bool zoomMiniMap(const CEGUI::EventArgs&);
     bool clickHeartBadge(const CEGUI::EventArgs&);
     //! \brief Sets the tooltip of the time limit display: a script countdown or a time limit
     void updateTimeLimitTooltip(bool isCountdown);
+    //! \brief Shows a detail view of the map area under the mouse cursor while the full map is open.
     void updateMapDetail();
+    //! \brief Moves the camera to a room of the given type owned by the local player.
     void focusRoom(RoomType type);
+    //! \brief Right-clicking the build button of a room focuses the next room of that type.
+    //! The type is stored as the window id of the button.
+    void connectRoomButton(RoomType type, const std::string& buttonName);
+    bool onRoomButtonClicked(const CEGUI::EventArgs& args);
+    //! \brief The full map shown while the map window is open, nullptr otherwise.
     std::unique_ptr<MiniMapDrawnFull> mFullMap;
+    //! \brief Zoom level of the minimap before the map window was opened.
     int mSavedMiniMapZoom = 0;
+    //! \brief Per room type, the index of the room the camera jumped to last.
     std::map<RoomType, size_t> mRoomFocusIndices;
+    //! \brief True while the map key is held, so that key repeat does not toggle the map again.
     bool mMapKeyDown = false;
 
 
@@ -510,8 +604,14 @@ private:
 
     //! \brief Called when there is a mouse input change
     void checkInputCommand();
+    //! \brief Handles the hover when no action is selected: unexplored tiles get a dig hint, otherwise
+    //! the closest pickable entity or the wall or ground under the pointer is described.
     void handlePlayerActionNone();
+    //! \brief Handles the dig-mark selection drag: previews the diggable tiles and, once validated,
+    //! asks the server to mark or unmark them for digging.
     void handlePlayerActionSelectTile();
+    //! \brief Selects the given action, or deselects it when it is already the current one.
+    void toggleSelectedAction(SelectedAction action);
     //! \brief Button handler: switches the query mode (SelectedAction::queryEntity) on or off.
     //! While it is on, the next click shows information about the pointed entity instead of
     //! selecting tiles. Does nothing when not connected or while the game is paused.
@@ -524,15 +624,28 @@ private:
     //! pointer and, once the click is validated, opens its stats window.
     void handlePlayerActionQuery();
     bool toggleSell(const CEGUI::EventArgs& e);
+    //! \brief Shows what selling the room or trap on the hovered tile gives, and sells it on validation.
     void handlePlayerActionSell();
     //! \brief Draws eligible selection borders without including invalid room tiles.
     void updateSelectedTiles();
+    //! \brief Scale of the hand feedback (action icon, pointer text, held portraits) relative to its design size.
+    float getHandFeedbackScale() const;
+    //! \brief Highlights the given creature and restores the previously highlighted one.
+    void setHighlightedCreature(Creature* creature);
 
+    //! \brief Asks the server to drop the pending hand entity on the pending tile or, if
+    //! dropAllCreatures is set and every held creature can be dropped there, all held
+    //! creatures at once. Falls back to the plain action when no request can be sent.
     void sendPendingHandDropRequest(bool dropAllCreatures);
+    //! True while the right mouse button is held after a drop was started. The drop is
+    //! sent on release, or for all creatures once the button is held long enough.
     bool mPendingHandDrop = false;
+    //! Seconds the right mouse button has been held for the pending drop.
     float mPendingHandDropTime = 0.0f;
+    //! Tile coordinates of the pending drop.
     int mPendingHandDropX = -1;
     int mPendingHandDropY = -1;
+    //! Type (as GameEntityType) and name of the first held entity when the drop started.
     int32_t mPendingHandDropEntityType = 0;
     std::string mPendingHandDropEntityName;
 
@@ -559,7 +672,8 @@ private:
     void showDefeatDebriefing();
     //! Fills the hidden statistics area of the debriefing with the rows and shows it (nothing for no rows)
     void fillDefeatStatistics(const std::vector<DebriefingTableRow>& rows);
-    //! The confirm button of the debriefing: leaves to the main menu with the skirmish sub-menu open
+    //! The confirm button of the debriefing: leaves to the campaign menu while a campaign level is played, otherwise to the
+    //! main menu with the skirmish sub-menu open
     bool onClickDefeatDebriefingConfirm(const CEGUI::EventArgs& arg);
     //! \brief Hides every window of the game interface except the ones of the defeat sequence
     void hideInterfaceForDefeat();

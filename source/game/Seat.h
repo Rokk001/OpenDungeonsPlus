@@ -221,7 +221,8 @@ public:
 
     void setDraggableMapSize(int x, int y);
     
-    //! \brief Returns the next fighter creature class to spawn.
+    //! \brief Returns the next fighter creature class to spawn. Classes that reached the limit set in the
+    //! skirmish game settings are skipped.
     const CreatureDefinition* getNextFighterClassToSpawn(const GameMap& gameMap, const ConfigManager& configManager );
 
     //! \brief Announces the first actual arrival of each class, once per seat.
@@ -279,6 +280,8 @@ public:
     void notifyOwnCreatureVision(Tile* tile);
 
     //! \brief Records visibility and starts the fog deadline once on first discovery from any source.
+    //! \param tile The tile that is seen.
+    //! \param nt Tells whether the tile belongs to the map tiles or to a draggable tile container.
     void notifyVisionOnTile(Tile* tile, NodeType nt);
     void notifyTileClaimedByEnemy(Tile* tile);
     void clearVisionForGameMap(DraggableTileContainer* dtc);

@@ -20,6 +20,13 @@ probe = r'''
 namespace Helper {template<class T>std::string toString(T v){std::ostringstream s;s<<v;return s.str();}}
 #define OD_LOG_ERR(x) do {} while(false)
 SOURCE
+//! Whether back is drawn behind front: lower Z-order, or the same Z-order and an earlier position in their container
+bool drawsBehind(Ogre::OverlayElement* back,Ogre::OverlayElement* front){
+ if(back->getZOrder()!=front->getZOrder())return back->getZOrder()<front->getZOrder();
+ const Ogre::OverlayContainer::ChildMap& children=static_cast<Ogre::OverlayContainer*>(front->getParent())->getChildren();
+ for(Ogre::OverlayContainer::ChildMap::const_iterator it=children.begin();it!=children.end();++it){
+  if(it->second==back)return true;if(it->second==front)return false;}
+ return false;}
 int main(int argc,char** argv){try{
  Ogre::Root root("","","caption-outline.log");root.loadPlugin(std::string(argv[2])+"/bin/RenderSystem_GL3Plus");
  root.setRenderSystem(root.getAvailableRenderers().front());root.initialise(false);
@@ -55,7 +62,9 @@ int main(int argc,char** argv){try{
     check(edge->getParameter("char_height")==main->getParameter("char_height"),"one- and two-digit sizes stay synchronized");
     const float dx=i==0?-.75f:i==1?.75f:0,dy=i==2?-.75f:i==3?.75f:0;
     check(std::abs(edge->getLeft()-main->getLeft()-dx)<.0001f&&std::abs(edge->getTop()-main->getTop()-dy)<.0001f,"outline stays subpixel-centred around glyph");
-    check(edge->getZOrder()<main->getZOrder(),"outline renders behind the light foreground");
+    // OGRE 14 gives all children of a container the same Z-order and queues them in container order (stable sort), so
+    // an element is drawn behind another when its Z-order is lower or equal with an earlier position in the container.
+    check(drawsBehind(edge,main),"outline renders behind the light foreground");
    }
   }
   auto mood=label.createChildOverlay("MedievalSharp",16,Ogre::ColourValue::White,"",false);
@@ -103,7 +112,7 @@ int main(int argc,char** argv){try{
 with tempfile.TemporaryDirectory(prefix='odp-caption-outline-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14', f'/I{repo / "source"}',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', f'/I{repo / "source"}',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreOverlay.lib'], cwd=work, check=True)
     if args.compile_only:

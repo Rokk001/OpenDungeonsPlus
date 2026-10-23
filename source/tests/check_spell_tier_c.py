@@ -71,9 +71,9 @@ if "stopAll" in ambience and "clearShake();" not in ambience[ambience.index("voi
 client = read("source", "network", "ODClient.cpp")
 end = client[client.index("case ServerNotificationType::possessionEnd:"):]
 end = end[:end.index("default:")]
-if "SpellFxPossessEnd" not in end or "displayText" not in end:
+if "POSSESSION_END_EVENT" not in end or 'POSSESSION_END_EVENT = "SpellFxPossessEnd"' not in client or "displayText" not in end:
     problems.append("possessionEnd shows no effect or message")
-if end.index("SpellFxPossessEnd") > end.index("setPossessedCreatureName"):
+if end.index("POSSESSION_END_EVENT") > end.index("setPossessedCreatureName"):
     problems.append("the effect must be raised before the possessed name is cleared")
 
 # 5. Config events, textures, materials, credits

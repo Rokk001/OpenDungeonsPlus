@@ -42,9 +42,7 @@ int main(int argc,char** argv){try{
  Ogre::ResourceGroupManager& groups=Ogre::ResourceGroupManager::getSingleton();groups.createResourceGroup("Graphics");
  for(const char* dir:{"models","materials/textures","materials/scripts","shaders","particles"})groups.addResourceLocation(repo+"/"+dir,"FileSystem","Graphics",true);
  groups.addResourceLocation(prefix+"/Media/Main","FileSystem","OgreInternal");
- groups.addResourceLocation(prefix+"/Media/Main","FileSystem","Graphics");
- groups.addResourceLocation(prefix+"/Media/RTShaderLib/GLSL","FileSystem","OgreInternal");
- groups.addResourceLocation(prefix+"/Media/RTShaderLib/GLSL","FileSystem","Graphics");
+ groups.addResourceLocation(prefix+"/Media/RTShaderLib","FileSystem","Graphics");
  Ogre::RTShader::ShaderGenerator::initialize();Ogre::RTShader::ShaderGenerator* generator=Ogre::RTShader::ShaderGenerator::getSingletonPtr();
  groups.initialiseAllResourceGroups();
  OgreBites::SGTechniqueResolverListener listener(generator);Ogre::MaterialManager::getSingleton().addListener(&listener);
@@ -145,7 +143,7 @@ int main(int argc,char** argv){try{
 with tempfile.TemporaryDirectory(prefix='odp-crypt-render-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++14',
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{prefix / "include/OGRE"}', f'/I{prefix / "include/OGRE/RTShaderSystem"}',
                     'check.cpp', '/Fecheck.exe', '/link',
                     f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib', 'OgreRTShaderSystem.lib',

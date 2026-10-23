@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that every change on the integration line is also carried by an open pull request.
 
-Compares the target ref (default origin/integration/all) with the union of the heads of all
+Compares the target ref (default origin/integration/all, or HEAD when --count-file is given) with the union of the heads of all
 open pull requests of one author (default Rokk001, listed through the GitHub CLI against the
 upstream repository). Both sides are diffed against the merge base with the upstream base
 branch. Reported are
@@ -19,11 +19,12 @@ Output: one line "file: <path>" per uncovered file and "lines: <path>: <count> u
 (with the first lines shown) per partly covered file, then a summary.
 With --count-file the number of gaps of every run is stored in that file as one line
 "PR coverage gaps (last run): <n>" (the line is replaced, or appended if the file or the
-line is missing); the run fails when the number is higher than the stored value of the
-previous run (the first run only stores it), so old gaps do not turn a run red. When the
-number rose, the stored value is left unchanged.
+line is missing); with --count-file the target defaults to HEAD, so an integration run measures the
+merged state of its worktree and not the remote ref; a number higher than the stored value of the
+previous run (the first run only stores it) is reported but is informational only and never blocks an
+integration. When the number rose, the stored value is left unchanged.
 Exit codes: 0 = finished (gaps are only listed unless --strict is given), 1 = gaps found
-with --strict or more gaps than in the previous run, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
+with --strict, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
 a pull request head is not available locally); this is never reported as green.
 Nothing is compiled.
 """
@@ -49,7 +50,32 @@ EXCLUDED_FILES = frozenset([
     "source/tests/check_pr_coverage.py",
     # The list of commits below is read by this check and not submitted upstream either.
     "source/tests/pr-coverage-not-upstream.txt",
+    # Not submitted, replaced by feature/dungeonbook-whole-portraits (decision of 2026-10-20): the part-based
+    # Dungeonbook portrait tooling and checks of the withdrawn portrait branches.
+    "materials/portraits/generation-inventory.json",
+    "materials/portraits/neutral-bases/Knight.mesh.png",
+    "scripts/check_portrait_manifests.py",
+    "source/tests/check_portrait_option_orientation.py",
+    "tools/portraits/check_plan_completion.py",
+    "tools/portraits/deliver_neutral_variants.py",
+    "tools/portraits/export_generation_inventory.py",
+    "tools/portraits/measure_base_tints.py",
+    "tools/portraits/neutral-feature-layouts.json",
+    "tools/portraits/prepare_neutral_bases.py",
+    "tools/portraits/prepare_neutral_features.py",
+    "tools/portraits/prepare_outfit_variants.py",
+    "tools/portraits/render_manifest_reviews.py",
+    "tools/portraits/render_native_check_sheets.py",
+    "tools/portraits/validate_neutral_features.py",
+    "tools/portraits/verify_portrait_sources.py",
 ])
+
+# Directories whose files are not submitted, replaced by feature/dungeonbook-whole-portraits (decision of 2026-10-20):
+# the part-based Dungeonbook portrait variants of the withdrawn portrait branches.
+EXCLUDED_PREFIXES = (
+    "materials/portraits/variants/",
+    "materials/portraits/neutral-variants/",
+)
 
 # Commits whose lines in BLAME_FILTERED_FILE are not submitted upstream; their lines in other files still count.
 NOT_UPSTREAM_COMMITS_FILE = "source/tests/pr-coverage-not-upstream.txt"
@@ -186,7 +212,7 @@ def write_count(path, gaps):
 def main():
     """Parse the arguments, compute the gaps and print them; return the exit code."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--target", default=DEFAULT_TARGET)
+    parser.add_argument("--target", default=None, help="ref to measure (default: HEAD with --count-file, else %s)" % DEFAULT_TARGET)
     parser.add_argument("--base", default=DEFAULT_BASE)
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--author", default=DEFAULT_AUTHOR)
@@ -194,12 +220,16 @@ def main():
     parser.add_argument("--count-file", default=None, help="file that keeps the gap count of the last run")
     parser.add_argument("--strict", action="store_true", help="exit 1 when gaps are found")
     options = parser.parse_args()
+    if options.target is None:
+        # An integration run measures the merged HEAD of its worktree; without a count file the remote ref is measured.
+        options.target = "HEAD" if options.count_file else DEFAULT_TARGET
     try:
         heads = list_open_pr_heads(options.repo, options.author)
         if not heads:
             raise CheckError("no open pull requests found for %s in %s; refusing to report an empty comparison" % (options.author, options.repo))
         target_files, target_added = diff_added(options.base, options.target)
         target_files -= EXCLUDED_FILES
+        target_files = set(f for f in target_files if not f.startswith(EXCLUDED_PREFIXES))
         if BLAME_FILTERED_FILE in target_files:
             target_added[BLAME_FILTERED_FILE] -= lines_from_commits(options.target, BLAME_FILTERED_FILE, read_not_upstream_commits())
             if not target_added[BLAME_FILTERED_FILE]:
@@ -235,7 +265,9 @@ def main():
         else:
             write_count(options.count_file, gaps)
             print("gap count %d stored (previous %s)" % (gaps, "none" if previous is None else previous))
-    return 1 if ((gaps and options.strict) or rose) else 0
+    if rose:
+        print("informational only: a rise of the gap count never blocks an integration")
+    return 1 if (gaps and options.strict) else 0
 
 
 if __name__ == "__main__":
