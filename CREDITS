@@ -145,6 +145,23 @@ skirmish/
 -> Wyrmhollow.level                    OD Team                 GPLv3+
 
 template.level                         OD Team                 GPLv3+
+-> CrownofEmbers.level                 Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> EmberBasin.level                    Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> FourWinds.level                     Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> KingdomsFall.level                  Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> LongWinter.level                    Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> SunkenHalls.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheBreach.level                     Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheBrokenSeal.level                 Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheEightThrones.level               Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheEndlessTide.level                Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheFourGates.level                  Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheGreatWarren.level                Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheIronCross.level                  Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheLastGate.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheSaltLake.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> TheShatteredRing.level              Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
+-> ThievesGold.level                   Francesco Bonazzi (Upabjojr)  GPLv3+                  https://github.com/tomluchowski/OpenDungeonsPlus/pull/30, AI-generated (Claude Code)
 
 
 =================================================
