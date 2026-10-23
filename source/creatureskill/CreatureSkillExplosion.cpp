@@ -20,6 +20,7 @@
 #include "creatureeffect/CreatureEffectExplosion.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
