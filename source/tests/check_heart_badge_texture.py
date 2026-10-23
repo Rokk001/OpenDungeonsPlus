@@ -219,6 +219,14 @@ if args.menu_scene:
 #include <CEGUI/widgets/ButtonBase.h>
 #include <CEGUI/widgets/FrameWindow.h>
 
+//! Sampling limits and tolerances for the authored zero-phase left firelight.
+static const Ogre::Real PROBE_FIRE_AMPLITUDE = 0.18f;
+static const Ogre::Real PROBE_FIRST_FIRE_STEP = 0.11f;
+static const Ogre::Real PROBE_SECOND_FIRE_STEP = 0.13f;
+static const Ogre::Real PROBE_FIRE_STEP = 0.05f;
+static const Ogre::Real PROBE_COLOUR_EPSILON = 0.00001f;
+static const unsigned int PROBE_FIRE_SAMPLES = 80;
+
 //! \brief Exposes the real probe camera hierarchy to the extracted production menu functions.
 class CameraManager
 {
@@ -453,18 +461,19 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
         throw std::runtime_error("cannot open menu scene configuration");
     unsigned int entityCount = 0, lightCount = 0, particleCount = 0, animationCount = 0, cameraCount = 0;
     std::string line;
-    bool cameraMetadata = false;
+    bool sceneMetadata = false;
     while(std::getline(definition, line))
     {
         std::istringstream command(line);
         std::string type;
         command >> type;
-        if(type == "[MenuCamera]" || type == "[/MenuCamera]")
+        if(type == "[MenuCamera]" || type == "[/MenuCamera]" ||
+            type == "[MenuFireLights]" || type == "[/MenuFireLights]")
         {
-            cameraMetadata = (type == "[MenuCamera]");
+            sceneMetadata = (type == "[MenuCamera]" || type == "[MenuFireLights]");
             continue;
         }
-        if(cameraMetadata)
+        if(sceneMetadata)
             continue;
         if(type.empty() || type[0] == '#' || type == "[RenderSceneGroup]" || type == "[/RenderSceneGroup]")
             continue;
@@ -559,12 +568,40 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     RenderManager menuRenderer;
     menuRenderer.mSceneManager = scene;
     const Ogre::ColourValue savedAmbient = scene->getAmbientLight();
+    const Ogre::ColourValue authoredFire = scene->getLight("LeftFire")->getDiffuseColour();
+    const Ogre::ColourValue authoredFireSpecular = scene->getLight("LeftFire")->getSpecularColour();
+    const Ogre::ColourValue steadyGreen = scene->getLight("SpireLight")->getDiffuseColour();
     RenderSceneMenu menuScene;
     menuScene.readSceneMenu(repository + "/config/mainmenuscene.cfg");
     menuScene.resetMenu(menuCamera, menuRenderer);
     check(!background->isVisible() && scene->getAmbientLight() == Ogre::ColourValue::Black,
         "production menu activation hides the world rectangle and disables uniform ambient lighting");
     checkMenuPose(menuScene, menuCamera, "overview");
+
+    // The production menu updates fire colours from authored baselines even without a camera flight.
+    check(scene->getLight("LeftFire")->getDiffuseColour() == authoredFire,
+        "zero-phase fire starts at its authored intensity");
+    menuScene.updateMenu(menuCamera, menuRenderer, PROBE_FIRST_FIRE_STEP);
+    const Ogre::ColourValue firstFlicker = scene->getLight("LeftFire")->getDiffuseColour();
+    menuScene.updateMenu(menuCamera, menuRenderer, PROBE_SECOND_FIRE_STEP);
+    const Ogre::ColourValue secondFlicker = scene->getLight("LeftFire")->getDiffuseColour();
+    check(firstFlicker != authoredFire && secondFlicker != firstFlicker,
+        "the configured firelight changes continuously while the camera is settled");
+    check(scene->getLight("SpireLight")->getDiffuseColour() == steadyGreen,
+        "fire flicker never changes the green tower light");
+    for(unsigned int sample = 0; sample < PROBE_FIRE_SAMPLES; ++sample)
+    {
+        menuScene.updateMenu(menuCamera, menuRenderer, PROBE_FIRE_STEP);
+        const Ogre::ColourValue flicker = scene->getLight("LeftFire")->getDiffuseColour();
+        const Ogre::Real scale = flicker.r / authoredFire.r;
+        check(scale >= 1.0f - PROBE_FIRE_AMPLITUDE && scale <= 1.0f + PROBE_FIRE_AMPLITUDE &&
+            std::abs(flicker.g - authoredFire.g * scale) < PROBE_COLOUR_EPSILON &&
+            std::abs(flicker.b - authoredFire.b * scale) < PROBE_COLOUR_EPSILON,
+            "configured fire intensity stays bounded and retains its authored warm colour");
+        const Ogre::ColourValue specular = scene->getLight("LeftFire")->getSpecularColour();
+        check(std::abs(specular.r - authoredFireSpecular.r * scale) < PROBE_COLOUR_EPSILON,
+            "fire reflections use the same nonaccumulating intensity as diffuse lighting");
+    }
 
     CEGUI::WindowManager& windows = CEGUI::WindowManager::getSingleton();
     CEGUI::Window* menuRoot = windows.createWindow("DefaultWindow", "MenuProbeRoot");
@@ -646,11 +683,16 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     target->update(false);
     target->writeContentsToFile(output + "/menu-scene-1920x1080.png");
     menuScene.freeMenu(menuCamera, menuRenderer);
+    check(scene->getLight("LeftFire")->getDiffuseColour() == authoredFire &&
+        scene->getLight("LeftFire")->getSpecularColour() == authoredFireSpecular,
+        "menu teardown restores authored fire colours before releasing native lights");
     check(background->isVisible() && background->getMaterial() ==
         Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics") && scene->getAmbientLight() == savedAmbient,
         "production teardown restores the world background and previous ambient lighting");
     menuScene.resetMenu(menuCamera, menuRenderer);
     checkMenuPose(menuScene, menuCamera, "overview");
+    check(scene->getLight("LeftFire")->getDiffuseColour() == authoredFire,
+        "re-entering the menu resets fire time without multiplying its old intensity");
     menuScene.freeMenu(menuCamera, menuRenderer);
     CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(nullptr);
     windows.destroyWindow(menuRoot);

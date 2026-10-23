@@ -15,7 +15,7 @@ from mathutils import Quaternion
 # The authored families remain complete while their placed ruins use separate exported variants.
 SOURCE_FAMILIES = {
     "MenuGate", "MenuWallSegment", "MenuTower", "MenuStatue", "MenuBrazier", "MenuBanner",
-    "MenuArches", "MenuCrystalSpire", "MenuCourtyard", "MenuBackdrop", "MenuCampaignHall",
+    "MenuArches", "MenuGreenTower", "MenuCourtyard", "MenuBackdrop", "MenuCampaignHall",
     "MenuMapTable", "MenuSideCave"
 }
 EXPECTED_CONFIGURED_ENTITY_COUNT = 31
@@ -89,6 +89,14 @@ def configure_material(material, values, repo, images):
         transparent=nodes.new("ShaderNodeBsdfTransparent")
         links.new(transparent.outputs[0],output.inputs["Surface"])
         return
+    if name=="MenuSpireBeam":
+        volume=nodes.new("ShaderNodeVolumePrincipled")
+        volume.inputs["Color"].default_value=(0.005,0.12,0.014,1)
+        volume.inputs["Density"].default_value=0.005
+        volume.inputs["Emission Color"].default_value=(0.008,0.8,0.025,1)
+        volume.inputs["Emission Strength"].default_value=3.0
+        links.new(volume.outputs[0],output.inputs["Volume"])
+        return
     if values.get("unlit"):
         emission=nodes.new("ShaderNodeEmission")
         emission.inputs["Color"].default_value=(*values.get("emissive",colour)[:3],1)
@@ -129,9 +137,9 @@ def configure_material(material, values, repo, images):
     links.new(base,surface.inputs["Base Color"])
     specular=values.get("specular",(0,0,0,1,0))
     if name=="MenuPuddle":
-        surface.inputs["Roughness"].default_value=0.07
+        surface.inputs["Roughness"].default_value=0.045
     elif name=="MenuWetStone":
-        surface.inputs["Roughness"].default_value=0.16
+        surface.inputs["Roughness"].default_value=0.10
     else:
         surface.inputs["Roughness"].default_value=min(1,math.sqrt(2/(specular[4]+2)))
     surface.inputs["Specular IOR Level"].default_value=0.5 if name in ("MenuWetStone","MenuPuddle") else max(0.18,sum(specular[:3])/3)
@@ -161,15 +169,15 @@ def configure_material(material, values, repo, images):
     links.new(surface.outputs[0],output.inputs["Surface"])
 
 
-# Create low nonuniform participating fog that catches the existing orange and green light.
+# Keep a thin nonuniform veil below the courtyard's ankles, leaving all architecture unobscured.
 def add_ground_fog(collection):
-    bpy.ops.mesh.primitive_cube_add(size=2,location=(0,3,1.15))
+    bpy.ops.mesh.primitive_cube_add(size=2,location=(0,0,0.24))
     fog=bpy.context.object
     fog.name="Courtyard drifting volume"
     for parent in list(fog.users_collection):
         parent.objects.unlink(fog)
     collection.objects.link(fog)
-    fog.scale=(27,35,1.65)
+    fog.scale=(26,29,0.36)
     fog["engine_particle_script"]="MenuCourtyardFog"
     material=bpy.data.materials.new("Courtyard volume")
     material.use_nodes=True
@@ -178,8 +186,8 @@ def add_ground_fog(collection):
     links=material.node_tree.links
     output=nodes.new("ShaderNodeOutputMaterial")
     volume=nodes.new("ShaderNodeVolumePrincipled")
-    volume.inputs["Color"].default_value=(0.50,0.55,0.60,1)
-    volume.inputs["Anisotropy"].default_value=0.35
+    volume.inputs["Color"].default_value=(0.30,0.33,0.36,1)
+    volume.inputs["Anisotropy"].default_value=0.10
     coordinates=nodes.new("ShaderNodeTexCoord")
     noise=nodes.new("ShaderNodeTexNoise")
     noise.inputs["Scale"].default_value=0.24
@@ -191,7 +199,7 @@ def add_ground_fog(collection):
     ramp.color_ramp.elements[0].position=0.3
     ramp.color_ramp.elements[0].color=(0,0,0,1)
     ramp.color_ramp.elements[1].position=0.75
-    ramp.color_ramp.elements[1].color=(0.34,0.34,0.34,1)
+    ramp.color_ramp.elements[1].color=(0.085,0.085,0.085,1)
     links.new(noise.outputs["Fac"],ramp.inputs[0])
     separate=nodes.new("ShaderNodeSeparateXYZ")
     links.new(coordinates.outputs["Generated"],separate.inputs[0])
@@ -210,9 +218,9 @@ def add_ground_fog(collection):
 
 
 
-# Fill native spatial storm layers with turbulent density, soft bounds and dark participating smoke.
+# Place turbulent storm volumes behind the mountain layers, above the courtyard and architecture.
 def add_storm_clouds(collection):
-    layers=[((0,57,31),(75,24,7)),((0,90,43),(95,31,10)),((0,124,56),(115,38,12))]
+    layers=[((0,80,35),(84,22,6)),((0,112,49),(102,28,8)),((0,145,64),(118,33,10))]
     for index,(position,scale) in enumerate(layers):
         bpy.ops.mesh.primitive_cube_add(size=2,location=position)
         cloud=bpy.context.object
@@ -229,8 +237,9 @@ def add_storm_clouds(collection):
         links=material.node_tree.links
         output=nodes.new("ShaderNodeOutputMaterial")
         volume=nodes.new("ShaderNodeVolumePrincipled")
-        volume.inputs["Color"].default_value=(0.18,0.21,0.25,1)
-        volume.inputs["Anisotropy"].default_value=0.35
+        volume.inputs["Color"].default_value=(0.18,0.17,0.16,1)
+        volume.inputs["Anisotropy"].default_value=0.20
+        volume.inputs["Emission Color"].default_value=(0.055,0.023,0.011,1)
         geometry=nodes.new("ShaderNodeNewGeometry")
         coordinates=nodes.new("ShaderNodeTexCoord")
         noise=nodes.new("ShaderNodeTexNoise")
@@ -243,7 +252,7 @@ def add_storm_clouds(collection):
         density.color_ramp.elements[0].position=0.42
         density.color_ramp.elements[0].color=(0,0,0,1)
         density.color_ramp.elements[1].position=0.7
-        density.color_ramp.elements[1].color=(0.16,0.16,0.16,1)
+        density.color_ramp.elements[1].color=(0.085,0.085,0.085,1)
         links.new(noise.outputs["Fac"],density.inputs[0])
         separate=nodes.new("ShaderNodeSeparateXYZ")
         links.new(coordinates.outputs["Generated"],separate.inputs[0])
@@ -267,8 +276,161 @@ def add_storm_clouds(collection):
             links.new(boost.outputs[0],mask.inputs[1])
             value=mask.outputs[0]
         links.new(value,volume.inputs["Density"])
+        horizon_scatter=nodes.new("ShaderNodeMath")
+        horizon_scatter.operation="MULTIPLY"
+        horizon_scatter.inputs[1].default_value=2
+        links.new(value,horizon_scatter.inputs[0])
+        links.new(horizon_scatter.outputs[0],volume.inputs["Emission Strength"])
         links.new(volume.outputs[0],output.inputs["Volume"])
         cloud.data.materials.append(material)
+
+
+# Build native advecting fire volumes at the same four configured particle-emitter locations.
+def add_brazier_fire(collection, definitions):
+    positions={words[1]:tuple(float(value) for value in words[3:6]) for words in definitions if words[0]=="AddEntity"}
+    fires=[]
+    for words in definitions:
+        if words[0]!="AddParticleEffect" or words[2]!="MenuBrazierFire":
+            continue
+        position=positions[words[1]]
+        bpy.ops.mesh.primitive_cube_add(size=2,location=(position[0],position[1],position[2]+4.15))
+        fire=bpy.context.object
+        fire.name=words[1]+" animated fire volume"
+        for parent in list(fire.users_collection):
+            parent.objects.unlink(fire)
+        collection.objects.link(fire)
+        fire.scale=(0.88,0.88,1.05)
+        fire["engine_particle_script"]="MenuBrazierFire"
+        material=bpy.data.materials.new(words[1]+" turbulent flame gas")
+        material.use_nodes=True
+        nodes=material.node_tree.nodes
+        nodes.clear()
+        links=material.node_tree.links
+        output=nodes.new("ShaderNodeOutputMaterial")
+        volume=nodes.new("ShaderNodeVolumePrincipled")
+        volume.inputs["Color"].default_value=(0.08,0.012,0.001,1)
+        coordinates=nodes.new("ShaderNodeTexCoord")
+        separate=nodes.new("ShaderNodeSeparateXYZ")
+        links.new(coordinates.outputs["Generated"],separate.inputs[0])
+        centered=nodes.new("ShaderNodeVectorMath")
+        centered.operation="SUBTRACT"
+        centered.inputs[1].default_value=(0.5,0.5,0)
+        links.new(coordinates.outputs["Generated"],centered.inputs[0])
+        flat=nodes.new("ShaderNodeVectorMath")
+        flat.operation="MULTIPLY"
+        flat.inputs[1].default_value=(1,1,0)
+        links.new(centered.outputs["Vector"],flat.inputs[0])
+        radial=nodes.new("ShaderNodeVectorMath")
+        radial.operation="LENGTH"
+        links.new(flat.outputs["Vector"],radial.inputs[0])
+        radius=nodes.new("ShaderNodeMapRange")
+        radius.inputs["From Min"].default_value=0
+        radius.inputs["From Max"].default_value=1
+        radius.inputs["To Min"].default_value=0.45
+        radius.inputs["To Max"].default_value=0.07
+        links.new(separate.outputs["Z"],radius.inputs["Value"])
+        edge=nodes.new("ShaderNodeMath")
+        edge.operation="SUBTRACT"
+        links.new(radius.outputs["Result"],edge.inputs[0])
+        links.new(radial.outputs["Value"],edge.inputs[1])
+        envelope=nodes.new("ShaderNodeMapRange")
+        envelope.clamp=True
+        envelope.inputs["From Min"].default_value=0
+        envelope.inputs["From Max"].default_value=0.16
+        envelope.inputs["To Min"].default_value=0
+        envelope.inputs["To Max"].default_value=1
+        links.new(edge.outputs[0],envelope.inputs["Value"])
+        noise=nodes.new("ShaderNodeTexNoise")
+        noise.name="Animated fire turbulence"
+        noise.noise_dimensions="4D"
+        noise.inputs["Scale"].default_value=6.5
+        noise.inputs["Detail"].default_value=3.2
+        noise.inputs["Distortion"].default_value=0.8
+        links.new(coordinates.outputs["Generated"],noise.inputs["Vector"])
+        driver=noise.inputs["W"].driver_add("default_value").driver
+        driver.expression="frame / 24 * 1.7 + %.4f"%(len(fires)*0.83)
+        tongues=nodes.new("ShaderNodeMapRange")
+        tongues.clamp=True
+        tongues.inputs["From Min"].default_value=0.36
+        tongues.inputs["From Max"].default_value=0.65
+        tongues.inputs["To Min"].default_value=0
+        tongues.inputs["To Max"].default_value=1
+        links.new(noise.outputs["Fac"],tongues.inputs["Value"])
+        gas=nodes.new("ShaderNodeMath")
+        gas.operation="MULTIPLY"
+        links.new(envelope.outputs["Result"],gas.inputs[0])
+        links.new(tongues.outputs["Result"],gas.inputs[1])
+        height=nodes.new("ShaderNodeValToRGB")
+        height.color_ramp.elements[0].position=0.08
+        height.color_ramp.elements[0].color=(0,0,0,1)
+        height.color_ramp.elements[1].position=0.20
+        height.color_ramp.elements[1].color=(1,1,1,1)
+        tip=height.color_ramp.elements.new(0.88)
+        tip.color=(0,0,0,1)
+        links.new(separate.outputs["Z"],height.inputs[0])
+        bounded=nodes.new("ShaderNodeMath")
+        bounded.operation="MULTIPLY"
+        links.new(gas.outputs[0],bounded.inputs[0])
+        links.new(height.outputs[0],bounded.inputs[1])
+        density=nodes.new("ShaderNodeMath")
+        density.operation="MULTIPLY"
+        density.inputs[1].default_value=2.2
+        links.new(bounded.outputs[0],density.inputs[0])
+        links.new(density.outputs[0],volume.inputs["Density"])
+        heat=nodes.new("ShaderNodeValToRGB")
+        heat.color_ramp.elements[0].position=0.22
+        heat.color_ramp.elements[0].color=(0.28,0.012,0.0005,1)
+        heat.color_ramp.elements[1].position=0.82
+        heat.color_ramp.elements[1].color=(1,0.42,0.045,1)
+        links.new(noise.outputs["Fac"],heat.inputs[0])
+        links.new(heat.outputs[0],volume.inputs["Emission Color"])
+        emission=nodes.new("ShaderNodeMath")
+        emission.operation="MULTIPLY"
+        emission.inputs[1].default_value=11
+        links.new(bounded.outputs[0],emission.inputs[0])
+        links.new(emission.outputs[0],volume.inputs["Emission Strength"])
+        links.new(volume.outputs[0],output.inputs["Volume"])
+        fire.data.materials.append(material)
+        fires.append((fire,noise))
+    assert len(fires)==4, "The configured four bowls must have native animated fire"
+    return fires
+
+
+# Drive each configured fire light with the same continuous two-frequency waveform as the engine.
+def animate_fire_lights(definitions, collection):
+    animated=[]
+    for words in definitions:
+        if words[0]!="Flicker":
+            continue
+        name=words[1]
+        amplitude,frequency,phase=(float(value) for value in words[2:5])
+        assert 0<=amplitude<=1 and frequency>0
+        light=collection.objects[name]
+        baseline=light.data.energy
+        light.data["steady_energy_watts"]=baseline
+        light.data["cfg_flicker"]=[amplitude,frequency,phase]
+        driver=light.data.driver_add("energy").driver
+        driver.expression="%.12g*(1+%.12g*(0.7*sin(%.12g*frame/24+%.12g)+0.3*sin(2.37*%.12g*frame/24+1.73*%.12g)))"%(baseline,amplitude,frequency,phase,frequency,phase)
+        animated.append(light)
+    assert len(animated)==7, "The configured fire lights must match the native menu runtime"
+    return animated
+
+
+# Sample the actual animated data during the existing assembly run without producing extra images.
+def sample_fire_animation(scene, fires, lights):
+    samples=[]
+    for frame in (1,24,48):
+        scene.frame_set(frame)
+        bpy.context.view_layer.update()
+        samples.append({"frame":frame,"time_seconds":frame/24,
+            "light_energy_watts":{light.name:light.data.energy for light in lights},
+            "fire_noise_w":{fire.name:noise.inputs["W"].default_value for fire,noise in fires}})
+    for light in lights:
+        assert len({sample["light_energy_watts"][light.name] for sample in samples})>1
+    for fire,noise in fires:
+        assert len({sample["fire_noise_w"][fire.name] for sample in samples})>1
+    scene.frame_set(24)
+    return samples
 
 
 # Instantiate a deterministic particle snapshot from the configured fire and courtyard emitters.
@@ -358,9 +520,11 @@ def add_light(words, collection):
     data.color = tuple(component / magnitude for component in diffuse)
     data.energy = magnitude * 4 * math.pi ** 2 * reference_distance ** 2 / attenuation
     data.shadow_soft_size = 0
-    # The indirect crystal bounce illuminates surfaces without becoming a luminous fog orb.
-    if name == "SpireGround":
+    # Local bounce lights reveal surfaces without becoming luminous floating fog orbs.
+    if name in ("SpireGround", "SpireBounce", "NightRim"):
         data.volume_factor = 0
+    elif name == "CloudBack":
+        data.volume_factor = 0.35
     data.use_custom_distance = True
     data.cutoff_distance = distance_range
     obj = bpy.data.objects.new(name, data)
@@ -472,13 +636,13 @@ def main():
     camera.rotation_quaternion = Quaternion((1, 0, 0), math.radians(camera_values[3])) @ Quaternion((0, 1, 0), math.radians(camera_values[4])) @ Quaternion((0, 0, 1), math.radians(camera_values[5]))
     scene.camera = camera
     lights = [add_light(words, instances) for words in definitions if words[0] == "AddPointLight"]
-    assert len(lights) == 17
+    assert len(lights) == 18
     scene.frame_set(24)
     assert len([obj for obj in instances.objects if obj.type == "MESH"]) == len(entities)
     assert len(images) == 3 and all(image.packed_file for image in images.values())
     atmosphere=bpy.data.collections.new("Configured atmospheric effects")
     scene.collection.children.link(atmosphere)
-    # Capture off-screen fire and crystal geometry in the wet courtyard reflections.
+    # Capture off-screen fire and the internally lit tower in the wet courtyard reflections.
     planar_data=bpy.data.lightprobes.new("Wet courtyard planar reflection","PLANE")
     planar_data.influence_distance=0.4
     planar_data.clip_start=0.02
@@ -490,6 +654,9 @@ def main():
     planar["preview_limit"]="Native Eevee planar reflection; engine reflection support remains a later runtime check."
     add_ground_fog(atmosphere)
     add_storm_clouds(atmosphere)
+    fires=add_brazier_fire(atmosphere,definitions)
+    fire_lights=animate_fire_lights(definitions,instances)
+    fire_animation=sample_fire_animation(scene,fires,fire_lights)
     ember_count=add_embers(atmosphere,definitions)
     compositor=bpy.data.node_groups.new("Fortress fire glow","CompositorNodeTree")
     compositor.interface.new_socket(name="Image",in_out="OUTPUT",socket_type="NodeSocketColor")
@@ -509,10 +676,10 @@ def main():
     scene["source_model_count"] = len(filenames)
     scene["source_family_count"] = len(source_families)
     scene["configured_entity_count"] = len(entities)
-    scene["preview_limit"] = "Blender Eevee atmosphere preview. Configured ground fog and ember emitters are represented as participating volume and instanced points. CLQ falloff is matched at half-range only."
+    scene["preview_limit"] = "Blender Eevee atmosphere preview. Configured low ground fog and fire are participating volumes; fire noise and point-light energy are driven continuously. Embers are instanced points. CLQ falloff is matched at half-range only."
     scene.render.filepath = "//menu-scene-eevee-1920x1080.png"
     bpy.ops.wm.save_as_mainfile(filepath=str(assembly))
-    report = {"source_models": filenames, "source_families": sorted(source_families), "additional_variant_count": len(filenames) - len(source_families), "entities": entity_report, "camera_position_rotation": camera_values, "vertical_fov_degrees": math.degrees(camera_data.angle_y), "resolution": [1920, 1080], "engine": scene.render.engine, "lights": lights, "packed_images": sorted(images), "sample_seconds": 1, "limits": scene["preview_limit"], "ambient_mapping": "No ambient self-emission on stone or architecture. Faint world and configured distant night rim preserve dark silhouettes.", "light_mapping": "E = max(diffuse) * 4*pi^2*d^2/(c+l*d+q*d^2), d=range/2; colour normalised by its largest channel. This matches unnormalised Ogre Lambert radiance to Blender's normalised Lambert response at the reference distance only.", "colour_management": "AgX, neutral look, zero exposure adjustment"}
+    report = {"source_models": filenames, "source_families": sorted(source_families), "additional_variant_count": len(filenames) - len(source_families), "entities": entity_report, "camera_position_rotation": camera_values, "vertical_fov_degrees": math.degrees(camera_data.angle_y), "resolution": [1920, 1080], "engine": scene.render.engine, "lights": lights, "fire_animation_samples": fire_animation, "packed_images": sorted(images), "sample_seconds": 1, "limits": scene["preview_limit"], "ambient_mapping": "No ambient self-emission on stone or architecture. Faint world, distant ember horizon and configured local rim preserve dark silhouettes.", "light_mapping": "E = max(diffuse) * 4*pi^2*d^2/(c+l*d+q*d^2), d=range/2; colour normalised by its largest channel. This matches unnormalised Ogre Lambert radiance to Blender's normalised Lambert response at the reference distance only.", "colour_management": "AgX, neutral look, zero exposure adjustment"}
     (output / "assembly-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     scene.render.filepath = str(rendered)
     if not args.save_only:

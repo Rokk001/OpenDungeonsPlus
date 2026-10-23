@@ -50,10 +50,10 @@ public:
     void resetMenu(CameraManager& cameraManager, RenderManager& renderManager);
     //! \brief Releases active scene commands in reverse order and restores the world background.
     void freeMenu(CameraManager& cameraManager, RenderManager& renderManager);
-    //! \brief Advances native scene animations, camera paths and the unchanged hand hover pose.
+    //! \brief Advances native scene animations, firelight, camera paths and the unchanged hand hover pose.
     void updateMenu(CameraManager& cameraManager, RenderManager& renderManager,
         Ogre::Real timeSinceLastFrame);
-    //! \brief Loads scripted scene groups and named camera paths from one configuration file.
+    //! \brief Loads scripted groups, named camera paths and firelight timing from one configuration file.
     void readSceneMenu(const std::string& fileName);
 
     //! \brief Starts the configured arrival from outside the fortress; rejects overlapping flights.
@@ -88,18 +88,43 @@ private:
         std::vector<std::string> mWaypoints;
     };
 
+    //! \brief One configured firelight waveform and the native light's unmodulated colours.
+    struct FireLight
+    {
+        //! Name of the point light created by the native scene commands.
+        std::string mName = std::string();
+        //! Maximum fractional change around the authored light intensity.
+        Ogre::Real mAmplitude = 0.0f;
+        //! Angular frequency in radians per interface second.
+        Ogre::Real mFrequency = 1.0f;
+        //! Independent waveform phase in radians.
+        Ogre::Real mPhase = 0.0f;
+        //! Native light, valid only between scene reset and resource release.
+        Ogre::Light* mLight = nullptr;
+        //! Authored diffuse colour, never replaced by a previously modulated value.
+        Ogre::ColourValue mDiffuse = Ogre::ColourValue::Black;
+        //! Authored specular colour, scaled by the same waveform as diffuse lighting.
+        Ogre::ColourValue mSpecular = Ogre::ColourValue::Black;
+    };
+
     //! \brief Applies a pose to the existing camera hierarchy without gameplay movement or map clamping.
     void applyCameraPose(CameraManager& cameraManager, const CameraPose& pose);
     //! \brief Begins a validated path from the actual current camera position.
     bool beginPath(CameraManager& cameraManager, const CameraPath& path, const std::string& destination);
     //! \brief Samples the active curved path with eased time and quaternion interpolation.
     CameraPose samplePath(Ogre::Real progress) const;
+    //! \brief Advances configured firelight without multiplying the previous frame's result.
+    void updateFireLights(Ogre::Real elapsed);
     //! Parsed native scene commands, in authored activation order.
     std::vector<RenderSceneGroup*> mSceneGroups;
     //! Named camera endpoints read from the scene configuration.
     std::map<std::string, CameraPose> mCameraPoses;
     //! Authored routes for the destinations and the outside arrival.
     std::map<std::string, CameraPath> mCameraPaths;
+    //! Configured firelights; green and other steady lights are not included.
+    std::vector<FireLight> mFireLights;
+    //! Interface seconds since the native menu scene was reset.
+    Ogre::Real mFireTime = 0.0f;
     //! Actual start pose followed by the current path's authored waypoints.
     std::vector<CameraPose> mFlightPoses;
     //! Place last reached without an active transition.

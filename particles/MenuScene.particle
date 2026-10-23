@@ -1,9 +1,9 @@
-// Continuous fire, low drifting fog, rising embers and cold crystal motes for the fortress.
+// Continuous fire, ankle-low drifting fog, rising embers and the tower's vertical green shaft.
 particle_system MenuBrazierFire
 {
     material Flame
-    particle_width 0.55
-    particle_height 0.9
+    particle_width 0.42
+    particle_height 1.05
     quota 180
     billboard_type point
     sorted true
@@ -14,12 +14,12 @@ particle_system MenuBrazierFire
         height 0.85
         depth 0.05
         direction 0 0 1
-        angle 12
-        emission_rate 65
-        time_to_live_min 0.35
-        time_to_live_max 0.8
-        velocity_min 0.45
-        velocity_max 1.3
+        angle 18
+        emission_rate 78
+        time_to_live_min 0.25
+        time_to_live_max 0.75
+        velocity_min 0.55
+        velocity_max 1.75
         colour_range_start 1 0.36 0.04 0.95
         colour_range_end 0.85 0.12 0.015 0.7
     }
@@ -72,25 +72,25 @@ particle_system MenuCourtyardFog
 {
     material RoomAmbSmoke
     particle_width 7
-    particle_height 2.2
+    particle_height 0.65
     quota 90
     sorted true
     billboard_type point
     emitter Box
     {
-        position 0 -4 0.7
+        position 0 -4 0.16
         width 37
         height 24
-        depth 0.6
-        direction 1 0.2 0.02
+        depth 0.18
+        direction 1 0.2 0
         angle 8
         emission_rate 5
         time_to_live_min 9
         time_to_live_max 14
         velocity_min 0.1
         velocity_max 0.3
-        colour_range_start 0.19 0.21 0.22 0.15
-        colour_range_end 0.15 0.19 0.17 0.12
+        colour_range_start 0.14 0.15 0.16 0.09
+        colour_range_end 0.11 0.13 0.12 0.07
     }
     affector ColourFader
     {
@@ -98,30 +98,30 @@ particle_system MenuCourtyardFog
     }
     affector Scaler
     {
-        rate 0.12
+        rate 0.02
     }
 }
 
-particle_system MenuCrystalGlow
+particle_system MenuSpireGlow
 {
     material CombatSparks
-    particle_width 0.12
-    particle_height 0.22
+    particle_width 0.045
+    particle_height 0.85
     quota 160
     billboard_type point
     emitter Box
     {
-        position 0 0 16
-        width 2.8
-        height 2.8
-        depth 6
+        position 0 0 25.8
+        width 0.16
+        height 0.16
+        depth 0.3
         direction 0 0 1
-        angle 25
-        emission_rate 24
-        time_to_live_min 1.5
-        time_to_live_max 3.5
-        velocity_min 0.1
-        velocity_max 0.45
+        angle 1
+        emission_rate 28
+        time_to_live_min 3
+        time_to_live_max 6
+        velocity_min 3
+        velocity_max 7
         colour_range_start 0.04 0.65 0.08 0.7
         colour_range_end 0.12 1 0.2 0.9
     }
@@ -156,8 +156,8 @@ particle_system MenuStormClouds
         time_to_live_max 40
         velocity_min 0.08
         velocity_max 0.2
-        colour_range_start 0.015 0.018 0.025 0.65
-        colour_range_end 0.008 0.012 0.018 0.5
+        colour_range_start 0.09 0.034 0.012 0.5
+        colour_range_end 0.032 0.015 0.009 0.4
     }
     affector ColourFader
     {

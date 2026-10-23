@@ -24,6 +24,7 @@
 #include "utils/LogManager.h"
 
 #include <OgreMaterialManager.h>
+#include <OgreLight.h>
 #include <OgreNode.h>
 #include <OgreRectangle2D.h>
 #include <OgreSceneManager.h>
@@ -51,6 +52,14 @@ static const std::string ARRIVAL_PATH = "arrival";
 //! Camera metadata is kept outside the existing native scene groups.
 static const std::string CAMERA_SECTION = "[MenuCamera]";
 static const std::string CAMERA_SECTION_END = "[/MenuCamera]";
+//! Firelight timing is separate from native render groups and camera metadata.
+static const std::string FIRE_LIGHT_SECTION = "[MenuFireLights]";
+static const std::string FIRE_LIGHT_SECTION_END = "[/MenuFireLights]";
+//! Two smooth waves avoid synchronized, rigid pulses while retaining positive light intensity.
+static const Ogre::Real FIRE_PRIMARY_WEIGHT = 0.7f;
+static const Ogre::Real FIRE_SECONDARY_WEIGHT = 0.3f;
+static const Ogre::Real FIRE_SECONDARY_FREQUENCY = 2.37f;
+static const Ogre::Real FIRE_SECONDARY_PHASE = 1.73f;
 //! Permitted authored flight durations in interface seconds.
 static const Ogre::Real MIN_FLIGHT_DURATION = 1.5f;
 static const Ogre::Real MAX_FLIGHT_DURATION = 2.5f;
@@ -83,7 +92,7 @@ void RenderSceneMenu::dispatchSyncPost(const std::string& event)
         sceneGroup->notifySyncPost(event);
 }
 
-//! \brief Instantiates native scene groups and selects the authored overview without picture overlays.
+//! \brief Instantiates native groups, captures firelight baselines and selects the authored overview.
 void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
     if(mActive)
@@ -98,6 +107,19 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
     mActive = true;
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
         sceneGroup->reset(cameraManager, renderManager);
+    mFireTime = 0.0f;
+    for(FireLight& fire : mFireLights)
+    {
+        fire.mLight = nullptr;
+        if(!renderManager.getSceneManager()->hasLight(fire.mName))
+        {
+            OD_LOG_ERR("Missing configured menu firelight: " + fire.mName);
+            continue;
+        }
+        fire.mLight = renderManager.getSceneManager()->getLight(fire.mName);
+        fire.mDiffuse = fire.mLight->getDiffuseColour();
+        fire.mSpecular = fire.mLight->getSpecularColour();
+    }
     mCurrentPlace = OVERVIEW_PLACE;
     std::map<std::string, CameraPose>::const_iterator overview = mCameraPoses.find(OVERVIEW_PLACE);
     if(overview != mCameraPoses.end())
@@ -105,7 +127,7 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
     updateMenu(cameraManager, renderManager, 0.0f);
 }
 
-//! \brief Frees animations before their entities and restores world lighting and the background rectangle.
+//! \brief Restores firelight baselines, frees native commands and restores the world background and lighting.
 void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
     mFlight.reset();
@@ -113,6 +135,15 @@ void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& rend
     mFlightPlace.clear();
     mCurrentPlace.clear();
     renderManager.rrSetHandPose(false, false);
+    for(FireLight& fire : mFireLights)
+    {
+        if(fire.mLight == nullptr)
+            continue;
+        fire.mLight->setDiffuseColour(fire.mDiffuse);
+        fire.mLight->setSpecularColour(fire.mSpecular);
+        fire.mLight = nullptr;
+    }
+    mFireTime = 0.0f;
     if(mActive)
     {
         for(std::vector<RenderSceneGroup*>::reverse_iterator group = mSceneGroups.rbegin();
@@ -128,7 +159,7 @@ void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& rend
     background->setVisible(true);
 }
 
-//! \brief Advances native scene animation and camera paths while preserving the existing hand hover rules.
+//! \brief Advances native animation, independent firelight and paths while preserving the hand hover rules.
 void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& renderManager,
         Ogre::Real timeSinceLastFrame)
 {
@@ -155,12 +186,32 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
 
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
         sceneGroup->update(cameraManager, renderManager, timeSinceLastFrame);
+    updateFireLights(timeSinceLastFrame);
     if(!mFlight.isActive())
         return;
     const bool arrived = mFlight.advance(timeSinceLastFrame);
     applyCameraPose(cameraManager, samplePath(mFlight.getProgress()));
     if(arrived)
         mCurrentPlace = mFlightPlace;
+}
+
+//! \brief Scales authored firelight colours by a bounded smooth waveform in interface time.
+void RenderSceneMenu::updateFireLights(Ogre::Real elapsed)
+{
+    if(std::isfinite(elapsed) && elapsed > 0.0f)
+        mFireTime += elapsed;
+    for(const FireLight& fire : mFireLights)
+    {
+        if(fire.mLight == nullptr)
+            continue;
+        const Ogre::Real primary = fire.mFrequency * mFireTime + fire.mPhase;
+        const Ogre::Real secondary = FIRE_SECONDARY_FREQUENCY * fire.mFrequency * mFireTime
+            + FIRE_SECONDARY_PHASE * fire.mPhase;
+        const Ogre::Real scale = 1.0f + fire.mAmplitude * (FIRE_PRIMARY_WEIGHT * std::sin(primary)
+            + FIRE_SECONDARY_WEIGHT * std::sin(secondary));
+        fire.mLight->setDiffuseColour(fire.mDiffuse * scale);
+        fire.mLight->setSpecularColour(fire.mSpecular * scale);
+    }
 }
 
 //! \brief Applies a pose in CameraMove's hierarchy without gameplay movement or map clamping.
@@ -270,7 +321,7 @@ bool RenderSceneMenu::getCameraPose(const std::string& name, Ogre::Vector3& posi
     return true;
 }
 
-//! \brief Reads named camera metadata separately while retaining the native scene group parser.
+//! \brief Reads camera and firelight metadata separately while retaining the native scene group parser.
 void RenderSceneMenu::readSceneMenu(const std::string& fileName)
 {
     if(!mSceneGroups.empty())
@@ -289,11 +340,33 @@ void RenderSceneMenu::readSceneMenu(const std::string& fileName)
     std::stringstream groups;
     std::string line;
     bool cameraSection = false;
+    bool fireSection = false;
     while(Helper::readNextLineNotEmpty(definition, line))
     {
         if(line == CAMERA_SECTION || line == CAMERA_SECTION_END)
         {
             cameraSection = (line == CAMERA_SECTION);
+            continue;
+        }
+        if(line == FIRE_LIGHT_SECTION || line == FIRE_LIGHT_SECTION_END)
+        {
+            fireSection = (line == FIRE_LIGHT_SECTION);
+            continue;
+        }
+        if(fireSection)
+        {
+            std::stringstream command(line);
+            std::string kind;
+            FireLight fire;
+            if(!(command >> kind >> fire.mName >> fire.mAmplitude >> fire.mFrequency >> fire.mPhase)
+                || kind != "Flicker" || !std::isfinite(fire.mAmplitude) || !std::isfinite(fire.mFrequency)
+                || !std::isfinite(fire.mPhase) || fire.mAmplitude < 0.0f || fire.mAmplitude > 1.0f
+                || fire.mFrequency <= 0.0f)
+            {
+                OD_LOG_ERR("Invalid menu firelight definition: " + line);
+                return;
+            }
+            mFireLights.push_back(fire);
             continue;
         }
         if(!cameraSection)
