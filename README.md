@@ -35,6 +35,7 @@ selected. Loaded single-player saves resume their stored side without a new
 seat-selection step. Long save descriptions can be scrolled.
 
 The main menu explores a ruined 3D fortress with flickering fire, a green-lit spired tower, low ground mist and embers.
+Its chain-hung title sign can be renamed by replacing only `materials/textures/menu/MenuTitle.png`; its mesh, animation and layout remain reusable.
 Selecting an entry flies to its place in the fortress; Back or Escape returns to the courtyard overview.
 
 Creature combat uses model-specific attacks, directional impact reactions, visible fireballs and arrows, with an optional blood-effects setting.

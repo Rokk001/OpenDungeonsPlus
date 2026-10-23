@@ -1,12 +1,14 @@
 """Create the editable fortress models and export their Ogre XML meshes sequentially."""
 from pathlib import Path
 import math
+import json
 import random
 import shutil
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Quaternion
+from mathutils.bvhtree import BVHTree
 
 VARIANT_SEED = 0
 VARIANT_DAMAGE = 1.0
@@ -22,6 +24,7 @@ class MeshBuilder:
         self.faces = []
         self.face_materials = []
         self.rng = random.Random(1901 + VARIANT_SEED + sum(ord(value) for value in name))
+        self.contact_corrections = []
 
     # Append a solid polygon extruded along Y.
     def prism(self, polygon, front, back, material="MenuStone"):
@@ -182,6 +185,7 @@ class MeshBuilder:
 
     # Produce worn surfaces with baked per-object texture rotation and non-repeating local UV offsets.
     def finish(self):
+        settle_rubble(self)
         mesh=bpy.data.meshes.new(self.name)
         mesh.from_pydata(self.vertices,[],self.faces)
         mesh.update()
@@ -207,7 +211,7 @@ class MeshBuilder:
         uv=mesh.uv_layers.new(name="UVMap")
         for face, name in zip(mesh.polygons,self.face_materials):
             face.material_index=names.index(name)
-            if name in ("MenuCarvedStone","MenuRoughStone"):
+            if name=="MenuCarvedStone" and self.name!="MenuGate":
                 face.use_smooth=True
             dominant=max(range(3),key=lambda i:abs(face.normal[i]))
             axes=((1,2),(0,2),(0,1))[dominant]
@@ -228,7 +232,7 @@ class MeshBuilder:
         deform = set()
         for face in mesh.polygons:
             material = mesh.materials[face.material_index].name
-            if material not in ("MenuFlame", "MenuFlameCore", "MenuEmber", "MenuSpireGlow", "MenuSpireBeam", "MenuEmberCrack", "MenuWindowGlow", "MenuCampaignMap", "MenuPuddle", "MenuSky", "MenuCloud", "MenuHorizonGlow", "MenuHorizonDark"):
+            if material not in ("MenuFlame", "MenuFlameCore", "MenuEmber", "MenuSpireGlow", "MenuSpireBeam", "MenuEmberCrack", "MenuWindowGlow", "MenuCampaignMap", "MenuPuddle", "MenuSky", "MenuCloud", "MenuHorizonGlow", "MenuHorizonDark", "MenuTitleLetters", "MenuTitleCrest", "MenuGateEyes", "MenuLavaCrack", "MenuWeb", "MenuCrowBlack", "MenuBone", "MenuDriedBlood"):
                 deform.update(face.vertices)
         if deform:
             worn.add(sorted(deform), 1.0, "REPLACE")
@@ -246,6 +250,7 @@ class MeshBuilder:
             displacement.vertex_group = worn.name
             displacement.strength = 0.11*VARIANT_DAMAGE
             displacement.mid_level = 0.52
+        obj["contact_corrections"] = json.dumps(self.contact_corrections)
         return obj
 
 
@@ -302,7 +307,7 @@ def gate():
                 if (side,row,col) in ((-1,8,1),(1,3,0),(1,10,1)):
                     continue
                 b.box((side*(5.14+col*1.15)+rng.uniform(-0.035,0.035),-0.38+rng.uniform(-0.055,0.045),row*0.97+0.48),
-                    (1.11+rng.uniform(-0.08,0.03),1.03,0.92+rng.uniform(-0.07,0.02)))
+                    (1.11+rng.uniform(-0.08,0.03),1.03,1.03+rng.uniform(-0.03,0.02)))
         b.box((side*5.9,-0.52,0.3),(3.0,1.55,0.6))
         for x in (side*5.0,side*6.8):
             b.box((x,-0.42,6.2),(0.28,1.26,12.4))
@@ -343,8 +348,8 @@ def gate():
     for side in (-1,1):
         b.prism([(side*0.15,12.89),(side*0.65,13.14),(side*0.71,12.88),
             (side*0.54,12.51),(side*0.27,12.42)],-1.77,-1.70,"MenuBlack")
-        b.prism([(side*0.23,12.83),(side*0.58,13.01),(side*0.49,12.73),
-            (side*0.30,12.57)],-1.79,-1.77,"MenuWindowGlow")
+        b.prism([(side*0.29,12.78),(side*0.48,12.89),(side*0.43,12.72),
+            (side*0.33,12.64)],-1.775,-1.77,"MenuGateEyes")
         b.segment((side*0.10,-1.90,13.08),(side*0.83,-1.65,13.25),0.14,0.10,"MenuCarvedStone",5)
         b.segment((side*0.72,-1.64,12.48),(side*0.49,-2.30,11.43),0.17,0.09,"MenuCarvedStone",5)
         b.segment((side*0.49,-2.30,11.43),(side*0.25,-2.65,11.07),0.10,0.06,"MenuCarvedStone",5)
@@ -359,11 +364,13 @@ def gate():
                 x,y,z=horn[index]
                 b.prism([(x-side*0.15,z-0.11),(x+side*0.24,z+0.20),
                     (x+side*0.19,z-0.14)],y-0.20,y+0.11,"MenuCarvedStone")
-        b.segment((side*0.32,-2.51,11.35),(side*0.30,-2.58,10.96 if side<0 else 11.13),0.095,0.004,"MenuCarvedStone",5)
+        b.segment((side*0.32,-2.51,11.70),(side*0.35,-2.65,10.77 if side<0 else 11.01),0.13,0.003,"MenuBone",5)
         for i in range(6):
             b.link((side*(0.83+i*0.18),-1.28+i*0.05,12.48-i*0.11),0.13,bool(i%2))
         b.segment((side*0.63,-1.85,12.08),(side*1.28,-0.68,11.67),0.075,0.075,"MenuCorrodedIron",4)
         b.box((side*1.25,-0.76,11.75),(0.27,0.22,0.48),"MenuCorrodedIron")
+    b.segment((-0.49,-2.30,11.43),(-0.04,-2.55,10.63),0.12,0.055,"MenuBone",5)
+    b.segment((-0.04,-2.55,10.63),(0.25,-2.62,10.81),0.055,0.025,"MenuBone",5)
     for x in (-0.16,0.04):
         b.segment((x,-2.65,11.33),(x-0.02,-2.69,11.03),0.065,0.003,"MenuCarvedStone",5)
     b.prism([(-0.06,13.89),(0.0,13.79),(-0.11,13.28),(0.06,12.99),
@@ -371,9 +378,17 @@ def gate():
     b.segment((-0.56,-1.80,13.58),(0.51,-1.80,13.48),0.062,0.062,"MenuCorrodedIron",4)
     for x in (-1.1,-0.75,-0.43,0.49,0.84,1.16):
         b.segment((x,-1.15,11.48),(x*1.07,-1.20,10.82),0.11,0.003,"MenuCorrodedIron",5)
+    for i in range(5):
+        x=-0.50+i*0.23
+        b.prism([(x,11.12),(x+0.08,10.71),(x+0.04,10.20),(x-0.03,10.61)],0.21,0.23,"MenuDriedBlood")
     for index in range(crown_start,len(b.vertices)):
         x,y,z=b.vertices[index]
-        b.vertices[index]=(x*1.12,y-0.18,12.2+(z-12.2)*1.02)
+        b.vertices[index]=(x*1.12,y-0.18,14.5+(z-12.2)*1.12)
+    # A fractured crown pier carries the raised skull; its clamps penetrate actual masonry.
+    b.box((0,0.65,13.0),(2.20,1.2,4.0),"MenuDarkStone")
+    b.box((0,0.30,14.00),(4.00,1.10,0.62),"MenuDarkStone")
+    for side in (-1,1):
+        b.segment((side*1.4,-0.96,14.0),(side*1.4,0.46,14.0),0.105,0.105,"MenuCorrodedIron",6)
     return b.finish()
 
 
@@ -391,7 +406,7 @@ def wall():
             if (row,col) in ((8,2),(6,12),(9,13),(4,4)) or row*0.88 > crown or (row>2 and abs(x-fracture_x)<0.70):
                 continue
             b.box((x+rng.uniform(-0.06,0.06),0.5+rng.uniform(-0.08,0.06),row*0.88+0.44),
-                (1.30+rng.uniform(-0.10,0.02),2.8,0.83+rng.uniform(-0.08,0.02)))
+                (1.30+rng.uniform(-0.10,0.02),2.8,0.97+rng.uniform(-0.03,0.02)))
     for x in range(-10,11):
         top = 9.6 - 2.5*math.exp(-((x-(4.5 if VARIANT_SEED%2 else -5.7))/3.1)**2)
         b.box((x,0.5,top),(0.94,3.45,rng.uniform(0.24,0.60)))
@@ -418,8 +433,6 @@ def wall():
         b.arch(x,-1.04,8.1,0.23,0.18,0.25,9)
     for x in (-4.8,2.4,9.1):
         weather_marks(b,x,-0.925,4.5,0.68,2.0)
-    for x,z in ((-6.1,5.6),(7.8,4.1)):
-        hanging_cage(b,x,-1.95,z,int(abs(x))%9)
     for x in (-9.6,-8.7,-4.3,-2.0,0.8,3.6,5.4,9.4):
         weather_marks(b,x,-0.925,1.25,0.65,2.2)
     for i in range(24):
@@ -438,7 +451,7 @@ def tower():
             if (row,col) in ((8,0),(10,3),(3,1)) or (collapsed and row>=8 and col<2) or (row>=11 and col==0):
                 continue
             b.box((-1.74+col*1.16+rng.uniform(-0.045,0.045),-0.25+rng.uniform(-0.05,0.04),row*0.94+0.46),
-                (1.12+rng.uniform(-0.09,0.025),4.4,0.89+rng.uniform(-0.05,0.02)))
+                (1.12+rng.uniform(-0.09,0.025),4.4,1.02+rng.uniform(-0.03,0.02)))
     for z in (0.5,4.4,8.5,12.3):
         if collapsed and z>8:
             b.box((1.40,-0.25,z),(2.4,4.95,0.32))
@@ -465,7 +478,6 @@ def tower():
         b.box((0,-2.48,z),(0.4,0.025,1.45),"MenuWindowGlow")
         b.arch(0,-2.58,z+0.73,0.22,0.19,0.2,9)
     weather_marks(b,-1.6,-2.505,6.0,0.55,2.8)
-    hanging_cage(b,-1.48 if collapsed else 1.42,-3.28,6.05 if collapsed else 7.12,2 if collapsed else 6)
     for x in (-1.72,-0.85,0.78,1.65):
         weather_marks(b,x,-2.505,1.4,0.55,2.35)
     for i in range(15):
@@ -605,7 +617,7 @@ def brazier():
     return b.finish()
 
 
-# Create torn red cloth and its original trident heraldry, sharing the existing looping cloth rig.
+# Create scorched, dirty red cloth and a fractured horned-skull three-blade iron crest on the existing cloth rig.
 def banner():
     b=MeshBuilder("MenuBanner")
     b.box((0,0,0),(2.4,0.13,0.13),"MenuIron")
@@ -629,12 +641,13 @@ def banner():
             b.faces.append((i,i+1,i+8,i+7))
             b.face_materials.append("MenuClothFadedB" if VARIANT_SEED%2 else "MenuClothFadedA")
     symbols=[
-        [(-0.085,-3.82),(0.085,-3.82),(0.085,-1.20),(-0.085,-1.20)],
-        [(-0.28,-1.28),(0,-0.73),(0.28,-1.28)],
-        [(-0.08,-2.52),(-0.72,-2.12),(-0.72,-1.18),(-0.55,-1.18),(-0.55,-2.0),(-0.08,-2.30)],
-        [(-0.96,-1.40),(-0.64,-0.96),(-0.35,-1.40)]
+        [(-0.55,-1.12),(-0.12,-0.88),(0.42,-1.02),(0.58,-1.49),(0.29,-1.88),(-0.22,-1.95),(-0.57,-1.54)],
+        [(-0.44,-1.07),(-0.95,-0.63),(-0.82,-1.20),(-0.54,-1.45)],
+        [(0.32,-1.01),(0.78,-0.51),(0.73,-1.10),(0.44,-1.39)],
+        [(-0.37,-1.81),(-0.53,-2.82),(-0.30,-2.60),(-0.15,-1.90)],
+        [(-0.08,-1.89),(-0.11,-3.29),(0.15,-2.87),(0.11,-1.87)],
+        [(0.18,-1.81),(0.37,-2.76),(0.62,-2.97),(0.42,-1.74)]
     ]
-    symbols.extend([ [(-x,z) for x,z in polygon] for polygon in symbols[2:] ])
     for polygon in symbols:
         first=len(b.vertices)
         for x,z in polygon:
@@ -693,14 +706,15 @@ def arches():
         for col in range(8):
             if (row,col) in ((6,2),(7,2),(3,6)):
                 continue
-            b.box((-6.9+col*1.95,0,row+0.5),(1.84,4.0,0.94),"MenuDarkStone")
+            b.box((-6.9+col*1.95,0,row+0.5),(1.84,4.0,1.08),"MenuDarkStone")
     for x in (-7,-2.34,2.34,7):
-        b.box((x,0,12.1),(1.15,3.1,7.8))
+        b.box((x,0,11.85),(1.15,3.1,8.4))
         b.box((x,0,0.35),(1.65,3.65,0.70))
     for x in (-6.8,-4.1,-1.4,2.2,4.9,7.1):
         b.box((x,0,17.9+0.13*math.sin(x)),(1.8+0.4*math.sin(x),3.7,0.48))
+    b.box((0,0,18.04),(15.6,3.35,0.30))
     for x in (-6,-3,0,3,6):
-        b.box((x,0,19.25),(0.85,3.4,0.8))
+        b.box((x,0,18.43),(0.85,3.4,0.8))
     return b.finish()
 
 
@@ -766,15 +780,18 @@ def courtyard():
             x=-25+col*1.75+(0.82 if row%2 else 0)+rng.uniform(-0.15,0.15)
             sx,sy=1.57+rng.uniform(-0.21,0.11),1.47+rng.uniform(-0.20,0.10)
             z=-0.10+rng.uniform(-0.24,0.12)
+            if any(abs(x-gx)<sx/2+1.02 and abs(y-gy)<sy/2+1.62 for gx,gy in ((-12.6,-9.7),(12.5,-8.3))):
+                continue
+            b.box((x,y,-0.56),(sx+0.23,sy+0.22,0.46),"MenuDarkStone")
             if rng.random()<0.075:
                 continue
             if rng.random()<0.33:
-                b.prism([(x-sx/2,z-0.11),(x+0.12,z-0.11),(x-0.08,z+0.07),(x-sx/2+0.025,z+0.11)],
+                b.prism([(x-sx/2,-0.55),(x+0.12,-0.55),(x-0.08,z+0.07),(x-sx/2+0.025,z+0.11)],
                     y-sy/2,y+sy/2,"MenuWetStone")
-                b.prism([(x+0.20,z-0.19),(x+sx/2,z-0.19),(x+sx/2-0.025,z-0.03),(x+0.01,z+0.005)],
+                b.prism([(x+0.20,-0.55),(x+sx/2,-0.55),(x+sx/2-0.025,z-0.03),(x+0.01,z+0.005)],
                     y-sy/2+0.08,y+sy/2-0.05,"MenuWetStone")
             else:
-                poly=[(x-sx/2,z-0.11),(x+sx/2,z-0.11),(x+sx/2-0.025,z+0.07+rng.uniform(-0.04,0.05)),(x-sx/2+0.025,z+0.07)]
+                poly=[(x-sx/2,-0.55),(x+sx/2,-0.55),(x+sx/2-0.025,z+0.07+rng.uniform(-0.04,0.05)),(x-sx/2+0.025,z+0.07)]
                 b.prism(poly,y-sy/2,y+sy/2,"MenuWetStone")
             if -24<y<11 and rng.random()<0.24:
                 edge=x+sx/2+0.03
@@ -790,7 +807,8 @@ def courtyard():
                     b.vertices.extend(tuple(point) for point in (Vector(a)-normal,Vector(c)-normal,Vector(c)+normal,Vector(a)+normal))
                     b.faces.append(tuple(first+i for i in range(4)))
                     b.face_materials.append("MenuEmberCrack")
-    b.box((0,-4,-0.39),(56,58,0.12),"MenuDarkStone")
+    # Individual substrate cells leave both excavated graves genuinely open to depth.
+    b.contact_corrections.append("grave cutouts: two physical floor/substrate omissions")
     for i in range(23):
         x,y=rng.uniform(-20,20),rng.uniform(-24,13)
         rx,ry=rng.uniform(0.40,1.8),rng.uniform(0.26,1.1)
@@ -949,12 +967,12 @@ def hall():
             for col in range(9):
                 if (row,col,side) in ((5,3,-1),(6,3,-1),(4,7,1)):
                     continue
-                b.box((side*6.4,-7+col*1.75,row+0.5),(0.7,1.64,0.93))
+                b.box((side*6.4,-7+col*1.75,row+0.5),(0.7,1.64,1.07))
     for row in range(7):
         for col in range(8):
             if row>3 and col in (2,3):
                 continue
-            b.box((-5.7+col*1.6,7.8,row+0.5),(1.5,0.7,0.92))
+            b.box((-5.7+col*1.6,7.8,row+0.5),(1.5,0.7,1.07))
     for y in (-6,-2,2,6):
         b.arch(0,y,5.0,5.8,0.45,0.5,18)
         for side in (-1,1):
@@ -1000,9 +1018,9 @@ def cave():
 def rock():
     b=MeshBuilder("MenuRuinRock")
     rng=random.Random(VARIANT_SEED)
-    b.oval((0,0,0.65),(rng.uniform(1.0,1.6),rng.uniform(0.8,1.35),rng.uniform(0.75,1.35)),"MenuRoughStone",30,20)
+    b.oval((0,0,0.65),(rng.uniform(1.0,1.6),rng.uniform(0.8,1.35),rng.uniform(0.75,1.35)),"MenuRoughStone",11,7)
     for index, point in enumerate(b.vertices):
-        scale=1+0.045*math.sin(point[0]*3.7+VARIANT_SEED)*math.sin(point[1]*4.3+point[2]*2.1)
+        scale=1+0.16*math.sin(point[0]*3.7+VARIANT_SEED)*math.sin(point[1]*4.3+point[2]*2.1)
         b.vertices[index]=tuple(value*scale for value in point)
     return b.finish()
 
@@ -1019,6 +1037,553 @@ def arcade_arch():
     return b.finish()
 
 
+# Put each loose rubble island onto an actual lower mesh surface, with a small weathering inset.
+def settle_rubble(builder):
+    if not builder.vertices:
+        return
+    parent=list(range(len(builder.vertices)))
+    # Resolve the connected component of a vertex without merging separate rubble stones.
+    def find(index):
+        while parent[index]!=index:
+            parent[index]=parent[parent[index]]
+            index=parent[index]
+        return index
+    for face in builder.faces:
+        root=find(face[0])
+        for vertex in face[1:]:
+            parent[find(vertex)]=root
+    groups={}
+    materials={}
+    for face,material in zip(builder.faces,builder.face_materials):
+        root=find(face[0])
+        groups.setdefault(root,set()).update(face)
+        materials.setdefault(root,set()).add(material)
+    support_faces=[face for face,material in zip(builder.faces,builder.face_materials) if material!="MenuRoughStone"]
+    tree=BVHTree.FromPolygons([Vector(v) for v in builder.vertices],support_faces,all_triangles=False) if support_faces else None
+    for root,indices in groups.items():
+        if materials[root]!={"MenuRoughStone"}:
+            continue
+        points=[Vector(builder.vertices[index]) for index in indices]
+        lowest=min(point.z for point in points)
+        centre=sum(points,Vector())/len(points)
+        supports=[]
+        probes=[point for point in points if point.z<lowest+0.025]
+        probes.append(Vector((centre.x,centre.y,lowest)))
+        for point in probes:
+            hit=tree.ray_cast(Vector((point.x,point.y,lowest-0.065)),Vector((0,0,-1)),80) if tree else (None,None,None,None)
+            if hit[0] is not None:
+                supports.append(hit[0].z)
+        support=max(supports) if supports else -0.22
+        # A buried lower edge stays in contact after the editable erosion modifier is evaluated.
+        shift=support-0.075-lowest
+        if abs(shift)>0.035:
+            for index in indices:
+                x,y,z=builder.vertices[index]
+                builder.vertices[index]=(x,y,z+shift)
+            builder.contact_corrections.append(round(shift,4))
+
+
+# Add a fractured dry skull with deep sockets, an uneven jaw and missing teeth.
+def bone_skull(b, position, scale=1, material="MenuBone"):
+    x,y,z=position
+    first=len(b.vertices)
+    b.oval((x,y,z+0.28*scale),(0.25*scale,0.22*scale,0.31*scale),material,9,5)
+    b.prism([(x-0.18*scale,z+0.20*scale),(x+0.17*scale,z+0.19*scale),
+        (x+0.15*scale,z-0.04*scale),(x-0.10*scale,z-0.10*scale)],y-0.28*scale,y-0.12*scale,material)
+    for side in (-1,1):
+        b.prism([(x+side*0.045*scale,z+0.35*scale),(x+side*0.20*scale,z+0.40*scale),
+            (x+side*0.19*scale,z+0.20*scale),(x+side*0.065*scale,z+0.18*scale)],
+            y-0.246*scale,y-0.23*scale,"MenuBlack")
+    b.prism([(x-0.04*scale,z+0.18*scale),(x+0.055*scale,z+0.17*scale),(x,z+0.06*scale)],
+        y-0.295*scale,y-0.28*scale,"MenuBlack")
+    for i in range(6):
+        if (i+VARIANT_SEED)%5==0:
+            continue
+        tx=x+(-0.13+i*0.052)*scale
+        b.segment((tx,y-0.28*scale,z+0.045*scale),(tx+0.01*scale,y-0.30*scale,z-0.055*scale),0.022*scale,0.012*scale,material,5)
+    b.prism([(x-0.04*scale,z+0.57*scale),(x-0.025*scale,z+0.43*scale),
+        (x+0.06*scale,z+0.34*scale),(x+0.045*scale,z+0.32*scale),(x-0.05*scale,z+0.43*scale)],
+        y-0.205*scale,y-0.198*scale,"MenuBlack")
+    return first
+
+
+# Add a readable articulated skeleton in a standing, crawling or partly buried pose.
+def dead_skeleton(b, position=(0,0,0), scale=1, pose="standing"):
+    origin=Vector(position)
+    if pose=="crawling":
+        hips=Vector((0,0.45,0.40)); neck=Vector((0,-0.70,0.78)); head=Vector((0,-1.01,0.77))
+        arms=[((-0.40,-0.50,0.70),(-0.72,-0.99,0.18),(-0.84,-1.50,0.06)),
+            ((0.40,-0.50,0.70),(0.80,-0.35,0.24),(1.03,-0.72,0.06))]
+        legs=[((-0.20,0.46,0.40),(-0.45,1.07,0.13),(-0.72,1.72,0.05)),
+            ((0.20,0.46,0.40),(0.67,0.99,0.32),(0.35,1.58,0.07))]
+    else:
+        hips=Vector((0,0,0.92)); neck=Vector((0,-0.10,1.92)); head=Vector((0,-0.12,2.02))
+        arms=[((-0.35,-0.04,1.72),(-0.64,-0.18,1.20),(-0.55,-0.35,0.74)),
+            ((0.35,-0.04,1.72),(0.72,0.02,1.24),(0.64,-0.24,0.81))]
+        legs=[((-0.16,0,0.92),(-0.22,-0.02,0.47),(-0.28,-0.13,0.06)),
+            ((0.16,0,0.92),(0.29,0.03,0.45),(0.34,-0.10,0.06))]
+        if pose=="chained":
+            arms=[((-0.35,-0.04,1.72),(-0.67,0,2.02),(-0.80,0,2.44)),
+                ((0.35,-0.04,1.72),(0.71,-0.03,2.05),(0.96,-0.01,2.35))]
+    neck.x+=0.12*math.sin(VARIANT_SEED*0.53)
+    head.x=neck.x+0.06*math.cos(VARIANT_SEED)
+    # Transform every joint in the same local frame to keep limbs and ribs physically connected.
+    # Apply the shared local skeleton frame to one anatomical joint.
+    def point(value):
+        return tuple(origin+Vector(value)*scale)
+    b.segment(point(hips),point(neck),0.060*scale,0.045*scale,"MenuBone",6)
+    for index in range(8):
+        center=hips.lerp(neck,index/8)
+        b.box(point(center),(0.14*scale,0.12*scale,0.09*scale),"MenuBone")
+    b.segment(point(hips+Vector((-0.22,0,0))),point(hips+Vector((0.21,0,0))),0.10*scale,0.095*scale,"MenuBone",6)
+    chest_axis=(neck-hips).normalized()
+    for row in range(6):
+        center=hips.lerp(neck,0.48+row*0.074)
+        width=(0.29+0.055*math.sin(row*0.64))*scale
+        for side in (-1,1):
+            if pose=="rising" and side<0 and row==2:
+                continue
+            a=origin+center*scale+Vector((side*width,0.015*scale,0))
+            c=origin+center*scale+Vector((side*width*0.78,-0.17*scale,-0.065*scale))
+            d=origin+center*scale+Vector((side*0.045*scale,-0.22*scale,-0.095*scale))
+            b.segment(tuple(a),tuple(c),0.028*scale,0.025*scale,"MenuBone",5)
+            b.segment(tuple(c),tuple(d),0.025*scale,0.021*scale,"MenuBone",5)
+    bone_skull(b,point(head),0.91*scale)
+    for joints in arms+([] if pose=="rising" else legs):
+        b.segment(point(joints[0]),point(joints[1]),0.050*scale,0.037*scale,"MenuBone",6)
+        b.segment(point(joints[1]),point(joints[2]),0.040*scale,0.027*scale,"MenuBone",6)
+        for finger in range(4):
+            p=Vector(joints[2])+Vector(((finger-1.5)*0.045,-0.01,0))
+            q=p+Vector((0.012,-0.16,-0.035))
+            b.segment(point(p),point(q),0.015*scale,0.009*scale,"MenuBone",5)
+
+
+# Skin authored vertex ranges to rigid bones and create a genuinely looping native Ogre action.
+def rigid_loop(obj, bones, clip, seconds, animation, pinned=()):
+    if clip=="Sway":
+        top=max(vertex.co.z for vertex in obj.data.vertices)
+        bones=[("Fixed",(0,0,top),range(0),None)]+[(name,pivot,indices,"Fixed") for name,pivot,indices,parent in bones]
+    arm_data=bpy.data.armatures.new(obj.name+"Rig")
+    arm=bpy.data.objects.new(obj.name+"Rig",arm_data)
+    bpy.context.scene.collection.objects.link(arm)
+    obj.select_set(False); arm.select_set(True)
+    bpy.context.view_layer.objects.active=arm
+    bpy.ops.object.mode_set(mode="EDIT")
+    for name,pivot,indices,parent in bones:
+        bone=arm.data.edit_bones.new(name)
+        bone.head=pivot; bone.tail=Vector(pivot)+Vector((0,0,0.25))
+        if parent:
+            bone.parent=arm.data.edit_bones[parent]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    arm["ogre_bone_order"]=[bone[0] for bone in bones]
+    for name,pivot,indices,parent in bones:
+        group=obj.vertex_groups.new(name=name)
+        if indices:
+            group.add(list(indices),1,"REPLACE")
+    if clip=="Sway":
+        # Upper chain endpoints are bolted in place while lower links and the load can swing.
+        for vertex in obj.data.vertices:
+            fixed=max(0.0,min(1.0,(vertex.co.z-(top-1.25))/1.25))
+            if fixed>0:
+                obj.vertex_groups["Fixed"].add([vertex.index],fixed,"REPLACE")
+                obj.vertex_groups["Swing"].add([vertex.index],1-fixed,"REPLACE")
+    if pinned:
+        obj.vertex_groups["Fixed"].add(list(pinned),1.0,"REPLACE")
+        obj.vertex_groups["Swing"].add(list(pinned),0.0,"REPLACE")
+    modifier=obj.modifiers.new(clip+" skeletal loop","ARMATURE"); modifier.object=arm; obj.parent=arm
+    frame_count=int(seconds*24)
+    for frame in range(0,frame_count+1,12):
+        t=frame/frame_count
+        for name,pivot,indices,parent in bones:
+            bone=arm.pose.bones[name]; bone.rotation_mode="QUATERNION"
+            rotation,translation=animation(name,t)
+            # Convert authored scene-axis movement into the bone bind frame.
+            basis=bone.bone.matrix_local.to_quaternion()
+            authored=Quaternion((0,1,0),rotation[1]) @ Quaternion((1,0,0),rotation[0]) @ Quaternion((0,0,1),rotation[2])
+            bone.rotation_quaternion=basis.inverted() @ authored @ basis
+            if max(abs(value) for value in rotation)>1e-6:
+                assert max(abs(value) for value in bone.rotation_quaternion[1:])>1e-7,"Authored rotation lost its quaternion vector"
+            bone.location=basis.inverted() @ Vector(translation)
+            bone.keyframe_insert("rotation_quaternion",frame=frame,group=name)
+            bone.keyframe_insert("location",frame=frame,group=name)
+    arm.animation_data.action.name=clip
+    arm.animation_data.action["ogre_length"]=seconds
+    bpy.context.scene.frame_set(0)
+    return obj,arm
+
+
+# Return small unsynchronized pendulum motion about the actual chain attachment.
+def sway_motion(name,t):
+    if name=="Fixed":
+        return ((0,0,0),(0,0,0))
+    phase=(VARIANT_SEED%23)/23*2*math.pi
+    amplitude=0.018+(VARIANT_SEED%7)*0.0015
+    angle=math.sin(t*2*math.pi+phase)*amplitude
+    return ((angle*0.25,angle,angle*0.15),(0,0,0))
+
+
+# Pose the crow's idle head and wings, with a brief complete takeoff and landing every twelve seconds.
+def crow_motion(name,t):
+    t=(t+(VARIANT_SEED%17)/17)%1.0
+    flight=max(0,math.sin((t-0.5)*math.pi/0.30)) if 0.5<t<0.8 else 0
+    if name=="Root":
+        return ((0,0,0),(0,0,flight*1.6))
+    if name=="Head":
+        return ((0.05*math.sin(t*4*math.pi),0,0.48*math.sin(t*6*math.pi)),(0,0,0))
+    side=-1 if name=="WingL" else 1
+    return ((0,side*(0.10*math.sin(t*8*math.pi)+flight*0.75*math.sin(t*32*math.pi)),0),(0,0,0))
+
+
+# Build one new separately editable horror prop; every placed variant has its own seeded source file.
+def polish_prop():
+    name=VARIANT_NAME
+    b=MeshBuilder(name)
+    rng=random.Random(VARIANT_SEED)
+    kind=next(spec[2] for spec in POLISH_SPECS if spec[0]==name)
+    armature=None; bones=None; clip="Sway"; seconds=6; pinned=[]
+    if kind=="SkullHeap":
+        for index in range(4 if name.endswith("A") else 6):
+            bone_skull(b,(rng.uniform(-0.65,0.65),rng.uniform(-0.5,0.5),rng.uniform(0.04,0.18)),rng.uniform(0.7,1.2))
+        for index in range(12):
+            x,y=rng.uniform(-0.9,0.9),rng.uniform(-0.6,0.6)
+            b.segment((x,y,0.07),(x+rng.uniform(-0.4,0.4),y+0.42,0.08),0.035,0.025,"MenuBone",6)
+    elif kind in ("GraspingHands","RisingRibcage","CrawlingDead","ChainedDead","CagedDead","EmptyCage","ImpaledBones"):
+        if kind=="GraspingHands":
+            for x,h in ((-0.29,0.54),(0.42,0.79)):
+                b.segment((x,0,-0.20),(x+0.04,-0.12,h),0.055,0.043,"MenuBone",6)
+                b.box((x+0.03,-0.10,h),(0.21,0.11,0.18),"MenuBone")
+                for finger in range(5):
+                    a=(x-0.09+finger*0.045,-0.13,h+0.06)
+                    c=(a[0]+0.01,-0.17,h+0.30-abs(finger-2)*0.04)
+                    b.segment(a,c,0.019,0.014,"MenuBone",5)
+                    b.segment(c,(c[0],c[1]-0.12,c[2]-0.045),0.014,0.005,"MenuBone",5)
+        elif kind=="RisingRibcage":
+            dead_skeleton(b,(0,0,-0.68),0.95,"rising")
+        elif kind=="CrawlingDead":
+            dead_skeleton(b,(0,0,0),1.02,"crawling")
+        elif kind=="ImpaledBones":
+            b.column((0,0,-0.2),0.11,2.9,0,"MenuCorrodedIron",7)
+            dead_skeleton(b,(0,-0.10,1.0),0.64,"rising")
+        elif kind=="ChainedDead":
+            dead_skeleton(b,(0,-0.28,0),0.96,"chained")
+            for side in (-1,1):
+                for index in range(9):
+                    b.link((side*(0.88+index*0.025),0.05,2.28+index*0.12),0.10,bool(index%2))
+                b.segment((side*1.08,0.14,3.18),(side*1.08,1.70,3.18),0.065,0.065,"MenuCorrodedIron",6)
+                b.box((side*1.08,1.70,3.18),(0.24,0.18,0.20),"MenuCorrodedIron")
+            bones=[("Swing",(0,0,3.2),range(len(b.vertices)),None)]
+        else:
+            hanging_cage(b,0,0,0.0,VARIANT_SEED%9)
+            b.segment((0,0,3.16),(0,2.40,3.16),0.085,0.085,"MenuCorrodedIron",6)
+            b.box((0,2.40,3.16),(0.32,0.22,0.35),"MenuCorrodedIron")
+            if kind=="CagedDead":
+                dead_skeleton(b,(0,-0.10,0.04),0.54,"standing")
+            bones=[("Swing",(0,0,3.16),range(len(b.vertices)),None)]
+    elif kind=="Gravestone":
+        lean=rng.uniform(-0.25,0.25)
+        b.prism([(-0.61,-0.17),(0.58,-0.17),(0.47+lean,1.40),
+            (0.16+lean,1.70),(-0.07+lean,1.39),(-0.48+lean,1.56)],-0.20,0.24,"MenuCarvedStone")
+        for row in range(5):
+            z=0.30+row*0.18
+            b.segment((-0.31,-0.22,z),(0.22-rng.random()*0.12,-0.22,z+0.025),0.018,0.012,"MenuBlack",4)
+        b.prism([(-0.11,1.42),(-0.08,1.02),(0.14,0.80),(0.11,0.76),(-0.14,1.0)],-0.225,-0.21,"MenuBlack")
+        bone_skull(b,(-0.23,-0.45,0.08),0.55)
+    elif kind=="OpenGrave":
+        b.box((0,0,-0.45),(1.65,2.7,0.12),"MenuBlack")
+        for side in (-1,1):
+            b.box((side*0.94,0,-0.15),(0.20,3.1,0.6),"MenuDarkStone")
+            b.box((0,side*1.55,-0.15),(2.05,0.20,0.6),"MenuDarkStone")
+        dead_skeleton(b,(0,0.10,-0.40),0.73,"crawling")
+    elif kind=="Crypt":
+        b.box((0,1.30,0.03),(3.4,3.0,0.28))
+        for side in (-1,1):
+            for row in range(5):
+                b.box((side*1.32,1.3,0.40+row*0.58),(0.48,2.7,0.59))
+        b.arch(0,0.0,2.1,1.08,0.40,0.50,16)
+        b.box((0,1.65,2.98),(3.15,2.5,0.35))
+        b.box((0,2.58,1.15),(2.6,0.26,2.3))
+        b.box((0,2.40,1.35),(1.4,0.035,1.7),"MenuWindowGlow")
+        # The opened iron door is rotated as solid geometry about its left-hand hinge.
+        first=len(b.vertices)
+        b.box((-0.98,-0.05,1.11),(1.9,0.16,2.20),"MenuCorrodedIron")
+        pivot=Vector((-1.0,0.0,0))
+        for index in range(first,len(b.vertices)):
+            p=Vector(b.vertices[index])-pivot
+            b.vertices[index]=tuple(pivot+Vector((p.x*0.34-p.y*0.94,p.x*0.94+p.y*0.34,p.z)))
+    elif kind=="Coffin":
+        outline=[(-0.31,-1.15),(0.32,-1.15),(0.56,-0.63),(0.44,1.15),(-0.43,1.15),(-0.57,-0.61)]
+        first=len(b.vertices)
+        b.vertices.extend((x,y,0.02) for x,y in outline)
+        b.faces.append(tuple(first+i for i in reversed(range(6)))); b.face_materials.append("MenuAgedWood")
+        for i in range(6):
+            x,y=outline[i]; u,v=outline[(i+1)%6]
+            first=len(b.vertices)
+            b.vertices.extend(((x,y,0.02),(u,v,0.02),(u,v,0.42),(x,y,0.42)))
+            b.faces.extend(((first,first+1,first+2,first+3),(first+3,first+2,first+1,first)))
+            b.face_materials.extend(("MenuAgedWood","MenuAgedWood"))
+            b.segment((x,y,0.42),(u,v,0.42),0.045,0.040,"MenuCorrodedIron",5)
+        first=len(b.vertices)
+        b.vertices.extend((x+1.11,y+0.12,0.055+0.04*x) for x,y in outline)
+        b.faces.append(tuple(first+i for i in range(6))); b.face_materials.append("MenuAgedWood")
+    elif kind=="EarthBones":
+        for index in range(11):
+            x,y=rng.uniform(-1.1,1.1),rng.uniform(-0.9,0.9)
+            b.oval((x,y,0.02),(rng.uniform(0.35,0.6),rng.uniform(0.3,0.6),rng.uniform(0.1,0.35)),"MenuAsh",7,4)
+        bone_skull(b,(0.34,-0.55,0.09),0.85)
+        for index in range(7):
+            x,y=rng.uniform(-0.8,0.8),rng.uniform(-0.6,0.6)
+            b.segment((x,y,0.09),(x+0.3,y+0.2,0.14),0.04,0.035,"MenuBone",6)
+    elif kind in ("BrokenSword","BrokenAxe","TatteredSpear"):
+        if kind=="BrokenSword":
+            b.segment((0.16,0.04,1.04),(0.22,0.08,1.50),0.055,0.038,"MenuAgedWood",7)
+        else:
+            b.segment((0,0,-0.25),(0.22,0.08,1.5 if kind!="TatteredSpear" else 3.3),0.045,0.028,"MenuAgedWood",7)
+        if kind=="BrokenSword":
+            b.prism([(-0.16,0.12),(0.10,0.08),(0.27,1.02),(0.10,0.88),(0.02,1.14)],-0.045,0.05,"MenuCorrodedIron")
+            b.segment((-0.35,0,1.1),(0.40,0,1.22),0.055,0.04,"MenuCorrodedIron",6)
+        elif kind=="BrokenAxe":
+            b.prism([(0.02,0.9),(0.70,0.82),(0.81,1.32),(0.60,1.65),(0.51,1.38),(0.06,1.30)],-0.06,0.07,"MenuCorrodedIron")
+        else:
+            b.column((0.22,0.08,3.0),0.14,0.66,0,"MenuCorrodedIron",5)
+            b.prism([(0.15,2.9),(1.0,2.80),(0.54,2.51),(0.81,2.35),(0.27,2.08)],-0.02,0.03,"MenuClothFadedA")
+    elif kind=="ArmourHeap":
+        for index in range(4):
+            x,y=rng.uniform(-0.8,0.8),rng.uniform(-0.6,0.6)
+            b.oval((x,y,0.24),(0.34,0.31,0.29),"MenuCorrodedIron",7,4)
+            b.prism([(x-0.20,0.25),(x+0.19,0.28),(x+0.13,0.17),(x-0.14,0.16)],y-0.32,y-0.30,"MenuBlack")
+        b.prism([(-0.8,0.1),(-0.16,0.08),(0.11,0.52),(-0.21,0.93),(-0.60,0.77)],0.22,0.36,"MenuCorrodedIron")
+        for index in range(4):
+            b.box((-0.52+index*0.14,0.29,0.37),(0.065,0.20,0.61),"MenuAgedWood")
+    elif kind=="BrokenRam":
+        for side in (-1,1):
+            b.segment((side*1.25,-1.55,0.02),(side*0.88,0.75,1.50),0.17,0.13,"MenuAgedWood",7)
+            b.segment((side*1.25,1.60,0.02),(side*0.88,0.75,1.50),0.15,0.12,"MenuAgedWood",7)
+        b.segment((-1.9,0,0.52),(0.36,0.12,0.89),0.35,0.28,"MenuAgedWood",9)
+        b.segment((0.68,0.15,0.43),(2.1,0.27,0.08),0.29,0.15,"MenuAgedWood",8)
+        b.oval((-1.9,0,0.52),(0.39,0.40,0.34),"MenuCorrodedIron",8,5)
+        for x in (-0.65,0.34):
+            for index in range(6):
+                b.link((x,0,1.72-index*0.16),0.13,bool(index%2))
+    elif kind in ("Pillory","Gallows","HeadStake","WallHooks"):
+        if kind=="Pillory":
+            for side in (-1,1):
+                b.box((side*0.83,0,1.10),(0.19,0.24,2.4),"MenuAgedWood")
+                b.box((side*0.54,0,1.66),(0.64,0.18,0.46),"MenuAgedWood")
+            b.box((0,0,2.05),(1.8,0.21,0.20),"MenuAgedWood")
+            b.box((0,0,1.30),(1.8,0.21,0.20),"MenuAgedWood")
+        elif kind=="Gallows":
+            b.box((0,0,1.80),(0.32,0.38,3.7),"MenuAgedWood")
+            b.box((0.89,0,3.47),(2.1,0.28,0.28),"MenuAgedWood")
+            b.segment((0.04,0,2.49),(1.31,0,3.44),0.10,0.09,"MenuAgedWood",6)
+            for index in range(8):
+                b.link((1.45,0,3.3-index*0.17),0.10,bool(index%2))
+            b.link((1.45,0,1.85),0.28,False)
+        elif kind=="HeadStake":
+            b.column((0,0,-0.2),0.10,2.4,0,"MenuAgedWood",7)
+            bone_skull(b,(0,-0.04,1.48),1.08,"MenuDeadSkin")
+            for index in range(3):
+                b.segment((rng.uniform(-0.11,0.11),-0.04,1.35),(rng.uniform(-0.15,0.15),-0.02,0.93),0.02,0.005,"MenuDriedBlood",5)
+        else:
+            for side in (-1,1):
+                b.box((side*0.38,1.6,1.8),(0.19,0.24,0.36),"MenuCorrodedIron")
+                b.segment((side*0.38,-0.09,1.8),(side*0.38,1.6,1.8),0.065,0.065,"MenuCorrodedIron",5)
+                for index in range(12):
+                    b.link((side*0.38,-0.09,1.70-index*0.125),0.09,bool(index%2))
+                b.segment((side*0.38,-0.09,0.25),(side*0.55,-0.20,0.10),0.05,0.025,"MenuCorrodedIron",5)
+            bones=[("Swing",(0,0,2.0),range(len(b.vertices)),None)]
+    elif kind=="Crow":
+        ranges={}
+        first=len(b.vertices)
+        b.oval((0,0.0,0.30),(0.16,0.30,0.22),"MenuCrowBlack",9,5)
+        b.prism([(-0.15,0.23),(0.14,0.24),(0.11,0.05),(-0.10,0.04)],0.14,0.54,"MenuCrowBlack")
+        for side in (-1,1):
+            b.segment((side*0.08,0.04,0.15),(side*0.10,-0.02,-0.01),0.018,0.015,"MenuCorrodedIron",5)
+            for toe in range(3):
+                b.segment((side*0.10,-0.02,-0.01),(side*0.10+(toe-1)*0.045,-0.17,-0.015),0.012,0.005,"MenuCrowBlack",5)
+        ranges["Root"]=range(first,len(b.vertices))
+        first=len(b.vertices)
+        b.oval((0,-0.18,0.57),(0.115+(VARIANT_SEED%5)*0.008,0.15,0.135+(VARIANT_SEED%3)*0.012),"MenuCrowBlack",8,5)
+        b.prism([(-0.07,0.56),(0.07,0.56),(0,0.46)],-0.47,-0.24,"MenuCrowBlack")
+        for side in (-1,1):
+            b.oval((side*0.105,-0.28,0.60),(0.016,0.025,0.018),"MenuGateEyes",6,4)
+        ranges["Head"]=range(first,len(b.vertices))
+        for side,label in ((-1,"WingL"),(1,"WingR")):
+            first=len(b.vertices)
+            b.prism([(side*0.07,0.40),(side*0.32,0.31),(side*0.25,0.13),
+                (side*0.19,0.10),(side*0.14,0.03),(side*0.10,0.21)],-0.02,0.28,"MenuCrowBlack")
+            ranges[label]=range(first,len(b.vertices))
+        bones=[("Root",(0,0,0),ranges["Root"],None),("Head",(0,-0.15,0.48),ranges["Head"],"Root"),
+            ("WingL",(-0.08,0,0.35),ranges["WingL"],"Root"),("WingR",(0.08,0,0.35),ranges["WingR"],"Root")]
+        clip="Watch"; seconds=12
+    elif kind=="Rat":
+        b.oval((0,0,0.13),(0.15,0.32,0.14),"MenuRatHide",9,5)
+        b.oval((0,-0.29,0.15),(0.10,0.16,0.11),"MenuRatHide",8,4)
+        b.segment((0,0.23,0.11),(0.14,0.65,0.015),0.025,0.005,"MenuRatHide",6)
+        for side in (-1,1):
+            b.oval((side*0.08,-0.20,0.24),(0.05,0.04,0.06),"MenuRatHide",6,4)
+            for y in (-0.13,0.18):
+                b.segment((side*0.11,y,0.10),(side*0.18,y-0.04,0.0),0.025,0.015,"MenuRatHide",5)
+    elif kind=="WebVictim":
+        center=Vector((0,0,1.25))
+        for spoke in range(13):
+            angle=spoke*2*math.pi/13
+            end=center+Vector((1.2*math.cos(angle),0,1.2*math.sin(angle)))
+            b.segment(tuple(center),tuple(end),0.008,0.004,"MenuWeb",4)
+        for ring in range(1,5):
+            radius=ring*0.25
+            for spoke in range(13):
+                a=spoke*2*math.pi/13; c=(spoke+1)*2*math.pi/13
+                b.segment(tuple(center+Vector((radius*math.cos(a),0,radius*math.sin(a)))),
+                    tuple(center+Vector((radius*math.cos(c),0,radius*math.sin(c)))),0.006,0.005,"MenuWeb",4)
+        dead_skeleton(b,(0,0.08,0.0),0.54,"chained")
+        for z in (0.35,0.56,0.75,0.94):
+            b.segment((-0.27,-0.10,z),(0.31,-0.10,z+0.06),0.020,0.010,"MenuWeb",5)
+    elif kind in ("BloodTrail","DragTrail"):
+        for index in range(11):
+            x=rng.uniform(-0.5,0.5); y=index*0.55
+            width=rng.uniform(0.10,0.38)
+            first=len(b.vertices)
+            b.vertices.extend(((x-width,y,0.0),(x+width,y+0.12,0.0),(x+width*0.45,y+0.66,0.0),(x-width*0.40,y+0.49,0.0)))
+            b.faces.append(tuple(first+i for i in range(4))); b.face_materials.append("MenuDriedBlood" if kind=="BloodTrail" else "MenuSoot")
+    elif kind in ("BurntTorch","CharredRemains","BrokenSlab"):
+        if kind=="BurntTorch":
+            b.segment((-0.45,0,0.02),(0.49,0.13,0.05),0.06,0.09,"MenuAgedWood",7)
+            b.oval((0.45,0.12,0.06),(0.16,0.14,0.12),"MenuSoot",7,4)
+        elif kind=="CharredRemains":
+            dead_skeleton(b,(0,0,0),0.63,"crawling")
+            for index in range(9):
+                b.oval((rng.uniform(-0.6,0.6),rng.uniform(-0.6,0.9),0.05),(0.20,0.17,0.10),"MenuAsh",6,4)
+        else:
+            b.prism([(-0.8,0.0),(0.1,-0.12),(-0.15,0.28),(-0.63,0.46)],-0.70,0.72,"MenuWetStone")
+            b.prism([(0.2,-0.12),(0.85,-0.03),(0.63,0.51),(0.34,0.23)],-0.68,0.68,"MenuWetStone")
+    elif kind=="GateBeast":
+        b.prism([(-2.7,0),(-2.8,2),(-1.9,4.2),(-0.7,6.6),(0.30,6.9),(1.5,4.8),(2.5,3.5),(3.0,0)],-0.02,0.02,"MenuBlack")
+        for x in (-0.52,0.52,-1.64,1.39):
+            b.oval((x,-0.05,5.0 if abs(x)<1 else 2.9),(0.10,0.035,0.055),"MenuGateEyes",8,4)
+    elif kind=="LavaWall":
+        for index in range(8):
+            z=0.2+index*0.50
+            x=0.18*math.sin(index*1.9+VARIANT_SEED)
+            b.prism([(x-0.035,z),(x+0.035,z),(x+0.20,z+0.32),(x+0.12,z+0.55),
+                (x+0.075,z+0.54),(x+0.14,z+0.31)],-0.02,0.01,"MenuLavaCrack")
+    elif kind=="VolcanicRuins":
+        # The raised ruins have a real broken mountain foot embedded below the existing distant ridge.
+        b.prism([(-44,-30),(44,-30),(44,0),(40,1),(30,2),(20,3),(10,1),
+            (0,2),(-10,4),(-20,1),(-30,3),(-39,2),(-44,0)],-5,15,"MenuMountain")
+        for index in range(11):
+            x=-32+index*6+rng.uniform(-2,2); h=rng.uniform(4,13)
+            b.prism([(x-1.6,0),(x+1.5,0),(x+1.1,h),(x+0.3,h+2.4),
+                (x-0.3,h-0.9),(x-1.4,h+0.3)],0,3,"MenuDistantStone")
+            for slit in range(3):
+                b.box((x-0.7+slit*0.6,-0.04,h*0.55),(0.22,0.04,1.5),"MenuLavaCrack")
+        b.prism([(-13,-1),(-7,5),(-4,10),(-2,13),(0,11),(3,5),(9,0)],4,8,"MenuMountain")
+        for index in range(7):
+            b.segment((-2+index*0.12,3.94,12-index*1.3),(-2.4+index*0.22,3.94,10.7-index*1.3),0.05,0.025,"MenuLavaCrack",5)
+    elif kind=="HorizonCrows":
+        for index in range(24):
+            x,y,z=rng.uniform(-17,17),rng.uniform(-3,3),rng.uniform(0,7)
+            b.segment((x,y,z),(x-0.28,y+0.05,z+0.16),0.035,0.008,"MenuCrowBlack",4)
+            b.segment((x,y,z),(x+0.23,y+0.04,z+0.19),0.035,0.008,"MenuCrowBlack",4)
+    elif kind=="TitlePlaque":
+        b.prism([(-7.2,-1.70),(6.9,-1.70),(7.25,-1.2),(7.05,1.63),
+            (5.0,1.76),(-6.9,1.65),(-7.3,1.1)],-0.05,0.33,"MenuTitleIron")
+        for side in (-1,1):
+            for index in range(18):
+                t=index/17
+                tx=side*(5.7+(1.8 if side<0 else 3.0)*t)
+                first_link=len(b.vertices)
+                b.link((tx,0.14+3.85*t,1.65+1.53*t-0.35*math.sin(t*math.pi)),0.16,bool(index%2))
+                if index>=16:
+                    pinned.extend(range(first_link,len(b.vertices)))
+            anchor_x=side*(7.5 if side<0 else 8.7)
+            first_anchor=len(b.vertices)
+            b.segment((anchor_x,3.99,3.18),(anchor_x,5.25,3.18),0.10,0.10,"MenuCorrodedIron",7)
+            b.box((anchor_x,5.25,3.18),(0.29,0.25,0.32),"MenuCorrodedIron")
+            pinned.extend(range(first_anchor,len(b.vertices)))
+            for z in (-0.88,0.88):
+                b.oval((side*6.60,-0.08,z),(0.12,0.07,0.12),"MenuCorrodedIron",7,4)
+        # The title canvas is a single replaceable 3:1 texture, separate from its physical backing.
+        start=len(b.vertices)
+        b.vertices.extend(((-5.8,-0.085,-1.94),(5.8,-0.085,-1.94),(5.8,-0.085,1.9267),(-5.8,-0.085,1.9267)))
+        b.faces.append((start,start+1,start+2,start+3)); b.face_materials.append("MenuTitleLetters")
+        bones=[("Swing",(0,0.14,3.05),range(len(b.vertices)),None)]
+    elif kind=="TitleCrest":
+        b.prism([(-0.95,0.15),(0,0.75),(0.92,0.10),(0.35,-0.65),(0,-1.10),(-0.39,-0.57)],-0.12,0.14,"MenuCorrodedIron")
+        for side in (-1,1):
+            b.segment((side*0.15,-0.16,0.28),(side*0.45,-0.16,-0.07),0.06,0.035,"MenuTitleCrest",5)
+            b.segment((side*0.45,-0.16,-0.07),(side*0.12,-0.16,-0.48),0.035,0.008,"MenuTitleCrest",5)
+        b.segment((0,-0.17,0.43),(0,-0.17,-0.75),0.065,0.025,"MenuTitleCrest",5)
+    elif kind=="BloodMoon":
+        b.oval((0,0,0),(7.0,0.9,7.0),"MenuBloodMoon",72,40)
+        craters=[]
+        for index in range(11):
+            x,z=rng.uniform(-5.7,5.7),rng.uniform(-5.7,5.7)
+            if x*x+z*z<32:
+                craters.append((x,z,rng.uniform(0.45,1.35),rng.uniform(0.07,0.17)))
+        # Basins and broken raised rims deform the actual lunar shell; there are no dark overlay discs.
+        for index,(x,y,z) in enumerate(b.vertices):
+            if y>=0:
+                continue
+            displacement=0
+            for cx,cz,radius,depth in craters:
+                d=math.sqrt((x-cx)**2+(z-cz)**2)/radius
+                rim=math.exp(-((d-1)*5.5)**2)*(0.65+0.35*math.sin(x*7+z*3))
+                displacement+=depth*math.exp(-d*d*3)-depth*0.47*rim
+            b.vertices[index]=(x,y+displacement,z)
+    else:
+        raise ValueError(kind)
+    obj=b.finish()
+    mounted=("ChainedDead","CagedDead","EmptyCage","ImpaledBones","WallHooks","WebVictim","GateBeast","LavaWall","TitlePlaque","TitleCrest","BloodMoon","VolcanicRuins","HorizonCrows")
+    obj["contact_mode"]="perch" if kind=="Crow" else "embedded" if kind in ("GraspingHands","RisingRibcage","OpenGrave","BloodTrail","DragTrail") else "mounted" if kind in mounted else "ground"
+    obj["prop_kind"]=kind
+    obj["fixed_anchor_vertex_count"]=len(pinned)
+    obj["contact_support"]=("GravestoneA" if name=="MenuCrowA" else "GravestoneC" if name=="MenuCrowB" else "LeftWall" if name=="MenuCrowC" else "RightTower" if name=="MenuCrowD" else "Courtyard")
+    obj["contact_point"]=(-0.25,0,0.18) if name=="MenuGravestoneC" else (1.03,-0.72,0.03) if kind=="CrawlingDead" else (0,0,0.18) if kind in ("BrokenSword","BrokenAxe","TatteredSpear","HeadStake","Gravestone") else (0,0,min(v.co.z for v in obj.data.vertices))
+    if kind=="TitlePlaque":
+        face=obj.data.polygons[-1]
+        for loop,uv in zip(face.loop_indices,((0,0),(1,0),(1,1),(0,1))):
+            obj.data.uv_layers.active.data[loop].uv=uv
+    if bones:
+        return rigid_loop(obj,bones,clip,seconds,crow_motion if kind=="Crow" else sway_motion,pinned)
+    return obj
+
+
+# Give every new placed prop its own source, mesh, position and distinct deterministic damage.
+POLISH_SPECS=[
+    ("MenuSkullHeapA",(-4.5,-8.0,-0.16),"SkullHeap"),("MenuSkullHeapB",(4.5,-12.0,-0.16),"SkullHeap"),
+    ("MenuGraspingHands",(-3.4,-13.5,-0.16),"GraspingHands"),("MenuRisingRibcage",(5.1,-15.3,-0.16),"RisingRibcage"),
+    ("MenuCrawlingDead",(-11.5,-11.6,-0.16),"CrawlingDead"),
+    ("MenuChainedDeadLeft",(-6.7,4.5,1.5),"ChainedDead"),("MenuChainedDeadRight",(6.4,4.6,2.1),"ChainedDead"),
+    ("MenuCagedDead",(-5.5,4.8,5.2),"CagedDead"),
+    ("MenuEmptyCageLeft",(-13.0,6.0,4.2),"EmptyCage"),("MenuEmptyCageRight",(17.8,5.8,3.5),"EmptyCage"),
+    ("MenuImpaledBonesLeft",(-7.3,7.2,13.12),"ImpaledBones"),("MenuImpaledBonesRight",(10.6,6.5,12.5),"ImpaledBones"),
+    ("MenuGravestoneA",(-11.5,-12.4,-0.16),"Gravestone"),("MenuGravestoneB",(-15.0,-6.1,-0.16),"Gravestone"),
+    ("MenuGravestoneC",(11.6,-10.9,-0.16),"Gravestone"),("MenuGravestoneD",(15.8,-4.3,-0.16),"Gravestone"),
+    ("MenuOpenGraveLeft",(-12.6,-9.7,-0.10),"OpenGrave"),("MenuOpenGraveRight",(12.5,-8.3,-0.10),"OpenGrave"),
+    ("MenuCrypt",(-16.6,-0.8,-0.16),"Crypt"),("MenuCoffinLeft",(-10.6,-13.4,-0.16),"Coffin"),
+    ("MenuCoffinRight",(11.3,-11.6,-0.16),"Coffin"),("MenuEarthBonesLeft",(-15.7,-8.0,-0.16),"EarthBones"),
+    ("MenuEarthBonesRight",(14.2,-6.9,-0.16),"EarthBones"),
+    ("MenuBrokenSwordA",(-5.0,-10.7,-0.16),"BrokenSword"),("MenuBrokenSwordB",(4.0,-17.3,-0.16),"BrokenSword"),
+    ("MenuBrokenAxe",(6.6,-8.9,-0.16),"BrokenAxe"),("MenuArmourHeapLeft",(-13.3,-5.8,-0.16),"ArmourHeap"),
+    ("MenuArmourHeapRight",(10.0,-9.2,-0.16),"ArmourHeap"),("MenuTatteredSpear",(13.1,-4.1,-0.16),"TatteredSpear"),
+    ("MenuBrokenRam",(3.2,2.3,-0.16),"BrokenRam"),("MenuPillory",(-15.0,3.7,-0.16),"Pillory"),
+    ("MenuHeadStakeA",(-12.5,-2.4,-0.16),"HeadStake"),("MenuHeadStakeB",(14.7,-3.0,-0.16),"HeadStake"),
+    ("MenuGallows",(17.0,-0.3,-0.16),"Gallows"),("MenuWallHooksLeft",(-24.5,5.5,3.1),"WallHooks"),
+    ("MenuWallHooksRight",(22.3,5.4,2.5),"WallHooks"),
+    ("MenuCrowA",(-11.5,-12.4,1.47),"Crow"),("MenuCrowB",(11.6,-10.9,1.50),"Crow"),
+    ("MenuCrowC",(-12.1,8.4,10.0),"Crow"),("MenuCrowD",(10.4,6.9,14.3),"Crow"),
+    ("MenuRatA",(-6.8,-13.4,-0.10),"Rat"),("MenuRatB",(8.7,-11.2,-0.10),"Rat"),("MenuRatC",(-13.0,1.6,-0.10),"Rat"),
+    ("MenuWebVictimLeft",(-20.5,8.05,0.30),"WebVictim"),("MenuWebVictimRight",(23.2,6.15,0.24),"WebVictim"),
+    ("MenuBloodTrail",(-0.8,-10.6,0.045),"BloodTrail"),("MenuDragTrail",(1.0,-7.4,0.055),"DragTrail"),
+    ("MenuBurntTorchA",(-8.0,-6.2,-0.15),"BurntTorch"),("MenuBurntTorchB",(8.7,-6.8,-0.15),"BurntTorch"),
+    ("MenuCharredRemains",(6.9,-7.5,-0.16),"CharredRemains"),
+    ("MenuBrokenSlabLeft",(-4.6,-16.8,-0.16),"BrokenSlab"),("MenuBrokenSlabRight",(4.5,-11.1,-0.16),"BrokenSlab"),
+    ("MenuGateBeast",(0,29.2,-0.18),"GateBeast"),("MenuLavaWallLeft",(-14.1,5.89,0),"LavaWall"),
+    ("MenuLavaWallRight",(15.0,5.79,0),"LavaWall"),("MenuVolcanicRuins",(0,95,23.0),"VolcanicRuins"),
+    ("MenuHorizonCrows",(-12,65,24),"HorizonCrows"),("MenuTitlePlaque",(0,2.95,10.9),"TitlePlaque"),
+    ("MenuTitleCrest",(0,2.9,8.5),"TitleCrest"),("MenuBloodMoon",(-33,83,35),"BloodMoon")]
+
+
 MODELS=(gate,wall,tower,statue,brazier,banner,arches,green_tower,courtyard,backdrop,hall,table,cave)
 COLOURS={"MenuSoot":(0.009,0.007,0.005),"MenuPuddle":(0.05,0.05,0.045),"MenuCarvedStone":(0.22,0.24,0.26),"MenuRoughStone":(0.20,0.22,0.24),"MenuDistantStone":(0.003,0.004,0.006),"MenuStone":(0.30,0.29,0.28),"MenuDarkStone":(0.11,0.12,0.13),"MenuIron":(0.14,0.15,0.16),"MenuWood":(0.18,0.11,0.07),"MenuParchment":(0.42,0.36,0.25),"MenuBlack":(0.012,0.014,0.016),"MenuCloth":(0.25,0.025,0.028),"MenuEmber":(0.9,0.16,0.015),"MenuCrystal":(0.035,0.45,0.055),"MenuMountain":(0.055,0.065,0.07),"MenuCloud":(0.035,0.043,0.049),"MenuSky":(0.012,0.018,0.022),"MenuCampaignMap":(0.7,0.7,0.7),"MenuWindowGlow":(0.8,0.12,0.018),"MenuFlame":(1.0,0.11,0.008),"MenuFlameCore":(1.0,0.42,0.035),"MenuCrystalDark":(0.005,0.12,0.018),"MenuCrystalBright":(0.12,0.8,0.035)}
 COLOURS.update({"MenuMoss":(0.035,0.055,0.022),"MenuLichen":(0.065,0.070,0.045),
@@ -1029,6 +1594,9 @@ COLOURS["MenuDemonStone"]=(0.14,0.15,0.15)
 COLOURS.update({"MenuSpireGlow":(0.025,0.8,0.055),"MenuSpireBeam":(0.04,0.95,0.09),
     "MenuEmberCrack":(0.65,0.055,0.004),"MenuBannerSymbol":(0.32,0.21,0.085),
     "MenuHorizonGlow":(0.08,0.012,0.002),"MenuHorizonDark":(0.018,0.007,0.004)})
+
+
+COLOURS.update({'MenuDriedBlood': (0.05, 0.002, 0.001), 'MenuWetSlime': (0.02, 0.028, 0.009), 'MenuAsh': (0.035, 0.031, 0.026), 'MenuWeb': (0.19, 0.18, 0.15), 'MenuCrowBlack': (0.008, 0.009, 0.008), 'MenuRatHide': (0.05, 0.04, 0.027), 'MenuDeadSkin': (0.08, 0.055, 0.035), 'MenuTitleLetters': (0.5, 0.5, 0.5), 'MenuTitleIron': (0.06, 0.045, 0.03), 'MenuTitleCrest': (0.005, 0.45, 0.015), 'MenuBloodMoon': (0.25, 0.012, 0.002), 'MenuGateEyes': (0.25, 0.035, 0.003), 'MenuLavaCrack': (0.65, 0.03, 0.001)})
 
 
 # Enumerate the thirteen base families and every independently authored visible instance variant.
@@ -1048,6 +1616,8 @@ def model_specs():
         specs.append((rock,"MenuRuinRock%02d"%(index+1),"MenuCourtyard",701+index,1.35))
     for index in range(3):
         specs.append((arcade_arch,"MenuArcadeArch%02d"%(index+1),"MenuArches",801+index,1.1+index*0.23))
+    for index,(name,position,family) in enumerate(POLISH_SPECS):
+        specs.append((polish_prop,name,family,3001+index*13,0.65))
     return specs
 
 
@@ -1090,7 +1660,7 @@ def main():
             arm.name=name+"Armature"
         bpy.context.scene.render.fps=24
         bpy.context.scene.frame_start=0
-        bpy.context.scene.frame_end=96
+        bpy.context.scene.frame_end=int(24*arm.animation_data.action.get("ogre_length",4)) if arm else 96
         assert obj.name==name
         if (private/(name+".blend")).exists() or (private/(name+".mesh.xml")).exists():
             raise FileExistsError("Use a fresh model destination: "+name)
@@ -1101,7 +1671,7 @@ def main():
         if arm:
             exporter.export_skeleton_xml(arm,str(private/(name+".skeleton.xml")))
             shutil.copyfile(private/(name+".skeleton.xml"),work/(name+".skeleton.xml"))
-        report.append(name+" "+str(stats))
+        report.append(name+" "+str(stats)+" contact_corrections="+str(len(json.loads(obj.get("contact_corrections","[]")))))
         print(report[-1],flush=True)
     (work.parent/"models.txt").write_text("\n".join(report)+"\n",encoding="utf-8")
 

@@ -22,7 +22,7 @@ material MenuStone : RTSS/NormalMapping_MultiPass
         {
             ambient 0.85 0.85 0.85 1
             diffuse 0.85 0.85 0.85 1
-            specular 0.035 0.035 0.035 1 12
+            specular 0.10 0.10 0.09 1 32
             texture_unit decalmap
             {
                 texture menu/MenuFortressStone.png
@@ -40,7 +40,7 @@ material MenuDarkStone : MenuStone
         {
             ambient 0.48 0.50 0.52 1
             diffuse 0.48 0.50 0.52 1
-            specular 0.018 0.018 0.018 1 6
+            specular 0.06 0.06 0.05 1 24
         }
     }
 }
@@ -483,14 +483,14 @@ material MenuEmberCrack
     } }
 }
 
-// Faded heraldic tridents are an original painted symbol on the existing torn red cloth.
+// Torn iron skull-and-blade heraldry is dried blood-red instead of clean bright paint.
 material MenuBannerSymbol
 {
     technique { pass {
         cull_hardware none
-        ambient 0.25 0.17 0.09 1
-        diffuse 0.25 0.17 0.09 1
-        specular 0.008 0.008 0.006 1 3
+        ambient 0.14 0.014 0.009 1
+        diffuse 0.14 0.014 0.009 1
+        specular 0.025 0.010 0.007 1 12
     } }
 }
 
@@ -509,5 +509,173 @@ material MenuHorizonDark
     technique { pass { lighting off
         cull_hardware none
         emissive 0.032 0.012 0.007
+    } }
+}
+
+// Old blood is a wet, dark surface trace rather than a source of red illumination.
+material MenuDriedBlood : MenuStone
+{
+    technique { pass decal {
+        ambient 0.22 0.013 0.008 1
+        diffuse 0.22 0.013 0.008 1
+        specular 0.18 0.035 0.020 1 48
+    } }
+}
+
+// Slimy mineral deposits catch rain highlights only inside the existing dark stone colour.
+material MenuWetSlime : MenuStone
+{
+    technique { pass decal {
+        ambient 0.055 0.070 0.025 1
+        diffuse 0.055 0.070 0.025 1
+        specular 0.25 0.28 0.16 1 48
+    } }
+}
+
+// Opaque charcoal flecks and scorched remains never become bright airborne confetti.
+material MenuAsh
+{
+    technique { pass {
+        ambient 0.025 0.023 0.020 1
+        diffuse 0.025 0.023 0.020 1
+        specular 0 0 0 1 1
+        cull_hardware none
+    } }
+}
+
+// Thin dusty strands are modelled geometry, with enough surface response for local rim light.
+material MenuWeb
+{
+    technique { pass {
+        ambient 0.16 0.15 0.13 1
+        diffuse 0.16 0.15 0.13 1
+        specular 0.10 0.10 0.09 1 16
+        cull_hardware none
+    } }
+}
+
+// Crow feathers retain sharp black silhouettes and a faint wet edge under the moon.
+material MenuCrowBlack : MenuIron
+{
+    technique { pass decal {
+        ambient 0.055 0.058 0.052 1
+        diffuse 0.055 0.058 0.052 1
+        specular 0.14 0.12 0.10 1 28
+    } }
+}
+
+// Diseased rat hide is dark and soil-stained, with no colourful highlights.
+material MenuRatHide : MenuDemonStone
+{
+    technique { pass decal {
+        ambient 0.20 0.15 0.095 1
+        diffuse 0.20 0.15 0.095 1
+        specular 0.035 0.030 0.020 1 12
+    } }
+}
+
+// Desiccated trophies use the same original eroded surface with a muted dead-earth tint.
+material MenuDeadSkin : MenuDemonStone
+{
+    technique { pass decal {
+        ambient 0.32 0.22 0.12 1
+        diffuse 0.32 0.22 0.12 1
+        specular 0.018 0.012 0.008 1 8
+    } }
+}
+
+// The separate title decal contains the entire replaceable word and no opaque plaque background.
+material MenuTitleLetters
+{
+    technique { pass {
+        lighting off
+        diffuse 1 1 1 1
+        emissive 0.18 0.18 0.18
+        alpha_rejection greater 96
+        cull_hardware none
+        texture_unit { texture menu/MenuTitle.png
+            tex_address_mode clamp
+            filtering trilinear
+        }
+    } }
+}
+
+// The title support is old pitted iron, independent from the exchangeable lettering bitmap.
+material MenuTitleIron : MenuIron
+{
+    technique { pass decal {
+        ambient 0.38 0.32 0.25 1
+        diffuse 0.38 0.32 0.25 1
+        specular 0.12 0.09 0.06 1 24
+    } }
+}
+
+// The hanging crest is the only green accent away from the poisoned tower.
+material MenuTitleCrest
+{
+    technique { pass {
+        lighting off
+        emissive 0.009 0.32 0.025
+        cull_hardware none
+    } }
+}
+
+// Fractured lunar stone glows a desaturated blood red behind drifting cloud fragments.
+material MenuBloodMoon : MenuStone
+{
+    technique { pass decal {
+        ambient 0.30 0.018 0.010 1
+        diffuse 0.30 0.018 0.010 1
+        emissive 0.22 0.013 0.006
+        specular 0 0 0 1 1
+    } }
+}
+
+// Faint eyes are embedded in darkness behind the grille rather than floating lanterns.
+material MenuGateEyes
+{
+    technique { pass {
+        lighting off
+        emissive 0.24 0.024 0.002
+    } }
+}
+
+// Deep red heat beneath broken masonry complements the brighter courtyard ember veins.
+material MenuLavaCrack
+{
+    technique { pass {
+        lighting off
+        emissive 0.85 0.035 0.002
+        cull_hardware none
+    } }
+}
+
+// PC menu swarms use small cutout sprites; their quotas are capped in the particle scripts.
+material MenuBatSprite
+{
+    technique { pass {
+        lighting off
+        diffuse 0.028 0.026 0.022 1
+        scene_blend alpha_blend
+        depth_write off
+        cull_hardware none
+        texture_unit { texture menu/MenuBat.png
+            tex_address_mode clamp
+            filtering trilinear
+        }
+    } }
+}
+material MenuCrowSprite
+{
+    technique { pass {
+        lighting off
+        diffuse 0.035 0.030 0.025 1
+        scene_blend alpha_blend
+        depth_write off
+        cull_hardware none
+        texture_unit { texture menu/MenuCrow.png
+            tex_address_mode clamp
+            filtering trilinear
+        }
     } }
 }
