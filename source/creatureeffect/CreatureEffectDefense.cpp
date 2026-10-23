@@ -45,23 +45,20 @@ const std::string& CreatureEffectDefense::getEffectName() const
     return CreatureEffectDefenseName;
 }
 
+//! \brief Keeps the bonus of this effect in the defense modifier of the creature (the modifier is the sum of the
+//! bonuses of all running defense effects, so effects from different sources add up and end on their own).
 void CreatureEffectDefense::applyEffect(Creature& creature)
 {
     if(!creature.isAlive())
         return;
 
-    creature.setDefenseModifier(mPhy, mMag, mEle);
+    creature.setDefenseContribution(this, mPhy, mMag, mEle);
 }
 
+//! \brief Takes only the bonus of this effect out of the defense modifier of the creature.
 void CreatureEffectDefense::releaseEffect(Creature& creature)
 {
-    if(!creature.isAlive())
-        return;
-
-    creature.clearDefenseModifier();
-    mPhy = 0.0;
-    mMag = 0.0;
-    mEle = 0.0;
+    creature.removeDefenseContribution(this);
 }
 
 CreatureEffectDefense* CreatureEffectDefense::load(std::istream& is)

@@ -57,6 +57,7 @@ bool CreatureSkillStrengthSelf::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Strengthens the creature while it fights (a skill of the skill tree only when its effect is not running).
 bool CreatureSkillStrengthSelf::tryUseSupport(GameMap& gameMap, Creature* creature) const
 {
     if(!creature->isAlive())
@@ -66,7 +67,12 @@ bool CreatureSkillStrengthSelf::tryUseSupport(GameMap& gameMap, Creature* creatu
     if(!creature->isActionInList(CreatureActionType::fight))
         return false;
 
+    // A skill of the skill tree is not used again while its effect runs
+    if(isTreeSkill() && creature->hasActiveEffectSource(getTreeSkillId()))
+        return false;
+
     CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(mEffectDuration, mEffectValue, "SpellCreatureStrength");
+    tagEffect(effect);
     creature->addCreatureEffect(effect);
 
     for(Tile* tile : creature->getCoveredTiles())

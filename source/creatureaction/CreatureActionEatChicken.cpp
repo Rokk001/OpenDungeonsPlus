@@ -160,6 +160,8 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
             Creature::reportRelationshipEvent(RelationshipEvent::chickenSnatched, *victim, creature);
     }
     creature.foodEaten(ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHungerPerChicken"));
+    // Eaten chickens count for the reset of the skills
+    creature.registerChickenEaten();
     // Eating together with a friend is more pleasant
     creature.reportEatingWithFriends();
     creature.setJobCooldown(Random::Int(ConfigManager::getSingleton().getRoomConfigUInt32("HatcheryCooldownChickenMin"),

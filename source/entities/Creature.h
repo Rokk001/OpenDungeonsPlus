@@ -25,6 +25,7 @@
 #include "entities/CreatureActivity.h"
 #include "entities/DefenceChance.h"
 #include "eventsystem/CreatureMoved.h"
+#include "creatureskill/CreatureSkillTree.h"
 #include "eventsystem/Subject.h"
 #include "game/CreatureAppearance.h"
 
@@ -36,6 +37,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 enum class RelationshipEvent;
 struct RelationshipCreatureState;
@@ -102,10 +104,26 @@ public:
     }
 
     const CreatureSkill* mSkill;
+    //! \brief Id of the skill tree entry the skill was made from (empty for a line of the creature definition)
+    std::string mTreeSkillId;
     //! \brief Turns left until the skill can be used again; fractions of a turn are possible (level scaled cooldown)
     double mCooldown;
     //! \brief Turns left of the warmup before the skill takes effect; fractions of a turn are kept like in mCooldown
     double mWarmup;
+};
+
+//! \brief Defense bonus of one running defense effect on the three damage channels.
+struct CreatureDefenseBonus
+{
+    CreatureDefenseBonus() :
+        mPhy(0.0),
+        mMag(0.0),
+        mEle(0.0)
+    {}
+
+    double mPhy;
+    double mMag;
+    double mEle;
 };
 
 //! Class used on server side to link creature effects (spells, slap, ...) with particle effects
@@ -497,8 +515,8 @@ public:
     //! \brief Returns a mana cost after the manacost% passives: baseCost x (1 - manacost% / 100), never below 0.
     //! \param baseCost The cost before the passives.
     double getManaCost(double baseCost) const;
-    //! \brief Returns the mana the skill costs this creature now: the shot cost of a caster's first MissileLaunch
-    //! or of a second MissileLaunch line (both with manacost%), 0 for every free attack.
+    //! \brief Returns the mana the skill costs this creature now: the rank cost of a skill tree skill, the shot cost
+    //! of a caster's first MissileLaunch or of a second MissileLaunch line (all with manacost%), 0 for every free attack.
     //! \param skill The skill or attack line to price.
     double getSkillManaCost(const CreatureSkill& skill) const;
     //! \brief Returns true if the current mana covers the cost of the skill (a free skill is always affordable).
@@ -509,6 +527,51 @@ public:
     void payManaFor(const CreatureSkill& skill);
     //! \brief Adds one turn of mana regeneration: max mana / (ManaRefillSeconds x turns per second), capped at max.
     void regenerateMana();
+    //! \brief Returns the skill state of the creature (template, ranks, personal seed, reset counters).
+    inline const CreatureSkillTree::SkillBuild& getSkillBuild() const
+    { return mSkillBuild; }
+    //! \brief Returns the rank of the skill tree entry with the given id (0 when the creature has none).
+    uint32_t getSkillRank(const std::string& skillId) const;
+    //! \brief Returns the skill points the creature has earned so far (one per level from the first point level).
+    uint32_t getSkillPointsEarned() const;
+    //! \brief Returns the skill points the creature has spent (the free rank of the pre-skill does not count).
+    uint32_t getSkillPointsSpent() const;
+    //! \brief Returns the name of the template the creature follows, empty while it follows none.
+    std::string getSkillTemplateName() const;
+    //! \brief Fills what the skill rules need to know about the type of the creature.
+    CreatureSkillTree::TypeInfo getSkillTypeInfo() const;
+    //! \brief Counts one eaten chicken for the skill reset (server side).
+    void registerChickenEaten();
+    //! \brief Returns the heal amount of 100 percent of a heal skill: the MinHP times the damage multiplier of the
+    //! Mana attribute level.
+    double getHealBase() const;
+    //! \brief Returns the factor on the damage of a damage skill of the skill tree: damage multiplier of the level,
+    //! own MinHP divided by SkillSpellReferenceMinHP, and the spell% and alldmg% passives.
+    double getTreeSpellDamageFactor() const;
+    //! \brief Arms the next melee blow against a creature to do its damage times the factor.
+    void armStrike(double factor);
+    //! \brief True while a melee blow is armed.
+    bool isStrikeArmed() const;
+    //! \brief Returns the factor of the armed melee blow and unarms it (1 when none is armed).
+    double consumeStrikeMultiplier();
+    //! \brief Returns the own creatures (same seat, alive, on the map) within the radius in tiles, the creature itself
+    //! included.
+    std::vector<Creature*> getOwnCreaturesWithin(double radius) const;
+    //! \brief True when a running effect of the creature was made by the skill or spell with the given source id.
+    bool hasActiveEffectSource(const std::string& sourceId) const;
+
+    //! \brief Sets the factor of a running strength effect; the strength modifier is the product of all factors.
+    void setStrengthContribution(const CreatureEffect* source, double factor);
+    //! \brief Removes the factor of a strength effect that ended.
+    void removeStrengthContribution(const CreatureEffect* source);
+    //! \brief Sets the factor of a running speed effect; the speed modifier is the product of all factors.
+    void setSpeedContribution(const CreatureEffect* source, double factor);
+    //! \brief Removes the factor of a speed effect that ended.
+    void removeSpeedContribution(const CreatureEffect* source);
+    //! \brief Sets the bonus of a running defense effect; the defense modifier is the sum of all bonuses.
+    void setDefenseContribution(const CreatureEffect* source, double phy, double mag, double ele);
+    //! \brief Removes the bonus of a defense effect that ended.
+    void removeDefenseContribution(const CreatureEffect* source);
 
     //! \brief Check whether a creature has earned one level. If yes, handle leveling it up
     void checkLevelUp();
@@ -1572,6 +1635,50 @@ private:
 
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;
+
+    //! \brief Skill points spent, template, ranks and reset counters of the skill tree (saved and sent to clients)
+    CreatureSkillTree::SkillBuild mSkillBuild;
+    //! \brief The active skills made from the skill tree ranks; owned by the creature (server side)
+    std::vector<CreatureSkill*> mTreeSkills;
+    //! \brief True when the ranks changed and mSkillData has to be rebuilt at the start of the next turn
+    bool mTreeSkillsDirty = false;
+    //! \brief Damage factor of the armed melee blow (1 when no blow is armed)
+    double mStrikeMultiplier = 1.0;
+    //! \brief Factors of the running strength effects; the strength modifier is their product
+    std::map<const CreatureEffect*, double> mStrengthContributions;
+    //! \brief Factors of the running speed effects; the speed modifier is their product
+    std::map<const CreatureEffect*, double> mSpeedContributions;
+    //! \brief Bonuses of the running defense effects; the defense modifier is their sum
+    std::map<const CreatureEffect*, CreatureDefenseBonus> mDefenseContributions;
+
+    //! \brief Starts the skill build of a new creature (personal seed, free rank of the pre-skill) and spends the points
+    //! it has earned (server side). Does nothing for a creature whose build was started or loaded.
+    void initSkillBuild();
+    //! \brief Spends the skill points the level pays for; chooses the template at the first point (server side).
+    void updateSkillPoints();
+    //! \brief Counts the own creatures of the skill group per template (the creature itself included once it chose).
+    //! \param followers Receives one count per template of the group.
+    void countTemplateFollowers(std::vector<uint32_t>& followers) const;
+    //! \brief Lets the reset window run, resets the skills when the conditions are met and rebuilds the active skills
+    //! after a change of the ranks (server side, at the start of every turn).
+    void upkeepSkillTree();
+    //! \brief Replaces the skills made from the skill tree in mSkillData by the ones of the current ranks.
+    void rebuildTreeSkills();
+    //! \brief Creates the active skill of a skill tree entry at its rank.
+    //! \return The skill (owned by the creature), nullptr when the entry has no active skill.
+    CreatureSkill* createTreeSkill(const std::string& skillId, uint32_t rank) const;
+    //! \brief Writes the skill build for clients.
+    void exportSkillBuildToPacket(ODPacket& os) const;
+    //! \brief Reads the skill build sent by exportSkillBuildToPacket.
+    void importSkillBuildFromPacket(ODPacket& is);
+    //! \brief Multiplies the three move speeds by the move% passives of the skills.
+    void applyMovePassive();
+    //! \brief Recomputes the strength modifier as the product of the factors of all running strength effects.
+    void updateStrengthModifier();
+    //! \brief Recomputes the speed modifier as the product of the factors of all running speed effects.
+    void updateSpeedModifier();
+    //! \brief Recomputes the defense modifier as the sum of the bonuses of all running defense effects.
+    void updateDefenseModifier();
 
     //! \brief Turns left until the creature can attack again (may be a fraction of a turn)
     double mAttackRecoveryTurns = 0.0;

@@ -45,25 +45,20 @@ const std::string& CreatureEffectStrengthChange::getEffectName() const
     return CreatureEffectStrengthChangeName;
 }
 
+//! \brief Keeps the factor of this effect in the strength modifier of the creature (the modifier is the product of the
+//! factors of all running strength effects, so effects from different sources add up and end on their own).
 void CreatureEffectStrengthChange::applyEffect(Creature& creature)
 {
     if(!creature.isAlive())
         return;
 
-    if(mEffectValue == 1.0)
-        return;
-
-    creature.setStrengthModifier(mEffectValue);
-    mEffectValue = 1.0;
+    creature.setStrengthContribution(this, mEffectValue);
 }
 
+//! \brief Takes only the factor of this effect out of the strength modifier of the creature.
 void CreatureEffectStrengthChange::releaseEffect(Creature& creature)
 {
-    if(!creature.isAlive())
-        return;
-
-    creature.clearStrengthModifier();
-    mEffectValue = 1.0;
+    creature.removeStrengthContribution(this);
 }
 
 CreatureEffectStrengthChange* CreatureEffectStrengthChange::load(std::istream& is)

@@ -127,6 +127,8 @@ struct Creature {
  bool mNeedFireRefresh=false;
  unsigned getLevel(){return mLevel;}std::string getName(){return "probe";}
  double getLifeLevel(){return mLevel;}double getSkillPassive(const std::string&){return 0.0;}
+ // Mana and skill point hooks of setLevel/buildStats; the probe has no passives, skills or mana pool.
+ double mMana=0;void setCurrentMana(double mana){mMana=mana;}void updateSkillPoints(){}void applyMovePassive(){}
  void buildStats();void setLevel(unsigned);void checkLevelUp();void receiveExp(double);
 };
 METHODS

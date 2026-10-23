@@ -18,6 +18,8 @@
 #ifndef CONFIGMANAGER_H
 #define CONFIGMANAGER_H
 
+#include "creatureskill/CreatureSkillTree.h"
+
 #include <OgreSingleton.h>
 #include <OgreColourValue.h>
 
@@ -256,6 +258,9 @@ public:
     //! \brief Number of own creatures (self included) below the area heal limit that make a creature use an area heal skill (SkillHealAreaMinCreatures in global.cfg)
     inline uint32_t getSkillHealAreaMinCreatures() const
     { return mSkillHealAreaMinCreatures; }
+    //! \brief The creature skill trees, tier 4 skills and templates read from creatureSkills.cfg
+    inline const CreatureSkillTree::SkillTreeConfig& getCreatureSkillTree() const
+    { return mCreatureSkillTree; }
     //! \brief Share of its gold capacity a worker gains for every Strength point above its start Strength (GoldCarryPerStrength in global.cfg)
     inline double getGoldCarryPerStrength() const
     { return mGoldCarryPerStrength; }
@@ -576,6 +581,8 @@ private:
     bool loadTraps(const std::string& fileName);
     bool loadSpellConfig(const std::string& fileName);
     bool loadSkills(const std::string& fileName);
+    //! \brief Reads config/creatureSkills.cfg (skill trees, tier 4 skills and templates of the creatures).
+    bool loadCreatureSkills(const std::string& fileName);
     bool loadTilesets(const std::string& fileName);
     bool loadTilesetValues(std::istream& defFile, TileVisual tileVisual, std::vector<std::vector<TileSetValue>>& tileValues, std::map<TileVisual,std::map<int,float>>& highMap);
     bool loadEditorSettings(const std::string& fileName);
@@ -612,6 +619,7 @@ private:
     std::string mFilenameTraps;
     std::string mFilenameSpells;
     std::string mFilenameSkills;
+    std::string mFilenameCreatureSkills;
     std::string mFilenameTilesets;
     std::string mFilenameEditor;
     std::string mFilenameUserCfg;
@@ -674,6 +682,8 @@ private:
     double mSkillHealAreaBelow;
     //! Number of own creatures (self included) below the area heal limit that make a creature use an area heal skill (global.cfg SkillHealAreaMinCreatures)
     uint32_t mSkillHealAreaMinCreatures;
+    //! The creature skill trees, tier 4 skills and templates (creatureSkills.cfg)
+    CreatureSkillTree::SkillTreeConfig mCreatureSkillTree;
     //! Share of its gold capacity a worker gains for every Strength point above its start Strength (global.cfg GoldCarryPerStrength)
     double mGoldCarryPerStrength;
     double mLowHealthWalkThresholdPercent;

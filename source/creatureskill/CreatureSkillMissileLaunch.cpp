@@ -28,6 +28,7 @@
 #include "gamemap/GameMap.h"
 #include "network/CosmeticEvent.h"
 #include "spells/Spell.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -108,16 +109,22 @@ bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creatur
         attackedObject, ko, notifyPlayerIfHit);
     // Grenades and guided bolts follow the SkillDamageFactor of the creature type; the factor applies to the skill
     // damage only, not to the weapon damage added by the scaler
-    const double damageFactor = appliesSkillDamageFactor() ? creature->getDefinition()->getSkillDamageFactor() : 1.0;
+    double damageFactor = appliesSkillDamageFactor() ? creature->getDefinition()->getSkillDamageFactor() : 1.0;
+    // A grenade or guided bolt of the skill tree also scales with the health tier of the creature (its MinHP over the
+    // calibration MinHP); the damage multiplier of the level and the passives are applied below
+    const double referenceMinHP = ConfigManager::getSingleton().getSkillSpellReferenceMinHP();
+    if(isTreeSkill() && referenceMinHP > 0.0)
+        damageFactor *= creature->getDefinition()->getMinHp() / referenceMinHP;
     double phyMin = mPhyMin * damageFactor, phyMax = mPhyMax * damageFactor;
     double magMin = mMagMin * damageFactor, magMax = mMagMax * damageFactor;
     double eleMin = mEleMin * damageFactor, eleMax = mEleMax * damageFactor;
     // Bow and crossbow lines (not the grenade) follow the Dexterity attribute level, every other line the creature
     // level. The first attack line of a type without bow is its spell attack: spell% instead of dmg%.
     const bool carriesBow = creature->carriesBowOrCrossbow();
-    const bool dexterityLine = carriesBow && getSkillName() != "Grenade";
+    const bool dexterityLine = carriesBow && getSkillName() != "Grenade" && !isTreeSkill();
     const double damageLevel = dexterityLine ? creature->getDexterityLevel() : static_cast<double>(creature->getLevel());
-    const bool spellLine = !carriesBow && creature->getDefinition()->isFirstAttackSkill(this);
+    // A skill of the skill tree counts as a spell: the creature level and the spell% passive
+    const bool spellLine = isTreeSkill() || (!carriesBow && creature->getDefinition()->isFirstAttackSkill(this));
     CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
         damageLevel, spellLine ? "spell%" : "dmg%");
     missile->setCreatureDamageRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,

@@ -80,6 +80,9 @@ bool CreatureSkillExplosion::tryUseFight(GameMap& gameMap, Creature* creature, f
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
     // The damage follows the SkillDamageFactor of the creature type
     double damageFactor = creature->getDefinition()->getSkillDamageFactor();
+    // A skill of the skill tree also scales with the level, the health tier and the spell passives of the creature
+    if(isTreeSkill())
+        damageFactor *= creature->getTreeSpellDamageFactor();
     // The blast has no hit roll: it is critical when the roll succeeds, which multiplies its damage values (the
     // magical defense of the target is subtracted from the multiplied values by the effect)
     const bool critical = creature->rollCritical();
