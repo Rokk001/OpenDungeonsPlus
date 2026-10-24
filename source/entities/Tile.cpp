@@ -59,6 +59,11 @@
 
 
 const uint32_t Tile::NO_FLOODFILL = 0;
+const uint32_t Tile::GOLD_DENSITY_LOW = 50;
+const uint32_t Tile::GOLD_DENSITY_DEFAULT = 100;
+const uint32_t Tile::GOLD_DENSITY_HIGH = 150;
+//! \brief Gold below this is rounding noise of the saved fullness (6 digits) and counts as paid out
+static const double GOLD_REMAINING_EPSILON = 0.001;
 const std::string Tile::TILE_PREFIX = "Tile_";
 const std::string Tile::TILE_SCANF = TILE_PREFIX + "%i_%i";
 const Ogre::ColourValue Tile::DIG_MARK_COLOUR(0.65f, 0.45f, 1.0f, 0.5f);
@@ -74,6 +79,7 @@ Tile::Tile(GameMap* gameMap, int x, int y, TileType type, double fullness) :
     mTileVisual         (TileVisual::nullTileVisual),
     mSelected           (false),
     mFullness           (fullness),
+    mGoldDensity        (GOLD_DENSITY_DEFAULT),
     mRefundPriceRoom    (0),
     mRefundPriceTrap    (0),
     mCoveringBuilding   (nullptr),
@@ -113,7 +119,8 @@ void Tile::transfer(Tile* tt)
     mTileVisual  = tt->mTileVisual;       
     mSelected  = tt->mSelected;         
     mFullness = tt->mFullness;         
-    mRefundPriceRoom = tt->mRefundPriceRoom;   
+    mGoldDensity = tt->mGoldDensity;
+    mRefundPriceRoom = tt->mRefundPriceRoom;
     mRefundPriceTrap = tt->mRefundPriceTrap; 
     mClaimedPercentage = tt->mClaimedPercentage; 
     mIsRoom = tt->mIsRoom;            
@@ -275,17 +282,53 @@ bool Tile::isWallClaimedForSeat(Seat* seat)
 
 std::string Tile::getFormat()
 {
-    return "posX\tposY\ttype\tfullness\tseatId(optional)";
+    return "posX\tposY\ttype\tfullness\tseatId(optional)\tgoldDensity(optional, gold tiles only, seatId -1 if none)";
 }
 
+//! \brief Writes the tile as one level line. A gold tile with a density other than 100 gets two more columns:
+//! the seat id (-1 if the tile has no seat) and the density. Older files have 4 or 5 columns and load with density 100.
 void Tile::exportToStream(std::ostream& os) const
 {
     os << getX() << "\t" << getY() << "\t";
     os << getType() << "\t" << getFullness();
+    bool writeDensity = (getType() == TileType::gold) && (mGoldDensity != GOLD_DENSITY_DEFAULT);
     if(getSeat() == nullptr)
+    {
+        if(writeDensity)
+            os << "\t-1\t" << mGoldDensity;
         return;
+    }
 
     os << "\t" << getSeat()->getId();
+    if(writeDensity)
+        os << "\t" << mGoldDensity;
+}
+
+//! \brief Sets the gold density in percent; anything but 50, 100 or 150 is stored as 100.
+void Tile::setGoldDensity(uint32_t density)
+{
+    if((density == GOLD_DENSITY_LOW) || (density == GOLD_DENSITY_HIGH))
+        mGoldDensity = density;
+    else
+        mGoldDensity = GOLD_DENSITY_DEFAULT;
+}
+
+//! \brief The editor cycle of the gold density: 100 -> 150 -> 50 -> 100.
+uint32_t Tile::nextGoldDensity(uint32_t density)
+{
+    if(density == GOLD_DENSITY_DEFAULT)
+        return GOLD_DENSITY_HIGH;
+    if(density == GOLD_DENSITY_HIGH)
+        return GOLD_DENSITY_LOW;
+    return GOLD_DENSITY_DEFAULT;
+}
+
+//! \brief Gold held by the tile in total, see Tile.h. The skirmish setting is a percentage of the map (100 by default).
+double Tile::getGoldSeamTotal() const
+{
+    double skirmishPercent = static_cast<double>(getGameMap()->getGoldDensityPercent());
+    return ConfigManager::getSingleton().getGoldPerSeamTile() * static_cast<double>(mGoldDensity) / 100.0 *
+        skirmishPercent / 100.0;
 }
 
 ODPacket& operator<<(ODPacket& os, const TileType& type)
@@ -1412,6 +1455,11 @@ void Tile::updateFromPacket(ODPacket& is)
 
     OD_ASSERT_TRUE(is >> mTileVisual);
 
+    // The gold density comes last (see Seat::exportTileToPacket); a gold tile is shown with density 100 until it arrives
+    uint32_t goldDensity = GOLD_DENSITY_DEFAULT;
+    OD_ASSERT_TRUE(is >> goldDensity);
+    setGoldDensity(goldDensity);
+
     if(seatId == -1)
     {
         setSeat(nullptr);
@@ -1479,6 +1527,11 @@ void Tile::loadFromLine(const std::string& line, Tile *t)
             break;
     }
     t->setFullnessValue(fullness);
+
+    // A gold tile can have a sixth column with its density (the fifth is then its seat id or -1). Missing means 100.
+    // The density is read before the seat code below, which returns early for tiles without a seat.
+    if((tileType == TileType::gold) && (elems.size() >= 6))
+        t->setGoldDensity(static_cast<uint32_t>(Helper::toInt(elems[5])));
 
     bool shouldSetSeat = false;
     // We allow to set seat if the tile is dirt (full or not) or if it is gold (ground only)
@@ -1775,27 +1828,69 @@ double Tile::digOut(double digRate)
     if(fullnessLost >= mFullness)
     {
         digRateScaled = mFullness;
-        setFullness(0.0);
-
-        computeTileVisual();
-        setDirtyForAllSeats();
-
-        for (Tile* tile : mNeighbors)
-        {
-            // Update potential active spots.
-            Building* building = tile->getCoveringBuilding();
-            if (building != nullptr)
-            {
-                building->updateActiveSpots();
-                building->createMesh();
-            }
-        }
+        finishDigOut();
         return digRateScaled;
     }
 
     digRateScaled = fullnessLost;
     setFullness(mFullness - fullnessLost);
     return digRateScaled;
+}
+
+//! \brief Turns a wall that was dug empty into ground: fullness 0, new visual, all seats notified and the buildings
+//! next to the tile refreshed (their active spots may have changed).
+void Tile::finishDigOut()
+{
+    setFullness(0.0);
+
+    computeTileVisual();
+    setDirtyForAllSeats();
+
+    for (Tile* tile : mNeighbors)
+    {
+        // Update potential active spots.
+        Building* building = tile->getCoveringBuilding();
+        if (building != nullptr)
+        {
+            building->updateActiveSpots();
+            building->createMesh();
+        }
+    }
+}
+
+//! \brief Mines one dig step from a gold wall. The remaining gold is the fullness share of the tile total; the step
+//! takes GoldPerDigStep x density / 100 x skirmish gold setting / 100 of it, the last step takes what is left.
+double Tile::digOutGold()
+{
+    if((getType() != TileType::gold) || (getTileVisual() != TileVisual::goldFull))
+    {
+        OD_LOG_ERR("Wrong tile for mining gold tile=" + Tile::displayAsString(this) + ", visual=" + tileVisualToString(getTileVisual()));
+        return 0.0;
+    }
+
+    if(mFullness <= 0.0)
+    {
+        OD_LOG_ERR("tile=" + Tile::displayAsString(this) + ", mFullness=" + Helper::toString(mFullness));
+        return 0.0;
+    }
+
+    double total = getGoldSeamTotal();
+    if(total <= 0.0)
+        return 0.0;
+
+    double skirmishPercent = static_cast<double>(getGameMap()->getGoldDensityPercent());
+    double step = ConfigManager::getSingleton().getGoldPerDigStep() * static_cast<double>(mGoldDensity) / 100.0 *
+        skirmishPercent / 100.0;
+    double remaining = mFullness / 100.0 * total;
+    if((remaining - step) <= GOLD_REMAINING_EPSILON)
+    {
+        // Last step: pays what is left and the tile becomes ground
+        finishDigOut();
+        return remaining;
+    }
+
+    setFullness((remaining - step) / total * 100.0);
+    return step;
 }
 
 void Tile::fillWithCarryableEntities(Creature* carrier, std::vector<GameEntity*>& entities)

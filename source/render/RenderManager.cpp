@@ -169,6 +169,52 @@ const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f)
 
 const Ogre::Real RenderManager::DRAGGABLE_NODE_HEIGHT = 3.0f;
 
+//! The material of a gold wall of density 100 % and the prefix of its clone for the editor drag container
+static const std::string GOLD_WALL_MATERIAL = "Gold";
+static const std::string LIFTED_MATERIAL_PREFIX = "Lifted";
+static const std::string GRAPHICS_RESOURCE_GROUP = "Graphics";
+//! The number of different gold densities (50, 100 and 150 percent)
+static const uint32_t NB_GOLD_DENSITIES = 3;
+
+//! \brief Returns the name of the material of a gold wall of the given density (Gold, Gold50 or Gold150);
+//! lifted selects the clone for the editor drag container (the name with the prefix Lifted).
+std::string RenderManager::goldWallMaterialName(uint32_t density, bool lifted)
+{
+    std::string name = GOLD_WALL_MATERIAL;
+    if((density == Tile::GOLD_DENSITY_LOW) || (density == Tile::GOLD_DENSITY_HIGH))
+        name += Helper::toString(density);
+    if(lifted)
+        name = LIFTED_MATERIAL_PREFIX + name;
+    return name;
+}
+
+//! \brief Clones the gold wall material of every density into its lifted variant, which ignores the height of the
+//! dragged tiles (dirty hack, please look at the Gold.material file).
+void RenderManager::createLiftedGoldMaterials()
+{
+    uint32_t density = Tile::GOLD_DENSITY_DEFAULT;
+    for(uint32_t count = 0; count < NB_GOLD_DENSITIES; ++count)
+    {
+        Ogre::MaterialPtr liftedGold = Ogre::MaterialManager::getSingleton().getByName(
+            goldWallMaterialName(density, false))->clone(goldWallMaterialName(density, true));
+        liftedGold->getTechnique(0)->getPass(liftedGold->getTechnique(0)->getNumPasses() - 1)->getVertexProgramParameters()->setNamedConstant("height",DRAGGABLE_NODE_HEIGHT);
+        density = Tile::nextGoldDensity(density);
+    }
+}
+
+//! \brief Removes the lifted gold wall materials of every density if they exist.
+void RenderManager::removeLiftedGoldMaterials()
+{
+    uint32_t density = Tile::GOLD_DENSITY_DEFAULT;
+    for(uint32_t count = 0; count < NB_GOLD_DENSITIES; ++count)
+    {
+        std::string name = goldWallMaterialName(density, true);
+        if(Ogre::MaterialManager::getSingleton().resourceExists(name, GRAPHICS_RESOURCE_GROUP))
+            Ogre::MaterialManager::getSingleton().remove(name, GRAPHICS_RESOURCE_GROUP);
+        density = Tile::nextGoldDensity(density);
+    }
+}
+
 // The room patch lights only use this light mask bit. Plain claimed ground tiles leave it out,
 // so the floor next to a room doorway is not lit brighter than claimed ground elsewhere.
 const uint32_t ROOM_LIGHT_MASK = 0x2;
@@ -1805,9 +1851,8 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
         mHandLightNode->attachObject(mHandLight);
     }
     // dirty hack to make the hovering gold tile be height agnostic, please look Gold.material file
-    Ogre::MaterialPtr liftedGold = Ogre::MaterialManager::getSingleton().getByName("Gold")->clone("LiftedGold");
-    liftedGold->getTechnique(0)->getPass(liftedGold->getTechnique(0)->getNumPasses() - 1)->getVertexProgramParameters()->setNamedConstant("height",DRAGGABLE_NODE_HEIGHT);
-    
+    createLiftedGoldMaterials();
+
     //Add a too small to be visible dummy dirt tile to the hand node
     //so that there will always be a dirt tile "visible"
     //This is an ugly workaround for issue where destroying some entities messes
@@ -2067,7 +2112,7 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
         mSceneManager->destroyLight(mHandLight);
         mHandLight = nullptr;
     }
-    removeIfExists<Ogre::MaterialManager>("LiftedGold", "Graphics");
+    removeLiftedGoldMaterials();
     removeIfExists<Ogre::TextureManager>("smokeTexture", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
     if(ODFrameListener::getSingleton().getCameraManager()->hasCamera("RenderToTexture"))
         ODFrameListener::getSingleton().getCameraManager()->destroyCamera("RenderToTexture");
@@ -3478,9 +3523,10 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tileMeshEnt->setMaterialName(tileSetValue.getMaterialName());
 
 
-        // dirty hack to make the hovering gold tile be height agnostic, please look Gold.material file
-        if(tileSetValue.getMaterialName() == "Gold" && nt == NodeType::MDTC_NODE)
-            tileMeshEnt->setMaterialName("LiftedGold");
+        // A gold wall shows the material of its density (Gold, Gold50 or Gold150). The tiles of the editor drag container
+        // use the lifted clone (dirty hack to make the hovering gold tile be height agnostic, please look Gold.material file)
+        if(tileSetValue.getMaterialName() == GOLD_WALL_MATERIAL)
+            tileMeshEnt->setMaterialName(goldWallMaterialName(tile.getGoldDensity(), nt == NodeType::MDTC_NODE));
         Seat* seatColor = nullptr;
         if(tile.shouldColorTileMesh())
             seatColor = tile.getSeat();

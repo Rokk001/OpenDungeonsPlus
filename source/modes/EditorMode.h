@@ -155,6 +155,9 @@ private:
     //! < 1.0 means no walls.
     double mCurrentFullness;
 
+    //! \brief Density in percent (50, 100 or 150) given to the gold tiles that are placed. Key G cycles it.
+    uint32_t mCurrentGoldDensity;
+
     //! \brief Current selected creature to spawn
     uint32_t mCurrentCreatureIndex;
 

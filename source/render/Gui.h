@@ -178,6 +178,7 @@ public:
     static const std::string EDITOR_GEM_BUTTON;
     static const std::string EDITOR_MANAWELL_BUTTON;
     static const std::string EDITOR_FULLNESS;
+    static const std::string EDITOR_GOLD_DENSITY;
     static const std::string EDITOR_CURSOR_POS;
     static const std::string EDITOR_SEAT_ID;
     static const std::string EDITOR_CREATURE_SPAWN;

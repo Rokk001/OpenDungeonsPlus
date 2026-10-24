@@ -73,10 +73,90 @@ material Gold //: RTSS/NormalMapping_MultiPass
                 tex_border_colour 1 1 1 1
                 filtering bilinear
             }
-            
-            
+
+
         }
 
+    }
+}
+
+// Gold wall with 50 % density: the same programs and veinGain as Gold, fewer veins in the texture
+material Gold50
+{
+    technique
+    {
+        pass
+        {
+            diffuse 1.0 1.0 1.0 1.0
+            vertex_program_ref myVertexShader
+            {
+
+            }
+            fragment_program_ref myFragmentShader
+            {
+                param_named decalmap int 0
+                param_named normalmap int 1
+                param_named shadowmap int 2
+            }
+
+            texture_unit
+            {
+                texture Gold50.png
+
+            }
+            texture_unit
+            {
+                texture Gold50Normal.png
+
+            }
+            texture_unit shadowmap
+            {
+                content_type shadow
+                tex_address_mode border
+                tex_border_colour 1 1 1 1
+                filtering bilinear
+            }
+        }
+    }
+}
+
+// Gold wall with 150 % density: the same programs and veinGain as Gold, more veins in the texture
+material Gold150
+{
+    technique
+    {
+        pass
+        {
+            diffuse 1.0 1.0 1.0 1.0
+            vertex_program_ref myVertexShader
+            {
+
+            }
+            fragment_program_ref myFragmentShader
+            {
+                param_named decalmap int 0
+                param_named normalmap int 1
+                param_named shadowmap int 2
+            }
+
+            texture_unit
+            {
+                texture Gold150.png
+
+            }
+            texture_unit
+            {
+                texture Gold150Normal.png
+
+            }
+            texture_unit shadowmap
+            {
+                content_type shadow
+                tex_address_mode border
+                tex_border_colour 1 1 1 1
+                filtering bilinear
+            }
+        }
     }
 }
 

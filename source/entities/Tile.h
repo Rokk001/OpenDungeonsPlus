@@ -170,6 +170,10 @@ public:
     virtual void removeItselfFromContainer(){};
     
     static const uint32_t NO_FLOODFILL;
+    //! \brief The density values (percent) a gold tile can have; the default is the one of a gold tile without a density
+    static const uint32_t GOLD_DENSITY_LOW;
+    static const uint32_t GOLD_DENSITY_DEFAULT;
+    static const uint32_t GOLD_DENSITY_HIGH;
     static const std::string TILE_PREFIX;
     static const std::string TILE_SCANF;
     //! \brief Colour (with alpha) of the marking drawn over a tile that is marked for digging.
@@ -213,7 +217,30 @@ public:
      * for the tile.
      */
     inline void setType(TileType t)
-    { mType = t; }
+    {
+        mType = t;
+        // The density only means something for gold tiles
+        if(mType != TileType::gold)
+            mGoldDensity = GOLD_DENSITY_DEFAULT;
+    }
+
+    //! \brief Returns the density of the gold of this tile in percent (50, 100 or 150). Only meaningful for gold tiles.
+    inline uint32_t getGoldDensity() const
+    { return mGoldDensity; }
+
+    //! \brief Sets the density of the gold of this tile in percent. Values other than 50, 100 and 150 give 100.
+    void setGoldDensity(uint32_t density);
+
+    //! \brief Returns the next density of the editor cycle: 100 -> 150 -> 50 -> 100 (any other value gives 100)
+    static uint32_t nextGoldDensity(uint32_t density);
+
+    //! \brief Returns the gold a gold tile holds in total: GoldPerSeamTile x density / 100 x skirmish gold setting / 100
+    double getGoldSeamTotal() const;
+
+    //! \brief Mines one dig step from a gold wall tile: removes the step gold (GoldPerDigStep x density / 100 x
+    //! skirmish gold setting / 100) from the tile and lowers its fullness by its share of the tile total. The last
+    //! step pays what is left and the tile becomes ground. Returns the gold paid, 0 if the tile cannot be mined.
+    double digOutGold();
 
     //! \brief Returns the tile type (rock, claimed, etc.).
     inline TileType getType() const
@@ -627,6 +654,11 @@ private:
     //! Used on server side only
     double mFullness;
 
+    //! \brief The gold density of the tile in percent (50, 100 or 150, default 100). Only meaningful for gold tiles and
+    //! reset to the default when the tile changes to another type. The server knows it from the level, the clients get it
+    //! with the tile refresh packet.
+    uint32_t mGoldDensity;
+
     //! Used on client side to know how much gold can be retrieved if the room/trap
     //! is sold. Note that it is needed because client are not aware of rooms/traps
     uint32_t mRefundPriceRoom;
@@ -669,6 +701,9 @@ private:
     bool mEnemyTerritoryFog;
 
     uint32_t mTileCulling;
+
+    //! \brief Turns a wall that was dug empty into ground (shared by digOut and digOutGold)
+    void finishDigOut();
 
     /*! \brief Set the fullness value for the tile.
      *  This only sets the fullness variable. This function is here to change the value
