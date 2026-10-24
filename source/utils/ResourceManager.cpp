@@ -88,6 +88,7 @@ ResourceManager::ResourceManager(boost::program_options::variables_map& options)
         mServerMode(false),
         mRunLevelSeconds(120),
         mRunLevelSeed(0),
+        mMenuTestSeconds(0),
         mForcedNetworkPort(-1),
         mLogLevel(LogMessageLevel::NORMAL),
         mGameDataPath("./"),
@@ -456,6 +457,10 @@ void ResourceManager::setupUserDataFolders(boost::program_options::variables_map
     if(itOption != options.end())
         mRunLevelScenario = itOption->second.as<std::string>();
 
+    itOption = options.find("menu-test");
+    if(itOption != options.end())
+        mMenuTestSeconds = itOption->second.as<int32_t>();
+
     itOption = options.find("port");
     if(itOption != options.end())
         mForcedNetworkPort = itOption->second.as<int32_t>();
@@ -625,6 +630,7 @@ void ResourceManager::buildCommandOptions(boost::program_options::options_descri
         ("run-level", boost::program_options::value<std::string>(), "Debug: starts a local game on the given level file, runs it for --seconds, triggers the win and exits with a result code")
         ("seconds", boost::program_options::value<int32_t>(), "Debug: game time in seconds for --run-level (default 120)")
         ("seed", boost::program_options::value<uint32_t>(), "Debug: seed of the random generator for --run-level (not 0); also writes the game state to run-level-state.txt")
+        ("menu-test", boost::program_options::value<int32_t>(), "Debug: shows the main menu scene for the given number of seconds, prints a MENUTEST line and exits")
         ("scenario", boost::program_options::value<std::string>(), "Debug: scenario set up by --run-level on the first turn (ignored-enemies: writes the combat state of fighters near enemies to run-level-scenario.txt)")
     ;
 }

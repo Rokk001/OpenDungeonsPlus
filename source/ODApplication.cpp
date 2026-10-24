@@ -64,6 +64,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
+#include <chrono>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <sstream>
@@ -144,6 +146,18 @@ void ODApplication::startServer()
 
     OD_LOG_INF("Stopping server...");
     server.stopServer();
+}
+
+namespace
+{
+//! \brief Debug option --menu-test: true once the main menu has been shown for the requested time.
+//! \param start the time the main loop started
+//! \param seconds the requested display time; 0 means the option is not used
+//! \return true if seconds is greater than 0 and that many seconds passed since start
+bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t seconds)
+{
+    return (seconds > 0) && (std::chrono::steady_clock::now() - start >= std::chrono::seconds(seconds));
+}
 }
 
 //! \brief Creates the window and runs the client main loop (SFML 3 window and event handling).
@@ -320,6 +334,11 @@ void ODApplication::startClient()
     if(RunLevelTest::isActive())
         frameListener.setPendingRestartLevel(RunLevelTest::getLevelFile());
 
+    // Automated main menu test: the menu opens as usual and the game exits after the requested seconds
+    const int32_t menuTestSeconds = resMgr.getMenuTestSeconds();
+    const std::chrono::steady_clock::time_point menuTestStart = std::chrono::steady_clock::now();
+    uint32_t menuTestFrames = 0;
+
 #ifdef OD_USE_SFML_WINDOW
     bool running = true;
     while(running)
@@ -343,9 +362,12 @@ void ODApplication::startClient()
         }
         if(RunLevelTest::isFinished())
             frameListener.requestExit();
+        if(menuTestElapsed(menuTestStart, menuTestSeconds))
+            frameListener.requestExit();
         sfmlWindow.clear();
         // If renderOneFrame returns false, it indicates that an exit has been requested
         running = ogreRoot.renderOneFrame();
+        ++menuTestFrames;
         sfmlWindow.display();
         RunLevelTest::onFrameRendered(*renderWindow);
     }
@@ -361,6 +383,8 @@ void ODApplication::startClient()
 
         if(RunLevelTest::isFinished())
             frameListener.requestExit();
+        if(menuTestElapsed(menuTestStart, menuTestSeconds))
+            frameListener.requestExit();
 
         // Closing the window destroys the mode manager from within the pump above, so
         // bail out here rather than rendering a frame that would still use it.
@@ -370,9 +394,13 @@ void ODApplication::startClient()
         // renderOneFrame() returns false once an exit has been requested.
         if (!ogreRoot.renderOneFrame())
             break;
+        ++menuTestFrames;
         RunLevelTest::onFrameRendered(*renderWindow);
     }
 #endif /* OD_USE_SFML_WINDOW */
+
+    if(menuTestSeconds > 0)
+        std::cout << "MENUTEST frames=" << menuTestFrames << std::endl;
 
     OD_LOG_INF("Disconnecting client...");
     client.disconnect();

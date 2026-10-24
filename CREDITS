@@ -276,6 +276,8 @@ textures/
 -> Lamp*.png                           Nobiax                  CC0                     http://forum.freegamedev.net/viewtopic.php?
 -> Lava.png
 -> LavaSpawn*.png                      piacenti                CC-BY-SA 3.0            http://opengameart.org/content/lava-spawn-animated
+-> Library.png                         Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058 (library room tile texture, added with the library room by Danimal; not AI generated)
+-> LibraryNormal.png                   Danimal                 CC-BY-SA 3.0            http://forum.freegamedev.net/viewtopic.php?p=59058#p59058 (normal map of Library.png; not AI generated)
 -> Library*.png
 -> LizardmanBed*.png                   Nobiax, public domain   CC0                     http://forum.freegamedev.net/viewtopic.php?p=60197#p60197
 -> Lizardman{,Normal}.png
