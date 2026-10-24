@@ -48,6 +48,7 @@
 #include <CEGUI/WindowManager.h>
 #include <CEGUI/Window.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <bitset>
 #include <istream>
@@ -62,6 +63,7 @@ const uint32_t Tile::NO_FLOODFILL = 0;
 const uint32_t Tile::GOLD_DENSITY_LOW = 50;
 const uint32_t Tile::GOLD_DENSITY_DEFAULT = 100;
 const uint32_t Tile::GOLD_DENSITY_HIGH = 150;
+const double Tile::MAX_DIRT = 100.0;
 //! \brief Gold below this is rounding noise of the saved fullness (6 digits) and counts as paid out
 static const double GOLD_REMAINING_EPSILON = 0.001;
 const std::string Tile::TILE_PREFIX = "Tile_";
@@ -79,6 +81,7 @@ Tile::Tile(GameMap* gameMap, int x, int y, TileType type, double fullness) :
     mTileVisual         (TileVisual::nullTileVisual),
     mSelected           (false),
     mFullness           (fullness),
+    mDirt               (0.0),
     mGoldDensity        (GOLD_DENSITY_DEFAULT),
     mRefundPriceRoom    (0),
     mRefundPriceTrap    (0),
@@ -119,6 +122,7 @@ void Tile::transfer(Tile* tt)
     mTileVisual  = tt->mTileVisual;       
     mSelected  = tt->mSelected;         
     mFullness = tt->mFullness;         
+    mDirt = tt->mDirt;
     mGoldDensity = tt->mGoldDensity;
     mRefundPriceRoom = tt->mRefundPriceRoom;
     mRefundPriceTrap = tt->mRefundPriceTrap; 
@@ -1249,11 +1253,46 @@ void Tile::exportToStream(Tile* tile, std::ostream& os)
     tile->exportToStream(os);
 }
 
+bool Tile::canCarryDirt() const
+{
+    if((mType != TileType::dirt) || (mFullness > 0.0))
+        return false;
+
+    return (getCoveringRoom() != nullptr) || isClaimed();
+}
+
+void Tile::addDirt(double amount)
+{
+    if(amount <= 0.0)
+        return;
+
+    if(!canCarryDirt())
+        return;
+
+    mDirt = std::min(MAX_DIRT, mDirt + amount);
+}
+
+void Tile::cleanDirt(double amount)
+{
+    if(amount <= 0.0)
+        return;
+
+    mDirt = std::max(0.0, mDirt - amount);
+}
+
+void Tile::setDirt(double dirt)
+{
+    mDirt = std::min(MAX_DIRT, std::max(0.0, dirt));
+}
+
 void Tile::setFullness(double f)
 {
     double oldFullness = getFullness();
 
     mFullness = f;
+    // A wall has no floor to be dirty
+    if(mFullness > 0.0)
+        mDirt = 0.0;
     if(getIsOnServerMap())
         getGameMap()->markWallTorchesDirty();
 

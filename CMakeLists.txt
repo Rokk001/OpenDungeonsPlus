@@ -342,6 +342,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/CraftedTrap.cpp
     ${SRC}/entities/Creature.cpp
     ${SRC}/entities/CreatureDefinition.cpp
+    ${SRC}/entities/DirtPileEntity.cpp
     ${SRC}/entities/DoorEntity.cpp
     ${SRC}/entities/EntityLoading.cpp
     ${SRC}/entities/GameEntity.cpp

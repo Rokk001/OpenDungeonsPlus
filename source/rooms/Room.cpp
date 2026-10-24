@@ -330,6 +330,46 @@ double Room::getTileHP() const
         RoomManager::getRoomNameFromRoomType(getType()) + "HP", Building::DEFAULT_TILE_HP);
 }
 
+//! \brief Adds the dirt of one room use (config key times the DirtFactor of the creature type) to the tile.
+void Room::addUseDirt(const Creature& creature, Tile* tile, const std::string& key)
+{
+    if(tile == nullptr)
+        return;
+
+    double dirt = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(key, 0.0);
+    if(dirt <= 0.0)
+        return;
+
+    tile->addDirt(dirt * creature.getDefinition()->getDirtFactor());
+}
+
+//! \brief The mean tile dirt over all covered tiles (0 when there are none).
+double Room::getDirtMean() const
+{
+    if(mCoveredTiles.empty())
+        return 0.0;
+
+    double sum = 0.0;
+    for(const Tile* tile : mCoveredTiles)
+        sum += tile->getDirt();
+
+    return sum / static_cast<double>(mCoveredTiles.size());
+}
+
+//! \brief The dirt stage (1 - 3) of the mean dirt of this room.
+uint32_t Room::getDirtStage() const
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    double mean = getDirtMean();
+    if(mean < config.getDirtConfigDouble("DirtStage2At"))
+        return 1;
+
+    if(mean < config.getDirtConfigDouble("DirtStage3At"))
+        return 2;
+
+    return 3;
+}
+
 bool Room::isAttackable(Tile* tile, Seat* seat) const
 {
     if(!isDestructible())

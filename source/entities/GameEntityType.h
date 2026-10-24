@@ -41,7 +41,8 @@ enum class GameEntityType
     trapEntity,
     skillEntity,
     giftBoxEntity,
-    lavaRock
+    lavaRock,
+    dirtPileEntity
 };
 
 ODPacket& operator<<(ODPacket& os, const GameEntityType& type);
