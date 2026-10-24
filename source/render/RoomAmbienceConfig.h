@@ -195,6 +195,7 @@ struct AmbienceEffect
     //! one within Amount tiles of the event is used
     std::vector<std::string> mObjects;
     //! Object clips: the clip runs in a loop as long as the condition holds (and stops at its last pose when it ends)
+    //! Sound effects loop while the target remains visible and its condition holds.
     bool mLoop;
     //! How the object is moved (kind motion)
     AmbienceMotion mMotion;
