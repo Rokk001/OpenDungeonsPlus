@@ -22,8 +22,11 @@ code = r'''
 #include <iostream>
 enum class GameEntityType {creature,other};
 struct Creature;
+struct Room;
 int refineCalls=0;
-namespace RoomObjectNavigation {bool refine(Creature&,std::vector<Ogre::Vector2>& p){++refineCalls;if(!p.empty())p.back()+=Ogre::Vector2(1,1);return true;}}
+namespace RoomObjectNavigation {bool refine(Creature&,std::vector<Ogre::Vector2>& p){++refineCalls;if(!p.empty())p.back()+=Ogre::Vector2(1,1);return true;}
+// Probe stand-in for the server spacing step called by setWalkPath; it leaves the route unchanged.
+bool separate(Creature&,std::vector<Ogre::Vector2>&,bool=false,const Room* =nullptr){return true;}}
 enum class ServerNotificationType {animatedObjectSetWalkPath};
 struct Player {bool getIsHuman(){return true;}};
 struct Seat {Player player;Player* getPlayer(){return &player;}};

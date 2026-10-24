@@ -1421,6 +1421,7 @@ void Creature::dropCarriedEquipment()
 }
 
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
+//! Spaces authoritative standing bodies before their next action without changing action targets.
 void Creature::doUpkeep()
 {
     // No manifest was available when the creature spawned: assign the appearance as soon as it is
@@ -1917,6 +1918,28 @@ void Creature::doUpkeep()
     decidePrioritaryAction();
     handleHeartDefence();
 
+    // Keep combat in its current attack tile; free waiting creatures may use adjacent floor space.
+    const CreatureActionType standingAction = mActions.empty() ? CreatureActionType::nb : mActions.back()->getType();
+    Room* standingRoom = getPositionTile()->getCoveringRoom();
+    const bool freeRoomStand = standingAction == CreatureActionType::useRoom && standingRoom != nullptr &&
+        (standingRoom->getType() == RoomType::temple || standingRoom->getType() == RoomType::guardRoom ||
+         standingRoom->getType() == RoomType::arena || standingRoom->getType() == RoomType::hatchery);
+    // Prayer spots, guard posts and watch banners remain bound to their assigned tile.
+    const bool adjacentStand = mActions.empty() || (freeRoomStand &&
+        (standingRoom->getType() == RoomType::arena || standingRoom->getType() == RoomType::hatchery));
+    if(!isMoving() && (mActions.empty() || standingAction == CreatureActionType::fight ||
+        standingAction == CreatureActionType::fightFriendly || standingAction == CreatureActionType::watchBanner || freeRoomStand))
+    {
+        const Ogre::Vector2 position(getPosition().x, getPosition().y);
+        std::vector<Ogre::Vector2> path{position};
+        if(RoomObjectNavigation::separate(*this, path, adjacentStand, freeRoomStand ? standingRoom : nullptr) && path.back() != position)
+        {
+            setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, false, true);
+            pushAction(Utils::make_unique<CreatureActionWalkToTile>(*this));
+            return;
+        }
+    }
+
     // The loopback variable allows creatures to begin processing a new
     // action immediately after some other action happens.
     bool loopBack = false;
@@ -2260,6 +2283,7 @@ bool Creature::handleIdleAction()
     return false;
 }
 
+//! \brief Selects existing combat targets and attack tiles, preferring legal body-free stances before crowded fallback.
 bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObjects, const std::vector<Tile*>& tilesFilter, GameEntity*& attackedEntity,
         Tile*& attackedTile, Tile*& positionTile, CreatureSkillData*& creatureSkillData)
 {
@@ -2357,7 +2381,9 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
 
         // Check if we can attack from our position
         int rangeTarget = Pathfinding::squaredDistanceTile(*tileAttackCheck, *myTile);
-        if(rangeTarget <= (skillRangeMax * skillRangeMax))
+        const bool inRange = rangeTarget <= (skillRangeMax * skillRangeMax);
+        bool freePosition = false;
+        if(inRange)
         {
              // We can attack
              tilePosition = myTile;
@@ -2365,7 +2391,9 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
              tileAttack = tileAttackCheck;
              skillData = skillDataCheck;
              closestDistWeighted = closestDistCheckWeighted;
-             continue;
+             std::vector<Ogre::Vector2> standing{Ogre::Vector2(getPosition().x, getPosition().y)};
+             if(RoomObjectNavigation::separate(*this, standing))
+                 continue;
         }
 
         // We check if we can attack from somewhere. To do that, we check
@@ -2396,6 +2424,17 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
             if(!getGameMap()->pathExists(this, myTile, tile))
                 continue;
 
+            // A tile this creature cannot enter (locked door, barricade, fence) has no walkable path
+            if((tile != myTile) && !canGoThroughTile(tile))
+                continue;
+
+            std::vector<Ogre::Vector2> standing{tile->getPosition2d()};
+            const bool freeTile = RoomObjectNavigation::separate(*this, standing);
+            if(!freeTile && (freePosition || inRange))
+                continue;
+            if(freeTile && !freePosition)
+                bestScoreAttack = -1;
+
             int distFoeTmp = Pathfinding::squaredDistanceTile(*tile, *tileAttackCheck);
             int distAttackTmp = Pathfinding::squaredDistanceTile(*tile, *myTile);
             // We compute a score for each tile. We will choose the best one. Note that we try to be as close as possible
@@ -2417,6 +2456,7 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
 
             // We found a better target
             bestScoreAttack = scoreAttack;
+            freePosition = freeTile;
             tilePosition = tile;
             entityAttack = entityAttackCheck;
             tileAttack = tileAttackCheck;
@@ -2462,6 +2502,10 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
                 continue;
 
             if(!getGameMap()->pathExists(this, myTile, tile))
+                continue;
+
+            // A tile this creature cannot enter has no walkable path
+            if((tile != myTile) && !canGoThroughTile(tile))
                 continue;
 
             int distFoeTmp = Pathfinding::squaredDistanceTile(*tile, *tileEntityFlee);
