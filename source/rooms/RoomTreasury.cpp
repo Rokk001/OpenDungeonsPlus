@@ -24,6 +24,8 @@
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
+#include "entities/ItemBagEntity.h"
+#include "giftboxes/GiftBoxItem.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -543,8 +545,24 @@ void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTre
     roomTreasuryTileData->mMeshOfTile = newMeshName;
 }
 
+//! \brief Accepts item storage independently of gold capacity while keeping sealed goods out of worker storage.
 bool RoomTreasury::hasCarryEntitySpot(GameEntity* carriedEntity)
 {
+    if(carriedEntity->getObjectType() == GameEntityType::itemBagEntity ||
+        (carriedEntity->getObjectType() == GameEntityType::giftBoxEntity &&
+        static_cast<GiftBoxEntity*>(carriedEntity)->getGiftBoxType() == GiftBoxType::item))
+    {
+        if(carriedEntity->getObjectType() == GameEntityType::itemBagEntity)
+        {
+            const ItemInstance* item = static_cast<ItemBagEntity*>(carriedEntity)->getItem();
+            if(item != nullptr && item->mMerchantGoods) return false;
+        }
+        const uint32_t capacity = ConfigManager::getSingleton().getRoomConfigUInt32("TreasuryBagsPerTile");
+        for(Tile* tile : mCoveredTiles)
+            if(tile->countEntitiesOnTile(GameEntityType::itemBagEntity) + tile->countEntitiesOnTile(GameEntityType::giftBoxEntity) < capacity)
+                return true;
+        return false;
+    }
     // We might accept more gold than empty space (for example, if there are 100 gold left
     // and 2 different workers want to bring a treasury) but we don't care
     if(carriedEntity->getObjectType() != GameEntityType::treasuryObject)
@@ -556,16 +574,48 @@ bool RoomTreasury::hasCarryEntitySpot(GameEntity* carriedEntity)
     return true;
 }
 
+//! \brief Finds the first tile with an unoccupied bag storage position.
 Tile* RoomTreasury::askSpotForCarriedEntity(GameEntity* carriedEntity)
 {
     if(!hasCarryEntitySpot(carriedEntity))
         return nullptr;
 
+    if(carriedEntity->getObjectType() == GameEntityType::itemBagEntity || carriedEntity->getObjectType() == GameEntityType::giftBoxEntity)
+    {
+        const uint32_t capacity = ConfigManager::getSingleton().getRoomConfigUInt32("TreasuryBagsPerTile");
+        for(Tile* tile : mCoveredTiles)
+            if(tile->countEntitiesOnTile(GameEntityType::itemBagEntity) + tile->countEntitiesOnTile(GameEntityType::giftBoxEntity) < capacity)
+                return tile;
+        return nullptr;
+    }
     return mCoveredTiles[0];
 }
 
+//! \brief Sets delivered item ownership and separates four ground bags from the existing gold visuals.
 void RoomTreasury::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
+    if(carriedEntity != nullptr && carriedEntity->getIsOnMap() &&
+        (carriedEntity->getObjectType() == GameEntityType::itemBagEntity || carriedEntity->getObjectType() == GameEntityType::giftBoxEntity))
+    {
+        Tile* tile = carriedEntity->getPositionTile();
+        if(tile != nullptr && tile->getCoveringRoom() == this)
+        {
+            const std::vector<GameEntity*>& entities = tile->getEntitiesInTile();
+            size_t index = 0;
+            for(GameEntity* entity : entities)
+            {
+                if(entity == carriedEntity) break;
+                if(entity->getObjectType() == GameEntityType::itemBagEntity || entity->getObjectType() == GameEntityType::giftBoxEntity) ++index;
+            }
+            static const Ogre::Vector2 OFFSETS[] = {{-0.25f,-0.25f},{0.25f,-0.25f},{-0.25f,0.25f},{0.25f,0.25f}};
+            if(index < sizeof(OFFSETS)/sizeof(OFFSETS[0]))
+            {
+                carriedEntity->setSeat(getSeat());
+                carriedEntity->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()) + OFFSETS[index].x,
+                    static_cast<Ogre::Real>(tile->getY()) + OFFSETS[index].y, 0.0f));
+            }
+        }
+    }
     // If a treasury is deposited on the treasury, no need to handle it here.
     // It will handle himself alone
 }

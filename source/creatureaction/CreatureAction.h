@@ -57,6 +57,11 @@ enum class CreatureActionType
     tunnel, // (fighters with a dig rate) Dig through walls towards an enemy dungeon heart that cannot be reached on foot
     possessed, // The creature is controlled by a player (Possess spell). Other actions are paused
     reloadTrap, // (worker only) Walks to a trap tile that used up its shots and arms it again
+    pickupItem,
+    stealItem,
+    crackBox,
+    harvestHerbs,
+    brewPotion,
     nb // Must be the last value of this enum
 };
 
@@ -98,7 +103,11 @@ public:
     virtual uint32_t updateMoodModifier() const
     { return CreatureMoodValues::Nothing; }
 
+    //! \brief Returns the diagnostic name of an action, including item and new work actions.
     static std::string toString(CreatureActionType actionType);
+
+    //! \brief Identifies ordinary room use and its specialized workshop, garden and lab actions.
+    static bool isRoomWorkAction(CreatureActionType actionType);
 
 protected:
     Creature& mCreature;

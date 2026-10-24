@@ -21,6 +21,10 @@
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionUseRoom.h"
+#include "creatureaction/CreatureActionCrackBox.h"
+#include "creatureaction/CreatureActionHarvestHerbs.h"
+#include "creatureaction/CreatureActionBrewPotion.h"
+#include "rooms/RoomWorkshop.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
@@ -37,12 +41,25 @@
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 
+//! \brief Selects the ordinary room action or its item-box workshop specialization.
+static std::unique_ptr<CreatureAction> createRoomWorkAction(Creature& creature, Room& room, bool forced)
+{
+    if(room.getType() == RoomType::herbGarden)
+        return std::unique_ptr<CreatureAction>(new CreatureActionHarvestHerbs(creature, room, forced));
+    if(room.getType() == RoomType::alchemyLab)
+        return std::unique_ptr<CreatureAction>(new CreatureActionBrewPotion(creature, room, forced));
+    if(room.getType() == RoomType::workshop && static_cast<RoomWorkshop&>(room).hasCrackJob())
+        return std::unique_ptr<CreatureAction>(new CreatureActionCrackBox(creature, room, forced));
+    return std::unique_ptr<CreatureAction>(new CreatureActionUseRoom(creature, room, forced));
+}
+
 std::function<bool()> CreatureActionSearchJob::action()
 {
     return std::bind(&CreatureActionSearchJob::handleSearchJob,
         std::ref(mCreature), mForced);
 }
 
+//! \brief Selects an allowed room job and its corresponding ordinary or specialized work action.
 bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
 {
     // Current creature tile position
@@ -124,7 +141,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
             // It is the room responsibility to test if the creature is suited for working in it
             if(room->hasOpenCreatureSpot(&creature))
             {
-                creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *room, forced));
+                creature.pushAction(createRoomWorkAction(creature, *room, forced));
                 return false;
             }
             break;
@@ -175,7 +192,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
                 }
                 else
                 {
-                    creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *room, forced));
+                    creature.pushAction(createRoomWorkAction(creature, *room, forced));
                     return true;
                 }
             }
@@ -215,7 +232,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
             // No other room: we stay in the room we do not like so much
             if(useDislikedRoomAsFallback(dislikedRoom != nullptr, rooms.size()))
             {
-                creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *dislikedRoom, forced));
+                creature.pushAction(createRoomWorkAction(creature, *dislikedRoom, forced));
                 return true;
             }
             continue;

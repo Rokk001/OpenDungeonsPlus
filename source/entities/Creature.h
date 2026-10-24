@@ -169,6 +169,7 @@ public:
 
     //! \brief Constructor for creatures. It generates an unique name
     Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat* seat, Ogre::Vector3 position = Ogre::Vector3(0.0f,0.0f,0.0f));
+    //! \brief Releases active skill data and unregisters held Epics when this holder is deleted.
     virtual ~Creature();
 
     static const uint32_t NB_OVERLAY_HEALTH_VALUES;
@@ -538,6 +539,20 @@ public:
     double getItemAttribute(const std::string& attribute) const;
     //! \brief Rebuilds derived item stats and notifies clients after a holder changes.
     void itemsChanged();
+    //! \brief Returns the wearer's target slot for an item, or -1 when its weapon class cannot be worn.
+    int32_t getItemEquipmentSlot(const ItemInstance& item) const;
+    //! \brief Tests slot compatibility and the item's minimum level.
+    bool isItemEquippable(const ItemInstance& item) const;
+    //! \brief Rates rolled bonuses with configured weights and this creature's primary/family paths.
+    double rateItem(const ItemInstance& item) const;
+    //! \brief Accepts an owned instance, equipping upgrades outside combat and retaining or dropping overflow.
+    bool acceptItem(std::unique_ptr<ItemInstance> item, bool equip = true);
+    //! \brief Equips carried upgrades outside combat, retaining items below their level gate.
+    void decideEquipment();
+    //! \brief Drops eligible rolled items on knockout or all held items on death.
+    void dropItems(bool dead);
+    //! \brief Unregisters held Epics when this creature permanently leaves the map.
+    void unregisterHeldEpics();
     //! \brief Sets the multiplicative contribution of one running potion effect.
     void setPotionContribution(const CreatureEffect* source, const std::string& kind, double value);
     //! \brief Removes only the contribution of a potion that ended.
@@ -766,7 +781,7 @@ public:
     void useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit);
 
-    //! \brief Returns true if the given action is queued in the action list. False otherwise
+    //! \brief Returns whether an action is queued; room-use queries also include its specialized work actions.
     bool isActionInList(CreatureActionType action) const;
 
     //! \brief Clears the action queue, except for the Idle action at the end.
@@ -1460,6 +1475,10 @@ private:
     std::array<std::unique_ptr<ItemInstance>, 6> mEquipment;
     std::vector<std::unique_ptr<ItemInstance>> mPotionSlots;
     std::array<std::unique_ptr<ItemInstance>, 4> mInventory;
+    //! \brief Prevents repeated knockout drops until the creature stands up again.
+    bool mKoDroppedThisFight = false;
+    //! \brief Prevents an exiting creature and its later destructor from unregistering the same Epic twice.
+    bool mHeldEpicsUnregistered = false;
     //! \brief Multipliers of running potion effects, keyed by their independent effect objects.
     std::map<const CreatureEffect*, std::pair<std::string, double>> mPotionContributions;
     //! \brief Owner-only active potion contributions received from the server, without effect-object pointers.

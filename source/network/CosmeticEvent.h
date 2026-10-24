@@ -121,7 +121,9 @@ enum class CosmeticEventType : int32_t
     //! configuration and starts the strike clip when the turn is done (at the latest after the configured delay, the turn
     //! then runs over the wind-up). Damage and its timing are decided by the server and are not touched. Older clients skip
     //! the kind and turn as before, an older server sends none.
-    attackTurn = 18
+    attackTurn = 18,
+    //! \brief A workshop cracked an item box: mObject room name, mPosition box tile.
+    boxCracked = 19
 };
 
 //! \brief The result in mValue of the event hitResult

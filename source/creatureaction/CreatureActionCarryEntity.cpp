@@ -21,7 +21,11 @@
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
 #include "entities/MissileStone.h"
+#include "entities/ItemBagEntity.h"
 #include "entities/Tile.h"
+#include "rooms/Room.h"
+#include "rooms/RoomMerchant.h"
+#include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -159,6 +163,7 @@ bool CreatureActionCarryEntity::isPulledOverGround(const Creature& carrier, Game
     return creature.isAlive() && (creature.getSeat() == carrier.getSeat());
 }
 
+//! \brief Delivers cargo at its tile or the merchant table's existing furniture-aware stand position.
 bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest)
 {
     if(tileDest == nullptr)
@@ -179,6 +184,19 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     if(entityToCarry == nullptr)
     {
         OD_LOG_ERR("creature=" + creature.getName());
+        creature.popAction();
+        return false;
+    }
+
+    Room* room = tileDest->getCoveringRoom();
+    if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity && room != nullptr &&
+        room->getType() == RoomType::merchant)
+    {
+        RoomMerchant* merchant = static_cast<RoomMerchant*>(room);
+        const MerchantApproach approach = merchant->approachTable(creature, tileDest);
+        if(approach == MerchantApproach::walking)
+            return false;
+        merchant->releaseInteractionPosition(&creature);
         creature.popAction();
         return false;
     }

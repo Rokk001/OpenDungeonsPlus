@@ -44,6 +44,7 @@ enum class GiftBoxType
     makeHappy,
     makeUnhappy,
     killCreatures,
+    item,
     nbTypes
 };
 std::ostream& operator<<(std::ostream& os, const GiftBoxType& type);
@@ -82,11 +83,15 @@ public:
     inline GiftBoxType getGiftBoxType() const
     { return mGiftBoxType; }
 
+    //! \brief Loads an existing box type or the appended workshop item-box type.
     static GiftBoxEntity* getGiftBoxEntityFromStream(GameMap* gameMap, std::istream& is);
+    //! \brief Loads opaque existing boxes or the new quality-only item-box appearance.
     static GiftBoxEntity* getGiftBoxEntityFromPacket(GameMap* gameMap, ODPacket& is);
     static std::string getGiftBoxEntityStreamFormat();
 protected:
     virtual void exportHeadersToStream(std::ostream& os) const override;
+    //! \brief Sends the appended box subtype before its ordinary placement, never its hidden content.
+    void exportToPacket(ODPacket& packet, const Seat* seat) const override;
 
 private:
     GiftBoxType mGiftBoxType;

@@ -63,6 +63,7 @@
 
 namespace MapHandler {
 
+//! \brief Loads map state including optional item bags while retaining legacy maps without that section.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 {
     std::stringstream levelFile;
@@ -565,6 +566,13 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         return false;
     }
 
+    // Item bags are optional in older maps and saves.
+    const std::streampos itemBagPosition = levelFile.tellg();
+    levelFile >> nextParam;
+    levelFile.seekg(itemBagPosition);
+    if(nextParam == "[ItemBags]" && !readGameEntity(gameMap, "ItemBags", GameEntityType::itemBagEntity, levelFile))
+        return false;
+
     if(!readGameEntity(gameMap, "Missiles", GameEntityType::missileObject, levelFile))
     {
         OD_LOG_WRN("Invalid Missiles section");
@@ -717,6 +725,7 @@ bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType ty
     return true;
 }
 
+//! \brief Saves the map with item bags after gift boxes and the existing remaining sections.
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -926,6 +935,17 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << std::endl;
     }
     levelFile << "[/GiftBoxEntity]" << std::endl;
+
+    levelFile << "\n[ItemBags]\n";
+    levelFile << "# SeatId Name MeshName PosX PosY PosZ opacity rotationAngle ItemInstanceLine\n";
+    for(RenderedMovableEntity* rendered : rendereds)
+    {
+        if(rendered->getObjectType() != GameEntityType::itemBagEntity)
+            continue;
+        GameEntity::exportToStream(rendered, levelFile);
+        levelFile << '\n';
+    }
+    levelFile << "[/ItemBags]\n";
 
     levelFile << "\n[Missiles]\n";
     levelFile << "# " << MissileObject::getMissileObjectStreamFormat() << "\n";

@@ -40,6 +40,7 @@
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
+#include "entities/ItemBagEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -69,6 +70,7 @@
 #include "utils/Random.h"
 
 #include <cctype>
+#include <array>
 #include <cmath>
 #include <set>
 #include <vector>
@@ -4326,6 +4328,47 @@ void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapo
 
     ent->attachObjectToBone(weaponBone->getName(), weaponEntity,
                             mount.mRotation, mount.mOffset);
+}
+
+//! \brief Uses the second material's seal only while a bag is merchant-owned stock.
+void RenderManager::rrRefreshItemBag(ItemBagEntity* bag)
+{
+    if(bag == nullptr || bag->getItem() == nullptr)
+        return;
+    rrRefreshItemBagAppearance(bag, bag->getItem()->mQuality, bag->getItem()->mMerchantGoods);
+}
+
+//! \brief Applies identical quality material clones and seal visibility to every item-bag presentation.
+void RenderManager::rrRefreshItemBagAppearance(RenderedMovableEntity* bag, Quality quality, bool sealed)
+{
+    if(bag == nullptr)
+        return;
+    const std::string name = bag->getOgreNamePrefix() + bag->getName();
+    if(!mSceneManager->hasEntity(name))
+        return;
+    Ogre::Entity* entity = mSceneManager->getEntity(name);
+    static const std::array<Ogre::ColourValue, 4> TINTS = {{
+        Ogre::ColourValue(138.0f/255.0f, 138.0f/255.0f, 138.0f/255.0f), Ogre::ColourValue::White,
+        Ogre::ColourValue(62.0f/255.0f, 123.0f/255.0f, 1.0f), Ogre::ColourValue(166.0f/255.0f, 77.0f/255.0f, 1.0f)}};
+    for(unsigned int index = 0; index < entity->getNumSubEntities(); ++index)
+    {
+        Ogre::SubEntity* sub = entity->getSubEntity(index);
+        const std::string materialName = sub->getMaterialName();
+        if(materialName == "ItemBagSealed")
+        {
+            sub->setVisible(sealed);
+            continue;
+        }
+        const std::string tintedName = materialName + "_item_" + qualityName(quality);
+        Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().getByName(tintedName);
+        if(material.isNull())
+        {
+            material = sub->getMaterial()->clone(tintedName);
+            material->setDiffuse(TINTS.at(static_cast<size_t>(quality)));
+            material->setAmbient(TINTS.at(static_cast<size_t>(quality)));
+        }
+        sub->setMaterial(material);
+    }
 }
 
 void RenderManager::rrDestroyWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand)

@@ -68,7 +68,8 @@ enum class EntityCarryType
     craftedTrap,
     giftBox,
     gold,
-    koCreature
+    koCreature,
+    itemBag
 };
 
 enum class EntityParticleEffectType

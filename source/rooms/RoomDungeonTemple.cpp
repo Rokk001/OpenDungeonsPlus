@@ -994,8 +994,12 @@ void RoomDungeonTemple::destroyMeshLocal(NodeType nt)
     mTempleObject = nullptr;
 }
 
+//! \brief Preserves temple cargo rules while excluding the new workshop-only item boxes.
 bool RoomDungeonTemple::hasCarryEntitySpot(GameEntity* carriedEntity)
 {
+    if(carriedEntity->getObjectType() == GameEntityType::giftBoxEntity &&
+        static_cast<GiftBoxEntity*>(carriedEntity)->getGiftBoxType() == GiftBoxType::item)
+        return false;
     switch(carriedEntity->getObjectType())
     {
         case GameEntityType::giftBoxEntity:

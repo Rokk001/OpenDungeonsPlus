@@ -1018,6 +1018,7 @@ Creature* GameMap::getWorkerToPickupBySeat(Seat* seat)
     return nullptr;
 }
 
+//! \brief Selects an owned fighter using the existing fleeing, idle, room-work and fighting priority.
 Creature* GameMap::getFighterToPickupBySeat(Seat* seat)
 {
     // 1 - Take fleeing fighters
@@ -1059,6 +1060,9 @@ Creature* GameMap::getFighterToPickupBySeat(Seat* seat)
                 case CreatureActionType::searchFood:
                 case CreatureActionType::searchJob:
                 case CreatureActionType::useRoom:
+                case CreatureActionType::crackBox:
+                case CreatureActionType::harvestHerbs:
+                case CreatureActionType::brewPotion:
                     isIdle = false;
                     isBusy = true;
                     break;
