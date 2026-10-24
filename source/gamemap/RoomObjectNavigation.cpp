@@ -98,27 +98,66 @@ std::vector<RoomObjectPath::Obstacle> standingBodies(Creature& creature)
     return result;
 }
 
+//! \brief Obstacles of other creatures that stay the same during one spacing search, collected on first use.
+struct SeparationCache
+{
+    //! Present bodies and assigned destinations of the other creatures
+    std::vector<RoomObjectPath::Obstacle> bodies;
+    //! Interaction positions that the other creatures reserved in any room
+    std::vector<RoomObjectPath::Obstacle> reservations;
+    //! True once bodies has been collected
+    bool bodiesCollected = false;
+    //! True once reservations has been collected
+    bool reservationsCollected = false;
+};
+
+//! \brief Returns the cached reservations of other creatures, collecting them on first use.
+const std::vector<RoomObjectPath::Obstacle>& cachedReservations(Creature& creature, SeparationCache& cache)
+{
+    if(!cache.reservationsCollected)
+    {
+        for(const Room* room : creature.getGameMap()->getRooms())
+            for(const std::pair<Creature* const, Room::InteractionPosition>& entry : room->getInteractionPositions())
+                if(entry.first != &creature)
+                    cache.reservations.push_back(interactionFootprint(*entry.first,
+                        entry.second.position, entry.second.direction));
+        cache.reservationsCollected = true;
+    }
+    return cache.reservations;
+}
+
+//! \brief Returns the cached bodies of other creatures, collecting them on first use.
+const std::vector<RoomObjectPath::Obstacle>& cachedBodies(Creature& creature, SeparationCache& cache)
+{
+    if(!cache.bodiesCollected)
+    {
+        cache.bodies = standingBodies(creature);
+        cache.bodiesCollected = true;
+    }
+    return cache.bodies;
+}
+
 //! \brief Tests measured bodies against room reservations, optionally including present bodies and assigned destinations.
 //! Returns false if the creature, standing at point and facing direction, would overlap another creature
 //! that has reserved an interaction position in any room
+//! \param cache Obstacles collected earlier in the same search; a local one is used if null
 bool interactionPositionClear(Creature& creature, const Ogre::Vector2& point,
-    const Ogre::Vector2& direction, bool includeBodies = true)
+    const Ogre::Vector2& direction, bool includeBodies = true, SeparationCache* cache = nullptr)
 {
+    SeparationCache localCache;
+    if(cache == nullptr)
+        cache = &localCache;
     const RoomObjectPath::Obstacle footprint = interactionFootprint(creature, point, direction);
-    for(const Room* room : creature.getGameMap()->getRooms())
-        for(const std::pair<Creature* const, Room::InteractionPosition>& entry : room->getInteractionPositions())
-        {
-            if(entry.first == &creature)
-                continue;
-            RoomObjectPath::Obstacle other = interactionFootprint(*entry.first, entry.second.position, entry.second.direction);
-            other.bodyMinimum = footprint.minimum;
-            other.bodyMaximum = footprint.maximum;
-            if(other.contains(point, direction))
-                return false;
-        }
+    for(RoomObjectPath::Obstacle other : cachedReservations(creature, *cache))
+    {
+        other.bodyMinimum = footprint.minimum;
+        other.bodyMaximum = footprint.maximum;
+        if(other.contains(point, direction))
+            return false;
+    }
     if(!includeBodies)
         return true;
-    for(RoomObjectPath::Obstacle other : standingBodies(creature))
+    for(RoomObjectPath::Obstacle other : cachedBodies(creature, *cache))
     {
         other.bodyMinimum = footprint.minimum;
         other.bodyMaximum = footprint.maximum;
@@ -363,8 +402,12 @@ bool RoomObjectNavigation::standingPosition(const std::vector<RoomObjectPath::Ob
     return std::isfinite(distance);
 }
 
-//! \brief Chooses a reachable nonoverlapping destination, preserving the original route when space is exhausted.
-bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector2>& path, bool adjacent, const Room* room)
+namespace RoomObjectNavigation
+{
+//! \brief Does the work of separate() and shares the obstacles of the other creatures between all candidate tests.
+//! \param cache Bodies and reservations of the other creatures, collected at most once per top-level search
+static bool separateCached(Creature& creature, std::vector<Ogre::Vector2>& path, bool adjacent, const Room* room,
+    SeparationCache& cache)
 {
     if(path.empty() || !creature.getIsOnServerMap() ||
         creature.isActionInList(CreatureActionType::digTile) ||
@@ -380,7 +423,7 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
     Tile* wantedTile = map.getTile(Helper::round(wanted.x), Helper::round(wanted.y));
     if(wantedTile != nullptr && creature.canGoThroughTile(wantedTile) &&
         (room == nullptr || wantedTile->getCoveringRoom() == room) &&
-        interactionPositionClear(creature, wanted, heading))
+        interactionPositionClear(creature, wanted, heading, true, &cache))
         return true;
     if(adjacent)
     {
@@ -389,6 +432,7 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
             map.getMapSizeY() - 1 - centerY});
         float nearest = std::numeric_limits<float>::infinity();
         std::vector<Ogre::Vector2> nearestPath;
+        Tile* startTile = creature.getPositionTile();
         for(int ring = 0; ring <= lastRing; ++ring)
         {
             for(int dy = -ring; dy <= ring; ++dy)
@@ -400,9 +444,17 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
                     if(tile == nullptr || !creature.canGoThroughTile(tile) ||
                         (room != nullptr && tile->getCoveringRoom() != room))
                         continue;
+                    // A tile whose nearest edge is not closer than the best route found so far cannot win.
+                    const float edgeX = std::max(0.0f, std::abs(wanted.x - tile->getX()) - 0.5f);
+                    const float edgeY = std::max(0.0f, std::abs(wanted.y - tile->getY()) - 0.5f);
+                    if(edgeX * edgeX + edgeY * edgeY >= nearest)
+                        continue;
+                    // Cheap reachability test (flood fill) before any placement test or path search.
+                    if(startTile != nullptr && !map.pathExists(&creature, startTile, tile))
+                        continue;
                     // Reject occupied body placements before searching a path to this tile.
                     std::vector<Ogre::Vector2> probe{ring == 0 ? wanted : tile->getPosition2d()};
-                    if(!separate(creature, probe, false, room))
+                    if(!separateCached(creature, probe, false, room, cache))
                         continue;
                     const std::list<Tile*> tiles = map.path(&creature, tile);
                     if(tiles.empty())
@@ -411,7 +463,8 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
                     Creature::tileToVector2(tiles, route, true, 0.0f);
                     route.push_back(ring == 0 ? wanted : tile->getPosition2d());
                     refine(creature, route);
-                    if(route.empty() || !separate(creature, route, false, room) || blocked(creature, route))
+                    if(route.empty() || !separateCached(creature, route, false, room, cache) ||
+                        blocked(creature, route))
                         continue;
                     const float distance = route.back().squaredDistance(wanted);
                     if(distance < nearest)
@@ -445,11 +498,9 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
     const std::vector<RoomObjectPath::Obstacle> body = bodyObstacles(creature, interactionObject(creature, wanted));
     // Add measured body tangencies as well as the navigation grid: a real free gap may be narrower than a grid cell.
     const RoomObjectPath::Obstacle footprint = interactionFootprint(creature, wanted, heading);
-    std::vector<RoomObjectPath::Obstacle> occupied = standingBodies(creature);
-    for(const Room* room : map.getRooms())
-        for(const std::pair<Creature* const, Room::InteractionPosition>& entry : room->getInteractionPositions())
-            if(entry.first != &creature)
-                occupied.push_back(interactionFootprint(*entry.first, entry.second.position, entry.second.direction));
+    std::vector<RoomObjectPath::Obstacle> occupied = cachedBodies(creature, cache);
+    const std::vector<RoomObjectPath::Obstacle>& reserved = cachedReservations(creature, cache);
+    occupied.insert(occupied.end(), reserved.begin(), reserved.end());
     for(RoomObjectPath::Obstacle obstacle : occupied)
     {
         obstacle.bodyMinimum = footprint.minimum;
@@ -475,7 +526,7 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
             (room != nullptr && tile->getCoveringRoom() != room) ||
             std::abs(tile->getX() - Helper::round(wanted.x)) > range ||
             std::abs(tile->getY() - Helper::round(wanted.y)) > range ||
-            !interactionPositionClear(creature, point, direction) ||
+            !interactionPositionClear(creature, point, direction, true, &cache) ||
             !RoomObjectPath::clearPoint(body, point, direction))
             continue;
         std::vector<Ogre::Vector2> route;
@@ -497,12 +548,20 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
         if(route.empty() || route.back() != point || blocked(creature, route))
             continue;
         const Ogre::Vector2 arrival = point - (route.size() > 1 ? route[route.size() - 2] : start);
-        if(!interactionPositionClear(creature, point, arrival))
+        if(!interactionPositionClear(creature, point, arrival, true, &cache))
             continue;
         path.swap(route);
         return true;
     }
     return false;
+}
+}
+
+//! \brief Chooses a reachable nonoverlapping destination, preserving the original route when space is exhausted.
+bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector2>& path, bool adjacent, const Room* room)
+{
+    SeparationCache cache;
+    return separateCached(creature, path, adjacent, room, cache);
 }
 
 bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path)
