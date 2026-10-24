@@ -129,9 +129,10 @@ def mesh_vertex_colours(mesh_file):
 
 
 # Return the names of materials whose block says "lighting off" and names no texture.
-def unlit_untextured_materials(root):
+# pattern selects the material scripts to scan (default: all of them).
+def unlit_untextured_materials(root, pattern="*.material"):
     names = set()
-    for script in (root / "materials/scripts").rglob("*.material"):
+    for script in (root / "materials/scripts").rglob(pattern):
         text = "\n".join(l for l in script.read_text(encoding="utf-8", errors="replace").splitlines()
                          if not l.strip().startswith("//"))
         for match in re.finditer(r"\bmaterial\s+([^\s:{]+)[^{]*\{", text):
@@ -176,6 +177,15 @@ def missing_models_and_materials(root):
                     problems.append(f"models/{mesh}: skeleton {name} not found under models/")
             elif name not in defined and name + ".mesh" != mesh:
                 problems.append(f"models/{mesh}: material {name} is not defined in materials/scripts")
+    # A material of MenuScene.material that no menu mesh uses has no vertex colour information, so it
+    # counts as without vertex colours and turns red when it is lighting off without a texture.
+    used = set()
+    for mesh in scene_meshes(root):
+        if (models / mesh).is_file():
+            used.update(mesh_vertex_colours(models / mesh).keys())
+    for material in sorted(unlit_untextured_materials(root, "MenuScene.material")):
+        if material not in used:
+            problems.append(f"materials/scripts/MenuScene.material: material {material} is lighting off without texture and is not used by a mesh with vertex colours (renders red)")
     for name in sorted(particle_materials(root)):
         if name not in defined:
             problems.append(f"particles/MenuScene.particle: material {name} is not defined in materials/scripts")

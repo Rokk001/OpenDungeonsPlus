@@ -265,7 +265,8 @@ material MenuFlame
 }
 material MenuFlameCore
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 1.0 0.42 0.035
     } }
 }
