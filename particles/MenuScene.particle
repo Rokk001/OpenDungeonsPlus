@@ -1,4 +1,5 @@
-// Continuous fire, ankle-low drifting fog, rising embers and the tower's vertical green shaft.
+// PC menu effects: all configured systems total at most 1,968 particles, including five grave emitters.
+// Continuous fire, low grave fog, windblown embers and the tower's vertical green shaft.
 particle_system MenuBrazierFire
 {
     material Flame
@@ -138,8 +139,8 @@ particle_system MenuSpireGlow
 particle_system MenuBrazierSmoke
 {
     material RoomAmbSmoke
-    particle_width 1.5
-    particle_height 2.0
+    particle_width 2.3
+    particle_height 4.6
     quota 48
     sorted true
     billboard_type point
@@ -149,15 +150,15 @@ particle_system MenuBrazierSmoke
         width 0.65
         height 0.65
         depth 0.25
-        direction 0.12 0.04 1
-        angle 12
-        emission_rate 7
-        time_to_live_min 1.5
-        time_to_live_max 3.8
-        velocity_min 0.35
-        velocity_max 0.8
-        colour_range_start 0.16 0.14 0.11 0.12
-        colour_range_end 0.09 0.09 0.085 0.08
+        direction 0.17 0.02 1
+        angle 8
+        emission_rate 8
+        time_to_live_min 3.5
+        time_to_live_max 5.8
+        velocity_min 0.55
+        velocity_max 1.1
+        colour_range_start 0.20 0.15 0.11 0.65
+        colour_range_end 0.12 0.10 0.08 0.42
     }
     affector ColourFader
     {
@@ -167,6 +168,210 @@ particle_system MenuBrazierSmoke
     {
         rate 0.3
     }
+}
+
+// A dim warm background reveals the creature silhouette behind the grille without lighting the court.
+particle_system MenuGateHaze
+{
+    material RoomAmbSmoke
+    particle_width 2.8
+    particle_height 3.5
+    quota 40
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position 0 1.8 4.3
+        width 5.6
+        height 1.0
+        depth 4.8
+        direction 0.05 0 1
+        angle 8
+        emission_rate 4
+        time_to_live_min 6
+        time_to_live_max 9
+        velocity_min 0.04
+        velocity_max 0.10
+        colour_range_start 0.18 0.028 0.004 0.22
+        colour_range_end 0.10 0.012 0.002 0.12
+    }
+    affector ColourFader { alpha -0.02 }
+}
+
+// Thin low vapour is rooted in each opened grave or broken slab, never in a full-screen overlay.
+particle_system MenuGraveMist
+{
+    material RoomAmbSmoke
+    particle_width 2.0
+    particle_height 0.8
+    quota 32
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position 0 0 0.12
+        width 1.4
+        height 1.2
+        depth 0.15
+        direction 0.18 0.04 1
+        angle 15
+        emission_rate 5
+        time_to_live_min 2.5
+        time_to_live_max 5
+        velocity_min 0.06
+        velocity_max 0.18
+        colour_range_start 0.16 0.18 0.13 0.18
+        colour_range_end 0.10 0.12 0.09 0.10
+    }
+    affector ColourFader { alpha -0.035 }
+    affector Scaler { rate 0.12 }
+}
+
+// Small charcoal fragments drift down through local firelight without glowing themselves.
+particle_system MenuAshFall
+{
+    material RoomAmbSmoke
+    particle_width 0.035
+    particle_height 0.055
+    quota 160
+    billboard_type point
+    emitter Box
+    {
+        position 0 0 14
+        width 42
+        height 42
+        depth 6
+        direction 0.28 0.07 -1
+        angle 20
+        emission_rate 12
+        time_to_live_min 8
+        time_to_live_max 12
+        velocity_min 0.25
+        velocity_max 0.65
+        colour_range_start 0.08 0.075 0.065 0.65
+        colour_range_end 0.035 0.032 0.028 0.35
+    }
+    affector ColourFader { alpha -0.045 }
+}
+
+// Transparent generated bats cross the far red horizon; the particle quota limits alpha overdraw.
+particle_system MenuBatSwarm
+{
+    material MenuBatSprite
+    particle_width 0.95
+    particle_height 0.95
+    quota 64
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position 25 61 23
+        width 26
+        height 20
+        depth 11
+        direction -1 0.12 0.03
+        angle 16
+        emission_rate 5
+        time_to_live_min 7
+        time_to_live_max 11
+        velocity_min 0.7
+        velocity_max 1.7
+        colour_range_start 0.045 0.04 0.03 0.9
+        colour_range_end 0.025 0.022 0.018 0.7
+    }
+    affector Rotator
+    {
+        rotation_range_start -15
+        rotation_range_end 15
+        rotation_speed_range_start -8
+        rotation_speed_range_end 8
+    }
+    affector ColourFader { alpha -0.06 }
+}
+
+// Separate generated crow silhouettes remain irregular and distinct from the bat swarm.
+particle_system MenuCrowSwarm
+{
+    material MenuCrowSprite
+    particle_width 1.2
+    particle_height 1.2
+    quota 48
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position -28 66 24
+        width 24
+        height 20
+        depth 10
+        direction 1 0.08 0.02
+        angle 13
+        emission_rate 4
+        time_to_live_min 7
+        time_to_live_max 10
+        velocity_min 0.6
+        velocity_max 1.3
+        colour_range_start 0.04 0.035 0.03 0.95
+        colour_range_end 0.02 0.018 0.015 0.7
+    }
+    affector ColourFader { alpha -0.06 }
+}
+
+// Distant orange ruin flames stay behind the mountains rather than brightening the foreground.
+particle_system MenuVolcanicFire
+{
+    material Flame
+    particle_width 0.55
+    particle_height 2.2
+    quota 80
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position 0 0 5
+        width 65
+        height 8
+        depth 5
+        direction 0.12 0 1
+        angle 9
+        emission_rate 15
+        time_to_live_min 1.5
+        time_to_live_max 4
+        velocity_min 0.3
+        velocity_max 0.8
+        colour_range_start 0.8 0.095 0.006 0.65
+        colour_range_end 0.35 0.025 0.002 0.4
+    }
+    affector ColourFader { alpha -0.22 }
+    affector Scaler { rate -0.08 }
+}
+
+// A small capped band of near-black cloud wisps crosses in front of the distant red moon.
+particle_system MenuMoonCloudTatters
+{
+    material RoomAmbSmoke
+    particle_width 8.0
+    particle_height 1.8
+    quota 24
+    sorted true
+    billboard_type point
+    emitter Box
+    {
+        position 0 -6 1.5
+        width 14
+        height 1.5
+        depth 3.6
+        direction 1 0 0.02
+        angle 4
+        emission_rate 0.5
+        time_to_live_min 26
+        time_to_live_max 40
+        velocity_min 0.04
+        velocity_max 0.09
+        colour_range_start 0.016 0.018 0.016 0.36
+        colour_range_end 0.010 0.012 0.010 0.22
+    }
+    affector ColourFader { alpha -0.008 }
 }
 
 // Layered dark storm smoke behind the distant fortress silhouettes.

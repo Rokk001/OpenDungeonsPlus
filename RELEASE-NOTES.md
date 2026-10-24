@@ -8,7 +8,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
-* Explore a ruined fortress in the main menu, with flights to each menu location and back to the courtyard, flickering firelight, a green-lit spired tower, low ground mist and embers.
+* Explore a ruined fortress in the main menu, with flights to each menu location and back to the courtyard, flickering firelight, a green-lit spired tower, low ground mist and embers. A replaceable chain-hung title, moving crows and cages, blood moon and weathered graveyard details deepen the scene.
 
 * Rebuilt research tree with three tabs, four tiers and gates for levels 2 and 3; research levels scale rooms, traps, doors and spells; new keeper research Dominion, Heart Fortitude, Heart Mending and Mana Flow.
 * Windows are now limited to the screen size at every UI scale
