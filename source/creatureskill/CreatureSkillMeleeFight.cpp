@@ -19,6 +19,7 @@
 
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "entities/CreatureProgression.h"
 #include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
@@ -70,7 +71,7 @@ bool CreatureSkillMeleeFight::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
-//! \brief Resolves creature hits with weapon recovery compensation, preserving building damage.
+//! \brief Resolves hits with weapon recovery and equipment effects, including structure damage bonuses.
 bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -110,11 +111,15 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
     bool critical = false;
     if(attackedObject->getObjectType() != GameEntityType::creature)
     {
+        const double itemFactor = ItemEffects::targetDamageFactor(*creature, *attackedObject);
+        phyAtk *= itemFactor;
+        magAtk *= itemFactor;
+        eleAtk *= itemFactor;
         // Buildings, doors and traps have no hit roll: the blow lands and may be critical (building damage x multiplier)
         critical = creature->rollCritical();
         if(critical)
         {
-            const double criticalFactor = ConfigManager::getSingleton().getCritDamageMultiplier();
+            const double criticalFactor = ItemEffects::criticalMultiplier(*creature);
             phyAtk *= criticalFactor;
             magAtk *= criticalFactor;
             eleAtk *= criticalFactor;
@@ -134,6 +139,13 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
             // Melee damage follows the Strength attribute level
             CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
                 creature->getStrengthLevel(), "dmg%");
+            const double itemFactor = ItemEffects::targetDamageFactor(*creature, *target);
+            phyMin *= itemFactor;
+            phyMax *= itemFactor;
+            magMin *= itemFactor;
+            magMax *= itemFactor;
+            eleMin *= itemFactor;
+            eleMax *= itemFactor;
             // An armed blow of a skill multiplies the damage before the defense; blows against buildings keep it
             const double strikeFactor = creature->consumeStrikeMultiplier();
             phyMin *= strikeFactor;
@@ -145,7 +157,8 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
             // A critical hit multiplies every damage value before the defense of the target is subtracted
             critical = creature->rollCritical();
             if(critical)
-                CombatDamage::applyCriticalToRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax);
+                CombatDamage::applyCriticalToRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax,
+                    creature->getItemEffect("Executioner"));
             uint32_t weaponCooldown = 0;
             const Weapon* weapons[] = {creature->getWeaponL(), creature->getWeaponR()};
             for(const Weapon* weapon : weapons)
@@ -174,11 +187,19 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
         magAtk = 0.0;
         eleAtk = 0.0;
     }
+    double retaliationPercent = 0.0;
+    if(attackedObject->getObjectType() == GameEntityType::creature)
+    {
+        const Creature* target = static_cast<const Creature*>(attackedObject);
+        retaliationPercent = target->getItemEffect("Spiked") + target->getItemEffect("Spikes");
+    }
     const double damageDone = attackedObject->takeDamage(creature, creatureDamage,
         phyAtk, magAtk, eleAtk, attackedTile, ko);
     if(attackedObject->getObjectType() == GameEntityType::creature)
     {
         Creature* target = static_cast<Creature*>(attackedObject);
+        if(!missed && defence == DefenceChance::none)
+            ItemEffects::onHit(*creature, *target, damageDone, true, retaliationPercent);
         if(!missed)
             target->fireCombatImpact(hasWeapon(creature) && hasWeapon(target),
                 damageDone > 0.0, creature->getPosition());

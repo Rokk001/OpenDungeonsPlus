@@ -28,6 +28,7 @@
 #include "creatureskill/CreatureSkillTree.h"
 #include "eventsystem/Subject.h"
 #include "game/CreatureAppearance.h"
+#include "entities/ItemInstance.h"
 
 
 #include <Ogre.h>
@@ -35,6 +36,7 @@
 #include <CEGUI/EventArgs.h>
 
 #include <map>
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -380,14 +382,14 @@ public:
     static double getDragWorkerSpeedFactor();
 
     //! \brief Gets the creature depending the terrain type.
-    inline double getMoveSpeedGround() const
-    { return mGroundSpeed; }
-    inline double getMoveSpeedWater() const
-    { return mWaterSpeed; }
-    inline double getMoveSpeedLava() const
-    { return mLavaSpeed; }
+    double getMoveSpeedGround() const;
+    //! \brief Returns water speed with terrain-specific equipment effects.
+    double getMoveSpeedWater() const;
+    //! \brief Returns lava speed with terrain-specific equipment effects.
+    double getMoveSpeedLava() const;
 
-    inline int32_t getKoTurnCounter() const
+    //! \brief Returns fractional knockout turns, negative for a lethal knockout.
+    inline double getKoTurnCounter() const
     { return mKoTurnCounter; }
 
     //! \brief Updates the entity path, movement, and direction, and creature attack time
@@ -513,6 +515,45 @@ public:
     //! "spell%", "alldmg%", ...), 0 while the creature has no passive skill of that stat.
     //! \param stat The passive stat name.
     double getSkillPassive(const std::string& stat) const;
+
+    //! \brief Returns the six worn slots in right-hand, left-hand, head, armour, boots, ring order.
+    const std::array<std::unique_ptr<ItemInstance>, 6>& getEquipment() const { return mEquipment; }
+    //! \brief Returns the creature's unstacked potion slots.
+    const std::vector<std::unique_ptr<ItemInstance>>& getPotionSlots() const { return mPotionSlots; }
+    //! \brief Returns the four carried inventory slots.
+    const std::array<std::unique_ptr<ItemInstance>, 4>& getInventory() const { return mInventory; }
+    //! \brief Changes one worn slot and returns its previous item to the caller.
+    std::unique_ptr<ItemInstance> setEquipment(size_t slot, std::unique_ptr<ItemInstance> item);
+    //! \brief Changes one inventory slot and returns its previous item.
+    std::unique_ptr<ItemInstance> setInventorySlot(size_t slot, std::unique_ptr<ItemInstance> item);
+    //! \brief Changes one potion slot and returns its previous potion.
+    std::unique_ptr<ItemInstance> setPotionSlot(size_t slot, std::unique_ptr<ItemInstance> item);
+    //! \brief Grows the potion slot vector at the two level thresholds, never shrinking it.
+    void resizePotionSlots();
+    //! \brief Sums a bonus over the six worn items.
+    double getItemBonus(const std::string& kind) const;
+    //! \brief Sums a special effect over the six worn items.
+    double getItemEffect(const std::string& id) const;
+    //! \brief Returns a level-equivalent item bonus converted into the creature's attribute points.
+    double getItemAttribute(const std::string& attribute) const;
+    //! \brief Rebuilds derived item stats and notifies clients after a holder changes.
+    void itemsChanged();
+    //! \brief Sets the multiplicative contribution of one running potion effect.
+    void setPotionContribution(const CreatureEffect* source, const std::string& kind, double value);
+    //! \brief Removes only the contribution of a potion that ended.
+    void removePotionContribution(const CreatureEffect* source);
+    //! \brief Returns the product of potion multipliers of one kind, or one when absent.
+    double getPotionFactor(const std::string& kind) const;
+    //! \brief Returns the critical chance points of active dexterity potions.
+    double getPotionCritChance() const;
+    //! \brief Returns the defense multiplier from item bonuses and conditional effects.
+    double getItemDefenseFactor() const;
+    //! \brief Adds Second Wind to the same movement percentage sum without caching its health condition.
+    double getConditionalItemMoveFactor() const;
+    //! \brief Ends all running freeze effects when a thaw potion is drunk.
+    void endFreeze();
+    //! \brief Returns the natural sight radius plus the equipment sight bonus.
+    int32_t getTileSightRadius() const;
 
     //! \brief Returns the size of the mana pool: Mana attribute (with equipment) x ManaPerPoint of the type.
     double getMaxMana() const;
@@ -1415,6 +1456,17 @@ private:
     uint32_t mAppearanceNoCatalogGeneration = 0;
     //! \brief Pointer to the struct holding the general type of the creature with its values
     const CreatureDefinition* mDefinition;
+    //! \brief Rolled equipment and unstacked carried items, owned by this creature.
+    std::array<std::unique_ptr<ItemInstance>, 6> mEquipment;
+    std::vector<std::unique_ptr<ItemInstance>> mPotionSlots;
+    std::array<std::unique_ptr<ItemInstance>, 4> mInventory;
+    //! \brief Multipliers of running potion effects, keyed by their independent effect objects.
+    std::map<const CreatureEffect*, std::pair<std::string, double>> mPotionContributions;
+    //! \brief Owner-only active potion contributions received from the server, without effect-object pointers.
+    std::vector<std::pair<std::string, double>> mClientPotionContributions;
+    //! \brief Authoritative same-seat aura sums; clients cannot reconstruct hidden or unseen givers.
+    double mClientGuardWall = 0.0;
+    double mClientRally = 0.0;
 
     bool            mHasVisualDebuggingEntities;
     double          mWakefulness;
@@ -1569,7 +1621,7 @@ private:
     //! While KO to death, a worker pulls the creature over the ground to its own bed (it stays on
     //! the map, so the counter keeps running during the way) and the counter is reset to 0 when
     //! the creature reaches its bed.
-    int32_t                         mKoTurnCounter;
+    double                          mKoTurnCounter;
 
     //! brief Creatures that recently hurt this creature (name and turn), used to find who took part
     //! in defeating it for the relationships. Only filled when the option is on.
@@ -1753,6 +1805,14 @@ private:
 
     //! \brief Restores the creature's stats according to its current level
     void buildStats();
+    //! \brief Writes the optional tagged item block after the other creature save fields.
+    void exportItemsToStream(std::ostream& stream) const;
+    //! \brief Reads the contents of a tagged item block transactionally.
+    bool importItemsFromStream(std::istream& stream);
+    //! \brief Writes all own item data, exposing only hand slots to foreign seats.
+    void exportItemsToPacket(ODPacket& packet, const Seat* seat) const;
+    //! \brief Reads the item payload before adopting any slot changes.
+    bool importItemsFromPacket(ODPacket& packet);
 
     void increaseHunger(double value);
 

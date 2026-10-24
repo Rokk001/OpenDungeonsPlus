@@ -19,6 +19,7 @@
 #define CONFIGMANAGER_H
 
 #include "creatureskill/CreatureSkillTree.h"
+#include "entities/PotionDefinition.h"
 
 #include <OgreSingleton.h>
 #include <OgreColourValue.h>
@@ -28,6 +29,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <map>
 #include <set>
 #include <string>
 #include <utility>
@@ -35,6 +37,7 @@
 
 
 class CreatureDefinition;
+class ItemDefinition;
 class Weapon;
 class SpawnCondition;
 class Skill;
@@ -115,6 +118,7 @@ public:
     //! \brief Loads configuration, including dodge and shield block defaults.
     ConfigManager(const std::string& configPath, const std::string& userConfigPath,
         const std::string& soundPath);
+    //! \brief Releases configuration-owned creature, equipment and item definitions.
     ~ConfigManager();
 
     static const std::string DefaultWorkerCreatureDefinition;
@@ -148,6 +152,21 @@ public:
     inline const std::vector<const Weapon*>& getWeapons() const
     { return mWeapons; }
     const Weapon* getWeapon(const std::string& name) const;
+
+    //! \brief Returns all item lines in their configuration order.
+    const std::vector<const ItemDefinition*>& getItems() const { return mItems; }
+    //! \brief Finds an item line by its unique id, or returns null.
+    const ItemDefinition* getItem(const std::string& id) const;
+    //! \brief Returns all potion recipes in their configuration order.
+    const std::vector<PotionDefinition>& getPotions() const { return mPotions; }
+    //! \brief Finds a potion recipe, or returns null.
+    const PotionDefinition* getPotion(const std::string& id) const;
+    //! \brief Returns all herb definitions in configuration order.
+    const std::vector<HerbDefinition>& getHerbs() const { return mHerbs; }
+    //! \brief Finds a herb definition, or returns null.
+    const HerbDefinition* getHerb(const std::string& id) const;
+    //! \brief Returns a configured item-drop, item-rating or potion rule value.
+    double getItemSetting(const std::string& section, const std::string& key) const;
 
     inline uint32_t getCreatureDeathCounter() const
     { return mCreatureDeathCounter; }
@@ -574,6 +593,7 @@ private:
     //! is ok and false if a mandatory parameter is missing
     bool loadGlobalConfig(const std::string& configPath);
     bool loadGlobalConfigSeatColors(std::stringstream& configFile);
+    //! \brief Reads the configured filenames, including item and potion catalogues.
     bool loadGlobalConfigDefinitionFiles(std::stringstream& configFile);
     //! \brief Reads global game settings and the settings of each creature avoidance kind.
     bool loadGlobalGameConfig(std::stringstream& configFile);
@@ -582,6 +602,12 @@ private:
     bool loadSpawnConditions(const std::string& fileName);
     bool loadFactions(const std::string& fileName);
     bool loadRooms(const std::string& fileName);
+    //! \brief Loads all item lines without modifying their supplied values.
+    bool loadItems(const std::string& fileName);
+    //! \brief Loads potion recipes and herb definitions in file order.
+    bool loadPotions(const std::string& fileName);
+    //! \brief Reads one named numeric item-system rule block.
+    bool loadItemSettings(std::stringstream& stream, const std::string& section);
     bool loadTraps(const std::string& fileName);
     bool loadSpellConfig(const std::string& fileName);
     bool loadSkills(const std::string& fileName);
@@ -614,6 +640,13 @@ private:
     std::map<std::string, Ogre::ColourValue> mSeatColors;
     std::map<std::string, CreatureDefinition*> mCreatureDefs;
     std::vector<const Weapon*> mWeapons;
+    //! \brief Catalogue definitions owned by the configuration manager.
+    std::vector<const ItemDefinition*> mItems;
+    std::vector<PotionDefinition> mPotions;
+    std::vector<HerbDefinition> mHerbs;
+    std::map<std::string, std::map<std::string, double>> mItemSettings;
+    std::string mFilenameItems;
+    std::string mFilenamePotions;
     std::string mConfigPath;
     std::string mFilenameCreatureDefinition;
     std::string mFilenameEquipmentDefinition;

@@ -44,6 +44,7 @@ public:
     static CreatureEffectStrengthChange* load(std::istream& is);
 
 protected:
+    //! \brief Maintains the strength contribution with Unyielding reducing negative strength changes.
     virtual void applyEffect(Creature& creature) override;
     virtual void releaseEffect(Creature& creature) override;
 

@@ -29,6 +29,7 @@
 #include "entities/MissileBoulder.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "entities/ItemDefinition.h"
 #include "game/Campaign.h"
 #include "game/HeartHealthRing.h"
 #include "giftboxes/GiftBoxBonus.h"
@@ -1063,6 +1064,11 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 const Weapon* def = gameMap->getWeapon(i);
                 packet << def;
             }
+
+            // Item definitions follow weapons so both peers resolve the same rolled instances.
+            packet << static_cast<uint32_t>(gameMap->getItemDefinitions().size());
+            for(const ItemDefinition* definition : gameMap->getItemDefinitions())
+                definition->exportToPacket(packet);
 
             // Tiles
             std::vector<Tile*> goldTiles;

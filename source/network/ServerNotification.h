@@ -212,7 +212,15 @@ enum class ServerNotificationType
     timeLimit,
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
-    campaignVictory
+    campaignVictory,
+    //! \brief Owner-only merchant stock, deal history, margin and reservation-mode snapshot.
+    merchantWindow,
+    //! \brief Owner-only merchant settings: int32_t margin, string fair/profit mode.
+    merchantSettings,
+    //! \brief Owner-only cauldron progress, herb stocks and laboratory-mode snapshot.
+    labWindow,
+    //! \brief Owner-only laboratory settings: int32_t production mode.
+    labSettings
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
