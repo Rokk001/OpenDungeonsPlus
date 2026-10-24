@@ -1,5 +1,184 @@
 # Item image prompts
 
+## BLZ_A_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Helm of Zeal (do not write that name): one compact steel scale helmet with a rounded dome, layered overlapping metal brow plates and short cheek guards, empty helmet without a head. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Helm (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Plate of Zeal (do not write that name): one compact empty scale-armour breastplate and tunic with overlapping teardrop steel scales, modest rounded shoulder guards and plain dark leather fastening, without a wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Plate (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Greaves of Zeal (do not write that name): one matching pair of sturdy dark leather combat boots with overlapping teardrop steel scale shin guards and simple functional straps, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Greaves (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Ring of Zeal (do not write that name): one broad steel finger ring with an oval flat signet face composed of shallow overlapping scale-shaped metal panels, simple functional craftsmanship. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Ring (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Helm of Protection (do not write that name): one sturdy steel scale helmet with a broad protective brow, compact layered scale panels over the dome and deep rounded cheek guards, empty helmet without a head. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Helm (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Plate of Protection (do not write that name): one compact empty steel scale-armour cuirass with a broad protective chest, dense overlapping rounded steel scales, stout rounded shoulder guards and plain leather buckles, without a wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Plate (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Greaves of Protection (do not write that name): one matching pair of stout dark leather combat boots with broad protective steel scale shin guards, rounded toe caps and simple straps, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Greaves (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Ring of Protection (do not write that name): one thick steel finger ring with a broad rounded shield-shaped signet face bearing shallow overlapping rounded scale-shaped metal panels, modest functional craftsmanship. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Ring (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Helm of Charge (do not write that name): one compact steel scale helmet with an angled brow, close-fitting overlapping steel scale panels and tapered cheek guards, empty helmet without a head. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Helm (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Plate of Charge (do not write that name): one compact empty scale-armour cuirass with close-fitting overlapping pointed steel scales, modest angled shoulder guards and plain dark leather fastening, without a wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Plate (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Greaves of Charge (do not write that name): one matching pair of dark leather combat boots with tapered overlapping steel scale shin guards, angled knee rims and plain straps, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Greaves (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Ring of Charge (do not write that name): one sturdy steel finger ring with a small elongated oval signet face composed of shallow pointed overlapping scale-shaped metal panels, modest functional craftsmanship. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Ring (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
 ## BLK_C_Shield_rare.png
 
 Edit target: supplied original shield inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
