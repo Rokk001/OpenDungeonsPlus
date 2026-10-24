@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Check that every texture named by the material and particle scripts can be found by the engine.
+"""Check that the menu scene finds every texture, material and mesh it names.
+
+Textures: every texture named by the material and particle scripts must be found by the engine.
+Materials and meshes: every mesh named by the menu scene description must exist under models/, every
+material or skeleton named inside the menu meshes must be defined in materials/scripts/*.material (or exist
+under models/), and every material used by the menu particle effects must be defined as well.
 
 The engine registers each folder of the Graphics section in cmake/config/resources.cfg.in
 non-recursively (ResourceManager::setupOgreResources passes recursive=false), so a texture name
@@ -40,7 +45,67 @@ def texture_references(root):
     return references
 
 
-# Fail when a menu scene texture cannot be resolved; other unresolved names are listed as well.
+# Return the set of material names defined by all material scripts (also those derived from a parent).
+def defined_materials(root):
+    names = set()
+    pattern = re.compile(r"^\s*material\s+([^\s:{]+)")
+    for script in (root / "materials/scripts").rglob("*.material"):
+        for line in script.read_text(encoding="utf-8", errors="replace").splitlines():
+            match = pattern.match(line)
+            if match:
+                names.add(match.group(1))
+    return names
+
+
+# Return the mesh names of every AddEntity command of the menu scene description.
+def scene_meshes(root):
+    meshes = []
+    for line in (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8").splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[0] == "AddEntity":
+            meshes.append(parts[2])
+    return meshes
+
+
+# Return the material and skeleton names stored as text inside a binary mesh file.
+def mesh_references(mesh_file):
+    return sorted(set(name.decode("ascii") for name in re.findall(rb"Menu[A-Za-z0-9_]*(?:\.skeleton)?", mesh_file.read_bytes())))
+
+
+# Return the material names that the menu particle script uses.
+def particle_materials(root):
+    pattern = re.compile(r"^\s*material\s+(\S+)")
+    names = set()
+    for line in (root / "particles/MenuScene.particle").read_text(encoding="utf-8", errors="replace").splitlines():
+        match = pattern.match(line)
+        if match:
+            names.add(match.group(1))
+    return names
+
+
+# Return the list of missing menu scene materials, meshes and skeletons as readable lines.
+def missing_models_and_materials(root):
+    problems = []
+    defined = defined_materials(root)
+    models = root / "models"
+    for mesh in scene_meshes(root):
+        mesh_file = models / mesh
+        if not mesh_file.is_file():
+            problems.append(f"config/mainmenuscene.cfg: mesh {mesh} not found under models/")
+            continue
+        for name in mesh_references(mesh_file):
+            if name.endswith(".skeleton"):
+                if not (models / name).is_file():
+                    problems.append(f"models/{mesh}: skeleton {name} not found under models/")
+            elif name not in defined and name + ".mesh" != mesh:
+                problems.append(f"models/{mesh}: material {name} is not defined in materials/scripts")
+    for name in sorted(particle_materials(root)):
+        if name not in defined:
+            problems.append(f"particles/MenuScene.particle: material {name} is not defined in materials/scripts")
+    return problems
+
+
+# Fail when a menu scene texture, material, mesh or skeleton cannot be resolved.
 def main():
     root = Path(__file__).resolve().parents[2]
     folders = graphics_folders(root)
@@ -55,7 +120,10 @@ def main():
             missing.append(f"{script.relative_to(root)}:{number}: {name}")
     assert menu_count > 0, "no menu scene texture references found"
     assert not missing, "menu scene textures not resolvable by the engine:\n  " + "\n  ".join(missing)
-    print(f"OK: {menu_count} menu scene texture references resolve through resources.cfg.in")
+    problems = missing_models_and_materials(root)
+    assert not problems, "menu scene materials or meshes missing:\n  " + "\n  ".join(problems)
+    print(f"OK: {menu_count} menu scene texture references resolve through resources.cfg.in; "
+          f"{len(scene_meshes(root))} scene meshes with their materials and skeletons are present")
 
 
 if __name__ == "__main__":
