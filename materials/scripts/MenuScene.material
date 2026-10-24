@@ -177,20 +177,19 @@ material MenuCloud
     {
         pass
         {
-            lighting off
             scene_blend alpha_blend
             depth_write off
             cull_hardware none
-            ambient 0.009 0.012 0.018 1
-            diffuse 0.009 0.012 0.018 0
-            emissive 0 0 0
+            ambient 0 0 0 1
+            diffuse 0 0 0 0
+            emissive 0.035 0.043 0.049
         }
     }
 }
 
 // The sky dome has no texture and no vertex colours. With lighting off the fixed pipeline falls back to
 // white vertex colour, which rendered the sky white. Lighting stays on with only an emissive colour, so
-// the dome shows the same dark blue-grey as the approved Blender scene.
+// the dome shows the exact sky colour of the approved Blender scene (its MenuSky entry).
 material MenuSky
 {
     technique
@@ -201,7 +200,7 @@ material MenuSky
             ambient 0 0 0 1
             diffuse 0 0 0 1
             specular 0 0 0 1 0
-            emissive 0.027 0.034 0.048
+            emissive 0.012 0.018 0.022
         }
     }
 }
@@ -252,13 +251,15 @@ material MenuWetStone : RTSS/NormalMapping_MultiPass
 // Original fire and slit-window values for the dark fortress scene.
 material MenuWindowGlow
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.35 0.045 0.004
     } }
 }
 material MenuFlame
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 1.0 0.12 0.008
     } }
 }
@@ -461,7 +462,8 @@ material MenuClothFadedB : MenuCloth
 // Green light stays inside the ruined tower's window openings and structural fissures.
 material MenuSpireGlow
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.008 0.65 0.035
     } }
 }
@@ -469,11 +471,11 @@ material MenuSpireGlow
 // The faint additive core accompanies the wider smoke-scattered green particle shaft.
 material MenuSpireBeam
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
         scene_blend add
         depth_write off
         cull_hardware none
-        diffuse 0.001 0.035 0.003 0.04
+        diffuse 0 0 0 0.04
         emissive 0.001 0.035 0.003
     } }
 }
@@ -481,7 +483,8 @@ material MenuSpireBeam
 // Orange heat is visible only in the broken joints between the wet flagstones.
 material MenuEmberCrack
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.8 0.06 0.003
     } }
 }
@@ -500,7 +503,8 @@ material MenuBannerSymbol
 // The far sky carries ember light below the mountain silhouettes, never a foreground wash.
 material MenuHorizonGlow
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         cull_hardware none
         emissive 0.18 0.035 0.006
     } }
@@ -509,7 +513,8 @@ material MenuHorizonGlow
 // A darker upper transition keeps the distant glow beneath the storm-cloud ceiling.
 material MenuHorizonDark
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         cull_hardware none
         emissive 0.032 0.012 0.007
     } }
@@ -617,7 +622,8 @@ material MenuTitleIron : MenuIron
 material MenuTitleCrest
 {
     technique { pass {
-        lighting off
+        ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.009 0.32 0.025
         cull_hardware none
     } }
@@ -638,7 +644,8 @@ material MenuBloodMoon : MenuStone
 material MenuGateEyes
 {
     technique { pass {
-        lighting off
+        ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.85 0.065 0.003
     } }
 }
@@ -647,7 +654,8 @@ material MenuGateEyes
 material MenuLavaCrack
 {
     technique { pass {
-        lighting off
+        ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.85 0.035 0.002
         cull_hardware none
     } }
