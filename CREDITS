@@ -1360,3 +1360,6 @@ materials/textures/Pile_*.png          OD Team                 GPLv3+           
 materials/textures/BloodStain.png      OD Team                 GPLv3+                  Painted from periodic noise by tools/gen_pile_textures.py (script generated, original work)
 materials/scripts/DirtPiles.material   OD Team                 GPLv3+                  Written by tools/gen_pile_textures.py (materials DirtPiles, Pile_<Type>, BloodStain)
 tools/gen_pile_textures.py   OD Team   GPLv3+   Original work
+materials/textures/DirtStage1.png, materials/textures/DirtStage2.png, materials/textures/DirtStage3.png, materials/textures/ToiletSeat.png   OD Team   GPLv3+   Painted from periodic noise and simple shapes by tools/gen_dirt_decals.py (script generated, original work); these files are not covered by the Dirt*.png row of the textures section, which has another author and licence
+materials/scripts/DirtStage.material, materials/scripts/ToiletSeat.material   OD Team   GPLv3+   Written by tools/gen_dirt_decals.py
+tools/gen_dirt_decals.py   OD Team   GPLv3+   Original work
