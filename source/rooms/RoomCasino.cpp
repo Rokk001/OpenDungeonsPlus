@@ -479,6 +479,7 @@ void RoomCasino::doUpkeep()
         creature->addGoldCarried(-creatureBet);
         creature->jobDone(wakefullness);
         creature->setJobCooldown(cooldown);
+        addUseDirt(*creature, creature->getPositionTile(), "CasinoDirtPerWork");
         const CreatureRoomAffinity& creature1RoomAffinity = creature->getDefinition()->getRoomAffinity(getType());
 
         creature = p.second.mCreature2.mCreature;
@@ -486,6 +487,7 @@ void RoomCasino::doUpkeep()
         creature->addGoldCarried(-creatureBet);
         creature->jobDone(wakefullness);
         creature->setJobCooldown(cooldown);
+        addUseDirt(*creature, creature->getPositionTile(), "CasinoDirtPerWork");
         const CreatureRoomAffinity& creature2RoomAffinity = creature->getDefinition()->getRoomAffinity(getType());
 
         p.second.mCooldown = cooldown;

@@ -92,6 +92,9 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
 
         creature.computeCreatureOverlayHealthValue();
 
+        // Every turn of sleep dirties the floor of the bed a little
+        Room::addUseDirt(creature, myTile, "DormitoryDirtPerSleepTurn");
+
         if (creature.getWakefulness() >= 100.0 && creature.getHP() >= creature.getMaxHp())
         {
             creature.popAction();

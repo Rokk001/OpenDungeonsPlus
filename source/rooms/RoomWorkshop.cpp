@@ -490,6 +490,7 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));
+    addUseDirt(creature, tileCreature, "WorkshopDirtPerWork");
 
     return false;
 }

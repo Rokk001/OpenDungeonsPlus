@@ -226,6 +226,7 @@ bool RoomGuardRoom::useRoom(Creature& creature, bool forced)
         ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomWakefulnessPerDuty"), ResearchEffect::WakefulnessPerDuty));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMax")));
+    addUseDirt(creature, tileCreature, "GuardRoomDirtPerDuty");
 
     return false;
 }
