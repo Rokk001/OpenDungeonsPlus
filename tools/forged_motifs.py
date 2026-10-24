@@ -1251,6 +1251,20 @@ def m_mana_flow(c):
               z=0.03, bevel=0.03, base=0.08)
 
 
+def m_toilet(c):
+    c.glow(0.0, 0.1, 0.6, (90, 70, 40), 0.4)
+    c.add(c.box(0.0, -0.46, 0.34, 0.24, 0.05), STONE, z=0.12, bevel=0.06, base=0.05, shadow=0.6)
+    c.add(c.box(0.0, -0.64, 0.38, 0.05, 0.02), STONE_DARK, z=0.06, bevel=0.03, base=0.12, shadow=0.4)
+    c.add(c.box(-0.20, -0.52, 0.06, 0.02, 0.01), BRONZE, z=0.04, bevel=0.03, base=0.20)
+    c.add(c.seg(0.0, -0.22, 0.0, -0.06, 0.05), IRON, z=0.05, bevel=0.04, base=0.10, shadow=0.4)
+    c.add(c.ellipse(0.0, 0.34, 0.56, 0.34), STONE, z=0.14, bevel=0.08, base=0.05, shadow=0.6)
+    c.add(c.ellipse(0.0, 0.26, 0.50, 0.27), WOOD_DARK, z=0.06, bevel=0.05, base=0.18, shadow=0.4)
+    c.add(c.ellipse(0.0, 0.24, 0.42, 0.21), WOOD, z=0.05, bevel=0.06, base=0.22)
+    c.add(c.ellipse(0.0, 0.20, 0.14, 0.05), BRONZE, z=0.03, bevel=0.03, base=0.30)
+    for x in (-0.34, 0.34):
+        c.add(c.circle(x, 0.04, 0.035), BRONZE, z=0.03, bevel=0.03, base=0.28)
+
+
 # ---------------------------------------------------------------------------------------------
 # The icon table. kind None: a frameless symbol. cells: pixel size of the cell in the atlas.
 # ---------------------------------------------------------------------------------------------
@@ -1367,5 +1381,6 @@ ICONS = {
     "HeartFortitudeButton": _slot(m_heart_fortitude, "trap"),
     "HeartMendingButton": _slot(m_heart_mending, "trap"),
     "ManaFlowButton": _slot(m_mana_flow, "spell"),
+    "ToiletButton": _slot(m_toilet, "room"),
     "MenuReturn": _sym(m_return, 64),
 }
