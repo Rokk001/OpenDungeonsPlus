@@ -63,6 +63,11 @@ namespace
 const float LAYOUT_DESIGN_WIDTH = 1024.0f;
 const float LAYOUT_DESIGN_HEIGHT = 768.0f;
 
+//! Source-pixel density of the repainted atlases relative to their existing design sizes.
+static const float SKIN_IMAGE_PIXEL_DENSITY = 4.0f;
+static const float HUD_SURFACE_IMAGE_PIXEL_DENSITY = 2.0f;
+static const float DEFAULT_IMAGE_PIXEL_DENSITY = 1.0f;
+
 // Layout of the room, trap and spell buttons in unscaled pixels.
 const float ACTION_BUTTON_MARGIN_X = 20.0f;
 const float ACTION_BUTTON_MARGIN_Y = 6.0f;
@@ -1375,6 +1380,19 @@ bool startsWith(const std::string& text, const std::string& prefix)
     return text.compare(0, prefix.size(), prefix) == 0;
 }
 
+//! \brief Returns the atlas pixel density without changing its images' logical layout sizes.
+//! \param ceguiName Registered image name, including its imageset prefix.
+//! \return Source pixels per original design pixel for this image family.
+float imagePixelDensity(const CEGUI::String& ceguiName)
+{
+    const std::string name(ceguiName.c_str());
+    if(startsWith(name, "OpenDungeonsSkin/"))
+        return SKIN_IMAGE_PIXEL_DENSITY;
+    if(startsWith(name, "ODHudSurface/"))
+        return HUD_SURFACE_IMAGE_PIXEL_DENSITY;
+    return DEFAULT_IMAGE_PIXEL_DENSITY;
+}
+
 //! \brief Applies display and user scaling to the registered GUI image families.
 bool shouldScaleImage(const CEGUI::String& ceguiName)
 {
@@ -2101,6 +2119,7 @@ void Gui::applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data,
     }
 }
 
+//! \brief Scales fonts and images for the display while preserving high-resolution atlas design sizes.
 void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
 {
     const CEGUI::Sizef fontNativeResolution(FONT_DESIGN_WIDTH / mUserScale,
@@ -2123,7 +2142,9 @@ void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
             CEGUI::BasicImage* basicImage = dynamic_cast<CEGUI::BasicImage*>(image.getCurrentValue().first);
             if(basicImage != nullptr)
             {
-                basicImage->setNativeResolution(imageNativeResolution);
+                const float pixelDensity = imagePixelDensity(image.getCurrentKey());
+                basicImage->setNativeResolution(CEGUI::Sizef(imageNativeResolution.d_width * pixelDensity,
+                    imageNativeResolution.d_height * pixelDensity));
                 basicImage->setAutoScaled(CEGUI::ASM_Min);
             }
         }
