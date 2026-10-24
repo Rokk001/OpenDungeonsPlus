@@ -72,6 +72,26 @@ def parse_frame_time(output):
     return result
 
 
+# Engine log lines that mean a resource was not found; such a line naming a menu scene resource fails the run.
+RESOURCE_ERRORS = ("Cannot locate resource", "Texture layer will be blank", "Can't assign material")
+# Name prefix shared by all menu scene textures and materials; other missing-resource lines are not judged here.
+MENU_RESOURCE_PREFIX = "Menu"
+
+
+def find_resource_errors(log_path):
+    """Returns the distinct engine log lines (time stamp removed) that report a missing menu scene resource."""
+    found = []
+    if not os.path.exists(log_path):
+        return found
+    with open(log_path, encoding="utf-8", errors="replace") as handle:
+        for text in handle:
+            if MENU_RESOURCE_PREFIX in text and any(marker in text for marker in RESOURCE_ERRORS):
+                entry = re.sub(r"^\d\d:\d\d:\d\d: ", "", text.strip())
+                if entry not in found:
+                    found.append(entry)
+    return found
+
+
 def run_level(exe, level, seconds):
     """Runs one level. Returns (passed, text)."""
     passed, text, _ = run_level_with_frame_time(exe, level, seconds)
@@ -95,6 +115,7 @@ def run_level_with_frame_time(exe, level, seconds):
         code = None
 
     frame_time = parse_frame_time(output)
+    resource_errors = find_resource_errors(os.path.join(os.path.dirname(os.path.abspath(exe)), "Ogre.log"))
     line = ""
     for text in (output or "").splitlines():
         if text.startswith("PASS ") or text.startswith("FAIL "):
@@ -109,6 +130,9 @@ def run_level_with_frame_time(exe, level, seconds):
     name = os.path.basename(level)
     if code is None:
         return False, "FAIL %s : timeout: the script killed the game after %d s" % (name, limit), frame_time
+    if code == 0 and line.startswith("PASS ") and resource_errors:
+        return False, "FAIL %s : missing menu scene resources in Ogre.log (%d): %s" % (
+            name, len(resource_errors), "; ".join(resource_errors[:5])), frame_time
     if code == 0 and line.startswith("PASS "):
         return True, line, frame_time
     if code not in CODE_NAMES:
