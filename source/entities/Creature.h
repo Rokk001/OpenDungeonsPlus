@@ -1511,6 +1511,9 @@ private:
     CEGUI::Window*  mStatsWindow;
     int32_t         mNbTurnsWithoutBattle;
 
+    //! \brief Runtime only (not saved): true when this creature was knocked out in the current fight, so the fight end adds no extra creature dirt
+    bool            mDirtKoThisFight;
+
     //! \brief Used on server side for the mood. Set by the casino, fades by CasinoMoodDecay per second
     double          mCasinoMood;
 

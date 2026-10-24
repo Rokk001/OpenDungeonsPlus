@@ -634,6 +634,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
+    mDirtKoThisFight         (false),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
@@ -754,6 +755,7 @@ Creature::Creature(GameMap* gameMap) :
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
+    mDirtKoThisFight         (false),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
@@ -2038,6 +2040,14 @@ void Creature::doUpkeep()
     }
 
     ++mNbTurnsWithoutBattle;
+    // The turn the counter goes from 0 to 1 is the end of a fight: the creature gets a little dirty
+    // unless it was already dirtied by being knocked out in this fight
+    if(mNbTurnsWithoutBattle == 1)
+    {
+        if(!mDirtKoThisFight)
+            increaseCreatureDirt(ConfigManager::getSingleton().getDirtConfigDouble("CreatureDirtPerFightWon"));
+        mDirtKoThisFight = false;
+    }
 
     // The pit mood fades towards 0
     if(mPitMood != 0.0)
@@ -5662,6 +5672,13 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
                 reportRelationshipEvent(RelationshipEvent::arenaLoss, *this, *creatureAttacking);
             }
         }
+    }
+
+    // Being knocked out dirties the creature at once; the end of this fight then adds nothing
+    if(!wasKo && getIsOnServerMap() && (isKoTemp() || isKoDeath()))
+    {
+        increaseCreatureDirt(ConfigManager::getSingleton().getDirtConfigDouble("CreatureDirtPerKo"));
+        mDirtKoThisFight = true;
     }
 
     computeCreatureOverlayHealthValue();
