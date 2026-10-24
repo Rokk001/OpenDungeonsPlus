@@ -297,7 +297,7 @@ private:
     //! \param layoutScale Scale from display size and user scale, before the fit to the screen.
     void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float layoutScale);
 
-    //! \brief Sets the native resolution of fonts and skin images from the user scale.
+    //! \brief Sets resource native resolutions from user scale while preserving atlas design sizes.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
 };
 
