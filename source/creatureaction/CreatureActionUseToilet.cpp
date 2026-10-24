@@ -52,7 +52,7 @@ CreatureActionUseToilet::~CreatureActionUseToilet()
     releaseSeat();
 }
 
-std::function<bool()> CreatureActionUseToilet::action()
+std::function<bool()> CreatureActionUseToilet::action() // allowed-lambda: signature required by CreatureAction
 {
     return std::bind(&CreatureActionUseToilet::handleUseToilet, this);
 }

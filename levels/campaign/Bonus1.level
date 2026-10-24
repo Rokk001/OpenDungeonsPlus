@@ -1467,6 +1467,7 @@ DwarfWorker	1
     Heal/Turn	0.5
     WakefulnessLost/Turn	0.15
     HungerGrowth/Turn	0.15
+    UrgeGrowth/Turn	0.15
     TileSightRadius	15
     MaxGoldCarryable	0
     DigRate	0

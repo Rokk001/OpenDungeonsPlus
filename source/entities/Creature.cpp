@@ -107,6 +107,7 @@
 #include "render/DungeonbookQuirks.h"
 #include "render/PortraitCatalogRegistry.h"
 #include "render/RenderManager.h"
+#include "render/RoomAmbience.h"
 #include "render/SocialWindow.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
@@ -4164,6 +4165,21 @@ bool Creature::isSocialFeedSource() const
     return (localPlayer != nullptr) && (getSeat() == localPlayer->getSeat());
 }
 
+//! \brief Dirt stage from which a creature's room is filthy (the post "filthy room").
+static const uint32_t FILTHY_ROOM_DIRT_STAGE = 3;
+
+//! \brief The dirt stage of a room as the client knows it. The tiles of the client map carry no dirt value; the server
+//! tells the dirt stage of every room in sight in the tile dirt cosmetic event, which the room ambience keeps.
+//! \param room The room to ask.
+//! \return The stage (1 - 3), 0 if the server has not told it (yet).
+static uint32_t getClientRoomDirtStage(const Room& room)
+{
+    if(RoomAmbience::getSingletonPtr() == nullptr)
+        return 0;
+
+    return RoomAmbience::getSingleton().getRoomDirtStage(room.getName());
+}
+
 void Creature::fillSocialSnapshot(social::CreatureSnapshot& snapshot) const
 {
     snapshot.mLevel = mLevel;
@@ -4172,12 +4188,12 @@ void Creature::fillSocialSnapshot(social::CreatureSnapshot& snapshot) const
     snapshot.mMoodLevel = mMoodValue;
     snapshot.mActivity = mActivity;
 
-    // The filthy room the creature stands in (the client sees the dirt of the tiles through the cosmetic dirt events)
+    // The filthy room the creature stands in (the client map has no tile dirt: the room stage comes from the cosmetic dirt event)
     snapshot.mFilthyRoom.clear();
     const Tile* tile = getPositionTile();
     const Room* room = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
     if((room != nullptr) && (room->getType() != RoomType::prison) && (room->getType() != RoomType::torture) &&
-       (room->getType() != RoomType::crypt) && (room->getDirtStage() >= 3))
+       (room->getType() != RoomType::crypt) && (getClientRoomDirtStage(*room) >= FILTHY_ROOM_DIRT_STAGE))
         snapshot.mFilthyRoom = room->getName();
 }
 
