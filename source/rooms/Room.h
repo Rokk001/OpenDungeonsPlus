@@ -79,6 +79,16 @@ public:
     //! the limits are the [Dirt] keys of global.cfg.
     uint32_t getDirtStage() const;
 
+    //! \brief The factor dirt puts on the output of this room: 1 at stage 1, DirtOutputStage2 at stage 2, DirtOutputStage3 at
+    //! stage 3 (global.cfg). Rooms without an output effect from dirt do not call it.
+    double getDirtOutputFactor() const;
+
+    //! \brief The factor for a room whose dirt helps or hurts by stage with keys of its own: 1 at stage 1, the value of
+    //! stage2Key at stage 2 and the value of stage3Key at stage 3 (both keys of the [Dirt] block of global.cfg).
+    //! \param stage2Key The [Dirt] key used at stage 2.
+    //! \param stage3Key The [Dirt] key used at stage 3.
+    double getDirtStageFactor(const std::string& stage2Key, const std::string& stage3Key) const;
+
     //! \brief Server side. Adds the dirt of one use of a room to a tile: the value of the rooms.cfg key times the DirtFactor
     //! of the creature. A key that is not in the configuration makes no dirt.
     //! \param creature The creature that uses the room (its type gives the DirtFactor).

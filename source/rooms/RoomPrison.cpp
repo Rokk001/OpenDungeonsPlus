@@ -326,8 +326,10 @@ void RoomPrison::doUpkeep()
 
             ++nbCreatures;
             // We slightly damage the prisoner
-            double damage = Random::Double(ConfigManager::getSingleton().getRoomConfigDouble("PrisonDamagePerTurnMin"),
-                ConfigManager::getSingleton().getRoomConfigDouble("PrisonDamagePerTurn"));
+            // The dirtier the prison, the more the prisoners suffer
+            double dirtDamageFactor = getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3");
+            double damage = Random::Double(ConfigManager::getSingleton().getRoomConfigDouble("PrisonDamagePerTurnMin") * dirtDamageFactor,
+                ConfigManager::getSingleton().getRoomConfigDouble("PrisonDamagePerTurn") * dirtDamageFactor);
             creature->takeDamage(this, damage, 0.0, 0.0, 0.0, creatureTile, false);
             creature->increaseTurnsPrison();
             addUseDirt(*creature, creatureTile, "PrisonDirtPerPrisonerTurn");

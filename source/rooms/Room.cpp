@@ -370,6 +370,25 @@ uint32_t Room::getDirtStage() const
     return 3;
 }
 
+//! \brief The factor on the output of this room by its dirt stage (DirtOutputStage2 / DirtOutputStage3).
+double Room::getDirtOutputFactor() const
+{
+    return getDirtStageFactor("DirtOutputStage2", "DirtOutputStage3");
+}
+
+//! \brief 1 at dirt stage 1, otherwise the value of the key of the room's stage.
+double Room::getDirtStageFactor(const std::string& stage2Key, const std::string& stage3Key) const
+{
+    uint32_t stage = getDirtStage();
+    if(stage <= 1)
+        return 1.0;
+
+    if(stage == 2)
+        return ConfigManager::getSingleton().getDirtConfigDouble(stage2Key);
+
+    return ConfigManager::getSingleton().getDirtConfigDouble(stage3Key);
+}
+
 bool Room::isAttackable(Tile* tile, Seat* seat) const
 {
     if(!isDestructible())
