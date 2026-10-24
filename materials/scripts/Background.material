@@ -13,9 +13,9 @@ material Background
             emissive 1.0 1.0 1.0 1.0
             texture_unit
             {
-                texture starsedit.jpg
+                texture WorldRock.png
                 tex_address_mode wrap
-                scale 1.0 1.0
+                scale 0.03846154 0.06666667
                 filtering trilinear
             }
         }
