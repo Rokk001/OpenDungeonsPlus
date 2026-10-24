@@ -26,6 +26,10 @@ These instructions apply to every change made to this repository with an AI assi
 
 - Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when Mario explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
 
+## Working mode
+
+Working mode: never wait idle. While a build, load test or agent runs, start every other task that does not depend on its result at once as a separate subagent (analysis, code fixes on own branches, checks, documentation). Only Blender work stays sequential, and timing measurements run without competing game instances. Before reporting 'waiting', list what else could run now and start it.
+
 ## Protected content
 
 - Never copy or derive levels, maps, graphics, models, sounds, texts or data tables from
