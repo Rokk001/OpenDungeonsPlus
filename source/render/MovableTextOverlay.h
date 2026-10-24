@@ -114,6 +114,11 @@ private:
     Ogre::Real mOffsetX = 0.0f;
     //! Vertical shift in pixels (at scale 1) of the drawing; it does not change where the next child is centred
     Ogre::Real mOffsetY = 0.0f;
+
+    //! Atlas frame last given to the overlay by setAtlasFrame; the texture coordinates are only written again when
+    //! the frame or the column count changes. Columns 0 means that no frame was set yet.
+    uint32_t mAtlasFrame = 0;
+    uint32_t mAtlasColumns = 0;
 };
 
 class MovableTextOverlay

@@ -294,13 +294,20 @@ void MovableTextOverlay::setAtlasFrame(uint32_t childOverlayId, uint32_t frame, 
 {
     if(childOverlayId >= mChildOverlays.size() || columns == 0 || frame >= columns * columns)
         return;
+    // The rings call this every frame with mostly the same frame: the overlay then already shows it, and writing
+    // the same texture coordinates again would only make Ogre rebuild the geometry of the element
+    ChildOverlay& childOverlay = mChildOverlays[childOverlayId];
+    if(childOverlay.mAtlasColumns == columns && childOverlay.mAtlasFrame == frame)
+        return;
+    childOverlay.mAtlasColumns = columns;
+    childOverlay.mAtlasFrame = frame;
     // The texture is divided into columns x columns squares of the same size. The frame number
     // enumerates them from the top left to the bottom right square, row by row. The result are
     // the u,v coordinates of the top left corner of the square in [0..1]x[0..1].
     const Ogre::Real size = 1.0f / columns;
     const Ogre::Real u = (frame % columns) * size;
     const Ogre::Real v = (frame / columns) * size;
-    static_cast<Ogre::PanelOverlayElement*>(mChildOverlays[childOverlayId].mOverlayContainer)->setUV(
+    static_cast<Ogre::PanelOverlayElement*>(childOverlay.mOverlayContainer)->setUV(
         u, v, u + size, v + size);
 }
 
