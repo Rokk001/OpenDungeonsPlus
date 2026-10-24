@@ -153,6 +153,7 @@
         <LayoutImport type="DefaultWindow" filename="WindowPlayerSettings.layout" name="PlayerSettingsWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowObjectives.layout" name="ObjectivesWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowCasinoPayout.layout" name="CasinoPayoutWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowAlchemyLab.layout" name="AlchemyLabWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSkillTree.layout" name="SkillTreeWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowProduction.layout" name="ProductionWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSocial.layout" name="SocialWindowImport" />
@@ -308,6 +309,15 @@
             <Property name="TooltipText" value="Production" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <UserString name="ContextHelp" value="Production: view workshop progress and change trap order priority" />
+        </Window>
+        <Window type="OD/GameTabButton" name="LabButton">
+            <Property name="Area" value="{{0,244},{1,-224},{0,284},{1,-184}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/LabButton" />
+            <Property name="NavigationFrame" value="True" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="Visible" value="False" />
+            <Property name="TooltipText" value="Alchemy lab" />
+            <UserString name="AllowEdgeScrolling" value="true" />
         </Window>
         <Window type="OD/GameTabButton" name="SocialButton">
             <Property name="Area" value="{{0,148},{1,-224},{0,188},{1,-184}}" />

@@ -729,6 +729,14 @@ GameMode::GameMode(ModeManager *modeManager):
 
     // Dungeonbook: creature list and post feed
     mSocialWindow.reset(new SocialWindow(mRootWindow, *mGameMap));
+    addEventConnection(mRootWindow->getChild("LabButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleAlchemyLabWindow, this)));
+    addEventConnection(mRootWindow->getChild("AlchemyLabWindow/CloseButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::hideAlchemyLabWindow, this)));
+    addEventConnection(mRootWindow->getChild("AlchemyLabWindow")->subscribeEvent(
+        CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::hideAlchemyLabWindow, this)));
+    addEventConnection(mRootWindow->getChild("AlchemyLabWindow/ModeButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleLabMode, this)));
     addEventConnection(mRootWindow->getChild("SocialButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSocialWindow, this)));
     addEventConnection(mRootWindow->getChild("SocialWindow")->subscribeEvent(
@@ -1457,6 +1465,12 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     {
         Room* room = tileClicked->getCoveringRoom();
         Player* localPlayer = mGameMap->getLocalPlayer();
+        if(room != nullptr && localPlayer != nullptr && room->getType() == RoomType::alchemyLab &&
+           room->getSeat() == localPlayer->getSeat())
+        {
+            showAlchemyLabWindow();
+            return true;
+        }
         if((room != nullptr) && (localPlayer != nullptr) && (room->getType() == RoomType::casino) &&
            (room->getSeat() == localPlayer->getSeat()))
         {
@@ -1673,6 +1687,9 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 
     case OIS::KC_B:
         toggleSocialWindow();
+        break;
+    case OIS::KC_L:
+        toggleAlchemyLabWindow(CEGUI::EventArgs());
         break;
     case OIS::KC_H:
         if(!cameraInputBlocked())
@@ -2254,6 +2271,10 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
 
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+    Player* labPlayer = mGameMap->getLocalPlayer();
+    const bool hasLab = labPlayer != nullptr && labPlayer->getSeat() != nullptr &&
+        labPlayer->getSeat()->getNbRooms(RoomType::alchemyLab) > 0;
+    mRootWindow->getChild("LabButton")->setVisible(hasLab);
 
     // Recover releases missed while focus was elsewhere without changing the toggle.
     if(!getKeyboard()->isKeyDown(OIS::KC_LMENU))

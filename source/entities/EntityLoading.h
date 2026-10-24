@@ -28,7 +28,9 @@ class ODPacket;
 
 namespace Entities
 {
+    //! \brief Restores the requested entity kind, including a harvested herb bundle.
     GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::istream& is);
+    //! \brief Creates a client entity from its typed network payload.
     GameEntity* getGameEntityFromPacket(GameMap* gameMap,  ODPacket& is);
 }
 

@@ -50,6 +50,7 @@
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/RoomAlchemyLab.h"
 #include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
@@ -3218,6 +3219,36 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             break;
         }
 
+        case ClientNotificationType::askLabWindow:
+        {
+            bool open;
+            OD_ASSERT_TRUE(packetReceived >> open);
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr || player->getHasLost())
+                break;
+            if(open && gameMap->getRoomsByTypeAndSeat(RoomType::alchemyLab, player->getSeat()).empty())
+                break;
+            player->setLabWindowOpen(open);
+            if(open)
+                RoomAlchemyLab::sendWindow(*gameMap, *player);
+            break;
+        }
+        case ClientNotificationType::askLabSetting:
+        {
+            int32_t mode;
+            OD_ASSERT_TRUE(packetReceived >> mode);
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr || player->getHasLost() || mode < 0 || mode > 2 ||
+               gameMap->getRoomsByTypeAndSeat(RoomType::alchemyLab, player->getSeat()).empty())
+                break;
+            player->getSeat()->setLabMode(mode);
+            ServerNotification response(ServerNotificationType::labSettings, player);
+            response.mPacket << mode;
+            sendAsyncMsg(response);
+            if(player->getLabWindowOpen())
+                RoomAlchemyLab::sendWindow(*gameMap, *player);
+            break;
+        }
         case ClientNotificationType::askCasinoPayout:
         {
             Player* player = clientSocket->getPlayer();

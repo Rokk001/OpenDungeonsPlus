@@ -380,6 +380,15 @@ private:
     //! \brief The creature the player possesses. Empty if none
     std::string mPossessedCreatureName;
 
+    //! \brief Whether this owner is viewing laboratory information.
+    bool mLabWindowOpen = false;
+public:
+    //! \brief Returns whether owner-only laboratory updates have been requested.
+    bool getLabWindowOpen() const { return mLabWindowOpen; }
+    //! \brief Enables or stops continuing owner-only laboratory updates.
+    void setLabWindowOpen(bool open) { mLabWindowOpen = open; }
+private:
+
     //! \brief A simple mutator function to put the given entity into the player's hand,
     //! note this should NOT be called directly for creatures on the map,
     //! for that you should use the correct function like pickUpEntity() instead.

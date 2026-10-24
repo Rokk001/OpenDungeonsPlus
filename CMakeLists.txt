@@ -343,6 +343,8 @@ set(OD_SOURCEFILES
     ${SRC}/entities/ChickenEntity.cpp
     ${SRC}/entities/CraftedTrap.cpp
     ${SRC}/entities/Creature.cpp
+    ${SRC}/entities/CreaturePotions.cpp
+    ${SRC}/entities/HerbBundleEntity.cpp
     ${SRC}/entities/CreatureDefinition.cpp
     ${SRC}/entities/DoorEntity.cpp
     ${SRC}/entities/EntityLoading.cpp
@@ -423,6 +425,7 @@ set(OD_SOURCEFILES
     ${SRC}/modes/ConsoleInterface.cpp
     ${SRC}/modes/EditorMode.cpp
     ${SRC}/modes/GameMode.cpp
+    ${SRC}/modes/GameModeAlchemy.cpp
     ${SRC}/modes/InputCommand.cpp
     ${SRC}/modes/GameEditorModeBase.cpp
     ${SRC}/modes/GameEditorModeConsole.cpp
@@ -524,6 +527,8 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomBridgeStone.cpp
     ${SRC}/rooms/RoomBridgeWooden.cpp
     ${SRC}/rooms/RoomCasino.cpp
+    ${SRC}/rooms/RoomHerbGarden.cpp
+    ${SRC}/rooms/RoomAlchemyLab.cpp
     ${SRC}/rooms/RoomCrypt.cpp
     ${SRC}/rooms/RoomDormitory.cpp
     ${SRC}/rooms/RoomDungeonTemple.cpp

@@ -552,6 +552,14 @@ public:
     double getConditionalItemMoveFactor() const;
     //! \brief Ends all running freeze effects when a thaw potion is drunk.
     void endFreeze();
+    //! \brief Drinks eligible carried potions and refills slots only outside combat.
+    void decidePotion();
+    //! \brief Drinks a useful keeper gift or stores it; false leaves ownership with the caller.
+    bool receiveGiftedPotion(std::unique_ptr<ItemInstance>& item);
+    //! \brief Returns whether a timed potion of the given effect kind is still active.
+    bool hasPotionEffect(const std::string& kind) const;
+    //! \brief Consumes one eligible potion and starts its existing effect implementation.
+    bool drinkPotion(std::unique_ptr<ItemInstance>& item);
     //! \brief Returns the natural sight radius plus the equipment sight bonus.
     int32_t getTileSightRadius() const;
 
@@ -1706,6 +1714,8 @@ private:
 
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;
+    //! \brief Whether an enemy was in attack range on the previous potion decision.
+    bool mPotionEnemyInRange = false;
 
     //! \brief Skill points spent, template, ranks and reset counters of the skill tree (saved and sent to clients)
     CreatureSkillTree::SkillBuild mSkillBuild;

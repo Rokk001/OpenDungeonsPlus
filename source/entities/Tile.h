@@ -118,6 +118,8 @@ enum class TileVisual
     guardRoom,
     manaWellGround,
     templeRoom,
+    herbGardenRoom,
+    alchemyLabRoom,
     countTileVisual
 };
 
@@ -432,6 +434,7 @@ public:
     //! \brief Tells whether the tile is diggable by dig-capable creatures.
     //! \brief The player seat.
     //! The function will check whether a tile is not already a reinforced wall owned by another team.
+    //! \brief Rejects digging room floors, including the garden and laboratory.
     bool isDiggable(const Seat* seat) const;
 
     //! \brief Tells whether the tile fullness is empty (ground tile) and can be claimed by the given seat.
@@ -445,6 +448,7 @@ public:
     bool isClaimedForSeat(const Seat* seat) const;
 
     //! \brief Tells whether the tile is claimed for the given seat.
+    //! \brief Recognises every claimed floor visual on clients and the authoritative claim on servers.
     bool isClaimed() const;
 
     //! \brief Tells whether the given tile is a claimed wall for the given seat team.
@@ -472,6 +476,7 @@ public:
      */
     static std::string tileTypeToString(TileType t);
 
+    //! \brief Returns the serialised tile-visual name used by tilesets and ambience rules.
     static std::string tileVisualToString(TileVisual tileVisual);
     static TileVisual tileVisualFromString(const std::string& strTileVisual);
 
@@ -545,6 +550,7 @@ public:
 
     //! Refresh the tile visual according to the tile parameters (type, claimed, ...).
     //! Used only on server side
+    //! \brief Chooses the claimed floor visual from its covering room type.
     void computeTileVisual();
 
     //! Function that allows to know if the tile is full or not. Works for both
@@ -579,6 +585,7 @@ public:
 
     void fireTileSound(TileSound sound);
 
+    //! \brief Uses ground movement speed on traversable room floors.
     double getCreatureSpeedDefault(const Creature* creature) const;
 
     //! \brief Allows to lock the tile for the workers claiming it. Returns true if the worker could be added

@@ -2476,6 +2476,8 @@ void Creature::doUpkeep()
     // The skill tree: reset window, reset and the active skills of changed ranks
     upkeepSkillTree();
 
+    decidePotion();
+
     // A frozen creature can neither move nor fight
     if(isFrozen())
     {

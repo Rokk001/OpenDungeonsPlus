@@ -22,6 +22,7 @@
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
 #include "entities/GiftBoxEntity.h"
+#include "entities/HerbBundleEntity.h"
 #include "entities/MapLight.h"
 #include "entities/MissileObject.h"
 #include "entities/PersistentObject.h"
@@ -49,6 +50,14 @@ GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::
     GameEntity* entity = nullptr;
     switch(type)
     {
+        case GameEntityType::herbBundleEntity:
+            entity = new HerbBundleEntity(gameMap);
+            if(!static_cast<HerbBundleEntity*>(entity)->importFromStream(is))
+            {
+                delete entity;
+                entity = nullptr;
+            }
+            break;
         case GameEntityType::buildingObject:
         {
             // Building objects are not stored in level files, we should not be here
@@ -142,6 +151,10 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
     OD_ASSERT_TRUE(is >> type);
     switch(type)
     {
+        case GameEntityType::herbBundleEntity:
+            entity = new HerbBundleEntity(gameMap);
+            static_cast<HerbBundleEntity*>(entity)->importFromPacket(is);
+            break;
         case GameEntityType::buildingObject:
         {
             entity = BuildingObject::getBuildingObjectFromPacket(gameMap, is);

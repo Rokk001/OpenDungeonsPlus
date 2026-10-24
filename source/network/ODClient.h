@@ -182,6 +182,7 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! get the profile name shown on the creature card. For the carry and release notifications it also flags
     //! the carrier as carrying or not carrying on the client.
     //! \return true if the notification was processed.
+    //! \brief Adopts authoritative game updates and complete owner-only laboratory snapshots.
     bool processMessage(ServerNotificationType cmd, ODPacket& packetReceived) override;
     //! \brief Restores any loading presentation and reports the lost connection.
     void playerDisconnected() override;
