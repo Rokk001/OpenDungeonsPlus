@@ -53,6 +53,8 @@ class Player;
 class RenderedMovableEntity;
 class RockLava;
 class Weapon;
+class ItemBagEntity;
+enum class Quality : int32_t;
 
 namespace Ogre
 {
@@ -234,6 +236,10 @@ public:
     //! A weapon with the mesh name "none" is already drawn by the creature model and attaches nothing.
     //! \brief Attaches the wearer's spawn weapon with its worn item quality mesh and material tint.
     void rrCreateWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand);
+    //! \brief Applies the bag's quality tint and displays its seal only for merchant goods.
+    void rrRefreshItemBag(ItemBagEntity* bag);
+    //! \brief Shares bag tint and seal appearance between floor bags and merchant table objects.
+    void rrRefreshItemBagAppearance(RenderedMovableEntity* bag, Quality quality, bool sealed);
     void rrDestroyWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand);
     //! \brief A worker whose model has no pick of its own and no weapon in the right hand carries a pickaxe model
     void rrCreateWorkerTool(Creature* curCreature);

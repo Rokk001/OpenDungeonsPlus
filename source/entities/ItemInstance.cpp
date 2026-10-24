@@ -2,6 +2,7 @@
 
 #include "entities/ItemEffects.h"
 #include "entities/PotionDefinition.h"
+#include "entities/Weapon.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
 #include "utils/ConfigManager.h"
@@ -236,7 +237,14 @@ double ItemInstance::getPrice(const GameMap* map) const
     }
     const ItemDefinition* definition = resolveItemDefinition(mDefinitionId, map);
     if(definition == nullptr)
+    {
+        if(mQuality == Quality::poor && ConfigManager::getSingleton().getWeapon(mDefinitionId) != nullptr)
+        {
+            const ItemDefinition* poor = ConfigManager::getSingleton().getItem("POOR_Shield");
+            if(poor != nullptr) return poor->getQuality(Quality::poor).mPrice;
+        }
         return 0.0;
+    }
     const ItemQuality& values = definition->getQuality(mQuality);
     return values.mPrice + values.mPricePerBonus * mBonuses.size();
 }

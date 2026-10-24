@@ -70,8 +70,11 @@ public:
     // Functions specific to this class.
     virtual void doUpkeep() override;
 
+    //! \brief Accepts gold or unsealed item storage within their independent capacities.
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
+    //! \brief Returns a storage tile with a free item place or gold capacity.
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
+    //! \brief Places delivered item bags at quarter-tile positions between the gold meshes.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
 
     virtual int getTotalGoldStorage() const override;

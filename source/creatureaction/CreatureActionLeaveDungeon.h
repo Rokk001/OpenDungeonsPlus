@@ -39,6 +39,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Leaves the map with carried items and releases their Epic registrations at departure.
     static bool handleLeaveDungeon(Creature& creature);
 };
 

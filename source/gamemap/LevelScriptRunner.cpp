@@ -18,6 +18,7 @@
 #include "gamemap/LevelScriptRunner.h"
 
 #include "entities/Creature.h"
+#include "game/ItemDrops.h"
 #include "entities/GameEntityType.h"
 #include "entities/MissileBoulder.h"
 #include "entities/MissileStone.h"
@@ -869,6 +870,8 @@ void spawnCreatures(GameMap& gameMap, const LevelScriptAction& action,
             + ", name=" + newCreature->getName() + ", seatId=" + Helper::toString(seat->getId()));
 
         newCreature->addToGameMap();
+        if(seat->getPlayerType() != Seat::PLAYER_TYPE_HUMAN && seat->getPlayerType() != Seat::PLAYER_TYPE_AI)
+            ItemDrops::outfit(*newCreature, "hero");
         if(!sourceTrigger.empty())
             gameMap.getLevelScript().observeSpawn(sourceTrigger, sourceAction, newCreature->getName());
         if(!action.mParty.empty())

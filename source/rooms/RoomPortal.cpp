@@ -19,6 +19,7 @@
 
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
+#include "game/ItemDrops.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/PersistentObject.h"
 #include "entities/Tile.h"
@@ -289,6 +290,7 @@ void RoomPortal::spawnCreature()
         + ", name=" + newCreature->getName() + ", seatId=" + Helper::toString(getSeat()->getId()));
 
     newCreature->addToGameMap();
+    ItemDrops::outfit(*newCreature, "portal");
     newCreature->createMesh();
     newCreature->setPosition(newCreature->getPosition());
     newCreature->fireArrivalEvent();

@@ -1273,7 +1273,7 @@ bool Seat::importSeatFromStream(std::istream& is)
             int32_t type;
             uint32_t amount;
             if(!(is >> type >> amount) || (type <= static_cast<int32_t>(GiftBoxType::skill)) ||
-               (type >= static_cast<int32_t>(GiftBoxType::nbTypes)))
+               (type >= static_cast<int32_t>(GiftBoxType::item)))
             {
                 return false;
             }
@@ -1900,8 +1900,11 @@ SkillType Seat::getFirstSkillPending() const
     return mSkillPending.at(0);
 }
 
+//! \brief Stores one existing special type, excluding skill books and workshop item boxes.
 void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
 {
+    if(type <= GiftBoxType::skill || type >= GiftBoxType::item)
+        return;
     uint32_t index = static_cast<uint32_t>(type);
     mStoredSpecialBoxes.push_back(std::pair<int32_t, uint32_t>(static_cast<int32_t>(type), amount));
     if(mStoredSpecials.size() <= index)
@@ -1910,8 +1913,11 @@ void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
     ++mStoredSpecials[index];
 }
 
+//! \brief Uses only stored special bonuses, never workshop-only item boxes.
 bool Seat::useStoredSpecial(GiftBoxType type)
 {
+    if(type <= GiftBoxType::skill || type >= GiftBoxType::item)
+        return false;
     std::vector<std::pair<int32_t, uint32_t> >::iterator it = mStoredSpecialBoxes.begin();
     while((it != mStoredSpecialBoxes.end()) && (it->first != static_cast<int32_t>(type)))
         ++it;

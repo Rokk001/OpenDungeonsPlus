@@ -32,6 +32,7 @@
 #include "entities/Tile.h"
 #include "entities/TrapEntity.h"
 #include "entities/TreasuryObject.h"
+#include "entities/ItemBagEntity.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
 #include "spells/Spell.h"
@@ -103,6 +104,9 @@ GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::
             OD_LOG_ERR("Cannot create entity from stream");
             break;
         }
+        case GameEntityType::itemBagEntity:
+            entity = ItemBagEntity::loadFromStream(gameMap, is);
+            break;
         case GameEntityType::treasuryObject:
         {
             entity = TreasuryObject::getTreasuryObjectFromStream(gameMap, is);
@@ -192,6 +196,9 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
             entity = TrapEntity::getTrapEntityFromPacket(gameMap, is);
             break;
         }
+        case GameEntityType::itemBagEntity:
+            entity = ItemBagEntity::loadFromPacket(gameMap, is);
+            break;
         case GameEntityType::treasuryObject:
         {
             entity = TreasuryObject::getTreasuryObjectFromPacket(gameMap, is);

@@ -68,6 +68,9 @@
 #include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
 #include "entities/ItemEffects.h"
+#include "creatureaction/CreatureActionPickupItem.h"
+#include "creatureaction/CreatureActionStealItem.h"
+#include "game/CreatureMerchantAI.h"
 
 
 
@@ -787,6 +790,8 @@ Creature::Creature(GameMap* gameMap) :
 //! \brief Frees the active skills made from the skill tree and, on a client, clears the highlighted creature pointer.
 Creature::~Creature()
 {
+    if(getIsOnServerMap())
+        unregisterHeldEpics();
     // The active skills made from the skill tree belong to the creature
     for(CreatureSkill* skill : mTreeSkills)
         delete skill;
@@ -1998,8 +2003,10 @@ void Creature::setLevel(unsigned int level)
     mNeedFireRefresh = true;
 }
 
+//! \brief Drops carried gold and eligible item instances while preserving the existing death presentation.
 void Creature::dropCarriedEquipment()
 {
+    dropItems(!isAlive());
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
@@ -2207,6 +2214,8 @@ void Creature::doUpkeep()
     if(mKoTurnCounter > 0)
     {
         mKoTurnCounter = std::max(0.0, mKoTurnCounter - 1.0);
+        if(mKoTurnCounter == 0.0)
+            mKoDroppedThisFight = false;
         if(mKoTurnCounter > 0)
             return;
 
@@ -2582,7 +2591,7 @@ void Creature::doUpkeep()
     // Keep combat in its current attack tile; free waiting creatures may use adjacent floor space.
     const CreatureActionType standingAction = mActions.empty() ? CreatureActionType::nb : mActions.back()->getType();
     Room* standingRoom = getPositionTile()->getCoveringRoom();
-    const bool freeRoomStand = standingAction == CreatureActionType::useRoom && standingRoom != nullptr &&
+    const bool freeRoomStand = CreatureAction::isRoomWorkAction(standingAction) && standingRoom != nullptr &&
         (standingRoom->getType() == RoomType::temple || standingRoom->getType() == RoomType::guardRoom ||
          standingRoom->getType() == RoomType::arena || standingRoom->getType() == RoomType::hatchery);
     // Prayer spots, guard posts and watch banners remain bound to their assigned tile.
@@ -2673,6 +2682,7 @@ void Creature::handleHeartDefence()
     pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
 }
 
+//! \brief Chooses equipment, trade and visible item actions among the existing idle needs.
 bool Creature::handleIdleAction()
 {
     setAnimationState(EntityAnimation::idle_anim);
@@ -2734,6 +2744,15 @@ bool Creature::handleIdleAction()
        (mGoldFee > 0))
     {
         pushAction(Utils::make_unique<CreatureActionGetFee>(*this));
+        return true;
+    }
+
+    decideEquipment();
+    if(CreatureMerchantAI::decideTrade(*this))
+        return true;
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::pickupItem))
+    {
+        pushAction(Utils::make_unique<CreatureActionPickupItem>(*this));
         return true;
     }
 
@@ -2803,6 +2822,12 @@ bool Creature::handleIdleAction()
         (Random::Double(70.0, 80.0) < mHunger))
     {
         pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::stealItem) && Random::Double(0.0, 1.0) < 0.2)
+    {
+        pushAction(Utils::make_unique<CreatureActionStealItem>(*this));
         return true;
     }
 
@@ -4634,11 +4659,12 @@ double Creature::getExperienceProgress() const
     return needed > 0.0 ? std::max(0.0, std::min(1.0, mExp / needed)) : 0.0;
 }
 
+//! \brief Sends the active room-work or attack recovery without dropping specialized job progress.
 void Creature::exportProgressToPacket(ODPacket& os, const Seat* seat) const
 {
     if(!ODServer::getSingleton().supportsCreatureProgress(seat->getPlayer()))
         return;
-    const bool working = getActivity().action == CreatureActionType::useRoom &&
+    const bool working = CreatureAction::isRoomWorkAction(getActivity().action) &&
         mJobCooldown > 0 && mJobCooldownDuration > 0;
     // The attack recovery can be a fraction of a turn, so both values travel as double
     const double remaining = working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns;
@@ -4700,6 +4726,7 @@ void Creature::importMoodFromPacket(ODPacket& is)
     mMoodValue = static_cast<CreatureMoodLevel>(mood);
 }
 
+//! \brief Derives activity and assigned room from ordinary and specialized room actions.
 CreatureActivity Creature::getActivity() const
 {
     CreatureActivity activity;
@@ -4722,7 +4749,7 @@ CreatureActivity Creature::getActivity() const
            type != CreatureActionType::parkToTile)
             activity.task = type;
 
-        if(type != CreatureActionType::useRoom)
+        if(!CreatureAction::isRoomWorkAction(type))
             continue;
 
         const Room* room = static_cast<const CreatureActionUseRoom*>(it->get())->getRoom();
@@ -6244,11 +6271,13 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     receiveExp(1.5);
 }
 
+//! \brief Finds an exact queued action, with specialized room work included in ordinary room-use queries.
 bool Creature::isActionInList(CreatureActionType action) const
 {
     for (const std::unique_ptr<CreatureAction>& ca : mActions)
     {
-        if (ca.get()->getType() == action)
+        if (ca.get()->getType() == action ||
+            (action == CreatureActionType::useRoom && CreatureAction::isRoomWorkAction(ca->getType())))
             return true;
     }
     return false;
@@ -8304,11 +8333,13 @@ bool Creature::isHungry() const
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
 }
 
+//! \brief Ends knockout state and permits one item drop in the next fight.
 void Creature::resetKoTurns()
 {
     if(getIsOnServerMap())
         getGameMap()->getLevelScript().clearFatalShot(getName());
     mKoTurnCounter = 0;
+    mKoDroppedThisFight = false;
     mNeedFireRefresh = true;
 }
 

@@ -30,6 +30,9 @@
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
 #include "entities/ItemDefinition.h"
+#include "entities/ItemBagEntity.h"
+#include "giftboxes/GiftBoxItem.h"
+#include "game/ItemDrops.h"
 #include "game/Campaign.h"
 #include "game/HeartHealthRing.h"
 #include "giftboxes/GiftBoxBonus.h"
@@ -3204,7 +3207,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int32_t giftBoxTypeInt;
             OD_ASSERT_TRUE(packetReceived >> giftBoxTypeInt);
             if((giftBoxTypeInt <= static_cast<int32_t>(GiftBoxType::skill)) ||
-               (giftBoxTypeInt >= static_cast<int32_t>(GiftBoxType::nbTypes)))
+               (giftBoxTypeInt >= static_cast<int32_t>(GiftBoxType::item)))
             {
                 OD_LOG_ERR("Unexpected GiftBoxType=" + Helper::toString(giftBoxTypeInt));
                 break;
@@ -3308,8 +3311,34 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
             }
 
-            GiftBoxBonus* giftBox = new GiftBoxBonus(gameMap, "EditorGiftBox", giftBoxType,
-                GiftBoxBonus::getDefaultAmount(giftBoxType));
+            RenderedMovableEntity* giftBox = nullptr;
+            if(giftBoxType == GiftBoxType::item)
+            {
+                std::string content;
+                bool placeBag = false;
+                if(!(packetReceived >> content >> placeBag))
+                    break;
+                if(placeBag)
+                {
+                    std::unique_ptr<ItemInstance> item = ItemDrops::resolve(*gameMap, content);
+                    if(item.get() == nullptr) break;
+                    giftBox = new ItemBagEntity(gameMap, std::move(item));
+                    giftBox->setSeat(player->getSeat());
+                }
+                else
+                {
+                    GiftBoxItem* itemBox = new GiftBoxItem(gameMap, content);
+                    if(!itemBox->hasContent())
+                    {
+                        delete itemBox;
+                        break;
+                    }
+                    giftBox = itemBox;
+                }
+            }
+            else
+                giftBox = new GiftBoxBonus(gameMap, "EditorGiftBox", giftBoxType,
+                    GiftBoxBonus::getDefaultAmount(giftBoxType));
             giftBox->addToGameMap();
             giftBox->setPosition(Ogre::Vector3(0.0, 0.0, 0.0));
             // In editor mode, every player has vision

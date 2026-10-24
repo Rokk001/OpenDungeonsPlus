@@ -262,6 +262,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionSearchWallTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSleep.cpp
     ${SRC}/creatureaction/CreatureActionStealFreeGold.cpp
+    ${SRC}/creatureaction/CreatureActionPickupItem.cpp
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
@@ -369,6 +370,8 @@ set(OD_SOURCEFILES
     ${SRC}/entities/Weapon.cpp
     ${SRC}/entities/ItemDefinition.cpp
     ${SRC}/entities/ItemInstance.cpp
+    ${SRC}/entities/ItemBagEntity.cpp
+    ${SRC}/entities/CreatureEquipmentAI.cpp
     ${SRC}/entities/ItemEffects.cpp
     ${SRC}/entities/PotionDefinition.cpp
 
@@ -380,6 +383,7 @@ set(OD_SOURCEFILES
     ${SRC}/game/Campaign.cpp
     ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
+    ${SRC}/game/ItemDrops.cpp
     ${SRC}/game/CreaturePanelData.cpp
     ${SRC}/game/CreatureAppearance.cpp
     ${SRC}/game/CreatureRelationships.cpp
@@ -407,6 +411,7 @@ set(OD_SOURCEFILES
 
     ${SRC}/giftboxes/GiftBoxBonus.cpp
     ${SRC}/giftboxes/GiftBoxSkill.cpp
+    ${SRC}/giftboxes/GiftBoxItem.cpp
 
     ${SRC}/goals/Goal.cpp
     ${SRC}/goals/GoalClaimNTiles.cpp
