@@ -593,6 +593,25 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     
     levelFile >> nextParam;
 
+    if(nextParam == "[HerbBundles]")
+    {
+        while(true)
+        {
+            levelFile >> nextParam;
+            if(!levelFile.good())
+                return false;
+            if(nextParam == "[/HerbBundles]")
+                break;
+            std::string remainder;
+            std::getline(levelFile, remainder);
+            std::stringstream bundleLine(nextParam + remainder);
+            GameEntity* bundle = Entities::getGameEntityFromStream(&gameMap, GameEntityType::herbBundleEntity, bundleLine);
+            if(bundle == nullptr)
+                return false;
+            bundle->addToGameMap();
+        }
+        levelFile >> nextParam;
+    }
     if(nextParam == "[Scripts]")
     {
         while(true)
@@ -982,6 +1001,11 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << std::endl;
     }
     levelFile << "[/Chickens]" << std::endl;
+    levelFile << "\n[HerbBundles]\n";
+    for(RenderedMovableEntity* rendered : rendereds)
+        if(rendered->getObjectType() == GameEntityType::herbBundleEntity)
+            levelFile << *rendered << "\n";
+    levelFile << "[/HerbBundles]\n";
 
     if(!gameMap.getLevelScript().isEmpty())
     {

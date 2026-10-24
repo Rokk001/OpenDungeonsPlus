@@ -29,6 +29,7 @@
 #include "game/CreaturePanelData.h"
 #include "game/TrapProductionData.h"
 #include "entities/ItemInstance.h"
+#include "rooms/RoomAlchemyLab.h"
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
@@ -109,6 +110,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
      * This function uses the current action target to determine whether a creature
      * or a selection of eligible tiles is being dragged.
      */
+    //! \brief Handles game clicks and opens the owner's laboratory from its floor tile.
     virtual bool mousePressed   (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
 
     /*! \brief Handle mouse button releases.
@@ -134,6 +136,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
      */
     virtual void handleHotkeys  (OIS::KeyCode keycode) override;
 
+    //! \brief Refreshes the interface and the laboratory button's room availability.
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
     void onFrameEnded(const Ogre::FrameEvent& evt) override;
     void receiveEventShortNotice(EventMessage* event) override;
@@ -209,6 +212,18 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Called when the server tells the payout level of a casino. It is only shown if
     //! it is the casino the window is open for.
     void setCasinoPayoutShown(int tileX, int tileY, uint32_t level);
+    //! \brief Opens or closes this keeper's laboratory overview.
+    bool toggleAlchemyLabWindow(const CEGUI::EventArgs& e);
+    //! \brief Opens the owner's laboratory overview after a tile click.
+    void showAlchemyLabWindow();
+    //! \brief Stops laboratory updates when its close control is used.
+    bool hideAlchemyLabWindow(const CEGUI::EventArgs& e);
+    //! \brief Requests the next approved brewing mode from the server.
+    bool cycleLabMode(const CEGUI::EventArgs& e);
+    //! \brief Displays a validated owner-seat laboratory snapshot.
+    void setLabWindowData(const LabWindowData& data);
+    //! \brief Updates the mode label and client seat from an authoritative setting.
+    void setLabModeShown(int32_t mode);
 
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
@@ -351,6 +366,7 @@ protected:
     bool raiseShownDialog(const CEGUI::EventArgs& e);
 
     //! \brief Handle the keyboard input in normal mode
+    //! \brief Handles normal game shortcuts, including L for the laboratory overview.
     virtual bool keyPressedNormal   (const OIS::KeyEvent &arg);
 
     //! \brief Handle the keyboard input when chat is activated

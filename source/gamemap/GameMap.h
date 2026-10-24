@@ -743,6 +743,7 @@ public:
     RenderedMovableEntity* getRenderedMovableEntity(const std::string& name);
     void clearRenderedMovableEntities(NodeType nt = NodeType::MTILES_NODE);
     //! \brief Resolves a typed entity identity for movement, hand and appearance notifications.
+    //! \brief Resolves a typed live entity name, including carryable herb bundles.
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 

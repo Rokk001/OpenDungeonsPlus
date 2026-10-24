@@ -3737,6 +3737,13 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
         ent = mSceneManager->createEntity(tempString, meshPtr);
         node->attachObject(ent); 
+        if(meshName == "Cauldron" && ent->hasSkeleton() && ent->getSkeleton()->hasBone("FireAnchor"))
+        {
+            Ogre::ParticleSystem* fire = mSceneManager->createParticleSystem(tempString + "_CauldronFire", "RoomAmbAltarFlame");
+            for(unsigned short index = 0; index < fire->getNumEmitters(); ++index)
+                fire->getEmitter(index)->setColour(Ogre::ColourValue::Green);
+            ent->attachObjectToBone("FireAnchor", fire);
+        }
     }
 
     renderedMovableEntity->setParentSceneNode(node->getParentSceneNode());
@@ -3813,6 +3820,12 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     if(mSceneManager->hasEntity(tempString))
     {
         Ogre::Entity* ent = mSceneManager->getEntity(tempString);
+        if(mSceneManager->hasParticleSystem(tempString + "_CauldronFire"))
+        {
+            Ogre::ParticleSystem* fire = mSceneManager->getParticleSystem(tempString + "_CauldronFire");
+            ent->detachObjectFromBone(fire);
+            mSceneManager->destroyParticleSystem(fire);
+        }
         node->detachObject(ent);
         mSceneManager->destroyEntity(ent);
     }
