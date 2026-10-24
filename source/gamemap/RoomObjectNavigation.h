@@ -27,11 +27,11 @@ bool standingPosition(const std::vector<RoomObjectPath::Obstacle>& obstacles,
 bool separate(Creature& creature, std::vector<Ogre::Vector2>& path, bool adjacent = false, const Room* room = nullptr);
 // Searches a route to a point from which the creature can reach the food without
 // furniture in between. The last point of the path is the position to eat at.
-//! rief Finds a reachable feeding stance, preferring measured body separation before crowded fallback.
+//! brief Finds a reachable feeding stance, preferring measured body separation before crowded fallback.
 bool foodApproach(Creature& creature, const Ogre::Vector2& food, std::vector<Ogre::Vector2>& path);
 // Searches a route to the wanted working position at the object, facing it with the
 // facing offset. An empty path means that the creature already stands there.
-//! rief Prefers clear working bodies, then retains the original valid room-reserved placement when crowded.
+//! brief Prefers clear working bodies, then retains the original valid room-reserved placement when crowded.
 bool workApproach(Creature& creature, const BuildingObject& object, const Ogre::Vector2& wanted,
     const Ogre::Vector2& facingOffset, std::vector<Ogre::Vector2>& path);
 // Replaces the path by one that leads around furniture, if the path crosses any. Returns

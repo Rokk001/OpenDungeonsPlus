@@ -24,8 +24,11 @@ def body(source, signature):
 
 
 navigation = read("source/gamemap/RoomObjectNavigation.cpp")
-separate = body(navigation, "bool RoomObjectNavigation::separate(")
+# separate() delegates the search to separateCached(), so both bodies carry its contract
+separate = body(navigation, "bool RoomObjectNavigation::separate(") + body(navigation, "static bool separateCached(")
 occupancy = body(navigation, "bool interactionPositionClear(")
+cached_reservations = body(navigation, "cachedReservations(Creature& creature, SeparationCache& cache)")
+cached_bodies = body(navigation, "cachedBodies(Creature& creature, SeparationCache& cache)")
 bodies = body(navigation, "std::vector<RoomObjectPath::Obstacle> standingBodies(")
 footprint = body(navigation, "RoomObjectPath::Obstacle interactionFootprint(")
 assert "RoomObjectPath::walkingRadii" in footprint and "creature.getLevelScale()" in footprint
@@ -37,11 +40,12 @@ for token in ("other == &creature", "!other->getIsOnMap()", "!other->isAlive()",
 assert "other.bodyMinimum = footprint.minimum" in occupancy
 assert "other.bodyMaximum = footprint.maximum" in occupancy
 assert "other.contains(point, direction)" in occupancy
-assert "getInteractionPositions()" in occupancy and "standingBodies(creature)" in occupancy
+assert "getInteractionPositions()" in cached_reservations and "standingBodies(creature)" in cached_bodies
+assert "cachedReservations(creature, *cache)" in occupancy and "cachedBodies(creature, *cache)" in occupancy
 assert "CreatureActionType::digTile" in separate and "CreatureActionType::parkToTile" in separate
 for token in ("!creature.getIsOnServerMap()", "obstacle.forHeading(heading)",
               "candidates.emplace(point.squaredDistance(wanted), point)", "!creature.canGoThroughTile(tile)",
-              "route.back() != point", "blocked(creature, route)", "interactionPositionClear(creature, point, arrival)"):
+              "route.back() != point", "blocked(creature, route)", "interactionPositionClear(creature, point, arrival, true, &cache)"):
     assert token in separate
 walk = body(read("source/entities/MovableGameEntity.cpp"), "void MovableGameEntity::setWalkPath(")
 assignment = walk[walk.index("if(spaceDestination)"):walk.index("mWalkQueue.clear();")]
@@ -53,7 +57,7 @@ work = body(navigation, "bool RoomObjectNavigation::workApproach(")
 assert "for(bool includeBodies : {true, false})" in work
 assert "interactionPositionClear(creature, point, facing - point, includeBodies)" in work
 assert "tile->getCoveringRoom() != room" in work and "!terrainClear(creature, staging, point)" in work
-assert occupancy.index("getInteractionPositions()") < occupancy.index("if(!includeBodies)")
+assert occupancy.index("cachedReservations(creature, *cache)") < occupancy.index("if(!includeBodies)") < occupancy.index("cachedBodies(creature, *cache)")
 creature = read("source/entities/Creature.cpp")
 for action in ("fight", "fightFriendly", "watchBanner"):
     assert "standingAction == CreatureActionType::" + action in creature
@@ -75,10 +79,10 @@ assert "if(standing.back() == position)" in heart and "standing, false, true);" 
 assert "if(action->mTargetTile != targetTile)" in heart and "action->mStandingTile = nullptr;" in heart
 assert "myTile == action->mStandingTile" in heart and "action->mStandingTile = creature.getGameMap()->getTile(" in heart
 assert "ring <= lastRing" in separate
-assert separate.index("interactionPositionClear(creature, wanted, heading)") < separate.index("if(adjacent)")
+assert separate.index("interactionPositionClear(creature, wanted, heading, true, &cache)") < separate.index("if(adjacent)")
 assert "(room == nullptr || wantedTile->getCoveringRoom() == room)" in separate
 assert "map.getMapSizeX() - 1 - centerX" in separate and "map.getMapSizeY() - 1 - centerY" in separate
-assert separate.index("if(!separate(creature, probe, false, room))") < separate.index("const std::list<Tile*> tiles = map.path(&creature, tile);")
+assert separate.index("if(!separateCached(creature, probe, false, room, cache))") < separate.index("const std::list<Tile*> tiles = map.path(&creature, tile);")
 assert "if(tiles.empty())" in separate and "nearestPath.empty()" in separate
 assert "setPosition(" not in separate and "setPosition(" not in heart
 combat = body(creature, "bool Creature::searchBestTargetInList(")
