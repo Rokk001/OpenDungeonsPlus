@@ -264,7 +264,7 @@ inline bool clearPointExpanded(const std::array<std::vector<Obstacle>, 9>& headi
         {
             if(x == 0 && y == 0)
                 continue;
-            const Ogre::Vector2 heading(float(x), float(y));
+            const Ogre::Vector2 heading(static_cast<float>(x), static_cast<float>(y));
             bool clear = true;
             for(const Obstacle& obstacle : headingObstacles[(1 - y) * 3 + 1 - x])
                 if(obstacle.contains(point, heading))
