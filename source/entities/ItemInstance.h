@@ -5,6 +5,8 @@
 
 #include <memory>
 
+class GameMap;
+
 //! \brief A rolled item or a single potion, owned by its current holder.
 class ItemInstance
 {
@@ -31,23 +33,31 @@ public:
     //! \brief Returns the sum of one special effect on this instance.
     double getEffect(const std::string& id) const;
     //! \brief Returns the catalogue name of the item or potion.
-    std::string getDisplayName() const;
+    std::string getDisplayName(const GameMap* map = nullptr) const;
     //! \brief Returns the base merchant price, including rolled bonus count pricing.
-    double getPrice() const;
+    double getPrice(const GameMap* map = nullptr) const;
     //! \brief Returns the minimum required level.
-    uint32_t getLevelMin() const;
+    uint32_t getLevelMin(const GameMap* map = nullptr) const;
     //! \brief Returns the ItemImages entry for this instance.
     std::string getImageName() const;
     //! \brief Builds the shared quality-coloured name, bonus and effect tooltip.
-    std::string describe() const;
+    std::string describe(const GameMap* map = nullptr) const;
 
+    //! \brief Catalogue id of the item line, or the potion id for a consumable.
     std::string mDefinitionId;
+    //! \brief Rolled equipment quality; potions carry the neutral Poor value.
     Quality mQuality;
+    //! \brief Rolled bonus kind and amount pairs, in catalogue order.
     std::vector<std::pair<std::string, double>> mBonuses;
+    //! \brief Fixed special effects and their values.
     std::vector<std::pair<std::string, double>> mEffects;
+    //! \brief Map-wide Epic serial, zero for all other qualities.
     uint32_t mEpicSerial;
+    //! \brief True while this instance belongs to merchant stock or sealed fallen goods.
     bool mMerchantGoods;
+    //! \brief Records the keeper's gift provenance for reactions and handling.
     bool mGifted;
+    //! \brief Nonempty only for a potion instance; potion instances have no rolled bonuses.
     std::string mPotionId;
 };
 

@@ -928,10 +928,8 @@ void Creature::exportToStream(std::ostream& os) const
     MovableGameEntity::exportToStream(os);
     os << mDefinition->getClassName() << "\t";
     os << getLevel() << "\t" << mExp << "\t";
-    if(getHP() < mMaxHP)
-        os << getHP();
-    else
-        os << "max";
+    // Numeric health preserves the current value while aura sources are rebuilt after loading all holders.
+    os << getHP();
     os << "\t" << mWakefulness << "\t" << mHunger << "\t" << mGoldCarried;
 
     // Check creature weapons
@@ -1312,6 +1310,7 @@ bool Creature::importItemsFromStream(std::istream& stream)
 void Creature::exportItemsToPacket(ODPacket& packet, const Seat* seat) const
 {
     const bool ownData = seat != nullptr && seat == getSeat();
+    packet << mMaxHP;
     for(size_t index = 0; index < mEquipment.size(); ++index)
         writeItemSlotPacket(packet, mEquipment[index], ownData || index < 2);
     packet << static_cast<uint32_t>(mPotionSlots.size());
@@ -1319,6 +1318,16 @@ void Creature::exportItemsToPacket(ODPacket& packet, const Seat* seat) const
         writeItemSlotPacket(packet, item, ownData);
     for(const std::unique_ptr<ItemInstance>& item : mInventory)
         writeItemSlotPacket(packet, item, ownData);
+    const uint32_t potionCount = ownData ? static_cast<uint32_t>(mPotionContributions.size()) : 0;
+    packet << potionCount;
+    if(ownData)
+    {
+        for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
+            packet << entry.second.first << entry.second.second;
+    }
+    const double guardWall = ownData ? getGameMap()->getItemAura(*this, "GuardWall") : 0.0;
+    const double rally = ownData ? getGameMap()->getItemAura(*this, "Rally") : 0.0;
+    packet << guardWall << rally;
 }
 
 //! \brief Adopts a complete item update and refreshes client hand meshes when their quality changes.
@@ -1328,6 +1337,9 @@ bool Creature::importItemsFromPacket(ODPacket& packet)
     std::array<std::unique_ptr<ItemInstance>, 6> equipment;
     std::array<std::unique_ptr<ItemInstance>, 4> inventory;
     std::vector<std::unique_ptr<ItemInstance>> potions;
+    double maximumHealth = 0.0;
+    if(!(packet >> maximumHealth) || !std::isfinite(maximumHealth) || maximumHealth < 0.0)
+        return false;
     for(std::unique_ptr<ItemInstance>& item : equipment)
     {
         if(!readItemSlotPacket(packet, item))
@@ -1347,6 +1359,21 @@ bool Creature::importItemsFromPacket(ODPacket& packet)
         if(!readItemSlotPacket(packet, item))
             return false;
     }
+    uint32_t contributionCount = 0;
+    if(!(packet >> contributionCount) || contributionCount > ConfigManager::getSingleton().getPotions().size())
+        return false;
+    std::vector<std::pair<std::string, double>> contributions;
+    for(uint32_t index = 0; index < contributionCount; ++index)
+    {
+        std::pair<std::string, double> value("", 0.0);
+        if(!(packet >> value.first >> value.second) || !std::isfinite(value.second))
+            return false;
+        contributions.push_back(value);
+    }
+    double guardWall = 0.0;
+    double rally = 0.0;
+    if(!(packet >> guardWall >> rally) || !std::isfinite(guardWall) || !std::isfinite(rally))
+        return false;
     bool handChanged = false;
     for(size_t index = 0; index < 2; ++index)
     {
@@ -1360,8 +1387,10 @@ bool Creature::importItemsFromPacket(ODPacket& packet)
     mEquipment = std::move(equipment);
     mInventory = std::move(inventory);
     mPotionSlots = std::move(potions);
-    if(mDefinition != nullptr)
-        buildStats();
+    mMaxHP = maximumHealth;
+    mClientPotionContributions = contributions;
+    mClientGuardWall = guardWall;
+    mClientRally = rally;
     if(handChanged && !getIsOnServerMap() && getEntityNode() != nullptr)
     {
         destroyMeshWeapons();
@@ -1472,6 +1501,15 @@ void Creature::resizePotionSlots()
 double Creature::getPotionFactor(const std::string& kind) const
 {
     double factor = 1.0;
+    if(!getIsOnServerMap())
+    {
+        for(const std::pair<std::string, double>& entry : mClientPotionContributions)
+        {
+            if(entry.first == kind)
+                factor *= entry.second;
+        }
+        return factor;
+    }
     for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
     {
         if(entry.second.first == kind)
@@ -1487,6 +1525,14 @@ double Creature::getPotionCritChance() const
     static const double DEXTERITY_MEDIUM = 1.15;
     static const double DEXTERITY_LARGE = 1.20;
     double points = 0.0;
+    if(!getIsOnServerMap())
+    {
+        const double factor = getPotionFactor("DexterityChange");
+        if(factor >= DEXTERITY_LARGE) return 6.0;
+        if(factor >= DEXTERITY_MEDIUM) return 4.0;
+        if(factor >= DEXTERITY_SMALL) return 2.0;
+        return 0.0;
+    }
     for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
     {
         if(entry.second.first != "DexterityChange")
@@ -1535,12 +1581,14 @@ void Creature::removePotionContribution(const CreatureEffect* source)
 //! \brief Adds conditional item defense after the natural defense curve.
 double Creature::getItemDefenseFactor() const
 {
+    static const double LAST_STAND_HEALTH_SHARE = 0.25;
+    static const double BULWARK_RADIUS = 2.0;
     double bonus = getItemBonus("Defense%") + getItemEffect("ThickPlates");
-    if(mMaxHP > 0.0 && mHp < mMaxHP * 0.25)
+    if(mMaxHP > 0.0 && mHp < mMaxHP * LAST_STAND_HEALTH_SHARE)
         bonus += getItemEffect("LastStand");
     if(getItemEffect("Bulwark") != 0.0)
     {
-        for(const Creature* mate : getOwnCreaturesWithin(2.0))
+        for(const Creature* mate : getOwnCreaturesWithin(BULWARK_RADIUS))
         {
             if(mate != this)
             {
@@ -1675,9 +1723,9 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mWakefulness;
     os << mHunger;
 
-    os << mGroundSpeed;
-    os << mWaterSpeed;
-    os << mLavaSpeed;
+    os << getMoveSpeedGround();
+    os << getMoveSpeedWater();
+    os << getMoveSpeedLava();
 
     os << mPhysicalDefense;
     os << mMagicalDefense;
@@ -1717,7 +1765,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mMana;
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
-    // The skill state, then the last field: the carried gold, shown as a sack on the thief
+    // The skill state and carried gold are followed by the visible item slots and active owner contributions.
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
@@ -3363,18 +3411,24 @@ double Creature::getConditionalItemMoveFactor() const
 //! \brief Returns ground speed with its current health-dependent equipment bonus.
 double Creature::getMoveSpeedGround() const
 {
+    if(!getIsOnServerMap())
+        return mGroundSpeed;
     return mGroundSpeed * getConditionalItemMoveFactor();
 }
 
 //! \brief Keeps non-swimmers immobile while applying water equipment speed to swimmers.
 double Creature::getMoveSpeedWater() const
 {
+    if(!getIsOnServerMap())
+        return mWaterSpeed;
     return mWaterSpeed * getConditionalItemMoveFactor() * (1.0 + getItemEffect("Wader") / 100.0);
 }
 
 //! \brief Keeps creatures unable to cross lava immobile while applying lava speed effects.
 double Creature::getMoveSpeedLava() const
 {
+    if(!getIsOnServerMap())
+        return mLavaSpeed;
     return mLavaSpeed * getConditionalItemMoveFactor() * (1.0 + getItemEffect("LavaStride") / 100.0);
 }
 
@@ -3596,8 +3650,8 @@ double Creature::getSkillPassive(const std::string& stat) const
     else if(stat == "dig%") sum += getItemEffect("GoldNose");
     if(getGameMap() != nullptr)
     {
-        if(stat == "dr%") sum += getGameMap()->getItemAura(*this, "GuardWall");
-        else if(stat == "hp%") sum += getGameMap()->getItemAura(*this, "Rally");
+        if(stat == "dr%") sum += getIsOnServerMap() ? getGameMap()->getItemAura(*this, "GuardWall") : mClientGuardWall;
+        else if(stat == "hp%") sum += getIsOnServerMap() ? getGameMap()->getItemAura(*this, "Rally") : mClientRally;
     }
     return sum;
 }
@@ -4405,9 +4459,9 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     }
 
     os << moodValue;
-    os << mGroundSpeed;
-    os << mWaterSpeed;
-    os << mLavaSpeed;
+    os << getMoveSpeedGround();
+    os << getMoveSpeedWater();
+    os << getMoveSpeedLava();
     os << mSpeedModifier;
 
     int seatPrisonId = -1;
@@ -4421,7 +4475,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportProgressToPacket(os, seat);
     // Current mana, next to the health value (the maximum follows from type, level and equipment)
     os << mMana;
-    // The skill state, then the last field: the carried gold, shown as a sack on the thief
+    // The skill state and carried gold are followed by the visible item slots and active owner contributions.
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
@@ -7273,7 +7327,7 @@ void Creature::fireChatMsgFurious()
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
 }
 
-//! \brief Resolves the creature definition, makes the skill list (server side, with the skill tree) and builds the stats.
+//! \brief Resolves the definition and builds authoritative server stats while preserving received client summaries.
 void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition)
 {
     bool setHpToStrHp = false;
@@ -7329,7 +7383,10 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
         initSkillBuild();
     }
 
-    buildStats();
+    if(getIsOnServerMap())
+        buildStats();
+    else
+        resizePotionSlots();
 
     // Now, the max hp is known. If needed, we set it
     if(setHpToStrHp)

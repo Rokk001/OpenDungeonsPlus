@@ -670,7 +670,8 @@ double GameMap::getItemAura(const Creature& receiver, const std::string& effect)
     double sum = 0.0;
     for(const Creature* source : found->second)
     {
-        if(std::find(mCreatures.begin(), mCreatures.end(), source) == mCreatures.end() || !source->isAlive() || !source->getIsOnMap())
+        if(std::find(mCreatures.begin(), mCreatures.end(), source) == mCreatures.end() || !source->isAlive() ||
+            !source->getIsOnMap() || source->getSeat() != receiver.getSeat())
             continue;
         const double dx = source->getPosition().x - receiver.getPosition().x;
         const double dy = source->getPosition().y - receiver.getPosition().y;

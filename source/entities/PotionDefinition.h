@@ -47,11 +47,17 @@ public:
     bool importFromPacket(ODPacket& packet);
 
 private:
+    //! \brief Identity, player-visible name, bottle size and effect kind.
     std::string mId, mDisplay, mSize, mKind;
+    //! \brief Effect value and its duration in seconds, preserving fractional values.
     double mValue, mDuration;
+    //! \brief Minimum level allowed to drink this size of potion.
     uint32_t mLevelMin;
+    //! \brief Herb bundle counts consumed when brewing starts.
     std::map<std::string, uint32_t> mHerbs;
+    //! \brief Base brewing time in seconds and merchant price.
     double mBrewSeconds, mPrice;
+    //! \brief Image entry used by the potion atlas.
     std::string mImage;
 };
 
@@ -64,9 +70,13 @@ struct HerbDefinition
     bool importFromStream(std::istream& stream);
     //! \brief Writes the complete growth definition.
     void exportToStream(std::ostream& stream) const;
+    //! \brief Herb identity, player-visible name and hexadecimal colour.
     std::string mId, mDisplay, mColour;
+    //! \brief Growth duration in seconds before research multipliers.
     double mGrowSeconds;
+    //! \brief Research gate, or none when available from the start.
     std::string mResearch;
+    //! \brief Number of growth meshes defined for the herb.
     uint32_t mStages;
 };
 

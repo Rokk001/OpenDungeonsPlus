@@ -84,6 +84,7 @@ TileStateNotified::TileStateNotified():
 }
 
 
+//! \brief Creates seat state with its merchant margin from the shared room settings.
 Seat::Seat(GameMap* gameMap) :
     mGameMap(gameMap),
     mPlayer(nullptr),
@@ -106,6 +107,7 @@ Seat::Seat(GameMap* gameMap) :
     mConfigFactionIndex(-1),
     mKoCreatures(true)
 {
+    mMerchantMargin = ConfigManager::getSingleton().getRoomConfigInt32("MerchantMarginDefault");
 }
 
 void Seat::addGoal(Goal* g)
@@ -1099,7 +1101,7 @@ Seat* Seat::createRogueSeat(GameMap* gameMap)
 }
 
 
-//! \brief Loads seat state, including optional first-arrival history.
+//! \brief Loads seat state, including optional first-arrival history and shared room settings.
 bool Seat::importSeatFromStream(std::istream& is)
 {
     std::string str;
@@ -1297,6 +1299,21 @@ bool Seat::importSeatFromStream(std::istream& is)
         if(!(is >> str))
             return false;
     }
+    // Optional shared room settings; older saves keep the constructor defaults.
+    if(str == "[Merchant]")
+    {
+        int32_t margin = 0;
+        int32_t labMode = 0;
+        std::string mode;
+        if(!(is >> margin >> mode >> labMode) || margin < 0 ||
+            margin > ConfigManager::getSingleton().getRoomConfigInt32("MerchantMarginMax") ||
+            (mode != "fair" && mode != "profit") || labMode < 0 || labMode > 2)
+            return false;
+        if(!(is >> str) || str != "[/Merchant]" || !(is >> str))
+            return false;
+        setMerchantSettings(margin, mode);
+        setLabMode(labMode);
+    }
     if(str != "[SkillNotAllowed]")
     {
         OD_LOG_INF("WARNING: expected [SkillNotAllowed] and read " + str);
@@ -1471,7 +1488,7 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
-//! \brief Saves seat state and the classes whose first arrival was announced.
+//! \brief Saves seat state, shared room settings and the classes whose first arrival was announced.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1575,6 +1592,8 @@ bool Seat::exportSeatToStream(std::ostream& os) const
             os << className << "\n";
         os << "[/AnnouncedCreatureClasses]\n";
     }
+
+    os << "[Merchant]\t" << mMerchantMargin << '\t' << mMerchantMode << '\t' << mLabMode << "\t[/Merchant]\n";
 
     os << "[SkillNotAllowed]" << std::endl;
     for(SkillType type : mSkillNotAllowed)

@@ -81,6 +81,7 @@ public:
     friend class GameMap;
     friend class ODClient;
     // Constructors
+    //! \brief Creates a seat with its configured merchant margin and shared room settings.
     Seat(GameMap* gameMap);
 
     inline Player* getPlayer() const
@@ -419,9 +420,9 @@ public:
 
     static Seat* createRogueSeat(GameMap* gameMap);
 
-    //! brief Loads seat data, optional first-arrival history and optional saved own-creature sight ages.
+    //! brief Loads seat data, optional room settings, first-arrival history and saved own-creature sight ages.
     bool importSeatFromStream(std::istream& is);
-    //! brief Saves seat data, first-arrival history and own-creature sight ages.
+    //! brief Saves seat data, room settings, first-arrival history and own-creature sight ages.
     bool exportSeatToStream(std::ostream& os) const;
     static void loadFromLine(const std::string& line, Seat *s);
 

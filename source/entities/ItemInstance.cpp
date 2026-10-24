@@ -2,6 +2,7 @@
 
 #include "entities/ItemEffects.h"
 #include "entities/PotionDefinition.h"
+#include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
@@ -18,6 +19,14 @@ static const uint32_t BONUS_KIND_COUNT = 17;
 static const uint32_t MAX_ITEM_EFFECTS = 2;
 static const std::array<std::string, 4> QUALITY_COLOURS = {{"FF8A8A8A", "FFFFFFFF", "FF3E7BFF", "FFA64DFF"}};
 static const std::array<std::string, 4> QUALITY_SUFFIXES = {{"poor", "common", "rare", "epic"}};
+
+//! \brief Resolves a map's authoritative item catalogue, or the configuration before a map exists.
+const ItemDefinition* resolveItemDefinition(const std::string& id, const GameMap* map)
+{
+    if(map != nullptr)
+        return map->getItemDefinition(id);
+    return ConfigManager::getSingleton().getItem(id);
+}
 
 //! \brief Adds all matching entries from a rolled bonus or effect list.
 double sumValues(const std::vector<std::pair<std::string, double>>& values, const std::string& kind)
@@ -206,26 +215,26 @@ double ItemInstance::getBonus(const std::string& kind) const { return sumValues(
 double ItemInstance::getEffect(const std::string& id) const { return sumValues(mEffects, id); }
 
 //! \brief Resolves the display name from the transferred item or potion catalogue.
-std::string ItemInstance::getDisplayName() const
+std::string ItemInstance::getDisplayName(const GameMap* map) const
 {
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
         return potion == nullptr ? std::string() : potion->getDisplay();
     }
-    const ItemDefinition* definition = ConfigManager::getSingleton().getItem(mDefinitionId);
+    const ItemDefinition* definition = resolveItemDefinition(mDefinitionId, map);
     return definition == nullptr ? std::string() : definition->getQuality(mQuality).mDisplay;
 }
 
 //! \brief Resolves the base price and adds per-bonus pricing for the rolled instance.
-double ItemInstance::getPrice() const
+double ItemInstance::getPrice(const GameMap* map) const
 {
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
         return potion == nullptr ? 0.0 : potion->getPrice();
     }
-    const ItemDefinition* definition = ConfigManager::getSingleton().getItem(mDefinitionId);
+    const ItemDefinition* definition = resolveItemDefinition(mDefinitionId, map);
     if(definition == nullptr)
         return 0.0;
     const ItemQuality& values = definition->getQuality(mQuality);
@@ -233,14 +242,14 @@ double ItemInstance::getPrice() const
 }
 
 //! \brief Resolves the level gate of this particular quality or potion size.
-uint32_t ItemInstance::getLevelMin() const
+uint32_t ItemInstance::getLevelMin(const GameMap* map) const
 {
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
         return potion == nullptr ? 1 : potion->getLevelMin();
     }
-    const ItemDefinition* definition = ConfigManager::getSingleton().getItem(mDefinitionId);
+    const ItemDefinition* definition = resolveItemDefinition(mDefinitionId, map);
     return definition == nullptr ? 1 : definition->getQuality(mQuality).mLevelMin;
 }
 
@@ -258,9 +267,9 @@ std::string ItemInstance::getImageName() const
 }
 
 //! \brief Builds the tooltip shared by bags, profile slots and merchant stock.
-std::string ItemInstance::describe() const
+std::string ItemInstance::describe(const GameMap* map) const
 {
-    std::string text = "[colour='" + QUALITY_COLOURS.at(static_cast<size_t>(mQuality)) + "']" + getDisplayName()
+    std::string text = "[colour='" + QUALITY_COLOURS.at(static_cast<size_t>(mQuality)) + "']" + getDisplayName(map)
         + "[colour='FFFFFFFF']";
     for(const std::pair<std::string, double>& bonus : mBonuses)
     {
@@ -270,5 +279,5 @@ std::string ItemInstance::describe() const
     }
     for(const std::pair<std::string, double>& effect : mEffects)
         text += "\n" + ItemEffects::getName(effect.first) + " " + itemNumber(effect.second);
-    return text + "\nLevel " + std::to_string(getLevelMin());
+    return text + "\nLevel " + std::to_string(getLevelMin(map));
 }

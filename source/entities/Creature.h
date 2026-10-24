@@ -1462,6 +1462,11 @@ private:
     std::array<std::unique_ptr<ItemInstance>, 4> mInventory;
     //! \brief Multipliers of running potion effects, keyed by their independent effect objects.
     std::map<const CreatureEffect*, std::pair<std::string, double>> mPotionContributions;
+    //! \brief Owner-only active potion contributions received from the server, without effect-object pointers.
+    std::vector<std::pair<std::string, double>> mClientPotionContributions;
+    //! \brief Authoritative same-seat aura sums; clients cannot reconstruct hidden or unseen givers.
+    double mClientGuardWall = 0.0;
+    double mClientRally = 0.0;
 
     bool            mHasVisualDebuggingEntities;
     double          mWakefulness;

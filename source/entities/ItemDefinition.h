@@ -27,7 +27,9 @@ struct ItemBonusRange
 {
     //! \brief Creates an empty roll range.
     ItemBonusRange() : mMinimum(0.0), mMaximum(0.0) {}
+    //! \brief Bonus kind as written in the catalogue.
     std::string mKind;
+    //! \brief Inclusive lower and upper bounds of the rolled value.
     double mMinimum;
     double mMaximum;
 };
@@ -38,14 +40,21 @@ struct ItemQuality
     //! \brief Creates an unavailable quality until it is read from a definition.
     ItemQuality() : mAvailable(false), mLevelMin(1), mPrice(0.0), mPricePerBonus(0.0),
         mBonusMinimum(0), mBonusMaximum(0) {}
+    //! \brief Whether the item line defines this quality.
     bool mAvailable;
+    //! \brief Player-facing item name for this quality.
     std::string mDisplay;
+    //! \brief Minimum creature level required to equip this quality.
     uint32_t mLevelMin;
+    //! \brief Fixed base price and extra price for each rolled bonus.
     double mPrice;
     double mPricePerBonus;
+    //! \brief Inclusive range of the number of ordered bonus lines to roll.
     uint32_t mBonusMinimum;
     uint32_t mBonusMaximum;
+    //! \brief Ordered roll ranges, with the primary bonus first.
     std::vector<ItemBonusRange> mBonuses;
+    //! \brief Fixed effect ids and values carried by this quality.
     std::vector<std::pair<std::string, double>> mEffects;
 };
 
@@ -77,12 +86,16 @@ public:
     static ItemDefinition* loadFromPacket(ODPacket& packet);
 
 private:
+    //! \brief Unique catalogue id and the equipment slot of the item line.
     std::string mId;
     std::string mSlot;
+    //! \brief Intended skill path and its creature group or family marker.
     std::string mPath;
     std::string mGroup;
+    //! \brief Required weapon type and representative Poor equipment for previews.
     std::string mWeaponClass;
     std::string mPoorEquipment;
+    //! \brief Quality-specific values indexed by the four Quality enum values.
     std::array<ItemQuality, 4> mQualities;
 };
 

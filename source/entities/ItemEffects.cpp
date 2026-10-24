@@ -10,6 +10,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/SandboxMode.h"
+#include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 
 #include <algorithm>
@@ -105,7 +106,10 @@ double ItemEffects::targetDamageFactor(const Creature& wearer, const GameEntity&
 {
     if(target.getObjectType() != GameEntityType::creature)
         return increaseFactor(wearer, "Breaker");
-    if(SandboxMode::isHeroSeat(target.getSeat()))
+    const Seat* targetSeat = target.getSeat();
+    const bool waveSeat = targetSeat != nullptr && target.getGameMap() != nullptr &&
+        !target.getGameMap()->getRoomsByTypeAndSeat(RoomType::portalWave, targetSeat).empty();
+    if(SandboxMode::isHeroSeat(targetSeat) || waveSeat)
         return increaseFactor(wearer, "HeroBane");
     return 1.0;
 }
