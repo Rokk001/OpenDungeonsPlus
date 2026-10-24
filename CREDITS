@@ -1212,6 +1212,17 @@ tools/blender-assets/odp_*.py, splice_anims.py OD Team                 GPLv3+   
 tools/blender-assets/hatchery_*.py     OD Team                 GPLv3+                  Blender scripts that build the hatchery meshes and clips (AI-generated, original work)
 
 =======================================================
+==  Dirt, cleaning and toilet: models and clips     ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+models/Pile_*.mesh                     OD Team                 GPLv3+                  Own work (dirt models): 35 pile models, one per creature type, modelled from primitives in Blender (original work)
+assets-src/dirt/Pile_*.blend           OD Team                 GPLv3+                  Own work (dirt models): Blender sources of the 35 pile models (original work)
+models/BloodStain.mesh                 OD Team                 GPLv3+                  Own work (dirt models): Flat blood stain decal model, modelled in Blender (original work)
+assets-src/dirt/BloodStain.blend       OD Team                 GPLv3+                  Own work (dirt models): Blender source of the blood stain decal (original work)
+
+=======================================================
 ==  Hatchery animal sounds: crow, protest, cluck, peep, egg crack  ==
 =======================================================
 
