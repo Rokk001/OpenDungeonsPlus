@@ -313,6 +313,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::guardRoom;
         case RoomType::temple:
             return tile.getTileVisual() == TileVisual::templeRoom;
+        case RoomType::toilet:
+            return tile.getTileVisual() == TileVisual::toiletRoom;
         default:
             return false;
     }

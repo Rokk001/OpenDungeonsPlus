@@ -43,6 +43,7 @@ enum class RoomType
     torture,
     guardRoom,
     temple,
+    toilet,
     nbRooms     // Must be the last in this enum
 };
 

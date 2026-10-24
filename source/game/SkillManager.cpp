@@ -494,6 +494,9 @@ SkillManager::SkillManager() :
     skill = createSkill(mSkills, SkillType::roomGuardRoom, std::vector<SkillType>{SkillType::roomDormitory});
     def = new SkillDefRoom(TREE_PREFIX_ROOMS, "GuardRoomButton", skill, 2, RoomType::guardRoom);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{SkillType::roomDormitory});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "ToiletButton", skill, 2, RoomType::toilet);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::roomCasino, std::vector<SkillType>{SkillType::roomTreasury});
     def = new SkillDefRoom(TREE_PREFIX_ROOMS, "CasinoButton", skill, 2, RoomType::casino);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);

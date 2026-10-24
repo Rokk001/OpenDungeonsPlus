@@ -1710,6 +1710,10 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
     {
         noteDigging(creature);
     }
+    else if(clip == EntityAnimation::relieve_anim)
+    {
+        noteRelief(creature);
+    }
     else if(clip == EntityAnimation::sniff_anim)
     {
         // The server action state of a creature that sniffs at a chicken the keeper gave it. This is the only
@@ -1739,6 +1743,37 @@ void CreatureReactions::noteAnimation(MovableGameEntity* entity, const std::stri
         {
             noteRoomWork(creature);
         }
+    }
+}
+
+//! \brief Shows the reactions of a creature that relieves itself on the floor and of those that smell the pile.
+void CreatureReactions::noteRelief(Creature* creature)
+{
+    Tile* tile = creature->getPositionTile();
+    if((tile == nullptr) || tile->checkCoveringRoomType(RoomType::toilet))
+        return;
+
+    // The pile appears when the squat is over
+    ConfigManager& config = ConfigManager::getSingleton();
+    double delay = config.getDirtConfigDouble("ToiletUseTurns") / ODApplication::turnsPerSecond;
+    queueReaction(creature, "Relieved", DONE_WAIT_MAX, delay);
+
+    const double radius = config.getDirtConfigDouble("DirtPileRadius");
+    for(Creature* other : mGameMap->getCreatures())
+    {
+        if((other == creature) || !other->getIsOnMap() || !other->isAlive())
+            continue;
+
+        Tile* otherTile = other->getPositionTile();
+        if(otherTile == nullptr)
+            continue;
+
+        const double distanceX = std::abs(otherTile->getX() - tile->getX());
+        const double distanceY = std::abs(otherTile->getY() - tile->getY());
+        if(std::max(distanceX, distanceY) > radius)
+            continue;
+
+        queueReaction(other, "SmellsPile", DONE_WAIT_MAX, delay);
     }
 }
 

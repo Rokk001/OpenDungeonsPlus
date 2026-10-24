@@ -81,6 +81,10 @@ std::string getPostCategoryName(PostCategory category)
             return "couple";
         case PostCategory::SplitUp:
             return "splitup";
+        case PostCategory::Relieved:
+            return "relieved";
+        case PostCategory::Filthy:
+            return "filthy";
         default:
             return "";
     }

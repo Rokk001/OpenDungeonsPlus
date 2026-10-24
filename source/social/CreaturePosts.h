@@ -47,6 +47,9 @@ struct CreatureSnapshot
     uint32_t mMoodBits;
     CreatureMoodLevel mMoodLevel;
     CreatureActivity mActivity;
+    //! Name of the room the creature stands in when that room is at dirt stage 3 (not for prisons, torture chambers
+    //! and crypts), empty otherwise
+    std::string mFilthyRoom;
 };
 
 //! \brief Turns the changes the client already sees (creature updates, arrival, removal, ...)

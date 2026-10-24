@@ -86,6 +86,12 @@ public:
     //! \param key The rooms.cfg key with the dirt of one use, for example WorkshopDirtPerWork.
     static void addUseDirt(const Creature& creature, Tile* tile, const std::string& key);
 
+    //! \brief Server side. Called by a covered tile after it received dirt. Tells a human owner (once per notice
+    //! interval, see Player::notifyDirtEvent) when the room has just reached dirt stage 3. Prisons, torture
+    //! chambers and crypts are meant to be filthy and never give this notice.
+    //! \param added The dirt the tile really received (after the limit of the tile).
+    void notifyDirtAdded(double added);
+
     //! \brief What enemies can do to a room, read from RoomsClaimableByEnemies
     //! in the room configuration file.
     enum class ClaimMode

@@ -1850,6 +1850,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
             return false;
         if(!loadTilesetValues(defFile, TileVisual::templeRoom, tileSet->configureTileValues(TileVisual::templeRoom),*mHighMap))
             return false;
+        if(!loadTilesetValues(defFile, TileVisual::toiletRoom, tileSet->configureTileValues(TileVisual::toiletRoom),*mHighMap))
+            return false;
 
     }
 

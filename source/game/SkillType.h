@@ -100,6 +100,9 @@ enum class SkillType
     keeperHeartMending,
     keeperManaFlow,
 
+    // Added later, appended so that existing saves stay valid
+    roomToilet,
+
     // This should be the last
     countSkill
 };

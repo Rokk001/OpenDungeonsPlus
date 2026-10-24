@@ -166,6 +166,7 @@ bool Tile::isDiggable(const Seat* seat) const
         case TileVisual::tortureRoom:        
         case TileVisual::guardRoom:
         case TileVisual::templeRoom:
+        case TileVisual::toiletRoom:
         case TileVisual::claimedGround:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:
@@ -518,6 +519,9 @@ std::string Tile::tileVisualToString(TileVisual tileVisual)
 
         case TileVisual::templeRoom:
             return "templeRoom";
+
+        case TileVisual::toiletRoom:
+            return "toiletRoom";
   
             
         default:
@@ -932,6 +936,7 @@ bool Tile::isClaimed() const
             case TileVisual::tortureRoom:  
             case TileVisual::guardRoom:
             case TileVisual::templeRoom:
+            case TileVisual::toiletRoom:
                 return true;
         }
         
@@ -1073,6 +1078,9 @@ void Tile::computeTileVisual()
                            case RoomType::temple:
                                mTileVisual = TileVisual::templeRoom;
                                return;
+                           case RoomType::toilet:
+                               mTileVisual = TileVisual::toiletRoom;
+                               return;
                            default:
                                OD_LOG_ERR("Computing tile visual for unknown room type tile=" + Tile::displayAsString(this) + ", TileType=" + roomTypeToString(getCoveringRoom()->getType()));
                                mTileVisual = TileVisual::nullTileVisual;
@@ -1154,6 +1162,9 @@ void Tile::computeTileVisual()
                                return;
                            case RoomType::temple:
                                mTileVisual = TileVisual::templeRoom;
+                               return;
+                           case RoomType::toilet:
+                               mTileVisual = TileVisual::toiletRoom;
                                return;
                            default:
                                OD_LOG_ERR("Computing tile visual for unknown room type tile=" + Tile::displayAsString(this) + ", TileType=" + roomTypeToString(getCoveringRoom()->getType()));
@@ -1269,7 +1280,13 @@ void Tile::addDirt(double amount)
     if(!canCarryDirt())
         return;
 
+    const double oldDirt = mDirt;
     mDirt = std::min(MAX_DIRT, mDirt + amount);
+
+    // The room under the tile may have just become filthy
+    Room* room = getCoveringRoom();
+    if((room != nullptr) && getGameMap()->isServerGameMap())
+        room->notifyDirtAdded(mDirt - oldDirt);
 }
 
 void Tile::cleanDirt(double amount)
@@ -2398,6 +2415,7 @@ double Tile::getCreatureSpeedDefault(const Creature* creature) const
         case TileVisual::tortureRoom:        
         case TileVisual::guardRoom:
         case TileVisual::templeRoom:
+        case TileVisual::toiletRoom:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:
         case TileVisual::rockGround:
