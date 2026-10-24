@@ -59,6 +59,8 @@ assets-src/gui/skin/control-*.png       AI-generated with Codex  GPLv3+         
 fonts/
 -> LiberationSans-Bold.ttf             Red Hat                 OFL (Open Font License) https://fedorahosted.org/liberation-fonts/
 -> MedievalSharp-Bold.ttf              wmk69 (wmk69@o2.pl)     OFL (Open Font License) http://openfontlibrary.org/en/font/medievalsharp
+-> SourceSerif4-Semibold.ttf           Adobe                   SIL OFL 1.1             Source Serif 4 Semibold 4.005R, unmodified static TrueType; readable book serif for the in-game UI. https://github.com/adobe-fonts/source-serif/tree/4.005R/TTF
+-> SourceSerif4-LICENSE.md             Adobe                   SIL OFL 1.1             Original copyright and font licence: https://github.com/adobe-fonts/source-serif/blob/4.005R/LICENSE.md
 -> *.font                              OD Team                 GPLv3+
 -> ogrefonts.fontdef                   OD Team                 GPLv3+
 
