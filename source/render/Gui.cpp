@@ -49,6 +49,8 @@
 #include <CEGUI/LeftAlignedRenderedString.h>
 #include <CEGUI/RenderedStringWordWrapper.h>
 #include <OgreImage.h>
+#include <OgreColourValue.h>
+#include <OgreResourceGroupManager.h>
 
 #include <algorithm>
 #include <cmath>
@@ -66,7 +68,29 @@ const float LAYOUT_DESIGN_HEIGHT = 768.0f;
 //! Source-pixel density of the repainted atlases relative to their existing design sizes.
 static const float SKIN_IMAGE_PIXEL_DENSITY = 4.0f;
 static const float HUD_SURFACE_IMAGE_PIXEL_DENSITY = 2.0f;
+static const float ICON_IMAGE_PIXEL_DENSITY = 2.0f;
 static const float DEFAULT_IMAGE_PIXEL_DENSITY = 1.0f;
+
+//! Painted navigation atlas coordinates, in doubled source pixels; existing layout sizes stay unchanged.
+static const char* const PAINTED_NAVIGATION_ATLAS = "ODNavigation.png";
+static const int PAINTED_BADGE_SIZE = 256;
+static const int PAINTED_CORNER_SIZE = 256;
+static const int PAINTED_CORNER_X = 1024;
+static const int PAINTED_RIM_SIZE = 768;
+static const int PAINTED_SYMBOL_SIZE = 128;
+static const int PAINTED_BADGE_X = 768;
+static const int PAINTED_NORTH_Y = 512;
+static const int PAINTED_HELP_Y = 640;
+static const int PAINTED_SELL_X = 896;
+static const int PAINTED_ZOOM_Y = 768;
+//! Existing badge-space annulus, measured in the original 64-unit artwork coordinates.
+static const float HEART_RING_INNER_RADIUS = 20.8f;
+static const float HEART_RING_OUTER_RADIUS = 25.4f;
+static const float BADGE_ARTWORK_SIZE = 64.0f;
+static const float BADGE_ARTWORK_CENTRE = 32.0f;
+static const float BYTE_COLOUR_MAX = 255.0f;
+//! Decoded source retained for the changing heart badge without reloading PNG data every update.
+static Ogre::Image paintedNavigationAtlas;
 
 // Layout of the room, trap and spell buttons in unscaled pixels.
 const float ACTION_BUTTON_MARGIN_X = 20.0f;
@@ -1306,6 +1330,73 @@ void createNavigationImage(const std::string& name, const std::vector<unsigned c
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
+//! \brief Copies one square of the painted runtime atlas into RGBA bytes for an existing GUI image.
+//! \param pixels Receives the square's RGBA bytes.
+//! \param sourceX Left source pixel in the atlas.
+//! \param sourceY Top source pixel in the atlas.
+//! \param size Side length in source pixels.
+void copyPaintedNavigationPixels(std::vector<unsigned char>& pixels, int sourceX, int sourceY, int size)
+{
+    pixels.resize(size * size * 4);
+    for(int y = 0; y < size; ++y)
+    {
+        for(int x = 0; x < size; ++x)
+        {
+            const Ogre::ColourValue colour = paintedNavigationAtlas.getColourAt(sourceX + x, sourceY + y, 0);
+            const int offset = (y * size + x) * 4;
+            pixels[offset] = static_cast<unsigned char>(badgeClamp(colour.r * BYTE_COLOUR_MAX, 0.0f, BYTE_COLOUR_MAX));
+            pixels[offset + 1] = static_cast<unsigned char>(badgeClamp(colour.g * BYTE_COLOUR_MAX, 0.0f, BYTE_COLOUR_MAX));
+            pixels[offset + 2] = static_cast<unsigned char>(badgeClamp(colour.b * BYTE_COLOUR_MAX, 0.0f, BYTE_COLOUR_MAX));
+            pixels[offset + 3] = static_cast<unsigned char>(badgeClamp(colour.a * BYTE_COLOUR_MAX, 0.0f, BYTE_COLOUR_MAX));
+        }
+    }
+}
+
+//! \brief Places the painted badge around the existing health-ring pixels and attack-colour difference.
+//! \param pixels Existing 128-pixel procedural badge; replaced with its painted 256-pixel composition.
+//! \param badge Zero selects the changing heart badge; one selects the static gold badge.
+//! \param underAttack Retains the existing attack-colour change over the painted heart.
+void applyPaintedBadgePixels(std::vector<unsigned char>& pixels, int badge, bool underAttack)
+{
+    std::vector<unsigned char> paintedPixels;
+    copyPaintedNavigationPixels(paintedPixels, PAINTED_BADGE_X, badge * PAINTED_BADGE_SIZE, PAINTED_BADGE_SIZE);
+    std::vector<unsigned char> quietPixels;
+    if(badge == 0 && underAttack)
+        drawBadgePixels(quietPixels, badge, 1.0f, false);
+    for(int y = 0; y < PAINTED_BADGE_SIZE; ++y)
+    {
+        for(int x = 0; x < PAINTED_BADGE_SIZE; ++x)
+        {
+            const float dx = (x + 0.5f) * BADGE_ARTWORK_SIZE / PAINTED_BADGE_SIZE - BADGE_ARTWORK_CENTRE;
+            const float dy = (y + 0.5f) * BADGE_ARTWORK_SIZE / PAINTED_BADGE_SIZE - BADGE_ARTWORK_CENTRE;
+            const float radius = std::sqrt(dx * dx + dy * dy);
+            const int source = ((y * BADGE_SIZE / PAINTED_BADGE_SIZE) * BADGE_SIZE
+                + x * BADGE_SIZE / PAINTED_BADGE_SIZE) * 4;
+            const int target = (y * PAINTED_BADGE_SIZE + x) * 4;
+            // Keep the existing opaque well so the attack glow remains visible between heart pixels.
+            if(badge == 0 && radius <= HEART_RING_INNER_RADIUS)
+                paintedPixels[target + 3] = pixels[source + 3];
+            if(badge == 0 && radius > HEART_RING_INNER_RADIUS && radius <= HEART_RING_OUTER_RADIUS)
+            {
+                for(int channel = 0; channel < 4; ++channel)
+                    paintedPixels[target + channel] = pixels[source + channel];
+            }
+            else if(badge == 0 && underAttack && radius <= HEART_RING_INNER_RADIUS)
+            {
+                // Preserve the existing attack blink as a colour difference over the painted heart.
+                for(int channel = 0; channel < 3; ++channel)
+                {
+                    const float difference = static_cast<float>(pixels[source + channel]) - quietPixels[source + channel];
+                    paintedPixels[target + channel] = static_cast<unsigned char>(badgeClamp(
+                        paintedPixels[target + channel] + difference, 0.0f, BYTE_COLOUR_MAX));
+                }
+            }
+        }
+    }
+    pixels.swap(paintedPixels);
+}
+
+//! \brief Registers the existing minimap hit-target factory and fills its image names from painted artwork.
 void createMiniMapCornerImages()
 {
     CEGUI::WindowFactoryManager::addFactory<CEGUI::TplWindowFactory<MiniMapCornerButton>>();
@@ -1315,31 +1406,42 @@ void createMiniMapCornerImages()
     {
         for(int state = 0; state < 3; ++state)
         {
-            drawCornerPlatePixels(pixels, corner, state);
-            createNavigationImage("MiniMapCorner" + std::to_string(corner) + suffixes[state], pixels, CORNER_PLATE_SIZE);
+            copyPaintedNavigationPixels(pixels, PAINTED_CORNER_X + corner * PAINTED_CORNER_SIZE,
+                state * PAINTED_CORNER_SIZE, PAINTED_CORNER_SIZE);
+            createNavigationImage("MiniMapCorner" + std::to_string(corner) + suffixes[state], pixels, PAINTED_CORNER_SIZE);
         }
     }
-    drawMiniMapRimPixels(pixels);
-    createNavigationImage("MiniMapRim", pixels, MINIMAP_RIM_SIZE);
-    drawMiniMapNorthPixels(pixels);
-    createNavigationImage("MiniMapNorth", pixels, MINIMAP_NORTH_SIZE);
+    copyPaintedNavigationPixels(pixels, 0, 0, PAINTED_RIM_SIZE);
+    createNavigationImage("MiniMapRim", pixels, PAINTED_RIM_SIZE);
+    copyPaintedNavigationPixels(pixels, PAINTED_BADGE_X, PAINTED_NORTH_Y, PAINTED_SYMBOL_SIZE);
+    createNavigationImage("MiniMapNorth", pixels, PAINTED_SYMBOL_SIZE);
     const char* symbols[] = {"NavHelp", "NavSell", "NavOptions", "MapZoom"};
     for(int symbol = 0; symbol < 4; ++symbol)
     {
-        drawNavigationSymbolPixels(pixels, symbol);
-        createNavigationImage(symbols[symbol], pixels, NAV_ICON_SIZE);
+        if(symbol == NAV_ICON_HELP)
+            copyPaintedNavigationPixels(pixels, PAINTED_BADGE_X, PAINTED_HELP_Y, PAINTED_SYMBOL_SIZE);
+        else if(symbol == NAV_ICON_SELL)
+            copyPaintedNavigationPixels(pixels, PAINTED_SELL_X, PAINTED_NORTH_Y, PAINTED_SYMBOL_SIZE);
+        else if(symbol == NAV_ICON_OPTIONS)
+            copyPaintedNavigationPixels(pixels, PAINTED_SELL_X, PAINTED_HELP_Y, PAINTED_SYMBOL_SIZE);
+        else
+            copyPaintedNavigationPixels(pixels, 0, PAINTED_ZOOM_Y, PAINTED_SYMBOL_SIZE);
+        createNavigationImage(symbols[symbol], pixels, PAINTED_SYMBOL_SIZE);
     }
 }
 
+//! \brief Loads the painted navigation atlas while retaining the existing changing heart-health texture.
 void createNavigationImages()
 {
-    // The category, message and menu emblems live in gui/ODIcons.png (tools/generate_forged_icons.py)
+    // The category, message and menu emblems live in the painted gui/ODIcons.png atlas.
+    paintedNavigationAtlas.load(PAINTED_NAVIGATION_ATLAS, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
     createMiniMapCornerImages();
     std::vector<unsigned char> pixels;
-    const int badgeSize = BADGE_SIZE;
+    const int badgeSize = PAINTED_BADGE_SIZE;
     for(int badge = 0; badge < 2; ++badge)
     {
         drawBadgePixels(pixels, badge, 1.0f, false);
+        applyPaintedBadgePixels(pixels, badge, false);
         const std::string name = badge == 0 ? "ManaBadge" : "GoldBadge";
         CEGUI::Texture& badgeTexture = CEGUI::System::getSingleton().getRenderer()->createTexture(name);
         badgeTexture.loadFromMemory(pixels.data(), CEGUI::Sizef(badgeSize, badgeSize), CEGUI::Texture::PF_RGBA);
@@ -1390,6 +1492,10 @@ float imagePixelDensity(const CEGUI::String& ceguiName)
         return SKIN_IMAGE_PIXEL_DENSITY;
     if(startsWith(name, "ODHudSurface/"))
         return HUD_SURFACE_IMAGE_PIXEL_DENSITY;
+    if(name == "OpenDungeonsIcons/Prohibition")
+        return DEFAULT_IMAGE_PIXEL_DENSITY;
+    if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "OpenDungeonsNavigation/"))
+        return ICON_IMAGE_PIXEL_DENSITY;
     return DEFAULT_IMAGE_PIXEL_DENSITY;
 }
 
@@ -1399,6 +1505,7 @@ bool shouldScaleImage(const CEGUI::String& ceguiName)
     const std::string name(ceguiName.c_str());
     return startsWith(name, "OpenDungeonsSkin/")
         || startsWith(name, "OpenDungeonsIcons/")
+        || startsWith(name, "OpenDungeonsNavigation/")
         || startsWith(name, "GoalStatus/")
         || startsWith(name, "ODMainMenuButton/")
         || startsWith(name, "ODHudSurface/")
@@ -2155,15 +2262,17 @@ void Gui::updateResourceScaling(const CEGUI::Sizef& displaySize)
     CEGUI::ImageManager::getSingleton().notifyDisplaySizeChanged(displaySize);
 }
 
+//! \brief Updates the existing heart-health ring and attack blink within its painted badge texture.
 void Gui::updateHeartBadge(float healthFraction, bool underAttack)
 {
     std::vector<unsigned char> pixels;
     drawBadgePixels(pixels, 0, healthFraction, underAttack);
+    applyPaintedBadgePixels(pixels, 0, underAttack);
     CEGUI::Texture& texture = CEGUI::System::getSingleton().getRenderer()->getTexture("ManaBadge");
     // Write into the existing texture: loadFromMemory of the Ogre renderer makes a new Ogre texture,
     // while the badge window keeps drawing the old one from its cached geometry, so the ring never changed
-    texture.blitFromMemory(pixels.data(), CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(BADGE_SIZE),
-        static_cast<float>(BADGE_SIZE)));
+    texture.blitFromMemory(pixels.data(), CEGUI::Rectf(0.0f, 0.0f, static_cast<float>(PAINTED_BADGE_SIZE),
+        static_cast<float>(PAINTED_BADGE_SIZE)));
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();
 }
 
