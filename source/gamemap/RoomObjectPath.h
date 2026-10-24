@@ -250,34 +250,6 @@ inline float pathLength(const Ogre::Vector2& start, const std::vector<Ogre::Vect
     return cost;
 }
 
-//! \brief Same result as clearPoint() without a heading, for obstacles that were already widened with
-//! Obstacle::forHeading() for each of the eight walking headings, so that the widening is not repeated for
-//! every tested point (it was the main cost of the start and goal point tests of a route search).
-//! \param headingObstacles The obstacles widened for the heading (-dx, -dy) at index (dy + 1) * 3 + dx + 1.
-//! \param point The point to test.
-//! \return True if one of the eight walking headings is free at the point.
-inline bool clearPointExpanded(const std::array<std::vector<Obstacle>, 9>& headingObstacles,
-    const Ogre::Vector2& point)
-{
-    for(int y = -1; y <= 1; ++y)
-        for(int x = -1; x <= 1; ++x)
-        {
-            if(x == 0 && y == 0)
-                continue;
-            const Ogre::Vector2 heading(float(x), float(y));
-            bool clear = true;
-            for(const Obstacle& obstacle : headingObstacles[(1 - y) * 3 + 1 - x])
-                if(obstacle.contains(point, heading))
-                {
-                    clear = false;
-                    break;
-                }
-            if(clear)
-                return true;
-        }
-    return false;
-}
-
 // Searches the shortest route from the start to the nearest of the goals around the
 // obstacles, within the given tile range, and returns the index of the goal in
 // chosenGoal. Routes longer than maximumCost are not accepted.
@@ -354,19 +326,6 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
         open.emplace(cost - potential(index), index);
     };
 
-    // A grid edge has only eight headings; project a creature's walking body
-    // once per heading, not once per obstacle for every expanded search node.
-    std::array<std::vector<Obstacle>, 9> edgeObstacles;
-    for(int dy = -1; dy <= 1; ++dy)
-        for(int dx = -1; dx <= 1; ++dx)
-        {
-            if(dx == 0 && dy == 0)
-                continue;
-            std::vector<Obstacle>& edge = edgeObstacles[(dy + 1) * 3 + dx + 1];
-            edge.reserve(obstacles.size());
-            for(const Obstacle& obstacle : obstacles)
-                edge.push_back(obstacle.forHeading(Ogre::Vector2(float(-dx), float(-dy))));
-        }
     // Usually only the surrounding grid nodes are needed. If old save data or
     // newly placed furniture overlaps the start, connect an outward exit first.
     const Ogre::Vector2 initialHeading = obstacles.empty() ? Ogre::Vector2(0, -1) : obstacles.front().initialHeading;
@@ -380,7 +339,7 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
         {
             const int index = y * width + x;
             const Ogre::Vector2 point = position(index);
-            if(clearPointExpanded(edgeObstacles, point) && clearSegment(obstacles, start, point, allowStartExit) && terrain(start, point))
+            if(clearPoint(obstacles, point) && clearSegment(obstacles, start, point, allowStartExit) && terrain(start, point))
             {
                 nodes[index].forwardCost = start.distance(point);
                 forwardOpen.emplace(nodes[index].forwardCost + potential(index), index);
@@ -393,7 +352,7 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     for(size_t i = 0; i < goals.size(); ++i)
     {
         const Ogre::Vector2& goal = goals[i];
-        if(!clearPointExpanded(edgeObstacles, goal) || !terrain(goal, goal))
+        if(!clearPoint(obstacles, goal) || !terrain(goal, goal))
             continue;
         const int goalFirstX = std::max(0, int(std::floor((goal.x - routeGoalReach - minX - gridOffset.x) * routeCellsPerTile)));
         const int goalLastX = std::min(width - 1, int(std::ceil((goal.x + routeGoalReach - minX - gridOffset.x) * routeCellsPerTile)));
@@ -414,6 +373,19 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
 
     if(open.empty())
         return false;
+    // A grid edge has only eight headings; project a creature's walking body
+    // once per heading, not once per obstacle for every expanded search node.
+    std::array<std::vector<Obstacle>, 9> edgeObstacles;
+    for(int dy = -1; dy <= 1; ++dy)
+        for(int dx = -1; dx <= 1; ++dx)
+        {
+            if(dx == 0 && dy == 0)
+                continue;
+            std::vector<Obstacle>& edge = edgeObstacles[(dy + 1) * 3 + dx + 1];
+            edge.reserve(obstacles.size());
+            for(const Obstacle& obstacle : obstacles)
+                edge.push_back(obstacle.forHeading(Ogre::Vector2(float(-dx), float(-dy))));
+        }
     int destination = -1;
     float best = maximumCost;
     bool forward = false;
