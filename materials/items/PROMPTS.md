@@ -217,6 +217,85 @@ Use case: precise-object-edit. Edit only the supplied single-item fantasy invent
 
 Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its epic quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Epic quality: add refined forged filigree and sophisticated layered engraving on the EXISTING surfaces, richer noble metal, and a faint restrained magical violet glow closely hugging the object. Do not grow spikes, wings or ornaments outside the existing shape. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
 
+## BLK_B_Shield_base.png and BLK_B_Shield_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Shield of Bulwark: one stout round iron shield with a thick concentric reinforced rim and a broad low central iron boss, practical defensive construction and a plain unmarked face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_B_Axe_base.png and BLK_B_Axe_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Axe of Bulwark: one compact broad bearded iron battle axe with a heavy squared cheek, strong socket and a short sturdy wooden haft with dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_B_Sword_base.png and BLK_B_Sword_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Sword of Bulwark: one broad straight iron arming sword with a short solid crossguard, squat square pommel and dark leather grip, practical defensive workmanship. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_B_Spear_base.png and BLK_B_Spear_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Spear of Bulwark: one sturdy long wooden spear with a broad diamond-shaped iron spearhead and a thick reinforced iron socket, simple dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_B_Club_base.png and BLK_B_Club_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Club of Bulwark: one sturdy short wooden war club with a thick barrel-shaped striking head reinforced by broad plain iron bands and a dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_B_Hammer_base.png and BLK_B_Hammer_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Hammer of Bulwark: one short stout war hammer with a heavy rectangular iron block head, reinforced socket, straight wooden haft and dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## gui/potions/healing_small.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for healing_small.png, a square icon suitable for downsampling to 128x128. Subject: exactly one small narrow glass potion bottle with a simple cork stopper, filled with deep bloodroot-red healing liquid (dominant tint #B3261E). Bottle shape must read as SMALL and NARROW, rather than a medium round or large wide flask. Chunky readable silhouette, painterly shaded glass, restrained warm upper-left highlights, matching an illustrated bronze-and-iron fantasy dungeon interface. One centred bottle, entire object visible with generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/potions/healing_medium.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for healing_medium.png, square suitable for downsampling to128x128. Subject: exactly one medium normal-proportioned glass potion bottle with a simple cork stopper, filled with deep bloodroot-red healing liquid (dominant tint #B3261E). The MEDIUM bottle has a conventional rounded body of normal width. Chunky readable silhouette, painterly shaded materials and restrained warm upper-left lighting matching the illustrated bronze-and-iron fantasy dungeon interface. Exactly one centred object, entire object visible within generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/potions/healing_large.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for healing_large.png, square suitable for downsampling to128x128. Subject: exactly one large broad and wide glass potion flask with a simple cork stopper, filled with deep bloodroot-red healing liquid (dominant tint #B3261E). The LARGE flask has a noticeably wide full body. Chunky readable silhouette, painterly shaded materials and restrained warm upper-left lighting matching the illustrated bronze-and-iron fantasy dungeon interface. Exactly one centred object, entire object visible within generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/potions/mana_small.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for mana_small.png, square suitable for downsampling to128x128. Subject: exactly one small narrow glass potion bottle with a simple cork stopper, filled with rich moonlily-blue mana liquid (dominant tint #4C7DE0). The SMALL bottle has a slim narrow body. Chunky readable silhouette, painterly shaded materials and restrained warm upper-left lighting matching the illustrated bronze-and-iron fantasy dungeon interface. Exactly one centred object, entire object visible within generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/potions/mana_medium.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for mana_medium.png, square suitable for downsampling to128x128. Subject: exactly one medium normal-proportioned glass potion bottle with a simple cork stopper, filled with rich moonlily-blue mana liquid (dominant tint #4C7DE0). The MEDIUM bottle has a conventional rounded body of normal width. Chunky readable silhouette, painterly shaded materials and restrained warm upper-left lighting matching the illustrated bronze-and-iron fantasy dungeon interface. Exactly one centred object, entire object visible within generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/potions/mana_large.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for mana_large.png, square suitable for downsampling to128x128. Subject: exactly one large broad and wide glass potion flask with a simple cork stopper, filled with rich moonlily-blue mana liquid (dominant tint #4C7DE0). The LARGE flask has a noticeably wide full body. Chunky readable silhouette, painterly shaded materials and restrained warm upper-left lighting matching the illustrated bronze-and-iron fantasy dungeon interface. Exactly one centred object, entire object visible within generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/potions/lifespring.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for lifespring.png, square suitable for downsampling to128x128. Subject: exactly one golden-red Lifespring potion flask with a simple cork stopper, warm crimson liquid blending into a restrained golden shimmer within the glass. Chunky readable silhouette, painterly shaded materials and restrained warm upper-left lighting matching the illustrated bronze-and-iron fantasy dungeon interface. Exactly one centred object, entire object visible within generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/potions/strength_small.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon for strength_small.png, square suitable for downsampling to128x128. Subject: exactly one small narrow glass potion bottle with a simple cork stopper, filled with rich ironfern-green strength liquid (dominant tint #4F8A3A). The SMALL size must read from its slim narrow bottle shape. Chunky readable silhouette, painterly shaded materials and restrained warm upper-left lighting matching the illustrated bronze-and-iron fantasy dungeon interface. Exactly one centred object, entire object visible within generous transparent margins. No label, text, runes, numbers, frame, tile, floor, scenery, extra objects, hands, branding, watermark or cast background shadow. Genuine transparent alpha background, including the margins; do not paint a checkerboard or background.
+
+
+## gui/items/ItemBag.png
+
+Original hand-painted fantasy inventory icon for a dungeon game, square, to be downsampled to 128x128. Exactly one small closed cloth drawstring item sack, rounded slightly squat body, gathered neck tied with rope, worn neutral brown woven cloth with readable folds. Ordinary loose-item sack with no wax seal and no decoration. Warm upper-left lighting, clear painterly silhouette matching an illustrated iron-and-bronze game interface, entire object centred with generous transparent margins. No floor, background, frame, text, numbers, branding, watermark, additional objects or cast background shadow. Genuine transparent alpha.
+
+
+## gui/items/GiftBoxItem.png
+
+Original hand-painted fantasy inventory icon for a dungeon game, square, to be downsampled to 128x128. Exactly one closed item gift box: a sturdy small wooden treasure gift box with iron corner fittings and a closed hinged lid, clearly a box awaiting opening in a workshop. Modest utilitarian fantasy craftsmanship, warm upper-left lighting, readable painterly shape matching an illustrated iron-and-bronze game interface. Entire object centred with generous transparent margins. No contents, symbols, floor, background, frame, text, letters, numbers, brands, watermark, additional objects or cast background shadow. Genuine transparent alpha.
+
 ## POOR_Head.png
 
 Use case: stylized-concept. Asset type: a single inventory icon for an original
