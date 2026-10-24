@@ -57,12 +57,13 @@ public:
     //! \brief Returns the trap type currently being crafted, or TrapType::nullTrapType if
     //! the workshop is idle.
     TrapType getCurrentProductionType() const { return mTrapType; }
-    //! \brief Returns the work points collected for the trap currently being crafted.
-    int32_t getProductionPoints() const { return mPoints; }
+    //! \brief Returns whole work points for the production display; fractional progress stays stored.
+    int32_t getProductionPoints() const { return static_cast<int32_t>(mPoints); }
     bool hasOpenCreatureSpot(Creature* c) override;
     bool addCreatureUsingRoom(Creature* c) override;
     void removeCreatureUsingRoom(Creature* c) override;
     void absorbRoom(Room *r) override;
+    //! \brief Earns fractional workshop points using research and the wearer's Craftsman effect.
     bool useRoom(Creature& creature, bool forced) override;
 
     static const RoomType mRoomType;
@@ -79,7 +80,8 @@ private:
     //!\brief checks if a tile is available in the workshop to place a new crafted trap
     uint32_t countCraftedItemsOnRoom();
     Tile* checkIfAvailableSpot();
-    int32_t mPoints;
+    //! \brief Work points retain fractional research and equipment contributions.
+    double mPoints;
     TrapType mTrapType;
     void getCreatureWantedPos(Creature* creature, Tile* tileSpot,
         Ogre::Real& wantedX, Ogre::Real& wantedY);

@@ -19,6 +19,7 @@
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "utils/LogManager.h"
 
 static const std::string CreatureEffectStrengthChangeName = "StrengthChange";
@@ -52,7 +53,10 @@ void CreatureEffectStrengthChange::applyEffect(Creature& creature)
     if(!creature.isAlive())
         return;
 
-    creature.setStrengthContribution(this, mEffectValue);
+    double factor = mEffectValue;
+    if(factor < 1.0)
+        factor = 1.0 - (1.0 - factor) * ItemEffects::remainingFactor(creature, "Unyielding");
+    creature.setStrengthContribution(this, factor);
 }
 
 //! \brief Takes only the factor of this effect out of the strength modifier of the creature.
