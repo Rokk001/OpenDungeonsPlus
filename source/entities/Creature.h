@@ -1656,6 +1656,9 @@ private:
 
     //! \brief Skill points spent, template, ranks and reset counters of the skill tree (saved and sent to clients)
     CreatureSkillTree::SkillBuild mSkillBuild;
+    //! \brief Passive sums already worked out for the current ranks, by stat name. getSkillPassive fills it and every
+    //! change of mSkillBuild clears it (invalidateSkillPassiveCache), so a cached value always equals a fresh sum.
+    mutable std::map<std::string, double> mSkillPassiveCache;
     //! \brief The active skills made from the skill tree ranks; owned by the creature (server side)
     std::vector<CreatureSkill*> mTreeSkills;
     //! \brief True when the ranks changed and mSkillData has to be rebuilt at the start of the next turn
@@ -1669,6 +1672,9 @@ private:
     //! \brief Bonuses of the running defense effects; the defense modifier is their sum
     std::map<const CreatureEffect*, CreatureDefenseBonus> mDefenseContributions;
 
+    //! \brief Forgets the cached passive sums. Called right after every change of mSkillBuild (before anything reads a
+    //! passive again), because the sums depend only on the ranks and on the skill tree config.
+    void invalidateSkillPassiveCache();
     //! \brief Starts the skill build of a new creature (personal seed, free rank of the pre-skill) and spends the points
     //! it has earned (server side). Does nothing for a creature whose build was started or loaded.
     void initSkillBuild();

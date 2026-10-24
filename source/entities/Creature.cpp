@@ -1073,7 +1073,9 @@ bool Creature::importFromStream(std::istream& is)
 
         if(appearanceToken == SKILL_BUILD_MARKER)
         {
-            if(!CreatureSkillTree::readBuild(is, mSkillBuild))
+            const bool buildRead = CreatureSkillTree::readBuild(is, mSkillBuild);
+            invalidateSkillPassiveCache();
+            if(!buildRead)
                 return false;
         }
         else
@@ -3075,13 +3077,28 @@ bool Creature::carriesBowOrCrossbow() const
 }
 
 //! \brief Returns the sum of the ranked passive skills of the skill tree for the stat (percentages add up).
+//! The sum is worked out once per stat and kept until the ranks change (mSkillPassiveCache), because it walks every
+//! rank and the skill table and is asked many times per turn.
 //! \param stat The passive stat name (hp%, ar%, dr%, dmg%, spell%, alldmg%, crit, cd%, avoid, move%, ...).
 double Creature::getSkillPassive(const std::string& stat) const
 {
     if(mSkillBuild.mRanks.empty())
         return 0.0;
 
-    return CreatureSkillTree::passiveSum(ConfigManager::getSingleton().getCreatureSkillTree(), mSkillBuild, stat);
+    std::map<std::string, double>::const_iterator cached = mSkillPassiveCache.find(stat);
+    if(cached != mSkillPassiveCache.end())
+        return cached->second;
+
+    const double sum = CreatureSkillTree::passiveSum(ConfigManager::getSingleton().getCreatureSkillTree(),
+        mSkillBuild, stat);
+    mSkillPassiveCache[stat] = sum;
+    return sum;
+}
+
+//! \brief Forgets the cached passive sums; called after every change of the skill build.
+void Creature::invalidateSkillPassiveCache()
+{
+    mSkillPassiveCache.clear();
 }
 
 //! \brief Returns the rank of the skill tree entry with the given id, 0 when the creature has none.
@@ -3231,7 +3248,10 @@ void Creature::initSkillBuild()
         return;
 
     if(mSkillBuild.mSeed == 0)
+    {
         CreatureSkillTree::startBuild(mSkillBuild, type, Random::Uint(1, SKILL_SEED_MAX));
+        invalidateSkillPassiveCache();
+    }
 
     updateSkillPoints();
     mTreeSkillsDirty = true;
@@ -3290,6 +3310,7 @@ void Creature::updateSkillPoints()
     const uint32_t spentBefore = CreatureSkillTree::spentPoints(mSkillBuild, type);
     CreatureSkillTree::spendUpToLevel(config.getCreatureSkillTree(), type, mSkillBuild, mLevel,
         config.getSkillPointFirstLevel(), config.getSkillTemplateDeviationPercent(), config.getSkillRanksPerSkill());
+    invalidateSkillPassiveCache();
     if(CreatureSkillTree::spentPoints(mSkillBuild, type) != spentBefore)
     {
         mTreeSkillsDirty = true;
@@ -3330,6 +3351,7 @@ void Creature::upkeepSkillTree()
                 CreatureSkillTree::resetBuild(config.getCreatureSkillTree(), getSkillTypeInfo(), mSkillBuild,
                     newTemplate, mLevel, config.getSkillPointFirstLevel(), config.getSkillTemplateDeviationPercent(),
                     config.getSkillRanksPerSkill());
+                invalidateSkillPassiveCache();
                 // One reset per window
                 mSkillBuild.mRespecWindow = 0.0;
                 mTreeSkillsDirty = true;
@@ -3698,6 +3720,7 @@ void Creature::importSkillBuildFromPacket(ODPacket& is)
     }
 
     mSkillBuild = build;
+    invalidateSkillPassiveCache();
 }
 
 //! \brief Returns the size of the mana pool: Mana attribute (with equipment) x ManaPerPoint of the type.
