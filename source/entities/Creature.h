@@ -861,6 +861,13 @@ public:
     inline void addGoldCarried(int32_t gold)
     { mGoldCarried += gold; }
 
+    //! \brief Returns how much gold the creature can carry before it has to haul it to a treasury (MaxGoldCarryable)
+    int32_t getGoldCapacity() const;
+
+    //! \brief Adds mined gold that may have a fraction. The whole part is added to the carried gold, the rest stays in
+    //! the remainder (not saved) for the next call. Returns the whole part that was added
+    int32_t addGoldCarriedFraction(double gold);
+
     inline uint32_t getOverlayHealthValue() const
     { return mOverlayHealthValue; }
 
@@ -1291,6 +1298,8 @@ private:
     int32_t         mGoldFee;
     //! \brief Gold carried by the creature that will be dropped if it gets killed
     int32_t         mGoldCarried;
+    //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
+    double          mGoldRemainder;
     //! \brief Server side: the amount of carried gold the clients were last told about
     int32_t         mGoldCarriedNotified;
     //! \brief Server side. The gold carried that the clients were told last (cosmetic events only, not saved)
@@ -1577,6 +1586,10 @@ private:
 
     //! \brief Removes the champion from the map (slap, or not enough mana)
     void dismissChampion();
+
+    //! \brief Server side. A creature that can carry gold (capacity above 0) but carries more than getGoldCapacity()
+    //! (old save) drops the excess as a gold pile on its tile. Creatures with capacity 0 (thieves, wages, casino gold) are untouched
+    void dropExcessGold();
 };
 
 #endif // CREATURE_H
