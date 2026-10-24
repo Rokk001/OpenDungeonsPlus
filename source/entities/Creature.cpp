@@ -68,6 +68,7 @@
 #include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
 #include "entities/ItemEffects.h"
+#include "entities/ItemInstance.h"
 
 
 
@@ -149,6 +150,21 @@
 #include <utility>
 
 
+
+//! \brief Number of hand slots visible when the viewing seat does not own the creature.
+static const std::size_t VISIBLE_ITEM_HAND_SLOTS = 2;
+
+//! \brief Returns a slot's catalogue name and quality, with a dash for an empty slot.
+static std::string getItemSlotDisplayText(const ItemInstance* item, const GameMap* gameMap)
+{
+    if(item == nullptr)
+        return "-";
+
+    if(!item->mPotionId.empty())
+        return item->getDisplayName(gameMap);
+    const std::string description = item->describe(gameMap);
+    return description.substr(0, description.find('\n')) + " [" + qualityName(item->mQuality) + "]";
+}
 
 static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 
@@ -5330,12 +5346,20 @@ std::string Creature::getRelationshipTooltip()
     return line;
 }
 
+//! \brief Returns the unmasked server-side statistics for existing internal callers.
 std::string Creature::getStatsText()
+{
+    return getStatsText(getSeat());
+}
+
+//! \brief Builds statistics while masking new private item fields for foreign viewing seats.
+std::string Creature::getStatsText(const Seat* viewer)
 {
     // The creatures are not refreshed at each turn so this information is relevant in the server
     // GameMap only
     const std::string formatTitleOn = "[font='MedievalSharp-10'][colour='FFF2C860']";
     const std::string formatTitleOff = "[font='MedievalSharp-8'][colour='FFE8DCC0']";
+    const bool showPrivateItems = viewer == getSeat();
 
     std::stringstream tempSS;
     tempSS << formatTitleOn << "Characteristics" << formatTitleOff << std::endl;
@@ -5349,6 +5373,32 @@ std::string Creature::getStatsText()
     tempSS << "Critical chance: " << formatFixedNumber(getCritChance()) << " %" << std::endl;
     tempSS << "Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
         << std::endl;
+    tempSS << "Equipment: ";
+    for(std::size_t index = 0; index < mEquipment.size(); ++index)
+    {
+        if(index != 0)
+            tempSS << " / ";
+        const ItemInstance* item = (showPrivateItems || index < VISIBLE_ITEM_HAND_SLOTS) ?
+            mEquipment[index].get() : nullptr;
+        tempSS << getItemSlotDisplayText(item, getGameMap()) << formatTitleOff;
+    }
+    tempSS << std::endl << "Potions: ";
+    for(std::size_t index = 0; index < mPotionSlots.size(); ++index)
+    {
+        if(index != 0)
+            tempSS << " / ";
+        tempSS << getItemSlotDisplayText(showPrivateItems ? mPotionSlots[index].get() : nullptr, getGameMap())
+            << formatTitleOff;
+    }
+    tempSS << std::endl << "Inventory: ";
+    for(std::size_t index = 0; index < mInventory.size(); ++index)
+    {
+        if(index != 0)
+            tempSS << " / ";
+        tempSS << getItemSlotDisplayText(showPrivateItems ? mInventory[index].get() : nullptr, getGameMap())
+            << formatTitleOff;
+    }
+    tempSS << std::endl;
     tempSS << "Path: " << getSkillPathText() << std::endl;
     tempSS << "Skills: " << getSkillListText() << std::endl;
     tempSS << "Experience: " << mExp << std::endl;

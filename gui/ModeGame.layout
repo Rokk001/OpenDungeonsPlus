@@ -263,6 +263,20 @@
             <Property name="MousePassThroughEnabled" value="True" />
             <Property name="TextParsingEnabled" value="False" />
             <Property name="HorzFormatting" value="LeftAligned" />
+            <Window type="OD/StaticImage" name="ContextImage" >
+                <Property name="Area" value="{{0,0},{0,0},{0,64},{0,64}}" />
+                <Property name="Visible" value="False" />
+                <Property name="ClippedByParent" value="False" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Window type="OD/StaticImage" name="QualityFrame" >
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+            </Window>
         </Window>
 <Window type="OD/MiniMapCornerButton" name="OptionsButton" >
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner2" />

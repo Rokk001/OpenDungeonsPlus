@@ -100,6 +100,13 @@ enum class SkillType
     keeperHeartMending,
     keeperManaFlow,
 
+    roomMerchant,
+    roomHerbGarden,
+    roomAlchemyLab,
+    trapFineTools,
+    trapMasterTools,
+    spellSunthornCultivation,
+
     // This should be the last
     countSkill
 };

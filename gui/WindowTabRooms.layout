@@ -135,6 +135,27 @@
             <Property name="TooltipText" value="Build a temple where creatures pray" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="MerchantButton" >
+            <Property name="Area" value="{{0,188},{0,62},{0,240},{0,114}}" />
+            <Property name="Visible" value="False" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/MerchantButton" />
+            <Property name="TooltipText" value="Room: Merchant" />
+            <Property name="InheritsAlpha" value="False" />
+        </Window>
+        <Window type="OD/GameTabButton" name="HerbGardenButton" >
+            <Property name="Area" value="{{0,188},{0,62},{0,240},{0,114}}" />
+            <Property name="Visible" value="False" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/HerbGardenButton" />
+            <Property name="TooltipText" value="Room: Herb Garden" />
+            <Property name="InheritsAlpha" value="False" />
+        </Window>
+        <Window type="OD/GameTabButton" name="AlchemyLabButton" >
+            <Property name="Area" value="{{0,188},{0,62},{0,240},{0,114}}" />
+            <Property name="Visible" value="False" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/AlchemyLabButton" />
+            <Property name="TooltipText" value="Room: Alchemy Lab" />
+            <Property name="InheritsAlpha" value="False" />
+        </Window>
         <Window type="OD/GameTabButton" name="WavePortalButton" >
             <Property name="Area" value="{{0,412},{0,62},{0,464},{0,114}}" />
             <Property name="Visible" value="False" />
