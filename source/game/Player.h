@@ -188,6 +188,11 @@ public:
     inline bool getIsHuman() const
     { return mIsHuman; }
 
+    //! \brief True while the owner has requested live merchant stock updates.
+    bool getMerchantWindowOpen() const { return mMerchantWindowOpen; }
+    //! \brief Updates the owner's live merchant-window subscription.
+    void setMerchantWindowOpen(bool open) { mMerchantWindowOpen = open; }
+
     inline void setIsHuman(bool isHuman)
     { mIsHuman = isHuman; }
 
@@ -357,6 +362,8 @@ private:
     float mCreatureKilledTime;
 
     bool mHasLost;
+    //! \brief Server-side subscription to live merchant stock, reset with a new player.
+    bool mMerchantWindowOpen = false;
 
     //! \brief Seat id that dealt the final blow to the heart, and the heart centre tile. -1 if unknown.
     //! Filled on the server by recordHeartDestroyed and sent with the playerDefeated notification.

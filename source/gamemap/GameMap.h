@@ -742,6 +742,7 @@ public:
     void removeRenderedMovableEntity(RenderedMovableEntity *obj);
     RenderedMovableEntity* getRenderedMovableEntity(const std::string& name);
     void clearRenderedMovableEntities(NodeType nt = NodeType::MTILES_NODE);
+    //! \brief Resolves a typed entity identity for movement, hand and appearance notifications.
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 

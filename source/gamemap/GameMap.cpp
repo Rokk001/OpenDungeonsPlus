@@ -3871,6 +3871,7 @@ std::string GameMap::nextUniqueNameMapLight()
     return ret;
 }
 
+//! \brief Resolves an entity identity, including room-owned merchant figures.
 GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
     const std::string& entityName)
 {
@@ -3890,6 +3891,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::skillEntity:
         case GameEntityType::giftBoxEntity:
         case GameEntityType::lavaRock:
+        case GameEntityType::merchantEntity:
             return getRenderedMovableEntity(entityName);
 
         case GameEntityType::spell:

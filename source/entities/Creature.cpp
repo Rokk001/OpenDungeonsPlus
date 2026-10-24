@@ -322,6 +322,8 @@ const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
 const uint32_t Creature::MANA_RING_STEPS = 63;
 //! \brief Label in front of the current mana in a creature save, so it cannot be mistaken for the appearance token
 static const std::string MANA_SAVE_LABEL = "Mana=";
+static const std::string MERCHANT_MOOD_SAVE_LABEL = "MerchantMood=";
+static const std::string GOLD_REMAINDER_SAVE_LABEL = "GoldRemainder=";
 
 //! \brief Returns the mana ring step 0 .. Creature::MANA_RING_STEPS for a mana value: floor(mana / maxMana x steps).
 //! \param mana The current mana.
@@ -977,6 +979,7 @@ void Creature::exportToStream(std::ostream& os) const
 
     // Current mana as a labelled token after the appearance, missing in old saves (they load with full mana)
     os << "\t" << MANA_SAVE_LABEL << mMana;
+    os << "\tMerchantMood=" << mMerchantMood << "\tGoldRemainder=" << mGoldRemainder;
 
     // Optional skill state (after the mana token), missing in old saves: their points are spent again at load
     if(mSkillBuild.mSeed != 0)
@@ -1061,6 +1064,22 @@ bool Creature::importFromStream(std::istream& is)
     std::string appearanceToken;
     while(is >> appearanceToken)
     {
+        if(appearanceToken.compare(0, MERCHANT_MOOD_SAVE_LABEL.size(), MERCHANT_MOOD_SAVE_LABEL) == 0 ||
+            appearanceToken.compare(0, GOLD_REMAINDER_SAVE_LABEL.size(), GOLD_REMAINDER_SAVE_LABEL) == 0)
+        {
+            const bool merchantMood = appearanceToken.compare(0, MERCHANT_MOOD_SAVE_LABEL.size(), MERCHANT_MOOD_SAVE_LABEL) == 0;
+            const std::string value = appearanceToken.substr(merchantMood ? MERCHANT_MOOD_SAVE_LABEL.size() : GOLD_REMAINDER_SAVE_LABEL.size());
+            char* end = nullptr;
+            const double loaded = std::strtod(value.c_str(), &end);
+            if(value.empty() || end == nullptr || *end != '\0' || !std::isfinite(loaded)) return false;
+            if(merchantMood) mMerchantMood = loaded;
+            else
+            {
+                if(loaded < 0.0 || loaded >= 1.0) return false;
+                mGoldRemainder = loaded;
+            }
+            continue;
+        }
         if(appearanceToken.compare(0, MANA_SAVE_LABEL.size(), MANA_SAVE_LABEL) == 0)
         {
             const std::string manaValue = appearanceToken.substr(MANA_SAVE_LABEL.size());
@@ -1333,6 +1352,9 @@ void Creature::exportItemsToPacket(ODPacket& packet, const Seat* seat) const
     const double guardWall = ownData ? getGameMap()->getItemAura(*this, "GuardWall") : 0.0;
     const double rally = ownData ? getGameMap()->getItemAura(*this, "Rally") : 0.0;
     packet << guardWall << rally;
+    packet << (ownData ? mMerchantMood : 0.0) << static_cast<uint8_t>(ownData ? mLastItemDeal : 0)
+        << (ownData ? mLastItemName : std::string());
+    if(ownData) { mLastItemDeal = 0; mLastItemName.clear(); }
 }
 
 //! \brief Adopts a complete item update and refreshes client hand meshes when their quality changes.
@@ -1379,6 +1401,10 @@ bool Creature::importItemsFromPacket(ODPacket& packet)
     double rally = 0.0;
     if(!(packet >> guardWall >> rally) || !std::isfinite(guardWall) || !std::isfinite(rally))
         return false;
+    double merchantMood = 0.0;
+    uint8_t deal = 0;
+    std::string itemName;
+    if(!(packet >> merchantMood >> deal >> itemName) || !std::isfinite(merchantMood) || deal > 5) return false;
     bool handChanged = false;
     for(size_t index = 0; index < 2; ++index)
     {
@@ -1396,6 +1422,26 @@ bool Creature::importItemsFromPacket(ODPacket& packet)
     mClientPotionContributions = contributions;
     mClientGuardWall = guardWall;
     mClientRally = rally;
+    mMerchantMood = merchantMood;
+    if(deal != 0 && mDefinition != nullptr && isSocialFeedSource())
+    {
+        social::PostCategory category = social::PostCategory::Bought;
+        if(deal == 2) category = social::PostCategory::Bargain;
+        else if(deal == 3) category = social::PostCategory::Fleeced;
+        else if(deal == 4) category = social::PostCategory::Gift;
+        else if(deal == 5) category = social::PostCategory::EpicFind;
+        social::PostLog::getSingleton().addPost(getGameMap()->getTurnNumber(), getName(),
+            mDefinition->getClassName(), mDefinition->isWorker(), category, 0, itemName);
+        if(CreatureReactions::getSingletonPtr() != nullptr)
+        {
+            std::string event;
+            if(deal == 2) event = "ItemBargain";
+            else if(deal == 3) event = "ItemFleeced";
+            else if(deal == 4) event = "ItemGift";
+            else if(deal == 5) event = "ItemEpic";
+            if(!event.empty()) CreatureReactions::getSingleton().trigger(this, event);
+        }
+    }
     if(handChanged && !getIsOnServerMap() && getEntityNode() != nullptr)
     {
         destroyMeshWeapons();
@@ -2471,6 +2517,13 @@ void Creature::doUpkeep()
             mPitMood = std::min(0.0, mPitMood + decay);
     }
 
+    // The merchant contribution fades by its configured points per simulation turn.
+    if(mMerchantMood != 0.0)
+    {
+        const double decay = ConfigManager::getSingleton().getRoomConfigDouble("MerchantMoodDecay");
+        if(mMerchantMood > 0.0) mMerchantMood = std::max(0.0, mMerchantMood - decay);
+        else mMerchantMood = std::min(0.0, mMerchantMood + decay);
+    }
     // The casino mood fades towards 0
     if(mCasinoMood != 0.0)
     {
@@ -4639,6 +4692,14 @@ void Creature::socialCreatureRemoved()
     social::CreaturePosts::reportRemoval(getGameMap()->getTurnNumber(), getName(),
         getDefinition()->getClassName(), getDefinition()->isWorker(), mOverlayMoodValue);
 }
+
+//! \brief Adds the mood points of the keeper's margin or a direct gift without an invented cap.
+void Creature::addMerchantMood(double points)
+{ mMerchantMood += points; mNeedFireRefresh = true; }
+
+//! \brief Keeps one owner-only deal notification until its next creature update is written.
+void Creature::setLastItemDeal(uint8_t deal, const std::string& name)
+{ mLastItemDeal = deal; mLastItemName = name; mNeedFireRefresh = true; }
 
 void Creature::socialEvent(social::PostCategory category)
 {
@@ -8870,8 +8931,8 @@ int32_t Creature::getGoldCapacity() const
     return static_cast<int32_t>(std::floor(capacity + GOLD_CAPACITY_ROUNDING_EPSILON));
 }
 
-//! \brief Adds mined gold with a fraction: the whole part goes to the carried gold, the rest is kept for the next step.
-//! \param gold The mined gold of this step (not negative).
+//! \brief Applies signed gold proceeds or payments and retains the fractional balance.
+//! \param gold Positive proceeds or a negative payment.
 //! \return The whole part that was added to the carried gold.
 int32_t Creature::addGoldCarriedFraction(double gold)
 {
