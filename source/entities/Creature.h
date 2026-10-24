@@ -845,6 +845,16 @@ public:
     //! \brief Sets the urge (0 - 100, limited), used when a creature is loaded.
     void setUrge(double val);
 
+    //! \brief Server side. Makes the creature relieve itself where it stands: a squat of ToiletUseTurns turns and a pile
+    //! on the floor afterwards. In a treasury, the dungeon heart room or a temple it first steps out of the room.
+    //! The urge is 0 afterwards.
+    void relieve();
+
+    //! \brief Server side, once per turn. At UrgeRelieve the creature relieves itself (not while it fights, is held in the
+    //! hand, KO, dragged, possessed or already on a toilet seat; then at the first turn after that). From UrgeOnTheWay on,
+    //! a creature that walks over a free toilet seat of a room it may use stops and uses it.
+    void handleUrge();
+
     //! \brief Returns the urge to use a toilet (0 = none, 100 = cannot hold it any longer).
     inline double getUrge() const
     { return mUrge; }
@@ -1057,6 +1067,11 @@ public:
 
     //! \brief Adds a post of this category to the feed if the creature belongs to the local player.
     void socialEvent(social::PostCategory category);
+
+    //! \brief Client side. The creature of the local player entered a filthy room: posts about it unless it posted about
+    //! the same room less than FilthyPostSeconds ago.
+    //! \param roomName The name of the filthy room.
+    void socialFilthyRoom(const std::string& roomName);
 
     inline int32_t getNbTurnsWithoutBattle() const
     { return mNbTurnsWithoutBattle; }
@@ -1494,6 +1509,8 @@ private:
     //! \brief Server side. Whether the clients were told that the creature has a bed: -1 not yet, 0 no, 1 yes
     //! (cosmetic events only, not saved)
     int32_t         mBedNotified;
+    //! \brief Client side. The turn of the last Filthy post of this creature, by room name (not saved)
+    std::map<std::string, int64_t> mFilthyPostTurn;
 
     //! Skill type that will be dropped when the creature dies
     SkillType       mSkillTypeDropDeath;

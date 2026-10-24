@@ -118,6 +118,7 @@ enum class TileVisual
     guardRoom,
     manaWellGround,
     templeRoom,
+    toiletRoom,
     countTileVisual
 };
 

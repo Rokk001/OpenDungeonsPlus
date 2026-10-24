@@ -59,6 +59,8 @@ enum class CreatureActionType
     reloadTrap, // (worker only) Walks to a trap tile that used up its shots and arms it again
     searchDirtToClean, // (worker only) Searches a pile, a dirty room tile or a dirty corridor tile to clean
     cleanTile, // (worker only) Wipes the dirt, pile or blood stain off a tile
+    searchToilet, // (fighters only) Looks for a free toilet seat, or waits near the toilet room while all seats are busy
+    useToilet, // (fighters only) Squats on a toilet seat, or relieves itself on the spot when it has no toilet
     nb // Must be the last value of this enum
 };
 

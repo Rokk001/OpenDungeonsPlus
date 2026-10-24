@@ -40,12 +40,14 @@
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
 #include "creatureaction/CreatureActionSearchJob.h"
+#include "creatureaction/CreatureActionSearchToilet.h"
 #include "creatureaction/CreatureActionSearchTileToDig.h"
 #include "creatureaction/CreatureActionSearchWallTileToClaim.h"
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionStealFreeGold.h"
 #include "creatureaction/CreatureActionTunnel.h"
 #include "creatureaction/CreatureActionUseRoom.h"
+#include "creatureaction/CreatureActionUseToilet.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturebehaviour/CreatureBehaviour.h"
 #include "creatureeffect/CreatureEffect.h"
@@ -115,6 +117,7 @@
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
+#include "rooms/RoomToilet.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/Spell.h"
 #include "spells/SpellType.h"
@@ -2177,6 +2180,7 @@ void Creature::doUpkeep()
 
     decidePrioritaryAction();
     handleHeartDefence();
+    handleUrge();
 
     // Keep combat in its current attack tile; free waiting creatures may use adjacent floor space.
     const CreatureActionType standingAction = mActions.empty() ? CreatureActionType::nb : mActions.back()->getType();
@@ -2405,6 +2409,16 @@ bool Creature::handleIdleAction()
         (Random::Double(70.0, 80.0) < mHunger))
     {
         pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    // If we have to relieve ourselves, we go to a toilet. Without a toilet room nothing happens here: the
+    // creature goes on until the urge is too strong
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::searchToilet) &&
+        (mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
         return true;
     }
 
@@ -4132,6 +4146,8 @@ void Creature::updateFromPacket(ODPacket& is)
         fillSocialSnapshot(socialAfter);
         social::CreaturePosts::reportUpdate(getGameMap()->getTurnNumber(), getName(),
             getDefinition()->getClassName(), getDefinition()->isWorker(), socialBefore, socialAfter);
+        if(!socialAfter.mFilthyRoom.empty() && (socialAfter.mFilthyRoom != socialBefore.mFilthyRoom))
+            socialFilthyRoom(socialAfter.mFilthyRoom);
     }
 
     // Level up and payday are shown as cosmetic reactions of the creature
@@ -4155,6 +4171,14 @@ void Creature::fillSocialSnapshot(social::CreatureSnapshot& snapshot) const
     snapshot.mMoodBits = mOverlayMoodValue;
     snapshot.mMoodLevel = mMoodValue;
     snapshot.mActivity = mActivity;
+
+    // The filthy room the creature stands in (the client sees the dirt of the tiles through the cosmetic dirt events)
+    snapshot.mFilthyRoom.clear();
+    const Tile* tile = getPositionTile();
+    const Room* room = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
+    if((room != nullptr) && (room->getType() != RoomType::prison) && (room->getType() != RoomType::torture) &&
+       (room->getType() != RoomType::crypt) && (room->getDirtStage() >= 3))
+        snapshot.mFilthyRoom = room->getName();
 }
 
 void Creature::socialCreatureAdded()
@@ -4180,6 +4204,23 @@ void Creature::socialEvent(social::PostCategory category)
 
     social::PostLog::getSingleton().addPost(getGameMap()->getTurnNumber(), getName(),
         getDefinition()->getClassName(), getDefinition()->isWorker(), category, 0);
+}
+
+//! \brief Posts "filthy room" for this creature, at most once per FilthyPostSeconds for the same room.
+void Creature::socialFilthyRoom(const std::string& roomName)
+{
+    if(!isSocialFeedSource())
+        return;
+
+    int64_t turn = getGameMap()->getTurnNumber();
+    int64_t limitTurns = static_cast<int64_t>(
+        ConfigManager::getSingleton().getDirtConfigDouble("FilthyPostSeconds") * ODApplication::turnsPerSecond);
+    std::map<std::string, int64_t>::iterator it = mFilthyPostTurn.find(roomName);
+    if((it != mFilthyPostTurn.end()) && (turn >= it->second) && (turn - it->second < limitTurns))
+        return;
+
+    mFilthyPostTurn[roomName] = turn;
+    socialEvent(social::PostCategory::Filthy);
 }
 
 double Creature::getExperienceProgress() const
@@ -4279,6 +4320,14 @@ CreatureActivity Creature::getActivity() const
         if(activity.task == CreatureActionType::nb && type != CreatureActionType::walkToTile &&
            type != CreatureActionType::parkToTile)
             activity.task = type;
+
+        if((type == CreatureActionType::useToilet) &&
+           (static_cast<const CreatureActionUseToilet*>(it->get())->getSeatTile() != nullptr))
+        {
+            activity.assignedRoom = RoomType::toilet;
+            activity.inAssignedRoom = true;
+            break;
+        }
 
         if(type != CreatureActionType::useRoom)
             continue;
@@ -7392,6 +7441,55 @@ void Creature::increaseUrge(double value)
     mUrge = std::min(NEED_MAX, mUrge + value);
 }
 
+//! \brief The creature relieves itself where it stands (see CreatureActionUseToilet).
+void Creature::relieve()
+{
+    pushAction(Utils::make_unique<CreatureActionUseToilet>(*this, nullptr));
+}
+
+//! \brief Relieves the creature at the highest urge and lets it use a toilet seat it walks over from UrgeOnTheWay on.
+void Creature::handleUrge()
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    if(mDefinition->isWorker() || (mUrge < config.getDirtConfigDouble("UrgeOnTheWay")))
+        return;
+
+    Seat* seat = getSeat();
+    if((seat == nullptr) || seat->isRogueSeat() || !getIsOnMap() || !isAlive())
+        return;
+
+    // Not while held in the hand, dragged, KO or controlled by a player: at the first turn after that
+    if(mIsInHand || mIsBeingDragged || isKo() || isPossessed())
+        return;
+
+    // A creature on a toilet seat (or already relieving itself) is busy, and a fight comes first
+    if(isActionInList(CreatureActionType::useToilet) || isActionInList(CreatureActionType::fight) ||
+       isActionInList(CreatureActionType::fightFriendly))
+        return;
+
+    if(mUrge >= config.getDirtConfigDouble("UrgeRelieve"))
+    {
+        relieve();
+        return;
+    }
+
+    // From UrgeOnTheWay on, a free toilet seat of a room the creature may use is used when the creature walks over it
+    if(mActions.empty() || (mActions.back()->getType() != CreatureActionType::walkToTile))
+        return;
+
+    Tile* tile = getPositionTile();
+    if(tile == nullptr)
+        return;
+
+    Room* room = tile->getCoveringRoom();
+    if((room == nullptr) || (room->getType() != RoomType::toilet))
+        return;
+
+    RoomToilet* toilet = static_cast<RoomToilet*>(room);
+    if(toilet->canBeUsedBy(*this) && toilet->isTileFree(tile, this))
+        pushAction(Utils::make_unique<CreatureActionUseToilet>(*this, tile));
+}
+
 //! \brief Sets the urge, limited to 0 - NEED_MAX.
 void Creature::setUrge(double val)
 {
@@ -8232,6 +8330,7 @@ void Creature::changeSeat(Seat* newSeat)
     mBrawlResumeOpponent.clear();
     mWakefulness = 100;
     mHunger = 0;
+    mUrge = 0.0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;
     mActiveSlapsCount = 0;

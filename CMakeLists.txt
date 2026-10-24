@@ -261,11 +261,13 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSearchJob.cpp
     ${SRC}/creatureaction/CreatureActionSearchTileToDig.cpp
+    ${SRC}/creatureaction/CreatureActionSearchToilet.cpp
     ${SRC}/creatureaction/CreatureActionSearchWallTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSleep.cpp
     ${SRC}/creatureaction/CreatureActionStealFreeGold.cpp
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
+    ${SRC}/creatureaction/CreatureActionUseToilet.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
     ${SRC}/creatureaction/CreatureActionPossessed.cpp
 
@@ -535,6 +537,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomTorture.cpp
     ${SRC}/rooms/RoomGuardRoom.cpp
     ${SRC}/rooms/RoomTemple.cpp
+    ${SRC}/rooms/RoomToilet.cpp
     ${SRC}/rooms/RoomTrainingHall.cpp
     ${SRC}/rooms/RoomTreasury.cpp
     ${SRC}/rooms/RoomType.cpp

@@ -90,6 +90,7 @@ Player::Player(GameMap* gameMap, int32_t id) :
     mCreatureCannotFindBed(0.0f),
     mCreatureCannotFindFood(0.0f),
     mNotEnoughGoldTime(0.0f),
+    mDirtNoticeTime(0.0f),
     mCreatureKilledTime(0.0f),
     mHasLost(false),
     mConquerorSeatId(-1),
@@ -858,6 +859,34 @@ void Player::notifyNewCreatureType(const std::string& creatureClassName)
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Sends the dirt notice (creature that relieved itself, filthy room) when the last one is at least
+//! DirtNoticeSeconds ago; human keepers only.
+void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Creature* creature)
+{
+    if(mHasLost || !getIsHuman())
+        return;
+
+    if(mDirtNoticeTime > 0.0f)
+        return;
+
+    if(kind == DirtEventKind::relieved)
+    {
+        if(creature == nullptr)
+            return;
+
+        mDirtNoticeTime = static_cast<float>(ConfigManager::getSingleton().getDirtConfigDouble("DirtNoticeSeconds"));
+        notifyCreatureEvent(*creature, " found no toilet and relieved itself.", EventShortNoticeType::aboutCreatures);
+        return;
+    }
+
+    mDirtNoticeTime = static_cast<float>(ConfigManager::getSingleton().getDirtConfigDouble("DirtNoticeSeconds"));
+    std::string chatMsg = "Your " + roomName + " is filthy.";
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
 void Player::fireEvents()
 {
     // On server side, we update the client
@@ -1079,6 +1108,14 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
             mCreatureKilledTime -= timeSinceLastUpkeep;
         else
             mCreatureKilledTime = 0.0f;
+    }
+
+    if(mDirtNoticeTime > 0.0f)
+    {
+        if(mDirtNoticeTime > timeSinceLastUpkeep)
+            mDirtNoticeTime -= timeSinceLastUpkeep;
+        else
+            mDirtNoticeTime = 0.0f;
     }
 
     if(isEventListUpdated)

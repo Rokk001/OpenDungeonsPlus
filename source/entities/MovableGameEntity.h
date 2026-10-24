@@ -52,6 +52,8 @@ namespace EntityAnimation
     static const std::string combat_attack_anim = "CombatAttack";
     static const std::string ranged_attack_anim = "RangedAttack";
     static const std::string eat_chicken_anim = "EatChicken";
+    //! A creature squats to relieve itself, on a toilet seat or on the floor (a skeleton without the clip plays Idle)
+    static const std::string relieve_anim = "Relieve";
     //! A creature sniffs at food it was given (server action state; the client shows the idle clip and a reaction)
     static const std::string sniff_anim = "Sniff";
     //! A worker pulls a hurt creature backwards by the legs (the clip it plays while walking; the room

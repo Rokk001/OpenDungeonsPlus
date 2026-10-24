@@ -357,6 +357,27 @@ double Room::getDirtMean() const
     return sum / static_cast<double>(mCoveredTiles.size());
 }
 
+//! \brief Tells the owner when the room has just reached dirt stage 3 because of the dirt a tile received.
+void Room::notifyDirtAdded(double added)
+{
+    if((added <= 0.0) || mCoveredTiles.empty() || (getSeat() == nullptr))
+        return;
+
+    RoomType type = getType();
+    if((type == RoomType::prison) || (type == RoomType::torture) || (type == RoomType::crypt))
+        return;
+
+    Player* player = getSeat()->getPlayer();
+    if((player == nullptr) || !player->getIsHuman())
+        return;
+
+    double limit = ConfigManager::getSingleton().getDirtConfigDouble("DirtStage3At");
+    double meanNow = getDirtMean();
+    double meanBefore = meanNow - added / static_cast<double>(mCoveredTiles.size());
+    if((meanBefore < limit) && (meanNow >= limit))
+        player->notifyDirtEvent(Player::DirtEventKind::roomFilthy, RoomManager::getRoomReadableName(type), nullptr);
+}
+
 //! \brief The dirt stage (1 - 3) of the mean dirt of this room.
 uint32_t Room::getDirtStage() const
 {

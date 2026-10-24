@@ -386,6 +386,9 @@ private:
     void noteRoomWork(Creature* creature);
     //! \brief The creature starts to dig: if it digs into a gold vein or gems it is pleased
     void noteDigging(Creature* creature);
+    //! \brief The creature squats down to relieve itself. On the floor (not on a toilet seat) it shows the Relieved
+    //! reaction when it is done and the creatures within DirtPileRadius tiles show SmellsPile, once each.
+    void noteRelief(Creature* creature);
     //! \brief Lets the creature show the event once it has finished what it does
     //! waitMax is the time the reaction waits at most for the creature to be free (negative: the usual time)
     //! The reaction starts after delay seconds (negative: a short time).

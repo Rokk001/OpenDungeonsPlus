@@ -56,6 +56,10 @@ enum class PostCategory : uint8_t
     //! Two creatures became a couple, or a couple broke up (relationship option)
     Couple,
     SplitUp,
+    //! A creature of the local player found no toilet and relieved itself on the floor
+    Relieved,
+    //! A creature of the local player entered a room that is at dirt stage 3
+    Filthy,
     Nb
 };
 
