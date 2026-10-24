@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<GUILayout version="4" >
+    <Window type="OD/FrameWindow" name="RoomCleanWindow" >
+        <Property name="Area" value="{{0.5,-130},{0.5,-60},{0.5,130},{0.5,60}}" />
+        <Property name="Text" value="Cleaning" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="AlwaysOnTop" value="True" />
+
+        <Window type="OD/StaticText" name="RoomCleanText" >
+            <Property name="Area" value="{{0,20},{0,35},{1,-20},{0,60}}" />
+            <Property name="Text" value="Workers do not clean here on their own." />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Button" name="RoomCleanButton" >
+            <Property name="Area" value="{{0.5,-60},{0,70},{0.5,60},{0,100}}" />
+            <Property name="Text" value="Clean" />
+            <Property name="TooltipText" value="Workers clean this room once" />
+        </Window>
+    </Window>
+</GUILayout>

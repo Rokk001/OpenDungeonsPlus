@@ -57,6 +57,8 @@ enum class CreatureActionType
     tunnel, // (fighters with a dig rate) Dig through walls towards an enemy dungeon heart that cannot be reached on foot
     possessed, // The creature is controlled by a player (Possess spell). Other actions are paused
     reloadTrap, // (worker only) Walks to a trap tile that used up its shots and arms it again
+    searchDirtToClean, // (worker only) Searches a pile, a dirty room tile or a dirty corridor tile to clean
+    cleanTile, // (worker only) Wipes the dirt, pile or blood stain off a tile
     nb // Must be the last value of this enum
 };
 

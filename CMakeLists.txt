@@ -240,6 +240,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionCarryEntity.cpp
     ${SRC}/creatureaction/CreatureActionClaimGroundTile.cpp
     ${SRC}/creatureaction/CreatureActionClaimWallTile.cpp
+    ${SRC}/creatureaction/CreatureActionCleanTile.cpp
     ${SRC}/creatureaction/CreatureActionDigTile.cpp
     ${SRC}/creatureaction/CreatureActionEatChicken.cpp
     ${SRC}/creatureaction/CreatureActionFight.cpp
@@ -254,6 +255,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionLeaveDungeon.cpp
     ${SRC}/creatureaction/CreatureActionParkToTile.cpp
     ${SRC}/creatureaction/CreatureActionReloadTrap.cpp
+    ${SRC}/creatureaction/CreatureActionSearchDirtToClean.cpp
     ${SRC}/creatureaction/CreatureActionSearchEntityToCarry.cpp
     ${SRC}/creatureaction/CreatureActionSearchFood.cpp
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp

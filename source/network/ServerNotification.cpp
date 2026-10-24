@@ -183,6 +183,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "timeLimit";
         case ServerNotificationType::campaignVictory:
             return "campaignVictory";
+        case ServerNotificationType::roomCleanOrder:
+            return "roomCleanOrder";
         case ServerNotificationType::relationshipTier:
             return "relationshipTier";
         case ServerNotificationType::trapEffect:

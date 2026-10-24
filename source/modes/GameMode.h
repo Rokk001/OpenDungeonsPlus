@@ -190,6 +190,16 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! it is the casino the window is open for.
     void setCasinoPayoutShown(int tileX, int tileY, uint32_t level);
 
+    //! \brief Clean-once control, opened by clicking on one of the player's prisons or torture chambers
+    void showRoomCleanWindow(Tile* tile);
+    //! \brief Hides the clean-once window.
+    bool hideRoomCleanWindow(const CEGUI::EventArgs& = {});
+    //! \brief The Clean button was pressed: asks the server to have the workers clean the room once.
+    bool orderRoomClean(const CEGUI::EventArgs& = {});
+    //! \brief Called when the server tells whether a prison or torture chamber has an open clean order. It is only
+    //! shown if it is the room the window is open for; while the order is open the button is disabled.
+    void setRoomCleanOrderShown(int tileX, int tileY, bool isOrdered);
+
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool cancelPlayerSettings(const CEGUI::EventArgs& = {});
@@ -569,6 +579,10 @@ private:
     int mCasinoX;
     int mCasinoY;
     uint32_t mCasinoPayout;
+
+    //! \brief Tile of the prison or torture chamber whose clean-once window is open
+    int mCleanRoomX;
+    int mCleanRoomY;
 
     //! \brief whether to allow showing the window with debug Tile info under middlemouse button click
     bool showTileDebugWindow;
