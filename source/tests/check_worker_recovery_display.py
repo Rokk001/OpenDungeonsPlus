@@ -43,7 +43,7 @@ call = 'creature.recordWorkerStepRecovery();'
 dig = (ROOT / 'source/creatureaction/CreatureActionDigTile.cpp').read_text()
 assert dig.count(call) == 1
 assert 'if(amountDug > 0.0 && tileDig.getFullness() > 0.0)\n        ' + call in dig
-assert dig.index('tileDig.digOut(creature.getDigRate())') < dig.index(call)
+assert dig.index('tileDig.digOut(creature.getDigRate() * digFactor * criticalFactor)') < dig.index(call)
 assert dig.index('if(isTreasuryAvailable)') < dig.index(call)
 for stem, steps in [('CreatureActionClaimGroundTile', 2), ('CreatureActionClaimWallTile', 1)]:
     text = (ROOT / ('source/creatureaction/' + stem + '.cpp')).read_text()

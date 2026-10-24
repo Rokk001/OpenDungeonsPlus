@@ -18,6 +18,8 @@
 #ifndef CONFIGMANAGER_H
 #define CONFIGMANAGER_H
 
+#include "creatureskill/CreatureSkillTree.h"
+
 #include <OgreSingleton.h>
 #include <OgreColourValue.h>
 
@@ -212,6 +214,60 @@ public:
     //! \brief Share of an attack or skill cooldown saved per level above 1 (CooldownReductionPerLevel in global.cfg), limited to 0 - 1
     inline double getCooldownReductionPerLevel() const
     { return std::max(0.0, std::min(1.0, mCooldownReductionPerLevel)); }
+    //! \brief Critical chance in percent for every point of start Dexterity of the creature type (plus equipment Dexterity) (CritChancePerDexterity in global.cfg)
+    inline double getCritChancePerDexterity() const
+    { return mCritChancePerDexterity; }
+    //! \brief Critical chance in percent that every creature level above 1 adds (CritChancePerLevel in global.cfg)
+    inline double getCritChancePerLevel() const
+    { return mCritChancePerLevel; }
+    //! \brief Factor on every damage value of a critical hit, applied before the target's defense (CritDamageMultiplier in global.cfg)
+    inline double getCritDamageMultiplier() const
+    { return mCritDamageMultiplier; }
+    //! \brief Seconds an empty mana pool needs to refill completely (ManaRefillSeconds in global.cfg)
+    inline double getManaRefillSeconds() const
+    { return mManaRefillSeconds; }
+    //! \brief Mana a caster pays for every shot of its first MissileLaunch attack (ManaPerCasterShot in global.cfg)
+    inline double getManaPerCasterShot() const
+    { return mManaPerCasterShot; }
+    //! \brief Mana the second MissileLaunch of the Dragon costs per shot (ManaPerDragonSecondShot in global.cfg)
+    inline double getManaPerDragonSecondShot() const
+    { return mManaPerDragonSecondShot; }
+    //! \brief Creature level at which the first skill point is earned (one point per level from there on) (SkillPointFirstLevel in global.cfg)
+    inline uint32_t getSkillPointFirstLevel() const
+    { return mSkillPointFirstLevel; }
+    //! \brief Highest rank of a skill (SkillRanksPerSkill in global.cfg)
+    inline uint32_t getSkillRanksPerSkill() const
+    { return mSkillRanksPerSkill; }
+    //! \brief Chance in percent that a skill point goes to the alternative path of the template (SkillTemplateDeviationPercent in global.cfg)
+    inline double getSkillTemplateDeviationPercent() const
+    { return mSkillTemplateDeviationPercent; }
+    //! \brief Number of eaten chickens that opens the reset window (SkillRespecChickens in global.cfg)
+    inline uint32_t getSkillRespecChickens() const
+    { return mSkillRespecChickens; }
+    //! \brief Seconds the reset window stays open (SkillRespecWindowSeconds in global.cfg)
+    inline double getSkillRespecWindowSeconds() const
+    { return mSkillRespecWindowSeconds; }
+    //! \brief Calibration constant of the skill damage scaling: own MinHP divided by this value scales creature spells (SkillSpellReferenceMinHP in global.cfg)
+    inline double getSkillSpellReferenceMinHP() const
+    { return mSkillSpellReferenceMinHP; }
+    //! \brief Own health fraction below which a creature uses a self heal skill (SkillHealSelfBelow in global.cfg)
+    inline double getSkillHealSelfBelow() const
+    { return mSkillHealSelfBelow; }
+    //! \brief Health fraction of an own creature below which an ally heal skill is used (SkillHealAllyBelow in global.cfg)
+    inline double getSkillHealAllyBelow() const
+    { return mSkillHealAllyBelow; }
+    //! \brief Health fraction below which own creatures count for an area heal skill (SkillHealAreaBelow in global.cfg)
+    inline double getSkillHealAreaBelow() const
+    { return mSkillHealAreaBelow; }
+    //! \brief Number of own creatures (self included) below the area heal limit that make a creature use an area heal skill (SkillHealAreaMinCreatures in global.cfg)
+    inline uint32_t getSkillHealAreaMinCreatures() const
+    { return mSkillHealAreaMinCreatures; }
+    //! \brief The creature skill trees, tier 4 skills and templates read from creatureSkills.cfg
+    inline const CreatureSkillTree::SkillTreeConfig& getCreatureSkillTree() const
+    { return mCreatureSkillTree; }
+    //! \brief Share of its gold capacity a worker gains for every Strength point above its start Strength (GoldCarryPerStrength in global.cfg)
+    inline double getGoldCarryPerStrength() const
+    { return mGoldCarryPerStrength; }
     //! \brief Limits a walk speed factor of a badly hurt creature to LOW_HEALTH_WALK_SPEED_FACTOR_MIN - LOW_HEALTH_WALK_SPEED_FACTOR_MAX
     //! \param factor The factor to limit (1 = no slowdown)
     //! \return The limited factor
@@ -529,6 +585,8 @@ private:
     bool loadTraps(const std::string& fileName);
     bool loadSpellConfig(const std::string& fileName);
     bool loadSkills(const std::string& fileName);
+    //! \brief Reads config/creatureSkills.cfg (skill trees, tier 4 skills and templates of the creatures).
+    bool loadCreatureSkills(const std::string& fileName);
     bool loadTilesets(const std::string& fileName);
     bool loadTilesetValues(std::istream& defFile, TileVisual tileVisual, std::vector<std::vector<TileSetValue>>& tileValues, std::map<TileVisual,std::map<int,float>>& highMap);
     bool loadEditorSettings(const std::string& fileName);
@@ -565,6 +623,7 @@ private:
     std::string mFilenameTraps;
     std::string mFilenameSpells;
     std::string mFilenameSkills;
+    std::string mFilenameCreatureSkills;
     std::string mFilenameTilesets;
     std::string mFilenameEditor;
     std::string mFilenameUserCfg;
@@ -596,6 +655,42 @@ private:
     double mCreatureHpGrowthPerLevel;
     //! Share of the cooldown saved per level above 1 (global.cfg CooldownReductionPerLevel)
     double mCooldownReductionPerLevel;
+    //! Critical chance in percent for every point of start Dexterity of the creature type (plus equipment Dexterity) (global.cfg CritChancePerDexterity)
+    double mCritChancePerDexterity;
+    //! Critical chance in percent that every creature level above 1 adds (global.cfg CritChancePerLevel)
+    double mCritChancePerLevel;
+    //! Factor on every damage value of a critical hit, applied before the target's defense (global.cfg CritDamageMultiplier)
+    double mCritDamageMultiplier;
+    //! Seconds an empty mana pool needs to refill completely (global.cfg ManaRefillSeconds)
+    double mManaRefillSeconds;
+    //! Mana a caster pays for every shot of its first MissileLaunch attack (global.cfg ManaPerCasterShot)
+    double mManaPerCasterShot;
+    //! Mana the second MissileLaunch of the Dragon costs per shot (global.cfg ManaPerDragonSecondShot)
+    double mManaPerDragonSecondShot;
+    //! Creature level at which the first skill point is earned (one point per level from there on) (global.cfg SkillPointFirstLevel)
+    uint32_t mSkillPointFirstLevel;
+    //! Highest rank of a skill (global.cfg SkillRanksPerSkill)
+    uint32_t mSkillRanksPerSkill;
+    //! Chance in percent that a skill point goes to the alternative path of the template (global.cfg SkillTemplateDeviationPercent)
+    double mSkillTemplateDeviationPercent;
+    //! Number of eaten chickens that opens the reset window (global.cfg SkillRespecChickens)
+    uint32_t mSkillRespecChickens;
+    //! Seconds the reset window stays open (global.cfg SkillRespecWindowSeconds)
+    double mSkillRespecWindowSeconds;
+    //! Calibration constant of the skill damage scaling: own MinHP divided by this value scales creature spells (global.cfg SkillSpellReferenceMinHP)
+    double mSkillSpellReferenceMinHP;
+    //! Own health fraction below which a creature uses a self heal skill (global.cfg SkillHealSelfBelow)
+    double mSkillHealSelfBelow;
+    //! Health fraction of an own creature below which an ally heal skill is used (global.cfg SkillHealAllyBelow)
+    double mSkillHealAllyBelow;
+    //! Health fraction below which own creatures count for an area heal skill (global.cfg SkillHealAreaBelow)
+    double mSkillHealAreaBelow;
+    //! Number of own creatures (self included) below the area heal limit that make a creature use an area heal skill (global.cfg SkillHealAreaMinCreatures)
+    uint32_t mSkillHealAreaMinCreatures;
+    //! The creature skill trees, tier 4 skills and templates (creatureSkills.cfg)
+    CreatureSkillTree::SkillTreeConfig mCreatureSkillTree;
+    //! Share of its gold capacity a worker gains for every Strength point above its start Strength (global.cfg GoldCarryPerStrength)
+    double mGoldCarryPerStrength;
     double mLowHealthWalkThresholdPercent;
     int32_t mHeartHealthStages;
     bool mHeartHealthStageEvents;

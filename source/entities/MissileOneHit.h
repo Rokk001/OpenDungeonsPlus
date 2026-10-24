@@ -63,6 +63,12 @@ public:
     void setCreatureDamageRange(double phyMin, double phyMax, double magMin, double magMax,
         double eleMin, double eleMax, double strength);
 
+    //! \brief Sets the critical chance in percent of the shooter at the launch. The shot rolls it when it hits (after
+    //! the hit roll and the avoidance). A shot without a chance (traps, spells) is never critical. Saved with the
+    //! launch accuracy.
+    void setShotCritChance(double chancePercent)
+    { mShotCritChance = chancePercent; }
+
     static MissileOneHit* getMissileOneHitFromStream(GameMap* gameMap, std::istream& is);
     static MissileOneHit* getMissileOneHitFromPacket(GameMap* gameMap, ODPacket& is);
 protected:
@@ -93,6 +99,8 @@ protected:
     //! \brief Accuracy and level at launch; level zero means no accuracy snapshot exists in a legacy save.
     double mShotAttackRating;
     uint32_t mShotAttackerLevel;
+    //! \brief Critical chance in percent of the shooter at launch, 0 when the shot cannot be critical.
+    double mShotCritChance;
 };
 
 #endif // MISSILEONEHIT_H

@@ -400,6 +400,18 @@ void MovableTextOverlay::setMaterialName(uint32_t childOverlayId, const Ogre::St
     childOverlay.setMaterialName(materialName);
 }
 
+void MovableTextOverlay::setOffset(uint32_t childOverlayId, Ogre::Real x, Ogre::Real y)
+{
+    if(childOverlayId >= mChildOverlays.size())
+    {
+        OD_LOG_ERR("childOverlayId=" + Helper::toString(childOverlayId));
+        return;
+    }
+
+    mChildOverlays[childOverlayId].mOffsetX = x;
+    mChildOverlays[childOverlayId].mOffsetY = y;
+}
+
 bool MovableTextOverlay::computeOverlayPositionHead(Ogre::Vector2& position, Ogre::Real& scale)
 {
     // The AABB of the target. It has to be derived rather than taken as it stands: the
@@ -511,7 +523,10 @@ void MovableTextOverlay::update(Ogre::Real timeSincelastFrame)
                 previousPosition.y + (previousHeight - relTextHeight) * 0.5);
         }
 
-        childOverlay.mOverlayContainer->setPosition(childPosition.x, childPosition.y);
+        // The offset (pixels at scale 1) moves only the drawing; the next child still centres on the unshifted box
+        childOverlay.mOverlayContainer->setPosition(
+            childPosition.x + childOverlay.mOffsetX * childOverlay.mScale / Ogre::OverlayManager::getSingleton().getViewportWidth(),
+            childPosition.y + childOverlay.mOffsetY * childOverlay.mScale / Ogre::OverlayManager::getSingleton().getViewportHeight());
         childOverlay.mOverlayContainer->setDimensions(relTextWidth, relTextHeight);
         previousPosition = childPosition;
         previousWidth = relTextWidth;

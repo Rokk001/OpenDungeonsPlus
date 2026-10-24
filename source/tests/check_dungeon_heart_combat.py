@@ -120,8 +120,8 @@ int main(){
  GameMap map;RoomDungeonTemple heart(&map,&owner);DungeonHeartObject core(&map,heart,&centre,"DungeonHeartObjectHealthy");
  heart.mTempleObject=&core;heart.mCoveredTiles={&centre,&floor};
  check(core.getSeat()==&owner,"heart entity carries room ownership");
- check(RoomDungeonTemple(&map,&owner).getHeartMaxHP()==10000&&heart.getHeartMaxHP()==10000,"the configured maximum is 10000, whatever the number of tiles");
- check(heart.getHP(nullptr)==10000&&heart.floorHP==250,"an undamaged heart has 10000, independent of the floor durability");
+ check(RoomDungeonTemple(&map,&owner).getHeartMaxHP()==15100&&heart.getHeartMaxHP()==15100,"the configured maximum is 15100, whatever the number of tiles");
+ check(heart.getHP(nullptr)==15100&&heart.floorHP==250,"an undamaged heart has 15100, independent of the floor durability");
  for(Seat* seat:{&owner,&ally,&enemy,static_cast<Seat*>(nullptr)}){
   GameEntity attacker{seat};
   check(!heart.canSeatSellBuilding(seat),"no gameplay demolition permission");
@@ -136,55 +136,77 @@ int main(){
  check(heart.takeHeartDamage(nullptr,99,0,0,0,&centre)==0,"unattributed damage rejected");
  check(heart.takeHeartDamage(&attacker,99,0,0,0,&floor)==0,"enemy cannot damage the floor");
  check(core.takeDamage(&attacker,4,5,6,7,&centre,false)==16,"actual heart entity receives damage");
- check(heart.getHP(nullptr)==9984&&heart.floorHP==250,"heart damage never reduces floor health");
+ check(heart.getHP(nullptr)==15084&&heart.floorHP==250,"heart damage never reduces floor health");
  // The research of the heart: the maximum follows the heart health factor, the current health grows with it, the healing follows its own factor
  {RoomDungeonTemple h(&map,&owner);h.mHeartHP=5000;gResearchHeartHP=1.698;h.doUpkeep();
-  check(std::abs(h.getHeartMaxHP()-16980.0)<1e-6,"the heart health research raises the maximum");
-  check(std::abs(h.getHP(nullptr)-(5000*1.698+2.5/1.4))<1e-6,"the current health grows with the maximum when a level is reached");
+  check(std::abs(h.getHeartMaxHP()-15100.0*1.698)<1e-6,"the heart health research raises the maximum");
+  check(std::abs(h.getHP(nullptr)-(5000*1.698+3.775/1.4))<1e-6,"the current health grows with the maximum when a level is reached");
   gResearchHeartHP=2.474;h.doUpkeep();
-  check(std::abs(h.getHP(nullptr)-((5000*1.698+2.5/1.4)*2.474/1.698+2.5/1.4))<1e-6,"the next level scales by the ratio of the factors");
+  check(std::abs(h.getHP(nullptr)-((5000*1.698+3.775/1.4)*2.474/1.698+3.775/1.4))<1e-6,"the next level scales by the ratio of the factors");
   gResearchHeartHP=1.0;
   RoomDungeonTemple fresh(&map,&owner);gResearchHeartHP=1.698;fresh.doUpkeep();
-  check(std::abs(fresh.getHP(nullptr)-16980.0)<1e-6,"an undamaged heart is at the new maximum");
+  check(std::abs(fresh.getHP(nullptr)-15100.0*1.698)<1e-6,"an undamaged heart is at the new maximum");
   gResearchHeartHP=1.0;
   RoomDungeonTemple mender(&map,&owner);mender.mHeartHP=1000;gResearchHeartHeal=2.0;mender.doUpkeep();
-  check(std::abs(mender.getHP(nullptr)-(1000+2*2.5/1.4))<1e-9,"the heart healing research multiplies the healing per second");
+  check(std::abs(mender.getHP(nullptr)-(1000+2*3.775/1.4))<1e-9,"the heart healing research multiplies the healing per second");
   gResearchHeartHeal=1.0;}
  check(heart.dead==0&&map.fights==1,"nonlethal hit reports combat without death");
  heart.doUpkeep();check(heart.removed==0&&heart.upkeep==1,"living heart retains all floor tiles");
- check(std::abs(heart.getHP(nullptr)-(9984+2.5/1.4))<1e-9,"a living damaged heart heals 2.5 per second, per turn 2.5 / turnsPerSecond");
- heart.mHeartHP=9984;
+ check(std::abs(heart.getHP(nullptr)-(15084+3.775/1.4))<1e-9,"a living damaged heart heals 3.775 per second, per turn 3.775 / turnsPerSecond");
+ heart.mHeartHP=15084;
  std::stringstream save;heart.exportToStream(save);save<<"[/Room]\n";
- RoomDungeonTemple loaded(&map,&owner);check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==9984,"damaged heart round trip");
+ RoomDungeonTemple loaded(&map,&owner);check(loaded.importFromStream(save)&&std::abs(loaded.getHP(nullptr)-15084)<1e-6,"damaged heart round trip by share");
  std::string next;save>>next;check(next=="[/Room]","save parser preserves room boundary");
  std::stringstream legacy("80\n[/Room]\n");RoomDungeonTemple old(&map,&owner);
- check(old.importFromStream(legacy)&&old.getHP(nullptr)==10000,"a heart without a health record starts undamaged");
+ check(old.importFromStream(legacy)&&old.getHP(nullptr)==15100,"a heart without a health record starts undamaged");
  legacy>>next;check(next=="[/Room]","legacy boundary not consumed");
- check(save.str().find("HeartHealth10000 9984")!=std::string::npos,"the health is saved as HeartHealth10000, on the scale of the fixed maximum");
+ check(save.str().find("HeartHealthShare ")!=std::string::npos&&save.str().find("HeartHealth10000")==std::string::npos,"the health is saved as the share HeartHealthShare of the maximum");
+ // New saves: the share marker reads back to the same health, also with the heart health research
+ {RoomDungeonTemple h(&map,&owner);h.mHeartHP=3775;std::stringstream s;h.exportToStream(s);s<<"[/Room]\n";
+  check(s.str().find("HeartHealthShare 0.25\n")!=std::string::npos,"a quarter of 15100 is saved as the share 0.25");
+  RoomDungeonTemple back(&map,&owner);check(back.importFromStream(s)&&back.getHP(nullptr)==3775,"a quarter heart round-trips its share");
+  RoomDungeonTemple full(&map,&owner);std::stringstream f;full.exportToStream(f);f<<"[/Room]\n";
+  check(f.str().find("HeartHealthShare 1\n")!=std::string::npos,"an undamaged heart is saved as the share 1");
+  RoomDungeonTemple ruin(&map,&owner);ruin.mHeartHP=0;std::stringstream r;ruin.exportToStream(r);r<<"[/Room]\n";
+  RoomDungeonTemple ruinBack(&map,&owner);check(r.str().find("HeartHealthShare 0\n")!=std::string::npos&&ruinBack.importFromStream(r)&&ruinBack.getHP(nullptr)==0,"a ruin is saved as the share 0 and stays a ruin");
+  gResearchHeartHP=1.698;RoomDungeonTemple big(&map,&owner);big.mHeartHP=big.getHeartMaxHP()/2;std::stringstream b;big.exportToStream(b);b<<"[/Room]\n";
+  RoomDungeonTemple bigBack(&map,&owner);check(bigBack.importFromStream(b)&&std::abs(bigBack.getHP(nullptr)-15100.0*1.698/2)<1e-6,"the share survives the heart health research");
+  gResearchHeartHP=1.0;}
+ {std::stringstream over("250\nHeartHealthShare 2\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(over)&&h.getHP(nullptr)==15100,"a share above 1 is limited to the full heart");}
+ {std::stringstream shareHalf("250\nHeartHealthShare 0.5\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(shareHalf)&&h.getHP(nullptr)==7550,"a share of one half loads as 7550");}
+ // Saves made with the former maximum of 10000: the share of that maximum is kept (divided by 10000 times the research factor)
+ {std::stringstream full10("250\nHeartHealth10000 10000\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(full10)&&h.getHP(nullptr)==15100,"a full heart of an old save (HeartHealth10000 10000) loads as 15100");}
+ {std::stringstream half10("250\nHeartHealth10000 5000\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(half10)&&h.getHP(nullptr)==7550,"a half heart of an old save loads as 7550");}
+ {gResearchHeartHP=1.698;std::stringstream fort("250\nHeartHealth10000 8490\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
+  check(h.importFromStream(fort)&&std::abs(h.getHP(nullptr)-h.getHeartMaxHP()/2)<1e-6,"an old save with the heart health research keeps its share of 10000 times the factor");gResearchHeartHP=1.0;}
  // Saves from before the heart had its own health: HeartHP was measured against the floor durability (250 here)
  {std::stringstream full("250\nHeartHP 250\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(full)&&h.getHP(nullptr)==10000,"an old save with a full heart (HeartHP equal to the floor durability) loads full");}
+  check(h.importFromStream(full)&&h.getHP(nullptr)==15100,"an old save with a full heart (HeartHP equal to the floor durability) loads full");}
  {std::stringstream half("250\nHeartHP 125\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(half)&&h.getHP(nullptr)==5000,"an old half damaged heart keeps its share of the health");}
+  check(h.importFromStream(half)&&h.getHP(nullptr)==7550,"an old half damaged heart keeps its share of the health");}
  {std::stringstream ruin("250\nHeartHP 0\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
   check(h.importFromStream(ruin)&&h.getHP(nullptr)==0,"an old destroyed heart stays destroyed");}
  {std::stringstream big("250\nHeartHealth10000 999999\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(big)&&h.getHP(nullptr)==10000,"a saved health above the maximum is limited to it");}
+  check(h.importFromStream(big)&&h.getHP(nullptr)==15100,"a saved health above the maximum is limited to it");}
  // Saves from when the heart had 10000 health per room tile (90000 for the nine tiles of these fixtures)
  {std::stringstream full("250\nHeartHealth 90000\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(full)&&h.getHP(nullptr)==10000,"a full heart of the per-tile scale stays full");}
+  check(h.importFromStream(full)&&h.getHP(nullptr)==15100,"a full heart of the per-tile scale stays full");}
  {std::stringstream half("250\nHeartHealth 45000\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(half)&&h.getHP(nullptr)==5000,"a damaged heart of the per-tile scale keeps its share");}
+  check(h.importFromStream(half)&&h.getHP(nullptr)==7550,"a damaged heart of the per-tile scale keeps its share");}
  {std::stringstream ruin("250\nHeartHealth 0\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
   check(h.importFromStream(ruin)&&h.getHP(nullptr)==0,"a ruin of the per-tile scale stays a ruin");}
  {std::stringstream big("250\nHeartHealth 999999\n[/Room]\n");RoomDungeonTemple h(&map,&owner);
-  check(h.importFromStream(big)&&h.getHP(nullptr)==10000,"a per-tile value above its maximum is limited to the full heart");}
- for(const char* text:{"250\nHeartHP -1\n", "250\nHeartHP nan\n", "250\nHeartHP nope\n", "250\nHeartHealth -1\n", "250\nHeartHealth10000 -1\n", "250\nHeartSomething 5\n"}){
+  check(h.importFromStream(big)&&h.getHP(nullptr)==15100,"a per-tile value above its maximum is limited to the full heart");}
+ for(const char* text:{"250\nHeartHP -1\n", "250\nHeartHP nan\n", "250\nHeartHP nope\n", "250\nHeartHealth -1\n", "250\nHeartHealth10000 -1\n", "250\nHeartHealthShare -1\n", "250\nHeartHealthShare nan\n", "250\nHeartSomething 5\n"}){
   std::stringstream bad(text);RoomDungeonTemple invalid(&map,&owner);check(!invalid.importFromStream(bad),"invalid health rejected");}
  {Creature worker(&enemy,true);Creature fighter(&enemy,false);
-  check(heart.takeHeartDamage(&worker,999,999,999,999,&centre)==0&&heart.getHP(nullptr)==9984,"an enemy worker cannot damage the heart");
-  check(heart.takeHeartDamage(&fighter,4,0,0,0,&centre)==4&&heart.getHP(nullptr)==9980,"an enemy fighter damages the heart");}
- check(core.takeDamage(&attacker,99999,0,0,0,&centre,false)==9980,"lethal damage clamped");
+  check(heart.takeHeartDamage(&worker,999,999,999,999,&centre)==0&&heart.getHP(nullptr)==15084,"an enemy worker cannot damage the heart");
+  check(heart.takeHeartDamage(&fighter,4,0,0,0,&centre)==4&&heart.getHP(nullptr)==15080,"an enemy fighter damages the heart");}
+ check(core.takeDamage(&attacker,99999,0,0,0,&centre,false)==15080,"lethal damage clamped");
  check(core.deaths==1&&core.getHP(nullptr)==0,"object death listeners notified");
  check(heart.dead==1&&!heart.canAttackHeart(&centre,&enemy),"death fires once and disables targeting");
  check(ownerPlayer.recorded==1&&ownerPlayer.conqueror==5&&ownerPlayer.heartX==3&&ownerPlayer.heartY==4,"owner records conqueror seat and heart tile on death");
@@ -193,22 +215,22 @@ int main(){
  check(enemy.stats.mKeepersDefeated==1&&owner.stats.mKeepersDefeated==0,"final blow counts one defeated keeper for the attacker seat only, once");
  heart.doUpkeep();check(heart.removed==0&&heart.mCoveredTiles.size()==2&&heart.objectsRemoved==1&&heart.mTempleObject==nullptr,"heart death releases only the heart object and keeps the floor");
  heart.doUpkeep();check(heart.getHP(nullptr)==0,"a destroyed heart never heals");
- {RoomDungeonTemple h(&map,&owner);h.doUpkeep();check(h.getHP(nullptr)==10000,"an undamaged heart stays at the maximum");
-  h.mHeartHP=9999.5;h.doUpkeep();check(h.getHP(nullptr)==10000,"healing stops at the maximum");
-  h.mHeartHP=1;h.doUpkeep();h.doUpkeep();check(std::abs(h.getHP(nullptr)-(1+2*2.5/1.4))<1e-9,"healing adds up turn by turn");
-  h.mCriticalWarningSent=true;h.mHeartHP=1097;h.doUpkeep();check(h.mCriticalWarningSent,"healing inside the critical range keeps the warning spent");
-  h.mHeartHP=1100;h.doUpkeep();check(!h.mCriticalWarningSent,"healing above 11 % re-arms the critical warning");}
+ {RoomDungeonTemple h(&map,&owner);h.doUpkeep();check(h.getHP(nullptr)==15100,"an undamaged heart stays at the maximum");
+  h.mHeartHP=15099.5;h.doUpkeep();check(h.getHP(nullptr)==15100,"healing stops at the maximum");
+  h.mHeartHP=1;h.doUpkeep();h.doUpkeep();check(std::abs(h.getHP(nullptr)-(1+2*3.775/1.4))<1e-9,"healing adds up turn by turn");
+  h.mCriticalWarningSent=true;h.mHeartHP=1657;h.doUpkeep();check(h.mCriticalWarningSent,"healing inside the critical range keeps the warning spent");
+  h.mHeartHP=1660;h.doUpkeep();check(!h.mCriticalWarningSent,"healing above 11 % re-arms the critical warning");}
  // The heart object follows the health tier, but a destroyed heart is only released (never rebuilt)
  {BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;h.doUpkeep();
   check(h.templeRebuilds==0,"a healthy heart keeps its object");
   h.mHeartHP=5000;h.doUpkeep();check(h.templeRebuilds==1,"a heart that fell to a lower tier is rebuilt with the matching object");
   h.mHeartHP=0;h.doUpkeep();check(h.templeRebuilds==1,"a destroyed heart is not rebuilt as a critical one");}
- // Critical-health warning (threshold 11 % of 10000 = 1100)
+ // Critical-health warning (threshold 11 % of 15100 = 1661)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};
  const char* warning="Your dungeon heart is in critical condition!";
  {server.queue.clear();BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;
-  h.takeHeartDamage(&hitter,8800,0,0,0,&centre);
-  h.takeHeartDamage(&hitter,99.9,0,0,0,&centre);
+  h.takeHeartDamage(&hitter,13300,0,0,0,&centre);
+  h.takeHeartDamage(&hitter,138.9,0,0,0,&centre);
   check(server.queue.empty(),"no warning above 11 percent");
   h.takeHeartDamage(&hitter,0.2,0,0,0,&centre);
   check(server.queue.size()==1,"exactly one warning at the threshold");
@@ -256,15 +278,16 @@ methods = '\n'.join(function(source, sig) for sig in (
     'void RoomDungeonTemple::doUpkeep(', 'void RoomDungeonTemple::exportToStream(',
     'bool RoomDungeonTemple::importFromStream('))
 methods = source[source.index('const double RoomDungeonTemple::HEART_CRITICAL_FRACTION'):source.index('RoomDungeonTemple::RoomDungeonTemple(')] + methods
-probe = probe.replace('INLINE_METHODS', inline).replace('METHODS', methods)
-probe = probe.replace('HEART_OBJECT', function(source, 'class DungeonHeartObject :'))
+# The placeholders are whole lines, so that names that contain them (e.g. the skirmish reward constants) stay untouched
+probe = probe.replace('\n INLINE_METHODS\n', '\n' + inline + '\n').replace('\nMETHODS\n', '\n' + methods + '\n')
+probe = probe.replace('\nHEART_OBJECT;\n', '\n' + function(source, 'class DungeonHeartObject :') + ';\n')
 # The reward for destroying a heart is a file-local helper called by takeHeartDamage
 # (the special objects and the room hand over are checked in check_skirmish_settings.py)
 reward = ('void placeHeartRewardSpecials(GameMap*, Seat*, Tile*) {}\n'
           'void giveHeartRewardRoomsAndLand(GameMap*, Seat*, Seat*) {}\n')
 tier_source = (repo / 'source/rooms/HeartHealthTier.cpp').read_text()
 tier = tier_source[tier_source.index('namespace'):] + '\n'
-probe = probe.replace('HEART_REWARD', tier + reward + function(source, 'void giveDestroyedHeartReward('))
+probe = probe.replace('\nHEART_REWARD\n', '\n' + tier + reward + function(source, 'void giveDestroyedHeartReward(') + '\n')
 check_heart_configuration(repo)
 if '--probe' not in sys.argv:
     print('Source checks passed; compiled probe requires --probe')

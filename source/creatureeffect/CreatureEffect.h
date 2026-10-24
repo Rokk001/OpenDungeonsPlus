@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <istream>
+#include <string>
 
 class Creature;
 
@@ -51,6 +52,15 @@ public:
 
     inline const std::string& getParticleEffectScript() const
     { return mParticleEffectScript; }
+
+    //! \brief Sets the id of the source of the effect (the id of the skill or spell that made it). A strength, speed or
+    //! defense effect that is cast again by the same source while it still runs only refreshes the running one.
+    inline void setSourceId(const std::string& sourceId)
+    { mSourceId = sourceId; }
+
+    //! \brief Returns the id of the source of the effect (see setSourceId), empty if it has none.
+    inline const std::string& getSourceId() const
+    { return mSourceId; }
 
     //! This function will be called when the effect is added to the creature
     virtual void startEffect(Creature& creature)
@@ -94,6 +104,8 @@ protected:
 
 private:
     std::string mParticleEffectScript;
+    //! \brief Id of the skill or spell that made the effect (empty when unknown)
+    std::string mSourceId;
 };
 
 #endif // CREATUREEFFECT_H

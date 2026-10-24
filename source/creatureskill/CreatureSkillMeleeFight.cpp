@@ -27,6 +27,7 @@
 #include "network/CosmeticEvent.h"
 #include "gamemap/GameMap.h"
 #include "spells/Spell.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -104,6 +105,21 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
     // attacker stay as they are, and takeDamage still runs with no damage for what it records besides the damage.
     DefenceChance::Outcome defence = DefenceChance::none;
     bool missed = false;
+    // Whether the blow is a critical hit: rolled once after the hit roll and the avoidance, never for a blow that
+    // missed or was avoided
+    bool critical = false;
+    if(attackedObject->getObjectType() != GameEntityType::creature)
+    {
+        // Buildings, doors and traps have no hit roll: the blow lands and may be critical (building damage x multiplier)
+        critical = creature->rollCritical();
+        if(critical)
+        {
+            const double criticalFactor = ConfigManager::getSingleton().getCritDamageMultiplier();
+            phyAtk *= criticalFactor;
+            magAtk *= criticalFactor;
+            eleAtk *= criticalFactor;
+        }
+    }
     if(attackedObject->getObjectType() == GameEntityType::creature)
     {
         Creature* target = static_cast<Creature*>(attackedObject);
@@ -115,7 +131,21 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
             double phyMin = mPhyMin, phyMax = mPhyMax;
             double magMin = mMagMin, magMax = mMagMax;
             double eleMin = mEleMin, eleMax = mEleMax;
-            CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax);
+            // Melee damage follows the Strength attribute level
+            CombatDamage::scale(*creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
+                creature->getStrengthLevel(), "dmg%");
+            // An armed blow of a skill multiplies the damage before the defense; blows against buildings keep it
+            const double strikeFactor = creature->consumeStrikeMultiplier();
+            phyMin *= strikeFactor;
+            phyMax *= strikeFactor;
+            magMin *= strikeFactor;
+            magMax *= strikeFactor;
+            eleMin *= strikeFactor;
+            eleMax *= strikeFactor;
+            // A critical hit multiplies every damage value before the defense of the target is subtracted
+            critical = creature->rollCritical();
+            if(critical)
+                CombatDamage::applyCriticalToRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax);
             uint32_t weaponCooldown = 0;
             const Weapon* weapons[] = {creature->getWeaponL(), creature->getWeaponR()};
             for(const Weapon* weapon : weapons)
@@ -165,7 +195,7 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
         else if(defence != DefenceChance::none)
             target->fireHitDefended(creature->getName(), defence);
         else
-            target->fireHitResult(creature->getName(), damageDone, rawDamage, false);
+            target->fireHitResult(creature->getName(), damageDone, rawDamage, false, critical);
         CosmeticEvent event(CosmeticEventType::meleeResult);
         event.mSubject = creature->getName();
         event.mObject = target->getName();
@@ -173,6 +203,12 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
         event.mValue2 = static_cast<int32_t>(share * 1000.0 + 0.5);
         event.mPosition = target->getPosition();
         target->fireCosmeticEvent(event, false);
+    }
+    else if(critical && (damageDone > 0.0) && (attackedTile != nullptr))
+    {
+        // A critical blow on a building: the feedback plays on the attacker
+        creature->fireCriticalOnStructure("melee", Ogre::Vector3(static_cast<Ogre::Real>(attackedTile->getX()),
+            static_cast<Ogre::Real>(attackedTile->getY()), 0.0f));
     }
     if(notifyPlayerIfHit)
         attackedObject->notifyFightPlayer(attackedTile);

@@ -7,13 +7,13 @@ def check_heart_configuration(repo):
     """Verify configured health and its unchanged independent building damage path."""
     rooms = (repo / 'config/rooms.cfg').read_text()
     values = re.findall(r'^\s*DungeonHeartHP\s+(\S+)', rooms, re.M)
-    assert len(values) == 1 and float(values[0]) == 10000.0, 'configured heart health'
+    assert len(values) == 1 and float(values[0]) == 15100.0, 'configured heart health'
     source = (repo / 'source/rooms/RoomDungeonTemple.cpp').read_text()
     assert '#include "utils/ConfigManager.h"' in source, 'heart configuration requires its complete declaration'
-    assert 'getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0)' in source
+    assert 'getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in source
     # The heal rate and the research of the heart health and healing come from the configuration and skills.cfg
     values = re.findall(r'^\s*DungeonHeartHealPerSecond\s+(\S+)', rooms, re.M)
-    assert len(values) == 1 and float(values[0]) == 2.5, 'configured heart healing'
+    assert len(values) == 1 and float(values[0]) == 3.775, 'configured heart healing'
     assert 'getRoomConfigDouble("DungeonHeartHealPerSecond")' in source
     assert 'HEART_HEAL_PER_SECOND' not in source
     assert 'ResearchEffect::HeartHP' in source and 'ResearchEffect::HeartHeal' in source
@@ -22,7 +22,7 @@ def check_heart_configuration(repo):
     assert 'magicalDamage - getMagicalDefense()' in source
     assert 'elementDamage - getElementDefense()' in source
     assert 'attacker == nullptr || !canAttackHeart(' in source
-    assert 'HeartHealth10000' in source and 'getHeartMaxHP()' in source
+    assert 'HeartHealthShare' in source and 'HeartHealth10000' in source and 'getHeartMaxHP()' in source
     building = (repo / 'source/entities/Building.cpp').read_text()
     assert re.search(r'Building::DEFAULT_TILE_HP\s*=\s*10\.0', building)
 
@@ -33,7 +33,7 @@ def configure_heart_probe(probe):
  // Return the checked default health without loading unrelated game configuration.
  double getRoomConfigDoubleOrDefault(const std::string&, double fallback) const { return fallback; }
  // Return the configured heal rate (the only room value the heart reads with this getter).
- double getRoomConfigDouble(const std::string& key) const { return key == "DungeonHeartHealPerSecond" ? 2.5 : 0.0; }
+ double getRoomConfigDouble(const std::string& key) const { return key == "DungeonHeartHealPerSecond" ? 3.775 : 0.0; }
 '''
     # The research of the heart: the fixture skill manager applies a factor per effect (1 = no research); the skill
     # type arguments of the production code are replaced by a plain number because the fixtures declare no skill types

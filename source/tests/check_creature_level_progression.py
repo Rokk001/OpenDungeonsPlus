@@ -50,9 +50,13 @@ sys.path.insert(0, str(root / 'tools/balance'))
 from combat_sim import Roster, combat_stat, multiplier
 
 build_stats = function(source, 'void Creature::buildStats()')
-assert 'CreatureProgression::hpMultiplier' in build_stats
+# Hit points use the Life attribute level (equal to the creature level without equipment); the three channel
+# defenses keep the creature level
+assert 'CreatureProgression::hpMultiplierAt' in build_stats
+assert 'getLifeLevel()' in build_stats
+assert build_stats.count('CreatureProgression::combatStatAt(') == 1
 assert build_stats.count('CreatureProgression::damageMultiplier') == 3
-assert build_stats.count('CreatureProgression::combatStat(') == 4
+assert build_stats.count('CreatureProgression::combatStat(') == 3
 for member, getter in (('mDigRate', 'getDigRatePerLevel'), ('mClaimRate', 'getClaimRatePerLevel'),
                        ('mGroundSpeed', 'getGroundSpeedPerLevel'), ('mWaterSpeed', 'getWaterSpeedPerLevel'),
                        ('mLavaSpeed', 'getLavaSpeedPerLevel')):
@@ -122,6 +126,9 @@ struct Creature {
  double mDigRate=0,mClaimRate=0,mGroundSpeed=0,mWaterSpeed=0,mLavaSpeed=0,mPhysicalDefense=0,mMagicalDefense=0,mElementDefense=0;
  bool mNeedFireRefresh=false;
  unsigned getLevel(){return mLevel;}std::string getName(){return "probe";}
+ double getLifeLevel(){return mLevel;}double getSkillPassive(const std::string&){return 0.0;}
+ // Mana and skill point hooks of setLevel/buildStats; the probe has no passives, skills or mana pool.
+ double mMana=0;void setCurrentMana(double mana){mMana=mana;}void updateSkillPoints(){}void applyMovePassive(){}
  void buildStats();void setLevel(unsigned);void checkLevelUp();void receiveExp(double);
 };
 METHODS

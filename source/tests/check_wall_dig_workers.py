@@ -71,15 +71,15 @@ for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
 # Per-worker mining: other walls are dug by the dig rate of the worker, a gold wall pays gold per step (not
 # depending on the worker), the last step pays what is left and the worker carries the whole part of the gold
 # (the fraction stays in its remainder).
-assert "tileDig.digOut(creature.getDigRate())" in dig
-assert "tileDig.digOutGold()" in dig
+assert "tileDig.digOut(creature.getDigRate() * digFactor * criticalFactor)" in dig
+assert "tileDig.digOutGold(digFactor * criticalFactor)" in dig
 assert "payMinedGold(creature, tileDig, amountDug)" in dig
-assert "payMinedGold(creature, tileDig, gemGoldPerDigStep)" in dig
+assert "payMinedGold(creature, tileDig, gemGoldPerDigStep * digFactor * criticalFactor)" in dig
 assert "creature.addGoldCarriedFraction(gold)" in dig
 assert "digCoefGold" not in dig and "digCoefGem" not in dig
 assert "digRateScaled = mFullness" in tile
-assert "double Tile::digOutGold()" in tile
-assert "return remaining;" in tile[tile.index("double Tile::digOutGold()"):]
+assert "double Tile::digOutGold(double stepFactor)" in tile
+assert "return remaining;" in tile[tile.index("double Tile::digOutGold(double stepFactor)"):]
 assert value(config, "GoldPerSeamTile") == 3000
 assert value(config, "GoldPerDigStep") == 25
 assert value(config, "GemGoldPerDigStep") == 16.67

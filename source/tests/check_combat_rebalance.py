@@ -8,11 +8,15 @@ import os
 from pathlib import Path
 import random
 import re
+import statistics
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/balance"))
-from combat_sim import Roster, building_stat, combat_stat, damage_bounds, duel_turns, evaluate, hit_chance, multiplier
+from combat_sim import (CASES_MATRIX, TURNS_PER_SECOND, Roster, World, building_stat, combat_stat, damage_bounds, duel_turns,
+                        evaluate, hit_chance, multiplier, world_class_means, world_matrix, world_roles, world_rule_one,
+                        world_verify)
 
 # Approved level-one roster: health, healing, sleep, ratings, six damage endpoints and avoidance.
 EXPECTED = """
@@ -154,8 +158,8 @@ def check_buildings(roster):
             damage = sum(building_stat(float(attack[start + 2 * channel]) + float(attack[start + 2 * channel + 1]), float(attack[start + 2 * channel + 1]), level) for channel in range(3))
             assert math.isclose(damage, wanted, abs_tol=1e-9), (name, level, damage, wanted)
     rooms = read("config/rooms.cfg")
-    assert re.search(r"^\s*DungeonHeartHP\s+10000\s*$", rooms, re.M)
-    assert 'ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0)' in read("source/rooms/RoomDungeonTemple.cpp")
+    assert re.search(r"^\s*DungeonHeartHP\s+15100\s*$", rooms, re.M)
+    assert 'ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in read("source/rooms/RoomDungeonTemple.cpp")
     assert re.search(r"DEFAULT_TILE_HP\s*=\s*10(?:\.0)?\s*;", read("source/entities/Building.cpp"))
 
 
@@ -197,7 +201,7 @@ def check_sources():
     assert hurt.index("rollAttackHit(") < hurt.index("rollMeleeDefence(true)") < hurt.index("CombatDamage::roll(")
     assert "mHasCreatureDamageRange && entity->getObjectType() == GameEntityType::creature" in hurt
     assert "takeDamage(this, damage, 0.0, 0.0, 0.0" in hurt
-    assert "takeDamage(this, 0.0, mPhysicalDamage, mMagicalDamage, mElementDamage" in hurt
+    assert "takeDamage(this, 0.0, mPhysicalDamage * criticalFactor, mMagicalDamage * criticalFactor" in hurt
     for signature in ("void MissileOneHit::exportToStream(", "bool MissileOneHit::importFromStream("):
         body = function(missile, signature)
         assert body.index("CreatureDamageRange") < body.index("ShotAccuracy"), signature
@@ -231,7 +235,7 @@ def check_other_damage(roster):
         "spells": {"LightningDamageMin": 20.5, "LightningDamage": 30.75, "TremorDamageMin": 13.67,
                    "TremorDamage": 20.5, "InfernoDamagePerTurnMin": 39.05, "InfernoDamagePerTurn": 58.57,
                    "CreatureHealValue": 10.25},
-        "rooms": {"PrisonDamagePerTurnMin": .082, "PrisonDamagePerTurn": .123, "DungeonHeartHP": 10000,
+        "rooms": {"PrisonDamagePerTurnMin": .082, "PrisonDamagePerTurn": .123, "DungeonHeartHP": 15100,
                   "HatcheryHpRecoveredPerChicken": 10.25, "HatcheryGiftHpRecoveredPerChicken": 4.1},
         "traps": {"BoulderDamagePerHitMin": 205, "BoulderDamagePerHitMax": 246,
                   "CannonDamagePerHitMin": 20.5, "CannonDamagePerHitMax": 30.75,
@@ -293,6 +297,83 @@ def check_simulation(roster):
     print("Simulation: 32 fighters, 150 seeded duels per pair, 60 fights per level comparison")
 
 
+# Thresholds of the attribute simulation (the random spread of one run is about 0.02).
+CLASS_MEAN_RANGE = (0.40, 0.60)
+TYPE_MEAN_RANGE = (0.28, 0.70)
+SINGLE_TEMPLATE_RANGE = (0.25, 0.72)
+RULE_TWO_LEVEL_TEN = 0.8
+RULE_TWO_LEVEL_TEN_DRAGON = 0.6
+RULE_TWO_LEVEL_THIRTY = 0.95
+RULE_FOUR_RATIO = 0.97
+RULE_FOUR_RATIO_EXCEPTIONS = {"Goblin": 0.82, "Cultist": 0.82, "Dwarf2": 0.82, "Knight": 0.82}
+
+
+# Check the attribute simulation of tools/balance/combat_sim.py (attribute levels, critical hits, mana, skill templates)
+# against the balance rules. Every value comes from the configuration files; nothing here is tuned to the result.
+def check_world_simulation(roster):
+    started = time.time()
+    world = World(roster)
+    # The model constants that are not in a config file match the production source and the level-constant avoidance.
+    application = read("source/ODApplication.cpp")
+    assert float(re.search(r"double ODApplication::turnsPerSecond = ([0-9.]+);", application).group(1)) == TURNS_PER_SECOND
+    for key in ("DodgePerLevel", "ParryPerLevel", "ShieldBlockPerLevel"):
+        assert world.glob[key] == 0, key
+    # Point order: no points below level 10, one point at level 10, the tier four skill only at level 30.
+    assert world.allocation("Orc", 9, 0, True) == ({}, False)
+    assert sum(world.allocation("Orc", 10, 0, True)[0].values()) == 1
+    ranks, ult = world.allocation("Orc", 29, 0, True)
+    assert sum(ranks.values()) == 20 and not ult
+    ranks, ult = world.allocation("Orc", 30, 0, True)
+    assert sum(ranks.values()) == 20 and ult, "20 points are spent, the 21st point is the tier four skill"
+    assert world.allocation("Lich", 1, 0, False) == ({"UND_1": 1}, False), "the pre-skill is free at level 1"
+    # Per-type matrix: the single creature against two of half its wage, level 1 without skills and levels 10, 20, 30
+    # with each of the three templates.
+    matrices = {case: world_matrix(world, *case) for case in CASES_MATRIX}
+    rows, _ = world_roles(matrices)
+    assert len(rows) == 25 and all(len(matrices[case]) == len(matrices[CASES_MATRIX[0]]) for case in CASES_MATRIX)
+    low, high = TYPE_MEAN_RANGE
+    for name, cases in sorted(rows.items()):
+        assert low <= cases[(1, -1)] <= high, ("level 1", name, cases[(1, -1)])
+        for level in (10, 20, 30):
+            mean = statistics.mean(cases[(level, template)] for template in (0, 1, 2))
+            assert low <= mean <= high, ("template mean", name, level, mean)
+            for template in (0, 1, 2):
+                assert SINGLE_TEMPLATE_RANGE[0] <= cases[(level, template)] <= SINGLE_TEMPLATE_RANGE[1], ("template", name, level, template, cases[(level, template)])
+    singles = [value for cases in rows.values() for value in cases.values()]
+    # Class means: every case, the wages 100, 200 and 400.
+    means = world_class_means(world)
+    assert len(means) == 12
+    for case, row in means.items():
+        for wage, value in row.items():
+            assert CLASS_MEAN_RANGE[0] <= value <= CLASS_MEAN_RANGE[1], ("class mean", case, wage, value)
+    # Rule 2 (level 10 against three at level 5, level 30 against three at level 15) and rule 4 (fight length at level 30
+    # against level 10).
+    groups, lengths = world_verify(world)
+    for name, (wins10, wins30) in groups.items():
+        needed = RULE_TWO_LEVEL_TEN_DRAGON if name == "Dragon" else RULE_TWO_LEVEL_TEN
+        assert wins10 >= needed, ("rule 2 level 10", name, wins10)
+        assert wins30 >= RULE_TWO_LEVEL_THIRTY, ("rule 2 level 30", name, wins30)
+    for name, (_, turns10, turns30) in lengths.items():
+        assert turns30 / turns10 >= RULE_FOUR_RATIO_EXCEPTIONS.get(name, RULE_FOUR_RATIO), ("rule 4", name, turns10, turns30)
+    # Rule 1: the worker survives the largest critical blow of a level-1 fighter of wage 50 to 200, also under the keeper's
+    # Strength spell at research level 3 (spell value and research factor are read from the configuration).
+    spell = float(re.search(r"^\s*CreatureStrengthValue\s+(\S+)", read("config/spells.cfg"), re.M).group(1))
+    factor = float(re.search(r"^\s*spellCreatureStrength\s+Factor\s+dev\s+\S+\s+\S+\s+(\S+)", read("config/skills.cfg"), re.M).group(1))
+    strength = 1 + (spell - 1) * factor
+    worker_hp, worst, by = world_rule_one(world)
+    assert worker_hp == 62, worker_hp
+    assert math.isclose(strength, 1.2) and worst * strength < worker_hp, (worst, strength, worker_hp, by)
+    print("Attribute simulation: class means %.3f-%.3f, level 1 and template means per type %.2f-%.2f, single templates %.2f-%.2f"
+          % (min(v for row in means.values() for v in row.values()), max(v for row in means.values() for v in row.values()),
+             min(min(cases[(1, -1)], *[statistics.mean(cases[(level, t)] for t in (0, 1, 2)) for level in (10, 20, 30)]) for cases in rows.values()),
+             max(max(cases[(1, -1)], *[statistics.mean(cases[(level, t)] for t in (0, 1, 2)) for level in (10, 20, 30)]) for cases in rows.values()),
+             min(singles), max(singles)))
+    print("Rule 2: level 10 vs 3x5 at least %.3f, level 30 vs 3x15 at least %.3f; rule 4: turns level 30 / level 10 at least %.3f; "
+          "rule 1: worker %g hit points, largest critical blow %.2f x %.2f (%s); %.0f seconds"
+          % (min(v[0] for v in groups.values()), min(v[1] for v in groups.values()),
+             min(v[2] / v[1] for v in lengths.values()), worker_hp, worst, strength, by, time.time() - started))
+
+
 # Execute the checks as pure Python; production C++ is inspected, never compiled.
 def main():
     roster = Roster(ROOT)
@@ -302,6 +383,7 @@ def main():
     check_sources()
     check_other_damage(roster)
     check_simulation(roster)
+    check_world_simulation(roster)
     print("check_combat_rebalance: ok")
 
 

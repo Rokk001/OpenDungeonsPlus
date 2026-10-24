@@ -45,27 +45,20 @@ const std::string& CreatureEffectSpeedChange::getEffectName() const
     return CreatureEffectSpeedChangeName;
 }
 
+//! \brief Keeps the factor of this effect in the speed modifier of the creature (the modifier is the product of the
+//! factors of all running speed effects, so effects from different sources add up and end on their own).
 void CreatureEffectSpeedChange::applyEffect(Creature& creature)
 {
     if(!creature.isAlive())
         return;
 
-    if(mEffectValue == 1.0)
-        return;
-
-    creature.setMoveSpeedModifier(mEffectValue);
-    mEffectValue = 1.0;
+    creature.setSpeedContribution(this, mEffectValue);
 }
 
+//! \brief Takes only the factor of this effect out of the speed modifier of the creature.
 void CreatureEffectSpeedChange::releaseEffect(Creature& creature)
 {
-    //FIXME: sanitizer reports that this is called at least once on something that is not a creature.
-    if(!creature.isAlive())
-        return;
-
-    creature.clearMoveSpeedModifier();
-    mEffectValue = 1.0;
-
+    creature.removeSpeedContribution(this);
 }
 
 CreatureEffectSpeedChange* CreatureEffectSpeedChange::load(std::istream& is)

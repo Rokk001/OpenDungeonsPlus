@@ -394,6 +394,13 @@ static RoomRegister reg(new RoomDungeonTempleFactory);
 
 const double RoomDungeonTemple::HEART_CRITICAL_FRACTION = 0.11;
 
+// Heart health that saves from before the share marker counted on (the HeartHealth10000 marker held
+// the health on the scale of this fixed maximum, multiplied by the heart health research of the owner).
+static const double LEGACY_HEART_HEALTH_SCALE = 10000.0;
+
+// Digits written for the HeartHealthShare marker, enough to read back the same double.
+static const int HEART_SHARE_PRECISION = 17;
+
 // The treasury ring of a 5x5 heart stores a fixed amount of gold per ring tile
 // (H6/R8). Unlike a treasury room this is not raised by the treasury skill:
 // the ring is part of the heart, not a buildable treasury.
@@ -433,7 +440,7 @@ double RoomDungeonTemple::getHeartHPFactor() const
 //! \brief The health of an undamaged heart: the configured value times the factor of the heart health research.
 double RoomDungeonTemple::getHeartMaxHP() const
 {
-    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 10000.0) * getHeartHPFactor();
+    return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0) * getHeartHPFactor();
 }
 
 double RoomDungeonTemple::getHeartHealthFraction() const
@@ -597,14 +604,20 @@ void RoomDungeonTemple::doUpkeep()
     announceKeeperWealth(getHeartTile());
 }
 
+//! \brief Writes the room and the health of the heart as its share (0 to 1) of the maximum of the owner.
 void RoomDungeonTemple::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
     if(!getGameMap()->isInEditorMode())
-        os << "HeartHealth10000 " << getHP(nullptr) << '\n';
+    {
+        const std::streamsize oldPrecision = os.precision(HEART_SHARE_PRECISION);
+        os << "HeartHealthShare " << getHeartHealthFraction() << '\n';
+        os.precision(oldPrecision);
+    }
 }
 
 //! \brief Reads the room and the health of the heart; the health is limited to the maximum of the owner.
+//! Saves before the share marker hold the health on the scale of the former maximum (HeartHealth10000).
 bool RoomDungeonTemple::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
@@ -620,8 +633,10 @@ bool RoomDungeonTemple::importFromStream(std::istream& is)
         double value;
         if(!(is >> marker >> value) || !std::isfinite(value) || value < 0.0)
             return false;
-        if(marker == "HeartHealth10000")
-            mHeartHP = std::min(value, getHeartMaxHP());
+        if(marker == "HeartHealthShare")
+            mHeartHP = std::min(1.0, std::max(0.0, value)) * getHeartMaxHP();
+        else if(marker == "HeartHealth10000")
+            mHeartHP = std::min(1.0, value / (LEGACY_HEART_HEALTH_SCALE * getHeartHPFactor())) * getHeartMaxHP();
         else if(marker == "HeartHealth")
         {
             // Saves from when the heart had 10000 health per room tile: keep the same share of

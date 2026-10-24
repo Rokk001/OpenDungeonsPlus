@@ -16,21 +16,22 @@ target discovery. The ordinary room target/damage and sale paths reject the
 heart's floor. Actual heart death releases the room through the existing cleanup
 and last-temple defeat paths. Editor tile removal remains available.
 
-The heart's health is its own pool with a fixed maximum of 10000
-(`RoomDungeonTemple::HEART_MAX_HP`), whatever the number of tiles of the room. It
+The heart's health is its own pool with a fixed maximum of 15100
+(`DungeonHeartHP` in rooms.cfg), whatever the number of tiles of the room. It
 no longer comes from the floor tiles' durability (9 tiles of 10, so 90 in all,
 which one strong blow destroyed while the ring barely moved). The top-left ring
 shows the remaining health divided by this maximum. Only fighters damage an
 enemy heart: `takeHeartDamage` ignores worker creatures, and a worker given a
 non-creature target drops its fight action. A tagged optional room record saves
-the remaining heart health as `HeartHealth10000`; files without it load with an
-undamaged heart. Older saves are converted by share, so a full heart stays full
-and a ruin stays a ruin: the record `HeartHealth` (10000 per room tile, 90000
+the remaining heart health as its share of the maximum, `HeartHealthShare` (0 to 1); files
+without it load with an undamaged heart. Older saves are converted by share, so a full heart stays full
+and a ruin stays a ruin: the record `HeartHealth10000` (health on the scale of the former maximum
+10000, divided by 10000 times the heart health research factor), the record `HeartHealth` (10000 per room tile, 90000
 for a 3 by 3 heart) is divided by that old maximum, and the record `HeartHP`,
 which measured the health against the floor durability, by the durability
-(`HeartHP 90` of 90 becomes 10000, `HeartHP 0` stays a ruin).
-A living heart heals 2.5 per second (`HEART_HEAL_PER_SECOND`, added as
-`2.5 / turnsPerSecond` in every `doUpkeep`) up to the maximum; a destroyed heart
+(`HeartHP 90` of 90 becomes the full 15100, `HeartHP 0` stays a ruin).
+A living heart heals 3.775 per second (`DungeonHeartHealPerSecond`, added as
+`3.775 / turnsPerSecond` in every `doUpkeep`) up to the maximum; a destroyed heart
 (0) never heals. Unrelated resource rewards are not part of it.
 
 ## Verification

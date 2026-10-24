@@ -140,7 +140,7 @@ struct Creature {
   for(auto* tile:tiles){if(skip){skip=false;continue;}path.push_back({float(tile->x),float(tile->y)});}
  }
  bool decreaseJobCooldown(){if(cooldown>0){--cooldown;return false;}return true;}
- void popAction(){++popped;}void foodEaten(double value){food+=value;}
+ void popAction(){++popped;}void foodEaten(double value){food+=value;}void registerChickenEaten(){}
  void setJobCooldown(int value){cooldown=value;}double getHP()const{return hp;}void setHP(double value){hp=value;}
  void computeCreatureOverlayHealthValue(){}void fireChickenFeeding(const std::string&,const Ogre::Vector3&){++feeding;}
  void clearDestinations(const std::string& state,bool,bool){walk.clear();animation=state;}

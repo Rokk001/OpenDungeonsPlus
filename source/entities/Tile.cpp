@@ -1859,8 +1859,9 @@ void Tile::finishDigOut()
 }
 
 //! \brief Mines one dig step from a gold wall. The remaining gold is the fullness share of the tile total; the step
-//! takes GoldPerDigStep x density / 100 x skirmish gold setting / 100 of it, the last step takes what is left.
-double Tile::digOutGold()
+//! takes GoldPerDigStep x density / 100 x skirmish gold setting / 100 x stepFactor of it, the last step takes what is
+//! left. The stepFactor is the dig% factor of the worker and, on a critical step, the critical damage multiplier.
+double Tile::digOutGold(double stepFactor)
 {
     if((getType() != TileType::gold) || (getTileVisual() != TileVisual::goldFull))
     {
@@ -1880,7 +1881,7 @@ double Tile::digOutGold()
 
     double skirmishPercent = static_cast<double>(getGameMap()->getGoldDensityPercent());
     double step = ConfigManager::getSingleton().getGoldPerDigStep() * static_cast<double>(mGoldDensity) / 100.0 *
-        skirmishPercent / 100.0;
+        skirmishPercent / 100.0 * stepFactor;
     double remaining = mFullness / 100.0 * total;
     if((remaining - step) <= GOLD_REMAINING_EPSILON)
     {

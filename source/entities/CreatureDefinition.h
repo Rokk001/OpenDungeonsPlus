@@ -218,6 +218,34 @@ public:
     }
     //! \brief Factor on every damage the skills of this type deal (Explosion, HailStorm, GasCloud, Grenade, GuidedBolt)
     inline double               getSkillDamageFactor () const   { return mSkillDamageFactor; }
+    //! \brief Returns the start value of Strength (level 1, without equipment).
+    inline double getStrength() const { return mStrength; }
+    //! \brief Returns the start value of Dexterity.
+    inline double getDexterity() const { return mDexterity; }
+    //! \brief Returns the start value of Life.
+    inline double getLife() const { return mLife; }
+    //! \brief Returns the start value of Mana.
+    inline double getMana() const { return mMana; }
+    //! \brief Returns the Strength points gained per level.
+    inline double getStrengthPerLevel() const { return mStrengthPerLevel; }
+    //! \brief Returns the Dexterity points gained per level.
+    inline double getDexterityPerLevel() const { return mDexterityPerLevel; }
+    //! \brief Returns the Life points gained per level.
+    inline double getLifePerLevel() const { return mLifePerLevel; }
+    //! \brief Returns the Mana points gained per level.
+    inline double getManaPerLevel() const { return mManaPerLevel; }
+    //! \brief Returns the mana pool size per Mana point.
+    inline double getManaPerPoint() const { return mManaPerPoint; }
+    //! \brief Returns the critical chance bonus in percent of this type.
+    inline double getCritChanceBonus() const { return mCritChanceBonus; }
+    //! \brief Returns the skill group (blocker, blitzer, flanker, archer, caster, worker or none).
+    inline const std::string& getSkillGroup() const { return mSkillGroup; }
+    //! \brief Returns the skill family id (greenskin, dwarf, ... or none).
+    inline const std::string& getSkillFamily() const { return mSkillFamily; }
+    //! \brief Returns the id of the skill that has rank 1 from level 1 for free (or none).
+    inline const std::string& getPreSkill() const { return mPreSkill; }
+    //! \brief Returns the id of the tier 4 skill of this type (or none).
+    inline const std::string& getTierFourSkill() const { return mTierFourSkill; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -259,6 +287,11 @@ public:
     inline double               getMagicalDefPerLevel () const  { return mMagicalDefPerLevel; }
     inline double               getElementDefense  () const     { return mElementDefense; }
     inline double               getElementDefPerLevel () const  { return mElementDefPerLevel; }
+
+    //! \brief Tells whether the given skill is the first attack line of this type: the first Melee or MissileLaunch
+    //! line of its skill list. The first MissileLaunch line of a type without bow is its spell attack.
+    //! \param skill The skill to test.
+    bool isFirstAttackSkill(const CreatureSkill* skill) const;
 
     //! \brief Returns the natural attack rating at level one.
     inline double getAttackRating() const { return mAttackRating; }
@@ -342,6 +375,48 @@ private:
     //! \brief Optional (SkillDamageFactor): factor on every damage the skills of this type deal (Explosion, HailStorm,
     //! GasCloud, Grenade, GuidedBolt). 1 when not set
     double mSkillDamageFactor;
+
+    //! \brief Optional (Strength): start value of Strength (level 1, without equipment). Default 20.0 when not set
+    double mStrength;
+
+    //! \brief Optional (Dexterity): start value of Dexterity. Default 20.0 when not set
+    double mDexterity;
+
+    //! \brief Optional (Life): start value of Life. Default 20.0 when not set
+    double mLife;
+
+    //! \brief Optional (Mana): start value of Mana. Default 20.0 when not set
+    double mMana;
+
+    //! \brief Optional (StrengthPerLevel): Strength points gained per level. Default 1.0 when not set
+    double mStrengthPerLevel;
+
+    //! \brief Optional (DexterityPerLevel): Dexterity points gained per level. Default 2.0 when not set
+    double mDexterityPerLevel;
+
+    //! \brief Optional (LifePerLevel): Life points gained per level. Default 1.0 when not set
+    double mLifePerLevel;
+
+    //! \brief Optional (ManaPerLevel): Mana points gained per level. Default 1.0 when not set
+    double mManaPerLevel;
+
+    //! \brief Optional (ManaPerPoint): mana pool size per Mana point. Default 1.5 when not set
+    double mManaPerPoint;
+
+    //! \brief Optional (CritChanceBonus): critical chance bonus in percent of this type. Default 0.0 when not set
+    double mCritChanceBonus;
+
+    //! \brief Optional (SkillGroup): skill group (blocker, blitzer, flanker, archer, caster, worker or none). Default "none" when not set
+    std::string mSkillGroup;
+
+    //! \brief Optional (SkillFamily): skill family id (greenskin, dwarf, ... or none). Default "none" when not set
+    std::string mSkillFamily;
+
+    //! \brief Optional (PreSkill): id of the skill that has rank 1 from level 1 for free (or none). Default "none" when not set
+    std::string mPreSkill;
+
+    //! \brief Optional (TierFourSkill): id of the tier 4 skill of this type (or none). Default "none" when not set
+    std::string mTierFourSkill;
 
     //! \brief The name of the creatures class
     std::string mClassName;

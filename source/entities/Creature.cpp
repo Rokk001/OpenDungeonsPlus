@@ -55,6 +55,7 @@
 #include "creaturemood/CreatureMoodManager.h"
 #include "creaturemood/CreatureMoodOutOfWork.h"
 #include "creatureskill/CreatureSkill.h"
+#include "creatureskill/CreatureSkillManager.h"
 #include "creatureskill/CreatureSkillMeleeFight.h"
 
 
@@ -141,6 +142,10 @@
 #include <cmath>
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
+#include <iomanip>
+#include <sstream>
+#include <utility>
 
 
 
@@ -234,6 +239,53 @@ uint32_t getAppearanceRandom(uint32_t min, uint32_t max)
 {
     return Random::Uint(min, max);
 }
+
+//! \brief Name of the token that starts the saved skill state of a creature in the creature stream.
+static const std::string SKILL_BUILD_MARKER = "SkillTree";
+//! \brief Highest personal skill seed (the seed is a random number from 1 to this value).
+static const uint32_t SKILL_SEED_MAX = 0xFFFFFFFFu;
+//! \brief Sort positions of the skills of the skill tree in the skill list of a creature.
+static const uint32_t TREE_SKILL_PRIORITY_TIER_FOUR = 0;
+static const uint32_t TREE_SKILL_PRIORITY_HEAL = 1;
+static const uint32_t TREE_SKILL_PRIORITY_BUFF = 2;
+static const uint32_t TREE_SKILL_PRIORITY_DEBUFF = 3;
+static const uint32_t TREE_SKILL_PRIORITY_DAMAGE = 4;
+//! \brief Prefixes of the kind tokens of the skill table that decide the sort position of a skill.
+static const std::string TREE_KIND_HEAL = "HEAL_";
+static const std::string TREE_KIND_BUFF = "BUFF_SELF_";
+static const std::string TREE_KIND_AURA = "AURA_ALLY_";
+static const std::string TREE_KIND_STRIKE = "STRIKE";
+static const std::string TREE_KIND_DEBUFF = "DEBUFF_";
+//! \brief Text of a type key that means the type has no such skill entry.
+static const std::string SKILL_KEY_NONE = "none";
+//! \brief Names of the effects whose strength, speed or defense factor stacks with other sources.
+static const std::string EFFECT_NAME_STRENGTH = "StrengthChange";
+static const std::string EFFECT_NAME_SPEED = "SpeedChange";
+static const std::string EFFECT_NAME_DEFENSE = "Defense";
+
+//! \brief Returns the text of a skill key of a creature type, empty when it is "none".
+static std::string skillTextOrEmpty(const std::string& text)
+{
+    if(text == SKILL_KEY_NONE)
+        return std::string();
+    return text;
+}
+
+//! \brief Returns the key under which a running strength, speed or defense effect is refreshed instead of added: the
+//! id of its source (skill or spell), else its particle script (which names the spell).
+static std::string effectRefreshKey(const CreatureEffect& effect)
+{
+    if(!effect.getSourceId().empty())
+        return effect.getSourceId();
+    return effect.getParticleEffectScript();
+}
+
+//! \brief True for the effects whose factor stacks with other effects (strength, speed and defense).
+static bool isStackingEffect(const CreatureEffect& effect)
+{
+    const std::string& name = effect.getEffectName();
+    return name == EFFECT_NAME_STRENGTH || name == EFFECT_NAME_SPEED || name == EFFECT_NAME_DEFENSE;
+}
 }
 
 //! \brief Lowest ratio between the speed of the tile under a creature and its ground speed (see getTileSpeedRatio)
@@ -261,6 +313,22 @@ static const uint32_t MAX_PATH_CHECK_TARGET_TRIES = 5;
 
 const int32_t Creature::NB_TURNS_BEFORE_CHECKING_TASK = 15;
 const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
+//! \brief The mana ring is an atlas of 64 frames (0 empty .. 63 full): steps 0..63 of the current/max mana share
+const uint32_t Creature::MANA_RING_STEPS = 63;
+//! \brief Label in front of the current mana in a creature save, so it cannot be mistaken for the appearance token
+static const std::string MANA_SAVE_LABEL = "Mana=";
+
+//! \brief Returns the mana ring step 0 .. Creature::MANA_RING_STEPS for a mana value: floor(mana / maxMana x steps).
+//! \param mana The current mana.
+//! \param maxMana The size of the mana pool; a pool of 0 or less counts as empty.
+static uint32_t manaRingStep(double mana, double maxMana)
+{
+    if(maxMana <= 0.0)
+        return 0;
+
+    const double share = std::max(0.0, std::min(1.0, mana / maxMana));
+    return static_cast<uint32_t>(share * static_cast<double>(Creature::MANA_RING_STEPS));
+}
 const std::string Creature::POSSESSION_AURA_SCRIPT = "SpellCreaturePossess";
 const double Creature::WOUNDED_DRAG_LAY_TURNS_DEFAULT = 12.0;
 const double Creature::WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT = 6.0;
@@ -540,6 +608,9 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mMana                    (0.0),
+    mManaFromSave            (false),
+    mManaRingStepNotified    (MANA_RING_STEPS),
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
@@ -620,6 +691,9 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
 
     setupDefinition(*gameMap, *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 
+    // A new creature spawns with a full mana pool
+    mMana = getMaxMana();
+
     if(!getIsOnServerMap())
     {
         registerObserver(GameEditorModeConsole::getSingleton());
@@ -652,6 +726,9 @@ Creature::Creature(GameMap* gameMap) :
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mMana                    (0.0),
+    mManaFromSave            (false),
+    mManaRingStepNotified    (MANA_RING_STEPS),
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
@@ -705,8 +782,14 @@ Creature::Creature(GameMap* gameMap) :
     }
 }
 
+//! \brief Frees the active skills made from the skill tree and, on a client, clears the highlighted creature pointer.
 Creature::~Creature()
 {
+    // The active skills made from the skill tree belong to the creature
+    for(CreatureSkill* skill : mTreeSkills)
+        delete skill;
+    mTreeSkills.clear();
+
     // The client remembers the creature the mouse is hovering in a bare pointer, so that
     // it can restore its ambient once the mouse leaves it. Nothing used to clear that
     // pointer when the creature itself went away, so a creature dying while highlighted
@@ -836,6 +919,7 @@ std::string Creature::getCreatureStreamFormat()
     return format;
 }
 
+//! \brief Writes the creature to a stream; the skill state is the last, optional part.
 void Creature::exportToStream(std::ostream& os) const
 {
     MovableGameEntity::exportToStream(os);
@@ -884,8 +968,19 @@ void Creature::exportToStream(std::ostream& os) const
     // Optional last token, missing in old saves and for creatures without appearance
     if(!mAppearance.isEmpty())
         os << "\t" << CreatureAppearanceLogic::toToken(mAppearance);
+
+    // Current mana as a labelled token after the appearance, missing in old saves (they load with full mana)
+    os << "\t" << MANA_SAVE_LABEL << mMana;
+
+    // Optional skill state (after the mana token), missing in old saves: their points are spent again at load
+    if(mSkillBuild.mSeed != 0)
+    {
+        os << "\t" << SKILL_BUILD_MARKER << " ";
+        CreatureSkillTree::writeBuild(mSkillBuild, os);
+    }
 }
 
+//! \brief Reads the creature from a stream; the appearance and the skill state at the end are optional.
 bool Creature::importFromStream(std::istream& is)
 {
     // Beware: A generic class name might be used here so we shouldn't use mDefinition
@@ -953,13 +1048,40 @@ bool Creature::importFromStream(std::istream& is)
         addCreatureEffect(effect);
     }
 
-    // Optional appearance token. Old saves end after the effects.
+    // Optional trailing tokens. Old saves end after the effects. The appearance token comes first (if any), then the
+    // labelled mana token (see exportToStream) and the skill state marker with its tokens; each of them can also stand
+    // alone when the creature has no appearance or the save is older.
     std::string appearanceToken;
-    if(is >> appearanceToken)
+    while(is >> appearanceToken)
     {
-        if(!CreatureAppearanceLogic::fromToken(appearanceToken, mAppearance))
+        if(appearanceToken.compare(0, MANA_SAVE_LABEL.size(), MANA_SAVE_LABEL) == 0)
         {
-            OD_LOG_WRN("Invalid appearance token=" + appearanceToken);
+            const std::string manaValue = appearanceToken.substr(MANA_SAVE_LABEL.size());
+            char* parseEnd = nullptr;
+            const double loadedMana = std::strtod(manaValue.c_str(), &parseEnd);
+            if(!manaValue.empty() && (parseEnd != nullptr) && (*parseEnd == '\0') && (loadedMana >= 0.0))
+            {
+                mMana = loadedMana;
+                mManaFromSave = true;
+            }
+            else
+            {
+                OD_LOG_WRN("Invalid mana token=" + appearanceToken);
+            }
+            continue;
+        }
+
+        if(appearanceToken == SKILL_BUILD_MARKER)
+        {
+            if(!CreatureSkillTree::readBuild(is, mSkillBuild))
+                return false;
+        }
+        else
+        {
+            if(!CreatureAppearanceLogic::fromToken(appearanceToken, mAppearance))
+            {
+                OD_LOG_WRN("Invalid appearance token=" + appearanceToken);
+            }
         }
     }
 
@@ -1060,7 +1182,8 @@ void Creature::setAppearanceFromServer(const CreatureAppearance& appearance)
     mAppearance = appearance;
 }
 
-//! \brief Builds natural health and defenses with their combat curves, retaining other stat growth.
+//! \brief Builds natural health and defenses with their combat curves, retaining other stat growth. The move%
+//! passives of the skills raise the speeds.
 void Creature::buildStats()
 {
     // Get the base value
@@ -1075,13 +1198,18 @@ void Creature::buildStats()
     mMagicalDefense = mDefinition->getMagicalDefense();
     mElementDefense = mDefinition->getElementDefense();
 
+    // Hit points follow the Life attribute level, so equipment can raise them even at level 1, then the hp% passives
+    mMaxHP = CreatureProgression::combatStatAt(mMaxHP, mDefinition->getHpPerLevel(), getLifeLevel(),
+        CreatureProgression::hpMultiplierAt) * (1.0 + getSkillPassive("hp%") / 100.0);
+
     // Improve the stats to the current level
     double multiplier = mLevel - 1;
     if (multiplier <= 0.0)
+    {
+        applyMovePassive();
         return;
+    }
 
-    mMaxHP = CreatureProgression::combatStat(mMaxHP, mDefinition->getHpPerLevel(), mLevel,
-        CreatureProgression::hpMultiplier);
     mDigRate += mDefinition->getDigRatePerLevel() * multiplier;
     mClaimRate += mDefinition->getClaimRatePerLevel() * multiplier;
     mGroundSpeed += mDefinition->getGroundSpeedPerLevel() * multiplier;
@@ -1094,6 +1222,16 @@ void Creature::buildStats()
         CreatureProgression::damageMultiplier);
     mElementDefense = CreatureProgression::combatStat(mElementDefense, mDefinition->getElementDefPerLevel(), mLevel,
         CreatureProgression::damageMultiplier);
+    applyMovePassive();
+}
+
+//! \brief Multiplies the three move speeds by the move% passives of the skills.
+void Creature::applyMovePassive()
+{
+    const double factor = 1.0 + getSkillPassive("move%") / 100.0;
+    mGroundSpeed *= factor;
+    mWaterSpeed *= factor;
+    mLavaSpeed *= factor;
 }
 
 Creature* Creature::getCreatureFromStream(GameMap* gameMap, std::istream& is)
@@ -1114,6 +1252,7 @@ Creature* Creature::getCreatureFromPacket(GameMap* gameMap, ODPacket& is)
     return creature;
 }
 
+//! \brief Writes the full creature data for a client, the skill state last.
 void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     MovableGameEntity::exportToPacket(os, seat);
@@ -1168,12 +1307,16 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
+    // Current mana (the maximum follows from type, level and equipment on the client)
+    os << mMana;
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
-    // Last field: the carried gold, shown as a sack on the thief
+    // The skill state, then the last field: the carried gold, shown as a sack on the thief
+    exportSkillBuildToPacket(os);
     os << mGoldCarried;
 }
 
+//! \brief Reads the full creature data sent by the server, the skill state last.
 void Creature::importFromPacket(ODPacket& is)
 {
     MovableGameEntity::importFromPacket(is);
@@ -1228,6 +1371,7 @@ void Creature::importFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
+    OD_ASSERT_TRUE(is >> mMana);
     // The client only takes over the appearance the server has chosen, it never rolls one itself
     std::string appearanceToken;
     OD_ASSERT_TRUE(is >> appearanceToken);
@@ -1236,6 +1380,7 @@ void Creature::importFromPacket(ODPacket& is)
     {
         OD_LOG_ERR("Invalid appearance token=" + appearanceToken);
     }
+    importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
@@ -1367,16 +1512,31 @@ void Creature::computeVisibleTiles()
     }
 }
 
+//! \brief Sets the level, spends the skill points the level pays and rebuilds the stats. The current hit points and the
+//! current mana keep their share of the maximum when the maximum grows.
 void Creature::setLevel(unsigned int level)
 {
+    // The size of the mana pool before the new level, to keep the mana share
+    const double previousMaxMana = getMaxMana();
+
     // Reset XP once the level has been acquired.
     mLevel = std::max(1u, std::min(MAX_LEVEL, level));
     mExp = 0.0;
+
+    // The new level may pay skill points; their passives are part of the stats built below
+    updateSkillPoints();
 
     const double previousMaxHP = mMaxHP;
     buildStats();
     if(mHp > 0.0 && previousMaxHP > 0.0)
         mHp = std::min(mMaxHP, mHp * mMaxHP / previousMaxHP);
+
+    // The pool grows with the level; the mana keeps its share of the pool like the hit points (a pool of 0 before
+    // the level-up keeps the mana as it is, then capped at the new size)
+    if(previousMaxMana > 0.0)
+        setCurrentMana(mMana * getMaxMana() / previousMaxMana);
+    else
+        setCurrentMana(mMana);
 
     mNeedFireRefresh = true;
 }
@@ -1483,6 +1643,14 @@ void Creature::doUpkeep()
     {
         for(EntityParticleEffect* effect : mEntityParticleEffects)
         {
+            // The strength, speed and defense factors of the effect leave the modifiers of the creature
+            if(effect->getEntityParticleEffectType() == EntityParticleEffectType::creature)
+            {
+                CreatureEffect* creatureEffect = static_cast<CreatureParticleEffect*>(effect)->mEffect;
+                if(isStackingEffect(*creatureEffect))
+                    creatureEffect->releaseEffect(*this);
+            }
+
             delete effect;
         }
         mEntityParticleEffects.clear();
@@ -1519,6 +1687,9 @@ void Creature::doUpkeep()
             continue;
         }
 
+        // The effect ended: only its own factor leaves the strength, speed and defense modifiers
+        if(isStackingEffect(*effect->mEffect))
+            effect->mEffect->releaseEffect(*this);
         delete effect;
         it = mEntityParticleEffects.erase(it);
     }
@@ -1699,10 +1870,14 @@ void Creature::doUpkeep()
 
     computeCreatureOverlayHealthValue();
 
+    // The mana pool refills a little every turn, always
+    regenerateMana();
+
     // Rogue creatures are not affected by wakefulness/hunger
     if(!getSeat()->isRogueSeat())
     {
-        decreaseWakefulness(mDefinition->getWakefulnessLostPerTurn());
+        // The wake% passives lower the wakefulness lost per turn
+        decreaseWakefulness(mDefinition->getWakefulnessLostPerTurn() * (1.0 - getSkillPassive("wake%") / 100.0));
 
         increaseHunger(mDefinition->getHungerGrowthPerTurn());
     }
@@ -1827,6 +2002,9 @@ void Creature::doUpkeep()
             mCasinoMood = std::min(0.0, mCasinoMood + decay);
     }
 
+    // The skill tree: reset window, reset and the active skills of changed ranks
+    upkeepSkillTree();
+
     // A frozen creature can neither move nor fight
     if(isFrozen())
     {
@@ -1900,8 +2078,15 @@ void Creature::doUpkeep()
         if(!skillData.mSkill->canBeUsedBy(this))
             continue;
 
+        // A skill that costs more mana than the creature has is not used, like a skill on cooldown
+        if(!hasManaFor(*skillData.mSkill))
+            continue;
+
         if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
             continue;
+
+        // The mana is paid when the skill starts
+        payManaFor(*skillData.mSkill);
 
         // The new cooldown and warmup are added, so the remainder of the last turn carries over
         skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
@@ -2372,6 +2557,10 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
             if(!skillDataTmp.mSkill->canBeUsedBy(this))
                 continue;
 
+            // A shot or skill that costs more mana than the creature has is skipped, like a skill on cooldown
+            if(!hasManaFor(*skillDataTmp.mSkill))
+                continue;
+
             double skillRange = skillDataTmp.mSkill->getRangeMax(this, entityAttackCheck);
             if(skillRange <= 0)
                 continue;
@@ -2739,11 +2928,12 @@ double Creature::getClientPoseSpeedFactor() const
     return factor;
 }
 
-//! \brief Returns level-scaled attack rating with the unscaled ratings of both held items.
+//! \brief Returns the attack rating scaled by the Dexterity attribute level and the ar% passives, plus the unscaled
+//! ratings of both held items.
 double Creature::getAttackRating() const
 {
-    double rating = CreatureProgression::combatStat(mDefinition->getAttackRating(), 0.0, mLevel,
-        CreatureProgression::attackRatingMultiplier);
+    double rating = CreatureProgression::combatStatAt(mDefinition->getAttackRating(), 0.0, getDexterityLevel(),
+        CreatureProgression::attackRatingMultiplierAt) * (1.0 + getSkillPassive("ar%") / 100.0);
     if(mWeaponL != nullptr)
         rating += mWeaponL->getAttackRating();
     if(mWeaponR != nullptr)
@@ -2751,16 +2941,920 @@ double Creature::getAttackRating() const
     return rating;
 }
 
-//! \brief Returns level-scaled defense rating with the unscaled ratings of both held items.
+//! \brief Returns the defense rating scaled by the Dexterity attribute level and the dr% passives, plus the unscaled
+//! ratings of both held items.
 double Creature::getDefenseRating() const
 {
-    double rating = CreatureProgression::combatStat(mDefinition->getDefenseRating(), 0.0, mLevel,
-        CreatureProgression::defenseRatingMultiplier);
+    double rating = CreatureProgression::combatStatAt(mDefinition->getDefenseRating(), 0.0, getDexterityLevel(),
+        CreatureProgression::defenseRatingMultiplierAt) * (1.0 + getSkillPassive("dr%") / 100.0);
     if(mWeaponL != nullptr)
         rating += mWeaponL->getDefenseRating();
     if(mWeaponR != nullptr)
         rating += mWeaponR->getDefenseRating();
     return rating;
+}
+
+namespace
+{
+//! \brief The attributes and bonuses an item can add to a creature.
+enum class EquipmentAttribute
+{
+    strength,
+    dexterity,
+    life,
+    mana,
+    critChance
+};
+
+//! \brief Returns the bonus one item gives for the given attribute (0 for no item).
+//! \param weapon The held item, may be null.
+//! \param attribute The attribute to read.
+double weaponBonus(const Weapon* weapon, EquipmentAttribute attribute)
+{
+    if(weapon == nullptr)
+        return 0.0;
+    switch(attribute)
+    {
+    case EquipmentAttribute::strength:
+        return weapon->getStrength();
+    case EquipmentAttribute::dexterity:
+        return weapon->getDexterity();
+    case EquipmentAttribute::life:
+        return weapon->getLife();
+    case EquipmentAttribute::mana:
+        return weapon->getMana();
+    case EquipmentAttribute::critChance:
+        return weapon->getCritChance();
+    }
+    return 0.0;
+}
+
+//! \brief Returns the summed bonus of both held items for the given attribute.
+//! \param weaponL The item in the left hand, may be null.
+//! \param weaponR The item in the right hand, may be null.
+//! \param attribute The attribute to read.
+double equipmentBonus(const Weapon* weaponL, const Weapon* weaponR, EquipmentAttribute attribute)
+{
+    return weaponBonus(weaponL, attribute) + weaponBonus(weaponR, attribute);
+}
+
+//! \brief Returns the attribute level LA of one attribute: 1 + (value - start value) / points per level, which is
+//! level + equipment bonus / points per level, at least 1; the creature level when the points per level are 0.
+//! \param perLevel Points per level of the attribute.
+//! \param level The creature level.
+//! \param equipmentBonusValue The summed equipment bonus of the attribute.
+double attributeLevel(double perLevel, unsigned int level, double equipmentBonusValue)
+{
+    if(perLevel == 0.0)
+        return static_cast<double>(level);
+    return std::max(1.0, static_cast<double>(level) + equipmentBonusValue / perLevel);
+}
+}
+
+//! \brief Returns the Strength attribute at the current level, including the equipment bonus.
+double Creature::getStrength() const
+{
+    return mDefinition->getStrength() + mDefinition->getStrengthPerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength);
+}
+
+//! \brief Returns the Dexterity attribute at the current level, including the equipment bonus.
+double Creature::getDexterity() const
+{
+    return mDefinition->getDexterity() + mDefinition->getDexterityPerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity);
+}
+
+//! \brief Returns the Life attribute at the current level, including the equipment bonus.
+double Creature::getLife() const
+{
+    return mDefinition->getLife() + mDefinition->getLifePerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life);
+}
+
+//! \brief Returns the Mana attribute at the current level, including the equipment bonus.
+double Creature::getMana() const
+{
+    return mDefinition->getMana() + mDefinition->getManaPerLevel() * (mLevel - 1) +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana);
+}
+
+//! \brief Returns the Strength attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getStrengthLevel() const
+{
+    return attributeLevel(mDefinition->getStrengthPerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength));
+}
+
+//! \brief Returns the Dexterity attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getDexterityLevel() const
+{
+    return attributeLevel(mDefinition->getDexterityPerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity));
+}
+
+//! \brief Returns the Life attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getLifeLevel() const
+{
+    return attributeLevel(mDefinition->getLifePerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life));
+}
+
+//! \brief Returns the Mana attribute level LA (the creature level plus the equipment bonus in levels).
+double Creature::getManaLevel() const
+{
+    return attributeLevel(mDefinition->getManaPerLevel(), mLevel,
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana));
+}
+
+//! \brief Returns the critical chance bonus in percent that both held items add.
+double Creature::getEquipmentCritChance() const
+{
+    return equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::critChance);
+}
+
+//! \brief Returns the critical chance in percent: CritChancePerDexterity x (start Dexterity of the type + equipment
+//! Dexterity) + CritChancePerLevel x (level - 1) + CritChanceBonus + crit passives + equipment critical chance.
+double Creature::getCritChance() const
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    const double dexterity = mDefinition->getDexterity() +
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity);
+    return config.getCritChancePerDexterity() * dexterity +
+        config.getCritChancePerLevel() * static_cast<double>(mLevel - 1) +
+        mDefinition->getCritChanceBonus() + getSkillPassive("crit") + getEquipmentCritChance();
+}
+
+//! \brief Rolls one critical hit against the critical chance; a chance of 0 or less never rolls.
+bool Creature::rollCritical() const
+{
+    const double chance = getCritChance();
+    if(chance <= 0.0)
+        return false;
+    return Random::Double(0.0, 100.0) < chance;
+}
+
+//! \brief Returns the claim rate of the creature: the config rate with the level bonus times 1 + claim% / 100.
+double Creature::getClaimRate() const
+{
+    return mClaimRate * (1.0 + getSkillPassive("claim%") / 100.0);
+}
+
+//! \brief Returns 1 + dig% / 100: the factor of the dig% passives on the dig rate and on the gold of a dig step.
+double Creature::getDigFactor() const
+{
+    return 1.0 + getSkillPassive("dig%") / 100.0;
+}
+
+//! \brief Returns true if one of the held items has the weapon type bow or crossbow.
+bool Creature::carriesBowOrCrossbow() const
+{
+    const Weapon* weapons[] = {mWeaponL, mWeaponR};
+    for(const Weapon* weapon : weapons)
+    {
+        if(weapon == nullptr)
+            continue;
+        const std::string weaponType = weapon->getWeaponType();
+        if(weaponType == "bow" || weaponType == "crossbow")
+            return true;
+    }
+    return false;
+}
+
+//! \brief Returns the sum of the ranked passive skills of the skill tree for the stat (percentages add up).
+//! \param stat The passive stat name (hp%, ar%, dr%, dmg%, spell%, alldmg%, crit, cd%, avoid, move%, ...).
+double Creature::getSkillPassive(const std::string& stat) const
+{
+    if(mSkillBuild.mRanks.empty())
+        return 0.0;
+
+    return CreatureSkillTree::passiveSum(ConfigManager::getSingleton().getCreatureSkillTree(), mSkillBuild, stat);
+}
+
+//! \brief Returns the rank of the skill tree entry with the given id, 0 when the creature has none.
+uint32_t Creature::getSkillRank(const std::string& skillId) const
+{
+    return CreatureSkillTree::getRank(mSkillBuild, skillId);
+}
+
+//! \brief Returns the skill points the level has paid so far (0 for a type without skill group).
+uint32_t Creature::getSkillPointsEarned() const
+{
+    if(mDefinition == nullptr || skillTextOrEmpty(mDefinition->getSkillGroup()).empty())
+        return 0;
+
+    return CreatureSkillTree::pointsAtLevel(mLevel, ConfigManager::getSingleton().getSkillPointFirstLevel());
+}
+
+//! \brief Returns the skill points the creature has spent in its paths and on its tier 4 skill.
+uint32_t Creature::getSkillPointsSpent() const
+{
+    return CreatureSkillTree::spentPoints(mSkillBuild, getSkillTypeInfo());
+}
+
+//! \brief Returns the name of the template the creature follows, empty while it follows none.
+std::string Creature::getSkillTemplateName() const
+{
+    if(mDefinition == nullptr)
+        return std::string();
+
+    const CreatureSkillTree::TemplateDef* templ = ConfigManager::getSingleton().getCreatureSkillTree().findTemplate(
+        skillTextOrEmpty(mDefinition->getSkillGroup()), mSkillBuild.mTemplate);
+    if(templ == nullptr)
+        return std::string();
+
+    return templ->mName;
+}
+
+//! \brief Text shown for an empty template, skill list or hand in the displays.
+static const std::string DISPLAY_NONE_TEXT = "none";
+//! \brief Number of decimals of the attribute values and the critical chance in the displays.
+static const int32_t DISPLAY_DECIMALS = 1;
+//! \brief Text a value with DISPLAY_DECIMALS decimals ends with when the decimals are zero.
+static const std::string DISPLAY_ZERO_DECIMALS_SUFFIX = ".0";
+
+//! \brief Writes a number with exactly DISPLAY_DECIMALS decimals.
+//! \param value The number to write.
+static std::string formatFixedNumber(double value)
+{
+    std::stringstream text;
+    text << std::fixed << std::setprecision(DISPLAY_DECIMALS) << value;
+    return text.str();
+}
+
+//! \brief Writes a number with DISPLAY_DECIMALS decimals; a whole number is written without decimals.
+//! \param value The number to write.
+static std::string formatDisplayNumber(double value)
+{
+    std::string result = formatFixedNumber(value);
+    if(result.size() > DISPLAY_ZERO_DECIMALS_SUFFIX.size() &&
+       result.compare(result.size() - DISPLAY_ZERO_DECIMALS_SUFFIX.size(), DISPLAY_ZERO_DECIMALS_SUFFIX.size(),
+           DISPLAY_ZERO_DECIMALS_SUFFIX) == 0)
+    {
+        result.erase(result.size() - DISPLAY_ZERO_DECIMALS_SUFFIX.size());
+    }
+    return result;
+}
+
+//! \brief Returns the template name for the displays ("none" while the creature follows no template).
+std::string Creature::getSkillPathText() const
+{
+    const std::string templateName = getSkillTemplateName();
+    if(templateName.empty())
+        return DISPLAY_NONE_TEXT;
+
+    return templateName;
+}
+
+//! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none).
+std::string Creature::getSkillListText() const
+{
+    const CreatureSkillTree::SkillTreeConfig& config = ConfigManager::getSingleton().getCreatureSkillTree();
+    std::string result;
+    for(std::map<std::string, uint32_t>::const_iterator it = mSkillBuild.mRanks.begin();
+        it != mSkillBuild.mRanks.end(); ++it)
+    {
+        if(it->second == 0)
+            continue;
+
+        std::string skillName = it->first;
+        const CreatureSkillTree::SkillDef* skill = config.findSkill(it->first);
+        const CreatureSkillTree::TierFourDef* tierFour = config.findTierFourById(it->first);
+        if(skill != nullptr)
+            skillName = skill->mName;
+        else if(tierFour != nullptr)
+            skillName = tierFour->mName;
+
+        if(!result.empty())
+            result += ", ";
+        result += skillName + " " + Helper::toString(it->second);
+    }
+    if(result.empty())
+        return DISPLAY_NONE_TEXT;
+
+    return result;
+}
+
+//! \brief Returns the attribute line of the displays: "Strength s - Dexterity d - Life l - Mana m -
+//! Critical x.x %".
+std::string Creature::getAttributeSummaryText() const
+{
+    return "Strength " + formatDisplayNumber(getStrength()) + " - Dexterity " + formatDisplayNumber(getDexterity())
+        + " - Life " + formatDisplayNumber(getLife()) + " - Mana " + formatDisplayNumber(getMana())
+        + " - Critical " + formatFixedNumber(getCritChance()) + " %";
+}
+
+//! \brief Returns the carried items for the displays as "<right> / <left>" ("none" for an empty hand).
+std::string Creature::getEquipmentText() const
+{
+    const std::string right = (mWeaponR == nullptr) ? DISPLAY_NONE_TEXT : mWeaponR->getName();
+    const std::string left = (mWeaponL == nullptr) ? DISPLAY_NONE_TEXT : mWeaponL->getName();
+    return right + " / " + left;
+}
+
+//! \brief Fills the skill group, family, pre-skill and tier 4 skill of the type of the creature (empty = none).
+CreatureSkillTree::TypeInfo Creature::getSkillTypeInfo() const
+{
+    CreatureSkillTree::TypeInfo type;
+    if(mDefinition == nullptr)
+        return type;
+
+    type.mGroup = skillTextOrEmpty(mDefinition->getSkillGroup());
+    type.mFamily = skillTextOrEmpty(mDefinition->getSkillFamily());
+    type.mPreSkill = skillTextOrEmpty(mDefinition->getPreSkill());
+    type.mTierFour = skillTextOrEmpty(mDefinition->getTierFourSkill());
+    return type;
+}
+
+//! \brief Starts the skill build of a new creature: a personal seed, the free rank of the pre-skill and the points the
+//! level has paid. A creature that was loaded with its skill state keeps it.
+void Creature::initSkillBuild()
+{
+    if(!getIsOnServerMap() || mDefinition == nullptr)
+        return;
+
+    const CreatureSkillTree::TypeInfo type = getSkillTypeInfo();
+    if(type.mGroup.empty())
+        return;
+
+    if(mSkillBuild.mSeed == 0)
+        CreatureSkillTree::startBuild(mSkillBuild, type, Random::Uint(1, SKILL_SEED_MAX));
+
+    updateSkillPoints();
+    mTreeSkillsDirty = true;
+}
+
+//! \brief Counts the own creatures of the skill group per template; the creature itself counts once it has chosen.
+//! \param followers Receives one count per template of the group.
+void Creature::countTemplateFollowers(std::vector<uint32_t>& followers) const
+{
+    const std::string group = skillTextOrEmpty(mDefinition->getSkillGroup());
+    const CreatureSkillTree::SkillTreeConfig& tree = ConfigManager::getSingleton().getCreatureSkillTree();
+    followers.assign(tree.getTemplates(group).size(), 0);
+    if(getGameMap() == nullptr || getSeat() == nullptr)
+        return;
+
+    const std::vector<Creature*> mates = getGameMap()->getCreaturesBySeat(getSeat());
+    for(Creature* mate : mates)
+    {
+        if(mate == this || mate->mDefinition == nullptr)
+            continue;
+
+        if(skillTextOrEmpty(mate->mDefinition->getSkillGroup()) != group)
+            continue;
+
+        const int32_t mateTemplate = mate->mSkillBuild.mTemplate;
+        if(mateTemplate >= 0 && static_cast<size_t>(mateTemplate) < followers.size())
+            ++followers[static_cast<size_t>(mateTemplate)];
+    }
+
+    const int32_t ownTemplate = mSkillBuild.mTemplate;
+    if(ownTemplate >= 0 && static_cast<size_t>(ownTemplate) < followers.size())
+        ++followers[static_cast<size_t>(ownTemplate)];
+}
+
+//! \brief Spends the skill points the level has paid. At the first point the template is chosen: weight 1 per template,
+//! times 3 for a template that no own creature of the group follows.
+void Creature::updateSkillPoints()
+{
+    if(!getIsOnServerMap() || mDefinition == nullptr || mSkillBuild.mSeed == 0)
+        return;
+
+    const CreatureSkillTree::TypeInfo type = getSkillTypeInfo();
+    ConfigManager& config = ConfigManager::getSingleton();
+    if(type.mGroup.empty() || CreatureSkillTree::pointsAtLevel(mLevel, config.getSkillPointFirstLevel()) == 0)
+        return;
+
+    if(mSkillBuild.mTemplate < 0)
+    {
+        std::vector<uint32_t> followers;
+        countTemplateFollowers(followers);
+        mSkillBuild.mTemplate = CreatureSkillTree::chooseTemplate(followers, Random::Double(0.0, 1.0));
+        if(mSkillBuild.mTemplate < 0)
+            return;
+    }
+
+    const uint32_t spentBefore = CreatureSkillTree::spentPoints(mSkillBuild, type);
+    CreatureSkillTree::spendUpToLevel(config.getCreatureSkillTree(), type, mSkillBuild, mLevel,
+        config.getSkillPointFirstLevel(), config.getSkillTemplateDeviationPercent(), config.getSkillRanksPerSkill());
+    if(CreatureSkillTree::spentPoints(mSkillBuild, type) != spentBefore)
+    {
+        mTreeSkillsDirty = true;
+        mNeedFireRefresh = true;
+    }
+}
+
+//! \brief Counts one eaten chicken; the configured number of chickens opens the reset window of the skills.
+void Creature::registerChickenEaten()
+{
+    if(!getIsOnServerMap() || mDefinition == nullptr || skillTextOrEmpty(mDefinition->getSkillGroup()).empty())
+        return;
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    CreatureSkillTree::countChicken(mSkillBuild, config.getSkillRespecChickens(), config.getSkillRespecWindowSeconds());
+    mNeedFireRefresh = true;
+}
+
+//! \brief Lets the reset window run. While it is open, a creature whose template has at least three followers among the
+//! own creatures of its group, while another template of the group has none, switches to that template and spends all
+//! its points again. Then rebuilds the active skills when the ranks changed.
+void Creature::upkeepSkillTree()
+{
+    if(!getIsOnServerMap() || mDefinition == nullptr)
+        return;
+
+    if(mSkillBuild.mRespecWindow > 0.0)
+    {
+        CreatureSkillTree::tickRespecWindow(mSkillBuild, 1.0 / ODApplication::turnsPerSecond);
+        if(mSkillBuild.mRespecWindow > 0.0 && mSkillBuild.mTemplate >= 0)
+        {
+            std::vector<uint32_t> followers;
+            countTemplateFollowers(followers);
+            const int32_t newTemplate = CreatureSkillTree::findResetTemplate(mSkillBuild.mTemplate, followers);
+            if(newTemplate >= 0)
+            {
+                ConfigManager& config = ConfigManager::getSingleton();
+                CreatureSkillTree::resetBuild(config.getCreatureSkillTree(), getSkillTypeInfo(), mSkillBuild,
+                    newTemplate, mLevel, config.getSkillPointFirstLevel(), config.getSkillTemplateDeviationPercent(),
+                    config.getSkillRanksPerSkill());
+                // One reset per window
+                mSkillBuild.mRespecWindow = 0.0;
+                mTreeSkillsDirty = true;
+                mNeedFireRefresh = true;
+
+                // The passives of the new ranks change the maximum hit points
+                const double previousMaxHP = mMaxHP;
+                buildStats();
+                if(mHp > 0.0 && previousMaxHP > 0.0)
+                    mHp = std::min(mMaxHP, mHp * mMaxHP / previousMaxHP);
+            }
+        }
+    }
+
+    if(mTreeSkillsDirty)
+        rebuildTreeSkills();
+}
+
+//! \brief Returns the sort position of a skill of the skill tree: the tier 4 skill first, then heals, buffs, debuffs
+//! and at last damage and control skills.
+//! \param skillId The id of the skill tree entry.
+//! \param kind The kind token of the entry.
+static uint32_t treeSkillPriority(const std::string& skillId, const std::string& kind)
+{
+    if(skillId.compare(0, CreatureSkillTree::TIER_FOUR_PREFIX.size(), CreatureSkillTree::TIER_FOUR_PREFIX) == 0)
+        return TREE_SKILL_PRIORITY_TIER_FOUR;
+    if(kind.compare(0, TREE_KIND_HEAL.size(), TREE_KIND_HEAL) == 0)
+        return TREE_SKILL_PRIORITY_HEAL;
+    if(kind.compare(0, TREE_KIND_BUFF.size(), TREE_KIND_BUFF) == 0 ||
+       kind.compare(0, TREE_KIND_AURA.size(), TREE_KIND_AURA) == 0 || kind == TREE_KIND_STRIKE)
+    {
+        return TREE_SKILL_PRIORITY_BUFF;
+    }
+    if(kind.compare(0, TREE_KIND_DEBUFF.size(), TREE_KIND_DEBUFF) == 0)
+        return TREE_SKILL_PRIORITY_DEBUFF;
+    return TREE_SKILL_PRIORITY_DAMAGE;
+}
+
+//! \brief Replaces the active skills made from the skill tree ranks. A skill that stays keeps its cooldown and warmup.
+//! The skills stand in front of the attack lines of the definition in the order of the AI: tier 4, heals, buffs,
+//! debuffs, damage and control skills.
+void Creature::rebuildTreeSkills()
+{
+    mTreeSkillsDirty = false;
+    if(!getIsOnServerMap() || mDefinition == nullptr)
+        return;
+
+    // Remember the timers of the skills that are replaced
+    std::map<std::string, std::pair<double, double> > timers;
+    for(std::vector<CreatureSkillData>::iterator it = mSkillData.begin(); it != mSkillData.end();)
+    {
+        if(it->mTreeSkillId.empty())
+        {
+            ++it;
+            continue;
+        }
+
+        timers[it->mTreeSkillId] = std::make_pair(it->mCooldown, it->mWarmup);
+        it = mSkillData.erase(it);
+    }
+    for(CreatureSkill* skill : mTreeSkills)
+        delete skill;
+    mTreeSkills.clear();
+
+    const CreatureSkillTree::SkillTreeConfig& tree = ConfigManager::getSingleton().getCreatureSkillTree();
+    std::vector<std::pair<uint32_t, CreatureSkillData> > sorted;
+    for(std::map<std::string, uint32_t>::const_iterator it = mSkillBuild.mRanks.begin();
+        it != mSkillBuild.mRanks.end(); ++it)
+    {
+        if(it->second == 0)
+            continue;
+
+        CreatureSkill* skill = createTreeSkill(it->first, it->second);
+        if(skill == nullptr)
+            continue;
+
+        mTreeSkills.push_back(skill);
+        std::string kind;
+        const CreatureSkillTree::TierFourDef* tierFour = tree.findTierFourById(it->first);
+        const CreatureSkillTree::SkillDef* def = tree.findSkill(it->first);
+        if(tierFour != nullptr)
+            kind = tierFour->mKind;
+        else if(def != nullptr)
+            kind = def->mKind;
+
+        CreatureSkillData skillData(skill, getAppliedCooldownNbTurns(*skill), 0);
+        skillData.mTreeSkillId = it->first;
+        std::map<std::string, std::pair<double, double> >::const_iterator timer = timers.find(it->first);
+        if(timer != timers.end())
+        {
+            skillData.mCooldown = timer->second.first;
+            skillData.mWarmup = timer->second.second;
+        }
+        sorted.push_back(std::make_pair(treeSkillPriority(it->first, kind), skillData));
+    }
+
+    // Sorted by priority; inside one priority the order of the ids stays
+    std::vector<CreatureSkillData> ordered;
+    for(uint32_t priority = TREE_SKILL_PRIORITY_TIER_FOUR; priority <= TREE_SKILL_PRIORITY_DAMAGE; ++priority)
+    {
+        for(size_t i = 0; i < sorted.size(); ++i)
+        {
+            if(sorted[i].first == priority)
+                ordered.push_back(sorted[i].second);
+        }
+    }
+    mSkillData.insert(mSkillData.begin(), ordered.begin(), ordered.end());
+    mNeedFireRefresh = true;
+}
+
+//! \brief Creates the active skill of a skill tree entry at the given rank from its table row (kind, rank value,
+//! cooldown, duration, radius, range and base line).
+//! \param skillId The id of the skill tree entry (a tier 4 id is T4_<type>).
+//! \param rank The rank (ignored for the tier 4 skill).
+//! \return The skill, nullptr when the entry is a passive or has no valid skill line. The caller owns the skill.
+CreatureSkill* Creature::createTreeSkill(const std::string& skillId, uint32_t rank) const
+{
+    const CreatureSkillTree::SkillTreeConfig& tree = ConfigManager::getSingleton().getCreatureSkillTree();
+    std::string line;
+    double manaCost = 0.0;
+    const CreatureSkillTree::TierFourDef* tierFour = tree.findTierFourById(skillId);
+    const CreatureSkillTree::SkillDef* def = tree.findSkill(skillId);
+    if(tierFour != nullptr)
+    {
+        line = CreatureSkillTree::buildSkillLine(tierFour->mKind, tierFour->mValue, tierFour->mCooldown,
+            tierFour->mDuration, tierFour->mRadius, tierFour->mRange, tierFour->mBaseLine);
+        manaCost = tierFour->mMana.mValue;
+    }
+    else if(def != nullptr && rank > 0 && !def->mValues.empty())
+    {
+        const size_t index = std::min(static_cast<size_t>(rank), def->mValues.size()) - 1;
+        line = CreatureSkillTree::buildSkillLine(def->mKind, def->mValues[index], def->mCooldown, def->mDuration,
+            def->mRadius, def->mRange, def->mBaseLine);
+        if(index < def->mMana.size())
+            manaCost = def->mMana[index];
+    }
+
+    if(line.empty())
+        return nullptr;
+
+    std::istringstream lineStream(line);
+    CreatureSkill* skill = CreatureSkillManager::load(lineStream);
+    if(skill == nullptr)
+    {
+        OD_LOG_ERR("creature=" + getName() + ", cannot load the skill line of " + skillId + ": " + line);
+        return nullptr;
+    }
+
+    skill->setTreeSkill(skillId, manaCost);
+    return skill;
+}
+
+//! \brief Returns the heal amount of 100 percent of a heal skill: the MinHP of the type times the damage multiplier of
+//! the Mana attribute level.
+double Creature::getHealBase() const
+{
+    return mDefinition->getMinHp() * CreatureProgression::damageMultiplierAt(getManaLevel());
+}
+
+//! \brief Returns the factor on the damage of a damage skill of the skill tree: the damage multiplier of the level, the
+//! own MinHP divided by the calibration MinHP, and the spell% and alldmg% passives. The SkillDamageFactor of the type
+//! is applied by the skills themselves.
+double Creature::getTreeSpellDamageFactor() const
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    double factor = CreatureProgression::damageMultiplierAt(static_cast<double>(mLevel));
+    if(config.getSkillSpellReferenceMinHP() > 0.0)
+        factor *= mDefinition->getMinHp() / config.getSkillSpellReferenceMinHP();
+
+    return factor * (1.0 + (getSkillPassive("spell%") + getSkillPassive("alldmg%")) / 100.0);
+}
+
+//! \brief Arms the next melee blow against a creature to do its damage times the factor.
+void Creature::armStrike(double factor)
+{
+    mStrikeMultiplier = factor;
+}
+
+//! \brief True while a melee blow is armed.
+bool Creature::isStrikeArmed() const
+{
+    return mStrikeMultiplier > 1.0;
+}
+
+//! \brief Returns the factor of the armed melee blow and unarms it; 1 when none is armed.
+double Creature::consumeStrikeMultiplier()
+{
+    const double factor = mStrikeMultiplier;
+    mStrikeMultiplier = 1.0;
+    return factor;
+}
+
+//! \brief Returns the own creatures (same seat, alive, on the map) within the radius in tiles, itself included.
+//! \param radius The radius in tiles around the position of the creature.
+std::vector<Creature*> Creature::getOwnCreaturesWithin(double radius) const
+{
+    std::vector<Creature*> found;
+    if(getGameMap() == nullptr || getSeat() == nullptr || !getIsOnMap())
+        return found;
+
+    const std::vector<Creature*> mates = getGameMap()->getCreaturesBySeat(getSeat());
+    for(Creature* mate : mates)
+    {
+        if(!mate->isAlive() || !mate->getIsOnMap())
+            continue;
+
+        const double dx = mate->getPosition().x - getPosition().x;
+        const double dy = mate->getPosition().y - getPosition().y;
+        if(dx * dx + dy * dy <= radius * radius)
+            found.push_back(mate);
+    }
+    return found;
+}
+
+//! \brief True when a running effect of the creature was made by the skill or spell with the given source id.
+//! \param sourceId The source id of the effect (the id of a skill tree entry).
+bool Creature::hasActiveEffectSource(const std::string& sourceId) const
+{
+    for(const EntityParticleEffect* entityEffect : mEntityParticleEffects)
+    {
+        if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+
+        const CreatureParticleEffect* effect = static_cast<const CreatureParticleEffect*>(entityEffect);
+        if(effect->mEffect->getSourceId() == sourceId && effect->mEffect->getNbTurnsEffect() != 0.0)
+            return true;
+    }
+    return false;
+}
+
+//! \brief Recomputes the strength modifier as the product of the factors of all running strength effects.
+void Creature::updateStrengthModifier()
+{
+    double modifier = 1.0;
+    for(std::map<const CreatureEffect*, double>::const_iterator it = mStrengthContributions.begin();
+        it != mStrengthContributions.end(); ++it)
+    {
+        modifier *= it->second;
+    }
+    setStrengthModifier(modifier);
+}
+
+//! \brief Sets the factor of a running strength effect.
+//! \param source The effect that holds the factor.
+//! \param factor The damage factor of the effect.
+void Creature::setStrengthContribution(const CreatureEffect* source, double factor)
+{
+    mStrengthContributions[source] = factor;
+    updateStrengthModifier();
+}
+
+//! \brief Removes the factor of a strength effect that ended; the others stay.
+void Creature::removeStrengthContribution(const CreatureEffect* source)
+{
+    mStrengthContributions.erase(source);
+    updateStrengthModifier();
+}
+
+//! \brief Recomputes the speed modifier as the product of the factors of all running speed effects.
+void Creature::updateSpeedModifier()
+{
+    double modifier = 1.0;
+    for(std::map<const CreatureEffect*, double>::const_iterator it = mSpeedContributions.begin();
+        it != mSpeedContributions.end(); ++it)
+    {
+        modifier *= it->second;
+    }
+    // Only a change is applied, so that a running effect does not refresh the speeds every turn
+    if(modifier != mSpeedModifier)
+        setMoveSpeedModifier(modifier);
+}
+
+//! \brief Sets the factor of a running speed effect; the speed modifier is the product of all factors.
+//! \param source The effect that holds the factor.
+//! \param factor The speed factor of the effect.
+void Creature::setSpeedContribution(const CreatureEffect* source, double factor)
+{
+    mSpeedContributions[source] = factor;
+    updateSpeedModifier();
+}
+
+//! \brief Removes the factor of a speed effect that ended; the others stay.
+void Creature::removeSpeedContribution(const CreatureEffect* source)
+{
+    mSpeedContributions.erase(source);
+    updateSpeedModifier();
+}
+
+//! \brief Recomputes the defense modifier as the sum of the bonuses of all running defense effects.
+void Creature::updateDefenseModifier()
+{
+    double phy = 0.0;
+    double mag = 0.0;
+    double ele = 0.0;
+    for(std::map<const CreatureEffect*, CreatureDefenseBonus>::const_iterator it = mDefenseContributions.begin();
+        it != mDefenseContributions.end(); ++it)
+    {
+        phy += it->second.mPhy;
+        mag += it->second.mMag;
+        ele += it->second.mEle;
+    }
+    setDefenseModifier(phy, mag, ele);
+}
+
+//! \brief Sets the bonus of a running defense effect; the defense modifier is the sum of all bonuses.
+//! \param source The effect that holds the bonus.
+//! \param phy The bonus on the physical defense.
+//! \param mag The bonus on the magical defense.
+//! \param ele The bonus on the elemental defense.
+void Creature::setDefenseContribution(const CreatureEffect* source, double phy, double mag, double ele)
+{
+    CreatureDefenseBonus& bonus = mDefenseContributions[source];
+    bonus.mPhy = phy;
+    bonus.mMag = mag;
+    bonus.mEle = ele;
+    updateDefenseModifier();
+}
+
+//! \brief Removes the bonus of a defense effect that ended; the others stay.
+void Creature::removeDefenseContribution(const CreatureEffect* source)
+{
+    mDefenseContributions.erase(source);
+    updateDefenseModifier();
+}
+
+//! \brief Writes the skill state (template, ranks, seed, generator state, reset counters) for clients.
+void Creature::exportSkillBuildToPacket(ODPacket& os) const
+{
+    os << mSkillBuild.mTemplate;
+    os << mSkillBuild.mSeed;
+    os << mSkillBuild.mRngState;
+    os << mSkillBuild.mPickCursor;
+    os << mSkillBuild.mChickens;
+    os << mSkillBuild.mRespecWindow;
+    os << static_cast<uint32_t>(mSkillBuild.mRanks.size());
+    for(std::map<std::string, uint32_t>::const_iterator it = mSkillBuild.mRanks.begin();
+        it != mSkillBuild.mRanks.end(); ++it)
+    {
+        os << it->first;
+        os << it->second;
+    }
+}
+
+//! \brief Reads the skill state written by exportSkillBuildToPacket. A short packet leaves the state empty.
+void Creature::importSkillBuildFromPacket(ODPacket& is)
+{
+    CreatureSkillTree::SkillBuild build;
+    uint32_t nbRanks = 0;
+    if(!(is >> build.mTemplate >> build.mSeed >> build.mRngState >> build.mPickCursor >> build.mChickens >>
+         build.mRespecWindow >> nbRanks))
+    {
+        OD_LOG_ERR("creature=" + getName() + ", short skill state in packet");
+        return;
+    }
+
+    for(uint32_t i = 0; i < nbRanks; ++i)
+    {
+        std::string skillId;
+        uint32_t rank = 0;
+        if(!(is >> skillId >> rank))
+        {
+            OD_LOG_ERR("creature=" + getName() + ", short skill ranks in packet");
+            return;
+        }
+        build.mRanks[skillId] = rank;
+    }
+
+    mSkillBuild = build;
+}
+
+//! \brief Returns the size of the mana pool: Mana attribute (with equipment) x ManaPerPoint of the type.
+double Creature::getMaxMana() const
+{
+    return std::max(0.0, getMana() * mDefinition->getManaPerPoint());
+}
+
+//! \brief Returns the mana the creature has right now (0 .. getMaxMana()).
+double Creature::getCurrentMana() const
+{
+    return mMana;
+}
+
+//! \brief Sets the current mana, clamped to 0 .. getMaxMana(), and tells the clients when the mana ring changes.
+//! \param mana The new current mana.
+void Creature::setCurrentMana(double mana)
+{
+    const double maxMana = getMaxMana();
+    mMana = std::max(0.0, std::min(mana, maxMana));
+
+    if(!getIsOnServerMap())
+        return;
+
+    const uint32_t step = manaRingStep(mMana, maxMana);
+    if(step != mManaRingStepNotified)
+    {
+        mManaRingStepNotified = step;
+        mNeedFireRefresh = true;
+    }
+}
+
+//! \brief Returns a mana cost after the manacost% passives: baseCost x (1 - manacost% / 100), never below 0.
+//! \param baseCost The cost before the passives.
+double Creature::getManaCost(double baseCost) const
+{
+    const double factor = std::max(0.0, 1.0 - getSkillPassive("manacost%") / 100.0);
+    return std::max(0.0, baseCost) * factor;
+}
+
+//! \brief Returns the mana the skill costs this creature now: the rank cost of a skill of the skill tree, the shot cost
+//! of a caster's first MissileLaunch or of a second MissileLaunch line like the Dragon's (all with manacost%), 0 for
+//! every free attack.
+//! \param skill The skill or attack line to price.
+double Creature::getSkillManaCost(const CreatureSkill& skill) const
+{
+    // A skill of the skill tree costs its rank cost, whatever its kind (also a MissileLaunch or Grenade)
+    if(skill.isTreeSkill())
+        return getManaCost(skill.getTreeManaCost());
+
+    // Only the MissileLaunch attack lines cost mana per shot; Melee and the weapon shots of the first line are free
+    if(skill.getSkillName() != "MissileLaunch")
+        return 0.0;
+
+    const bool firstAttack = mDefinition->isFirstAttackSkill(&skill);
+    if(firstAttack && carriesBowOrCrossbow())
+        return 0.0;
+
+    // The shot of a caster costs the caster rate. A type with a skill group is
+    // told by its group, because a level file may list the Dragon's spell shot before its melee line; a type
+    // without a group is told by the line order: the first attack line is the spell shot.
+    const std::string& group = mDefinition->getSkillGroup();
+    bool casterShot = firstAttack;
+    if(group != "none")
+        casterShot = (group == "caster");
+
+    if(casterShot)
+        return getManaCost(ConfigManager::getSingleton().getManaPerCasterShot());
+
+    return getManaCost(ConfigManager::getSingleton().getManaPerDragonSecondShot());
+}
+
+//! \brief Returns true if the current mana covers the cost of the skill (a free skill is always affordable).
+//! \param skill The skill or attack line to check.
+bool Creature::hasManaFor(const CreatureSkill& skill) const
+{
+    return mMana >= getSkillManaCost(skill);
+}
+
+//! \brief Subtracts the mana cost of the skill; called when the skill or shot starts.
+//! \param skill The skill or attack line that starts.
+void Creature::payManaFor(const CreatureSkill& skill)
+{
+    const double cost = getSkillManaCost(skill);
+    if(cost <= 0.0)
+        return;
+
+    setCurrentMana(mMana - cost);
+}
+
+//! \brief Adds one turn of mana regeneration: max mana / (ManaRefillSeconds x turns per second), capped at max.
+void Creature::regenerateMana()
+{
+    const double maxMana = getMaxMana();
+    if(mMana >= maxMana)
+    {
+        // The pool may have shrunk (equipment removed): the mana above the new size is lost
+        if(mMana > maxMana)
+            setCurrentMana(maxMana);
+        return;
+    }
+
+    const double refillTurns = ConfigManager::getSingleton().getManaRefillSeconds() * ODApplication::turnsPerSecond;
+    if(refillTurns <= 0.0)
+    {
+        setCurrentMana(maxMana);
+        return;
+    }
+
+    setCurrentMana(mMana + maxMana / refillTurns);
 }
 
 double Creature::getPhysicalDefense() const
@@ -2816,6 +3910,7 @@ void Creature::checkLevelUp()
     mExp = 0.0;
 }
 
+//! \brief Writes the changing creature data for a client, the skill state last.
 void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat) 
 {
     MovableGameEntity::exportToPacketForUpdate(os, seat);
@@ -2852,10 +3947,14 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodToPacket(os, seat);
     exportActivityToPacket(os, seat);
     exportProgressToPacket(os, seat);
-    // Last field: the carried gold, shown as a sack on the thief
+    // Current mana, next to the health value (the maximum follows from type, level and equipment)
+    os << mMana;
+    // The skill state, then the last field: the carried gold, shown as a sack on the thief
+    exportSkillBuildToPacket(os);
     os << mGoldCarried;
 }
 
+//! \brief Reads the changing creature data sent by the server, the skill state last.
 void Creature::updateFromPacket(ODPacket& is)
 {
     // What changed in this update can become a post of the feed. The state is only copied
@@ -2935,6 +4034,8 @@ void Creature::updateFromPacket(ODPacket& is)
     importMoodFromPacket(is);
     importActivityFromPacket(is);
     importProgressFromPacket(is);
+    OD_ASSERT_TRUE(is >> mMana);
+    importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
@@ -3547,6 +4648,10 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     }
     page->getChild("FromText")->setText("From: " + profile.mHometown);
     page->getChild("JobText")->setText("Job: " + profile.mJob);
+    page->getChild("AttributesText")->setText(getAttributeSummaryText());
+    page->getChild("EquipmentText")->setText("Equipment: " + getEquipmentText());
+    page->getChild("PathText")->setText("Path: " + getSkillPathText());
+    page->getChild("SkillsText")->setText("Skills: " + getSkillListText());
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
     std::vector<std::string> likes(profile.mLikes, profile.mLikes + PROFILE_LIST_SIZE);
     std::vector<std::string> dislikes(profile.mDislikes, profile.mDislikes + PROFILE_LIST_SIZE);
@@ -3710,6 +4815,14 @@ std::string Creature::getStatsText()
         tempSS << "Level: " << CHAMPION_CROWN_MARKUP << std::endl;
     else
         tempSS << "Level: " << getLevel() << std::endl;
+    tempSS << "Strength / Dexterity / Life / Mana: " << formatDisplayNumber(getStrength()) << " / "
+        << formatDisplayNumber(getDexterity()) << " / " << formatDisplayNumber(getLife()) << " / "
+        << formatDisplayNumber(getMana()) << std::endl;
+    tempSS << "Critical chance: " << formatFixedNumber(getCritChance()) << " %" << std::endl;
+    tempSS << "Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
+        << std::endl;
+    tempSS << "Path: " << getSkillPathText() << std::endl;
+    tempSS << "Skills: " << getSkillListText() << std::endl;
     tempSS << "Experience: " << mExp << std::endl;
     tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
     tempSS << "Gold: " << mGoldCarried << std::endl;
@@ -3735,7 +4848,7 @@ std::string Creature::getStatsText()
     if (getDefinition()->isWorker())
     {
         tempSS << "Dig rate: " << getDigRate() << std::endl;
-        tempSS << "Dance rate: " << mClaimRate << std::endl;
+        tempSS << "Dance rate: " << getClaimRate() << std::endl;
     }
 
     tempSS << formatTitleOn << "\nDebugging information" << formatTitleOff << std::endl;
@@ -4524,7 +5637,8 @@ bool isLevelScaledAttack(const CreatureSkill& skill)
 }
 }
 
-//! \brief Gets the larger skill or weapon cooldown for melee, with level scaling for attacks.
+//! \brief Gets the larger skill or weapon cooldown for melee, with level scaling for attacks. The cd% passives
+//! shorten the cooldown of the attack lines.
 double Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
 {
     uint32_t baseCooldown = skill.getCooldownNbTurns();
@@ -4548,7 +5662,12 @@ double Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
     if(!isLevelScaledAttack(skill))
         return baseCooldown;
 
-    return CreatureProgression::cooldownAtLevel(baseCooldown, getLevel());
+    // The cd% passives shorten the cooldown of the attack lines, to at least one turn
+    double cooldown = CreatureProgression::cooldownAtLevel(baseCooldown, getLevel());
+    const double cooldownPassive = getSkillPassive("cd%");
+    if(cooldownPassive > 0.0 && cooldown > 0.0)
+        cooldown = std::max(1.0, cooldown * (1.0 - cooldownPassive / 100.0));
+    return cooldown;
 }
 
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
@@ -4570,6 +5689,9 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     // Calculate how much damage we do.
     Tile* myTile = getPositionTile();
     float range = Pathfinding::distanceTile(*myTile, tileAttack);
+
+    // The mana is paid when the shot or skill starts
+    payManaFor(*skillData.mSkill);
 
     // We use the skill
     skillData.mSkill->tryUseFight(*getGameMap(), this, range,
@@ -4902,14 +6024,14 @@ void Creature::drop(const Ogre::Vector3& v)
             return;
         }
 
-        if((tileToClaim != nullptr) && (mClaimRate > 0.0))
+        if((tileToClaim != nullptr) && (getClaimRate() > 0.0))
         {
             pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimGroundTile>(*this, *tileToClaim));
             return;
         }
 
-        if((tileWallNotClaimed != nullptr) && (mClaimRate > 0.0))
+        if((tileWallNotClaimed != nullptr) && (getClaimRate() > 0.0))
         {
             pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimWallTile>(*this, *tileWallNotClaimed));
@@ -5673,6 +6795,7 @@ void Creature::fireChatMsgFurious()
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
 }
 
+//! \brief Resolves the creature definition, makes the skill list (server side, with the skill tree) and builds the stats.
 void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition)
 {
     bool setHpToStrHp = false;
@@ -5723,6 +6846,9 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             CreatureSkillData skillData(skill, getAppliedCooldownNbTurns(*skill), 0);
             mSkillData.push_back(skillData);
         }
+
+        // The skill tree: personal seed, free rank of the pre-skill and the points the level has paid
+        initSkillBuild();
     }
 
     buildStats();
@@ -5736,6 +6862,13 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             mHp = Helper::toDouble(mHpString);
 
         computeCreatureOverlayHealthValue();
+
+        // The mana comes from the save, or the pool is full (old saves and creatures from a level file)
+        if(mManaFromSave)
+            mMana = std::min(mMana, getMaxMana());
+        else
+            mMana = getMaxMana();
+        mManaRingStepNotified = manaRingStep(mMana, getMaxMana());
     }
 }
 
@@ -5853,17 +6986,21 @@ void Creature::fireAttackTurn(const std::string& targetName, const Ogre::Vector3
     fireCosmeticEvent(event, false);
 }
 
-void Creature::fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile)
+void Creature::fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile,
+    bool critical)
 {
     if(!ConfigManager::getSingleton().getHitEvents())
         return;
 
-    // The share of the damage that got through the defense decides between a hit, a glancing blow and a blocked one
+    // The share of the damage that got through the defense decides between a hit, a glancing blow and a blocked one;
+    // a critical blow that did damage is reported as critical
     double share = (rawDamage > 0.0) ? damageDone / rawDamage : 0.0;
     share = std::max(0.0, std::min(1.0, share));
     CosmeticHitResult result = CosmeticHitResult::hit;
     if(damageDone <= 0.0)
         result = CosmeticHitResult::blocked;
+    else if(critical)
+        result = CosmeticHitResult::critical;
     else if(share < ConfigManager::getSingleton().getHitGlanceShare())
         result = CosmeticHitResult::glanced;
 
@@ -5878,6 +7015,38 @@ void Creature::fireHitResult(const std::string& attackerName, double damageDone,
     event.mText = missile ? "missile" : "melee";
     event.mValue = static_cast<int32_t>(result);
     event.mValue2 = static_cast<int32_t>(healthShare * 1000.0 + 0.5);
+    event.mPosition = getPosition();
+    fireCosmeticEvent(event, false);
+}
+
+//! \brief Reports a critical hit of this creature on a building or a wall; the event has no target creature, so the
+//! client plays the feedback on this (the attacking) creature.
+void Creature::fireCriticalOnStructure(const std::string& kind, const Ogre::Vector3& position)
+{
+    if(!ConfigManager::getSingleton().getHitEvents())
+        return;
+
+    CosmeticEvent event(CosmeticEventType::hitResult);
+    event.mSubject = getName();
+    event.mText = kind;
+    event.mValue = static_cast<int32_t>(CosmeticHitResult::critical);
+    event.mValue2 = 0;
+    event.mPosition = position;
+    fireCosmeticEvent(event, false);
+}
+
+//! \brief Reports a critical spell or area damage on this creature (no damage share, the damage follows by effect).
+void Creature::fireCriticalSpell(const std::string& attackerName)
+{
+    if(!ConfigManager::getSingleton().getHitEvents())
+        return;
+
+    CosmeticEvent event(CosmeticEventType::hitResult);
+    event.mSubject = attackerName;
+    event.mObject = getName();
+    event.mText = "spell";
+    event.mValue = static_cast<int32_t>(CosmeticHitResult::critical);
+    event.mValue2 = 0;
     event.mPosition = getPosition();
     fireCosmeticEvent(event, false);
 }
@@ -5931,7 +7100,8 @@ bool Creature::rollAttackHit(double attackRating, uint32_t attackerLevel, bool p
         attackerLevel, getLevel());
 }
 
-//! \brief Rolls one configured avoidance kind; parry cannot stop missiles and block requires a shield.
+//! \brief Rolls one configured avoidance kind; parry cannot stop missiles and block requires a shield. The avoid
+//! passives add to the chance; a creature without avoidance kind dodges with their sum.
 DefenceChance::Outcome Creature::rollMeleeDefence(bool missile) const
 {
     ConfigManager& config = ConfigManager::getSingleton();
@@ -5944,7 +7114,9 @@ DefenceChance::Outcome Creature::rollMeleeDefence(bool missile) const
         return DefenceChance::none;
 
     const CreatureDefinition::Avoidance avoidance = getDefinition()->getAvoidance();
-    if(avoidance == CreatureDefinition::Avoidance::none ||
+    // The avoid passives add to the avoidance chance; a creature without avoidance kind dodges with their sum
+    const double avoidBonus = getSkillPassive("avoid");
+    if((avoidance == CreatureDefinition::Avoidance::none && avoidBonus <= 0.0) ||
         (missile && avoidance == CreatureDefinition::Avoidance::parry))
         return DefenceChance::none;
 
@@ -5977,6 +7149,11 @@ DefenceChance::Outcome Creature::rollMeleeDefence(bool missile) const
         chance = DefenceChance::dodgeChance(getLevel(), config.getShieldBlockBase(), config.getShieldBlockPerLevel(),
             config.getShieldBlockMax());
     }
+    else if(avoidance == CreatureDefinition::Avoidance::none)
+    {
+        // Only the avoid passives give the creature a chance to dodge
+        kind = DefenceChance::dodged;
+    }
     else if(avoidance == CreatureDefinition::Avoidance::parry)
     {
         kind = DefenceChance::parried;
@@ -5989,6 +7166,8 @@ DefenceChance::Outcome Creature::rollMeleeDefence(bool missile) const
                 parryWeapons[i]->getParryPerLevel(), parryWeapons[i]->getParryMax()));
         }
     }
+    if(kind != DefenceChance::none)
+        chance += avoidBonus;
     // The selected avoidance kind uses exactly one server roll.
     return DefenceChance::decide(kind, chance, Random::Double(0.0, 100.0));
 }
@@ -6262,8 +7441,35 @@ void Creature::computeCreatureOverlayMoodValue()
     }
 }
 
+//! \brief Adds an effect to the creature. A strength, speed or defense effect of a source that already has a running
+//! effect only refreshes the running one.
 void Creature::addCreatureEffect(CreatureEffect* effect)
 {
+    // A strength, speed or defense effect that a running effect of the same source already provides only refreshes the
+    // running one: the same skill or spell cast again does not stack
+    if(isStackingEffect(*effect))
+    {
+        const std::string refreshKey = effectRefreshKey(*effect);
+        for(EntityParticleEffect* entityEffect : mEntityParticleEffects)
+        {
+            if(entityEffect->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+                continue;
+
+            CreatureParticleEffect* running = static_cast<CreatureParticleEffect*>(entityEffect);
+            if(running->mEffect->getEffectName() != effect->getEffectName() ||
+               running->mEffect->getNbTurnsEffect() == 0.0 || effectRefreshKey(*running->mEffect) != refreshKey)
+            {
+                continue;
+            }
+
+            running->mEffect->mNbTurnsEffect = effect->getNbTurnsEffect();
+            running->mNbTurnsEffect = static_cast<int32_t>(std::ceil(effect->getNbTurnsEffect()));
+            delete effect;
+            mNeedFireRefresh = true;
+            return;
+        }
+    }
+
     std::string effectName = nextParticleSystemsName();
 
     OD_LOG_INF("Added CreatureEffect name=" + effectName + " on creature=" + getName());
@@ -6645,6 +7851,7 @@ void Creature::clientUpkeep()
         --mDropCooldown;
 }
 
+//! \brief Sets the speed modifier of the effects and recomputes the move speeds (the move% passives included).
 void Creature::setMoveSpeedModifier(double modifier)
 {
     mSpeedModifier = modifier;
@@ -6661,9 +7868,11 @@ void Creature::setMoveSpeedModifier(double modifier)
         mLavaSpeed += mDefinition->getLavaSpeedPerLevel() * multiplier;
     }
 
-    mGroundSpeed *= mSpeedModifier;
-    mWaterSpeed *= mSpeedModifier;
-    mLavaSpeed *= mSpeedModifier;
+    // The move% passives raise every speed
+    const double speedFactor = mSpeedModifier * (1.0 + getSkillPassive("move%") / 100.0);
+    mGroundSpeed *= speedFactor;
+    mWaterSpeed *= speedFactor;
+    mLavaSpeed *= speedFactor;
     mNeedFireRefresh = true;
 }
 
@@ -6742,7 +7951,7 @@ void Creature::flee()
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
 }
 
-void Creature::fleeFromTile(Tile* fearTile, int32_t nbTurns)
+void Creature::fleeFromTile(Tile* fearTile, double nbTurns)
 {
     // Fear breaks the possession of the creature
     if(isPossessed())
@@ -7067,11 +8276,24 @@ void Creature::dismissChampion()
     deleteYourself();
 }
 
+//! Tolerance that keeps an exact capacity such as 129 from being rounded down to 128 by floating point error.
+static const double GOLD_CAPACITY_ROUNDING_EPSILON = 1e-9;
+
 //! \brief Returns the gold the creature can carry before it has to haul it to a treasury. Every reader of the
-//! capacity uses this function so that the capacity can depend on more than the definition.
+//! capacity uses this function so that the capacity can depend on more than the definition. A creature with
+//! MaxGoldCarryable above 0 carries MaxGoldCarryable x (1 + GoldCarryPerStrength x (Strength - start Strength))
+//! x (1 + carry% / 100), rounded down.
 int32_t Creature::getGoldCapacity() const
 {
-    return mDefinition->getMaxGoldCarryable();
+    const int32_t baseCapacity = mDefinition->getMaxGoldCarryable();
+    if(baseCapacity <= 0)
+        return baseCapacity;
+
+    const double strengthGain = std::max(0.0, getStrength() - mDefinition->getStrength());
+    const double strengthFactor = 1.0 + ConfigManager::getSingleton().getGoldCarryPerStrength() * strengthGain;
+    const double carryFactor = 1.0 + getSkillPassive("carry%") / 100.0;
+    const double capacity = static_cast<double>(baseCapacity) * strengthFactor * carryFactor;
+    return static_cast<int32_t>(std::floor(capacity + GOLD_CAPACITY_ROUNDING_EPSILON));
 }
 
 //! \brief Adds mined gold with a fraction: the whole part goes to the carried gold, the rest is kept for the next step.
@@ -7287,13 +8509,13 @@ bool isPossessedBasicAttack(const CreatureSkill& skill)
 }
 
 //! \brief Tells whether a possessed creature can use the skill now: no cooldown (including a fraction of a
-//! turn) and no warmup left, and the skill is usable by the creature.
+//! turn) and no warmup left, the skill is usable by the creature and the creature has the mana for it.
 //! \param creature The possessed creature that wants to use the skill.
 //! \param skillData The state of the skill (cooldown and warmup turns left).
 bool isPossessedSkillReady(const Creature& creature, const CreatureSkillData& skillData)
 {
     return (skillData.mCooldown <= 0.0) && (skillData.mWarmup <= 0.0) &&
-        skillData.mSkill->canBeUsedBy(&creature);
+        skillData.mSkill->canBeUsedBy(&creature) && creature.hasManaFor(*skillData.mSkill);
 }
 }
 
@@ -7440,6 +8662,9 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
         {
             if(!skillData.mSkill->tryUseSupport(*getGameMap(), this))
                 return;
+
+            // The mana is paid when the skill starts
+            payManaFor(*skillData.mSkill);
 
             skillData.mCooldown += skillData.mSkill->getCooldownNbTurns();
             skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();

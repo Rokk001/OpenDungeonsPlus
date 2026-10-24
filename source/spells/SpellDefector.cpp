@@ -36,7 +36,6 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
-#include <cmath>
 
 const std::string SpellDefectorName = "defector";
 const std::string SpellDefectorNameDisplay = "Defector";
@@ -203,8 +202,8 @@ bool SpellDefector::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    int32_t nbTurns = static_cast<int32_t>(std::lround(SkillManager::getResearchValue(player->getSeat(), SkillType::spellDefector,
-        ConfigManager::getSingleton().getSpellConfigDouble("DefectorNbTurns"), ResearchEffect::Duration)));
+    double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellDefector,
+        ConfigManager::getSingleton().getSpellConfigDouble("DefectorNbTurns"), ResearchEffect::Duration);
     int originalSeatId = creature->getSeat()->getId();
     int newSeatId = player->getSeat()->getId();
     creature->changeSeat(player->getSeat());

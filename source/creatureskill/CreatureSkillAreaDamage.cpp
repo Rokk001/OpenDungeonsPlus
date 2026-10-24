@@ -88,7 +88,10 @@ bool CreatureSkillAreaDamage::tryUseFight(GameMap& gameMap, Creature* creature, 
 
     // The zone is centred on the target and is kept by the caster
     // The damage follows the SkillDamageFactor of the creature type
-    const double damageFactor = creature->getDefinition()->getSkillDamageFactor();
+    double damageFactor = creature->getDefinition()->getSkillDamageFactor();
+    // A skill of the skill tree also scales with the level, the health tier and the spell passives of the creature
+    if(isTreeSkill())
+        damageFactor *= creature->getTreeSpellDamageFactor();
     CreatureEffectAreaDamage* effect = new CreatureEffectAreaDamage(static_cast<int32_t>(mNbTurns),
         attackedTile->getX(), attackedTile->getY(), mRadius, mDamagePerTurn * damageFactor, mParticleScript);
     effect->setDamageMin(mDamagePerTurnMin * damageFactor);

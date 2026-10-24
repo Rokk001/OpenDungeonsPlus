@@ -68,7 +68,7 @@ assert 'CosmeticEventType::calmed' in reactions and 'CosmeticEventType::bedStatu
 event_cpp = read('source/network/CosmeticEvent.cpp')
 results = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticHitResult')[1].split('};')[0], re.M)
 assert results == [('hit', '0'), ('glanced', '1'), ('blocked', '2'), ('missed', '3'),
-                   ('dodged', '4'), ('parried', '5'), ('shieldBlocked', '6')], results
+                   ('dodged', '4'), ('parried', '5'), ('shieldBlocked', '6'), ('critical', '7')], results
 layout = ('event.mType << event.mSubject << event.mObject << event.mText',
           'event.mValue << event.mValue2 << event.mPosition')
 for fields in layout:

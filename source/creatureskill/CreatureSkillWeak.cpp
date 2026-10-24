@@ -50,10 +50,16 @@ const std::string& CreatureSkillWeak::getSkillName() const
     return CreatureSkillWeakName;
 }
 
+//! \brief Returns the range of the skill; 0 for targets that are not creatures (a skill of the skill tree: also for a
+//! target that already suffers from it).
 double CreatureSkillWeak::getRangeMax(const Creature* creature, GameEntity* entityAttack) const
 {
     // Weak can be cast on creatures only
     if(entityAttack->getObjectType() != GameEntityType::creature)
+        return 0.0;
+
+    // A skill of the skill tree is not cast on a target that already suffers from it
+    if(isTreeSkill() && static_cast<Creature*>(entityAttack)->hasActiveEffectSource(getTreeSkillId()))
         return 0.0;
 
     return mMaxRange;
@@ -67,6 +73,7 @@ bool CreatureSkillWeak::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Puts the effect on the attacked creature; a skill of the skill tree tags it with its id.
 bool CreatureSkillWeak::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -78,6 +85,7 @@ bool CreatureSkillWeak::tryUseFight(GameMap& gameMap, Creature* creature, float 
 
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
     CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(mEffectDuration, mEffectValue, "SpellCreatureWeak");
+    tagEffect(effect);
     attackedCreature->addCreatureEffect(effect);
 
     return true;

@@ -117,7 +117,7 @@ def documented(text, key):
 
 
 for key, expected in (("TreasuryGoldPerTile", 1000), ("DormitoryWakefulnessPerTurn", 1.5), ("PrisonSkeletonBaseLevel", 1),
-                      ("DungeonHeartHealPerSecond", 2.5), ("DungeonHeartManaPerSecond", 30)):
+                      ("DungeonHeartHealPerSecond", 3.775), ("DungeonHeartManaPerSecond", 30)):
     assert value(rooms_cfg, key) == expected, key
     assert documented(rooms_cfg, key), "%s is documented in the header of rooms.cfg" % key
 assert value(global_cfg, "CreaturesPerPortal") == 5
@@ -209,6 +209,16 @@ assert 'getTrapConfigDouble("TriggerRadius")' in trigger and "dx = -radius; dx <
 # fractional values: the timers and the readers of the plan are doubles
 assert "double mReloadTime;" in read("source/traps/Trap.h") and 'getTrapConfigDouble("AlarmReloadTurns")' in read("source/traps/TrapAlarm.cpp")
 assert "double mFearTurns;" in read("source/traps/TrapFear.h") and "double mFreezeTurns;" in read("source/traps/TrapFreeze.h")
+# the research duration reaches the effect timers as a fraction (Defector level 2 = 43.75), nothing is rounded
+for rounded_file in ("source/traps/TrapFear.cpp", "source/traps/TrapFreeze.cpp", "source/spells/SpellDefector.cpp", "source/spells/SpellHexenHen.cpp"):
+    assert "lround" not in read(rounded_file), rounded_file + " must not round the duration"
+assert "void fleeFromTile(Tile* fearTile, double nbTurns);" in read("source/entities/Creature.h")
+assert "double mFearTurns;" in read("source/creatureaction/CreatureActionFlee.h")
+assert "double fearTurns" in read("source/creatureaction/CreatureActionFlee.h")
+assert "double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellDefector" in read("source/spells/SpellDefector.cpp")
+assert "double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellHexenHen" in read("source/spells/SpellHexenHen.cpp")
+assert "CreatureEffectDefector(double nbTurnsEffect" in read("source/creatureeffect/CreatureEffectDefector.h")
+assert abs(35 * 1.25 - 43.75) < 1e-9
 assert "std::pair<Creature*, double>" in read("source/rooms/RoomCrypt.h")
 assert 'getRoomConfigDouble("CryptRotNbTurns")' in read("source/rooms/RoomCrypt.cpp")
 assert "double getHeartMaxHP() const;" in read("source/rooms/RoomDungeonTemple.h")
