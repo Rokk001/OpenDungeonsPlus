@@ -1,5 +1,64 @@
 # Item image prompts
 
+## BLK_C_Shield_rare.png
+
+Edit target: supplied original shield inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Shield_epic.png
+
+Edit target: supplied original shield inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Axe_rare.png
+
+Edit target: supplied original axe inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Axe_epic.png
+
+Edit target: supplied original axe inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Sword_rare.png
+
+Edit target: supplied original sword inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Sword_epic.png
+
+Edit target: supplied original sword inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Spear_rare.png
+
+Edit target: supplied original spear inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Spear_epic.png
+
+Edit target: supplied original spear inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Club_rare.png
+
+Edit target: supplied original club inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Club_epic.png
+
+Edit target: supplied original club inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Hammer_rare.png
+
+Edit target: supplied original hammer inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Hammer_epic.png
+
+Edit target: supplied original hammer inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
 ## BLK_C_Head_rare.png
 
 Edit target: the supplied original head inventory icon. Create its rare quality version. Refine existing iron surfaces to polished steel, add restrained fine etched concentric details and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
