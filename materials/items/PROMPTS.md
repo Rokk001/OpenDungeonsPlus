@@ -70,6 +70,35 @@ Edit target: supplied original signet ring inventory icon. Create its rare quali
 
 Edit target: supplied original signet ring inventory icon. Create its epic quality version named Seal of Iron Resolve (do not write that name). Refine the existing signet ring to polished silver-steel, rich fine gold inlay surrounding the original rectangular signet face and geometric diamond motif. Add a very faint violet magic glow confined to the engraved grooves. No jewel. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment item. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
 
+## BLK_A_Shield_base.png and BLK_A_Shield_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Shield of Arms: one sturdy round iron shield with a plain round boss, modest riveted rim and no heraldic image. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_A_Axe_base.png and BLK_A_Axe_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Axe of Arms: one practical single-bladed iron battle axe with a sturdy short wooden haft and dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_A_Sword_base.png and BLK_A_Sword_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Sword of Arms: one practical straight iron sword with a plain iron crossguard, simple round pommel and dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_A_Spear_base.png and BLK_A_Spear_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Spear of Arms: one practical long wooden spear with a narrow leaf-shaped iron point and a simple dark grip wrapping. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_A_Club_base.png and BLK_A_Club_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Club of Arms: one sturdy short heavy wooden war club with an iron-banded striking head and simple dark grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLK_A_Hammer_base.png and BLK_A_Hammer_common.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Hammer of Arms: one compact practical war hammer with a broad square iron head, straight wooden haft and dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
 ## POOR_Head.png
 
 Use case: stylized-concept. Asset type: a single inventory icon for an original
