@@ -6375,7 +6375,9 @@ void Creature::handleHexenHenUpkeep()
         return;
 
     Tile* destTile = getGameMap()->getTile(myTile->getX() + Random::Int(-2, 2), myTile->getY() + Random::Int(-2, 2));
-    if((destTile == nullptr) || (destTile == myTile) || !canGoThroughTile(destTile))
+    // The wandering target must be a tile with a free standing point, not one covered by furniture
+    if((destTile == nullptr) || (destTile == myTile) || !canGoThroughTile(destTile) ||
+       !RoomObjectNavigation::hasStandingPosition(*this, *destTile))
         return;
 
     std::list<Tile*> tempPath = getGameMap()->path(this, destTile);

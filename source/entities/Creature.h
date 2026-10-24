@@ -1564,7 +1564,8 @@ private:
 
     void computeCreatureOverlayMoodValue();
 
-    //! \brief Called on server side each turn when the creature is a chicken. It only wanders around
+    //! \brief Called on server side each turn when the creature is a chicken. It only wanders around,
+    //! and only to tiles with a free standing point (not covered by furniture)
     void handleHexenHenUpkeep();
 
     //! \brief Called on server side each turn for the champion. The cast price covers the first seconds, then the owner pays
