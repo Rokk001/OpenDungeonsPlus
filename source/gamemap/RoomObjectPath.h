@@ -250,13 +250,52 @@ inline float pathLength(const Ogre::Vector2& start, const std::vector<Ogre::Vect
     return cost;
 }
 
-//! \brief Same result as clearPoint() without a heading, for obstacles that were already widened with
-//! Obstacle::forHeading() for each of the eight walking headings, so that the widening is not repeated for
+//! \brief The obstacles of a route search widened with Obstacle::forHeading() for each of the eight walking
+//! headings. A list is built on its first use only, so that a search which ends early (no free start point,
+//! no free goal point) does not pay for the headings it never tests.
+struct HeadingObstacles
+{
+    //! \brief Creates the cache for the obstacles; nothing is widened yet.
+    //! \param base The obstacles to widen; must outlive this object.
+    explicit HeadingObstacles(const std::vector<Obstacle>& base) :
+        mBase(base)
+    {
+        mBuilt.fill(false);
+    }
+
+    //! \brief Returns the obstacles widened for the heading (-dx, -dy), building them on the first request.
+    //! \param index The heading index (dy + 1) * 3 + dx + 1 with dx and dy in -1..1, not both 0.
+    const std::vector<Obstacle>& get(int index)
+    {
+        if(!mBuilt[index])
+        {
+            const int dx = index % 3 - 1;
+            const int dy = index / 3 - 1;
+            std::vector<Obstacle>& edge = mLists[index];
+            edge.reserve(mBase.size());
+            for(const Obstacle& obstacle : mBase)
+                edge.push_back(obstacle.forHeading(Ogre::Vector2(float(-dx), float(-dy))));
+            mBuilt[index] = true;
+        }
+        return mLists[index];
+    }
+
+private:
+    //! The unwidened obstacles.
+    const std::vector<Obstacle>& mBase;
+    //! The widened lists per heading index.
+    std::array<std::vector<Obstacle>, 9> mLists;
+    //! Tells which entries of mLists are already built.
+    std::array<bool, 9> mBuilt;
+};
+
+//! \brief Same result as clearPoint() without a heading, for obstacles that are widened with
+//! Obstacle::forHeading() once per walking heading, so that the widening is not repeated for
 //! every tested point (it was the main cost of the start and goal point tests of a route search).
-//! \param headingObstacles The obstacles widened for the heading (-dx, -dy) at index (dy + 1) * 3 + dx + 1.
+//! \param headingObstacles The obstacles widened per heading; lists are built when first needed.
 //! \param point The point to test.
 //! \return True if one of the eight walking headings is free at the point.
-inline bool clearPointExpanded(const std::array<std::vector<Obstacle>, 9>& headingObstacles,
+inline bool clearPointExpanded(HeadingObstacles& headingObstacles,
     const Ogre::Vector2& point)
 {
     for(int y = -1; y <= 1; ++y)
@@ -266,7 +305,7 @@ inline bool clearPointExpanded(const std::array<std::vector<Obstacle>, 9>& headi
                 continue;
             const Ogre::Vector2 heading(static_cast<float>(x), static_cast<float>(y));
             bool clear = true;
-            for(const Obstacle& obstacle : headingObstacles[(1 - y) * 3 + 1 - x])
+            for(const Obstacle& obstacle : headingObstacles.get((1 - y) * 3 + 1 - x))
                 if(obstacle.contains(point, heading))
                 {
                     clear = false;
@@ -356,17 +395,8 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
 
     // A grid edge has only eight headings; project a creature's walking body
     // once per heading, not once per obstacle for every expanded search node.
-    std::array<std::vector<Obstacle>, 9> edgeObstacles;
-    for(int dy = -1; dy <= 1; ++dy)
-        for(int dx = -1; dx <= 1; ++dx)
-        {
-            if(dx == 0 && dy == 0)
-                continue;
-            std::vector<Obstacle>& edge = edgeObstacles[(dy + 1) * 3 + dx + 1];
-            edge.reserve(obstacles.size());
-            for(const Obstacle& obstacle : obstacles)
-                edge.push_back(obstacle.forHeading(Ogre::Vector2(float(-dx), float(-dy))));
-        }
+    // The lists are built on first use, so a search that ends before the expansion builds few or none.
+    HeadingObstacles edgeObstacles(obstacles);
     // Usually only the surrounding grid nodes are needed. If old save data or
     // newly placed furniture overlaps the start, connect an outward exit first.
     const Ogre::Vector2 initialHeading = obstacles.empty() ? Ogre::Vector2(0, -1) : obstacles.front().initialHeading;
@@ -453,7 +483,7 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
                 const Ogre::Vector2 from = forward ? point : target;
                 const Ogre::Vector2 to = forward ? target : point;
                 const int heading = forward ? (1 - dy) * 3 + 1 - dx : (dy + 1) * 3 + dx + 1;
-                if(!clearSegment(edgeObstacles[heading], from, to) || !terrain(from, to))
+                if(!clearSegment(edgeObstacles.get(heading), from, to) || !terrain(from, to))
                     continue;
                 nodes[next].*distance = nextCost;
                 nodes[next].*link = current;
