@@ -309,10 +309,21 @@ EXPECTED_LEVELS = {
     'levels/campaign/Wolfscar.level': ('5', '187', '300600', '0/0/334', '147'),
     'levels/campaign/Wraithwood.level': ('3', '134', '300000', '0/0/200', '66'),
     'levels/multiplayer/Angel.level': ('4', '2736', '2052000', '912/912/912', '0'),
+    'levels/multiplayer/CrownofEmbers.level': ('4', '1296', '972000', '432/432/432', '0'),
+    'levels/multiplayer/EmberBasin.level': ('4', '828', '621000', '276/276/276', '0'),
+    'levels/multiplayer/FourWinds.level': ('4', '1032', '774000', '344/344/344', '0'),
     'levels/multiplayer/GreedOrMight.level': ('3', '196', '300000', '0/0/200', '4'),
+    'levels/multiplayer/LongWinter.level': ('2', '960', '1440000', '320/320/320', '0'),
     'levels/multiplayer/RuinsOfTheConfluent.level': ('4', '171', '300375', '0/0/267', '96'),
     'levels/multiplayer/ScreamInTheDark.level': ('5', '372', '300000', '0/116/256', '0'),
+    'levels/multiplayer/SunkenHalls.level': ('2', '810', '1215000', '270/270/270', '0'),
     'levels/multiplayer/TheBridge.level': ('2', '255', '382500', '85/85/85', '0'),
+    'levels/multiplayer/TheBrokenSeal.level': ('2', '424', '635250', '142/141/141', '0'),
+    'levels/multiplayer/TheEightThrones.level': ('8', '1424', '533812', '475/475/474', '0'),
+    'levels/multiplayer/TheFourGates.level': ('4', '1312', '983625', '438/437/437', '0'),
+    'levels/multiplayer/TheIronCross.level': ('4', '884', '662625', '295/295/294', '0'),
+    'levels/multiplayer/TheSaltLake.level': ('2', '690', '1035000', '230/230/230', '0'),
+    'levels/multiplayer/TheShatteredRing.level': ('2', '906', '1359000', '302/302/302', '0'),
     'levels/skirmish/Barrackdeep.level': ('1', '75', '300000', '0/25/50', '0'),
     'levels/skirmish/DuelToDeath.level': ('2', '2386', '3578250', '796/795/795', '0'),
     'levels/skirmish/Embervault.level': ('1', '79', '300000', '0/37/42', '0'),
@@ -321,10 +332,16 @@ EXPECTED_LEVELS = {
     'levels/skirmish/FourThrones.level': ('4', '384', '300000', '96/160/128', '0'),
     'levels/skirmish/Gloomkeep.level': ('1', '171', '513000', '57/57/57', '0'),
     'levels/skirmish/GrandDelve.level': ('1', '74', '300000', '0/22/52', '0'),
+    'levels/skirmish/KingdomsFall.level': ('8', '1476', '553500', '492/492/492', '0'),
     'levels/skirmish/Lanternreach.level': ('1', '135', '405000', '45/45/45', '0'),
     'levels/skirmish/Quietcrag.level': ('1', '87', '300000', '3/55/29', '0'),
     'levels/skirmish/Splitstone.level': ('1', '157', '469500', '53/52/52', '0'),
     'levels/skirmish/StoneKeep.level': ('3', '698', '697500', '233/233/232', '0'),
+    'levels/skirmish/TheBreach.level': ('1', '533', '1597500', '178/178/177', '0'),
+    'levels/skirmish/TheEndlessTide.level': ('1', '1081', '3241500', '361/360/360', '0'),
+    'levels/skirmish/TheGreatWarren.level': ('4', '992', '743625', '331/331/330', '0'),
+    'levels/skirmish/TheLastGate.level': ('1', '932', '2794500', '311/311/310', '0'),
+    'levels/skirmish/ThievesGold.level': ('2', '864', '1296000', '288/288/288', '0'),
     'levels/skirmish/TriadDeeps.level': ('3', '552', '552000', '184/184/184', '0'),
     'levels/skirmish/TwinDelve.level': ('2', '124', '301500', '0/0/134', '10'),
     'levels/skirmish/Wyrmhollow.level': ('1', '508', '1522500', '170/169/169', '0'),
@@ -332,6 +349,8 @@ EXPECTED_LEVELS = {
 
 tool = read('tools/balance/rebalance_gold_density.py')
 assert re.search(r'^BASE_COMMIT = "[0-9a-f]{40}"$', tool, re.M)
+# Levels that do not exist at BASE_COMMIT are read from the commit that introduced them
+assert re.search(r'^NEW_LEVELS_BASE_COMMIT = "2ad2f576294eaf429d8aaf7a1b3a354633d3476d"$', tool, re.M)
 assert 'GOLD_TARGET_PER_KEEPER_SEAT = 300000' in tool
 result = subprocess.run([sys.executable, str(ROOT / 'tools' / 'balance' / 'rebalance_gold_density.py'), '--check'],
                         cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,
