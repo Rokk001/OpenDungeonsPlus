@@ -1,5 +1,154 @@
 # Item image prompts
 
+## WRK_B_Head_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Cap of Claiming: a sturdy tan canvas worker cap with a softly squared crown, short brim and simple brown leather brow band, empty without a head. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Head_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Head_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Armour_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Apron of Claiming: a broad sturdy empty tan canvas work apron, square bib, practical stitched pocket and plain leather neck and waist straps. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Armour_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Armour_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Boots_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Clogs of Claiming: a matching pair of broad wooden-soled canvas work clogs, sturdy low shoes with brown leather instep straps, shown as one equipment item. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Boots_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Boots_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Ring_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Band of Claiming: one plain forged iron finger ring wrapped neatly with tan canvas and simple cross stitches, empty without a hand. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Ring_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Ring_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Pick_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Pick of Claiming: one practical mining pick, a narrow iron head with one pointed end and one compact chisel end, straight wooden handle bound with tan canvas. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Pick_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Pick_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Head_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Cap of Survival: a tough rounded tan canvas worker cap with a short sturdy brim, double-stitched rim and modest leather side binding, no head. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Head_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Head_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Armour_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Apron of Survival: one empty thick tan canvas worker apron, reinforced bib and hem, modest stitched pocket and dark brown leather fastening straps. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Armour_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Armour_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Boots_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Clogs of Survival: a matching pair of enclosed canvas work shoes with sturdy wooden clog soles and dark brown leather heel reinforcement, one equipment item. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Boots_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Boots_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Ring_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Band of Survival: one thick dark iron finger ring partly wrapped in tightly bound tan canvas with plain sturdy stitching, no hand. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Ring_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Ring_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Pick_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Pick of Survival: one sturdy dark iron mining pick on a straight wooden haft with a thick tan canvas grip wrap, functional modest workmanship. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Pick_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Pick_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
 ## ARC_A_Head_base.png
 
 Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Cap of Bow (do not write the name): one supple brown hide archer cap, rounded soft crown with a short pointed front brow, narrow leather band and small plain buckle. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
