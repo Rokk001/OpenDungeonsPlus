@@ -25,6 +25,7 @@
 #include "utils/MakeUnique.h"
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/RenderedMovableEntity.h"
@@ -433,7 +434,7 @@ void RoomWorkshop::doUpkeep()
     mTrapType = TrapType::nullTrapType;
 }
 
-//! \brief A creature works; the points per work follow the workshop research.
+//! \brief A creature works with the workshop research and Craftsman equipment factors.
 bool RoomWorkshop::useRoom(Creature& creature, bool forced)
 {
     std::map<Creature*, Tile*>::iterator it = mCreaturesSpots.find(&creature);
@@ -484,9 +485,9 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
     OD_ASSERT_TRUE_MSG(creatureRoomAffinity.getRoomType() == getType(), "name=" + getName() + ", creature=" + creature.getName()
         + ", creatureRoomAffinityType=" + Helper::toString(static_cast<int>(creatureRoomAffinity.getRoomType())));
 
-    mPoints += static_cast<int32_t>(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
+    mPoints += creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork"),
-        ResearchEffect::PointsPerWork));
+        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Craftsman");
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));

@@ -19,6 +19,7 @@
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 
 static const std::string CreatureEffectFrozenName = "Frozen";
 
@@ -42,6 +43,14 @@ static CreatureEffectRegister reg(new CreatureEffectFrozenFactory);
 const std::string& CreatureEffectFrozen::getEffectName() const
 {
     return CreatureEffectFrozenName;
+}
+
+//! \brief Applies Thick Skull only on a new freeze, not again when its remaining duration is loaded.
+void CreatureEffectFrozen::startEffect(Creature& creature)
+{
+    if(!mItemResistanceApplied)
+        mNbTurnsEffect *= ItemEffects::remainingFactor(creature, "ThickSkull");
+    mItemResistanceApplied = true;
 }
 
 void CreatureEffectFrozen::applyEffect(Creature& creature)

@@ -69,7 +69,7 @@ public:
     static CreatureEffectAreaDamage* load(std::istream& is);
 
 protected:
-    //! \brief Rolls a fresh damage value for every affected creature and turn.
+    //! \brief Rolls fresh damage for each target and turn with the caster's critical and hero-target item bonuses.
     virtual void applyEffect(Creature& creature) override;
 
 private:

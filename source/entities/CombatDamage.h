@@ -73,12 +73,13 @@ inline bool rollCriticalChance(double chancePercent)
     return Random::Double(0.0, 100.0) < chancePercent;
 }
 
-//! \brief Multiplies every damage value of the six-value range by CritDamageMultiplier. Called for a critical hit
+//! \brief Multiplies every damage value by CritDamageMultiplier plus the attacker's equipment bonus. Called for a critical hit
 //! before the defense of the target is subtracted (see roll()).
+//! \param extraMultiplier Executioner bonus, zero for sources without item effects.
 inline void applyCriticalToRange(double& phyMin, double& phyMax, double& magMin, double& magMax,
-    double& eleMin, double& eleMax)
+    double& eleMin, double& eleMax, double extraMultiplier = 0.0)
 {
-    const double factor = ConfigManager::getSingleton().getCritDamageMultiplier();
+    const double factor = ConfigManager::getSingleton().getCritDamageMultiplier() + extraMultiplier;
     phyMin *= factor;
     phyMax *= factor;
     magMin *= factor;

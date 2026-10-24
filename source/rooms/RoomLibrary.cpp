@@ -24,6 +24,7 @@
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "utils/MakeUnique.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/SkillEntity.h"
@@ -337,7 +338,7 @@ void RoomLibrary::doUpkeep()
     }
 }
 
-//! \brief A creature researches in the library; the points per work follow the library research.
+//! \brief A creature researches with the library research and Scholar equipment factors.
 bool RoomLibrary::useRoom(Creature& creature, bool forced)
 {
     int32_t skillEntityPoints = ConfigManager::getSingleton().getRoomConfigInt32("LibrarySkillPointsBook");
@@ -389,9 +390,9 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
     OD_ASSERT_TRUE_MSG(creatureRoomAffinity.getRoomType() == getType(), "name=" + getName() + ", creature=" + creature.getName()
         + ", creatureRoomAffinityType=" + Helper::toString(static_cast<int>(creatureRoomAffinity.getRoomType())));
 
-    int32_t pointsEarned = static_cast<int32_t>(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
+    const double pointsEarned = creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomLibrary, ConfigManager::getSingleton().getRoomConfigDouble("LibraryPointsPerWork"),
-        ResearchEffect::PointsPerWork));
+        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Scholar");
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("LibraryWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax")));

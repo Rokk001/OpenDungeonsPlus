@@ -61,6 +61,7 @@ public:
     { return false; }
 
     //! \brief Tries to use the skill against the attacked object. Returns true if it was used.
+    //! \brief Pushes the target along traversable tiles after its Brace resistance reduces the distance.
     virtual bool tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const override;
 
