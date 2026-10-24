@@ -291,6 +291,8 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectTemporary.cpp
     ${SRC}/creatureeffect/CreatureEffectAreaDamage.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
+    ${SRC}/creatureeffect/CreatureEffectBleed.cpp
+    ${SRC}/creatureeffect/CreatureEffectPotion.cpp
 
     ${SRC}/creaturemood/CreatureMood.cpp
     ${SRC}/creaturemood/CreatureMoodWakefulness.cpp
@@ -365,6 +367,10 @@ set(OD_SOURCEFILES
     ${SRC}/entities/TrapEntity.cpp
     ${SRC}/entities/TreasuryObject.cpp
     ${SRC}/entities/Weapon.cpp
+    ${SRC}/entities/ItemDefinition.cpp
+    ${SRC}/entities/ItemInstance.cpp
+    ${SRC}/entities/ItemEffects.cpp
+    ${SRC}/entities/PotionDefinition.cpp
 
 
 	${SRC}/eventsystem/CreatureMoved.cpp

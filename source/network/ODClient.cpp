@@ -28,6 +28,7 @@
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "entities/ItemDefinition.h"
 #include "game/Campaign.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
@@ -273,6 +274,18 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 Weapon* def = new Weapon();
                 OD_ASSERT_TRUE(packetReceived >> def);
                 gameMap->addWeapon(def);
+            }
+
+            // Item definitions use their canonical block representation after the weapon list.
+            uint32_t itemCount = 0;
+            OD_ASSERT_TRUE(packetReceived >> itemCount);
+            for(uint32_t itemIndex = 0; itemIndex < itemCount; ++itemIndex)
+            {
+                ItemDefinition* definition = ItemDefinition::loadFromPacket(packetReceived);
+                OD_ASSERT_TRUE(definition != nullptr);
+                if(definition == nullptr)
+                    return false;
+                gameMap->addItemDefinition(definition);
             }
 
             // Tiles

@@ -82,6 +82,7 @@
 #include <OgreCamera.h>
 #include <OgreCompositorManager.h>
 #include <OgreEntity.h>
+#include <OgreSubEntity.h>
 #include <OgreMaterialManager.h>
 #include <OgreMesh.h>
 #include <OgreMovableObject.h>
@@ -4261,6 +4262,7 @@ bool RenderManager::getWeaponMount(const Ogre::Skeleton* skeleton, const std::st
     return skeleton->hasBone(mount.mBoneName);
 }
 
+//! \brief Attaches the original spawn weapon's quality variant without changing its mount or combat values.
 void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand)
 {
     // A weapon with the mesh name "none" is already part of the creature model, so nothing is attached
@@ -4278,9 +4280,49 @@ void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapo
         return;
     }
     Ogre::Bone* weaponBone = ent->getSkeleton()->getBone(mount.mBoneName);
+    std::string meshName = curWeapon->getMeshName();
+    const size_t handSlot = hand == "R" ? 0 : 1;
+    const ItemInstance* item = curCreature->getEquipment()[handSlot].get();
+    std::string qualitySuffix;
+    if(item != nullptr && item->mQuality != Quality::poor)
+    {
+        static const std::array<std::string, 4> QUALITY_SUFFIXES = {{"poor", "common", "rare", "epic"}};
+        qualitySuffix = QUALITY_SUFFIXES.at(static_cast<size_t>(item->mQuality));
+        std::string baseName = meshName.substr(0, meshName.find_last_of('.'));
+        if(curWeapon->getName() == "RustySword")
+            baseName = "RustySword";
+        meshName = baseName + "_" + qualitySuffix + ".mesh";
+    }
     Ogre::Entity* weaponEntity = mSceneManager->createEntity(curWeapon->getOgreNamePrefix()
                                 + hand + "_" + curCreature->getName(),
-                                curWeapon->getMeshName());
+                                meshName);
+
+    if(!qualitySuffix.empty())
+    {
+        static const std::array<Ogre::ColourValue, 4> QUALITY_TINTS = {{
+            Ogre::ColourValue(138.0f / 255.0f, 138.0f / 255.0f, 138.0f / 255.0f), Ogre::ColourValue::White,
+            Ogre::ColourValue(62.0f / 255.0f, 123.0f / 255.0f, 1.0f),
+            Ogre::ColourValue(166.0f / 255.0f, 77.0f / 255.0f, 1.0f)}};
+        const Ogre::ColourValue tint = QUALITY_TINTS.at(static_cast<size_t>(item->mQuality));
+        const std::string suffix = "_" + qualitySuffix;
+        for(unsigned int index = 0; index < weaponEntity->getNumSubEntities(); ++index)
+        {
+            Ogre::SubEntity* sub = weaponEntity->getSubEntity(index);
+            Ogre::MaterialPtr original = sub->getMaterial();
+            const std::string originalName = original->getName();
+            if(originalName.size() >= suffix.size() && originalName.compare(originalName.size() - suffix.size(), suffix.size(), suffix) == 0)
+                continue;
+            const std::string materialName = originalName + suffix;
+            Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().getByName(materialName);
+            if(material.isNull())
+            {
+                material = original->clone(materialName);
+                material->setDiffuse(tint);
+                material->setAmbient(tint);
+            }
+            sub->setMaterial(material);
+        }
+    }
 
     ent->attachObjectToBone(weaponBone->getName(), weaponEntity,
                             mount.mRotation, mount.mOffset);

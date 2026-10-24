@@ -34,6 +34,8 @@
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "entities/ItemDefinition.h"
+#include "entities/ItemInstance.h"
 #include "game/Campaign.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
@@ -338,6 +340,7 @@ bool GameMap::isInEditorMode() const
     return (ODFrameListener::getSingleton().getModeManager()->getCurrentModeType() == ModeManager::EDITOR);
 }
 
+//! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations.
 bool GameMap::loadLevel(const std::string& levelFilepath)
 {
     // We reset the creature definitions
@@ -354,6 +357,9 @@ bool GameMap::loadLevel(const std::string& levelFilepath)
     {
         addWeapon(def);
     }
+    clearItemDefinitions();
+    for(const ItemDefinition* definition : ConfigManager::getSingleton().getItems())
+        addItemDefinition(definition);
 
     // We add the rogue default seat (seatId = 0 and teamId = 0)
     Seat* rogueSeat = Seat::createRogueSeat(this);
@@ -420,6 +426,7 @@ void GameMap::setAllFullnessAndNeighbors()
     }
 }
 
+//! \brief Clears map entities, definitions and ephemeral item ownership state.
 void GameMap::clearAll()
 {
     if(mNodeType == NodeType::MTILES_NODE)
@@ -427,6 +434,7 @@ void GameMap::clearAll()
         clearCreatures();
         clearClasses();
         clearWeapons();
+        clearItemDefinitions();
         clearTraps();
 
         clearMapLights();
@@ -560,6 +568,116 @@ void GameMap::clearWeapons()
             delete def.first;
     }
     mWeapons.clear();
+}
+
+//! \brief Shares server catalogue lines or takes ownership of a received client line.
+void GameMap::addItemDefinition(const ItemDefinition* definition)
+{
+    mItemDefinitions.push_back(definition);
+}
+
+//! \brief Looks up an item line in this map's authoritative catalogue.
+const ItemDefinition* GameMap::getItemDefinition(const std::string& id) const
+{
+    for(const ItemDefinition* definition : mItemDefinitions)
+    {
+        if(definition->getId() == id)
+            return definition;
+    }
+    return nullptr;
+}
+
+//! \brief Releases network-owned definitions and clears all ephemeral item registration state.
+void GameMap::clearItemDefinitions()
+{
+    if(!isServerGameMap())
+    {
+        for(const ItemDefinition* definition : mItemDefinitions)
+            delete definition;
+    }
+    mItemDefinitions.clear();
+    mEpicRegistry.clear();
+    mNextEpicSerial = 1;
+    mItemAuraGivers.clear();
+}
+
+//! \brief Selects uniformly among matching free lines and records every newly created Epic.
+std::unique_ptr<ItemInstance> GameMap::rollItem(Quality quality, const std::string& slot,
+    const std::string& weaponClass, const std::string& path)
+{
+    std::vector<const ItemDefinition*> candidates;
+    for(const ItemDefinition* definition : mItemDefinitions)
+    {
+        if((!slot.empty() && definition->getSlot() != slot) ||
+            (!weaponClass.empty() && definition->getWeaponClass() != weaponClass) ||
+            (!path.empty() && definition->getPath() != path) || !definition->getQuality(quality).mAvailable)
+            continue;
+        if(quality == Quality::epic && isEpicRegistered(definition->getId()))
+            continue;
+        candidates.push_back(definition);
+    }
+    if(candidates.empty())
+    {
+        if(quality == Quality::epic)
+            return rollItem(Quality::rare, slot, weaponClass, path);
+        return std::unique_ptr<ItemInstance>();
+    }
+    const uint32_t index = Random::Uint(0, static_cast<uint32_t>(candidates.size() - 1));
+    std::unique_ptr<ItemInstance> item = ItemInstance::create(*candidates[index], quality);
+    if(item.get() != nullptr && quality == Quality::epic)
+    {
+        item->mEpicSerial = mNextEpicSerial++;
+        registerEpic(*item);
+    }
+    return item;
+}
+
+//! \brief Rebuilds Epic ownership incrementally as saved holders load their instances.
+void GameMap::registerEpic(const ItemInstance& item)
+{
+    if(item.mQuality != Quality::epic)
+        return;
+    mEpicRegistry.insert(item.mDefinitionId);
+    mNextEpicSerial = std::max(mNextEpicSerial, item.mEpicSerial + 1);
+}
+
+//! \brief Frees the Epic line when its only instance permanently leaves the map.
+void GameMap::unregisterEpic(const ItemInstance& item)
+{
+    if(item.mQuality == Quality::epic)
+        mEpicRegistry.erase(item.mDefinitionId);
+}
+
+//! \brief Collects living same-seat aura sources once per turn.
+void GameMap::updateItemAuraGivers()
+{
+    mItemAuraGivers.clear();
+    for(Creature* creature : mCreatures)
+    {
+        if(creature->isAlive() && creature->getIsOnMap() &&
+            (creature->getItemEffect("GuardWall") != 0.0 || creature->getItemEffect("Rally") != 0.0))
+            mItemAuraGivers[creature->getSeat()].push_back(creature);
+    }
+}
+
+//! \brief Sums a cached aura within the two-tile radius, ignoring sources that left during the turn.
+double GameMap::getItemAura(const Creature& receiver, const std::string& effect) const
+{
+    static const double AURA_RADIUS_SQUARED = 4.0;
+    std::map<const Seat*, std::vector<Creature*>>::const_iterator found = mItemAuraGivers.find(receiver.getSeat());
+    if(found == mItemAuraGivers.end() || !receiver.getIsOnMap())
+        return 0.0;
+    double sum = 0.0;
+    for(const Creature* source : found->second)
+    {
+        if(std::find(mCreatures.begin(), mCreatures.end(), source) == mCreatures.end() || !source->isAlive() || !source->getIsOnMap())
+            continue;
+        const double dx = source->getPosition().x - receiver.getPosition().x;
+        const double dy = source->getPosition().y - receiver.getPosition().y;
+        if(dx * dx + dy * dy <= AURA_RADIUS_SQUARED)
+            sum += source->getItemEffect(effect);
+    }
+    return sum;
 }
 
 void GameMap::clearRenderedMovableEntities(NodeType nt)
@@ -1551,11 +1669,13 @@ void GameMap::updateWallTorchesFromPacket(ODPacket& is)
     ++mWallTorchesVersion;
 }
 
+//! \brief Advances the map after refreshing the per-seat equipment aura cache.
 void GameMap::doTurn(double timeSinceLastTurn)
 {
     OD_LOG_INF("Computing turn " + Helper::toString(mTurnNumber) + ", timeSinceLastTurn=" + Helper::toString(timeSinceLastTurn));
     unsigned int numCallsTo_path_atStart = mNumCallsTo_path;
 
+    updateItemAuraGivers();
     uint32_t miscUpkeepTime = doMiscUpkeep(timeSinceLastTurn);
 
     if(isServerGameMap())

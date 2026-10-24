@@ -57,6 +57,9 @@ class MapLight;
 class MovableGameEntity;
 class CreatureDefinition;
 class Weapon;
+class ItemDefinition;
+class ItemInstance;
+enum class Quality : int32_t;
 class CreatureMood;
 class RenderedMovableEntity;
 class Room;
@@ -276,6 +279,28 @@ public:
     Weapon* getWeaponForTuning(const std::string& name);
     uint32_t numWeapons();
     void saveLevelEquipments(std::ofstream& levelFile);
+
+    //! \brief Adds an item definition; clients own received definitions, servers share configuration definitions.
+    void addItemDefinition(const ItemDefinition* definition);
+    //! \brief Finds an item line sent by the server or loaded from configuration.
+    const ItemDefinition* getItemDefinition(const std::string& id) const;
+    //! \brief Returns all item definitions in their catalogue order.
+    const std::vector<const ItemDefinition*>& getItemDefinitions() const { return mItemDefinitions; }
+    //! \brief Releases client definitions and resets the map-wide Epic registry.
+    void clearItemDefinitions();
+    //! \brief Rolls a matching item, excluding registered Epics and falling back to Rare when exhausted.
+    std::unique_ptr<ItemInstance> rollItem(Quality quality, const std::string& slot = std::string(),
+        const std::string& weaponClass = std::string(), const std::string& path = std::string());
+    //! \brief Registers a loaded Epic and advances the serial without storing a second registry in saves.
+    void registerEpic(const ItemInstance& item);
+    //! \brief Releases an Epic id when its instance permanently leaves this map.
+    void unregisterEpic(const ItemInstance& item);
+    //! \brief Returns whether an Epic of an item line already exists anywhere in the map.
+    bool isEpicRegistered(const std::string& id) const { return mEpicRegistry.count(id) != 0; }
+    //! \brief Caches living aura givers by seat at the beginning of a turn.
+    void updateItemAuraGivers();
+    //! \brief Returns a nearby same-seat aura sum for GuardWall or Rally.
+    double getItemAura(const Creature& receiver, const std::string& effect) const;
 
     //! \brief Calls the deleteYourself() method on each of the rooms in the game map as well as clearing the vector of stored rooms.
     void clearRooms(NodeType nt = NodeType::MTILES_NODE);
@@ -911,6 +936,11 @@ private:
     //! It is the same for weapons.
     std::vector<std::pair<const CreatureDefinition*,CreatureDefinition*> > mClassDescriptions;
     std::vector<std::pair<const Weapon*,Weapon*> > mWeapons;
+    //! \brief Catalogue lines and ephemeral ownership records for the item system.
+    std::vector<const ItemDefinition*> mItemDefinitions;
+    std::set<std::string> mEpicRegistry;
+    uint32_t mNextEpicSerial = 1;
+    std::map<const Seat*, std::vector<Creature*>> mItemAuraGivers;
 
 
     //! \brief Map Entities
