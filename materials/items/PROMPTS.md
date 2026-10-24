@@ -1,5 +1,54 @@
 # Item image prompts
 
+## BLK_C_Head_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Helm of War Cries (do not write the name): a sturdy iron war helmet with open face, broad cheek guards and a simple raised ridge, a small circular vent motif near the temples. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Three-quarter inventory view. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Mail of War Cries (do not write the name): a complete sleeveless iron chainmail shirt with leather shoulder straps, broad reinforced neck edging and simple circular metal clasps, hollow clothing with no body inside. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Three-quarter inventory view. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Boots_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Greaves of War Cries (do not write the name): a matching pair of tall iron greaves over dark leather boots, broad reinforced shin plates, sturdy buckles and plain rounded toes. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Three-quarter inventory view. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Ring_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Ring of War Cries (do not write the name): a single substantial iron signet finger ring with a round raised face bearing an abstract concentric ripple engraving, no letters. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Three-quarter inventory view. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Shield_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Shield of War Cries (do not write the name): one broad iron heater shield with a rounded boss and restrained concentric ripple engraving on the face, leather edging visible. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Axe_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Axe of War Cries (do not write the name): one sturdy single-bladed iron battle axe with a broad curved blade and short wooden haft wrapped in dark leather, restrained concentric engraving. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Sword_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Sword of War Cries (do not write the name): one complete broad straight iron sword with a simple broad crossguard, dark leather grip and circular pommel, restrained concentric engraving on the guard. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Spear_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Spear of War Cries (do not write the name): one complete iron spear with a broad leaf-shaped spearhead, wooden shaft and dark leather bindings, simple circular collar. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Club_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Club of War Cries (do not write the name): one complete sturdy iron-banded wooden war club, broad blunt cylindrical head with iron rings and restrained circular markings, dark leather grip. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## BLK_C_Hammer_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Hammer of War Cries (do not write the name): one complete heavy iron war hammer with a broad rectangular striking head, short wooden handle and dark leather grip, concentric engraved circles on the head. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
+
 ## WRK_A_Head_base.png
 
 Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Cap of Delving: one practical rounded tan canvas worker cap with a short brim and modest leather brow binding, empty cap without a head. Common-quality functional worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
