@@ -1335,7 +1335,7 @@ void removeCreature(GameMap& gameMap, const std::string& name)
     creature->deleteYourself();
 }
 
-//! \brief Executes actions, mission door locks and identified goal updates; stone attachment requires a living carrier.
+//! \brief Executes actions, mission door locks and identified goal updates without objective notices; stone attachment requires a living carrier.
 void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& action,
     const std::string& sourceTrigger, int64_t sourceAction)
 {
@@ -1348,9 +1348,7 @@ void runAction(GameMap& gameMap, LevelScript& script, const LevelScriptAction& a
             sendMessage(gameMap, action.mSeatId, "Hint: " + action.mText);
             break;
         case LevelScriptActionType::objective:
-            // Grouped declarations populate the goal panels; they are not duplicate routine notices.
-            if(action.mObjectiveGroup == LevelScriptObjectiveGroup::legacy)
-                sendMessage(gameMap, action.mSeatId, "Objective: " + action.mText);
+            // All objective declarations populate only the goal panels, without routine notices.
             break;
         case LevelScriptActionType::objectiveState:
             for(Player* player : getTargetPlayers(gameMap, action.mSeatId))
