@@ -1364,3 +1364,6 @@ materials/portraits/whole/Dwarf2.mesh-female/*.jpg	AI-generated with Codex	GPLv3
 materials/portraits/whole/RunelordDwarf.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female rune dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
 
 materials/portraits/whole/RunelordDwarf.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male rune dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
+
+models/Kobold.skeleton (clips Relieve, Clean)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte; the Clean clip is the same kind of authoring
+models/Dwarf1.skeleton (clips Relieve, Clean)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte; the Clean clip is the same kind of authoring
