@@ -1,5 +1,44 @@
 # Item image prompts
 
+## BLK_C_Head_rare.png
+
+Edit target: the supplied original head inventory icon. Create its rare quality version. Refine existing iron surfaces to polished steel, add restrained fine etched concentric details and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_C_Head_epic.png
+
+Edit target: the supplied original head inventory icon. Create its epic quality version. Refine the metal craftsmanship with fine concentric etching and noble fittings, and add a faint violet magical glow along existing metal edges and engraved grooves. Glow must be subtle and narrow, no floating particles or separate aura. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_C_Armour_rare.png
+
+Edit target: the supplied original armour inventory icon. Create its rare quality version. Refine existing iron surfaces to polished steel, add restrained fine etched concentric details and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_C_Armour_epic.png
+
+Edit target: the supplied original armour inventory icon. Create its epic quality version. Refine the metal craftsmanship with fine concentric etching and noble fittings, and add a faint violet magical glow along existing metal edges and engraved grooves. Glow must be subtle and narrow, no floating particles or separate aura. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_C_Boots_rare.png
+
+Edit target: the supplied original boots inventory icon. Create its rare quality version. Refine existing iron surfaces to polished steel, add restrained fine etched concentric details and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_C_Boots_epic.png
+
+Edit target: the supplied original boots inventory icon. Create its epic quality version. Refine the metal craftsmanship with fine concentric etching and noble fittings, and add a faint violet magical glow along existing metal edges and engraved grooves. Glow must be subtle and narrow, no floating particles or separate aura. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_C_Ring_rare.png
+
+Edit target: the supplied original ring inventory icon. Create its rare quality version. Refine existing iron surfaces to polished steel, add restrained fine etched concentric details and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_C_Ring_epic.png
+
+Edit target: the supplied original ring inventory icon. Create its epic quality version. Refine the metal craftsmanship with fine concentric etching and noble fittings, and add a faint violet magical glow along existing metal edges and engraved grooves. Glow must be subtle and narrow, no floating particles or separate aura. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
 ## BLK_C_Head_base.png
 
 Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Iron Helm of War Cries (do not write the name): a sturdy iron war helmet with open face, broad cheek guards and a simple raised ridge, a small circular vent motif near the temples. Common quality: sturdy functional iron and dark leather, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at 128x128, painterly shaded materials and warm upper-left light. Three-quarter inventory view. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha, square image.
