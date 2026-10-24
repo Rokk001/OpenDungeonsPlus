@@ -446,6 +446,18 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
         {
             effect.mGrainMin = Helper::toUInt32(words[1]);
         }
+        else if(key == "DirtStage")
+        {
+            effect.mDirtStage = Helper::toUInt32(words[1]);
+        }
+        else if(key == "DirtStageMin")
+        {
+            effect.mDirtStageMin = Helper::toUInt32(words[1]);
+        }
+        else if(key == "Unlimited")
+        {
+            effect.mUnlimited = toBool(words[1]);
+        }
         else if(key == "MaxDistance")
         {
             effect.mMaxDistance = Helper::toDouble(words[1]);

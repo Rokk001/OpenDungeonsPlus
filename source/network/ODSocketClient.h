@@ -18,6 +18,7 @@
 #ifndef ODSOCKETCLIENT_H
 #define ODSOCKETCLIENT_H
 
+#include "gamemap/TileDirtSync.h"
 #include "network/ODPacket.h"
 #include "utils/Timer.h"
 
@@ -125,6 +126,9 @@ class ODSocketClient
         //! \brief Names of the hatcheries this keeper sees and has been told the grain of. A hatchery is missing while
         //! the keeper does not see it, so its grain is sent at once when it comes into view (also after joining or loading).
         std::set<std::string>& getGrainSeen() { return mGrainSeen; }
+        //! \brief What this client was told about the dirt of the floor tiles and rooms (cosmetic event tileDirt). It starts
+        //! empty, so a keeper who joins or loads gets everything in sight at once.
+        TileDirtClientState& getDirtSent() { return mDirtSent; }
         const std::string& getState() {return mState;}
         bool isDataAvailable(int miliseconds=5);
         int32_t getGameTimeMillis()
@@ -183,6 +187,8 @@ class ODSocketClient
         int64_t mHeartMessageTurn;
         std::map<int32_t, int32_t> mHeartStagesSent;
         std::set<std::string> mGrainSeen;
+        //! See getDirtSent()
+        TileDirtClientState mDirtSent;
         //! True once the client got the current relationship tiers
         bool mRelationshipsSynced;
         //! True once the client got the whole list of wall torches

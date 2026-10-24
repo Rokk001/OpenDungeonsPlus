@@ -4916,6 +4916,8 @@ std::string Creature::getStatsText()
     {
         tempSS << "Wakefulness: " << mWakefulness << std::endl;
         tempSS << "Hunger: " << mHunger << std::endl;
+        tempSS << "Urge: " << mUrge << std::endl;
+        tempSS << "Dirt: " << mCreatureDirt << std::endl;
     }
     tempSS << "Move speed (G/W/L): " << getMoveSpeedGround() << " / "
         << getMoveSpeedWater() << " / " << getMoveSpeedLava() << std::endl;
