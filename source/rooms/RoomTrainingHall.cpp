@@ -450,6 +450,8 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
         getSeat(), SkillType::roomTrainingHall, ConfigManager::getSingleton().getRoomConfigDouble("TrainHallXpPerAttack"),
         ResearchEffect::XpPerHit);
     expReceived *= coef;
+    // A dirty hall teaches less
+    expReceived *= getDirtOutputFactor();
 
     // A higher level friend training in the same room teaches the creature
     if(getGameMap()->isRelationshipsEnabled() && creature.canHaveRelationships())

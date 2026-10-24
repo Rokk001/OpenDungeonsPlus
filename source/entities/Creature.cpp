@@ -5813,8 +5813,12 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
 
     // Fighting is tiring
     decreaseWakefulness(0.5);
-    // but gives experience
-    receiveExp(1.5);
+    // but gives experience; a dirty arena teaches less
+    Room* attackRoom = (myTile == nullptr) ? nullptr : myTile->getCoveringRoom();
+    if((attackRoom != nullptr) && (attackRoom->getType() == RoomType::arena))
+        receiveExp(1.5 * attackRoom->getDirtOutputFactor());
+    else
+        receiveExp(1.5);
 }
 
 bool Creature::isActionInList(CreatureActionType action) const

@@ -296,8 +296,9 @@ static const double TORTURE_LEVEL_PERCENT[] = {100.0, 105.0, 110.0, 115.0, 120.0
 //! \brief Computes how many turns a creature must be tortured before it changes side.
 //! \param creature The tortured creature; its kind and level set the time
 //! \param torturingSeat The seat that tortures it; its torture research makes the conversion faster
+//! \param dirtConvertFactor Factor of the dirt stage of the torture chamber on the time (1 in a clean chamber)
 //! \return The number of turns of torture needed
-static double tortureTurnsToConvert(const Creature& creature, const Seat* torturingSeat)
+static double tortureTurnsToConvert(const Creature& creature, const Seat* torturingSeat, double dirtConvertFactor)
 {
     uint32_t nbLevels = sizeof(TORTURE_LEVEL_PERCENT) / sizeof(TORTURE_LEVEL_PERCENT[0]);
     uint32_t index = std::min(std::max(creature.getLevel(), 1u), nbLevels) - 1;
@@ -305,7 +306,7 @@ static double tortureTurnsToConvert(const Creature& creature, const Seat* tortur
     // The torture research makes the conversion faster
     double speed = SkillManager::getResearchValue(torturingSeat, SkillType::roomTorture, 1.0,
         ResearchEffect::ConversionSpeed);
-    return seconds * ODApplication::turnsPerSecond / speed;
+    return seconds * ODApplication::turnsPerSecond / speed * dirtConvertFactor;
 }
 
 void RoomTorture::doUpkeep()
@@ -432,7 +433,8 @@ bool RoomTorture::useRoom(Creature& creature, bool forced)
 
         // An enemy changes side once it has been tortured long enough for its kind and level
         if((getSeat() != creature.getSeat()) &&
-           (static_cast<double>(creature.getNbTurnsTorture()) >= tortureTurnsToConvert(creature, getSeat())))
+           (static_cast<double>(creature.getNbTurnsTorture()) >= tortureTurnsToConvert(creature, getSeat(),
+               getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3"))))
         {
             // The creature changes side
             creature.changeSeat(getSeat());

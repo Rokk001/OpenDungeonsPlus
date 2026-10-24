@@ -429,8 +429,12 @@ void RoomCasino::doUpkeep()
     double moodPerSecond = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(
         (mPayout == CasinoPayout::smiles) ? "CasinoMoodSmiles" : "CasinoMoodMoney", 0.0);
     // The research raises the mood the smiles payout gives, not the annoyance of the money payout
+    // A dirty casino cheers up less (the mood gain only, the annoyance of the money payout stays)
     if(mPayout == CasinoPayout::smiles)
+    {
         moodPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::roomCasino, moodPerSecond, ResearchEffect::Mood);
+        moodPerSecond *= getDirtOutputFactor();
+    }
     double moodPerTurn = moodPerSecond / ODApplication::turnsPerSecond;
     for(Creature* creature : mCreaturesUsingRoom)
         creature->addCasinoMood(moodPerTurn);

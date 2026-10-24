@@ -245,6 +245,8 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     double manaPerSecond = configManager.getRoomConfigDoubleOrDefault(
         "TemplePrayerMana" + creature.getDefinition()->getClassName(), defaultManaPerSecond);
     manaPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::roomTemple, manaPerSecond, ResearchEffect::PrayerMana);
+    // A dirty temple gathers less mana
+    manaPerSecond *= getDirtOutputFactor();
     mPrayerManaPending += manaPerSecond / ODApplication::turnsPerSecond;
     int32_t mana = static_cast<int32_t>(mPrayerManaPending);
     mPrayerManaPending -= mana;

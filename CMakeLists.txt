@@ -295,6 +295,7 @@ set(OD_SOURCEFILES
     ${SRC}/creaturemood/CreatureMood.cpp
     ${SRC}/creaturemood/CreatureMoodWakefulness.cpp
     ${SRC}/creaturemood/CreatureMoodCreature.cpp
+    ${SRC}/creaturemood/CreatureMoodDirt.cpp
     ${SRC}/creaturemood/CreatureMoodFee.cpp
     ${SRC}/creaturemood/CreatureMoodHunger.cpp
     ${SRC}/creaturemood/CreatureMoodHeldInHand.cpp
