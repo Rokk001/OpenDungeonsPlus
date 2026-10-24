@@ -1564,37 +1564,6 @@ void setCreatureDecayProgress(Ogre::Entity* entity, Ogre::Real progress)
 
 namespace
 {
-//! Marked unknown tiles meet exactly at their edges, at the height of the neutral fog mesh.
-void createMarkedFogMesh(Ogre::SceneManager* sceneManager)
-{
-    Ogre::MeshPtr fog = Ogre::MeshManager::getSingleton().getByName("FogOfWarDirt.mesh", "Graphics");
-    const Ogre::Real height = fog->getBounds().getMaximum().z;
-    const Ogre::Vector3 corners[] = {
-        {-0.5f, -0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}, {0.5f, 0.5f, 0.0f}, {-0.5f, 0.5f, 0.0f},
-        {-0.5f, -0.5f, height}, {0.5f, -0.5f, height}, {0.5f, 0.5f, height}, {-0.5f, 0.5f, height}
-    };
-    const int faces[6][4] = {{4, 5, 6, 7}, {3, 2, 1, 0}, {0, 1, 5, 4},
-        {1, 2, 6, 5}, {2, 3, 7, 6}, {3, 0, 4, 7}};
-    const Ogre::Vector2 uv[] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-    Ogre::ManualObject* object = sceneManager->createManualObject();
-    object->begin("DirtInstanced", Ogre::RenderOperation::OT_TRIANGLE_LIST, "Graphics");
-    for(uint32_t face = 0; face < 6; ++face)
-    {
-        const Ogre::Vector3 normal = (corners[faces[face][1]] - corners[faces[face][0]]).crossProduct(
-            corners[faces[face][2]] - corners[faces[face][0]]).normalisedCopy();
-        for(uint32_t vertex = 0; vertex < 4; ++vertex)
-        {
-            object->position(corners[faces[face][vertex]]);
-            object->normal(normal);
-            object->textureCoord(uv[vertex]);
-        }
-        object->quad(face * 4, face * 4 + 1, face * 4 + 2, face * 4 + 3);
-    }
-    object->end();
-    object->convertToMesh("FogOfWarMarked.mesh", "Graphics");
-    sceneManager->destroyManualObject(object);
-}
-
 //! Returns the lowest z of the entity bounding box once the given orientation and scale
 //! are applied. It is used to put a creature that was rotated onto the ground.
 Ogre::Real getLowestBoundingBoxZ(Ogre::Entity* entity, const Ogre::Quaternion& orientation,
@@ -1611,6 +1580,8 @@ Ogre::Real getLowestBoundingBoxZ(Ogre::Entity* entity, const Ogre::Quaternion& o
 }
 }
 
+//! \brief Initializes the shared terrain renderer and delayed enemy cloud instances.
+//! \param overlaySystem The overlay system used for the on-screen overlays.
 RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     mHandLight(nullptr),
     mRenderTarget(nullptr),
@@ -1653,15 +1624,6 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     mMainMenuSceneNode = mSceneManager->getRootSceneNode()->createChildSceneNode("MainMenu_scene_node");
     mDraggableSceneNode->setPosition(0.0,0.0,DRAGGABLE_NODE_HEIGHT);
     
-    mInstanceManagerDirt = mSceneManager->createInstanceManager(
-        "InstanceManagerMeshDirt",
-        "FogOfWarDirt.mesh",
-        "Graphics",
-        Ogre::InstanceManager::HWInstancingBasic,
-        128,
-        Ogre::IM_USEALL,
-        0);
-    
     mInstanceManagerCloud = mSceneManager->createInstanceManager(
         "InstanceManagerMeshCloud2",
         "FogOfWarCloud2.mesh",
@@ -1671,16 +1633,6 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
         Ogre::IM_USEALL,
         0);
 
-    createMarkedFogMesh(mSceneManager);
-    mInstanceManagerMarkedFog = mSceneManager->createInstanceManager(
-        "InstanceManagerMarkedFog", "FogOfWarMarked.mesh", "Graphics",
-        Ogre::InstanceManager::HWInstancingBasic, MARKED_FOG_INSTANCES_PER_BATCH, Ogre::IM_USEALL, 0);
-    mInstanceManagerMarkedFog->setNumCustomParams(1);
-    mInstanceManagerMarkedFog->defragmentBatches(true);
-
-    mInstanceManagerDirt->setNumCustomParams(1); // Number of vec4 custom params
-    
-    mInstanceManagerDirt->defragmentBatches(true);
     mInstanceManagerCloud->defragmentBatches(true);
 }
 
@@ -1782,6 +1734,7 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
     setShadowingEnabledParameters(enabled);
 }
 
+//! \brief Releases the renderer's visual resources.
 RenderManager::~RenderManager()
 {
     while(!mCreatureDecayMaterials.empty())
@@ -1798,8 +1751,6 @@ RenderManager::~RenderManager()
     clearRoomConstructionEffects();
     clearTreasuryEffects();
     delete DebugDrawer::getSingletonPtr();
-    mSceneManager->destroyInstanceManager(mInstanceManagerDirt);
-    mSceneManager->destroyInstanceManager(mInstanceManagerMarkedFog);
     // mSceneManager->destroyInstanceManager(mInstanceManagerCloud);
 }
 
@@ -3316,7 +3267,7 @@ static void rrPlaceFogInstance(Ogre::InstancedEntity* instance)
     instance->setPosition(Ogre::Vector3::ZERO);
 }
 
-//! \brief Creates or updates the meshes of a tile, including the neutral fog surface, its cloud
+//! \brief Creates or updates discovered terrain or matching neutral earth, its delayed cloud
 //! and the dig mark of the local player.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
 {
@@ -3392,86 +3343,10 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tileMeshNode = tile.getEntityNode()->createChildSceneNode(tileMeshNodeName);
 
         
-        if (tile.getEverVisible() && !tile.getHasFogOfWar())
-        {
-        
-            tileMeshEnt = mSceneManager->createEntity(tileMeshName, meshPtr);
-            // If the node does not exist, we create it
-
-            // Link the tile mesh back to the relevant scene node so OGRE will render it
-            tileMeshNode->attachObject(tileMeshEnt);
-            tile.setHasFogOfWar(false);
-
-        }
-        else if ( !tile.getEverVisible() && !tile.getHasFogOfWar())
-        {
-
-            tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
-            tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            rrPlaceFogInstance(tile.getFogOfWarMesh());
-            
-            
-            
-            tile.setHasFogOfWar(true);
-                      
-        }
-
-        else if( tile.getEverVisible() && tile.getHasFogOfWar())
-        {
-            tileMeshNode->detachObject(tile.getFogOfWarMesh());
-            mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
-            if(tile.getFogOfWarCloud() != nullptr)
-            {
-                tileMeshNode->detachObject(tile.getFogOfWarCloud());
-                mSceneManager->destroyInstancedEntity(tile.getFogOfWarCloud());
-            }
-            tile.setFogOfWarMesh(nullptr, isMarked);
-            tile.setFogOfWarCloud(nullptr);
-            tileMeshEnt = mSceneManager->createEntity(tileMeshName, meshPtr);
-            // If the node does not exist, we create it
-
-            // Link the tile mesh back to the relevant scene node so OGRE will render it
-            tileMeshNode->attachObject(tileMeshEnt);
-            tile.setHasFogOfWar(false);            
-        }
-        else if ( !tile.getEverVisible() && tile.getHasFogOfWar())
-        {
-            tileMeshNode->detachObject(tile.getFogOfWarMesh());
-            mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
-            tile.setFogOfWarMesh(nullptr, isMarked);  
-            tile.setHasFogOfWar(false);  
-            tile.setFogOfWarMesh( (isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->createInstancedEntity("DirtInstanced"), isMarked);
-            tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            rrPlaceFogInstance(tile.getFogOfWarMesh());
-           
-            
-            
-            tile.setHasFogOfWar(true);
-                      
-        }
-
-
-        
-
-    }
-    if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)
-    {
-        // Switch only the marked fog geometry; removing a mark restores the original unknown surface.
-        const bool wasMarked = tile.getFogOfWarMesh()->getCustomParam(0).w > 0.0f;
-        if(wasMarked != isMarked)
-        {
-            tileMeshNode->detachObject(tile.getFogOfWarMesh());
-            mSceneManager->destroyInstancedEntity(tile.getFogOfWarMesh());
-            tile.setFogOfWarMesh((isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)->
-                createInstancedEntity("DirtInstanced"), isMarked);
-            tileMeshNode->attachObject(tile.getFogOfWarMesh());
-            rrPlaceFogInstance(tile.getFogOfWarMesh());
-        }
-        tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked);
-        // The alpha-blended cloud hangs above the flat mark and would hide it again, the more the
-        // farther away the tile is; a marked unknown tile shows its violet surface without it.
-        if(tile.getFogOfWarCloud() != nullptr)
-            tile.getFogOfWarCloud()->setVisible(!isMarked);
+        // Both discovered terrain and neutral unexplored earth use the exact same mesh and material path.
+        tileMeshEnt = mSceneManager->createEntity(tileMeshName, meshPtr);
+        tileMeshNode->attachObject(tileMeshEnt);
+        tile.setHasFogOfWar(false);
     }
 
     // Only previously discovered enemy territory receives the delayed fog cloud.
@@ -3490,6 +3365,9 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
             tile.setFogOfWarCloud(nullptr);
         }
     }
+
+    if(tile.getFogOfWarCloud() != nullptr)
+        tile.getFogOfWarCloud()->setVisible(!isMarked);
 
     // We rescale and set the orientation that may have changed
     if(tileMeshNode != nullptr)
@@ -3528,7 +3406,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
         if(tileSetValue.getMaterialName() == GOLD_WALL_MATERIAL)
             tileMeshEnt->setMaterialName(goldWallMaterialName(tile.getGoldDensity(), nt == NodeType::MDTC_NODE));
         Seat* seatColor = nullptr;
-        if(tile.shouldColorTileMesh())
+        if(tile.getEverVisible() && tile.shouldColorTileMesh())
             seatColor = tile.getSeat();
 
         colourizeEntity(tileMeshEnt, seatColor, isMarked, vision);
@@ -7980,7 +7858,7 @@ static void addPreviewBorderBand(Ogre::ManualObject* object, const Ogre::Vector3
 }
 
 //! \brief Draws selection borders, sharing the filled frame width for construction and digging.
-//! A dig selection (hover or drag) is flat: only the top face of a tile is framed, never a 3D block.
+//! A dig selection (hover or drag) is flat: only the rendered tile top is framed, never a 3D block.
 //! \param tiles The selected tiles. An empty list removes the preview.
 //! \param colour Colour of the borders.
 //! \param construction Also draws the filled border of building floors.
@@ -8016,7 +7894,7 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             minY = std::min(minY, tile->getY());
             maxY = std::max(maxY, tile->getY());
             Ogre::MovableObject* surface = tile->getFogOfWarMesh();
-            if(tile->getEverVisible() && !tile->getHasFogOfWar())
+            if(!tile->getHasFogOfWar())
             {
                 const std::string meshName = tile->getOgreNamePrefix() + tile->getName() + "_tileMesh";
                 if(mSceneManager->hasEntity(meshName))
@@ -8079,7 +7957,7 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
         float z = TILE_PREVIEW_FLOOR_HEIGHT;
         // Use the rendered wall, including the existing unrevealed tile
         // representation, so the outline cannot sit inside a taller mesh.
-        if(tile->isFullTile() && !getWallPreviewHeight(mSceneManager, tile, z))
+        if((!tile->getEverVisible() || tile->isFullTile()) && !getWallPreviewHeight(mSceneManager, tile, z))
             continue;
         const Ogre::Vector3 corners[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
             {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};
@@ -8111,7 +7989,7 @@ void RenderManager::rrDrawTilePreview(const std::vector<Tile*>& tiles, const Ogr
             const float x = static_cast<float>(tile->getX());
             const float y = static_cast<float>(tile->getY());
             float z = ribbonHeight;
-            if(tile->isFullTile() && !getWallPreviewHeight(mSceneManager, tile, z))
+            if((!tile->getEverVisible() || tile->isFullTile()) && !getWallPreviewHeight(mSceneManager, tile, z))
                 continue;
             const Ogre::Vector3 outer[] = {{x-0.5f,y-0.5f,z}, {x+0.5f,y-0.5f,z},
                 {x+0.5f,y+0.5f,z}, {x-0.5f,y+0.5f,z}};

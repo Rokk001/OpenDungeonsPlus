@@ -4011,15 +4011,18 @@ int GameMap::computeTileSetIndex(const Tile* tile) const
 }
 
 
+//! \brief Selects terrain geometry, treating never-seen client tiles as ordinary full earth.
 const TileSetValue& GameMap::getMeshForTile(const Tile* tile)
 {
+    const TileVisual visual = !isServerGameMap() && !tile->getEverVisible() ?
+        TileVisual::dirtFull : tile->getTileVisual();
     int index = computeTileSetIndex(tile);
 
-    int upper_bound = mTileSet->getTileValues(tile->getTileVisual()).at(index).size() - 1;
+    int upper_bound = mTileSet->getTileValues(visual).at(index).size() - 1;
     std::uniform_int_distribution<int> distribution(0 , upper_bound);
 
     int random_number = distribution(generator);
-    return mTileSet->getTileValues(tile->getTileVisual()).at(index).at(random_number) ;
+    return mTileSet->getTileValues(visual).at(index).at(random_number) ;
 }
 
 //! \brief The number of creatures the seat can control: default or setting, its portals and the dominion research, at most the absolute limit.

@@ -1,12 +1,11 @@
 """Check type-neutral marking of unexplored tiles and the fog-surface mark. Text check, no game start."""
 from pathlib import Path
-import ast
 import math
-import re
 
 repo = Path(__file__).resolve().parents[2]
 
 
+# Read a source contract without starting the game or a compiler.
 def read(path):
     return (repo / path).read_text(encoding='utf-8')
 
@@ -22,18 +21,22 @@ seat = read('source/game/Seat.cpp')
 assert 'mPlayer->markTilesForDigging(false, std::vector<Tile*>(1, tile), false)' in seat
 
 render = read('source/render/RenderManager.cpp')
-assert render.count('(isMarked ? mInstanceManagerMarkedFog : mInstanceManagerDirt)') == 3
-assert 'tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked)' in render
+# Ordinary earth replaces the separate marked fog manager; require exact shared geometry and marks.
+import runpy
+earth_contract = runpy.run_path(str(repo / 'source/tests/check_fog_earth_geometry.py'), run_name='__fog_contract__')
+assert 'mInstanceManagerMarkedFog' not in render and 'mInstanceManagerDirt' not in render
+assert 'colourizeEntity(tileMeshEnt, seatColor, isMarked, vision)' in render
 # The cloud above a marked unknown tile is hidden so it cannot cover the mark; unmarking shows it again.
-fog_block = render[render.index('if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)'):]
+fog_block = render[render.index('// Only previously discovered enemy territory'):]
 fog_block = fog_block[:fog_block.index('// We rescale and set the orientation')]
-assert fog_block.index('tile.setFogOfWarMesh(tile.getFogOfWarMesh(), isMarked)') < \
-    fog_block.index('tile.getFogOfWarCloud()->setVisible(!isMarked)')
+# Set cloud visibility after creation as well, including marked discovered enemy tiles.
+assert fog_block.index('createInstancedEntity("Fog")') < fog_block.index('tile.getFogOfWarCloud()->setVisible(!isMarked)')
 assert 'if(tile.getFogOfWarCloud() != nullptr)' in fog_block
 tile = read('source/entities/Tile.cpp')
-fog_shader = read('shaders/DirtTileInstanced.frag')
 assert 'DIG_MARK_COLOUR(0.65f, 0.45f, 1.0f, 0.5f)' in tile
-assert 'mix(texelColor, outputColor.rgb, outputColor.a)' in fog_shader
+# Blend the same opaque earth texture through the existing half-alpha overlay, on identical vertices.
+assert '*markPass = *technique->getPass(0);' in render
+assert 'markPass->setDepthWriteEnabled(false)' in render
 preview = render[render.index('void RenderManager::rrDrawTilePreview('):render.index('bool RenderManager::getKeeperHandPosition')]
 rectangle = preview[preview.index('if(singleRectangle)'):preview.index('    return;\n    }')]
 assert 'if(construction || digging)' in rectangle and 'OT_TRIANGLE_LIST' in rectangle
@@ -43,17 +46,20 @@ assert 'minX - PREVIEW_TILE_HALF' in rectangle and 'maxX + PREVIEW_TILE_HALF' in
 assert 'static const float PREVIEW_TILE_HALF = 0.5f;' in render
 assert 'static const float PREVIEW_BORDER_INNER_HALF = 0.44f;' in render
 
-# Flat marked-fog geometry is independent of tile type and exactly shares every adjacent edge.
-mesh = render[render.index('void createMarkedFogMesh('):render.index('RenderManager::RenderManager(')]
-assert '"FogOfWarDirt.mesh"' in mesh and 'getBounds().getMaximum().z' in mesh
-assert 'getTileVisual' not in mesh and 'getType' not in mesh
-corner_text = re.search(r'const Ogre::Vector3 corners\[\] = \{(.*?)\n    \};', mesh, re.S).group(1)
-corner_text = corner_text.replace('height', '1.33211').replace('f', '').replace('{', '[').replace('}', ']')
-corners = ast.literal_eval('[' + corner_text + ']')
-assert len(corners) == 8
+# Mario replaced the height-1.33211 flat cuboid with the exact ordinary earth surface.
+# Read real mesh positions instead; retain every original translated-neighbour assertion below.
+# The strict companion additionally checks all full-earth variants against each other.
+assert 'createMarkedFogMesh' not in render
+assert '"FogOfWarDirt.mesh"' not in render and '"FogOfWarMarked.mesh"' not in render
+vertices = earth_contract['positions'](repo / 'models/Dirt_fl_1111.mesh')
+height = max(p[2] for p in vertices)
+corners = list({tuple(round(value, 4) for value in p) for p in vertices
+                if abs(abs(p[0]) - 0.5) < 0.0001 and abs(abs(p[1]) - 0.5) < 0.0001
+                and abs(p[2] - height) < 0.0001})
+assert len(corners) == 4
 assert {p[0] for p in corners} == {-0.5, 0.5}
 assert {p[1] for p in corners} == {-0.5, 0.5}
-assert {p[2] for p in corners} == {0, 1.33211}
+assert {p[2] for p in corners} == {round(height, 4)}
 for width, height in [(1, 1), (4, 1), (4, 4), (3, 7)]:
     # Every cell shares the same straight edge and top plane with its neighbours, without a gap/overlap.
     for x in range(width):
@@ -71,12 +77,16 @@ for width, height in [(1, 1), (4, 1), (4, 4), (3, 7)]:
     ring_area = width * height - (width - 2 * thickness) * (height - 2 * thickness)
     assert ring_area > 0
 assert 'for(Tile* tile' not in rectangle[rectangle.index('if(construction || digging)'):]
-vertex = read('shaders/DirtTileInstanced.vert')
-flat_branch = vertex[vertex.index('if(final_color.a > 0.0)'):vertex.index('    vec3 local_normal')]
-assert 'deform(' not in flat_branch and 'return;' in flat_branch
-assert 'outputColor.a > 0.0 ? FragPos.xy : out_UV0.st' in fog_shader
-assert 'wasMarked != isMarked' in render
-assert 'destroyInstanceManager(mInstanceManagerMarkedFog)' in render
+# Relief now stays identical when marked; the overlay copies the same vertex pass instead of
+# flattening a separate instanced surface. Shared world UVs continue across tile boundaries.
+vertex = read('shaders/DirtTile.vert')
+assert 'tileBorderFade(pos.xy)' in vertex and 'P = deform(P)' in vertex
+assert 'worldTileUV(P)' in vertex and 'out_UV0 = mix(uv_0, worldUV, uvWeight)' in vertex
+assert 'if(final_color.a > 0.0)' not in vertex
+assert '*markPass = *technique->getPass(0);' in render
+assert 'markPass->setVertexProgram' not in render
+# No separate manager remains to create or leak an obsolete marked-fog mesh.
+assert 'mInstanceManagerMarkedFog' not in render
 # Releasing clears the temporary frame before the persistent marking is requested.
 release = game_mode[game_mode.index('void GameMode::handlePlayerActionSelectTile()'):]
 release = release[:release.index('void GameMode::resetSkillTree()')]
@@ -99,7 +109,7 @@ for name, text in (('client selection', release[:release.index('unselectAllTiles
                    ('server mark', player[player.index('void Player::markTilesForDigging('):player.index('void Player::upkeepPlayer(')])):
     for forbidden in ('getNeighbor', 'isAdjacent', 'adjacent', 'Adjacent', 'getAllNeighbors'):
         assert forbidden not in text, name + ' restricts marking by ' + forbidden
-# The mark of a fogged tile is drawn whenever it exists: the fog surface is switched on isMarked alone.
-assert 'if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)' in render
-assert 'const bool wasMarked = tile.getFogOfWarMesh()->getCustomParam(0).w > 0.0f;' in render
-print('check_unexplored_marks ok: thick outer frame, seamless flat marked fog, neutral tooltip and transparent marking')
+# Every unknown mark uses the identical known-earth pass, independent of ever-visible or vision.
+assert 'colourizeEntity(tileMeshEnt, seatColor, isMarked, vision)' in render
+assert '*markPass = *technique->getPass(0);' in render
+print('check_unexplored_marks ok: thick outer frame, shared earth marks, neutral tooltip and transparent marking')

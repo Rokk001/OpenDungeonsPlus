@@ -149,6 +149,7 @@ public:
     //! the position is the centre of the wall tile that is hit first, at the height of the hit,
     //! or else the point on the floor. Returns false if the cursor is not over the map; in that
     //! case position stays unchanged.
+    //! Never-seen tiles use the same rendered earth-wall height as known earth.
     bool findTilePositionFromMouse(const OIS::MouseEvent& arg, Ogre::Vector3& position);
     bool rayIntersectionGameMap(const OIS::MouseEvent &arg,Ogre::Vector3& keeperHand3DPos, DraggableTileContainer* draggableTileContainer);
     

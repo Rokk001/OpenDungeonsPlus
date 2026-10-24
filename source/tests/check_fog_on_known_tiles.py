@@ -2,11 +2,11 @@
 
 Known tiles (seen at least once) show their real mesh. Fog surfaces, dig-mark surfaces and clouds may only
 exist for a tile when its state asks for them:
-  - the neutral earth surface or its marked variant only on a tile that was never seen,
-  - the marked variant only while the local player has the tile marked,
+  - never-seen tiles use ordinary earth in the shared terrain entity, with no separate fog surface,
+  - the shared terrain mark only while the local player has the tile marked,
   - the cloud only on a seen tile of enemy territory that is currently fogged,
   - all of them are removed again as soon as the tile state no longer asks for them.
-Every fog instance is also placed at zero offset from the tile's own scene node, which already sits at the
+Every cloud instance is also placed at zero offset from the tile's own scene node, which already sits at the
 tile coordinates: a tile position there is added a second time and moves the fog onto other tiles, which
 shows as large black or brown patches on known ground. Run from any directory; no build, no game start.
 """
@@ -19,6 +19,7 @@ render = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
 failures = []
 
 
+# Collect every independent fog-state contract failure.
 def check(condition, message):
     if not condition:
         failures.append(message)
@@ -36,8 +37,9 @@ check("setPosition(Ogre::Vector3::ZERO)" in helper, "fog placement helper must u
 refresh = between(render, "void RenderManager::rrRefreshTile(", "\nvoid RenderManager::rrCreateTile(")
 for match in re.finditer(r"getFogOfWar(Mesh|Cloud)\(\)\s*->\s*setPosition\(", render):
     failures.append("fog instance positioned directly at offset " + str(match.start()) + ", use rrPlaceFogInstance")
-check(len(re.findall(r"rrPlaceFogInstance\(", refresh)) == 4, "every fog attach must call rrPlaceFogInstance")
-check(len(re.findall(r"attachObject\(tile\.getFogOfWar(Mesh|Cloud)\(\)\)", refresh)) == 4,
+# The three obsolete earth instances are gone; the one delayed cloud remains instanced.
+check(len(re.findall(r"rrPlaceFogInstance\(", refresh)) == 1, "every fog attach must call rrPlaceFogInstance")
+check(len(re.findall(r"attachObject\(tile\.getFogOfWar(Mesh|Cloud)\(\)\)", refresh)) == 1,
       "the fog attach count changed, update this check together with the placement calls")
 check("getPosition()" not in "".join(re.findall(r"[^\n]*FogOfWar[^\n]*", refresh)),
       "a fog line in the tile refresh uses a tile position")
@@ -45,23 +47,35 @@ create = between(render, "void RenderManager::rrCreateTile(", "\nvoid RenderMana
 check("node->setPosition(static_cast<Ogre::Real>(tile.getX()), static_cast<Ogre::Real>(tile.getY())" in create,
       "the tile scene node must sit at the tile coordinates, otherwise fog needs an offset")
 
-# 2. The neutral earth surface (and its marked variant) is created only for never-seen tiles.
-for match in re.finditer(r'createInstancedEntity\("DirtInstanced"\)', refresh):
-    before = refresh[:match.start()]
-    branch = before[max(before.rfind("else if"), before.rfind("\n        if ")):]
-    check("!tile.getEverVisible()" in branch or "wasMarked != isMarked" in branch,
-          "a fog surface is created outside the never-seen branch at offset " + str(match.start()))
-switch = between(refresh, "const bool wasMarked", "// Only previously discovered enemy territory")
-check("tile.getHasFogOfWar()" in refresh[refresh.index("if(tile.getHasFogOfWar() && tile.getFogOfWarMesh() != nullptr)"):],
-      "the mark switch must only touch tiles that still carry the fog surface")
-check("isMarked" in switch and "mInstanceManagerMarkedFog" in switch,
-      "the marked surface must follow the mark state of the tile")
+# 2. A separate neutral or marked fog surface is prohibited everywhere, rather than only on known tiles.
+# Exact common earth selection, creation, appearance and copied mark passes are checked in full,
+# with real mesh-neighbour tests and eleven negative mutations; no condition can leak a hidden type.
+import runpy
+runpy.run_path(str(root / 'source/tests/check_fog_earth_geometry.py'), run_name='__fog_contract__')
+check('createInstancedEntity("DirtInstanced")' not in render and 'createMarkedFogMesh' not in render,
+      'a separate neutral or marked fog surface still exists')
+check('mInstanceManagerMarkedFog' not in render and 'mInstanceManagerDirt' not in render,
+      'an obsolete fog manager can recreate a stale surface')
+check('colourizeEntity(tileMeshEnt, seatColor, isMarked, vision)' in refresh,
+      'the common terrain mark must follow the local mark state')
 
-# 3. Revealing a tile removes the surface and the cloud and clears both handles.
-reveal = between(refresh, "else if( tile.getEverVisible() && tile.getHasFogOfWar())", "else if ( !tile.getEverVisible() && tile.getHasFogOfWar())")
-for needle in ["destroyInstancedEntity(tile.getFogOfWarMesh())", "destroyInstancedEntity(tile.getFogOfWarCloud())",
-               "tile.setFogOfWarMesh(nullptr", "tile.setFogOfWarCloud(nullptr)", "tile.setHasFogOfWar(false)"]:
-    check(needle in reveal, "revealing a tile does not clean up: missing " + needle)
+# 3. Revealing now replaces the ordinary earth entity, not a separate fog instance.
+# The former fog handle cannot exist (section 2); every changed mesh still detaches and destroys.
+replacement = between(refresh, 'if(mSceneManager->hasEntity(tileMeshName))', 'Ogre::SceneNode* tileMeshNode')
+for needle in ['getMesh()->getName().compare(meshName) != 0', 'detachObject(tileMeshEnt)',
+               'destroyEntity(tileMeshEnt)', 'tileMeshEnt = nullptr']:
+    check(needle in replacement, 'revealing a tile does not replace its earth mesh: missing ' + needle)
+check('tile.setHasFogOfWar(false)' in refresh and 'tile.setHasFogOfWar(true)' not in refresh,
+      'the obsolete fog surface flag can survive reveal')
+# The independently valid cloud cleanup assertions remain strict: no cloud can exist before
+# discovery, and ending enemy fog must detach, destroy and null its handle in that order.
+cleanup = between(refresh, 'else if(!tile.getEnemyTerritoryFog() && tile.getFogOfWarCloud() != nullptr)',
+                  '\n    if(tile.getFogOfWarCloud() != nullptr)')
+for needle in ['detachObject(tile.getFogOfWarCloud())', 'destroyInstancedEntity(tile.getFogOfWarCloud())',
+               'tile.setFogOfWarCloud(nullptr)']:
+    check(needle in cleanup, 'cloud state cleanup is missing ' + needle)
+check(cleanup.index('detachObject') < cleanup.index('destroyInstancedEntity') < cleanup.index('setFogOfWarCloud(nullptr)'),
+      'cloud cleanup must detach and destroy before nulling its handle')
 
 # 4. The cloud exists only on seen tiles with the enemy fog state and goes away with that state.
 cloud = refresh[refresh.index("// Only previously discovered enemy territory"):]

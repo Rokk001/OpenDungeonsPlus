@@ -74,11 +74,12 @@ void TileSet::addTileLink(TileVisual tileVisual1, TileVisual tileVisual2)
     mTileLinks[intTile2Visual] |= tileLink;
 }
 
+//! \brief Links visible terrain shapes while representing every never-seen neighbour as full earth.
 bool TileSet::areLinked(const Tile* tile1, const Tile* tile2) const
 {
     // Check if the tile visual is linkable
-    uint32_t intTile1Visual = static_cast<uint32_t>(tile1->getTileVisual());
-    uint32_t intTile2Visual = static_cast<uint32_t>(tile2->getTileVisual());
+    uint32_t intTile1Visual = static_cast<uint32_t>(!tile1->getIsOnServerMap() && !tile1->getEverVisible() ? TileVisual::dirtFull : tile1->getTileVisual());
+    uint32_t intTile2Visual = static_cast<uint32_t>(!tile2->getIsOnServerMap() && !tile2->getEverVisible() ? TileVisual::dirtFull : tile2->getTileVisual());
     uint32_t linkValue = 1 << intTile2Visual;
     linkValue &= mTileLinks[intTile1Visual];
 
