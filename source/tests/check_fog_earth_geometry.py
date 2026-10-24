@@ -186,8 +186,8 @@ def verify(sources):
             else tileMeshEnt->setLightMask(ALL_LIGHTS_MASK);
             if(!tileSetValue.getMaterialName().empty())
                 tileMeshEnt->setMaterialName(tileSetValue.getMaterialName());
-            if(tileSetValue.getMaterialName() == "Gold" && nt == NodeType::MDTC_NODE)
-                tileMeshEnt->setMaterialName("LiftedGold");
+            if(tileSetValue.getMaterialName() == GOLD_WALL_MATERIAL)
+                tileMeshEnt->setMaterialName(goldWallMaterialName(tile.getGoldDensity(), nt == NodeType::MDTC_NODE));
             Seat* seatColor = nullptr;
             if(tile.getEverVisible() && tile.shouldColorTileMesh()) seatColor = tile.getSeat();
             colourizeEntity(tileMeshEnt, seatColor, isMarked, vision);
