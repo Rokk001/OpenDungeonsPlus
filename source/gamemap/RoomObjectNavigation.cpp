@@ -12,6 +12,9 @@
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include <functional>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 namespace
 {
@@ -292,6 +295,30 @@ bool removeLowStepObstacles(Creature& creature, std::vector<RoomObjectPath::Obst
 }
 }
 
+//! Maps a mesh name to its entry of RoomObjectPath::meshBounds.
+typedef std::unordered_map<std::string, const RoomObjectPath::MeshBounds*> MeshBoundsIndex;
+
+//! \brief Builds the name index of RoomObjectPath::meshBounds; the first entry of a name wins.
+//! \return The index over the constant table.
+static MeshBoundsIndex buildMeshBoundsIndex()
+{
+    MeshBoundsIndex built;
+    for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
+        built.insert(std::make_pair(std::string(bounds.name), &bounds));
+    return built;
+}
+
+//! \brief Finds the entry of RoomObjectPath::meshBounds for a mesh name without comparing the name with every entry.
+//! The index is built once from the constant table and keeps the first entry of a name, as the linear search did.
+//! \param meshName The mesh name of a room object.
+//! \return The bounds of the mesh, or nullptr if the table has no entry for the name.
+static const RoomObjectPath::MeshBounds* findMeshBounds(const std::string& meshName)
+{
+    static const MeshBoundsIndex index = buildMeshBoundsIndex();
+    const MeshBoundsIndex::const_iterator found = index.find(meshName);
+    return found == index.end() ? nullptr : found->second;
+}
+
 float RoomObjectNavigation::clearance(const Creature& creature)
 {
     const float scale = static_cast<float>(creature.getLevelScale());
@@ -311,10 +338,10 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
         if(object == interaction || object->getMeshName() == "PortalObject" ||
             RoomObjectPath::isDungeonHeartMesh(object->getMeshName()))
             return;
-        for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
+        const RoomObjectPath::MeshBounds* found = findMeshBounds(object->getMeshName());
+        if(found != nullptr)
         {
-            if(object->getMeshName() != bounds.name)
-                continue;
+            const RoomObjectPath::MeshBounds& bounds = *found;
             const float angle = float(object->getRotationAngle()) * RoomObjectPath::degreesToRadians;
             const Ogre::Vector2 placedScale = object->getFurnitureScale();
             const RoomObjectPath::FurnitureScale scale = placedScale == Ogre::Vector2::ZERO ? RoomObjectPath::furnitureScale(bounds) :
@@ -323,7 +350,6 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
                 {bounds.maxX * scale.x + clearance, bounds.maxY * scale.y + clearance},
                 {object->getPosition().x, object->getPosition().y}, std::cos(angle), std::sin(angle)});
             result.back().maximumHeight = object->getPosition().z + bounds.maxZ;
-            break;
         }
     };
     for(Room* room : map.getRooms())
