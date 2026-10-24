@@ -22,9 +22,13 @@
 
 #include "modes/SettingsWindow.h"
 
+#include <string>
+
+//! \brief Shows the existing main-menu panes after their configured scene flights finish.
 class MenuModeMain: public AbstractApplicationMode
 {
 public:
+    //! \brief Connects the existing menu actions to their scene-flight timing.
     MenuModeMain(ModeManager*);
 
     virtual ~MenuModeMain()
@@ -35,11 +39,13 @@ public:
     //! from the game.
     void activate() final override;
 
-    //! \brief Opens the skirmish sub-menu once the flight into the menu (after the defeat debriefing) ended
+    //! \brief Opens the requested pane only after its flight reaches the configured destination.
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
 
-    //! \brief Escape in the main menu: closes the open sub menu (skirmish, multiplayer or editor)
-    //! instead of leaving the menu.
+    //! \brief Defers replay navigation until arrival and keeps quitting immediate during a flight.
+    bool changeModeAfterFlight(AbstractModeManager::ModeType mode, const CEGUI::EventArgs& e);
+
+    //! \brief Closes the open submenu and flies back to the overview without overlapping a flight.
     bool goBack(const CEGUI::EventArgs& e = {}) override;
 
 private:
@@ -53,13 +59,19 @@ private:
     bool mSettingsPageOpen = false;
     //! True while the menu waits for the flight to end before it shows the skirmish sub-menu
     bool mSkirmishSubMenuPending = false;
+    //! Existing submenu waiting for its configured scene flight to finish.
+    std::string mPendingSubMenu = std::string();
+    //! Existing mode waiting for its configured scene flight to finish.
+    AbstractModeManager::ModeType mPendingMode = AbstractModeManager::NONE;
 
     //! \brief Helper functions to connect a button to a mode change
     void connectModeChangeEvent(const std::string& buttonName, AbstractModeManager::ModeType mode);
+    //! \brief Connects an existing mode-changing button through flight-aware navigation.
     void connectModeChangeEvent(CEGUI::Window* button, AbstractModeManager::ModeType mode);
 
     //! \brief Function triggered when pushing a button
     bool quitButtonPressed(const CEGUI::EventArgs&);
+    //! \brief Flies to the right tower before showing the existing settings submenu.
     bool toggleSettings(const CEGUI::EventArgs&);
     //! \brief Hides the settings sub menu and shows the named settings page.
     bool openSettingsPage(const std::string& name);
@@ -69,8 +81,10 @@ private:
     bool settingsPageClosed(const CEGUI::EventArgs&);
     //! \brief Shows or hides the main menu buttons behind the sub menus.
     void showMainMenuButtons(bool visible);
-    //! \brief Toggles the named sub menu window and hides the others.
+    //! \brief Flies to the named submenu's location before showing its existing controls.
     bool toggleSubMenu(const std::string& name);
+    //! \brief Shows one existing submenu after arrival and hides its siblings.
+    void showSubMenu(const std::string& name);
 
     //! \brief Sub menu button triggers
     //! \brief Shows or hides the campaign sub menu
@@ -83,8 +97,11 @@ private:
     //! \brief Shows or hides the question that asks whether the saved campaign progress
     //! may be replaced by a new campaign, in place of the two campaign buttons
     void showNewCampaignConfirm(bool visible);
+    //! \brief Flies to the side cave before showing the existing skirmish submenu.
     bool toggleSkirmishSubMenu(const CEGUI::EventArgs&);
+    //! \brief Flies to the left arcade before showing the existing multiplayer submenu.
     bool toggleMultiplayerSubMenu(const CEGUI::EventArgs&);
+    //! \brief Flies to the workshop before showing the existing editor submenu.
     bool toggleEditorSubMenu(const CEGUI::EventArgs&);
 
     //! \brief Opens the level list with the sandbox levels

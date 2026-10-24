@@ -1,6 +1,6 @@
 """Exercise the defeat follow-ups without a game: menu flight timing, its use by the main menu, camera symbol, stone imagery.
 
-MenuFlight.h is compiled as it is. MenuModeMain::onFrameStarted and the two hand-over functions of ModeManager.h are cut out of
+MenuFlight.h is compiled as it is. MenuModeMain::onFrameStarted and the hand-over functions of ModeManager.h are cut out of
 the production sources and compiled against small mocks. The image names used by the layout and by GameMode.cpp are checked
 against the real imagesets and the icon picture.
 """
@@ -8,7 +8,6 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
-import time
 import xml.etree.ElementTree as ElementTree
 
 from PIL import Image
@@ -22,6 +21,7 @@ flight_header = (repo / 'source/render/MenuFlight.h').read_text()
 gui = repo / 'gui'
 
 
+# Extract one complete production function for the isolated probe.
 def function(text, signature):
     start = text.index(signature)
     end = text.index('{', start) + 1
@@ -47,22 +47,29 @@ def imagesets():
 images = imagesets()
 
 probe = r'''
-#include <functional>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include "render/MenuFlight.h"
 
 int gChecks = 0, gFailures = 0;
+//! \brief Records an assertion without stopping the remaining regression checks.
 void check(bool ok, const char* msg) {++gChecks;if(!ok){++gFailures;std::cout << "FAIL " << msg << '\n';}}
 
 namespace Ogre {struct FrameEvent {};}
+namespace CEGUI {struct EventArgs {};}
+struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY, ADVERTISMENT};};
 const std::string WINDOW_SKIRMISH = "SkirmishSubMenuWindow";
 int gToggles = 0;
+int gShown = 0;
+int gChanged = 0;
 std::string gToggled;
 MenuFlight gFlight;
 struct ODFrameListener
 {
+    //! \brief Returns the isolated listener sharing the production flight timer.
     static ODFrameListener& getSingleton() {static ODFrameListener listener;return listener;}
+    //! \brief Reports whether the current arrival or destination timer is advancing.
     bool isMainMenuFlightActive() const {return gFlight.isActive();}
 };
 
@@ -70,50 +77,66 @@ struct ModeManager
 {
     enum ModeType {MENU_MAIN = 2};
     bool mOpenSkirmishSubMenu = false;
+    bool mMainMenuArrivalRequested = false;
+    //! \brief Accepts the original hand-over request without a full application mode switch.
     void requestMode(ModeType, bool = true) {}
 @@REQUESTMAINMENU@@
 @@CONSUMEREQUEST@@
+@@CONSUMEARRIVAL@@
 };
 
 class MenuModeMain
 {
 public:
     void onFrameStarted(const Ogre::FrameEvent& evt);
-    bool toggleSubMenu(const std::string& name) {++gToggles;gToggled = name;return true;}
+    //! \brief Represents the second leg to the cave, retaining its delayed pane reveal.
+    bool toggleSubMenu(const std::string& name)
+    {++gToggles;gToggled = name;mPendingSubMenu = name;return gFlight.start();}
+    //! \brief Records an existing pane becoming visible after arrival.
+    void showSubMenu(const std::string& name) {++gShown;gToggled = name;}
+    //! \brief Leaves button presentation outside this isolated timing fixture.
+    void showMainMenuButtons(bool) {}
+    //! \brief Records a deferred mode request once its flight completes.
+    bool changeModeEvent(AbstractModeManager::ModeType, const CEGUI::EventArgs&) {++gChanged;return true;}
     bool mSkirmishSubMenuPending = false;
+    std::string mPendingSubMenu;
+    AbstractModeManager::ModeType mPendingMode = AbstractModeManager::NONE;
 };
 @@FRAME@@
 
 namespace S = MenuFlightSettings;
 
+//! \brief Exercises three-dimensional flight timing and the two-leg defeat menu hand-over.
 int main()
 {
     // Pure timing and path functions
     check(MenuFlight::progressAt(-1.0f) == 0.0f && MenuFlight::progressAt(0.0f) == 0.0f, "progress: before and at the start is 0");
     check(MenuFlight::progressAt(S::DURATION * 0.5f) == 0.5f, "progress: halfway");
     check(MenuFlight::progressAt(S::DURATION) == 1.0f && MenuFlight::progressAt(100.0f) == 1.0f, "progress: at and after the end is 1");
-    check(S::DURATION >= 2.5f && S::DURATION <= 3.5f, "the flight lasts about 3 seconds");
-    check(MenuFlight::scaleAt(0.0f) == S::START_SCALE && MenuFlight::scaleAt(-5.0f) == S::START_SCALE, "scale: the start (and earlier) is the start scale");
-    check(MenuFlight::scaleAt(S::DURATION) == 1.0f && MenuFlight::scaleAt(S::DURATION + 10.0f) == 1.0f, "scale: the end (and later) is exactly the normal menu view");
+    check(S::DURATION >= 1.5f && S::DURATION <= 2.5f, "the flight lasts between 1.5 and 2.5 seconds");
+    check(MenuFlight::easedProgressAt(0.0f) == 0.0f && MenuFlight::easedProgressAt(-5.0f) == 0.0f, "ease: starts at zero");
+    check(MenuFlight::easedProgressAt(S::DURATION) == 1.0f && MenuFlight::easedProgressAt(S::DURATION + 10.0f) == 1.0f, "ease: ends exactly at the configured endpoint");
     bool monotonic = true;
-    float last = MenuFlight::scaleAt(0.0f);
+    float last = MenuFlight::easedProgressAt(0.0f);
     for(int i = 1; i <= 300; ++i)
     {
-        float scale = MenuFlight::scaleAt(S::DURATION * i / 300.0f);
-        monotonic = monotonic && scale <= last && scale >= 1.0f && scale <= S::START_SCALE;
-        last = scale;
+        const float progress = MenuFlight::easedProgressAt(S::DURATION * i / 300.0f);
+        monotonic = monotonic && progress >= last && progress >= 0.0f && progress <= 1.0f;
+        last = progress;
     }
-    check(monotonic, "scale: never grows, stays between 1 and the start scale");
-    check(MenuFlight::scaleAt(S::DURATION * 0.9f) - 1.0f < (MenuFlight::scaleAt(S::DURATION * 0.1f) - 1.0f) * 0.1f, "scale: slows down towards the end");
+    check(monotonic, "ease: advances monotonically without overshooting");
+    check(MenuFlight::easedProgressAt(S::DURATION * 0.01f) < 0.001f &&
+        1.0f - MenuFlight::easedProgressAt(S::DURATION * 0.99f) < 0.001f, "ease: slows at both endpoints");
 
     // The state
     MenuFlight flight;
-    check(!flight.isActive() && flight.getScale() == 1.0f, "idle: not active, normal view (the normal menu entry is unchanged)");
-    check(!flight.advance(1.0f) && flight.getScale() == 1.0f && !flight.isActive(), "idle: advancing does nothing");
-    check(flight.start() && flight.isActive() && flight.getScale() == S::START_SCALE, "start: active at the start scale");
+    check(!flight.isActive() && flight.getProgress() == 0.0f, "idle: no active path");
+    check(!flight.advance(1.0f) && flight.getProgress() == 0.0f && !flight.isActive(), "idle: advancing does nothing");
+    check(!flight.start(0.0f) && !flight.start(-1.0f), "start: rejects nonpositive durations");
+    check(flight.start() && flight.isActive() && flight.getProgress() == 0.0f, "start: active at the first pose");
     check(!flight.start(), "start: a second start while running is refused");
     check(!flight.advance(S::MAX_STEP * 4.0f) && flight.isActive(), "one slow frame is clamped and does not end the flight");
-    check(flight.getScale() < S::START_SCALE && flight.getScale() > 1.0f, "in the middle the picture is between the start and the normal size");
+    check(flight.getProgress() > 0.0f && flight.getProgress() < 1.0f, "in the middle the camera is between its endpoints");
     check(!flight.advance(-1.0f) && flight.isActive(), "a negative step does nothing");
     int steps = 0;
     bool ended = false;
@@ -122,18 +145,20 @@ int main()
         ended = flight.advance(0.1f);
         ++steps;
     }
-    check(ended && !flight.isActive() && flight.getScale() == 1.0f, "the flight ends at the normal view");
-    check(steps >= 20 && steps <= 30, "after one slow frame of 0.25 s the remaining time takes about 27 steps of 0.1 s");
+    check(ended && !flight.isActive() && flight.getProgress() == 1.0f, "the flight reaches its exact endpoint");
+    check(steps >= 15 && steps <= 25, "configured duration is respected after a clamped slow frame");
     check(!flight.advance(0.1f), "the end is reported once");
     check(flight.start(), "a new request may start a new flight after the end");
     flight.reset();
-    check(!flight.isActive() && flight.getScale() == 1.0f, "reset stops the flight");
+    check(!flight.isActive() && flight.getProgress() == 0.0f, "reset stops the flight");
 
     // The hand-over flag works exactly once and the sub-menu waits for the end of the flight
     ModeManager manager;
     check(!manager.consumeSkirmishSubMenuRequest(), "no request: nothing to consume");
     manager.requestMainMenuWithSkirmishSubMenu();
     check(manager.consumeSkirmishSubMenuRequest() && !manager.consumeSkirmishSubMenuRequest(), "the hand-over is consumed exactly once");
+    manager.mMainMenuArrivalRequested = true;
+    check(manager.consumeMainMenuArrivalRequest() && !manager.consumeMainMenuArrivalRequest(), "normal game-return arrival is consumed exactly once");
 
     MenuModeMain menu;
     Ogre::FrameEvent event;
@@ -148,13 +173,25 @@ int main()
     }
     check(gToggles == 0 && menu.mSkirmishSubMenuPending, "during the flight the sub-menu stays closed");
     menu.onFrameStarted(event);
-    check(gToggles == 1 && gToggled == WINDOW_SKIRMISH && !menu.mSkirmishSubMenuPending, "after the flight the skirmish sub-menu opens");
+    check(gToggles == 1 && gToggled == WINDOW_SKIRMISH && !menu.mSkirmishSubMenuPending && gShown == 0 && gFlight.isActive(), "after arrival the cave flight starts before showing the skirmish pane");
+    for(int i = 0; i < 100 && gFlight.isActive(); ++i)
+    {
+        menu.onFrameStarted(event);
+        gFlight.advance(0.1f);
+    }
+    check(gShown == 0, "during the cave flight the skirmish pane remains hidden");
     menu.onFrameStarted(event);
     menu.onFrameStarted(event);
-    check(gToggles == 1, "and only once");
-    menu.mSkirmishSubMenuPending = true;
+    check(gToggles == 1 && gShown == 1, "the pane is revealed exactly once after both flights");
+    menu.mPendingMode = AbstractModeManager::MENU_REPLAY;
+    gFlight.start();
     menu.onFrameStarted(event);
-    check(gToggles == 2, "a request when the flight could not start opens the sub-menu at once instead of waiting forever");
+    check(gChanged == 0, "the replay mode waits during the archive flight");
+    while(gFlight.isActive())
+        gFlight.advance(0.1f);
+    menu.onFrameStarted(event);
+    menu.onFrameStarted(event);
+    check(gChanged == 1, "the replay pane opens exactly once at arrival");
 
     std::cout << "CHECKS=" << gChecks << " FAILURES=" << gFailures << '\n';
     return gFailures ? 1 : 0;
@@ -162,6 +199,7 @@ int main()
 '''
 probe = probe.replace('@@REQUESTMAINMENU@@', function(mode_manager, 'void requestMainMenuWithSkirmishSubMenu('))
 probe = probe.replace('@@CONSUMEREQUEST@@', function(mode_manager, 'bool consumeSkirmishSubMenuRequest('))
+probe = probe.replace('@@CONSUMEARRIVAL@@', function(mode_manager, 'bool consumeMainMenuArrivalRequest('))
 probe = probe.replace('@@FRAME@@', function(menu_main, 'void MenuModeMain::onFrameStarted('))
 assert '@@' not in probe
 
@@ -206,13 +244,14 @@ print('LAYOUT OK: every image name exists in the imagesets, the stone surface ba
 activate = function(menu_main, 'void MenuModeMain::activate(')
 assert activate.index('showMainMenuButtons(true);') < activate.index('consumeSkirmishSubMenuRequest()') < activate.index('createMainMenuScene();') < activate.index('startMainMenuFlight();')
 assert 'toggleSubMenu(WINDOW_SKIRMISH)' not in activate
-assert 'if(mSkirmishSubMenuPending)\n        ODFrameListener::getSingleton().startMainMenuFlight();' in activate
+assert 'consumeMainMenuArrivalRequest() || mSkirmishSubMenuPending' in activate
 assert 'mSkirmishSubMenuPending = false;' in activate
 update = function(menu_scene, 'void RenderSceneMenu::updateMenu(')
-assert 'mFlight.advance(timeSinceLastFrame)' in update and update.count('flightScale') == 3
+assert 'mFlight.advance(timeSinceLastFrame)' in update and 'samplePath(' in update
+assert 'flightScale' not in update
 assert 'mFlight.reset();' in function(menu_scene, 'void RenderSceneMenu::freeMenu(')
 assert 'MenuFlight' in (repo / 'source/renderscene/RenderSceneMenu.h').read_text()
-print('WIRING OK: the flight starts only through the hand-over flag, the sub-menu waits for it, the normal entry is unchanged')
+print('WIRING OK: configured 3D flights replace the picture zoom and the defeat pane waits for arrival and the cave destination')
 
 assert re.search(r'\bauto\b', probe) is None and re.search(r'\bauto\b', flight_header) is None
 assert re.search(r'\bauto\b', function(menu_main, 'void MenuModeMain::onFrameStarted(')) is None
@@ -229,14 +268,5 @@ with tempfile.TemporaryDirectory(prefix='odp-defeat-menu-flight-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(repo / 'source'), 'check.cpp', '/Fecheck.exe'],
-                   cwd=work, check=True)
-    # Windows may block a freshly compiled executable (WinError 4551) for a moment
-    for attempt in range(4):
-        try:
-            subprocess.run([str(work / 'check.exe')], cwd=work, check=True)
-            break
-        except OSError as error:
-            if attempt == 3:
-                raise
-            print('retrying after', error)
-            time.sleep(2)
+                   cwd=work, check=True, stdin=subprocess.DEVNULL, timeout=120)
+    subprocess.run([str(work / 'check.exe')], cwd=work, check=True, stdin=subprocess.DEVNULL, timeout=30)

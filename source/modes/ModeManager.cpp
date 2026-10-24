@@ -34,9 +34,18 @@
 #include "modes/EditorMode.h"
 #include "utils/MakeUnique.h"
 #include "render/Gui.h"
+#include "render/ODFrameListener.h"
 
 #include <CEGUI/Window.h>
+#include <CEGUI/GUIContext.h>
+#include <CEGUI/System.h>
 
+namespace
+{
+//! Configured scene destinations used by menu return and campaign arrival.
+static const std::string PLACE_OVERVIEW = "overview";
+static const std::string PLACE_CAMPAIGN = "campaign";
+}
 
 ModeManager::ModeManager(Ogre::RenderWindow* renderWindow, Gui* gui) :
     mInputManager(renderWindow),
@@ -60,8 +69,14 @@ ModeManager::ModeType ModeManager::getCurrentModeType() const
     return mCurrentApplicationMode->getModeType();
 }
 
+//! \brief Requests the previous mode once, without consuming history during a menu flight.
 void ModeManager::requestPreviousMode()
 {
+    ODFrameListener& listener = ODFrameListener::getSingleton();
+    if(mMainMenuReturnPending || !mMenuArrivalPlace.empty() || listener.isMainMenuFlightActive() ||
+       (mRequestedMode == MENU_MAIN && mCurrentApplicationMode != nullptr &&
+        mCurrentApplicationMode->getModeType() != MENU_MAIN))
+        return;
     if (mPreviousModeTypes.empty())
     {
         mRequestedMode = MENU_MAIN;
@@ -83,10 +98,76 @@ void ModeManager::requestSavedGame(const std::string& filename)
     requestMode(MENU_LOAD_SAVEDGAME, false);
 }
 
+//! \brief Hides the current menu sheet while the camera returns or enters a destination.
+void ModeManager::hideMenuForFlight()
+{
+    if(mFlightHiddenWindow != nullptr)
+        return;
+    mFlightHiddenWindow = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
+    if(mFlightHiddenWindow != nullptr)
+        mFlightHiddenWindow->hide();
+}
+
+//! \brief Restores a hidden sheet before it is reused or replaced by another existing pane.
+void ModeManager::restoreMenuAfterFlight()
+{
+    if(mFlightHiddenWindow != nullptr)
+        mFlightHiddenWindow->show();
+    mFlightHiddenWindow = nullptr;
+}
+
+//! \brief Reveals the returning campaign pane after the arrival and table flight finish.
+bool ModeManager::updateMenuArrival()
+{
+    if(mMenuArrivalPlace.empty())
+        return false;
+    ODFrameListener& listener = ODFrameListener::getSingleton();
+    if(listener.isMainMenuFlightActive())
+        return true;
+    if(listener.getMainMenuPlace() != mMenuArrivalPlace)
+    {
+        listener.flyMainMenuTo(mMenuArrivalPlace);
+        return true;
+    }
+    mMenuArrivalPlace.clear();
+    restoreMenuAfterFlight();
+    return false;
+}
+
+//! \brief Changes modes after any required overview return while preserving existing mode history.
 void ModeManager::checkModeChange()
 {
     if (mRequestedMode == NONE)
         return;
+
+    ODFrameListener& listener = ODFrameListener::getSingleton();
+    if(!mMenuArrivalPlace.empty())
+    {
+        mMenuArrivalPlace.clear();
+        restoreMenuAfterFlight();
+    }
+    if(mMainMenuReturnPending)
+    {
+        if(mRequestedMode == MENU_MAIN && listener.isMainMenuFlightActive())
+            return;
+        mMainMenuReturnPending = false;
+        restoreMenuAfterFlight();
+    }
+    if(mRequestedMode == MENU_MAIN && mCurrentApplicationMode != nullptr &&
+       mCurrentApplicationMode->getModeType() != MENU_MAIN &&
+       mCurrentApplicationMode->getModeType() != GAME &&
+       mCurrentApplicationMode->getModeType() != EDITOR && listener.getIsMainMenuCreated() &&
+       listener.getMainMenuPlace() != PLACE_OVERVIEW)
+    {
+        if(listener.isMainMenuFlightActive())
+            return;
+        if(listener.flyMainMenuTo(PLACE_OVERVIEW))
+        {
+            mMainMenuReturnPending = true;
+            hideMenuForFlight();
+            return;
+        }
+    }
 
     const bool initialMode = mCurrentApplicationMode == nullptr;
     ModeType previousMode = NONE;
@@ -97,6 +178,9 @@ void ModeManager::checkModeChange()
 
         // Keep the previous mode in mind.
         previousMode = mCurrentApplicationMode->getModeType();
+
+        if(mRequestedMode == MENU_MAIN && (previousMode == GAME || previousMode == EDITOR))
+            mMainMenuArrivalRequested = true;
 
         mCurrentApplicationMode->deactivate();
         mCurrentApplicationMode = nullptr;
@@ -159,7 +243,15 @@ void ModeManager::checkModeChange()
         break;
     }
 
+    const bool campaignArrival = mRequestedMode == MENU_CAMPAIGN &&
+        (previousMode == GAME || previousMode == EDITOR);
     mCurrentApplicationMode->activate();
+    if(campaignArrival)
+    {
+        listener.startMainMenuFlight();
+        mMenuArrivalPlace = PLACE_CAMPAIGN;
+        hideMenuForFlight();
+    }
 
     if((initialMode && mRequestedMode == MENU_MAIN) || mRequestedMode == GAME)
     {
@@ -178,6 +270,7 @@ void ModeManager::checkModeChange()
     mRequestedMode = NONE;
 }
 
+//! \brief Advances mode changes and keeps a returning campaign pane hidden until arrival.
 void ModeManager::update(const Ogre::FrameEvent& evt)
 {
     checkModeChange();
@@ -193,5 +286,7 @@ void ModeManager::update(const Ogre::FrameEvent& evt)
     //currentMode->mouseMoved(OIS::MouseEvent(nullptr, currentMode->getMouse()->getMouseState()));
 
     currentMode->updateCameraControls(evt.timeSinceLastFrame);
+    if(updateMenuArrival())
+        return;
     currentMode->onFrameStarted(evt);
 }

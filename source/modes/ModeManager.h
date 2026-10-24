@@ -24,15 +24,21 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 
 class AbstractApplicationMode;
 class CameraManager;
 class Gui;
+namespace CEGUI
+{
+class Window;
+}
 
 namespace Ogre {
   class RenderWindow;
 }
 
+//! \brief Switches application modes and preserves scene flights between existing menu panes.
 class ModeManager final : public AbstractModeManager
 {
 public:
@@ -68,7 +74,15 @@ public:
         return requested;
     }
 
-    //! \brief Request to load the previous mode type.
+    //! \brief Consumes a request to fly into the main menu after returning from a game or editor.
+    bool consumeMainMenuArrivalRequest()
+    {
+        const bool requested = mMainMenuArrivalRequested;
+        mMainMenuArrivalRequested = false;
+        return requested;
+    }
+
+    //! \brief Requests the previous mode once without consuming history during a menu flight.
     void requestPreviousMode();
     //! \brief Request to leave the current mode and launch the given saved game.
     void requestSavedGame(const std::string& filename);
@@ -102,11 +116,26 @@ private:
     bool mStoreCurrentModeAtChange;
     //! Set by requestMainMenuWithSkirmishSubMenu, consumed by the main menu when it is activated
     bool mOpenSkirmishSubMenu = false;
+    //! Requests the configured outside-to-overview flight on the next main-menu activation.
+    bool mMainMenuArrivalRequested = false;
+    //! True while returning from another menu pane to the overview before activating the main menu.
+    bool mMainMenuReturnPending = false;
+    //! Menu pane temporarily hidden during an arrival or return flight; never owned here.
+    CEGUI::Window* mFlightHiddenWindow = nullptr;
+    //! Destination to reach after the arrival from a game, empty when no arrival is pending.
+    std::string mMenuArrivalPlace = std::string();
     //! \brief Saved game that the next load menu launches right away, empty if none.
     std::string mRequestedSavedGame;
 
     //! \brief Actually change the mode if needed
     void checkModeChange();
+
+    //! \brief Hides the current pane for a scene flight without changing its controls or contents.
+    void hideMenuForFlight();
+    //! \brief Restores the pane hidden by a completed or superseded menu flight.
+    void restoreMenuAfterFlight();
+    //! \brief Finishes a game-to-campaign arrival before revealing its existing pane.
+    bool updateMenuArrival();
 };
 
 #endif // MODEMANAGER_H

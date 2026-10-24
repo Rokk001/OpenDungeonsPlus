@@ -90,8 +90,8 @@ static bool looksDownwards(const Ogre::Quaternion& root, const Ogre::Quaternion&
 
 const Ogre::String BACKGROUND_RECT_NAME = "BackgroundRect";
 
-//! The scripted main-menu scene and its GUI were authored on an 800x600 plane.
-const Ogre::Real MAIN_MENU_REFERENCE_ASPECT_RATIO = 4.0f / 3.0f;
+//! The authored fortress overview uses a 16:9 frame at the reference vertical field of view.
+const Ogre::Real MAIN_MENU_REFERENCE_ASPECT_RATIO = 16.0f / 9.0f;
 
 //! Vertical field of view in degrees used until the main menu projection stores the camera's own value.
 const float MAIN_MENU_DEFAULT_FOV_Y_DEGREES = 45.0f;
@@ -364,9 +364,10 @@ void CameraManager::setActiveCamera(const Ogre::String& ss)
     OD_LOG_INF("Setting Active Camera to " + ss + " ...");
 }
 
+//! \brief Fits the complete authored menu frame by expanding only the narrow viewport's vertical field of view.
 void CameraManager::setViewportSize(unsigned int width, unsigned int height)
 {
-    if(mActiveCamera == nullptr || height == 0)
+    if(mActiveCamera == nullptr || width == 0 || height == 0)
         return;
 
     const Ogre::Real aspectRatio = static_cast<Ogre::Real>(width) / static_cast<Ogre::Real>(height);
@@ -374,12 +375,13 @@ void CameraManager::setViewportSize(unsigned int width, unsigned int height)
     if(!mMainMenuProjection)
         return;
 
-    const Ogre::Real halfFovY = mMainMenuBaseFovY.valueRadians() * 0.5f;
+    const Ogre::Real halfFovY = Ogre::Degree(MAIN_MENU_DEFAULT_FOV_Y_DEGREES).valueRadians() * 0.5f;
     const Ogre::Real menuFovY = 2.0f * std::atan(std::tan(halfFovY)
-        * MAIN_MENU_REFERENCE_ASPECT_RATIO / aspectRatio);
+        * std::max(1.0f, MAIN_MENU_REFERENCE_ASPECT_RATIO / aspectRatio));
     mActiveCamera->setFOVy(Ogre::Radian(menuFovY));
 }
 
+//! \brief Saves gameplay projection while fitting the authored fortress overview to any menu viewport.
 void CameraManager::setMainMenuProjection(bool enabled)
 {
     if(mActiveCamera == nullptr)

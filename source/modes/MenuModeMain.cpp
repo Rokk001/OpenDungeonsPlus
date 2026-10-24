@@ -74,13 +74,23 @@ const std::string BUTTON_EDITOR_LOAD = "EditorLoadButton";
 
 namespace
 {
+//! Configured destinations of the existing main-menu actions.
+static const std::string PLACE_OVERVIEW = "overview";
+static const std::string PLACE_CAMPAIGN = "campaign";
+static const std::string PLACE_SKIRMISH = "skirmish";
+static const std::string PLACE_MULTIPLAYER = "multiplayer";
+static const std::string PLACE_REPLAY = "replay";
+static const std::string PLACE_EDITOR = "editor";
+static const std::string PLACE_SETTINGS = "settings";
+
 //! \brief Helper functor to change modes
 class ModeChanger
 {
 public:
+    //! \brief Preserves the requested mode while allowing its menu flight to finish first.
     bool operator()(const CEGUI::EventArgs& e)
     {
-        mMode->changeModeEvent(mNewMode, e);
+        mMode->changeModeAfterFlight(mNewMode, e);
         return true;
     }
 
@@ -89,6 +99,7 @@ public:
 };
 } // namespace
 
+//! \brief Connects the existing menu controls without changing their destinations.
 MenuModeMain::MenuModeMain(ModeManager *modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_MAIN),
     mSettings(getModeManager().getGui().getGuiSheet(Gui::mainMenu), modeManager->getGui(), true)
@@ -200,6 +211,7 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
         );
 }
 
+//! \brief Restores the main controls and starts any requested arrival from a finished game.
 void MenuModeMain::activate()
 {
     // Loads the corresponding Gui sheet.
@@ -215,12 +227,15 @@ void MenuModeMain::activate()
     window->getChild(WINDOW_SETTINGS)->hide();
     mSettingsPageOpen = false;
     mSkirmishSubMenuPending = false;
+    mPendingSubMenu.clear();
+    mPendingMode = AbstractModeManager::NONE;
     showMainMenuButtons(true);
     // Coming from the defeat debriefing: fly into the menu, then go on in the skirmish sub-menu
     if(getModeManager().consumeSkirmishSubMenuRequest())
     {
         mSkirmishSubMenuPending = true;
         showMainMenuButtons(false);
+        window->getChild(BUTTON_QUIT)->show();
     }
 
     // Reaching the main menu ends the campaign flow. The campaign buttons
@@ -244,21 +259,59 @@ void MenuModeMain::activate()
 
     ODFrameListener::getSingleton().stopGameRenderer();
     ODFrameListener::getSingleton().createMainMenuScene();
-    if(mSkirmishSubMenuPending)
+    if(getModeManager().consumeMainMenuArrivalRequest() || mSkirmishSubMenuPending)
         ODFrameListener::getSingleton().startMainMenuFlight();
 
     restartPendingLevel();
 }
 
+//! \brief Reveals the selected existing pane only after its configured flight finishes.
 void MenuModeMain::onFrameStarted(const Ogre::FrameEvent& /*evt*/)
 {
-    if(!mSkirmishSubMenuPending)
-        return;
     if(ODFrameListener::getSingleton().isMainMenuFlightActive())
         return;
 
-    mSkirmishSubMenuPending = false;
-    toggleSubMenu(WINDOW_SKIRMISH);
+    if(mSkirmishSubMenuPending)
+    {
+        mSkirmishSubMenuPending = false;
+        showMainMenuButtons(true);
+        toggleSubMenu(WINDOW_SKIRMISH);
+        return;
+    }
+    if(!mPendingSubMenu.empty())
+    {
+        const std::string name = mPendingSubMenu;
+        mPendingSubMenu.clear();
+        showSubMenu(name);
+    }
+    if(mPendingMode != AbstractModeManager::NONE)
+    {
+        const AbstractModeManager::ModeType mode = mPendingMode;
+        mPendingMode = AbstractModeManager::NONE;
+        changeModeEvent(mode, CEGUI::EventArgs());
+    }
+}
+
+//! \brief Keeps Quit immediate and delays only the replay pane until its archive flight arrives.
+bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, const CEGUI::EventArgs& e)
+{
+    if(mode == AbstractModeManager::ADVERTISMENT)
+    {
+        mPendingSubMenu.clear();
+        mPendingMode = AbstractModeManager::NONE;
+        mSkirmishSubMenuPending = false;
+        return changeModeEvent(mode, e);
+    }
+    ODFrameListener& listener = ODFrameListener::getSingleton();
+    if(listener.isMainMenuFlightActive())
+        return true;
+    if(mode == AbstractModeManager::MENU_REPLAY && listener.getMainMenuPlace() != PLACE_REPLAY)
+    {
+        if(listener.flyMainMenuTo(PLACE_REPLAY))
+            mPendingMode = mode;
+        return true;
+    }
+    return changeModeEvent(mode, e);
 }
 
 void MenuModeMain::restartPendingLevel()
@@ -354,9 +407,14 @@ bool MenuModeMain::settingsPageClosed(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Closes the current submenu and flies back without overlapping an active flight.
 bool MenuModeMain::goBack(const CEGUI::EventArgs&)
 {
+    ODFrameListener& listener = ODFrameListener::getSingleton();
+    if(listener.isMainMenuFlightActive())
+        return true;
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
+    OD_ASSERT_TRUE(mainWin != nullptr);
     for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS})
     {
         CEGUI::Window* window = mainWin->getChild(name);
@@ -365,6 +423,7 @@ bool MenuModeMain::goBack(const CEGUI::EventArgs&)
             window->hide();
             showNewCampaignConfirm(false);
             showMainMenuButtons(true);
+            listener.flyMainMenuTo(PLACE_OVERVIEW);
             break;
         }
     }
@@ -436,13 +495,38 @@ bool MenuModeMain::toggleEditorSubMenu(const CEGUI::EventArgs&)
     return toggleSubMenu(WINDOW_EDITOR);
 }
 
+//! \brief Starts the selected scene flight while keeping Quit available until arrival.
 bool MenuModeMain::toggleSubMenu(const std::string& name)
+{
+    ODFrameListener& listener = ODFrameListener::getSingleton();
+    if(listener.isMainMenuFlightActive())
+        return true;
+    CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
+    OD_ASSERT_TRUE(mainWin != nullptr);
+    if(mainWin->getChild(name)->isVisible())
+        return goBack();
+    std::string place = PLACE_SETTINGS;
+    if(name == WINDOW_CAMPAIGN)
+        place = PLACE_CAMPAIGN;
+    else if(name == WINDOW_SKIRMISH)
+        place = PLACE_SKIRMISH;
+    else if(name == WINDOW_MULTIPLAYER)
+        place = PLACE_MULTIPLAYER;
+    else if(name == WINDOW_EDITOR)
+        place = PLACE_EDITOR;
+    if(listener.getMainMenuPlace() == place)
+        showSubMenu(name);
+    else if(listener.flyMainMenuTo(place))
+        mPendingSubMenu = name;
+    return true;
+}
+
+//! \brief Shows the same submenu controls once their scene destination has been reached.
+void MenuModeMain::showSubMenu(const std::string& name)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
     OD_ASSERT_TRUE(mainWin);
-    const bool visible = !mainWin->getChild(name)->isVisible();
     for(const std::string& other : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS})
-        mainWin->getChild(other)->setVisible(visible && other == name);
-    showMainMenuButtons(!visible);
-    return true;
+        mainWin->getChild(other)->setVisible(other == name);
+    showMainMenuButtons(false);
 }

@@ -21,96 +21,122 @@
 class CameraManager;
 class RenderManager;
 class RenderSceneGroup;
-namespace Ogre
-{
-class Rectangle2D;
-}
 
 #include "render/MenuFlight.h"
 #include "renderscene/RenderScene.h"
 
 #include <OgrePrerequisites.h>
+#include <OgreColourValue.h>
+#include <OgreQuaternion.h>
+#include <OgreVector3.h>
 
+#include <map>
 #include <string>
+#include <vector>
 
 //! \brief This class is basically used to store the needed scenes to display a menu
 class RenderSceneMenu : public RenderSceneListener
 {
 public:
-    // Constructors
+    //! \brief Creates an inactive menu scene.
     RenderSceneMenu();
+    //! \brief Deletes the parsed scene commands after their owner has freed the active scene.
     virtual ~RenderSceneMenu();
 
+    //! \brief Sends a scripted synchronization event to every scene group.
     void dispatchSyncPost(const std::string& event) override;
 
+    //! \brief Instantiates the configured scene and places the camera at its overview.
     void resetMenu(CameraManager& cameraManager, RenderManager& renderManager);
+    //! \brief Releases active scene commands in reverse order and restores the world background.
     void freeMenu(CameraManager& cameraManager, RenderManager& renderManager);
+    //! \brief Advances native scene animations, firelight, camera paths and the unchanged hand hover pose.
     void updateMenu(CameraManager& cameraManager, RenderManager& renderManager,
         Ogre::Real timeSinceLastFrame);
+    //! \brief Loads scripted groups, named camera paths and firelight timing from one configuration file.
     void readSceneMenu(const std::string& fileName);
 
-    //! Starts the flight into the menu (used after the defeat debriefing). False if one is already running.
-    bool startFlight()
-    { return mFlight.start(); }
+    //! \brief Starts the configured arrival from outside the fortress; rejects overlapping flights.
+    bool startFlight(CameraManager& cameraManager);
+    //! \brief Flies to a named menu place, reversing its entry route when returning to the overview.
+    bool flyTo(CameraManager& cameraManager, const std::string& place);
+    //! \brief Returns whether an arrival, outward or return flight is active.
     bool isFlightActive() const
     { return mFlight.isActive(); }
+    //! \brief Returns the last settled menu place; it changes only after a flight completes.
+    const std::string& getCurrentPlace() const
+    { return mCurrentPlace; }
+    //! \brief Returns a configured endpoint for the existing offscreen menu probe.
+    bool getCameraPose(const std::string& name, Ogre::Vector3& position, Ogre::Quaternion& orientation) const;
 
 private:
-    //! \brief The kinds of animated overlay drawn on top of the menu artwork. Each kind has its own animation.
-    enum class AtmosphereEffectType
+    //! \brief One authored camera position and its local view orientation.
+    struct CameraPose
     {
-        fog,
-        fire,
-        acid,
-        lightning,
-        ember
+        //! Location in the scene's existing coordinate system.
+        Ogre::Vector3 mPosition = Ogre::Vector3::ZERO;
+        //! View rotation, matching CameraMove's local X/Y/Z rotation order.
+        Ogre::Quaternion mOrientation = Ogre::Quaternion::IDENTITY;
     };
 
-    //! \brief One animated overlay rectangle together with the ogre objects that have to be destroyed with it.
-    struct AtmosphereEffect
+    //! \brief A named path with its duration and ordered waypoint names.
+    struct CameraPath
     {
-        //! Selects the animation applied in updateAtmosphereEffect()
-        AtmosphereEffectType mType;
-        //! The rectangle that is drawn; owned by this effect
-        Ogre::Rectangle2D* mRectangle;
-        //! The scene node mRectangle is attached to
-        Ogre::SceneNode* mNode;
-        //! Name of the material cloned for this effect, so that its shader parameters are not shared
-        std::string mMaterialName;
-        //! Centre in artwork coordinates, from (0, 0) at the top left to (1, 1) at the bottom right
-        Ogre::Vector2 mCenter;
-        //! Width and height as a fraction of the width and height of the artwork
-        Ogre::Vector2 mSize;
-        //! Colour of the effect; the alpha is replaced by the animation every frame
-        Ogre::ColourValue mColour;
-        //! Offset in seconds added to the animation clock, so that equal effects do not move in step
-        Ogre::Real mPhase;
+        //! Duration in interface seconds.
+        Ogre::Real mDuration = MenuFlightSettings::DURATION;
+        //! Pose names in travel order, excluding the current camera position.
+        std::vector<std::string> mWaypoints;
     };
 
-    //! \brief Creates all overlay effects for the current menu scene. Replaces effects created before.
-    void createAtmosphere(RenderManager& renderManager);
+    //! \brief One configured firelight waveform and the native light's unmodulated colours.
+    struct FireLight
+    {
+        //! Name of the point light created by the native scene commands.
+        std::string mName = std::string();
+        //! Maximum fractional change around the authored light intensity.
+        Ogre::Real mAmplitude = 0.0f;
+        //! Angular frequency in radians per interface second.
+        Ogre::Real mFrequency = 1.0f;
+        //! Independent waveform phase in radians.
+        Ogre::Real mPhase = 0.0f;
+        //! Native light, valid only between scene reset and resource release.
+        Ogre::Light* mLight = nullptr;
+        //! Authored diffuse colour, never replaced by a previously modulated value.
+        Ogre::ColourValue mDiffuse = Ogre::ColourValue::Black;
+        //! Authored specular colour, scaled by the same waveform as diffuse lighting.
+        Ogre::ColourValue mSpecular = Ogre::ColourValue::Black;
+    };
 
-    //! \brief Creates one overlay effect from a clone of baseMaterial and adds it to mAtmosphereEffects.
-    void addAtmosphereEffect(AtmosphereEffectType type, const std::string& baseMaterial,
-        const Ogre::Vector2& center, const Ogre::Vector2& size, const Ogre::ColourValue& colour,
-        Ogre::Real phase);
-
-    //! \brief Destroys all overlay effects and their cloned materials.
-    void clearAtmosphere();
-
-    //! \brief Advances the animation of one effect and places it on the artwork,
-    //! whose visible half extent in screen space is halfWidth x halfHeight.
-    void updateAtmosphereEffect(AtmosphereEffect& effect, Ogre::Real halfWidth, Ogre::Real halfHeight);
-
+    //! \brief Applies a pose to the existing camera hierarchy without gameplay movement or map clamping.
+    void applyCameraPose(CameraManager& cameraManager, const CameraPose& pose);
+    //! \brief Begins a validated path from the actual current camera position.
+    bool beginPath(CameraManager& cameraManager, const CameraPath& path, const std::string& destination);
+    //! \brief Samples the active curved path with eased time and quaternion interpolation.
+    CameraPose samplePath(Ogre::Real progress) const;
+    //! \brief Advances configured firelight without multiplying the previous frame's result.
+    void updateFireLights(Ogre::Real elapsed);
+    //! Parsed native scene commands, in authored activation order.
     std::vector<RenderSceneGroup*> mSceneGroups;
-    RenderSceneListener* mRenderSceneListener;
-    //! The overlay effects currently shown; empty outside of the menu
-    std::vector<AtmosphereEffect> mAtmosphereEffects;
-    //! The scene manager the effects were created in, or nullptr while there are none
-    Ogre::SceneManager* mAtmosphereSceneManager = nullptr;
-    //! Animation clock in seconds, advanced in updateMenu()
-    Ogre::Real mAtmosphereTime = 0.0f;
+    //! Named camera endpoints read from the scene configuration.
+    std::map<std::string, CameraPose> mCameraPoses;
+    //! Authored routes for the destinations and the outside arrival.
+    std::map<std::string, CameraPath> mCameraPaths;
+    //! Configured firelights; green and other steady lights are not included.
+    std::vector<FireLight> mFireLights;
+    //! Interface seconds since the native menu scene was reset.
+    Ogre::Real mFireTime = 0.0f;
+    //! Actual start pose followed by the current path's authored waypoints.
+    std::vector<CameraPose> mFlightPoses;
+    //! Place last reached without an active transition.
+    std::string mCurrentPlace;
+    //! Destination to publish only when the active flight finishes.
+    std::string mFlightPlace;
+    //! Timer shared by native arrival, destination and return flights.
     MenuFlight mFlight;
+    //! Whether parsed groups currently own live render objects.
+    bool mActive = false;
+    //! World ambient lighting restored when the menu releases its scene.
+    Ogre::ColourValue mSavedAmbient = Ogre::ColourValue::Black;
 };
 
 #endif // RENDERSCENEMENU_H

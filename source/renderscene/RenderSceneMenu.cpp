@@ -19,17 +19,16 @@
 
 #include "camera/CameraManager.h"
 #include "render/RenderManager.h"
-#include "renderscene/RenderScene.h"
 #include "renderscene/RenderSceneGroup.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
 #include <OgreMaterialManager.h>
+#include <OgreLight.h>
+#include <OgreNode.h>
 #include <OgreRectangle2D.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
-#include <OgreTextureManager.h>
-#include <OgreViewport.h>
 
 #include <CEGUI/System.h>
 #include <CEGUI/GUIContext.h>
@@ -39,15 +38,31 @@
 
 #include <algorithm>
 #include <cmath>
+#include <sstream>
 
 //! Scene node holding the full screen background rectangle created by the render manager.
 static const std::string BACKGROUND_NODE_NAME = "Background";
 //! Material used by the background rectangle outside of the menus.
 static const std::string DEFAULT_BACKGROUND_MATERIAL = "Background";
-//! Material and texture of the static menu background.
-static const std::string MENU_BACKGROUND_MATERIAL = "MainMenuBackground";
-static const std::string MENU_BACKGROUND_TEXTURE = "MainMenuBackground.png";
+//! Resource group shared by the world background and menu assets.
 static const std::string BACKGROUND_RESOURCE_GROUP = "Graphics";
+//! Configured overview destination and outside-arrival path names.
+static const std::string OVERVIEW_PLACE = "overview";
+static const std::string ARRIVAL_PATH = "arrival";
+//! Camera metadata is kept outside the existing native scene groups.
+static const std::string CAMERA_SECTION = "[MenuCamera]";
+static const std::string CAMERA_SECTION_END = "[/MenuCamera]";
+//! Firelight timing is separate from native render groups and camera metadata.
+static const std::string FIRE_LIGHT_SECTION = "[MenuFireLights]";
+static const std::string FIRE_LIGHT_SECTION_END = "[/MenuFireLights]";
+//! Two smooth waves avoid synchronized, rigid pulses while retaining positive light intensity.
+static const Ogre::Real FIRE_PRIMARY_WEIGHT = 0.7f;
+static const Ogre::Real FIRE_SECONDARY_WEIGHT = 0.3f;
+static const Ogre::Real FIRE_SECONDARY_FREQUENCY = 2.37f;
+static const Ogre::Real FIRE_SECONDARY_PHASE = 1.73f;
+//! Permitted authored flight durations in interface seconds.
+static const Ogre::Real MIN_FLIGHT_DURATION = 1.5f;
+static const Ogre::Real MAX_FLIGHT_DURATION = 2.5f;
 
 //! \brief Returns the full screen background rectangle of the scene.
 static Ogre::Rectangle2D* getBackgroundRectangle(RenderManager& renderManager)
@@ -56,51 +71,100 @@ static Ogre::Rectangle2D* getBackgroundRectangle(RenderManager& renderManager)
         renderManager.getSceneManager()->getSceneNode(BACKGROUND_NODE_NAME)->getAttachedObject(0));
 }
 
+//! \brief Creates an inactive parsed menu with no settled destination.
 RenderSceneMenu::RenderSceneMenu()
 {
 }
 
+//! \brief Deletes parsed commands after their owner has released the live scene.
 RenderSceneMenu::~RenderSceneMenu()
 {
-    clearAtmosphere();
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
         delete sceneGroup;
 
     mSceneGroups.clear();
 }
 
+//! \brief Broadcasts a scripted synchronization event to all scene groups.
 void RenderSceneMenu::dispatchSyncPost(const std::string& event)
 {
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
         sceneGroup->notifySyncPost(event);
 }
 
+//! \brief Instantiates native groups, captures firelight baselines and selects the authored overview.
 void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
+    if(mActive)
+        freeMenu(cameraManager, renderManager);
+    if(cameraManager.getActiveCamera() == nullptr || cameraManager.getActiveCameraNode() == nullptr)
+        return;
     if(!renderManager.isKeeperHandVisible())
         renderManager.rrToggleHandSelectorVisibility();
-    Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);
-    Ogre::TextureManager::getSingleton().load(MENU_BACKGROUND_TEXTURE, BACKGROUND_RESOURCE_GROUP);
-    background->setMaterial(Ogre::MaterialManager::getSingleton().getByName(MENU_BACKGROUND_MATERIAL,
-        BACKGROUND_RESOURCE_GROUP));
-    createAtmosphere(renderManager);
+    mSavedAmbient = renderManager.getSceneManager()->getAmbientLight();
+    renderManager.getSceneManager()->setAmbientLight(Ogre::ColourValue::Black);
+    getBackgroundRectangle(renderManager)->setVisible(false);
+    mActive = true;
+    for(RenderSceneGroup* sceneGroup : mSceneGroups)
+        sceneGroup->reset(cameraManager, renderManager);
+    mFireTime = 0.0f;
+    for(FireLight& fire : mFireLights)
+    {
+        fire.mLight = nullptr;
+        if(!renderManager.getSceneManager()->hasLight(fire.mName))
+        {
+            OD_LOG_ERR("Missing configured menu firelight: " + fire.mName);
+            continue;
+        }
+        fire.mLight = renderManager.getSceneManager()->getLight(fire.mName);
+        fire.mDiffuse = fire.mLight->getDiffuseColour();
+        fire.mSpecular = fire.mLight->getSpecularColour();
+    }
+    mCurrentPlace = OVERVIEW_PLACE;
+    std::map<std::string, CameraPose>::const_iterator overview = mCameraPoses.find(OVERVIEW_PLACE);
+    if(overview != mCameraPoses.end())
+        applyCameraPose(cameraManager, overview->second);
     updateMenu(cameraManager, renderManager, 0.0f);
 }
 
+//! \brief Restores firelight baselines, frees native commands and restores the world background and lighting.
 void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
     mFlight.reset();
+    mFlightPoses.clear();
+    mFlightPlace.clear();
+    mCurrentPlace.clear();
     renderManager.rrSetHandPose(false, false);
-    clearAtmosphere();
+    for(FireLight& fire : mFireLights)
+    {
+        if(fire.mLight == nullptr)
+            continue;
+        fire.mLight->setDiffuseColour(fire.mDiffuse);
+        fire.mLight->setSpecularColour(fire.mSpecular);
+        fire.mLight = nullptr;
+    }
+    mFireTime = 0.0f;
+    if(mActive)
+    {
+        for(std::vector<RenderSceneGroup*>::reverse_iterator group = mSceneGroups.rbegin();
+            group != mSceneGroups.rend(); ++group)
+            (*group)->freeGroup(cameraManager, renderManager);
+        renderManager.getSceneManager()->setAmbientLight(mSavedAmbient);
+        mActive = false;
+    }
     Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);
     background->setMaterial(Ogre::MaterialManager::getSingleton().getByName(DEFAULT_BACKGROUND_MATERIAL,
         BACKGROUND_RESOURCE_GROUP));
     background->setCorners(-1.0f, 1.0f, 1.0f, -1.0f);
+    background->setVisible(true);
 }
 
+//! \brief Advances native animation, independent firelight and paths while preserving the hand hover rules.
 void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& renderManager,
         Ogre::Real timeSinceLastFrame)
 {
+    if(!mActive)
+        return;
     bool pointing = false;
     for(CEGUI::Window* window = CEGUI::System::getSingleton().getDefaultGUIContext().getWindowContainingMouse();
         window != nullptr; window = window->getParent())
@@ -120,202 +184,144 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     }
     renderManager.rrSetHandPose(pointing, false);
 
-    Ogre::Viewport* viewport = cameraManager.getViewport();
-    if(viewport->getActualWidth() == 0 || viewport->getActualHeight() == 0)
+    for(RenderSceneGroup* sceneGroup : mSceneGroups)
+        sceneGroup->update(cameraManager, renderManager, timeSinceLastFrame);
+    updateFireLights(timeSinceLastFrame);
+    if(!mFlight.isActive())
         return;
-    const Ogre::TexturePtr texture = Ogre::TextureManager::getSingleton().getByName(MENU_BACKGROUND_TEXTURE,
-        BACKGROUND_RESOURCE_GROUP);
-    if(texture.isNull() || texture->getHeight() == 0)
-        return;
-    const Ogre::Real imageAspect = static_cast<Ogre::Real>(texture->getWidth()) / texture->getHeight();
-    const Ogre::Real viewportAspect = static_cast<Ogre::Real>(viewport->getActualWidth()) / viewport->getActualHeight();
-    // During the flight the picture is zoomed around its centre
-    mFlight.advance(timeSinceLastFrame);
-    const Ogre::Real flightScale = mFlight.getScale();
-    const Ogre::Real halfWidth = std::min(1.0f, imageAspect / viewportAspect) * flightScale;
-    const Ogre::Real halfHeight = std::min(1.0f, viewportAspect / imageAspect) * flightScale;
-    Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);
-    background->setCorners(-halfWidth, halfHeight, halfWidth, -halfHeight);
-
-    mAtmosphereTime += std::min(timeSinceLastFrame, 0.1f);
-    for(AtmosphereEffect& effect : mAtmosphereEffects)
-        updateAtmosphereEffect(effect, halfWidth, halfHeight);
+    const bool arrived = mFlight.advance(timeSinceLastFrame);
+    applyCameraPose(cameraManager, samplePath(mFlight.getProgress()));
+    if(arrived)
+        mCurrentPlace = mFlightPlace;
 }
 
-void RenderSceneMenu::updateAtmosphereEffect(AtmosphereEffect& effect, Ogre::Real halfWidth,
-    Ogre::Real halfHeight)
+//! \brief Scales authored firelight colours by a bounded smooth waveform in interface time.
+void RenderSceneMenu::updateFireLights(Ogre::Real elapsed)
 {
-    Ogre::Real alpha = 0.0f;
-    Ogre::Real scaleX = 1.0f;
-    Ogre::Real scaleY = 1.0f;
-    Ogre::Real driftX = 0.0f;
-    Ogre::Real driftY = 0.0f;
-    const Ogre::Real time = mAtmosphereTime + effect.mPhase;
-    switch(effect.mType)
+    if(std::isfinite(elapsed) && elapsed > 0.0f)
+        mFireTime += elapsed;
+    for(const FireLight& fire : mFireLights)
     {
-        case AtmosphereEffectType::fog:
-        {
-            alpha = 0.19f + 0.035f * Ogre::Math::Sin(time * 0.24f);
-            driftX = 0.009f * Ogre::Math::Sin(time * 0.11f);
-            driftY = 0.003f * Ogre::Math::Sin(time * 0.16f);
-            break;
-        }
-        case AtmosphereEffectType::fire:
-        {
-            const Ogre::Real flicker = 0.78f +
-                0.15f * Ogre::Math::Sin(time * 8.0f) +
-                0.07f * Ogre::Math::Sin(time * 13.0f);
-            alpha = 0.48f * flicker;
-            scaleX = 0.94f + 0.06f * flicker;
-            scaleY = 0.90f + 0.14f * flicker;
-            driftY = 0.003f * Ogre::Math::Sin(time * 11.0f);
-            break;
-        }
-        case AtmosphereEffectType::acid:
-            alpha = 0.11f + 0.04f * Ogre::Math::Sin(time * 1.4f);
-            scaleX = 1.0f + 0.05f * Ogre::Math::Sin(time * 0.9f);
-            scaleY = 1.0f + 0.04f * Ogre::Math::Sin(time * 1.1f);
-            break;
-        case AtmosphereEffectType::lightning:
-        {
-            const Ogre::Real cycle = std::fmod(time, 6.5f);
-            Ogre::Real flash = 0.0f;
-            if(cycle < 0.12f)
-                flash = 1.0f - cycle / 0.12f;
-            else if(cycle >= 0.22f && cycle < 0.30f)
-                flash = 0.7f * (1.0f - (cycle - 0.22f) / 0.08f);
-            alpha = 0.025f + 0.70f * flash;
-            scaleX = 0.9f + 0.15f * flash;
-            scaleY = 1.0f + 0.08f * flash;
-            break;
-        }
-        case AtmosphereEffectType::ember:
-        {
-            const Ogre::Real lifetime = 2.4f + 0.35f * effect.mPhase;
-            const Ogre::Real progress = std::fmod(time, lifetime) / lifetime;
-            alpha = 0.85f * Ogre::Math::Sin(Ogre::Math::PI * progress);
-            driftX = 0.011f * Ogre::Math::Sin(time * 1.4f + effect.mPhase)
-                * progress;
-            driftY = -0.09f * progress;
-            scaleX = 1.0f - 0.5f * progress;
-            scaleY = scaleX;
-            break;
-        }
-    }
-
-    const Ogre::Real centerX = -halfWidth +
-        2.0f * halfWidth * (effect.mCenter.x + driftX);
-    const Ogre::Real centerY = halfHeight -
-        2.0f * halfHeight * (effect.mCenter.y + driftY);
-    const Ogre::Real effectHalfWidth = halfWidth * effect.mSize.x * scaleX;
-    const Ogre::Real effectHalfHeight = halfHeight * effect.mSize.y * scaleY;
-    effect.mRectangle->setCorners(centerX - effectHalfWidth,
-        centerY + effectHalfHeight, centerX + effectHalfWidth,
-        centerY - effectHalfHeight);
-
-    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().getByName(
-        effect.mMaterialName, "Graphics");
-    Ogre::ColourValue colour = effect.mColour;
-    colour.a = alpha;
-    Ogre::GpuProgramParametersSharedPtr parameters =
-        material->getTechnique(0)->getPass(0)->getFragmentProgramParameters();
-    parameters->setNamedConstant("tint", colour);
-    parameters->setNamedConstant("time", time);
-}
-
-void RenderSceneMenu::addAtmosphereEffect(AtmosphereEffectType type,
-    const std::string& baseMaterial, const Ogre::Vector2& center,
-    const Ogre::Vector2& size, const Ogre::ColourValue& colour,
-    Ogre::Real phase)
-{
-    const std::string suffix = Helper::toString(mAtmosphereEffects.size());
-    const std::string objectName = "MainMenuAtmosphere_" + suffix;
-    const std::string materialName = objectName + "_material";
-    Ogre::MaterialPtr base = Ogre::MaterialManager::getSingleton().getByName(
-        baseMaterial, "Graphics");
-    Ogre::MaterialPtr material = base->clone(materialName, true, "Graphics");
-    Ogre::Rectangle2D* rectangle = new Ogre::Rectangle2D(objectName, true);
-    rectangle->setMaterial(material);
-    rectangle->setRenderQueueGroupAndPriority(
-        Ogre::RENDER_QUEUE_SKIES_EARLY, 101);
-    rectangle->setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
-    Ogre::SceneNode* node = mAtmosphereSceneManager->getRootSceneNode()
-        ->createChildSceneNode(objectName + "_node");
-    node->attachObject(rectangle);
-    mAtmosphereEffects.push_back({type, rectangle, node, materialName,
-        center, size, colour, phase});
-}
-
-void RenderSceneMenu::createAtmosphere(RenderManager& renderManager)
-{
-    clearAtmosphere();
-    mAtmosphereSceneManager = renderManager.getSceneManager();
-    mAtmosphereTime = 0.0f;
-
-    // Normalised positions of the four fires in the menu artwork (0,0 is the top left corner).
-    const Ogre::Vector2 fireAnchors[4] = {Ogre::Vector2(0.082f, 0.485f), Ogre::Vector2(0.918f, 0.485f),
-        Ogre::Vector2(0.302f, 0.145f), Ogre::Vector2(0.698f, 0.145f)};
-
-    addAtmosphereEffect(AtmosphereEffectType::fire, "MainMenuAtmosphereGlow",
-        fireAnchors[0], Ogre::Vector2(0.105f, 0.16f),
-        Ogre::ColourValue(1.0f, 0.24f, 0.025f), 0.3f);
-    addAtmosphereEffect(AtmosphereEffectType::fire, "MainMenuAtmosphereGlow",
-        fireAnchors[1], Ogre::Vector2(0.105f, 0.16f),
-        Ogre::ColourValue(1.0f, 0.24f, 0.025f), 1.7f);
-    addAtmosphereEffect(AtmosphereEffectType::fire, "MainMenuAtmosphereGlow",
-        fireAnchors[2], Ogre::Vector2(0.065f, 0.095f),
-        Ogre::ColourValue(1.0f, 0.32f, 0.035f), 2.4f);
-    addAtmosphereEffect(AtmosphereEffectType::fire, "MainMenuAtmosphereGlow",
-        fireAnchors[3], Ogre::Vector2(0.065f, 0.095f),
-        Ogre::ColourValue(1.0f, 0.32f, 0.035f), 3.6f);
-    addAtmosphereEffect(AtmosphereEffectType::acid, "MainMenuAtmosphereGlow",
-        Ogre::Vector2(0.505f, 0.385f), Ogre::Vector2(0.15f, 0.14f),
-        Ogre::ColourValue(0.08f, 0.95f, 0.22f), 1.2f);
-    addAtmosphereEffect(AtmosphereEffectType::acid, "MainMenuAtmosphereGlow",
-        Ogre::Vector2(0.835f, 0.845f), Ogre::Vector2(0.16f, 0.08f),
-        Ogre::ColourValue(0.04f, 0.8f, 0.16f), 3.1f);
-    addAtmosphereEffect(AtmosphereEffectType::lightning, "MainMenuAtmosphereGlow",
-        Ogre::Vector2(0.879f, 0.105f), Ogre::Vector2(0.075f, 0.19f),
-        Ogre::ColourValue(0.16f, 1.0f, 0.32f), 0.0f);
-    addAtmosphereEffect(AtmosphereEffectType::fog, "MainMenuAtmosphereFog",
-        Ogre::Vector2(0.21f, 0.73f), Ogre::Vector2(0.39f, 0.23f),
-        Ogre::ColourValue(0.38f, 0.40f, 0.42f), 0.4f);
-    addAtmosphereEffect(AtmosphereEffectType::fog, "MainMenuAtmosphereFog",
-        Ogre::Vector2(0.79f, 0.73f), Ogre::Vector2(0.39f, 0.23f),
-        Ogre::ColourValue(0.32f, 0.40f, 0.37f), 12.6f);
-    addAtmosphereEffect(AtmosphereEffectType::fog, "MainMenuAtmosphereFog",
-        Ogre::Vector2(0.50f, 0.91f), Ogre::Vector2(0.82f, 0.14f),
-        Ogre::ColourValue(0.31f, 0.35f, 0.36f), 24.8f);
-
-    for(const Ogre::Vector2& fire : fireAnchors)
-    {
-        for(unsigned int ember = 0; ember < 6; ++ember)
-        {
-            addAtmosphereEffect(AtmosphereEffectType::ember, "MainMenuAtmosphereGlow",
-                fire, Ogre::Vector2(0.0025f, 0.006f),
-                Ogre::ColourValue(1.0f, 0.38f, 0.055f),
-                ember * 0.67f + fire.x * 3.0f);
-        }
+        if(fire.mLight == nullptr)
+            continue;
+        const Ogre::Real primary = fire.mFrequency * mFireTime + fire.mPhase;
+        const Ogre::Real secondary = FIRE_SECONDARY_FREQUENCY * fire.mFrequency * mFireTime
+            + FIRE_SECONDARY_PHASE * fire.mPhase;
+        const Ogre::Real scale = 1.0f + fire.mAmplitude * (FIRE_PRIMARY_WEIGHT * std::sin(primary)
+            + FIRE_SECONDARY_WEIGHT * std::sin(secondary));
+        fire.mLight->setDiffuseColour(fire.mDiffuse * scale);
+        fire.mLight->setSpecularColour(fire.mSpecular * scale);
     }
 }
 
-void RenderSceneMenu::clearAtmosphere()
+//! \brief Applies a pose in CameraMove's hierarchy without gameplay movement or map clamping.
+void RenderSceneMenu::applyCameraPose(CameraManager& cameraManager, const CameraPose& pose)
 {
-    if(mAtmosphereSceneManager == nullptr)
+    Ogre::SceneNode* node = cameraManager.getActiveCameraNode();
+    if(cameraManager.getActiveCamera() == nullptr || node == nullptr || node->numChildren() == 0)
         return;
-
-    for(AtmosphereEffect& effect : mAtmosphereEffects)
-    {
-        effect.mNode->detachObject(effect.mRectangle);
-        delete effect.mRectangle;
-        mAtmosphereSceneManager->destroySceneNode(effect.mNode);
-        Ogre::MaterialManager::getSingleton().remove(
-            effect.mMaterialName, "Graphics");
-    }
-    mAtmosphereEffects.clear();
-    mAtmosphereSceneManager = nullptr;
+    cameraManager.move(CameraManager::fullStop);
+    node->setPosition(pose.mPosition);
+    node->resetOrientation();
+    node->getChild(0)->setOrientation(pose.mOrientation);
 }
 
+//! \brief Samples the curved position path and interpolates adjacent authored view rotations.
+RenderSceneMenu::CameraPose RenderSceneMenu::samplePath(Ogre::Real progress) const
+{
+    if(progress >= 1.0f)
+        return mFlightPoses.back();
+    const Ogre::Real coordinate = std::max(0.0f, progress) * (mFlightPoses.size() - 1);
+    const size_t index = std::min(static_cast<size_t>(coordinate), mFlightPoses.size() - 2);
+    const Ogre::Real fraction = coordinate - static_cast<Ogre::Real>(index);
+    const Ogre::Real squared = fraction * fraction;
+    const Ogre::Real cubed = squared * fraction;
+    const CameraPose& first = mFlightPoses[index];
+    const CameraPose& second = mFlightPoses[index + 1];
+    const Ogre::Vector3& before = mFlightPoses[index == 0 ? 0 : index - 1].mPosition;
+    const Ogre::Vector3& after = mFlightPoses[std::min(index + 2, mFlightPoses.size() - 1)].mPosition;
+    CameraPose result;
+    result.mPosition = 0.5f * ((2.0f * first.mPosition) + (-before + second.mPosition) * fraction
+        + (2.0f * before - 5.0f * first.mPosition + 4.0f * second.mPosition - after) * squared
+        + (-before + 3.0f * first.mPosition - 3.0f * second.mPosition + after) * cubed);
+    result.mOrientation = Ogre::Quaternion::Slerp(fraction, first.mOrientation, second.mOrientation, true);
+    return result;
+}
+
+//! \brief Validates every waypoint before starting a path from the actual current camera pose.
+bool RenderSceneMenu::beginPath(CameraManager& cameraManager, const CameraPath& path,
+    const std::string& destination)
+{
+    Ogre::SceneNode* node = cameraManager.getActiveCameraNode();
+    if(!mActive || mFlight.isActive() || node == nullptr || node->numChildren() == 0
+        || cameraManager.getActiveCamera() == nullptr || path.mWaypoints.empty())
+        return false;
+    std::vector<CameraPose> poses;
+    CameraPose start;
+    start.mPosition = node->getPosition();
+    start.mOrientation = node->getOrientation() * node->getChild(0)->getOrientation();
+    poses.push_back(start);
+    for(const std::string& waypoint : path.mWaypoints)
+    {
+        std::map<std::string, CameraPose>::const_iterator pose = mCameraPoses.find(waypoint);
+        if(pose == mCameraPoses.end())
+            return false;
+        poses.push_back(pose->second);
+    }
+    if(!mFlight.start(path.mDuration))
+        return false;
+    mFlightPoses.swap(poses);
+    mFlightPlace = destination;
+    return true;
+}
+
+//! \brief Starts the authored outside arrival, rejecting concurrent menu transitions.
+bool RenderSceneMenu::startFlight(CameraManager& cameraManager)
+{
+    std::map<std::string, CameraPose>::const_iterator start = mCameraPoses.find(ARRIVAL_PATH);
+    std::map<std::string, CameraPath>::const_iterator path = mCameraPaths.find(ARRIVAL_PATH);
+    if(!mActive || mFlight.isActive() || start == mCameraPoses.end() || path == mCameraPaths.end())
+        return false;
+    applyCameraPose(cameraManager, start->second);
+    return beginPath(cameraManager, path->second, OVERVIEW_PLACE);
+}
+
+//! \brief Starts a destination path or reverses its entry path when returning to the overview.
+bool RenderSceneMenu::flyTo(CameraManager& cameraManager, const std::string& place)
+{
+    std::map<std::string, CameraPath>::const_iterator path = mCameraPaths.find(place);
+    if(path == mCameraPaths.end() || mFlight.isActive() || !mActive)
+        return false;
+    CameraPath route = path->second;
+    if(place == OVERVIEW_PLACE && mCurrentPlace != OVERVIEW_PLACE)
+    {
+        std::map<std::string, CameraPath>::const_iterator outward = mCameraPaths.find(mCurrentPlace);
+        if(outward != mCameraPaths.end())
+        {
+            route.mWaypoints.clear();
+            route.mDuration = outward->second.mDuration;
+            const std::vector<std::string>& points = outward->second.mWaypoints;
+            for(size_t index = points.size(); index > 1; --index)
+                route.mWaypoints.push_back(points[index - 2]);
+            route.mWaypoints.push_back(OVERVIEW_PLACE);
+        }
+    }
+    return beginPath(cameraManager, route, place);
+}
+
+//! \brief Returns a named authored endpoint for the existing menu probe.
+bool RenderSceneMenu::getCameraPose(const std::string& name, Ogre::Vector3& position,
+    Ogre::Quaternion& orientation) const
+{
+    std::map<std::string, CameraPose>::const_iterator pose = mCameraPoses.find(name);
+    if(pose == mCameraPoses.end())
+        return false;
+    position = pose->second.mPosition;
+    orientation = pose->second.mOrientation;
+    return true;
+}
+
+//! \brief Reads camera and firelight metadata separately while retaining the native scene group parser.
 void RenderSceneMenu::readSceneMenu(const std::string& fileName)
 {
     if(!mSceneGroups.empty())
@@ -324,22 +330,94 @@ void RenderSceneMenu::readSceneMenu(const std::string& fileName)
         return;
     }
 
-    std::stringstream defFile;
-    if(!Helper::readFile(fileName, defFile,true))
+    std::stringstream definition;
+    if(!Helper::readFile(fileName, definition, true))
     {
         OD_LOG_ERR("Couldn't read " + fileName);
         return;
     }
 
-    std::string nextParam;
-    while(true)
+    std::stringstream groups;
+    std::string line;
+    bool cameraSection = false;
+    bool fireSection = false;
+    while(Helper::readNextLineNotEmpty(definition, line))
     {
-        if(!defFile.good())
-            break;
-
-        RenderSceneGroup* group = RenderSceneGroup::load(defFile);
-        if(group == nullptr)
+        if(line == CAMERA_SECTION || line == CAMERA_SECTION_END)
+        {
+            cameraSection = (line == CAMERA_SECTION);
+            continue;
+        }
+        if(line == FIRE_LIGHT_SECTION || line == FIRE_LIGHT_SECTION_END)
+        {
+            fireSection = (line == FIRE_LIGHT_SECTION);
+            continue;
+        }
+        if(fireSection)
+        {
+            std::stringstream command(line);
+            std::string kind;
+            FireLight fire;
+            if(!(command >> kind >> fire.mName >> fire.mAmplitude >> fire.mFrequency >> fire.mPhase)
+                || kind != "Flicker" || !std::isfinite(fire.mAmplitude) || !std::isfinite(fire.mFrequency)
+                || !std::isfinite(fire.mPhase) || fire.mAmplitude < 0.0f || fire.mAmplitude > 1.0f
+                || fire.mFrequency <= 0.0f)
+            {
+                OD_LOG_ERR("Invalid menu firelight definition: " + line);
+                return;
+            }
+            mFireLights.push_back(fire);
+            continue;
+        }
+        if(!cameraSection)
+        {
+            groups << line << '\n';
+            continue;
+        }
+        std::stringstream command(line);
+        std::string kind;
+        std::string name;
+        command >> kind >> name;
+        if(kind == "Pose")
+        {
+            CameraPose pose;
+            Ogre::Vector3 rotation = Ogre::Vector3::ZERO;
+            if(!(command >> pose.mPosition.x >> pose.mPosition.y >> pose.mPosition.z
+                >> rotation.x >> rotation.y >> rotation.z))
+            {
+                OD_LOG_ERR("Invalid menu camera pose: " + line);
+                return;
+            }
+            pose.mOrientation = Ogre::Quaternion(Ogre::Degree(rotation.x), Ogre::Vector3::UNIT_X)
+                * Ogre::Quaternion(Ogre::Degree(rotation.y), Ogre::Vector3::UNIT_Y)
+                * Ogre::Quaternion(Ogre::Degree(rotation.z), Ogre::Vector3::UNIT_Z);
+            mCameraPoses[name] = pose;
+        }
+        else if(kind == "Flight")
+        {
+            CameraPath path;
+            if(!(command >> path.mDuration) || !std::isfinite(path.mDuration)
+                || path.mDuration < MIN_FLIGHT_DURATION || path.mDuration > MAX_FLIGHT_DURATION)
+            {
+                OD_LOG_ERR("Invalid menu camera duration: " + line);
+                return;
+            }
+            std::string waypoint;
+            while(command >> waypoint)
+                path.mWaypoints.push_back(waypoint);
+            mCameraPaths[name] = path;
+        }
+        else
+        {
+            OD_LOG_ERR("Unknown menu camera command: " + line);
             return;
+        }
+    }
+    while(groups.good())
+    {
+        RenderSceneGroup* group = RenderSceneGroup::load(groups);
+        if(group == nullptr)
+            break;
 
         group->setRenderSceneListener(this);
         mSceneGroups.emplace_back(group);
