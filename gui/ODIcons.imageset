@@ -98,4 +98,18 @@
     <Image height="128" name="HeartFortitudeButton" width="128" xPos="640" yPos="1152" />
     <Image height="128" name="HeartMendingButton" width="128" xPos="768" yPos="1152" />
     <Image height="128" name="ManaFlowButton" width="128" xPos="896" yPos="1152" />
+    <Image height="128" name="MerchantButton" width="128" xPos="0" yPos="1280" />
+    <Image height="128" name="LabButton" width="128" xPos="128" yPos="1280" />
+    <Image height="128" name="HerbGardenButton" width="128" xPos="256" yPos="1280" />
+    <Image height="128" name="AlchemyLabButton" width="128" xPos="384" yPos="1280" />
+    <Image height="128" name="FineToolsButton" width="128" xPos="512" yPos="1280" />
+    <Image height="128" name="MasterToolsButton" width="128" xPos="640" yPos="1280" />
+    <Image height="128" name="SunthornButton" width="128" xPos="768" yPos="1280" />
+    <Image height="128" name="ItemBoxButton" width="128" xPos="896" yPos="1280" />
+    <Image height="128" name="ItemBagButton" width="128" xPos="0" yPos="1408" />
+    <Image height="128" name="ItemFramePoor" width="128" xPos="128" yPos="1408" />
+    <Image height="128" name="ItemFrameCommon" width="128" xPos="256" yPos="1408" />
+    <Image height="128" name="ItemFrameRare" width="128" xPos="384" yPos="1408" />
+    <Image height="128" name="ItemFrameEpic" width="128" xPos="512" yPos="1408" />
+    <Image height="128" name="ItemSlotEmpty" width="128" xPos="640" yPos="1408" />
 </Imageset>
