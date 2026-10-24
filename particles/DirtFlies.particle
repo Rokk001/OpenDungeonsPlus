@@ -1,0 +1,34 @@
+// A few small dark dots circling about 0.3 tile wide over a filthy floor tile (dirt stage 3) and over a dirt pile
+// (uses the existing sprite material of the dust motes, tinted dark like the flies of the prison)
+particle_system DirtFlies
+{
+    material        RoomAmbDust
+    point_rendering false
+    particle_width  0.035
+    particle_height 0.035
+    cull_each       false
+    quota           8
+    billboard_type  point
+
+    emitter Ellipsoid
+    {
+        angle               180
+        colour              0.06 0.05 0.04 0.9
+        emission_rate       3
+        time_to_live        2
+        direction           1 0 0
+        velocity_min        0.1
+        velocity_max        0.25
+        position            0 0 0.12
+        width               0.6
+        height              0.6
+        depth               0.2
+    }
+
+    affector DirectionRandomiser
+    {
+        randomness  3.0
+        scope       1.0
+        keep_velocity true
+    }
+}

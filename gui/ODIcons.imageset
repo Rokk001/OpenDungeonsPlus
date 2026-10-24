@@ -98,4 +98,5 @@
     <Image height="128" name="HeartFortitudeButton" width="128" xPos="640" yPos="1152" />
     <Image height="128" name="HeartMendingButton" width="128" xPos="768" yPos="1152" />
     <Image height="128" name="ManaFlowButton" width="128" xPos="896" yPos="1152" />
+    <Image height="128" name="ToiletButton" width="128" xPos="0" yPos="1280" />
 </Imageset>
