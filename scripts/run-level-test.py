@@ -72,6 +72,70 @@ def parse_frame_time(output):
     return result
 
 
+# Engine log lines that mean a resource was not found; such a line naming a menu scene resource fails the run.
+RESOURCE_ERRORS = ("Cannot locate resource", "Texture layer will be blank", "Can't assign material")
+# Name prefix shared by all menu scene textures and materials; other missing-resource lines are not judged here.
+MENU_RESOURCE_PREFIX = "Menu"
+
+
+def find_resource_errors(log_path):
+    """Returns the distinct engine log lines (time stamp removed) that report a missing menu scene resource."""
+    found = []
+    if not os.path.exists(log_path):
+        return found
+    with open(log_path, encoding="utf-8", errors="replace") as handle:
+        for text in handle:
+            if MENU_RESOURCE_PREFIX in text and any(marker in text for marker in RESOURCE_ERRORS):
+                entry = re.sub(r"^\d\d:\d\d:\d\d: ", "", text.strip())
+                if entry not in found:
+                    found.append(entry)
+    return found
+
+
+MENU_TEST_NAME = "MainMenu"
+MENU_FRAME_LINE = re.compile(r"^MENUTEST frames=(\d+)")
+
+
+def run_menu_test(exe, seconds):
+    """Starts the game once with --menu-test, so that the main menu scene is really rendered, and checks Ogre.log.
+
+    A --run-level run starts its level while the menu opens, before a single menu frame is rendered, so
+    the menu textures and materials are never loaded there. Returns (passed, text); the text is
+    "PASS MainMenu ..." or "FAIL MainMenu : reason" (it does not end in .level).
+    """
+    appdata = tempfile.mkdtemp(prefix="od-menu-test-")
+    limit = 2 * seconds + 120
+    command = [exe, "--menu-test", str(seconds), "--appData", appdata]
+    process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               universal_newlines=True)
+    try:
+        output, _ = process.communicate(timeout=limit)
+        code = process.returncode
+    except subprocess.TimeoutExpired:
+        process.kill()
+        output, _ = process.communicate()
+        code = None
+    shutil.rmtree(appdata, ignore_errors=True)
+
+    frames = 0
+    for text in (output or "").splitlines():
+        match = MENU_FRAME_LINE.match(text.strip())
+        if match:
+            frames = int(match.group(1))
+    resource_errors = find_resource_errors(os.path.join(os.path.dirname(os.path.abspath(exe)), "Ogre.log"))
+    if code is None:
+        return False, "FAIL %s : timeout: the script killed the game after %d s" % (MENU_TEST_NAME, limit)
+    if code != 0:
+        return False, "FAIL %s : crash: exit code %d" % (MENU_TEST_NAME, code)
+    if frames <= 0:
+        return False, "FAIL %s : the menu rendered no frame (no MENUTEST line)" % MENU_TEST_NAME
+    if resource_errors:
+        return False, "FAIL %s : missing menu scene resources in Ogre.log (%d): %s" % (
+            MENU_TEST_NAME, len(resource_errors), "; ".join(resource_errors[:5]))
+    return True, "PASS %s : %d frames rendered, no missing menu resources" % (MENU_TEST_NAME, frames)
+
+
 def run_level(exe, level, seconds):
     """Runs one level. Returns (passed, text)."""
     passed, text, _ = run_level_with_frame_time(exe, level, seconds)
@@ -95,6 +159,7 @@ def run_level_with_frame_time(exe, level, seconds):
         code = None
 
     frame_time = parse_frame_time(output)
+    resource_errors = find_resource_errors(os.path.join(os.path.dirname(os.path.abspath(exe)), "Ogre.log"))
     line = ""
     for text in (output or "").splitlines():
         if text.startswith("PASS ") or text.startswith("FAIL "):
@@ -109,6 +174,9 @@ def run_level_with_frame_time(exe, level, seconds):
     name = os.path.basename(level)
     if code is None:
         return False, "FAIL %s : timeout: the script killed the game after %d s" % (name, limit), frame_time
+    if code == 0 and line.startswith("PASS ") and resource_errors:
+        return False, "FAIL %s : missing menu scene resources in Ogre.log (%d): %s" % (
+            name, len(resource_errors), "; ".join(resource_errors[:5])), frame_time
     if code == 0 and line.startswith("PASS "):
         return True, line, frame_time
     if code not in CODE_NAMES:
@@ -124,6 +192,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--exe", required=True, help="built game executable")
     parser.add_argument("--seconds", type=int, default=120, help="game time per level (default 120)")
+    parser.add_argument("--menu-seconds", type=int, default=8,
+                        help="seconds the main menu test shows the menu once per run (0 = skip, default 8)")
     parser.add_argument("--markdown", action="store_true", help="print the results as a markdown paragraph")
     parser.add_argument("--progress-file", help="append one progress line per finished level to this file")
     parser.add_argument("levels", nargs="*", help="level files (default: all levels of Campaign.cfg)")
@@ -134,6 +204,13 @@ def main():
         print("exe not found: " + exe)
         return 2
     levels = [os.path.abspath(level) for level in args.levels] or campaign_levels()
+
+    # The main menu is tested once per run, before the levels (its own PASS/FAIL line, not counted as a level)
+    menu_passed = True
+    menu_text = ""
+    if args.menu_seconds > 0:
+        menu_passed, menu_text = run_menu_test(exe, args.menu_seconds)
+        print(menu_text, flush=True)
 
     results = []
     for level in levels:
@@ -157,13 +234,17 @@ def main():
         for text in failed:
             print("  " + text.splitlines()[0])
     print("%d of %d levels PASS" % (len(results) - len(failed), len(results)))
+    if not menu_passed:
+        print("FAIL: the main menu test failed")
     if args.markdown:
         print()
         print("- Load test (`--run-level <file> --seconds %d`, %d levels): %d PASS, %d FAIL."
               % (args.seconds, len(results), len(results) - len(failed), len(failed)))
         for passed, text in results:
             print("  - " + text)
-    return 0 if not failed else 1
+        if args.menu_seconds > 0:
+            print("  - " + menu_text)
+    return 0 if (not failed and menu_passed) else 1
 
 
 if __name__ == "__main__":

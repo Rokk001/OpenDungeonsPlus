@@ -169,6 +169,10 @@ public:
     inline const std::string& getRunLevelScenario() const
     { return mRunLevelScenario; }
 
+    //! \brief Debug option --menu-test: seconds the main menu scene is shown before the game exits (0 if not used)
+    inline int32_t getMenuTestSeconds() const
+    { return mMenuTestSeconds; }
+
 private:
     //! \brief used when the executable is launched in server mode
     bool mServerMode;
@@ -180,6 +184,9 @@ private:
     int32_t mRunLevelSeconds;
     uint32_t mRunLevelSeed;
     std::string mRunLevelScenario;
+
+    //! \brief used by the automated main menu test
+    int32_t mMenuTestSeconds;
 
     //! \brief used when the network port is forced
     int32_t mForcedNetworkPort;

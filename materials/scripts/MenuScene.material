@@ -7,10 +7,10 @@ material MenuStone : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuFortressStone.png }
+            texture_unit decalmap { texture MenuFortressStone.png }
             texture_unit
             {
-                texture menu/MenuFortressStoneNormal.png
+                texture MenuFortressStoneNormal.png
                 tex_address_mode wrap
                 rtshader_system
                 {
@@ -25,7 +25,7 @@ material MenuStone : RTSS/NormalMapping_MultiPass
             specular 0.10 0.10 0.09 1 32
             texture_unit decalmap
             {
-                texture menu/MenuFortressStone.png
+                texture MenuFortressStone.png
                 tex_address_mode wrap
             }
         }
@@ -51,10 +51,10 @@ material MenuIron : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuRustIron.png }
+            texture_unit decalmap { texture MenuRustIron.png }
             texture_unit
             {
-                texture menu/MenuRustIronNormal.png
+                texture MenuRustIronNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -64,7 +64,7 @@ material MenuIron : RTSS/NormalMapping_MultiPass
             ambient 0.72 0.72 0.72 1
             diffuse 0.72 0.72 0.72 1
             specular 0.22 0.23 0.24 1 28
-            texture_unit decalmap { texture menu/MenuRustIron.png }
+            texture_unit decalmap { texture MenuRustIron.png }
         }
     }
 }
@@ -112,10 +112,10 @@ material MenuCloth : RTSS/NormalMapping_MultiPass
         pass lighting
         {
             cull_hardware none
-            texture_unit decalmap { texture menu/MenuTornCloth.png }
+            texture_unit decalmap { texture MenuTornCloth.png }
             texture_unit
             {
-                texture menu/MenuTornClothNormal.png
+                texture MenuTornClothNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -126,7 +126,7 @@ material MenuCloth : RTSS/NormalMapping_MultiPass
             ambient 0.85 0.85 0.85 1
             diffuse 0.85 0.85 0.85 1
             specular 0.025 0.025 0.025 1 6
-            texture_unit decalmap { texture menu/MenuTornCloth.png }
+            texture_unit decalmap { texture MenuTornCloth.png }
         }
     }
 }
@@ -177,28 +177,30 @@ material MenuCloud
     {
         pass
         {
-            lighting off
             scene_blend alpha_blend
             depth_write off
             cull_hardware none
-            ambient 0.009 0.012 0.018 1
-            diffuse 0.009 0.012 0.018 0
-            emissive 0 0 0
+            ambient 0 0 0 1
+            diffuse 0 0 0 0
+            emissive 0.035 0.043 0.049
         }
     }
 }
 
+// The sky dome has no texture and no vertex colours. With lighting off the fixed pipeline falls back to
+// white vertex colour, which rendered the sky white. Lighting stays on with only an emissive colour, so
+// the dome shows the exact sky colour of the approved Blender scene (its MenuSky entry).
 material MenuSky
 {
     technique
     {
         pass
         {
-            lighting off
             cull_hardware none
-            ambient 0.012 0.010 0.008 1
-            diffuse 0.012 0.010 0.008 1
-            emissive 0.004 0.003 0.002
+            ambient 0 0 0 1
+            diffuse 0 0 0 1
+            specular 0 0 0 1 0
+            emissive 0.012 0.018 0.022
         }
     }
 }
@@ -213,7 +215,7 @@ material MenuCampaignMap
             diffuse 0.8 0.8 0.8 1
             texture_unit
             {
-                texture menu/MenuCampaignMap.png
+                texture MenuCampaignMap.png
                 tex_address_mode clamp
                 filtering trilinear
             }
@@ -228,10 +230,10 @@ material MenuWetStone : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuWetPaving.png }
+            texture_unit decalmap { texture MenuWetPaving.png }
             texture_unit
             {
-                texture menu/MenuWetPavingNormal.png
+                texture MenuWetPavingNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -241,7 +243,7 @@ material MenuWetStone : RTSS/NormalMapping_MultiPass
             ambient 0.92 0.92 0.92 1
             diffuse 0.92 0.92 0.92 1
             specular 0.65 0.65 0.65 1 64
-            texture_unit decalmap { texture menu/MenuWetPaving.png }
+            texture_unit decalmap { texture MenuWetPaving.png }
         }
     }
 }
@@ -249,19 +251,22 @@ material MenuWetStone : RTSS/NormalMapping_MultiPass
 // Original fire and slit-window values for the dark fortress scene.
 material MenuWindowGlow
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.35 0.045 0.004
     } }
 }
 material MenuFlame
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 1.0 0.12 0.008
     } }
 }
 material MenuFlameCore
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 1.0 0.42 0.035
     } }
 }
@@ -313,10 +318,10 @@ material MenuDemonStone : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuDemonStone.png }
+            texture_unit decalmap { texture MenuDemonStone.png }
             texture_unit
             {
-                texture menu/MenuDemonStoneNormal.png
+                texture MenuDemonStoneNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -326,7 +331,7 @@ material MenuDemonStone : RTSS/NormalMapping_MultiPass
             ambient 0.82 0.82 0.82 1
             diffuse 0.82 0.82 0.82 1
             specular 0.09 0.09 0.09 1 18
-            texture_unit decalmap { texture menu/MenuDemonStone.png }
+            texture_unit decalmap { texture MenuDemonStone.png }
         }
     }
 }
@@ -458,7 +463,8 @@ material MenuClothFadedB : MenuCloth
 // Green light stays inside the ruined tower's window openings and structural fissures.
 material MenuSpireGlow
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.008 0.65 0.035
     } }
 }
@@ -466,11 +472,11 @@ material MenuSpireGlow
 // The faint additive core accompanies the wider smoke-scattered green particle shaft.
 material MenuSpireBeam
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
         scene_blend add
         depth_write off
         cull_hardware none
-        diffuse 0.001 0.035 0.003 0.04
+        diffuse 0 0 0 0.04
         emissive 0.001 0.035 0.003
     } }
 }
@@ -478,7 +484,8 @@ material MenuSpireBeam
 // Orange heat is visible only in the broken joints between the wet flagstones.
 material MenuEmberCrack
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.8 0.06 0.003
     } }
 }
@@ -497,7 +504,8 @@ material MenuBannerSymbol
 // The far sky carries ember light below the mountain silhouettes, never a foreground wash.
 material MenuHorizonGlow
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         cull_hardware none
         emissive 0.18 0.035 0.006
     } }
@@ -506,7 +514,8 @@ material MenuHorizonGlow
 // A darker upper transition keeps the distant glow beneath the storm-cloud ceiling.
 material MenuHorizonDark
 {
-    technique { pass { lighting off
+    technique { pass { ambient 0 0 0 1
+        diffuse 0 0 0 1
         cull_hardware none
         emissive 0.032 0.012 0.007
     } }
@@ -593,7 +602,7 @@ material MenuTitleLetters
         emissive 0.18 0.18 0.18
         alpha_rejection greater 96
         cull_hardware none
-        texture_unit { texture menu/MenuTitle.png
+        texture_unit { texture MenuTitle.png
             tex_address_mode clamp
             filtering trilinear
         }
@@ -614,7 +623,8 @@ material MenuTitleIron : MenuIron
 material MenuTitleCrest
 {
     technique { pass {
-        lighting off
+        ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.009 0.32 0.025
         cull_hardware none
     } }
@@ -635,7 +645,8 @@ material MenuBloodMoon : MenuStone
 material MenuGateEyes
 {
     technique { pass {
-        lighting off
+        ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.85 0.065 0.003
     } }
 }
@@ -644,7 +655,8 @@ material MenuGateEyes
 material MenuLavaCrack
 {
     technique { pass {
-        lighting off
+        ambient 0 0 0 1
+        diffuse 0 0 0 1
         emissive 0.85 0.035 0.002
         cull_hardware none
     } }
@@ -659,7 +671,7 @@ material MenuBatSprite
         scene_blend alpha_blend
         depth_write off
         cull_hardware none
-        texture_unit { texture menu/MenuBat.png
+        texture_unit { texture MenuBat.png
             tex_address_mode clamp
             filtering trilinear
         }
@@ -673,7 +685,7 @@ material MenuCrowSprite
         scene_blend alpha_blend
         depth_write off
         cull_hardware none
-        texture_unit { texture menu/MenuCrow.png
+        texture_unit { texture MenuCrow.png
             tex_address_mode clamp
             filtering trilinear
         }
