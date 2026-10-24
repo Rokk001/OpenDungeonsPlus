@@ -34,6 +34,8 @@ the saved-game browser; Back preserves the current game until another save is
 selected. Loaded single-player saves resume their stored side without a new
 seat-selection step. Long save descriptions can be scrolled.
 
+Levels, saved games and editor maps load over one of twenty-five painted dungeon-world pictures, fitted to the screen without stretching.
+
 The main-menu artwork includes flowing mist, flickering firelight, rising embers, acid glow and lightning effects.
 
 Creature combat uses model-specific attacks, directional impact reactions, visible fireballs and arrows, with an optional blood-effects setting.

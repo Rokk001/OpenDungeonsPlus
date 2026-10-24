@@ -173,6 +173,7 @@ void MenuModeMasterServerJoin::onFrameStarted(const Ogre::FrameEvent& evt)
         refreshList();
 }
 
+//! \brief Displays the existing loading text before a blocking server connection.
 bool MenuModeMasterServerJoin::clientButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::multiMasterServerJoinMenu);
@@ -219,6 +220,7 @@ bool MenuModeMasterServerJoin::clientButtonPressed(const CEGUI::EventArgs&)
     uint32_t timeout = ConfigManager::getSingleton().getClientConnectionTimeout();
     std::string replayFilename = ResourceManager::getSingleton().getReplayDataPath()
         + ResourceManager::getSingleton().buildReplayFilename();
+    infoText->setText("Loading...");
     if(!ODClient::getSingleton().connect(ip, port, timeout, replayFilename))
     {
         // Error while connecting
@@ -226,7 +228,6 @@ bool MenuModeMasterServerJoin::clientButtonPressed(const CEGUI::EventArgs&)
         return true;
     }
 
-    infoText->setText("Loading...");
     return true;
 }
 

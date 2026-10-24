@@ -43,6 +43,7 @@
 #include "network/ServerMode.h"
 #include "render/DebugDrawer.h"
 #include "render/Gui.h"
+#include "render/LoadingScreen.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "render/TextRenderer.h"
@@ -2212,6 +2213,7 @@ bool EditorMode::onYesConfirmMenu(const CEGUI::EventArgs& /*arg*/)
     return loadLevelFromFile(dialogFullPath);
 }
 
+//! \brief Replaces the editor map while using its existing status text for the loading screen.
 bool EditorMode::loadLevelFromFile(const std::string& fileName)
 {
     // Ogre::MaterialManager::getSingletonPtr()->unload("LiftedGold");    
@@ -2244,6 +2246,8 @@ bool EditorMode::loadLevelFromFile(const std::string& fileName)
         ODClient::getSingleton().disconnect(mKeepReplayAtDisconnect);
     if(ODServer::getSingleton().isConnected())
         ODServer::getSingleton().stopServer();
+
+    LoadingScreen loading(mRootWindow->getChild("MenuEditorLoad/LevelWindowFrame/MapDescriptionText"));
 
     // Now that the server is stopped, we can clear the client game map
     mGameMap->clearAll();
@@ -2278,6 +2282,7 @@ bool EditorMode::loadLevelFromFile(const std::string& fileName)
     addToRecentlyUsed(fileName);
     uninstallRecentlyUsedFilesButtons();
     installRecentlyUsedFilesButtons();
+    loading.continueLoading();
     return true;
 }
 
@@ -2994,6 +2999,7 @@ EditorMode::~EditorMode()
         debugDrawer->clear();
 }
 
+//! \brief Creates and opens a new map with the existing editor status above the loading picture.
 bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
 {
     // Creating the filename
@@ -3069,6 +3075,9 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
         ODServer::getSingleton().stopServer();
 
     
+    mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Loading...");
+    LoadingScreen loading;
+
     // Create the level before opening it.
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     gameMap->clearAll();
@@ -3113,7 +3122,6 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     }
 
     // In editor mode, we act as a server
-    mRootWindow->getChild("LevelWindowFrame/LevelTypeText")->setText("Loading...");
     ConfigManager& config = ConfigManager::getSingleton();
     std::string nickname = config.getGameValue(Config::NICKNAME, std::string(), false);
     if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeEditor, false))
@@ -3147,5 +3155,6 @@ bool EditorMode::launchNewLevelPressed(const CEGUI::EventArgs&)
     mMainCullingManager = new CullingManager(mGameMap, CullingType::SHOW_MAIN_WINDOW);
     mMainCullingManager->startTileCulling(ODFrameListener::getSingleton().getCameraManager()->getActiveCamera(), mCameraTilesIntersections);
     
+    loading.continueLoading();
     return true;
 }

@@ -29,6 +29,7 @@ public:
     //! Used to call the corresponding Gui Sheet.
     void activate() final override;
 
+    //! \brief Creates and opens an editor map while showing the loading picture.
     bool launchSelectedButtonPressed(const CEGUI::EventArgs&);
 };
 

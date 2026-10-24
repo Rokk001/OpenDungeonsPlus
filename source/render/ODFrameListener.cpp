@@ -40,6 +40,7 @@
 #include "render/TreasuryGoldMesh.h"
 #include "render/MovableTextOverlay.h"
 #include "render/Gui.h"
+#include "render/LoadingScreen.h"
 #include "render/RenderManager.h"
 #include "render/RoomAmbience.h"
 #include "render/TextRenderer.h"
@@ -410,6 +411,7 @@ void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
         mRoomAmbience->update(gameTime);
 }
 
+//! \brief Advances the interface and world while preserving any active loading presentation.
 bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
 {
     CEGUI::MouseCursor& mouseCursor = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor();
@@ -438,6 +440,7 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
         updateAnimations(evt.timeSinceLastFrame);
     }
 
+    LoadingScreen::update();
     mCameraManager.updateCameraFrameTime(evt.timeSinceLastFrame);
     mCameraManager.onFrameStarted();
 
@@ -475,6 +478,7 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     mGameMap.get()->processDeletionQueues();
     ODClient::getSingleton().processClientSocketMessages();
     ODClient::getSingleton().processClientNotifications();
+    LoadingScreen::update();
 
 
     
