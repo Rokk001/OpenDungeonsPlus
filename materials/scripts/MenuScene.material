@@ -188,17 +188,20 @@ material MenuCloud
     }
 }
 
+// The sky dome has no texture and no vertex colours. With lighting off the fixed pipeline falls back to
+// white vertex colour, which rendered the sky white. Lighting stays on with only an emissive colour, so
+// the dome shows the same dark blue-grey as the approved Blender scene.
 material MenuSky
 {
     technique
     {
         pass
         {
-            lighting off
             cull_hardware none
-            ambient 0.012 0.010 0.008 1
-            diffuse 0.012 0.010 0.008 1
-            emissive 0.004 0.003 0.002
+            ambient 0 0 0 1
+            diffuse 0 0 0 1
+            specular 0 0 0 1 0
+            emissive 0.027 0.034 0.048
         }
     }
 }
