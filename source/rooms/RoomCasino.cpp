@@ -621,6 +621,8 @@ bool RoomCasino::useRoom(Creature& creature, bool forced)
             return false;
         }
 
+        // The wandering target must be a tile with a free standing point, not one covered by furniture
+        RoomObjectNavigation::keepTilesWithStandingPosition(creature, tiles);
         uint32_t index = Random::Uint(0, tiles.size() - 1);
         Tile* tile = tiles[index];
         creature.setDestination(tile);

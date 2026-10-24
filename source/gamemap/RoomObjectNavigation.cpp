@@ -334,6 +334,52 @@ bool RoomObjectNavigation::standingPosition(const std::vector<RoomObjectPath::Ob
     return std::isfinite(distance);
 }
 
+//! \brief Tells whether a free standing point exists in the tile, for the given (already prepared) obstacles.
+static bool tileHasFreeStandingPoint(const std::vector<RoomObjectPath::Obstacle>& obstacles, const Tile& tile)
+{
+    Ogre::Vector2 position;
+    return RoomObjectNavigation::standingPosition(obstacles,
+        Ogre::Vector2(static_cast<float>(tile.getX()), static_cast<float>(tile.getY())), position);
+}
+
+bool RoomObjectNavigation::hasStandingPosition(Creature& creature, const Tile& tile)
+{
+    std::vector<RoomObjectPath::Obstacle> obstacles = bodyObstacles(creature);
+    const Ogre::Vector2 center(static_cast<float>(tile.getX()), static_cast<float>(tile.getY()));
+    keepObstaclesNear(obstacles, center - Ogre::Vector2(OBSTACLE_REGION_TILES),
+        center + Ogre::Vector2(OBSTACLE_REGION_TILES));
+    return tileHasFreeStandingPoint(obstacles, tile);
+}
+
+void RoomObjectNavigation::keepTilesWithStandingPosition(Creature& creature, std::vector<Tile*>& tiles)
+{
+    if(tiles.empty())
+        return;
+    std::vector<RoomObjectPath::Obstacle> obstacles = bodyObstacles(creature);
+    if(obstacles.empty())
+        return;
+    // Only the furniture around the candidate tiles can cover one of them.
+    Ogre::Vector2 regionMinimum(std::numeric_limits<float>::max()), regionMaximum(-std::numeric_limits<float>::max());
+    for(const Tile* tile : tiles)
+    {
+        const Ogre::Vector2 center(static_cast<float>(tile->getX()), static_cast<float>(tile->getY()));
+        regionMinimum.makeFloor(center);
+        regionMaximum.makeCeil(center);
+    }
+    keepObstaclesNear(obstacles, regionMinimum - Ogre::Vector2(OBSTACLE_REGION_TILES),
+        regionMaximum + Ogre::Vector2(OBSTACLE_REGION_TILES));
+    std::vector<Tile*> kept;
+    kept.reserve(tiles.size());
+    for(Tile* tile : tiles)
+    {
+        if(tileHasFreeStandingPoint(obstacles, *tile))
+            kept.push_back(tile);
+    }
+    // Without any free tile the targets stay as they were, so that the creature is not blocked.
+    if(!kept.empty())
+        tiles.swap(kept);
+}
+
 bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path)
 {
     if(path.empty())
