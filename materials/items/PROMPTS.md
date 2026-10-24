@@ -1,5 +1,34 @@
 # Item image prompts
 
+## ARC_A_Head_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Cap of Bow (do not write the name): one supple brown hide archer cap, rounded soft crown with a short pointed front brow, narrow leather band and small plain buckle. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Vest of Bow (do not write the name): one sleeveless brown hide archery vest with diagonal stitched leather panels, simple laced front and reinforced shoulder seams, hollow with no body inside. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Boots_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Treads of Bow (do not write the name): one matching pair of soft brown hide boots with low folded cuffs, reinforced stitched toes and narrow leather ankle straps. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Ring_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Band of Bow (do not write the name): one finger-sized circular band wrapped in finely stitched brown hide with a small oval bronze fitting, no jewel or lettering. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Bow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Bow of Bow (do not write the name): one complete long wooden bow with brown hide wrapping at the grip and limb ends, taut bowstring correctly joining both tips, no arrow. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Crossbow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Crossbow of Bow (do not write the name): one complete wooden crossbow with brown hide grip wrapping, a symmetrical iron bow assembly across its front and correctly stretched bowstring, no loaded bolt. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
 ## BLZ_A_Head_base.png
 
 Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Helm of Zeal (do not write that name): one compact steel scale helmet with a rounded dome, layered overlapping metal brow plates and short cheek guards, empty helmet without a head. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
