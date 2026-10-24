@@ -99,6 +99,124 @@ Use case: stylized-concept. Asset type: one original hand-painted fantasy invent
 
 Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Hammer of Arms: one compact practical war hammer with a broad square iron head, straight wooden haft and dark leather grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment object, entire object visible including all shaft/handle ends, inside a generous transparent border. Long weapons placed diagonally to fill the square without cropping. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
 
+## BLK_A_Shield_rare.png
+
+Edit target: supplied original round shield inventory icon. Create its rare quality version named Warborn Shield (do not write that name). Refine the existing iron surfaces to polished steel, add restrained fine geometric etched grooves and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Shield_epic.png
+
+Edit target: supplied original round shield inventory icon. Create its epic quality version named Bastion of Iron Resolve (do not write that name). Refine the existing iron surfaces to bright silver-steel, add intricate gold inlay and flowing masterwork engravings to the existing surfaces, with a very faint violet magical glow confined to those engravings and edges. Keep the glow subtle. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Axe_rare.png
+
+Edit target: supplied original single-bladed axe inventory icon. Create its rare quality version named Warborn Axe (do not write that name). Refine the existing iron surfaces to polished steel, add restrained fine geometric etched grooves and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Axe_epic.png
+
+Edit target: supplied original single-bladed axe inventory icon. Create its epic quality version named Cleaver of Iron Resolve (do not write that name). Refine the existing iron surfaces to bright silver-steel, add intricate gold inlay and flowing masterwork engravings to the existing surfaces, with a very faint violet magical glow confined to those engravings and edges. Keep the glow subtle. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Sword_rare.png
+
+Edit target: supplied original straight sword inventory icon. Create its rare quality version named Warborn Sword (do not write that name). Refine the existing iron surfaces to polished steel, add restrained fine geometric etched grooves and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Sword_epic.png
+
+Edit target: supplied original straight sword inventory icon. Create its epic quality version named Edge of Iron Resolve (do not write that name). Refine the existing iron surfaces to bright silver-steel, add intricate gold inlay and flowing masterwork engravings to the existing surfaces, with a very faint violet magical glow confined to those engravings and edges. Keep the glow subtle. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Spear_rare.png
+
+Edit target: supplied original long wooden spear with iron point inventory icon. Create its rare quality version named Warborn Spear (do not write that name). Refine the existing iron surfaces to polished steel, add restrained fine geometric etched grooves and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Spear_epic.png
+
+Edit target: supplied original long wooden spear with iron point inventory icon. Create its epic quality version named Reach of Iron Resolve (do not write that name). Refine the existing iron surfaces to bright silver-steel, add intricate gold inlay and flowing masterwork engravings to the existing surfaces, with a very faint violet magical glow confined to those engravings and edges. Keep the glow subtle. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Club_rare.png
+
+Edit target: supplied original wooden club with iron bands inventory icon. Create its rare quality version named Warborn Club (do not write that name). Refine the existing iron surfaces to polished steel, add restrained fine geometric etched grooves and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Club_epic.png
+
+Edit target: supplied original wooden club with iron bands inventory icon. Create its epic quality version named Maul of Iron Resolve (do not write that name). Refine the existing iron surfaces to bright silver-steel, add intricate gold inlay and flowing masterwork engravings to the existing surfaces, with a very faint violet magical glow confined to those engravings and edges. Keep the glow subtle. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Hammer_rare.png
+
+Edit target: supplied original wooden-hafted iron war hammer inventory icon. Create its rare quality version named Warborn Hammer (do not write that name). Refine the existing iron surfaces to polished steel, add restrained fine geometric etched grooves and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Hammer_epic.png
+
+Edit target: supplied original wooden-hafted iron war hammer inventory icon. Create its epic quality version named Anvil of Iron Resolve (do not write that name). Refine the existing iron surfaces to bright silver-steel, add intricate gold inlay and flowing masterwork engravings to the existing surfaces, with a very faint violet magical glow confined to those engravings and edges. Keep the glow subtle. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+## BLK_B_Head_base.png and BLK_B_Head_common.png
+
+Use case: stylized-concept. Asset type: original fantasy inventory icon, one item for a transparent 128x128 icon after downsampling. Primary request: a single sturdy iron defensive helmet, the Common base for an Iron Helm of Bulwark. Hand-painted fantasy icon style: sculpted readable forms, softly painted highlights on iron, warm dark leather edging, restrained worn steel gray palette, matching the project's warmly lit painted inventory artwork. A closed stout rounded helmet with broad brow reinforcement and cheek guards, isolated empty helmet with no head, no body. Slight three-quarter view, whole object centered, generous transparent margin on all sides, strong readable silhouette at small size. Genuine transparent background and alpha. No frame, no tile, no pedestal, no ground plane, no cast shadow outside the object, no text, no symbols or lettering, no brands. Common quality: practical plain iron workmanship, no gems, no aura, no glow. Square high-resolution image, the entire helmet visible.
+
+
+## BLK_B_Head_rare.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its rare quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Rare quality: add finer forged border detailing, small decorative rivets and restrained non-letter geometric engravings to the EXISTING surfaces, using nobler, better-finished metal. No glow, no aura. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
+
+## BLK_B_Head_epic.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its epic quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Epic quality: add refined forged filigree and sophisticated layered engraving on the EXISTING surfaces, richer noble metal, and a faint restrained magical violet glow closely hugging the object. Do not grow spikes, wings or ornaments outside the existing shape. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
+
+## BLK_B_Armour_base.png and BLK_B_Armour_common.png
+
+Use case: stylized-concept. Asset type: original fantasy inventory icon, square transparent image to downsample to128px. Primary request: a single empty sturdy iron chainmail torso cuirass, Iron Mail of Bulwark; squat broad protective shoulders, plain linked steel rings with practical reinforced iron breast bands and leather straps, no head, no limbs, no wearer. Hand-painted fantasy game icon style, readable sculpted forms, warmly lit painterly metal highlights, restrained worn steel gray and warm dark leather, coherent with the project's painted inventory art. Common quality: practical plain workmanship, no glow or magical aura. The whole item centered with generous transparent margins, strong small-size silhouette. Genuine alpha transparency, no background, no ground, no shadow outside object, no frame, no border, no tile, no pedestal, no text, no writing, no logo. Only the named item; no added objects.
+
+
+## BLK_B_Armour_rare.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its rare quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Rare quality: add finer forged border detailing, small decorative rivets and restrained non-letter geometric engravings to the EXISTING surfaces, using nobler, better-finished metal. No glow, no aura. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
+
+## BLK_B_Armour_epic.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its epic quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Epic quality: add refined forged filigree and sophisticated layered engraving on the EXISTING surfaces, richer noble metal, and a faint restrained magical violet glow closely hugging the object. Do not grow spikes, wings or ornaments outside the existing shape. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
+
+## BLK_B_Boots_base.png and BLK_B_Boots_common.png
+
+Use case: stylized-concept. Asset type: original fantasy inventory icon, square transparent image to downsample to128px. Primary request: one inventory item consisting of a compact matched pair of sturdy iron greaves and boots, Iron Greaves of Bulwark; broad squared reinforced toes, plated shin guards, dark leather straps, three-quarter view with the two boots slightly overlapping, no legs, no wearer. Hand-painted fantasy game icon style, readable sculpted forms, warmly lit painterly metal highlights, restrained worn steel gray and warm dark leather, coherent with the project's painted inventory art. Common quality: practical plain workmanship, no glow or magical aura. The whole item centered with generous transparent margins, strong small-size silhouette. Genuine alpha transparency, no background, no ground, no shadow outside object, no frame, no border, no tile, no pedestal, no text, no writing, no logo. Only the named item; no added objects.
+
+
+## BLK_B_Boots_rare.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its rare quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Rare quality: add finer forged border detailing, small decorative rivets and restrained non-letter geometric engravings to the EXISTING surfaces, using nobler, better-finished metal. No glow, no aura. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
+
+## BLK_B_Boots_epic.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its epic quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Epic quality: add refined forged filigree and sophisticated layered engraving on the EXISTING surfaces, richer noble metal, and a faint restrained magical violet glow closely hugging the object. Do not grow spikes, wings or ornaments outside the existing shape. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
+
+## BLK_B_Ring_base.png and BLK_B_Ring_common.png
+
+Use case: stylized-concept. Asset type: original fantasy inventory icon, square transparent image to downsample to128px. Primary request: one plain thick iron defensive ring, Iron Ring of Bulwark; substantial dark steel band and a squat flat geometric iron seal face, small rivets and simple leather-like dark inset, no engraving, no glyph, no gem, no finger. Hand-painted fantasy game icon style, readable sculpted forms, warmly lit painterly metal highlights, restrained worn steel gray and warm dark leather, coherent with the project's painted inventory art. Common quality: practical plain workmanship, no glow or magical aura. The whole item centered with generous transparent margins, strong small-size silhouette. Genuine alpha transparency, no background, no ground, no shadow outside object, no frame, no border, no tile, no pedestal, no text, no writing, no logo. Only the named item; no added objects.
+
+
+## BLK_B_Ring_rare.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its rare quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Rare quality: add finer forged border detailing, small decorative rivets and restrained non-letter geometric engravings to the EXISTING surfaces, using nobler, better-finished metal. No glow, no aura. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
+
+## BLK_B_Ring_epic.png
+
+Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its epic quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Epic quality: add refined forged filigree and sophisticated layered engraving on the EXISTING surfaces, richer noble metal, and a faint restrained magical violet glow closely hugging the object. Do not grow spikes, wings or ornaments outside the existing shape. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+
 ## POOR_Head.png
 
 Use case: stylized-concept. Asset type: a single inventory icon for an original
