@@ -1373,6 +1373,9 @@ void applyPaintedBadgePixels(std::vector<unsigned char>& pixels, int badge, bool
             const int source = ((y * BADGE_SIZE / PAINTED_BADGE_SIZE) * BADGE_SIZE
                 + x * BADGE_SIZE / PAINTED_BADGE_SIZE) * 4;
             const int target = (y * PAINTED_BADGE_SIZE + x) * 4;
+            // Keep the existing opaque well so the attack glow remains visible between heart pixels.
+            if(badge == 0 && radius <= HEART_RING_INNER_RADIUS)
+                paintedPixels[target + 3] = pixels[source + 3];
             if(badge == 0 && radius > HEART_RING_INNER_RADIUS && radius <= HEART_RING_OUTER_RADIUS)
             {
                 for(int channel = 0; channel < 4; ++channel)
