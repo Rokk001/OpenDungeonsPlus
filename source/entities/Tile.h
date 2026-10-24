@@ -174,6 +174,8 @@ public:
     static const uint32_t GOLD_DENSITY_LOW;
     static const uint32_t GOLD_DENSITY_DEFAULT;
     static const uint32_t GOLD_DENSITY_HIGH;
+    //! \brief The highest dirt value a tile floor can have (0 is clean)
+    static const double MAX_DIRT;
     static const std::string TILE_PREFIX;
     static const std::string TILE_SCANF;
     //! \brief Colour (with alpha) of the marking drawn over a tile that is marked for digging.
@@ -222,7 +224,29 @@ public:
         // The density only means something for gold tiles
         if(mType != TileType::gold)
             mGoldDensity = GOLD_DENSITY_DEFAULT;
+        // Only a dirt floor carries dirt
+        if(mType != TileType::dirt)
+            mDirt = 0.0;
     }
+
+    //! \brief Returns the dirt of the floor of this tile (0 clean to 100 filthy), server side only.
+    inline double getDirt() const
+    { return mDirt; }
+
+    //! \brief Tells whether this tile can carry dirt: a floor (no wall) of the dirt type that is claimed or part of a
+    //! room. Rock, water, lava, gold, gems, mana wells, walls and unclaimed floor never carry dirt.
+    bool canCarryDirt() const;
+
+    //! \brief Adds dirt to the floor of this tile, limited to 100. Ignored (server side only) on a tile that cannot carry dirt.
+    //! \param amount The dirt to add; a value of 0 or less changes nothing.
+    void addDirt(double amount);
+
+    //! \brief Removes dirt from the floor of this tile, never below 0.
+    //! \param amount The dirt to remove; a value of 0 or less changes nothing.
+    void cleanDirt(double amount);
+
+    //! \brief Sets the dirt of the floor, used when a level or a save is loaded. The value is limited to 0 - 100.
+    void setDirt(double dirt);
 
     //! \brief Returns the density of the gold of this tile in percent (50, 100 or 150). Only meaningful for gold tiles.
     inline uint32_t getGoldDensity() const
@@ -655,6 +679,10 @@ private:
     //! At 0.0, it is a ground tile. Over it is a wall.
     //! Used on server side only
     double mFullness;
+
+    //! \brief The dirt of the floor (0.0 clean - 100.0 filthy). Used on server side only; it is kept when a room is
+    //! sold, and reset when the tile stops being a floor.
+    double mDirt;
 
     //! \brief The gold density of the tile in percent (50, 100 or 150, default 100). Only meaningful for gold tiles and
     //! reset to the default when the tile changes to another type. The server knows it from the level, the clients get it

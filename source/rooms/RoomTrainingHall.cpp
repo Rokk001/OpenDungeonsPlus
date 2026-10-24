@@ -468,6 +468,7 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("TrainHallWakefulnessPerAttack"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMax")));
+    addUseDirt(creature, tileCreature, "TrainHallDirtPerHit");
 
     // Creatures of the same keeper training at the same time grow closer
     if(getGameMap()->isRelationshipsEnabled())

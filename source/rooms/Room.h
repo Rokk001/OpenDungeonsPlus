@@ -72,6 +72,20 @@ public:
     //! key <RoomName>HP; falls back to Building::DEFAULT_TILE_HP when the key is missing.
     double getTileHP() const;
 
+    //! \brief The mean dirt (0 - 100) of the floor of the tiles this room covers, 0 for a room without tiles.
+    double getDirtMean() const;
+
+    //! \brief The dirt stage of the room: 1 (clean) below DirtStage2At, 2 below DirtStage3At, else 3 (filth);
+    //! the limits are the [Dirt] keys of global.cfg.
+    uint32_t getDirtStage() const;
+
+    //! \brief Server side. Adds the dirt of one use of a room to a tile: the value of the rooms.cfg key times the DirtFactor
+    //! of the creature. A key that is not in the configuration makes no dirt.
+    //! \param creature The creature that uses the room (its type gives the DirtFactor).
+    //! \param tile The tile that gets the dirt, usually the one the creature stands on; nothing happens if it is null.
+    //! \param key The rooms.cfg key with the dirt of one use, for example WorkshopDirtPerWork.
+    static void addUseDirt(const Creature& creature, Tile* tile, const std::string& key);
+
     //! \brief What enemies can do to a room, read from RoomsClaimableByEnemies
     //! in the room configuration file.
     enum class ClaimMode

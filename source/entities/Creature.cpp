@@ -65,6 +65,7 @@
 #include "entities/CreatureMoodValues.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "entities/DirtPileEntity.h"
 #include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
 
@@ -317,6 +318,14 @@ const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
 const uint32_t Creature::MANA_RING_STEPS = 63;
 //! \brief Label in front of the current mana in a creature save, so it cannot be mistaken for the appearance token
 static const std::string MANA_SAVE_LABEL = "Mana=";
+//! \brief Tag that opens the optional block of the needs (urge and creature dirt) at the end of a saved creature.
+static const std::string NEEDS_SAVE_OPEN = "[Needs]";
+//! \brief Tag that closes the block of the needs.
+static const std::string NEEDS_SAVE_CLOSE = "[/Needs]";
+//! \brief The highest value of the urge and of the creature dirt (both go from 0 to this value).
+static const double NEED_MAX = 100.0;
+//! \brief Divisor that turns the creature dirt (0 - NEED_MAX) into the share (0 - 1) of the trail dirt it leaves.
+static const double CREATURE_DIRT_SHARE_DIVISOR = NEED_MAX;
 
 //! \brief Returns the mana ring step 0 .. Creature::MANA_RING_STEPS for a mana value: floor(mana / maxMana x steps).
 //! \param mana The current mana.
@@ -598,6 +607,8 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mHasVisualDebuggingEntities (false),
     mWakefulness             (100.0),
     mHunger                  (0.0),
+    mUrge                    (0.0),
+    mCreatureDirt            (0.0),
     mLevel                   (1),
     mHp                      (10.0),
     mMaxHP                   (10.0),
@@ -716,6 +727,8 @@ Creature::Creature(GameMap* gameMap) :
     mHasVisualDebuggingEntities (false),
     mWakefulness             (100.0),
     mHunger                  (0.0),
+    mUrge                    (0.0),
+    mCreatureDirt            (0.0),
     mLevel                   (1),
     mHp                      (10.0),
     mMaxHP                   (10.0),
@@ -914,7 +927,7 @@ std::string Creature::getCreatureStreamFormat()
 
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
-            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]";
+            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Needs urge dirt /Needs]";
 
     return format;
 }
@@ -978,6 +991,10 @@ void Creature::exportToStream(std::ostream& os) const
         os << "\t" << SKILL_BUILD_MARKER << " ";
         CreatureSkillTree::writeBuild(mSkillBuild, os);
     }
+
+    // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
+    if((mUrge > 0.0) || (mCreatureDirt > 0.0))
+        os << "\t" << NEEDS_SAVE_OPEN << " " << mUrge << " " << mCreatureDirt << " " << NEEDS_SAVE_CLOSE;
 }
 
 //! \brief Reads the creature from a stream; the appearance and the skill state at the end are optional.
@@ -1068,6 +1085,21 @@ bool Creature::importFromStream(std::istream& is)
             {
                 OD_LOG_WRN("Invalid mana token=" + appearanceToken);
             }
+            continue;
+        }
+
+        if(appearanceToken == NEEDS_SAVE_OPEN)
+        {
+            std::string needsClose;
+            double loadedUrge = 0.0;
+            double loadedDirt = 0.0;
+            if(!(is >> loadedUrge >> loadedDirt >> needsClose) || (needsClose != NEEDS_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid needs block for creature=" + getName());
+                return false;
+            }
+            setUrge(loadedUrge);
+            setCreatureDirt(loadedDirt);
             continue;
         }
 
@@ -1311,7 +1343,10 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mMana;
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
-    // The skill state, then the last field: the carried gold, shown as a sack on the thief
+    // The needs (urge and creature dirt) for the stats window, then the skill state and the last field: the carried
+    // gold, shown as a sack on the thief
+    os << mUrge;
+    os << mCreatureDirt;
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
 }
@@ -1380,6 +1415,8 @@ void Creature::importFromPacket(ODPacket& is)
     {
         OD_LOG_ERR("Invalid appearance token=" + appearanceToken);
     }
+    OD_ASSERT_TRUE(is >> mUrge);
+    OD_ASSERT_TRUE(is >> mCreatureDirt);
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
 
@@ -1388,10 +1425,20 @@ void Creature::importFromPacket(ODPacket& is)
 
 void Creature::setPosition(const Ogre::Vector3& v, GameMap *gameMap )
 {
-    
+    // The tile the creature leaves, to know whether it enters a new one (null while it is not on the map)
+    Tile* leftTile = (getIsOnServerMap() && getIsOnMap()) ? getPositionTile() : nullptr;
+
     MovableGameEntity::setPosition(v);
     if(mCarriedEntity != nullptr)
         mCarriedEntity->notifyCarryMove(v);
+
+    // A creature that enters a new tile leaves dirt on it
+    if(leftTile != nullptr)
+    {
+        Tile* enteredTile = getPositionTile();
+        if((enteredTile != nullptr) && (enteredTile != leftTile))
+            dirtyEnteredTile(enteredTile);
+    }
 
     if(!getIsOnServerMap()){
 
@@ -1717,6 +1764,9 @@ void Creature::doUpkeep()
     else if(mNbTurnsHatedCompany > 0)
         --mNbTurnsHatedCompany;
 
+    if(getIsOnServerMap())
+        upkeepCreatureDirt();
+
     mTorturedThisTurn = false;
     mRestedThisTurn = false;
 
@@ -1801,12 +1851,20 @@ void Creature::doUpkeep()
     // Handle creature death
     if (!isAlive())
     {
+        // The corpse dirties the tile it lies on
+        if(getIsOnServerMap())
+            dirtyTileByCorpse();
+
         // Let the creature lay dead on the ground for a few turns before removing it from the GameMap.
         if (mDeathCounter == 0 )
         {
             OD_LOG_INF("Creature=" + getName() + " RIP");
 
             dropCarriedEquipment();
+
+            // The fight leaves blood on the tile where the creature fell
+            if(getIsOnServerMap() && (getPositionTile() != nullptr))
+                DirtPileEntity::createOnTile(getGameMap(), getPositionTile(), DirtPileKind::blood, getDefinition()->getClassName());
 
             if(getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
                 getSeat()->getPlayer()->notifyCreatureKilled(*this);
@@ -1880,6 +1938,7 @@ void Creature::doUpkeep()
         decreaseWakefulness(mDefinition->getWakefulnessLostPerTurn() * (1.0 - getSkillPassive("wake%") / 100.0));
 
         increaseHunger(mDefinition->getHungerGrowthPerTurn());
+        increaseUrge(mDefinition->getUrgeGrowthPerTurn());
     }
 
     mVisibleEnemyObjects         = getVisibleEnemyObjects();
@@ -3949,6 +4008,17 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportProgressToPacket(os, seat);
     // Current mana, next to the health value (the maximum follows from type, level and equipment)
     os << mMana;
+    // The needs (urge and creature dirt) are sent for allied creatures only, foreign creatures send 0 for both
+    if(seat->isAlliedSeat(getSeat()))
+    {
+        os << mUrge;
+        os << mCreatureDirt;
+    }
+    else
+    {
+        os << 0.0;
+        os << 0.0;
+    }
     // The skill state, then the last field: the carried gold, shown as a sack on the thief
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
@@ -4035,6 +4105,8 @@ void Creature::updateFromPacket(ODPacket& is)
     importActivityFromPacket(is);
     importProgressFromPacket(is);
     OD_ASSERT_TRUE(is >> mMana);
+    OD_ASSERT_TRUE(is >> mUrge);
+    OD_ASSERT_TRUE(is >> mCreatureDirt);
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
@@ -5453,6 +5525,33 @@ void recordScriptEvent(const Creature& creature, const std::string& eventName)
 }
 } // namespace
 
+//! \brief Tells whether damage comes from a blow (the attacker is a creature) or a shot (the attacker is a missile).
+//! Traps, spells, rooms, burning and lava have no attacker of these kinds and leave no combat dirt.
+//! \param attacker The entity that deals the damage, can be null.
+static bool isHitByBlowOrShot(const GameEntity* attacker)
+{
+    if(attacker == nullptr)
+        return false;
+
+    return (attacker->getObjectType() == GameEntityType::creature) ||
+           (attacker->getObjectType() == GameEntityType::missileObject);
+}
+
+//! \brief Adds the dirt of one landed blow or shot to a tile: ArenaDirtPerHit on an arena tile (so that a fight there
+//! is not counted twice), CombatDirtPerHit anywhere else. The DirtFactor of the creatures is not used.
+//! \param tile The tile the target stands on, can be null.
+static void addHitDirt(Tile* tile)
+{
+    if(tile == nullptr)
+        return;
+
+    Room* room = tile->getCoveringRoom();
+    if((room != nullptr) && (room->getType() == RoomType::arena))
+        tile->addDirt(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("ArenaDirtPerHit", 0.0));
+    else
+        tile->addDirt(ConfigManager::getSingleton().getDirtConfigDouble("CombatDirtPerHit"));
+}
+
 double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
@@ -5491,6 +5590,12 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         totalDamage *= creatureAttacking->getRelationshipRageFactor(getSeat());
     double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
+    // A blow or shot that lands dirties the floor where its target stands
+    if(wasAlive && (damageDone > 0.0) && getIsOnServerMap() && isHitByBlowOrShot(attacker))
+    {
+        Tile* hitTile = (tileTakingDamage != nullptr) ? tileTakingDamage : getPositionTile();
+        addHitDirt(hitTile);
+    }
     if(wasAlive && (damageDone > 0.0))
     {
         recordScriptEvent(*this, "attacked");
@@ -7227,6 +7332,96 @@ void Creature::increaseHunger(double value)
         return;
 
     mHunger = std::min(100.0, mHunger + value);
+}
+
+//! \brief Lowers the hunger by val and raises the urge by UrgePerChicken.
+void Creature::foodEaten(double val)
+{
+    mHunger -= val;
+    if(mHunger < 0.0)
+        mHunger = 0.0;
+
+    increaseUrge(ConfigManager::getSingleton().getDirtConfigDouble("UrgePerChicken"));
+}
+
+//! \brief Hook for a later drinking room: raises the urge by UrgePerDrink.
+void Creature::drinkTaken(double val)
+{
+    increaseUrge(ConfigManager::getSingleton().getDirtConfigDouble("UrgePerDrink"));
+}
+
+//! \brief Hook for a later bathing room: the creature carries no dirt anymore.
+void Creature::washed()
+{
+    mCreatureDirt = 0.0;
+}
+
+//! \brief Raises the urge, limited to NEED_MAX; rogue creatures have none.
+void Creature::increaseUrge(double value)
+{
+    if(getSeat()->isRogueSeat())
+        return;
+
+    mUrge = std::min(NEED_MAX, mUrge + value);
+}
+
+//! \brief Sets the urge, limited to 0 - NEED_MAX.
+void Creature::setUrge(double val)
+{
+    mUrge = std::min(NEED_MAX, std::max(0.0, val));
+}
+
+//! \brief Raises the creature dirt, limited to NEED_MAX.
+void Creature::increaseCreatureDirt(double value)
+{
+    mCreatureDirt = std::min(NEED_MAX, mCreatureDirt + value);
+}
+
+//! \brief Sets the creature dirt, limited to 0 - NEED_MAX.
+void Creature::setCreatureDirt(double val)
+{
+    mCreatureDirt = std::min(NEED_MAX, std::max(0.0, val));
+}
+
+//! \brief Prison and torture make the creature filthy, otherwise the dirt it carries decays a little every turn.
+void Creature::upkeepCreatureDirt()
+{
+    if(isInPrison() || mTorturedThisTurn)
+        mCreatureDirt = NEED_MAX;
+
+    if(mCreatureDirt <= 0.0)
+        return;
+
+    double decay = ConfigManager::getSingleton().getDirtConfigDouble("CreatureDirtDecayPerTurn");
+    mCreatureDirt = std::max(0.0, mCreatureDirt - decay);
+}
+
+//! \brief Adds the trail dirt of this creature to the tile it entered: TrailDirtPerTile times DirtFactor for a load
+//! carried or a pulled wounded creature, plus the share of it that the creature dirt makes.
+void Creature::dirtyEnteredTile(Tile* tile)
+{
+    if((tile == nullptr) || (mDefinition == nullptr))
+        return;
+
+    if((mCarriedEntity == nullptr) && !mIsBeingDragged && (mCreatureDirt <= 0.0))
+        return;
+
+    double trailDirt = ConfigManager::getSingleton().getDirtConfigDouble("TrailDirtPerTile");
+    double share = mCreatureDirt / CREATURE_DIRT_SHARE_DIVISOR;
+    if((mCarriedEntity != nullptr) || mIsBeingDragged)
+        share += 1.0;
+
+    tile->addDirt(trailDirt * share * mDefinition->getDirtFactor());
+}
+
+//! \brief A corpse adds CombatDirtPerHit to the tile it lies on every turn.
+void Creature::dirtyTileByCorpse()
+{
+    Tile* tile = getPositionTile();
+    if(tile == nullptr)
+        return;
+
+    tile->addDirt(ConfigManager::getSingleton().getDirtConfigDouble("CombatDirtPerHit"));
 }
 
 void Creature::decreaseWakefulness(double value)

@@ -439,6 +439,9 @@ public:
     double getRoomConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
     //! \brief Tells whether the parameter is in the rooms configuration
     bool hasRoomConfig(const std::string& param) const;
+    //! \brief Returns the value of a key of the [Dirt] block of global.cfg (stages, moods, urge, cleaning, blood);
+    //! logs an error and returns 0 when the key is unknown.
+    double getDirtConfigDouble(const std::string& param) const;
     //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
     //! parameter is not in the configuration file (or has no value).
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
@@ -577,6 +580,8 @@ private:
     bool loadGlobalConfigDefinitionFiles(std::stringstream& configFile);
     //! \brief Reads global game settings and the settings of each creature avoidance kind.
     bool loadGlobalGameConfig(std::stringstream& configFile);
+    //! \brief Reads the [Dirt] block of global.cfg into mDirtConfig.
+    bool loadGlobalDirtConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
     bool loadEquipements(const std::string& fileName);
     bool loadSpawnConditions(const std::string& fileName);
@@ -739,6 +744,8 @@ private:
 
     std::vector<std::string> mFactions;
     std::map<const std::string, std::string> mRoomsConfig;
+    //! \brief The keys of the [Dirt] block of global.cfg
+    std::map<std::string, double> mDirtConfig;
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;

@@ -826,12 +826,36 @@ public:
     inline int getJobCooldown() const
     { return mJobCooldown; }
 
-    inline void foodEaten(double val)
-    {
-        mHunger -= val;
-        if(mHunger < 0.0)
-            mHunger = 0.0;
-    }
+    //! \brief Lowers the hunger by val (the creature ate) and raises the urge by UrgePerChicken (global.cfg [Dirt]).
+    //! \param val The hunger the meal takes away.
+    void foodEaten(double val);
+
+    //! \brief Hook for a later drinking room: raises the urge by UrgePerDrink (global.cfg [Dirt]). Nothing calls it yet.
+    //! \param val The value of the drink (reserved for the thirst of that room, the urge gain is the same for every drink).
+    void drinkTaken(double val);
+
+    //! \brief Hook for a later bathing room: the creature is clean again (creature dirt 0).
+    void washed();
+
+    //! \brief Raises the urge (0 - 100) by value, server side. Rogue creatures have no urge.
+    void increaseUrge(double value);
+
+    //! \brief Sets the urge (0 - 100, limited), used when a creature is loaded.
+    void setUrge(double val);
+
+    //! \brief Returns the urge to use a toilet (0 = none, 100 = cannot hold it any longer).
+    inline double getUrge() const
+    { return mUrge; }
+
+    //! \brief Raises the dirt the creature carries (0 - 100) by value, server side.
+    void increaseCreatureDirt(double value);
+
+    //! \brief Sets the dirt the creature carries (0 - 100, limited), used when a creature is loaded.
+    void setCreatureDirt(double val);
+
+    //! \brief Returns the dirt the creature carries (0 = clean, 100 = filthy).
+    inline double getCreatureDirt() const
+    { return mCreatureDirt; }
 
     //! \brief Sets the hunger (0 = full, 100 = starving), server side
     inline void setHunger(double val)
@@ -1419,6 +1443,11 @@ private:
     bool            mHasVisualDebuggingEntities;
     double          mWakefulness;
     double          mHunger;
+    //! \brief The urge to use a toilet (0 - 100). Grows by UrgeGrowth/Turn of the type, +UrgePerChicken per meal.
+    double          mUrge;
+    //! \brief The dirt the creature carries (0 - 100). Fights, prison and torture raise it, it decays, and it dirties
+    //! every tile the creature enters.
+    double          mCreatureDirt;
 
     //! \brief The level of the creature
     unsigned int    mLevel;
@@ -1755,6 +1784,18 @@ private:
     void buildStats();
 
     void increaseHunger(double value);
+
+    //! \brief Server side, once per turn: sets the creature dirt to the maximum while the creature is in prison or
+    //! tortured, then lets it decay by CreatureDirtDecayPerTurn.
+    void upkeepCreatureDirt();
+
+    //! \brief Server side: dirties a tile the creature has just entered (the dirt it carries, a load it carries or
+    //! the trail of a wounded creature that is pulled over the floor).
+    //! \param tile The tile that was entered.
+    void dirtyEnteredTile(Tile* tile);
+
+    //! \brief Server side: a corpse dirties the tile it lies on by CombatDirtPerHit every turn.
+    void dirtyTileByCorpse();
 
     void computeMood();
 

@@ -459,6 +459,7 @@ bool RoomTorture::useRoom(Creature& creature, bool forced)
         uint32_t nbTurns = Random::Uint(config.getRoomConfigUInt32("TortureSessionLengthMin"),
             config.getRoomConfigUInt32("TortureSessionLengthMax"));
         creature.setJobCooldown(nbTurns);
+        addUseDirt(creature, tileCreature, "TortureDirtPerSession");
 
         // We set the flame during half the session
         ++p.second.mState;

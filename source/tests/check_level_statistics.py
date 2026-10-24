@@ -214,6 +214,10 @@ struct Creature : public GameEntity
     CreatureDefinition mDefinition;
 };
 void recordScriptEvent(const Creature&, const std::string&) {}
+// The combat dirt of a landed hit is outside the statistics contract: this fixture runs the non-server path.
+bool isHitByBlowOrShot(const GameEntity*) { return false; }
+// Same: no tile dirt in the statistics fixture.
+void addHitDirt(Tile*) {}
 TAKE_DAMAGE
 struct MockRoom
 {

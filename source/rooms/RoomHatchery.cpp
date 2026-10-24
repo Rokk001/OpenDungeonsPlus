@@ -1340,6 +1340,8 @@ void RoomHatchery::doUpkeep()
     std::vector<ChickenEntity*> eggs;
     std::vector<ChickenEntity*> roosters;
     HatcheryCounts counts;
+    // Dirt the floor under every hen, chick and rooster gets per turn (eggs make none)
+    const double animalDirtPerTurn = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryDirtPerHenTurn", 0.0);
     for(Tile* tile : mCoveredTiles)
     {
         std::vector<GameEntity*> entities;
@@ -1353,6 +1355,9 @@ void RoomHatchery::doUpkeep()
             if(((chicken->getKind() == ChickenKind::egg) || (chicken->getKind() == ChickenKind::chick)) &&
                (chicken->getHomeSeat() != nullptr) && (chicken->getHomeSeat() != getSeat()))
                 continue;
+
+            if(chicken->getKind() != ChickenKind::egg)
+                tile->addDirt(animalDirtPerTurn);
 
             switch(chicken->getKind())
             {

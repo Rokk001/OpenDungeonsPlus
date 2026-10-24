@@ -330,6 +330,7 @@ void RoomPrison::doUpkeep()
                 ConfigManager::getSingleton().getRoomConfigDouble("PrisonDamagePerTurn"));
             creature->takeDamage(this, damage, 0.0, 0.0, 0.0, creatureTile, false);
             creature->increaseTurnsPrison();
+            addUseDirt(*creature, creatureTile, "PrisonDirtPerPrisonerTurn");
 
             if(creature->isAlive())
                 continue;
