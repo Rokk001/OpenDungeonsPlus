@@ -30,6 +30,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "rooms/RoomManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -384,6 +385,8 @@ bool RoomArena::useRoom(Creature& creature, bool forced)
             return false;
         }
 
+        // The wandering target must be a tile with a free standing point, not one covered by furniture
+        RoomObjectNavigation::keepTilesWithStandingPosition(creature, tiles);
         uint32_t index = Random::Uint(0, tiles.size() - 1);
         Tile* tile = tiles[index];
         if(!creature.setDestination(tile))

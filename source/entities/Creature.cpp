@@ -2165,6 +2165,8 @@ bool Creature::handleIdleAction()
         if (canGoThroughTile(tile) && getGameMap()->pathExists(this, getPositionTile(), tile))
             reachableTiles.push_back(tile);
     }
+    // A random walking target must be a tile with a free standing point, not one covered by furniture
+    RoomObjectNavigation::keepTilesWithStandingPosition(*this, reachableTiles);
 
     if (!mDefinition->isWorker())
     {
@@ -2243,7 +2245,8 @@ bool Creature::handleIdleAction()
     // cannot be entered or a tile in another closed-off area: then we walk to a reachable tile instead of
     // asking for a route that does not exist every turn
     if((tileDest != nullptr) &&
-       (!canGoThroughTile(tileDest) || !getGameMap()->pathExists(this, getPositionTile(), tileDest)))
+       (!canGoThroughTile(tileDest) || !getGameMap()->pathExists(this, getPositionTile(), tileDest) ||
+        !RoomObjectNavigation::hasStandingPosition(*this, *tileDest)))
     {
         tileDest = nullptr;
         if(!reachableTiles.empty())
@@ -5075,6 +5078,8 @@ bool Creature::wanderRandomly(const std::string& animationState)
     if (reachableTiles.empty())
         return false;
 
+    // A random walking target must be a tile with a free standing point, not one covered by furniture
+    RoomObjectNavigation::keepTilesWithStandingPosition(*this, reachableTiles);
     Tile* tileDestination = reachableTiles[Random::Uint(0, reachableTiles.size() - 1)];
     setDestination(tileDestination);
     return false;
