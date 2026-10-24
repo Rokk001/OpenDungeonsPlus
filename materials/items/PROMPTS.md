@@ -31,6 +31,45 @@ Use case: stylized-concept. Asset type: one original hand-painted fantasy invent
 
 Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Iron Ring of Arms: a single broad forged iron finger ring with a small flat rectangular signet face and a plain restrained geometric engraving without lettering. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
 
+## BLK_A_Head_rare.png
+
+Edit target: the supplied original inventory icon. Create its rare quality version named Warborn Helm (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same helmet shape, outer silhouette, object position, proportions, angle, visible openings, cheek guards, scale, lighting direction and transparent margins. Change only surface craftsmanship/material details. Keep original hand-painted fantasy inventory icon style and transparent alpha. Exactly one isolated object. No new protrusions, horns, spikes, wearer, head, background, border, frame, letters, numbers, symbols from any brand or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Head_epic.png
+
+Edit target: the supplied original inventory icon. Create its epic quality version named Crown of Iron Resolve (do not write that name). Add masterfully engraved silver-steel panels with refined gold inlay along existing edges, and a very faint violet magical glow following the existing metal surfaces. Keep the glow subtle. Preserve EXACTLY the same helmet shape, outer silhouette, object position, proportions, angle, visible openings, cheek guards, scale, lighting direction and transparent margins. Change only surface craftsmanship/material details. Keep original hand-painted fantasy inventory icon style and transparent alpha. Exactly one isolated object. No new protrusions, horns, spikes, wearer, head, background, border, frame, letters, numbers, symbols from any brand or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Armour_rare.png
+
+Edit target: supplied original armour inventory icon. Create its rare quality version named Warborn Mail (do not write that name). Refine the chain links to polished steel and add restrained etched grooves and noble bronze trimming on the existing shoulder yoke and hem. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment item. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Armour_epic.png
+
+Edit target: supplied original armour inventory icon. Create its epic quality version named Mantle of Iron Resolve (do not write that name). Refine the chainmail to bright silver-steel links, add fine gold inlay and masterful flowing engravings on the existing shoulder yoke and leather edge fittings, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment item. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Boots_rare.png
+
+Edit target: supplied original pair of greaves inventory icon. Create its rare quality version named Warborn Greaves (do not write that name). Refine existing shin plates to polished steel, add restrained fine etched grooves and neat bronze trim. Keep the leather and two boots. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment item. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Boots_epic.png
+
+Edit target: supplied original pair of greaves inventory icon. Create its epic quality version named Steps of Iron Resolve (do not write that name). Refine existing shin plates to silver-steel with intricate gold inlay and flowing engraving along existing edges. Add a very faint violet magic glow on the plates. Keep the leather and two boots. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment item. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Ring_rare.png
+
+Edit target: supplied original signet ring inventory icon. Create its rare quality version named Warborn Ring (do not write that name). Refine the existing band to polished silver-steel and add fine inset bronze ornament around the existing rectangular signet face and geometric diamond motif. No jewel, no glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment item. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLK_A_Ring_epic.png
+
+Edit target: supplied original signet ring inventory icon. Create its epic quality version named Seal of Iron Resolve (do not write that name). Refine the existing signet ring to polished silver-steel, rich fine gold inlay surrounding the original rectangular signet face and geometric diamond motif. Add a very faint violet magic glow confined to the engraved grooves. No jewel. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment item. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
 ## POOR_Head.png
 
 Use case: stylized-concept. Asset type: a single inventory icon for an original
