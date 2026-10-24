@@ -34,6 +34,7 @@ class RenderSceneGroup
 {
 public:
     // Constructors
+    //! \brief Creates a parsed group without activated render commands.
     RenderSceneGroup();
     virtual ~RenderSceneGroup();
 
@@ -41,7 +42,7 @@ public:
     //! and then restart
     void reset(CameraManager& cameraManager, RenderManager& renderManager);
 
-    //! \brief Called when the animation should not be displayed anymore.
+    //! \brief Releases the unfinished command and previous commands in reverse activation order.
     //! It will free the ressources starting from the current scene in the group
     //! until the first
     void freeGroup(CameraManager& cameraManager, RenderManager& renderManager);
@@ -61,6 +62,8 @@ public:
 private:
     std::vector<RenderScene*> mScenes;
     bool mIsRepeat;
+    //! Whether a reset has activated commands, including the current unfinished one.
+    bool mIsActive;
     uint32_t mIndexSceneRepeat;
     uint32_t mIndexScene;
 };

@@ -182,7 +182,7 @@ public:
     //! \brief Updates the active camera projection for the current viewport size.
     void setViewportSize(unsigned int width, unsigned int height);
 
-    //! \brief Preserves the authored menu scene's horizontal framing while active.
+    //! \brief Preserves both dimensions of the authored menu frame while active and restores gameplay FOV on exit.
     void setMainMenuProjection(bool enabled);
 
     inline Ogre::Camera* getActiveCamera()

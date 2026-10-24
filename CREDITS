@@ -307,7 +307,7 @@ textures/
 -> SpiderBed.png                    OD Plus project     CC0                     tools/room-objects/generate_beds.py (original, procedural)
 -> Spiketrap.png                       P0ss, Danimal           CC-BY 3.0               http://opengameart.org/content/spyke-trap-low-poly
 -> Staff.png
--> starsedit.jpg                       European Space Agency, edited by tomluchowski  CC-BY 4.0 - https://commons.wikimedia.org/wiki/File:Starsinthesky.jpg
+-> WorldRock.png                      AI-generated with Codex  GPLv3+                  Generated for this project (2026-10), seamless dark earth/rock texture
 -> StoneBridge*.png                    Danimal, Skorpio        CC-BY-SA 3.0            http://opengameart.org/users/danimal
 -> StoneCoffin*.png                    Yughues                 CC0                     http://forum.freegamedev.net/viewtopic.php?p=60771#p60771
 -> Strengthflare.png                   Lorc, OD Team           CC-BY-SA 3.0            http://ghttp://game-icons.net/lorc/originals/strong.html + Own made flare
@@ -367,7 +367,6 @@ textures/
 -> CreatureExperience.png, CreatureRecovery.png    AI-generated           GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 -> DungeonHeart{Healthy,Damaged,Critical}{,Normal,Glow}.pngMario                   GPLv3+                  Procedural, tools/heart-textures/generate_heart_textures.py
 -> DefeatFireball.png                  AI-generated            GPLv3+                  AI-generated, created for this project (first commit 2c05e6eb2); see "Generated assets" below
--> MainMenuBackground.png              AI-generated with Codex  GPLv3+                  Added 2026 (first commit b04544ed8)
 -> portrait-*.png                      AI-generated with Codex  GPLv3+                  AI-generated, created for this project; see "Generated assets" below
 
 ======================
@@ -1279,6 +1278,26 @@ source/tests/check_creature_armament.py                 OD Team  GPLv3+  Own wor
 tools/blender-assets/armament_preview.py                  OD Team  GPLv3+  Own work: configured creature and weapon animation previews with the game attachment transform
 models/Troll.skeleton                                    OD Team  GPLv3+  Own work: fitted right-hand weapon rest position and rotation, converted with OgreXMLConverter; existing data keeps its existing licence; original native animation keys retained byte for byte
 
+materials/textures/loading/loading_*.jpg    OD Team    GPLv3+    Twenty-five original painted loading illustrations, AI-generated for this project with the built-in image generation tool; no external stock image source.
+=======================================================
+== Original fortress menu scene ==
+=======================================================
+assets-src/menu-scene/*.blend          OD Team                 GPLv3+                  Original fortress sources, individual ruin variants and independently AI-authored graveyard props generated for this project with Blender; one model per file. The thirteen fortress families retain fractured masonry, damaged guardians, worn iron, torn cloth and wet rubble. Separate new sources add skeletal remains, graves, ruined weapons, trophies, vermin, web victims, hanging title and crest, blood moon and burning distant ruins. Geometry and skeletal animation are original project work using the five credited detail texture pairs.
+models/Menu*.mesh, models/Menu*.skeleton OD Team                 GPLv3+                  Original fortress geometry, individual damage variants and looping cloth, crow, title and chained-remain skeletons, generated for this project with tools/blender-assets/menu_scene_models.py and the existing Ogre exporter; per-object texture variation is baked into the exported UVs. Independently AI-authored graveyard, ruined weapons, remains, trophies, vermin, web victims, hanging title, blood moon and distant burning ruins retain the original project source and GPLv3+ licence.
+materials/textures/menu/MenuStone.png, materials/textures/menu/MenuStoneNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; seamless dark stone albedo and matching normal map.
+materials/textures/menu/MenuFortressStone.png, materials/textures/menu/MenuFortressStoneNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; cracked, soot-weathered fortress masonry albedo and matching tangent-space normal map.
+materials/textures/menu/MenuWetPaving.png, materials/textures/menu/MenuWetPavingNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; fractured wet paving albedo and matching tangent-space normal map.
+materials/textures/menu/MenuDemonStone.png, materials/textures/menu/MenuDemonStoneNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; fibrous, eroded guardian stone albedo and matching tangent-space normal map.
+materials/textures/menu/MenuRustIron.png, materials/textures/menu/MenuRustIronNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; pitted rusty iron albedo and matching tangent-space normal map.
+materials/textures/menu/MenuTornCloth.png, materials/textures/menu/MenuTornClothNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; faded red frayed cloth albedo and matching tangent-space normal map.
+materials/textures/menu/MenuTitle.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; transparent massive bevelled stone-and-metal Moreya lettering, orange to green, with riveted repairs, deep side faces, corrosion and emissive cracks. The single texture can be replaced to rename the hanging title without replacing its model.
+materials/textures/menu/MenuBat.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; original transparent dark bat silhouette for the capped distant swarm effect.
+materials/textures/menu/MenuCrow.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; original transparent ragged crow silhouette for a separate capped distant swarm effect.
+materials/textures/menu/MenuCampaignMap.png OD Team             GPLv3+                  Exact reuse of this project's AI-generated gui/campaign/world_base.png, credited above, on the campaign table; no changes to the map.
+tools/blender-assets/menu_scene_models.py OD Team                GPLv3+                  Original AI-generated Blender source generator for the fortress models.
+materials/scripts/MenuScene.material, particles/MenuScene.particle OD Team GPLv3+       Original AI-authored scene materials and looping effects generated for this project; the credited stone, paving, guardian stone, iron and cloth texture pairs supply albedo and matching normals. Original dark blood, slime, ash, bone, web and lunar surfaces accompany green tower scatter, volcanic horizon heat, red cracks, bowl smoke, grave vapour and windblown embers. Generated bat/crow silhouettes provide distinct capped swarm effects; smoke and fire reuse the project's credited particle textures.
+assets-src/menu-scene/MenuSceneAssembly.blend OD Team            GPLv3+                  Own AI-authored Blender assembly of this project's fortress families, individual damage variants and original graveyard props at configured positions. Native skeletal loops, animated fire volumes, point-light flicker, low grave vapour, rising smoke, ash and swarms map the original scene effects. Packed images contain the five credited albedo/normal pairs, existing campaign map, three generated title/bird images and the project's credited RoomAmbSmoke.png for lunar cloud tatters. Every placed prop retains its independently exported source and credits above.
+tools/blender-assets/menu_scene_assembly.py OD Team               GPLv3+                  Own AI-authored Blender assembly and Eevee preview script for the existing configured fortress scene.
 materials/portraits/whole/**/*.jpg  AI-generated with Codex  GPLv3+  Original project creature portraits edited from the project neutral bases with simple existing clothing; no external artwork used.
 materials/portraits/whole/Goblin.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male goblin portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.
 materials/portraits/whole/Elf.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original female woodland elf portraits with distinct faces and painted skin shades, directly edited from the project clothed neutral base.

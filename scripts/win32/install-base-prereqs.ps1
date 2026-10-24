@@ -34,7 +34,7 @@ foreach ($taskPackage in $taskPackages) {
         $taskBuildLog = "$taskRoot\logs\$taskName-$taskConfiguration.log"
         Write-Output "Building and installing $taskName ($taskConfiguration)"
         $ErrorActionPreference = 'Continue'
-        & $taskCmake --build $taskBuild --config $taskConfiguration --target INSTALL --parallel 2 *> $taskBuildLog
+        & $taskCmake --build $taskBuild --config $taskConfiguration --target INSTALL --parallel 1 *> $taskBuildLog
         $ErrorActionPreference = 'Stop'
         if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $taskBuildLog -Tail 45; throw "$taskName $taskConfiguration build failed" }
     }

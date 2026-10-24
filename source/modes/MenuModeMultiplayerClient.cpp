@@ -85,6 +85,7 @@ void MenuModeMultiplayerClient::activate()
         editNick->setText(reinterpret_cast<const CEGUI::utf8*>(nickname.c_str()));
 }
 
+//! \brief Displays the existing loading text before a blocking server connection.
 bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::multiplayerClientMenu);
@@ -119,6 +120,7 @@ bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
     uint32_t timeout = ConfigManager::getSingleton().getClientConnectionTimeout();
     std::string replayFilename = ResourceManager::getSingleton().getReplayDataPath()
         + ResourceManager::getSingleton().buildReplayFilename();
+    infoText->setText("Loading...");
     if(!ODClient::getSingleton().connect(ip, port, timeout, replayFilename))
     {
         // Error while connecting
@@ -126,6 +128,5 @@ bool MenuModeMultiplayerClient::clientButtonPressed(const CEGUI::EventArgs&)
         return true;
     }
 
-    infoText->setText("Loading...");
     return true;
 }

@@ -190,8 +190,13 @@ public:
     void stopGameRenderer();
     void createMainMenuScene();
     void freeMainMenuScene();
-    //! Starts the zoom flight of the main menu scene (only after createMainMenuScene)
+    //! \brief Starts the configured flight from outside the fortress into the overview.
     void startMainMenuFlight();
+    //! \brief Starts a named destination or return flight; false if a flight is already active.
+    bool flyMainMenuTo(const std::string& place);
+    //! \brief Returns the last settled menu destination, or an empty string outside the menu scene.
+    std::string getMainMenuPlace() const;
+    //! \brief Reports whether an arrival, destination or return flight is active.
     bool isMainMenuFlightActive() const;
     void updateMenuScene(Ogre::Real timeSinceLastFrame);
 
@@ -294,6 +299,7 @@ private:
     bool mIsMainMenuCreated;
 
     //! \brief Actually exit application
+    //! \brief Releases the menu scene before shutting down network and map resources.
     void exitApplication();
 
     //! \brief Replaces the render window if requested. The old window is kept if the new one cannot be set up.

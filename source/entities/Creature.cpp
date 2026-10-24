@@ -2183,7 +2183,9 @@ bool Creature::handleIdleAction()
     std::vector<Tile*> reachableTiles;
     for (Tile* tile: mTilesWithinSightRadius)
     {
-        if (getGameMap()->pathExists(this, getPositionTile(), tile))
+        // A tile this creature cannot enter (closed door of its own side, fenced room it is not in) is
+        // in the same area as the creature for the flood fill but can never be a walking destination
+        if (canGoThroughTile(tile) && getGameMap()->pathExists(this, getPositionTile(), tile))
             reachableTiles.push_back(tile);
     }
 
@@ -2258,6 +2260,17 @@ bool Creature::handleIdleAction()
             tileDest = reachableTiles[Random::Uint(reachableTiles.size() / 2,
                                                    reachableTiles.size() - 1)];
         }
+    }
+
+    // A spot picked around a worker is not taken from the reachable tiles. It can be a wall, a tile that
+    // cannot be entered or a tile in another closed-off area: then we walk to a reachable tile instead of
+    // asking for a route that does not exist every turn
+    if((tileDest != nullptr) &&
+       (!canGoThroughTile(tileDest) || !getGameMap()->pathExists(this, getPositionTile(), tileDest)))
+    {
+        tileDest = nullptr;
+        if(!reachableTiles.empty())
+            tileDest = reachableTiles[Random::Uint(0, reachableTiles.size() - 1)];
     }
 
     if(setDestination(tileDest))
@@ -5098,7 +5111,8 @@ bool Creature::wanderRandomly(const std::string& animationState)
     std::vector<Tile*> reachableTiles;
     for (Tile* tile: mTilesWithinSightRadius)
     {
-        if (getGameMap()->pathExists(this, getPositionTile(), tile))
+        // Only tiles the creature can enter are valid destinations (see handleIdleAction)
+        if (canGoThroughTile(tile) && getGameMap()->pathExists(this, getPositionTile(), tile))
             reachableTiles.push_back(tile);
     }
 

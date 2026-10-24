@@ -53,6 +53,12 @@ const int STANDING_GRID_SIZE = 8;
 const float STANDING_GRID_START = -0.4375f;
 // Walking radius of a creature whose mesh is not in the catalog, before it is scaled by its level.
 const float DEFAULT_WALKING_RADIUS = 0.2f;
+// Tiles around the coarse tile path within which the second, wider route search looks for a way around furniture.
+// The tile path already goes around walls, so a detour that is only needed because of furniture stays close to it.
+const int ROUTE_PADDING_TILES = 8;
+// Tiles around the coarse tile path beyond which furniture cannot touch any position of a route search: the wider
+// search area plus the two tiles the first search adds, the tile the grid is rounded out to and a tile of margin.
+const float OBSTACLE_REGION_TILES = static_cast<float>(ROUTE_PADDING_TILES) + 4.0f;
 
 //! Footprint (walking bounds scaled by creature level) of a creature standing at position and facing direction
 RoomObjectPath::Obstacle interactionFootprint(const Creature& creature,
@@ -210,6 +216,28 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
         return false;
     path.swap(result);
     return true;
+}
+
+//! Removes the obstacles that are too far from the rectangle to touch a creature anywhere inside it. The reach of an
+//! obstacle is the farthest point of its footprint (furniture bounds and body of the creature) from its position.
+void keepObstaclesNear(std::vector<RoomObjectPath::Obstacle>& obstacles, const Ogre::Vector2& minimum,
+    const Ogre::Vector2& maximum)
+{
+    std::vector<RoomObjectPath::Obstacle> kept;
+    kept.reserve(obstacles.size());
+    for(const RoomObjectPath::Obstacle& obstacle : obstacles)
+    {
+        const float furnitureReach = std::hypot(std::max(std::abs(obstacle.minimum.x), std::abs(obstacle.maximum.x)),
+            std::max(std::abs(obstacle.minimum.y), std::abs(obstacle.maximum.y)));
+        const float bodyReach = std::hypot(std::max(std::abs(obstacle.bodyMinimum.x), std::abs(obstacle.bodyMaximum.x)),
+            std::max(std::abs(obstacle.bodyMinimum.y), std::abs(obstacle.bodyMaximum.y)));
+        const float reach = furnitureReach + bodyReach + 0.5f;
+        const float dx = std::max(std::max(minimum.x - obstacle.position.x, obstacle.position.x - maximum.x), 0.0f);
+        const float dy = std::max(std::max(minimum.y - obstacle.position.y, obstacle.position.y - maximum.y), 0.0f);
+        if(dx * dx + dy * dy <= reach * reach)
+            kept.push_back(obstacle);
+    }
+    obstacles.swap(kept);
 }
 
 bool removeLowStepObstacles(Creature& creature, std::vector<RoomObjectPath::Obstacle>& obstacles)
@@ -500,6 +528,16 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         return smoothCorridor(creature, obstacles, path);
 
     obstacles = bodyObstacles(creature, interaction);
+    // A route search tests every grid point and every step against all obstacles, and there are hundreds of them on
+    // a map. Only the furniture around the path can touch a position the searches look at, so the rest is dropped.
+    Ogre::Vector2 regionMinimum = start, regionMaximum = start;
+    for(const Ogre::Vector2& point : path)
+    {
+        regionMinimum.makeFloor(point);
+        regionMaximum.makeCeil(point);
+    }
+    keepObstaclesNear(obstacles, regionMinimum - Ogre::Vector2(OBSTACLE_REGION_TILES),
+        regionMaximum + Ogre::Vector2(OBSTACLE_REGION_TILES));
     Ogre::Vector2 goal = path.back();
     if(!standingPosition(obstacles, goal, goal))
     {
@@ -525,9 +563,12 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     const int maxY = std::min(map.getMapSizeY() - 1, int(std::ceil(maximum.y)) + 2);
     const std::function<bool(const std::vector<RoomObjectPath::Obstacle>&, std::vector<Ogre::Vector2>&)> findRoute = [&](const std::vector<RoomObjectPath::Obstacle>& solid, std::vector<Ogre::Vector2>& route)
     {
+        // The second search is wider but stays near the path: a search over the whole map for a creature that is
+        // closed in by furniture visits everything it can reach and takes seconds
         return RoomObjectPath::route(start, goal, solid, minX, minY, maxX, maxY, terrain, route) ||
-            RoomObjectPath::route(start, goal, solid, 0, 0,
-                map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, route);
+            RoomObjectPath::route(start, goal, solid, std::max(0, minX - ROUTE_PADDING_TILES),
+                std::max(0, minY - ROUTE_PADDING_TILES), std::min(map.getMapSizeX() - 1, maxX + ROUTE_PADDING_TILES),
+                std::min(map.getMapSizeY() - 1, maxY + ROUTE_PADDING_TILES), terrain, route);
     };
     const std::function<float(const std::vector<Ogre::Vector2>&)> length = [&](const std::vector<Ogre::Vector2>& route)
     {

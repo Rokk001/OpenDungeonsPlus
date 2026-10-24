@@ -26,6 +26,7 @@
 #include "network/ServerMode.h"
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
+#include "render/LoadingScreen.h"
 #include "sound/MusicPlayer.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -101,6 +102,7 @@ void MenuModeEditorNew::activate()
     window->getChild(TEXT_LOADING)->setText("");
 }
 
+//! \brief Presents loading before creating, writing and opening the new editor map.
 bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* window = getModeManager().getGui().getGuiSheet(Gui::guiSheet::editorNewMenu);
@@ -153,6 +155,9 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         return true;
     }
 
+    window->getChild(TEXT_LOADING)->setText("Loading...");
+    LoadingScreen loading;
+
     // Create the level before opening it.
     GameMap* gameMap = ODFrameListener::getSingleton().getClientGameMap();
     gameMap->clearAll();
@@ -196,7 +201,6 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     }
 
     // In editor mode, we act as a server
-    window->getChild(TEXT_LOADING)->setText("Loading...");
     ConfigManager& config = ConfigManager::getSingleton();
     std::string nickname = config.getGameValue(Config::NICKNAME, std::string(), false);
     if(!ODServer::getSingleton().startServer(nickname, level, ServerMode::ModeEditor, false))
@@ -217,5 +221,6 @@ bool MenuModeEditorNew::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         return true;
     }
     window->getChild(TEXT_LOADING)->setText("The level was created successfully.");
+    loading.continueLoading();
     return true;
 }

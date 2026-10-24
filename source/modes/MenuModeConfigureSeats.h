@@ -51,6 +51,7 @@ public:
 
     void receiveChat(const ChatMessage& chat) override;
 
+    //! \brief Shows the loading picture and asks the server to start the configured map.
     bool launchSelectedButtonPressed(const CEGUI::EventArgs&);
     bool goBack(const CEGUI::EventArgs& e = {}) override;
     bool chatText(const CEGUI::EventArgs& e);

@@ -16,6 +16,7 @@
  */
 
 #include "network/ODServer.h"
+#include "render/LoadingScreen.h"
 
 #include "gamemap/LevelScript.h"
 #include "gamemap/LevelScriptRunner.h"
@@ -268,6 +269,7 @@ ODServer::~ODServer()
     delete mGameMap;
 }
 
+//! \brief Shows the loading picture while synchronously reading the level and starting the server.
 bool ODServer::startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer,
     bool relationships)
 {
@@ -291,6 +293,8 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         OD_LOG_INF("Couldn't start server: The client is already connected");
         return false;
     }
+
+    LoadingScreen loading;
 
     // Read in the map. The map loading should be happen here and not in the server thread to
     // make sure it is valid before launching the server.
@@ -446,7 +450,10 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
 
     // In single player, we use a default value for seats that can be chosen
     if(mServerMode != ServerMode::ModeGameSinglePlayer)
+    {
+        loading.continueLoading();
         return true;
+    }
 
     for(Seat* seat : gameMap->getSeats())
     {
@@ -473,6 +480,7 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
             seat->setConfigTeamId(availableTeamIds.front());
     }
 
+    loading.continueLoading();
     return true;
 }
 

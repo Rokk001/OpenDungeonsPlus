@@ -52,7 +52,7 @@ if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\ogre-configu
 foreach ($taskConfiguration in @('Release', 'Debug')) {
     Write-Output "Building and installing OGRE ($taskConfiguration)"
     $ErrorActionPreference = 'Continue'
-    & $taskCmake --build "$taskRoot\build\ogre" --config $taskConfiguration --target INSTALL --parallel 2 *> "$taskRoot\logs\ogre-$taskConfiguration.log"
+    & $taskCmake --build "$taskRoot\build\ogre" --config $taskConfiguration --target INSTALL --parallel 1 *> "$taskRoot\logs\ogre-$taskConfiguration.log"
     $ErrorActionPreference = 'Stop'
     if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\ogre-$taskConfiguration.log" -Tail 55; throw "OGRE $taskConfiguration build failed" }
 }

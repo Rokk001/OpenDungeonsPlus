@@ -18,50 +18,51 @@
 #ifndef MENUFLIGHT_H
 #define MENUFLIGHT_H
 
-//! \brief Timing and look of the camera flight shown when the main menu opens after the defeat debriefing.
-//! The main menu is a flat picture, so the "flight" is a zoom on that picture.
+#include <algorithm>
+#include <cmath>
+
+//! \brief Timing limits for the configured three-dimensional menu camera paths.
 namespace MenuFlightSettings
 {
-    //! Seconds from the start of the flight until the menu is usable
-    const float DURATION = 3.0f;
-    //! Size of the picture at the start, as a multiple of its normal size (1 is the normal menu view)
-    const float START_SCALE = 1.6f;
+    //! Default seconds until a menu destination is reached; authored routes supply their duration.
+    const float DURATION = 2.0f;
     //! Longest time step taken into account, so that a slow frame cannot skip the flight
     const float MAX_STEP = 0.25f;
 }
 
-//! \brief State of the menu flight: starts once per request, runs for DURATION, then stays finished.
+//! \brief Advances one configured camera path and rejects overlapping flight requests.
 class MenuFlight
 {
 public:
-    //! Progress from 0 (start) to 1 (end); times outside the flight are clamped
-    static float progressAt(float time)
+    //! \brief Returns clamped progress for a positive duration, or completion for an invalid duration.
+    static float progressAt(float time, float duration = MenuFlightSettings::DURATION)
     {
         if(time <= 0.0f)
             return 0.0f;
-        if(time >= MenuFlightSettings::DURATION)
+        if(duration <= 0.0f || time >= duration)
             return 1.0f;
-        return time / MenuFlightSettings::DURATION;
+        return time / duration;
     }
 
-    //! Size of the picture at a time: START_SCALE at the start, slowing down to exactly 1 at the end
-    static float scaleAt(float time)
+    //! \brief Returns smooth ease-in/out progress with zero speed at both endpoints.
+    static float easedProgressAt(float time, float duration = MenuFlightSettings::DURATION)
     {
-        const float remaining = 1.0f - progressAt(time);
-        return 1.0f + (MenuFlightSettings::START_SCALE - 1.0f) * remaining * remaining * remaining;
+        const float progress = progressAt(time, duration);
+        return progress * progress * (3.0f - 2.0f * progress);
     }
 
-    //! Starts the flight. Returns false (and changes nothing) while a flight is already running.
-    bool start()
+    //! \brief Starts a positive finite duration; returns false while another flight is running.
+    bool start(float duration = MenuFlightSettings::DURATION)
     {
-        if(mActive)
+        if(mActive || !std::isfinite(duration) || duration <= 0.0f)
             return false;
         mActive = true;
         mElapsed = 0.0f;
+        mDuration = duration;
         return true;
     }
 
-    //! Advances by a frame time (at most MAX_STEP). Returns true on the step that ends the flight.
+    //! \brief Advances by at most MAX_STEP and returns true on the step reaching the endpoint.
     bool advance(float elapsed)
     {
         if(!mActive)
@@ -70,30 +71,35 @@ public:
             elapsed = MenuFlightSettings::MAX_STEP;
         if(elapsed > 0.0f)
             mElapsed += elapsed;
-        if(mElapsed < MenuFlightSettings::DURATION)
+        if(mElapsed < mDuration)
             return false;
-        mElapsed = MenuFlightSettings::DURATION;
+        mElapsed = mDuration;
         mActive = false;
         return true;
     }
 
-    //! Stops the flight without finishing it (the menu scene is being freed)
+    //! \brief Stops the flight when its scene is freed.
     void reset()
     {
         mActive = false;
         mElapsed = 0.0f;
     }
 
+    //! \brief Returns whether a camera path is still advancing.
     bool isActive() const
     { return mActive; }
 
-    //! Current size of the picture: the normal size (1) unless a flight is running
-    float getScale() const
-    { return mActive ? scaleAt(mElapsed) : 1.0f; }
+    //! \brief Returns eased progress along the currently started path, including its final endpoint.
+    float getProgress() const
+    { return easedProgressAt(mElapsed, mDuration); }
 
 private:
+    //! Whether a path has an unfinished timer.
     bool mActive = false;
+    //! Seconds consumed by the current path.
     float mElapsed = 0.0f;
+    //! Duration supplied by the scene configuration.
+    float mDuration = MenuFlightSettings::DURATION;
 };
 
 #endif // MENUFLIGHT_H
