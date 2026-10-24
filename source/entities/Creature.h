@@ -241,6 +241,8 @@ public:
     //! \brief Client side. Takes over the appearance the server sent in the creature message of
     //! ServerNotificationType::creatureAppearance. Ignored on the server.
     void setAppearanceFromServer(const CreatureAppearance& appearance);
+    //! \brief Server side. The text of the stats window of the creature: characteristics (with hunger, urge and the dirt
+    //! it carries for a creature that is no worker) and debugging information.
     std::string getStatsText();
 
     //! \brief Client side. One line with the strongest friend and the worst enemy of a creature of the

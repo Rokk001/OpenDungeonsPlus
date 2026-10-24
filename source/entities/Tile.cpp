@@ -82,6 +82,7 @@ Tile::Tile(GameMap* gameMap, int x, int y, TileType type, double fullness) :
     mSelected           (false),
     mFullness           (fullness),
     mDirt               (0.0),
+    mDirtChanged        (false),
     mGoldDensity        (GOLD_DENSITY_DEFAULT),
     mRefundPriceRoom    (0),
     mRefundPriceTrap    (0),
@@ -1270,6 +1271,7 @@ void Tile::addDirt(double amount)
         return;
 
     mDirt = std::min(MAX_DIRT, mDirt + amount);
+    noteDirtChange();
 }
 
 void Tile::cleanDirt(double amount)
@@ -1278,11 +1280,22 @@ void Tile::cleanDirt(double amount)
         return;
 
     mDirt = std::max(0.0, mDirt - amount);
+    noteDirtChange();
 }
 
 void Tile::setDirt(double dirt)
 {
     mDirt = std::min(MAX_DIRT, std::max(0.0, dirt));
+    noteDirtChange();
+}
+
+void Tile::noteDirtChange()
+{
+    if(mDirtChanged || (getGameMap() == nullptr) || !getIsOnServerMap())
+        return;
+
+    mDirtChanged = true;
+    getGameMap()->getTileDirtSync().addChangedTile(this);
 }
 
 void Tile::setFullness(double f)
@@ -1291,8 +1304,11 @@ void Tile::setFullness(double f)
 
     mFullness = f;
     // A wall has no floor to be dirty
-    if(mFullness > 0.0)
+    if((mFullness > 0.0) && (mDirt > 0.0))
+    {
         mDirt = 0.0;
+        noteDirtChange();
+    }
     if(getIsOnServerMap())
         getGameMap()->markWallTorchesDirty();
 
@@ -2641,6 +2657,10 @@ std::string Tile::getStatsText()
     tempSS << "TileVisual : " << tileVisualToString(getTileVisual()) << std::endl;
     tempSS << "Fulness : " << getFullness() << std::endl;
     tempSS << "SeatID : " << ((getSeat() == nullptr) ? " NULL " : Helper::toString(getSeat()->getId())) << std::endl;
+    // The dirt of the room this tile belongs to
+    Room* dirtRoom = getCoveringRoom();
+    if((dirtRoom != nullptr) && TileDirtSync::isStageShown(dirtRoom->getType()))
+        tempSS << "Dirt: " << TileDirtSync::stageText(dirtRoom->getDirtStage()) << std::endl;
     if ( getSeat()!=nullptr )
         for(FloodFillType ft = static_cast<FloodFillType>(0) ; ft < FloodFillType::nbValues   ; ft = static_cast<FloodFillType>((size_t)ft + 1))
             tempSS << toString(ft) << ": " <<  getFloodFillValue(getSeat(), ft) << " \n"; 

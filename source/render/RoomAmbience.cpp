@@ -837,6 +837,65 @@ void RoomAmbience::notifyHatcheryGrain(const std::string& roomName, int32_t maxL
     }
 }
 
+int32_t RoomAmbience::getTileDirtStage(Tile* tile) const
+{
+    std::map<int64_t, int32_t>::const_iterator it = mDirtStages.find(
+        static_cast<int64_t>(tile->getX()) * 65536 + tile->getY());
+    if(it == mDirtStages.end())
+        return 0;
+
+    return it->second;
+}
+
+void RoomAmbience::notifyTileDirt(const std::string& text)
+{
+    // "x,y,stage;x,y,stage|roomName,stage;roomName,stage"
+    std::vector<std::string> parts = Helper::split(text, '|', true);
+    if(!parts.empty() && !text.empty() && (text[0] != '|'))
+    {
+        std::vector<std::string> entries = Helper::split(parts[0], ';', true);
+        for(const std::string& entry : entries)
+        {
+            std::vector<std::string> fields = Helper::split(entry, ',', true);
+            if(fields.size() != 3)
+                continue;
+
+            int64_t key = static_cast<int64_t>(Helper::toInt(fields[0])) * 65536 + Helper::toInt(fields[1]);
+            int32_t stage = Helper::toInt(fields[2]);
+            if(stage <= 0)
+                mDirtStages.erase(key);
+            else
+                mDirtStages[key] = stage;
+        }
+    }
+
+    // The room part follows the bar, it is the only part when the text starts with it
+    std::string roomPart;
+    if(!text.empty() && (text[0] == '|'))
+        roomPart = text.substr(1);
+    else if(parts.size() > 1)
+        roomPart = parts[1];
+
+    std::vector<std::string> roomEntries = Helper::split(roomPart, ';', true);
+    for(const std::string& entry : roomEntries)
+    {
+        std::vector<std::string> fields = Helper::split(entry, ',', true);
+        if(fields.size() != 2)
+            continue;
+
+        mRoomDirtStages[fields[0]] = Helper::toInt(fields[1]);
+    }
+}
+
+uint32_t RoomAmbience::getRoomDirtStage(const std::string& roomName) const
+{
+    std::map<std::string, int32_t>::const_iterator it = mRoomDirtStages.find(roomName);
+    if((it == mRoomDirtStages.end()) || (it->second <= 0))
+        return 0;
+
+    return static_cast<uint32_t>(it->second);
+}
+
 double RoomAmbience::getHeartRateFactor(const Ogre::Vector3& position) const
 {
     double best = 1.0;
@@ -1252,6 +1311,17 @@ void RoomAmbience::scanTiles(Ogre::Camera* camera, const Ogre::Vector3& cameraPo
                 // Grain that the hens have eaten is gone from the floor
                 if((effect.mGrainMin > 0) && (getGrainLevel(tile) < static_cast<int32_t>(effect.mGrainMin)))
                     continue;
+
+                // Dirt on the floor shows the stage the server told for the tile (a clean tile shows nothing)
+                if((effect.mDirtStage > 0) || (effect.mDirtStageMin > 0))
+                {
+                    const int32_t dirtStage = getTileDirtStage(tile);
+                    if((effect.mDirtStage > 0) && (dirtStage != static_cast<int32_t>(effect.mDirtStage)))
+                        continue;
+
+                    if((effect.mDirtStageMin > 0) && (dirtStage < static_cast<int32_t>(effect.mDirtStageMin)))
+                        continue;
+                }
 
                 if(effect.mNeedWall || effect.mWallSide)
                 {
@@ -1687,11 +1757,13 @@ void RoomAmbience::reconcile()
                 if(it->second.mSystem != nullptr)
                     it->second.mSystem->setEmitting(true);
             }
-            ++used;
+            if(!effect.mUnlimited)
+                ++used;
             continue;
         }
 
-        if(used >= budget)
+        // The floor decals of dirt do not use up the budget of the particle systems, they are limited by their distance
+        if(!effect.mUnlimited && (used >= budget))
             continue;
 
         Emitter emitter;
@@ -1716,7 +1788,8 @@ void RoomAmbience::reconcile()
         emitter.mPhase = hashPhase(key);
         emitter.mSeen = true;
         mEmitters.insert(std::make_pair(key, emitter));
-        ++used;
+        if(!effect.mUnlimited)
+            ++used;
     }
 
     for(std::map<std::string, Emitter>::iterator it = mEmitters.begin(); it != mEmitters.end(); ++it)

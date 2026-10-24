@@ -398,6 +398,7 @@ set(OD_SOURCEFILES
     ${SRC}/gamemap/SandboxMode.cpp
     ${SRC}/gamemap/MiniMapCamera.cpp
     ${SRC}/gamemap/TileContainer.cpp
+    ${SRC}/gamemap/TileDirtSync.cpp
     ${SRC}/gamemap/TileSet.cpp
 
     ${SRC}/giftboxes/GiftBoxBonus.cpp

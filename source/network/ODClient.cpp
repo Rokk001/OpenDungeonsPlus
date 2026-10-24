@@ -1121,6 +1121,17 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 break;
             }
 
+            if(event.is(CosmeticEventType::tileDirt))
+            {
+                // The dirt stages of the floor tiles and rooms in sight: the dirt decals and the room texts follow them
+                if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+                   (RoomAmbience::getSingletonPtr() != nullptr))
+                {
+                    RoomAmbience::getSingleton().notifyTileDirt(event.mText);
+                }
+                break;
+            }
+
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
                event.is(CosmeticEventType::keeperWealth) && (RenderManager::getSingletonPtr() != nullptr))
             {
