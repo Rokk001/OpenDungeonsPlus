@@ -1367,3 +1367,8 @@ materials/textures/Toilet????.png, materials/textures/Toilet????Normal.png   OD 
 materials/scripts/ToiletFloor.material   OD Team                 GPLv3+                  Written for this project (materials Toilet<mask> of the toilet room floor)
 particles/DirtFlies.particle           OD Team                 GPLv3+                  Written for this project (original work, only existing sprites)
 gui/ODIcons.png (ToiletButton)         OD Team                 GPLv3+                  Toilet icon drawn from simple shapes by tools/forged_motifs.py (m_toilet) and tools/generate_forged_icons.py; atlas row added, other icons unchanged
+sounds/Spatial/Creatures/Default/Relieve/FxRelieve01.ogg   OD Team   GPLv3+   Synthesized from sine waves and noise by tools/gen_dirt_sounds.py (own work, no recordings)
+sounds/Spatial/Creatures/Default/Clean/FxClean01.ogg       OD Team   GPLv3+   Synthesized from noise by tools/gen_dirt_sounds.py (own work, no recordings)
+sounds/Spatial/Rooms/Toilet/Flush/FxToiletFlush01.ogg      OD Team   GPLv3+   Synthesized from sine waves and noise by tools/gen_dirt_sounds.py (own work, no recordings)
+sounds/Spatial/Rooms/Toilet/Drip/FxToiletDrip01.ogg        OD Team   GPLv3+   Synthesized from sine waves by tools/gen_dirt_sounds.py (own work, no recordings)
+tools/gen_dirt_sounds.py   OD Team   GPLv3+   Original work
