@@ -21,6 +21,7 @@
 #include "entities/Creature.h"
 #include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
+#include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
 #include "utils/LogManager.h"
@@ -43,7 +44,8 @@ MissileOneHit::MissileOneHit(GameMap* gameMap, Seat* seat, const std::string& se
     mHasCreatureDamageRange(false), mCreatureStrength(1.0),
     mNotifyPlayerIfHit(notifyPlayerIfHit),
     mShotAttackRating(0.0),
-    mShotAttackerLevel(0)
+    mShotAttackerLevel(0),
+    mShotCritChance(0.0)
 {
     Creature* shooter = gameMap->getCreature(senderName);
     if(shooter != nullptr)
@@ -71,7 +73,8 @@ MissileOneHit::MissileOneHit(GameMap* gameMap) :
     mHasCreatureDamageRange(false), mCreatureStrength(1.0),
     mNotifyPlayerIfHit(false),
     mShotAttackRating(0.0),
-    mShotAttackerLevel(0)
+    mShotAttackerLevel(0),
+    mShotCritChance(0.0)
 {
 }
 
@@ -124,26 +127,42 @@ void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
             return;
         }
     }
+    // The shot is critical when its roll succeeds (rolled here, after the hit roll and the avoidance above): every
+    // damage value is multiplied before the defense of the target is subtracted
+    const bool critical = CombatDamage::rollCriticalChance(mShotCritChance);
+    const double criticalFactor = critical ? ConfigManager::getSingleton().getCritDamageMultiplier() : 1.0;
     double damageDone = 0.0;
-    double rawDamage = mPhysicalDamage + mMagicalDamage + mElementDamage;
+    double rawDamage = (mPhysicalDamage + mMagicalDamage + mElementDamage) * criticalFactor;
     if(mHasCreatureDamageRange && entity->getObjectType() == GameEntityType::creature)
     {
+        double phyMin = mPhysicalDamageMin, phyMax = mPhysicalDamageMax;
+        double magMin = mMagicalDamageMin, magMax = mMagicalDamageMax;
+        double eleMin = mElementDamageMin, eleMax = mElementDamageMax;
+        if(critical)
+            CombatDamage::applyCriticalToRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax);
         const double damage = CombatDamage::roll(*static_cast<Creature*>(entity),
-            mPhysicalDamageMin, mPhysicalDamageMax, mMagicalDamageMin, mMagicalDamageMax,
-            mElementDamageMin, mElementDamageMax, &rawDamage) * mCreatureStrength;
+            phyMin, phyMax, magMin, magMax, eleMin, eleMax, &rawDamage) * mCreatureStrength;
         rawDamage *= mCreatureStrength;
         damageDone = entity->takeDamage(this, damage, 0.0, 0.0, 0.0, tile, getKoEnemyCreature());
     }
     else
-        damageDone = entity->takeDamage(this, 0.0, mPhysicalDamage, mMagicalDamage, mElementDamage, tile,
-            getKoEnemyCreature());
+        damageDone = entity->takeDamage(this, 0.0, mPhysicalDamage * criticalFactor, mMagicalDamage * criticalFactor,
+            mElementDamage * criticalFactor, tile, getKoEnemyCreature());
     mHasHit = true;
 
     // Tell the clients what the shot did (cosmetic only, the damage above is already done)
     if(!mShooterName.empty() && (entity->getObjectType() == GameEntityType::creature))
     {
         Creature* creature = static_cast<Creature*>(entity);
-        creature->fireHitResult(mShooterName, damageDone, rawDamage, true);
+        creature->fireHitResult(mShooterName, damageDone, rawDamage, true, critical);
+    }
+    else if(critical && (damageDone > 0.0) && (tile != nullptr) && !mShooterName.empty())
+    {
+        // A critical shot on a building: the feedback plays on the shooter (if it is still there)
+        Creature* shooter = getGameMap()->getCreature(mShooterName);
+        if(shooter != nullptr)
+            shooter->fireCriticalOnStructure("missile", Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+                static_cast<Ogre::Real>(tile->getY()), 0.0f));
     }
 }
 
@@ -196,7 +215,7 @@ void MissileOneHit::exportToStream(std::ostream& os) const
     if(isCreatureShot() && mShotAttackerLevel != 0)
         os << "\tShotAccuracy\t" << mShotAttackRating << "\t" << mShotAttackerLevel << "\t"
             << (mShooterName.empty() ? "none" : mShooterName) << "\t"
-            << (mTargetName.empty() ? "none" : mTargetName);
+            << (mTargetName.empty() ? "none" : mTargetName) << "\tCritChance\t" << mShotCritChance;
 }
 
 //! \brief Reads optional launch accuracy while leaving old saves and derived missile suffixes readable.
@@ -258,6 +277,21 @@ bool MissileOneHit::importFromStream(std::istream& is)
             mShotAttackerLevel = attackerLevel;
             mShooterName = shooterName == "none" ? "" : shooterName;
             mTargetName = targetName == "none" ? "" : targetName;
+            // The critical chance of the shooter follows the accuracy; saves from before it have none (never critical)
+            const std::streampos critPosition = is.tellg();
+            std::string critMarker;
+            double critChance = 0.0;
+            if((is >> critMarker) && (critMarker == "CritChance"))
+            {
+                if(!(is >> critChance))
+                    return false;
+                mShotCritChance = critChance;
+            }
+            else
+            {
+                is.clear();
+                is.seekg(critPosition);
+            }
         }
         else
             is.seekg(accuracyPosition);

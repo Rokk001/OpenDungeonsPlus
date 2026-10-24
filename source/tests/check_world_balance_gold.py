@@ -68,13 +68,14 @@ assert re.search(r'GOLD_DENSITY_LOW = 50;', tile_source)
 assert re.search(r'GOLD_DENSITY_DEFAULT = 100;', tile_source)
 assert re.search(r'GOLD_DENSITY_HIGH = 150;', tile_source)
 
-gold_dig = function_body(tile_source, 'double Tile::digOutGold()')
+gold_dig = function_body(tile_source, 'double Tile::digOutGold(double stepFactor)')
 assert 'getGoldSeamTotal()' in gold_dig
 assert 'getGoldPerDigStep()' in gold_dig and 'mGoldDensity' in gold_dig and 'getGoldDensityPercent()' in gold_dig
 assert 'mFullness / 100.0 * total' in gold_dig                       # remaining gold from the fullness share
 assert '(remaining - step) / total * 100.0' in gold_dig              # fullness = remaining share in percent
 assert 'finishDigOut();' in gold_dig and 'return remaining;' in gold_dig  # the last step pays what is left
 assert 'getDigRate' not in gold_dig and 'digRate' not in gold_dig   # not worker dependent
+assert 'skirmishPercent / 100.0 * stepFactor;' in gold_dig           # only the factor of the caller (dig%, critical)
 seam_total = function_body(tile_source, 'double Tile::getGoldSeamTotal() const')
 assert 'getGoldPerSeamTile()' in seam_total and 'mGoldDensity' in seam_total and 'getGoldDensityPercent()' in seam_total
 # digOut stays as it is for tunnelling and every other wall
@@ -84,14 +85,14 @@ assert 'digOutGold' not in dig_out
 
 dig_action = read('source/creatureaction/CreatureActionDigTile.cpp')
 handle = function_body(dig_action, 'bool CreatureActionDigTile::handleDigTile(')
-assert 'if(tileDig.getType() == TileType::gold)' in handle and 'amountDug = tileDig.digOutGold();' in handle
-assert 'amountDug = tileDig.digOut(creature.getDigRate());' in handle
+assert 'if(tileDig.getType() == TileType::gold)' in handle and 'amountDug = tileDig.digOutGold(digFactor * criticalFactor);' in handle
+assert 'amountDug = tileDig.digOut(creature.getDigRate() * digFactor * criticalFactor);' in handle
 gold_case = handle[handle.index('case TileType::gold:'):handle.index('case TileType::gem:')]
 assert 'payMinedGold(creature, tileDig, amountDug);' in gold_case
 assert 'receiveExp(creature.getDigRate() / 20.0)' in gold_case          # XP per step stays as it was
 assert 'receiveExp(1.5 * creature.getDigRate() / 20.0)' in handle
 gem_case = handle[handle.index('case TileType::gem:'):handle.index('default:')]
-assert 'getGemGoldPerDigStep()' in gem_case and 'payMinedGold(creature, tileDig, gemGoldPerDigStep);' in gem_case
+assert 'getGemGoldPerDigStep()' in gem_case and 'payMinedGold(creature, tileDig, gemGoldPerDigStep * digFactor * criticalFactor);' in gem_case
 assert 'amountDug' not in gem_case and 'getGoldDensityPercent' not in gem_case   # fixed per step, not scaled
 assert 'creature.getGoldCarried() >= creature.getGoldCapacity()' in handle
 assert 'getMaxGoldCarryable' not in dig_action
@@ -109,7 +110,8 @@ assert creature_source.count('mGoldRemainder           (0.0),') == 2
 export = creature_source[creature_source.index('mWakefulness << "\\t" << mHunger'):]
 assert 'mGoldRemainder' not in export[:export.index('\n}\n')]             # the remainder is not saved
 capacity = function_body(creature_source, 'int32_t Creature::getGoldCapacity() const')
-assert 'return mDefinition->getMaxGoldCarryable();' in capacity
+assert 'const int32_t baseCapacity = mDefinition->getMaxGoldCarryable();' in capacity   # plan 4 extends the capacity
+assert 'getGoldCarryPerStrength()' in capacity and 'getSkillPassive("carry%")' in capacity
 readers = [path.name for path in (ROOT / 'source').rglob('*.cpp')
            if 'getMaxGoldCarryable()' in path.read_text(encoding='utf-8', errors='replace')
            and 'tests' not in path.parts]

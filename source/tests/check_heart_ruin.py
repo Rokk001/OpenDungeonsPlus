@@ -211,7 +211,7 @@ int main(){
 
  // The heart dies
  GameEntity attacker(&enemy);
- check(heart.takeHeartDamage(&attacker,99999,0,0,0,&centre)==10000,"lethal blow clamped to the heart health (10000, whatever the number of tiles)");
+ check(heart.takeHeartDamage(&attacker,99999,0,0,0,&centre)==15100,"lethal blow clamped to the heart health (15100, whatever the number of tiles)");
  check(heart.dead==1&&heart.getHP(nullptr)==0,"heart death fires once");
  check(g_rewards==1,"the destroying keeper gets the heart reward once");
  owner.computeSeatBeginTurn();
@@ -256,7 +256,7 @@ int main(){
 
  // Save and load of the destroyed state
  std::stringstream save;heart.exportToStream(save);save<<"[/Room]\n";
- check(save.str().find("HeartHealth10000 0")!=std::string::npos,"destroyed state is written with the room");
+ check(save.str().find("HeartHealthShare 0")!=std::string::npos,"destroyed state is written with the room");
  RoomDungeonTemple loaded(&map,&owner);RoomTreasuryTileData loadedCentre,loadedFloor;addFloor(loaded,&centre,&floor,&loadedCentre,&loadedFloor);
  check(loaded.importFromStream(save)&&loaded.getHP(nullptr)==0,"destroyed heart loads");
  std::string next;save>>next;check(next=="[/Room]","load keeps the room boundary");
@@ -274,13 +274,13 @@ int main(){
  // A damaged living heart still loads with its object
  {RoomDungeonTemple living(&map,&owner);RoomTreasuryTileData livingCentre,livingFloor;addFloor(living,&centre,&floor,&livingCentre,&livingFloor);
   std::stringstream damaged("250\nHeartHealth10000 100\n[/Room]\n");
-  check(living.importFromStream(damaged)&&living.getHP(nullptr)==100,"damaged heart round trip");
+  check(living.importFromStream(damaged)&&std::abs(living.getHP(nullptr)-151.0)<1e-9,"damaged heart of an old save keeps its share of the former maximum");
   int asked=g_removeAsked;living.updateActiveSpots(&map);living.restoreInitialEntityState();
   check(living.added==1&&living.mTempleObject!=nullptr&&living.restored==1,"living loaded heart gets its object back");
   check(g_removeAsked==asked&&errorsLogged==errorsBefore,"living loaded heart is not asked to disappear");
   // The research of the heart health: the maximum and the current health grow with the factor of the reached level
   gResearchHeartHP=1.698;living.doUpkeep();
-  check(std::abs(living.getHeartMaxHP()-16980.0)<1e-6&&living.mHeartHP>169.8&&living.mHeartHP<171.0,"the heart health research raises the maximum and the current health");
+  check(std::abs(living.getHeartMaxHP()-15100.0*1.698)<1e-6&&living.mHeartHP>256.0&&living.mHeartHP<258.0,"the heart health research raises the maximum and the current health");
   gResearchHeartHP=1.0;}
 
  // Removal is retried while a seat that saw the heart has no vision on it

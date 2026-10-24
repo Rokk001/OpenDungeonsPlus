@@ -25,6 +25,7 @@
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "sound/SoundEffectsManager.h"
+#include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
 #include <istream>
@@ -79,11 +80,21 @@ bool CreatureSkillExplosion::tryUseFight(GameMap& gameMap, Creature* creature, f
 
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
     // The damage follows the SkillDamageFactor of the creature type
-    const double damageFactor = creature->getDefinition()->getSkillDamageFactor();
+    double damageFactor = creature->getDefinition()->getSkillDamageFactor();
+    // A skill of the skill tree also scales with the level, the health tier and the spell passives of the creature
+    if(isTreeSkill())
+        damageFactor *= creature->getTreeSpellDamageFactor();
+    // The blast has no hit roll: it is critical when the roll succeeds, which multiplies its damage values (the
+    // magical defense of the target is subtracted from the multiplied values by the effect)
+    const bool critical = creature->rollCritical();
+    if(critical)
+        damageFactor *= ConfigManager::getSingleton().getCritDamageMultiplier();
     CreatureEffectExplosion* effect = new CreatureEffectExplosion(mEffectDuration, mEffectValue * damageFactor,
         "SpellCreatureExplosion");
     effect->setDamageMin(mEffectValueMin * damageFactor);
     attackedCreature->addCreatureEffect(effect);
+    if(critical)
+        attackedCreature->fireCriticalSpell(creature->getName());
 
     return true;
 }

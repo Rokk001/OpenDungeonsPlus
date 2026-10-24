@@ -25,6 +25,7 @@
 #include "entities/CreatureActivity.h"
 #include "entities/DefenceChance.h"
 #include "eventsystem/CreatureMoved.h"
+#include "creatureskill/CreatureSkillTree.h"
 #include "eventsystem/Subject.h"
 #include "game/CreatureAppearance.h"
 
@@ -36,6 +37,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 enum class RelationshipEvent;
 struct RelationshipCreatureState;
@@ -102,10 +104,26 @@ public:
     }
 
     const CreatureSkill* mSkill;
+    //! \brief Id of the skill tree entry the skill was made from (empty for a line of the creature definition)
+    std::string mTreeSkillId;
     //! \brief Turns left until the skill can be used again; fractions of a turn are possible (level scaled cooldown)
     double mCooldown;
     //! \brief Turns left of the warmup before the skill takes effect; fractions of a turn are kept like in mCooldown
     double mWarmup;
+};
+
+//! \brief Defense bonus of one running defense effect on the three damage channels.
+struct CreatureDefenseBonus
+{
+    CreatureDefenseBonus() :
+        mPhy(0.0),
+        mMag(0.0),
+        mEle(0.0)
+    {}
+
+    double mPhy;
+    double mMag;
+    double mEle;
 };
 
 //! Class used on server side to link creature effects (spells, slap, ...) with particle effects
@@ -152,6 +170,9 @@ public:
     virtual ~Creature();
 
     static const uint32_t NB_OVERLAY_HEALTH_VALUES;
+
+    //! \brief Number of steps of the mana ring: the clients are updated whenever the mana crosses a step
+    static const uint32_t MANA_RING_STEPS;
 
     //! The script of the aura of a possessed creature, which ends with the possession
     static const std::string POSSESSION_AURA_SCRIPT;
@@ -256,9 +277,9 @@ public:
     inline double getDigRate() const
     { return mDigRate; }
 
-    //! \brief Gets the current claim rate
-    inline double getClaimRate() const
-    { return mClaimRate; }
+    //! \brief Gets the current claim rate: the rate of the creature type and level times 1 + claim% / 100 (claim% passives
+    //! of the skill tree). Every reader of the claim rate uses this value.
+    double getClaimRate() const;
 
     //! \brief Gets pointer to the Weapon in left hand
     inline const Weapon* getWeaponL() const
@@ -454,6 +475,121 @@ public:
     double getAttackRating() const;
     //! \brief Returns defense rating at the current level, including both held items.
     double getDefenseRating() const;
+
+    //! \brief Returns the Strength attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getStrength() const;
+    //! \brief Returns the Dexterity attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getDexterity() const;
+    //! \brief Returns the Life attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getLife() const;
+    //! \brief Returns the Mana attribute: start value + points per level x (level - 1) + equipment bonus.
+    double getMana() const;
+    //! \brief Returns the Strength attribute level LA: 1 + (attribute - start value) / points per level, at least 1
+    //! (the creature level when the points per level are 0). Equals the creature level without equipment.
+    double getStrengthLevel() const;
+    //! \brief Returns the Dexterity attribute level LA (see getStrengthLevel).
+    double getDexterityLevel() const;
+    //! \brief Returns the Life attribute level LA (see getStrengthLevel).
+    double getLifeLevel() const;
+    //! \brief Returns the Mana attribute level LA (see getStrengthLevel).
+    double getManaLevel() const;
+    //! \brief Returns the critical chance bonus in percent that the carried items add.
+    double getEquipmentCritChance() const;
+    //! \brief Returns the critical chance in percent: CritChancePerDexterity x (start Dexterity of the type + equipment
+    //! Dexterity) + CritChancePerLevel x (level - 1) + CritChanceBonus of the type + crit passives + equipment
+    //! critical chance. There is no upper limit.
+    double getCritChance() const;
+    //! \brief Server side. Rolls once whether the next damage this creature causes is a critical hit (chance in
+    //! getCritChance()). The caller rolls it only for a landed, not avoided blow or for damage without a hit roll.
+    //! \return True if the damage is critical.
+    bool rollCritical() const;
+    //! \brief Returns the factor (1 + dig% / 100) of the dig% passives. It multiplies the dig rate on dirt and walls
+    //! and the gold of a dig step on gold and gem walls; the experience of a dig step does not use it.
+    double getDigFactor() const;
+    //! \brief Returns true if a carried item is a bow or a crossbow (its weapon type), which makes the
+    //! missile attack lines of the creature use the Dexterity attribute level.
+    bool carriesBowOrCrossbow() const;
+    //! \brief Returns the summed value of all ranked passive skills for the given stat ("hp%", "ar%", "dr%", "dmg%",
+    //! "spell%", "alldmg%", ...), 0 while the creature has no passive skill of that stat.
+    //! \param stat The passive stat name.
+    double getSkillPassive(const std::string& stat) const;
+
+    //! \brief Returns the size of the mana pool: Mana attribute (with equipment) x ManaPerPoint of the type.
+    double getMaxMana() const;
+    //! \brief Returns the mana the creature has right now (0 .. getMaxMana()).
+    double getCurrentMana() const;
+    //! \brief Sets the current mana, clamped to 0 .. getMaxMana(), and tells the clients when the mana ring changes.
+    //! \param mana The new current mana.
+    void setCurrentMana(double mana);
+    //! \brief Returns a mana cost after the manacost% passives: baseCost x (1 - manacost% / 100), never below 0.
+    //! \param baseCost The cost before the passives.
+    double getManaCost(double baseCost) const;
+    //! \brief Returns the mana the skill costs this creature now: the rank cost of a skill tree skill, the shot cost
+    //! of a caster's first MissileLaunch or of a second MissileLaunch line (all with manacost%), 0 for every free attack.
+    //! \param skill The skill or attack line to price.
+    double getSkillManaCost(const CreatureSkill& skill) const;
+    //! \brief Returns true if the current mana covers the cost of the skill (a free skill is always affordable).
+    //! \param skill The skill or attack line to check.
+    bool hasManaFor(const CreatureSkill& skill) const;
+    //! \brief Subtracts the mana cost of the skill; called when the skill or shot starts.
+    //! \param skill The skill or attack line that starts.
+    void payManaFor(const CreatureSkill& skill);
+    //! \brief Adds one turn of mana regeneration: max mana / (ManaRefillSeconds x turns per second), capped at max.
+    void regenerateMana();
+    //! \brief Returns the skill state of the creature (template, ranks, personal seed, reset counters).
+    inline const CreatureSkillTree::SkillBuild& getSkillBuild() const
+    { return mSkillBuild; }
+    //! \brief Returns the rank of the skill tree entry with the given id (0 when the creature has none).
+    uint32_t getSkillRank(const std::string& skillId) const;
+    //! \brief Returns the skill points the creature has earned so far (one per level from the first point level).
+    uint32_t getSkillPointsEarned() const;
+    //! \brief Returns the skill points the creature has spent (the free rank of the pre-skill does not count).
+    uint32_t getSkillPointsSpent() const;
+    //! \brief Returns the name of the template the creature follows, empty while it follows none.
+    std::string getSkillTemplateName() const;
+    //! \brief Returns the template name for the displays ("none" while the creature follows no template).
+    std::string getSkillPathText() const;
+    //! \brief Returns the ranked skills for the displays as "<name> <rank>, ..." ("none" while there are none).
+    std::string getSkillListText() const;
+    //! \brief Returns the attribute line of the displays: "Strength s - Dexterity d - Life l - Mana m -
+    //! Critical x.x %".
+    std::string getAttributeSummaryText() const;
+    //! \brief Returns the carried items for the displays as "<right> / <left>" ("none" for an empty hand).
+    std::string getEquipmentText() const;
+    //! \brief Fills what the skill rules need to know about the type of the creature.
+    CreatureSkillTree::TypeInfo getSkillTypeInfo() const;
+    //! \brief Counts one eaten chicken for the skill reset (server side).
+    void registerChickenEaten();
+    //! \brief Returns the heal amount of 100 percent of a heal skill: the MinHP times the damage multiplier of the
+    //! Mana attribute level.
+    double getHealBase() const;
+    //! \brief Returns the factor on the damage of a damage skill of the skill tree: damage multiplier of the level,
+    //! own MinHP divided by SkillSpellReferenceMinHP, and the spell% and alldmg% passives.
+    double getTreeSpellDamageFactor() const;
+    //! \brief Arms the next melee blow against a creature to do its damage times the factor.
+    void armStrike(double factor);
+    //! \brief True while a melee blow is armed.
+    bool isStrikeArmed() const;
+    //! \brief Returns the factor of the armed melee blow and unarms it (1 when none is armed).
+    double consumeStrikeMultiplier();
+    //! \brief Returns the own creatures (same seat, alive, on the map) within the radius in tiles, the creature itself
+    //! included.
+    std::vector<Creature*> getOwnCreaturesWithin(double radius) const;
+    //! \brief True when a running effect of the creature was made by the skill or spell with the given source id.
+    bool hasActiveEffectSource(const std::string& sourceId) const;
+
+    //! \brief Sets the factor of a running strength effect; the strength modifier is the product of all factors.
+    void setStrengthContribution(const CreatureEffect* source, double factor);
+    //! \brief Removes the factor of a strength effect that ended.
+    void removeStrengthContribution(const CreatureEffect* source);
+    //! \brief Sets the factor of a running speed effect; the speed modifier is the product of all factors.
+    void setSpeedContribution(const CreatureEffect* source, double factor);
+    //! \brief Removes the factor of a speed effect that ended.
+    void removeSpeedContribution(const CreatureEffect* source);
+    //! \brief Sets the bonus of a running defense effect; the defense modifier is the sum of all bonuses.
+    void setDefenseContribution(const CreatureEffect* source, double phy, double mag, double ele);
+    //! \brief Removes the bonus of a defense effect that ended.
+    void removeDefenseContribution(const CreatureEffect* source);
 
     //! \brief Check whether a creature has earned one level. If yes, handle leveling it up
     void checkLevelUp();
@@ -769,8 +905,19 @@ public:
     void fireCosmeticEvent(int32_t type, int32_t value, int32_t value2, bool alliedOnly);
     //! \brief This creature was just hit by a blow or a shot of the attacker (cosmetic event hitResult). damageDone
     //! is what takeDamage returned and rawDamage the damage before the defense; missile tells a shot from a
-    //! melee blow. Only reports what the damage calculation gave, it changes nothing.
-    void fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile);
+    //! melee blow. Only reports what the damage calculation gave, it changes nothing. With critical set, a blow that
+    //! did damage is reported as CosmeticHitResult::critical instead of hit or glanced.
+    void fireHitResult(const std::string& attackerName, double damageDone, double rawDamage, bool missile,
+        bool critical = false);
+    //! \brief Tells the keepers who see this creature that it landed a critical hit on a building or a wall (cosmetic
+    //! event hitResult with the value critical and an empty mObject, so the client plays the feedback on this creature).
+    //! \param kind "melee", "missile" or "dig" (mText of the event).
+    //! \param position The position of the struck building or wall tile.
+    void fireCriticalOnStructure(const std::string& kind, const Ogre::Vector3& position);
+    //! \brief This creature was just hit by a critical spell or area damage of the attacker (cosmetic event hitResult
+    //! with the value critical, mText "spell"). Used where the damage is done later by an effect, so there is no
+    //! damage share to report. Only reports, it changes nothing.
+    void fireCriticalSpell(const std::string& attackerName);
     //! \brief Reports a missed melee blow or missile without changing combat timing.
     void fireHitMissed(const std::string& attackerName, bool missile = true);
     //! \brief Server: this creature is about to strike at the target in the given direction and turns to it first
@@ -861,7 +1008,9 @@ public:
     inline void addGoldCarried(int32_t gold)
     { mGoldCarried += gold; }
 
-    //! \brief Returns how much gold the creature can carry before it has to haul it to a treasury (MaxGoldCarryable)
+    //! \brief Returns how much gold the creature can carry before it has to haul it to a treasury: MaxGoldCarryable
+    //! x (1 + GoldCarryPerStrength x (Strength - start Strength)) x (1 + carry% / 100), rounded down (0 for a
+    //! creature that cannot carry gold).
     int32_t getGoldCapacity() const;
 
     //! \brief Adds mined gold that may have a fraction. The whole part is added to the carried gold, the rest stays in
@@ -1101,7 +1250,7 @@ public:
     void flee();
 
     //! \brief Makes the creature run away from fearTile for nbTurns turns (fear trap)
-    void fleeFromTile(Tile* fearTile, int32_t nbTurns);
+    void fleeFromTile(Tile* fearTile, double nbTurns);
 
     //! \brief Stuns the creature for nbTurns turns (lightning trap). A stunned creature does nothing,
     //! like a creature that was just dropped. Does nothing if the creature is dead or already KO.
@@ -1288,6 +1437,12 @@ private:
 
     //! \brief Counter to let the creature stay some turns after its death
     unsigned int    mDeathCounter;
+    //! \brief Current mana. Starts full, regenerates every turn, is saved and sent to the clients
+    double          mMana;
+    //! \brief True when the mana was read from a save, so the creature does not start with a full pool
+    bool            mManaFromSave;
+    //! \brief Server side: the mana ring step (0 .. MANA_RING_STEPS) the clients were last told about
+    uint32_t        mManaRingStepNotified;
     //! \brief Server side. Turns since the champion was summoned (see handleChampionUpkeep), not saved
     uint32_t        mChampionTurns;
     int             mJobCooldown;
@@ -1498,6 +1653,50 @@ private:
 
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;
+
+    //! \brief Skill points spent, template, ranks and reset counters of the skill tree (saved and sent to clients)
+    CreatureSkillTree::SkillBuild mSkillBuild;
+    //! \brief The active skills made from the skill tree ranks; owned by the creature (server side)
+    std::vector<CreatureSkill*> mTreeSkills;
+    //! \brief True when the ranks changed and mSkillData has to be rebuilt at the start of the next turn
+    bool mTreeSkillsDirty = false;
+    //! \brief Damage factor of the armed melee blow (1 when no blow is armed)
+    double mStrikeMultiplier = 1.0;
+    //! \brief Factors of the running strength effects; the strength modifier is their product
+    std::map<const CreatureEffect*, double> mStrengthContributions;
+    //! \brief Factors of the running speed effects; the speed modifier is their product
+    std::map<const CreatureEffect*, double> mSpeedContributions;
+    //! \brief Bonuses of the running defense effects; the defense modifier is their sum
+    std::map<const CreatureEffect*, CreatureDefenseBonus> mDefenseContributions;
+
+    //! \brief Starts the skill build of a new creature (personal seed, free rank of the pre-skill) and spends the points
+    //! it has earned (server side). Does nothing for a creature whose build was started or loaded.
+    void initSkillBuild();
+    //! \brief Spends the skill points the level pays for; chooses the template at the first point (server side).
+    void updateSkillPoints();
+    //! \brief Counts the own creatures of the skill group per template (the creature itself included once it chose).
+    //! \param followers Receives one count per template of the group.
+    void countTemplateFollowers(std::vector<uint32_t>& followers) const;
+    //! \brief Lets the reset window run, resets the skills when the conditions are met and rebuilds the active skills
+    //! after a change of the ranks (server side, at the start of every turn).
+    void upkeepSkillTree();
+    //! \brief Replaces the skills made from the skill tree in mSkillData by the ones of the current ranks.
+    void rebuildTreeSkills();
+    //! \brief Creates the active skill of a skill tree entry at its rank.
+    //! \return The skill (owned by the creature), nullptr when the entry has no active skill.
+    CreatureSkill* createTreeSkill(const std::string& skillId, uint32_t rank) const;
+    //! \brief Writes the skill build for clients.
+    void exportSkillBuildToPacket(ODPacket& os) const;
+    //! \brief Reads the skill build sent by exportSkillBuildToPacket.
+    void importSkillBuildFromPacket(ODPacket& is);
+    //! \brief Multiplies the three move speeds by the move% passives of the skills.
+    void applyMovePassive();
+    //! \brief Recomputes the strength modifier as the product of the factors of all running strength effects.
+    void updateStrengthModifier();
+    //! \brief Recomputes the speed modifier as the product of the factors of all running speed effects.
+    void updateSpeedModifier();
+    //! \brief Recomputes the defense modifier as the sum of the bonuses of all running defense effects.
+    void updateDefenseModifier();
 
     //! \brief Turns left until the creature can attack again (may be a fraction of a turn)
     double mAttackRecoveryTurns = 0.0;

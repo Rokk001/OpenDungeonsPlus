@@ -23,6 +23,7 @@
 #include <string>
 
 class Creature;
+class CreatureEffect;
 class GameEntity;
 class GameMap;
 class Tile;
@@ -35,7 +36,8 @@ public:
     // Constructors
     CreatureSkill() :
         mCooldownNbTurns(0),
-        mWarmupNbTurns(0)
+        mWarmupNbTurns(0),
+        mTreeManaCost(0.0)
     {}
 
     virtual ~CreatureSkill()
@@ -80,14 +82,45 @@ public:
     //! \brief Returns the format string (including specific additional parameters)
     virtual void getFormatString(std::string& format) const;
 
+    //! \brief Marks the skill as the active skill of a skill tree entry of the creature that owns it. Skills made
+    //! from the skill tree are created per creature and rank; they are not part of the creature definition.
+    //! \param id The id of the skill tree entry (e.g. BLK_C3 or T4_Orc).
+    //! \param manaCost The mana cost of the rank (before the manacost% passives).
+    inline void setTreeSkill(const std::string& id, double manaCost)
+    {
+        mTreeSkillId = id;
+        mTreeManaCost = manaCost;
+    }
+
+    //! \brief True when the skill was made from a skill tree entry (see setTreeSkill).
+    inline bool isTreeSkill() const
+    { return !mTreeSkillId.empty(); }
+
+    //! \brief Returns the id of the skill tree entry the skill was made from (empty for a line of the definition).
+    inline const std::string& getTreeSkillId() const
+    { return mTreeSkillId; }
+
+    //! \brief Returns the mana cost of a skill made from a skill tree entry (0 for every other skill).
+    inline double getTreeManaCost() const
+    { return mTreeManaCost; }
+
     //! \brief Write skill data to the given stream
     virtual void exportToStream(std::ostream& os) const;
     //! \brief Read skills data. Returns true if loading is OK and false otherwise
     virtual bool importFromStream(std::istream& is);
 
+protected:
+    //! \brief Gives an effect that a skill of the skill tree creates the id of that skill, so that casting the same
+    //! skill again only refreshes the running effect (other skills and spells stay separate effects).
+    void tagEffect(CreatureEffect* effect) const;
+
 private:
     uint32_t mCooldownNbTurns;
     uint32_t mWarmupNbTurns;
+    //! \brief Id of the skill tree entry the skill was made from (empty when it is a line of the definition)
+    std::string mTreeSkillId;
+    //! \brief Mana cost of the rank of a skill tree skill
+    double mTreeManaCost;
 };
 
 #endif // CREATURESKILL_H

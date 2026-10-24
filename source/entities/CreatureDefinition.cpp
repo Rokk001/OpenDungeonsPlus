@@ -86,6 +86,20 @@ CreatureDefinition::CreatureDefinition(
         mWalkClipRate (1.0),
         mWalkHurtClipRate (-1.0),
         mSkillDamageFactor (1.0),
+        mStrength (20.0),
+        mDexterity (20.0),
+        mLife (20.0),
+        mMana (20.0),
+        mStrengthPerLevel (1.0),
+        mDexterityPerLevel (2.0),
+        mLifePerLevel (1.0),
+        mManaPerLevel (1.0),
+        mManaPerPoint (1.5),
+        mCritChanceBonus (0.0),
+        mSkillGroup ("none"),
+        mSkillFamily ("none"),
+        mPreSkill ("none"),
+        mTierFourSkill ("none"),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -150,6 +164,20 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mWalkClipRate(def.mWalkClipRate),
         mWalkHurtClipRate(def.mWalkHurtClipRate),
         mSkillDamageFactor(def.mSkillDamageFactor),
+        mStrength(def.mStrength),
+        mDexterity(def.mDexterity),
+        mLife(def.mLife),
+        mMana(def.mMana),
+        mStrengthPerLevel(def.mStrengthPerLevel),
+        mDexterityPerLevel(def.mDexterityPerLevel),
+        mLifePerLevel(def.mLifePerLevel),
+        mManaPerLevel(def.mManaPerLevel),
+        mManaPerPoint(def.mManaPerPoint),
+        mCritChanceBonus(def.mCritChanceBonus),
+        mSkillGroup(def.mSkillGroup),
+        mSkillFamily(def.mSkillFamily),
+        mPreSkill(def.mPreSkill),
+        mTierFourSkill(def.mTierFourSkill),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -347,6 +375,18 @@ std::string CreatureDefinition::creatureJobToString(CreatureJob c)
     }
 }
 
+//! \brief Returns true if the skill is the first Melee or MissileLaunch line of the skill list.
+bool CreatureDefinition::isFirstAttackSkill(const CreatureSkill* skill) const
+{
+    for(const CreatureSkill* candidate : mCreatureSkills)
+    {
+        const std::string& name = candidate->getSkillName();
+        if(name == "Melee" || name == "MissileLaunch")
+            return candidate == skill;
+    }
+    return false;
+}
+
 int32_t CreatureDefinition::getFee(unsigned int level) const
 {
     return mFeeBase + (mFeePerLevel * level);
@@ -398,6 +438,20 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mWalkClipRate;
     os << c->mWalkHurtClipRate;
     os << c->mSkillDamageFactor;
+    os << c->mStrength;
+    os << c->mDexterity;
+    os << c->mLife;
+    os << c->mMana;
+    os << c->mStrengthPerLevel;
+    os << c->mDexterityPerLevel;
+    os << c->mLifePerLevel;
+    os << c->mManaPerLevel;
+    os << c->mManaPerPoint;
+    os << c->mCritChanceBonus;
+    os << c->mSkillGroup;
+    os << c->mSkillFamily;
+    os << c->mPreSkill;
+    os << c->mTierFourSkill;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -450,6 +504,20 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mWalkClipRate;
     is >> c->mWalkHurtClipRate;
     is >> c->mSkillDamageFactor;
+    is >> c->mStrength;
+    is >> c->mDexterity;
+    is >> c->mLife;
+    is >> c->mMana;
+    is >> c->mStrengthPerLevel;
+    is >> c->mDexterityPerLevel;
+    is >> c->mLifePerLevel;
+    is >> c->mManaPerLevel;
+    is >> c->mManaPerPoint;
+    is >> c->mCritChanceBonus;
+    is >> c->mSkillGroup;
+    is >> c->mSkillFamily;
+    is >> c->mPreSkill;
+    is >> c->mTierFourSkill;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -635,6 +703,86 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mSkillDamageFactor = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "Strength")
+            {
+                defFile >> nextParam;
+                creatureDef->mStrength = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "Dexterity")
+            {
+                defFile >> nextParam;
+                creatureDef->mDexterity = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "Life")
+            {
+                defFile >> nextParam;
+                creatureDef->mLife = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "Mana")
+            {
+                defFile >> nextParam;
+                creatureDef->mMana = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "StrengthPerLevel")
+            {
+                defFile >> nextParam;
+                creatureDef->mStrengthPerLevel = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "DexterityPerLevel")
+            {
+                defFile >> nextParam;
+                creatureDef->mDexterityPerLevel = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "LifePerLevel")
+            {
+                defFile >> nextParam;
+                creatureDef->mLifePerLevel = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "ManaPerLevel")
+            {
+                defFile >> nextParam;
+                creatureDef->mManaPerLevel = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "ManaPerPoint")
+            {
+                defFile >> nextParam;
+                creatureDef->mManaPerPoint = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "CritChanceBonus")
+            {
+                defFile >> nextParam;
+                creatureDef->mCritChanceBonus = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "SkillGroup")
+            {
+                defFile >> creatureDef->mSkillGroup;
+                continue;
+            }
+            else if (nextParam == "SkillFamily")
+            {
+                defFile >> creatureDef->mSkillFamily;
+                continue;
+            }
+            else if (nextParam == "PreSkill")
+            {
+                defFile >> creatureDef->mPreSkill;
+                continue;
+            }
+            else if (nextParam == "TierFourSkill")
+            {
+                defFile >> creatureDef->mTierFourSkill;
                 continue;
             }
             else if (nextParam == "MeshName")
@@ -970,6 +1118,35 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if((def1 == nullptr) ? (def2->mSkillDamageFactor != 1.0) : (def1->mSkillDamageFactor != def2->mSkillDamageFactor))
         file << "    SkillDamageFactor\t" << def2->mSkillDamageFactor << std::endl;
+
+    if((def1 == nullptr) ? (def2->mStrength != 20.0) : (def1->mStrength != def2->mStrength))
+        file << "    Strength\t" << def2->mStrength << std::endl;
+    if((def1 == nullptr) ? (def2->mDexterity != 20.0) : (def1->mDexterity != def2->mDexterity))
+        file << "    Dexterity\t" << def2->mDexterity << std::endl;
+    if((def1 == nullptr) ? (def2->mLife != 20.0) : (def1->mLife != def2->mLife))
+        file << "    Life\t" << def2->mLife << std::endl;
+    if((def1 == nullptr) ? (def2->mMana != 20.0) : (def1->mMana != def2->mMana))
+        file << "    Mana\t" << def2->mMana << std::endl;
+    if((def1 == nullptr) ? (def2->mStrengthPerLevel != 1.0) : (def1->mStrengthPerLevel != def2->mStrengthPerLevel))
+        file << "    StrengthPerLevel\t" << def2->mStrengthPerLevel << std::endl;
+    if((def1 == nullptr) ? (def2->mDexterityPerLevel != 2.0) : (def1->mDexterityPerLevel != def2->mDexterityPerLevel))
+        file << "    DexterityPerLevel\t" << def2->mDexterityPerLevel << std::endl;
+    if((def1 == nullptr) ? (def2->mLifePerLevel != 1.0) : (def1->mLifePerLevel != def2->mLifePerLevel))
+        file << "    LifePerLevel\t" << def2->mLifePerLevel << std::endl;
+    if((def1 == nullptr) ? (def2->mManaPerLevel != 1.0) : (def1->mManaPerLevel != def2->mManaPerLevel))
+        file << "    ManaPerLevel\t" << def2->mManaPerLevel << std::endl;
+    if((def1 == nullptr) ? (def2->mManaPerPoint != 1.5) : (def1->mManaPerPoint != def2->mManaPerPoint))
+        file << "    ManaPerPoint\t" << def2->mManaPerPoint << std::endl;
+    if((def1 == nullptr) ? (def2->mCritChanceBonus != 0.0) : (def1->mCritChanceBonus != def2->mCritChanceBonus))
+        file << "    CritChanceBonus\t" << def2->mCritChanceBonus << std::endl;
+    if((def1 == nullptr) ? (def2->mSkillGroup != "none") : (def1->mSkillGroup != def2->mSkillGroup))
+        file << "    SkillGroup\t" << def2->mSkillGroup << std::endl;
+    if((def1 == nullptr) ? (def2->mSkillFamily != "none") : (def1->mSkillFamily != def2->mSkillFamily))
+        file << "    SkillFamily\t" << def2->mSkillFamily << std::endl;
+    if((def1 == nullptr) ? (def2->mPreSkill != "none") : (def1->mPreSkill != def2->mPreSkill))
+        file << "    PreSkill\t" << def2->mPreSkill << std::endl;
+    if((def1 == nullptr) ? (def2->mTierFourSkill != "none") : (def1->mTierFourSkill != def2->mTierFourSkill))
+        file << "    TierFourSkill\t" << def2->mTierFourSkill << std::endl;
 
     if(def1 == nullptr || (def1->mMeshName.compare(def2->mMeshName) != 0))
         file << "    MeshName\t" << def2->mMeshName << std::endl;

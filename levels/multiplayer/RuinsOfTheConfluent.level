@@ -2201,6 +2201,19 @@ NatureMonster	5
     AttackRating	233
     DefenseRating	78
     Avoidance	none
+    Strength	30
+    Dexterity	20
+    Life	25
+    Mana	10
+    StrengthPerLevel	2
+    DexterityPerLevel	1
+    LifePerLevel	1
+    ManaPerLevel	1
+    ManaPerPoint	1
+    SkillGroup	blocker
+    SkillFamily	vermin
+    PreSkill	none
+    TierFourSkill	T4_Scarab
     [/Stats]
     [RoomAffinity]
     TrainingHall	100	1.2
@@ -2242,16 +2255,6 @@ NatureMonster	5
     HatedCompany	43	-10
     [/MoodModifiers]
     [CreatureSkills]
-    # SkillName	CooldownNbTurns	WarmupNbTurns	RangeMax	LevelMin	EffectDuration	EffectValue
-    Slow	30	1	6	5	10	0.8
-    # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	EffectDuration	EffectValue
-    HealSelf	35	1	8	5	2.05
-    # SkillName	CooldownNbTurns	WarmupNbTurns	RangeMax	LevelMin	EffectDuration	EffectValue	EffectValueMin
-    Explosion	40	2	6	12	1	30.75	20.5
-    # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	EffectDuration	PhyDef	MagDef	EleDef
-    DefenseSelf	45	2	15	25	3	3	3
-    # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	EffectDuration	EffectValue
-    StrengthSelf	55	2	18	20	1.15
     # SkillName	CooldownNbTurns	WarmupNbTurns	LevelMin	PhyAtk	PhyAtkPerLvl	MagAtk	MagAtkPerLvl	EleAtk	EleAtkPerLvl	PhyMin	PhyMax	MagMin	MagMax	EleMin	EleMax
     Melee	2	1	1	0	0	16	0.31	0	0	0	0	79.05	118.53	0	0
     [/CreatureSkills]

@@ -87,7 +87,7 @@ bool CreatureActionFlee::handleFlee(Creature& creature, int32_t nbTurns)
     return false;
 }
 
-bool CreatureActionFlee::handleFear(Creature& creature, int32_t nbTurns, int32_t fearTurns, Tile* fearTile)
+bool CreatureActionFlee::handleFear(Creature& creature, int32_t nbTurns, double fearTurns, Tile* fearTile)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)

@@ -52,6 +52,53 @@ inline double combatStat(double base, double perLevel, uint32_t level, double (*
     return std::max(base + (level - 1) * perLevel, base * multiplier(level));
 }
 
+//! \brief Returns the damage multiplier for a fractional attribute level: the same curve as damageMultiplier, but
+//! without the upper limit of level 30 (a level below 1 counts as 1).
+//! \param level The attribute level LA (may be fractional and above 30).
+inline double damageMultiplierAt(double level)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    return 1.0 + config.getCreatureDamageGrowth() *
+        std::pow(std::max(1.0, level) - 1.0, config.getCreatureDamageExponent());
+}
+
+//! \brief Returns the health multiplier for a fractional attribute level: the same curve as hpMultiplier, but
+//! without the upper limit of level 30 (a level below 1 counts as 1).
+//! \param level The attribute level LA (may be fractional and above 30).
+inline double hpMultiplierAt(double level)
+{
+    const double steps = std::max(1.0, level) - 1.0;
+    return damageMultiplierAt(level) * (1.0 + ConfigManager::getSingleton().getCreatureHpGrowthPerLevel() * steps);
+}
+
+//! \brief Returns the attack rating multiplier for a fractional attribute level, without the upper limit of level 30
+//! (a level below 1 counts as 1).
+//! \param level The attribute level LA (may be fractional and above 30).
+inline double attackRatingMultiplierAt(double level)
+{
+    return std::max(1.0, level);
+}
+
+//! \brief Returns the defense rating multiplier for a fractional attribute level, without the upper limit of level 30
+//! (a level below 1 counts as 1).
+//! \param level The attribute level LA (may be fractional and above 30).
+inline double defenseRatingMultiplierAt(double level)
+{
+    return std::max(1.0, level);
+}
+
+//! \brief Returns the larger of linear growth and the supplied combat curve at a fractional attribute level, without
+//! the upper limit of level 30 (a level below 1 counts as 1); at whole levels 1 to 30 it equals combatStat.
+//! \param base The stat at level 1.
+//! \param perLevel The linear growth per level.
+//! \param level The attribute level LA (may be fractional and above 30).
+//! \param multiplier The curve to apply to the base stat (damageMultiplierAt, hpMultiplierAt, ...).
+inline double combatStatAt(double base, double perLevel, double level, double (*multiplier)(double))
+{
+    level = std::max(1.0, level);
+    return std::max(base + (level - 1.0) * perLevel, base * multiplier(level));
+}
+
 //! Returns the factor by which a creature's base power grows at the given level: 1 at level 1 and
 //! 6 at the highest level. The levels are clamped to 1..MAX_POWER_LEVEL.
 inline double powerMultiplier(uint32_t level)

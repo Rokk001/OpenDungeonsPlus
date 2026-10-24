@@ -52,7 +52,7 @@ known = function_body(event_cpp, 'bool CosmeticEvent::isKnownType() const')
 assert 'CosmeticEventType::roomTakeover' in known and 'CosmeticEventType::hitResult' in known
 # The old result numbers remain stable; shield blocking follows the existing avoidance results.
 results = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticHitResult')[1].split('};')[0], re.M)
-assert results == [('hit', '0'), ('glanced', '1'), ('blocked', '2'), ('missed', '3'), ('dodged', '4'), ('parried', '5'), ('shieldBlocked', '6')], results
+assert results == [('hit', '0'), ('glanced', '1'), ('blocked', '2'), ('missed', '3'), ('dodged', '4'), ('parried', '5'), ('shieldBlocked', '6'), ('critical', '7')], results
 assert 'CosmeticEventType::casinoResult' in known and 'CosmeticEventType::keeperWealth' in known
 
 # Server: emitters in the damage places, serverauthoritative, no change of damage or timing
@@ -68,13 +68,13 @@ assert 'CosmeticHitResult::missed' in miss and 'getHitEvents()' in miss and 'tak
 assert 'event.mText = missile ? "missile" : "melee";' in miss
 assert 'void fireHitResult(' in creature_h and 'void fireHitMissed(' in creature_h
 melee_body = function_body(melee, 'bool CreatureSkillMeleeFight::tryUseFight(')
-assert 'target->fireHitResult(creature->getName(), damageDone, rawDamage, false);' in melee_body
+assert 'target->fireHitResult(creature->getName(), damageDone, rawDamage, false, critical);' in melee_body
 assert 'target->fireHitDefended(creature->getName(), defence);' in melee_body
 # After the damage was calculated, before the older kind; the older kind is still sent for clients without hitResult
 assert melee_body.index('takeDamage(') < melee_body.index('fireHitResult(') < melee_body.index('CosmeticEventType::meleeResult')
 hurt = function_body(one_hit, 'void MissileOneHit::hurt(')
 assert hurt.index('takeDamage(') < hurt.index('fireHitResult(') and 'mHasHit = true;' in hurt
-assert 'fireHitResult(mShooterName, damageDone, rawDamage, true)' in hurt
+assert 'fireHitResult(mShooterName, damageDone, rawDamage, true, critical)' in hurt
 assert hurt.index('rollAttackHit(') < hurt.index('rollMeleeDefence(true)') < hurt.index('CombatDamage::roll(')
 assert 'fireHitMissed(mShooterName, true)' in hurt and 'fireHitDefended(mShooterName, defence, true)' in hurt
 assert 'hurt(tile, entity);' in function_body(one_hit, 'bool MissileOneHit::hitCreature(')

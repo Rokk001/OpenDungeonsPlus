@@ -24,6 +24,7 @@ for text in ('entityAttack.getObjectType() == GameEntityType::creature',
              'mNeedFireRefresh = true;', 'decreaseWakefulness(0.5);', 'receiveExp(1.5);'):
     assert text in method, text
 assert method.index('fireAttackTurn(') < method.index('setAnimationState(') < method.index('tryUseFight(')
+assert method.index('payManaFor(*skillData.mSkill)') < method.index('tryUseFight(')
 assert method.index('tryUseFight(') < method.index('skillData.mWarmup +=') < method.index('skillData.mCooldown +=')
 assert 'rollAttackHit' not in method and 'takeDamage' not in method, 'hit resolution stays in the individual skills'
 if '--probe' not in sys.argv:
@@ -62,6 +63,8 @@ struct Creature {
     std::string animation;int sounds=0,turns=-1;double tired=0,xp=0;
     double mAttackRecoveryDuration=0,mAttackRecoveryTurns=0;int mAttackRecoverySerial=0;bool mNeedFireRefresh=false;
     double getAppliedCooldownNbTurns(const Skill& s)const{return s.getCooldownNbTurns();}
+    // The mock counts the mana payments of useAttack (the real method pays the skill cost when the attack starts).
+    int manaPaid=0;void payManaFor(const Skill&){++manaPaid;}
     const Ogre::Vector3& getPosition()const{return position;}
     Tile* getPositionTile(){return &tile;}GameMap* getGameMap(){return &map;}
     void setAnimationState(const std::string& a,bool,const Ogre::Vector3& d,bool){animation=a;direction=d;}
@@ -82,6 +85,7 @@ int main(){int checks=0,failures=0;std::function<void(bool)> check=[&](bool v){+
     check(data.mWarmup==2 && data.mCooldown==3);
     check(c.mAttackRecoveryDuration==3 && c.mAttackRecoveryTurns==3 && c.mAttackRecoverySerial==1 && c.mNeedFireRefresh);
     check(c.sounds==1 && c.turns==0 && c.tired==.5 && c.xp==1.5);
+    check(c.manaPaid==1);
  }
  for(double maximum:{1.,7.})for(const Ogre::Vector3 offset:{Ogre::Vector3(.3f,.2f,0),Ogre::Vector3(-.3f,-.2f,0)}){
     Creature c;c.position={.1f,-.1f,0};Skill skill{maximum};CreatureSkillData data{&skill};

@@ -39,6 +39,7 @@ public:
        mElementDamage(0.0),
        mPhysicalDamageMin(-1.0), mMagicalDamageMin(-1.0), mElementDamageMin(-1.0),
        mAttackRating(0.0), mDefenseRating(0.0),
+       mStrength(0.0), mDexterity(0.0), mLife(0.0), mMana(0.0), mCritChance(0.0),
        mPhysicalDefense(0.0),
        mMagicalDefense(0.0),
        mElementDefense(0.0),
@@ -57,6 +58,7 @@ public:
        mElementDamage(0.0),
        mPhysicalDamageMin(-1.0), mMagicalDamageMin(-1.0), mElementDamageMin(-1.0),
        mAttackRating(0.0), mDefenseRating(0.0),
+       mStrength(0.0), mDexterity(0.0), mLife(0.0), mMana(0.0), mCritChance(0.0),
        mPhysicalDefense(0.0),
        mMagicalDefense(0.0),
        mElementDefense(0.0),
@@ -118,6 +120,16 @@ public:
     double getAttackRating() const { return mAttackRating; }
     //! \brief Equipment contribution to the defense rating.
     double getDefenseRating() const { return mDefenseRating; }
+    //! \brief Equipment bonus to the creature's strength (optional Strength field, default 0).
+    double getStrength() const { return mStrength; }
+    //! \brief Equipment bonus to the creature's dexterity (optional Dexterity field, default 0).
+    double getDexterity() const { return mDexterity; }
+    //! \brief Equipment bonus to the creature's life (optional Life field, default 0).
+    double getLife() const { return mLife; }
+    //! \brief Equipment bonus to the creature's mana (optional Mana field, default 0).
+    double getMana() const { return mMana; }
+    //! \brief Equipment bonus to the creature's critical chance in percent (optional CritChance field, default 0).
+    double getCritChance() const { return mCritChance; }
 
     inline double getPhysicalDefense() const
     { return mPhysicalDefense; }
@@ -164,6 +176,8 @@ private:
     double mPhysicalDamageMin, mMagicalDamageMin, mElementDamageMin;
     //! \brief Optional equipment rating contributions.
     double mAttackRating, mDefenseRating;
+    //! \brief Optional attribute bonuses (Strength, Dexterity, Life, Mana) and critical chance bonus in percent.
+    double mStrength, mDexterity, mLife, mMana, mCritChance;
     double          mPhysicalDefense;
     double          mMagicalDefense;
     double          mElementDefense;

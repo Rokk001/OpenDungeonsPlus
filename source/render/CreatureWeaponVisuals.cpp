@@ -25,6 +25,7 @@
 #include "render/CreatureCombatReactions.h"
 #include "render/CreatureReactions.h"
 #include "render/RenderManager.h"
+#include "sound/SoundEffectsManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -93,6 +94,12 @@ const int32_t STRONG_BLOW = 800;
 //! Delays after the event, in seconds (the blow lands a moment after the attack animation starts)
 const double DODGE_DELAY = 0.25;
 const double MISS_DELAY = 0.1;
+//! The sparks of a critical hit start with the event
+const double CRITICAL_DELAY = 0.0;
+//! Reaction event with the ReactionSparks particle system (config/creatureReactions.cfg) shown on a critical hit
+const std::string CRITICAL_REACTION_EVENT = "CriticalHit";
+//! Sound family (folder below sounds/Spatial) played on a critical hit
+const std::string CRITICAL_SOUND_FAMILY = "Creatures/Default/Critical";
 const double SOFT_MEMORY = 1.0;
 //! The last result of an attacker is remembered this long (seconds)
 const double LAST_HIT_MEMORY = 10.0;
@@ -766,6 +773,26 @@ void noteBlow(CreatureReactions& reactions, const CosmeticEvent& event)
         startTrail(reactions, attacker);
 }
 
+//! \brief Shows a critical hit: the ReactionSparks particle system and the critical hit sound, on the target
+//! creature, or on the attacker when the target is a building or a wall (no target creature in the event).
+//! \param reactions The creature reactions of the game.
+//! \param target The creature that was hit, or nullptr for a building or a wall.
+//! \param attacker The creature that landed the critical hit, or nullptr if the client does not know it.
+void showCriticalFeedback(CreatureReactions& reactions, Creature* target, Creature* attacker)
+{
+    Creature* shown = (target != nullptr) ? target : attacker;
+    if(shown == nullptr)
+        return;
+
+    queueReaction(reactions, shown->getName(), CRITICAL_REACTION_EVENT, CRITICAL_DELAY);
+    if(SoundEffectsManager::getSingletonPtr() == nullptr)
+        return;
+
+    const Ogre::Vector3 position = shown->getPosition();
+    SoundEffectsManager::getSingleton().playSpatialSound(CRITICAL_SOUND_FAMILY, static_cast<float>(position.x),
+        static_cast<float>(position.y));
+}
+
 //! \brief Shows server hit, miss and avoidance results with the existing combat reactions.
 void noteHitResult(CreatureReactions& reactions, const CosmeticEvent& event)
 {
@@ -791,6 +818,13 @@ void noteHitResult(CreatureReactions& reactions, const CosmeticEvent& event)
             // The target flinches, a strong hit makes it stagger
             if(target != nullptr)
                 CreatureCombatReactions::noteHitEvent(reactions, attacker, target, info.mStrong, info.mMissile);
+            break;
+        case static_cast<int32_t>(CosmeticHitResult::critical):
+            // A critical hit flinches like a hit (against a wall or building there is no target creature), and
+            // adds the sparks and the sound on the target, or on the attacker when there is no target creature
+            if(target != nullptr)
+                CreatureCombatReactions::noteHitEvent(reactions, attacker, target, info.mStrong, info.mMissile);
+            showCriticalFeedback(reactions, target, attacker);
             break;
         case static_cast<int32_t>(CosmeticHitResult::glanced):
             sSoftened[event.mObject] = now;

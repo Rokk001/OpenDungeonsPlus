@@ -25,6 +25,8 @@ public:
  double getCreatureDamageExponent() const {return %r;}
  double getCreatureHpGrowthPerLevel() const {return %r;}
  double getCooldownReductionPerLevel() const {return std::max(0.0,std::min(1.0,%r));}
+ double getSkillSpellReferenceMinHP() const {return %r;}
 };
 ''' % (global_cfg_number(root, 'CreatureDamageGrowth'), global_cfg_number(root, 'CreatureDamageExponent'),
-       global_cfg_number(root, 'CreatureHpGrowthPerLevel'), global_cfg_number(root, 'CooldownReductionPerLevel'))
+       global_cfg_number(root, 'CreatureHpGrowthPerLevel'), global_cfg_number(root, 'CooldownReductionPerLevel'),
+       global_cfg_number(root, 'SkillSpellReferenceMinHP'))

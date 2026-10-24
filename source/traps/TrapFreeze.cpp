@@ -30,7 +30,6 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
-#include <cmath>
 
 const std::string TrapFreezeName = "Freeze";
 const std::string TrapFreezeNameDisplay = "Freeze trap";
@@ -155,8 +154,8 @@ bool TrapFreeze::shoot(Tile* tile)
         }
         else
         {
-            creature->addCreatureEffect(new CreatureEffectFrozen(static_cast<int32_t>(std::lround(
-                SkillManager::getResearchValue(getSeat(), SkillType::trapFreeze, mFreezeTurns, ResearchEffect::Duration)))));
+            creature->addCreatureEffect(new CreatureEffectFrozen(
+                SkillManager::getResearchValue(getSeat(), SkillType::trapFreeze, mFreezeTurns, ResearchEffect::Duration)));
         }
         creature->notifyFightPlayer(targetTile);
     }

@@ -23,6 +23,7 @@
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "spells/Spell.h"
+#include "utils/ConfigManager.h"
 
 #include <istream>
 
@@ -56,15 +57,31 @@ bool CreatureSkillHealSelf::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Heals the creature over time when it is hurt (a skill of the skill tree: when its health share is below
+//! the limit of the config); the percent form heals a share of the MinHP times the damage multiplier of the Mana level.
 bool CreatureSkillHealSelf::tryUseSupport(GameMap& gameMap, Creature* creature) const
 {
     if(!creature->isAlive())
         return false;
 
-    if(!creature->isHurt())
+    if(isTreeSkill())
+    {
+        // A skill of the skill tree heals when the health share is low
+        if(creature->getMaxHp() <= 0.0 ||
+           creature->getHP() / creature->getMaxHp() >= ConfigManager::getSingleton().getSkillHealSelfBelow())
+        {
+            return false;
+        }
+    }
+    else if(!creature->isHurt())
         return false;
 
-    CreatureEffectHeal* effect = new CreatureEffectHeal(mEffectDuration, mEffectValue, "SpellCreatureHeal");
+    // The percent form heals a share of the MinHP in total, evenly over the duration
+    double healPerTurn = mEffectValue;
+    if(mHealPercent > 0.0 && mEffectDuration > 0)
+        healPerTurn = mHealPercent / 100.0 * creature->getHealBase() / static_cast<double>(mEffectDuration);
+
+    CreatureEffectHeal* effect = new CreatureEffectHeal(mEffectDuration, healPerTurn, "SpellCreatureHeal");
     creature->addCreatureEffect(effect);
 
     for(Tile* tile : creature->getCoveredTiles())
@@ -80,23 +97,27 @@ CreatureSkillHealSelf* CreatureSkillHealSelf::clone() const
     return new CreatureSkillHealSelf(*this);
 }
 
+//! \brief Appends the names of the columns of the skill line (the percent column is optional).
 void CreatureSkillHealSelf::getFormatString(std::string& format) const
 {
     CreatureSkill::getFormatString(format);
     if(!format.empty())
         format += "\t";
 
-    format += "LevelMin\tEffectDuration\tEffectValue";
+    format += "LevelMin\tEffectDuration\tEffectValue\tHealPercent";
 }
 
+//! \brief Writes the columns of the skill line, the percent column included.
 void CreatureSkillHealSelf::exportToStream(std::ostream& os) const
 {
     CreatureSkill::exportToStream(os);
     os << "\t" << mCreatureLevelMin;
     os << "\t" << mEffectDuration;
     os << "\t" << mEffectValue;
+    os << "\t" << mHealPercent;
 }
 
+//! \brief Reads the columns of the skill line; the percent column is optional and 0 when it is missing.
 bool CreatureSkillHealSelf::importFromStream(std::istream& is)
 {
     if(!CreatureSkill::importFromStream(is))
@@ -108,10 +129,18 @@ bool CreatureSkillHealSelf::importFromStream(std::istream& is)
         return false;
     if(!(is >> mEffectValue))
         return false;
+    // The percent column is optional: lines written before it existed end after EffectValue
+    mHealPercent = 0.0;
+    is >> std::ws;
+    if(is.eof())
+        is.clear();
+    else if(!(is >> mHealPercent))
+        return false;
 
     return true;
 }
 
+//! \brief Tells whether the other skill is a HealSelf with the same values, the percent included.
 bool CreatureSkillHealSelf::isEqual(const CreatureSkill& creatureSkill) const
 {
     if(!CreatureSkill::isEqual(creatureSkill))
@@ -126,6 +155,8 @@ bool CreatureSkillHealSelf::isEqual(const CreatureSkill& creatureSkill) const
     if(mEffectDuration != skill->mEffectDuration)
         return false;
     if(mEffectValue != skill->mEffectValue)
+        return false;
+    if(mHealPercent != skill->mHealPercent)
         return false;
 
     return true;

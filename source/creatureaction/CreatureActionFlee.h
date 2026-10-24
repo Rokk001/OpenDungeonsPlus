@@ -32,8 +32,8 @@ public:
     {}
 
     //! \brief Flee from a scary tile (fear trap). The creature runs away from the tile
-    //! for nbTurns turns, even if no enemy is visible.
-    CreatureActionFlee(Creature& creature, Tile* fearTile, int32_t nbTurns) :
+    //! for nbTurns turns (a fraction is kept), even if no enemy is visible.
+    CreatureActionFlee(Creature& creature, Tile* fearTile, double nbTurns) :
         CreatureAction(creature),
         mFearTile(fearTile),
         mFearTurns(nbTurns)
@@ -54,11 +54,12 @@ public:
 
     //! \brief Runs the creature away from the fear tile for fearTurns turns, even if no enemy is visible
     //! \return True when the flight is over and the action was removed, false while the creature keeps running
-    static bool handleFear(Creature& creature, int32_t nbTurns, int32_t fearTurns, Tile* fearTile);
+    static bool handleFear(Creature& creature, int32_t nbTurns, double fearTurns, Tile* fearTile);
 
 private:
     Tile* mFearTile;
-    int32_t mFearTurns;
+    //! Turns the creature runs from the fear tile (a fraction of a turn is kept, not rounded)
+    double mFearTurns;
 };
 
 #endif // CREATUREACTIONFLEE_H

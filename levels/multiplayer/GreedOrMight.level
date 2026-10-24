@@ -2402,6 +2402,19 @@ MineNGold	50
     AttackRating	270
     DefenseRating	90
     Avoidance	none
+    Strength	25
+    Dexterity	20
+    Life	25
+    Mana	26.6667
+    StrengthPerLevel	2
+    DexterityPerLevel	1
+    LifePerLevel	1
+    ManaPerLevel	1
+    ManaPerPoint	1.5
+    SkillGroup	blitzer
+    SkillFamily	dragonkin
+    PreSkill	DRK_1
+    TierFourSkill	T4_Dragon
     [/Stats]
     [RoomAffinity]
     [/RoomAffinity]
