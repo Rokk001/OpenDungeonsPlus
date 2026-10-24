@@ -296,7 +296,7 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
     # Windows may block a freshly compiled executable (WinError 4551) for a moment
     for attempt in range(4):
         try:
-            command = [str(work / 'check.exe'), str(deps / 'install').as_posix()]
+            command = [str(work / 'check.exe'), (deps / 'install').as_posix()]
             if args.loading_screens:
                 command.extend([repo.as_posix(), args.loading_output.resolve().as_posix()])
             subprocess.run(command, cwd=work, check=True, env=environment)
