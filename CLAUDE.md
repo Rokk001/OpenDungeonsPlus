@@ -70,3 +70,4 @@ Diese Pfade direkt verwenden, nie danach suchen.
 ## Builds
 
 - Kein Release- oder Abschlussbuild ohne ausdrueckliche Build-Freigabe durch Mario in der unmittelbar vorhergehenden Nachricht. Vorher muss die Vollstaendigkeitsfrage im Format "Offene Anforderungen: <Anzahl>" mit Liste aller offenen und teilweise erledigten Punkte beantwortet sein. Ein Plan-Schritt "Abschlussbuild" ersetzt diese Freigabe nicht. Ohne Freigabe: warten und melden.
+- Check scripts in source/tests that compile small C++ probes with cl are not a game build. Feature windows run them before marking a branch ready for every source file the branch changes; skipping them is not allowed.
