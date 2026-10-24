@@ -75,7 +75,7 @@ static const std::vector<RoomObjectPath::WalkingRadius>& testWalkingRadii(){
 enum class CreatureActionType {sleep,leaveDungeon,useRoom,digTile,parkToTile};
 namespace Helper {int round(float v){return int(std::round(v));}}
 struct Room;
-struct Tile {int x,y;bool walkable=true;Room* room=nullptr;Room* getCoveringRoom(){return room;}int getX()const{return x;}int getY()const{return y;}};
+struct Tile {int x,y;bool walkable=true;Room* room=nullptr;Room* getCoveringRoom(){return room;}int getX()const{return x;}int getY()const{return y;}Ogre::Vector2 getPosition2d()const{return Ogre::Vector2(float(x),float(y));}};
 struct BuildingObject {
  std::string mesh="ChickenCoop";Ogre::Vector3 pos{5,5,0};float angle=0;
  const std::string& getMeshName()const{return mesh;}const Ogre::Vector3& getPosition()const{return pos;}
