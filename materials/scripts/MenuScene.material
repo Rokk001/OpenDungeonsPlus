@@ -7,10 +7,10 @@ material MenuStone : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuFortressStone.png }
+            texture_unit decalmap { texture MenuFortressStone.png }
             texture_unit
             {
-                texture menu/MenuFortressStoneNormal.png
+                texture MenuFortressStoneNormal.png
                 tex_address_mode wrap
                 rtshader_system
                 {
@@ -25,7 +25,7 @@ material MenuStone : RTSS/NormalMapping_MultiPass
             specular 0.10 0.10 0.09 1 32
             texture_unit decalmap
             {
-                texture menu/MenuFortressStone.png
+                texture MenuFortressStone.png
                 tex_address_mode wrap
             }
         }
@@ -51,10 +51,10 @@ material MenuIron : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuRustIron.png }
+            texture_unit decalmap { texture MenuRustIron.png }
             texture_unit
             {
-                texture menu/MenuRustIronNormal.png
+                texture MenuRustIronNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -64,7 +64,7 @@ material MenuIron : RTSS/NormalMapping_MultiPass
             ambient 0.72 0.72 0.72 1
             diffuse 0.72 0.72 0.72 1
             specular 0.22 0.23 0.24 1 28
-            texture_unit decalmap { texture menu/MenuRustIron.png }
+            texture_unit decalmap { texture MenuRustIron.png }
         }
     }
 }
@@ -112,10 +112,10 @@ material MenuCloth : RTSS/NormalMapping_MultiPass
         pass lighting
         {
             cull_hardware none
-            texture_unit decalmap { texture menu/MenuTornCloth.png }
+            texture_unit decalmap { texture MenuTornCloth.png }
             texture_unit
             {
-                texture menu/MenuTornClothNormal.png
+                texture MenuTornClothNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -126,7 +126,7 @@ material MenuCloth : RTSS/NormalMapping_MultiPass
             ambient 0.85 0.85 0.85 1
             diffuse 0.85 0.85 0.85 1
             specular 0.025 0.025 0.025 1 6
-            texture_unit decalmap { texture menu/MenuTornCloth.png }
+            texture_unit decalmap { texture MenuTornCloth.png }
         }
     }
 }
@@ -213,7 +213,7 @@ material MenuCampaignMap
             diffuse 0.8 0.8 0.8 1
             texture_unit
             {
-                texture menu/MenuCampaignMap.png
+                texture MenuCampaignMap.png
                 tex_address_mode clamp
                 filtering trilinear
             }
@@ -228,10 +228,10 @@ material MenuWetStone : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuWetPaving.png }
+            texture_unit decalmap { texture MenuWetPaving.png }
             texture_unit
             {
-                texture menu/MenuWetPavingNormal.png
+                texture MenuWetPavingNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -241,7 +241,7 @@ material MenuWetStone : RTSS/NormalMapping_MultiPass
             ambient 0.92 0.92 0.92 1
             diffuse 0.92 0.92 0.92 1
             specular 0.65 0.65 0.65 1 64
-            texture_unit decalmap { texture menu/MenuWetPaving.png }
+            texture_unit decalmap { texture MenuWetPaving.png }
         }
     }
 }
@@ -313,10 +313,10 @@ material MenuDemonStone : RTSS/NormalMapping_MultiPass
     {
         pass lighting
         {
-            texture_unit decalmap { texture menu/MenuDemonStone.png }
+            texture_unit decalmap { texture MenuDemonStone.png }
             texture_unit
             {
-                texture menu/MenuDemonStoneNormal.png
+                texture MenuDemonStoneNormal.png
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
@@ -326,7 +326,7 @@ material MenuDemonStone : RTSS/NormalMapping_MultiPass
             ambient 0.82 0.82 0.82 1
             diffuse 0.82 0.82 0.82 1
             specular 0.09 0.09 0.09 1 18
-            texture_unit decalmap { texture menu/MenuDemonStone.png }
+            texture_unit decalmap { texture MenuDemonStone.png }
         }
     }
 }
@@ -593,7 +593,7 @@ material MenuTitleLetters
         emissive 0.18 0.18 0.18
         alpha_rejection greater 96
         cull_hardware none
-        texture_unit { texture menu/MenuTitle.png
+        texture_unit { texture MenuTitle.png
             tex_address_mode clamp
             filtering trilinear
         }
@@ -659,7 +659,7 @@ material MenuBatSprite
         scene_blend alpha_blend
         depth_write off
         cull_hardware none
-        texture_unit { texture menu/MenuBat.png
+        texture_unit { texture MenuBat.png
             tex_address_mode clamp
             filtering trilinear
         }
@@ -673,7 +673,7 @@ material MenuCrowSprite
         scene_blend alpha_blend
         depth_write off
         cull_hardware none
-        texture_unit { texture menu/MenuCrow.png
+        texture_unit { texture MenuCrow.png
             tex_address_mode clamp
             filtering trilinear
         }
