@@ -65,6 +65,17 @@ namespace WorkerShare
         double percent = static_cast<double>(nbReloading) / static_cast<double>(nbTotal);
         return percent <= sharePercent / PERCENT_DIVISOR;
     }
+
+    //! \brief Whether one more worker may clean: same counting as the trap reloading share, the first one
+    //! always may, then the workers cleaning may be at most the share (percent) of the counted workers.
+    inline bool isCleanShareOpen(uint32_t nbCleaning, uint32_t nbTotal, double sharePercent)
+    {
+        if(nbCleaning == 0)
+            return true;
+
+        double percent = static_cast<double>(nbCleaning) / static_cast<double>(nbTotal);
+        return percent <= sharePercent / PERCENT_DIVISOR;
+    }
 }
 
 #endif // WORKERSHARE_H

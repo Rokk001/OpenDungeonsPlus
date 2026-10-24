@@ -22,6 +22,7 @@
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/DirtPileEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/Tile.h"
@@ -2350,6 +2351,35 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
     if(tileState.mTileVisual == TileVisual::goldFull)
         goldDensity = tile->getGoldDensity();
     os << goldDensity;
+}
+
+//! \brief Looks for a pile first, then for a room that needs cleaning.
+bool Seat::hasDirtToClean() const
+{
+    if(mGameMap == nullptr)
+        return false;
+
+    for(RenderedMovableEntity* entity : mGameMap->getRenderedMovableEntities())
+    {
+        if((entity == nullptr) || (entity->getObjectType() != GameEntityType::dirtPileEntity))
+            continue;
+
+        DirtPileEntity* dirtPile = static_cast<DirtPileEntity*>(entity);
+        if(dirtPile->getKind() != DirtPileKind::pile)
+            continue;
+
+        Tile* tile = dirtPile->getPositionTile();
+        if((tile != nullptr) && (tile->getSeat() == this))
+            return true;
+    }
+
+    for(Room* room : mGameMap->getRooms())
+    {
+        if((room->getSeat() == this) && room->needsCleaning())
+            return true;
+    }
+
+    return false;
 }
 
 void Seat::notifyBuildingRemovedFromGameMap(Building* building, Tile* tile)

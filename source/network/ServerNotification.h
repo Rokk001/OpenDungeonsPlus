@@ -212,7 +212,10 @@ enum class ServerNotificationType
     timeLimit,
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
-    campaignVictory
+    campaignVictory,
+    //! Answer to askCleanRoom, owner only: + int32_t tileX, int32_t tileY, bool true while the workers have an order
+    //! to clean that prison or torture chamber. Appended so existing notification values remain unchanged.
+    roomCleanOrder
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

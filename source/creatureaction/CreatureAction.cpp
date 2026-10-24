@@ -110,6 +110,10 @@ std::string CreatureAction::toString(CreatureActionType actionType)
         return "possessed";
     case CreatureActionType::reloadTrap:
         return "reloadTrap";
+    case CreatureActionType::searchDirtToClean:
+        return "searchDirtToClean";
+    case CreatureActionType::cleanTile:
+        return "cleanTile";
 
     default:
         assert(false);

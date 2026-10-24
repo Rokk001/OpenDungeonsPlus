@@ -360,6 +360,8 @@ GameMode::GameMode(ModeManager *modeManager):
     mCasinoX(-1),
     mCasinoY(-1),
     mCasinoPayout(1),
+    mCleanRoomX(-1),
+    mCleanRoomY(-1),
     showTileDebugWindow(false),
     config(ConfigManager::getSingleton())
 {
@@ -485,6 +487,20 @@ GameMode::GameMode(ModeManager *modeManager):
         guiSheet->getChild("CasinoPayoutWindow/CasinoPayoutButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&GameMode::cycleCasinoPayout, this)
+        )
+    );
+
+    //Clean-once window of prisons and torture chambers
+    addEventConnection(
+        guiSheet->getChild("RoomCleanWindow")->subscribeEvent(
+            CEGUI::FrameWindow::EventCloseClicked,
+            CEGUI::Event::Subscriber(&GameMode::hideRoomCleanWindow, this)
+        )
+    );
+    addEventConnection(
+        guiSheet->getChild("RoomCleanWindow/RoomCleanButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::orderRoomClean, this)
         )
     );
 
@@ -829,6 +845,7 @@ void GameMode::activate()
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
+    guiSheet->getChild("RoomCleanWindow")->hide();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
     guiSheet->getChild("ProductionWindow")->hide();
@@ -1461,6 +1478,20 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
            (room->getSeat() == localPlayer->getSeat()))
         {
             showCasinoPayoutWindow(tileClicked);
+            return true;
+        }
+    }
+
+    // Clicking on one of our prisons or torture chambers opens the control to have it cleaned once
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+    {
+        Room* room = tileClicked->getCoveringRoom();
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        if((room != nullptr) && (localPlayer != nullptr) &&
+           ((room->getType() == RoomType::prison) || (room->getType() == RoomType::torture)) &&
+           (room->getSeat() == localPlayer->getSeat()))
+        {
+            showRoomCleanWindow(tileClicked);
             return true;
         }
     }
@@ -2614,6 +2645,43 @@ void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
     }
     mRootWindow->getChild("CasinoPayoutWindow/CasinoPayoutButton")->setText(levelText);
     mRootWindow->getChild("CasinoPayoutWindow/CasinoPayoutText")->setText(infoText);
+}
+
+void GameMode::showRoomCleanWindow(Tile* tile)
+{
+    mCleanRoomX = tile->getX();
+    mCleanRoomY = tile->getY();
+    setRoomCleanOrderShown(mCleanRoomX, mCleanRoomY, false);
+    mRootWindow->getChild("RoomCleanWindow")->show();
+
+    // The order is kept by the server, so we ask it whether one is open
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askCleanRoom);
+    clientNotification->mPacket << mCleanRoomX << mCleanRoomY << false;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+}
+
+bool GameMode::hideRoomCleanWindow(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("RoomCleanWindow")->hide();
+    return true;
+}
+
+bool GameMode::orderRoomClean(const CEGUI::EventArgs&)
+{
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askCleanRoom);
+    clientNotification->mPacket << mCleanRoomX << mCleanRoomY << true;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+    return true;
+}
+
+void GameMode::setRoomCleanOrderShown(int tileX, int tileY, bool isOrdered)
+{
+    if((tileX != mCleanRoomX) || (tileY != mCleanRoomY))
+        return;
+
+    mRootWindow->getChild("RoomCleanWindow/RoomCleanButton")->setEnabled(!isOrdered);
 }
 
 bool GameMode::toggleSandboxWindow(const CEGUI::EventArgs&)

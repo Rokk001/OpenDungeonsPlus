@@ -37,6 +37,8 @@ namespace EntityAnimation
     static const std::string dig_anim = "Dig";
     static const std::string attack_anim = "Attack1";
     static const std::string claim_anim = "Claim";
+    //! A worker wipes dirt off a floor tile; a skeleton without this clip plays the claim clip
+    static const std::string clean_anim = "Clean";
     static const std::string walk_anim = "Walk";
     //! Clip of a creature that walks with something in its arms (clients only, chosen where the Walk clip is
     //! applied when the skeleton has it, the entity state stays Walk)

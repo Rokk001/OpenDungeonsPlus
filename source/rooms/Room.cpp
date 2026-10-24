@@ -64,6 +64,7 @@ static const double DEFAULT_ROOM_REPAIR_FACTOR = 5.0;
 Room::Room(GameMap* gameMap):
     Building(gameMap),
     mClaimHealth(1.0),
+    mCleanOrder(false),
     mNumActiveSpots(0)
 {
 }
@@ -368,6 +369,70 @@ uint32_t Room::getDirtStage() const
         return 2;
 
     return 3;
+}
+
+//! \brief Workers clean every room except prison, torture chamber and crypt.
+bool Room::isCleanableByWorkers() const
+{
+    RoomType type = getType();
+    return (type != RoomType::prison) && (type != RoomType::torture) && (type != RoomType::crypt);
+}
+
+//! \brief Name of the toilet room as the room factory registers it.
+static const std::string TOILET_ROOM_NAME = "Toilet";
+//! \brief Dirt stage of a clean room.
+static const uint32_t CLEAN_DIRT_STAGE = 1;
+
+//! \brief The toilet room is found by its registered name.
+bool Room::isToiletRoom() const
+{
+    return RoomManager::getRoomNameFromRoomType(getType()) == TOILET_ROOM_NAME;
+}
+
+//! \brief The ordered cleaning is done when the room is clean again.
+void Room::updateCleanOrder()
+{
+    if(mCleanOrder && (getDirtStage() <= CLEAN_DIRT_STAGE))
+        mCleanOrder = false;
+}
+
+//! \brief An open order counts until the room is clean again; otherwise the dirt stage decides.
+bool Room::needsCleaning()
+{
+    updateCleanOrder();
+    if(mCleanOrder)
+        return true;
+
+    if(!isCleanableByWorkers())
+        return false;
+
+    return getDirtStage() >= static_cast<uint32_t>(ConfigManager::getSingleton().getDirtConfigDouble("CleanRoomFromStage"));
+}
+
+//! \brief Written as the line "CleanOrder 0" or "CleanOrder 1".
+void Room::exportCleanOrderToStream(std::ostream& os) const
+{
+    os << "CleanOrder " << (mCleanOrder ? 1 : 0) << "\n";
+}
+
+//! \brief Puts the stream back when the next token is not the clean order line (older saves).
+bool Room::importCleanOrderFromStream(std::istream& is)
+{
+    std::streampos pos = is.tellg();
+    std::string tag;
+    if(!(is >> tag) || (tag != "CleanOrder"))
+    {
+        is.clear();
+        is.seekg(pos);
+        return true;
+    }
+
+    uint32_t order = 0;
+    if(!(is >> order) || (order > 1))
+        return false;
+
+    mCleanOrder = (order == 1);
+    return true;
 }
 
 bool Room::isAttackable(Tile* tile, Seat* seat) const

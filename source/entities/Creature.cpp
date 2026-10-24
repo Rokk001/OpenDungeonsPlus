@@ -35,6 +35,7 @@
 #include "creatureaction/CreatureActionParkToTile.h"
 #include "creatureaction/CreatureActionPossessed.h"
 #include "creatureaction/CreatureActionReloadTrap.h"
+#include "creatureaction/CreatureActionSearchDirtToClean.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -2292,6 +2293,9 @@ bool Creature::handleIdleAction()
                     return true;
                 case CreatureActionType::searchWallTileToClaim:
                     pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, false));
+                    return true;
+                case CreatureActionType::searchDirtToClean:
+                    pushAction(Utils::make_unique<CreatureActionSearchDirtToClean>(*this));
                     return true;
                 default:
                     OD_LOG_ERR("name=" + getName() + ", unexpected worker action=" + CreatureAction::toString(actionType));

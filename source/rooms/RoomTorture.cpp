@@ -541,6 +541,7 @@ void RoomTorture::exportToStream(std::ostream& os) const
         os << "\t" << creature->getName();
     }
     os << "\n";
+    exportCleanOrderToStream(os);
 }
 
 bool RoomTorture::importFromStream(std::istream& is)
@@ -561,7 +562,7 @@ bool RoomTorture::importFromStream(std::istream& is)
         nb--;
     }
 
-    return true;
+    return importCleanOrderFromStream(is);
 }
 
 void RoomTorture::restoreInitialEntityState()

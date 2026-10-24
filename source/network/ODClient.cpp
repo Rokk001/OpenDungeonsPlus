@@ -2138,6 +2138,27 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::roomCleanOrder:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            int32_t xx = 0;
+            int32_t yy = 0;
+            bool isOrdered = false;
+            if(!(packetReceived >> xx >> yy >> isOrdered))
+            {
+                OD_LOG_ERR("Truncated roomCleanOrder packet");
+                break;
+            }
+
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setRoomCleanOrderShown(xx, yy, isOrdered);
+            break;
+        }
+
         case ServerNotificationType::editorPortalWaveData:
         {
             if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::EDITOR)
