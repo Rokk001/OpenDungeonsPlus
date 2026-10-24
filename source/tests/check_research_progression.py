@@ -110,6 +110,11 @@ struct SkillDefRoom:SkillDef {SkillDefRoom(const std::string& f,const char*,cons
 struct SkillDefTrap:SkillDef {SkillDefTrap(const std::string& f,const char*,const Skill* s,uint32_t t,TrapType):SkillDef(f,s,t){}};
 struct SkillDefSpell:SkillDef {SkillDefSpell(const std::string& f,const char*,const Skill* s,uint32_t t,SpellType):SkillDef(f,s,t){}};
 struct SkillDefKeeper:SkillDef {SkillDefKeeper(const std::string& f,const char*,const Skill* s,uint32_t t):SkillDef(f,s,t){}};
+//! \brief Supplies research-only nodes to the production constructor without a cast action.
+struct SkillDefPlain:SkillDef {
+    //! \brief Supplies the same tier and tab registration as the production research-only definition.
+    SkillDefPlain(const std::string& f,const char*,const Skill* s,uint32_t t):SkillDef(f,s,t){}
+};
 struct Seat;
 struct SkillManager {
     std::vector<const SkillDef*> mSkills;
@@ -205,7 +210,7 @@ int main(int argc,char** argv){try {
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
         if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
-    check(all.size()==53,"all 53 research entries");
+    check(all.size()==59,"all 59 research entries");
     check(ConfigManager::getSingleton().freeLevelOne.size()==5,"five free level one entries in skills.cfg");
     const std::vector<std::pair<SkillType,int> > none;
     // The research tree: tabs, tiers and parents of the production constructor
