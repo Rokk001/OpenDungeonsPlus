@@ -491,6 +491,8 @@ public:
 
     static std::string toString(FloodFillType type);
 
+    //! \brief Tells whether the given tile is in the same flood fill area as this tile for the seat and type.
+    //! A tile without a flood fill value is connected to nothing but itself.
     bool isSameFloodFill(Seat* seat, FloodFillType type, Tile* tile) const;
 
     //! Updates the floodfill from the given tile if floodfill is not already set.

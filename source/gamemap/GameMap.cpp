@@ -87,6 +87,7 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <queue>
 #include <set>
 #include <sstream>
 #include <string>
@@ -184,7 +185,8 @@ public:
         tile    (nullptr),
         parent  (nullptr),
         g       (0.0),
-        h       (0.0)
+        h       (0.0),
+        mHasBeenProcessed (false)
     {}
 
     AstarEntry(Tile* tile, int x1, int y1, int x2, int y2) :
@@ -202,9 +204,11 @@ public:
         return fabs(static_cast<double>(x2 - x1)) + fabs(static_cast<double>(y2 - y1));
     }
 
-    void setHeuristic(const int& x1, const int& y1, const int& x2, const int& y2)
+    //! \brief Sets the estimate of the remaining cost: the distance to the destination multiplied by the given
+    //! factor (1 / best speed of the creature, the same unit as the cost of a step).
+    void setHeuristic(const int& x1, const int& y1, const int& x2, const int& y2, double factor)
     {
-        h = fabs(static_cast<double>(x2 - x1)) + fabs(static_cast<double>(y2 - y1));
+        h = (fabs(static_cast<double>(x2 - x1)) + fabs(static_cast<double>(y2 - y1))) * factor;
     }
 
     inline double fCost() const
@@ -240,6 +244,28 @@ private:
     double      g;
     double      h;
     bool        mHasBeenProcessed;
+};
+
+//! \brief An item of the A* open list: the cost of the entry when the item was pushed, the order of insertion
+//! and the entry. An entry that gets a lower cost is pushed again, the older item is skipped when it comes up.
+struct AstarOpenItem
+{
+    double mCost;
+    uint32_t mSequence;
+    AstarEntry* mEntry;
+};
+
+//! \brief Orders the A* open list so that the item with the lowest cost is on top. On equal cost the item
+//! pushed first comes first.
+struct AstarOpenItemOrder
+{
+    bool operator()(const AstarOpenItem& first, const AstarOpenItem& second) const
+    {
+        if(first.mCost != second.mCost)
+            return first.mCost > second.mCost;
+
+        return first.mSequence > second.mSequence;
+    }
 };
 
 
@@ -2242,12 +2268,14 @@ bool GameMap::pathExists(const Creature* creature, Tile* tileStart, Tile* tileEn
     {
         floodFill = FloodFillType::groundWaterLava;
     }
-    if((creature->getMoveSpeedGround() > 0.0) &&
+    // The three cases exclude each other: a creature that crosses ground, water and lava keeps
+    // groundWaterLava and is not downgraded to a smaller area by the following tests
+    else if((creature->getMoveSpeedGround() > 0.0) &&
         (creature->getMoveSpeedWater() > 0.0))
     {
         floodFill = FloodFillType::groundWater;
     }
-    if((creature->getMoveSpeedGround() > 0.0) &&
+    else if((creature->getMoveSpeedGround() > 0.0) &&
         (creature->getMoveSpeedLava() > 0.0))
     {
         floodFill = FloodFillType::groundLava;
@@ -2297,16 +2325,35 @@ std::list<Tile*> GameMap::path(int x1, int y1, int x2, int y2, const Creature* c
     if (!throughDiggableTiles && !pathExists(creature, start, destination))
         return returnList;
 
+    // A* only enters a tile the creature can go through (the start tile is the one exception), so a destination
+    // it cannot enter (closed door of its own side, fenced room it is not in, tile held back by a building)
+    // can never be reached. The flood fill cannot tell, the search would cover the whole area to find nothing.
+    if(!throughDiggableTiles && (destination != start) && !creature->canGoThroughTile(destination))
+        return returnList;
+
+    // The cost of a step is its distance divided by the speed of the creature, so the estimate of the
+    // remaining cost has to be divided by the best speed of the creature too. With the bare distance the
+    // estimate was far too low and the search spread over the whole area around the start.
+    double bestSpeed = std::max(creature->getMoveSpeedGround(),
+        std::max(creature->getMoveSpeedWater(), creature->getMoveSpeedLava()));
+    double heuristicFactor = (bestSpeed > 0.0) ? (1.0 / bestSpeed) : 1.0;
+
     AstarEntry *currentEntry = new AstarEntry(start, x1, y1, x2, y2);
     AstarEntry neighbor;
 
-    std::vector<AstarEntry*> openList;
-    openList.push_back(currentEntry);
+    // The entries still to process, the one with the lowest cost on top
+    std::priority_queue<AstarOpenItem, std::vector<AstarOpenItem>, AstarOpenItemOrder> openList;
+    uint32_t openSequence = 0;
+    AstarOpenItem startItem = {currentEntry->fCost(), openSequence++, currentEntry};
+    openList.push(startItem);
 
     // This list will contain the processed and the to process entries
-    // allowing to quickly know if a tile has been processed or not
-    std::vector<std::vector<AstarEntry*>> processList(getMapSizeX(), std::vector<AstarEntry*>(getMapSizeY(), nullptr));
-    processList[currentEntry->getTile()->getX()][currentEntry->getTile()->getY()] = currentEntry;
+    // allowing to quickly know if a tile has been processed or not (index: x * map height + y)
+    const int mapSizeY = getMapSizeY();
+    std::vector<AstarEntry*> processList(static_cast<size_t>(getMapSizeX()) * mapSizeY, nullptr);
+    std::vector<AstarEntry*> createdEntries;
+    createdEntries.push_back(currentEntry);
+    processList[currentEntry->getTile()->getX() * mapSizeY + currentEntry->getTile()->getY()] = currentEntry;
     AstarEntry* destinationEntry = nullptr;
     while (true)
     {
@@ -2314,9 +2361,13 @@ std::list<Tile*> GameMap::path(int x1, int y1, int x2, int y2, const Creature* c
         if (openList.empty())
             break;
 
-        // openList being sorted, the last element is the smallest
-        AstarEntry* smallestAstar = *openList.rbegin();
-        openList.pop_back();
+        AstarOpenItem smallestItem = openList.top();
+        openList.pop();
+        AstarEntry* smallestAstar = smallestItem.mEntry;
+
+        // An older item of an entry that was processed or got a lower cost since is skipped
+        if(smallestAstar->getHasBeenProcessed() || (smallestItem.mCost > smallestAstar->fCost()))
+            continue;
 
         currentEntry = smallestAstar;
         currentEntry->setHasBeenProcessed();
@@ -2394,7 +2445,7 @@ std::list<Tile*> GameMap::path(int x1, int y1, int x2, int y2, const Creature* c
                 continue;
 
             // See if the neighbor has already been processed
-            AstarEntry* neighborEntry = processList[neighbor.getTile()->getX()][neighbor.getTile()->getY()];
+            AstarEntry* neighborEntry = processList[neighbor.getTile()->getX() * mapSizeY + neighbor.getTile()->getY()];
             if ((neighborEntry != nullptr) && (neighborEntry->getHasBeenProcessed()))
                 continue;
 
@@ -2411,19 +2462,14 @@ std::list<Tile*> GameMap::path(int x1, int y1, int x2, int y2, const Creature* c
                 neighbor.setG(currentEntry->getG() + weightToParent);
 
                 // Use the manhattan distance for the heuristic
-                neighbor.setHeuristic(neighbor.getTile()->getX(), neighbor.getTile()->getY(), x2, y2);
+                neighbor.setHeuristic(neighbor.getTile()->getX(), neighbor.getTile()->getY(), x2, y2, heuristicFactor);
                 neighbor.setParent(currentEntry);
 
                 AstarEntry* entry = new AstarEntry(neighbor);
-                std::vector<AstarEntry*>::iterator itr = openList.begin();
-                while((itr != openList.end()) &&
-                      ((*itr)->fCost() > entry->fCost()))
-                {
-                    ++itr;
-                }
-
-                openList.insert(itr, entry);
-                processList[neighbor.getTile()->getX()][neighbor.getTile()->getY()] = entry;
+                AstarOpenItem entryItem = {entry->fCost(), openSequence++, entry};
+                openList.push(entryItem);
+                createdEntries.push_back(entry);
+                processList[neighbor.getTile()->getX() * mapSizeY + neighbor.getTile()->getY()] = entry;
             }
             else
             {
@@ -2442,26 +2488,9 @@ std::list<Tile*> GameMap::path(int x1, int y1, int x2, int y2, const Creature* c
                     neighborEntry->setG(currentEntry->getG() + weightToParent);
                     neighborEntry->setParent(currentEntry);
 
-                    // The cost changed. We need to re-order openList
-                    std::vector<AstarEntry*>::iterator itr = std::find(openList.begin(), openList.end(), neighborEntry);
-                    if(itr == openList.end())
-                    {
-                        OD_LOG_ERR("Unexpected entry not found tileStart=" + Tile::displayAsString(start)
-                            + ", tileDest=" + Tile::displayAsString(destination)
-                            + ", tile=" + Tile::displayAsString(neighborEntry->getTile()));
-                    }
-                    else
-                    {
-                        itr = openList.erase(itr);
-                        // We look for the new location
-                        while((itr != openList.end()) &&
-                              ((*itr)->fCost() > neighborEntry->fCost()))
-                        {
-                            ++itr;
-                        }
-
-                        openList.insert(itr, neighborEntry);
-                    }
+                    // The cost changed. The entry is pushed again with its new cost, the older item is skipped
+                    AstarOpenItem neighborItem = {neighborEntry->fCost(), openSequence++, neighborEntry};
+                    openList.push(neighborItem);
                 }
             }
         }
@@ -2482,13 +2511,9 @@ std::list<Tile*> GameMap::path(int x1, int y1, int x2, int y2, const Creature* c
         } while (curEntry != nullptr);
     }
 
-    // Clean up the memory we allocated by deleting the astarEntries.  Note that
-    // processList contains all the created entries so it is enough to clean it.
-    for (std::vector<AstarEntry*>& column : processList)
-    {
-        for (AstarEntry* entry : column)
-            delete entry;
-    }
+    // Clean up the memory we allocated by deleting the astarEntries. createdEntries contains all of them.
+    for (AstarEntry* entry : createdEntries)
+        delete entry;
 
     return returnList;
 }

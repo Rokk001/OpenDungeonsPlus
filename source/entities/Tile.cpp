@@ -703,7 +703,15 @@ bool Tile::isFloodFillPossible(Seat* seat, FloodFillType type) const
 
 bool Tile::isSameFloodFill(Seat* seat, FloodFillType type, Tile* tile) const
 {
-    return getFloodFillValue(seat, type) == tile->getFloodFillValue(seat, type);
+    // A tile without a flood fill value (full tile, water or lava this walker type cannot cross, closed enemy
+    // door) belongs to no area. Two such tiles are not connected: otherwise the path check says "reachable"
+    // for a creature standing in rock or heading for a tile it cannot enter, and the path search then runs
+    // over the whole map and finds nothing.
+    uint32_t value = getFloodFillValue(seat, type);
+    if(value == NO_FLOODFILL)
+        return tile == this;
+
+    return value == tile->getFloodFillValue(seat, type);
 }
 
 void Tile::resetFloodFill()
