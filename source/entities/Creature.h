@@ -538,6 +538,14 @@ public:
     double getItemAttribute(const std::string& attribute) const;
     //! \brief Rebuilds derived item stats and notifies clients after a holder changes.
     void itemsChanged();
+    //! \brief Adds the mood points of a merchant deal or keeper gift.
+    void addMerchantMood(double points);
+    //! \brief Returns the merchant mood contribution used by the existing mood calculation.
+    double getMerchantMood() const { return mMerchantMood; }
+    //! \brief Returns carried gold including the fractional proceeds retained by the existing gold helper.
+    double getGoldCarriedAmount() const { return mGoldCarried + mGoldRemainder; }
+    //! \brief Records the prescribed pending deal byte and item name for the owner's next update.
+    void setLastItemDeal(uint8_t deal, const std::string& name);
     //! \brief Sets the multiplicative contribution of one running potion effect.
     void setPotionContribution(const CreatureEffect* source, const std::string& kind, double value);
     //! \brief Removes only the contribution of a potion that ended.
@@ -1054,8 +1062,8 @@ public:
     //! creature that cannot carry gold).
     int32_t getGoldCapacity() const;
 
-    //! \brief Adds mined gold that may have a fraction. The whole part is added to the carried gold, the rest stays in
-    //! the remainder (not saved) for the next call. Returns the whole part that was added
+    //! \brief Adds gold proceeds or subtracts a payment, preserving the saved fractional balance.
+    //! \return The signed whole amount applied to carried gold.
     int32_t addGoldCarriedFraction(double gold);
 
     inline uint32_t getOverlayHealthValue() const
@@ -1508,6 +1516,11 @@ private:
     int32_t         mGoldCarried;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
     double          mGoldRemainder;
+    //! \brief Temporary merchant mood, saved with the creature and sent to the owner.
+    double mMerchantMood = 0.0;
+    //! \brief Pending owner-only deal payload, consumed when its update is written.
+    mutable uint8_t mLastItemDeal = 0;
+    mutable std::string mLastItemName;
     //! \brief Server side: the amount of carried gold the clients were last told about
     int32_t         mGoldCarriedNotified;
     //! \brief Server side. The gold carried that the clients were told last (cosmetic events only, not saved)

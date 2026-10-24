@@ -28,7 +28,9 @@ class ODPacket;
 
 namespace Entities
 {
+    //! \brief Loads a saved entity; room-owned figures are restored with their room.
     GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::istream& is);
+    //! \brief Creates the concrete entity type identified by an incoming packet.
     GameEntity* getGameEntityFromPacket(GameMap* gameMap,  ODPacket& is);
 }
 

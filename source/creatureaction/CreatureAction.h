@@ -57,6 +57,8 @@ enum class CreatureActionType
     tunnel, // (fighters with a dig rate) Dig through walls towards an enemy dungeon heart that cannot be reached on foot
     possessed, // The creature is controlled by a player (Possess spell). Other actions are paused
     reloadTrap, // (worker only) Walks to a trap tile that used up its shots and arms it again
+    sellItem, // Visits a merchant table to sell unwanted inventory goods.
+    buyItem, // Visits a merchant table to buy a reserved wanted good.
     nb // Must be the last value of this enum
 };
 
@@ -98,6 +100,7 @@ public:
     virtual uint32_t updateMoodModifier() const
     { return CreatureMoodValues::Nothing; }
 
+    //! \brief Returns the stable action name used by creature activity and diagnostics.
     static std::string toString(CreatureActionType actionType);
 
 protected:

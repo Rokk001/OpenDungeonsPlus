@@ -50,6 +50,7 @@
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/RoomMerchant.h"
 #include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
@@ -3218,6 +3219,15 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             break;
         }
 
+        case ClientNotificationType::askMerchantWindow:
+        case ClientNotificationType::askMerchantSettings:
+        case ClientNotificationType::askMerchantBuy:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(player != nullptr && mServerMode != ServerMode::ModeEditor)
+                RoomMerchant::handleRequest(*gameMap, *player, clientCommand, packetReceived);
+            break;
+        }
         case ClientNotificationType::askCasinoPayout:
         {
             Player* player = clientSocket->getPlayer();

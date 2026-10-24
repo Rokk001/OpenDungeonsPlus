@@ -307,6 +307,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::arenaRoom;
         case RoomType::casino:
             return tile.getTileVisual() == TileVisual::casinoRoom;
+        case RoomType::merchant:
+            return tile.getTileVisual() == TileVisual::merchantRoom;
         case RoomType::torture:
             return tile.getTileVisual() == TileVisual::tortureRoom;
         case RoomType::guardRoom:
@@ -473,6 +475,8 @@ GameMode::GameMode(ModeManager *modeManager):
             CEGUI::Event::Subscriber(&GameMode::hideObjectivesWindow, this)
         )
     );
+
+    initializeMerchantWindow();
 
     //Casino payout window
     addEventConnection(
@@ -803,6 +807,7 @@ GameMode::~GameMode()
     }
 }
 
+//! \brief Activates the game interface and refreshes its room-dependent windows.
 void GameMode::activate()
 {
     resetIdleHand();
@@ -829,6 +834,7 @@ void GameMode::activate()
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
+    hideMerchantWindow();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
     guiSheet->getChild("ProductionWindow")->hide();
@@ -1457,6 +1463,12 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     {
         Room* room = tileClicked->getCoveringRoom();
         Player* localPlayer = mGameMap->getLocalPlayer();
+        if(room != nullptr && localPlayer != nullptr && room->getType() == RoomType::merchant &&
+            room->getSeat() == localPlayer->getSeat())
+        {
+            if(!mRootWindow->getChild("MerchantWindow")->isVisible()) toggleMerchantWindow();
+            return true;
+        }
         if((room != nullptr) && (localPlayer != nullptr) && (room->getType() == RoomType::casino) &&
            (room->getSeat() == localPlayer->getSeat()))
         {
@@ -2252,8 +2264,15 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
     }
 }
 
+//! \brief Refreshes frame controls and the availability of room-specific panels.
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+    const Player* merchantPlayer = mGameMap->getLocalPlayer();
+    const bool hasMerchant = merchantPlayer != nullptr && merchantPlayer->getSeat() != nullptr &&
+        merchantPlayer->getSeat()->getNbRooms(RoomType::merchant) > 0;
+    mRootWindow->getChild("MerchantButton")->setVisible(hasMerchant);
+    if(!hasMerchant && mRootWindow->getChild("MerchantWindow")->isVisible()) hideMerchantWindow();
+    if(mRootWindow->getChild("MerchantWindow")->isVisible()) refreshMerchantSelection();
 
     // Recover releases missed while focus was elsewhere without changing the toggle.
     if(!getKeyboard()->isKeyDown(OIS::KC_LMENU))

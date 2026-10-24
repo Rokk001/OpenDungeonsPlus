@@ -28,6 +28,7 @@
 #include "modes/SettingsWindow.h"
 #include "game/CreaturePanelData.h"
 #include "game/TrapProductionData.h"
+#include "entities/ItemInstance.h"
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
@@ -87,6 +88,7 @@ public:
 
 
 
+//! \brief Handles dungeon play controls and the keeper's room and creature windows.
 class GameMode final : public GameEditorModeBase, public InputCommand
 {
  public:
@@ -158,6 +160,24 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     //! \brief Shows/toggles the Dungeonbook (creature list and post feed) and closes it again
     bool toggleSocialWindow(const CEGUI::EventArgs& = {});
+    //! \brief Connects the approved merchant controls to owner-only requests.
+    void initializeMerchantWindow();
+    //! \brief Opens or closes the merchant stock window and its live subscription.
+    bool toggleMerchantWindow(const CEGUI::EventArgs& = {});
+    //! \brief Closes the window and ends live stock updates.
+    bool hideMerchantWindow(const CEGUI::EventArgs& = {});
+    //! \brief Sends the selected five-point margin step to the server.
+    bool changeMerchantMargin(const CEGUI::EventArgs& = {});
+    //! \brief Switches the merchant reservation mode between fair and profit.
+    bool cycleMerchantMode(const CEGUI::EventArgs& = {});
+    //! \brief Buys the selected stable goods index for the keeper.
+    bool buyMerchantItem(const CEGUI::EventArgs& = {});
+    //! \brief Refreshes selected-row tooltip, price and treasury affordability.
+    bool refreshMerchantSelection(const CEGUI::EventArgs& = {});
+    //! \brief Reads a complete merchant stock snapshot without adopting a truncated response.
+    void receiveMerchantWindow(ODPacket& packet);
+    //! \brief Applies the validated margin and mode snapshot from the server.
+    void setMerchantSettingsShown(int32_t margin, const std::string& mode);
     //! \brief Shows the Dungeonbook above the other windows with the creature selected, used by the
     //! creature card (the card stays open)
     void showSocialWindow(const std::string& selectedCreature);
@@ -569,6 +589,15 @@ private:
     int mCasinoX;
     int mCasinoY;
     uint32_t mCasinoPayout;
+    //! \brief Latest stock entries and stable indices received from the server.
+    std::vector<std::pair<uint32_t, ItemInstance>> mMerchantItems;
+    //! \brief Tracks changed deal history so a live push also triggers the prescribed client refresh.
+    std::string mMerchantHistoryShown;
+    bool mMerchantSnapshotReceived = false;
+    int32_t mMerchantMarginShown = 10;
+    std::string mMerchantModeShown = "fair";
+    //! \brief Prevents applying a received slider value from sending a new setting request.
+    bool mMerchantUpdating = false;
 
     //! \brief whether to allow showing the window with debug Tile info under middlemouse button click
     bool showTileDebugWindow;

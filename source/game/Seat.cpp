@@ -1314,6 +1314,12 @@ bool Seat::importSeatFromStream(std::istream& is)
         setMerchantSettings(margin, mode);
         setLabMode(labMode);
     }
+    if(str == "[MerchantBalance]")
+    {
+        if(!(is >> mMerchantGoldRemainder >> str) || !std::isfinite(mMerchantGoldRemainder)
+            || mMerchantGoldRemainder < 0.0 || mMerchantGoldRemainder >= 1.0 || str != "[/MerchantBalance]"
+            || !(is >> str)) return false;
+    }
     if(str != "[SkillNotAllowed]")
     {
         OD_LOG_INF("WARNING: expected [SkillNotAllowed] and read " + str);
@@ -1594,6 +1600,7 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     }
 
     os << "[Merchant]\t" << mMerchantMargin << '\t' << mMerchantMode << '\t' << mLabMode << "\t[/Merchant]\n";
+    os << "[MerchantBalance] " << mMerchantGoldRemainder << " [/MerchantBalance]\n";
 
     os << "[SkillNotAllowed]" << std::endl;
     for(SkillType type : mSkillNotAllowed)
@@ -1898,6 +1905,25 @@ SkillType Seat::getFirstSkillPending() const
         return SkillType::nullSkillType;
 
     return mSkillPending.at(0);
+}
+
+//! \brief Deposits whole merchant proceeds and retains their fractional remainder across deals and saves.
+void Seat::addMerchantGold(double amount)
+{
+    mMerchantGoldRemainder += amount;
+    const int32_t whole = static_cast<int32_t>(std::floor(mMerchantGoldRemainder));
+    mMerchantGoldRemainder -= whole;
+    if(whole > 0) mGameMap->addGoldToSeat(whole, getId());
+}
+
+//! \brief Keeps the last twenty deals seat-wide, including non-potion deals in the brewing lookback.
+void Seat::recordMerchantDeal(const std::string& text, const std::string& potion, bool soldToBuyer)
+{
+    static const size_t HISTORY_SIZE = 20;
+    mMerchantHistory.push_back(text);
+    mMerchantPotionHistory.push_back(std::make_pair(potion, soldToBuyer));
+    while(mMerchantHistory.size() > HISTORY_SIZE) mMerchantHistory.pop_front();
+    while(mMerchantPotionHistory.size() > HISTORY_SIZE) mMerchantPotionHistory.pop_front();
 }
 
 void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)

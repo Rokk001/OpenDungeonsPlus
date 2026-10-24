@@ -108,6 +108,10 @@ std::string CreatureAction::toString(CreatureActionType actionType)
         return "tunnel";
     case CreatureActionType::possessed:
         return "possessed";
+    case CreatureActionType::sellItem:
+        return "sellItem";
+    case CreatureActionType::buyItem:
+        return "buyItem";
     case CreatureActionType::reloadTrap:
         return "reloadTrap";
 

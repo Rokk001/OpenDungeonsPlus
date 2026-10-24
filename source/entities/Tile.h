@@ -118,6 +118,7 @@ enum class TileVisual
     guardRoom,
     manaWellGround,
     templeRoom,
+    merchantRoom,
     countTileVisual
 };
 
@@ -472,6 +473,7 @@ public:
      */
     static std::string tileTypeToString(TileType t);
 
+    //! \brief Returns the configuration name for terrain and room visuals.
     static std::string tileVisualToString(TileVisual tileVisual);
     static TileVisual tileVisualFromString(const std::string& strTileVisual);
 
@@ -579,6 +581,7 @@ public:
 
     void fireTileSound(TileSound sound);
 
+    //! \brief Uses the creature's ground, water or lava speed on this tile.
     double getCreatureSpeedDefault(const Creature* creature) const;
 
     //! \brief Allows to lock the tile for the workers claiming it. Returns true if the worker could be added

@@ -2134,6 +2134,20 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         }
 
+        case ServerNotificationType::merchantWindow:
+        case ServerNotificationType::merchantSettings:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME) break;
+            GameMode* mode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            if(cmd == ServerNotificationType::merchantWindow) mode->receiveMerchantWindow(packetReceived);
+            else
+            {
+                int32_t margin = 0;
+                std::string allocation;
+                if(packetReceived >> margin >> allocation) mode->setMerchantSettingsShown(margin, allocation);
+            }
+            break;
+        }
         case ServerNotificationType::casinoPayout:
         {
             if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
