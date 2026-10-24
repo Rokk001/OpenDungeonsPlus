@@ -1352,6 +1352,7 @@ materials/portraits/whole/RunelordDwarf.mesh/*.jpg	AI-generated with Codex	GPLv3
 
 gui/items/*.png	AI-generated with Codex	GPLv3+	Original item icons, created for this project; prompts in materials/items/PROMPTS.md.
 gui/potions/*.png	AI-generated with Codex	GPLv3+	Original potion icons, created for this project; prompts in materials/items/PROMPTS.md.
+gui/herbs/*.png	AI-generated with Codex	GPLv3+	Original herb icons, created for this project; prompts in materials/items/PROMPTS.md.
 gui/items/ItemBag.png	AI-generated with Codex	GPLv3+	Original cloth item sack icon, created for this project; prompt in materials/items/PROMPTS.md.
 gui/items/GiftBoxItem.png	AI-generated with Codex	GPLv3+	Original wooden item gift box icon, created for this project; prompt in materials/items/PROMPTS.md.
 gui/Items.png	OpenDungeonsPlus contributors	GPLv3+	Atlas assembled from the original item, potion and herb icons credited in this file.
