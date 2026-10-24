@@ -1438,7 +1438,7 @@ ProtectDungeonTemple	NULL
 1	Guard1	Goblin.mesh	19	40	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Guard2	Goblin.mesh	27	40	0	Goblin	3	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Guard3	Cultist.mesh	21	38	0	Cultist	3	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Guard4	DarkElf.mesh	25	37	0	DarkElf	3	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Guard4	DarkElf.mesh	25	38	0	DarkElf	3	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
