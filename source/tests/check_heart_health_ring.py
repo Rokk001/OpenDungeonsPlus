@@ -557,7 +557,7 @@ enumerators = [name for name in enumerators if name not in ('relationshipTier', 
 # Campaign victory appends one value after the historical tail without changing existing ordinals.
 assert enumerators[-5:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'roomCleanOrder'], enumerators[-5:]
 assert enumerators.count('campaignVictory') == 1
-enumerators = enumerators[:-1]
+enumerators = enumerators[:-2]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
 assert enumerators.count('wallTorches') == 1

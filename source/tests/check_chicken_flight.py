@@ -127,7 +127,7 @@ assert 'mFlight' not in cpp[cpp.index('void ChickenEntity::exportToStream'):]
 event_h = read('source/network/CosmeticEvent.h')
 assert re.search(r'portalArrival = 8,.*?chickenFlee = 9,.*?calmed = 10,.*?bedStatus = 11,.*?casinoResult = 15,.*?keeperWealth = 16,.*?attackTurn = 18,.*?tileDirt = 19\s*\};', event_h, re.S)
 event_cpp = read('source/network/CosmeticEvent.cpp')
-assert 'CosmeticEventType::attackTurn)));\n}' in event_cpp and 'return "chickenFlee";' in event_cpp
+assert 'CosmeticEventType::tileDirt)));\n}' in event_cpp and 'return "chickenFlee";' in event_cpp
 server = read('source/network/ODServer.cpp')
 send = server[server.index('void ODServer::sendCosmeticEvent('):]
 send = send[:send.index('\n}\n')]

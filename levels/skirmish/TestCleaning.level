@@ -1119,12 +1119,12 @@ SpawnTurnMax	-1
 Wyvern	10
 Wyvern	1
 DwarfWorker	1
-1	DefaultWorker4	Kobold.mesh	13	8	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DefaultWorker5	Kobold.mesh	14	8	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DefaultWorker6	Kobold.mesh	13	9	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DefaultWorker7	Kobold.mesh	14	9	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	DefaultWorker8	Kobold.mesh	15	9	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
-1	Orc4	Orc.mesh	14	10	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DefaultWorker4	Kobold.mesh	13	15	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DefaultWorker5	Kobold.mesh	14	15	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DefaultWorker6	Kobold.mesh	15	15	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DefaultWorker7	Kobold.mesh	12	14	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	DefaultWorker8	Kobold.mesh	12	15	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
+1	Orc4	Orc.mesh	11	14	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 [/Wave]
 [/Waves]
