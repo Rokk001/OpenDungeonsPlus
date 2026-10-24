@@ -1,5 +1,79 @@
 # Item image prompts
 
+## WRK_A_Head_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Cap of Delving: one practical rounded tan canvas worker cap with a short brim and modest leather brow binding, empty cap without a head. Common-quality functional worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_A_Head_rare.png
+
+Edit target: the supplied original hand-painted canvas worker equipment icon. Produce its Rare-quality Deepcut version. Preserve EXACTLY the same object, outer silhouette, pose, angle, proportions, straps, openings, scale, composition and transparent margins. Add fine careful stitching on the existing canvas, a denser richer weave, more refined leather where it already exists, restrained polished steel and brass trim on existing metal fittings. Engrave modest fine geometric grooves on existing metal only, no letters. No glow. Change only surface craftsmanship and material quality; do not add any extra parts, protrusions, objects, gems, background or frame. Keep warm upper-left light and the hand-painted fantasy icon style. No text, numbers, symbols from any brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_A_Head_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality version for the Deep Seam set. Preserve EXACTLY the same equipment object, outer silhouette, pose, viewing angle, proportions, straps, openings, size, framing, transparent margins and upper-left light. Upgrade existing canvas to fine tightly woven cloth with intricate small stitched seams, refine existing leather, and add delicate polished silver and gold detailing only on existing metal or seam surfaces. Include a faint warm amber magical glow along a few existing edges, subtle and readable at128px, without changing the outline. Keep its practical worker-tool or work-clothing identity and hand-painted fantasy inventory icon style. No new shapes, protrusions, gems, extra objects, wearer, person, background, frame, floor, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_A_Armour_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Apron of Delving: one sturdy empty tan canvas work apron with leather neck strap and waist straps, simple reinforced pockets, an unoccupied garment. Common-quality functional worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_A_Armour_rare.png
+
+Edit target: the supplied original hand-painted canvas worker equipment icon. Produce its Rare-quality Deepcut version. Preserve EXACTLY the same object, outer silhouette, pose, angle, proportions, straps, openings, scale, composition and transparent margins. Add fine careful stitching on the existing canvas, a denser richer weave, more refined leather where it already exists, restrained polished steel and brass trim on existing metal fittings. Engrave modest fine geometric grooves on existing metal only, no letters. No glow. Change only surface craftsmanship and material quality; do not add any extra parts, protrusions, objects, gems, background or frame. Keep warm upper-left light and the hand-painted fantasy icon style. No text, numbers, symbols from any brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_A_Armour_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality version for the Deep Seam set. Preserve EXACTLY the same equipment object, outer silhouette, pose, viewing angle, proportions, straps, openings, size, framing, transparent margins and upper-left light. Upgrade existing canvas to fine tightly woven cloth with intricate small stitched seams, refine existing leather, and add delicate polished silver and gold detailing only on existing metal or seam surfaces. Include a faint warm amber magical glow along a few existing edges, subtle and readable at128px, without changing the outline. Keep its practical worker-tool or work-clothing identity and hand-painted fantasy inventory icon style. No new shapes, protrusions, gems, extra objects, wearer, person, background, frame, floor, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_A_Boots_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Clogs of Delving: a matching pair of sturdy canvas work shoes with thick wooden clog soles and modest leather fastening, presented as a single equipment item. Common-quality functional worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_A_Boots_rare.png
+
+Edit target: the supplied original hand-painted canvas worker equipment icon. Produce its Rare-quality Deepcut version. Preserve EXACTLY the same object, outer silhouette, pose, angle, proportions, straps, openings, scale, composition and transparent margins. Add fine careful stitching on the existing canvas, a denser richer weave, more refined leather where it already exists, restrained polished steel and brass trim on existing metal fittings. Engrave modest fine geometric grooves on existing metal only, no letters. No glow. Change only surface craftsmanship and material quality; do not add any extra parts, protrusions, objects, gems, background or frame. Keep warm upper-left light and the hand-painted fantasy icon style. No text, numbers, symbols from any brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_A_Boots_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality version for the Deep Seam set. Preserve EXACTLY the same equipment object, outer silhouette, pose, viewing angle, proportions, straps, openings, size, framing, transparent margins and upper-left light. Upgrade existing canvas to fine tightly woven cloth with intricate small stitched seams, refine existing leather, and add delicate polished silver and gold detailing only on existing metal or seam surfaces. Include a faint warm amber magical glow along a few existing edges, subtle and readable at128px, without changing the outline. Keep its practical worker-tool or work-clothing identity and hand-painted fantasy inventory icon style. No new shapes, protrusions, gems, extra objects, wearer, person, background, frame, floor, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_A_Ring_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Band of Delving: one finger ring, a plain iron band neatly wrapped in a narrow strip of tan canvas with restrained stitched binding, no hand. Common-quality functional worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_A_Ring_rare.png
+
+Edit target: the supplied original hand-painted canvas worker equipment icon. Produce its Rare-quality Deepcut version. Preserve EXACTLY the same object, outer silhouette, pose, angle, proportions, straps, openings, scale, composition and transparent margins. Add fine careful stitching on the existing canvas, a denser richer weave, more refined leather where it already exists, restrained polished steel and brass trim on existing metal fittings. Engrave modest fine geometric grooves on existing metal only, no letters. No glow. Change only surface craftsmanship and material quality; do not add any extra parts, protrusions, objects, gems, background or frame. Keep warm upper-left light and the hand-painted fantasy icon style. No text, numbers, symbols from any brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_A_Ring_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality version for the Deep Seam set. Preserve EXACTLY the same equipment object, outer silhouette, pose, viewing angle, proportions, straps, openings, size, framing, transparent margins and upper-left light. Upgrade existing canvas to fine tightly woven cloth with intricate small stitched seams, refine existing leather, and add delicate polished silver and gold detailing only on existing metal or seam surfaces. Include a faint warm amber magical glow along a few existing edges, subtle and readable at128px, without changing the outline. Keep its practical worker-tool or work-clothing identity and hand-painted fantasy inventory icon style. No new shapes, protrusions, gems, extra objects, wearer, person, background, frame, floor, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_A_Pick_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Pick of Delving: one compact iron mining pick with a pointed steel head and straight dark wooden handle wrapped in tan canvas grip binding. Common-quality functional worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_A_Pick_rare.png
+
+Edit target: the supplied original hand-painted canvas worker equipment icon. Produce its Rare-quality Deepcut version. Preserve EXACTLY the same object, outer silhouette, pose, angle, proportions, straps, openings, scale, composition and transparent margins. Add fine careful stitching on the existing canvas, a denser richer weave, more refined leather where it already exists, restrained polished steel and brass trim on existing metal fittings. Engrave modest fine geometric grooves on existing metal only, no letters. No glow. Change only surface craftsmanship and material quality; do not add any extra parts, protrusions, objects, gems, background or frame. Keep warm upper-left light and the hand-painted fantasy icon style. No text, numbers, symbols from any brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_A_Pick_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality version for the Deep Seam set. Preserve EXACTLY the same equipment object, outer silhouette, pose, viewing angle, proportions, straps, openings, size, framing, transparent margins and upper-left light. Upgrade existing canvas to fine tightly woven cloth with intricate small stitched seams, refine existing leather, and add delicate polished silver and gold detailing only on existing metal or seam surfaces. Include a faint warm amber magical glow along a few existing edges, subtle and readable at128px, without changing the outline. Keep its practical worker-tool or work-clothing identity and hand-painted fantasy inventory icon style. No new shapes, protrusions, gems, extra objects, wearer, person, background, frame, floor, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
 ## BLK_B_Shield_rare.png
 
 Edit target: supplied original round iron shield inventory icon. Create its rare quality version named Stonewall Shield (do not write that name). Refine the existing iron surfaces to polished steel, add restrained fine geometric etched grooves and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, visible parts, object position, proportions, angle, scale, lighting direction and transparent margins. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials, adding no protrusions or additional blades. Keep original hand-painted fantasy inventory icon style and genuine transparent alpha. One isolated equipment object. No wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
