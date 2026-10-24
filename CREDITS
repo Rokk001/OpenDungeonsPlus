@@ -1221,6 +1221,10 @@ models/Pile_*.mesh                     OD Team                 GPLv3+           
 assets-src/dirt/Pile_*.blend           OD Team                 GPLv3+                  Own work (dirt models): Blender sources of the 35 pile models (original work)
 models/BloodStain.mesh                 OD Team                 GPLv3+                  Own work (dirt models): Flat blood stain decal model, modelled in Blender (original work)
 assets-src/dirt/BloodStain.blend       OD Team                 GPLv3+                  Own work (dirt models): Blender source of the blood stain decal (original work)
+models/ToiletSeat.mesh                 OD Team                 GPLv3+                  Own work (dirt models): Toilet seat model (stone seat with a hole and a propped wooden lid), modelled in Blender (original work)
+assets-src/rooms/ToiletSeat.blend      OD Team                 GPLv3+                  Own work (dirt models): Blender source of the toilet seat (original work)
+models/DirtStage*.mesh                 OD Team                 GPLv3+                  Own work (dirt models): Three flat one-tile dirt decal models (stains, stains with litter, dark layer with puddles), modelled in Blender (original work)
+assets-src/dirt/DirtStage*.blend       OD Team                 GPLv3+                  Own work (dirt models): Blender sources of the three dirt decal models (original work)
 
 =======================================================
 ==  Hatchery animal sounds: crow, protest, cluck, peep, egg crack  ==
