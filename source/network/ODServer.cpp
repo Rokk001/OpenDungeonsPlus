@@ -559,6 +559,7 @@ void ODServer::handleConsoleCommand(Player* player, GameMap* gameMap, const std:
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Advances the server turn and sends each player notifications with private item data masked.
 void ODServer::startNewTurn(double timeSinceLastTurn)
 {
     GameMap* gameMap = mGameMap;
@@ -638,7 +639,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
                 itCreatures = creatures.erase(itCreatures);
             else
             {
-                std::string creatureInfos = creature->getStatsText();
+                std::string creatureInfos = creature->getStatsText(player->getSeat());
 
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::notifyCreatureInfo, player);

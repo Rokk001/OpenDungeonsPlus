@@ -23,6 +23,8 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
+#include "entities/ItemBagEntity.h"
+#include "entities/ItemInstance.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "giftboxes/GiftBoxBonus.h"
@@ -77,6 +79,7 @@
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/WindowManager.h>
+#include <CEGUI/ImageManager.h>
 #include <CEGUI/widgets/PushButton.h>
 #include <CEGUI/widgets/ToggleButton.h>
 #include <CEGUI/widgets/ProgressBar.h>
@@ -104,6 +107,34 @@ const std::string TEXT_SEAT_TEAM_ID_PREFIX = "TextSeatTeam";
 const double AUTOSCROLL_EDGE_RATIO = 0.02;
 //! Seconds between two refreshes of the open trap production window.
 const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
+
+//! \brief Existing context text bounds and the specified item icon side, in design pixels.
+static const float ITEM_CONTEXT_LEFT = 404.0f;
+static const float ITEM_CONTEXT_TOP = 2.0f;
+static const float ITEM_CONTEXT_RIGHT_INSET = 4.0f;
+static const float ITEM_CONTEXT_ORDINARY_BOTTOM = 44.0f;
+static const float ITEM_CONTEXT_IMAGE_SIDE = 64.0f;
+//! \brief The four specified quality colours, encoded as RGBA.
+static const uint32_t ITEM_CONTEXT_COLOURS[] = {0x8A8A8AFF, 0xFFFFFFFF, 0x3E7BFFFF, 0xA64DFFFF};
+//! \brief The item atlas and quality-frame resource prefixes.
+static const std::string ITEM_CONTEXT_IMAGE_PREFIX = "ItemImages/";
+static const std::string ITEM_CONTEXT_FRAME_PREFIX = "OpenDungeonsIcons/ItemFrame";
+
+//! \brief Removes only CEGUI colour tags when an item tooltip is used by Ogre pointer text.
+static std::string getPlainItemTooltip(std::string text)
+{
+    static const std::string tag = "[colour='";
+    std::size_t start = text.find(tag);
+    while(start != std::string::npos)
+    {
+        const std::size_t end = text.find("']", start);
+        if(end == std::string::npos)
+            break;
+        text.erase(start, end + 2 - start);
+        start = text.find(tag, start);
+    }
+    return text;
+}
 
 // Text colours (ARGB) of the mana change next to the mana display.
 const std::string MANA_GAIN_TEXT_COLOUR = "FF7FE3A6";
@@ -344,7 +375,7 @@ const float SKILL_BADGE_NODE_GAP = 16.0f;
 //! \brief Horizontal padding in pixels added to the counter text width to get the width of the counter window
 const float SKILL_BADGE_WIDTH_PADDING = 8.0f;
 
-//! \brief Connects game controls, including both entry points to the existing objectives window.
+//! \brief Connects game controls and the existing objectives entry points, excluding item boxes from stored specials.
 GameMode::GameMode(ModeManager *modeManager):
     GameEditorModeBase(modeManager, ModeManager::GAME, modeManager->getGui().getGuiSheet(Gui::guiSheet::inGameMenu)),
     mDigSetBool(false),
@@ -414,7 +445,7 @@ GameMode::GameMode(ModeManager *modeManager):
             CEGUI::Event::Subscriber(&GameMode::selectUserCamera, this)));
     }
     for(uint32_t special = static_cast<uint32_t>(GiftBoxType::skill) + 1;
-        special < static_cast<uint32_t>(GiftBoxType::nbTypes); ++special)
+        special < static_cast<uint32_t>(GiftBoxType::item); ++special)
     {
         CEGUI::Window* button = mRootWindow->getChild("SpecialsPanel/Special" + Helper::toString(special));
         button->setID(special);
@@ -2230,15 +2261,16 @@ bool GameMode::useSpecial(const CEGUI::EventArgs& args)
     return true;
 }
 
+//! \brief Refreshes stored-special buttons without treating item gift boxes as stored specials.
 void GameMode::refreshSpecialButtons()
 {
     Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
     if(localPlayerSeat == nullptr)
         return;
 
-    mSpecialCountsShown.resize(static_cast<uint32_t>(GiftBoxType::nbTypes), 0);
+    mSpecialCountsShown.resize(static_cast<uint32_t>(GiftBoxType::item), 0);
     for(uint32_t special = static_cast<uint32_t>(GiftBoxType::skill) + 1;
-        special < static_cast<uint32_t>(GiftBoxType::nbTypes); ++special)
+        special < static_cast<uint32_t>(GiftBoxType::item); ++special)
     {
         uint32_t count = localPlayerSeat->getNbStoredSpecials(special);
         CEGUI::Window* button = mRootWindow->getChild("SpecialsPanel/Special" + Helper::toString(special));
@@ -4773,8 +4805,10 @@ void GameMode::unselectAllTiles()
     RenderManager::getSingleton().rrDrawTilePreview(mSelectedTiles, Ogre::ColourValue::White);
 }
 
+//! \brief Displays ordinary context text and clears any preceding item image.
 void GameMode::displayText(const Ogre::ColourValue& txtColour, const std::string& txt)
 {
+    clearItemContextImage();
     // Callers supply both eligibility and context; do not discard the former with the old label.
     mActionTargetValid = txtColour != Ogre::ColourValue::Red;
     mActionTargetText = txt;
@@ -4963,8 +4997,10 @@ void GameMode::notifyPossessionEnded()
     mPossessTimeSinceSent = 0.0f;
 }
 
+//! \brief Re-evaluates the selected action and its contextual item or terrain information.
 void GameMode::checkInputCommand()
 {
+    clearItemContextImage();
     // In the gamemode, by default, we select tiles
     const InputManager& inputManager = mModeManager->getInputManager();
 
@@ -5130,6 +5166,54 @@ void GameMode::handlePlayerActionQuery()
         entity->createStatsWindow();
 }
 
+//! \brief Restores the original context text bounds after an item hover ends.
+void GameMode::clearItemContextImage()
+{
+    CEGUI::Window* context = mRootWindow->getChild("ContextInfo");
+    context->getChild("ContextImage")->hide();
+    context->setProperty("TextParsingEnabled", "False");
+    mModeManager->getGui().setScaledArea(context,
+        CEGUI::URect(CEGUI::UDim(0, ITEM_CONTEXT_LEFT), CEGUI::UDim(0, ITEM_CONTEXT_TOP),
+            CEGUI::UDim(1, -ITEM_CONTEXT_RIGHT_INSET), CEGUI::UDim(0, ITEM_CONTEXT_ORDINARY_BOTTOM)));
+}
+
+//! \brief Shows the complete pointer tooltip and places the icon immediately left of its context name.
+void GameMode::showItemContext(const ItemBagEntity& bag)
+{
+    const ItemInstance* item = bag.getItem();
+    if(item == nullptr)
+        return;
+
+    const std::string description = item->describe(mGameMap);
+    CEGUI::Window* context = mRootWindow->getChild("ContextInfo");
+    context->setProperty("TextParsingEnabled", "True");
+    mActionTargetText = description.substr(0, description.find('\n'));
+    context->setText(mActionTargetText);
+    CEGUI::Window* image = context->getChild("ContextImage");
+    const std::string imageName = ITEM_CONTEXT_IMAGE_PREFIX + item->getImageName();
+    if(CEGUI::ImageManager::getSingleton().isDefined(imageName))
+    {
+        image->setProperty("Image", imageName);
+        Gui& gui = mModeManager->getGui();
+        gui.setScaledArea(context,
+            CEGUI::URect(CEGUI::UDim(0, ITEM_CONTEXT_LEFT + ITEM_CONTEXT_IMAGE_SIDE),
+                CEGUI::UDim(0, ITEM_CONTEXT_TOP), CEGUI::UDim(1, -ITEM_CONTEXT_RIGHT_INSET),
+                CEGUI::UDim(0, ITEM_CONTEXT_TOP + ITEM_CONTEXT_IMAGE_SIDE)));
+        gui.setScaledArea(image, CEGUI::URect(CEGUI::UDim(0, -ITEM_CONTEXT_IMAGE_SIDE), CEGUI::UDim(0, 0),
+            CEGUI::UDim(0, 0), CEGUI::UDim(0, ITEM_CONTEXT_IMAGE_SIDE)));
+        CEGUI::Window* frame = image->getChild("QualityFrame");
+        const std::string frameName = ITEM_CONTEXT_FRAME_PREFIX + qualityName(item->mQuality);
+        frame->setVisible(CEGUI::ImageManager::getSingleton().isDefined(frameName));
+        if(frame->isVisible())
+            frame->setProperty("Image", frameName);
+        image->show();
+    }
+    Ogre::ColourValue colour;
+    colour.setAsRGBA(ITEM_CONTEXT_COLOURS[static_cast<std::size_t>(item->mQuality)]);
+    displayPointerText(colour, getPlainItemTooltip(description));
+}
+
+//! \brief Describes visible bags as well as the existing pickable creatures, objects and terrain.
 void GameMode::handlePlayerActionNone()
 {
     const InputManager& inputManager = mModeManager->getInputManager();
@@ -5157,7 +5241,7 @@ void GameMode::handlePlayerActionNone()
             tile->fillWithEntities(entities, SelectionEntityWanted::any, player);
             for(GameEntity* entity : entities)
             {
-                if(!entity->tryPickup(player->getSeat()))
+                if(!entity->tryPickup(player->getSeat()) && entity->getObjectType() != GameEntityType::itemBagEntity)
                     continue;
                 const Ogre::Vector3& pos = entity->getPosition();
                 const double candidate = Pathfinding::squaredDistance(pos.x, inputManager.mKeeperHandPos.x,
@@ -5175,6 +5259,14 @@ void GameMode::handlePlayerActionNone()
                     displayText(Ogre::ColourValue::White, "Chicken");
                 else if(closest->getObjectType() == GameEntityType::treasuryObject)
                     displayText(Ogre::ColourValue::White, "Gold");
+                else if(closest->getObjectType() == GameEntityType::itemBagEntity)
+                {
+                    const ItemBagEntity* bag = static_cast<const ItemBagEntity*>(closest);
+                    const ItemInstance* item = bag->getItem();
+                    if(item != nullptr)
+                        displayText(Ogre::ColourValue::White, item->getDisplayName(mGameMap));
+                    mActionTargetValid = closest->tryPickup(player->getSeat());
+                }
                 else
                 {
                     std::string text = creature != nullptr ? creature->getDefinition()->getClassName() : closest->getName();
@@ -5212,6 +5304,8 @@ void GameMode::handlePlayerActionNone()
         }
         setHighlightedCreature(dynamic_cast<Creature*>(closest));
         TextRenderer::getSingleton().setText(ODApplication::POINTER_INFO_STRING, "");
+        if(closest != nullptr && closest->getObjectType() == GameEntityType::itemBagEntity)
+            showItemContext(*static_cast<const ItemBagEntity*>(closest));
         return;
     }
 

@@ -2135,14 +2135,25 @@ void EditorMode::notifyGuiAction(GuiAction guiAction)
     }
 }
 
+//! \brief Keeps the existing gift-box request payload unchanged for existing box types.
 void EditorMode::askCreateGiftBox(GiftBoxType type)
 {
+    askCreateGiftBox(type, std::string(), false);
+}
+
+//! \brief Adds the content selection and placement flag only for the new item-box type.
+void EditorMode::askCreateGiftBox(GiftBoxType type, const std::string& content, bool placeBag)
+{
     if(!ODClient::getSingleton().isConnected())
+        return;
+    if(type == GiftBoxType::item && content.empty())
         return;
 
     ClientNotification *clientNotification = new ClientNotification(
         ClientNotificationType::editorCreateGiftBox);
     clientNotification->mPacket << static_cast<int32_t>(type);
+    if(type == GiftBoxType::item)
+        clientNotification->mPacket << content << placeBag;
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 

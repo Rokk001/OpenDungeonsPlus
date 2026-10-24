@@ -48,6 +48,7 @@ class Window;
 class Creature;
 class CreaturePanel;
 class GameEntity;
+class ItemBagEntity;
 class MiniMapDrawnFull;
 class MenuModeLoad;
 class SocialWindow;
@@ -89,7 +90,7 @@ public:
 
 
 
-//! \brief Handles dungeon play controls and the keeper's room and creature windows.
+//! \brief Handles dungeon play controls, the keeper's room and creature windows, and contextual item information.
 class GameMode final : public GameEditorModeBase, public InputCommand
 {
  public:
@@ -288,6 +289,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void selectTiles(const std::vector<Tile*> tiles) override;
     void unselectAllTiles() override;
 
+    //! \brief Displays ordinary context text and clears any preceding item image.
     void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
     //! \brief Displays the text next to the pointer (for example a price) rather than in the context line.
     void displayPointerText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
@@ -535,6 +537,7 @@ private:
     //! \brief The player pressed the button of a stored special: asks the server to use it
     bool useSpecial(const CEGUI::EventArgs& args);
     //! \brief Shows the buttons of the specials the local player has stored
+    //! \brief Updates only existing stored-special buttons; item gift boxes are never stored specials.
     void refreshSpecialButtons();
     //! \brief The number of stored specials the buttons show, indexed by gift box type
     std::vector<uint32_t> mSpecialCountsShown;
@@ -655,8 +658,12 @@ private:
 
     //! \brief Called when there is a mouse input change
     void checkInputCommand();
+    //! \brief Restores the ordinary context area and hides its item image and quality frame.
+    void clearItemContextImage();
+    //! \brief Shows one bag's image, quality frame and complete pointer tooltip.
+    void showItemContext(const ItemBagEntity& bag);
     //! \brief Handles the hover when no action is selected: unexplored tiles get a dig hint, otherwise
-    //! the closest pickable entity or the wall or ground under the pointer is described.
+    //! the closest pickable entity, visible item bag, wall or ground under the pointer is described.
     void handlePlayerActionNone();
     //! \brief Handles the dig-mark selection drag: previews the diggable tiles and, once validated,
     //! asks the server to mark or unmark them for digging.

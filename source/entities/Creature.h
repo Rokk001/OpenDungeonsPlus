@@ -244,7 +244,10 @@ public:
     //! \brief Client side. Takes over the appearance the server sent in the creature message of
     //! ServerNotificationType::creatureAppearance. Ignored on the server.
     void setAppearanceFromServer(const CreatureAppearance& appearance);
+    //! \brief Returns server-side characteristics, carried item slots and existing debug information.
     std::string getStatsText();
+    //! \brief Returns statistics with only hand items visible to a foreign viewing seat.
+    std::string getStatsText(const Seat* viewer);
 
     //! \brief Client side. One line with the strongest friend and the worst enemy of a creature of the
     //! local player or its allies, e.g. "Closest: Name (friend) - Against: Name (nemesis)". Empty if the
