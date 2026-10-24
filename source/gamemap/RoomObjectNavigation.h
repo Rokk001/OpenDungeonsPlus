@@ -6,6 +6,7 @@
 class GameMap;
 class Creature;
 class BuildingObject;
+class Tile;
 
 namespace RoomObjectNavigation
 {
@@ -22,6 +23,15 @@ std::vector<RoomObjectPath::Obstacle> bodyObstacles(Creature& creature,
 // false if there is none in the tile.
 bool standingPosition(const std::vector<RoomObjectPath::Obstacle>& obstacles,
     const Ogre::Vector2& wanted, Ogre::Vector2& result);
+//! \brief Tells whether the creature can stand somewhere in the tile without touching room furniture.
+//! \param creature The creature whose walking body is used.
+//! \param tile The tile to test.
+bool hasStandingPosition(Creature& creature, const Tile& tile);
+//! \brief Removes the tiles that are covered by furniture from a list of random walking targets.
+//! If no tile of the list has a free standing position, the list stays as it is.
+//! \param creature The creature whose walking body is used.
+//! \param tiles The candidate tiles, reduced in place.
+void keepTilesWithStandingPosition(Creature& creature, std::vector<Tile*>& tiles);
 // Searches a route to a point from which the creature can reach the food without
 // furniture in between. The last point of the path is the position to eat at.
 bool foodApproach(Creature& creature, const Ogre::Vector2& food, std::vector<Ogre::Vector2>& path);

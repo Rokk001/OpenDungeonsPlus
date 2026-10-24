@@ -29,6 +29,7 @@
 #include "game/CreatureRelationships.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "utils/Helper.h"
@@ -157,8 +158,10 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
             if((affinity.getEfficiency() <= 0) ||
                (room->getType() == RoomType::hatchery))
             {
-                int index = Random::Int(0, room->numCoveredTiles() - 1);
-                Tile* tileDest = room->getCoveredTile(index);
+                // The wandering target must be a tile with a free standing point, not one covered by furniture
+                std::vector<Tile*> wanderTiles = room->getCoveredTiles();
+                RoomObjectNavigation::keepTilesWithStandingPosition(creature, wanderTiles);
+                Tile* tileDest = wanderTiles[Random::Uint(0, wanderTiles.size() - 1)];
                 creature.setDestination(tileDest);
                 return false;
             }
