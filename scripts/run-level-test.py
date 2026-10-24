@@ -25,6 +25,7 @@ Usage:
     python scripts/run-level-test.py --exe build/windows/Release/opendungeons-plus.exe
     python scripts/run-level-test.py --exe ... --seconds 60 levels/campaign/Mossgate.level
     python scripts/run-level-test.py --exe ... --markdown   # result paragraph as markdown
+    python scripts/run-level-test.py --exe ... --port 31301   # own server port, for parallel instances
 """
 
 import argparse
@@ -96,16 +97,22 @@ MENU_TEST_NAME = "MainMenu"
 MENU_FRAME_LINE = re.compile(r"^MENUTEST frames=(\d+)")
 
 
-def run_menu_test(exe, seconds):
+def port_arguments(port):
+    """Returns the game arguments that select the server port; empty if no port is requested (game default)."""
+    return [] if port is None else ["--port", str(port)]
+
+
+def run_menu_test(exe, seconds, port=None):
     """Starts the game once with --menu-test, so that the main menu scene is really rendered, and checks Ogre.log.
 
     A --run-level run starts its level while the menu opens, before a single menu frame is rendered, so
     the menu textures and materials are never loaded there. Returns (passed, text); the text is
-    "PASS MainMenu ..." or "FAIL MainMenu : reason" (it does not end in .level).
+    "PASS MainMenu ..." or "FAIL MainMenu : reason" (it does not end in .level). port selects the server
+    port of the game (None = game default).
     """
     appdata = tempfile.mkdtemp(prefix="od-menu-test-")
     limit = 2 * seconds + 120
-    command = [exe, "--menu-test", str(seconds), "--appData", appdata]
+    command = [exe, "--menu-test", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                universal_newlines=True)
@@ -136,17 +143,20 @@ def run_menu_test(exe, seconds):
     return True, "PASS %s : %d frames rendered, no missing menu resources" % (MENU_TEST_NAME, frames)
 
 
-def run_level(exe, level, seconds):
+def run_level(exe, level, seconds, port=None):
     """Runs one level. Returns (passed, text)."""
-    passed, text, _ = run_level_with_frame_time(exe, level, seconds)
+    passed, text, _ = run_level_with_frame_time(exe, level, seconds, port)
     return passed, text
 
 
-def run_level_with_frame_time(exe, level, seconds):
-    """Runs one level. Returns (passed, text, frame_time), frame_time is (frames, avg_ms) or None."""
+def run_level_with_frame_time(exe, level, seconds, port=None):
+    """Runs one level. Returns (passed, text, frame_time), frame_time is (frames, avg_ms) or None.
+
+    port selects the server port of the game (None = game default); parallel instances need different ports.
+    """
     appdata = tempfile.mkdtemp(prefix="od-run-level-")
     limit = 2 * seconds + 400
-    command = [exe, "--run-level", level, "--seconds", str(seconds), "--appData", appdata]
+    command = [exe, "--run-level", level, "--seconds", str(seconds), "--appData", appdata] + port_arguments(port)
     process = subprocess.Popen(command, cwd=os.path.dirname(os.path.abspath(exe)),
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                universal_newlines=True)
@@ -195,6 +205,8 @@ def main():
     parser.add_argument("--menu-seconds", type=int, default=8,
                         help="seconds the main menu test shows the menu once per run (0 = skip, default 8)")
     parser.add_argument("--markdown", action="store_true", help="print the results as a markdown paragraph")
+    parser.add_argument("--port", type=int, default=None,
+                        help="server port of the game (default: the game default); parallel instances need different ports")
     parser.add_argument("--progress-file", help="append one progress line per finished level to this file")
     parser.add_argument("levels", nargs="*", help="level files (default: all levels of Campaign.cfg)")
     args = parser.parse_args()
@@ -209,12 +221,12 @@ def main():
     menu_passed = True
     menu_text = ""
     if args.menu_seconds > 0:
-        menu_passed, menu_text = run_menu_test(exe, args.menu_seconds)
+        menu_passed, menu_text = run_menu_test(exe, args.menu_seconds, args.port)
         print(menu_text, flush=True)
 
     results = []
     for level in levels:
-        passed, text, frame_time = run_level_with_frame_time(exe, level, args.seconds)
+        passed, text, frame_time = run_level_with_frame_time(exe, level, args.seconds, args.port)
         print(text, flush=True)
         if frame_time is not None:
             print("FRAMETIME frames=%d avg_ms=%s" % frame_time, flush=True)
