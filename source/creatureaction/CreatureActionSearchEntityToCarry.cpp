@@ -34,6 +34,16 @@
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 
+namespace
+{
+//! \brief Prioritizes infirmaries before other reachable delivery buildings.
+bool infirmaryFirst(Building* building)
+{
+    return building->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(building)->getType() == RoomType::infirmary;
+}
+}
+
 CreatureActionSearchEntityToCarry::CreatureActionSearchEntityToCarry(Creature& creature, bool forced) :
     CreatureAction(creature),
     mForced(forced)
@@ -64,8 +74,6 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
     }
 
     std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
-    std::function<bool(Building*)> infirmaryFirst = [](Building* building)
-    { return building->getObjectType() == GameEntityType::room && static_cast<Room*>(building)->getType() == RoomType::infirmary; };
     std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
     std::vector<GameEntity*> carryableEntities = creature.getGameMap()->getCarryableEntities(&creature, creature.getTilesWithinSightRadius());
     std::vector<Tile*> carryableEntityInMyTileClients;

@@ -31,6 +31,16 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 
+namespace
+{
+//! \brief Prioritizes infirmaries before other reachable delivery buildings.
+bool infirmaryFirst(Building* building)
+{
+    return building->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(building)->getType() == RoomType::infirmary;
+}
+}
+
 CreatureActionGrabEntity::CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry) :
     CreatureAction(creature),
     mEntityToCarry(&entityToCarry)
@@ -106,8 +116,6 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
 
     // We try to find a building that wants the entity
     std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
-    std::function<bool(Building*)> infirmaryFirst = [](Building* building)
-    { return building->getObjectType() == GameEntityType::room && static_cast<Room*>(building)->getType() == RoomType::infirmary; };
     std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
     std::vector<Tile*> tilesDest;
     for(Building* building : buildings)
