@@ -5940,6 +5940,17 @@ void Creature::pushAction(std::unique_ptr<CreatureAction>&& action)
         mActionTry.push_back(actionType);
     }
 
+    // A fight or a flight on top of a toilet use gives the seat back at once
+    if((actionType == CreatureActionType::fight) || (actionType == CreatureActionType::fightFriendly) ||
+       (actionType == CreatureActionType::flee))
+    {
+        for(std::unique_ptr<CreatureAction>& lower : mActions)
+        {
+            if(lower->getType() == CreatureActionType::useToilet)
+                static_cast<CreatureActionUseToilet*>(lower.get())->interrupt();
+        }
+    }
+
     mActions.emplace_back(std::move(action));
 }
 
@@ -7095,6 +7106,12 @@ void Creature::fireCreatureSound(CreatureSound sound)
             break;
         case CreatureSound::Dig:
             soundFamily = "Default/Dig";
+            break;
+        case CreatureSound::Relieve:
+            soundFamily = "Default/Relieve";
+            break;
+        case CreatureSound::Clean:
+            soundFamily = "Default/Clean";
             break;
         default:
             OD_LOG_ERR("Wrong CreatureSound value=" + Helper::toString(static_cast<uint32_t>(sound)));

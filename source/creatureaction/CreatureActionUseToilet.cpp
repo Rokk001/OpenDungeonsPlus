@@ -58,6 +58,12 @@ std::function<bool()> CreatureActionUseToilet::action() // allowed-lambda: signa
     return std::bind(&CreatureActionUseToilet::handleUseToilet, this);
 }
 
+void CreatureActionUseToilet::interrupt()
+{
+    releaseSeat();
+    mPhase = Phase::approach;
+}
+
 bool CreatureActionUseToilet::isExemptRoomType(const Room* room)
 {
     if(room == nullptr)
@@ -100,6 +106,7 @@ void CreatureActionUseToilet::startSquat()
     if(mCreature.isMoving())
         mCreature.clearDestinations(EntityAnimation::relieve_anim, true, false);
     mCreature.setAnimationState(EntityAnimation::relieve_anim, true, Ogre::Vector3::ZERO, false);
+    mCreature.fireCreatureSound(CreatureSound::Relieve);
 }
 
 Tile* CreatureActionUseToilet::findTileOutsideExemptRoom() const

@@ -105,6 +105,10 @@ bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClea
         return true;
     }
 
+    // The scrubbing sound plays once when the worker starts cleaning a tile, not on every turn of the work
+    if(creature.getAnimationStateName() != EntityAnimation::clean_anim)
+        creature.fireCreatureSound(CreatureSound::Clean);
+
     creature.setAnimationState(EntityAnimation::clean_anim);
     // The cleaning work per turn: the claim rate of the worker as a share of the whole dirt range
     double cleanRate = creature.getClaimRate() * Tile::MAX_DIRT * config.getDirtConfigDouble("CleanRateFactor");

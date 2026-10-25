@@ -30,7 +30,7 @@ class Tile;
 //! there for ToiletUseTurns turns and leaves the room a little dirtier. Without a seat tile (nullptr) it relieves
 //! itself where it stands and leaves a pile on the floor; in a treasury, the dungeon heart room or a temple it
 //! first steps out of the room. Either way the urge is 0 afterwards. A fight on top of this action interrupts it:
-//! the seat is kept only while the reservation lasts and the urge stays.
+//! the seat is given back at once (see interrupt) and the urge stays.
 class CreatureActionUseToilet : public CreatureAction
 {
 public:
@@ -51,6 +51,10 @@ public:
 
     //! \brief Gets the function that runs this action.
     std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
+
+    //! \brief Called when another action (a fight) takes over: gives the seat back at once and starts the use again
+    //! when the creature gets control back. The urge stays. Does not touch a seat reserved by somebody else.
+    void interrupt();
 
     //! \brief True for the rooms where a creature must not relieve itself (treasury, dungeon heart room, temple).
     static bool isExemptRoomType(const Room* room);
