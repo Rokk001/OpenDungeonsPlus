@@ -254,6 +254,8 @@ public:
     inline double getDirtFactor() const { return mDirtFactor; }
     //! \brief Returns how fast the thirst grows per turn (0 = the creature never gets thirsty).
     inline double getThirstGrowthPerTurn() const { return mThirstGrowthPerTurn; }
+    //! \brief Returns true if the creature type can get thirsty (a type without hunger has no thirst either).
+    inline bool hasThirst() const { return mThirstGrowthPerTurn > 0.0; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }

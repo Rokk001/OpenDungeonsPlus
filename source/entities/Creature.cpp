@@ -2494,6 +2494,7 @@ bool Creature::handleIdleAction()
     // If we are thirsty, we go to a tavern. Without a tavern nothing happens here: the thirst keeps rising and
     // its mood malus acts
     if (!mDefinition->isWorker() &&
+        mDefinition->hasThirst() &&
         !hasActionBeenTried(CreatureActionType::searchDrink) &&
         (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
     {
@@ -7620,7 +7621,7 @@ void Creature::drinkTaken(DrinkKind kind)
 //! is at the limit lets the keeper know when there is no tavern (the keeper limits the notices itself).
 void Creature::increaseThirst(double value)
 {
-    if(getSeat()->isRogueSeat())
+    if(getSeat()->isRogueSeat() || !mDefinition->hasThirst())
         return;
 
     mThirst = std::min(THIRST_STATE_MAX, mThirst + value);
@@ -7628,9 +7629,14 @@ void Creature::increaseThirst(double value)
         getSeat()->getPlayer()->notifyTavernEvent();
 }
 
-//! \brief Sets the thirst, limited to 0 - THIRST_STATE_MAX.
+//! \brief Sets the thirst, limited to 0 - THIRST_STATE_MAX; a creature type that cannot get thirsty stays at 0.
 void Creature::setThirst(double val)
 {
+    if(!mDefinition->hasThirst())
+    {
+        mThirst = 0.0;
+        return;
+    }
     mThirst = std::min(THIRST_STATE_MAX, std::max(0.0, val));
 }
 
