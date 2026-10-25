@@ -717,6 +717,7 @@ int RoomDungeonTemple::getTotalGoldStored() const
     return totalGold;
 }
 
+//! \brief Deposits unchanged gold into the ring and reports one cosmetic burst at the actual heart.
 int RoomDungeonTemple::depositGold(int gold, Tile* tile)
 {
     int goldDeposited, goldToDeposit = gold, emptySpace;
@@ -762,6 +763,16 @@ int RoomDungeonTemple::depositGold(int gold, Tile* tile)
     // Tells the client to play a deposit gold sound. For now, we only send it to the players
     // with vision on tile
     fireRoomSound(*tile, "Treasury/DepositGold");
+
+    Tile* heartTile = getHeartTile();
+    if(heartTile != nullptr)
+    {
+        CosmeticEvent delivery(CosmeticEventType::goldDelivery);
+        delivery.mObject = getName();
+        delivery.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTile->getX()),
+            static_cast<Ogre::Real>(heartTile->getY()), 0.0f);
+        fireRoomCosmeticEvent(*tile, delivery);
+    }
 
     return wasDeposited;
 }

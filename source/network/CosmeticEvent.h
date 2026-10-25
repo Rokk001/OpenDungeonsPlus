@@ -131,7 +131,13 @@ enum class CosmeticEventType : int32_t
     //! Sent to the keepers that see the tiles when something changed (after DirtSyncTurns), every DirtResyncTurns
     //! and at once to a keeper who gains sight, joins or loads. Only shows the dirt decals and the room text; the game
     //! never depends on it. Older clients skip the kind.
-    tileDirt = 19
+    tileDirt = 19,
+    //! A successful mining stroke. mSubject worker, mValue TileType, mPosition the actual mined tile.
+    //! Sent once after the server removed material; timing, gold and gameplay are unchanged.
+    digStroke = 20,
+    //! A successful deposit in a heart ring. mObject room, mPosition actual heart tile.
+    //! Sent once per successful deposit to the keepers who see its deposit tile.
+    goldDelivery = 21
 };
 
 //! \brief The result in mValue of the event hitResult

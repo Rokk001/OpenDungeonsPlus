@@ -117,6 +117,51 @@ particle_system WorkerGoldSplinters
     }
 }
 
+// One stationary mining/delivery burst: at most six coins, each alive for 0.8 seconds.
+particle_system WorkerMiningCoins
+{
+    material        ReactionParticleCoin
+    point_rendering false
+    particle_width  0.08
+    particle_height 0.08
+    cull_each       false
+    quota           6
+    billboard_type  point
+
+    emitter Point
+    {
+        angle               80
+        colour_range_start  1.0 0.85 0.3 1.0
+        colour_range_end    1.0 0.95 0.55 1.0
+        emission_rate       30
+        time_to_live        0.8
+        direction           0 0 1
+        velocity_min        0.1
+        velocity_max        0.2
+        duration            0.2
+        position            0 0 0.3
+    }
+
+    affector LinearForce
+    {
+        force_vector      0 0 -1.0
+        force_application add
+    }
+
+    affector Rotator
+    {
+        rotation_speed_range_start  -300
+        rotation_speed_range_end    300
+        rotation_range_start        0
+        rotation_range_end          360
+    }
+
+    affector ColourFader
+    {
+        alpha -0.9
+    }
+}
+
 particle_system WorkerGemGlint
 {
     material        ReactionParticleSpark

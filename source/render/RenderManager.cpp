@@ -6002,20 +6002,28 @@ void RenderManager::treasuryCreatureStep(Creature* creature, const Ogre::Vector3
         SoundEffectsManager::getSingleton().playSpatialSound("Rooms/Treasury/CoinStep", position.x, position.y);
 }
 
+//! \brief Emits a bounded stationary burst using the existing timed free-particle cleanup.
+void RenderManager::rrMiningCoinBurst(const Ogre::Vector3& position)
+{
+    const std::string name = "TreasuryEffect_" + Helper::toString(++mTreasuryEffectNumber);
+    rrCreateFreeParticleEffect(name, "WorkerMiningCoins", position, nullptr);
+    TreasuryEffect effect;
+    effect.mName = name;
+    effect.mRemaining = 1.0f;
+    effect.mRoomKey = nullptr;
+    effect.mKind = TreasuryEffectKind::coinBurst;
+    mTreasuryEffects.push_back(effect);
+}
+
+//! \brief Retains the deposit pour pose; the server goldDelivery event owns the coin burst.
 void RenderManager::rrTreasuryDeposit(GameMap* gameMap, int x, int y)
 {
-    int level = 0;
-    const float height = TreasuryGoldMesh::surfaceHeight(static_cast<float>(x), static_cast<float>(y), level);
-    // Only treasuries drawn with a gold layer have a pile to pour onto
-    if(level <= 0)
-        return;
-
     Tile* tile = gameMap != nullptr ? gameMap->getTile(x, y) : nullptr;
-    const void* roomKey = (tile != nullptr && tile->getCoveringRoom() != nullptr) ?
-        static_cast<const void*>(tile->getCoveringRoom()) : static_cast<const void*>(tile);
-    createTreasuryEffect(roomKey, "TreasuryCoinPour",
-        Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), height + TreasuryCoinEffectHeightOffset));
-    startTreasuryPour(tile, level);
+    int level = 0;
+    TreasuryGoldMesh::surfaceHeight(static_cast<float>(x), static_cast<float>(y), level);
+    // Only treasuries drawn with a gold layer have a pile to pour onto
+    if(level > 0)
+        startTreasuryPour(tile, level);
 }
 
 void RenderManager::startTreasuryPour(Tile* tile, int level)
@@ -6194,6 +6202,7 @@ bool RenderManager::createTreasuryEffect(const void* roomKey, const std::string&
     return true;
 }
 
+//! \brief Removes expired free particles and releases budgets only for effects that acquired one.
 void RenderManager::updateTreasuryEffects(Ogre::Real timeSinceLastFrame)
 {
     for(std::vector<TreasuryEffect>::iterator it = mTreasuryEffects.begin(); it != mTreasuryEffects.end();)
@@ -6210,7 +6219,7 @@ void RenderManager::updateTreasuryEffects(Ogre::Real timeSinceLastFrame)
             mTreasuryDustBudget.release(it->mRoomKey);
         else if(it->mKind == TreasuryEffectKind::ambient)
             mTreasuryAmbientBudget.release(it->mRoomKey);
-        else
+        else if(it->mKind == TreasuryEffectKind::splash)
             mTreasurySplashBudget.release(it->mRoomKey);
         it = mTreasuryEffects.erase(it);
     }
