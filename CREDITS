@@ -1489,3 +1489,36 @@ materials/textures/InfirmaryFloor.png          OD Team; AI-generated with Codex 
 materials/textures/InfirmaryFloorNormal.png    OD Team; AI-generated with Codex    CC0    Matching tangent normal map of the prescribed original infirmary floor height field, 2026-10-25
 materials/scripts/InfirmaryFloor.material     OpenDungeonsPlus contributors    GPLv3+    Existing room-floor shader material with infirmary texture references; original material attribution retained, 2026-10-25; additional definition AI-generated with Codex
 particles/CreatureReactions.particle (InfirmaryHealGlow)    OpenDungeonsPlus contributors    GPLv3+    Additional continuous healing glow based on the existing ReactionHeal definition, 2026-10-25; existing particle definitions unchanged; additional definition AI-generated with Codex
+
+== Original infirmary furniture and shaman ==
+
+assets-src/rooms/infirmary/InfirmaryCotSmall.blend  AI-generated with Codex  GPLv3+  Original Blender source: small low wooden infirmary cot, grey blanket and straw pillow, 2026-10-25.
+assets-src/rooms/infirmary/InfirmaryCotMedium.blend  AI-generated with Codex  GPLv3+  Original Blender source: medium low wooden infirmary cot, grey blanket and straw pillow, 2026-10-25.
+assets-src/rooms/infirmary/InfirmaryCotLarge.blend  AI-generated with Codex  GPLv3+  Original Blender source: large heavy plank infirmary cot with iron bands, grey blanket and straw pillow, 2026-10-25.
+assets-src/rooms/infirmary/MedicineCabinet.blend  AI-generated with Codex  GPLv3+  Original Blender source: dark wooden medicine cabinet with jars and skull, 2026-10-25.
+assets-src/rooms/infirmary/InstrumentTable.blend  AI-generated with Codex  GPLv3+  Original Blender source: stone instrument table with saw, pliers and bandage rolls, 2026-10-25.
+assets-src/rooms/infirmary/WashBasin.blend  AI-generated with Codex  GPLv3+  Original Blender source: hollow stone wash basin with wooden bucket; overlapping bottom edge corrected, 2026-10-25.
+assets-src/rooms/infirmary/HerbShelf.blend  AI-generated with Codex  GPLv3+  Original Blender source: dark wooden herb shelf with hanging bundles and bottles, 2026-10-25.
+assets-src/rooms/infirmary/InfirmaryShaman.blend  AI-generated with Codex  GPLv3+  Original bone-masked shaman with feather cape, rattle, own rig and eight two-second actions; mouth contact corrected in PotionTaste, 2026-10-25.
+models/InfirmaryCotSmall.mesh  AI-generated with Codex  GPLv3+  Exported from assets-src/rooms/infirmary/InfirmaryCotSmall.blend with the project Ogre XML helper, 2026-10-25.
+models/InfirmaryCotMedium.mesh  AI-generated with Codex  GPLv3+  Exported from assets-src/rooms/infirmary/InfirmaryCotMedium.blend with the project Ogre XML helper, 2026-10-25.
+models/InfirmaryCotLarge.mesh  AI-generated with Codex  GPLv3+  Exported from assets-src/rooms/infirmary/InfirmaryCotLarge.blend with the project Ogre XML helper, 2026-10-25.
+models/MedicineCabinet.mesh  AI-generated with Codex  GPLv3+  Exported from assets-src/rooms/infirmary/MedicineCabinet.blend with the project Ogre XML helper, 2026-10-25.
+models/InstrumentTable.mesh  AI-generated with Codex  GPLv3+  Exported from assets-src/rooms/infirmary/InstrumentTable.blend with the project Ogre XML helper, 2026-10-25.
+models/WashBasin.mesh  AI-generated with Codex  GPLv3+  Exported from assets-src/rooms/infirmary/WashBasin.blend with the project Ogre XML helper; corrected overlapping bottom edge, 2026-10-25.
+models/HerbShelf.mesh  AI-generated with Codex  GPLv3+  Exported from assets-src/rooms/infirmary/HerbShelf.blend with the project Ogre XML helper, 2026-10-25.
+models/InfirmaryShaman.mesh  AI-generated with Codex  GPLv3+  Original shaman mesh exported from assets-src/rooms/infirmary/InfirmaryShaman.blend, 2026-10-25.
+models/InfirmaryShaman.skeleton  AI-generated with Codex  GPLv3+  Own armature and Idle, Walk, Chant, RattleShake, HerbSniff, PotionTaste, TripOverBucket and Dance; each two seconds, Idle/Walk looped; only PotionTaste replaced for the flask-to-mouth correction, 2026-10-25.
+materials/textures/InfirmaryObjectBone.png  AI-generated with Codex  GPLv3+  Original rough bone texture for infirmary objects and shaman, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectBottle.png  AI-generated with Codex  GPLv3+  Original muted glass texture for infirmary jars and bottles, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectCloth.png  AI-generated with Codex  GPLv3+  Original coarse grey cloth texture for infirmary blankets and bandages, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectDark.png  AI-generated with Codex  GPLv3+  Original dark recess texture for infirmary object details, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectFeather.png  AI-generated with Codex  GPLv3+  Original dark feather texture for the infirmary shaman cape, packed in its Blender source, 2026-10-25.
+materials/textures/InfirmaryObjectHerb.png  AI-generated with Codex  GPLv3+  Original muted herb texture for infirmary plant bundles, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectIron.png  AI-generated with Codex  GPLv3+  Original rough iron texture for infirmary bands and instruments, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectLeather.png  AI-generated with Codex  GPLv3+  Original worn leather texture for the infirmary shaman clothing and bindings, packed in its Blender source, 2026-10-25.
+materials/textures/InfirmaryObjectSkin.png  AI-generated with Codex  GPLv3+  Original muted skin texture for the infirmary shaman, packed in its Blender source, 2026-10-25.
+materials/textures/InfirmaryObjectStone.png  AI-generated with Codex  GPLv3+  Original rough stone texture for the infirmary table and basin, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectStraw.png  AI-generated with Codex  GPLv3+  Original straw texture for infirmary pillows and the shaman rattle, packed in the Blender sources, 2026-10-25.
+materials/textures/InfirmaryObjectWood.png  AI-generated with Codex  GPLv3+  Original dark woodgrain texture for infirmary furniture, packed in the Blender sources, 2026-10-25.
+materials/scripts/InfirmaryObjects.material  AI-generated with Codex  GPLv3+  Original materials for the twelve infirmary object textures; existing materials unchanged, 2026-10-25.
