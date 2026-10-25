@@ -963,7 +963,7 @@ private:
     void startCreatureSleepAnimation(Creature* creature, Ogre::Entity* entity);
     //! \brief Starts a cosmetic wake transition only when this creature has a stored sleep pose.
     bool startCreatureWakeAnimation(Creature* creature, Ogre::Entity* entity);
-    //! \brief Finds the nearest bed and computes where the creature has to lie on it.
+    //! \brief Fits a sleeper to its nearest bed or infirmary cot while retaining the cot sleep direction.
     void fitCreatureToBed(CreatureSleepAnimation& sleeping);
     //! \brief Restores the standing transform and removes any retained native wake blend.
     void cancelCreatureSleepAnimation(Creature* creature = nullptr);
