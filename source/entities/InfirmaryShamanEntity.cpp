@@ -12,6 +12,7 @@
 #include "rooms/RoomType.h"
 #include "ODApplication.h"
 #include "utils/ConfigManager.h"
+#include "utils/LogManager.h"
 #include "utils/Random.h"
 
 #include <algorithm>

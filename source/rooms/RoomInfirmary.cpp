@@ -510,6 +510,7 @@ void RoomInfirmary::absorbRoom(Room* room)
     updateActiveSpots();
 }
 
+//! \brief Transfers intact cots and removes split furniture from its current infirmary.
 void RoomInfirmary::splitRoom(Room& room, const std::vector<Tile*>& tiles)
 {
     RoomInfirmary& target=static_cast<RoomInfirmary&>(room);
@@ -528,7 +529,7 @@ void RoomInfirmary::splitRoom(Room& room, const std::vector<Tile*>& tiles)
         {
             BuildingObject* object=mCotObjects[entry.first];
             Tile* anchor=getGameMap()->getTile(entry.second.x,entry.second.y);
-            Building* owner=anchor->getCoveringBuilding();
+            RoomInfirmary* owner=static_cast<RoomInfirmary*>(anchor->getCoveringBuilding());
             owner->removeBuildingObject(object);
         }
         if(all)
