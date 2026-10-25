@@ -1,5 +1,2253 @@
 # Item image prompts
 
+## GRN_Armour_base.png
+
+Use case: precise-object-edit. Correct the framing of this original Bone Mantle of Greenskin inventory icon. Output a perfectly SQUARE 1:1 native transparent canvas. Preserve the empty brown leather mantle, ivory bone plates, two tusk-shaped shoulder tips, entire pointed lower hems, all garment geometry, pose, angle and Common materials. Make the COMPLETE WHOLE GARMENT SMALLER in the canvas so it occupies only the CENTRAL 65 PERCENT, with at least 15 PERCENT EMPTY TRANSPARENT SPACE on ALL FOUR SIDES. Both horns must be whole and visibly surrounded by transparent space, and every lower hem endpoint fully visible with wide clear margin. No part reaches any image border. Restore any clipped horn endpoint faithfully as a small tusk continuing the existing design. Warm upper-left light, same hand-painted fantasy inventory style, no magical glow, no wearer, body, mannequin, text, frame, scenery, floor, shadow, extra objects or detached particles. Genuine alpha-zero background. Native square 128x128 inventory composition, do not crop or fill frame.
+
+
+## GRN_Armour_rare.png
+
+Use case: precise-object-edit. Image1 is the accepted correctly framed original BASE Bone Mantle. Create Rare Tuskbound Mantle. Keep EXACTLY its same complete horn tips, all seams and bone plate boundaries, empty collar, pose, angle and proportions. Refine bone to polished ivory with fine geometric incisions, dark iron rivets to burnished steel with bronze edges, leather finer stitched. No glow. FRAMING IS CRITICAL: whole connected garment confined to CENTRAL 65 PERCENT of a perfectly SQUARE 1:1 native canvas, generous EMPTY transparent border all four sides, at least 100 native pixels from any horn or lower hem to canvas edges. No marks at canvas edges. No detached pixels, specks, glow, shadow, fog, particles, objects, background brush marks or anything in that EMPTY margin. Preserve entire garment without clipping. Warm upper-left light, original hand-painted fantasy 128x128 inventory composition. Genuine alpha zero throughout empty background. No person, body, mannequin, writing, letters, numbers, frame, scenery, floor, branding or watermark.
+
+
+## GRN_Armour_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Mantle of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Keep EXACTLY the wide empty transparent border of this corrected Base: both horns and all lower hems remain complete with visible empty margin. Do not enlarge the garment or fill the canvas.
+
+## GRN_Head_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Bone Circlet of Greenskin: empty wearable oval circlet of rugged dark brown leather with a row of smooth ivory bone plates bound across the front, two short blunt tusk-shaped side ornaments, central flat angular bone plate held by plain dark iron rivets. Three-quarter view showing the open center clearly transparent. Practical rough Common craftsmanship, intact coherent leather band, no skulls or faces, no glow. Entire circlet centered with generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No wearer, head, hair, body, person, skin, mannequin, text, letters, readable runes, numbers, frame, floor, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## GRN_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Boots_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original matching pair of Bone Striders of Greenskin: two empty rugged dark brown leather boots with broad ivory bone shin plates bound by leather thongs, simple dark iron ankle buckles, one short tusk-shaped outer ankle fitting each, thick practical dark soles. Left boot slightly behind in three-quarter view, both open empty cuffs visible, complete pair centered with generous transparent margins. Rough but intact Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, person, body, mannequin, skulls, faces, text, letters, readable runes, numbers, frame, floor, scene, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## GRN_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Ring_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Bone Seal of Greenskin: thick hollow dark iron finger ring, broad ivory bone signet plate with a plain angular chevron relief, short curved tusk-shaped bone inlays along band shoulders, dark brown leather bindings holding the bone to the metal. Three-quarter view, coherent continuous wearable ring, empty finger opening clearly visible and genuinely transparent. Rough practical Common craftsmanship, no skull, face, gemstone or glow. Entire ring centered within generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No finger, hand, person, body, mannequin, readable runes, text, letters, numbers, extra objects, scene, floor, frame, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## GRN_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Axe_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. Single original Bone Axe of Greenskin, centered and occupying ONLY THE CENTRAL 75 PERCENT of image. Keep a generous CLEAR TRANSPARENT BORDER at least 12 percent of canvas on all four sides; no part touches an edge. Robust short single-bladed axe: broad dark iron crescent blade, brown hardwood haft, ivory bone cheek plates with two small tusk fittings lashed around the head, dark leather grip, plain iron buttcap. Entire diagonal weapon from lower-left butt to upper-right head, FULL intact axe visible with abundant empty space around blade and endpoints. Rough practical Common craftsmanship, no glow. Hand-painted fantasy inventory icon, warm upper-left light. No skulls, faces, blood, hands, people, body, mannequin, letters, readable runes, writing, numbers, floor, frame, scenery, backdrop, shadow, watermark, branding. Genuine alpha-zero transparent background. Do not fill or crop the frame; object must fit safely in the middle of the square.
+
+
+## GRN_Axe_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Axe. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Axe_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Cleaver of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Club_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bone Club of Greenskin, entire weapon occupying only central 75 percent, at least 10 percent clear transparent margins all sides. Heavy dark hardwood club with a thick blunt head sheathed in overlapping ivory bone plates tied by dark leather, two short tusk-shaped fittings projecting a little from head sides, plain iron reinforcing band, brown leather grip, modest rounded iron butt. Whole club diagonal lower-left grip to upper-right head, intact practical weapon, no skulls, no face, no glow. Hand-painted fantasy inventory icon, warm upper-left light, rugged Common craftsmanship. No hands, people, body, mannequin, blood, writing, text, readable runes, letters, numbers, frame, floor, scenery, backdrop, shadow, branding or watermark. Genuine alpha-zero transparent background, full object fits safely inside square.
+
+
+## GRN_Club_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Club. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Club_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Maul of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Only the single connected club exists. Do not add any detached dots, circles, specks, particles, sparks, floating fragments, glowing motes, lens flare or other objects anywhere in the transparent area. All light is tightly contained within the existing club's surface grooves.
+
+
+## GRN_Dagger_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bone Dagger of Greenskin, central 75 percent of frame with generous clear transparent margins all sides. Broad short sharp steel dagger blade with simple ivory bone ridge inlaid along its center, dark iron small crossguard, sturdy brown leather wrapped grip with two ivory tusk-shaped side plates, plain iron pommel. Entire dagger diagonal lower-left pommel to upper-right point, practical coherent complete weapon, no loose ornaments, no skull, no face, no glow. Hand-painted fantasy inventory icon, warm upper-left light, rugged Common craftsmanship. No hands, person, body, mannequin, blood, readable runes, writing, text, letters, numbers, scenery, floor, frame, backdrop, cast shadow, branding, watermark or detached objects. Genuine alpha-zero transparent background, full object safely inside native square.
+
+
+## GRN_Dagger_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Dagger. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Dagger_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Fang of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Head_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Circlet of Elf: empty slim oval circlet of gracefully carved pale birch bark and smooth brown wood, slender upward leaf-shaped central crest, symmetrical flowing leaf-vein relief along the band, two subtle bronze joining clasps. Refined but modest Common craftsmanship, no moss, no flowers, no jewels or magical glow. Three-quarter view, open center clearly visible and genuinely transparent, coherent complete wearable band centered within generous transparent margins. Hand-painted fantasy inventory icon, warm upper-left light. No wearer, head, hair, skin, person, body, mannequin, readable runes, text, letters, numbers, floor, frame, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Armour_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Mantle of Elf: empty elegant short shoulder mantle of muted pale sage cloth, layered slim birch-bark leaf-shaped protective panels following the shoulders and two tapered front ends, fine flowing carved wooden edging and modest bronze leaf clasp. Raised folded collar clearly empty. No wearer, torso, head, arms, body or mannequin. Three-quarter front view, coherent complete wearable mantle centered within generous transparent margins. Refined modest Common craftsmanship, no moss, flowers, jewels or glow. Hand-painted fantasy inventory icon, warm upper-left light, readable fine cloth folds, birch bark and wood. No text, letters, readable runes, numbers, extra items, frame, floor, scene, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Armour_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Mantle. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Armour_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Mantle of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Boots_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original matching pair of Bark Striders of Elf: two empty slim elegant brown leather boots with pale birch-bark leaf-shaped shin panels, muted sage folded cloth cuffs, fine flowing carved wooden edging, small bronze leaf-shaped ankle fastenings, practical dark soles. Left boot slightly behind in three-quarter view, both empty cuff openings visible, coherent wearable boots, entire pair centered within generous transparent margins. Refined modest Common craftsmanship, no moss, flowers, jewels or magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, skin, body, person, mannequin, text, letters, readable runes, numbers, additional objects, frame, scenery, floor, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Ring_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Seal of Elf: slender continuous hollow finger ring of smooth brown wood with pale birch bark insets on the shoulders, elegant oval signet plate shaped like a long pointed leaf, carved leaf veins inside thin bronze edging. Three-quarter view, complete coherent wearable ring, empty finger opening clearly visible and genuinely transparent, entire ring centered within generous transparent margins. Refined modest Common craftsmanship, no moss, flowers, gems or magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No hand, finger, person, body, mannequin, face, readable runes, text, letters, numbers, frame, floor, scene, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Bow_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Bow of Elf, full elegant undrawn recurve bow centered and occupying only the central 75 percent with abundant clear transparent margins on all sides. Long curved limbs of smooth brown wood faced with pale birch bark, carved flowing leaf-vein relief, modest bronze leaf-shaped fittings near a muted sage leather central grip. ONE taut thin bowstring connects both tips, clear unambiguous string path, no arrow. Three-quarter inventory view slightly diagonal lower-left tip to upper-right tip, entire intact bow including both tips and complete string visible. Refined modest Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No moss, flowers, jewels, person, hands, body, mannequin, text, letters, readable runes, numbers, extra objects, frame, floor, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square, no clipping.
+
+
+## ELF_Bow_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Bow. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Preserve the complete continuous bowstring exactly, connected to the same two tips. No arrow.
+
+
+## ELF_Bow_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Arc of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Preserve the complete continuous bowstring exactly, connected to the same two tips. No arrow.
+
+
+## ELF_Crossbow_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas, SQUARE 128x128 inventory composition. Single original Bark Crossbow of Elf, mechanically correct conventional crossbow seen clearly from above in slight three-quarter view. Brown wooden stock pointing from lower-left butt to upper-right muzzle. ONE symmetric curved bow mounted perpendicular across the FOREMOST end of the stock. The string connects the two bow tips and is drawn BACK TOWARDS THE LOWER-LEFT BUTT to a clearly visible central latch on the stock BEHIND the bow. The string forms a V whose apex points towards the butt, never towards the muzzle. Visible bronze trigger below that latch; no bolt loaded. Simple elegant limbs faced in pale birch bark, flowing carved leaf-vein relief, sage leather grip, modest bronze fittings. Full weapon occupies only central 70 percent of native square, with ample transparent margins. Clear intact endpoints, coherent practical crossbow, no additional bows or strings. Refined modest Common quality, no glow. Hand-painted fantasy icon, warm upper-left light. No people, hands, body, text, letters, writing, numbers, scenery, frame, floor, shadows, branding, watermark. Genuine alpha-zero transparent background.
+
+
+## ELF_Crossbow_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Crossbow. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Keep the mechanically correct drawn string EXACTLY: both ends at existing bow tips, V apex locked to the existing central latch behind the bow towards the butt. Preserve trigger, stock channel, all openings and precise limb symmetry. No bolt.
+
+
+## ELF_Crossbow_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Bolt of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Keep the mechanically correct drawn string EXACTLY: both ends at existing bow tips, V apex locked to the existing central latch behind the bow towards the butt. Preserve trigger, stock channel, all openings and precise limb symmetry. No bolt.
+
+## CST_A_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Hood of Fire (do not write that name): one empty deep rust-red silk hood with soft rounded folds, a broad face opening and a short draped silk neck cape, plain modest stitched edges, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_A_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Emberforged Hood (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Ember Heart (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Robe of Fire (do not write that name): one empty deep rust-red silk robe with loose long sleeves, a modest folded collar, simple silk waist sash and long divided hem, no wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_A_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Emberforged Robe (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Ember Heart (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Sandals of Fire (do not write that name): one matching pair of simple sandals with sturdy plain leather soles and crossed deep rust-red silk ribbon straps, empty sandals without feet, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_A_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Emberforged Sandals (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Ember Heart (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Signet of Fire (do not write that name): one finger signet ring with a narrow plain bronze band wrapped in deep rust-red silk and a small flat oval bronze signet face without letters. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_A_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Emberforged Signet (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Ember Heart (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Staff_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Staff of Fire (do not write that name): one long plain dark wooden staff with a compact rounded knotted wooden tip and a deep rust-red silk-wrapped grip, no crystal, orb, active flame or magic. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_A_Staff_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Emberforged Staff (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_A_Staff_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Rod of the Ember Heart (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Hood of Frost (do not write that name): one empty muted cool-blue silk hood with layered soft cloth folds, a gently pointed crown, broad face opening and short folded neck drape, plain modest stitched edges, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_B_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Rimefrost Hood (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Frozen Breath (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Robe of Frost (do not write that name): one empty muted cool-blue silk robe with wide long sleeves, a simple high folded collar, plain silk sash and a long straight hem, no wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_B_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Rimefrost Robe (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Frozen Breath (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Sandals of Frost (do not write that name): one matching pair of simple sandals with plain leather soles and broad muted cool-blue silk straps crossing the insteps, empty sandals without feet, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_B_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Rimefrost Sandals (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Frozen Breath (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Signet of Frost (do not write that name): one finger signet ring with a narrow plain silver-grey metal band wrapped in muted cool-blue silk and a small flat rounded-square silver-grey signet face without letters. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_B_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Rimefrost Signet (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Frozen Breath (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Staff_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Staff of Frost (do not write that name): one long plain wooden staff with a compact faceted carved wooden tip and a muted cool-blue silk-wrapped grip, no crystal, orb, ice or active magic. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_B_Staff_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Rimefrost Staff (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_B_Staff_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Rod of the Frozen Breath (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Hood of Healing (do not write that name): one empty warm ivory silk hood with soft gathered folds, a rounded crown, open face and a short gently draped neck cape, plain modest stitched edges, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_C_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Mender's Hood (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Mending Light (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Robe of Healing (do not write that name): one empty warm ivory silk robe with loose long sleeves, a simple overlapping front, plain silk waist sash and long softly folded hem, no wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_C_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Mender's Robe (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Mending Light (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Sandals of Healing (do not write that name): one matching pair of simple sandals with plain leather soles and softly woven warm ivory silk ribbon straps, empty sandals without feet, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_C_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Mender's Sandals (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Mending Light (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Signet of Healing (do not write that name): one finger signet ring with a narrow plain bronze band wrapped in warm ivory silk and a small flat round bronze signet face without letters. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_C_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Mender's Signet (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Mending Light (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Staff_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Staff of Healing (do not write that name): one long plain warm brown wooden staff with a small smoothly rounded wooden tip and a warm ivory silk-wrapped grip, no crystal, orb or active magic. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## CST_C_Staff_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Mender's Staff (do not write that name). Refine existing silk to finer lustrous woven silk, neat restrained embroidery and elegant seam finishing; existing leather becomes supple polished leather, existing metal becomes finely polished silver or bronze according to its existing type, and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## CST_C_Staff_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Rod of the Mending Light (do not write that name). Refine existing silk to lustrous finely woven silk with masterful fine gold embroidery along existing seams and surfaces. Refine existing leather with fine decorative stitching, existing metal with restrained gold inlay, and existing wood with polished grain and fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+## DWF_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty practical circlet with a plain central clasp, no head, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty short protective shoulder mantle with layered plates and simple fastenings, no wearer, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one matching pair of compact ankle boots with protective toe plates and simple straps, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain finger ring with an empty oval signet face, no markings, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Shield_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one sturdy oval shield with a modest central boss and rim, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Shield_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Shield_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Axe_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one practical single-bitted axe with a straight wooden haft, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Axe_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Axe_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Hammer_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one practical compact square-headed hammer with a straight wooden haft, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Hammer_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Hammer_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain straight sword with modest crossguard and wrapped grip, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty practical circlet with a plain central clasp, no head, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty short protective shoulder mantle with layered plates and simple fastenings, no wearer, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one matching pair of compact ankle boots with protective toe plates and simple straps, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain finger ring with an empty oval signet face, no markings, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Shield_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one sturdy oval shield with a modest central boss and rim, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Shield_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Shield_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain straight sword with modest crossguard and wrapped grip, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Spear_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one practical straight spear with a simple leaf-shaped head and wooden shaft, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Spear_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Spear_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+## HUM_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Circlet of Human: an empty plain iron circlet band with neat beige linen wrapping and a modest central clasp, no head. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Mantle of Human: an empty short beige linen mantle with practical brown leather clasp and neatly stitched hem, no wearer. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Striders of Human: one matching pair of beige linen ankle boots with simple brown leather reinforcement and plain laces. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Seal of Human: one plain iron finger ring with an empty oval signet face and a narrow beige linen binding around the shank, no letters. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Shield_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Shield of Human: one sturdy oval wooden shield faced with beige linen, a modest plain iron rim and a small central iron boss. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Shield_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Shield_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Sword of Human: one plain straight steel sword with modest crossguard and a beige linen-wrapped brown grip, isolated object. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Circlet of Undead: one weathered dark iron circlet with a modest pointed brow plate and grey woven cloth binding, empty without a head. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Mantle of Undead: one empty ash-grey woven mantle with simple aged iron clasps and a worn stitched hem, no wearer. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Striders of Undead: one matching pair of dark grey cloth and leather ankle boots with modest weathered iron toe guards. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Seal of Undead: one weathered dark iron finger ring with an empty oval signet face and grey cloth binding, no symbols or letters. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Sword of Undead: one plain weathered grey steel sword, restrained aged iron crossguard and dark grey cloth-wrapped grip. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Staff_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Staff of Undead: one dark wooden staff with an aged iron ferrule and a small grey stone enclosed in a simple iron cradle at the top. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Staff_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Staff_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Circlet of Vermin: one empty ring-shaped circlet crafted from overlapping muted brown chitin plates with simple dark leather binding. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Mantle of Vermin: one empty mantle of smooth overlapping brown and olive chitin shell plates, bound with modest dark leather straps. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Striders of Vermin: one matching pair of compact dark leather boots protected by smooth overlapping brown chitin plates. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Seal of Vermin: one thick finger ring carved from layered brown chitin, with a simple flat oval seal face and no markings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Circlet of Tentacle: one empty circlet made from interwoven muted green kelp strips and modest weathered bronze binding, no head. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Mantle of Tentacle: one empty short mantle woven from muted green kelp-like strips over dark leather, with a simple bronze clasp. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Striders of Tentacle: one matching pair of dark leather ankle boots wrapped in neat muted green kelp strips, with simple bronze fastenings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Seal of Tentacle: one bronze finger ring with an empty oval seal face and neatly braided muted green kelp binding, no markings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+## ARC_Head_base.png
+
+Use case: stylized-concept. SQUARE128x128 INVENTORY COMPOSITION. The image canvas MUST be perfectly square1:1, not landscape. Keep ample genuinely transparent space above and below the wide item; do not auto-fit the canvas to the item. Subject: Runed Circlet of Arcane, one modest empty bronze circlet, a complete thin oval headband with a small pointed front panel, dark navy-blue inset, restrained engraved concentric arcs and geometric grooves. Exactly one head-equipment object, Common quality: functional dark bronze, modest craftsmanship, no gems and no magic glow. Entire oval loop fully visible, centred within a square image with generous transparent padding on all four sides. Hand-painted fantasy inventory icon with chunky readable silhouette, painterly shaded bronze and warm upper-left light matching a bronze-and-iron dungeon interface. No wearer, head, face, skin, body, mannequin, floating props, letters, readable runes, writing, numbers, border, frame, tile, floor, scenery, background, cast shadow, branding or watermark. Native square RGBA canvas with genuine transparent alpha.
+
+
+## ARC_Head_rare.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition, retain Image1's exact square1:1 canvas and transparent padding. Edit target: the original empty bronze and navy-blue Runed Circlet of Arcane. Create the Rare Sigilmarked Circlet by refining only existing metal to carefully brushed noble silver with restrained warm bronze edge trim, and adding fine geometric engraving inside the existing concentric grooves. Keep the navy-blue inset. No glow. Preserve EXACTLY the original complete wide oval band, its inner opening, small pointed front panel, all outer edges and existing pieces, their pixel placement, scale, proportions, angle and warm upper-left lighting. Do not zoom, stretch, crop, reframe or change the shape. No additional jewels, parts, protrusions, markings resembling letters, wearer, person, face, mannequin, writing, text, numbers, frame, floor, scenery, background, cast shadow, branding or watermark. Original hand-painted fantasy inventory style, genuine transparent alpha on a native square canvas.
+
+
+## ARC_Head_epic.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition: retain Image1's exact square1:1 canvas, transparent padding and pixel placement; never landscape, zoom, stretch or crop. Edit target: Image1, original empty bronze-and-navy Runed Circlet of Arcane. Produce Epic Crown of the Hidden Sigil. Preserve EXACTLY its wide oval band, completely open interior, pointed front panel, concentric motifs, original outer perimeter, proportions, scale, angle and every existing piece. Refine only existing surfaces to exceptionally crafted silver and gold with fine etched geometric detail. Preserve navy-blue insets. A faint narrow violet magical glimmer may trace a few existing engraved grooves only, with no broad bloom, floating aura or particles. Same hand-painted fantasy material shading and warm upper-left light. No added gems, blades, spikes, parts, protrusions, text, readable runes, letters, numbers, wearer, face, mannequin, body, props, border, frame, floor, scenery, background, cast shadow, branding or watermark. Genuine transparent alpha, native square RGBA canvas.
+
+
+## ARC_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon, square suitable for128x128 downsampling. Subject: Runed Mantle of Arcane, one empty short dark navy-blue cloth mantle with a clear open neck, broad folded shoulder collar, tapered hanging cloth panels, modest dark leather edge binding and a small bronze front clasp etched with simple concentric grooves. An unoccupied garment displayed as a single equipment object, no wearer or mannequin. Common-quality practical arcane equipment: subdued woven cloth, restrained bronze fittings, no gemstones or magical glow. Entire garment visible, centred with generous genuinely transparent margins, strong chunky silhouette readable at128px. Painterly shaded fabric and metal, warm upper-left light matching an illustrated bronze-and-iron dungeon interface. No body, person, face, skin, hands, limbs, extra props, letters, readable runes, numbers, writing, border, frame, tile, floor, scenery, cast background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_Armour_rare.png
+
+Use case: precise-object-edit. Square128x128 inventory composition on a perfectly square1:1 canvas with transparent margins; retain the input canvas, no landscape reframing. Edit target Image1 is the original empty navy-blue Runed Mantle of Arcane. Make the Rare Sigilmarked Mantle: refine the existing navy fabric to a denser finer weave, add careful small stitching on existing seams and fine geometric etching on the existing round clasp, refine existing bronze borders with restrained noble silver inlay. No magical glow. Preserve EXACTLY the same garment silhouette, open neck, collar, every cloth panel and fold, draped openings, hems, angle, position, proportions, scale, warm upper-left lighting and transparent margins. No new ornaments, shapes, collar points, gemstones, attached objects or extensions. Original hand-painted fantasy inventory style. No wearer, body, skin, person, mannequin, text, letters, readable runes, numbers, frame, floor, scenery, background, cast shadow, watermark or branding. Genuine transparent alpha.
+
+
+## ARC_Armour_epic.png
+
+Use case: precise-object-edit. Square128x128 inventory composition on the same perfectly square1:1 canvas as Image1; no cropping, stretching or reframing. Edit target: original empty navy-blue Runed Mantle of Arcane. Create the Epic Mantle of the Hidden Sigil. Preserve EXACTLY the original garment's outer silhouette, neck opening, raised collar, every draped panel and fold, hems, existing clasp, proportions, scale, viewing angle, placement, transparent margins and warm upper-left light. Upgrade only existing cloth to exceptionally fine woven navy fabric and existing leather/bronze borders to detailed noble silver-and-gold craftsmanship. Add careful small geometric etching and a very faint narrow violet glimmer along existing border grooves and around the existing clasp, never a broad aura. No new parts, ornaments, jewels, tips, runes that resemble letters, props or floating particles. Hand-painted fantasy inventory icon. No wearer, body, person, skin, mannequin, writing, letters, numbers, text, frame, floor, scenery, background, cast shadow, watermark or branding. Genuine transparent alpha.
+
+
+## ARC_Boots_base.png
+
+Use case: stylized-concept. SQUARE128x128 inventory composition on a perfectly square1:1 transparent canvas, not portrait or landscape. Subject: Runed Striders of Arcane, one matching pair of empty practical navy-blue cloth-and-dark-leather ankle boots, soft folded cuffs, sturdy dark soles, modest bronze toe trim and a small concentric geometric groove on each existing bronze fastening. The boots are the single equipment item, arranged slightly offset in a clear three-quarter view, both boots entirely visible within generous transparent margins. Common quality, modest functional craftsmanship, no gems and no magical glow. Chunky readable silhouette and original hand-painted fantasy inventory shading, warm upper-left light matching a bronze-and-iron dungeon interface. No feet, legs, skin, person, wearer, mannequin, extra props, letters, readable runes, writing, numbers, text, border, frame, tile, floor, scenery, cast background shadow, branding or watermark. Genuine transparent alpha, square canvas.
+
+
+## ARC_Boots_rare.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition on Image1's unchanged square1:1 transparent canvas. Edit target is the original pair of empty navy-blue and dark-leather Runed Striders of Arcane. Create the Rare Sigilmarked Striders: finer tighter cloth weave, carefully finished leather, fine stitched seams and restrained noble silver inlay on the existing bronze toe trim and circular fastenings. No glow. Preserve EXACTLY both boots' outer silhouettes, open cuffs, every strap, seam, toe, heel and sole, their relative arrangement, pose, viewing angle, proportions, scale, placement, transparent margins and warm upper-left light. Change only existing surfaces and craftsmanship; add no extra pieces, tips, jewels or ornaments. Same hand-painted fantasy inventory style. No feet, legs, wearer, body, person, skin, mannequin, writing, readable runes, letters, text, numbers, border, frame, floor, scenery, background, cast shadow, watermark or branding. Native square RGBA canvas, genuine transparent alpha.
+
+
+## ARC_Boots_epic.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition, same perfectly square1:1 canvas and genuine transparent padding as Image1. Edit target: the original pair of empty navy-blue cloth and dark-leather Runed Striders of Arcane. Create Epic Steps of the Hidden Sigil. Preserve EXACTLY both boots' complete outer outlines, open folded cuffs, soles, heels, toes, straps, circular fastenings, relative positions, scale, proportions, viewing angle and warm upper-left lighting. Upgrade only existing materials to fine tightly woven navy cloth, carefully worked leather and noble silver-and-gold detailing on the existing bronze trims and fastenings. Add delicate geometric etching and only a faint narrow violet glow tracing a few existing seams and circular grooves. No broad aura or particles. Do not add extra shapes, jewels, tips, ornaments or parts. Original hand-painted fantasy inventory icon. No feet, legs, skin, wearer, person, mannequin, writing, readable runes, letters, text, numbers, border, frame, floor, backdrop, scenery, cast shadow, branding or watermark. Native square RGBA with genuine transparent alpha.
+
+
+## ARC_Ring_base.png
+
+Use case: stylized-concept. SQUARE128x128 inventory composition on a perfectly square1:1 native canvas. Subject: Runed Seal of Arcane, one modest bronze finger ring with a broad flat circular signet face, a dark navy-blue enamel inset engraved only with simple concentric circles and angular geometric grooves, no readable writing. A complete hollow band is visible in a three-quarter view, no finger. Common-quality practical arcane equipment, plain sturdy bronze with restrained craft detail, no gemstones and no magical glow. Exactly one centred ring, entirely visible with generous transparent padding on every side. Original hand-painted fantasy inventory icon with clear chunky silhouette, painterly metal and warm upper-left light matching an illustrated bronze-and-iron dungeon interface. No hand, wearer, person, body, mannequin, floating props, letters, text, numbers, readable runes, frame, border, floor, tile, scenery, background, cast shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## ARC_Ring_rare.png
+
+Use case: precise-object-edit. Keep Image1's exact SQUARE1:1 transparent canvas and128x128 inventory composition. Edit target is the original bronze finger ring with navy circular signet face. Create the Rare Sigilmarked Seal. Preserve EXACTLY the entire band and opening, circular signet plate, all concentric circles and four existing geometric points, every existing surface boundary, pose, viewing angle, proportions, scale, placement, margins and warm upper-left light. Refine only existing bronze to carefully worked noble silver with restrained polished bronze edge trim; improve the navy enamel finish and fine etched geometric grooves. No magical glow. Same original hand-painted fantasy icon. No new gems, ornaments, shapes, protrusions, marks resembling letters, hands, finger, wearer, body, person, mannequin, text, numbers, writing, frame, floor, scenery, backdrop, cast shadow, watermark or branding. Genuine transparent alpha on a native square canvas; no crop, stretch or reframing.
+
+
+## ARC_Ring_epic.png
+
+Use case: precise-object-edit. Keep Image1's exact SQUARE 1:1 transparent canvas and 128x128 inventory composition. Create the Epic Seal of the Hidden Sigil from this original bronze finger ring with navy circular signet face. Preserve EXACTLY the entire band and open hole, circular signet plate, concentric circles and four geometric points, all surface boundaries, pose, angle, proportions, scale, placement, margins and warm upper-left light. Refine existing bronze to finely worked noble silver and gold trim, navy enamel, exquisite geometric engraving. Add only a restrained violet magical glimmer in the existing engraved lines, not an aura obscuring the ring. Original hand-painted fantasy inventory icon. No new gems, ornaments, shapes, protrusions, readable runes, hands, fingers, wearer, body, person, mannequin, text, numbers, frame, floor, scenery, backdrop, cast shadow, watermark or branding. Genuine transparent alpha on native square canvas; no crop, stretch or reframing.
+
+
+## ARC_Dagger_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on a perfectly SQUARE 1:1 native canvas, not portrait or landscape. One original Runed Dagger of Arcane: short sharp double-edged steel blade with dark navy central groove containing abstract concentric geometric engravings, simple bronze swept crossguard, navy wrapped grip and bronze ring pommel. Entire dagger diagonal from lower-left pommel to upper-right point, clear readable silhouette, ample transparent margins on all sides. Hand-painted fantasy inventory icon, warm upper-left light, physically coherent blade, grip, guard. Bronze and dark navy restrained Common quality, no magical glow. No readable runes, text, numbers, lettering, hands, person, body, mannequin, frame, floor, scenery, background shadow, watermark or branding. Genuine transparent background with alpha zero; complete object centered within square, no clipping.
+
+
+## ARC_Dagger_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Sigilmarked Dagger. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bronze into finely worked noble silver with bronze trim, navy enamel/leather more finely finished and existing geometric grooves delicately etched. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Dagger_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Fang of the Hidden Sigil. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing fittings into finely worked noble silver and gold trim, navy surfaces richer, existing geometric grooves exquisite and faintly violet luminous. Restrained magical glow only along existing grooves, keep all edges clear. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Staff_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas, no portrait or landscape. One original Runed Staff of Arcane, entire long staff diagonal from lower-left foot to upper-right finial. Slender dark walnut shaft partly wrapped navy leather, restrained bronze collars and pointed bronze foot. Head is a clear circular bronze open ring with a small navy enamel solid disc suspended centrally by three short spokes, abstract concentric geometric grooves, no writing. Strong readable silhouette, entire staff inside ample transparent margins, complete endpoints not clipped. Hand-painted fantasy inventory icon, warm upper-left light, modest bronze Common quality, no magical glow. No extra accessories, text, letters, numbers, readable runes, people, hand, body, mannequin, floor, frame, scenery, backdrop, shadow, watermark or branding. Genuine transparent alpha-zero background. Centered in a square.
+
+
+## ARC_Staff_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Sigilmarked Staff. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bronze into finely worked noble silver with bronze trim, navy enamel/leather more finely finished and existing geometric grooves delicately etched. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Staff_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Rod of the Hidden Sigil. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing fittings into finely worked noble silver and gold trim, navy surfaces richer, existing geometric grooves exquisite and faintly violet luminous. Restrained magical glow only along existing grooves, keep all edges clear. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Wand_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Runed Wand of Arcane, compact thin tapered dark walnut magical wand diagonal lower-left grip to upper-right tip, navy leather wrapped handle, modest bronze handle collar and butt, bronze spiral inlay following the slender wood towards a small pointed navy enamel tip held in a bronze collar. Distinct wand, no staff head, no blade, no extra objects. Entire wand centered with generous transparent margins and intact endpoints. Hand-painted fantasy inventory icon, warm upper-left light, dark navy and bronze Common quality, no glow. No readable runes, letters, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, shadow, branding or watermark. Genuine alpha-zero transparent background, native square composition.
+
+
+## ARC_Wand_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Sigilmarked Wand. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bronze into finely worked noble silver with bronze trim, navy enamel/leather more finely finished and existing geometric grooves delicately etched. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Wand_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Spark of the Hidden Sigil. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing fittings into finely worked noble silver and gold trim, navy surfaces richer, existing geometric grooves exquisite and faintly violet luminous. Restrained magical glow only along existing grooves, keep all edges clear. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Head_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on a perfectly SQUARE 1:1 native canvas. One original Scale Circlet of Dragonkin: empty wearable oval bronze circlet with overlapping broad dark copper scale plates along the front, shallow angular central crest, two small upswept scale-shaped side fins, brown leather inner band. Three-quarter view showing the open center clearly transparent. Modest weathered bronze and dark copper Common quality, no gems or glow. Hand-painted fantasy inventory icon, warm upper-left light, full object centered within generous transparent margins. Original generic scale craftsmanship, no creature head, face, skull, wearer, person, hair, skin, mannequin, readable runes, writing, text, numbers, floor, scenery, frame, backdrop, cast background shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Armour_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Scale Mantle of Dragonkin: empty short protective shoulder mantle, broad brown leather shoulders covered by overlapping dark copper scale plates, shallow standing collar visibly empty, simple bronze clasp, tapered overlapping scale panels descending in front to a pointed hem. Three-quarter front view, entire garment centered, ample transparent margins. No wearer, no torso, no body, no mannequin, no head or arms. Restrained bronze and leather Common craftsmanship, physically coherent wearable mantle, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No creature face, readable runes, text, letters, numbers, additional items, frame, scenery, floor, backdrop, cast shadow, watermark or branding. Genuine transparent alpha-zero background, square canvas.
+
+
+## DRK_Armour_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Mantle. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Armour_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Mantle of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Boots_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original matching pair of Scale Striders of Dragonkin, two empty sturdy brown leather boots with overlapping dark copper scale plates on the shins and reinforced toes, simple bronze ankle fastenings, dark leather soles. Both boots fully visible in three-quarter view, left boot slightly behind, separate readable contours, open empty cuffs, full centered pair inside generous transparent margins. Modest bronze and leather Common quality, no glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, body, skin, mannequin, dragon face, readable runes, text, numbers, letters, extra objects, floor, frame, scenery, backdrop, cast background shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Ring_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Scale Seal of Dragonkin: thick hollow bronze finger ring, wide band with overlapping dark copper scale relief along shoulders, flat hexagonal bronze signet plate with simple raised geometric scale pattern, no writing or face. Three-quarter view with the finger opening clearly visible and genuinely transparent, coherent wearable ring. Modest weathered bronze Common quality, no gems or glow. Entire ring centered within generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No wearer, finger, hand, body, creature head, person, mannequin, readable runes, letters, text, numbers, frame, floor, scenery, backdrop, cast shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Staff_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Scale Staff of Dragonkin, long dark brown wooden shaft diagonal lower-left foot to upper-right head. Brown leather grip, bronze collars made of overlapping scale relief. Head is a large tapered dark copper scale-shaped solid finial, three broad overlapping metal scales aligned like a closed spearbud, blunt ceremonial crown not a weapon blade, no dragon face. Bronze pointed foot. Full staff centered inside generous transparent margins, both endpoints intact. Restrained bronze and leather Common quality, no gems, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No creatures, faces, people, hands, body, mannequin, readable runes, text, letters, numbers, scenery, floor, frame, backdrop, cast shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Staff_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Staff. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Staff_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Rod of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Head_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Circlet of Wild: empty oval wearable circlet woven from two slender brown woody vines, small thorn tips turned outward, clustered soft green moss and a few short oak-shaped leaves following the front and sides. Simple central leaf-shaped bronze fastening, clearly visible open center genuinely transparent, three-quarter view. Entire circlet centered inside generous transparent margins. Modest natural Common craftsmanship, no flowers, gemstones or magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No face, wearer, head, hair, person, body, mannequin, text, letters, readable runes, numbers, extra objects, frame, scenery, floor, backdrop, cast shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Armour_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Mantle of Wild: empty short forest-green cloth shoulder mantle with layered broad leaf-shaped panels, braided brown thorn-vine trim, modest soft moss patches on shoulders, small bronze leaf clasp, raised folded collar visibly empty. Front three-quarter view, physically coherent garment suspended alone, no wearer, torso, head, arms, body or mannequin. Entire mantle centered with generous transparent margins. Natural modest Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light, distinct cloth folds, wood and moss texture. No flowers, readable runes, letters, text, numbers, additional items, scene, floor, frame, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Armour_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Mantle. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Armour_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Mantle of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Boots_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original matching pair of Moss Striders of Wild: two empty dark brown leather woodland boots with deep forest-green cloth cuffs, braided thin thorn-vine straps around ankles, small moss patches and two short leaf-shaped leather overlays on each shin. Sturdy clearly readable soles, no roots growing out. Three-quarter view, left boot slightly behind, both empty cuff openings visible, full pair centered inside generous transparent margins. Modest natural Common craftsmanship, no glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, body, person, mannequin, flowers, readable runes, text, letters, numbers, frame, scene, floor, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Ring_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Seal of Wild: broad hollow finger ring of smoothly carved dark brown wood, braided slender thorn-vines integrated along shoulders, little green moss patches, oval flat signet face with bronze leaf-shaped inset showing plain leaf veins. Three-quarter view, empty finger hole clearly visible and genuinely transparent, complete physically coherent band. Modest natural Common craftsmanship, no gems, no magical glow. Full object centered with generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No wearer, fingers, hand, face, people, mannequin, readable runes, text, letters, numbers, flowers, frame, floor, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Shield_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Shield of Wild: sturdy rounded wooden shield, broad vertical dark brown planks, braided thorn-vine outer rim, modest green moss patches around rim, central plain bronze leaf-shaped boss with simple veins. Three-quarter frontal view with slight visible wooden thickness, no arm, back straps only if naturally visible. Shield entire centered within generous transparent margins. Modest natural Common craftsmanship, practical intact protective shield, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No faces, people, hand, body, mannequin, flowers, readable runes, text, letters, numbers, additional objects, floor, scenery, frame, backdrop, cast background shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Shield_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Shield. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Shield_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Bastion of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Sword_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Sword of Wild: practical straight double-edged steel sword with leaf-shaped blade, narrow bronze central vein inlay, short curved woody-vine crossguard with small thorns and modest green moss near its base, dark brown leather wrapped grip, simple bronze leaf-shaped pommel. Entire sword diagonal lower-left pommel to upper-right tip, clear continuous sharp blade, full object centered with generous transparent margins and both ends intact. Modest natural Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No readable runes, text, letters, numbers, flowers, gems, extra items, hands, people, body, mannequin, floor, frame, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Sword_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Sword. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Sword_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Edge of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+## ARC_C_Head_rare.png
+
+Edit target: supplied original reddish-brown hide head inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_C_Head_epic.png
+
+Edit target: supplied original reddish-brown hide head inventory icon. Create its epic quality version. Refine leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_C_Armour_rare.png
+
+Edit target: supplied original reddish-brown hide armour inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_C_Armour_epic.png
+
+Edit target: supplied original reddish-brown hide armour inventory icon. Create its epic quality version. Refine leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_C_Boots_rare.png
+
+Edit target: supplied original reddish-brown hide boots inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_C_Boots_epic.png
+
+Edit target: supplied original reddish-brown hide boots inventory icon. Create its epic quality version. Refine leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_C_Ring_rare.png
+
+Edit target: supplied original ring inventory icon. Create its rare quality version. Refine leather wrapping with finer stitching and restrained embossed borders, wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_C_Ring_epic.png
+
+Edit target: supplied original ring inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_C_Bow_rare.png
+
+Edit target: supplied original bow inventory icon. Create its rare quality version. Refine leather wrapping with finer stitching and restrained embossed borders, wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_C_Bow_epic.png
+
+Edit target: supplied original bow inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_C_Crossbow_rare.png
+
+Edit target: supplied original crossbow inventory icon. Create its rare quality version. Refine leather wrapping with finer stitching and restrained embossed borders, wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_C_Crossbow_epic.png
+
+Edit target: supplied original crossbow inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+## ARC_C_Head_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Cap of Skirmish (do not write the name): one lightweight reddish-brown hide cap with a low close-fitting crown, short swept-back side flaps and a stitched diagonal brow band. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Vest of Skirmish (do not write the name): one lightweight reddish-brown hide skirmisher vest with angled overlapping chest panels, short split hem and compact shoulder straps, hollow clothing with no body inside. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Boots_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Treads of Skirmish (do not write the name): one matching pair of lightweight reddish-brown hide ankle boots with low notched cuffs, thin crisscross straps and flexible stitched soles. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Ring_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Band of Skirmish (do not write the name): one finger-sized narrow ring wrapped in reddish-brown hide with diagonal seam stitching and a small angular bronze fitting, no jewel or lettering. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Bow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Bow of Skirmish (do not write the name): one complete slim wooden shortbow with gently recurved tips, reddish-brown hide wrapping at the grip and thin leather tip bindings, taut string connecting both tips, no arrow. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Crossbow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Crossbow of Skirmish (do not write the name): one complete small wooden crossbow with a slim light stock wrapped in reddish-brown hide, symmetric short iron bow at front and taut correctly joined bowstring, no loaded bolt. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+## FLK_A_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Hood of Shadow (do not write that name): one empty dark brown leather hood with a deep rounded face opening, a close-fitting crown and a short folded neck drape, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_A_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Shadowtread Hood (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Veiled Night (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Jerkin of Shadow (do not write that name): one empty dark brown leather jerkin with fitted layered front panels, modest leather shoulder flaps, plain straps and a short split hem, no wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_A_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Shadowtread Jerkin (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Veiled Night (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Boots of Shadow (do not write that name): one matching pair of supple dark brown leather boots with soft folded cuffs, discreet plain straps and low sturdy soles, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_A_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Shadowtread Boots (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Veiled Night (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Loop of Shadow (do not write that name): one broad dark brown leather finger loop with a compact oval leather front panel and a small plain metal fastening, one finger ring only. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_A_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Shadowtread Loop (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Veiled Night (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Dagger_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Dagger of Shadow (do not write that name): one functional short steel dagger with a straight tapered blade, a small plain crossguard and a dark brown leather-wrapped grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_A_Dagger_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Shadowtread Dagger (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Dagger_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Fang of the Veiled Night (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Sword_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Sword of Shadow (do not write that name): one functional steel sword with a straight double-edged blade, a small simple crossguard and a dark brown leather-wrapped grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_A_Sword_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Shadowtread Sword (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Sword_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Edge of the Veiled Night (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Wand_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Wand of Shadow (do not write that name): one slender plain dark wooden magic wand with a dark brown leather-wrapped grip and simple smooth tapered wooden tip, no crystal or glowing orb. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_A_Wand_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Shadowtread Wand (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_A_Wand_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Spark of the Veiled Night (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Hood of Venom (do not write that name): one empty dark brown leather hood with a broad folded brow, a deep tapered face opening and compact overlapping leather neck panels, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_B_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Venomous Hood (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Serpent's Kiss (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Jerkin of Venom (do not write that name): one empty dark brown leather jerkin with overlapping reinforced leather chest panels, rounded leather shoulder flaps and simple side buckles, no wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_B_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Venomous Jerkin (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Serpent's Kiss (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Boots of Venom (do not write that name): one matching pair of dark brown leather boots with reinforced leather shin panels, compact folded cuffs and simple side buckles, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_B_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Venomous Boots (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Serpent's Kiss (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Loop of Venom (do not write that name): one thick dark brown leather finger loop with a broad rounded leather front panel, neat plain seams and a modest bronze fastening, one finger ring only. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_B_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Venomous Loop (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Serpent's Kiss (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Dagger_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Dagger of Venom (do not write that name): one functional short steel dagger with a gently curved tapered blade, small plain guard and tightly leather-wrapped dark brown grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_B_Dagger_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Venomous Dagger (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Dagger_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Fang of the Serpent's Kiss (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Sword_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Sword of Venom (do not write that name): one functional steel sword with a gently curved single-edged blade, simple compact guard and dark brown leather-wrapped grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_B_Sword_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Venomous Sword (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Sword_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Edge of the Serpent's Kiss (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Wand_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Wand of Venom (do not write that name): one slender dark wooden magic wand with a slightly curved wooden tip and a tightly dark brown leather-wrapped grip, no crystal or glowing orb. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_B_Wand_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Venomous Wand (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_B_Wand_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Spark of the Serpent's Kiss (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Hood of Evasion (do not write that name): one empty close-fitting brown leather hood with a narrow angled face opening, a tapered crown and a short close neck flap, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_C_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Windstep Hood (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Dancing Wind (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Jerkin of Evasion (do not write that name): one empty fitted brown leather jerkin with lightweight angled leather front panels, slim shoulder flaps and short split hem with simple side fastening, no wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_C_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Windstep Jerkin (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Dancing Wind (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Boots of Evasion (do not write that name): one matching pair of slim brown leather boots with close-fitting shin panels, angled cuffs, modest straps and flexible low soles, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_C_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Windstep Boots (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Dancing Wind (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Loop of Evasion (do not write that name): one slender brown leather finger loop with an elongated oval leather front panel, simple diagonal seam and a small plain metal fastening, one finger ring only. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_C_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Windstep Loop (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Dancing Wind (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Dagger_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Dagger of Evasion (do not write that name): one functional slim steel dagger with a long narrow tapered blade, compact straight guard and brown leather-wrapped grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_C_Dagger_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Windstep Dagger (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Dagger_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Fang of the Dancing Wind (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Sword_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Sword of Evasion (do not write that name): one functional slender steel sword with a straight narrow blade, compact angled crossguard and brown leather-wrapped grip. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_C_Sword_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Windstep Sword (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Sword_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Edge of the Dancing Wind (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Wand_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Wand of Evasion (do not write that name): one slender tapered wooden magic wand with a slim brown leather-wrapped grip and a simple subtly angled wooden tip, no crystal or glowing orb. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## FLK_C_Wand_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Windstep Wand (do not write that name). Refine existing leather to supple dark leather with fine neat stitching, restrained embossed patterns and elegant small bronze fittings only where fittings already exist; existing metal becomes finely polished steel and existing wood becomes well-finished dark hardwood. Preserve original material types. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## FLK_C_Wand_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Spark of the Dancing Wind (do not write that name). Refine existing leather with expert embossed patterns, fine decorative gold stitching and fine gold inlay only on existing fittings. Refine existing metal to bright silver steel with gold engraving and existing wood to polished dark hardwood with fine carving. Preserve original material types. Add a very faint violet magic glow along those existing surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+## WKF_Head_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Circlet of Workfolk: one practical tan canvas headband circlet, a sturdy woven strip with simple stitched seams and a modest iron brow clasp, an open empty loop without a cap or head. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Head_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Head_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Armour_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Mantle of Workfolk: one empty sturdy tan canvas work mantle with short shoulder flaps and a modest leather front fastening, practical thick cloth, no wearer. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Armour_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Armour_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Boots_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Striders of Workfolk: a matching pair of durable tan canvas ankle boots with brown leather toe and heel reinforcement, modest plain laces and sturdy soles, one equipment item. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Boots_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Boots_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Ring_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Seal of Workfolk: one plain iron finger ring with a small flat oval signet face, tan canvas binding around the shank, restrained seam stitches, no letters or symbol. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Ring_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Ring_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Pick_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Pick of Workfolk: one sturdy iron mining pick with a curved pointed head, straight brown wooden shaft and a modest tan canvas grip wrap. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Pick_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Pick_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+## ARC_B_Head_rare.png
+
+Edit target: supplied original dark brown hide head inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_B_Head_epic.png
+
+Edit target: supplied original dark brown hide head inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_B_Armour_rare.png
+
+Edit target: supplied original dark brown hide armour inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_B_Armour_epic.png
+
+Edit target: supplied original dark brown hide armour inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_B_Boots_rare.png
+
+Edit target: supplied original dark brown hide boots inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_B_Boots_epic.png
+
+Edit target: supplied original dark brown hide boots inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_B_Ring_rare.png
+
+Edit target: supplied original ring inventory icon. Create its rare quality version. Refine leather wrapping with finer stitching and restrained embossed borders, wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_B_Ring_epic.png
+
+Edit target: supplied original ring inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_B_Bow_rare.png
+
+Edit target: supplied original bow inventory icon. Create its rare quality version. Refine leather wrapping with finer stitching and restrained embossed borders, wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_B_Bow_epic.png
+
+Edit target: supplied original bow inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_B_Crossbow_rare.png
+
+Edit target: supplied original crossbow inventory icon. Create its rare quality version. Refine leather wrapping with finer stitching and restrained embossed borders, wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_B_Crossbow_epic.png
+
+Edit target: supplied original crossbow inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1 canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+## ARC_B_Head_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Cap of Hunter (do not write the name): one dark brown hide hunter cap with a tapered crown and low folded side panels, a stitched brow band with a plain bronze clasp. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_B_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Vest of Hunter (do not write the name): one dark brown hide hunter vest, overlapping reinforced leather chest panels, simple side buckles and stitched shoulder guards, hollow clothing with no body inside. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_B_Boots_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Treads of Hunter (do not write the name): one matching pair of dark brown hide hunting boots with mid-height straight cuffs, reinforced stitched toes and two slim buckled straps. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_B_Ring_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Band of Hunter (do not write the name): one finger-sized oval band made of layered dark brown hide with crossed stitches and a small flat bronze clasp, no jewel or letters. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_B_Bow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Bow of Hunter (do not write the name): one complete compact recurved wooden hunting bow with dark brown hide grip and tip wrapping, taut bowstring correctly joining both tips, no arrow. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_B_Crossbow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Crossbow of Hunter (do not write the name): one complete compact wooden crossbow with dark brown hide wrapping on the stock and grip, broad symmetric iron bow at its front with correctly stretched bowstring, no loaded bolt. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Crossbow_rare.png
+
+Edit target: supplied original crossbow inventory icon. Create its rare quality version. Refine the leather wrapping with finer stitching and restrained embossed borders, the wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_A_Crossbow_epic.png
+
+Edit target: supplied original crossbow inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+## ARC_A_Head_rare.png
+
+Edit target: supplied original brown hide head inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Head_epic.png
+
+Edit target: supplied original brown hide head inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Armour_rare.png
+
+Edit target: supplied original brown hide armour inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Armour_epic.png
+
+Edit target: supplied original brown hide armour inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Boots_rare.png
+
+Edit target: supplied original brown hide boots inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Boots_epic.png
+
+Edit target: supplied original brown hide boots inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Ring_rare.png
+
+Edit target: supplied original ring inventory icon. Create its rare quality version. Refine the leather wrapping with finer stitching and restrained embossed borders, the wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_A_Ring_epic.png
+
+Edit target: supplied original ring inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_A_Bow_rare.png
+
+Edit target: supplied original bow inventory icon. Create its rare quality version. Refine the leather wrapping with finer stitching and restrained embossed borders, the wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_A_Bow_epic.png
+
+Edit target: supplied original bow inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+## WRK_B_Head_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Cap of Claiming: a sturdy tan canvas worker cap with a softly squared crown, short brim and simple brown leather brow band, empty without a head. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Head_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Head_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Armour_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Apron of Claiming: a broad sturdy empty tan canvas work apron, square bib, practical stitched pocket and plain leather neck and waist straps. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Armour_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Armour_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Boots_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Clogs of Claiming: a matching pair of broad wooden-soled canvas work clogs, sturdy low shoes with brown leather instep straps, shown as one equipment item. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Boots_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Boots_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Ring_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Band of Claiming: one plain forged iron finger ring wrapped neatly with tan canvas and simple cross stitches, empty without a hand. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Ring_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Ring_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_B_Pick_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Pick of Claiming: one practical mining pick, a narrow iron head with one pointed end and one compact chisel end, straight wooden handle bound with tan canvas. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_B_Pick_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Landmark version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_B_Pick_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Marked Stone version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Head_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Cap of Survival: a tough rounded tan canvas worker cap with a short sturdy brim, double-stitched rim and modest leather side binding, no head. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Head_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Head_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Armour_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Apron of Survival: one empty thick tan canvas worker apron, reinforced bib and hem, modest stitched pocket and dark brown leather fastening straps. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Armour_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Armour_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Boots_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Clogs of Survival: a matching pair of enclosed canvas work shoes with sturdy wooden clog soles and dark brown leather heel reinforcement, one equipment item. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Boots_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Boots_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Ring_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Band of Survival: one thick dark iron finger ring partly wrapped in tightly bound tan canvas with plain sturdy stitching, no hand. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Ring_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Ring_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+
+## WRK_C_Pick_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Pick of Survival: one sturdy dark iron mining pick on a straight wooden haft with a thick tan canvas grip wrap, functional modest workmanship. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## WRK_C_Pick_rare.png
+
+Edit target: the supplied original canvas worker equipment icon. Create the Rare-quality Survivor version. Preserve EXACTLY the same object, outer silhouette, viewing angle, pose, proportions, openings, straps, scale and transparent margins. Change only surface craft: finer denser canvas weave, precise decorative stitching on existing seams, refined existing leather, polished steel and restrained brass lines only on existing fittings or metal. Keep modest practical worker equipment and warm upper-left lighting. No glow. Do not add any parts, protrusions, gems, symbols, extra objects, wearer, background, frame, text, letters, numbers, brand or watermark. Original hand-painted fantasy inventory-icon style. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WRK_C_Pick_epic.png
+
+Edit target: the supplied original canvas worker equipment icon. Create its Epic-quality Last Breath version. Preserve EXACTLY the same equipment object, outer silhouette, pose, angle, proportions, openings, straps, scale, composition and transparent margins. Upgrade existing surfaces only: fine dense canvas with delicate decorative stitching along seams, refined existing leather, polished steel with subtle silver and gold detail on existing fittings. Add a faint warm amber glow along a few existing edges; keep it subtle and readable at128px. Keep the practical worker equipment identity and hand-painted fantasy inventory style with warm upper-left lighting. No added parts, protrusions, gems, extra objects, wearer, background, frame, text, letters, numbers, brands or watermark. Genuine transparent alpha.
+
+## ARC_A_Head_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Cap of Bow (do not write the name): one supple brown hide archer cap, rounded soft crown with a short pointed front brow, narrow leather band and small plain buckle. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Vest of Bow (do not write the name): one sleeveless brown hide archery vest with diagonal stitched leather panels, simple laced front and reinforced shoulder seams, hollow with no body inside. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Boots_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Treads of Bow (do not write the name): one matching pair of soft brown hide boots with low folded cuffs, reinforced stitched toes and narrow leather ankle straps. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Ring_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Band of Bow (do not write the name): one finger-sized circular band wrapped in finely stitched brown hide with a small oval bronze fitting, no jewel or lettering. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Bow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Bow of Bow (do not write the name): one complete long wooden bow with brown hide wrapping at the grip and limb ends, taut bowstring correctly joining both tips, no arrow. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_A_Crossbow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Crossbow of Bow (do not write the name): one complete wooden crossbow with brown hide grip wrapping, a symmetrical iron bow assembly across its front and correctly stretched bowstring, no loaded bolt. Common quality functional brown hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly shaded materials and warm upper-left light. Diagonal three-quarter inventory view for long weapons, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+## BLZ_A_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Helm of Zeal (do not write that name): one compact steel scale helmet with a rounded dome, layered overlapping metal brow plates and short cheek guards, empty helmet without a head. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Helm (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Plate of Zeal (do not write that name): one compact empty scale-armour breastplate and tunic with overlapping teardrop steel scales, modest rounded shoulder guards and plain dark leather fastening, without a wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Plate (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Greaves of Zeal (do not write that name): one matching pair of sturdy dark leather combat boots with overlapping teardrop steel scale shin guards and simple functional straps, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Greaves (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Ring of Zeal (do not write that name): one broad steel finger ring with an oval flat signet face composed of shallow overlapping scale-shaped metal panels, simple functional craftsmanship. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_A_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Fervent Ring (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_A_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of Burning Faith (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Helm of Protection (do not write that name): one sturdy steel scale helmet with a broad protective brow, compact layered scale panels over the dome and deep rounded cheek guards, empty helmet without a head. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Helm (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Plate of Protection (do not write that name): one compact empty steel scale-armour cuirass with a broad protective chest, dense overlapping rounded steel scales, stout rounded shoulder guards and plain leather buckles, without a wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Plate (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Greaves of Protection (do not write that name): one matching pair of stout dark leather combat boots with broad protective steel scale shin guards, rounded toe caps and simple straps, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Greaves (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Ring of Protection (do not write that name): one thick steel finger ring with a broad rounded shield-shaped signet face bearing shallow overlapping rounded scale-shaped metal panels, modest functional craftsmanship. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_B_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Hallowed Ring (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_B_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Sacred Guard (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Head_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Helm of Charge (do not write that name): one compact steel scale helmet with an angled brow, close-fitting overlapping steel scale panels and tapered cheek guards, empty helmet without a head. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Head_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Helm (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Head_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Crown of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Armour_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Plate of Charge (do not write that name): one compact empty scale-armour cuirass with close-fitting overlapping pointed steel scales, modest angled shoulder guards and plain dark leather fastening, without a wearer. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Armour_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Plate (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Armour_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Mantle of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Boots_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Greaves of Charge (do not write that name): one matching pair of dark leather combat boots with tapered overlapping steel scale shin guards, angled knee rims and plain straps, shown together as one equipment item. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Boots_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Greaves (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Boots_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Steps of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Ring_base.png
+
+Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Scale Ring of Charge (do not write that name): one sturdy steel finger ring with a small elongated oval signet face composed of shallow pointed overlapping scale-shaped metal panels, modest functional craftsmanship. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded metal and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
+
+
+## BLZ_C_Ring_rare.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its rare quality version named Stormborn Ring (do not write that name). Add restrained fine etched grooves on existing metal panels, richer polished silver steel and neat bronze trim, modest additional craftsmanship. No glow. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+
+## BLZ_C_Ring_epic.png
+
+Use case: precise-object-edit. Edit target: the supplied original equipment inventory icon. Create its epic quality version named Seal of the Storm Rush (do not write that name). Refine the existing metal to bright silver steel, add fine gold inlay and masterful flowing engravings on existing surfaces, with a very faint violet magic glow along those surfaces. Preserve EXACTLY the same outer silhouette, object shape, openings, object positions, proportions, angle, scale, lighting direction and transparent margins. Change only surface craftsmanship and materials, adding no protrusions. Keep the original hand-painted fantasy inventory icon style and genuine transparent alpha. Exactly one isolated equipment item. No new horns, spikes, extra objects, wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
+
+## BLK_C_Shield_rare.png
+
+Edit target: supplied original shield inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Shield_epic.png
+
+Edit target: supplied original shield inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Axe_rare.png
+
+Edit target: supplied original axe inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Axe_epic.png
+
+Edit target: supplied original axe inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Sword_rare.png
+
+Edit target: supplied original sword inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Sword_epic.png
+
+Edit target: supplied original sword inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Spear_rare.png
+
+Edit target: supplied original spear inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Spear_epic.png
+
+Edit target: supplied original spear inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Club_rare.png
+
+Edit target: supplied original club inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Club_epic.png
+
+Edit target: supplied original club inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Hammer_rare.png
+
+Edit target: supplied original hammer inventory icon. Create its rare quality version. Refine existing iron to polished steel with fine concentric etched details and noble bronze trim on existing fittings. No magical glow. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
+
+## BLK_C_Hammer_epic.png
+
+Edit target: supplied original hammer inventory icon. Create its epic quality version. Refine existing iron with fine concentric etching and noble fittings, and add only a faint narrow violet glow along metal edges and engraved grooves. No floating particles or detached aura. Preserve EXACTLY outer silhouette, whole shape, openings, position, proportions, angle, scale, margins, light direction and every visible part. Preserve wooden hafts and leather grips. Change only material craftsmanship; no protrusions or added blades. Original hand-painted fantasy icon, genuine transparent alpha, one isolated equipment object. No person, wearer, body, background, border, frame, text, numbers, branding or watermark. Square suitable for128px downsampling.
+
 ## BLK_C_Head_rare.png
 
 Edit target: the supplied original head inventory icon. Create its rare quality version. Refine existing iron surfaces to polished steel, add restrained fine etched concentric details and noble bronze trim to existing fittings. No magical glow. Preserve EXACTLY the same outer silhouette, complete object shape, openings, visible parts, position, proportions, angle, scale, transparent margins and lighting direction. Preserve wooden hafts and leather grips where present. Change only surface craftsmanship and materials; no added protrusions or blades. Original hand-painted fantasy icon style, genuine transparent alpha. One isolated equipment object, no wearer, person, body, background, border, frame, letters, numbers, branding or watermark. Square image suitable for128px downsampling.
@@ -506,17 +2754,17 @@ Edit target: supplied original wooden-hafted iron war hammer inventory icon. Cre
 
 ## BLK_B_Head_base.png and BLK_B_Head_common.png
 
-Use case: stylized-concept. Asset type: original fantasy inventory icon, one item for a transparent 128x128 icon after downsampling. Primary request: a single sturdy iron defensive helmet, the Common base for an Iron Helm of Bulwark. Hand-painted fantasy icon style: sculpted readable forms, softly painted highlights on iron, warm dark leather edging, restrained worn steel gray palette, matching the project's warmly lit painted inventory artwork. A closed stout rounded helmet with broad brow reinforcement and cheek guards, isolated empty helmet with no head, no body. Slight three-quarter view, whole object centered, generous transparent margin on all sides, strong readable silhouette at small size. Genuine transparent background and alpha. No frame, no tile, no pedestal, no ground plane, no cast shadow outside the object, no text, no symbols or lettering, no brands. Common quality: practical plain iron workmanship, no gems, no aura, no glow. Square high-resolution image, the entire helmet visible.
+Use case: stylized-concept. Asset type: hand-painted equipment inventory icon. Reference image: the supplied existing iron helmet; preserve its exact outer silhouette, eye and face openings, shape, broad brow reinforcement, central ridge, cheek guards, leather lining, proportions, angle, position, scale and transparent margins. Produce a fresh Common quality base rendering of that same isolated helmet with plain functional iron, subdued worn steel shading, dark brown leather edging, restrained detail and warm upper-left light. Original fantasy illustration, chunky readable shape suitable for a128x128 icon. One whole empty helmet, entirely visible and centred on a square1:1 canvas with genuine transparent alpha. No person, wearer, head, limbs, mannequin, frame, border, pedestal, ground, background, cast shadow, text, symbols, lettering, branding, gems, magic or glow.
 
 
 ## BLK_B_Head_rare.png
 
-Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its rare quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Rare quality: add finer forged border detailing, small decorative rivets and restrained non-letter geometric engravings to the EXISTING surfaces, using nobler, better-finished metal. No glow, no aura. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+Use case: precise-object-edit. Edit target: the supplied new Common iron helmet inventory icon. Produce its rare quality version. Refine the existing iron surfaces to polished steel, add restrained finely engraved borders and noble bronze trim to the existing brow, central ridge and cheek-guard fittings. No magic or glow. Preserve exactly the complete outer silhouette, all eye and face openings, whole helmet shape, every part, proportions, three-quarter angle, position, scale, transparent margins and warm upper-left light. Retain the leather lining and all existing structural elements; change only surface craftsmanship and materials, with no added protrusions or accessories. Hand-painted fantasy equipment inventory icon, square1:1 canvas, genuine transparent alpha, whole object visible and readable at128px. No wearer, person, head, limbs, mannequin, background, frame, text, letters, numbers, symbols, branding or watermark.
 
 
 ## BLK_B_Head_epic.png
 
-Use case: precise-object-edit. Edit only the supplied single-item fantasy inventory base image into its epic quality version. Retain the EXACT object type, outer silhouette, component shapes, proportions, orientation, object placement, framing and generous margin. Keep the same hand-painted style and steel/leather material family. Epic quality: add refined forged filigree and sophisticated layered engraving on the EXISTING surfaces, richer noble metal, and a faint restrained magical violet glow closely hugging the object. Do not grow spikes, wings or ornaments outside the existing shape. Transparent alpha background remains truly transparent, including any gaps through the object; no ground plane, no cast shadow, no tile, no frame, no border. No words, letters, numbers, brands, watermark, additional objects or wearer. The complete item must remain inside the image without cropping. Square high resolution, for a 128px game icon.
+Use case: precise-object-edit. Edit target: the supplied new Common iron helmet inventory icon. Produce its epic quality version. Refine existing metal surfaces with finely engraved borders and noble bronze fittings, and add only a faint narrow violet glow along existing metal edges and engraved lines. No detached aura or particles. Preserve exactly the complete outer silhouette, all eye and face openings, whole helmet shape, every part, proportions, three-quarter angle, position, scale, transparent margins and warm upper-left light. Retain the leather lining and all existing structural elements; change only surface craftsmanship and materials, with no added protrusions or accessories. Hand-painted fantasy equipment inventory icon, square1:1 canvas, genuine transparent alpha, whole object visible and readable at128px. No wearer, person, head, limbs, mannequin, background, frame, text, letters, numbers, symbols, branding or watermark.
 
 
 ## BLK_B_Armour_base.png and BLK_B_Armour_common.png

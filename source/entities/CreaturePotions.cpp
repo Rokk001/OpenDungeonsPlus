@@ -14,6 +14,7 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/Pathfinding.h"
 #include "utils/ConfigManager.h"
 
 #include <algorithm>
@@ -150,18 +151,23 @@ void Creature::decidePotion()
         }
     }
     bool enemyInRange = false;
+    Tile* ownTile = getPositionTile();
     for(Creature* enemy : getGameMap()->getCreatures())
     {
         if(enemy == this || !enemy->getIsOnMap() || !enemy->isAlive() || enemy->isInvisible() ||
            getSeat()->isAlliedSeat(enemy->getSeat()) || enemy->getSeat() == getSeat())
             continue;
         Tile* tile = enemy->getPositionTile();
-        if(tile == nullptr || std::find(mVisibleTiles.begin(), mVisibleTiles.end(), tile) == mVisibleTiles.end())
+        if(tile == nullptr || ownTile == nullptr ||
+           std::find(mVisibleTiles.begin(), mVisibleTiles.end(), tile) == mVisibleTiles.end())
             continue;
-        const double distance = getPosition().distance(enemy->getPosition());
+        const int squaredDistance = Pathfinding::squaredDistanceTile(*tile, *ownTile);
         for(const CreatureSkillData& data : mSkillData)
         {
-            if(data.mSkill->getRangeMax(this, enemy) > 0.0 && distance <= data.mSkill->getRangeMax(this, enemy))
+            if(!data.mSkill->canBeUsedBy(this))
+                continue;
+            const double range = data.mSkill->getRangeMax(this, enemy);
+            if(range > 0.0 && squaredDistance <= range * range)
             {
                 enemyInRange = true;
                 break;
@@ -193,6 +199,8 @@ void Creature::decidePotion()
             const double after = std::min(getMaxMana(), getCurrentMana()+getMaxMana()*potion->getValue()/PERCENT);
             for(const CreatureSkillData& data : mSkillData)
             {
+                if(!data.mSkill->canBeUsedBy(this))
+                    continue;
                 const double cost = getSkillManaCost(*data.mSkill);
                 if(cost > getCurrentMana() && cost <= after)
                     useful = true;

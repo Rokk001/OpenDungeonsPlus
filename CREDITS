@@ -1351,6 +1351,7 @@ materials/portraits/whole/RunelordDwarf.mesh-female/*.jpg	AI-generated with Code
 materials/portraits/whole/RunelordDwarf.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male rune dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
 
 gui/items/*.png	AI-generated with Codex	GPLv3+	Original item icons, created for this project; prompts in materials/items/PROMPTS.md.
+gui/items/BLK_B_Head_*.png	AI-generated with Codex	GPLv3+	Original helmet base and quality edits, created for this project; complete generation prompts in materials/items/PROMPTS.md.
 gui/potions/*.png	AI-generated with Codex	GPLv3+	Original potion icons, created for this project; prompts in materials/items/PROMPTS.md.
 gui/herbs/*.png	AI-generated with Codex	GPLv3+	Original herb icons, created for this project; prompts in materials/items/PROMPTS.md.
 gui/items/ItemBag.png	AI-generated with Codex	GPLv3+	Original cloth item sack icon, created for this project; prompt in materials/items/PROMPTS.md.

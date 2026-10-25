@@ -59,6 +59,8 @@ def catalogue_fixture():
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+// Retain production log expressions while the fixture supplies no game log service.
+#define OD_LOG_INF(message) static_cast<void>(message)
 //! \brief Supplies unused packet services while stream and gameplay methods run unchanged.
 class ODPacket {
 public:

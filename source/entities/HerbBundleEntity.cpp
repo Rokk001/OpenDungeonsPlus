@@ -56,11 +56,11 @@ void HerbBundleEntity::notifyEntityCarryOn(Creature* carrier)
     setIsOnMap(false);
 }
 
-//! \brief Reattaches a bundle released by its carrier to the destination ground tile.
+//! \brief Reattaches a released bundle even when its carrier drops it on the original tile.
 void HerbBundleEntity::notifyEntityCarryOff(const Ogre::Vector3& position)
 {
-    setIsOnMap(true);
     setPosition(position);
+    addEntityToPositionTile();
 }
 
 //! \brief Releases a bundle only after its recipe units were transferred to storage.

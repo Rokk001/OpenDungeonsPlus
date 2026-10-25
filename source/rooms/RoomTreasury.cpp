@@ -545,7 +545,27 @@ void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTre
     roomTreasuryTileData->mMeshOfTile = newMeshName;
 }
 
-//! \brief Accepts item storage independently of gold capacity while keeping sealed goods out of worker storage.
+//! \brief Counts floor cargo and promised deliveries before selecting an independent item-storage place.
+Tile* RoomTreasury::getItemDeliveryTile(const GameEntity* carriedEntity) const
+{
+    const uint32_t capacity = ConfigManager::getSingleton().getRoomConfigUInt32("TreasuryBagsPerTile");
+    for(Tile* tile : mCoveredTiles)
+    {
+        uint32_t count = 0;
+        for(GameEntity* stored : tile->getEntitiesInTile())
+            if(stored != carriedEntity && (stored->getObjectType() == GameEntityType::itemBagEntity ||
+                stored->getObjectType() == GameEntityType::giftBoxEntity))
+                ++count;
+        for(const std::pair<GameEntity* const, Tile*>& delivery : mItemDeliveries)
+            if(delivery.first != carriedEntity && delivery.second == tile)
+                ++count;
+        if(count < capacity)
+            return tile;
+    }
+    return nullptr;
+}
+
+//! \brief Accepts item storage independently of gold capacity while counting promised worker deliveries.
 bool RoomTreasury::hasCarryEntitySpot(GameEntity* carriedEntity)
 {
     if(carriedEntity->getObjectType() == GameEntityType::itemBagEntity ||
@@ -557,11 +577,7 @@ bool RoomTreasury::hasCarryEntitySpot(GameEntity* carriedEntity)
             const ItemInstance* item = static_cast<ItemBagEntity*>(carriedEntity)->getItem();
             if(item != nullptr && item->mMerchantGoods) return false;
         }
-        const uint32_t capacity = ConfigManager::getSingleton().getRoomConfigUInt32("TreasuryBagsPerTile");
-        for(Tile* tile : mCoveredTiles)
-            if(tile->countEntitiesOnTile(GameEntityType::itemBagEntity) + tile->countEntitiesOnTile(GameEntityType::giftBoxEntity) < capacity)
-                return true;
-        return false;
+        return getItemDeliveryTile(carriedEntity) != nullptr;
     }
     // We might accept more gold than empty space (for example, if there are 100 gold left
     // and 2 different workers want to bring a treasury) but we don't care
@@ -574,7 +590,7 @@ bool RoomTreasury::hasCarryEntitySpot(GameEntity* carriedEntity)
     return true;
 }
 
-//! \brief Finds the first tile with an unoccupied bag storage position.
+//! \brief Books the first available item place so concurrent carriers cannot promise it twice.
 Tile* RoomTreasury::askSpotForCarriedEntity(GameEntity* carriedEntity)
 {
     if(!hasCarryEntitySpot(carriedEntity))
@@ -582,18 +598,18 @@ Tile* RoomTreasury::askSpotForCarriedEntity(GameEntity* carriedEntity)
 
     if(carriedEntity->getObjectType() == GameEntityType::itemBagEntity || carriedEntity->getObjectType() == GameEntityType::giftBoxEntity)
     {
-        const uint32_t capacity = ConfigManager::getSingleton().getRoomConfigUInt32("TreasuryBagsPerTile");
-        for(Tile* tile : mCoveredTiles)
-            if(tile->countEntitiesOnTile(GameEntityType::itemBagEntity) + tile->countEntitiesOnTile(GameEntityType::giftBoxEntity) < capacity)
-                return tile;
-        return nullptr;
+        Tile* tile = getItemDeliveryTile(carriedEntity);
+        if(tile != nullptr)
+            mItemDeliveries[carriedEntity] = tile;
+        return tile;
     }
     return mCoveredTiles[0];
 }
 
-//! \brief Sets delivered item ownership and separates four ground bags from the existing gold visuals.
+//! \brief Releases a finished booking and uses an actually free quarter position between the gold visuals.
 void RoomTreasury::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
+    releaseItemDelivery(carriedEntity);
     if(carriedEntity != nullptr && carriedEntity->getIsOnMap() &&
         (carriedEntity->getObjectType() == GameEntityType::itemBagEntity || carriedEntity->getObjectType() == GameEntityType::giftBoxEntity))
     {
@@ -601,23 +617,41 @@ void RoomTreasury::notifyCarryingStateChanged(Creature* carrier, GameEntity* car
         if(tile != nullptr && tile->getCoveringRoom() == this)
         {
             const std::vector<GameEntity*>& entities = tile->getEntitiesInTile();
-            size_t index = 0;
-            for(GameEntity* entity : entities)
-            {
-                if(entity == carriedEntity) break;
-                if(entity->getObjectType() == GameEntityType::itemBagEntity || entity->getObjectType() == GameEntityType::giftBoxEntity) ++index;
-            }
             static const Ogre::Vector2 OFFSETS[] = {{-0.25f,-0.25f},{0.25f,-0.25f},{-0.25f,0.25f},{0.25f,0.25f}};
-            if(index < sizeof(OFFSETS)/sizeof(OFFSETS[0]))
+            for(const Ogre::Vector2& offset : OFFSETS)
             {
-                carriedEntity->setSeat(getSeat());
-                carriedEntity->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()) + OFFSETS[index].x,
-                    static_cast<Ogre::Real>(tile->getY()) + OFFSETS[index].y, 0.0f));
+                const Ogre::Vector3 position(static_cast<Ogre::Real>(tile->getX()) + offset.x,
+                    static_cast<Ogre::Real>(tile->getY()) + offset.y, 0.0f);
+                bool occupied = false;
+                for(GameEntity* entity : entities)
+                {
+                    if(entity == carriedEntity || (entity->getObjectType() != GameEntityType::itemBagEntity &&
+                        entity->getObjectType() != GameEntityType::giftBoxEntity))
+                        continue;
+                    const Ogre::Vector3& otherPosition = entity->getPosition();
+                    if(otherPosition.x == position.x && otherPosition.y == position.y)
+                    {
+                        occupied = true;
+                        break;
+                    }
+                }
+                if(!occupied)
+                {
+                    carriedEntity->setSeat(getSeat());
+                    carriedEntity->setPosition(position);
+                    break;
+                }
             }
         }
     }
     // If a treasury is deposited on the treasury, no need to handle it here.
     // It will handle himself alone
+}
+
+//! \brief Cancels a promised item place without changing the cargo or the treasury's gold.
+void RoomTreasury::releaseItemDelivery(GameEntity* carriedEntity)
+{
+    mItemDeliveries.erase(carriedEntity);
 }
 
 RoomTreasuryTileData* RoomTreasury::createTileData(Tile* tile)

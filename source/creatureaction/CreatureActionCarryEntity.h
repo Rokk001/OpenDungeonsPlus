@@ -65,6 +65,7 @@ public:
     bool handleDragCreature();
 
 private:
+    //! \brief Releases interrupted cargo and any treasury capacity booked for it.
     void releaseEntity(const std::string& reason);
     void startDrag();
     void startLaying(Creature& dragged);

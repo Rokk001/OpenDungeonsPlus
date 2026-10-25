@@ -601,7 +601,7 @@ void GameMap::clearItemDefinitions()
     mItemAuraGivers.clear();
 }
 
-//! \brief Selects uniformly among matching free lines and records every newly created Epic.
+//! \brief Selects uniformly among matching free lines, registers each Epic and logs its unique serial.
 std::unique_ptr<ItemInstance> GameMap::rollItem(Quality quality, const std::string& slot,
     const std::string& weaponClass, const std::string& path)
 {
@@ -628,6 +628,7 @@ std::unique_ptr<ItemInstance> GameMap::rollItem(Quality quality, const std::stri
     {
         item->mEpicSerial = mNextEpicSerial++;
         registerEpic(*item);
+        OD_LOG_INF("Created Epic item=" + item->mDefinitionId + ", serial=" + std::to_string(item->mEpicSerial));
     }
     return item;
 }

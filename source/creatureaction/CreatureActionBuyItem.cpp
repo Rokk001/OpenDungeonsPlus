@@ -9,6 +9,7 @@ CreatureActionBuyItem::CreatureActionBuyItem(Creature& creature, const std::stri
 //! \brief Identifies merchant purchase work in the creature action queue.
 CreatureActionType CreatureActionBuyItem::getType() const { return CreatureActionType::buyItem; }
 //! \brief Supplies one purchase step without retaining a deleted room pointer.
+// allowed-lambda: CreatureAction requires the existing std::function action interface.
 std::function<bool()> CreatureActionBuyItem::action()
 { return std::bind(&CreatureActionBuyItem::handle, std::ref(mCreature), mRoom, mIndex); }
 //! \brief Approaches a still-existing table and validates the purchase again on arrival.
