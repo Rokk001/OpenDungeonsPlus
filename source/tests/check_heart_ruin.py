@@ -71,7 +71,7 @@ struct ODServer {std::vector<ServerNotification*> queue;
 struct Tile{int mX=0,mY=0;Tile(int x=0,int y=0):mX(x),mY(y){}int getX()const{return mX;}int getY()const{return mY;}static std::string displayAsString(const Tile*){return "tile";}};
 struct Seat;
 struct TileData{double mHP=0.0;std::vector<Seat*> mSeatsVision;virtual ~TileData()=default;};
-struct RoomTreasuryTileData:TileData{int mGoldInTile=0;std::string mMeshOfTile;};
+struct RoomTreasuryTileData:TileData{double mGoldInTile=0;std::string mMeshOfTile;};
 namespace Ogre {typedef double Real;struct Vector3{Real x,y,z;Vector3(Real a,Real b,Real c):x(a),y(b),z(c){}};}
 struct Random {static double Double(double min,double max){return (min+max)*0.5;}};
 #define OD_ASSERT_TRUE_MSG(cond,msg) do{if(!(cond)){std::cout<<"ASSERT FAILED: "<<(msg)<<'\n';std::exit(1);}}while(0)
@@ -151,10 +151,11 @@ struct BuildingObject:GameEntity {Tile* tile;BuildingObject(Tile* t):GameEntity(
  Tile* getPositionTile(){return tile;}
  virtual bool notifyRemoveAsked(){++g_removeAsked;return g_removeAllowed;}
  void notifySeatsWithVision(const std::vector<Seat*>&){}};
-struct TreasuryObject:GameEntity {int mGoldValue=0;static std::vector<TreasuryObject*> spawned;
- TreasuryObject(GameMap*,int v):GameEntity(nullptr),mGoldValue(v){spawned.push_back(this);}
+struct TreasuryObject:GameEntity {double mGoldValue=0;static std::vector<TreasuryObject*> spawned;
+ //! \brief Preserves the production loose-pile amount without integer narrowing.
+ TreasuryObject(GameMap*,double v):GameEntity(nullptr),mGoldValue(v){spawned.push_back(this);}
  void addToGameMap(){}void createMesh(){}void setPosition(Ogre::Vector3){}
- static const char* getMeshNameForGold(int gold);};
+ static const char* getMeshNameForGold(double gold);};
 std::vector<TreasuryObject*> TreasuryObject::spawned;
 struct PersistentObject:BuildingObject {
  PersistentObject(GameMap*,Room&,const std::string&,Tile* t,double,bool,float,const char*,bool):BuildingObject(t){}

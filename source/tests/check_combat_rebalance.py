@@ -165,6 +165,10 @@ def check_buildings(roster):
 
 # Tie numerical checks to actual hit, avoidance, damage, item and serialization paths.
 def check_sources():
+    sleep = function(read("source/creatureaction/CreatureActionSleep.cpp"), "bool CreatureActionSleep::handleSleep(")
+    assert 'getSleepHeal() == 0.0 ? 0.0 :' in sleep
+    assert 'creature.getMaxHp() / (ConfigManager::getSingleton().getRoomConfigDouble("DormitoryFullHealSeconds") *' in sleep
+    assert 'ODApplication::turnsPerSecond), ResearchEffect::SleepRecovery)' in sleep
     creature = read("source/entities/Creature.cpp")
     hit = function(creature, "bool Creature::rollAttackHit(")
     assert hit.index("if(possessed)") < hit.index("Random::Double(0.0, 100.0)")

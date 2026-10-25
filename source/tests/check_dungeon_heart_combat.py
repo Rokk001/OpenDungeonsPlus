@@ -33,7 +33,7 @@ probe = r'''
 #define OD_LOG_INF(x)
 namespace Ogre {typedef double Real;struct Vector3{Real x,y,z;Vector3(Real a,Real b,Real c):x(a),y(b),z(c){}};}
 struct TileData {virtual ~TileData()=default;};
-struct RoomTreasuryTileData:TileData {int mGoldInTile=0;std::string mMeshOfTile;};
+struct RoomTreasuryTileData:TileData {double mGoldInTile=0;std::string mMeshOfTile;};
 struct Tile{int getX()const{return 3;}int getY()const{return 4;}};
 struct Player {bool human=true;bool lost=false;int conqueror=-1,heartX=-1,heartY=-1,recorded=0;bool getIsHuman()const{return human;}bool getHasLost()const{return lost;}
  void recordHeartDestroyed(int c,int x,int y){conqueror=c;heartX=x;heartY=y;++recorded;}};
