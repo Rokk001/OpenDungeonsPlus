@@ -37,6 +37,8 @@ public:
     RoomType getType() const override
     { return mRoomType; }
 
+    //! \brief Rebuilds active spots and ends the one-time restoration of the saved rack layout.
+    void updateActiveSpots(GameMap* gameMap = nullptr) override;
     void doUpkeep() override;
     bool hasOpenCreatureSpot(Creature* c) override;
     bool addCreatureUsingRoom(Creature* c) override;
@@ -48,9 +50,19 @@ public:
     static const TileVisual mRoomVisual;
     
 protected:
+    //! \brief Creates unchanged center targets or a wall rack, retaining any loaded rack.
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
+    //! \brief Rejects rack tiles that lack the matching wall or would separate the room.
+    void filterWallActiveSpots(ActiveSpotPlace place, std::vector<Tile*>& tiles) override;
+    //! \brief Appends the exact rack layout to existing room tile data.
+    void exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileData) const override;
+    //! \brief Reads optional rack data; old files retain their existing load path.
+    bool importTileDataFromStream(std::istream& is, Tile* tile, TileData* tileData) override;
 private:
+    //! \brief Returns whether excluding this rack tile leaves its room neighbors connected.
+    bool rackLeavesRoomConnected(Tile* tile) const;
+    bool mRestoringRackLayout = false;
     int32_t nbTurnsNoChangeDummies;
     //! \brief Gold for the training of the last turns that is not paid yet (less than 1 gold)
     double mTrainingGoldDue;
