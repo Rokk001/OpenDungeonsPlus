@@ -1803,7 +1803,7 @@ private:
     //! \brief A sub-function called by doTurn()
     //! This one checks if there is something prioritary to do (like fighting). If it is the case,
     //! it should empty the action list before adding what to do.
-    //! \brief Keeps lying creatures below the carry health limit in bed or on their cot.
+    //! \brief Keeps weak patients lying and preserves configured combat responses when they can rise.
     void decidePrioritaryAction();
 
     //! \brief A sub-function called by doTurn()

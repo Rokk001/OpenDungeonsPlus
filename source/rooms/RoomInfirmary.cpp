@@ -502,8 +502,9 @@ void RoomInfirmary::splitRoom(Room& room, const std::vector<Tile*>& tiles)
         if(!all && mCotObjects.count(entry.first))
         {
             BuildingObject* object=mCotObjects[entry.first];
-            removeBuildingObject(object);
-            target.removeBuildingObject(object);
+            Tile* anchor=getGameMap()->getTile(entry.second.x,entry.second.y);
+            Building* owner=anchor->getCoveringBuilding();
+            owner->removeBuildingObject(object);
         }
         if(all)
         {
