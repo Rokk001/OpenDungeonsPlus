@@ -25,6 +25,7 @@ EXPECTED = [
     ("Rooms", 2, "roomWorkshop", "WorkshopButton", ["roomTreasury"]),
     ("Rooms", 2, "roomBridgeWooden", "WoodenBridgeButton", ["roomTreasury"]),
     ("Rooms", 2, "roomGuardRoom", "GuardRoomButton", ["roomDormitory"]),
+    ("Rooms", 2, "roomToilet", "ToiletButton", ["roomDormitory"]),
     ("Rooms", 2, "roomCasino", "CasinoButton", ["roomTreasury"]),
     ("Rooms", 3, "roomArena", "ArenaButton", ["roomTrainingHall"]),
     ("Rooms", 3, "roomPrison", "PrisonButton", ["roomGuardRoom"]),
@@ -73,7 +74,7 @@ EXPECTED = [
 ]
 TIER_COST = {1: 100, 2: 250, 3: 600, 4: 1500}
 FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary", "spellSummonWorker"]
-TAB_TOTALS = {"Rooms": 59450, "Traps": 76300, "Spells": 80750}
+TAB_TOTALS = {"Rooms": 61200, "Traps": 76300, "Spells": 80750}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
@@ -82,7 +83,7 @@ KEEPERS = {
     "keeperManaFlow": ("ManaFlowButton", "Keeper: Mana Flow", "Spells"),
 }
 
-assert len(EXPECTED) == 53, "the tree has 53 entries"
+assert len(EXPECTED) == 54, "the tree has 54 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree
@@ -121,7 +122,7 @@ for tab, tier, name, button, parent_list in EXPECTED:
     registered.append(name)
 
 # ---------------------------------------------------------------------------------------------
-# 2. skills.cfg: the 53 entries with the tier costs and the free level one block
+# 2. skills.cfg: the 54 entries with the tier costs and the free level one block
 cfg = read("config/skills.cfg")
 body = re.sub(r"#[^\r\n]*", "", cfg)
 skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
@@ -131,7 +132,7 @@ for index in range(0, len(skills_block), 2):
     assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
     costs[skills_block[index]] = int(skills_block[index + 1])
 assert "spellSummonChampion" not in costs, "the reward skill has no entry"
-assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 53 entries"
+assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 54 entries"
 for tab, tier, name, button, parent_list in EXPECTED:
     assert costs[name] == TIER_COST[tier], "%s costs the tier %d value" % (name, tier)
 free_block = body[body.index("[FreeLevelOne]") + len("[FreeLevelOne]"):body.index("[/FreeLevelOne]")].split()
@@ -237,9 +238,9 @@ for button, (x, y) in cells.items():
     assert re.search(r'name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset) or \
         re.search(r'height="128" name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset), "cell of " + button
 motifs = read("tools/forged_motifs.py")
-last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-4:]
+last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-5:]
 assert last_four == [("DominionButton", "room"), ("HeartFortitudeButton", "trap"), ("HeartMendingButton", "trap"),
-                     ("ManaFlowButton", "spell")], "the four keeper icons are the last four big icons"
+                     ("ManaFlowButton", "spell"), ("ToiletButton", "room")], "the four keeper icons and the toilet icon are the last five big icons"
 assert motifs.index('"NavigationMessagesRead"') < motifs.index('"DominionButton"') < motifs.index('"MenuReturn"')
 
 # ---------------------------------------------------------------------------------------------

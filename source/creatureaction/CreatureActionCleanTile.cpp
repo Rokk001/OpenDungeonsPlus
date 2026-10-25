@@ -36,7 +36,7 @@ CreatureActionCleanTile::~CreatureActionCleanTile()
 {
 }
 
-std::function<bool()> CreatureActionCleanTile::action()
+std::function<bool()> CreatureActionCleanTile::action() // allowed-lambda: signature required by CreatureAction
 {
     return std::bind(&CreatureActionCleanTile::handleCleanTile,
         std::ref(mCreature), std::ref(mTileClean), getNbTurnsActive());

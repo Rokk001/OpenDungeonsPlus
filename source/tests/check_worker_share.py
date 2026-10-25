@@ -59,6 +59,24 @@ assert re.search(r'CARRY_FIRST_MAX_SHARE = 0\.2;', header)
 assert re.search(r'CLAIM_WALL_FIRST_MIN_SHARE = 0\.8;', header)
 assert re.search(r'PERCENT_DIVISOR = 100\.0;', header)
 
+# Cleaning: its own share rule with the same arithmetic as the reload share (the first worker always, then at most the
+# share), workers cleaning are part of the total, and the cleaning job comes first in the list while the share is open
+# and the seat has something to clean
+assert re.search(r'inline bool isCleanShareOpen\(', header), 'isCleanShareOpen missing in the header'
+clean_share = function_body(header, 'inline bool isCleanShareOpen(')
+assert 'if(nbCleaning == 0)' in clean_share and 'return true;' in clean_share
+assert 'percent <= sharePercent / PERCENT_DIVISOR;' in clean_share
+assert 'getNbWorkersDoing(CreatureActionType::searchDirtToClean)' in prefs
+assert '+ nbWorkersCleaning;' in prefs and '+ nbWorkersCleaning;' in share
+assert 'WorkerShare::isCleanShareOpen(nbWorkersCleaning, nbWorkersTotal' in prefs
+assert 'getDirtConfigDouble("CleaningWorkerSharePercent")' in prefs
+assert 'getSeat()->hasDirtToClean()' in prefs, 'cleaning is never offered when there is nothing to clean'
+first_clean = prefs.index('ret.push_back(CreatureActionType::searchDirtToClean);')
+assert first_clean < prefs.index('ret.push_back(CreatureActionType::searchEntityToCarry);'), 'searchDirtToClean must come first'
+assert first_clean < prefs.index('ret.push_back(CreatureActionType::searchWallTileToClaim);')
+assert first_clean < prefs.index('ret.push_back(CreatureActionType::searchTileToDig);')
+assert re.search(r'^    CleaningWorkerSharePercent\t20\s*$', read('config/global.cfg'), re.M)
+
 if '--probe' in sys.argv:
     probe = r'''
 #include "game/WorkerShare.h"
@@ -105,6 +123,17 @@ int main()
     check(!WorkerShare::isReloadShareOpen(1, 1000, 0.0), "0 percent: also with many workers");
     check(WorkerShare::isReloadShareOpen(1, 2, 100.0), "100 percent: second worker allowed");
     check(WorkerShare::isReloadShareOpen(9, 10, 100.0), "100 percent: never blocked");
+    // Clean share: same arithmetic as the reload share (first worker always, then at most the share; exactly 20 percent is open)
+    check(WorkerShare::isCleanShareOpen(0, 1, 20.0), "clean: first worker, no other workers");
+    check(WorkerShare::isCleanShareOpen(0, 100, 0.0), "clean: first worker at 0 percent");
+    check(WorkerShare::isCleanShareOpen(1, 6, 20.0), "clean: one of 6 is below 20 percent and open");
+    check(WorkerShare::isCleanShareOpen(1, 5, 20.0), "clean: one of 5 is exactly 20 percent and open");
+    check(!WorkerShare::isCleanShareOpen(1, 4, 20.0), "clean: one of 4 is above 20 percent and closed");
+    check(!WorkerShare::isCleanShareOpen(1, 10, 0.0), "clean: 0 percent closes the second worker");
+    check(WorkerShare::isCleanShareOpen(9, 10, 100.0), "clean: 100 percent never closes");
+    // Cleaning workers are counted in the total like the others (the total adds them to totalWorkers)
+    check(WorkerShare::isCleanShareOpen(2, WorkerShare::totalWorkers(8, 0, 0, 0, 0) + 2, 20.0), "clean: 2 cleaning, 8 others is open");
+    check(!WorkerShare::isCleanShareOpen(3, WorkerShare::totalWorkers(8, 0, 0, 0, 0) + 3, 20.0), "clean: 3 cleaning, 8 others is closed");
     // No workers doing anything else: total is 1 (the chooser) and the first worker is open
     check(WorkerShare::isReloadShareOpen(0, WorkerShare::totalWorkers(0, 0, 0, 0, 0), 20.0), "no workers at all");
     std::cout << "FAILURES=" << gFailures << '\n';

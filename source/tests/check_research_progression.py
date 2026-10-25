@@ -205,7 +205,7 @@ int main(int argc,char** argv){try {
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
         if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
-    check(all.size()==53,"all 53 research entries");
+    check(all.size()==54,"all 54 research entries");
     check(ConfigManager::getSingleton().freeLevelOne.size()==5,"five free level one entries in skills.cfg");
     const std::vector<std::pair<SkillType,int> > none;
     // The research tree: tabs, tiers and parents of the production constructor
@@ -213,7 +213,7 @@ int main(int argc,char** argv){try {
     check(SkillManager::getSkillTab(SkillType::trapDoorWooden)==SkillTab::traps&&SkillManager::getSkillTab(SkillType::keeperHeartMending)==SkillTab::traps,"Heart Mending stands in the Traps tab");
     check(SkillManager::getSkillTab(SkillType::spellSummonWorker)==SkillTab::spells&&SkillManager::getSkillTab(SkillType::keeperManaFlow)==SkillTab::spells,"Mana Flow stands in the Spells tab");
     {std::vector<SkillType> rooms,traps,spells;SkillManager::listTabSkills(SkillTab::rooms,rooms);SkillManager::listTabSkills(SkillTab::traps,traps);SkillManager::listTabSkills(SkillTab::spells,spells);
-     check(rooms.size()==16&&traps.size()==19&&spells.size()==18,"16 + 19 + 18 entries in the three tabs");}
+     check(rooms.size()==17&&traps.size()==19&&spells.size()==18,"17 + 19 + 18 entries in the three tabs");}
     {const Skill* mending=SkillManager::getSkill(SkillType::keeperHeartMending);
      check(mending->getDependencies().size()==1&&mending->getDependencies()[0]->getType()==SkillType::keeperHeartFortitude,"Heart Mending needs only Heart Fortitude");
      const Skill* banner=SkillManager::getSkill(SkillType::trapWatchBanner);
@@ -266,15 +266,15 @@ int main(int argc,char** argv){try {
      check(SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,denied.mSkillNotAllowed)&&!SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,{}),"canBeSkilled honours the allowed list");}
     // Levels II and III: half (rounded up) and all of the allowed entries of the tab need level I
     {Seat g;g.setSkillsDone(startSkills);
-     check(!g.canResearchLevel(SkillType::roomTreasury,2,none),"level II waits for 8 of 16 rooms at level I (4 present)");
-     std::vector<std::pair<SkillType,int> > four={{SkillType::roomTrainingHall,1},{SkillType::roomWorkshop,1},{SkillType::roomBridgeWooden,1},{SkillType::roomGuardRoom,1}};
-     check(g.canResearchLevel(SkillType::roomTreasury,2,four),"level II opens with 8 of 16 rooms (queued entries count)");
-     std::vector<std::pair<SkillType,int> > three(four.begin(),four.begin()+3);
-     check(!g.canResearchLevel(SkillType::roomTreasury,2,three),"7 of 16 rooms are not enough");
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,none),"level II waits for 9 of 17 rooms at level I (4 present)");
+     std::vector<std::pair<SkillType,int> > four={{SkillType::roomTrainingHall,1},{SkillType::roomWorkshop,1},{SkillType::roomBridgeWooden,1},{SkillType::roomGuardRoom,1},{SkillType::roomToilet,1}};
+     check(g.canResearchLevel(SkillType::roomTreasury,2,four),"level II opens with 9 of 17 rooms (queued entries count)");
+     std::vector<std::pair<SkillType,int> > three(four.begin(),four.begin()+4);
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,three),"8 of 17 rooms are not enough");
      g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomTreasury});
      check(g.mSkillPending.size()==3,"the queue drops only the level II entry that has no gate yet");
-     g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomGuardRoom,SkillType::roomTreasury});
-     check(g.mSkillPending.size()==5,"the queue accepts level II once 8 entries are done or queued");
+     g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomGuardRoom,SkillType::roomToilet,SkillType::roomTreasury});
+     check(g.mSkillPending.size()==6,"the queue accepts level II once 9 entries are done or queued");
      check(!g.canResearchLevel(SkillType::roomTreasury,3,four),"level III needs the entry at level II");
      Seat done;done.setSkillsDone(startSkills);
      std::vector<SkillType> allRooms;SkillManager::listTabSkills(SkillTab::rooms,allRooms);

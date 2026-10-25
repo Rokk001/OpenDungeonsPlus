@@ -50,7 +50,7 @@ public:
     { return mSeatTile; }
 
     //! \brief Gets the function that runs this action.
-    std::function<bool()> action() override;
+    std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
 
     //! \brief True for the rooms where a creature must not relieve itself (treasury, dungeon heart room, temple).
     static bool isExemptRoomType(const Room* room);

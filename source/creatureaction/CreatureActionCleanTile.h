@@ -34,7 +34,7 @@ public:
     CreatureActionType getType() const override
     { return CreatureActionType::cleanTile; }
 
-    std::function<bool()> action() override;
+    std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
 
     //! \brief Walks to the tile and does one cleaning step on it per turn.
     //! \param nbTurns The turns this cleaning has been the running action (the walk to the tile does not count).

@@ -135,6 +135,7 @@ skirmish/
 -> SandboxEverything.level            OD Team                 GPLv3+
 -> Splitstone.level                    OD Team                 GPLv3+
 -> StonekeepSiege.level                OD Team                 GPLv3+
+-> TestCleaning.level                  OD Team                 GPLv3+
 -> TestLegacy.level                    OD Team                 GPLv3+
 -> TestLevelScripting.level            OD Team                 GPLv3+
 -> TestModelsFair.level                OD Team                 GPLv3+
@@ -1420,3 +1421,9 @@ models/NatureMonster.skeleton (clip Relieve)OD Team                 GPLv3+      
 models/Wyvern.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
 models/Tentacle.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
 models/Kreatur.skeleton (clip Relieve) OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+tools/balance/dirt_values.py            OD Team                 GPLv3+
+source/tests/check_dirt_values.py       OD Team                 GPLv3+
+source/tests/check_dirt_rules.py        OD Team                 GPLv3+
+source/tests/check_dirt_streams.py      OD Team                 GPLv3+
+source/tests/check_dirt_assets.py       OD Team                 GPLv3+
+source/tests/check_toilet_room.py       OD Team                 GPLv3+

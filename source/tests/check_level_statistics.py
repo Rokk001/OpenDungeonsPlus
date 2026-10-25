@@ -180,6 +180,8 @@ struct ConfigManager
     static ConfigManager& getSingleton() { static ConfigManager config; return config; }
     int getNbTurnsKoCreatureAttacked() { return 5; }
     double getSpellConfigDouble(const std::string&) { return 100.0; }
+    // The creature dirt of a knock-out is outside the statistics contract (the fixture runs the non-server path)
+    double getDirtConfigDouble(const std::string&) { return 0.0; }
 };
 struct Creature : public GameEntity
 {
@@ -196,6 +198,9 @@ struct Creature : public GameEntity
     double getPitDamageFactor(GameEntity*) { return 1.0; }
     bool isPossessed() const { return false; }
     bool isKo() const { return false; }
+    bool isKoTemp() const { return false; }
+    bool isKoDeath() const { return false; }
+    void increaseCreatureDirt(double) {}
     bool getIsOnServerMap() const { return false; }
     bool canHaveRelationships() const { return false; }
     Tile* getPositionTile() { return nullptr; }
@@ -211,6 +216,7 @@ struct Creature : public GameEntity
     int mNbTurnsWithoutBattle;
     int mKoTurnCounter;
     int mDeaths;
+    bool mDirtKoThisFight = false;
     CreatureDefinition mDefinition;
 };
 void recordScriptEvent(const Creature&, const std::string&) {}
@@ -611,7 +617,7 @@ wiring_checks = 0
 
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and enum_body.rstrip().endswith('campaignVictory')
+assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and enum_body.rstrip().endswith('roomCleanOrder')
 assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')
 assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout') < enum_body.index('possessionStart')
 assert enum_body.index('playerDefeated') < enum_body.index('levelStatistics')

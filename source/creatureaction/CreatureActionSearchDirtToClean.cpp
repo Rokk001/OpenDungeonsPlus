@@ -53,7 +53,7 @@ CreatureActionSearchDirtToClean::~CreatureActionSearchDirtToClean()
     mCreature.getSeat()->getPlayer()->notifyWorkerStopsAction(mCreature, getType());
 }
 
-std::function<bool()> CreatureActionSearchDirtToClean::action()
+std::function<bool()> CreatureActionSearchDirtToClean::action() // allowed-lambda: signature required by CreatureAction
 {
     return std::bind(&CreatureActionSearchDirtToClean::handleSearchDirtToClean,
         std::ref(mCreature), getNbTurns());

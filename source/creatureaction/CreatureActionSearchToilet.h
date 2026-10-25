@@ -38,7 +38,7 @@ public:
     { return CreatureActionType::searchToilet; }
 
     //! \brief Gets the function that runs this action.
-    std::function<bool()> action() override;
+    std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
 
     //! \brief One turn of the search: ends when the urge is gone or no toilet room exists, starts the use of a
     //! free seat, or waits near the toilet room.

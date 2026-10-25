@@ -33,7 +33,7 @@ public:
     CreatureActionType getType() const override
     { return CreatureActionType::searchDirtToClean; }
 
-    std::function<bool()> action() override;
+    std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
 
     //! \brief Chooses the tile to clean and pushes the cleaning of it; pops the search if there is nothing to clean
     //! or if the worker has searched for too long and should look for another job.

@@ -65,6 +65,7 @@ ROOM_RULE = (
     ("torture", ("tortureRoom",), ("TortureObject",)),
     ("guardRoom", ("guardRoom",), ()),
     ("temple", ("templeRoom",), ()),
+    ("toilet", ("toiletRoom",), ("ToiletSeat",)),
 )
 # Idle effects that the client draws itself instead of reading them from the configuration: room -> (name, pattern
 # that must be found in source/render/RenderManager.cpp). Such an effect counts for the room only while its drawing

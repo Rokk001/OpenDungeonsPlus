@@ -19,8 +19,8 @@ body = body[:body.index('};')]
 names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.MULTILINE)
          if m.group(1) not in ('enum', 'class')]
 # Existing kinds retain their order before the appended campaign victory.
-assert names[-11:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
-                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory'], names[-12:]
+assert names[-12:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
+                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'roomCleanOrder'], names[-13:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')

@@ -25,7 +25,7 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 
-std::function<bool()> CreatureActionSearchToilet::action()
+std::function<bool()> CreatureActionSearchToilet::action() // allowed-lambda: signature required by CreatureAction
 {
     return std::bind(&CreatureActionSearchToilet::handleSearchToilet, std::ref(mCreature));
 }
