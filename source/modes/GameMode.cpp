@@ -3819,6 +3819,7 @@ bool GameMode::toggleHelpWindow(const CEGUI::EventArgs& e)
 }
 
 //! \brief Lists the current camera, keeper and room-window controls in the help page.
+//! \brief Lists the game controls, including merchant, laboratory and full-map shortcuts.
 void GameMode::setHelpWindowText()
 {
     CEGUI::Window* textWindow = mRootWindow->getChild("GameHelpWindow/TextDisplay");
@@ -3838,6 +3839,7 @@ void GameMode::setHelpWindowText()
         << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
         << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl
         << "  - K opens the merchant: stock, purchases and trading settings." << std::endl
+        << "  - L opens the alchemy lab overview." << std::endl
         << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;
     txt << formatTitleOn << "Keeper hand controls" << formatTitleOff << std::endl
         << "Use your hand wisely to keep all minions under control and let your dungeon thrive!" << std::endl
