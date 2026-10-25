@@ -30,6 +30,7 @@ class Building;
 class GameEntity;
 class Tile;
 
+//! \brief Carries one entity to its reserved delivery place, retaining destination changes.
 class CreatureActionCarryEntity : public CreatureAction, public GameEntityListener
 {
 public:

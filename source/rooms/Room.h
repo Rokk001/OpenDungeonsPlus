@@ -33,6 +33,7 @@ class Seat;
 
 enum class RoomType;
 
+//! \brief Owns a room floor, its objects and its room-specific creature interactions.
 class Room : public Building
 {
 public:

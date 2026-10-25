@@ -23,6 +23,7 @@
 
 class GameEntity;
 
+//! \brief Chooses and starts the appropriate delivery for a carryable entity.
 class CreatureActionGrabEntity : public CreatureAction, public GameEntityListener
 {
 public:

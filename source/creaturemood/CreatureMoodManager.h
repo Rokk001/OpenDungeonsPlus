@@ -39,6 +39,7 @@ public:
     virtual const std::string& getCreatureMoodName() const = 0;
 };
 
+//! \brief Combines the configured and temporary mood modifiers of a creature.
 class CreatureMoodManager
 {
 friend class CreatureMoodRegister;

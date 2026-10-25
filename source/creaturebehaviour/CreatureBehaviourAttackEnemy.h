@@ -20,6 +20,7 @@
 
 #include "creaturebehaviour/CreatureBehaviour.h"
 
+//! \brief Applies the configured enemy response while keeping badly hurt sleepers lying.
 class CreatureBehaviourAttackEnemy : public CreatureBehaviour
 {
 public:

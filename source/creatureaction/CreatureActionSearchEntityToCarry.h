@@ -20,6 +20,7 @@
 
 #include "creatureaction/CreatureAction.h"
 
+//! \brief Finds eligible cargo and prioritizes available infirmary admissions.
 class CreatureActionSearchEntityToCarry : public CreatureAction
 {
 public:

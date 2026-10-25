@@ -34,6 +34,7 @@ class Player;
 
 enum class ServerNotificationType;
 
+//! \brief Tracks one connected player and its requested live data subscriptions.
 class ODSocketClient
 {
     public:

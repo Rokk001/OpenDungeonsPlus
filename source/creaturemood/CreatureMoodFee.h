@@ -20,6 +20,7 @@
 
 #include "creaturemood/CreatureMood.h"
 
+//! \brief Defines the mood modifier associated with unpaid creature wages.
 class CreatureMoodFee : public CreatureMood
 {
 public:

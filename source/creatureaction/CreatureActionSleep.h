@@ -20,6 +20,7 @@
 
 #include "creatureaction/CreatureAction.h"
 
+//! \brief Recovers a creature in its assigned bed with the configured full-heal duration.
 class CreatureActionSleep : public CreatureAction
 {
 public:

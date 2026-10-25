@@ -88,6 +88,7 @@ public:
 
 
 
+//! \brief Handles keeper input, game windows and synchronized room controls.
 class GameMode final : public GameEditorModeBase, public InputCommand
 {
  public:
