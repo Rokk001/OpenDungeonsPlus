@@ -12,7 +12,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="VertFormatting" value="TopAligned" />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-            <Property name="VertScrollbar" value="True" />
+            <Property name="VertScrollbar" value="False" />
             <Property name="Font" value="MedievalSharp-10" />
         </Window>
     </Window>
