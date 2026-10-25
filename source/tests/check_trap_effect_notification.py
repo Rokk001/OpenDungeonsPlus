@@ -26,6 +26,9 @@ header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
+if names[-2:] != ["tavernWindow", "tavernPayer"]:
+    problems.append("the tavern notifications must follow campaignVictory")
+names = names[:-2]
 if names[-2:] != ["timeLimit", "campaignVictory"]:
     problems.append("campaignVictory must follow timeLimit without moving existing values")
 if "trapEffect" not in names or names.index("trapEffect") != len(names) - 3:

@@ -212,7 +212,14 @@ enum class ServerNotificationType
     timeLimit,
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
-    campaignVictory
+    campaignVictory,
+    //! \brief Answer to askTavernWindow, owner only: + int32_t tileX, int32_t tileY (a tile of the tavern),
+    //! uint32_t payer (TavernPayer), bool beerResearched, double beerPrice (gold per beer).
+    //! Appended last so that no existing numeric value changes.
+    tavernWindow,
+    //! \brief Answer to askTavernPayer, owner only: + int32_t tileX, int32_t tileY, uint32_t payer (TavernPayer)
+    //! Appended last so that no existing numeric value changes.
+    tavernPayer
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

@@ -155,6 +155,10 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "editorRegionEdit";
         case ClientNotificationType::askUseSpecial:
             return "askUseSpecial";
+        case ClientNotificationType::askTavernWindow:
+            return "askTavernWindow";
+        case ClientNotificationType::askTavernPayer:
+            return "askTavernPayer";
         default:
             OD_LOG_ERR("Unknown enum for ClientNotificationType="
                 + Helper::toString(static_cast<int>(type)));

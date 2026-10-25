@@ -60,6 +60,15 @@ enum class PostCategory : uint8_t
     Relieved,
     //! A creature of the local player entered a room that is at dirt stage 3
     Filthy,
+    //! A creature of the local player had its first drink of a visit to the tavern
+    Drank,
+    //! A creature of the local player won / lost a slap duel in the tavern (the opponent is named in the text)
+    DuelWon,
+    DuelLost,
+    //! A creature of the local player has drunk so much that it staggers
+    Drunk,
+    //! A creature of the local player woke up with a hangover
+    Hungover,
     Nb
 };
 

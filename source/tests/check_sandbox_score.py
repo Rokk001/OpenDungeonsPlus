@@ -57,6 +57,8 @@ check("Reward: " in code and "mWaveHeroPoints" in code, "a beaten wave must anno
 
 # The notifications are appended after the existing ones and named
 names = re.findall(r"^\s*(\w+),?\s*$", notification_h[notification_h.index("enum class ServerNotificationType"):notification_h.index("};")], re.M)
+check(names[-2:] == ["tavernWindow", "tavernPayer"], "the tavern notifications follow the existing tail")
+names = names[:-2]
 check(names[-2:] == ["timeLimit", "campaignVictory"] and "sandboxStatus" in names and names.index("sandboxStatus") + 1 == names.index("sandboxRealmComplete"),
       "sandbox notifications follow each other; campaignVictory follows the existing tail: %s" % names[-4:])
 for entry in ("sandboxStatus", "sandboxRealmComplete"):

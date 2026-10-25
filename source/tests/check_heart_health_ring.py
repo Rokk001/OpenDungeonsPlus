@@ -554,6 +554,9 @@ enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
 enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect',
                                                  'creatureAppearance', 'cosmeticEvent')]
+# The tavern notifications follow campaignVictory; the tail pinned below is the one before them
+assert enumerators[-2:] == ["tavernWindow", "tavernPayer"], enumerators[-3:]
+enumerators = enumerators[:-2]
 # Campaign victory appends one value after the historical tail without changing existing ordinals.
 assert enumerators[-4:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory'], enumerators[-4:]
 assert enumerators.count('campaignVictory') == 1
