@@ -536,3 +536,6 @@ craft creature's equipment (#459)
 **Distribution:**
 
 * A Windows installer (msi-package).
+
+- Equipment and potion networking now uses version 0.7.4. Poor weapon bags preserve the spawn equipment identity,
+  name and matching base icon; hero quality chances interpolate the level 1 and 30 endpoints exactly.

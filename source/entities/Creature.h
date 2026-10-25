@@ -438,6 +438,7 @@ public:
     //! \brief Called when the creature dies or is KO to death. triggers death animation, stops
     //! the creature job and drops what it is carrying
     //! Preserves the non-looping death state for players who discover the corpse later.
+    //! Item loss on knockout is triggered only by takeDamage; a dead creature drops all held items here.
     void dropCarriedEquipment();
 
     /*! \brief The main AI routine which decides what the creature will do and carries out that action.

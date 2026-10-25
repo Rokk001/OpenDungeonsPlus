@@ -84,7 +84,7 @@ namespace
 {
 static const double HALF_GROWTH = 0.5;
 static const Ogre::Real PLANT_HEIGHT = 0.09f;
-static const std::string STAGES[] = {"Sprout", "Young", "Ripe"};
+static const std::string STAGES[] = {"Sprout", "Sapling", "Ripe"};
 }
 
 //! \brief Creates the garden's standard building state.
@@ -114,7 +114,7 @@ void RoomHerbGarden::removePlant(Tile* tile)
     mPlants.erase(found);
 }
 
-//! \brief Maintains a bed on every covered tile that the engine did not designate as a centre.
+//! \brief Maintains beds on non-centre tiles and rebuilds ground lamps between the beds.
 void RoomHerbGarden::updateActiveSpots(GameMap* map)
 {
     Room::updateActiveSpots(map);
@@ -147,6 +147,52 @@ void RoomHerbGarden::updateActiveSpots(GameMap* map)
         if(data.mHerb.empty())
             chooseHerb(data);
         syncPlant(tile, data);
+    }
+    syncLamps();
+}
+
+//! \brief Removes all supplementary ground lamps without affecting beds or their growth.
+void RoomHerbGarden::removeLamps()
+{
+    for(BuildingObject* lamp : mLamps)
+    {
+        lamp->removeFromGameMap();
+        lamp->deleteYourself();
+    }
+    mLamps.clear();
+}
+
+//! \brief Places floor lamps between adjacent beds, keeping at least two tiles between lamps.
+void RoomHerbGarden::syncLamps()
+{
+    removeLamps();
+    static const double LAMP_SPACING_SQUARED = 4.0;
+    static const int OFFSETS[][2] = {{1, 0}, {0, 1}};
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(std::find(mCentralActiveSpotTiles.begin(), mCentralActiveSpotTiles.end(), tile) != mCentralActiveSpotTiles.end())
+            continue;
+        for(const int* offset : OFFSETS)
+        {
+            Tile* neighbour = getGameMap()->getTile(tile->getX()+offset[0], tile->getY()+offset[1]);
+            if(neighbour == nullptr || neighbour->getCoveringRoom() != this ||
+               std::find(mCentralActiveSpotTiles.begin(), mCentralActiveSpotTiles.end(), neighbour) != mCentralActiveSpotTiles.end())
+                continue;
+            const Ogre::Vector3 position(tile->getX()+offset[0]*0.5f, tile->getY()+offset[1]*0.5f, 0.0f);
+            bool clear = true;
+            for(BuildingObject* lamp : mLamps)
+                if((lamp->getPosition()-position).squaredLength() < LAMP_SPACING_SQUARED)
+                    clear = false;
+            if(!clear)
+                continue;
+            BuildingObject* lamp = new BuildingObject(getGameMap(), *this, "MushroomLamp", tile,
+                position.x, position.y, position.z, 0.0f, false);
+            lamp->setSeat(getSeat());
+            lamp->addToGameMap();
+            lamp->createMesh();
+            lamp->setPosition(position);
+            mLamps.push_back(lamp);
+        }
     }
 }
 
@@ -346,19 +392,21 @@ bool RoomHerbGarden::importTileDataFromStream(std::istream& stream, Tile* tile, 
     return true;
 }
 
-//! \brief Transfers supplementary plant visuals before the standard room absorption removes the source room.
+//! \brief Transfers plant visuals and recreates ground lamps when the absorbed beds change rooms.
 void RoomHerbGarden::absorbRoom(Room* room)
 {
     RoomHerbGarden* garden = static_cast<RoomHerbGarden*>(room);
+    garden->removeLamps();
     mPlants.insert(garden->mPlants.begin(), garden->mPlants.end());
     garden->mPlants.clear();
     Room::absorbRoom(room);
 }
 
-//! \brief Moves plant objects together with the bed tile data during splitting and takeover.
+//! \brief Moves plants with split bed tile data and rebuilds lamps for the resulting gardens.
 void RoomHerbGarden::splitRoom(Room& room, const std::vector<Tile*>& tiles)
 {
     RoomHerbGarden& garden = static_cast<RoomHerbGarden&>(room);
+    removeLamps();
     for(Tile* tile : tiles)
     {
         std::map<Tile*, BuildingObject*>::iterator found = mPlants.find(tile);
@@ -369,9 +417,10 @@ void RoomHerbGarden::splitRoom(Room& room, const std::vector<Tile*>& tiles)
     }
 }
 
-//! \brief Removes only the supplementary plant objects before the base room removes its furniture.
+//! \brief Removes supplementary plants and ground lamps before the base room removes its furniture.
 void RoomHerbGarden::removeFromGameMap(GameMap* map)
 {
+    removeLamps();
     while(!mPlants.empty())
         removePlant(mPlants.begin()->first);
     Room::removeFromGameMap(map);

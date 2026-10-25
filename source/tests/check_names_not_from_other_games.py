@@ -1,14 +1,17 @@
-"""Check player-facing item, potion, herb, effect, room and research names against the supplied fixture."""
+"""Check player-facing item, potion, herb, effect, room and research names against the hook's local term list."""
+import importlib.util
 import re
 from check_items_cfg import ROOT, blocks, read, value
 
 
 def main():
-    """Report every whole-word, case-insensitive fixture match without modifying the fixture."""
-    fixture = ROOT / "source/tests/fixtures/other_game_terms.txt"
-    terms = [line.strip() for line in fixture.read_text(encoding="utf-8").splitlines()
-             if line.strip() and not line.lstrip().startswith("#")]
-    assert terms, "the supplied name fixture is required"
+    """Check whole-word names using the hook's fail-closed local term-list lookup."""
+    spec = importlib.util.spec_from_file_location("protected_content", ROOT / "scripts/check-protected-content.py")
+    protected = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(protected)
+    terms, error = protected.find_terms(str(ROOT), None)
+    if terms is None:
+        raise SystemExit("Name check cannot run: " + error)
     displays, counts = [], []
     for text, tag in ((read("config/items.cfg"), "Quality"), (read("config/potions.cfg"), "Potion"),
                       (read("config/potions.cfg"), "Herb")):
@@ -50,7 +53,7 @@ def main():
     hits = [(display, term) for display in displays for term in terms
             if re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", display, re.I)]
     assert not hits, "forbidden whole-word name matches: " + repr(hits)
-    print("player-facing names: fixture word-boundary check passed (%d names)" % len(displays))
+    print("player-facing names: local-list word-boundary check passed (%d names)" % len(displays))
 
 
 if __name__ == "__main__":
