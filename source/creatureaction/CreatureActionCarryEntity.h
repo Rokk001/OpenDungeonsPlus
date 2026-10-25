@@ -50,7 +50,7 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
-    //! \brief Walks cargo to its destination and records mission delivery only on successful arrival.
+    //! \brief Walks cargo to its destination, using a furniture-aware stand position for merchant tables.
     static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
 
     //! \brief True if the entity is not carried but pulled over the ground: a living creature of the seat of the
@@ -65,6 +65,7 @@ public:
     bool handleDragCreature();
 
 private:
+    //! \brief Releases interrupted cargo and any treasury capacity booked for it.
     void releaseEntity(const std::string& reason);
     void startDrag();
     void startLaying(Creature& dragged);

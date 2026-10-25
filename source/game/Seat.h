@@ -31,8 +31,10 @@
 #include <cstdint>
 #include <map>
 #include <utility>
+#include <deque>
 
 class Building;
+class MerchantEntity;
 class ConfigManager;
 class DraggableTileContainer;
 class Goal;
@@ -75,6 +77,7 @@ public:
     
 };
 
+//! \brief Owns a dungeon's creatures, rooms, merchant and persistent keeper state.
 class Seat : public SeatData
 {
 public:
@@ -83,6 +86,19 @@ public:
     // Constructors
     //! \brief Creates a seat with its configured merchant margin and shared room settings.
     Seat(GameMap* gameMap);
+
+    //! \brief Returns this seat's single non-creature merchant figure, if one exists.
+    MerchantEntity* getMerchant() const { return mMerchant; }
+    //! \brief Updates the weak reference when the figure spawns, changes owner or despawns.
+    void setMerchant(MerchantEntity* merchant) { mMerchant = merchant; }
+    //! \brief Deposits the whole part and retains exact fractional merchant proceeds for later deals.
+    void addMerchantGold(double amount);
+    //! \brief Records the seat's last twenty merchant deals for its window and brewing priorities.
+    void recordMerchantDeal(const std::string& text, const std::string& potion, bool soldToBuyer);
+    //! \brief Returns the approved twenty-entry deal history of the seat.
+    const std::deque<std::string>& getMerchantHistory() const { return mMerchantHistory; }
+    //! \brief Returns potion ids and sale direction for the same twenty deals.
+    const std::deque<std::pair<std::string, bool>>& getMerchantPotionHistory() const { return mMerchantPotionHistory; }
 
     inline Player* getPlayer() const
     { return mPlayer; }
@@ -567,6 +583,15 @@ private:
     int32_t mConfigPlayerId;
     int32_t mConfigTeamId;
     int32_t mConfigFactionIndex;
+
+    //! \brief Weak reference to this seat's one merchant, owned by the map.
+    MerchantEntity* mMerchant = nullptr;
+    //! \brief Fractional gold already earned from merchant deals, persisted with the seat.
+    double mMerchantGoldRemainder = 0.0;
+    //! \brief Text records use transport names resolved to profile names by the client.
+    std::deque<std::string> mMerchantHistory;
+    //! \brief Potion sale records correspond one for one with the retained history.
+    std::deque<std::pair<std::string, bool>> mMerchantPotionHistory;
 
     //! \brief Should the creatures fight to death or ko enemy creatures
     bool mKoCreatures;

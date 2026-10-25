@@ -1254,6 +1254,121 @@ def m_mana_flow(c):
 # ---------------------------------------------------------------------------------------------
 # The icon table. kind None: a frameless symbol. cells: pixel size of the cell in the atlas.
 # ---------------------------------------------------------------------------------------------
+def m_merchant(c):
+    """Draw the merchant's balanced scale as a forged room emblem."""
+    c.add(c.box(0.0, 0.58, 0.46, 0.07, 0.03), IRON, z=0.08, bevel=0.04, base=0.06)
+    c.add(c.seg(0.0, 0.50, 0.0, -0.58, 0.045), GOLD, z=0.08, bevel=0.04, base=0.10)
+    c.add(c.seg(-0.62, -0.36, 0.62, -0.36, 0.035), GOLD, z=0.06, bevel=0.03, base=0.18)
+    c.add(c.circle(0.0, -0.38, 0.09), BRONZE, z=0.08, bevel=0.06, base=0.20)
+    for x in (-0.48, 0.48):
+        c.add(c.seg(x - 0.18, 0.10, x, -0.36, 0.014), STEEL, z=0.02, bevel=0.014, base=0.18)
+        c.add(c.seg(x + 0.18, 0.10, x, -0.36, 0.014), STEEL, z=0.02, bevel=0.014, base=0.18)
+        c.add(c.poly([(x - 0.24, 0.10), (x + 0.24, 0.10), (x + 0.14, 0.26), (x - 0.14, 0.26)]),
+              BRONZE, z=0.08, bevel=0.06, base=0.16)
+
+
+def m_alchemy_lab(c):
+    """Draw a bubbling iron cauldron for the alchemy room and minimap."""
+    brew = Mat((110, 180, 64), (48, 94, 32), spec=0.6, shin=24, emit=(16, 38, 8))
+    c.add(c.seg(-0.34, 0.40, -0.42, 0.64, 0.06), IRON, z=0.06, bevel=0.04, base=0.08)
+    c.add(c.seg(0.34, 0.40, 0.42, 0.64, 0.06), IRON, z=0.06, bevel=0.04, base=0.08)
+    c.add(c.ellipse(0.0, 0.12, 0.58, 0.46), IRON, z=0.20, bevel=0.18, base=0.08, shadow=0.5)
+    c.add(c.ellipse(0.0, -0.20, 0.60, 0.14), BRONZE_DARK, z=0.10, bevel=0.06, base=0.22)
+    c.add(c.ellipse(0.0, -0.22, 0.50, 0.09), brew, z=0.03, bevel=0.04, base=0.32)
+    for x, y, radius in ((-0.24, -0.42, 0.09), (0.08, -0.58, 0.07), (0.30, -0.42, 0.05)):
+        c.add(c.circle(x, y, radius), brew, z=0.06, bevel=radius, base=0.20)
+    c.glow(0.0, 0.46, 0.55, (50, 120, 26), 0.35)
+
+
+def herb_sprout(c, material):
+    """Draw two broad leaves around an upright stem using the supplied material."""
+    c.add(c.seg(0.0, 0.60, 0.0, -0.34, 0.035), material, z=0.06, bevel=0.03, base=0.12)
+    for side in (-1, 1):
+        c.add(c.poly([(0.0, 0.12), (side * 0.44, -0.06), (side * 0.58, -0.48),
+                      (side * 0.18, -0.38), (0.0, -0.12)]),
+              material, z=0.12, bevel=0.10, base=0.14, shadow=0.4)
+    c.add(c.ellipse(0.0, 0.62, 0.36, 0.06), WOOD_DARK, z=0.04, bevel=0.04, base=0.06)
+
+
+def m_herb_garden(c):
+    """Draw the herb garden's green sprout."""
+    herb_sprout(c, Mat((130, 168, 64), (62, 94, 30), spec=0.3, shin=18))
+
+
+def m_sunthorn(c):
+    """Draw the golden herb cultivation emblem."""
+    herb_sprout(c, GOLD)
+    c.glow(0.0, -0.22, 0.55, (180, 126, 36), 0.35)
+
+
+def item_tools(c, master):
+    """Draw box-cracking tools, with gold fittings for the master tier."""
+    metal = GOLD if master else STEEL
+    c.add(c.seg(-0.48, 0.58, 0.34, -0.44, 0.07), WOOD, z=0.08, bevel=0.05, base=0.10)
+    c.add(c.poly([(0.12, -0.60), (0.52, -0.34), (0.36, -0.10), (-0.06, -0.36)]),
+          metal, z=0.12, bevel=0.06, base=0.18, shadow=0.4)
+    c.add(c.seg(0.48, 0.58, -0.32, -0.48, 0.045), metal, z=0.08, bevel=0.03, base=0.24)
+    c.add(c.seg(-0.32, -0.48, -0.54, -0.42, 0.055), metal, z=0.08, bevel=0.04, base=0.26)
+
+
+def m_fine_tools(c):
+    """Draw the fine tools research emblem."""
+    item_tools(c, False)
+
+
+def m_master_tools(c):
+    """Draw the master tools research emblem."""
+    item_tools(c, True)
+
+
+def m_item_box(c):
+    """Draw the sealed item gift box editor emblem."""
+    c.add(c.box(0.0, 0.08, 0.54, 0.48, 0.04), WOOD, z=0.12, bevel=0.06, base=0.08, shadow=0.5)
+    c.add(c.box(0.0, -0.36, 0.60, 0.11, 0.03), WOOD_DARK, z=0.08, bevel=0.05, base=0.20)
+    c.add(c.box(0.0, 0.02, 0.06, 0.55), GOLD, z=0.05, bevel=0.03, base=0.24)
+    c.add(c.circle(0.0, 0.10, 0.14), RUBY, z=0.10, bevel=0.09, base=0.28)
+
+
+def m_item_bag(c):
+    """Draw the tied item bag editor emblem."""
+    c.add(c.poly([(-0.20, -0.58), (0.20, -0.58), (0.12, -0.24), (0.48, 0.18),
+                  (0.42, 0.58), (-0.42, 0.58), (-0.48, 0.18), (-0.12, -0.24)]),
+          LEATHER, z=0.18, bevel=0.14, base=0.08, shadow=0.5)
+    c.add(c.seg(-0.18, -0.22, 0.18, -0.22, 0.035), GOLD_DARK, z=0.06, bevel=0.03, base=0.24)
+
+
+def item_frame(c, colour):
+    """Draw a transparent quality border that can overlay an inventory image."""
+    material = Mat(colour, spec=0.35, shin=20, mottle=0.0, grain=0.0)
+    c.add(c.ring_box(0.0, 0.0, 0.94, 0.09, 0.035), material, z=0.04, bevel=0.025, base=0.04)
+
+
+def m_item_frame_poor(c):
+    """Draw the grey Poor quality frame."""
+    item_frame(c, (138, 138, 138))
+
+
+def m_item_frame_common(c):
+    """Draw the white Common quality frame."""
+    item_frame(c, (255, 255, 255))
+
+
+def m_item_frame_rare(c):
+    """Draw the blue Rare quality frame."""
+    item_frame(c, (62, 123, 255))
+
+
+def m_item_frame_epic(c):
+    """Draw the purple Epic quality frame."""
+    item_frame(c, (166, 77, 255))
+
+
+def m_item_slot_empty(c):
+    """Draw the recessed well of an empty inventory slot."""
+    c.add(c.box(0.0, 0.0, 0.94, 0.94, 0.09), IRON_DARK, z=0.02, bevel=0.04, base=0.02)
+    c.fill_well(c.box(0.0, 0.0, 0.86, 0.86, 0.06), (32, 27, 24), (12, 10, 9), r=1.20, z=0.0)
+
+
 def _slot(fn, kind, zoom=1.05):
     return {"draw": fn, "kind": kind, "cells": 128, "zoom": zoom}
 
@@ -1368,4 +1483,18 @@ ICONS = {
     "HeartMendingButton": _slot(m_heart_mending, "trap"),
     "ManaFlowButton": _slot(m_mana_flow, "spell"),
     "MenuReturn": _sym(m_return, 64),
+    "MerchantButton": _slot(m_merchant, "room"),
+    "LabButton": _slot(m_alchemy_lab, "room"),
+    "HerbGardenButton": _slot(m_herb_garden, "room"),
+    "AlchemyLabButton": _slot(m_alchemy_lab, "room"),
+    "FineToolsButton": _slot(m_fine_tools, "trap"),
+    "MasterToolsButton": _slot(m_master_tools, "trap"),
+    "SunthornButton": _slot(m_sunthorn, "spell"),
+    "ItemBoxButton": _slot(m_item_box, "room"),
+    "ItemBagButton": _slot(m_item_bag, "room"),
+    "ItemFramePoor": _sym(m_item_frame_poor, 128),
+    "ItemFrameCommon": _sym(m_item_frame_common, 128),
+    "ItemFrameRare": _sym(m_item_frame_rare, 128),
+    "ItemFrameEpic": _sym(m_item_frame_epic, 128),
+    "ItemSlotEmpty": _sym(m_item_slot_empty, 128),
 }

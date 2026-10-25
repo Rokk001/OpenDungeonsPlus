@@ -68,6 +68,9 @@
 #include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
 #include "entities/ItemEffects.h"
+#include "creatureaction/CreatureActionPickupItem.h"
+#include "creatureaction/CreatureActionStealItem.h"
+#include "game/CreatureMerchantAI.h"
 #include "entities/ItemInstance.h"
 
 
@@ -335,6 +338,8 @@ const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
 const uint32_t Creature::MANA_RING_STEPS = 63;
 //! \brief Label in front of the current mana in a creature save, so it cannot be mistaken for the appearance token
 static const std::string MANA_SAVE_LABEL = "Mana=";
+static const std::string MERCHANT_MOOD_SAVE_LABEL = "MerchantMood=";
+static const std::string GOLD_REMAINDER_SAVE_LABEL = "GoldRemainder=";
 
 //! \brief Returns the mana ring step 0 .. Creature::MANA_RING_STEPS for a mana value: floor(mana / maxMana x steps).
 //! \param mana The current mana.
@@ -803,6 +808,8 @@ Creature::Creature(GameMap* gameMap) :
 //! \brief Frees the active skills made from the skill tree and, on a client, clears the highlighted creature pointer.
 Creature::~Creature()
 {
+    if(getIsOnServerMap())
+        unregisterHeldEpics();
     // The active skills made from the skill tree belong to the creature
     for(CreatureSkill* skill : mTreeSkills)
         delete skill;
@@ -988,6 +995,7 @@ void Creature::exportToStream(std::ostream& os) const
 
     // Current mana as a labelled token after the appearance, missing in old saves (they load with full mana)
     os << "\t" << MANA_SAVE_LABEL << mMana;
+    os << "\tMerchantMood=" << mMerchantMood << "\tGoldRemainder=" << mGoldRemainder;
 
     // Optional skill state (after the mana token), missing in old saves: their points are spent again at load
     if(mSkillBuild.mSeed != 0)
@@ -1072,6 +1080,22 @@ bool Creature::importFromStream(std::istream& is)
     std::string appearanceToken;
     while(is >> appearanceToken)
     {
+        if(appearanceToken.compare(0, MERCHANT_MOOD_SAVE_LABEL.size(), MERCHANT_MOOD_SAVE_LABEL) == 0 ||
+            appearanceToken.compare(0, GOLD_REMAINDER_SAVE_LABEL.size(), GOLD_REMAINDER_SAVE_LABEL) == 0)
+        {
+            const bool merchantMood = appearanceToken.compare(0, MERCHANT_MOOD_SAVE_LABEL.size(), MERCHANT_MOOD_SAVE_LABEL) == 0;
+            const std::string value = appearanceToken.substr(merchantMood ? MERCHANT_MOOD_SAVE_LABEL.size() : GOLD_REMAINDER_SAVE_LABEL.size());
+            char* end = nullptr;
+            const double loaded = std::strtod(value.c_str(), &end);
+            if(value.empty() || end == nullptr || *end != '\0' || !std::isfinite(loaded)) return false;
+            if(merchantMood) mMerchantMood = loaded;
+            else
+            {
+                if(loaded < 0.0 || loaded >= 1.0) return false;
+                mGoldRemainder = loaded;
+            }
+            continue;
+        }
         if(appearanceToken.compare(0, MANA_SAVE_LABEL.size(), MANA_SAVE_LABEL) == 0)
         {
             const std::string manaValue = appearanceToken.substr(MANA_SAVE_LABEL.size());
@@ -1344,6 +1368,9 @@ void Creature::exportItemsToPacket(ODPacket& packet, const Seat* seat) const
     const double guardWall = ownData ? getGameMap()->getItemAura(*this, "GuardWall") : 0.0;
     const double rally = ownData ? getGameMap()->getItemAura(*this, "Rally") : 0.0;
     packet << guardWall << rally;
+    packet << (ownData ? mMerchantMood : 0.0) << static_cast<uint8_t>(ownData ? mLastItemDeal : 0)
+        << (ownData ? mLastItemName : std::string());
+    if(ownData) { mLastItemDeal = 0; mLastItemName.clear(); }
 }
 
 //! \brief Adopts a complete item update and refreshes client hand meshes when their quality changes.
@@ -1390,6 +1417,10 @@ bool Creature::importItemsFromPacket(ODPacket& packet)
     double rally = 0.0;
     if(!(packet >> guardWall >> rally) || !std::isfinite(guardWall) || !std::isfinite(rally))
         return false;
+    double merchantMood = 0.0;
+    uint8_t deal = 0;
+    std::string itemName;
+    if(!(packet >> merchantMood >> deal >> itemName) || !std::isfinite(merchantMood) || deal > 5) return false;
     bool handChanged = false;
     for(size_t index = 0; index < 2; ++index)
     {
@@ -1407,6 +1438,26 @@ bool Creature::importItemsFromPacket(ODPacket& packet)
     mClientPotionContributions = contributions;
     mClientGuardWall = guardWall;
     mClientRally = rally;
+    mMerchantMood = merchantMood;
+    if(deal != 0 && mDefinition != nullptr && isSocialFeedSource())
+    {
+        social::PostCategory category = social::PostCategory::Bought;
+        if(deal == 2) category = social::PostCategory::Bargain;
+        else if(deal == 3) category = social::PostCategory::Fleeced;
+        else if(deal == 4) category = social::PostCategory::Gift;
+        else if(deal == 5) category = social::PostCategory::EpicFind;
+        social::PostLog::getSingleton().addPost(getGameMap()->getTurnNumber(), getName(),
+            mDefinition->getClassName(), mDefinition->isWorker(), category, 0, itemName);
+        if(CreatureReactions::getSingletonPtr() != nullptr)
+        {
+            std::string event;
+            if(deal == 2) event = "ItemBargain";
+            else if(deal == 3) event = "ItemFleeced";
+            else if(deal == 4) event = "ItemGift";
+            else if(deal == 5) event = "ItemEpic";
+            if(!event.empty()) CreatureReactions::getSingleton().trigger(this, event);
+        }
+    }
     if(handChanged && !getIsOnServerMap() && getEntityNode() != nullptr)
     {
         destroyMeshWeapons();
@@ -2014,8 +2065,10 @@ void Creature::setLevel(unsigned int level)
     mNeedFireRefresh = true;
 }
 
+//! \brief Drops carried gold and eligible item instances while preserving the existing death presentation.
 void Creature::dropCarriedEquipment()
 {
+    dropItems(!isAlive());
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
@@ -2223,6 +2276,8 @@ void Creature::doUpkeep()
     if(mKoTurnCounter > 0)
     {
         mKoTurnCounter = std::max(0.0, mKoTurnCounter - 1.0);
+        if(mKoTurnCounter == 0.0)
+            mKoDroppedThisFight = false;
         if(mKoTurnCounter > 0)
             return;
 
@@ -2478,6 +2533,13 @@ void Creature::doUpkeep()
             mPitMood = std::min(0.0, mPitMood + decay);
     }
 
+    // The merchant contribution fades by its configured points per simulation turn.
+    if(mMerchantMood != 0.0)
+    {
+        const double decay = ConfigManager::getSingleton().getRoomConfigDouble("MerchantMoodDecay");
+        if(mMerchantMood > 0.0) mMerchantMood = std::max(0.0, mMerchantMood - decay);
+        else mMerchantMood = std::min(0.0, mMerchantMood + decay);
+    }
     // The casino mood fades towards 0
     if(mCasinoMood != 0.0)
     {
@@ -2491,6 +2553,8 @@ void Creature::doUpkeep()
 
     // The skill tree: reset window, reset and the active skills of changed ranks
     upkeepSkillTree();
+
+    decidePotion();
 
     // A frozen creature can neither move nor fight
     if(isFrozen())
@@ -2598,7 +2662,7 @@ void Creature::doUpkeep()
     // Keep combat in its current attack tile; free waiting creatures may use adjacent floor space.
     const CreatureActionType standingAction = mActions.empty() ? CreatureActionType::nb : mActions.back()->getType();
     Room* standingRoom = getPositionTile()->getCoveringRoom();
-    const bool freeRoomStand = standingAction == CreatureActionType::useRoom && standingRoom != nullptr &&
+    const bool freeRoomStand = CreatureAction::isRoomWorkAction(standingAction) && standingRoom != nullptr &&
         (standingRoom->getType() == RoomType::temple || standingRoom->getType() == RoomType::guardRoom ||
          standingRoom->getType() == RoomType::arena || standingRoom->getType() == RoomType::hatchery);
     // Prayer spots, guard posts and watch banners remain bound to their assigned tile.
@@ -2689,6 +2753,7 @@ void Creature::handleHeartDefence()
     pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
 }
 
+//! \brief Chooses equipment, trade and visible item actions among the existing idle needs.
 bool Creature::handleIdleAction()
 {
     setAnimationState(EntityAnimation::idle_anim);
@@ -2750,6 +2815,15 @@ bool Creature::handleIdleAction()
        (mGoldFee > 0))
     {
         pushAction(Utils::make_unique<CreatureActionGetFee>(*this));
+        return true;
+    }
+
+    decideEquipment();
+    if(CreatureMerchantAI::decideTrade(*this))
+        return true;
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::pickupItem))
+    {
+        pushAction(Utils::make_unique<CreatureActionPickupItem>(*this));
         return true;
     }
 
@@ -2819,6 +2893,12 @@ bool Creature::handleIdleAction()
         (Random::Double(70.0, 80.0) < mHunger))
     {
         pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::stealItem) && Random::Double(0.0, 1.0) < 0.2)
+    {
+        pushAction(Utils::make_unique<CreatureActionStealItem>(*this));
         return true;
     }
 
@@ -4631,6 +4711,14 @@ void Creature::socialCreatureRemoved()
         getDefinition()->getClassName(), getDefinition()->isWorker(), mOverlayMoodValue);
 }
 
+//! \brief Adds the mood points of the keeper's margin or a direct gift without an invented cap.
+void Creature::addMerchantMood(double points)
+{ mMerchantMood += points; mNeedFireRefresh = true; }
+
+//! \brief Keeps one owner-only deal notification until its next creature update is written.
+void Creature::setLastItemDeal(uint8_t deal, const std::string& name)
+{ mLastItemDeal = deal; mLastItemName = name; mNeedFireRefresh = true; }
+
 void Creature::socialEvent(social::PostCategory category)
 {
     if(!isSocialFeedSource())
@@ -4650,11 +4738,12 @@ double Creature::getExperienceProgress() const
     return needed > 0.0 ? std::max(0.0, std::min(1.0, mExp / needed)) : 0.0;
 }
 
+//! \brief Sends the active room-work or attack recovery without dropping specialized job progress.
 void Creature::exportProgressToPacket(ODPacket& os, const Seat* seat) const
 {
     if(!ODServer::getSingleton().supportsCreatureProgress(seat->getPlayer()))
         return;
-    const bool working = getActivity().action == CreatureActionType::useRoom &&
+    const bool working = CreatureAction::isRoomWorkAction(getActivity().action) &&
         mJobCooldown > 0 && mJobCooldownDuration > 0;
     // The attack recovery can be a fraction of a turn, so both values travel as double
     const double remaining = working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns;
@@ -4716,6 +4805,7 @@ void Creature::importMoodFromPacket(ODPacket& is)
     mMoodValue = static_cast<CreatureMoodLevel>(mood);
 }
 
+//! \brief Derives activity and assigned room from ordinary and specialized room actions.
 CreatureActivity Creature::getActivity() const
 {
     CreatureActivity activity;
@@ -4738,7 +4828,7 @@ CreatureActivity Creature::getActivity() const
            type != CreatureActionType::parkToTile)
             activity.task = type;
 
-        if(type != CreatureActionType::useRoom)
+        if(!CreatureAction::isRoomWorkAction(type))
             continue;
 
         const Room* room = static_cast<const CreatureActionUseRoom*>(it->get())->getRoom();
@@ -6294,11 +6384,13 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     receiveExp(1.5);
 }
 
+//! \brief Finds an exact queued action, with specialized room work included in ordinary room-use queries.
 bool Creature::isActionInList(CreatureActionType action) const
 {
     for (const std::unique_ptr<CreatureAction>& ca : mActions)
     {
-        if (ca.get()->getType() == action)
+        if (ca.get()->getType() == action ||
+            (action == CreatureActionType::useRoom && CreatureAction::isRoomWorkAction(ca->getType())))
             return true;
     }
     return false;
@@ -8354,11 +8446,13 @@ bool Creature::isHungry() const
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
 }
 
+//! \brief Ends knockout state and permits one item drop in the next fight.
 void Creature::resetKoTurns()
 {
     if(getIsOnServerMap())
         getGameMap()->getLevelScript().clearFatalShot(getName());
     mKoTurnCounter = 0;
+    mKoDroppedThisFight = false;
     mNeedFireRefresh = true;
 }
 
@@ -8889,8 +8983,8 @@ int32_t Creature::getGoldCapacity() const
     return static_cast<int32_t>(std::floor(capacity + GOLD_CAPACITY_ROUNDING_EPSILON));
 }
 
-//! \brief Adds mined gold with a fraction: the whole part goes to the carried gold, the rest is kept for the next step.
-//! \param gold The mined gold of this step (not negative).
+//! \brief Applies signed gold proceeds or payments and retains the fractional balance.
+//! \param gold Positive proceeds or a negative payment.
 //! \return The whole part that was added to the carried gold.
 int32_t Creature::addGoldCarriedFraction(double gold)
 {

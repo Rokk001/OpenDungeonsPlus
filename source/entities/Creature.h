@@ -169,6 +169,7 @@ public:
 
     //! \brief Constructor for creatures. It generates an unique name
     Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat* seat, Ogre::Vector3 position = Ogre::Vector3(0.0f,0.0f,0.0f));
+    //! \brief Releases active skill data and unregisters held Epics when this holder is deleted.
     virtual ~Creature();
 
     static const uint32_t NB_OVERLAY_HEALTH_VALUES;
@@ -541,6 +542,28 @@ public:
     double getItemAttribute(const std::string& attribute) const;
     //! \brief Rebuilds derived item stats and notifies clients after a holder changes.
     void itemsChanged();
+    //! \brief Returns the wearer's target slot for an item, or -1 when its weapon class cannot be worn.
+    int32_t getItemEquipmentSlot(const ItemInstance& item) const;
+    //! \brief Tests slot compatibility and the item's minimum level.
+    bool isItemEquippable(const ItemInstance& item) const;
+    //! \brief Rates rolled bonuses with configured weights and this creature's primary/family paths.
+    double rateItem(const ItemInstance& item) const;
+    //! \brief Accepts an owned instance, equipping upgrades outside combat and retaining or dropping overflow.
+    bool acceptItem(std::unique_ptr<ItemInstance> item, bool equip = true);
+    //! \brief Equips carried upgrades outside combat, retaining items below their level gate.
+    void decideEquipment();
+    //! \brief Drops eligible rolled items on knockout or all held items on death.
+    void dropItems(bool dead);
+    //! \brief Unregisters held Epics when this creature permanently leaves the map.
+    void unregisterHeldEpics();
+    //! \brief Adds the mood points of a merchant deal or keeper gift.
+    void addMerchantMood(double points);
+    //! \brief Returns the merchant mood contribution used by the existing mood calculation.
+    double getMerchantMood() const { return mMerchantMood; }
+    //! \brief Returns carried gold including the fractional proceeds retained by the existing gold helper.
+    double getGoldCarriedAmount() const { return mGoldCarried + mGoldRemainder; }
+    //! \brief Records the prescribed pending deal byte and item name for the owner's next update.
+    void setLastItemDeal(uint8_t deal, const std::string& name);
     //! \brief Sets the multiplicative contribution of one running potion effect.
     void setPotionContribution(const CreatureEffect* source, const std::string& kind, double value);
     //! \brief Removes only the contribution of a potion that ended.
@@ -555,6 +578,14 @@ public:
     double getConditionalItemMoveFactor() const;
     //! \brief Ends all running freeze effects when a thaw potion is drunk.
     void endFreeze();
+    //! \brief Drinks eligible carried potions and refills slots only outside combat.
+    void decidePotion();
+    //! \brief Drinks a useful keeper gift or stores it; false leaves ownership with the caller.
+    bool receiveGiftedPotion(std::unique_ptr<ItemInstance>& item);
+    //! \brief Returns whether a timed potion of the given effect kind is still active.
+    bool hasPotionEffect(const std::string& kind) const;
+    //! \brief Consumes one eligible potion and starts its existing effect implementation.
+    bool drinkPotion(std::unique_ptr<ItemInstance>& item);
     //! \brief Returns the natural sight radius plus the equipment sight bonus.
     int32_t getTileSightRadius() const;
 
@@ -769,7 +800,7 @@ public:
     void useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit);
 
-    //! \brief Returns true if the given action is queued in the action list. False otherwise
+    //! \brief Returns whether an action is queued; room-use queries also include its specialized work actions.
     bool isActionInList(CreatureActionType action) const;
 
     //! \brief Clears the action queue, except for the Idle action at the end.
@@ -1057,8 +1088,8 @@ public:
     //! creature that cannot carry gold).
     int32_t getGoldCapacity() const;
 
-    //! \brief Adds mined gold that may have a fraction. The whole part is added to the carried gold, the rest stays in
-    //! the remainder (not saved) for the next call. Returns the whole part that was added
+    //! \brief Adds gold proceeds or subtracts a payment, preserving the saved fractional balance.
+    //! \return The signed whole amount applied to carried gold.
     int32_t addGoldCarriedFraction(double gold);
 
     inline uint32_t getOverlayHealthValue() const
@@ -1463,6 +1494,10 @@ private:
     std::array<std::unique_ptr<ItemInstance>, 6> mEquipment;
     std::vector<std::unique_ptr<ItemInstance>> mPotionSlots;
     std::array<std::unique_ptr<ItemInstance>, 4> mInventory;
+    //! \brief Prevents repeated knockout drops until the creature stands up again.
+    bool mKoDroppedThisFight = false;
+    //! \brief Prevents an exiting creature and its later destructor from unregistering the same Epic twice.
+    bool mHeldEpicsUnregistered = false;
     //! \brief Multipliers of running potion effects, keyed by their independent effect objects.
     std::map<const CreatureEffect*, std::pair<std::string, double>> mPotionContributions;
     //! \brief Owner-only active potion contributions received from the server, without effect-object pointers.
@@ -1511,6 +1546,11 @@ private:
     int32_t         mGoldCarried;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
     double          mGoldRemainder;
+    //! \brief Temporary merchant mood, saved with the creature and sent to the owner.
+    double mMerchantMood = 0.0;
+    //! \brief Pending owner-only deal payload, consumed when its update is written.
+    mutable uint8_t mLastItemDeal = 0;
+    mutable std::string mLastItemName;
     //! \brief Server side: the amount of carried gold the clients were last told about
     int32_t         mGoldCarriedNotified;
     //! \brief Server side. The gold carried that the clients were told last (cosmetic events only, not saved)
@@ -1709,6 +1749,8 @@ private:
 
     //! \brief Skills the creature can use
     std::vector<CreatureSkillData> mSkillData;
+    //! \brief Whether an enemy was in attack range on the previous potion decision.
+    bool mPotionEnemyInRange = false;
 
     //! \brief Skill points spent, template, ranks and reset counters of the skill tree (saved and sent to clients)
     CreatureSkillTree::SkillBuild mSkillBuild;

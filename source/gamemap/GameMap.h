@@ -295,6 +295,8 @@ public:
     void registerEpic(const ItemInstance& item);
     //! \brief Releases an Epic id when its instance permanently leaves this map.
     void unregisterEpic(const ItemInstance& item);
+    //! \brief Allocates the serial of a server-created fixed Epic line.
+    uint32_t allocateEpicSerial() { return mNextEpicSerial++; }
     //! \brief Returns whether an Epic of an item line already exists anywhere in the map.
     bool isEpicRegistered(const std::string& id) const { return mEpicRegistry.count(id) != 0; }
     //! \brief Caches living aura givers by seat at the beginning of a turn.
@@ -740,6 +742,8 @@ public:
     void removeRenderedMovableEntity(RenderedMovableEntity *obj);
     RenderedMovableEntity* getRenderedMovableEntity(const std::string& name);
     void clearRenderedMovableEntities(NodeType nt = NodeType::MTILES_NODE);
+    //! \brief Resolves a typed entity identity for movement, hand and appearance notifications.
+    //! \brief Resolves a typed live entity name, including carryable herb bundles.
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 

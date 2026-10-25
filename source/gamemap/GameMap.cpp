@@ -601,7 +601,7 @@ void GameMap::clearItemDefinitions()
     mItemAuraGivers.clear();
 }
 
-//! \brief Selects uniformly among matching free lines and records every newly created Epic.
+//! \brief Selects uniformly among matching free lines, registers each Epic and logs its unique serial.
 std::unique_ptr<ItemInstance> GameMap::rollItem(Quality quality, const std::string& slot,
     const std::string& weaponClass, const std::string& path)
 {
@@ -628,6 +628,7 @@ std::unique_ptr<ItemInstance> GameMap::rollItem(Quality quality, const std::stri
     {
         item->mEpicSerial = mNextEpicSerial++;
         registerEpic(*item);
+        OD_LOG_INF("Created Epic item=" + item->mDefinitionId + ", serial=" + std::to_string(item->mEpicSerial));
     }
     return item;
 }
@@ -1018,6 +1019,7 @@ Creature* GameMap::getWorkerToPickupBySeat(Seat* seat)
     return nullptr;
 }
 
+//! \brief Selects an owned fighter using the existing fleeing, idle, room-work and fighting priority.
 Creature* GameMap::getFighterToPickupBySeat(Seat* seat)
 {
     // 1 - Take fleeing fighters
@@ -1059,6 +1061,9 @@ Creature* GameMap::getFighterToPickupBySeat(Seat* seat)
                 case CreatureActionType::searchFood:
                 case CreatureActionType::searchJob:
                 case CreatureActionType::useRoom:
+                case CreatureActionType::crackBox:
+                case CreatureActionType::harvestHerbs:
+                case CreatureActionType::brewPotion:
                     isIdle = false;
                     isBusy = true;
                     break;
@@ -3867,6 +3872,7 @@ std::string GameMap::nextUniqueNameMapLight()
     return ret;
 }
 
+//! \brief Resolves an entity identity, including room-owned merchant figures.
 GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
     const std::string& entityName)
 {
@@ -3886,6 +3892,8 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::skillEntity:
         case GameEntityType::giftBoxEntity:
         case GameEntityType::lavaRock:
+        case GameEntityType::merchantEntity:
+        case GameEntityType::herbBundleEntity:
             return getRenderedMovableEntity(entityName);
 
         case GameEntityType::spell:

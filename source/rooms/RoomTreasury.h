@@ -49,6 +49,7 @@ public:
     std::string mMeshOfTile;
 };
 
+//! \brief Stores gold and independently books floor places for delivered item bags and boxes.
 class RoomTreasury: public Room
 {
     friend class ODClient;
@@ -70,9 +71,14 @@ public:
     // Functions specific to this class.
     virtual void doUpkeep() override;
 
+    //! \brief Accepts gold or unsealed item storage within their independent capacities.
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
+    //! \brief Books a free item-storage tile or returns the normal destination for gold.
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
+    //! \brief Releases a delivery booking and places delivered items at a free quarter-tile position.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
+    //! \brief Frees a booked item place when its carry action ends or its cargo disappears.
+    void releaseItemDelivery(GameEntity* carriedEntity);
 
     virtual int getTotalGoldStorage() const override;
     virtual int getTotalGoldStored() const override;
@@ -93,6 +99,8 @@ protected:
     {}
 
 private:
+    //! \brief Returns the first tile with room for this cargo after counting other promised deliveries.
+    Tile* getItemDeliveryTile(const GameEntity* carriedEntity) const;
     int getGoldCapacityPerTile() const;
     //! \brief Fill step of the tile at the given position, 0 for tiles that are not part of this room
     int getLevelOfTile(const std::map<Tile*, int>& levels, int x, int y) const;
@@ -101,6 +109,8 @@ private:
     bool mGoldChanged;
     //! The clients were told that the treasury is full (cosmetic only, until room is not full again)
     bool mFullAnnounced;
+    //! \brief Item and box deliveries reserve capacity until their carry action releases the booking.
+    std::map<GameEntity*, Tile*> mItemDeliveries;
 };
 
 #endif // ROOMTREASURY_H

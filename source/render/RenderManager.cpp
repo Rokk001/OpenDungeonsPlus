@@ -40,6 +40,7 @@
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
+#include "entities/ItemBagEntity.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -69,6 +70,7 @@
 #include "utils/Random.h"
 
 #include <cctype>
+#include <array>
 #include <cmath>
 #include <set>
 #include <vector>
@@ -3735,6 +3737,13 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
         ent = mSceneManager->createEntity(tempString, meshPtr);
         node->attachObject(ent); 
+        if(meshName == "Cauldron" && ent->hasSkeleton() && ent->getSkeleton()->hasBone("FireAnchor"))
+        {
+            Ogre::ParticleSystem* fire = mSceneManager->createParticleSystem(tempString + "_CauldronFire", "RoomAmbAltarFlame");
+            for(unsigned short index = 0; index < fire->getNumEmitters(); ++index)
+                fire->getEmitter(index)->setColour(Ogre::ColourValue::Green);
+            ent->attachObjectToBone("FireAnchor", fire);
+        }
     }
 
     renderedMovableEntity->setParentSceneNode(node->getParentSceneNode());
@@ -3811,6 +3820,12 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
     if(mSceneManager->hasEntity(tempString))
     {
         Ogre::Entity* ent = mSceneManager->getEntity(tempString);
+        if(mSceneManager->hasParticleSystem(tempString + "_CauldronFire"))
+        {
+            Ogre::ParticleSystem* fire = mSceneManager->getParticleSystem(tempString + "_CauldronFire");
+            ent->detachObjectFromBone(fire);
+            mSceneManager->destroyParticleSystem(fire);
+        }
         node->detachObject(ent);
         mSceneManager->destroyEntity(ent);
     }
@@ -4262,7 +4277,7 @@ bool RenderManager::getWeaponMount(const Ogre::Skeleton* skeleton, const std::st
     return skeleton->hasBone(mount.mBoneName);
 }
 
-//! \brief Attaches the original spawn weapon's quality variant without changing its mount or combat values.
+//! \brief Attaches the spawn mesh or quality variant and tints every quality without changing mounts or combat values.
 void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand)
 {
     // A weapon with the mesh name "none" is already part of the creature model, so nothing is attached
@@ -4283,11 +4298,11 @@ void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapo
     std::string meshName = curWeapon->getMeshName();
     const size_t handSlot = hand == "R" ? 0 : 1;
     const ItemInstance* item = curCreature->getEquipment()[handSlot].get();
-    std::string qualitySuffix;
-    if(item != nullptr && item->mQuality != Quality::poor)
+    const Quality quality = item == nullptr ? Quality::poor : item->mQuality;
+    static const std::array<std::string, 4> QUALITY_SUFFIXES = {{"poor", "common", "rare", "epic"}};
+    const std::string qualitySuffix = QUALITY_SUFFIXES.at(static_cast<size_t>(quality));
+    if(quality != Quality::poor)
     {
-        static const std::array<std::string, 4> QUALITY_SUFFIXES = {{"poor", "common", "rare", "epic"}};
-        qualitySuffix = QUALITY_SUFFIXES.at(static_cast<size_t>(item->mQuality));
         std::string baseName = meshName.substr(0, meshName.find_last_of('.'));
         if(curWeapon->getName() == "RustySword")
             baseName = "RustySword";
@@ -4297,13 +4312,12 @@ void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapo
                                 + hand + "_" + curCreature->getName(),
                                 meshName);
 
-    if(!qualitySuffix.empty())
     {
         static const std::array<Ogre::ColourValue, 4> QUALITY_TINTS = {{
             Ogre::ColourValue(138.0f / 255.0f, 138.0f / 255.0f, 138.0f / 255.0f), Ogre::ColourValue::White,
             Ogre::ColourValue(62.0f / 255.0f, 123.0f / 255.0f, 1.0f),
             Ogre::ColourValue(166.0f / 255.0f, 77.0f / 255.0f, 1.0f)}};
-        const Ogre::ColourValue tint = QUALITY_TINTS.at(static_cast<size_t>(item->mQuality));
+        const Ogre::ColourValue tint = QUALITY_TINTS.at(static_cast<size_t>(quality));
         const std::string suffix = "_" + qualitySuffix;
         for(unsigned int index = 0; index < weaponEntity->getNumSubEntities(); ++index)
         {
@@ -4326,6 +4340,47 @@ void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapo
 
     ent->attachObjectToBone(weaponBone->getName(), weaponEntity,
                             mount.mRotation, mount.mOffset);
+}
+
+//! \brief Uses the second material's seal only while a bag is merchant-owned stock.
+void RenderManager::rrRefreshItemBag(ItemBagEntity* bag)
+{
+    if(bag == nullptr || bag->getItem() == nullptr)
+        return;
+    rrRefreshItemBagAppearance(bag, bag->getItem()->mQuality, bag->getItem()->mMerchantGoods);
+}
+
+//! \brief Applies identical quality material clones and seal visibility to every item-bag presentation.
+void RenderManager::rrRefreshItemBagAppearance(RenderedMovableEntity* bag, Quality quality, bool sealed)
+{
+    if(bag == nullptr)
+        return;
+    const std::string name = bag->getOgreNamePrefix() + bag->getName();
+    if(!mSceneManager->hasEntity(name))
+        return;
+    Ogre::Entity* entity = mSceneManager->getEntity(name);
+    static const std::array<Ogre::ColourValue, 4> TINTS = {{
+        Ogre::ColourValue(138.0f/255.0f, 138.0f/255.0f, 138.0f/255.0f), Ogre::ColourValue::White,
+        Ogre::ColourValue(62.0f/255.0f, 123.0f/255.0f, 1.0f), Ogre::ColourValue(166.0f/255.0f, 77.0f/255.0f, 1.0f)}};
+    for(unsigned int index = 0; index < entity->getNumSubEntities(); ++index)
+    {
+        Ogre::SubEntity* sub = entity->getSubEntity(index);
+        const std::string materialName = sub->getMaterialName();
+        if(materialName == "ItemBagSealed")
+        {
+            sub->setVisible(sealed);
+            continue;
+        }
+        const std::string tintedName = materialName + "_item_" + qualityName(quality);
+        Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().getByName(tintedName);
+        if(material.isNull())
+        {
+            material = sub->getMaterial()->clone(tintedName);
+            material->setDiffuse(TINTS.at(static_cast<size_t>(quality)));
+            material->setAmbient(TINTS.at(static_cast<size_t>(quality)));
+        }
+        sub->setMaterial(material);
+    }
 }
 
 void RenderManager::rrDestroyWeapon(Creature* curCreature, const Weapon* curWeapon, const std::string& hand)

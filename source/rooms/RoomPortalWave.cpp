@@ -18,6 +18,7 @@
 #include "rooms/RoomPortalWave.h"
 
 #include "entities/Creature.h"
+#include "game/ItemDrops.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/PersistentObject.h"
@@ -303,6 +304,7 @@ void RoomPortalWave::handleChooseTarget()
     }
 }
 
+//! \brief Spawns a wave with configured hero item rolls and the existing target/name bookkeeping.
 void RoomPortalWave::spawnWave(RoomPortalWaveData* roomPortalWaveData, uint32_t maxCreaturesToSpawn,
     std::vector<std::string>* spawnedNames)
 {
@@ -340,6 +342,7 @@ void RoomPortalWave::spawnWave(RoomPortalWaveData* roomPortalWaveData, uint32_t 
             + ", name=" + newCreature->getName() + ", seatId=" + Helper::toString(getSeat()->getId()));
 
         newCreature->addToGameMap();
+        ItemDrops::outfit(*newCreature, "hero");
         newCreature->createMesh();
         newCreature->setPosition(newCreature->getPosition());
         getSeat()->notifyCreatureArrival(classToSpawn->getClassName());

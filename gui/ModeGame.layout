@@ -153,6 +153,8 @@
         <LayoutImport type="DefaultWindow" filename="WindowPlayerSettings.layout" name="PlayerSettingsWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowObjectives.layout" name="ObjectivesWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowCasinoPayout.layout" name="CasinoPayoutWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowMerchant.layout" name="MerchantWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowAlchemyLab.layout" name="AlchemyLabWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSkillTree.layout" name="SkillTreeWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowProduction.layout" name="ProductionWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSocial.layout" name="SocialWindowImport" />
@@ -323,6 +325,15 @@
             <UserString name="AllowEdgeScrolling" value="true" />
             <UserString name="ContextHelp" value="Production: view workshop progress and change trap order priority" />
         </Window>
+        <Window type="OD/GameTabButton" name="LabButton">
+            <Property name="Area" value="{{0,244},{1,-224},{0,284},{1,-184}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/LabButton" />
+            <Property name="NavigationFrame" value="True" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="Visible" value="False" />
+            <Property name="TooltipText" value="Alchemy lab" />
+            <UserString name="AllowEdgeScrolling" value="true" />
+        </Window>
         <Window type="OD/GameTabButton" name="SocialButton">
             <Property name="Area" value="{{0,148},{1,-224},{0,188},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/CreaturesIcon" />
@@ -331,6 +342,15 @@
             <Property name="TooltipText" value="Dungeonbook" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <UserString name="ContextHelp" value="Dungeonbook: creature profiles and what your minions are posting (B)" />
+        </Window>
+        <Window type="OD/GameTabButton" name="MerchantButton">
+            <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/MerchantButton" />
+            <Property name="NavigationFrame" value="True" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="TooltipText" value="Merchant" />
+            <Property name="Visible" value="False" />
+            <UserString name="AllowEdgeScrolling" value="true" />
         </Window>
         <Window type="OD/GameTabButton" name="SandboxButton">
             <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />

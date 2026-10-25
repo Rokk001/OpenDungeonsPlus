@@ -338,6 +338,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::arenaRoom;
         case RoomType::casino:
             return tile.getTileVisual() == TileVisual::casinoRoom;
+        case RoomType::merchant:
+            return tile.getTileVisual() == TileVisual::merchantRoom;
         case RoomType::torture:
             return tile.getTileVisual() == TileVisual::tortureRoom;
         case RoomType::guardRoom:
@@ -504,6 +506,8 @@ GameMode::GameMode(ModeManager *modeManager):
             CEGUI::Event::Subscriber(&GameMode::hideObjectivesWindow, this)
         )
     );
+
+    initializeMerchantWindow();
 
     //Casino payout window
     addEventConnection(
@@ -760,6 +764,14 @@ GameMode::GameMode(ModeManager *modeManager):
 
     // Dungeonbook: creature list and post feed
     mSocialWindow.reset(new SocialWindow(mRootWindow, *mGameMap));
+    addEventConnection(mRootWindow->getChild("LabButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleAlchemyLabWindow, this)));
+    addEventConnection(mRootWindow->getChild("AlchemyLabWindow/CloseButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::hideAlchemyLabWindow, this)));
+    addEventConnection(mRootWindow->getChild("AlchemyLabWindow")->subscribeEvent(
+        CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::hideAlchemyLabWindow, this)));
+    addEventConnection(mRootWindow->getChild("AlchemyLabWindow/ModeButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleLabMode, this)));
     addEventConnection(mRootWindow->getChild("SocialButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSocialWindow, this)));
     addEventConnection(mRootWindow->getChild("SocialWindow")->subscribeEvent(
@@ -834,6 +846,7 @@ GameMode::~GameMode()
     }
 }
 
+//! \brief Activates the game interface and refreshes its room-dependent windows.
 void GameMode::activate()
 {
     resetIdleHand();
@@ -860,6 +873,7 @@ void GameMode::activate()
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
+    hideMerchantWindow();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
     guiSheet->getChild("ProductionWindow")->hide();
@@ -1488,6 +1502,18 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     {
         Room* room = tileClicked->getCoveringRoom();
         Player* localPlayer = mGameMap->getLocalPlayer();
+        if(room != nullptr && localPlayer != nullptr && room->getType() == RoomType::merchant &&
+            room->getSeat() == localPlayer->getSeat())
+        {
+            if(!mRootWindow->getChild("MerchantWindow")->isVisible()) toggleMerchantWindow();
+            return true;
+        }
+        if(room != nullptr && localPlayer != nullptr && room->getType() == RoomType::alchemyLab &&
+           room->getSeat() == localPlayer->getSeat())
+        {
+            showAlchemyLabWindow();
+            return true;
+        }
         if((room != nullptr) && (localPlayer != nullptr) && (room->getType() == RoomType::casino) &&
            (room->getSeat() == localPlayer->getSeat()))
         {
@@ -1704,6 +1730,9 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 
     case OIS::KC_B:
         toggleSocialWindow();
+        break;
+    case OIS::KC_L:
+        toggleAlchemyLabWindow(CEGUI::EventArgs());
         break;
     case OIS::KC_H:
         if(!cameraInputBlocked())
@@ -2284,8 +2313,19 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
     }
 }
 
+//! \brief Refreshes frame controls and the availability of room-specific panels.
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+    const Player* merchantPlayer = mGameMap->getLocalPlayer();
+    const bool hasMerchant = merchantPlayer != nullptr && merchantPlayer->getSeat() != nullptr &&
+        merchantPlayer->getSeat()->getNbRooms(RoomType::merchant) > 0;
+    mRootWindow->getChild("MerchantButton")->setVisible(hasMerchant);
+    if(!hasMerchant && mRootWindow->getChild("MerchantWindow")->isVisible()) hideMerchantWindow();
+    if(mRootWindow->getChild("MerchantWindow")->isVisible()) refreshMerchantSelection();
+    Player* labPlayer = mGameMap->getLocalPlayer();
+    const bool hasLab = labPlayer != nullptr && labPlayer->getSeat() != nullptr &&
+        labPlayer->getSeat()->getNbRooms(RoomType::alchemyLab) > 0;
+    mRootWindow->getChild("LabButton")->setVisible(hasLab);
 
     // Recover releases missed while focus was elsewhere without changing the toggle.
     if(!getKeyboard()->isKeyDown(OIS::KC_LMENU))
