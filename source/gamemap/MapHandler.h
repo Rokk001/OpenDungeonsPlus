@@ -53,12 +53,14 @@ namespace MapHandler
     //! \param fileName The level file to read.
     //! \param gameMap The game map to fill.
     //! \return False if the file or one of its sections is invalid.
+    //! \brief Loads existing maps and optional saved loose herb bundles.
     bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap);
 
     //! \brief Writes the game map to a level file, including the [Triggers] section if the level has a script.
     //! \param fileName The level file to write.
     //! \param gameMap The game map to save.
     //! \return False if the file could not be written.
+    //! \brief Saves map entities, including loose harvested herb bundles.
     bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap);
 
     bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType type, std::stringstream& levelFile);

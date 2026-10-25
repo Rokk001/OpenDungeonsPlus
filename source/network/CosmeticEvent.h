@@ -123,7 +123,9 @@ enum class CosmeticEventType : int32_t
     //! the kind and turn as before, an older server sends none.
     attackTurn = 18,
     //! \brief A workshop cracked an item box: mObject room name, mPosition box tile.
-    boxCracked = 19
+    boxCracked = 19,
+    //! A busy cauldron emits harmless smoke; mSubject brewer, mPosition cauldron tile.
+    cauldronBang = 20
 };
 
 //! \brief The result in mValue of the event hitResult

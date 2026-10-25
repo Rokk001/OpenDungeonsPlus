@@ -289,6 +289,57 @@
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
+                    <Window type="OD/ResearchButton" name="MerchantButton" >
+                        <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/MerchantButton" />
+                        <Property name="TooltipText" value="Room: Merchant" />
+                        <Window type="OD/ProgressBar" name="MerchantButtonProgressBar" >
+                            <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                            <Property name="InheritsTooltipText" value="True" />
+                            <Property name="CurrentProgress" value="0.0" />
+                            <Property name="MousePassThroughEnabled" value="True" />
+                            <Property name="StepSize" value="0.1" />
+                            <Property name="Visible" value="False" />
+                            <Property name="VerticalProgress" value="True" />
+                            <Property name="Alpha" value="0.2" />
+                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+                            <Property name="ReversedProgress" value="True" />
+                        </Window>
+                    </Window>
+                    <Window type="OD/ResearchButton" name="HerbGardenButton" >
+                        <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/HerbGardenButton" />
+                        <Property name="TooltipText" value="Room: Herb Garden" />
+                        <Window type="OD/ProgressBar" name="HerbGardenButtonProgressBar" >
+                            <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                            <Property name="InheritsTooltipText" value="True" />
+                            <Property name="CurrentProgress" value="0.0" />
+                            <Property name="MousePassThroughEnabled" value="True" />
+                            <Property name="StepSize" value="0.1" />
+                            <Property name="Visible" value="False" />
+                            <Property name="VerticalProgress" value="True" />
+                            <Property name="Alpha" value="0.2" />
+                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+                            <Property name="ReversedProgress" value="True" />
+                        </Window>
+                    </Window>
+                    <Window type="OD/ResearchButton" name="AlchemyLabButton" >
+                        <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/AlchemyLabButton" />
+                        <Property name="TooltipText" value="Room: Alchemy Lab" />
+                        <Window type="OD/ProgressBar" name="AlchemyLabButtonProgressBar" >
+                            <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                            <Property name="InheritsTooltipText" value="True" />
+                            <Property name="CurrentProgress" value="0.0" />
+                            <Property name="MousePassThroughEnabled" value="True" />
+                            <Property name="StepSize" value="0.1" />
+                            <Property name="Visible" value="False" />
+                            <Property name="VerticalProgress" value="True" />
+                            <Property name="Alpha" value="0.2" />
+                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+                            <Property name="ReversedProgress" value="True" />
+                        </Window>
+                    </Window>
                 </Window>
                 <Window type="DefaultWindow" name="Traps" >
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
@@ -618,6 +669,40 @@
                             <Property name="ReversedProgress" value="True" />
                         </Window>
                     </Window>
+                    <Window type="OD/ResearchButton" name="FineToolsButton" >
+                        <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/FineToolsButton" />
+                        <Property name="TooltipText" value="Workshop: Fine Tools (cracks Rare item boxes)" />
+                        <Window type="OD/ProgressBar" name="FineToolsButtonProgressBar" >
+                            <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                            <Property name="InheritsTooltipText" value="True" />
+                            <Property name="CurrentProgress" value="0.0" />
+                            <Property name="MousePassThroughEnabled" value="True" />
+                            <Property name="StepSize" value="0.1" />
+                            <Property name="Visible" value="False" />
+                            <Property name="VerticalProgress" value="True" />
+                            <Property name="Alpha" value="0.2" />
+                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+                            <Property name="ReversedProgress" value="True" />
+                        </Window>
+                    </Window>
+                    <Window type="OD/ResearchButton" name="MasterToolsButton" >
+                        <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/MasterToolsButton" />
+                        <Property name="TooltipText" value="Workshop: Master Tools (cracks Epic item boxes)" />
+                        <Window type="OD/ProgressBar" name="MasterToolsButtonProgressBar" >
+                            <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                            <Property name="InheritsTooltipText" value="True" />
+                            <Property name="CurrentProgress" value="0.0" />
+                            <Property name="MousePassThroughEnabled" value="True" />
+                            <Property name="StepSize" value="0.1" />
+                            <Property name="Visible" value="False" />
+                            <Property name="VerticalProgress" value="True" />
+                            <Property name="Alpha" value="0.2" />
+                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+                            <Property name="ReversedProgress" value="True" />
+                        </Window>
+                    </Window>
                 </Window>
                 <Window type="DefaultWindow" name="Spells" >
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
@@ -918,6 +1003,23 @@
                         <Property name="ButtonImage" value="OpenDungeonsIcons/ManaFlowButton" />
                         <Property name="TooltipText" value="Keeper: Mana Flow" />
                         <Window type="OD/ProgressBar" name="ManaFlowButtonProgressBar" >
+                            <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
+                            <Property name="InheritsTooltipText" value="True" />
+                            <Property name="CurrentProgress" value="0.0" />
+                            <Property name="MousePassThroughEnabled" value="True" />
+                            <Property name="StepSize" value="0.1" />
+                            <Property name="Visible" value="False" />
+                            <Property name="VerticalProgress" value="True" />
+                            <Property name="Alpha" value="0.2" />
+                            <Property name="ProgressImage" value="OpenDungeonsSkin/ProgressBarLitSegment" />
+                            <Property name="ReversedProgress" value="True" />
+                        </Window>
+                    </Window>
+                    <Window type="OD/ResearchButton" name="SunthornButton" >
+                        <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
+                        <Property name="ButtonImage" value="OpenDungeonsIcons/SunthornButton" />
+                        <Property name="TooltipText" value="Garden: Sunthorn Cultivation (grows the golden herb)" />
+                        <Window type="OD/ProgressBar" name="SunthornButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
                             <Property name="InheritsTooltipText" value="True" />
                             <Property name="CurrentProgress" value="0.0" />

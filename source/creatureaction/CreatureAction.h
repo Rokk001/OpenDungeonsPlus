@@ -62,6 +62,8 @@ enum class CreatureActionType
     crackBox,
     harvestHerbs,
     brewPotion,
+    sellItem, // Visits a merchant table to sell unwanted inventory goods.
+    buyItem, // Visits a merchant table to buy a reserved wanted good.
     nb // Must be the last value of this enum
 };
 
@@ -104,6 +106,7 @@ public:
     { return CreatureMoodValues::Nothing; }
 
     //! \brief Returns the diagnostic name of an action, including item and new work actions.
+    //! \brief Returns the stable action name used by creature activity and diagnostics.
     static std::string toString(CreatureActionType actionType);
 
     //! \brief Identifies ordinary room use and its specialized workshop, garden and lab actions.

@@ -39,6 +39,7 @@ SkillType fromString(const std::string& typeName)
     return SkillType::nullSkillType;
 }
 
+//! \brief Returns the stable saved name of every research entry.
 std::string toString(SkillType type)
 {
     switch(type)
@@ -153,11 +154,24 @@ std::string toString(SkillType type)
             return "keeperHeartMending";
         case SkillType::keeperManaFlow:
             return "keeperManaFlow";
+        case SkillType::roomMerchant:
+            return "roomMerchant";
+        case SkillType::roomHerbGarden:
+            return "roomHerbGarden";
+        case SkillType::roomAlchemyLab:
+            return "roomAlchemyLab";
+        case SkillType::trapFineTools:
+            return "trapFineTools";
+        case SkillType::trapMasterTools:
+            return "trapMasterTools";
+        case SkillType::spellSunthornCultivation:
+            return "spellSunthornCultivation";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }
 }
 
+//! \brief Returns the approved player-facing research entry name.
 std::string skillTypeToPlayerVisibleString(SkillType type)
 {
     switch(type)
@@ -272,6 +286,18 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "Keeper: Heart Mending";
         case SkillType::keeperManaFlow:
             return "Keeper: Mana Flow";
+        case SkillType::roomMerchant:
+            return "The Merchant Room";
+        case SkillType::roomHerbGarden:
+            return "The Herb Garden";
+        case SkillType::roomAlchemyLab:
+            return "The Alchemy Lab";
+        case SkillType::trapFineTools:
+            return "Fine Tools";
+        case SkillType::trapMasterTools:
+            return "Master Tools";
+        case SkillType::spellSunthornCultivation:
+            return "Sunthorn Cultivation";
         default:
             return "Unknown enum value:" + Helper::toString(static_cast<int>(type));
     }

@@ -43,6 +43,9 @@ enum class RoomType
     torture,
     guardRoom,
     temple,
+    merchant,
+    herbGarden,
+    alchemyLab,
     nbRooms     // Must be the last in this enum
 };
 

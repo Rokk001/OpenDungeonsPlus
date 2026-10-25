@@ -53,6 +53,8 @@
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/RoomMerchant.h"
+#include "rooms/RoomAlchemyLab.h"
 #include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
@@ -557,6 +559,7 @@ void ODServer::handleConsoleCommand(Player* player, GameMap* gameMap, const std:
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Advances the server turn and sends each player notifications with private item data masked.
 void ODServer::startNewTurn(double timeSinceLastTurn)
 {
     GameMap* gameMap = mGameMap;
@@ -636,7 +639,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
                 itCreatures = creatures.erase(itCreatures);
             else
             {
-                std::string creatureInfos = creature->getStatsText();
+                std::string creatureInfos = creature->getStatsText(player->getSeat());
 
                 ServerNotification *serverNotification = new ServerNotification(
                     ServerNotificationType::notifyCreatureInfo, player);
@@ -3221,6 +3224,45 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             break;
         }
 
+        case ClientNotificationType::askMerchantWindow:
+        case ClientNotificationType::askMerchantSettings:
+        case ClientNotificationType::askMerchantBuy:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(player != nullptr && mServerMode != ServerMode::ModeEditor)
+                RoomMerchant::handleRequest(*gameMap, *player, clientCommand, packetReceived);
+            break;
+        }
+        case ClientNotificationType::askLabWindow:
+        {
+            bool open;
+            OD_ASSERT_TRUE(packetReceived >> open);
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr || player->getHasLost())
+                break;
+            if(open && gameMap->getRoomsByTypeAndSeat(RoomType::alchemyLab, player->getSeat()).empty())
+                break;
+            player->setLabWindowOpen(open);
+            if(open)
+                RoomAlchemyLab::sendWindow(*gameMap, *player);
+            break;
+        }
+        case ClientNotificationType::askLabSetting:
+        {
+            int32_t mode;
+            OD_ASSERT_TRUE(packetReceived >> mode);
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr || player->getHasLost() || mode < 0 || mode > 2 ||
+               gameMap->getRoomsByTypeAndSeat(RoomType::alchemyLab, player->getSeat()).empty())
+                break;
+            player->getSeat()->setLabMode(mode);
+            ServerNotification response(ServerNotificationType::labSettings, player);
+            response.mPacket << mode;
+            sendAsyncMsg(response);
+            if(player->getLabWindowOpen())
+                RoomAlchemyLab::sendWindow(*gameMap, *player);
+            break;
+        }
         case ClientNotificationType::askCasinoPayout:
         {
             Player* player = clientSocket->getPlayer();

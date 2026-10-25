@@ -8,6 +8,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Add creature equipment, unique Epic items, collectible bags and workshop-opened item boxes; trade goods through a merchant, grow herbs and brew potions with room and tool research.
 * Explore a ruined fortress in the main menu, with flights to each menu location and back to the courtyard, flickering firelight, a green-lit spired tower, low ground mist and embers. A replaceable chain-hung title, moving crows and cages, blood moon and weathered graveyard details deepen the scene.
 * Render unexplored tiles with the same earth walls, lighting and translucent dig marks as known earth, while keeping hidden terrain types private.
 

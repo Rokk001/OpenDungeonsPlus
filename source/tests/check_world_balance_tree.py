@@ -33,6 +33,9 @@ EXPECTED = [
     ("Rooms", 4, "roomTorture", "TortureButton", ["roomPrison"]),
     ("Rooms", 4, "roomTemple", "PrayerTempleButton", ["roomCrypt"]),
     ("Rooms", 4, "keeperDominion", "DominionButton", ["roomArena"]),
+    ("Rooms", 2, "roomMerchant", "MerchantButton", ["roomTreasury"]),
+    ("Rooms", 2, "roomHerbGarden", "HerbGardenButton", ["roomHatchery"]),
+    ("Rooms", 3, "roomAlchemyLab", "AlchemyLabButton", ["roomHerbGarden"]),
     ("Traps", 1, "trapDoorWooden", "WoodenDoorTrapButton", ["roomWorkshop"]),
     ("Traps", 1, "trapSpike", "SpikeTrapButton", ["roomWorkshop"]),
     ("Traps", 1, "trapCannon", "CannonButton", ["roomWorkshop"]),
@@ -52,6 +55,8 @@ EXPECTED = [
     ("Traps", 4, "trapFreeze", "FreezeTrapButton", ["trapLightning"]),
     ("Traps", 4, "keeperHeartFortitude", "HeartFortitudeButton", ["trapDoorSteel"]),
     ("Traps", 4, "keeperHeartMending", "HeartMendingButton", ["keeperHeartFortitude"]),
+    ("Traps", 2, "trapFineTools", "FineToolsButton", ["roomWorkshop"]),
+    ("Traps", 3, "trapMasterTools", "MasterToolsButton", ["trapFineTools"]),
     ("Spells", 1, "spellSummonWorker", "SummonWorkerButton", []),
     ("Spells", 1, "spellCreatureHeal", "CreatureHealButton", ["roomLibrary"]),
     ("Spells", 1, "spellCreatureHaste", "CreatureHasteButton", ["roomLibrary"]),
@@ -70,10 +75,11 @@ EXPECTED = [
     ("Spells", 4, "spellDefector", "DefectorButton", ["spellPossess"]),
     ("Spells", 4, "spellHexenHen", "HexenHenButton", ["spellCreatureWeak"]),
     ("Spells", 4, "keeperManaFlow", "ManaFlowButton", ["roomTemple"]),
+    ("Spells", 3, "spellSunthornCultivation", "SunthornButton", ["roomAlchemyLab"]),
 ]
 TIER_COST = {1: 100, 2: 250, 3: 600, 4: 1500}
 FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary", "spellSummonWorker"]
-TAB_TOTALS = {"Rooms": 59450, "Traps": 76300, "Spells": 80750}
+TAB_TOTALS = {"Rooms": 67150, "Traps": 82250, "Spells": 84950}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
@@ -82,7 +88,7 @@ KEEPERS = {
     "keeperManaFlow": ("ManaFlowButton", "Keeper: Mana Flow", "Spells"),
 }
 
-assert len(EXPECTED) == 53, "the tree has 53 entries"
+assert len(EXPECTED) == 59, "the tree has 59 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree
@@ -121,7 +127,7 @@ for tab, tier, name, button, parent_list in EXPECTED:
     registered.append(name)
 
 # ---------------------------------------------------------------------------------------------
-# 2. skills.cfg: the 53 entries with the tier costs and the free level one block
+# 2. skills.cfg: the 59 entries with the tier costs and the free level one block
 cfg = read("config/skills.cfg")
 body = re.sub(r"#[^\r\n]*", "", cfg)
 skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
@@ -131,7 +137,7 @@ for index in range(0, len(skills_block), 2):
     assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
     costs[skills_block[index]] = int(skills_block[index + 1])
 assert "spellSummonChampion" not in costs, "the reward skill has no entry"
-assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 53 entries"
+assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 59 entries"
 for tab, tier, name, button, parent_list in EXPECTED:
     assert costs[name] == TIER_COST[tier], "%s costs the tier %d value" % (name, tier)
 free_block = body[body.index("[FreeLevelOne]") + len("[FreeLevelOne]"):body.index("[/FreeLevelOne]")].split()
@@ -237,9 +243,9 @@ for button, (x, y) in cells.items():
     assert re.search(r'name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset) or \
         re.search(r'height="128" name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset), "cell of " + button
 motifs = read("tools/forged_motifs.py")
-last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-4:]
+last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-13:-9]
 assert last_four == [("DominionButton", "room"), ("HeartFortitudeButton", "trap"), ("HeartMendingButton", "trap"),
-                     ("ManaFlowButton", "spell")], "the four keeper icons are the last four big icons"
+                     ("ManaFlowButton", "spell")], "the four keeper icons precede the nine appended item and room icons"
 assert motifs.index('"NavigationMessagesRead"') < motifs.index('"DominionButton"') < motifs.index('"MenuReturn"')
 
 # ---------------------------------------------------------------------------------------------

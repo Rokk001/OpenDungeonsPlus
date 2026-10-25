@@ -21,7 +21,9 @@
 #include "entities/ChickenEntity.h"
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
+#include "entities/MerchantEntity.h"
 #include "entities/GiftBoxEntity.h"
+#include "entities/HerbBundleEntity.h"
 #include "entities/MapLight.h"
 #include "entities/MissileObject.h"
 #include "entities/PersistentObject.h"
@@ -45,15 +47,29 @@
 
 namespace Entities
 {
+//! \brief Creates a saved entity, leaving room-owned merchant figures to their rooms.
 GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::istream& is)
 {
     GameEntity* entity = nullptr;
     switch(type)
     {
+        case GameEntityType::herbBundleEntity:
+            entity = new HerbBundleEntity(gameMap);
+            if(!static_cast<HerbBundleEntity*>(entity)->importFromStream(is))
+            {
+                delete entity;
+                entity = nullptr;
+            }
+            break;
         case GameEntityType::buildingObject:
         {
             // Building objects are not stored in level files, we should not be here
             OD_LOG_ERR("Cannot create entity from stream");
+            break;
+        }
+        case GameEntityType::merchantEntity:
+        {
+            OD_LOG_ERR("Merchant figures are restored from their rooms");
             break;
         }
         case GameEntityType::chickenEntity:
@@ -139,6 +155,7 @@ GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::
     return entity;
 }
 
+//! \brief Creates the concrete client entity named by a received packet type.
 GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
 {
     GameEntity* entity = nullptr;
@@ -146,6 +163,15 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
     OD_ASSERT_TRUE(is >> type);
     switch(type)
     {
+        case GameEntityType::merchantEntity:
+        {
+            entity = MerchantEntity::loadFromPacket(gameMap, is);
+            break;
+        }
+        case GameEntityType::herbBundleEntity:
+            entity = new HerbBundleEntity(gameMap);
+            static_cast<HerbBundleEntity*>(entity)->importFromPacket(is);
+            break;
         case GameEntityType::buildingObject:
         {
             entity = BuildingObject::getBuildingObjectFromPacket(gameMap, is);

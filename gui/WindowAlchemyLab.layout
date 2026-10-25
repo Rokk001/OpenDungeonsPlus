@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GUILayout version="4">
+    <Window type="OD/FrameWindow" name="AlchemyLabWindow">
+        <Property name="Area" value="{{0.5,-310},{0.5,-210},{0.5,310},{0.5,210}}" />
+        <Property name="Text" value="Alchemy lab" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="AlwaysOnTop" value="True" />
+        <Property name="Visible" value="False" />
+        <Window type="OD/MenuMultiColumnList" name="CauldronList">
+            <Property name="Area" value="{{0,20},{0,40},{1,-20},{0,275}}" />
+        </Window>
+        <Window type="OD/StaticText" name="HerbStock">
+            <Property name="Area" value="{{0,20},{0,285},{1,-20},{0,340}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
+        <Window type="OD/Button" name="ModeButton">
+            <Property name="Area" value="{{0,20},{1,-65},{1,-160},{1,-25}}" />
+            <Property name="Text" value="Automatic" />
+        </Window>
+        <Window type="OD/Button" name="CloseButton">
+            <Property name="Area" value="{{1,-140},{1,-65},{1,-20},{1,-25}}" />
+            <Property name="Text" value="Close" />
+        </Window>
+    </Window>
+</GUILayout>
