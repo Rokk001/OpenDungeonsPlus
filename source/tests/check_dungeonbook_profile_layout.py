@@ -61,9 +61,18 @@ for name in header_rows:
 layout = (repo / 'gui/WindowCreatureProfile.layout').read_text()
 m = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout)
 card_width, card_height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
-holder = re.search(r'name="ProfilePage" >\s*<Property name="Area" value="\{\{0\.0,0\},\{0\.0,(\d+)\},\{1\.0,0\},\{1\.0,(-\d+)\}\}"', layout)
-page_height = card_height - int(holder[1]) + int(holder[2])
-text_width = card_width - 32
+# The page uses 88 percent of the shared frame client, excluding title and borders.
+import xml.etree.ElementTree as ET
+card = ET.fromstring(layout).find('Window')
+holder = card.find("Window[@name='ProfilePage']/Property[@name='Area']").get('value')
+assert holder == '{{0.0,0},{0.0,0},{1.0,0},{0.88,0}}'
+skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
+border = float(skin.find("Image[@name='WindowTopEdge']").get('height')) / 4
+side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4
+title_height = 18 * 10 / 8 + 12
+page_height = (card_height - title_height - 2 * border) * 0.88
+text_width = card_width - 2 * side - 48
+assert 'PROFILE_RIGHT_MARGIN = 32.0f' in gui
 
 LINE, PAD, GAP, TOP = 18.0, 4.0, 4.0, 174.0
 # attributes, equipment, path and skills: four one line rows above the bio
@@ -162,9 +171,11 @@ assert 'UDim(1, -PROFILE_MIN_POSTS_HEIGHT)' in social, 'the profile holder must 
 assert social.index('UDim(1, -PROFILE_MIN_POSTS_HEIGHT)') < social.index('fillProfilePage(mProfilePage)'), 'the holder is set after the fill'
 social_layout = (repo / 'gui/WindowSocial.layout').read_text()
 window = re.search(r'name="SocialWindow">\s*<Property name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
-pane = re.search(r'name="ProfilePane">\s*<Property name="Area" value="\{\{0,(\d+)\},\{0,(\d+)\},\{1,(-\d+)\},\{1,(-\d+)\}\}"', social_layout)
-pane_height = (int(window[4]) - int(window[2])) - int(pane[2]) + int(pane[4])
-pane_width = (int(window[3]) - int(window[1])) - int(pane[1]) + int(pane[3])
+pane = ET.fromstring(social_layout).find(".//Window[@name='ProfilePane']/Property[@name='Area']").get('value')
+assert pane == '{{0.48,0},{0.08,0},{0.98,0},{0.98,0}}'
+pane_height = ((int(window[4]) - int(window[2])) - title_height - 2 * border) * 0.9
+pane_width = ((int(window[3]) - int(window[1])) - 2 * side) * 0.5
+
 dungeonbook_viewport = pane_height - minimum
 posts_height = pane_height - (dungeonbook_viewport + gap)
 assert posts_height >= minimum - gap > 0, 'the recent posts keep no room'

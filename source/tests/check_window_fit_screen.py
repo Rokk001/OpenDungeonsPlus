@@ -120,3 +120,35 @@ assert has_fit, 'Gui.cpp does not limit windows to the screen (getWindowFitFacto
 assert not too_large, '%d window sizes are larger than the screen' % len(too_large)
 print('window fit screen check ok (%d windows, %d screen/scale combinations)' % (
     len(windows), len(SCREENS) * len(USER_SCALES)))
+
+# Shared reskin title/close sizing and framed content must use the same usable rectangle.
+skin = ET.parse(repo / 'gui/OD.looknfeel').getroot()
+frame = skin.find("WidgetLook[@name='OD/FrameWindow']")
+assert frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-10'
+client = frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
+assert len(client.findall('Dim')) == 4, 'frame contents need a clipped inner rectangle'
+close = frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
+for dimension in ('Width', 'Height'):
+    node = close.find("Dim[@type='%s']/WidgetDim" % dimension)
+    assert node is not None and node.get('widget') == '__auto_titlebar__' and node.get('dimension') == 'Height'
+listbox = skin.find("WidgetLook[@name='OD/Listbox']")
+for name in ('ItemRenderingArea', 'ItemRenderingAreaHScroll', 'ItemRenderingAreaVScroll', 'ItemRenderingAreaHVScroll'):
+    for edge in ('LeftEdge', 'TopEdge'):
+        dim = listbox.find("NamedArea[@name='%s']/Area/Dim[@type='%s']" % (name, edge))
+        assert len(dim) == 1 and len(dim[0]) == 2, 'the frame and list padding must be summed inside one operator'
+hud = ET.parse(repo / 'gui/ModeGame.layout').getroot()
+assert hud.find(".//Window[@name='ObjectivesButton']") is None, 'the duplicate eye button is removed'
+assert hud.find(".//Window[@name='GoalsButton']") is not None, 'the scroll goals button remains'
+assert 'guiSheet->getChild("ObjectivesButton")' not in (repo / 'source/modes/GameMode.cpp').read_text()
+notice = ET.parse(repo / 'gui/WindowGameEvent.layout').getroot().find('Window')
+message = udims(notice.find("Window[@name='Message']/Property[@name='Area']").get('value'))
+assert abs(message[0][0] - (1 - message[2][0])) < 1e-9, 'message margins are equal'
+notice_extent = window_extent(notice)
+notice_height = notice_extent[1][1]
+atlas = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
+border_height = float(atlas.find("Image[@name='WindowTopEdge']").get('height')) / 4
+for name in ('Message', 'Dismiss', 'Close'):
+    area = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))
+    # Derive the content bounds from the existing scaled atlas border and actual panel height.
+    assert area[1][0] * notice_height >= border_height and area[3][0] * notice_height <= notice_height - border_height, name
+print('shared title, close button, list insets, event field and single goals entry verified')
