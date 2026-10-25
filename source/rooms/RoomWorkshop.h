@@ -23,6 +23,7 @@
 
 enum class TrapType;
 enum class TileVisual;
+class GiftBoxItem;
 
 class RoomWorkshopTileData : public TileData
 {
@@ -46,6 +47,7 @@ public:
     bool mCanHaveCraftedTrap;
 };
 
+//! \brief Crafts traps and cracks researched item boxes using the existing workshop work cycle.
 class RoomWorkshop: public Room{
 public:
     RoomWorkshop(GameMap* gameMap);
@@ -53,23 +55,39 @@ public:
     RoomType getType() const override
     { return mRoomType; }
 
+    //! \brief Advances box cracking before starting the next trap job.
     void doUpkeep() override;
+    //! \brief Accepts item boxes only when this workshop has tools and a centre spot.
+    bool hasCarryEntitySpot(GameEntity* entity) override;
+    //! \brief Returns an available centre tile for delivery of an item box.
+    Tile* askSpotForCarriedEntity(GameEntity* entity) override;
+    //! \brief Retains delivered boxes on the workshop floor for the next crack job.
+    void notifyCarryingStateChanged(Creature* carrier, GameEntity* entity) override;
+    //! \brief Returns whether the current job cracks an item box.
+    bool hasCrackJob() const { return mCrackBox != nullptr; }
+    //! \brief Returns the configured crack effort with the matching researched tools multiplier.
+    double getNeededCrackPoints() const;
     //! \brief Returns the trap type currently being crafted, or TrapType::nullTrapType if
     //! the workshop is idle.
     TrapType getCurrentProductionType() const { return mTrapType; }
-    //! \brief Returns the work points collected for the trap currently being crafted.
-    int32_t getProductionPoints() const { return mPoints; }
+    //! \brief Returns whole work points for the production display; fractional progress stays stored.
+    int32_t getProductionPoints() const { return static_cast<int32_t>(mPoints); }
+    //! \brief Allows work on trap or box jobs when a centre work spot is available.
     bool hasOpenCreatureSpot(Creature* c) override;
     bool addCreatureUsingRoom(Creature* c) override;
     void removeCreatureUsingRoom(Creature* c) override;
+    //! \brief Combines workshop work progress and retains pending box ownership during room merging.
     void absorbRoom(Room *r) override;
+    //! \brief Earns fractional workshop points using research and the wearer's Craftsman effect.
     bool useRoom(Creature& creature, bool forced) override;
 
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
     
 protected:
+    //! \brief Saves trap work and optional pending box work after normal room data.
     void exportToStream(std::ostream& os) const override;
+    //! \brief Reads workshop work while accepting old records without a box job.
     bool importFromStream(std::istream& is) override;
 
     RoomWorkshopTileData* createTileData(Tile* tile) override;
@@ -79,7 +97,12 @@ private:
     //!\brief checks if a tile is available in the workshop to place a new crafted trap
     uint32_t countCraftedItemsOnRoom();
     Tile* checkIfAvailableSpot();
-    int32_t mPoints;
+    //! \brief Work points retain fractional research and equipment contributions.
+    double mPoints;
+    //! \brief The current box job, its stable save name and fractional work progress.
+    GiftBoxItem* mCrackBox = nullptr;
+    std::string mCrackBoxName;
+    double mCrackPoints = 0.0;
     TrapType mTrapType;
     void getCreatureWantedPos(Creature* creature, Tile* tileSpot,
         Ogre::Real& wantedX, Ogre::Real& wantedY);

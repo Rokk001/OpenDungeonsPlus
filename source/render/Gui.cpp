@@ -1924,12 +1924,14 @@ void Gui::arrangeActionButtonPanels(CEGUI::Window* gameSheet)
     arrangeSpellButtons(gameSheet->getChild(TAB_SPELLS));
 }
 
+//! \brief Fits the available room buttons, including the merchant, garden and laboratory.
 void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
 {
     rooms->getChild("DestroyRoomButton")->hide();
     arrangeActionButtons(rooms, {"DormitoryButton", "HatcheryButton", "LibraryButton", "TrainingHallButton",
         "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
-        "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton", "GuardRoomButton", "PrayerTempleButton"});
+        "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton", "GuardRoomButton", "PrayerTempleButton",
+        "MerchantButton", "HerbGardenButton", "AlchemyLabButton"});
 }
 
 void Gui::arrangeTrapButtons(CEGUI::Window* traps)

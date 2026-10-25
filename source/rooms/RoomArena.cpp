@@ -16,6 +16,7 @@
  */
 
 #include "rooms/RoomArena.h"
+#include "game/CreatureMerchantAI.h"
 #include "ODApplication.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
@@ -299,6 +300,7 @@ void RoomArena::doUpkeep()
 }
 
 
+//! \brief Updates pit moods and gives waiting keeper bags to the fight's winner.
 void RoomArena::updatePitMood()
 {
     ConfigManager& config = ConfigManager::getSingleton();
@@ -361,7 +363,10 @@ void RoomArena::updatePitMood()
         // The fight is over, the last creature standing is proud of itself
         mFightOngoing = false;
         if(lastActive != nullptr)
+        {
             lastActive->addPitMood(config.getRoomConfigDoubleOrDefault("PitMoodVictor", 0.0));
+            CreatureMerchantAI::collectArenaGifts(*lastActive);
+        }
     }
 }
 

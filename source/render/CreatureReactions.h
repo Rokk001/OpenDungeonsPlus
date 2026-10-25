@@ -176,6 +176,7 @@ public:
     //! \brief Client hook: the server sent a cosmetic event (only when cosmetic events were agreed on). Mood
     //! changes, fear, waiting for work and the full treasury are shown here. The other kinds (carried gold,
     //! melee result, missile launch, finished digging) are left to the code that shows them.
+    //! \brief Shows cosmetic game events, including a brewer's smoke and following sweat reaction.
     void noteCosmeticEvent(const CosmeticEvent& event);
 
     //! \brief Ends the running reaction of the creature and forgets the waiting ones. Needed before the creature
@@ -412,6 +413,7 @@ private:
     //! distance cheer, and the crowd of the arena cheers (confetti and shouting of the room ambience)
     void scanArenaSpectators();
     //! \brief True if the creature stands in a room where the work is done with the attack animation
+    //! \brief Distinguishes room work, harvesting and brewing from combat attack clips.
     bool isWorkingInRoom(const Creature* creature) const;
     //! \brief True if the creature type, group, job and sleep need allow the variant.
     bool isVariantAllowed(const Creature* creature, const ReactionVariant& variant) const;

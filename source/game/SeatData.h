@@ -36,6 +36,7 @@ class SeatData
 {
 public:
     // Constructors
+    //! \brief Creates seat data with the default shared merchant and laboratory values.
     SeatData();
 
     inline void setId(int id)
@@ -106,6 +107,18 @@ public:
 
     uint32_t getNbRooms(RoomType roomType) const;
 
+    //! \brief Returns the per-seat merchant margin in percentage points.
+    int32_t getMerchantMargin() const { return mMerchantMargin; }
+    //! \brief Returns the fair/profit reservation mode stored for this seat.
+    const std::string& getMerchantMode() const { return mMerchantMode; }
+    //! \brief Stores validated merchant settings received by the server's settings handler.
+    void setMerchantSettings(int32_t margin, const std::string& mode)
+    { mMerchantMargin = margin; mMerchantMode = mode; }
+    //! \brief Returns the stored laboratory production mode.
+    int32_t getLabMode() const { return mLabMode; }
+    //! \brief Stores a laboratory mode validated by the server's settings handler.
+    void setLabMode(int32_t mode) { mLabMode = mode; }
+
     //! \brief True when the seat once had a library and has none left, for example
     //! because an enemy took it over. The spells researched there cannot be used
     //! until a library is owned again.
@@ -126,14 +139,26 @@ public:
 
     //! \brief functions to transfer Seat data through network. Note that they should not be overriden as
     //! unit tests use them to get the data from the Seat (without having to take Seat and all its dependencies)
+    //! \brief Reads full seat data and its appended shared room settings.
     bool importFromPacket(ODPacket& is);
+    //! \brief Writes full seat data and its appended shared room settings.
     void exportToPacket(ODPacket& os) const;
+    //! \brief Reads changing seat values followed by shared room settings.
     bool importFromPacketForUpdate(ODPacket& is);
+    //! \brief Writes changing seat values followed by shared room settings.
     void exportToPacketForUpdate(ODPacket& os) const;
 
     static std::string displayAsString(const SeatData* seat);
 
 protected:
+    //! \brief Reads the shared room-settings data without adopting incomplete values.
+    bool importItemSettingsFromPacket(ODPacket& packet);
+    //! \brief Writes the merchant and laboratory values shared by full and update packets.
+    void exportItemSettingsToPacket(ODPacket& packet) const;
+    //! \brief Per-seat margin, fair/profit reservation mode and laboratory mode.
+    int32_t mMerchantMargin;
+    std::string mMerchantMode;
+    int32_t mLabMode;
     //! \brief The seat id. Allows to identify this seat. Must be unique per level file.
     int mId;
 

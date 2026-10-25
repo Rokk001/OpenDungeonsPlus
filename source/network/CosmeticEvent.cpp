@@ -17,6 +17,7 @@
 
 #include "network/CosmeticEvent.h"
 
+//! \brief Recognizes the supported event numbers, including workshop opening and cauldron smoke.
 bool CosmeticEvent::isKnownType() const
 {
     return (mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
@@ -24,9 +25,12 @@ bool CosmeticEvent::isKnownType() const
             (mType == static_cast<int32_t>(CosmeticEventType::casinoResult)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::keeperWealth)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::hitResult)) ||
-            (mType == static_cast<int32_t>(CosmeticEventType::attackTurn)));
+            (mType == static_cast<int32_t>(CosmeticEventType::attackTurn)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::boxCracked)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)));
 }
 
+//! \brief Returns the diagnostic name of a known cosmetic event without changing its wire number.
 std::string CosmeticEvent::typeString() const
 {
     switch(mType)
@@ -69,6 +73,10 @@ std::string CosmeticEvent::typeString() const
             return "hitResult";
         case static_cast<int32_t>(CosmeticEventType::attackTurn):
             return "attackTurn";
+        case static_cast<int32_t>(CosmeticEventType::boxCracked):
+            return "boxCracked";
+        case static_cast<int32_t>(CosmeticEventType::cauldronBang):
+            return "cauldronBang";
         default:
             break;
     }

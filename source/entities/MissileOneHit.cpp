@@ -19,6 +19,7 @@
 
 #include "entities/Building.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "entities/CombatDamage.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
@@ -108,7 +109,7 @@ void MissileOneHit::setCreatureDamageRange(double phyMin, double phyMax, double 
     mHasCreatureDamageRange = true;
 }
 
-//! \brief Resolves creature-shot accuracy, avoidance and damage range while keeping building damage deterministic.
+//! \brief Resolves shot accuracy, damage and equipment effects after a landed impact.
 void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
 {
     if(entity->getObjectType() == GameEntityType::creature && isCreatureShot() && usesCreatureHitRoll())
@@ -129,8 +130,11 @@ void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
     }
     // The shot is critical when its roll succeeds (rolled here, after the hit roll and the avoidance above): every
     // damage value is multiplied before the defense of the target is subtracted
+    Creature* shooter = getGameMap()->getCreature(mShooterName);
     const bool critical = CombatDamage::rollCriticalChance(mShotCritChance);
-    const double criticalFactor = critical ? ConfigManager::getSingleton().getCritDamageMultiplier() : 1.0;
+    const double executioner = shooter == nullptr ? 0.0 : shooter->getItemEffect("Executioner");
+    const double criticalFactor = critical ? ConfigManager::getSingleton().getCritDamageMultiplier() + executioner : 1.0;
+    const double itemFactor = shooter == nullptr ? 1.0 : ItemEffects::targetDamageFactor(*shooter, *entity);
     double damageDone = 0.0;
     double rawDamage = (mPhysicalDamage + mMagicalDamage + mElementDamage) * criticalFactor;
     if(mHasCreatureDamageRange && entity->getObjectType() == GameEntityType::creature)
@@ -138,25 +142,36 @@ void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
         double phyMin = mPhysicalDamageMin, phyMax = mPhysicalDamageMax;
         double magMin = mMagicalDamageMin, magMax = mMagicalDamageMax;
         double eleMin = mElementDamageMin, eleMax = mElementDamageMax;
+        phyMin *= itemFactor;
+        phyMax *= itemFactor;
+        magMin *= itemFactor;
+        magMax *= itemFactor;
+        eleMin *= itemFactor;
+        eleMax *= itemFactor;
         if(critical)
-            CombatDamage::applyCriticalToRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax);
+            CombatDamage::applyCriticalToRange(phyMin, phyMax, magMin, magMax, eleMin, eleMax, executioner);
         const double damage = CombatDamage::roll(*static_cast<Creature*>(entity),
             phyMin, phyMax, magMin, magMax, eleMin, eleMax, &rawDamage) * mCreatureStrength;
         rawDamage *= mCreatureStrength;
         damageDone = entity->takeDamage(this, damage, 0.0, 0.0, 0.0, tile, getKoEnemyCreature());
     }
     else
-        damageDone = entity->takeDamage(this, 0.0, mPhysicalDamage * criticalFactor, mMagicalDamage * criticalFactor,
-            mElementDamage * criticalFactor, tile, getKoEnemyCreature());
+        damageDone = entity->takeDamage(this, 0.0, mPhysicalDamage * criticalFactor * itemFactor,
+            mMagicalDamage * criticalFactor * itemFactor, mElementDamage * criticalFactor * itemFactor,
+            tile, getKoEnemyCreature());
     mHasHit = true;
 
+    if(shooter != nullptr && entity->getObjectType() == GameEntityType::creature)
+        ItemEffects::onHit(*shooter, *static_cast<Creature*>(entity), damageDone, false, 0.0);
+
     // Tell the clients what the shot did (cosmetic only, the damage above is already done)
-    if(!mShooterName.empty() && (entity->getObjectType() == GameEntityType::creature))
+    if(usesCreatureHitRoll() && !mShooterName.empty() && (entity->getObjectType() == GameEntityType::creature))
     {
         Creature* creature = static_cast<Creature*>(entity);
         creature->fireHitResult(mShooterName, damageDone, rawDamage, true, critical);
     }
-    else if(critical && (damageDone > 0.0) && (tile != nullptr) && !mShooterName.empty())
+    else if(entity->getObjectType() != GameEntityType::creature && critical && (damageDone > 0.0)
+        && (tile != nullptr) && !mShooterName.empty())
     {
         // A critical shot on a building: the feedback plays on the shooter (if it is still there)
         Creature* shooter = getGameMap()->getCreature(mShooterName);
@@ -166,10 +181,11 @@ void MissileOneHit::hurt(Tile* tile, GameEntity* entity)
     }
 }
 
+//! \brief Reports a missed single-target shot, leaving area explosions without individual miss events.
 void MissileOneHit::missileStopped()
 {
     // A shot at a creature that ended without hurting anything: it hit a wall or the creature was gone from the tile
-    if(mHasHit || mShooterName.empty() || mTargetName.empty())
+    if(!usesCreatureHitRoll() || mHasHit || mShooterName.empty() || mTargetName.empty())
         return;
 
     Creature* target = getGameMap()->getCreature(mTargetName);

@@ -23,6 +23,14 @@
 
 #include <istream>
 
+//! \brief Keeps specialized room jobs in the existing room-work lifecycle and activity classification.
+bool CreatureAction::isRoomWorkAction(CreatureActionType actionType)
+{
+    return actionType == CreatureActionType::useRoom || actionType == CreatureActionType::crackBox ||
+        actionType == CreatureActionType::harvestHerbs || actionType == CreatureActionType::brewPotion;
+}
+
+//! \brief Returns the diagnostic name of existing and appended item/room actions.
 std::string CreatureAction::toString(CreatureActionType actionType)
 {
     switch (actionType)
@@ -108,8 +116,17 @@ std::string CreatureAction::toString(CreatureActionType actionType)
         return "tunnel";
     case CreatureActionType::possessed:
         return "possessed";
+    case CreatureActionType::sellItem:
+        return "sellItem";
+    case CreatureActionType::buyItem:
+        return "buyItem";
     case CreatureActionType::reloadTrap:
         return "reloadTrap";
+    case CreatureActionType::pickupItem: return "pickupItem";
+    case CreatureActionType::stealItem: return "stealItem";
+    case CreatureActionType::crackBox: return "crackBox";
+    case CreatureActionType::harvestHerbs: return "harvestHerbs";
+    case CreatureActionType::brewPotion: return "brewPotion";
 
     default:
         assert(false);

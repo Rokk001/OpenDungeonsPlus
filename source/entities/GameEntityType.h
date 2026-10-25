@@ -41,7 +41,10 @@ enum class GameEntityType
     trapEntity,
     skillEntity,
     giftBoxEntity,
-    lavaRock
+    lavaRock,
+    itemBagEntity,
+    merchantEntity,
+    herbBundleEntity
 };
 
 ODPacket& operator<<(ODPacket& os, const GameEntityType& type);

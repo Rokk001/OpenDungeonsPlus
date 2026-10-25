@@ -63,6 +63,7 @@
 
 namespace MapHandler {
 
+//! \brief Loads map state including optional item bags while retaining legacy maps without that section.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 {
     std::stringstream levelFile;
@@ -565,6 +566,13 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         return false;
     }
 
+    // Item bags are optional in older maps and saves.
+    const std::streampos itemBagPosition = levelFile.tellg();
+    levelFile >> nextParam;
+    levelFile.seekg(itemBagPosition);
+    if(nextParam == "[ItemBags]" && !readGameEntity(gameMap, "ItemBags", GameEntityType::itemBagEntity, levelFile))
+        return false;
+
     if(!readGameEntity(gameMap, "Missiles", GameEntityType::missileObject, levelFile))
     {
         OD_LOG_WRN("Invalid Missiles section");
@@ -585,6 +593,25 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     
     levelFile >> nextParam;
 
+    if(nextParam == "[HerbBundles]")
+    {
+        while(true)
+        {
+            levelFile >> nextParam;
+            if(!levelFile.good())
+                return false;
+            if(nextParam == "[/HerbBundles]")
+                break;
+            std::string remainder;
+            std::getline(levelFile, remainder);
+            std::stringstream bundleLine(nextParam + remainder);
+            GameEntity* bundle = Entities::getGameEntityFromStream(&gameMap, GameEntityType::herbBundleEntity, bundleLine);
+            if(bundle == nullptr)
+                return false;
+            bundle->addToGameMap();
+        }
+        levelFile >> nextParam;
+    }
     if(nextParam == "[Scripts]")
     {
         while(true)
@@ -717,6 +744,7 @@ bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType ty
     return true;
 }
 
+//! \brief Saves the map with item bags after gift boxes and the existing remaining sections.
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -927,6 +955,17 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     }
     levelFile << "[/GiftBoxEntity]" << std::endl;
 
+    levelFile << "\n[ItemBags]\n";
+    levelFile << "# SeatId Name MeshName PosX PosY PosZ opacity rotationAngle ItemInstanceLine\n";
+    for(RenderedMovableEntity* rendered : rendereds)
+    {
+        if(rendered->getObjectType() != GameEntityType::itemBagEntity)
+            continue;
+        GameEntity::exportToStream(rendered, levelFile);
+        levelFile << '\n';
+    }
+    levelFile << "[/ItemBags]\n";
+
     levelFile << "\n[Missiles]\n";
     levelFile << "# " << MissileObject::getMissileObjectStreamFormat() << "\n";
     for (RenderedMovableEntity* rendered : rendereds)
@@ -962,6 +1001,11 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << std::endl;
     }
     levelFile << "[/Chickens]" << std::endl;
+    levelFile << "\n[HerbBundles]\n";
+    for(RenderedMovableEntity* rendered : rendereds)
+        if(rendered->getObjectType() == GameEntityType::herbBundleEntity)
+            levelFile << *rendered << "\n";
+    levelFile << "[/HerbBundles]\n";
 
     if(!gameMap.getLevelScript().isEmpty())
     {

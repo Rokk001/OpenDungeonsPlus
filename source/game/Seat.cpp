@@ -84,6 +84,7 @@ TileStateNotified::TileStateNotified():
 }
 
 
+//! \brief Creates seat state with its merchant margin from the shared room settings.
 Seat::Seat(GameMap* gameMap) :
     mGameMap(gameMap),
     mPlayer(nullptr),
@@ -106,6 +107,7 @@ Seat::Seat(GameMap* gameMap) :
     mConfigFactionIndex(-1),
     mKoCreatures(true)
 {
+    mMerchantMargin = ConfigManager::getSingleton().getRoomConfigInt32("MerchantMarginDefault");
 }
 
 void Seat::addGoal(Goal* g)
@@ -1099,7 +1101,7 @@ Seat* Seat::createRogueSeat(GameMap* gameMap)
 }
 
 
-//! \brief Loads seat state, including optional first-arrival history.
+//! \brief Loads seat state, including optional first-arrival history and shared room settings.
 bool Seat::importSeatFromStream(std::istream& is)
 {
     std::string str;
@@ -1271,7 +1273,7 @@ bool Seat::importSeatFromStream(std::istream& is)
             int32_t type;
             uint32_t amount;
             if(!(is >> type >> amount) || (type <= static_cast<int32_t>(GiftBoxType::skill)) ||
-               (type >= static_cast<int32_t>(GiftBoxType::nbTypes)))
+               (type >= static_cast<int32_t>(GiftBoxType::item)))
             {
                 return false;
             }
@@ -1296,6 +1298,27 @@ bool Seat::importSeatFromStream(std::istream& is)
         }
         if(!(is >> str))
             return false;
+    }
+    // Optional shared room settings; older saves keep the constructor defaults.
+    if(str == "[Merchant]")
+    {
+        int32_t margin = 0;
+        int32_t labMode = 0;
+        std::string mode;
+        if(!(is >> margin >> mode >> labMode) || margin < 0 ||
+            margin > ConfigManager::getSingleton().getRoomConfigInt32("MerchantMarginMax") ||
+            (mode != "fair" && mode != "profit") || labMode < 0 || labMode > 2)
+            return false;
+        if(!(is >> str) || str != "[/Merchant]" || !(is >> str))
+            return false;
+        setMerchantSettings(margin, mode);
+        setLabMode(labMode);
+    }
+    if(str == "[MerchantBalance]")
+    {
+        if(!(is >> mMerchantGoldRemainder >> str) || !std::isfinite(mMerchantGoldRemainder)
+            || mMerchantGoldRemainder < 0.0 || mMerchantGoldRemainder >= 1.0 || str != "[/MerchantBalance]"
+            || !(is >> str)) return false;
     }
     if(str != "[SkillNotAllowed]")
     {
@@ -1471,7 +1494,7 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
-//! \brief Saves seat state and the classes whose first arrival was announced.
+//! \brief Saves seat state, shared room settings and the classes whose first arrival was announced.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1575,6 +1598,9 @@ bool Seat::exportSeatToStream(std::ostream& os) const
             os << className << "\n";
         os << "[/AnnouncedCreatureClasses]\n";
     }
+
+    os << "[Merchant]\t" << mMerchantMargin << '\t' << mMerchantMode << '\t' << mLabMode << "\t[/Merchant]\n";
+    os << "[MerchantBalance] " << mMerchantGoldRemainder << " [/MerchantBalance]\n";
 
     os << "[SkillNotAllowed]" << std::endl;
     for(SkillType type : mSkillNotAllowed)
@@ -1881,8 +1907,30 @@ SkillType Seat::getFirstSkillPending() const
     return mSkillPending.at(0);
 }
 
+//! \brief Deposits whole merchant proceeds and retains their fractional remainder across deals and saves.
+void Seat::addMerchantGold(double amount)
+{
+    mMerchantGoldRemainder += amount;
+    const int32_t whole = static_cast<int32_t>(std::floor(mMerchantGoldRemainder));
+    mMerchantGoldRemainder -= whole;
+    if(whole > 0) mGameMap->addGoldToSeat(whole, getId());
+}
+
+//! \brief Keeps the last twenty deals seat-wide, including non-potion deals in the brewing lookback.
+void Seat::recordMerchantDeal(const std::string& text, const std::string& potion, bool soldToBuyer)
+{
+    static const size_t HISTORY_SIZE = 20;
+    mMerchantHistory.push_back(text);
+    mMerchantPotionHistory.push_back(std::make_pair(potion, soldToBuyer));
+    while(mMerchantHistory.size() > HISTORY_SIZE) mMerchantHistory.pop_front();
+    while(mMerchantPotionHistory.size() > HISTORY_SIZE) mMerchantPotionHistory.pop_front();
+}
+
+//! \brief Stores one existing special type, excluding skill books and workshop item boxes.
 void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
 {
+    if(type <= GiftBoxType::skill || type >= GiftBoxType::item)
+        return;
     uint32_t index = static_cast<uint32_t>(type);
     mStoredSpecialBoxes.push_back(std::pair<int32_t, uint32_t>(static_cast<int32_t>(type), amount));
     if(mStoredSpecials.size() <= index)
@@ -1891,8 +1939,11 @@ void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
     ++mStoredSpecials[index];
 }
 
+//! \brief Uses only stored special bonuses, never workshop-only item boxes.
 bool Seat::useStoredSpecial(GiftBoxType type)
 {
+    if(type <= GiftBoxType::skill || type >= GiftBoxType::item)
+        return false;
     std::vector<std::pair<int32_t, uint32_t> >::iterator it = mStoredSpecialBoxes.begin();
     while((it != mStoredSpecialBoxes.end()) && (it->first != static_cast<int32_t>(type)))
         ++it;

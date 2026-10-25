@@ -67,6 +67,11 @@
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
 #include "entities/Weapon.h"
+#include "entities/ItemEffects.h"
+#include "creatureaction/CreatureActionPickupItem.h"
+#include "creatureaction/CreatureActionStealItem.h"
+#include "game/CreatureMerchantAI.h"
+#include "entities/ItemInstance.h"
 
 
 
@@ -148,6 +153,21 @@
 #include <utility>
 
 
+
+//! \brief Number of hand slots visible when the viewing seat does not own the creature.
+static const std::size_t VISIBLE_ITEM_HAND_SLOTS = 2;
+
+//! \brief Returns a slot's catalogue name and quality, with a dash for an empty slot.
+static std::string getItemSlotDisplayText(const ItemInstance* item, const GameMap* gameMap)
+{
+    if(item == nullptr)
+        return "-";
+
+    if(!item->mPotionId.empty())
+        return item->getDisplayName(gameMap);
+    const std::string description = item->describe(gameMap);
+    return description.substr(0, description.find('\n')) + " [" + qualityName(item->mQuality) + "]";
+}
 
 static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 
@@ -284,7 +304,8 @@ static std::string effectRefreshKey(const CreatureEffect& effect)
 static bool isStackingEffect(const CreatureEffect& effect)
 {
     const std::string& name = effect.getEffectName();
-    return name == EFFECT_NAME_STRENGTH || name == EFFECT_NAME_SPEED || name == EFFECT_NAME_DEFENSE;
+    return name == EFFECT_NAME_STRENGTH || name == EFFECT_NAME_SPEED || name == EFFECT_NAME_DEFENSE ||
+        name == "Bleed" || name == "Potion";
 }
 }
 
@@ -317,6 +338,8 @@ const uint32_t Creature::NB_OVERLAY_HEALTH_VALUES = 8;
 const uint32_t Creature::MANA_RING_STEPS = 63;
 //! \brief Label in front of the current mana in a creature save, so it cannot be mistaken for the appearance token
 static const std::string MANA_SAVE_LABEL = "Mana=";
+static const std::string MERCHANT_MOOD_SAVE_LABEL = "MerchantMood=";
+static const std::string GOLD_REMAINDER_SAVE_LABEL = "GoldRemainder=";
 
 //! \brief Returns the mana ring step 0 .. Creature::MANA_RING_STEPS for a mana value: floor(mana / maxMana x steps).
 //! \param mana The current mana.
@@ -785,6 +808,8 @@ Creature::Creature(GameMap* gameMap) :
 //! \brief Frees the active skills made from the skill tree and, on a client, clears the highlighted creature pointer.
 Creature::~Creature()
 {
+    if(getIsOnServerMap())
+        unregisterHeldEpics();
     // The active skills made from the skill tree belong to the creature
     for(CreatureSkill* skill : mTreeSkills)
         delete skill;
@@ -906,6 +931,7 @@ void Creature::removeFromGameMap(GameMap* gameMap)
     getGameMap()->removeActiveObject(this);
 }
 
+//! \brief Describes the legacy creature fields and optional trailing appearance, skill and item data.
 std::string Creature::getCreatureStreamFormat()
 {
     std::string format = MovableGameEntity::getMovableGameEntityStreamFormat();
@@ -914,21 +940,19 @@ std::string Creature::getCreatureStreamFormat()
 
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
-            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]";
+            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]";
 
     return format;
 }
 
-//! \brief Writes the creature to a stream; the skill state is the last, optional part.
+//! \brief Writes the creature, its optional skill state and its trailing tagged item block.
 void Creature::exportToStream(std::ostream& os) const
 {
     MovableGameEntity::exportToStream(os);
     os << mDefinition->getClassName() << "\t";
     os << getLevel() << "\t" << mExp << "\t";
-    if(getHP() < mMaxHP)
-        os << getHP();
-    else
-        os << "max";
+    // Numeric health preserves the current value while aura sources are rebuilt after loading all holders.
+    os << getHP();
     os << "\t" << mWakefulness << "\t" << mHunger << "\t" << mGoldCarried;
 
     // Check creature weapons
@@ -971,6 +995,7 @@ void Creature::exportToStream(std::ostream& os) const
 
     // Current mana as a labelled token after the appearance, missing in old saves (they load with full mana)
     os << "\t" << MANA_SAVE_LABEL << mMana;
+    os << "\tMerchantMood=" << mMerchantMood << "\tGoldRemainder=" << mGoldRemainder;
 
     // Optional skill state (after the mana token), missing in old saves: their points are spent again at load
     if(mSkillBuild.mSeed != 0)
@@ -978,9 +1003,10 @@ void Creature::exportToStream(std::ostream& os) const
         os << "\t" << SKILL_BUILD_MARKER << " ";
         CreatureSkillTree::writeBuild(mSkillBuild, os);
     }
+    exportItemsToStream(os);
 }
 
-//! \brief Reads the creature from a stream; the appearance and the skill state at the end are optional.
+//! \brief Reads legacy creature data with optional appearance, mana, skill state and item data.
 bool Creature::importFromStream(std::istream& is)
 {
     // Beware: A generic class name might be used here so we shouldn't use mDefinition
@@ -1054,6 +1080,22 @@ bool Creature::importFromStream(std::istream& is)
     std::string appearanceToken;
     while(is >> appearanceToken)
     {
+        if(appearanceToken.compare(0, MERCHANT_MOOD_SAVE_LABEL.size(), MERCHANT_MOOD_SAVE_LABEL) == 0 ||
+            appearanceToken.compare(0, GOLD_REMAINDER_SAVE_LABEL.size(), GOLD_REMAINDER_SAVE_LABEL) == 0)
+        {
+            const bool merchantMood = appearanceToken.compare(0, MERCHANT_MOOD_SAVE_LABEL.size(), MERCHANT_MOOD_SAVE_LABEL) == 0;
+            const std::string value = appearanceToken.substr(merchantMood ? MERCHANT_MOOD_SAVE_LABEL.size() : GOLD_REMAINDER_SAVE_LABEL.size());
+            char* end = nullptr;
+            const double loaded = std::strtod(value.c_str(), &end);
+            if(value.empty() || end == nullptr || *end != '\0' || !std::isfinite(loaded)) return false;
+            if(merchantMood) mMerchantMood = loaded;
+            else
+            {
+                if(loaded < 0.0 || loaded >= 1.0) return false;
+                mGoldRemainder = loaded;
+            }
+            continue;
+        }
         if(appearanceToken.compare(0, MANA_SAVE_LABEL.size(), MANA_SAVE_LABEL) == 0)
         {
             const std::string manaValue = appearanceToken.substr(MANA_SAVE_LABEL.size());
@@ -1074,6 +1116,11 @@ bool Creature::importFromStream(std::istream& is)
         if(appearanceToken == SKILL_BUILD_MARKER)
         {
             if(!CreatureSkillTree::readBuild(is, mSkillBuild))
+                return false;
+        }
+        else if(appearanceToken == "[Items]")
+        {
+            if(!importItemsFromStream(is))
                 return false;
         }
         else
@@ -1182,10 +1229,472 @@ void Creature::setAppearanceFromServer(const CreatureAppearance& appearance)
     mAppearance = appearance;
 }
 
+namespace
+{
+//! \brief Writes one nullable item slot in the compact save format.
+void writeItemSlot(std::ostream& stream, const std::unique_ptr<ItemInstance>& item)
+{
+    stream << ' ';
+    if(item.get() == nullptr)
+        stream << "none";
+    else
+        item->exportToStream(stream);
+}
+
+//! \brief Reads one nullable save slot without consuming data belonging to following slots.
+bool readItemSlot(std::istream& stream, std::unique_ptr<ItemInstance>& item)
+{
+    std::string id;
+    if(!(stream >> id))
+        return false;
+    if(id == "none")
+    {
+        item.reset();
+        return true;
+    }
+    std::unique_ptr<ItemInstance> loaded(new ItemInstance);
+    if(!loaded->importFromStream(stream, id))
+        return false;
+    item = std::move(loaded);
+    return true;
+}
+
+//! \brief Writes a packet slot with a presence bit, masking private slots for foreign seats.
+void writeItemSlotPacket(ODPacket& packet, const std::unique_ptr<ItemInstance>& item, bool visible)
+{
+    const bool present = visible && item.get() != nullptr;
+    packet << present;
+    if(present)
+        item->exportToPacket(packet);
+}
+
+//! \brief Reads a nullable packet slot, retaining no partially received instance.
+bool readItemSlotPacket(ODPacket& packet, std::unique_ptr<ItemInstance>& item)
+{
+    bool present = false;
+    if(!(packet >> present))
+        return false;
+    if(!present)
+    {
+        item.reset();
+        return true;
+    }
+    std::unique_ptr<ItemInstance> loaded(new ItemInstance);
+    if(!loaded->importFromPacket(packet))
+        return false;
+    item = std::move(loaded);
+    return true;
+}
+}
+
+//! \brief Writes every carried item in the optional trailing creature block.
+void Creature::exportItemsToStream(std::ostream& stream) const
+{
+    stream << " [Items]";
+    for(const std::unique_ptr<ItemInstance>& item : mEquipment)
+        writeItemSlot(stream, item);
+    stream << ' ' << mPotionSlots.size();
+    for(const std::unique_ptr<ItemInstance>& item : mPotionSlots)
+        writeItemSlot(stream, item);
+    for(const std::unique_ptr<ItemInstance>& item : mInventory)
+        writeItemSlot(stream, item);
+    stream << " [/Items]";
+}
+
+//! \brief Loads a complete carried-item block and reconstructs its share of the Epic registry.
+bool Creature::importItemsFromStream(std::istream& stream)
+{
+    static const uint32_t MAX_POTION_SLOTS = 3;
+    std::array<std::unique_ptr<ItemInstance>, 6> equipment;
+    std::array<std::unique_ptr<ItemInstance>, 4> inventory;
+    std::vector<std::unique_ptr<ItemInstance>> potions;
+    for(std::unique_ptr<ItemInstance>& item : equipment)
+    {
+        if(!readItemSlot(stream, item))
+            return false;
+    }
+    uint32_t count = 0;
+    if(!(stream >> count) || count > MAX_POTION_SLOTS)
+        return false;
+    potions.resize(count);
+    for(std::unique_ptr<ItemInstance>& item : potions)
+    {
+        if(!readItemSlot(stream, item))
+            return false;
+    }
+    for(std::unique_ptr<ItemInstance>& item : inventory)
+    {
+        if(!readItemSlot(stream, item))
+            return false;
+    }
+    std::string end;
+    if(!(stream >> end) || end != "[/Items]")
+        return false;
+    mEquipment = std::move(equipment);
+    mInventory = std::move(inventory);
+    mPotionSlots = std::move(potions);
+    for(const std::unique_ptr<ItemInstance>& item : mEquipment)
+    {
+        if(item.get() != nullptr)
+            getGameMap()->registerEpic(*item);
+    }
+    for(const std::unique_ptr<ItemInstance>& item : mInventory)
+    {
+        if(item.get() != nullptr)
+            getGameMap()->registerEpic(*item);
+    }
+    return true;
+}
+
+//! \brief Sends hand appearances to everyone and private equipment, potions and inventory only to the owner.
+void Creature::exportItemsToPacket(ODPacket& packet, const Seat* seat) const
+{
+    const bool ownData = seat != nullptr && seat == getSeat();
+    packet << mMaxHP;
+    for(size_t index = 0; index < mEquipment.size(); ++index)
+        writeItemSlotPacket(packet, mEquipment[index], ownData || index < 2);
+    packet << static_cast<uint32_t>(mPotionSlots.size());
+    for(const std::unique_ptr<ItemInstance>& item : mPotionSlots)
+        writeItemSlotPacket(packet, item, ownData);
+    for(const std::unique_ptr<ItemInstance>& item : mInventory)
+        writeItemSlotPacket(packet, item, ownData);
+    const uint32_t potionCount = ownData ? static_cast<uint32_t>(mPotionContributions.size()) : 0;
+    packet << potionCount;
+    if(ownData)
+    {
+        for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
+            packet << entry.second.first << entry.second.second;
+    }
+    const double guardWall = ownData ? getGameMap()->getItemAura(*this, "GuardWall") : 0.0;
+    const double rally = ownData ? getGameMap()->getItemAura(*this, "Rally") : 0.0;
+    packet << guardWall << rally;
+    packet << (ownData ? mMerchantMood : 0.0) << static_cast<uint8_t>(ownData ? mLastItemDeal : 0)
+        << (ownData ? mLastItemName : std::string());
+    if(ownData) { mLastItemDeal = 0; mLastItemName.clear(); }
+}
+
+//! \brief Adopts a complete item update and refreshes client hand meshes when their quality changes.
+bool Creature::importItemsFromPacket(ODPacket& packet)
+{
+    static const uint32_t MAX_POTION_SLOTS = 3;
+    std::array<std::unique_ptr<ItemInstance>, 6> equipment;
+    std::array<std::unique_ptr<ItemInstance>, 4> inventory;
+    std::vector<std::unique_ptr<ItemInstance>> potions;
+    double maximumHealth = 0.0;
+    if(!(packet >> maximumHealth) || !std::isfinite(maximumHealth) || maximumHealth < 0.0)
+        return false;
+    for(std::unique_ptr<ItemInstance>& item : equipment)
+    {
+        if(!readItemSlotPacket(packet, item))
+            return false;
+    }
+    uint32_t count = 0;
+    if(!(packet >> count) || count > MAX_POTION_SLOTS)
+        return false;
+    potions.resize(count);
+    for(std::unique_ptr<ItemInstance>& item : potions)
+    {
+        if(!readItemSlotPacket(packet, item))
+            return false;
+    }
+    for(std::unique_ptr<ItemInstance>& item : inventory)
+    {
+        if(!readItemSlotPacket(packet, item))
+            return false;
+    }
+    uint32_t contributionCount = 0;
+    if(!(packet >> contributionCount) || contributionCount > ConfigManager::getSingleton().getPotions().size())
+        return false;
+    std::vector<std::pair<std::string, double>> contributions;
+    for(uint32_t index = 0; index < contributionCount; ++index)
+    {
+        std::pair<std::string, double> value("", 0.0);
+        if(!(packet >> value.first >> value.second) || !std::isfinite(value.second))
+            return false;
+        contributions.push_back(value);
+    }
+    double guardWall = 0.0;
+    double rally = 0.0;
+    if(!(packet >> guardWall >> rally) || !std::isfinite(guardWall) || !std::isfinite(rally))
+        return false;
+    double merchantMood = 0.0;
+    uint8_t deal = 0;
+    std::string itemName;
+    if(!(packet >> merchantMood >> deal >> itemName) || !std::isfinite(merchantMood) || deal > 5) return false;
+    bool handChanged = false;
+    for(size_t index = 0; index < 2; ++index)
+    {
+        const ItemInstance* oldItem = mEquipment[index].get();
+        const ItemInstance* newItem = equipment[index].get();
+        if(oldItem == nullptr || newItem == nullptr)
+            handChanged = handChanged || oldItem != newItem;
+        else
+            handChanged = handChanged || oldItem->mDefinitionId != newItem->mDefinitionId || oldItem->mQuality != newItem->mQuality;
+    }
+    mEquipment = std::move(equipment);
+    mInventory = std::move(inventory);
+    mPotionSlots = std::move(potions);
+    mMaxHP = maximumHealth;
+    mClientPotionContributions = contributions;
+    mClientGuardWall = guardWall;
+    mClientRally = rally;
+    mMerchantMood = merchantMood;
+    if(deal != 0 && mDefinition != nullptr && isSocialFeedSource())
+    {
+        social::PostCategory category = social::PostCategory::Bought;
+        if(deal == 2) category = social::PostCategory::Bargain;
+        else if(deal == 3) category = social::PostCategory::Fleeced;
+        else if(deal == 4) category = social::PostCategory::Gift;
+        else if(deal == 5) category = social::PostCategory::EpicFind;
+        social::PostLog::getSingleton().addPost(getGameMap()->getTurnNumber(), getName(),
+            mDefinition->getClassName(), mDefinition->isWorker(), category, 0, itemName);
+        if(CreatureReactions::getSingletonPtr() != nullptr)
+        {
+            std::string event;
+            if(deal == 2) event = "ItemBargain";
+            else if(deal == 3) event = "ItemFleeced";
+            else if(deal == 4) event = "ItemGift";
+            else if(deal == 5) event = "ItemEpic";
+            if(!event.empty()) CreatureReactions::getSingleton().trigger(this, event);
+        }
+    }
+    if(handChanged && !getIsOnServerMap() && getEntityNode() != nullptr)
+    {
+        destroyMeshWeapons();
+        createMeshWeapons();
+    }
+    return true;
+}
+
+//! \brief Returns the sum of the requested bonus across worn slots.
+double Creature::getItemBonus(const std::string& kind) const
+{
+    double sum = 0.0;
+    for(const std::unique_ptr<ItemInstance>& item : mEquipment)
+    {
+        if(item.get() != nullptr)
+            sum += item->getBonus(kind);
+    }
+    return sum;
+}
+
+//! \brief Returns the sum of one special effect across worn slots.
+double Creature::getItemEffect(const std::string& id) const
+{
+    double sum = 0.0;
+    for(const std::unique_ptr<ItemInstance>& item : mEquipment)
+    {
+        if(item.get() != nullptr)
+            sum += item->getEffect(id);
+    }
+    return sum;
+}
+
+//! \brief Converts level-equivalent equipment bonuses to the wearer's natural attribute points.
+double Creature::getItemAttribute(const std::string& attribute) const
+{
+    if(mDefinition == nullptr)
+        return 0.0;
+    if(attribute == "Life")
+        return getItemBonus("Life") * mDefinition->getLifePerLevel();
+    if(attribute == "Mana")
+        return getItemBonus("Mana") * mDefinition->getManaPerLevel();
+    const std::string& group = mDefinition->getSkillGroup();
+    const bool dexterity = group == "archer" || group == "caster";
+    if(attribute == "Dexterity" && dexterity)
+        return getItemBonus("DamageAttribute") * mDefinition->getDexterityPerLevel();
+    if(attribute == "Strength" && !dexterity)
+        return getItemBonus("DamageAttribute") * mDefinition->getStrengthPerLevel();
+    return 0.0;
+}
+
+//! \brief Rebuilds derived equipment stats, preserving existing health rather than healing on an equip change.
+void Creature::itemsChanged()
+{
+    mNeedFireRefresh = true;
+    if(mDefinition == nullptr)
+        return;
+    buildStats();
+    mHp = std::min(mHp, mMaxHP);
+    mMana = std::min(mMana, getMaxMana());
+    computeCreatureOverlayHealthValue();
+}
+
+//! \brief Exchanges one equipment slot and returns the replaced item to its new holder.
+std::unique_ptr<ItemInstance> Creature::setEquipment(size_t slot, std::unique_ptr<ItemInstance> item)
+{
+    std::unique_ptr<ItemInstance> previous = std::move(mEquipment.at(slot));
+    mEquipment.at(slot) = std::move(item);
+    itemsChanged();
+    return previous;
+}
+
+//! \brief Exchanges one carried inventory slot and marks the creature for refresh.
+std::unique_ptr<ItemInstance> Creature::setInventorySlot(size_t slot, std::unique_ptr<ItemInstance> item)
+{
+    std::unique_ptr<ItemInstance> previous = std::move(mInventory.at(slot));
+    mInventory.at(slot) = std::move(item);
+    mNeedFireRefresh = true;
+    return previous;
+}
+
+//! \brief Exchanges one unstacked potion slot and marks it for refresh.
+std::unique_ptr<ItemInstance> Creature::setPotionSlot(size_t slot, std::unique_ptr<ItemInstance> item)
+{
+    std::unique_ptr<ItemInstance> previous = std::move(mPotionSlots.at(slot));
+    mPotionSlots.at(slot) = std::move(item);
+    mNeedFireRefresh = true;
+    return previous;
+}
+
+//! \brief Adds the second potion slot at level ten and the third at level twenty.
+void Creature::resizePotionSlots()
+{
+    static const uint32_t SECOND_SLOT_LEVEL = 10;
+    static const uint32_t THIRD_SLOT_LEVEL = 20;
+    size_t count = 1;
+    if(mLevel >= THIRD_SLOT_LEVEL)
+        count = 3;
+    else if(mLevel >= SECOND_SLOT_LEVEL)
+        count = 2;
+    if(mPotionSlots.size() < count)
+    {
+        mPotionSlots.resize(count);
+        mNeedFireRefresh = true;
+    }
+}
+
+//! \brief Multiplies the active contributions of a single potion kind.
+double Creature::getPotionFactor(const std::string& kind) const
+{
+    double factor = 1.0;
+    if(!getIsOnServerMap())
+    {
+        for(const std::pair<std::string, double>& entry : mClientPotionContributions)
+        {
+            if(entry.first == kind)
+                factor *= entry.second;
+        }
+        return factor;
+    }
+    for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
+    {
+        if(entry.second.first == kind)
+            factor *= entry.second.second;
+    }
+    return factor;
+}
+
+//! \brief Gives dexterity potions their two, four or six critical chance points.
+double Creature::getPotionCritChance() const
+{
+    static const double DEXTERITY_SMALL = 1.10;
+    static const double DEXTERITY_MEDIUM = 1.15;
+    static const double DEXTERITY_LARGE = 1.20;
+    double points = 0.0;
+    if(!getIsOnServerMap())
+    {
+        const double factor = getPotionFactor("DexterityChange");
+        if(factor >= DEXTERITY_LARGE) return 6.0;
+        if(factor >= DEXTERITY_MEDIUM) return 4.0;
+        if(factor >= DEXTERITY_SMALL) return 2.0;
+        return 0.0;
+    }
+    for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
+    {
+        if(entry.second.first != "DexterityChange")
+            continue;
+        if(entry.second.second >= DEXTERITY_LARGE)
+            points += 6.0;
+        else if(entry.second.second >= DEXTERITY_MEDIUM)
+            points += 4.0;
+        else if(entry.second.second >= DEXTERITY_SMALL)
+            points += 2.0;
+    }
+    return points;
+}
+
+//! \brief Applies one timed potion multiplier and scales current health only for a maximum-health potion.
+void Creature::setPotionContribution(const CreatureEffect* source, const std::string& kind, double value)
+{
+    const double oldMaximum = mMaxHP;
+    mPotionContributions[source] = std::make_pair(kind, value);
+    if(mDefinition == nullptr)
+        return;
+    buildStats();
+    if(kind == "MaxHPChange" && oldMaximum > 0.0)
+        mHp *= mMaxHP / oldMaximum;
+    mNeedFireRefresh = true;
+}
+
+//! \brief Removes one timed potion multiplier and reverses its health scaling without killing the creature.
+void Creature::removePotionContribution(const CreatureEffect* source)
+{
+    std::map<const CreatureEffect*, std::pair<std::string, double>>::iterator found = mPotionContributions.find(source);
+    if(found == mPotionContributions.end())
+        return;
+    const bool healthPotion = found->second.first == "MaxHPChange";
+    const double oldMaximum = mMaxHP;
+    mPotionContributions.erase(found);
+    if(mDefinition == nullptr)
+        return;
+    buildStats();
+    if(healthPotion && oldMaximum > 0.0 && mHp > 0.0)
+        mHp = std::max(1.0, mHp * mMaxHP / oldMaximum);
+    mMana = std::min(mMana, getMaxMana());
+    mNeedFireRefresh = true;
+}
+
+//! \brief Adds conditional item defense after the natural defense curve.
+double Creature::getItemDefenseFactor() const
+{
+    static const double LAST_STAND_HEALTH_SHARE = 0.25;
+    static const double BULWARK_RADIUS = 2.0;
+    double bonus = getItemBonus("Defense%") + getItemEffect("ThickPlates");
+    if(mMaxHP > 0.0 && mHp < mMaxHP * LAST_STAND_HEALTH_SHARE)
+        bonus += getItemEffect("LastStand");
+    if(getItemEffect("Bulwark") != 0.0)
+    {
+        for(const Creature* mate : getOwnCreaturesWithin(BULWARK_RADIUS))
+        {
+            if(mate != this)
+            {
+                bonus += getItemEffect("Bulwark");
+                break;
+            }
+        }
+    }
+    return (1.0 + bonus / 100.0) * getPotionFactor("DefenseChange");
+}
+
+//! \brief Ends every running freeze effect while preserving other effects.
+void Creature::endFreeze()
+{
+    for(EntityParticleEffect* particle : mEntityParticleEffects)
+    {
+        if(particle->getEntityParticleEffectType() != EntityParticleEffectType::creature)
+            continue;
+        CreatureParticleEffect* effect = static_cast<CreatureParticleEffect*>(particle);
+        if(effect->mEffect->getEffectName() != "Frozen")
+            continue;
+        effect->mEffect->releaseEffect(*this);
+        effect->mEffect->mNbTurnsEffect = 0.0;
+        effect->mNbTurnsEffect = 0;
+    }
+    mNeedFireRefresh = true;
+}
+
+//! \brief Returns natural sight extended by worn Far Sight effects.
+int32_t Creature::getTileSightRadius() const
+{
+    return mDefinition->getSightRadius() + static_cast<int32_t>(getItemEffect("FarSight"));
+}
+
 //! \brief Builds natural health and defenses with their combat curves, retaining other stat growth. The move%
 //! passives of the skills raise the speeds.
 void Creature::buildStats()
 {
+    resizePotionSlots();
     // Get the base value
     mMaxHP = mDefinition->getMinHp();
     mDigRate = mDefinition->getDigRate();
@@ -1200,12 +1709,18 @@ void Creature::buildStats()
 
     // Hit points follow the Life attribute level, so equipment can raise them even at level 1, then the hp% passives
     mMaxHP = CreatureProgression::combatStatAt(mMaxHP, mDefinition->getHpPerLevel(), getLifeLevel(),
-        CreatureProgression::hpMultiplierAt) * (1.0 + getSkillPassive("hp%") / 100.0);
+        CreatureProgression::hpMultiplierAt) * (1.0 + getSkillPassive("hp%") / 100.0) * getPotionFactor("MaxHPChange");
 
     // Improve the stats to the current level
     double multiplier = mLevel - 1;
     if (multiplier <= 0.0)
     {
+        for(const std::pair<const CreatureEffect* const, CreatureDefenseBonus>& entry : mDefenseContributions)
+        {
+            mPhysicalDefense += entry.second.mPhy;
+            mMagicalDefense += entry.second.mMag;
+            mElementDefense += entry.second.mEle;
+        }
         applyMovePassive();
         return;
     }
@@ -1222,13 +1737,19 @@ void Creature::buildStats()
         CreatureProgression::damageMultiplier);
     mElementDefense = CreatureProgression::combatStat(mElementDefense, mDefinition->getElementDefPerLevel(), mLevel,
         CreatureProgression::damageMultiplier);
+    for(const std::pair<const CreatureEffect* const, CreatureDefenseBonus>& entry : mDefenseContributions)
+    {
+        mPhysicalDefense += entry.second.mPhy;
+        mMagicalDefense += entry.second.mMag;
+        mElementDefense += entry.second.mEle;
+    }
     applyMovePassive();
 }
 
 //! \brief Multiplies the three move speeds by the move% passives of the skills.
 void Creature::applyMovePassive()
 {
-    const double factor = 1.0 + getSkillPassive("move%") / 100.0;
+    const double factor = mSpeedModifier * (1.0 + getSkillPassive("move%") / 100.0);
     mGroundSpeed *= factor;
     mWaterSpeed *= factor;
     mLavaSpeed *= factor;
@@ -1252,7 +1773,7 @@ Creature* Creature::getCreatureFromPacket(GameMap* gameMap, ODPacket& is)
     return creature;
 }
 
-//! \brief Writes the full creature data for a client, the skill state last.
+//! \brief Writes full creature data with private item slots masked for foreign seats.
 void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     MovableGameEntity::exportToPacket(os, seat);
@@ -1269,9 +1790,9 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mWakefulness;
     os << mHunger;
 
-    os << mGroundSpeed;
-    os << mWaterSpeed;
-    os << mLavaSpeed;
+    os << getMoveSpeedGround();
+    os << getMoveSpeedWater();
+    os << getMoveSpeedLava();
 
     os << mPhysicalDefense;
     os << mMagicalDefense;
@@ -1311,12 +1832,13 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mMana;
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
-    // The skill state, then the last field: the carried gold, shown as a sack on the thief
+    // The skill state and carried gold are followed by the visible item slots and active owner contributions.
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
+    exportItemsToPacket(os, seat);
 }
 
-//! \brief Reads the full creature data sent by the server, the skill state last.
+//! \brief Reads full creature data, including the trailing rolled item slots.
 void Creature::importFromPacket(ODPacket& is)
 {
     MovableGameEntity::importFromPacket(is);
@@ -1382,6 +1904,8 @@ void Creature::importFromPacket(ODPacket& is)
     }
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
+
+    OD_ASSERT_TRUE(importItemsFromPacket(is));
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -1541,8 +2065,10 @@ void Creature::setLevel(unsigned int level)
     mNeedFireRefresh = true;
 }
 
+//! \brief Drops carried gold and eligible item instances while preserving the existing death presentation.
 void Creature::dropCarriedEquipment()
 {
+    dropItems(!isAlive());
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
@@ -1586,6 +2112,20 @@ void Creature::dropCarriedEquipment()
 //! Spaces authoritative standing bodies before their next action without changing action targets.
 void Creature::doUpkeep()
 {
+    const double oldMaximumHealth = mMaxHP;
+    buildStats();
+    if(oldMaximumHealth != mMaxHP)
+    {
+        mHp = std::min(mHp, mMaxHP);
+        mNeedFireRefresh = true;
+    }
+    if(isAlive() && !isActionInList(CreatureActionType::fight))
+    {
+        static const double MENDING_SECONDS = 10.0;
+        const double healing = getItemEffect("Mending") / 100.0 * mMaxHP / (MENDING_SECONDS * ODApplication::turnsPerSecond);
+        if(healing > 0.0)
+            heal(healing);
+    }
     // No manifest was available when the creature spawned: assign the appearance as soon as it is
     // (or the stored one was never checked against a catalog): the appearance is derived or checked as soon as one is
     if(getIsOnServerMap())
@@ -1735,7 +2275,9 @@ void Creature::doUpkeep()
     // If the creature is temporary KO, it should do nothing
     if(mKoTurnCounter > 0)
     {
-        --mKoTurnCounter;
+        mKoTurnCounter = std::max(0.0, mKoTurnCounter - 1.0);
+        if(mKoTurnCounter == 0.0)
+            mKoDroppedThisFight = false;
         if(mKoTurnCounter > 0)
             return;
 
@@ -1788,7 +2330,7 @@ void Creature::doUpkeep()
 
         
         // If the counter reaches 0, the creature is dead
-        ++mKoTurnCounter;
+        mKoTurnCounter = std::min(0.0, mKoTurnCounter + 1.0);
         if(mKoTurnCounter < 0)
             return;
 
@@ -1991,6 +2533,13 @@ void Creature::doUpkeep()
             mPitMood = std::min(0.0, mPitMood + decay);
     }
 
+    // The merchant contribution fades by its configured points per simulation turn.
+    if(mMerchantMood != 0.0)
+    {
+        const double decay = ConfigManager::getSingleton().getRoomConfigDouble("MerchantMoodDecay");
+        if(mMerchantMood > 0.0) mMerchantMood = std::max(0.0, mMerchantMood - decay);
+        else mMerchantMood = std::min(0.0, mMerchantMood + decay);
+    }
     // The casino mood fades towards 0
     if(mCasinoMood != 0.0)
     {
@@ -2004,6 +2553,8 @@ void Creature::doUpkeep()
 
     // The skill tree: reset window, reset and the active skills of changed ranks
     upkeepSkillTree();
+
+    decidePotion();
 
     // A frozen creature can neither move nor fight
     if(isFrozen())
@@ -2111,7 +2662,7 @@ void Creature::doUpkeep()
     // Keep combat in its current attack tile; free waiting creatures may use adjacent floor space.
     const CreatureActionType standingAction = mActions.empty() ? CreatureActionType::nb : mActions.back()->getType();
     Room* standingRoom = getPositionTile()->getCoveringRoom();
-    const bool freeRoomStand = standingAction == CreatureActionType::useRoom && standingRoom != nullptr &&
+    const bool freeRoomStand = CreatureAction::isRoomWorkAction(standingAction) && standingRoom != nullptr &&
         (standingRoom->getType() == RoomType::temple || standingRoom->getType() == RoomType::guardRoom ||
          standingRoom->getType() == RoomType::arena || standingRoom->getType() == RoomType::hatchery);
     // Prayer spots, guard posts and watch banners remain bound to their assigned tile.
@@ -2202,6 +2753,7 @@ void Creature::handleHeartDefence()
     pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
 }
 
+//! \brief Chooses equipment, trade and visible item actions among the existing idle needs.
 bool Creature::handleIdleAction()
 {
     setAnimationState(EntityAnimation::idle_anim);
@@ -2263,6 +2815,15 @@ bool Creature::handleIdleAction()
        (mGoldFee > 0))
     {
         pushAction(Utils::make_unique<CreatureActionGetFee>(*this));
+        return true;
+    }
+
+    decideEquipment();
+    if(CreatureMerchantAI::decideTrade(*this))
+        return true;
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::pickupItem))
+    {
+        pushAction(Utils::make_unique<CreatureActionPickupItem>(*this));
         return true;
     }
 
@@ -2332,6 +2893,12 @@ bool Creature::handleIdleAction()
         (Random::Double(70.0, 80.0) < mHunger))
     {
         pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::stealItem) && Random::Double(0.0, 1.0) < 0.2)
+    {
+        pushAction(Utils::make_unique<CreatureActionStealItem>(*this));
         return true;
     }
 
@@ -2928,6 +3495,39 @@ double Creature::getClientPoseSpeedFactor() const
     return factor;
 }
 
+//! \brief Adds Second Wind to the movement percentage sum only while below half health.
+double Creature::getConditionalItemMoveFactor() const
+{
+    static const double SECOND_WIND_HEALTH_SHARE = 0.5;
+    if(mMaxHP <= 0.0 || mHp >= mMaxHP * SECOND_WIND_HEALTH_SHARE)
+        return 1.0;
+    return 1.0 + getItemEffect("SecondWind") / (100.0 + getSkillPassive("move%"));
+}
+
+//! \brief Returns ground speed with its current health-dependent equipment bonus.
+double Creature::getMoveSpeedGround() const
+{
+    if(!getIsOnServerMap())
+        return mGroundSpeed;
+    return mGroundSpeed * getConditionalItemMoveFactor();
+}
+
+//! \brief Keeps non-swimmers immobile while applying water equipment speed to swimmers.
+double Creature::getMoveSpeedWater() const
+{
+    if(!getIsOnServerMap())
+        return mWaterSpeed;
+    return mWaterSpeed * getConditionalItemMoveFactor() * (1.0 + getItemEffect("Wader") / 100.0);
+}
+
+//! \brief Keeps creatures unable to cross lava immobile while applying lava speed effects.
+double Creature::getMoveSpeedLava() const
+{
+    if(!getIsOnServerMap())
+        return mLavaSpeed;
+    return mLavaSpeed * getConditionalItemMoveFactor() * (1.0 + getItemEffect("LavaStride") / 100.0);
+}
+
 //! \brief Returns the attack rating scaled by the Dexterity attribute level and the ar% passives, plus the unscaled
 //! ratings of both held items.
 double Creature::getAttackRating() const
@@ -2938,7 +3538,7 @@ double Creature::getAttackRating() const
         rating += mWeaponL->getAttackRating();
     if(mWeaponR != nullptr)
         rating += mWeaponR->getAttackRating();
-    return rating;
+    return rating * getPotionFactor("DexterityChange");
 }
 
 //! \brief Returns the defense rating scaled by the Dexterity attribute level and the dr% passives, plus the unscaled
@@ -2951,7 +3551,7 @@ double Creature::getDefenseRating() const
         rating += mWeaponL->getDefenseRating();
     if(mWeaponR != nullptr)
         rating += mWeaponR->getDefenseRating();
-    return rating;
+    return rating * getPotionFactor("DexterityChange");
 }
 
 namespace
@@ -3015,62 +3615,63 @@ double attributeLevel(double perLevel, unsigned int level, double equipmentBonus
 double Creature::getStrength() const
 {
     return mDefinition->getStrength() + mDefinition->getStrengthPerLevel() * (mLevel - 1) +
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength);
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength) + getItemAttribute("Strength");
 }
 
 //! \brief Returns the Dexterity attribute at the current level, including the equipment bonus.
 double Creature::getDexterity() const
 {
     return mDefinition->getDexterity() + mDefinition->getDexterityPerLevel() * (mLevel - 1) +
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity);
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity) + getItemAttribute("Dexterity");
 }
 
 //! \brief Returns the Life attribute at the current level, including the equipment bonus.
 double Creature::getLife() const
 {
     return mDefinition->getLife() + mDefinition->getLifePerLevel() * (mLevel - 1) +
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life);
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life) + getItemAttribute("Life");
 }
 
 //! \brief Returns the Mana attribute at the current level, including the equipment bonus.
 double Creature::getMana() const
 {
     return mDefinition->getMana() + mDefinition->getManaPerLevel() * (mLevel - 1) +
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana);
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana) + getItemAttribute("Mana");
 }
 
 //! \brief Returns the Strength attribute level LA (the creature level plus the equipment bonus in levels).
 double Creature::getStrengthLevel() const
 {
     return attributeLevel(mDefinition->getStrengthPerLevel(), mLevel,
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength));
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::strength) + getItemAttribute("Strength"));
 }
 
 //! \brief Returns the Dexterity attribute level LA (the creature level plus the equipment bonus in levels).
 double Creature::getDexterityLevel() const
 {
     return attributeLevel(mDefinition->getDexterityPerLevel(), mLevel,
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity));
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity) + getItemAttribute("Dexterity"));
 }
 
 //! \brief Returns the Life attribute level LA (the creature level plus the equipment bonus in levels).
 double Creature::getLifeLevel() const
 {
     return attributeLevel(mDefinition->getLifePerLevel(), mLevel,
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life));
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::life) + getItemAttribute("Life"));
 }
 
 //! \brief Returns the Mana attribute level LA (the creature level plus the equipment bonus in levels).
 double Creature::getManaLevel() const
 {
     return attributeLevel(mDefinition->getManaPerLevel(), mLevel,
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana));
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::mana) + getItemAttribute("Mana"));
 }
 
 //! \brief Returns the critical chance bonus in percent that both held items add.
 double Creature::getEquipmentCritChance() const
 {
-    return equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::critChance);
+    return equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::critChance) + getItemBonus("CritChance") +
+        getItemEffect("KeenEye") + getItemEffect("Fortune") + getPotionCritChance();
 }
 
 //! \brief Returns the critical chance in percent: CritChancePerDexterity x (start Dexterity of the type + equipment
@@ -3079,7 +3680,7 @@ double Creature::getCritChance() const
 {
     ConfigManager& config = ConfigManager::getSingleton();
     const double dexterity = mDefinition->getDexterity() +
-        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity);
+        equipmentBonus(mWeaponL, mWeaponR, EquipmentAttribute::dexterity) + getItemAttribute("Dexterity");
     return config.getCritChancePerDexterity() * dexterity +
         config.getCritChancePerLevel() * static_cast<double>(mLevel - 1) +
         mDefinition->getCritChanceBonus() + getSkillPassive("crit") + getEquipmentCritChance();
@@ -3125,10 +3726,30 @@ bool Creature::carriesBowOrCrossbow() const
 //! \param stat The passive stat name (hp%, ar%, dr%, dmg%, spell%, alldmg%, crit, cd%, avoid, move%, ...).
 double Creature::getSkillPassive(const std::string& stat) const
 {
-    if(mSkillBuild.mRanks.empty())
-        return 0.0;
-
-    return CreatureSkillTree::passiveSum(ConfigManager::getSingleton().getCreatureSkillTree(), mSkillBuild, stat);
+    double sum = CreatureSkillTree::passiveSum(ConfigManager::getSingleton().getCreatureSkillTree(), mSkillBuild, stat);
+    static const std::map<std::string, std::string> BONUS_STATS = {
+        {"hp%", "MaxHP%"}, {"cd%", "Cooldown%"}, {"avoid", "Avoid"}, {"ar%", "AttackRating%"},
+        {"dr%", "DefenseRating%"}, {"move%", "MoveSpeed%"}, {"wake%", "Wakefulness%"},
+        {"manacost%", "ManaCost%"}, {"dig%", "Dig%"}, {"claim%", "Claim%"}, {"carry%", "Carry%"}
+    };
+    std::map<std::string, std::string>::const_iterator bonus = BONUS_STATS.find(stat);
+    if(bonus != BONUS_STATS.end())
+        sum += getItemBonus(bonus->second);
+    const bool caster = mDefinition != nullptr && mDefinition->getSkillGroup() == "caster";
+    if((caster && stat == "spell%") || (!caster && stat == "dmg%"))
+        sum += getItemBonus("Damage%");
+    if(stat == "move%") sum += getItemEffect("SwiftStep");
+    else if(stat == "avoid") sum += getItemEffect("LightStep");
+    else if(stat == "wake%") sum += getItemEffect("Tireless") + getItemEffect("Stamina");
+    else if(stat == "manacost%") sum += getItemEffect("ClearMind");
+    else if(stat == "cd%") sum += getItemEffect("Swift");
+    else if(stat == "dig%") sum += getItemEffect("GoldNose");
+    if(getGameMap() != nullptr)
+    {
+        if(stat == "dr%") sum += getIsOnServerMap() ? getGameMap()->getItemAura(*this, "GuardWall") : mClientGuardWall;
+        else if(stat == "hp%") sum += getIsOnServerMap() ? getGameMap()->getItemAura(*this, "Rally") : mClientRally;
+    }
+    return sum;
 }
 
 //! \brief Returns the rank of the skill tree entry with the given id, 0 when the creature has none.
@@ -3750,7 +4371,7 @@ void Creature::importSkillBuildFromPacket(ODPacket& is)
 //! \brief Returns the size of the mana pool: Mana attribute (with equipment) x ManaPerPoint of the type.
 double Creature::getMaxMana() const
 {
-    return std::max(0.0, getMana() * mDefinition->getManaPerPoint());
+    return std::max(0.0, getMana() * mDefinition->getManaPerPoint() * getPotionFactor("MaxManaChange"));
 }
 
 //! \brief Returns the mana the creature has right now (0 .. getMaxMana()).
@@ -3854,7 +4475,8 @@ void Creature::regenerateMana()
         return;
     }
 
-    setCurrentMana(mMana + maxMana / refillTurns);
+    const double itemFactor = 1.0 + (getItemEffect("Focus") + getItemEffect("ManaSpring")) / 100.0;
+    setCurrentMana(mMana + maxMana / refillTurns * itemFactor * getPotionFactor("ManaRegenChange"));
 }
 
 double Creature::getPhysicalDefense() const
@@ -3865,7 +4487,7 @@ double Creature::getPhysicalDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getPhysicalDefense();
 
-    return std::max(0.0, defense + getRelationshipCombatModifier());
+    return std::max(0.0, defense * getItemDefenseFactor() + getRelationshipCombatModifier());
 }
 
 double Creature::getMagicalDefense() const
@@ -3876,7 +4498,7 @@ double Creature::getMagicalDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getMagicalDefense();
 
-    return std::max(0.0, defense + getRelationshipCombatModifier());
+    return std::max(0.0, defense * getItemDefenseFactor() * (1.0 + getItemEffect("SpellWard") / 100.0) + getRelationshipCombatModifier());
 }
 
 double Creature::getElementDefense() const
@@ -3887,7 +4509,7 @@ double Creature::getElementDefense() const
     if (mWeaponR != nullptr)
         defense += mWeaponR->getElementDefense();
 
-    return std::max(0.0, defense + getRelationshipCombatModifier());
+    return std::max(0.0, defense * getItemDefenseFactor() * (1.0 + getItemEffect("FireWard") / 100.0) + getRelationshipCombatModifier());
 }
 
 void Creature::checkLevelUp()
@@ -3910,7 +4532,7 @@ void Creature::checkLevelUp()
     mExp = 0.0;
 }
 
-//! \brief Writes the changing creature data for a client, the skill state last.
+//! \brief Writes changing creature data with public hands and owner-only private item slots.
 void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat) 
 {
     MovableGameEntity::exportToPacketForUpdate(os, seat);
@@ -3933,9 +4555,9 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     }
 
     os << moodValue;
-    os << mGroundSpeed;
-    os << mWaterSpeed;
-    os << mLavaSpeed;
+    os << getMoveSpeedGround();
+    os << getMoveSpeedWater();
+    os << getMoveSpeedLava();
     os << mSpeedModifier;
 
     int seatPrisonId = -1;
@@ -3949,12 +4571,13 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportProgressToPacket(os, seat);
     // Current mana, next to the health value (the maximum follows from type, level and equipment)
     os << mMana;
-    // The skill state, then the last field: the carried gold, shown as a sack on the thief
+    // The skill state and carried gold are followed by the visible item slots and active owner contributions.
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
+    exportItemsToPacket(os, seat);
 }
 
-//! \brief Reads the changing creature data sent by the server, the skill state last.
+//! \brief Reads changing creature data and refreshes equipment presentation.
 void Creature::updateFromPacket(ODPacket& is)
 {
     // What changed in this update can become a post of the feed. The state is only copied
@@ -4037,6 +4660,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mMana);
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
+    OD_ASSERT_TRUE(importItemsFromPacket(is));
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -4087,6 +4711,14 @@ void Creature::socialCreatureRemoved()
         getDefinition()->getClassName(), getDefinition()->isWorker(), mOverlayMoodValue);
 }
 
+//! \brief Adds the mood points of the keeper's margin or a direct gift without an invented cap.
+void Creature::addMerchantMood(double points)
+{ mMerchantMood += points; mNeedFireRefresh = true; }
+
+//! \brief Keeps one owner-only deal notification until its next creature update is written.
+void Creature::setLastItemDeal(uint8_t deal, const std::string& name)
+{ mLastItemDeal = deal; mLastItemName = name; mNeedFireRefresh = true; }
+
 void Creature::socialEvent(social::PostCategory category)
 {
     if(!isSocialFeedSource())
@@ -4106,11 +4738,12 @@ double Creature::getExperienceProgress() const
     return needed > 0.0 ? std::max(0.0, std::min(1.0, mExp / needed)) : 0.0;
 }
 
+//! \brief Sends the active room-work or attack recovery without dropping specialized job progress.
 void Creature::exportProgressToPacket(ODPacket& os, const Seat* seat) const
 {
     if(!ODServer::getSingleton().supportsCreatureProgress(seat->getPlayer()))
         return;
-    const bool working = getActivity().action == CreatureActionType::useRoom &&
+    const bool working = CreatureAction::isRoomWorkAction(getActivity().action) &&
         mJobCooldown > 0 && mJobCooldownDuration > 0;
     // The attack recovery can be a fraction of a turn, so both values travel as double
     const double remaining = working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns;
@@ -4172,6 +4805,7 @@ void Creature::importMoodFromPacket(ODPacket& is)
     mMoodValue = static_cast<CreatureMoodLevel>(mood);
 }
 
+//! \brief Derives activity and assigned room from ordinary and specialized room actions.
 CreatureActivity Creature::getActivity() const
 {
     CreatureActivity activity;
@@ -4194,7 +4828,7 @@ CreatureActivity Creature::getActivity() const
            type != CreatureActionType::parkToTile)
             activity.task = type;
 
-        if(type != CreatureActionType::useRoom)
+        if(!CreatureAction::isRoomWorkAction(type))
             continue;
 
         const Room* room = static_cast<const CreatureActionUseRoom*>(it->get())->getRoom();
@@ -4266,10 +4900,10 @@ void Creature::updateTilesInSight()
         return;
 
     // The tiles with sight radius without constraints
-    mTilesWithinSightRadius = getGameMap()->circularRegion(posTile->getX(), posTile->getY(), mDefinition->getSightRadius());
+    mTilesWithinSightRadius = getGameMap()->circularRegion(posTile->getX(), posTile->getY(), getTileSightRadius());
 
     // Only the tiles the creature can "see".
-    mVisibleTiles = getGameMap()->visibleTiles(posTile->getX(), posTile->getY(), mDefinition->getSightRadius());
+    mVisibleTiles = getGameMap()->visibleTiles(posTile->getX(), posTile->getY(), getTileSightRadius());
 }
 
 std::vector<GameEntity*> Creature::getVisibleEnemyObjects()
@@ -4802,12 +5436,20 @@ std::string Creature::getRelationshipTooltip()
     return line;
 }
 
+//! \brief Returns the unmasked server-side statistics for existing internal callers.
 std::string Creature::getStatsText()
+{
+    return getStatsText(getSeat());
+}
+
+//! \brief Builds statistics while masking new private item fields for foreign viewing seats.
+std::string Creature::getStatsText(const Seat* viewer)
 {
     // The creatures are not refreshed at each turn so this information is relevant in the server
     // GameMap only
     const std::string formatTitleOn = "[font='MedievalSharp-10'][colour='FFF2C860']";
     const std::string formatTitleOff = "[font='MedievalSharp-8'][colour='FFE8DCC0']";
+    const bool showPrivateItems = viewer == getSeat();
 
     std::stringstream tempSS;
     tempSS << formatTitleOn << "Characteristics" << formatTitleOff << std::endl;
@@ -4821,6 +5463,32 @@ std::string Creature::getStatsText()
     tempSS << "Critical chance: " << formatFixedNumber(getCritChance()) << " %" << std::endl;
     tempSS << "Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())
         << std::endl;
+    tempSS << "Equipment: ";
+    for(std::size_t index = 0; index < mEquipment.size(); ++index)
+    {
+        if(index != 0)
+            tempSS << " / ";
+        const ItemInstance* item = (showPrivateItems || index < VISIBLE_ITEM_HAND_SLOTS) ?
+            mEquipment[index].get() : nullptr;
+        tempSS << getItemSlotDisplayText(item, getGameMap()) << formatTitleOff;
+    }
+    tempSS << std::endl << "Potions: ";
+    for(std::size_t index = 0; index < mPotionSlots.size(); ++index)
+    {
+        if(index != 0)
+            tempSS << " / ";
+        tempSS << getItemSlotDisplayText(showPrivateItems ? mPotionSlots[index].get() : nullptr, getGameMap())
+            << formatTitleOff;
+    }
+    tempSS << std::endl << "Inventory: ";
+    for(std::size_t index = 0; index < mInventory.size(); ++index)
+    {
+        if(index != 0)
+            tempSS << " / ";
+        tempSS << getItemSlotDisplayText(showPrivateItems ? mInventory[index].get() : nullptr, getGameMap())
+            << formatTitleOff;
+    }
+    tempSS << std::endl;
     tempSS << "Path: " << getSkillPathText() << std::endl;
     tempSS << "Skills: " << getSkillListText() << std::endl;
     tempSS << "Experience: " << mExp << std::endl;
@@ -5491,6 +6159,8 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         totalDamage *= creatureAttacking->getRelationshipRageFactor(getSeat());
     double damageDone = std::min(mHp, totalDamage);
     mHp -= damageDone;
+    if(getIsOnServerMap() && damageDone > 0.0)
+        ItemEffects::onDamageDealt(attacker, *this, damageDone);
     if(wasAlive && (damageDone > 0.0))
     {
         recordScriptEvent(*this, "attacked");
@@ -5533,7 +6203,8 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         {
             mHp = 1.0;
             recordScriptEvent(*this, "incapacitated");
-            mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked();
+            mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked() *
+                ItemEffects::remainingFactor(*this, "QuickRise");
             OD_LOG_INF("creature=" + getName() + " has been KO by " + attacker->getName());
             dropCarriedEquipment();
 
@@ -5614,12 +6285,13 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     return damageDone;
 }
 
+//! \brief Adds earned experience with the worn Trainer bonus.
 void Creature::receiveExp(double experience)
 {
     if (!std::isfinite(experience) || experience < 0 || mLevel >= MAX_LEVEL)
         return;
 
-    mExp += experience;
+    mExp += experience * (1.0 + getItemEffect("Trainer") / 100.0);
     mNeedFireRefresh = true;
 }
 
@@ -5712,11 +6384,13 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     receiveExp(1.5);
 }
 
+//! \brief Finds an exact queued action, with specialized room work included in ordinary room-use queries.
 bool Creature::isActionInList(CreatureActionType action) const
 {
     for (const std::unique_ptr<CreatureAction>& ca : mActions)
     {
-        if (ca.get()->getType() == action)
+        if (ca.get()->getType() == action ||
+            (action == CreatureActionType::useRoom && CreatureAction::isRoomWorkAction(ca->getType())))
             return true;
     }
     return false;
@@ -6795,7 +7469,7 @@ void Creature::fireChatMsgFurious()
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
 }
 
-//! \brief Resolves the creature definition, makes the skill list (server side, with the skill tree) and builds the stats.
+//! \brief Resolves the definition and builds authoritative server stats while preserving received client summaries.
 void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition)
 {
     bool setHpToStrHp = false;
@@ -6851,7 +7525,10 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
         initSkillBuild();
     }
 
-    buildStats();
+    if(getIsOnServerMap())
+        buildStats();
+    else
+        resizePotionSlots();
 
     // Now, the max hp is known. If needed, we set it
     if(setHpToStrHp)
@@ -7115,7 +7792,7 @@ DefenceChance::Outcome Creature::rollMeleeDefence(bool missile) const
 
     const CreatureDefinition::Avoidance avoidance = getDefinition()->getAvoidance();
     // The avoid passives add to the avoidance chance; a creature without avoidance kind dodges with their sum
-    const double avoidBonus = getSkillPassive("avoid");
+    const double avoidBonus = getSkillPassive("avoid") + (missile ? getItemEffect("Deflect") : 0.0);
     if((avoidance == CreatureDefinition::Avoidance::none && avoidBonus <= 0.0) ||
         (missile && avoidance == CreatureDefinition::Avoidance::parry))
         return DefenceChance::none;
@@ -7146,7 +7823,7 @@ DefenceChance::Outcome Creature::rollMeleeDefence(bool missile) const
     else if(avoidance == CreatureDefinition::Avoidance::block && hasShield)
     {
         kind = DefenceChance::shieldBlocked;
-        chance = DefenceChance::dodgeChance(getLevel(), config.getShieldBlockBase(), config.getShieldBlockPerLevel(),
+        chance = DefenceChance::dodgeChance(getLevel(), config.getShieldBlockBase() + getItemEffect("Block"), config.getShieldBlockPerLevel(),
             config.getShieldBlockMax());
     }
     else if(avoidance == CreatureDefinition::Avoidance::none)
@@ -7445,6 +8122,8 @@ void Creature::computeCreatureOverlayMoodValue()
 //! effect only refreshes the running one.
 void Creature::addCreatureEffect(CreatureEffect* effect)
 {
+    if(effect->getEffectName() == EFFECT_NAME_SPEED || effect->getEffectName() == "Frozen")
+        effect->startEffect(*this);
     // A strength, speed or defense effect that a running effect of the same source already provides only refreshes the
     // running one: the same skill or spell cast again does not stack
     if(isStackingEffect(*effect))
@@ -7767,11 +8446,13 @@ bool Creature::isHungry() const
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
 }
 
+//! \brief Ends knockout state and permits one item drop in the next fight.
 void Creature::resetKoTurns()
 {
     if(getIsOnServerMap())
         getGameMap()->getLevelScript().clearFatalShot(getName());
     mKoTurnCounter = 0;
+    mKoDroppedThisFight = false;
     mNeedFireRefresh = true;
 }
 
@@ -7780,19 +8461,23 @@ void Creature::knockOutToDeath()
     if(mKoTurnCounter < 0)
         return;
 
-    mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked();
+    mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked() *
+        ItemEffects::remainingFactor(*this, "QuickRise");
     OD_LOG_INF("creature=" + getName() + " has been knocked out");
     dropCarriedEquipment();
     computeCreatureOverlayMoodValue();
     mNeedFireRefresh = true;
 }
 
+//! \brief Stuns a living creature for the resisted duration without replacing a longer stun.
 void Creature::stun(int32_t nbTurns)
 {
     if(!isAlive() || (nbTurns <= 0) || (mKoTurnCounter < 0))
         return;
 
-    mKoTurnCounter = std::max(mKoTurnCounter, nbTurns);
+    const double resisted = nbTurns * ItemEffects::remainingFactor(*this, "ThickSkull") *
+        ItemEffects::remainingFactor(*this, "Steadfast");
+    mKoTurnCounter = std::max(mKoTurnCounter, resisted);
     computeCreatureOverlayMoodValue();
     clearActionQueue();
     mNeedFireRefresh = true;
@@ -7964,6 +8649,7 @@ void Creature::fleeFromTile(Tile* fearTile, double nbTurns)
     pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns));
 }
 
+//! \brief Applies a resisted temporary stun while retaining fractional duration.
 void Creature::stunForTurns(int32_t nbTurns)
 {
     // Only living creatures that are not already KO can be stunned
@@ -7972,7 +8658,8 @@ void Creature::stunForTurns(int32_t nbTurns)
 
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
-    mKoTurnCounter = nbTurns;
+    mKoTurnCounter = nbTurns * ItemEffects::remainingFactor(*this, "ThickSkull") *
+        ItemEffects::remainingFactor(*this, "Steadfast");
     computeCreatureOverlayMoodValue();
 }
 
@@ -8296,8 +8983,8 @@ int32_t Creature::getGoldCapacity() const
     return static_cast<int32_t>(std::floor(capacity + GOLD_CAPACITY_ROUNDING_EPSILON));
 }
 
-//! \brief Adds mined gold with a fraction: the whole part goes to the carried gold, the rest is kept for the next step.
-//! \param gold The mined gold of this step (not negative).
+//! \brief Applies signed gold proceeds or payments and retains the fractional balance.
+//! \param gold Positive proceeds or a negative payment.
 //! \return The whole part that was added to the carried gold.
 int32_t Creature::addGoldCarriedFraction(double gold)
 {

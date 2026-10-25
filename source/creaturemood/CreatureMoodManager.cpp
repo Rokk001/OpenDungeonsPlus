@@ -20,6 +20,7 @@
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/ItemEffects.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -72,26 +73,29 @@ CreatureMoodLevel CreatureMoodManager::getCreatureMoodLevel(int32_t moodModifier
     return CreatureMoodLevel::Furious;
 }
 
+//! \brief Adds mood modifiers after Iron Will reduces each negative one, then adds Charisma.
 int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creature)
 {
-    int32_t moodValue = 0;
+    double moodValue = 0.0;
     for(const CreatureMood* mood : creature.getDefinition()->getCreatureMoods())
     {
-        moodValue += mood->computeMood(creature);
+        moodValue += ItemEffects::moodModifier(creature, mood->computeMood(creature));
     }
 
     // The casino can raise or lower the mood of any creature
-    moodValue += Helper::round(creature.getCasinoMood());
+    moodValue += ItemEffects::moodModifier(creature, creature.getCasinoMood());
+    moodValue += ItemEffects::moodModifier(creature, creature.getMerchantMood());
     // Praying in a temple makes the creature feel better, whatever its other moods are
-    moodValue += creature.getPrayerRelief();
+    moodValue += ItemEffects::moodModifier(creature, creature.getPrayerRelief());
     // Make Happy and Make Unhappy specials
-    moodValue += creature.getSpecialMood();
+    moodValue += ItemEffects::moodModifier(creature, creature.getSpecialMood());
     // Fights in the arena
-    moodValue += Helper::round(creature.getPitMood());
+    moodValue += ItemEffects::moodModifier(creature, creature.getPitMood());
     // Creatures of the same keeper that it hates (only with relationships on)
-    moodValue += creature.getRelationshipMood();
+    moodValue += ItemEffects::moodModifier(creature, creature.getRelationshipMood());
+    moodValue += creature.getItemEffect("Charisma");
 
-    return moodValue;
+    return Helper::round(moodValue);
 }
 
 CreatureMood* CreatureMoodManager::clone(const CreatureMood* mood)

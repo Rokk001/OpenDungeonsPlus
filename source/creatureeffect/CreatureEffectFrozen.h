@@ -30,12 +30,14 @@ class CreatureEffectFrozen : public CreatureEffect
 public:
     //! \brief Creates the effect for the given number of turns.
     CreatureEffectFrozen(double nbTurnsEffect) :
-        CreatureEffect(nbTurnsEffect, "")
+        CreatureEffect(nbTurnsEffect, ""),
+        mItemResistanceApplied(false)
     {}
 
     //! \brief Creates an empty effect to be filled from a stream.
     CreatureEffectFrozen() :
-        CreatureEffect()
+        CreatureEffect(),
+        mItemResistanceApplied(true)
     {}
 
     virtual ~CreatureEffectFrozen()
@@ -47,9 +49,16 @@ public:
     //! \brief Reads the effect from the given stream.
     static CreatureEffectFrozen* load(std::istream& is);
 
+    //! \brief Shortens a newly applied freeze by the wearer's Thick Skull resistance.
+    void startEffect(Creature& creature) override;
+
 protected:
     //! \brief Nothing to update each turn: the frozen state is deduced from the effect (Creature::isFrozen).
     virtual void applyEffect(Creature& creature) override;
+
+private:
+    //! \brief A loaded remaining duration has already had its resistance applied.
+    bool mItemResistanceApplied;
 };
 
 #endif // CREATUREEFFECTFROZEN_H

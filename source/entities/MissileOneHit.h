@@ -69,6 +69,10 @@ public:
     void setShotCritChance(double chancePercent)
     { mShotCritChance = chancePercent; }
 
+    //! \brief Returns the shooter name for attributing item effects to projectile damage.
+    const std::string& getShooterName() const
+    { return mShooterName; }
+
     static MissileOneHit* getMissileOneHitFromStream(GameMap* gameMap, std::istream& is);
     static MissileOneHit* getMissileOneHitFromPacket(GameMap* gameMap, ODPacket& is);
 protected:
@@ -78,7 +82,7 @@ protected:
     bool importFromStream(std::istream& is) override;
     virtual void missileStopped() override;
 
-    //! \brief Resolves single-target hit and avoidance before damage and reports the actual result.
+    //! \brief Resolves hit and avoidance, applies equipment effects, and reports the actual damage.
     void hurt(Tile* tile, GameEntity* entity);
 
 protected:

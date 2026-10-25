@@ -36,6 +36,7 @@ std::function<bool()> CreatureActionLeaveDungeon::action()
         std::ref(mCreature));
 }
 
+//! \brief Leaves through an own portal and releases Epic registrations only when the holder leaves the map.
 bool CreatureActionLeaveDungeon::handleLeaveDungeon(Creature& creature)
 {
     Tile* myTile = creature.getPositionTile();
@@ -62,6 +63,7 @@ bool CreatureActionLeaveDungeon::handleLeaveDungeon(Creature& creature)
 
             // Remove the creature from the game map and into the deletion queue, it will be deleted
             // when it is safe, i.e. all other pointers to it have been wiped from the program.
+            creature.unregisterHeldEpics();
             creature.removeFromGameMap();
             creature.deleteYourself();
             return false;
