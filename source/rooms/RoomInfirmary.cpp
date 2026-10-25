@@ -332,7 +332,7 @@ Tile* RoomInfirmary::askSpotForCarriedEntity(GameEntity* entity)
     return nullptr;
 }
 
-//! rief Reuses a running carry's reservation before testing a new admission's payment.
+//! \brief Reuses a running carry's reservation before testing a new admission's payment.
 Tile* RoomInfirmary::reserveCot(Creature& creature, Creature& carrier)
 {
     // Saved room reservations resume before the server refills the saved treasury balance.
