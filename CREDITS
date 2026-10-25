@@ -1486,7 +1486,7 @@ assets-src/rooms/tavern/DuelBird.png    AI-generated with Codex    GPLv3+    Ori
 assets-src/rooms/tavern/Innkeeper.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures and retained Idle, Pour and Cheer actions, 2026-10-25
 assets-src/rooms/tavern/TavernCounter.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
 assets-src/rooms/tavern/TavernKeg.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
-assets-src/rooms/tavern/TavernMug.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+assets-src/rooms/tavern/TavernMug.blend    AI-generated with Codex    GPLv3+    Original Blender source with embedded textures and grip-centred origin for the existing right-hand weapon mount, 2026-10-25
 assets-src/rooms/tavern/TavernTable.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
 materials/scripts/TavernEffects.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
 materials/scripts/TavernFloor.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
@@ -1511,7 +1511,7 @@ models/Innkeeper.mesh    AI-generated with Codex    GPLv3+    Original dungeon t
 models/Innkeeper.skeleton    AI-generated with Codex    GPLv3+    Original Innkeeper rig and Idle, Pour and Cheer animation clips, 2026-10-25
 models/TavernCounter.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 models/TavernKeg.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
-models/TavernMug.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/TavernMug.mesh    AI-generated with Codex    GPLv3+    Original wooden mug exported with a grip-centred origin and the existing right-hand weapon-mount orientation, 2026-10-25
 models/TavernTable.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 models/Vomit.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 particles/Tavern.particle    AI-generated with Codex    GPLv3+    New standalone TavernSmoke and DuelBirds asset definitions, existing particle files unchanged, 2026-10-25
