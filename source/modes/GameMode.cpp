@@ -59,6 +59,7 @@
 #include "render/SocialWindow.h"
 #include "render/TextRenderer.h"
 #include "social/PostLog.h"
+#include "social/SocialGenerator.h"
 #include "social/SocialProfileCache.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
@@ -130,14 +131,15 @@ static const char* const PILE_HOVER_PREFIX = "Pile (";
 static const char* const ROOM_DIRT_HOVER_PREFIX = ". Dirt: ";
 
 //! \brief Hover text for a pile or blood stain lying on a tile: "Pile (<creature name>)" or "Blood". A pile wins when
-//! both lie on the tile.
+//! both lie on the tile. The creature is named with the readable class name used in the creature windows.
 //! \param tile The hovered tile.
 //! \return The text, empty if no pile or blood stain lies on the tile.
 static std::string getDirtPileHoverText(Tile* tile)
 {
     DirtPileEntity* pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile);
     if(pile != nullptr)
-        return std::string(PILE_HOVER_PREFIX) + pile->getCreatureClass() + ")";
+        return std::string(PILE_HOVER_PREFIX) + social::SocialGenerator::displayClassName(
+            social::SocialProfileCache::getSingleton().getData(), pile->getCreatureClass()) + ")";
 
     if(DirtPileEntity::getEntityOnTile(tile, DirtPileKind::blood) != nullptr)
         return BLOOD_HOVER_TEXT;
@@ -403,8 +405,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mCasinoX(-1),
     mCasinoY(-1),
     mCasinoPayout(1),
-    mCleanRoomX(-1),
-    mCleanRoomY(-1),
+    mCleanRoomName(),
     showTileDebugWindow(false),
     config(ConfigManager::getSingleton())
 {
@@ -2692,15 +2693,18 @@ void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
 
 void GameMode::showRoomCleanWindow(Tile* tile)
 {
-    mCleanRoomX = tile->getX();
-    mCleanRoomY = tile->getY();
-    setRoomCleanOrderShown(mCleanRoomX, mCleanRoomY, false);
+    Room* room = tile->getCoveringRoom();
+    if(room == nullptr)
+        return;
+
+    mCleanRoomName = room->getName();
+    setRoomCleanOrderShown(mCleanRoomName, false);
     mRootWindow->getChild("RoomCleanWindow")->show();
 
     // The order is kept by the server, so we ask it whether one is open
     ClientNotification* clientNotification = new ClientNotification(
         ClientNotificationType::askCleanRoom);
-    clientNotification->mPacket << mCleanRoomX << mCleanRoomY << false;
+    clientNotification->mPacket << mCleanRoomName << false;
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
@@ -2714,14 +2718,14 @@ bool GameMode::orderRoomClean(const CEGUI::EventArgs&)
 {
     ClientNotification* clientNotification = new ClientNotification(
         ClientNotificationType::askCleanRoom);
-    clientNotification->mPacket << mCleanRoomX << mCleanRoomY << true;
+    clientNotification->mPacket << mCleanRoomName << true;
     ODClient::getSingleton().queueClientNotification(clientNotification);
     return true;
 }
 
-void GameMode::setRoomCleanOrderShown(int tileX, int tileY, bool isOrdered)
+void GameMode::setRoomCleanOrderShown(const std::string& roomName, bool isOrdered)
 {
-    if((tileX != mCleanRoomX) || (tileY != mCleanRoomY))
+    if(roomName != mCleanRoomName)
         return;
 
     mRootWindow->getChild("RoomCleanWindow/RoomCleanButton")->setEnabled(!isOrdered);

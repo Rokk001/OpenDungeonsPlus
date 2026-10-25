@@ -198,7 +198,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool orderRoomClean(const CEGUI::EventArgs& = {});
     //! \brief Called when the server tells whether a prison or torture chamber has an open clean order. It is only
     //! shown if it is the room the window is open for; while the order is open the button is disabled.
-    void setRoomCleanOrderShown(int tileX, int tileY, bool isOrdered);
+    void setRoomCleanOrderShown(const std::string& roomName, bool isOrdered);
 
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
@@ -580,9 +580,8 @@ private:
     int mCasinoY;
     uint32_t mCasinoPayout;
 
-    //! \brief Tile of the prison or torture chamber whose clean-once window is open
-    int mCleanRoomX;
-    int mCleanRoomY;
+    //! \brief Unique name of the prison or torture chamber whose clean-once window is open (empty if none)
+    std::string mCleanRoomName;
 
     //! \brief whether to allow showing the window with debug Tile info under middlemouse button click
     bool showTileDebugWindow;
