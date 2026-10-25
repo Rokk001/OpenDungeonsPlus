@@ -54,6 +54,15 @@ check(next_build.read_version(real) == (major, minor, patch), 'read_version disa
 claude = (repo / 'CLAUDE.md').read_text()
 check('starts again at 1' in claude and 'next-build-number.py' in claude, 'CLAUDE.md lacks the build number reset rule')
 
+# The integrator build script computes the number itself and hands it to the configure script.
+build_script = (repo / 'scripts/win32/integrator-release-build.ps1').read_text()
+check('next-build-number.py' in build_script, 'integrator build script does not call next-build-number.py')
+check('configure-windows-prereqs.ps1" -BuildNumber $buildNumber' in build_script, 'integrator build script does not pass -BuildNumber to the configure script')
+check('--parallel 1' in build_script, 'integrator build script does not build with --parallel 1')
+check('--build-start' not in build_script and 'build-start-$Run.txt' in build_script, 'integrator build script does not record the build start time')
+check('Feature and fix windows never run a full build' in claude, 'CLAUDE.md lacks the rule that only the integrator builds')
+check('Kein Release- oder Abschlussbuild' not in claude, 'CLAUDE.md still allows a full build after a release')
+
 for message in failures:
     print('FAIL: ' + message)
 if failures:
