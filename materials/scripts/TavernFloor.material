@@ -10,9 +10,9 @@ vertex_program myTavernFloorVertexShader glsl
         param_named_auto projectionMatrix projection_matrix
         param_named_auto viewMatrix view_matrix
         param_named_auto worldMatrix world_matrix
-        param_named_auto lightMatrix texture_worldviewproj_matrix         
+        param_named_auto lightMatrix texture_worldviewproj_matrix
     }
-  
+
 }
 
 fragment_program myTavernFloorFragmentShader glsl
@@ -28,48 +28,48 @@ fragment_program myTavernFloorFragmentShader glsl
         param_named_auto lightCount light_count
         param_named_auto firstLightCastsShadows light_casts_shadows 0
         param_named_auto cameraPosition camera_position
-        param_named shadowingEnabled bool false                 
+        param_named shadowingEnabled bool false
     }
 }
 
 
 material TavernFloor //: RTSS/NormalMapping_MultiPass
 {
-    
+
     technique
     {
 
-        pass 
+        pass
         {
             vertex_program_ref myTavernFloorVertexShader
             {
-                
+
             }
             fragment_program_ref myTavernFloorFragmentShader
-            { 
+            {
                 param_named decalmap int 0
                 param_named normalmap int 1
                 param_named shadowmap int 3
-            }            
-            
-            
+            }
+
+
             // We use blending, so that we can see the underlying texture.
             texture_unit decalmap
             {
                 texture TavernFloor.png
             }
-        
+
             texture_unit normalmap
             {
                 texture TavernFloorNormal.png
-            }  
+            }
             texture_unit shadowmap
             {
                 content_type shadow
                 tex_address_mode clamp
-                filtering bilinear              
-                
-            }                 
+                filtering bilinear
+
+            }
         }
 
     }
