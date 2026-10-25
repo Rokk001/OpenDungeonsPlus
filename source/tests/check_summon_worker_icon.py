@@ -1,4 +1,4 @@
-"""Check the summon worker icon: shared image binding and the warm worker emblem in the icon atlas."""
+"""Check the summon worker icon: shared binding and the painted worker source in its doubled atlas slot."""
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
@@ -10,6 +10,7 @@ gui = (repo / 'source/render/Gui.cpp').read_text()
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 
 
+# Return a complete function body to check the existing spell-image binding.
 def function(text, signature):
     start = text.index(signature)
     end = text.index('{', start) + 1
@@ -28,14 +29,15 @@ for filename, prop in [('WindowTabSpells.layout', 'NormalImage'), ('WindowSkillT
     button = ET.parse(repo / 'gui' / filename).find('.//Window[@name="SummonWorkerButton"]')
     assert button.find(f'Property[@name="{prop}"]').get('value') == 'OpenDungeonsIcons/SummonWorkerButton'
 assert 'createSummonWorkerIcon' not in gui and 'colourNavigationAtlas' not in gui
-m = re.search(r'height="(\d+)" name="SummonWorkerButton" width="(\d+)" xPos="(\d+)" yPos="(\d+)"', (repo / 'gui/ODIcons.imageset').read_text())
-h, w, x, y = (int(m[i]) for i in (1, 2, 3, 4))
+images = ET.parse(repo / 'gui/ODIcons.imageset').findall('Image[@name="SummonWorkerButton"]')
+assert len(images) == 1, 'one registered summon worker icon'
+x, y, w, h = (int(images[0].get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
 tile = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.float32)[y:y + h, x:x + w]
 opaque = tile[..., 3] > 200
-assert (w, h) == (128, 128) and opaque.sum() > 0.6 * w * h
-assert tile[..., 3][0, 0] == 0 and tile[..., 3][16, 16] > 240 and opaque.sum() > 0.9 * w * h, 'square tile with slightly rounded corners, no round medallion'
-rgb = tile[opaque][:, :3]
-assert (rgb[:, 2] > rgb[:, 0] + 12).mean() < 0.01, 'no cold blue enamel'
-centre = tile[40:80, 40:88, :3].reshape(-1, 3)
-assert centre[:, 0].mean() > centre[:, 2].mean() + 40, 'ember coloured worker'
+assert (x, y, w, h) == (1536, 1280, 256, 256), 'same logical slot at double source resolution'
+assert opaque.sum() > 0.6 * w * h, 'painted worker tile has a visible body'
+source = np.array(Image.open(repo / 'assets-src/gui/icons/tiles/SummonWorkerButton.png').convert('RGBA'))
+assert np.array_equal(tile, source), 'registered slot contains the painted worker, not a different emblem'
+centre = tile[h // 4:3 * h // 4, w // 4:3 * w // 4, :3]
+assert centre.std(axis=(0, 1)).max() > 12, 'worker motif remains visible at the centre'
 print('SUMMON ICON OK')

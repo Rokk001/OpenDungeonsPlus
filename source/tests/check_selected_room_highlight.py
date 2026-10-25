@@ -4,13 +4,41 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 
+from PIL import Image
+
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/modes/GameMode.cpp').read_text()
 start = source.index('    SkillManager::listAllRooms([&]', source.index('void GameMode::refreshActionFeedback'))
 block = source[start:source.index('    const bool prohibited', start)]
-look = ET.parse(repo / 'gui/OD.looknfeel').getroot().find("WidgetLook[@name='OD/GameTabButton']")
-for state in ('Normal', 'Hover', 'Pushed', 'PushedOff'):
-    assert look.find(f"StateImagery[@name='{state}']/Layer/Section[@section='selected']") is not None
+looks = ET.parse(repo / 'gui/OD.looknfeel').getroot()
+look = looks.find("WidgetLook[@name='OD/GameTabButton']")
+skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
+# Selection feedback must remain visible in each state, regardless of private imagery-section names.
+with Image.open(repo / 'gui' / skin.attrib['imagefile']) as atlas:
+    pixels = atlas.convert('RGBA')
+    for state in ('Normal', 'Hover', 'Pushed', 'PushedOff'):
+        state_imagery = look.find(f"StateImagery[@name='{state}']")
+        assert state_imagery is not None, state
+        selection_images = []
+        for reference in state_imagery.findall('Layer/Section'):
+            owner = looks.find(f"WidgetLook[@name='{reference.attrib['look']}']") if 'look' in reference.attrib else look
+            assert owner is not None, reference.attrib
+            section = owner.find(f"ImagerySection[@name='{reference.attrib['section']}']")
+            assert section is not None, reference.attrib
+            for component in section.findall('ImageryComponent'):
+                if component.find("ColourRectProperty[@name='SelectionColour']") is not None:
+                    image = component.find('Image')
+                    assert image is not None and image.attrib.get('name'), (state, reference.attrib)
+                    selection_images.append(image.attrib['name'])
+        assert selection_images, state + ' must draw a SelectionColour layer'
+        for image_name in selection_images:
+            imageset, name = image_name.split('/', 1)
+            assert imageset == skin.attrib['name'], image_name
+            image = skin.find(f"Image[@name='{name}']")
+            assert image is not None, image_name
+            left, top, width, height = (int(image.attrib[key]) for key in ('xPos', 'yPos', 'width', 'height'))
+            assert width > 0 and height > 0, image_name
+            assert pixels.crop((left, top, left + width, top + height)).getchannel('A').getextrema()[1] > 0, image_name
 probe = r'''
 #include <iostream>
 #include <map>

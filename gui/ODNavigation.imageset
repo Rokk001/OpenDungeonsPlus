@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Imageset autoScaled="true" imagefile="ODNavigation.png" name="OpenDungeonsNavigation" nativeHorzRes="2048" nativeVertRes="1536" version="2">
+    <Image name="MiniMapRim" xPos="0" yPos="0" width="768" height="768" />
+    <Image name="ManaBadge" xPos="768" yPos="0" width="256" height="256" />
+    <Image name="GoldBadge" xPos="768" yPos="256" width="256" height="256" />
+    <Image name="NavHelp" xPos="768" yPos="640" width="128" height="128" />
+    <Image name="NavSell" xPos="896" yPos="512" width="128" height="128" />
+    <Image name="NavOptions" xPos="896" yPos="640" width="128" height="128" />
+    <Image name="MapZoom" xPos="0" yPos="768" width="128" height="128" />
+    <Image name="MiniMapNorth" xPos="768" yPos="512" width="128" height="128" />
+    <Image name="MiniMapCorner0" xPos="1024" yPos="0" width="256" height="256" />
+    <Image name="MiniMapCorner0Hover" xPos="1024" yPos="256" width="256" height="256" />
+    <Image name="MiniMapCorner0Pressed" xPos="1024" yPos="512" width="256" height="256" />
+    <Image name="MiniMapCorner1" xPos="1280" yPos="0" width="256" height="256" />
+    <Image name="MiniMapCorner1Hover" xPos="1280" yPos="256" width="256" height="256" />
+    <Image name="MiniMapCorner1Pressed" xPos="1280" yPos="512" width="256" height="256" />
+    <Image name="MiniMapCorner2" xPos="1536" yPos="0" width="256" height="256" />
+    <Image name="MiniMapCorner2Hover" xPos="1536" yPos="256" width="256" height="256" />
+    <Image name="MiniMapCorner2Pressed" xPos="1536" yPos="512" width="256" height="256" />
+    <Image name="MiniMapCorner3" xPos="1792" yPos="0" width="256" height="256" />
+    <Image name="MiniMapCorner3Hover" xPos="1792" yPos="256" width="256" height="256" />
+    <Image name="MiniMapCorner3Pressed" xPos="1792" yPos="512" width="256" height="256" />
+</Imageset>
