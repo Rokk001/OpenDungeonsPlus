@@ -49,6 +49,7 @@ void reachable(RoomInfirmary& room,int width,int height){
   for(Tile* tile:entry.second.tiles)for(int i=0;i<4;++i)if(seen.count({tile->x+dx[i],tile->y+dy[i]}))touches=true;
   check(touches,"every cot reached from free walkway");}
 }
+//! \brief Runs the rectangular cot-layout and joined-floor build-rule regression cases.
 int main(){try{
 """
     for width, height, counts in ((4, 4, (1, 2, 1)), (5, 5, (3, 3, 1)),
