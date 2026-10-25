@@ -5007,6 +5007,7 @@ std::string Creature::getRelationshipTooltip()
     return line;
 }
 
+//! \brief Builds the creature stats, including its current infirmary discharge target.
 std::string Creature::getStatsText()
 {
     // The creatures are not refreshed at each turn so this information is relevant in the server
@@ -5031,6 +5032,17 @@ std::string Creature::getStatsText()
     tempSS << "Experience: " << mExp << std::endl;
     tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
     tempSS << "Gold: " << mGoldCarried << std::endl;
+    for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::infirmary, getSeat()))
+    {
+        RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(room);
+        const RoomInfirmary::PatientInfo* patient = infirmary->getPatient(*this);
+        if(patient != nullptr && patient->creature == this)
+        {
+            tempSS << "Infirmary: " << formatFixedNumber(getHP() * 100.0 / getMaxHp()) << " % -> "
+                << infirmary->getDischargeThreshold() << " %" << std::endl;
+            break;
+        }
+    }
     if (!getDefinition()->isWorker())
     {
         tempSS << "Wakefulness: " << mWakefulness << std::endl;

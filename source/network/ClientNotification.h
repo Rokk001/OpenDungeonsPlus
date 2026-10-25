@@ -110,7 +110,11 @@ enum class ClientNotificationType
     //! The server always answers with editorRegionData.
     editorRegionEdit,
     //! Use a stored special (the button of the special was pressed): + int32_t giftBoxType
-    askUseSpecial
+    askUseSpecial,
+    //! Subscribe to patient updates: bool open.
+    askInfirmaryWindow,
+    //! Set keeper preferences: int32_t payer, int32_t threshold, bool healOn.
+    askInfirmarySettings
 };
 
 //! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.

@@ -433,6 +433,7 @@ static void registerSkillDef(SkillDef* def, std::vector<const SkillDef*>& skills
         tabSkills[static_cast<uint32_t>(def->mTab)].push_back(def->mSkill->getType());
 }
 
+//! \brief Registers the research tree with the room, trap, spell and keeper unlocks.
 SkillManager::SkillManager() :
     mSkills(static_cast<uint32_t>(SkillType::countSkill)),
     mTabSkills(static_cast<uint32_t>(SkillTab::nb)),
@@ -513,6 +514,10 @@ SkillManager::SkillManager() :
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::roomBridgeStone, std::vector<SkillType>{SkillType::roomBridgeWooden});
     def = new SkillDefRoom(TREE_PREFIX_ROOMS, "StoneBridgeButton", skill, 3, RoomType::bridgeStone);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+
+    skill = createSkill(mSkills, SkillType::roomInfirmary, std::vector<SkillType>{SkillType::roomGuardRoom});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "InfirmaryButton", skill, 3, RoomType::infirmary);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
     // Rooms tab, tier IV
@@ -907,6 +912,7 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::roomArena, "LevelCap", ResearchBaseSource::rooms, "ArenaMaxTrainingLevel", ""},
     {SkillType::roomPrison, "Capacity", ResearchBaseSource::factor, "", ""},
     {SkillType::roomPrison, "SkeletonLevel", ResearchBaseSource::rooms, "PrisonSkeletonBaseLevel", ""},
+    {SkillType::roomInfirmary, "HealTime", ResearchBaseSource::rooms, "InfirmaryFullHealSeconds", ""},
     {SkillType::roomCrypt, "RotTime", ResearchBaseSource::rooms, "CryptRotNbTurns", ""},
     {SkillType::roomBridgeWooden, "ClaimResistance", ResearchBaseSource::factor, "", ""},
     {SkillType::roomBridgeStone, "ClaimResistance", ResearchBaseSource::factor, "", ""},
@@ -997,6 +1003,7 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::Mood] = "Mood gain";
         texts[ResearchEffect::LevelCap] = "Level cap";
         texts[ResearchEffect::SkeletonLevel] = "Skeleton level";
+        texts[ResearchEffect::HealTime] = "Healing time";
         texts[ResearchEffect::RotTime] = "Rot time";
         texts[ResearchEffect::ClaimResistance] = "Claim resistance";
         texts[ResearchEffect::ConversionSpeed] = "Conversion speed";

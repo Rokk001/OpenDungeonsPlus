@@ -2132,6 +2132,16 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         }
 
+        case ServerNotificationType::infirmaryWindow:
+        case ServerNotificationType::infirmarySettings:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+                break;
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->receiveInfirmaryWindow(packetReceived, cmd == ServerNotificationType::infirmaryWindow);
+            break;
+        }
+
         case ServerNotificationType::casinoPayout:
         {
             if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)

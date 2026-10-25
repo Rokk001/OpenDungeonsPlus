@@ -238,6 +238,8 @@ public:
 
     //! \brief Sends an owner creature notice whose name is resolved from the client profile; suffix keeps existing wording.
     void notifyCreatureEvent(Creature& creature, const std::string& suffix);
+    //! \brief Tells a human keeper that an infirmary cannot heal because mana is missing.
+    void notifyInfirmaryEvent();
     //! \brief Sends a profile-named creature notice while preserving its original event category.
     void notifyCreatureEvent(Creature& creature, const std::string& suffix, EventShortNoticeType noticeType);
 

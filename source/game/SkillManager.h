@@ -75,6 +75,7 @@ namespace ResearchEffect
     static const std::string Mood = "Mood";
     static const std::string LevelCap = "LevelCap";
     static const std::string SkeletonLevel = "SkeletonLevel";
+    static const std::string HealTime = "HealTime";
     static const std::string RotTime = "RotTime";
     static const std::string ClaimResistance = "ClaimResistance";
     static const std::string ConversionSpeed = "ConversionSpeed";

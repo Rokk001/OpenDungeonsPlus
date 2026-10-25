@@ -212,7 +212,13 @@ enum class ServerNotificationType
     timeLimit,
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
-    campaignVictory
+    campaignVictory,
+    //! Keeper preferences (int32_t payer, int32_t threshold, bool healOn), uint32_t patient count,
+    //! then patient rows: string creature, string class, bool worker, double HP, double maxHP,
+    //! double remaining seconds (negative while paused).
+    infirmaryWindow,
+    //! Current keeper preferences: int32_t payer, int32_t threshold, bool healOn.
+    infirmarySettings
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
