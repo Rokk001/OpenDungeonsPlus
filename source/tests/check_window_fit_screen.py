@@ -99,6 +99,17 @@ for layout in sorted((repo / 'gui').glob('*.layout')):
 windows = sorted(set((p, n, e) for p, n, e in windows))
 assert windows, 'no windows found in the layouts'
 
+# The existing Game/Editor quit confirmation stays centred and uses the opaque reskin panel.
+quit_window = ET.parse(repo / 'gui' / 'WindowQuit.layout').getroot().find('Window')
+quit_properties = {p.get('name'): p.get('value') for p in quit_window.findall('Property')}
+quit_area = udims(quit_properties['Area'])
+assert quit_window.get('type') == 'OD/FrameWindow'
+assert float(quit_properties['Alpha']) == 1.0, 'quit confirmation must be opaque'
+assert len(quit_area) == 4
+assert all(abs(quit_area[axis][0] + quit_area[axis + 2][0] - 1.0) < 0.00001
+           and quit_area[axis][1] == -quit_area[axis + 2][1] for axis in (0, 1)), 'quit confirmation must be centred'
+assert {child.get('name') for child in quit_window.findall('Window')} == {'YesOption', 'NoOption', 'SaveReplayCheckbox'}
+
 too_large = []
 for screen_w, screen_h in SCREENS:
     for user_scale in USER_SCALES:

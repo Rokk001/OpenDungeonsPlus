@@ -211,7 +211,7 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
         );
 }
 
-//! \brief Restores the main controls and starts any requested arrival from a finished game.
+//! \brief Restores main controls after any requested arrival flight from a finished game.
 void MenuModeMain::activate()
 {
     // Loads the corresponding Gui sheet.
@@ -227,6 +227,7 @@ void MenuModeMain::activate()
     window->getChild(WINDOW_SETTINGS)->hide();
     mSettingsPageOpen = false;
     mSkirmishSubMenuPending = false;
+    mOverviewPending = false;
     mPendingSubMenu.clear();
     mPendingMode = AbstractModeManager::NONE;
     showMainMenuButtons(true);
@@ -235,7 +236,6 @@ void MenuModeMain::activate()
     {
         mSkirmishSubMenuPending = true;
         showMainMenuButtons(false);
-        window->getChild(BUTTON_QUIT)->show();
     }
 
     // Reaching the main menu ends the campaign flow. The campaign buttons
@@ -260,21 +260,32 @@ void MenuModeMain::activate()
     ODFrameListener::getSingleton().stopGameRenderer();
     ODFrameListener::getSingleton().createMainMenuScene();
     if(getModeManager().consumeMainMenuArrivalRequest() || mSkirmishSubMenuPending)
+    {
         ODFrameListener::getSingleton().startMainMenuFlight();
+        if(ODFrameListener::getSingleton().isMainMenuFlightActive())
+        {
+            showMainMenuButtons(false);
+            mOverviewPending = !mSkirmishSubMenuPending;
+        }
+    }
 
     restartPendingLevel();
 }
 
-//! \brief Reveals the selected existing pane only after its configured flight finishes.
+//! \brief Reveals the overview or selected existing pane only after its configured flight finishes.
 void MenuModeMain::onFrameStarted(const Ogre::FrameEvent& /*evt*/)
 {
     if(ODFrameListener::getSingleton().isMainMenuFlightActive())
         return;
 
+    if(mOverviewPending)
+    {
+        mOverviewPending = false;
+        showMainMenuButtons(true);
+    }
     if(mSkirmishSubMenuPending)
     {
         mSkirmishSubMenuPending = false;
-        showMainMenuButtons(true);
         toggleSubMenu(WINDOW_SKIRMISH);
         return;
     }
@@ -300,6 +311,7 @@ bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, con
         mPendingSubMenu.clear();
         mPendingMode = AbstractModeManager::NONE;
         mSkirmishSubMenuPending = false;
+        mOverviewPending = false;
         return changeModeEvent(mode, e);
     }
     ODFrameListener& listener = ODFrameListener::getSingleton();
@@ -308,7 +320,10 @@ bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, con
     if(mode == AbstractModeManager::MENU_REPLAY && listener.getMainMenuPlace() != PLACE_REPLAY)
     {
         if(listener.flyMainMenuTo(PLACE_REPLAY))
+        {
+            showMainMenuButtons(false);
             mPendingMode = mode;
+        }
         return true;
     }
     return changeModeEvent(mode, e);
@@ -407,7 +422,7 @@ bool MenuModeMain::settingsPageClosed(const CEGUI::EventArgs&)
     return true;
 }
 
-//! \brief Closes the current submenu and flies back without overlapping an active flight.
+//! \brief Hides the current submenu and restores overview entries only after the return flight.
 bool MenuModeMain::goBack(const CEGUI::EventArgs&)
 {
     ODFrameListener& listener = ODFrameListener::getSingleton();
@@ -422,14 +437,17 @@ bool MenuModeMain::goBack(const CEGUI::EventArgs&)
         {
             window->hide();
             showNewCampaignConfirm(false);
-            showMainMenuButtons(true);
-            listener.flyMainMenuTo(PLACE_OVERVIEW);
+            showMainMenuButtons(false);
+            mOverviewPending = listener.flyMainMenuTo(PLACE_OVERVIEW);
+            if(!mOverviewPending)
+                showMainMenuButtons(true);
             break;
         }
     }
     return true;
 }
 
+//! \brief Shows or hides every overview entry together.
 void MenuModeMain::showMainMenuButtons(bool visible)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
@@ -495,7 +513,7 @@ bool MenuModeMain::toggleEditorSubMenu(const CEGUI::EventArgs&)
     return toggleSubMenu(WINDOW_EDITOR);
 }
 
-//! \brief Starts the selected scene flight while keeping Quit available until arrival.
+//! \brief Hides overview entries during the selected flight and defers its pane until arrival.
 bool MenuModeMain::toggleSubMenu(const std::string& name)
 {
     ODFrameListener& listener = ODFrameListener::getSingleton();
@@ -517,7 +535,10 @@ bool MenuModeMain::toggleSubMenu(const std::string& name)
     if(listener.getMainMenuPlace() == place)
         showSubMenu(name);
     else if(listener.flyMainMenuTo(place))
+    {
+        showMainMenuButtons(false);
         mPendingSubMenu = name;
+    }
     return true;
 }
 
