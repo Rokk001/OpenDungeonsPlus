@@ -23,6 +23,9 @@
 #include "entities/MissileStone.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "rooms/Room.h"
+#include "rooms/RoomType.h"
+#include <algorithm>
 #include "gamemap/GameMap.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -103,6 +106,9 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
 
     // We try to find a building that wants the entity
     std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
+    std::function<bool(Building*)> infirmaryFirst = [](Building* building)
+    { return building->getObjectType() == GameEntityType::room && static_cast<Room*>(building)->getType() == RoomType::infirmary; };
+    std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
     std::vector<Tile*> tilesDest;
     for(Building* building : buildings)
     {
@@ -110,6 +116,8 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
         {
             Tile* tile = building->getCoveredTile(0);
             tilesDest.push_back(tile);
+            if(building->getObjectType() == GameEntityType::room && static_cast<Room*>(building)->getType() == RoomType::infirmary)
+                break;
         }
     }
 

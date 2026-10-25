@@ -33,6 +33,7 @@ class Tile;
 class CreatureActionCarryEntity : public CreatureAction, public GameEntityListener
 {
 public:
+    //! \brief Reserves a fitting cot when starting a carry to an infirmary.
     CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest);
     //! \brief Carries a mission item visibly to its exact script destination without inventing a building.
     CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest);
@@ -64,9 +65,14 @@ public:
     //! by popAction, so nothing of it may be used after that call.
     bool handleDragCreature();
 
+    //! \brief Keeps a running carry attached when its destination room is absorbed.
+    void replaceDestination(Building& oldRoom, Building& newRoom);
+
 private:
+    //! \brief Releases cargo and its cot reservation when interrupted.
     void releaseEntity(const std::string& reason);
     void startDrag();
+    //! \brief Moves a pulled creature onto its cot or own bed.
     void startLaying(Creature& dragged);
     void followTrail(Creature& dragged, double targetArc);
     bool stopDragging(bool standUp);

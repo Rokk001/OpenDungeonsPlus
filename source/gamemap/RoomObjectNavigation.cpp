@@ -8,6 +8,7 @@
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomPrison.h"
+#include "rooms/RoomInfirmary.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -15,6 +16,7 @@
 
 namespace
 {
+//! \brief Allows an assigned sleeper or cot delivery to enter only its own furniture.
 const BuildingObject* interactionObject(Creature& creature, const Ogre::Vector2& goal)
 {
     Tile* tile = creature.getGameMap()->getTile(Helper::round(goal.x), Helper::round(goal.y));
@@ -23,6 +25,17 @@ const BuildingObject* interactionObject(Creature& creature, const Ogre::Vector2&
     Room* room = tile->getCoveringRoom();
     bool entering = room->getType() == RoomType::dormitory &&
         tile == creature.getHomeTile() && creature.isActionInList(CreatureActionType::sleep);
+    if(room->getType() == RoomType::infirmary)
+    {
+        RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(room);
+        for(const std::pair<const size_t, RoomInfirmary::PatientInfo>& entry : infirmary->getPatients())
+        {
+            const RoomInfirmary::CotInfo& cot = infirmary->getCots().at(entry.first);
+            if(tile->getX() == cot.x && tile->getY() == cot.y &&
+                (entry.second.reservedBy == &creature || entry.second.creatureName == creature.getName()))
+                entering = true;
+        }
+    }
     if(room->getType() == RoomType::portal && creature.isActionInList(CreatureActionType::leaveDungeon))
         entering = true;
     if(room->getType() == RoomType::torture && creature.isActionInList(CreatureActionType::useRoom))

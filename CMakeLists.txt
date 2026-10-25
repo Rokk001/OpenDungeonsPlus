@@ -269,6 +269,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionSearchToilet.cpp
     ${SRC}/creatureaction/CreatureActionSearchWallTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSleep.cpp
+    ${SRC}/creatureaction/CreatureActionInfirmaryRest.cpp
     ${SRC}/creatureaction/CreatureActionStealFreeGold.cpp
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
@@ -532,6 +533,9 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomCasino.cpp
     ${SRC}/rooms/RoomCrypt.cpp
     ${SRC}/rooms/RoomDormitory.cpp
+    ${SRC}/rooms/RoomInfirmary.cpp
+    ${SRC}/rooms/RoomInfirmaryEconomy.cpp
+    ${SRC}/rooms/RoomInfirmaryStreams.cpp
     ${SRC}/rooms/RoomDungeonTemple.cpp
     ${SRC}/rooms/RoomHatchery.cpp
     ${SRC}/rooms/RoomLibrary.cpp

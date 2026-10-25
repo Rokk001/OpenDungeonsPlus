@@ -116,6 +116,7 @@
 #include "social/SocialRng.h"
 #include "rooms/RoomCrypt.h"
 #include "rooms/RoomDormitory.h"
+#include "rooms/RoomInfirmary.h"
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
 #include "rooms/RoomToilet.h"
@@ -2255,6 +2256,16 @@ void Creature::doUpkeep()
 
 void Creature::decidePrioritaryAction()
 {
+    const bool patient = isActionInList(CreatureActionType::infirmaryRest);
+    const bool tooWeakToRise = getHP() * 100.0 < getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent");
+    if((patient || isActionInList(CreatureActionType::sleep)) && tooWeakToRise)
+        return;
+    if(patient)
+    {
+        if(!getVisibleEnemyObjects().empty())
+            fight();
+        return;
+    }
     for(const CreatureBehaviour* behaviour : getDefinition()->getCreatureBehaviours())
     {
         if(!behaviour->processBehaviour(*this))
@@ -2264,6 +2275,10 @@ void Creature::decidePrioritaryAction()
 
 void Creature::handleHeartDefence()
 {
+    if(isActionInList(CreatureActionType::infirmaryRest) ||
+        (isActionInList(CreatureActionType::sleep) && getHP() * 100.0 < getMaxHp() *
+            ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent")))
+        return;
     if(!getDefinition()->isHeartDefenceRunner())
         return;
 
@@ -6500,7 +6515,7 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
     if(mKoTurnCounter < 0)
     {
         if((carrier != nullptr) && (carrier->getSeat() == getSeat()))
-            return isKoToDeathForBedPull() ? EntityCarryType::koCreature : EntityCarryType::notCarryable;
+            return (isKoToDeathForBedPull() || RoomInfirmary::wouldAccept(*this)) ? EntityCarryType::koCreature : EntityCarryType::notCarryable;
 
         return EntityCarryType::koCreature;
     }
@@ -7493,6 +7508,10 @@ void Creature::relieve()
 //! \brief Relieves the creature at the highest urge and lets it use a toilet seat it walks over from UrgeOnTheWay on.
 void Creature::handleUrge()
 {
+    if(isActionInList(CreatureActionType::infirmaryRest) ||
+        (isActionInList(CreatureActionType::sleep) && getHP() * 100.0 < getMaxHp() *
+            ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent")))
+        return;
     ConfigManager& config = ConfigManager::getSingleton();
     if(mDefinition->isWorker() || (mUrge < config.getDirtConfigDouble("UrgeOnTheWay")))
         return;

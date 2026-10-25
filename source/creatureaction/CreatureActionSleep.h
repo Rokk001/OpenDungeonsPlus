@@ -35,6 +35,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Sleeps in the own bed with research-adjusted full-health recovery time.
     static bool handleSleep(Creature& creature, int32_t nbTurnsActive);
 };
 

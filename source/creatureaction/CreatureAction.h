@@ -61,6 +61,7 @@ enum class CreatureActionType
     cleanTile, // (worker only) Wipes the dirt, pile or blood stain off a tile
     searchToilet, // (fighters only) Looks for a free toilet seat, or waits near the toilet room while all seats are busy
     useToilet, // (fighters only) Squats on a toilet seat, or relieves itself on the spot when it has no toilet
+    infirmaryRest, // A patient lying on an infirmary cot.
     nb // Must be the last value of this enum
 };
 
@@ -102,6 +103,7 @@ public:
     virtual uint32_t updateMoodModifier() const
     { return CreatureMoodValues::Nothing; }
 
+    //! \brief Returns the stable name of an action, including patient rest.
     static std::string toString(CreatureActionType actionType);
 
 protected:

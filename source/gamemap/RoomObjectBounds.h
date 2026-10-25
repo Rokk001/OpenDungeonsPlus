@@ -99,9 +99,12 @@ constexpr float largeBedFootprint = 1.2f;
 constexpr float treasuryPileDiagonal = 0.4f;
 
 // Returns how much the mesh is narrowed so that it fits the footprint of its kind.
+//! \brief Keeps cots at their authored footprint and narrows other furniture as required.
 inline FurnitureScale furnitureScale(const MeshBounds& bounds)
 {
     const std::string name(bounds.name);
+    if(name.compare(0, 12, "InfirmaryCot") == 0)
+        return {1.0f, 1.0f};
     if(name == "FenceCorner" || name == "FenceStraight" ||
        name == "PortalObject" || isDungeonHeartMesh(name))
         return {1.0f, 1.0f};
