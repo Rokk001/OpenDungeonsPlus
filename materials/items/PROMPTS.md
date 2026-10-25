@@ -1,5 +1,229 @@
 # Item image prompts
 
+## DWF_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty practical circlet with a plain central clasp, no head, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty short protective shoulder mantle with layered plates and simple fastenings, no wearer, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one matching pair of compact ankle boots with protective toe plates and simple straps, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain finger ring with an empty oval signet face, no markings, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Shield_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one sturdy oval shield with a modest central boss and rim, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Shield_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Shield_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Axe_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one practical single-bitted axe with a straight wooden haft, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Axe_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Axe_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Hammer_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one practical compact square-headed hammer with a straight wooden haft, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Hammer_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Hammer_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain straight sword with modest crossguard and wrapped grip, crafted in aged bronze metal with modest brown leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DWF_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DWF_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty practical circlet with a plain central clasp, no head, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one empty short protective shoulder mantle with layered plates and simple fastenings, no wearer, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one matching pair of compact ankle boots with protective toe plates and simple straps, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain finger ring with an empty oval signet face, no markings, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Shield_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one sturdy oval shield with a modest central boss and rim, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Shield_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Shield_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one plain straight sword with modest crossguard and wrapped grip, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Spear_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: one practical straight spear with a simple leaf-shaped head and wooden shaft, crafted in ash-grey iron metal with modest charcoal cloth and dark leather bindings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## DMN_Spear_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## DMN_Spear_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
 ## HUM_Head_base.png
 
 Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Circlet of Human: an empty plain iron circlet band with neat beige linen wrapping and a modest central clasp, no head. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
