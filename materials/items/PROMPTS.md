@@ -1,5 +1,184 @@
 # Item image prompts
 
+## GRN_Head_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Bone Circlet of Greenskin: empty wearable oval circlet of rugged dark brown leather with a row of smooth ivory bone plates bound across the front, two short blunt tusk-shaped side ornaments, central flat angular bone plate held by plain dark iron rivets. Three-quarter view showing the open center clearly transparent. Practical rough Common craftsmanship, intact coherent leather band, no skulls or faces, no glow. Entire circlet centered with generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No wearer, head, hair, body, person, skin, mannequin, text, letters, readable runes, numbers, frame, floor, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## GRN_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Boots_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original matching pair of Bone Striders of Greenskin: two empty rugged dark brown leather boots with broad ivory bone shin plates bound by leather thongs, simple dark iron ankle buckles, one short tusk-shaped outer ankle fitting each, thick practical dark soles. Left boot slightly behind in three-quarter view, both open empty cuffs visible, complete pair centered with generous transparent margins. Rough but intact Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, person, body, mannequin, skulls, faces, text, letters, readable runes, numbers, frame, floor, scene, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## GRN_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Ring_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Bone Seal of Greenskin: thick hollow dark iron finger ring, broad ivory bone signet plate with a plain angular chevron relief, short curved tusk-shaped bone inlays along band shoulders, dark brown leather bindings holding the bone to the metal. Three-quarter view, coherent continuous wearable ring, empty finger opening clearly visible and genuinely transparent. Rough practical Common craftsmanship, no skull, face, gemstone or glow. Entire ring centered within generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No finger, hand, person, body, mannequin, readable runes, text, letters, numbers, extra objects, scene, floor, frame, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## GRN_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Axe_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. Single original Bone Axe of Greenskin, centered and occupying ONLY THE CENTRAL 75 PERCENT of image. Keep a generous CLEAR TRANSPARENT BORDER at least 12 percent of canvas on all four sides; no part touches an edge. Robust short single-bladed axe: broad dark iron crescent blade, brown hardwood haft, ivory bone cheek plates with two small tusk fittings lashed around the head, dark leather grip, plain iron buttcap. Entire diagonal weapon from lower-left butt to upper-right head, FULL intact axe visible with abundant empty space around blade and endpoints. Rough practical Common craftsmanship, no glow. Hand-painted fantasy inventory icon, warm upper-left light. No skulls, faces, blood, hands, people, body, mannequin, letters, readable runes, writing, numbers, floor, frame, scenery, backdrop, shadow, watermark, branding. Genuine alpha-zero transparent background. Do not fill or crop the frame; object must fit safely in the middle of the square.
+
+
+## GRN_Axe_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Axe. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Axe_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Cleaver of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Club_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bone Club of Greenskin, entire weapon occupying only central 75 percent, at least 10 percent clear transparent margins all sides. Heavy dark hardwood club with a thick blunt head sheathed in overlapping ivory bone plates tied by dark leather, two short tusk-shaped fittings projecting a little from head sides, plain iron reinforcing band, brown leather grip, modest rounded iron butt. Whole club diagonal lower-left grip to upper-right head, intact practical weapon, no skulls, no face, no glow. Hand-painted fantasy inventory icon, warm upper-left light, rugged Common craftsmanship. No hands, people, body, mannequin, blood, writing, text, readable runes, letters, numbers, frame, floor, scenery, backdrop, shadow, branding or watermark. Genuine alpha-zero transparent background, full object fits safely inside square.
+
+
+## GRN_Club_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Club. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Club_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Maul of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Only the single connected club exists. Do not add any detached dots, circles, specks, particles, sparks, floating fragments, glowing motes, lens flare or other objects anywhere in the transparent area. All light is tightly contained within the existing club's surface grooves.
+
+
+## GRN_Dagger_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bone Dagger of Greenskin, central 75 percent of frame with generous clear transparent margins all sides. Broad short sharp steel dagger blade with simple ivory bone ridge inlaid along its center, dark iron small crossguard, sturdy brown leather wrapped grip with two ivory tusk-shaped side plates, plain iron pommel. Entire dagger diagonal lower-left pommel to upper-right point, practical coherent complete weapon, no loose ornaments, no skull, no face, no glow. Hand-painted fantasy inventory icon, warm upper-left light, rugged Common craftsmanship. No hands, person, body, mannequin, blood, readable runes, writing, text, letters, numbers, scenery, floor, frame, backdrop, cast shadow, branding, watermark or detached objects. Genuine alpha-zero transparent background, full object safely inside native square.
+
+
+## GRN_Dagger_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Tuskbound Dagger. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to finely polished ivory with delicate geometric incisions, finer brown leather stitching, existing iron fittings to burnished steel with restrained bronze edging. Finer tusk craftsmanship, no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## GRN_Dagger_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Fang of the Tusk. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bone surfaces to exquisite polished ivory with fine geometric incisions, richer brown leather, existing fittings to finely forged dark steel and gold edging. Add a restrained warm amber magical glimmer only within existing incised lines and seams. No new shapes, no aura, no flames. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Head_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Circlet of Elf: empty slim oval circlet of gracefully carved pale birch bark and smooth brown wood, slender upward leaf-shaped central crest, symmetrical flowing leaf-vein relief along the band, two subtle bronze joining clasps. Refined but modest Common craftsmanship, no moss, no flowers, no jewels or magical glow. Three-quarter view, open center clearly visible and genuinely transparent, coherent complete wearable band centered within generous transparent margins. Hand-painted fantasy inventory icon, warm upper-left light. No wearer, head, hair, skin, person, body, mannequin, readable runes, text, letters, numbers, floor, frame, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Armour_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Mantle of Elf: empty elegant short shoulder mantle of muted pale sage cloth, layered slim birch-bark leaf-shaped protective panels following the shoulders and two tapered front ends, fine flowing carved wooden edging and modest bronze leaf clasp. Raised folded collar clearly empty. No wearer, torso, head, arms, body or mannequin. Three-quarter front view, coherent complete wearable mantle centered within generous transparent margins. Refined modest Common craftsmanship, no moss, flowers, jewels or glow. Hand-painted fantasy inventory icon, warm upper-left light, readable fine cloth folds, birch bark and wood. No text, letters, readable runes, numbers, extra items, frame, floor, scene, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Armour_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Mantle. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Armour_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Mantle of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Boots_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original matching pair of Bark Striders of Elf: two empty slim elegant brown leather boots with pale birch-bark leaf-shaped shin panels, muted sage folded cloth cuffs, fine flowing carved wooden edging, small bronze leaf-shaped ankle fastenings, practical dark soles. Left boot slightly behind in three-quarter view, both empty cuff openings visible, coherent wearable boots, entire pair centered within generous transparent margins. Refined modest Common craftsmanship, no moss, flowers, jewels or magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, skin, body, person, mannequin, text, letters, readable runes, numbers, additional objects, frame, scenery, floor, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Ring_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Seal of Elf: slender continuous hollow finger ring of smooth brown wood with pale birch bark insets on the shoulders, elegant oval signet plate shaped like a long pointed leaf, carved leaf veins inside thin bronze edging. Three-quarter view, complete coherent wearable ring, empty finger opening clearly visible and genuinely transparent, entire ring centered within generous transparent margins. Refined modest Common craftsmanship, no moss, flowers, gems or magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No hand, finger, person, body, mannequin, face, readable runes, text, letters, numbers, frame, floor, scene, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## ELF_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ELF_Bow_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas for SQUARE 128x128 inventory composition. One original Bark Bow of Elf, full elegant undrawn recurve bow centered and occupying only the central 75 percent with abundant clear transparent margins on all sides. Long curved limbs of smooth brown wood faced with pale birch bark, carved flowing leaf-vein relief, modest bronze leaf-shaped fittings near a muted sage leather central grip. ONE taut thin bowstring connects both tips, clear unambiguous string path, no arrow. Three-quarter inventory view slightly diagonal lower-left tip to upper-right tip, entire intact bow including both tips and complete string visible. Refined modest Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No moss, flowers, jewels, person, hands, body, mannequin, text, letters, readable runes, numbers, extra objects, frame, floor, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square, no clipping.
+
+
+## ELF_Bow_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Bow. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Preserve the complete continuous bowstring exactly, connected to the same two tips. No arrow.
+
+
+## ELF_Bow_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Arc of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Preserve the complete continuous bowstring exactly, connected to the same two tips. No arrow.
+
+
+## ELF_Crossbow_base.png
+
+Use case: game-asset. Perfectly SQUARE 1:1 native canvas, SQUARE 128x128 inventory composition. Single original Bark Crossbow of Elf, mechanically correct conventional crossbow seen clearly from above in slight three-quarter view. Brown wooden stock pointing from lower-left butt to upper-right muzzle. ONE symmetric curved bow mounted perpendicular across the FOREMOST end of the stock. The string connects the two bow tips and is drawn BACK TOWARDS THE LOWER-LEFT BUTT to a clearly visible central latch on the stock BEHIND the bow. The string forms a V whose apex points towards the butt, never towards the muzzle. Visible bronze trigger below that latch; no bolt loaded. Simple elegant limbs faced in pale birch bark, flowing carved leaf-vein relief, sage leather grip, modest bronze fittings. Full weapon occupies only central 70 percent of native square, with ample transparent margins. Clear intact endpoints, coherent practical crossbow, no additional bows or strings. Refined modest Common quality, no glow. Hand-painted fantasy icon, warm upper-left light. No people, hands, body, text, letters, writing, numbers, scenery, frame, floor, shadows, branding, watermark. Genuine alpha-zero transparent background.
+
+
+## ELF_Crossbow_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Moonwoven Crossbow. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to finely polished pale birch and smooth dark wood, exquisite carved leaf veins, existing metal fittings to noble silver with delicate silver inlay along existing carved grooves. Subtle moonlike craftsmanship but no magical glow, no added shapes. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Keep the mechanically correct drawn string EXACTLY: both ends at existing bow tips, V apex locked to the existing central latch behind the bow towards the butt. Preserve trigger, stock channel, all openings and precise limb symmetry. No bolt.
+
+
+## ELF_Crossbow_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Bolt of the Moonlit Wood. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces to exquisite pale birch and polished dark wood with noble silver fittings and fine silver leaf-vein inlay. Add a restrained cool moon-blue magical glimmer tightly within existing grooves and seams. Preserve clear readable edges, no new shapes, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing. Keep the mechanically correct drawn string EXACTLY: both ends at existing bow tips, V apex locked to the existing central latch behind the bow towards the butt. Preserve trigger, stock channel, all openings and precise limb symmetry. No bolt.
+
 ## CST_A_Head_base.png
 
 Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Silk Hood of Fire (do not write that name): one empty deep rust-red silk hood with soft rounded folds, a broad face opening and a short draped silk neck cape, plain modest stitched edges, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded silk, leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
