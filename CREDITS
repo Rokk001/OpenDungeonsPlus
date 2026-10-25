@@ -830,7 +830,7 @@ models/Tentacle.skeleton  OD Team  GPLv3+  Own change: the clips Walk and WalkHu
 Name                                   Author                  License                 Source URL
 ------------------------------------------------------------------------------------------------------------------------
 config/roomAmbience*.cfg               OD Team                 GPLv3+
-materials/scripts/RoomAmbience*.material   OD Team            GPLv3+
+materials/scripts/RoomAmbience*.material   OD Team            GPLv3+                  Library rune alpha blending correction; existing original particle artwork retained
 particles/RoomAmbience*.particle       OD Team                 GPLv3+
 materials/textures/RoomAmb*.png        OD Team                 GPLv3+                  Drawn from simple shapes and gradients by tools/gen_room_ambience_art.py (script generated, original work)
 tools/gen_room_ambience_art.py         OD Team                 GPLv3+
