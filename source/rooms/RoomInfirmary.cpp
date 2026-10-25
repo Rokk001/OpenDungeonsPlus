@@ -510,8 +510,9 @@ void RoomInfirmary::splitRoom(Room& room, const std::vector<Tile*>& tiles)
         if(!all && mCotObjects.count(entry.first))
         {
             BuildingObject* object=mCotObjects[entry.first];
-            removeBuildingObject(object);
-            target.removeBuildingObject(object);
+            Tile* anchor=getGameMap()->getTile(entry.second.x,entry.second.y);
+            Building* owner=anchor->getCoveringBuilding();
+            owner->removeBuildingObject(object);
         }
         if(all)
         {
@@ -599,7 +600,8 @@ Tile* RoomInfirmary::getShamanSpawnTile() const
 void RoomInfirmary::restoreInitialEntityState()
 {
     Room::restoreInitialEntityState();
-    for(const std::pair<const size_t,CotInfo>& entry : mCots) createCotObject(entry.first);
+    for(const std::pair<const size_t,CotInfo>& entry : mCots)
+        if(mCotObjects.count(entry.first)==0) createCotObject(entry.first);
     std::map<size_t,PatientInfo> saved=mPatients;
     mPatients.clear();
     // Destructors may release a previous rest or carry; no iterator into live admissions survives that cleanup.

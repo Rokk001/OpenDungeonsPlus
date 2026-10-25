@@ -50,6 +50,9 @@
 #include "creatureaction/CreatureActionUseToilet.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturebehaviour/CreatureBehaviour.h"
+#include "creaturebehaviour/CreatureBehaviourAttackEnemy.h"
+#include "creaturebehaviour/CreatureBehaviourFleeWhenWeak.h"
+#include "creaturebehaviour/CreatureBehaviourFleeWhenOutmatched.h"
 #include "creatureeffect/CreatureEffect.h"
 #include "creatureeffect/CreatureEffectDigTile.h"
 #include "creatureeffect/CreatureEffectManager.h"
@@ -2260,14 +2263,15 @@ void Creature::decidePrioritaryAction()
     const bool tooWeakToRise = getHP() * 100.0 < getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent");
     if((patient || isActionInList(CreatureActionType::sleep)) && tooWeakToRise)
         return;
-    if(patient)
-    {
-        if(!getVisibleEnemyObjects().empty())
-            fight();
+    if(patient && getVisibleEnemyObjects().empty())
         return;
-    }
     for(const CreatureBehaviour* behaviour : getDefinition()->getCreatureBehaviours())
     {
+        // A patient may answer visible enemies using its configured combat policy, but cannot leave treatment for a job.
+        if(patient && behaviour->getName() != CreatureBehaviourAttackEnemy::mNameCreatureBehaviourAttackEnemy &&
+            behaviour->getName() != CreatureBehaviourFleeWhenWeak::mNameCreatureBehaviourFleeWhenWeak &&
+            behaviour->getName() != CreatureBehaviourFleeWhenOutmatched::mNameCreatureBehaviourFleeWhenOutmatched)
+            continue;
         if(!behaviour->processBehaviour(*this))
             return;
     }
@@ -6553,6 +6557,9 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 
 bool Creature::isWoundedForBedCarry() const
 {
+    if(isActionInList(CreatureActionType::infirmaryRest))
+        return false;
+
     if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingDragged || mIsInHand ||
        isPossessed() || isInPrison() || getDefinition()->isWorker() || getDefinition()->isChampion())
     {

@@ -898,7 +898,7 @@ public:
     //! alive, own bed in a dormitory, not standing on it, hit points below the configured share,
     //! no fight or flight going on, no hostile creature close, not in jail, not possessed, not a
     //! worker or in the hand and not on cooldown after the last time. The worker and the distance
-    //! are not considered here.
+    //! are not considered here. An admitted infirmary patient stays on its paid cot.
     bool isWoundedForBedCarry() const;
 
     //! \brief Server side. True if the creature is knocked out to death and a worker may pull it to its
@@ -1803,7 +1803,7 @@ private:
     //! \brief A sub-function called by doTurn()
     //! This one checks if there is something prioritary to do (like fighting). If it is the case,
     //! it should empty the action list before adding what to do.
-    //! \brief Keeps lying creatures below the carry health limit in bed or on their cot.
+    //! \brief Keeps weak patients lying and preserves configured combat responses when they can rise.
     void decidePrioritaryAction();
 
     //! \brief A sub-function called by doTurn()
