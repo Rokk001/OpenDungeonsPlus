@@ -6,8 +6,9 @@ Materials and meshes: every mesh named by the menu scene description must exist 
 material or skeleton named inside the menu meshes must be defined in materials/scripts/*.material (or exist
 under models/), and every material used by the menu particle effects must be defined as well.
 Lighting off: a material with "lighting off" that has no texture can only take its colour from the
-mesh vertex colours. The fixed pipeline otherwise falls back to white, so every menu mesh part that uses
-such a material must carry a vertex colour element (Ogre semantic VES_DIFFUSE, read from the binary mesh).
+mesh vertex colours unless it supplies both explicit shader programs. The fixed pipeline otherwise falls
+back to white, so every fixed-function menu mesh part that uses such a material must carry a vertex
+colour element (Ogre semantic VES_DIFFUSE, read from the binary mesh).
 
 The engine registers each folder of the Graphics section in cmake/config/resources.cfg.in
 non-recursively (ResourceManager::setupOgreResources passes recursive=false), so a texture name
@@ -128,7 +129,7 @@ def mesh_vertex_colours(mesh_file):
     return result
 
 
-# Return the names of materials whose block says "lighting off" and names no texture.
+# Return fixed-function materials whose block says "lighting off" and names no texture.
 # pattern selects the material scripts to scan (default: all of them).
 def unlit_untextured_materials(root, pattern="*.material"):
     names = set()
@@ -141,7 +142,9 @@ def unlit_untextured_materials(root, pattern="*.material"):
                 depth += (text[end] == "{") - (text[end] == "}")
                 end += 1
             block = text[match.end():end]
-            if re.search(r"\blighting\s+off\b", block) and not re.search(r"\btexture\s+\S", block):
+            if (re.search(r"\blighting\s+off\b", block) and not re.search(r"\btexture\s+\S", block)
+                    and not (re.search(r"\bvertex_program_ref\s+\S+", block)
+                             and re.search(r"\bfragment_program_ref\s+\S+", block))):
                 names.add(match.group(1))
     return names
 
@@ -192,11 +195,33 @@ def missing_models_and_materials(root):
     return problems
 
 
+# Check that self-lit atmosphere bypasses fixed lighting and that its shader files are resolvable.
+def check_sky_programs(root, folders):
+    text = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
+    for program, filename in (("MenuSkyVertex", "MenuSky.vert"), ("MenuSkyFragment", "MenuSky.frag")):
+        assert re.search(r"\b(?:vertex|fragment)_program\s+" + program + r"\s+glsl\s*\{[^}]*\bsource\s+" + re.escape(filename), text), program + " must name its shader source"
+        assert any((folder / filename).is_file() for folder in folders), filename + " must resolve through Graphics resources"
+    for name, kind in (("MenuSky", 0), ("MenuHorizonGlow", 1), ("MenuHorizonDark", 1), ("MenuCloud", 2), ("MenuBloodMoon", 3)):
+        match = re.search(r"\bmaterial\s+" + name + r"\s*\{", text)
+        assert match, name + " must have a standalone atmosphere pass"
+        depth, end = 1, match.end()
+        while depth and end < len(text):
+            depth += (text[end] == "{") - (text[end] == "}")
+            end += 1
+        block = text[match.end():end]
+        for requirement in (r"\breceive_shadows\s+off", r"\blighting\s+off", r"\bvertex_program_ref\s+MenuSkyVertex", r"\bfragment_program_ref\s+MenuSkyFragment", r"\bparam_named\s+atmosphereKind\s+int\s+" + str(kind) + r"\b"):
+            assert re.search(requirement, block), name + " lacks atmosphere setting " + requirement
+    shader = (root / "shaders/MenuSky.frag").read_text(encoding="utf-8")
+    assert "cloudDensity(point)" in shader and "skyPosition.z - 12.0" in shader, "atmosphere needs cloud structure and horizon height fade"
+    assert "1.0 / 2.2" in shader, "linear atmosphere colours need their display transfer"
+
+
 # Fail when a menu scene texture, material, mesh or skeleton cannot be resolved.
 def main():
     root = Path(__file__).resolve().parents[2]
     folders = graphics_folders(root)
     assert root / "materials/textures/menu" in folders, "menu textures folder must be listed in resources.cfg.in"
+    check_sky_programs(root, folders)
     missing = []
     menu_count = 0
     for script, number, name in texture_references(root):
