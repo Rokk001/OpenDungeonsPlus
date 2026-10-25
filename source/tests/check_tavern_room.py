@@ -83,9 +83,9 @@ lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
 assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
 materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
 for words in lines:
-    assert words[1] == 'Room.mesh' and words[2] == 'TavernFloor', words
-assert re.search(r'^material TavernFloor\b', materials, re.M), 'material TavernFloor missing'
-assert re.search(r'^material TavernWall\b', materials, re.M), 'material TavernWall missing'
+    # Floor, wainscot and mug shelf are painted into the 16 floor pieces (one material per mask)
+    assert words[1] == 'Room.mesh' and words[2] == 'Tavern' + words[0], words
+    assert re.search(r'^material ' + words[2] + r'\b', materials, re.M), 'material ' + words[2] + ' missing'
 
 # 4. Buttons: action bar (hidden by default, after the hatchery) and research tree with the icons of the room and Beer
 rooms_layout = read('gui/WindowTabRooms.layout')
