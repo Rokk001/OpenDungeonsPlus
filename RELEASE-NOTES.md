@@ -8,6 +8,8 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* New room: the infirmary. Workers bring knocked-out creatures there; healing takes one minute (bed: two and a half minutes) for every level, costs the keeper mana, admission is paid by the keeper or the creature; a slider sets the discharge health. Lying creatures below 35 % health no longer get up to fight.
+
 * Paint the in-game HUD and windows in worn black iron and cracked stone, with new painted icons and scalable book serif text, while keeping the existing controls and layout.
 
 * Explore a ruined fortress in the main menu, with flights to each menu location and back to the courtyard, flickering firelight, a green-lit spired tower, low ground mist and embers. A replaceable chain-hung title, moving crows and cages, blood moon and weathered graveyard details deepen the scene.

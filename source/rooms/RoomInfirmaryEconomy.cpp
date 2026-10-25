@@ -68,7 +68,7 @@ bool RoomInfirmary::healPatient(Creature& creature)
     }
     const double maximum = creature.getMaxHp();
     const double seconds = SkillManager::getResearchValue(getSeat(), SkillType::roomInfirmary,
-        ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryFullHealSeconds"), "HealTime");
+        ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryFullHealSeconds"), ResearchEffect::HealTime);
     const double gain = std::min(maximum - creature.getHP(),
         maximum / (seconds * ODApplication::turnsPerSecond));
     if(gain <= 0.0)

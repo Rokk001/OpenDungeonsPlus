@@ -241,6 +241,7 @@ def pile_levels(match):
 
 
 def check_effect(effect, where, problems, visuals, systems, mats, counts):
+    """Validate effect data, including object sounds with an implemented spatial-loop lifecycle."""
     for key in effect:
         if key not in EFFECT_KEYS:
             problems.append("%s: unknown key %s" % (where, key))
@@ -281,7 +282,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 problems.append("%s: no .ogg file for sound family %s" % (where, family))
         if "Delay" in effect and target != "Event":
             problems.append("%s: Delay only works for events" % where)
-        if target == "Object" and "Every" not in effect:
+        if target == "Object" and "Every" not in effect and effect.get("Loop", ["no"])[0] not in ("yes", "true", "1"):
             problems.append("%s: a sound on an object needs Every" % where)
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
@@ -428,8 +429,14 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: %s needs three numbers" % (where, key))
     if "Object" in effect and not (kind == "Clip" and target == "Event"):
         problems.append("%s: Object only belongs to clips of events" % where)
-    if "Loop" in effect and kind != "Clip":
-        problems.append("%s: Loop only belongs to clips" % where)
+    if "Loop" in effect and kind != "Clip" and not (kind == "Sound" and target == "Object"):
+        problems.append("%s: Loop only belongs to object clips or object sounds" % where)
+    if kind == "Sound" and target == "Object" and effect.get("Loop", ["no"])[0] in ("yes", "true", "1"):
+        with open(os.path.join(ROOT, "source", "render", "RoomAmbience.cpp"), encoding="utf-8") as handle:
+            runtime = handle.read()
+        for required in ("effect.mLoop && isSound", "startSpatialLoop(", "setSpatialLoopPosition(", "stopSpatialLoop(", "activeSoundLoops"):
+            if required not in runtime:
+                problems.append("%s: sound loop lacks its runtime lifecycle (%s)" % (where, required))
     for pattern in effect.get("Object", []):
         if "*" not in pattern and not mesh_exists(pattern):
             problems.append("%s: no mesh %s" % (where, pattern))

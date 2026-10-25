@@ -366,6 +366,8 @@ bool RoomInfirmary::admit(size_t id, Creature& creature, bool manual)
     creature.setPosition(Ogre::Vector3(static_cast<Ogre::Real>(cot.x+(cot.width-1)*0.5),static_cast<Ogre::Real>(cot.y+(cot.height-1)*0.5),0.0));
     creature.clearDestinations(EntityAnimation::sleep_anim,false,false);
     creature.pushAction(Utils::make_unique<CreatureActionInfirmaryRest>(creature,*this));
+    if(creature.getPositionTile()!=nullptr) creature.getPositionTile()->addDirt(
+        ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryDirtPerTreatment"));
     if(creature.getPositionTile()!=nullptr) fireRoomSound(*creature.getPositionTile(), "Infirmary/Admit");
     return true;
 }

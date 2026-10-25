@@ -22,6 +22,13 @@ struct MeshBounds
 // Mesh-local XY bounds measured from the shipped room furniture, not tile
 // centers. Keep these synchronized with assets using check_room_object_bounds.py.
 static const MeshBounds meshBounds[] = {
+    {"InfirmaryCotSmall", -0.349999994f, -0.350000024f, 0.349999994f, 0.350000024f, 0.299999982f},
+    {"InfirmaryCotMedium", -0.349999994f, -0.850000024f, 0.349999994f, 0.850000024f, 0.300000012f},
+    {"InfirmaryCotLarge", -0.849999964f, -0.850000024f, 0.849999964f, 0.850000024f, 0.319999993f},
+    {"MedicineCabinet", -0.275000006f, -0.149999991f, 0.275000006f, 0.149999991f},
+    {"InstrumentTable", -0.299999982f, -0.200000003f, 0.299999982f, 0.200000003f},
+    {"WashBasin", -0.25f, -0.200000003f, 0.25f, 0.200000003f},
+    {"HerbShelf", -0.299999982f, -0.125f, 0.299999982f, 0.125f},
     {"AdventurerBed", -.406797f, -.679228f, .406797f, .679228f, .087917f},
     {"Anvil", -.335981f, -.280187f, .341827f, .231204f},
     {"Bed", -.337495f, -.681989f, .344794f, .702338f, .686024f},

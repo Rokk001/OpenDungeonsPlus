@@ -113,7 +113,7 @@ namespace
         notification->mPacket << seat->getInfirmaryPayer() << seat->getInfirmaryThreshold() << seat->getInfirmaryHealOn()
             << static_cast<uint32_t>(patients.size());
         const double fullSeconds = SkillManager::getResearchValue(seat, SkillType::roomInfirmary,
-            ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryFullHealSeconds"), "HealTime");
+            ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryFullHealSeconds"), ResearchEffect::HealTime);
         double mana = seat->getMana();
         for(Creature* creature : patients)
         {
