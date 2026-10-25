@@ -579,7 +579,8 @@ Tile* RoomInfirmary::getShamanSpawnTile() const
 void RoomInfirmary::restoreInitialEntityState()
 {
     Room::restoreInitialEntityState();
-    for(const std::pair<const size_t,CotInfo>& entry : mCots) createCotObject(entry.first);
+    for(const std::pair<const size_t,CotInfo>& entry : mCots)
+        if(mCotObjects.count(entry.first)==0) createCotObject(entry.first);
     std::map<size_t,PatientInfo> saved=mPatients;
     mPatients.clear();
     // Destructors may release a previous rest or carry; no iterator into live admissions survives that cleanup.
