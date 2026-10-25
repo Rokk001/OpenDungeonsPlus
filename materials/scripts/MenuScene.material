@@ -39,17 +39,9 @@ material MenuStone : RTSS/NormalMapping_MultiPass
                     normal_map tangent_space
                 }
             }
-        }
-        pass decal
-        {
             ambient 0.85 0.85 0.85 1
             diffuse 0.85 0.85 0.85 1
             specular 0.10 0.10 0.09 1 32
-            texture_unit decalmap
-            {
-                texture MenuFortressStone.png
-                tex_address_mode wrap
-            }
         }
     }
 }
@@ -58,7 +50,7 @@ material MenuDarkStone : MenuStone
 {
     technique
     {
-        pass decal
+        pass lighting
         {
             ambient 0.48 0.50 0.52 1
             diffuse 0.48 0.50 0.52 1
@@ -80,13 +72,9 @@ material MenuIron : RTSS/NormalMapping_MultiPass
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
-        }
-        pass decal
-        {
             ambient 0.72 0.72 0.72 1
             diffuse 0.72 0.72 0.72 1
             specular 0.22 0.23 0.24 1 28
-            texture_unit decalmap { texture MenuRustIron.png }
         }
     }
 }
@@ -141,14 +129,10 @@ material MenuCloth : RTSS/NormalMapping_MultiPass
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
-        }
-        pass decal
-        {
             cull_hardware none
             ambient 0.85 0.85 0.85 1
             diffuse 0.85 0.85 0.85 1
             specular 0.025 0.025 0.025 1 6
-            texture_unit decalmap { texture MenuTornCloth.png }
         }
     }
 }
@@ -274,13 +258,9 @@ material MenuWetStone : RTSS/NormalMapping_MultiPass
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
-        }
-        pass decal
-        {
             ambient 0.92 0.92 0.92 1
             diffuse 0.92 0.92 0.92 1
             specular 0.65 0.65 0.65 1 64
-            texture_unit decalmap { texture MenuWetPaving.png }
         }
     }
 }
@@ -339,7 +319,7 @@ material MenuCarvedStone : MenuStone
 {
     technique
     {
-        pass decal
+        pass lighting
         {
             ambient 0.80 0.82 0.84 1
             diffuse 0.80 0.82 0.84 1
@@ -362,13 +342,9 @@ material MenuDemonStone : RTSS/NormalMapping_MultiPass
                 tex_address_mode wrap
                 rtshader_system { normal_map tangent_space }
             }
-        }
-        pass decal
-        {
             ambient 0.82 0.82 0.82 1
             diffuse 0.82 0.82 0.82 1
             specular 0.09 0.09 0.09 1 18
-            texture_unit decalmap { texture MenuDemonStone.png }
         }
     }
 }
@@ -378,7 +354,7 @@ material MenuRoughStone : MenuStone
 {
     technique
     {
-        pass decal
+        pass lighting
         {
             ambient 0.78 0.80 0.82 1
             diffuse 0.78 0.80 0.82 1
@@ -402,7 +378,7 @@ material MenuPuddle : MenuWetStone
 {
     technique
     {
-        pass decal
+        pass lighting
         {
             ambient 0.55 0.55 0.52 1
             diffuse 0.55 0.55 0.52 1
@@ -414,7 +390,7 @@ material MenuPuddle : MenuWetStone
 // Damp moss gathers in broken joints; its colour is a dark surface response, never light.
 material MenuMoss : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.045 0.055 0.028 1
         diffuse 0.045 0.055 0.028 1
         specular 0.012 0.012 0.008 1 5
@@ -424,7 +400,7 @@ material MenuMoss : MenuStone
 // Muted mineral lichen occupies weathered stone recesses and retains the stone grain.
 material MenuLichen : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.075 0.071 0.041 1
         diffuse 0.075 0.071 0.041 1
         specular 0.012 0.012 0.010 1 5
@@ -434,7 +410,7 @@ material MenuLichen : MenuStone
 // Rain runoff darkens irregular tracks beneath broken masonry without emitting light.
 material MenuWaterStain : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.050 0.045 0.040 1
         diffuse 0.050 0.045 0.040 1
         specular 0.14 0.13 0.11 1 40
@@ -444,7 +420,7 @@ material MenuWaterStain : MenuStone
 // Exposed chipped faces remain dark and granular rather than clean pale cut stone.
 material MenuChippedStone : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.83 0.83 0.77 1
         diffuse 0.83 0.83 0.77 1
         specular 0.018 0.018 0.016 1 6
@@ -454,7 +430,7 @@ material MenuChippedStone : MenuStone
 // Rotten timber and broken weapon handles retain grain in a subdued weathered brown.
 material MenuAgedWood : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.085 0.066 0.045 1
         diffuse 0.085 0.066 0.045 1
         specular 0.010 0.009 0.007 1 5
@@ -464,7 +440,7 @@ material MenuAgedWood : MenuStone
 // Uneven corroded iron catches fire only at worn edges; rust is not emissive.
 material MenuCorrodedIron : MenuIron
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.56 0.51 0.45 1
         diffuse 0.56 0.51 0.45 1
         specular 0.07 0.06 0.05 1 8
@@ -474,7 +450,7 @@ material MenuCorrodedIron : MenuIron
 // Old courtyard bones are stained dark by soil and rain instead of bright clean ivory.
 material MenuBone : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.62 0.52 0.37 1
         diffuse 0.62 0.52 0.37 1
         specular 0.010 0.009 0.007 1 5
@@ -484,14 +460,14 @@ material MenuBone : MenuStone
 // Independent desaturated red remnants keep the two torn banners visibly different.
 material MenuClothFadedA : MenuCloth
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.78 0.70 0.64 1
         diffuse 0.78 0.70 0.64 1
     } }
 }
 material MenuClothFadedB : MenuCloth
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.57 0.62 0.55 1
         diffuse 0.57 0.62 0.55 1
     } }
@@ -577,7 +553,7 @@ material MenuHorizonDark
 // Old blood is a wet, dark surface trace rather than a source of red illumination.
 material MenuDriedBlood : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.36 0.014 0.008 1
         diffuse 0.36 0.014 0.008 1
         specular 0.32 0.045 0.025 1 48
@@ -587,7 +563,7 @@ material MenuDriedBlood : MenuStone
 // Slimy mineral deposits catch rain highlights only inside the existing dark stone colour.
 material MenuWetSlime : MenuStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.055 0.070 0.025 1
         diffuse 0.055 0.070 0.025 1
         specular 0.25 0.28 0.16 1 48
@@ -619,7 +595,7 @@ material MenuWeb
 // Crow feathers retain sharp black silhouettes and a faint wet edge under the moon.
 material MenuCrowBlack : MenuIron
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.055 0.058 0.052 1
         diffuse 0.055 0.058 0.052 1
         specular 0.14 0.12 0.10 1 28
@@ -629,7 +605,7 @@ material MenuCrowBlack : MenuIron
 // Diseased rat hide is dark and soil-stained, with no colourful highlights.
 material MenuRatHide : MenuDemonStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.20 0.15 0.095 1
         diffuse 0.20 0.15 0.095 1
         specular 0.035 0.030 0.020 1 12
@@ -639,7 +615,7 @@ material MenuRatHide : MenuDemonStone
 // Desiccated trophies use the same original eroded surface with a muted dead-earth tint.
 material MenuDeadSkin : MenuDemonStone
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.32 0.22 0.12 1
         diffuse 0.32 0.22 0.12 1
         specular 0.018 0.012 0.008 1 8
@@ -665,7 +641,7 @@ material MenuTitleLetters
 // The title support is old pitted iron, independent from the exchangeable lettering bitmap.
 material MenuTitleIron : MenuIron
 {
-    technique { pass decal {
+    technique { pass lighting {
         ambient 0.65 0.54 0.40 1
         diffuse 0.65 0.54 0.40 1
         specular 0.12 0.09 0.06 1 24
