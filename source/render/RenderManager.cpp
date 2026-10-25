@@ -1754,6 +1754,7 @@ RenderManager::~RenderManager()
     // mSceneManager->destroyInstanceManager(mInstanceManagerCloud);
 }
 
+//! \brief Initializes game visuals with a seam-covering ground plane bounded by the map edges.
 void RenderManager::initGameRenderer(GameMap* gameMap)
 {
     OD_ASSERT_TRUE(gameMap);
@@ -1761,12 +1762,12 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
     mCreatureTextOverlayDisplayed = false;
     mGameMap = gameMap;
 
-    // Cover tile and room seams with continuous earth below the dungeon.
+    // Cover tile and room seams with continuous earth inside the map footprint.
+    // Extending this opaque plane beyond the map would hide the world background.
     // The plane lies below the deepest tile geometry (arena pit floor at z = -3.012,
     // see ArenaLowered.mesh), otherwise it would hide the pit and the creatures in it.
-    const Ogre::Real groundMargin = mViewport->getCamera()->getFarClipDistance();
-    const Ogre::Real groundSizeX = gameMap->getMapSizeX() + 2.0f * groundMargin;
-    const Ogre::Real groundSizeY = gameMap->getMapSizeY() + 2.0f * groundMargin;
+    const Ogre::Real groundSizeX = static_cast<Ogre::Real>(gameMap->getMapSizeX());
+    const Ogre::Real groundSizeY = static_cast<Ogre::Real>(gameMap->getMapSizeY());
     Ogre::MeshManager::getSingleton().createPlane(GROUND_UNDERLAY_MESH_NAME, "Graphics",
         Ogre::Plane(Ogre::Vector3::UNIT_Z, GROUND_UNDERLAY_HEIGHT), groundSizeX, groundSizeY,
         1, 1, true, 1, groundSizeX, groundSizeY, Ogre::Vector3::UNIT_Y);
