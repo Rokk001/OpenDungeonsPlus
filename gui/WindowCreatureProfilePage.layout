@@ -17,7 +17,7 @@
             </Window>
         </Window>
         <Window type="OD/StaticText" name="NameText" >
-            <Property name="Area" value="{{0.0,148},{0.0,2},{1.0,-16},{0.0,26}}" />
+            <Property name="Area" value="{{0.0,148},{0.0,2},{1.0,-32},{0.0,26}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-10" />
@@ -25,7 +25,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="HandleText" >
-            <Property name="Area" value="{{0.0,148},{0.0,28},{1.0,-16},{0.0,48}}" />
+            <Property name="Area" value="{{0.0,148},{0.0,28},{1.0,-32},{0.0,48}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -33,7 +33,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="AgeText" >
-            <Property name="Area" value="{{0.0,148},{0.0,50},{1.0,-16},{0.0,70}}" />
+            <Property name="Area" value="{{0.0,148},{0.0,50},{1.0,-32},{0.0,70}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -41,7 +41,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="RelationText" >
-            <Property name="Area" value="{{0.0,148},{0.0,72},{1.0,-16},{0.0,92}}" />
+            <Property name="Area" value="{{0.0,148},{0.0,72},{1.0,-32},{0.0,92}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -49,7 +49,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="FromText" >
-            <Property name="Area" value="{{0.0,148},{0.0,94},{1.0,-16},{0.0,114}}" />
+            <Property name="Area" value="{{0.0,148},{0.0,94},{1.0,-32},{0.0,114}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -57,7 +57,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="JobText" >
-            <Property name="Area" value="{{0.0,148},{0.0,116},{1.0,-16},{0.0,136}}" />
+            <Property name="Area" value="{{0.0,148},{0.0,116},{1.0,-32},{0.0,136}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -87,13 +87,13 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/ProgressBar" name="ExperienceBar" >
-            <Property name="Area" value="{{0.5,42},{0.0,148},{1.0,-16},{0.0,164}}" />
+            <Property name="Area" value="{{0.5,42},{0.0,148},{1.0,-32},{0.0,164}}" />
             <Property name="StepSize" value="0.01" />
             <Property name="CurrentProgress" value="0.0" />
             <Property name="TooltipText" value="Progress to the next level" />
         </Window>
         <Window type="OD/StaticText" name="AttributesText" >
-            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -101,7 +101,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="EquipmentText" >
-            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -109,7 +109,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="PathText" >
-            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -117,7 +117,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="SkillsText" >
-            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -125,7 +125,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="BioText" >
-            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,214}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,214}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -133,7 +133,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="LikesText" >
-            <Property name="Area" value="{{0.0,16},{0.0,218},{1.0,-16},{0.0,238}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,218},{1.0,-32},{0.0,238}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -141,7 +141,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="DislikesText" >
-            <Property name="Area" value="{{0.0,16},{0.0,240},{1.0,-16},{0.0,260}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,240},{1.0,-32},{0.0,260}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -149,7 +149,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="QuirksText" >
-            <Property name="Area" value="{{0.0,16},{0.0,408},{1.0,-16},{0.0,456}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,408},{1.0,-32},{0.0,456}}" />
             <Property name="Visible" value="False" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -158,7 +158,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="RelationsText" >
-            <Property name="Area" value="{{0.0,16},{0.0,262},{1.0,-16},{0.0,282}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,262},{1.0,-32},{0.0,282}}" />
             <Property name="Visible" value="False" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -175,7 +175,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/InvisibleButton" name="FriendLink0" >
-            <Property name="Area" value="{{0.0,92},{0.0,262},{1.0,-16},{0.0,282}}" />
+            <Property name="Area" value="{{0.0,92},{0.0,262},{1.0,-32},{0.0,282}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzLabelFormatting" value="LeftAligned" />
             <Property name="VertLabelFormatting" value="TopAligned" />
@@ -183,7 +183,7 @@
             <Property name="Visible" value="False" />
         </Window>
         <Window type="OD/InvisibleButton" name="FriendLink1" >
-            <Property name="Area" value="{{0.0,92},{0.0,282},{1.0,-16},{0.0,302}}" />
+            <Property name="Area" value="{{0.0,92},{0.0,282},{1.0,-32},{0.0,302}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzLabelFormatting" value="LeftAligned" />
             <Property name="VertLabelFormatting" value="TopAligned" />
@@ -199,7 +199,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/InvisibleButton" name="FoeLink" >
-            <Property name="Area" value="{{0.0,92},{0.0,304},{1.0,-16},{0.0,324}}" />
+            <Property name="Area" value="{{0.0,92},{0.0,304},{1.0,-32},{0.0,324}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzLabelFormatting" value="LeftAligned" />
             <Property name="VertLabelFormatting" value="TopAligned" />
@@ -207,7 +207,7 @@
             <Property name="Visible" value="False" />
         </Window>
         <Window type="OD/StaticText" name="StatusText" >
-            <Property name="Area" value="{{0.0,16},{0.0,326},{1.0,-16},{0.0,364}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,326},{1.0,-32},{0.0,364}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -215,7 +215,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="LatestText" >
-            <Property name="Area" value="{{0.0,16},{0.0,368},{1.0,-16},{0.0,406}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,368},{1.0,-32},{0.0,406}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />

@@ -1823,10 +1823,12 @@ const float PROFILE_ROW_GAP = 4.0f;
 const float PROFILE_LINE_PADDING = 4.0f;
 //! Scroll step of the profile page (design pixels), about two lines
 const float PROFILE_SCROLL_STEP = 28.0f;
-//! Width the rows of the profile page leave free next to the text: 16 design pixels on each side
-const float PROFILE_ROW_INSET_TOTAL = 32.0f;
-//! Distance of the rows of the profile page from the left and the right edge (design pixels)
+//! Width reserved by the profile margins and the existing scrollbar gutter
+const float PROFILE_ROW_INSET_TOTAL = 48.0f;
+//! Distance of the profile rows from the left edge (design pixels)
 const float PROFILE_SIDE_MARGIN = 16.0f;
+//! Right inset including the existing profile scrollbar gutter (design pixels).
+const float PROFILE_RIGHT_MARGIN = 32.0f;
 //! Height of one text line if the window has no font (design pixels)
 const float PROFILE_FALLBACK_LINE_HEIGHT = 16.0f;
 //! Number of rows with a label and links (friends, foe) and the most windows in such a row (label and two links)
@@ -1858,12 +1860,13 @@ float getProfileLinesHeight(const CEGUI::Window* window, std::size_t lines, floa
 }
 }
 
+//! \brief Fits a wrapped profile row between the left margin and scrollbar gutter.
 float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
 {
     if(!window->isVisible())
         return y;
 
-    // The row spans the page minus 16 design pixels on each side; the text uses that whole width
+    // The row uses the page width between its margin and the scrollbar gutter
     const CEGUI::Window* parent = window->getParent();
     float width = window->getPixelSize().d_width;
     if(parent != nullptr)
@@ -1871,10 +1874,11 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
     const std::size_t lines = countWrappedLines(window, width);
     const float height = getProfileLinesHeight(window, lines, scale);
     setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
-        CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y + height)));
+        CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, y + height)));
     return y + height + PROFILE_ROW_GAP;
 }
 
+//! \brief Arranges the existing profile rows and scrollbar inside the fitted profile viewport.
 float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
 {
     const float scale = getLayoutScale();
@@ -1906,12 +1910,12 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
                 continue;
 
             setScaledArea(link, CEGUI::URect(CEGUI::UDim(0, PROFILE_LINK_LEFT), CEGUI::UDim(0, linkY),
-                CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, linkY + lineHeight)));
+                CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, linkY + lineHeight)));
             linkY += lineHeight;
         }
         const bool hasLinks = (linkY > y);
         setScaledArea(label, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
-            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -PROFILE_SIDE_MARGIN),
+            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN),
             CEGUI::UDim(0, y + lineHeight)));
         y = std::max(y + lineHeight, linkY) + PROFILE_ROW_GAP;
     }

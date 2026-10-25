@@ -387,7 +387,7 @@ const float SKILL_BADGE_NODE_GAP = 16.0f;
 //! \brief Horizontal padding in pixels added to the counter text width to get the width of the counter window
 const float SKILL_BADGE_WIDTH_PADDING = 8.0f;
 
-//! \brief Connects game controls, including both entry points to the existing objectives window.
+//! \brief Connects game controls, including the scroll button for the existing objectives window.
 GameMode::GameMode(ModeManager *modeManager):
     GameEditorModeBase(modeManager, ModeManager::GAME, modeManager->getGui().getGuiSheet(Gui::guiSheet::inGameMenu)),
     mDigSetBool(false),
@@ -502,12 +502,6 @@ GameMode::GameMode(ModeManager *modeManager):
     //Objectives window
     addEventConnection(
         guiSheet->getChild("GoalsButton")->subscribeEvent(
-            CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber(&GameMode::toggleObjectivesWindow, this)
-        )
-    );
-    addEventConnection(
-        guiSheet->getChild("ObjectivesButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&GameMode::toggleObjectivesWindow, this)
         )

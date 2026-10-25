@@ -35,13 +35,33 @@ for name in ('CreaturesLabel', 'FilterButton', 'CreatureList', 'FeedTab', 'Profi
              'OwnPostsText'):
     check('name="%s"' % name in layout, name)
 check('OpenProfileButton' not in layout, 'the profile opens in the right pane, not in a window')
-# the right part (feed or profile) starts right of the list and both panes use the same area
-list_block = layout[layout.index('name="CreatureList"'):]
-list_right = int(re.search(r'Area" value="\{\{0,\d+\},\{0,\d+\},\{0,(\d+)\}', list_block)[1])
-pane_lefts = [int(re.search(r'Area" value="\{\{0,(\d+)\}', layout[layout.index('name="%s"' % n):])[1])
-              for n in ('FeedTab', 'FeedPane', 'ProfilePane')]
-check(all(left > list_right for left in pane_lefts), 'the right part must not overlap the list')
-check(width - 16 - min(pane_lefts) >= 400, 'the profile needs about 400 design pixels')
+# Both columns use the shared frame client rectangle with proportional margins.
+import xml.etree.ElementTree as ET
+social_root = ET.fromstring(layout).find('Window')
+
+
+def area(name):
+    """Return the relative coordinates of a named social-window child."""
+    window = social_root.find(".//Window[@name='%s']" % name)
+    value = window.find("Property[@name='Area']").get('value')
+    dims = re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)
+    check(len(dims) == 4 and all(float(offset) == 0 for _, offset in dims), name + ' scales with its client')
+    return [float(scale) for scale, _ in dims]
+
+
+list_area = area('CreatureList')
+feed = area('FeedPane')
+profile = area('ProfilePane')
+check(feed == profile, 'feed and profile use the same grid')
+check(feed[0] > list_area[2], 'the right part must not overlap the list')
+# Preserve the original minimum text-column width after subtracting the actual forged frame.
+skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
+side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4
+check((width - 2 * side) * (profile[2] - profile[0]) >= 400, 'the profile needs about 400 design pixels')
+check(abs(list_area[0] - (1 - profile[2])) < 1e-6, 'equal outer margins')
+check(area('FeedTab')[0] == feed[0] and area('ProfileTab')[2] == feed[2], 'tabs align to the right column')
+check(abs((area('FeedTab')[2] - area('FeedTab')[0]) -
+          (area('ProfileTab')[2] - area('ProfileTab')[0])) < 1e-6, 'equal tab widths')
 check('name="Visible" value="False"' in layout[layout.index('name="ProfilePane"'):layout.index('name="ProfileHint"')],
       'the feed is shown first')
 check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')

@@ -337,15 +337,6 @@
             <UserString name="AllowEdgeScrolling" value="true" />
             <UserString name="ContextHelp" value="Skill: open the research tree and choose the next research" />
         </Window>
-    <Window type="OD/GameTabButton" name="ObjectivesButton" >
-            <Property name="NavigationFrame" value="True" />
-            <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,436},{1,-184},{0,468},{1,-132}}" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/NavigationObjectives" />
-            <Property name="TooltipText" value="Objectives" />
-            <Property name="ClippedByParent" value="False" />
-            <Property name="Visible" value="True" />
-        </Window>
     <Window type="OD/GameTabButton" name="PanelToggleButton" >
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
@@ -356,7 +347,7 @@
         </Window>
     <Window type="DefaultWindow" name="MessageQueue" >
             <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,472},{1,-184},{1,0},{1,-132}}" />
+            <Property name="Area" value="{{0,436},{1,-184},{1,0},{1,-132}}" />
             <Property name="MousePassThroughEnabled" value="True" />
             <Property name="RiseOnClickEnabled" value="False" />
             <Window type="OD/StaticImage" name="Rail">
