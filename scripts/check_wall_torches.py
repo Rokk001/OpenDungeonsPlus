@@ -117,11 +117,17 @@ check("if(mWallTorchesDirty)" in update and "mWallTorchesDirty = false;" in upda
 check(game_map_cpp.count("updateWallTorches();") == 1, "updateWallTorches is called more than once per turn")
 view = read("source", "render", "WallTorchView.cpp")
 check("WallTorchConfig::load()" in view, "WallTorchView does not read WallTorchConfig")
-for system in ("RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchSmoke"):
+for system in ("RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchGlow", "RoomAmbTorchSmoke"):
     check(system in view, "WallTorchView does not use " + system)
     check(system in read("particles", "RoomAmbienceDeferred.particle"), "particle system %s is missing" % system)
-check("RoomAmbTorchGlow" not in view and "RoomAmbTorchGlow" not in read("particles", "RoomAmbienceDeferred.particle"),
-      "the torch glow sprite is still present")
+glow_particle = read("particles", "RoomAmbienceDeferred.particle")
+glow_particle = glow_particle[glow_particle.index("particle_system RoomAmbTorchGlow"):
+                              glow_particle.index("particle_system RoomAmbTorchSmoke")]
+check("material        RoomAmbGlow" in glow_particle, "the torch glow does not use the soft additive sprite")
+glow_material = read("materials", "scripts", "RoomAmbience.material")
+glow_material = glow_material[glow_material.index("material RoomAmbGlow"):glow_material.index("material RoomAmbSmoke")]
+check("scene_blend src_alpha one" in glow_material and "depth_write off" in glow_material,
+      "torch glow must use alpha-weighted additive blending without writing depth")
 
 # The visible flame emitter must start at the actual mesh head, on all sides.
 # Read the shared position buffer directly; no converter, compiler or game needed.
@@ -170,8 +176,42 @@ for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
     check(all(abs(a - b) < 0.00001 for a, b in zip(rotated, emitted)), "flame misses head for wall side %s" % ((dx, dy),))
 
 refresh = body(view, "void WallTorchView::refresh")
+# Camera-height regression: torch visibility is measured on the floor, not in 3D from the camera.
+# At default zoom a wall under the camera is already farther than the old 16-tile limit.
+check("torch.mDistance = (torch.mPosition - lookPoint).length();" in refresh,
+      "torch visibility must use the floor look point instead of camera height")
+check("lookPoint.z = 0.0f;" in refresh and
+      "cameraPosition.z / -direction.z" in refresh,
+      "torch look point must be the camera ray's intersection with the floor")
+check("camera->isVisible(Ogre::AxisAlignedBox" in refresh,
+      "wall torches lost camera-frustum culling")
+show_distance = float(re.search(r"SHOW_DISTANCE = ([0-9.]+)", view).group(1))
+part_distances = [float(number) for number in re.search(r"PART_DISTANCES\[NB_PARTS\] = \{([^}]+)", view).group(1).split(",")]
+reduced_parts = int(re.search(r"NB_REDUCED_PARTS = ([0-9]+)", view).group(1))
+part_systems = re.findall(r'"(RoomAmbTorch\w+)"', re.search(r"PART_SYSTEMS\[NB_PARTS\] = \{([^}]+)", view).group(1))
+check(part_systems == ["RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchGlow", "RoomAmbTorchSmoke"],
+      "wall torch parts do not keep flame and glow ahead of optional smoke")
+check(reduced_parts == 3 and part_distances[1] == show_distance and part_distances[2] == show_distance,
+      "every shown torch must retain flame and glow, including reduced mode and unlit torches")
+check("mSettings.mActiveLights" in refresh and "mSettings.mActiveLightsReduced" in refresh and
+      "i < nbLights" in refresh and "NearerTorch(lookDistances)" in refresh,
+      "nearest-N real-light budgets must remain configured and sorted")
+check("cameraDistances.push_back((shown[i]->second.mPosition - cameraPosition).length());" in refresh,
+      "the visibility fix must preserve camera-distance ordering of crackling sounds")
+for height in (3.0, 16.0, 32.0):
+    # A diagonal downward camera keeps the same floor focus when zooming out.
+    camera_position = (0.0, -height, height)
+    direction = (0.0, math.sqrt(0.5), -math.sqrt(0.5))
+    look_point = tuple(camera_position[i] + direction[i] * (height / -direction[2]) for i in range(3))
+    for x, expected in ((0.55, True), (8.0, True), (17.0, False)):
+        floor_distance = math.dist((x, 0.0, 0.0), look_point)
+        check((floor_distance <= show_distance) == expected,
+              "torch visibility changes with camera height %s at floor distance %s" % (height, x))
+        if expected:
+            check(all(floor_distance <= distance for distance in part_distances[:reduced_parts]),
+                  "a shown torch loses its flame or glow after zooming")
 check("((part < NB_REDUCED_PARTS) || (torch.mLight != nullptr))" in refresh,
-      "unlit torches must show only the holder and flame")
+      "smoke must remain limited to torches with real light")
 check(refresh.index("if(lit[i])") < refresh.index("bool wanted ="),
       "torch particles are selected before nearest-N lights")
 check("for(uint32_t i = 0; i < NB_PARTS; ++i)\n                destroyPart(torch.mParts[i]);" in refresh,
