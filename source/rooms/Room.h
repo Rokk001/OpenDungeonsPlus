@@ -333,6 +333,10 @@ protected:
         activeSpotLeft,
         activeSpotRight
     };
+    //! \brief Lets a room restrict wall furniture candidates before active spots change.
+    virtual void filterWallActiveSpots(ActiveSpotPlace place, std::vector<Tile*>& tiles)
+    {}
+
     std::vector<Creature*> mCreaturesUsingRoom;
     //! Standing positions reserved by the creatures working at the room's objects
     std::map<Creature*, InteractionPosition> mInteractionPositions;
