@@ -499,6 +499,12 @@ void RoomInfirmary::splitRoom(Room& room, const std::vector<Tile*>& tiles)
         }
         if(!any) continue;
         if(!all || target.getSeat()!=getSeat()) abandon(entry.first);
+        if(!all && mCotObjects.count(entry.first))
+        {
+            BuildingObject* object=mCotObjects[entry.first];
+            removeBuildingObject(object);
+            target.removeBuildingObject(object);
+        }
         if(all)
         {
             size_t id=target.mNextCotId++;
