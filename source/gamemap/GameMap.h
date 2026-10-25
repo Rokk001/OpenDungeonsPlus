@@ -720,6 +720,7 @@ public:
     void removeRenderedMovableEntity(RenderedMovableEntity *obj);
     RenderedMovableEntity* getRenderedMovableEntity(const std::string& name);
     void clearRenderedMovableEntities(NodeType nt = NodeType::MTILES_NODE);
+    //! \brief Looks an entity up by its type and unique name (rendered entities, creatures, rooms, traps, spells and lights).
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 

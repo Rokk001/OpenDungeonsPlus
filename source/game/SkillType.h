@@ -103,6 +103,10 @@ enum class SkillType
     // Added later, appended so that existing saves stay valid
     roomToilet,
 
+    // Added later, appended so that existing saves stay valid
+    roomTavern,
+    tavernBeer,
+
     // This should be the last
     countSkill
 };

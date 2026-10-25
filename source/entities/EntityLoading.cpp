@@ -23,6 +23,7 @@
 #include "entities/Creature.h"
 #include "entities/DirtPileEntity.h"
 #include "entities/GiftBoxEntity.h"
+#include "entities/InnkeeperEntity.h"
 #include "entities/MapLight.h"
 #include "entities/MissileObject.h"
 #include "entities/PersistentObject.h"
@@ -217,6 +218,11 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
         case GameEntityType::dirtPileEntity:
         {
             entity = DirtPileEntity::getDirtPileEntityFromPacket(gameMap, is);
+            break;
+        }
+        case GameEntityType::innkeeperEntity:
+        {
+            entity = InnkeeperEntity::getInnkeeperEntityFromPacket(gameMap, is);
             break;
         }        
         default:

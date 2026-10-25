@@ -29,6 +29,7 @@ class ODPacket;
 namespace Entities
 {
     GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::istream& is);
+    //! \brief Creates the entity a client is told about by the server (a type followed by the data of the entity).
     GameEntity* getGameEntityFromPacket(GameMap* gameMap,  ODPacket& is);
 }
 

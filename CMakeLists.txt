@@ -355,6 +355,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/Creature.cpp
     ${SRC}/entities/CreatureDefinition.cpp
     ${SRC}/entities/DirtPileEntity.cpp
+    ${SRC}/entities/InnkeeperEntity.cpp
     ${SRC}/entities/DoorEntity.cpp
     ${SRC}/entities/EntityLoading.cpp
     ${SRC}/entities/GameEntity.cpp
@@ -545,6 +546,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomGuardRoom.cpp
     ${SRC}/rooms/RoomTemple.cpp
     ${SRC}/rooms/RoomToilet.cpp
+    ${SRC}/rooms/RoomTavern.cpp
     ${SRC}/rooms/RoomTrainingHall.cpp
     ${SRC}/rooms/RoomTreasury.cpp
     ${SRC}/rooms/RoomType.cpp

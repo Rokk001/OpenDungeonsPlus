@@ -97,6 +97,7 @@ namespace ResearchEffect
     static const std::string Lifetime = "Lifetime";
     static const std::string ManaPerSecond = "ManaPerSecond";
     static const std::string Gold = "Gold";
+    static const std::string PortalCooldown = "PortalCooldown";
 }
 
 //! \brief Local class that will be used to store Skill data and link it to the gui
