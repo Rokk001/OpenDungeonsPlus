@@ -1004,7 +1004,10 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     levelFile << "\n[HerbBundles]\n";
     for(RenderedMovableEntity* rendered : rendereds)
         if(rendered->getObjectType() == GameEntityType::herbBundleEntity)
-            levelFile << *rendered << "\n";
+        {
+            GameEntity::exportToStream(rendered, levelFile);
+            levelFile << "\n";
+        }
     levelFile << "[/HerbBundles]\n";
 
     if(!gameMap.getLevelScript().isEmpty())
