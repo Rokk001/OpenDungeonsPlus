@@ -268,7 +268,7 @@
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner2" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner2Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner2Pressed" />
-            <Property name="CornerIconArea" value="{{0.09,0},{0.48,0},{0.52,0},{0.91,0}}" />
+            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,8},{1,-52},{0,52},{1,-8}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/NavOptions" />
@@ -282,7 +282,7 @@
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner1" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner1Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner1Pressed" />
-            <Property name="CornerIconArea" value="{{0.48,0},{0.09,0},{0.91,0},{0.52,0}}" />
+            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-184},{0,184},{1,-140}}" />
@@ -377,7 +377,7 @@
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner0" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner0Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner0Pressed" />
-            <Property name="CornerIconArea" value="{{0.09,0},{0.09,0},{0.52,0},{0.52,0}}" />
+            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,8},{1,-184},{0,52},{1,-140}}" />
@@ -390,7 +390,7 @@
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner3" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner3Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner3Pressed" />
-            <Property name="CornerIconArea" value="{{0.48,0},{0.48,0},{0.91,0},{0.91,0}}" />
+            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <Property name="Area" value="{{0,140},{1,-52},{0,184},{1,-8}}" />
