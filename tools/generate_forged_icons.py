@@ -87,7 +87,10 @@ def read_swatches():
     return tiles
 
 
+# Rebuild legacy icons only when no painted icon source manifest is installed.
 def build_atlas():
+    if os.path.isfile(os.path.join(ROOT, "assets-src", "gui", "icons", "slots.json")):
+        raise SystemExit("Painted icon sources are installed; use scripts/gui/build_icon_atlas.py. --sheet remains available.")
     swatches = read_swatches()
     names = list(fm.ICONS)
     with multiprocessing.Pool() as pool:
