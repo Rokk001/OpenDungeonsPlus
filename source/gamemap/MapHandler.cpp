@@ -28,6 +28,7 @@
 #include "goals/GoalLoading.h"
 #include "entities/ChickenEntity.h"
 #include "entities/CraftedTrap.h"
+#include "entities/DirtPileEntity.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/EntityLoading.h"
@@ -572,6 +573,11 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile.seekg(itemBagPosition);
     if(nextParam == "[ItemBags]" && !readGameEntity(gameMap, "ItemBags", GameEntityType::itemBagEntity, levelFile))
         return false;
+    if(!readDirtSections(gameMap, levelFile))
+    {
+        OD_LOG_WRN("Invalid Dirt or DirtPiles section");
+        return false;
+    }
 
     if(!readGameEntity(gameMap, "Missiles", GameEntityType::missileObject, levelFile))
     {
@@ -707,6 +713,100 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     return true;
 }
 
+//! \brief Section tag that opens the dirt of the tiles in a level or saved game.
+static const std::string DIRT_SECTION_OPEN = "[Dirt]";
+//! \brief Section tag that closes the dirt of the tiles.
+static const std::string DIRT_SECTION_CLOSE = "[/Dirt]";
+//! \brief Section tag that opens the piles and blood stains.
+static const std::string DIRT_PILES_SECTION_OPEN = "[DirtPiles]";
+//! \brief Section tag that closes the piles and blood stains.
+static const std::string DIRT_PILES_SECTION_CLOSE = "[/DirtPiles]";
+
+//! \brief Reads the lines "x y dirt" of an opened [Dirt] section up to its end tag.
+static bool readDirtTileLines(GameMap& gameMap, std::stringstream& levelFile)
+{
+    std::string token;
+    while(levelFile >> token)
+    {
+        if(token == DIRT_SECTION_CLOSE)
+            return true;
+
+        int x = Helper::toInt(token);
+        int y = 0;
+        double dirt = 0.0;
+        if(!(levelFile >> y >> dirt))
+            return false;
+
+        Tile* tile = gameMap.getTile(x, y);
+        if(tile == nullptr)
+        {
+            OD_LOG_WRN("Dirt for an unknown tile x=" + Helper::toString(x) + ", y=" + Helper::toString(y));
+            continue;
+        }
+
+        tile->setDirt(dirt);
+    }
+
+    return false;
+}
+
+//! \brief Reads the lines of an opened [DirtPiles] section up to its end tag.
+static bool readDirtPileLines(GameMap& gameMap, std::stringstream& levelFile)
+{
+    std::string token;
+    while(levelFile >> token)
+    {
+        if(token == DIRT_PILES_SECTION_CLOSE)
+            return true;
+
+        std::string line = token;
+        std::string rest;
+        std::getline(levelFile, rest);
+        line += rest;
+
+        std::stringstream lineStream(line);
+        if(!DirtPileEntity::importFromSaveStream(&gameMap, lineStream))
+        {
+            OD_LOG_WRN("Invalid dirt pile line=" + line);
+            return false;
+        }
+    }
+
+    return false;
+}
+
+bool readDirtSections(GameMap& gameMap, std::stringstream& levelFile)
+{
+    // Both sections are optional and come in this order. A tag that is not ours is put back for the next reader.
+    std::string tag;
+    std::streampos before = levelFile.tellg();
+    if(levelFile >> tag)
+    {
+        if(tag == DIRT_SECTION_OPEN)
+        {
+            if(!readDirtTileLines(gameMap, levelFile))
+                return false;
+
+            before = levelFile.tellg();
+            if(!(levelFile >> tag))
+                tag.clear();
+        }
+
+        if(tag == DIRT_PILES_SECTION_OPEN)
+        {
+            if(!readDirtPileLines(gameMap, levelFile))
+                return false;
+
+            return true;
+        }
+    }
+
+    // Not a dirt section: go back to the start of the tag that was read
+    levelFile.clear();
+    levelFile.seekg(before);
+    return true;
+}
+
 bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType type, std::stringstream& levelFile)
 {
     std::string nextParam;
@@ -742,6 +842,47 @@ bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType ty
     OD_LOG_INF("Loaded " + Helper::toString(nbEntity) + " " + item + " in level");
 
     return true;
+}
+
+//! \brief Writes the [Dirt] section (one line x y dirt for every tile with dirt) and the [DirtPiles] section (one line
+//! for every pile or blood stain). A section without entries is left out.
+static void writeDirtSections(std::ostream& levelFile, GameMap& gameMap)
+{
+    std::stringstream dirtLines;
+    for(int xx = 0; xx < gameMap.getMapSizeX(); ++xx)
+    {
+        for(int yy = 0; yy < gameMap.getMapSizeY(); ++yy)
+        {
+            Tile* tile = gameMap.getTile(xx, yy);
+            if((tile != nullptr) && (tile->getDirt() > 0.0))
+                dirtLines << xx << "\t" << yy << "\t" << tile->getDirt() << "\n";
+        }
+    }
+    if(dirtLines.tellp() > 0)
+    {
+        levelFile << "\n" << DIRT_SECTION_OPEN << "\n";
+        levelFile << "# x y dirt" << "\n";
+        levelFile << dirtLines.str();
+        levelFile << DIRT_SECTION_CLOSE << std::endl;
+    }
+
+    std::stringstream pileLines;
+    const std::vector<RenderedMovableEntity*>& rendereds = gameMap.getRenderedMovableEntities();
+    for(RenderedMovableEntity* rendered : rendereds)
+    {
+        if(rendered->getObjectType() != GameEntityType::dirtPileEntity)
+            continue;
+
+        static_cast<DirtPileEntity*>(rendered)->exportToSaveStream(pileLines);
+        pileLines << "\n";
+    }
+    if(pileLines.tellp() > 0)
+    {
+        levelFile << "\n" << DIRT_PILES_SECTION_OPEN << "\n";
+        levelFile << "# kind creatureClass x y dirtLeft ageTurns" << "\n";
+        levelFile << pileLines.str();
+        levelFile << DIRT_PILES_SECTION_CLOSE << std::endl;
+    }
 }
 
 //! \brief Saves the map with item bags after gift boxes and the existing remaining sections.
@@ -965,6 +1106,7 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << '\n';
     }
     levelFile << "[/ItemBags]\n";
+    writeDirtSections(levelFile, gameMap);
 
     levelFile << "\n[Missiles]\n";
     levelFile << "# " << MissileObject::getMissileObjectStreamFormat() << "\n";

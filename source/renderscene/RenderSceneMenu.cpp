@@ -55,6 +55,9 @@ static const std::string CAMERA_SECTION_END = "[/MenuCamera]";
 //! Firelight timing is separate from native render groups and camera metadata.
 static const std::string FIRE_LIGHT_SECTION = "[MenuFireLights]";
 static const std::string FIRE_LIGHT_SECTION_END = "[/MenuFireLights]";
+//! Menu fill is parsed separately from native commands so world ambient can be restored.
+static const std::string LIGHTING_SECTION = "[MenuLighting]";
+static const std::string LIGHTING_SECTION_END = "[/MenuLighting]";
 //! Two smooth waves avoid synchronized, rigid pulses while retaining positive light intensity.
 static const Ogre::Real FIRE_PRIMARY_WEIGHT = 0.7f;
 static const Ogre::Real FIRE_SECONDARY_WEIGHT = 0.3f;
@@ -92,7 +95,7 @@ void RenderSceneMenu::dispatchSyncPost(const std::string& event)
         sceneGroup->notifySyncPost(event);
 }
 
-//! \brief Instantiates native groups, captures firelight baselines and selects the authored overview.
+//! \brief Instantiates native groups with configured ambient, captures firelight and selects the overview.
 void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
     if(mActive)
@@ -102,7 +105,7 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
     if(!renderManager.isKeeperHandVisible())
         renderManager.rrToggleHandSelectorVisibility();
     mSavedAmbient = renderManager.getSceneManager()->getAmbientLight();
-    renderManager.getSceneManager()->setAmbientLight(Ogre::ColourValue::Black);
+    renderManager.getSceneManager()->setAmbientLight(mMenuAmbient);
     getBackgroundRectangle(renderManager)->setVisible(false);
     mActive = true;
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
@@ -321,7 +324,7 @@ bool RenderSceneMenu::getCameraPose(const std::string& name, Ogre::Vector3& posi
     return true;
 }
 
-//! \brief Reads camera and firelight metadata separately while retaining the native scene group parser.
+//! \brief Reads camera, ambient and firelight metadata while retaining the native scene group parser.
 void RenderSceneMenu::readSceneMenu(const std::string& fileName)
 {
     if(!mSceneGroups.empty())
@@ -341,6 +344,7 @@ void RenderSceneMenu::readSceneMenu(const std::string& fileName)
     std::string line;
     bool cameraSection = false;
     bool fireSection = false;
+    bool lightingSection = false;
     while(Helper::readNextLineNotEmpty(definition, line))
     {
         if(line == CAMERA_SECTION || line == CAMERA_SECTION_END)
@@ -351,6 +355,26 @@ void RenderSceneMenu::readSceneMenu(const std::string& fileName)
         if(line == FIRE_LIGHT_SECTION || line == FIRE_LIGHT_SECTION_END)
         {
             fireSection = (line == FIRE_LIGHT_SECTION);
+            continue;
+        }
+        if(line == LIGHTING_SECTION || line == LIGHTING_SECTION_END)
+        {
+            lightingSection = (line == LIGHTING_SECTION);
+            continue;
+        }
+        if(lightingSection)
+        {
+            std::stringstream command(line);
+            std::string kind;
+            Ogre::ColourValue ambient = Ogre::ColourValue::Black;
+            if(!(command >> kind >> ambient.r >> ambient.g >> ambient.b) || kind != "Ambient"
+                || !std::isfinite(ambient.r) || !std::isfinite(ambient.g) || !std::isfinite(ambient.b)
+                || ambient.r < 0.0f || ambient.g < 0.0f || ambient.b < 0.0f)
+            {
+                OD_LOG_ERR("Invalid menu ambient definition: " + line);
+                return;
+            }
+            mMenuAmbient = ambient;
             continue;
         }
         if(fireSection)

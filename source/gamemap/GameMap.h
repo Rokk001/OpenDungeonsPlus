@@ -22,6 +22,7 @@
 #include "gamemap/SandboxMode.h"
 #include "gamemap/SelectionEntityWanted.h"
 #include "gamemap/TileContainer.h"
+#include "gamemap/TileDirtSync.h"
 #include "ai/AIManager.h"
 #include "rooms/WallTorches.h"
 
@@ -203,6 +204,10 @@ public:
     //! The clients only show the torches; the server list is also what the lit check of a room reads.
     const std::map<uint32_t, WallTorch>& getWallTorches() const
     { return mWallTorches; }
+
+    //! \brief Server side. Follows the dirt of the floor tiles and of the rooms for the cosmetic event tileDirt.
+    inline TileDirtSync& getTileDirtSync()
+    { return mTileDirtSync; }
 
     //! \brief Client side. Counts the changes of getWallTorches(), so that a display can see cheaply
     //! whether the list changed since it last read it.
@@ -883,6 +888,8 @@ private:
     int32_t mWaveCountdownToSend;
     //! \brief See getWallTorches()
     std::map<uint32_t, WallTorch> mWallTorches;
+    //! \brief See getTileDirtSync()
+    TileDirtSync mTileDirtSync;
     //! \brief Server side: the torches have to be computed again
     bool mWallTorchesDirty;
     //! \brief Client side: see getWallTorchesVersion()

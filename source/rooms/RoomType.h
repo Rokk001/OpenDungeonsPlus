@@ -43,6 +43,7 @@ enum class RoomType
     torture,
     guardRoom,
     temple,
+    toilet,
     merchant,
     herbGarden,
     alchemyLab,

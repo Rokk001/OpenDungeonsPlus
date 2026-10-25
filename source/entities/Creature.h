@@ -87,7 +87,9 @@ enum class CreatureSound
     Attack,
     Die,
     Slap,
-    Dig
+    Dig,
+    Relieve,
+    Clean
 };
 
 //! \brief A skill of a creature together with its running cooldown and warmup counters.
@@ -245,7 +247,7 @@ public:
     //! \brief Client side. Takes over the appearance the server sent in the creature message of
     //! ServerNotificationType::creatureAppearance. Ignored on the server.
     void setAppearanceFromServer(const CreatureAppearance& appearance);
-    //! \brief Returns server-side characteristics, carried item slots and existing debug information.
+    //! \brief Returns creature characteristics, equipment, needs and debug information.
     std::string getStatsText();
     //! \brief Returns statistics with only hand items visible to a foreign viewing seat.
     std::string getStatsText(const Seat* viewer);
@@ -903,12 +905,46 @@ public:
     inline int getJobCooldown() const
     { return mJobCooldown; }
 
-    inline void foodEaten(double val)
-    {
-        mHunger -= val;
-        if(mHunger < 0.0)
-            mHunger = 0.0;
-    }
+    //! \brief Lowers the hunger by val (the creature ate) and raises the urge by UrgePerChicken (global.cfg [Dirt]).
+    //! \param val The hunger the meal takes away.
+    void foodEaten(double val);
+
+    //! \brief Hook for a later drinking room: raises the urge by UrgePerDrink (global.cfg [Dirt]). Nothing calls it yet.
+    //! \param val The value of the drink (reserved for the thirst of that room, the urge gain is the same for every drink).
+    void drinkTaken(double val);
+
+    //! \brief Hook for a later bathing room: the creature is clean again (creature dirt 0).
+    void washed();
+
+    //! \brief Raises the urge (0 - 100) by value, server side. Rogue creatures have no urge.
+    void increaseUrge(double value);
+
+    //! \brief Sets the urge (0 - 100, limited), used when a creature is loaded.
+    void setUrge(double val);
+
+    //! \brief Server side. Makes the creature relieve itself where it stands: a squat of ToiletUseTurns turns and a pile
+    //! on the floor afterwards. In a treasury, the dungeon heart room or a temple it first steps out of the room.
+    //! The urge is 0 afterwards.
+    void relieve();
+
+    //! \brief Server side, once per turn. At UrgeRelieve the creature relieves itself (not while it fights, is held in the
+    //! hand, KO, dragged, possessed or already on a toilet seat; then at the first turn after that). From UrgeOnTheWay on,
+    //! a creature that walks over a free toilet seat of a room it may use stops and uses it.
+    void handleUrge();
+
+    //! \brief Returns the urge to use a toilet (0 = none, 100 = cannot hold it any longer).
+    inline double getUrge() const
+    { return mUrge; }
+
+    //! \brief Raises the dirt the creature carries (0 - 100) by value, server side.
+    void increaseCreatureDirt(double value);
+
+    //! \brief Sets the dirt the creature carries (0 - 100, limited), used when a creature is loaded.
+    void setCreatureDirt(double val);
+
+    //! \brief Returns the dirt the creature carries (0 = clean, 100 = filthy).
+    inline double getCreatureDirt() const
+    { return mCreatureDirt; }
 
     //! \brief Sets the hunger (0 = full, 100 = starving), server side
     inline void setHunger(double val)
@@ -948,7 +984,8 @@ public:
 
     //! \brief Server side. A worker starts pulling this creature by the legs: it stops what it did, stays on the
     //! map and lies on the ground (clip dragged_anim). It moves with the paths the worker gives it.
-    void notifyDragStart();
+    //! \param pullerDirtFactor DirtFactor of the pulling worker, used for the trail dirt of the pulled creature
+    void notifyDragStart(double pullerDirtFactor);
 
     //! \brief Server side. The worker stopped pulling (arrived, gave up, the creature died or was picked up):
     //! starts the pause before it can be pulled again
@@ -1108,6 +1145,11 @@ public:
 
     //! \brief Adds a post of this category to the feed if the creature belongs to the local player.
     void socialEvent(social::PostCategory category);
+
+    //! \brief Client side. The creature of the local player entered a filthy room: posts about it unless it posted about
+    //! the same room less than FilthyPostSeconds ago.
+    //! \param roomName The name of the filthy room.
+    void socialFilthyRoom(const std::string& roomName);
 
     inline int32_t getNbTurnsWithoutBattle() const
     { return mNbTurnsWithoutBattle; }
@@ -1511,6 +1553,11 @@ private:
     bool            mHasVisualDebuggingEntities;
     double          mWakefulness;
     double          mHunger;
+    //! \brief The urge to use a toilet (0 - 100). Grows by UrgeGrowth/Turn of the type, +UrgePerChicken per meal.
+    double          mUrge;
+    //! \brief The dirt the creature carries (0 - 100). Fights, prison and torture raise it, it decays, and it dirties
+    //! every tile the creature enters.
+    double          mCreatureDirt;
 
     //! \brief The level of the creature
     unsigned int    mLevel;
@@ -1560,6 +1607,8 @@ private:
     //! \brief Server side. Whether the clients were told that the creature has a bed: -1 not yet, 0 no, 1 yes
     //! (cosmetic events only, not saved)
     int32_t         mBedNotified;
+    //! \brief Client side. The turn of the last Filthy post of this creature, by room name (not saved)
+    std::map<std::string, int64_t> mFilthyPostTurn;
 
     //! Skill type that will be dropped when the creature dies
     SkillType       mSkillTypeDropDeath;
@@ -1578,6 +1627,12 @@ private:
 
     CEGUI::Window*  mStatsWindow;
     int32_t         mNbTurnsWithoutBattle;
+
+    //! \brief Runtime only (not saved): true when this creature was knocked out in the current fight, so the fight end adds no extra creature dirt
+    bool            mDirtKoThisFight;
+
+    //! \brief Runtime only (not saved): true once the creature took or dealt a hit since the last fight end, so a creature that never fought gets no creature dirt when the battle counter first counts up
+    bool            mFoughtSinceFightEnd;
 
     //! \brief Used on server side for the mood. Set by the casino, fades by CasinoMoodDecay per second
     double          mCasinoMood;
@@ -1722,6 +1777,9 @@ private:
     //! \brief Used on server side. True while a worker pulls the creature to its bed (not saved: actions are not saved)
     bool                            mIsBeingDragged;
 
+    //! \brief Used on server side (not saved). DirtFactor of the worker that pulls the creature, used for the trail dirt while it is pulled
+    double                          mDragDirtFactor;
+
     //! \brief Used on server side. No worker pulls the creature to its bed again before this turn (not saved)
     int64_t                         mWoundedCarryNextTurn;
 
@@ -1862,6 +1920,18 @@ private:
     bool importItemsFromPacket(ODPacket& packet);
 
     void increaseHunger(double value);
+
+    //! \brief Server side, once per turn: sets the creature dirt to the maximum while the creature is in prison or
+    //! tortured, then lets it decay by CreatureDirtDecayPerTurn.
+    void upkeepCreatureDirt();
+
+    //! \brief Server side: dirties a tile the creature has just entered (the dirt it carries, a load it carries or
+    //! the trail of a wounded creature that is pulled over the floor).
+    //! \param tile The tile that was entered.
+    void dirtyEnteredTile(Tile* tile);
+
+    //! \brief Server side: a corpse dirties the tile it lies on by CombatDirtPerHit every turn.
+    void dirtyTileByCorpse();
 
     void computeMood();
 

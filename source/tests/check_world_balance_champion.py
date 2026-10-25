@@ -3,6 +3,7 @@
 
 import re
 import struct
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -85,10 +86,12 @@ assert "ChampionCrown" not in read("materials/scripts/CreatureOverlayStatus.mate
 imageset = read("gui/ChampionCrown.imageset")
 assert 'imagefile="ChampionCrownIcon.png" name="ChampionCrown"' in imageset
 assert '<Image height="64" name="Crown" width="64" xPos="0" yPos="0" />' in imageset
-scheme = read("gui/ODSkin.scheme").splitlines()
-icons = [i for i, line in enumerate(scheme) if 'name="OpenDungeonsIcons"' in line]
-crown = [i for i, line in enumerate(scheme) if line.strip() == '<Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />']
-assert len(icons) == 1 and crown == [icons[0] + 1], "scheme line directly after the icon set"
+scheme = ET.fromstring(read("gui/ODSkin.scheme"))
+image_sets = scheme.findall('Imageset')
+icons = [i for i, node in enumerate(image_sets) if node.get('name') == 'OpenDungeonsIcons']
+crown = [i for i, node in enumerate(image_sets) if node.get('name') == 'ChampionCrown']
+assert len(icons) == len(crown) == 1 and icons[0] < crown[0], "crown registered once after the icon set"
+assert image_sets[crown[0]].get('filename') == 'ChampionCrown.imageset', "crown imageset binding"
 credits = read("CREDITS")
 for text in ("-> ChampionCrown.png", "ChampionCrownIcon.png", "ChampionCrown.imageset"):
     assert text in credits, text

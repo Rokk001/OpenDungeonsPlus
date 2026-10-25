@@ -100,6 +100,9 @@ CreatureDefinition::CreatureDefinition(
         mSkillFamily ("none"),
         mPreSkill ("none"),
         mTierFourSkill ("none"),
+        mUrgeGrowthPerTurn (0.0),
+        mCleanliness (1.0),
+        mDirtFactor (1.0),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -178,6 +181,9 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mSkillFamily(def.mSkillFamily),
         mPreSkill(def.mPreSkill),
         mTierFourSkill(def.mTierFourSkill),
+        mUrgeGrowthPerTurn(def.mUrgeGrowthPerTurn),
+        mCleanliness(def.mCleanliness),
+        mDirtFactor(def.mDirtFactor),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -452,6 +458,9 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mSkillFamily;
     os << c->mPreSkill;
     os << c->mTierFourSkill;
+    os << c->mUrgeGrowthPerTurn;
+    os << c->mCleanliness;
+    os << c->mDirtFactor;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -518,6 +527,9 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mSkillFamily;
     is >> c->mPreSkill;
     is >> c->mTierFourSkill;
+    is >> c->mUrgeGrowthPerTurn;
+    is >> c->mCleanliness;
+    is >> c->mDirtFactor;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -847,6 +859,24 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
                 creatureDef->mHungerGrowthPerTurn = Helper::toDouble(nextParam);
                 continue;
             }
+            else if (nextParam == "UrgeGrowth/Turn")
+            {
+                defFile >> nextParam;
+                creatureDef->mUrgeGrowthPerTurn = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "Cleanliness")
+            {
+                defFile >> nextParam;
+                creatureDef->mCleanliness = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "DirtFactor")
+            {
+                defFile >> nextParam;
+                creatureDef->mDirtFactor = Helper::toDouble(nextParam);
+                continue;
+            }
             else if (nextParam == "TileSightRadius")
             {
                 defFile >> nextParam;
@@ -1174,6 +1204,13 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if(def1 == nullptr || (def1->mHungerGrowthPerTurn != def2->mHungerGrowthPerTurn))
         file << "    HungerGrowth/Turn\t" << def2->mHungerGrowthPerTurn << std::endl;
+
+    if((def1 == nullptr) ? (def2->mUrgeGrowthPerTurn != 0.0) : (def1->mUrgeGrowthPerTurn != def2->mUrgeGrowthPerTurn))
+        file << "    UrgeGrowth/Turn\t" << def2->mUrgeGrowthPerTurn << std::endl;
+    if((def1 == nullptr) ? (def2->mCleanliness != 1.0) : (def1->mCleanliness != def2->mCleanliness))
+        file << "    Cleanliness\t" << def2->mCleanliness << std::endl;
+    if((def1 == nullptr) ? (def2->mDirtFactor != 1.0) : (def1->mDirtFactor != def2->mDirtFactor))
+        file << "    DirtFactor\t" << def2->mDirtFactor << std::endl;
 
     if(def1 == nullptr || (def1->mSightRadius != def2->mSightRadius))
         file << "    TileSightRadius\t" << def2->mSightRadius << std::endl;

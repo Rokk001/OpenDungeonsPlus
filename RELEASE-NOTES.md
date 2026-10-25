@@ -9,6 +9,8 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 ### Unreleased
 
 * Add creature equipment, unique Epic items, collectible bags and workshop-opened item boxes; trade goods through a merchant, grow herbs and brew potions with room and tool research.
+* Paint the in-game HUD and windows in worn black iron and cracked stone, with new painted icons and scalable book serif text, while keeping the existing controls and layout.
+
 * Explore a ruined fortress in the main menu, with flights to each menu location and back to the courtyard, flickering firelight, a green-lit spired tower, low ground mist and embers. A replaceable chain-hung title, moving crows and cages, blood moon and weathered graveyard details deepen the scene.
 * Render unexplored tiles with the same earth walls, lighting and translucent dig marks as known earth, while keeping hidden terrain types private.
 
@@ -34,6 +36,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 * Fixed list selection in the menu so a click selects the row under the pointer instead of the row above it
 * Creature strength follows the wage: a creature with twice the wage is as strong as two of half the wage; the Champion fights at level 30 with a crown instead of a level.
 * Gold seams hold 3000 gold in three visible densities, gem seams are endless, workers carry 100 gold; every level has enough gold for a game of at least four hours.
+* Creatures need the toilet: a new toilet room, piles where none is reachable, rooms get dirty with use and are cleaned by workers; dirt lowers output and mood, prisons and torture chambers profit from it.
 
 ### Version 0.7.3 - 20 September 2026
 

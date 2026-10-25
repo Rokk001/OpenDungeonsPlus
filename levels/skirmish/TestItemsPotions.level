@@ -20,6 +20,7 @@ gold	1000
 goldMined	100
 mana	100
 [SkillDone]
+roomToilet
 roomMerchant
 roomHerbGarden
 roomAlchemyLab
@@ -1527,7 +1528,7 @@ DwarfWorker	1
 9	5
 [/Room]
 [Room]
-19	TradeHall	1	25
+20	TradeHall	1	25
 2	15
 2	16
 2	17
@@ -1555,7 +1556,7 @@ DwarfWorker	1
 6	19
 [/Room]
 [Room]
-20	HerbGarden	1	25
+21	HerbGarden	1	25
 2	21
 2	22
 2	23
@@ -1583,7 +1584,7 @@ DwarfWorker	1
 6	25
 [/Room]
 [Room]
-21	AlchemyLab	1	25
+22	AlchemyLab	1	25
 8	21
 8	22
 8	23

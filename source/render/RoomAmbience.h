@@ -105,6 +105,15 @@ public:
     //! the event GrainPecked.
     void notifyHatcheryGrain(const std::string& roomName, int32_t maxLevel, int32_t validSeconds, const std::string& text);
 
+    //! \brief The dirt of the floor tiles and rooms as the server told them (cosmetic event tileDirt): text
+    //! "x,y,stage;...|roomName,stage;..." (see CosmeticEventType::tileDirt). A tile with stage 0 is clean. Effects with
+    //! "DirtStage" and "DirtStageMin" follow the stages of the tiles.
+    void notifyTileDirt(const std::string& text);
+
+    //! \brief The dirt stage (1 clean, 2 dirty, 3 filthy) of a room as the server last told it, 0 if it is not known.
+    //! \param roomName The name of the room.
+    uint32_t getRoomDirtStage(const std::string& roomName) const;
+
     //! \brief A trap or door effect sent by the server (ServerNotificationType::trapEffect): kind is a
     //! TrapEffectKind, typeName the type of the trap or door, fraction the health left of a door.
     //! Kinds reloading and ready only set the state for the effects "When Reloading" and "When Ready".
@@ -539,6 +548,15 @@ private:
     int32_t getGrainLevel(Tile* tile) const;
 
     std::map<std::string, GrainRoom> mGrainRooms;
+
+    //! \brief The dirt stage (0 - 3) of a floor tile as the server last told it; 0 when it never did (clean)
+    //! \param tile The floor tile.
+    int32_t getTileDirtStage(Tile* tile) const;
+
+    //! The dirt stage (1 - 3) of every dirty floor tile as last told by the server, by x * 65536 + y
+    std::map<int64_t, int32_t> mDirtStages;
+    //! The dirt stage (1 - 3) of every room as last told by the server, by room name
+    std::map<std::string, int32_t> mRoomDirtStages;
     RoomAmbienceExtras mExtras;
     WallTorchView mWallTorches;
     //! Version of GameMap::getWallTorches() that was handed to mWallTorches last

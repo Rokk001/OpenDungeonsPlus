@@ -23,7 +23,7 @@ SETTINGS = ("ScanInterval", "MaxParticles", "MaxParticlesReduced", "MaxMotions",
 EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Motion", "After", "Offset", "Axis",
                "Amount", "Speed", "Flicker", "Duration", "Chance", "Spacing", "MaxDistance", "Priority", "Reduced",
                "NeedWall", "Clips", "Every", "Family", "Delay", "Mesh", "EndSystem", "Below", "Land", "From",
-               "WallSide", "HeartRate", "Sound", "OwnerOnly", "Object", "Loop", "GrainMin")
+               "WallSide", "HeartRate", "Sound", "OwnerOnly", "Object", "Loop", "GrainMin", "DirtStage", "DirtStageMin", "Unlimited")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth", "Vacated", "Sleeping")
 KINDS = ("Particle", "Motion", "Clip", "Model", "Shake", "Mark", "Sound", "Roll", "Turn", "Beam", "Projectile", "CreatureClip")
@@ -65,6 +65,7 @@ ROOM_RULE = (
     ("torture", ("tortureRoom",), ("TortureObject",)),
     ("guardRoom", ("guardRoom",), ()),
     ("temple", ("templeRoom",), ()),
+    ("toilet", ("toiletRoom",), ("ToiletSeat",)),
 )
 # Idle effects that the client draws itself instead of reading them from the configuration: room -> (name, pattern
 # that must be found in source/render/RenderManager.cpp). Such an effect counts for the room only while its drawing
@@ -419,7 +420,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if "Object" in effect or "Loop" in effect:
             problems.append("%s: Object and Loop do not belong to creature clips" % where)
     for key in ("After", "Amount", "Speed", "Flicker", "Duration", "Every", "Chance", "Spacing", "MaxDistance", "Priority",
-                "Delay", "Below", "GrainMin"):
+                "Delay", "Below", "GrainMin", "DirtStage", "DirtStageMin"):
         if key in effect and not is_number(effect[key][0]):
             problems.append("%s: %s is not a number" % (where, key))
     for key in ("Offset", "Axis", "From"):

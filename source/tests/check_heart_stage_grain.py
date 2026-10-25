@@ -46,10 +46,10 @@ deferred_cfg = read('config/roomAmbienceDeferred.cfg')
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', event_h.split('enum class CosmeticEventType')[1].split('};')[0], re.M)
 numbers = [int(number) for _, number in kinds]
 # 15 and 16 are the casino result and the keeper wealth; hitResult is 17
-assert numbers == list(range(19)), 'cosmetic event kinds must stay numbered without gaps'
+assert numbers == list(range(20)), 'cosmetic event kinds must stay numbered without gaps'
 names = [name for name, _ in kinds]
-assert names[-8:] == ['bedStatus', 'heartHealthStage', 'hatcheryGrain', 'roomTakeover', 'casinoResult', 'keeperWealth',
-                      'hitResult', 'attackTurn'], names[-8:]
+assert names[-9:] == ['bedStatus', 'heartHealthStage', 'hatcheryGrain', 'roomTakeover', 'casinoResult', 'keeperWealth',
+                      'hitResult', 'attackTurn', 'tileDirt'], names[-9:]
 assert dict(kinds)['heartHealthStage'] == '12' and dict(kinds)['hatcheryGrain'] == '13' and dict(kinds)['roomTakeover'] == '14'
 assert 'CosmeticEventType::roomTakeover))' in event_cpp
 for name in ('heartHealthStage', 'hatcheryGrain', 'roomTakeover'):

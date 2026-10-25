@@ -27,7 +27,9 @@ bool CosmeticEvent::isKnownType() const
             (mType == static_cast<int32_t>(CosmeticEventType::hitResult)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::attackTurn)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::boxCracked)) ||
-            (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)));
+            (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)) ||
+
+            (mType == static_cast<int32_t>(CosmeticEventType::tileDirt)));
 }
 
 //! \brief Returns the diagnostic name of a known cosmetic event without changing its wire number.
@@ -77,6 +79,8 @@ std::string CosmeticEvent::typeString() const
             return "boxCracked";
         case static_cast<int32_t>(CosmeticEventType::cauldronBang):
             return "cauldronBang";
+        case static_cast<int32_t>(CosmeticEventType::tileDirt):
+            return "tileDirt";
         default:
             break;
     }

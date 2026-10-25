@@ -22,6 +22,7 @@
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
 #include "entities/MerchantEntity.h"
+#include "entities/DirtPileEntity.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/HerbBundleEntity.h"
 #include "entities/MapLight.h"
@@ -244,6 +245,11 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
         case GameEntityType::lavaRock:
         {
             entity = RockLava::getLavaRockEntityFromPacket(gameMap, is);
+            break;
+        }
+        case GameEntityType::dirtPileEntity:
+        {
+            entity = DirtPileEntity::getDirtPileEntityFromPacket(gameMap, is);
             break;
         }        
         default:

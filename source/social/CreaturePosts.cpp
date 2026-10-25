@@ -36,6 +36,10 @@ PostCategory getActivityCategory(const CreatureActivity& activity, int32_t& room
     if(activity.action == CreatureActionType::fight)
         return PostCategory::Fight;
 
+    // A creature on a toilet seat has a toilet room as its assigned room; one on the floor has found no toilet
+    if(activity.task == CreatureActionType::useToilet)
+        return (activity.assignedRoom == RoomType::toilet) ? PostCategory::Nb : PostCategory::Relieved;
+
     if((activity.task == CreatureActionType::eatChicken) || (activity.task == CreatureActionType::searchFood))
         return PostCategory::Eat;
 
@@ -111,6 +115,8 @@ std::string CreaturePosts::getRoomName(int32_t roomType)
             return "guard room";
         case RoomType::temple:
             return "temple";
+        case RoomType::toilet:
+            return "toilet room";
         default:
             return "dungeon";
     }

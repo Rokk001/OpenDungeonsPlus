@@ -450,6 +450,8 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
         getSeat(), SkillType::roomTrainingHall, ConfigManager::getSingleton().getRoomConfigDouble("TrainHallXpPerAttack"),
         ResearchEffect::XpPerHit);
     expReceived *= coef;
+    // A dirty hall teaches less
+    expReceived *= getDirtOutputFactor();
 
     // A higher level friend training in the same room teaches the creature
     if(getGameMap()->isRelationshipsEnabled() && creature.canHaveRelationships())
@@ -468,6 +470,7 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("TrainHallWakefulnessPerAttack"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallCooldownHitMax")));
+    addUseDirt(creature, tileCreature, "TrainHallDirtPerHit");
 
     // Creatures of the same keeper training at the same time grow closer
     if(getGameMap()->isRelationshipsEnabled())

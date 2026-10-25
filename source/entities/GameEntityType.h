@@ -42,6 +42,7 @@ enum class GameEntityType
     skillEntity,
     giftBoxEntity,
     lavaRock,
+    dirtPileEntity,
     itemBagEntity,
     merchantEntity,
     herbBundleEntity

@@ -37,6 +37,8 @@ namespace EntityAnimation
     static const std::string dig_anim = "Dig";
     static const std::string attack_anim = "Attack1";
     static const std::string claim_anim = "Claim";
+    //! A worker wipes dirt off a floor tile; a skeleton without this clip plays the claim clip
+    static const std::string clean_anim = "Clean";
     static const std::string walk_anim = "Walk";
     //! Clip of a creature that walks with something in its arms (clients only, chosen where the Walk clip is
     //! applied when the skeleton has it, the entity state stays Walk)
@@ -50,6 +52,8 @@ namespace EntityAnimation
     static const std::string combat_attack_anim = "CombatAttack";
     static const std::string ranged_attack_anim = "RangedAttack";
     static const std::string eat_chicken_anim = "EatChicken";
+    //! A creature squats to relieve itself, on a toilet seat or on the floor (a skeleton without the clip plays Idle)
+    static const std::string relieve_anim = "Relieve";
     //! A creature sniffs at food it was given (server action state; the client shows the idle clip and a reaction)
     static const std::string sniff_anim = "Sniff";
     //! A worker pulls a hurt creature backwards by the legs (the clip it plays while walking; the room

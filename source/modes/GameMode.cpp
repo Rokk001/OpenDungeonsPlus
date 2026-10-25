@@ -21,6 +21,7 @@
 #include "camera/CameraInput.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/DirtPileEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/ItemBagEntity.h"
@@ -41,6 +42,7 @@
 #include "gamemap/MiniMapDrawnFull.h"
 #include "gamemap/Pathfinding.h"
 #include "gamemap/RoomObjectBounds.h"
+#include "gamemap/TileDirtSync.h"
 #include "modes/GameEditorModeConsole.h"
 #include "modes/InputBridge.h"
 #include "modes/MenuModeLoad.h"
@@ -55,9 +57,11 @@
 #include "render/CreatureAppearancePicture.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
+#include "render/RoomAmbience.h"
 #include "render/SocialWindow.h"
 #include "render/TextRenderer.h"
 #include "social/PostLog.h"
+#include "social/SocialGenerator.h"
 #include "social/SocialProfileCache.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
@@ -137,8 +141,8 @@ static std::string getPlainItemTooltip(std::string text)
 }
 
 // Text colours (ARGB) of the mana change next to the mana display.
-const std::string MANA_GAIN_TEXT_COLOUR = "FF7FE3A6";
-const std::string MANA_LOSS_TEXT_COLOUR = "FFFF4848";
+const std::string MANA_GAIN_TEXT_COLOUR = "FFF0E2C0";
+const std::string MANA_LOSS_TEXT_COLOUR = "FFF0E2C0";
 
 //! Text colour of the time limit display (ARGB)
 static const char* const TIME_LIMIT_COLOUR = "FFF6CB62";
@@ -150,6 +154,45 @@ static const int32_t TIME_LIMIT_WARNING_SECONDS = 60;
 static const char* const TIME_LIMIT_TOOLTIP_COUNTDOWN = "Time left until the next stage of the level";
 //! Tooltip of the display while it shows a time limit
 static const char* const TIME_LIMIT_TOOLTIP_LIMIT = "Time left until the level is lost";
+//! Hover text of a blood stain on the floor
+static const char* const BLOOD_HOVER_TEXT = "Blood";
+//! Start of the hover text of a pile on the floor; the name of the creature that left it and a closing bracket follow
+static const char* const PILE_HOVER_PREFIX = "Pile (";
+//! Start of the dirt part of the hover text of a room
+static const char* const ROOM_DIRT_HOVER_PREFIX = ". Dirt: ";
+
+//! \brief Hover text for a pile or blood stain lying on a tile: "Pile (<creature name>)" or "Blood". A pile wins when
+//! both lie on the tile. The creature is named with the readable class name used in the creature windows.
+//! \param tile The hovered tile.
+//! \return The text, empty if no pile or blood stain lies on the tile.
+static std::string getDirtPileHoverText(Tile* tile)
+{
+    DirtPileEntity* pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile);
+    if(pile != nullptr)
+        return std::string(PILE_HOVER_PREFIX) + social::SocialGenerator::displayClassName(
+            social::SocialProfileCache::getSingleton().getData(), pile->getCreatureClass()) + ")";
+
+    if(DirtPileEntity::getEntityOnTile(tile, DirtPileKind::blood) != nullptr)
+        return BLOOD_HOVER_TEXT;
+
+    return std::string();
+}
+
+//! \brief Hover text for a tile of a room whose dirt stage the server told: "<room name>. Dirt: clean / dirty / filthy".
+//! \param tile The hovered tile.
+//! \return The text, empty if the tile is no room tile or the dirt stage of the room is not known (or not shown for its type).
+static std::string getRoomDirtHoverText(Tile* tile)
+{
+    Room* room = tile->getCoveringRoom();
+    if((room == nullptr) || (RoomAmbience::getSingletonPtr() == nullptr))
+        return std::string();
+
+    const uint32_t stage = RoomAmbience::getSingleton().getRoomDirtStage(room->getName());
+    if(stage == 0)
+        return std::string();
+
+    return RoomManager::getRoomReadableName(room->getType()) + ROOM_DIRT_HOVER_PREFIX + TileDirtSync::stageText(stage);
+}
 
 // Message tabs are laid out in units of the message queue height; the queue is designed
 // for tabs of this height in pixels.
@@ -346,6 +389,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::guardRoom;
         case RoomType::temple:
             return tile.getTileVisual() == TileVisual::templeRoom;
+        case RoomType::toilet:
+            return tile.getTileVisual() == TileVisual::toiletRoom;
         default:
             return false;
     }
@@ -5285,11 +5330,19 @@ void GameMode::handlePlayerActionNone()
                     displayText(Ogre::ColourValue::White, text);
                 }
             }
+            else if(!getDirtPileHoverText(tile).empty())
+            {
+                displayText(Ogre::ColourValue::White, getDirtPileHoverText(tile));
+            }
             else if(tile->isDiggable(player->getSeat()))
             {
                 displayText(Ogre::ColourValue::White, tile->getMarkedForDigging(player) ?
                     "Marked wall. Click or drag to remove digging marks." : "Wall. Click or drag to mark for digging.");
                 selectSquaredTiles(tile->getX(), tile->getY(), tile->getX(), tile->getY());
+            }
+            else if(tile->getLocalPlayerHasVision() && tile->getIsRoom() && !getRoomDirtHoverText(tile).empty())
+            {
+                mActionTargetText = getRoomDirtHoverText(tile);
             }
             else if(tile->getLocalPlayerHasVision() && !tile->getIsBuilding())
             {

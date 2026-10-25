@@ -1,0 +1,22 @@
+// Toilet seat: stone seat (left half of the UV space) and wooden lid (right half)
+material ToiletSeat
+{
+    receive_shadows on
+
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.75 0.75 0.75 1.0
+            specular 0.05 0.05 0.05 1.0 12.5
+
+            texture_unit
+            {
+                texture ToiletSeat.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}

@@ -19,6 +19,7 @@
 
 #include "entities/Building.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/MissileStone.h"
 #include "entities/ItemBagEntity.h"
@@ -226,7 +227,7 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
 void CreatureActionCarryEntity::startDrag()
 {
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
-    dragged->notifyDragStart();
+    dragged->notifyDragStart(mCreature.getDefinition()->getDirtFactor());
 
     // The creature lies down on the spot (the clip of the pulled creature, the clients show a fallback pose when
     // the skeleton has none). It keeps its place on the map.

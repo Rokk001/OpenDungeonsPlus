@@ -92,6 +92,7 @@ Player::Player(GameMap* gameMap, int32_t id) :
     mCreatureCannotFindBed(0.0f),
     mCreatureCannotFindFood(0.0f),
     mNotEnoughGoldTime(0.0f),
+    mDirtNoticeTime(0.0f),
     mCreatureKilledTime(0.0f),
     mHasLost(false),
     mConquerorSeatId(-1),
@@ -867,6 +868,34 @@ void Player::notifyNewCreatureType(const std::string& creatureClassName)
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Sends the dirt notice (creature that relieved itself, filthy room) when the last one is at least
+//! DirtNoticeSeconds ago; human keepers only.
+void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Creature* creature)
+{
+    if(mHasLost || !getIsHuman())
+        return;
+
+    if(mDirtNoticeTime > 0.0f)
+        return;
+
+    if(kind == DirtEventKind::relieved)
+    {
+        if(creature == nullptr)
+            return;
+
+        mDirtNoticeTime = static_cast<float>(ConfigManager::getSingleton().getDirtConfigDouble("DirtNoticeSeconds"));
+        notifyCreatureEvent(*creature, " found no toilet and relieved itself.", EventShortNoticeType::aboutCreatures);
+        return;
+    }
+
+    mDirtNoticeTime = static_cast<float>(ConfigManager::getSingleton().getDirtConfigDouble("DirtNoticeSeconds"));
+    std::string chatMsg = "Your " + roomName + " is filthy.";
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
 void Player::fireEvents()
 {
     // On server side, we update the client
@@ -1090,6 +1119,14 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
             mCreatureKilledTime = 0.0f;
     }
 
+    if(mDirtNoticeTime > 0.0f)
+    {
+        if(mDirtNoticeTime > timeSinceLastUpkeep)
+            mDirtNoticeTime -= timeSinceLastUpkeep;
+        else
+            mDirtNoticeTime = 0.0f;
+    }
+
     if(isEventListUpdated)
         fireEvents();
 }
@@ -1169,10 +1206,23 @@ std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& work
     uint32_t nbWorkersCarrying = getNbWorkersDoing(CreatureActionType::searchEntityToCarry);
     // Workers reloading traps are counted in the total (own share, see isWorkerReloadShareOpen)
     uint32_t nbWorkersReloading = getNbWorkersDoing(CreatureActionType::reloadTrap);
+    // Workers cleaning have their own share too (see CleaningWorkerSharePercent) and are counted in the total.
+    // A worker that cleans a tile still has its search action below the cleaning one, and only the search
+    // action reports to the player, so every cleaning worker is counted once
+    uint32_t nbWorkersCleaning = getNbWorkersDoing(CreatureActionType::searchDirtToClean);
     // For the total number of workers, we consider only those doing something in the wanted list (and not
     // the ones fighting or having nothing to do) + the one we are considering
     uint32_t nbWorkersTotal = WorkerShare::totalWorkers(nbWorkersDigging, nbWorkersClaimingGround,
-            nbWorkersClaimingWall, nbWorkersCarrying, nbWorkersReloading);
+            nbWorkersClaimingWall, nbWorkersCarrying, nbWorkersReloading) + nbWorkersCleaning;
+
+    // Cleaning is a side job: it comes first while its share is open and there is something to clean, and it
+    // never replaces the other jobs because they are still in the list after it
+    if(WorkerShare::isCleanShareOpen(nbWorkersCleaning, nbWorkersTotal,
+        ConfigManager::getSingleton().getDirtConfigDouble("CleaningWorkerSharePercent")) &&
+        (getSeat() != nullptr) && getSeat()->hasDirtToClean())
+    {
+        ret.push_back(CreatureActionType::searchDirtToClean);
+    }
 
     bool isCarryAdded = false;
     if(WorkerShare::isCarryFirst(nbWorkersCarrying, nbWorkersTotal))
@@ -1218,10 +1268,11 @@ bool Player::isWorkerReloadShareOpen() const
     // Same counting as in getWorkerPreferredActions: the workers reloading traps may be at most the
     // configured share (default 20%) of the workers doing the listed jobs + the one we are considering
     uint32_t nbWorkersReloading = getNbWorkersDoing(CreatureActionType::reloadTrap);
+    uint32_t nbWorkersCleaning = getNbWorkersDoing(CreatureActionType::searchDirtToClean);
     uint32_t nbWorkersTotal = WorkerShare::totalWorkers(getNbWorkersDoing(CreatureActionType::searchTileToDig),
             getNbWorkersDoing(CreatureActionType::searchGroundTileToClaim),
             getNbWorkersDoing(CreatureActionType::searchWallTileToClaim),
-            getNbWorkersDoing(CreatureActionType::searchEntityToCarry), nbWorkersReloading);
+            getNbWorkersDoing(CreatureActionType::searchEntityToCarry), nbWorkersReloading) + nbWorkersCleaning;
 
     double share = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadWorkerSharePercent", DEFAULT_RELOAD_WORKER_SHARE_PERCENT);
     return WorkerShare::isReloadShareOpen(nbWorkersReloading, nbWorkersTotal, share);

@@ -30,6 +30,10 @@ These instructions apply to every change made to this repository with an AI assi
 
 Working mode: never wait idle. While a build, load test or agent runs, start every other task that does not depend on its result at once as a separate subagent (analysis, code fixes on own branches, checks, documentation). Only Blender work stays sequential, and timing measurements run without competing game instances. Before reporting 'waiting', list what else could run now and start it.
 
+## Agent model
+
+- Agent model: Claude Code agents use Sonnet 5.5 medium, Codex agents use GPT-6.1-Sol medium. Both are equivalent; a plan's model line is fulfilled by either. Never ask Mario about the model.
+
 ## Protected content
 
 - Never copy or derive levels, maps, graphics, models, sounds, texts or data tables from
@@ -73,5 +77,22 @@ Diese Pfade direkt verwenden, nie danach suchen.
 
 ## Builds
 
-- Kein Release- oder Abschlussbuild ohne ausdrueckliche Build-Freigabe durch Mario in der unmittelbar vorhergehenden Nachricht. Vorher muss die Vollstaendigkeitsfrage im Format "Offene Anforderungen: <Anzahl>" mit Liste aller offenen und teilweise erledigten Punkte beantwortet sein. Ein Plan-Schritt "Abschlussbuild" ersetzt diese Freigabe nicht. Ohne Freigabe: warten und melden.
+- Build flow (Mario, 2026-10-25):
+  1. The integrator is the only one that runs a full build: once per run, Release, --parallel 1, at least 2 GB free RAM,
+     then all check scripts, the load test, push and deploy.
+  2. Feature and fix windows (Claude Code and Codex) never run a full build, not even when a prompt releases one, and
+     compile nothing while a plan is in progress.
+  3. After the completeness question is answered with 'Offene Anforderungen: 0', the window merges the current
+     origin/integration/all into its branch and resolves all conflicts itself.
+  4. Then it runs scripts/win32/compile-check-changed.ps1 in its worktree. The script compiles only the .cpp files the branch
+     changed against origin/integration/all, with the compiler settings of the integrator's build folder, without linking
+     and without building the game. The window fixes every compile error and repeats until the script exits 0.
+  5. Then it runs the check scripts for its changed source files, pushes normally and registers ready in
+     docs/internal/projects/git-integration/INTEGRATION-STATE.md with the checked tip and 'Kompiliertest: Exit 0'.
+  6. The integrator refuses a ready row without 'Kompiliertest: Exit 0' for its exact tip and sends it back.
+  7. No two branches work on the same code area at the same time. Before a new branch starts, its planned files are compared
+     with the files changed by every branch that is in progress or ready (git diff --name-only against
+     origin/integration/all). If they share a source file, header or config file, the new branch waits until the other one
+     is integrated, or the work goes into the existing branch. The coordinator applies the same rule when planning.
 - Check scripts in source/tests that compile small C++ probes with cl are not a game build. Feature windows run them before marking a branch ready for every source file the branch changes; skipping them is not allowed.
+- Every integrator release build that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on Mario's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every integrator build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.

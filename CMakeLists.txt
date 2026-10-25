@@ -18,9 +18,14 @@ set(OD_MAJOR_VERSION 0)
 set(OD_MINOR_VERSION 7)
 set(OD_PATCH_LEVEL   4)
 
+# Fourth version digit: the integrator passes the next running number (-DOD_BUILD_NUMBER=N)
+# for release builds that are pushed and deployed; branch and test builds keep 0.
+set(OD_BUILD_NUMBER 0 CACHE STRING "Fourth version digit (running build number)")
+set(OD_VERSION "${OD_MAJOR_VERSION}.${OD_MINOR_VERSION}.${OD_PATCH_LEVEL}.${OD_BUILD_NUMBER}")
+
 # Set the project version ready to be used in the code.
 if(NOT MSVC)
-    add_definitions(-DOD_VERSION="${OD_MAJOR_VERSION}.${OD_MINOR_VERSION}.${OD_PATCH_LEVEL}")
+    add_definitions(-DOD_VERSION="${OD_VERSION}")
 endif()
 
 # Set the data path depending on the platform
@@ -179,7 +184,7 @@ if(WIN32 AND MSVC)
     set(PLATFORM_C_FLAGS_DEBUG "/W3 /MDd /Od /Gm- /Gy /fp:fast /ZI /DOD_DEBUG" )
 
     # Set the application version
-    add_definitions(/DOD_VERSION="${OD_MAJOR_VERSION}.${OD_MINOR_VERSION}.${OD_PATCH_LEVEL}")
+    add_definitions(/DOD_VERSION="${OD_VERSION}")
 
     # Set the data paths
     add_definitions(/DOD_DATA_PATH="${OD_DATA_PATH}")
@@ -242,6 +247,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionCarryEntity.cpp
     ${SRC}/creatureaction/CreatureActionClaimGroundTile.cpp
     ${SRC}/creatureaction/CreatureActionClaimWallTile.cpp
+    ${SRC}/creatureaction/CreatureActionCleanTile.cpp
     ${SRC}/creatureaction/CreatureActionDigTile.cpp
     ${SRC}/creatureaction/CreatureActionEatChicken.cpp
     ${SRC}/creatureaction/CreatureActionFight.cpp
@@ -256,17 +262,20 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionLeaveDungeon.cpp
     ${SRC}/creatureaction/CreatureActionParkToTile.cpp
     ${SRC}/creatureaction/CreatureActionReloadTrap.cpp
+    ${SRC}/creatureaction/CreatureActionSearchDirtToClean.cpp
     ${SRC}/creatureaction/CreatureActionSearchEntityToCarry.cpp
     ${SRC}/creatureaction/CreatureActionSearchFood.cpp
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSearchJob.cpp
     ${SRC}/creatureaction/CreatureActionSearchTileToDig.cpp
+    ${SRC}/creatureaction/CreatureActionSearchToilet.cpp
     ${SRC}/creatureaction/CreatureActionSearchWallTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSleep.cpp
     ${SRC}/creatureaction/CreatureActionStealFreeGold.cpp
     ${SRC}/creatureaction/CreatureActionPickupItem.cpp
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
+    ${SRC}/creatureaction/CreatureActionUseToilet.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
     ${SRC}/creatureaction/CreatureActionPossessed.cpp
 
@@ -300,6 +309,7 @@ set(OD_SOURCEFILES
     ${SRC}/creaturemood/CreatureMood.cpp
     ${SRC}/creaturemood/CreatureMoodWakefulness.cpp
     ${SRC}/creaturemood/CreatureMoodCreature.cpp
+    ${SRC}/creaturemood/CreatureMoodDirt.cpp
     ${SRC}/creaturemood/CreatureMoodFee.cpp
     ${SRC}/creaturemood/CreatureMoodHunger.cpp
     ${SRC}/creaturemood/CreatureMoodHeldInHand.cpp
@@ -350,6 +360,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/CreaturePotions.cpp
     ${SRC}/entities/HerbBundleEntity.cpp
     ${SRC}/entities/CreatureDefinition.cpp
+    ${SRC}/entities/DirtPileEntity.cpp
     ${SRC}/entities/DoorEntity.cpp
     ${SRC}/entities/EntityLoading.cpp
     ${SRC}/entities/GameEntity.cpp
@@ -413,6 +424,7 @@ set(OD_SOURCEFILES
     ${SRC}/gamemap/SandboxMode.cpp
     ${SRC}/gamemap/MiniMapCamera.cpp
     ${SRC}/gamemap/TileContainer.cpp
+    ${SRC}/gamemap/TileDirtSync.cpp
     ${SRC}/gamemap/TileSet.cpp
 
     ${SRC}/giftboxes/GiftBoxBonus.cpp
@@ -552,6 +564,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomTorture.cpp
     ${SRC}/rooms/RoomGuardRoom.cpp
     ${SRC}/rooms/RoomTemple.cpp
+    ${SRC}/rooms/RoomToilet.cpp
     ${SRC}/rooms/RoomTrainingHall.cpp
     ${SRC}/rooms/RoomTreasury.cpp
     ${SRC}/rooms/RoomType.cpp

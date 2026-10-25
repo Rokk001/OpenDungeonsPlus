@@ -3894,6 +3894,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::lavaRock:
         case GameEntityType::merchantEntity:
         case GameEntityType::herbBundleEntity:
+        case GameEntityType::dirtPileEntity:
             return getRenderedMovableEntity(entityName);
 
         case GameEntityType::spell:

@@ -26,6 +26,7 @@ EXPECTED = [
     ("Rooms", 2, "roomBridgeWooden", "WoodenBridgeButton", ["roomTreasury"]),
     ("Rooms", 2, "roomGuardRoom", "GuardRoomButton", ["roomDormitory"]),
     ("Rooms", 2, "roomCasino", "CasinoButton", ["roomTreasury"]),
+    ("Rooms", 2, "roomToilet", "ToiletButton", ["roomDormitory"]),
     ("Rooms", 3, "roomArena", "ArenaButton", ["roomTrainingHall"]),
     ("Rooms", 3, "roomPrison", "PrisonButton", ["roomGuardRoom"]),
     ("Rooms", 3, "roomCrypt", "CryptButton", ["roomLibrary"]),
@@ -79,7 +80,7 @@ EXPECTED = [
 ]
 TIER_COST = {1: 100, 2: 250, 3: 600, 4: 1500}
 FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary", "spellSummonWorker"]
-TAB_TOTALS = {"Rooms": 67150, "Traps": 82250, "Spells": 84950}
+TAB_TOTALS = {"Rooms": 68900, "Traps": 82250, "Spells": 84950}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
@@ -88,7 +89,7 @@ KEEPERS = {
     "keeperManaFlow": ("ManaFlowButton", "Keeper: Mana Flow", "Spells"),
 }
 
-assert len(EXPECTED) == 59, "the tree has 59 entries"
+assert len(EXPECTED) == 60, "the tree has 60 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree
@@ -127,7 +128,7 @@ for tab, tier, name, button, parent_list in EXPECTED:
     registered.append(name)
 
 # ---------------------------------------------------------------------------------------------
-# 2. skills.cfg: the 59 entries with the tier costs and the free level one block
+# 2. skills.cfg: the 60 entries with the tier costs and the free level one block
 cfg = read("config/skills.cfg")
 body = re.sub(r"#[^\r\n]*", "", cfg)
 skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
@@ -137,7 +138,7 @@ for index in range(0, len(skills_block), 2):
     assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
     costs[skills_block[index]] = int(skills_block[index + 1])
 assert "spellSummonChampion" not in costs, "the reward skill has no entry"
-assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 59 entries"
+assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 60 entries"
 for tab, tier, name, button, parent_list in EXPECTED:
     assert costs[name] == TIER_COST[tier], "%s costs the tier %d value" % (name, tier)
 free_block = body[body.index("[FreeLevelOne]") + len("[FreeLevelOne]"):body.index("[/FreeLevelOne]")].split()
@@ -239,11 +240,15 @@ for name, (button, title, tab) in KEEPERS.items():
     assert bar is not None and bar.get("type") == "OD/ProgressBar", "progress bar child of " + button
     assert 'name="%s"' % button in imageset, "icon of " + button
 cells = {"DominionButton": (512, 1152), "HeartFortitudeButton": (640, 1152), "HeartMendingButton": (768, 1152), "ManaFlowButton": (896, 1152)}
+icon_images = ET.fromstring(imageset)
 for button, (x, y) in cells.items():
-    assert re.search(r'name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset) or \
-        re.search(r'height="128" name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset), "cell of " + button
+    # The painted atlas doubles source coordinates, retaining each original logical cell.
+    nodes = icon_images.findall('Image[@name="%s"]' % button)
+    assert len(nodes) == 1, "unique icon of " + button
+    assert tuple(int(nodes[0].get(key)) for key in ('xPos', 'yPos', 'width', 'height')) == \
+        (x * 2, y * 2, 256, 256), "doubled cell of " + button
 motifs = read("tools/forged_motifs.py")
-last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-13:-9]
+last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-14:-10]
 assert last_four == [("DominionButton", "room"), ("HeartFortitudeButton", "trap"), ("HeartMendingButton", "trap"),
                      ("ManaFlowButton", "spell")], "the four keeper icons precede the nine appended item and room icons"
 assert motifs.index('"NavigationMessagesRead"') < motifs.index('"DominionButton"') < motifs.index('"MenuReturn"')

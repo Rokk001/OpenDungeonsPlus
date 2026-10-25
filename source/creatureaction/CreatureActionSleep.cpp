@@ -85,12 +85,17 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
         // Improve wakefulness
         Room* sleepingRoom = creature.getHomeTile()->getCoveringRoom();
         const Seat* sleepingSeat = sleepingRoom == nullptr ? nullptr : sleepingRoom->getSeat();
-        creature.increaseWakefulness(SkillManager::getResearchValue(sleepingSeat, SkillType::roomDormitory,
+        // A dirty dormitory gives a less restful sleep
+        double dirtOutputFactor = (sleepingRoom == nullptr) ? 1.0 : sleepingRoom->getDirtOutputFactor();
+        creature.increaseWakefulness(dirtOutputFactor * SkillManager::getResearchValue(sleepingSeat, SkillType::roomDormitory,
             ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWakefulnessPerTurn"), ResearchEffect::SleepRecovery));
-        creature.setHP(creature.getHP() + SkillManager::getResearchValue(
+        creature.setHP(creature.getHP() + dirtOutputFactor * SkillManager::getResearchValue(
             sleepingSeat, SkillType::roomDormitory, creature.getDefinition()->getSleepHeal(), ResearchEffect::SleepRecovery));
 
         creature.computeCreatureOverlayHealthValue();
+
+        // Every turn of sleep dirties the floor of the bed a little
+        Room::addUseDirt(creature, myTile, "DormitoryDirtPerSleepTurn");
 
         if (creature.getWakefulness() >= 100.0 && creature.getHP() >= creature.getMaxHp())
         {

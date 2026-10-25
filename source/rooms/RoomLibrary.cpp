@@ -392,10 +392,11 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
 
     const double pointsEarned = creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomLibrary, ConfigManager::getSingleton().getRoomConfigDouble("LibraryPointsPerWork"),
-        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Scholar");
+        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Scholar") * getDirtOutputFactor();
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("LibraryWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax")));
+    addUseDirt(creature, tileCreature, "LibraryDirtPerWork");
 
     // We check if we have enough points to create a skill entity
     mSkillPoints += pointsEarned;

@@ -100,6 +100,8 @@ enum class SkillType
     keeperHeartMending,
     keeperManaFlow,
 
+    // Added later, appended so that existing saves stay valid
+    roomToilet,
     roomMerchant,
     roomHerbGarden,
     roomAlchemyLab,

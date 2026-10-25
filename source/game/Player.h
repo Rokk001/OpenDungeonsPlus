@@ -250,6 +250,23 @@ public:
     //! Should be called on the server game map
     void notifyNewCreatureType(const std::string& creatureClassName);
 
+    //! \brief The kinds of dirt notice a keeper gets.
+    enum class DirtEventKind
+    {
+        //! A creature found no toilet and relieved itself on the floor.
+        relieved,
+        //! A room reached dirt stage 3.
+        roomFilthy
+    };
+
+    //! \brief Tells a human keeper about dirt: "<Creature> found no toilet and relieved itself." or "Your <room> is
+    //! filthy.". At most one dirt notice is sent per DirtNoticeSeconds (global.cfg); the others are dropped.
+    //! Should be called on the server game map.
+    //! \param kind What happened.
+    //! \param roomName The readable name of the room for roomFilthy (not used for relieved).
+    //! \param creature The creature for relieved (not used for roomFilthy), may be nullptr otherwise.
+    void notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Creature* creature);
+
     void fireEvents();
 
     //! \brief Called on client side to update the current list of events. Note that
@@ -357,6 +374,9 @@ private:
 
     //! \brief Time left before the player is told again that gold is missing for a purchase.
     float mNotEnoughGoldTime;
+
+    //! \brief Seconds left before the player gets another dirt notice (see notifyDirtEvent).
+    float mDirtNoticeTime;
 
     //! \brief Time left before the player is told again that a creature has died.
     float mCreatureKilledTime;

@@ -245,12 +245,15 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     double manaPerSecond = configManager.getRoomConfigDoubleOrDefault(
         "TemplePrayerMana" + creature.getDefinition()->getClassName(), defaultManaPerSecond);
     manaPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::roomTemple, manaPerSecond, ResearchEffect::PrayerMana);
+    // A dirty temple gathers less mana
+    manaPerSecond *= getDirtOutputFactor();
     mPrayerManaPending += manaPerSecond / ODApplication::turnsPerSecond;
     int32_t mana = static_cast<int32_t>(mPrayerManaPending);
     mPrayerManaPending -= mana;
     getGameMap()->addManaToSeat(mana, getSeat()->getId());
     creature.addPrayerRelief(configManager.getRoomConfigInt32("TemplePrayerReliefPerTurn"),
         configManager.getRoomConfigInt32("TemplePrayerReliefMax"));
+    addUseDirt(creature, tileCreature, "TempleDirtPerPrayerTurn");
 
     // Creatures of the same keeper that pray in this temple at the same time may reconcile
     if(getGameMap()->isRelationshipsEnabled())

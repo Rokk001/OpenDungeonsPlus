@@ -18,6 +18,7 @@
 #include "creaturemood/CreatureMoodManager.h"
 
 #include "creaturemood/CreatureMood.h"
+#include "creaturemood/CreatureMoodDirt.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/ItemEffects.h"
@@ -91,6 +92,9 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += ItemEffects::moodModifier(creature, creature.getSpecialMood());
     // Fights in the arena
     moodValue += ItemEffects::moodModifier(creature, creature.getPitMood());
+    // Dirty rooms and dirt piles nearby (no line in the creature configuration, the global dirt values apply to all)
+    static const CreatureMoodDirt dirtMood;
+    moodValue += ItemEffects::moodModifier(creature, dirtMood.computeMood(creature));
     // Creatures of the same keeper that it hates (only with relationships on)
     moodValue += ItemEffects::moodModifier(creature, creature.getRelationshipMood());
     moodValue += creature.getItemEffect("Charisma");

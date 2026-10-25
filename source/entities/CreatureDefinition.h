@@ -246,6 +246,12 @@ public:
     inline const std::string& getPreSkill() const { return mPreSkill; }
     //! \brief Returns the id of the tier 4 skill of this type (or none).
     inline const std::string& getTierFourSkill() const { return mTierFourSkill; }
+    //! \brief Returns how fast the urge to use a toilet grows per turn (0 = the creature has no urge).
+    inline double getUrgeGrowthPerTurn() const { return mUrgeGrowthPerTurn; }
+    //! \brief Returns how much the creature minds dirt (0 = not at all, 1 = normal, 2 = twice as much).
+    inline double getCleanliness() const { return mCleanliness; }
+    //! \brief Returns the factor on all dirt the creature produces (1 = normal, 2 = twice as much).
+    inline double getDirtFactor() const { return mDirtFactor; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -417,6 +423,15 @@ private:
 
     //! \brief Optional (TierFourSkill): id of the tier 4 skill of this type (or none). Default "none" when not set
     std::string mTierFourSkill;
+
+    //! \brief Optional (UrgeGrowth/Turn): how fast the urge to use a toilet grows per turn. Default 0.0 when not set
+    double mUrgeGrowthPerTurn;
+
+    //! \brief Optional (Cleanliness, 0 - 2): factor on the mood the dirt around the creature costs. Default 1.0 when not set
+    double mCleanliness;
+
+    //! \brief Optional (DirtFactor, 0 - 2): factor on all dirt the creature produces. Default 1.0 when not set
+    double mDirtFactor;
 
     //! \brief The name of the creatures class
     std::string mClassName;

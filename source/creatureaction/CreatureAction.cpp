@@ -127,6 +127,14 @@ std::string CreatureAction::toString(CreatureActionType actionType)
     case CreatureActionType::crackBox: return "crackBox";
     case CreatureActionType::harvestHerbs: return "harvestHerbs";
     case CreatureActionType::brewPotion: return "brewPotion";
+    case CreatureActionType::searchDirtToClean:
+        return "searchDirtToClean";
+    case CreatureActionType::cleanTile:
+        return "cleanTile";
+    case CreatureActionType::searchToilet:
+        return "searchToilet";
+    case CreatureActionType::useToilet:
+        return "useToilet";
 
     default:
         assert(false);

@@ -161,13 +161,16 @@ struct AmbienceEffect
         mChance(DEFAULT_EFFECT_CHANCE),
         mSpacing(DEFAULT_EFFECT_SPACING),
         mGrainMin(0),
+        mDirtStage(0),
+        mDirtStageMin(0),
         mMaxDistance(DEFAULT_EFFECT_MAX_DISTANCE),
         mPriority(DEFAULT_EFFECT_PRIORITY),
         mReduced(false),
         mNeedWall(false),
         mWallSide(false),
         mHeartRate(false),
-        mOwnerOnly(false)
+        mOwnerOnly(false),
+        mUnlimited(false)
     {}
 
     //! Name of the effect, used in the log
@@ -231,6 +234,10 @@ struct AmbienceEffect
     uint32_t mSpacing;
     //! Tile targets: only shown while the grain level of the tile (hatchery floor) is at least this (0 = always)
     uint32_t mGrainMin;
+    //! Tile targets: only shown while the dirt stage (1 - 3) the server told for the tile is exactly this (0 = always)
+    uint32_t mDirtStage;
+    //! Tile targets: only shown while the dirt stage the server told for the tile is at least this (0 = always)
+    uint32_t mDirtStageMin;
     //! Distance to the camera up to which the effect runs
     double mMaxDistance;
     //! Higher priority effects are served first when the budget is used up
@@ -245,6 +252,8 @@ struct AmbienceEffect
     bool mHeartRate;
     //! Object targets: shown only to the keeper the object belongs to (the glint of a secret door must not give it away)
     bool mOwnerOnly;
+    //! Not counted against the limit of running particle systems and models (flat floor decals), only the distance limits it
+    bool mUnlimited;
     //! Sound family played when an event effect starts (only in the mode "full")
     std::string mSound;
 };

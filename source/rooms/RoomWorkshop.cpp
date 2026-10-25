@@ -561,12 +561,13 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
 
     const double work = creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork"),
-        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Craftsman");
+        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Craftsman") * getDirtOutputFactor();
     if(mCrackBox != nullptr) mCrackPoints += work;
     else mPoints += work;
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));
+    addUseDirt(creature, tileCreature, "WorkshopDirtPerWork");
 
     return false;
 }

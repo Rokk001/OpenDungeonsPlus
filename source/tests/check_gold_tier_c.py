@@ -73,7 +73,9 @@ assert 'ReactionParticleSpark' in particles.split('particle_system TreasuryHeart
 creature = read('source/entities/Creature.cpp')
 for name in ('exportToPacket(ODPacket& os, const Seat* seat) const', 'exportToPacketForUpdate(ODPacket& os, Seat* seat)'):
     body = creature.split('void Creature::' + name)[1].split('\n}\n')[0]
-    assert body.rstrip().endswith('os << mGoldCarried;'), name
+    assert 'os << mGoldCarried;' in body and 'os << mCreatureDirt;' in body.split('os << mGoldCarried;')[1], name
+    assert body.index('os << mGoldCarried;') < body.index('os << mUrge;') < body.index('os << mCreatureDirt;'), name
+    assert body.index('exportSkillBuildToPacket(os);') < body.index('os << mGoldCarried;'), name
 for name in ('importFromPacket(ODPacket& is)', 'updateFromPacket(ODPacket& is)'):
     body = creature.split('void Creature::' + name)[1].split('\n}\n')[0]
     assert 'OD_ASSERT_TRUE(is >> mGoldCarried);' in body, name

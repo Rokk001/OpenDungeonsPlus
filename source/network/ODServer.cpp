@@ -224,6 +224,21 @@ namespace
         }
     }
 
+    //! \brief Tells a human player the dirt of the floor tiles and rooms it sees (cosmetic event tileDirt): what changed
+    //! after DirtSyncTurns, everything in sight every DirtResyncTurns and at once for a keeper who joins, loads or gains
+    //! sight. Cosmetic only.
+    void notifyTileDirt(GameMap* gameMap, ODSocketClient* sock, Player* player)
+    {
+        if(!player->getIsHuman() || player->getSeat() == nullptr || !sock->supportsCosmeticEvents())
+            return;
+
+        TileDirtSync& sync = gameMap->getTileDirtSync();
+        sync.refresh(gameMap);
+        CosmeticEvent event;
+        if(sync.buildEvent(gameMap, player->getSeat(), sock->getDirtSent(), event))
+            ODServer::getSingleton().sendCosmeticEvent(player, event);
+    }
+
     //! \brief Gives a creature the level the editor asked for. Levelling raises the maximum
     //! HP without healing, which is what we want in game but not here: a creature placed in
     //! a level is expected to start it in full health.
@@ -604,6 +619,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
         notifyHeartHealth(gameMap, sock, player);
         notifyHeartStages(gameMap, sock, player);
         notifyHatcheryGrainSeen(gameMap, sock, player);
+        notifyTileDirt(gameMap, sock, player);
 
         // A client that joined or loaded gets the current relationship tiers once
         if(!sock->getRelationshipsSynced())

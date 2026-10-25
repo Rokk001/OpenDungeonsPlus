@@ -86,6 +86,10 @@ std::string getPostCategoryName(PostCategory category)
         case PostCategory::Fleeced: return "fleeced";
         case PostCategory::Gift: return "gift";
         case PostCategory::EpicFind: return "epicfind";
+        case PostCategory::Relieved:
+            return "relieved";
+        case PostCategory::Filthy:
+            return "filthy";
         default:
             return "";
     }
