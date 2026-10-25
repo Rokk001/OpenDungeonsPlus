@@ -111,8 +111,8 @@ enum class ClientNotificationType
     editorRegionEdit,
     //! Use a stored special (the button of the special was pressed): + int32_t giftBoxType
     askUseSpecial,
-    //! Asks to clean a prison or torture chamber once (the room on the given tile): + int32_t tileX, int32_t tileY,
-    //! bool isSet (false only asks for the state). The server answers with roomCleanOrder.
+    //! Asks to clean a prison or torture chamber once: + std::string roomName (the unique name that identifies the
+    //! room), bool isSet (false only asks for the state). The server answers with roomCleanOrder.
     askCleanRoom
 };
 

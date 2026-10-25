@@ -2156,17 +2156,16 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
                 break;
             }
-            int32_t xx = 0;
-            int32_t yy = 0;
+            std::string roomName;
             bool isOrdered = false;
-            if(!(packetReceived >> xx >> yy >> isOrdered))
+            if(!(packetReceived >> roomName >> isOrdered))
             {
                 OD_LOG_ERR("Truncated roomCleanOrder packet");
                 break;
             }
 
             GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
-            gameMode->setRoomCleanOrderShown(xx, yy, isOrdered);
+            gameMode->setRoomCleanOrderShown(roomName, isOrdered);
             break;
         }
 

@@ -112,4 +112,23 @@ order = re.findall(r'RoomType::(\w+)', wanted)
 assert order[:3] == ['dormitory', 'toilet', 'treasury'], order
 assert order.count('toilet') == 1
 
+# 8. Research tree order: the toilet entry follows the casino entry in the tier II row
+assert registered.index('roomCasino') + 1 == registered.index('roomToilet'), 'the toilet follows the casino in the tree'
+
+# 9. Clean-once control: a game tab button, and the order names the room (not a tile) in both directions
+clean_layout = read('gui/WindowRoomClean.layout')
+assert re.search(r'<Window type="OD/GameTabButton" name="RoomCleanButton" >', clean_layout), 'the Clean button is a GameTabButton'
+assert 'Workers clean this room once' in clean_layout and 'value="Clean"' in clean_layout
+server_cpp = read('source/network/ODServer.cpp')
+clean_case = server_cpp[server_cpp.index('case ClientNotificationType::askCleanRoom:'):]
+clean_case = clean_case[:clean_case.index('case ClientNotificationType::askExecuteConsoleCommand:')]
+assert 'packetReceived >> roomName >> isSet' in clean_case and 'getRoomByName(roomName)' in clean_case
+assert 'notif.mPacket << roomName << room->getCleanOrder()' in clean_case
+game_mode = read('source/modes/GameMode.cpp')
+assert game_mode.count('clientNotification->mPacket << mCleanRoomName <<') == 2
+client_cpp = read('source/network/ODClient.cpp')
+assert 'packetReceived >> roomName >> isOrdered' in client_cpp and 'setRoomCleanOrderShown(roomName, isOrdered)' in client_cpp
+pile_hover = game_mode[game_mode.index('static std::string getDirtPileHoverText'):game_mode.index('static std::string getRoomDirtHoverText')]
+assert 'social::SocialGenerator::displayClassName(' in pile_hover, 'the pile hover names the creature class readably'
+
 print('toilet room ok')
