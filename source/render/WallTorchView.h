@@ -83,6 +83,7 @@ private:
         double mBaseHeight;
     };
 
+    //! \brief Stores one server-provided torch with its visible parts, optional light and sound.
     struct Torch
     {
         //! \brief Creates a torch that is not shown and has no parts, light or sound yet
