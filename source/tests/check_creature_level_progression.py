@@ -71,7 +71,7 @@ for needle in ('while(getLevel() < MAX_LEVEL)', '!std::isfinite(newXP) || newXP 
     assert needle in level_up, needle
 receive = function(source, 'void Creature::receiveExp(')
 assert '!std::isfinite(experience) || experience < 0 || mLevel >= MAX_LEVEL' in receive
-assert 'mExp += experience;' in receive
+assert 'mExp += experience * (1.0 + getItemEffect("Trainer") / 100.0);' in receive
 roster = Roster(root)
 for name in roster.fighters() + ['Kobold', 'DwarfWorker']:
     fields = roster.creatures[name][0]

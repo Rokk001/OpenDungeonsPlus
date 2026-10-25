@@ -41,7 +41,7 @@ std::pair<uint32_t,uint32_t> heldCounts(const Creature& creature) {
     return std::make_pair(items,potions);
 }
 //! \brief Runs fixed-seed roll, ownership, affinity and the approved drop probabilities and armed arrival flow.
-int main(int argc,char** argv) {
+int main(int argc,char** argv) { try {
     check(argc==2,"repository argument"); GameMap map; Seat seat; loadCatalogue(argv[1],map);
     for(uint32_t rank=0;rank<4;++rank) {
         const Quality quality=static_cast<Quality>(rank); std::vector<const ItemDefinition*> eligible;
@@ -129,6 +129,7 @@ int main(int argc,char** argv) {
         check(std::abs(armedPotions/100000.0-expected[2])<.01,"armed hero potion flow");
     }
     std::cout<<"item production rules passed\n";
+} catch(const std::exception& error) { std::cerr<<"FAIL: "<<error.what()<<"\n";return 1; }
 }
 '''
     compile_and_run("item-rules", catalogue_fixture() + creature_fixture() + affinity_rooms + garden + lab + checks)

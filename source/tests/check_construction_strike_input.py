@@ -76,6 +76,8 @@ struct GameMode { GameMap* mGameMap;ModeManager* mModeManager;Selection mPlayerS
  void displayText(int colour,const std::string& text){mActionTargetValid=colour!=Ogre::ColourValue::Red;mActionTargetText=text;}
  void displayPointerText(int,const std::string&){}void displayTileBuildFailure(Tile*,Seat*){mActionTargetValid=false;}
  void selectTiles(const std::vector<Tile*>&){}void selectSquaredTiles(int,int,int,int){}
+ //! \brief Supplies the unrelated item hover reset used by the production dispatcher.
+ void clearItemContextImage(){}
  void unselectAllTiles(){}void updateSelectedTiles(){}
  void handlePlayerActionNone(){}void handlePlayerActionSelectTile(){}void handlePlayerActionQuery(){}void handlePlayerActionSell(){}
  void checkInputCommand();

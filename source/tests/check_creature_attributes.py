@@ -809,7 +809,8 @@ def check_part_g():
     assert not (root / 'tools/gen_critical_hit_sound.py').exists(), 'no generator any more'
 
     # ---- 11 the stats text: after "Level:" the attributes, critical chance, mana, path and skills
-    stats = function(creature, 'std::string Creature::getStatsText()')
+    stats = function(creature, 'std::string Creature::getStatsText(const Seat* viewer)')
+    assert 'return getStatsText(getSeat());' in function(creature, 'std::string Creature::getStatsText()')
     order = ['"Level: " << getLevel()', '"Strength / Dexterity / Life / Mana: "', '"Critical chance: "',
              '"Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())',
              '"Path: " << getSkillPathText()', '"Skills: " << getSkillListText()', '"Experience: "']

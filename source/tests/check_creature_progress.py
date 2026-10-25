@@ -57,7 +57,10 @@ struct ODClient {bool enabled=true;static ODClient& getSingleton(){static ODClie
 struct Definition {double needed=100;double getXPNeededWhenLevel(unsigned)const{return needed;}bool isWorker()const{return false;}};
 struct GameMap {double getGameSpeedFactor()const{return 1.0;}};
 //! \brief Minimal action identifiers used by the production packet selector.
-enum class CreatureActionType {nb, useRoom};
+enum class CreatureActionType {nb, useRoom, crackBox, harvestHerbs, brewPotion};
+//! \brief Runs the production room-work selector for all work actions.
+struct CreatureAction {static bool isRoomWorkAction(CreatureActionType actionType);};
+ACTION_SELECTOR
 //! \brief Minimal current-action snapshot for the production packet selector.
 struct CreatureActivity {CreatureActionType action=CreatureActionType::nb;};
 //! \brief Holds only the fields required by extracted production progress methods.
@@ -70,6 +73,10 @@ struct Creature {
  //! \brief Reports the mocked current activity for the production progress packet.
  CreatureActivity getActivity() const {CreatureActivity activity;if(working)activity.action=CreatureActionType::useRoom;return activity;}
 
+ //! \brief Supplies a controlled Trainer value to the actual experience formula.
+ double trainer=0;
+ //! \brief Returns the controlled Trainer effect for the actual experience formula.
+ double getItemEffect(const std::string& name)const{return name=="Trainer"?trainer:0;}
  bool getIsOnServerMap()const{return server;}std::string getName()const{return "probe";}
  //! \brief Records the real one-turn interval using the production method below.
  void recordWorkerStepRecovery();
@@ -123,6 +130,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  ODPacket bad;bad<<.5<<8.0<<2.0<<uint32_t(1);b.importProgressFromPacket(bad);check(!b.mHasProgressInformation,"invalid recovery rejected");
  ODPacket shortPacket;shortPacket<<.5;b.importProgressFromPacket(shortPacket);check(!b.mHasProgressInformation,"truncated payload rejected");
  a.mLevel=1;a.mExp=0;a.receiveExp(-1);check(a.mExp==0,"negative gain rejected");a.receiveExp(20);check(a.mExp==20&&a.mNeedFireRefresh,"XP changes schedule replication");
+ a.trainer=25;a.mExp=0;a.receiveExp(20);check(a.mExp==25,"Trainer multiplies earned experience without rounding");a.trainer=0;
  a.working=true;a.mAttackRecoveryTurns=0;a.mAttackRecoveryDuration=0;a.mAttackRecoverySerial=101;
  for(unsigned remaining:{5u,4u,1u,0u}){
   a.mJobCooldown=remaining;a.mJobCooldownDuration=5;
@@ -160,7 +168,7 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
-'''.replace('METHODS', methods).replace('CLOCK', clock)
+'''.replace('ACTION_SELECTOR', function('source/creatureaction/CreatureAction.cpp', 'bool CreatureAction::isRoomWorkAction(')).replace('METHODS', methods).replace('CLOCK', clock)
 with tempfile.TemporaryDirectory(prefix='odp-progress-') as directory:
     work = Path(directory)
     (work / 'probe.cpp').write_text(probe)

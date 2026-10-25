@@ -84,6 +84,7 @@ probe = r'''
 namespace Random {template<typename RandomIt> void shuffle(RandomIt first,RandomIt last){static std::mt19937 generator(1);std::shuffle(first,last,generator);}
  unsigned int Uint(unsigned int low,unsigned int high){static std::mt19937 generator(1);return std::uniform_int_distribution<unsigned int>(low,high)(generator);}}
 namespace Helper {std::string toString(int value){return std::to_string(value);} template<class T> std::string toString(T value){std::ostringstream s;s<<value;return s.str();}}
+//! \brief Supplies actual research config and the optional merchant parser bound.
 class ConfigManager {
 public:
     std::map<std::string,int> points;
@@ -93,6 +94,8 @@ public:
     static const uint32_t RESEARCH_LEVELS = 3;
     std::map<std::string,ResearchEffectLine> effects;
     static ConfigManager& getSingleton(){static ConfigManager c;return c;}
+    //! \brief Supplies the existing merchant margin bound used by optional seat parsing.
+    int getRoomConfigInt32(const std::string&) const {return 50;}
     int getSkillPoints(const std::string& key) const {return points.at(key);}
     bool isSkillFreeLevelOne(const std::string& key) const {return freeLevelOne.count(key)>0;}
     const ResearchEffectLine* getResearchEffect(const std::string& skill,const std::string& effect) const {
@@ -151,9 +154,15 @@ struct ODServer {
     void queueServerNotification(ServerNotification* n){sent.emplace_back(n);}
 };
 GIFTBOXENUM
+//! \brief Supplies seat storage for actual research and optional shared-room save methods.
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
     bool mHadLibrary=false;
+    int32_t mMerchantMargin=10,mLabMode=0;std::string mMerchantMode="fair";double mMerchantGoldRemainder=0.0;
+    //! \brief Stores the shared room settings parsed by the actual optional save block.
+    void setMerchantSettings(int32_t margin,const std::string& mode){mMerchantMargin=margin;mMerchantMode=mode;}
+    //! \brief Stores the laboratory mode parsed by the actual optional save block.
+    void setLabMode(int32_t mode){mLabMode=mode;}
     std::vector<std::pair<int32_t,uint32_t>> mStoredSpecialBoxes;
     void addStoredSpecial(GiftBoxType type,uint32_t amount){mStoredSpecialBoxes.push_back(std::pair<int32_t,uint32_t>(static_cast<int32_t>(type),amount));}
     int32_t mSkillPoints=0;const Skill* mCurrentSkill=nullptr;
@@ -193,6 +202,7 @@ bool requestSkills(ODPacket& packetReceived){ClientSocket socket;ClientSocket* c
 int checks=0;
 void check(bool value,const std::string& name){++checks;if(!value)throw std::runtime_error(name);}
 void near(double a,double b,const std::string& name){check(std::abs(a-b)<1e-7,name);}
+//! \brief Exercises research progression, gates, persistence and configured effects.
 int main(int argc,char** argv){try {
     std::ifstream config(argv[1]);std::string line;bool inFree=false,inEffects=false;
     while(std::getline(config,line)){line=line.substr(0,line.find('#'));std::istringstream row(line);std::string key;int points;
@@ -218,7 +228,7 @@ int main(int argc,char** argv){try {
     check(SkillManager::getSkillTab(SkillType::trapDoorWooden)==SkillTab::traps&&SkillManager::getSkillTab(SkillType::keeperHeartMending)==SkillTab::traps,"Heart Mending stands in the Traps tab");
     check(SkillManager::getSkillTab(SkillType::spellSummonWorker)==SkillTab::spells&&SkillManager::getSkillTab(SkillType::keeperManaFlow)==SkillTab::spells,"Mana Flow stands in the Spells tab");
     {std::vector<SkillType> rooms,traps,spells;SkillManager::listTabSkills(SkillTab::rooms,rooms);SkillManager::listTabSkills(SkillTab::traps,traps);SkillManager::listTabSkills(SkillTab::spells,spells);
-     check(rooms.size()==17&&traps.size()==19&&spells.size()==18,"17 + 19 + 18 entries in the three tabs");}
+     check(rooms.size()==20&&traps.size()==21&&spells.size()==19,"20 + 21 + 19 entries in the three tabs");}
     {const Skill* mending=SkillManager::getSkill(SkillType::keeperHeartMending);
      check(mending->getDependencies().size()==1&&mending->getDependencies()[0]->getType()==SkillType::keeperHeartFortitude,"Heart Mending needs only Heart Fortitude");
      const Skill* banner=SkillManager::getSkill(SkillType::trapWatchBanner);
@@ -271,15 +281,15 @@ int main(int argc,char** argv){try {
      check(SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,denied.mSkillNotAllowed)&&!SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,{}),"canBeSkilled honours the allowed list");}
     // Levels II and III: half (rounded up) and all of the allowed entries of the tab need level I
     {Seat g;g.setSkillsDone(startSkills);
-     check(!g.canResearchLevel(SkillType::roomTreasury,2,none),"level II waits for 9 of 17 rooms at level I (4 present)");
-     std::vector<std::pair<SkillType,int> > four={{SkillType::roomTrainingHall,1},{SkillType::roomWorkshop,1},{SkillType::roomBridgeWooden,1},{SkillType::roomGuardRoom,1},{SkillType::roomToilet,1}};
-     check(g.canResearchLevel(SkillType::roomTreasury,2,four),"level II opens with 9 of 17 rooms (queued entries count)");
-     std::vector<std::pair<SkillType,int> > three(four.begin(),four.begin()+4);
-     check(!g.canResearchLevel(SkillType::roomTreasury,2,three),"8 of 17 rooms are not enough");
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,none),"level II waits for 10 of 20 rooms at level I (4 present)");
+     std::vector<std::pair<SkillType,int> > four={{SkillType::roomTrainingHall,1},{SkillType::roomWorkshop,1},{SkillType::roomBridgeWooden,1},{SkillType::roomGuardRoom,1},{SkillType::roomToilet,1},{SkillType::roomMerchant,1}};
+     check(g.canResearchLevel(SkillType::roomTreasury,2,four),"level II opens with 10 of 20 rooms (queued entries count)");
+     std::vector<std::pair<SkillType,int> > three(four.begin(),four.begin()+5);
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,three),"9 of 20 rooms are not enough");
      g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomTreasury});
      check(g.mSkillPending.size()==3,"the queue drops only the level II entry that has no gate yet");
-     g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomGuardRoom,SkillType::roomToilet,SkillType::roomTreasury});
-     check(g.mSkillPending.size()==6,"the queue accepts level II once 9 entries are done or queued");
+     g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomGuardRoom,SkillType::roomToilet,SkillType::roomMerchant,SkillType::roomTreasury});
+     check(g.mSkillPending.size()==7,"the queue accepts level II once 10 entries are done or queued");
      check(!g.canResearchLevel(SkillType::roomTreasury,3,four),"level III needs the entry at level II");
      Seat done;done.setSkillsDone(startSkills);
      std::vector<SkillType> allRooms;SkillManager::listTabSkills(SkillTab::rooms,allRooms);
