@@ -47,7 +47,7 @@ editor_layout = read('gui/ModeEditor.layout')
 gui = read('source/render/Gui.cpp')
 for special in specials:
     check('askCreateGiftBox(GiftBoxType::%s)' % special in editor, 'the editor has a button action for %s' % special)
-check(editor_layout.count('BoxButton" >') == len(specials) + 1, 'the editor layout holds one box button per special')
+check(len(re.findall(r'<Window\b[^>]*\bname="\w+BoxButton"\s*>', editor_layout)) == len(specials) + 1, 'the editor layout holds one box button per special')
 check(len(re.findall(r'EDITOR_BOX_\w+_BUTTON = ', gui)) == len(specials), 'one editor box button path per special')
 check(len(re.findall(r'connectGuiAction\(Gui::EDITOR_BOX_', editor)) == len(specials), 'every editor box button is connected')
 

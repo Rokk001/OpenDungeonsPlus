@@ -6,6 +6,7 @@ Quality expectations interpolate the approved level-one and level-thirty endpoin
 from item_probe_support import catalogue_fixture, creature_fixture, compile_and_run, function, source
 
 
+# Exercise actual catalogue and creature rules with fixed-seed production fixtures.
 def main():
     """Exercise production item rules without replacing their algorithms with a Python model."""
     garden = function(source("source/rooms/RoomHerbGarden.cpp"), "bool RoomHerbGarden::hasOpenCreatureSpot(")
@@ -89,7 +90,7 @@ int main(int argc,char** argv) { try {
         check(imageLine!=nullptr&&imageLine->getWeaponClass()==equipment->getWeaponType()&&
             imageLine->getQuality(Quality::common).mAvailable,"Poor icon uses a path line of the spawn WeaponClass");
         const std::string atlas=cleanFile(std::string(argv[1])+"/gui/Items.imageset");
-        check(atlas.find("Name=\""+image+"\"")!=std::string::npos,"Poor icon exists in the actual atlas");
+        check(atlas.find("name=\""+image+"\"")!=std::string::npos,"Poor icon exists in the actual atlas");
     }
     victim.mWeaponR=&sword; victim.mWeaponL=&shield;
     victim.dropItems(false); check(victim.dropped.size()==1&&victim.dropped[0]->mQuality!=Quality::poor||

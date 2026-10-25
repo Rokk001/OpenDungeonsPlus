@@ -83,7 +83,7 @@ stopped = function_body(one_hit, 'void MissileOneHit::missileStopped()')
 assert 'mHasHit' in stopped and 'fireHitMissed(mShooterName)' in stopped and 'isAlive()' in stopped
 assert 'virtual void missileStopped()' in missile_h and 'missileStopped();' in missile
 assert missile.index('setWalkPath(EntityAnimation::idle_anim') < missile.index('missileStopped();')
-assert 'setShooter(creature->getName(), targetName)' in launch and 'MissileObjectType::oneHit' in launch
+assert 'setShooter(creature->getName(), targetName)' in launch and 'return new MissileOneHit(' in function_body(launch, 'MissileOneHit* CreatureSkillMissileLaunch::createMissile(')
 # Saved creature shots retain their launch accuracy and cosmetic names; old rows keep loading.
 export = function_body(one_hit, 'void MissileOneHit::exportToStream')
 load = function_body(one_hit, 'bool MissileOneHit::importFromStream')
