@@ -78,6 +78,7 @@
 #include "game/CreatureAppearance.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
+#include "game/ItemDrops.h"
 #include "game/Skill.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
@@ -5290,6 +5291,7 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     // Only the owning seat receives private slots; foreign copies reveal the two hands.
     for(std::size_t slot = 0; slot < 13; ++slot)
     {
+        std::unique_ptr<ItemInstance> spawnFallback;
         const ItemInstance* item = nullptr;
         if(slot < mEquipment.size())
             item = mEquipment[slot].get();
@@ -5299,6 +5301,16 @@ float Creature::fillProfilePage(CEGUI::Window* page)
             item = mInventory[slot - 9].get();
         if(localSeat != getSeat() && slot >= VISIBLE_ITEM_HAND_SLOTS)
             item = nullptr;
+        // Empty worn hand slots retain the creature's visible permanent spawn equipment.
+        if(item == nullptr && slot < VISIBLE_ITEM_HAND_SLOTS)
+        {
+            const Weapon* weapon = slot == 0 ? mWeaponR : mWeaponL;
+            if(weapon != nullptr)
+            {
+                spawnFallback = ItemDrops::poorWeapon(*weapon);
+                item = spawnFallback.get();
+            }
+        }
         CEGUI::Window* image = page->getChild("EquipmentRow/Slot" + Helper::toString(slot));
         const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
         image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
