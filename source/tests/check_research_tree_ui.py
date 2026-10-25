@@ -47,7 +47,7 @@ for line in constructor.splitlines():
         if current != 'spellSummonChampion':  # the reward skill has no node in the tree
             model[current] = (prefixes[match[1]] + match[2], parents, int(match[3]), tab_of_prefix[prefixes[match[1]]])
             order.append(current)
-assert len(model) == 54
+assert len(model) == 55
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}, %d, %d};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents), tier, tab)
     for key, (path, parents, tier, tab) in model.items())
@@ -80,7 +80,8 @@ struct Seat {bool gate=true;uint32_t level=0,queue=0;bool current=false;std::vec
 struct Player {Seat seat;Seat* getSeat(){return &seat;}};
 struct GameMap {Player player;Player* getLocalPlayer(){return &player;}};
 enum class SkillTab {rooms,traps,spells,nb};
-bool isKeeper(SkillType t){return t>=SkillType::keeperDominion&&t<SkillType::countSkill;}
+//! \brief Selects only the keeper-only entries, excluding later appended room research.
+bool isKeeper(SkillType t){return t>=SkillType::keeperDominion&&t<=SkillType::keeperManaFlow;}
 struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;int tier=1;int tab=0;
  SkillType getType()const{return type;}const std::vector<const Skill*>& getDependencies()const{return parents;}
  int getNeededSkillPoints(uint32_t level)const{return 100*level;}};

@@ -214,8 +214,8 @@ assert re.search(r'^    DormitoryWoundedKoDeathCooldown	150\s*$', rooms_cfg, re.
 assert re.search(r'^# DormitoryWoundedKoDeathCooldown\s', rooms_cfg, re.M), 'documented'
 assert 'DormitoryWoundedKoDeathCooldown' not in function_body(creature, 'bool Creature::isWoundedForBedCarry() const')
 assert re.search(r'if\(mKoTurnCounter < 0\)\s*\{\s*if\(\(carrier != nullptr\) && \(carrier->getSeat\(\) == getSeat\(\)\)\)\s*'
-                 r'return isKoToDeathForBedPull\(\) \? EntityCarryType::koCreature : EntityCarryType::notCarryable;',
-                 carry_type), 'own KO to death: pulled to the own bed or not touched'
+                 r'return \(isKoToDeathForBedPull\(\) \|\| RoomInfirmary::wouldAccept\(\*this\)\) \? EntityCarryType::koCreature : EntityCarryType::notCarryable;',
+                 carry_type), 'own KO to death: own bed pulling or available infirmary, otherwise not touched'
 assert re.search(r'EntityCarryType::notCarryable;\s*return EntityCarryType::koCreature;\s*\}', carry_type), 'enemies still go to a prison'
 assert carry_type.index('mKoTurnCounter < 0') < carry_type.index('EntityCarryType::corpse')
 assert 'bool pullable = (creature->getKoTurnCounter() < 0) ? creature->isKoToDeathForBedPull()' in has_spot

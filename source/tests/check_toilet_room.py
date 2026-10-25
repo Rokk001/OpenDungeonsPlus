@@ -25,10 +25,10 @@ def enum_names(text, header):
     return names
 
 
-# 1. RoomType: the toilet is the last room before nbRooms
+# 1. RoomType: infirmary follows the toilet without moving its existing value.
 room_type = read('source/rooms/RoomType.h')
 rooms = enum_names(room_type, 'enum class RoomType')
-assert rooms[-2:] == ['toilet', 'nbRooms'], rooms[-3:]
+assert rooms[-3:] == ['toilet', 'infirmary', 'nbRooms'], rooms[-4:]
 assert rooms.count('toilet') == 1
 
 # 2. The room class, factory, names and registration in the build
@@ -86,7 +86,7 @@ assert rooms_layout.count('name="ToiletButton"') == 1 and skill_layout.count('na
 # 6. Research: skill type appended before countSkill, registered under the dormitory in the Rooms tab (tier II)
 skill_type = read('source/game/SkillType.h')
 skills = enum_names(skill_type, 'enum class SkillType')
-assert skills[-2:] == ['roomToilet', 'countSkill'], skills[-3:]
+assert skills[-3:] == ['roomToilet', 'roomInfirmary', 'countSkill'], skills[-4:]
 assert 'case SkillType::roomToilet:' in read('source/game/SkillType.cpp') and '"roomToilet"' in read('source/game/SkillType.cpp')
 manager = read('source/game/SkillManager.cpp')
 assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{SkillType::roomDormitory});\n'
@@ -94,7 +94,7 @@ assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomToilet') == 1
-assert len(registered) == 54, 'the research tree has 54 entries, found ' + str(len(registered))
+assert len(registered) == 55, 'the research tree has 55 entries, found ' + str(len(registered))
 skills_cfg = read('config/skills.cfg')
 assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
 # No research effect line for the toilet

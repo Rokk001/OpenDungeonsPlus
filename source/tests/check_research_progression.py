@@ -148,6 +148,15 @@ struct ODServer {
 GIFTBOXENUM
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
+    int32_t mInfirmaryPayer=0,mInfirmaryThreshold=100;bool mInfirmaryHealOn=true;
+    //! \brief Supplies the appended optional setting block used by the production seat save path.
+    int32_t getInfirmaryPayer()const{return mInfirmaryPayer;}
+    //! \brief Accepts only the two existing admission payer choices.
+    void setInfirmaryPayer(int32_t payer){if(payer==0||payer==1)mInfirmaryPayer=payer;}
+    //! \brief Accepts the configured discharge slider domain for the extracted seat loader.
+    void setInfirmaryThreshold(int32_t threshold){if(threshold>=40&&threshold<=100&&(threshold-40)%10==0)mInfirmaryThreshold=threshold;}
+    //! \brief Restores the optional treatment switch without affecting research state.
+    void setInfirmaryHealOn(bool healOn){mInfirmaryHealOn=healOn;}
     bool mHadLibrary=false;
     std::vector<std::pair<int32_t,uint32_t>> mStoredSpecialBoxes;
     void addStoredSpecial(GiftBoxType type,uint32_t amount){mStoredSpecialBoxes.push_back(std::pair<int32_t,uint32_t>(static_cast<int32_t>(type),amount));}
@@ -205,7 +214,7 @@ int main(int argc,char** argv){try {
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
         if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
-    check(all.size()==54,"all 54 research entries");
+    check(all.size()==55,"all 55 research entries");
     check(ConfigManager::getSingleton().freeLevelOne.size()==5,"five free level one entries in skills.cfg");
     const std::vector<std::pair<SkillType,int> > none;
     // The research tree: tabs, tiers and parents of the production constructor
@@ -328,6 +337,7 @@ int main(int argc,char** argv){try {
     struct Effect{T type;const char* effect;double base,first,second,third;};
     const Effect effects[]={
         {T::roomTreasury,"GoldPerTile",1000,1000,1250,1500},{T::roomDormitory,"SleepRecovery",1.5,1.5,1.8,2.1},
+        {T::roomInfirmary,"HealTime",60,60,48,40.02},
         {T::roomHatchery,"LayInterval",15,15,12,12},{T::roomHatchery,"Capacity",1,1,1,1.5},
         {T::roomLibrary,"PointsPerWork",5,5,6,7},{T::roomTrainingHall,"XpPerHit",5,5,6,7},{T::roomWorkshop,"PointsPerWork",5,5,6,7},
         {T::roomGuardRoom,"WakefulnessPerDuty",0.5,0.5,0.4,0.3335},{T::roomCasino,"Fee",.1,.1,.12,.14},{T::roomCasino,"Mood",180,180,216,252},

@@ -23,9 +23,9 @@ editor = read('source/modes/EditorMode.cpp')
 client_ids = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', client_h.split('};')[0], re.M)
 # Later messages may be appended after it, but it must follow the previous last message directly
 assert client_ids.index('editorRegionEdit') == client_ids.index('askPossessSkill') + 1, 'client message moved'
-assert client_ids[-2:] == ['editorRegionEdit', 'askUseSpecial'], client_ids[-3:]
+assert client_ids[-4:] == ['editorRegionEdit', 'askUseSpecial', 'askInfirmaryWindow', 'askInfirmarySettings'], client_ids[-5:]
 assert 'case ClientNotificationType::editorRegionEdit:' in client_cpp
-assert server_h.split('};')[0].rstrip().endswith('campaignVictory') and 'editorRegionData,' in server_h, 'server message appended out of order'
+assert re.search(r'campaignVictory,\s*(?://[^\n]*\n\s*)*infirmaryWindow,\s*(?://[^\n]*\n\s*)*infirmarySettings\s*$', server_h.split('};')[0]) and 'editorRegionData,' in server_h, 'server message appended out of order'
 assert 'case ServerNotificationType::editorRegionData:' in server_cpp
 
 # The three operations of the request are named, the editor and the server use the names.

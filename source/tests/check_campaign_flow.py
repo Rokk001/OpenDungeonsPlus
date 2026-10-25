@@ -47,7 +47,7 @@ victory = game_map[game_map.index('void GameMap::addWinningSeat('):game_map.inde
 assert victory.index('mWinningSeats.push_back(s)') < victory.index('getGoalsStringForPlayer(player)')
 assert victory.index('sendLevelStatistics(true)') < victory.index('onLevelWon()') < victory.index('ServerNotificationType::campaignVictory')
 assert 'Open the menu and quit' not in victory
-goals = game_map[game_map.index('std::string GameMap::getGoalsStringForPlayer('):game_map.index('int GameMap::addGoldToSeat(')]
+goals = game_map[game_map.index('std::string GameMap::getGoalsStringForPlayer('):game_map.index('double GameMap::addGoldToSeat(')]
 assert 'else if (seat->numFailedGoals()' not in goals
 for state in ('Open', 'Reached', 'Failed'):
     assert "[image='GoalStatus/" + state + "'] " in goals, state

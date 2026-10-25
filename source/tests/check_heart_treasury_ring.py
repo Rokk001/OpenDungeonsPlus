@@ -39,9 +39,9 @@ get_hp = function(temple, 'double RoomDungeonTemple::getHP(')
 get_ring_center_tile = function(temple, 'Tile* RoomDungeonTemple::getRingCenterTile(')
 is_treasury_tile = function(temple, 'bool RoomDungeonTemple::isTreasuryTile(')
 get_total_gold_storage = function(temple, 'int RoomDungeonTemple::getTotalGoldStorage(')
-get_total_gold_stored = function(temple, 'int RoomDungeonTemple::getTotalGoldStored(')
-deposit_gold = function(temple, 'int RoomDungeonTemple::depositGold(')
-withdraw_gold = function(temple, 'int RoomDungeonTemple::withdrawGold(')
+get_total_gold_stored = function(temple, 'double RoomDungeonTemple::getTotalGoldStored(')
+deposit_gold = function(temple, 'double RoomDungeonTemple::depositGold(')
+withdraw_gold = function(temple, 'double RoomDungeonTemple::withdrawGold(')
 update_meshes = function(temple, 'void RoomDungeonTemple::updateTreasuryMeshesForTile(')
 split_room = function(temple, 'void RoomDungeonTemple::splitRoom(')
 create_tile_data = function(temple, 'RoomTreasuryTileData* RoomDungeonTemple::createTileData(')
@@ -87,7 +87,7 @@ struct TileData {
  virtual ~TileData()=default;
 };
 struct RoomTreasuryTileData:TileData {
- int mGoldInTile=0;
+ double mGoldInTile=0;
  std::string mMeshOfTile;
 };
 namespace Ogre {
@@ -126,13 +126,14 @@ struct BuildingObject:GameEntity {
  virtual bool notifyRemoveAsked(){return true;}
 };
 struct TreasuryObject:GameEntity {
- int mGoldValue=0;
+ double mGoldValue=0;
  static std::vector<TreasuryObject*> spawned;
- TreasuryObject(GameMap*,int v):GameEntity(nullptr),mGoldValue(v){spawned.push_back(this);}
+ //! \brief Preserves fractions in the precise loose-pile production API.
+ TreasuryObject(GameMap*,double v):GameEntity(nullptr),mGoldValue(v){spawned.push_back(this);}
  void addToGameMap(){}
  void createMesh(){}
  void setPosition(Ogre::Vector3){}
- static const char* getMeshNameForGold(int gold);
+ static const char* getMeshNameForGold(double gold);
 };
 std::vector<TreasuryObject*> TreasuryObject::spawned;
 struct Room:Building {
@@ -183,9 +184,9 @@ struct RoomDungeonTemple:Room {
  Tile* getRingCenterTile() const;
  bool isTreasuryTile(Tile*) const;
  int getTotalGoldStorage() const;
- int getTotalGoldStored() const;
- int depositGold(int,Tile*);
- int withdrawGold(int);
+ double getTotalGoldStored() const;
+ double depositGold(double,Tile*);
+ double withdrawGold(double);
  void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);
  void splitRoom(Room&,const std::vector<Tile*>&);
  RoomTreasuryTileData* createTileData(Tile*);
