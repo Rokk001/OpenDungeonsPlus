@@ -69,14 +69,17 @@ assert float(dirt['DirtStage2At']) < float(dirt['DirtStage3At']) < 100.0
 for key in DIRT:
     assert_documented(global_cfg, key, 'global.cfg')
 
-# 3. The per-room keys of rooms.cfg (the same values the tool computes) and the toilet room keys
+# 3. The computed existing room table, the fixed infirmary treatment value and the toilet room keys
 ROOM_KEYS = {
     'WorkshopDirtPerWork': '1.5922', 'ArenaDirtPerHit': '1.5922', 'ToiletDirtPerUse': '0.5211',
     'HatcheryDirtPerHenTurn': '0.0323', 'HatcheryDirtPerMeal': '8.0769', 'TrainHallDirtPerHit': '0.7961',
     'CasinoDirtPerWork': '0.7961', 'DormitoryDirtPerSleepTurn': '0.1448', 'GuardRoomDirtPerDuty': '1.2304',
     'LibraryDirtPerWork': '0.3980', 'TempleDirtPerPrayerTurn': '0.0724', 'PrisonDirtPerPrisonerTurn': '0.1615',
     'TortureDirtPerSession': '1.4475',
+    'InfirmaryDirtPerTreatment': '15.6',
 }
+# Medium production 0.8077 divided by occupancy 0.62 and 7/84 treatments per turn (0.0833), rounded to one decimal.
+assert round(0.8077 / (0.62 * 0.0833), 1) == float(ROOM_KEYS['InfirmaryDirtPerTreatment'])
 room_values = block_values(rooms_cfg, 'Rooms')
 for key, value in ROOM_KEYS.items():
     assert room_values.get(key) == value, 'rooms.cfg ' + key + ' is ' + str(room_values.get(key)) + ', expected ' + value

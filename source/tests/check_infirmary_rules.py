@@ -97,6 +97,12 @@ struct Seat{Player player;double mana=10000;int payer=0,threshold=100;bool heal=
 enum class GameEntityType{creature,room,other};
 //! \brief Supplies the real carry-entry type and ownership contract.
 struct GameEntity{Seat* owner=nullptr;virtual ~GameEntity(){}virtual GameEntityType getObjectType()const{return GameEntityType::creature;}
+ //! \brief Supplies carry listener attachment without changing fixture state.
+ void addGameEntityListener(void*){}
+ //! \brief Supplies the production carry-lock service without changing eligibility.
+ void setCarryLock(Creature&,bool){}
+ //! \brief Supplies non-drag pickup notification to the actual constructor.
+ void notifyEntityCarryOn(Creature*){}
  Seat* getSeat()const{return owner;}virtual const std::string& getName()const=0;};
 //! \brief Exposes the tile geometry used by the actual layout and minimum-square methods.
 struct Tile{int x,y;bool full=true;Room* room=nullptr;std::vector<Tile*> neighbors;
@@ -135,7 +141,23 @@ struct Definition{double fee=58,sleepHeal=2.05;std::vector<const CreatureMood*> 
 //! \brief Records action transitions without reimplementing their production decisions.
 struct CreatureActionSleep{CreatureActionSleep(Creature&){} };
 struct CreatureActionInfirmaryRest{CreatureActionInfirmaryRest(Creature&,RoomInfirmary&){} };
-struct CreatureActionCarryEntity{CreatureActionCarryEntity(Creature&,Creature&,RoomInfirmary&){} };
+//! \brief Provides the owning creature reference used by the actual carry constructor.
+struct CreatureAction{Creature& mCreature;
+ //! \brief Retains the owning creature for the actual carry constructor.
+ CreatureAction(Creature& creature):mCreature(creature){}
+};
+using Building=Room;
+//! \brief Declares the actual carry constructor state while excluding unrelated rendering and path services.
+struct CreatureActionCarryEntity:CreatureAction{
+ GameEntity* mEntityToCarry=nullptr;Tile* mTileDest=nullptr;Building* mBuildingDest=nullptr;
+ bool mIsDrag=false;int mDragPhase=0,mDragLayTurns=0;double mDragFollowArc=0;
+ //! \brief Executes the production room-delivery constructor supplied by the streams probe.
+ CreatureActionCarryEntity(Creature&,GameEntity&,Building&);
+ //! \brief Uses the production own-seat living-creature drag selection.
+ static bool isPulledOverGround(const Creature&,GameEntity&);
+ //! \brief Supplies drag attachment without changing the saved knockout countdown.
+ void startDrag(){}
+};
 namespace Utils{template<class T,class... A>std::unique_ptr<T> make_unique(A&&... a){return std::unique_ptr<T>(new T(std::forward<A>(a)...));}}
 namespace EntityAnimation{const char* sleep_anim="sleep";const char* die_anim="die";const char* idle_anim="idle";}
 enum class CreatureActionType{fight,flee,sleep,infirmaryRest};
@@ -144,6 +166,7 @@ namespace Random{int Int(int,int){return 0;}}
 //! \brief Supplies mutable resources and records actual admission, healing and action effects.
 struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=100,mInfirmaryMood=0,mInfirmaryMoodTurns=0;
  int counter=-73,glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
+ Tile* resumedCarryTarget=nullptr;int resumedCarryCounter=0;bool resumedCarryIsDrag=false;
  Definition* getDefinition(){return &definition;}const Definition* getDefinition()const{return &definition;}
  int getLevel()const{return 1;}double getGoldCarried()const{return gold;}void addGoldCarried(double v){gold+=v;}
  double getHP()const{return hp;}double getMaxHp()const{return maximum;}void setHP(double v){hp=v;}
@@ -156,6 +179,10 @@ struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=10
  void fight(){++fights;}void flee(){++flees;}
  void addParticleEffect(const char*,uint32_t){++glows;}Tile* getPositionTile(){return tile;}Tile* getHomeTile(){return home;}
  void clearActionQueue(){}void clearDestinations(const char*,bool,bool){}void setPosition(const Ogre::Vector3&){}
+ //! \brief Supplies ordinary attachment for the real carry constructor's non-drag branch.
+ void carryEntity(GameEntity*){}
+ //! \brief Records the actual constructor's resumed destination and countdown for assertions.
+ void pushAction(std::unique_ptr<CreatureActionCarryEntity>);
  template<class T>void pushAction(std::unique_ptr<T>){++sleeps;}void popAction(){++popped;}
 };
 //! \brief Executes the actual attack behaviour with controlled visible-enemy inputs.
