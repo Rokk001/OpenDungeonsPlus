@@ -26,13 +26,15 @@ material RoomAmbRune
         pass
         {
             lighting off
-            scene_blend add
+            // Preserve the rune and soft edge encoded in the sprite alpha.
+            scene_blend src_alpha one
             depth_write off
             diffuse vertexcolour
 
             texture_unit
             {
                 texture RoomAmbRune.png
+                tex_address_mode clamp
             }
         }
     }
