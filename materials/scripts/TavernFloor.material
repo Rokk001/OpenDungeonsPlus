@@ -49,7 +49,7 @@ material TavernFloor //: RTSS/NormalMapping_MultiPass
             {
                 param_named decalmap int 0
                 param_named normalmap int 1
-                param_named shadowmap int 3
+                param_named shadowmap int 2
             }
 
 
@@ -72,5 +72,293 @@ material TavernFloor //: RTSS/NormalMapping_MultiPass
             }
         }
 
+    }
+}
+
+material Tavern0000 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0000.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0000Normal.png
+            }
+        }
+    }
+}
+
+material Tavern0001 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0001.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0001Normal.png
+            }
+        }
+    }
+}
+
+material Tavern0010 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0010.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0010Normal.png
+            }
+        }
+    }
+}
+
+material Tavern0011 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0011.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0011Normal.png
+            }
+        }
+    }
+}
+
+material Tavern0100 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0100.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0100Normal.png
+            }
+        }
+    }
+}
+
+material Tavern0101 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0101.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0101Normal.png
+            }
+        }
+    }
+}
+
+material Tavern0110 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0110.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0110Normal.png
+            }
+        }
+    }
+}
+
+material Tavern0111 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern0111.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern0111Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1000 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1000.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1000Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1001 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1001.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1001Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1010 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1010.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1010Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1011 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1011.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1011Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1100 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1100.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1100Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1101 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1101.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1101Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1110 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1110.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1110Normal.png
+            }
+        }
+    }
+}
+
+material Tavern1111 : TavernFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap
+            {
+                texture Tavern1111.png
+            }
+            texture_unit normalmap
+            {
+                texture Tavern1111Normal.png
+            }
+        }
     }
 }
