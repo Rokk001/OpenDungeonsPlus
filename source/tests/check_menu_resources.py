@@ -5,6 +5,7 @@ Textures: every texture named by the material and particle scripts must be found
 Materials and meshes: every mesh named by the menu scene description must exist under models/, every
 material or skeleton named inside the menu meshes must be defined in materials/scripts/*.material (or exist
 under models/), and every material used by the menu particle effects must be defined as well.
+Generated shared geometry must retain every referenced vertex without truncated index buffers.
 Lighting off: a material with "lighting off" that has no texture can only take its colour from the
 mesh vertex colours unless it supplies both explicit shader programs. The fixed pipeline otherwise falls
 back to white, so every fixed-function menu mesh part that uses such a material must carry a vertex
@@ -131,6 +132,46 @@ def mesh_vertex_colours(mesh_file):
     return result
 
 
+# Validate each index against its vertex buffer and detect truncated indices in generated shared geometry.
+def mesh_index_problems(mesh_file):
+    data = mesh_file.read_bytes()
+    problems = []
+    start = data.index(b"\n", 2) + 1
+    for chunk_id, mesh_start, mesh_end in mesh_chunks(data, start, len(data)):
+        if chunk_id != 0x3000:
+            continue
+        shared_count = 0
+        shared_used = set()
+        has_shared_submesh = False
+        for sub_id, sub_start, sub_end in mesh_chunks(data, mesh_start + 1, mesh_end):
+            if sub_id == 0x5000:
+                shared_count, = struct.unpack_from("<I", data, sub_start)
+            elif sub_id == 0x4000:
+                name_end = data.index(b"\n", sub_start)
+                material = data[sub_start:name_end].decode("ascii")
+                use_shared = data[name_end + 1] != 0
+                count, = struct.unpack_from("<I", data, name_end + 2)
+                index_size = 4 if data[name_end + 6] else 2
+                index_start = name_end + 7
+                index_end = index_start + count * index_size
+                used = {index[0] for index in struct.iter_unpack("<I" if index_size == 4 else "<H", data[index_start:index_end])}
+                vertex_count = shared_count
+                if use_shared:
+                    has_shared_submesh = True
+                    shared_used.update(used)
+                else:
+                    for geometry_id, geometry_start, geometry_end in mesh_chunks(data, index_end, sub_end):
+                        if geometry_id == 0x5000:
+                            vertex_count, = struct.unpack_from("<I", data, geometry_start)
+                            break
+                if used and max(used) >= vertex_count:
+                    problems.append(f"models/{mesh_file.name}: {material} index exceeds its vertex buffer")
+        # The menu exporter appends only referenced vertices; wrapped 16-bit indices orphan the high vertices.
+        if has_shared_submesh and len(shared_used) != shared_count:
+            problems.append(f"models/{mesh_file.name}: {shared_count - len(shared_used)} shared vertices are unreferenced; check index width before conversion")
+    return problems
+
+
 # Return fixed-function materials whose block says "lighting off" and names no texture.
 # pattern selects the material scripts to scan (default: all of them).
 def unlit_untextured_materials(root, pattern="*.material"):
@@ -173,6 +214,7 @@ def missing_models_and_materials(root):
         if not mesh_file.is_file():
             problems.append(f"config/mainmenuscene.cfg: mesh {mesh} not found under models/")
             continue
+        problems.extend(mesh_index_problems(mesh_file))
         for material, coloured in sorted(mesh_vertex_colours(mesh_file).items()):
             if material in unlit and not coloured:
                 problems.append(f"models/{mesh}: material {material} is lighting off without texture and the mesh part has no vertex colours (renders white)")
