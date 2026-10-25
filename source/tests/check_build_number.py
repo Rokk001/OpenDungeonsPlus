@@ -60,7 +60,7 @@ check('next-build-number.py' in build_script, 'integrator build script does not 
 check('configure-windows-prereqs.ps1" -BuildNumber $buildNumber' in build_script, 'integrator build script does not pass -BuildNumber to the configure script')
 check('--parallel 1' in build_script, 'integrator build script does not build with --parallel 1')
 check('build-start-$Run.txt' in build_script, 'integrator build script does not record the build start time')
-check('Feature and fix windows never run a full build' in claude, 'CLAUDE.md lacks the rule that only the integrator builds')
+check('The integrator is the only one that runs a full build' in claude and 'never run a full build' in claude, 'CLAUDE.md lacks the rule that only the integrator builds')
 check('Kein Release- oder Abschlussbuild' not in claude, 'CLAUDE.md still allows a full build after a release')
 
 for message in failures:
