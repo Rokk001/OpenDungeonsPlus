@@ -192,7 +192,7 @@ public:
     void rrTemporalMarkTile(Tile* curTile);
     void rrDetachEntity(GameEntity* curEntity, bool really_do = true);
     void rrAttachEntity(GameEntity* curEntity);
-    //! \brief Builds movable visuals and attaches the cauldron's green bone-anchored fire.
+    //! \brief Builds movable visuals with decorative footprints and the cauldron's green bone-anchored fire.
     void rrCreateRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     //! \brief Releases movable visuals and any attached cauldron fire.
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);

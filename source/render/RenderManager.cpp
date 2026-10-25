@@ -3632,6 +3632,7 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
     parentNode->addChild(entityNode);
 }
 
+//! \brief Builds movable visuals with explicit decorative scales and the existing furniture defaults.
 void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* renderedMovableEntity, NodeType nt)
 {
     std::string meshName = renderedMovableEntity->getMeshName();
@@ -3692,6 +3693,11 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
     node->roll(Ogre::Degree(renderedMovableEntity->getRotationAngle()));
 
     if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
+    {
+        // Explicit decorative footprints also apply to bags, which are not blocking furniture.
+        const Ogre::Vector2 explicitScale = static_cast<BuildingObject*>(renderedMovableEntity)->getFurnitureScale();
+        if(explicitScale != Ogre::Vector2::ZERO)
+            node->setScale(explicitScale.x, explicitScale.y, 1.0f);
         for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
             if(meshName == bounds.name)
             {
@@ -3701,6 +3707,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
                 node->setScale(scale.x, scale.y, 1.0f);
                 break;
             }
+    }
 
 
     // Keep the narrow arrow shaft visible at dungeon-camera scale without

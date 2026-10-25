@@ -1654,6 +1654,7 @@ bool GameMode::keyPressed(const OIS::KeyEvent& arg)
     }
 }
 
+//! \brief Handles normal gameplay shortcuts while preserving the separate full-map key state.
 bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 {
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
@@ -1730,6 +1731,9 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 
     case OIS::KC_B:
         toggleSocialWindow();
+        break;
+    case OIS::KC_K:
+        toggleMerchantWindow(CEGUI::EventArgs());
         break;
     case OIS::KC_L:
         toggleAlchemyLabWindow(CEGUI::EventArgs());
@@ -3814,6 +3818,7 @@ bool GameMode::toggleHelpWindow(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Lists the current camera, keeper and room-window controls in the help page.
 void GameMode::setHelpWindowText()
 {
     CEGUI::Window* textWindow = mRootWindow->getChild("GameHelpWindow/TextDisplay");
@@ -3832,6 +3837,7 @@ void GameMode::setHelpWindowText()
         << "  - Define user cameras in Options; H focuses the dungeon heart; P cycles portals; F focuses fights." << std::endl
         << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
         << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl
+        << "  - K opens the merchant: stock, purchases and trading settings." << std::endl
         << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;
     txt << formatTitleOn << "Keeper hand controls" << formatTitleOff << std::endl
         << "Use your hand wisely to keep all minions under control and let your dungeon thrive!" << std::endl

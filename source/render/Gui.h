@@ -118,7 +118,8 @@ public:
     //! The page is shared by the creature card and the Dungeonbook, see Creature::fillProfilePage.
     CEGUI::Window* createCreatureProfilePage(CEGUI::Window* holder);
     //! \brief Stacks the text rows of the profile page (bio to latest post) one below the other, each as
-    //! high as its wrapped text, so no gap is left between short rows. Returns the bottom edge of the
+    //! high as its wrapped text, and wraps the equipment images within the available page width.
+    //! Leaves no gap between short rows. Returns the bottom edge of the
     //! last visible row in design pixels, relative to the page. If the rows are higher than the page, the page
     //! scrolls (scrollbar at its right edge, shown only then) and the height of the page is returned.
     float layoutCreatureProfilePage(CEGUI::Window* page);

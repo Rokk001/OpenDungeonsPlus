@@ -131,6 +131,7 @@
 
 #include <CEGUI/Event.h>
 #include <CEGUI/Image.h>
+#include <CEGUI/ImageManager.h>
 #include <CEGUI/System.h>
 #include <CEGUI/UDim.h>
 #include <CEGUI/Vector.h>
@@ -5225,6 +5226,7 @@ std::string Creature::getGender() const
     return social::SocialProfileCache::getCreatureGender(getName(), getDefinition()->getClassName());
 }
 
+//! \brief Fills the social page and transmitted item slots before its normal responsive layout.
 float Creature::fillProfilePage(CEGUI::Window* page)
 {
     const CreatureDefinition* definition = getDefinition();
@@ -5285,6 +5287,28 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("AttributesText")->setText(getAttributeSummaryText());
     page->getChild("EquipmentText")->setText("Equipment: " + getEquipmentText());
+    // Only the owning seat receives private slots; foreign copies reveal the two hands.
+    for(std::size_t slot = 0; slot < 13; ++slot)
+    {
+        const ItemInstance* item = nullptr;
+        if(slot < mEquipment.size())
+            item = mEquipment[slot].get();
+        else if(localSeat == getSeat() && slot < 9 && slot - 6 < mPotionSlots.size())
+            item = mPotionSlots[slot - 6].get();
+        else if(localSeat == getSeat() && slot >= 9)
+            item = mInventory[slot - 9].get();
+        if(localSeat != getSeat() && slot >= VISIBLE_ITEM_HAND_SLOTS)
+            item = nullptr;
+        CEGUI::Window* image = page->getChild("EquipmentRow/Slot" + Helper::toString(slot));
+        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
+        image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
+            name : "OpenDungeonsIcons/ItemSlotEmpty");
+        image->setTooltipText(item == nullptr ? "" : item->describe(getGameMap()));
+        CEGUI::Window* frame = image->getChild("QualityFrame");
+        frame->setVisible(item != nullptr);
+        if(item != nullptr)
+            frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));
+    }
     page->getChild("PathText")->setText("Path: " + getSkillPathText());
     page->getChild("SkillsText")->setText("Skills: " + getSkillListText());
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");

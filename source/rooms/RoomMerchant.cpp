@@ -8,7 +8,6 @@
 #include "entities/MerchantEntity.h"
 #include "entities/Tile.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
-#include "game/CreatureMerchantAI.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillManager.h"
@@ -122,6 +121,50 @@ TileData* RoomMerchantTileData::cloneTileData() const { return new RoomMerchantT
 RoomMerchant::RoomMerchant(GameMap* map) : Room(map), mGoodsChanged(true),
     mSavedMerchantPosition(false), mMerchantPosition(Ogre::Vector3::ZERO)
 { setMeshName(ROOM_NAME); }
+//! \brief Releases decorative stock before the normal furniture and room removal.
+void RoomMerchant::removeFromGameMap(GameMap* map)
+{
+    clearDisplayedGoods();
+    Room::removeFromGameMap(map);
+}
+
+//! \brief Deletes only the visual copies; real goods remain in their table records.
+void RoomMerchant::clearDisplayedGoods()
+{
+    for(BuildingObject* bag : mDisplayedGoods)
+    {
+        bag->removeFromGameMap();
+        bag->deleteYourself();
+    }
+    mDisplayedGoods.clear();
+}
+
+//! \brief Fits three or four sealed bags to the delivered table's 0.712-high cloth surface.
+void RoomMerchant::refreshDisplayedGoods()
+{
+    clearDisplayedGoods();
+    if(!getIsOnServerMap()) return;
+    const size_t capacity = tableCapacity(getSeat());
+    mDisplayedCapacity = capacity;
+    for(Tile* tile : mCoveredTiles)
+    {
+        const RoomMerchantTileData* data = static_cast<const RoomMerchantTileData*>(mTileData.at(tile));
+        if(!data->mTable) continue;
+        const float spacing = 0.63f / static_cast<float>(capacity);
+        const float scale = std::min(0.6f, spacing / 0.36f);
+        for(size_t index = 0; index < data->mGoods.size(); ++index)
+        {
+            const float y = tile->getY() - 0.315f + spacing * (static_cast<float>(index) + 0.5f);
+            BuildingObject* bag = new BuildingObject(getGameMap(), *this, "ItemBag", tile,
+                tile->getX(), y, 0.712f, 0.0f, false);
+            bag->setFurnitureScale(Ogre::Vector2(scale, scale));
+            bag->setItemBagAppearance(data->mGoods[index].mItem.mQuality, true);
+            bag->addToGameMap();
+            bag->setPosition(bag->getPosition());
+            mDisplayedGoods.push_back(bag);
+        }
+    }
+}
 //! \brief Returns the merchant room's type.
 RoomType RoomMerchant::getType() const { return mRoomType; }
 //! \brief Creates a merchant tile whose stock follows its ownership.
@@ -186,6 +229,7 @@ void RoomMerchant::releaseTableGoods(Tile* tile)
         bag->addToGameMap(); bag->createMesh(); bag->setPosition(tile->getPosition());
     }
     data->mGoods.clear();
+    clearDisplayedGoods();
     mGoodsChanged = true;
 }
 
@@ -491,12 +535,12 @@ void RoomMerchant::notifyCarryingStateChanged(Creature* carrier, GameEntity* ent
     }
 }
 
-//! \brief Lets an owner creature visit this room when it has a trade to make.
+//! \brief Rejects leisure jobs; buying and selling use their dedicated actions.
 bool RoomMerchant::hasOpenCreatureSpot(Creature* creature)
-{ return creature != nullptr && creature->getSeat() == getSeat(); }
-//! \brief Uses the same trade choices for a leisure visitor and an idle creature.
+{ return false; }
+//! \brief Rejects leisure use without changing dedicated buying or selling.
 bool RoomMerchant::useRoom(Creature& creature, bool forced)
-{ return CreatureMerchantAI::decideTrade(creature); }
+{ return false; }
 
 //! \brief Counts one potion across the seat's entire merchant stock.
 uint32_t RoomMerchant::countPotion(GameMap& map, const Seat* seat, const std::string& id)
@@ -602,9 +646,10 @@ void RoomMerchant::doUpkeep()
     Room::doUpkeep();
     ensureMerchant();
     reserveGoods();
-    if(mGoodsChanged)
+    if(mGoodsChanged || mDisplayedCapacity != tableCapacity(getSeat()))
     {
         mGoodsChanged = false;
+        refreshDisplayedGoods();
         Player* player = getSeat()->getPlayer();
         if(player != nullptr && player->getIsHuman() && player->getMerchantWindowOpen()) sendWindow(*getGameMap(), *player);
     }
