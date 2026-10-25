@@ -1474,3 +1474,11 @@ shaders/MenuSky.vert, shaders/MenuSky.frag	Original project code	GPLv3+	Self-lit
 == Painted infirmary interface icon ==
 
 assets-src/gui/icons/tiles/InfirmaryButton.png    AI-generated with Codex    GPLv3+    Original painted cot and crossed bandages in the project icon style, 2026-10-25; generated at native resolution and downsampled to the 256-pixel source.
+
+== Infirmary real sound recordings ==
+
+sounds/Rooms/Infirmary/Admit.ogg             krb21                    CC0 1.0                 "bed creaking.WAV", https://freesound.org/people/krb21/sounds/118605/ ; real HQ recording preview, cut 0-1.2 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Rooms/Infirmary/Discharge.ogg         krb21                    CC0 1.0                 "bed creaking.WAV", https://freesound.org/people/krb21/sounds/118605/ ; real HQ recording preview, cut 5-6 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Rooms/Infirmary/Chant.ogg             bolkmar                  CC0 1.0                 "Voice Male humming - Thinking", https://freesound.org/people/bolkmar/sounds/469603/ ; whole real HQ recording preview, 0.2-s loop crossfade, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Rooms/Infirmary/Rattle.ogg            Sassaby                  CC0 1.0                 "Shekere Hit", https://freesound.org/people/Sassaby/sounds/506383/ ; whole real HQ recording preview, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Spatial/Rooms/Infirmary/Chant/Chant.ogg             bolkmar                  CC0 1.0                 "Voice Male humming - Thinking", https://freesound.org/people/bolkmar/sounds/469603/ ; whole real HQ recording preview, 0.2-s loop crossfade, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
