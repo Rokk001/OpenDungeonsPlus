@@ -119,7 +119,7 @@ namespace
         {
             const double maxHp = creature->getMaxHp();
             const double hpLeft = std::max(0.0, maxHp * seat->getInfirmaryThreshold() / 100.0 - creature->getHP());
-            const double gain = std::min(hpLeft, maxHp / (fullSeconds * ODApplication::turnsPerSecond));
+            const double gain = std::min(maxHp - creature->getHP(), maxHp / (fullSeconds * ODApplication::turnsPerSecond));
             const double cost = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryManaPerWage") *
                 creature->getDefinition()->getFee(creature->getLevel()) * gain / maxHp;
             const bool paused = !seat->getInfirmaryHealOn() || mana < cost;
