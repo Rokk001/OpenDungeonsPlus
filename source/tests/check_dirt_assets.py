@@ -111,7 +111,7 @@ files = ['models/Pile_Orc.mesh', 'assets-src/dirt/Pile_Orc.blend', 'materials/te
          'models/DirtStage3.mesh', 'assets-src/dirt/DirtStage2.blend', 'materials/textures/DirtStage1.png',
          'materials/textures/DirtStage3.png', 'materials/scripts/DirtPiles.material', 'materials/scripts/DirtStage.material',
          'materials/scripts/ToiletSeat.material', 'particles/DirtFlies.particle', 'tools/gen_pile_textures.py',
-         'tools/gen_dirt_decals.py', 'tools/gen_dirt_sounds.py',
+         'tools/gen_dirt_decals.py',
          'sounds/Spatial/Creatures/Default/Relieve/FxRelieve01.ogg', 'sounds/Spatial/Creatures/Default/Clean/FxClean01.ogg',
          'sounds/Spatial/Rooms/Toilet/Flush/FxToiletFlush01.ogg', 'sounds/Spatial/Rooms/Toilet/Drip/FxToiletDrip01.ogg']
 for path in files:

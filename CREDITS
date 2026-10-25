@@ -1383,11 +1383,10 @@ materials/textures/Toilet????.png, materials/textures/Toilet????Normal.png   OD 
 materials/scripts/ToiletFloor.material   OD Team                 GPLv3+                  Written for this project (materials Toilet<mask> of the toilet room floor)
 particles/DirtFlies.particle           OD Team                 GPLv3+                  Written for this project (original work, only existing sprites)
 gui/ODIcons.png (ToiletButton)         OD Team                 GPLv3+                  Toilet icon drawn from simple shapes by tools/forged_motifs.py (m_toilet) and tools/generate_forged_icons.py; atlas row added, other icons unchanged
-sounds/Spatial/Creatures/Default/Relieve/FxRelieve01.ogg   OD Team   GPLv3+   Synthesized from sine waves and noise by tools/gen_dirt_sounds.py (own work, no recordings)
-sounds/Spatial/Creatures/Default/Clean/FxClean01.ogg       OD Team   GPLv3+   Synthesized from noise by tools/gen_dirt_sounds.py (own work, no recordings)
-sounds/Spatial/Rooms/Toilet/Flush/FxToiletFlush01.ogg      OD Team   GPLv3+   Synthesized from sine waves and noise by tools/gen_dirt_sounds.py (own work, no recordings)
-sounds/Spatial/Rooms/Toilet/Drip/FxToiletDrip01.ogg        OD Team   GPLv3+   Synthesized from sine waves by tools/gen_dirt_sounds.py (own work, no recordings)
-tools/gen_dirt_sounds.py   OD Team   GPLv3+   Original work
+sounds/Spatial/Creatures/Default/Relieve/FxRelieve01.ogg   pissing   CC0   https://freesound.org/people/pissing/sounds/503721/ (real recording "Long Piss"; cut, faded, mono, volume adjusted)
+sounds/Spatial/Creatures/Default/Clean/FxClean01.ogg       TOMRORYPARSONS   CC0   https://freesound.org/people/TOMRORYPARSONS/sounds/442306/ (real recording "Scrubbing.wav"; cut, faded, mono, volume adjusted)
+sounds/Spatial/Rooms/Toilet/Flush/FxToiletFlush01.ogg      Sonoticai   CC0   https://freesound.org/people/Sonoticai/sounds/544187/ (real recording "Toilet Flush.wav"; cut, faded, mono, volume adjusted)
+sounds/Spatial/Rooms/Toilet/Drip/FxToiletDrip01.ogg        Sclolex   CC0   https://freesound.org/people/Sclolex/sounds/177958/ (real recording "Water Dripping in Cave.wav"; cut, faded, mono, volume adjusted)
 
 models/Kobold.skeleton (clips Relieve, Clean)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte; the Clean clip is the same kind of authoring
 models/Dwarf1.skeleton (clips Relieve, Clean)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte; the Clean clip is the same kind of authoring
