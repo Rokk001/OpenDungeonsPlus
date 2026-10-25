@@ -63,6 +63,14 @@ namespace MapHandler
 
     bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType type, std::stringstream& levelFile);
 
+    //! \brief Reads the optional [Dirt] section (lines x y dirt) and the optional [DirtPiles] section (lines kind
+    //! creatureClass x y dirtLeft ageTurns) of a level or saved game. When a section is missing the stream is left where
+    //! it was, so levels and saves from before the dirt exist still load (no dirt, no piles).
+    //! \param gameMap The game map whose tiles get the dirt and which gets the piles.
+    //! \param levelFile The level stream, positioned behind the gift boxes.
+    //! \return False if a section is started but invalid.
+    bool readDirtSections(GameMap& gameMap, std::stringstream& levelFile);
+
     bool loadEquipments(const std::string& fileName, GameMap& gameMap);
 
     bool loadCreatureDefinition(const std::string& fileName, GameMap& gameMap);

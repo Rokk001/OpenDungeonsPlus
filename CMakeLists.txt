@@ -245,6 +245,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionCarryEntity.cpp
     ${SRC}/creatureaction/CreatureActionClaimGroundTile.cpp
     ${SRC}/creatureaction/CreatureActionClaimWallTile.cpp
+    ${SRC}/creatureaction/CreatureActionCleanTile.cpp
     ${SRC}/creatureaction/CreatureActionDigTile.cpp
     ${SRC}/creatureaction/CreatureActionEatChicken.cpp
     ${SRC}/creatureaction/CreatureActionFight.cpp
@@ -259,16 +260,19 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionLeaveDungeon.cpp
     ${SRC}/creatureaction/CreatureActionParkToTile.cpp
     ${SRC}/creatureaction/CreatureActionReloadTrap.cpp
+    ${SRC}/creatureaction/CreatureActionSearchDirtToClean.cpp
     ${SRC}/creatureaction/CreatureActionSearchEntityToCarry.cpp
     ${SRC}/creatureaction/CreatureActionSearchFood.cpp
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSearchJob.cpp
     ${SRC}/creatureaction/CreatureActionSearchTileToDig.cpp
+    ${SRC}/creatureaction/CreatureActionSearchToilet.cpp
     ${SRC}/creatureaction/CreatureActionSearchWallTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSleep.cpp
     ${SRC}/creatureaction/CreatureActionStealFreeGold.cpp
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
+    ${SRC}/creatureaction/CreatureActionUseToilet.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
     ${SRC}/creatureaction/CreatureActionPossessed.cpp
 
@@ -300,6 +304,7 @@ set(OD_SOURCEFILES
     ${SRC}/creaturemood/CreatureMood.cpp
     ${SRC}/creaturemood/CreatureMoodWakefulness.cpp
     ${SRC}/creaturemood/CreatureMoodCreature.cpp
+    ${SRC}/creaturemood/CreatureMoodDirt.cpp
     ${SRC}/creaturemood/CreatureMoodFee.cpp
     ${SRC}/creaturemood/CreatureMoodHunger.cpp
     ${SRC}/creaturemood/CreatureMoodHeldInHand.cpp
@@ -347,6 +352,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/CraftedTrap.cpp
     ${SRC}/entities/Creature.cpp
     ${SRC}/entities/CreatureDefinition.cpp
+    ${SRC}/entities/DirtPileEntity.cpp
     ${SRC}/entities/DoorEntity.cpp
     ${SRC}/entities/EntityLoading.cpp
     ${SRC}/entities/GameEntity.cpp
@@ -402,6 +408,7 @@ set(OD_SOURCEFILES
     ${SRC}/gamemap/SandboxMode.cpp
     ${SRC}/gamemap/MiniMapCamera.cpp
     ${SRC}/gamemap/TileContainer.cpp
+    ${SRC}/gamemap/TileDirtSync.cpp
     ${SRC}/gamemap/TileSet.cpp
 
     ${SRC}/giftboxes/GiftBoxBonus.cpp
@@ -535,6 +542,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomTorture.cpp
     ${SRC}/rooms/RoomGuardRoom.cpp
     ${SRC}/rooms/RoomTemple.cpp
+    ${SRC}/rooms/RoomToilet.cpp
     ${SRC}/rooms/RoomTrainingHall.cpp
     ${SRC}/rooms/RoomTreasury.cpp
     ${SRC}/rooms/RoomType.cpp

@@ -1,0 +1,79 @@
+// Floor dirt decals, one per stage (textures made by tools/gen_dirt_decals.py)
+
+material DirtStage1
+{
+    receive_shadows on
+
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.7 0.7 0.7 1.0
+            specular 0.0 0.0 0.0 1.0 12.5
+            scene_blend alpha_blend
+            depth_write off
+            depth_bias 1
+            cull_hardware none
+
+            texture_unit
+            {
+                texture DirtStage1.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material DirtStage2
+{
+    receive_shadows on
+
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.7 0.7 0.7 1.0
+            specular 0.0 0.0 0.0 1.0 12.5
+            scene_blend alpha_blend
+            depth_write off
+            depth_bias 1
+            cull_hardware none
+
+            texture_unit
+            {
+                texture DirtStage2.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material DirtStage3
+{
+    receive_shadows on
+
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.7 0.7 0.7 1.0
+            specular 0.0 0.0 0.0 1.0 12.5
+            scene_blend alpha_blend
+            depth_write off
+            depth_bias 1
+            cull_hardware none
+
+            texture_unit
+            {
+                texture DirtStage3.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}

@@ -1,0 +1,541 @@
+// Dirt piles and blood stains (textures made by tools/gen_pile_textures.py).
+// DirtPiles is the shared base; every Pile_<Type> only sets the texture of its creature type.
+
+material DirtPiles
+{
+    receive_shadows on
+
+    technique main
+    {
+        pass pile
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.75 0.75 0.75 1.0
+            specular 0.0 0.0 0.0 1.0 12.5
+
+            texture_unit decalmap
+            {
+                texture White.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material Pile_Adventurer : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Adventurer.png
+            }
+        }
+    }
+}
+
+material Pile_CaveHornet : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_CaveHornet.png
+            }
+        }
+    }
+}
+
+material Pile_Champion : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Champion.png
+            }
+        }
+    }
+}
+
+material Pile_Cultist : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Cultist.png
+            }
+        }
+    }
+}
+
+material Pile_DarkElf : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_DarkElf.png
+            }
+        }
+    }
+}
+
+material Pile_Defender : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Defender.png
+            }
+        }
+    }
+}
+
+material Pile_Dragon : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Dragon.png
+            }
+        }
+    }
+}
+
+material Pile_Dwarf1 : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Dwarf1.png
+            }
+        }
+    }
+}
+
+material Pile_Dwarf2 : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Dwarf2.png
+            }
+        }
+    }
+}
+
+material Pile_DwarfWorker : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_DwarfWorker.png
+            }
+        }
+    }
+}
+
+material Pile_Elf : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Elf.png
+            }
+        }
+    }
+}
+
+material Pile_Gnome : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Gnome.png
+            }
+        }
+    }
+}
+
+material Pile_Goblin : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Goblin.png
+            }
+        }
+    }
+}
+
+material Pile_Knight : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Knight.png
+            }
+        }
+    }
+}
+
+material Pile_Kobold : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Kobold.png
+            }
+        }
+    }
+}
+
+material Pile_Kreatur : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Kreatur.png
+            }
+        }
+    }
+}
+
+material Pile_LavaSpawn : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_LavaSpawn.png
+            }
+        }
+    }
+}
+
+material Pile_Lich : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Lich.png
+            }
+        }
+    }
+}
+
+material Pile_LizardMan : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_LizardMan.png
+            }
+        }
+    }
+}
+
+material Pile_Monk : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Monk.png
+            }
+        }
+    }
+}
+
+material Pile_NatureMonster : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_NatureMonster.png
+            }
+        }
+    }
+}
+
+material Pile_Orc : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Orc.png
+            }
+        }
+    }
+}
+
+material Pile_PitDemon : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_PitDemon.png
+            }
+        }
+    }
+}
+
+material Pile_Rat : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Rat.png
+            }
+        }
+    }
+}
+
+material Pile_Roach : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Roach.png
+            }
+        }
+    }
+}
+
+material Pile_RunelordDwarf : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_RunelordDwarf.png
+            }
+        }
+    }
+}
+
+material Pile_Scarab : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Scarab.png
+            }
+        }
+    }
+}
+
+material Pile_Skeleton : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Skeleton.png
+            }
+        }
+    }
+}
+
+material Pile_Slime : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Slime.png
+            }
+        }
+    }
+}
+
+material Pile_Spider : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Spider.png
+            }
+        }
+    }
+}
+
+material Pile_TentacleAlbine : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_TentacleAlbine.png
+            }
+        }
+    }
+}
+
+material Pile_TentacleGreen : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_TentacleGreen.png
+            }
+        }
+    }
+}
+
+material Pile_Troll : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Troll.png
+            }
+        }
+    }
+}
+
+material Pile_Wizard : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Wizard.png
+            }
+        }
+    }
+}
+
+material Pile_Wyvern : DirtPiles
+{
+    technique main
+    {
+        pass pile
+        {
+            texture_unit decalmap
+            {
+                texture Pile_Wyvern.png
+            }
+        }
+    }
+}
+
+// Flat red decal on the floor; lies a little above the tile and does not write depth
+material BloodStain
+{
+    receive_shadows on
+
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.75 0.75 0.75 1.0
+            specular 0.2 0.1 0.1 1.0 24.0
+            scene_blend alpha_blend
+            depth_write off
+            depth_bias 2
+            cull_hardware none
+
+            texture_unit
+            {
+                texture BloodStain.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}

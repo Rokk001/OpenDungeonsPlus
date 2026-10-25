@@ -81,6 +81,8 @@ private:
     std::vector<Tile*> mUnusedSpots;
     std::map<Creature*,Tile*> mCreaturesSpots;
     int32_t mSkillPoints;
+    //! \brief Fraction of a work point left over by the dirt output factor, added to the next work turn (not saved).
+    double mSkillPointsRemainder;
 };
 
 #endif // ROOMLIBRARY_H

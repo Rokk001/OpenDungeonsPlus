@@ -18,6 +18,7 @@
 #include "creaturemood/CreatureMoodManager.h"
 
 #include "creaturemood/CreatureMood.h"
+#include "creaturemood/CreatureMoodDirt.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "utils/ConfigManager.h"
@@ -88,6 +89,9 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += creature.getSpecialMood();
     // Fights in the arena
     moodValue += Helper::round(creature.getPitMood());
+    // Dirty rooms and dirt piles nearby (no line in the creature configuration, the global dirt values apply to all)
+    static const CreatureMoodDirt dirtMood;
+    moodValue += dirtMood.computeMood(creature);
     // Creatures of the same keeper that it hates (only with relationships on)
     moodValue += creature.getRelationshipMood();
 

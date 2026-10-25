@@ -20,6 +20,7 @@
 #include "creatureaction/CreatureActionGoCallToWar.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
+#include "rooms/Room.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "traps/Trap.h"
@@ -88,6 +89,8 @@ bool CreatureActionWatchBanner::handleWatchBanner(Creature& creature, Tile* post
         return true;
     }
 
+    // A guard at a banner dirties the floor of the banner like one on duty in the guard room
+    Room::addUseDirt(creature, postTile, "GuardRoomDirtPerDuty");
     creature.setAnimationState(EntityAnimation::idle_anim);
     return false;
 }

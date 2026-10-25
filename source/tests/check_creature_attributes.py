@@ -545,7 +545,9 @@ def check_mana_part_b():
     assert full_export.index('exportProgressToPacket(os, seat);') < full_export.index('os << mMana;') < full_export.index('toToken(mAppearance)')
     assert full_import.index('importProgressFromPacket(is);') < full_import.index('is >> mMana') < full_import.index('is >> appearanceToken')
     assert update_export.index('exportProgressToPacket(os, seat);') < update_export.index('os << mMana;') < update_export.index('os << mGoldCarried;')
-    assert update_export.rstrip().rstrip('}').rstrip().endswith('os << mGoldCarried;'), 'the carried gold stays the last field'
+    # The needs (urge and creature dirt) follow the carried gold as the last fields, the update gives them to the own seat only
+    assert update_export.index('os << mGoldCarried;') < update_export.index('os << mUrge;') < update_export.index('os << mCreatureDirt;'), 'the needs come after the carried gold'
+    assert update_export.rindex('os << 0.0;') > update_export.index('os << mCreatureDirt;') and 'if(seat == getSeat())' in update_export
     assert update_import.index('importProgressFromPacket(is);') < update_import.index('is >> mMana') < update_import.index('is >> mGoldCarried')
     # The clients are told when the ring crosses a step; the ring has 64 frames (steps 0..63)
     assert 'const uint32_t Creature::MANA_RING_STEPS = 63;' in creature

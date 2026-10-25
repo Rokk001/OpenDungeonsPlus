@@ -22,6 +22,8 @@
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "creatureaction/CreatureActionSearchDirtToClean.h"
+#include "entities/DirtPileEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/Tile.h"
@@ -2159,6 +2161,7 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
         case TileVisual::tortureRoom:         
         case TileVisual::guardRoom:
         case TileVisual::templeRoom:
+        case TileVisual::toiletRoom:
             if(tile->getSeat() == nullptr)
             {
                 OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
@@ -2279,6 +2282,7 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
             case TileVisual::tortureRoom:
             case TileVisual::guardRoom:
             case TileVisual::templeRoom:
+            case TileVisual::toiletRoom:
                 
                 tileSeatId = tileState.mSeatIdOwner;
                 break;
@@ -2352,6 +2356,35 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
     os << goldDensity;
 }
 
+//! \brief Looks for a pile first (not in rooms workers never clean), then for a room that needs cleaning.
+bool Seat::hasDirtToClean() const
+{
+    if(mGameMap == nullptr)
+        return false;
+
+    for(RenderedMovableEntity* entity : mGameMap->getRenderedMovableEntities())
+    {
+        if((entity == nullptr) || (entity->getObjectType() != GameEntityType::dirtPileEntity))
+            continue;
+
+        DirtPileEntity* dirtPile = static_cast<DirtPileEntity*>(entity);
+        if(dirtPile->getKind() != DirtPileKind::pile)
+            continue;
+
+        Tile* tile = dirtPile->getPositionTile();
+        if((tile != nullptr) && (tile->getSeat() == this) && CreatureActionSearchDirtToClean::isPileCleanable(*tile))
+            return true;
+    }
+
+    for(Room* room : mGameMap->getRooms())
+    {
+        if((room->getSeat() == this) && room->needsCleaning())
+            return true;
+    }
+
+    return false;
+}
+
 void Seat::notifyBuildingRemovedFromGameMap(Building* building, Tile* tile)
 {
     if(getPlayer() == nullptr)
@@ -2409,6 +2442,7 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
         case TileVisual::tortureRoom:        
         case TileVisual::guardRoom:
         case TileVisual::templeRoom:
+        case TileVisual::toiletRoom:
         case TileVisual::claimedGround:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:

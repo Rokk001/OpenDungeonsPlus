@@ -403,6 +403,10 @@ public:
     //! the seats to clear the pointers to the building that they may have
     void notifyBuildingRemovedFromGameMap(Building* building, Tile* tile);
 
+    //! \brief Server side. Tells whether the workers of this seat have something to clean: a pile on a tile
+    //! of the seat, or a room of the seat that needs cleaning (dirty enough).
+    bool hasDirtToClean() const;
+
     void setVisibleBuildingOnTile(Building* building, Tile* tile);
 
     //! \brief Used on both server and client sides.

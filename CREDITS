@@ -150,6 +150,7 @@ skirmish/
 -> SandboxEverything.level            OD Team                 GPLv3+
 -> Splitstone.level                    OD Team                 GPLv3+
 -> StonekeepSiege.level                OD Team                 GPLv3+
+-> TestCleaning.level                  OD Team                 GPLv3+
 -> TestLegacy.level                    OD Team                 GPLv3+
 -> TestLevelScripting.level            OD Team                 GPLv3+
 -> TestModelsFair.level                OD Team                 GPLv3+
@@ -1227,6 +1228,21 @@ tools/blender-assets/odp_*.py, splice_anims.py OD Team                 GPLv3+   
 tools/blender-assets/hatchery_*.py     OD Team                 GPLv3+                  Blender scripts that build the hatchery meshes and clips (AI-generated, original work)
 
 =======================================================
+==  Dirt, cleaning and toilet: models and clips     ==
+=======================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+models/Pile_*.mesh                     OD Team                 GPLv3+                  Own work (dirt models): 35 pile models, one per creature type, modelled from primitives in Blender (original work)
+assets-src/dirt/Pile_*.blend           OD Team                 GPLv3+                  Own work (dirt models): Blender sources of the 35 pile models (original work)
+models/BloodStain.mesh                 OD Team                 GPLv3+                  Own work (dirt models): Flat blood stain decal model, modelled in Blender (original work)
+assets-src/dirt/BloodStain.blend       OD Team                 GPLv3+                  Own work (dirt models): Blender source of the blood stain decal (original work)
+models/ToiletSeat.mesh                 OD Team                 GPLv3+                  Own work (dirt models): Toilet seat model (stone seat with a hole and a propped wooden lid), modelled in Blender (original work)
+assets-src/rooms/ToiletSeat.blend      OD Team                 GPLv3+                  Own work (dirt models): Blender source of the toilet seat (original work)
+models/DirtStage*.mesh                 OD Team                 GPLv3+                  Own work (dirt models): Three flat one-tile dirt decal models (stains, stains with litter, dark layer with puddles), modelled in Blender (original work)
+assets-src/dirt/DirtStage*.blend       OD Team                 GPLv3+                  Own work (dirt models): Blender sources of the three dirt decal models (original work)
+
+=======================================================
 ==  Hatchery animal sounds: crow, protest, cluck, peep, egg crack  ==
 =======================================================
 
@@ -1364,6 +1380,67 @@ materials/portraits/whole/Dwarf2.mesh-female/*.jpg	AI-generated with Codex	GPLv3
 materials/portraits/whole/RunelordDwarf.mesh-female/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project female rune dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
 
 materials/portraits/whole/RunelordDwarf.mesh/*.jpg	AI-generated with Codex	GPLv3+	One hundred original project male rune dwarf portraits with distinct faces and natural skin shades, directly edited from the project clothed neutral base.
+
+=============================================================
+==  Dirt, cleaning and toilet room                          ==
+=============================================================
+
+Name                                   Author                  License                 Source URL
+------------------------------------------------------------------------------------------------------------------------
+materials/textures/Pile_*.png          OD Team                 GPLv3+                  Painted from periodic noise with fixed colours per creature type by tools/gen_pile_textures.py (script generated, original work)
+materials/textures/BloodStain.png      OD Team                 GPLv3+                  Painted from periodic noise by tools/gen_pile_textures.py (script generated, original work)
+materials/scripts/DirtPiles.material   OD Team                 GPLv3+                  Written by tools/gen_pile_textures.py (materials DirtPiles, Pile_<Type>, BloodStain)
+tools/gen_pile_textures.py   OD Team   GPLv3+   Original work
+materials/textures/DirtStage1.png, materials/textures/DirtStage2.png, materials/textures/DirtStage3.png, materials/textures/ToiletSeat.png   OD Team   GPLv3+   Painted from periodic noise and simple shapes by tools/gen_dirt_decals.py (script generated, original work); these files are not covered by the Dirt*.png row of the textures section, which has another author and licence
+materials/scripts/DirtStage.material, materials/scripts/ToiletSeat.material   OD Team   GPLv3+   Written by tools/gen_dirt_decals.py
+tools/gen_dirt_decals.py   OD Team   GPLv3+   Original work
+materials/textures/Toilet????.png, materials/textures/Toilet????Normal.png   OD Team   CC0   Procedurally generated by tools/room-floors/generate_room_floors.py (original work, 16 pieces named by the neighbour mask)
+materials/scripts/ToiletFloor.material   OD Team                 GPLv3+                  Written for this project (materials Toilet<mask> of the toilet room floor)
+particles/DirtFlies.particle           OD Team                 GPLv3+                  Written for this project (original work, only existing sprites)
+gui/ODIcons.png (ToiletButton)         OD Team                 GPLv3+                  Toilet icon drawn from simple shapes by tools/forged_motifs.py (m_toilet) and tools/generate_forged_icons.py; doubled to 256 px for the painted atlas and placed in an added atlas row (assets-src/gui/icons/tiles/ToiletButton.png), other icons unchanged
+sounds/Spatial/Creatures/Default/Relieve/FxRelieve01.ogg   pissing   CC0   https://freesound.org/people/pissing/sounds/503721/ (real recording "Long Piss"; cut, faded, mono, volume adjusted)
+sounds/Spatial/Creatures/Default/Clean/FxClean01.ogg       TOMRORYPARSONS   CC0   https://freesound.org/people/TOMRORYPARSONS/sounds/442306/ (real recording "Scrubbing.wav"; cut, faded, mono, volume adjusted)
+sounds/Spatial/Rooms/Toilet/Flush/FxToiletFlush01.ogg      Sonoticai   CC0   https://freesound.org/people/Sonoticai/sounds/544187/ (real recording "Toilet Flush.wav"; cut, faded, mono, volume adjusted)
+sounds/Spatial/Rooms/Toilet/Drip/FxToiletDrip01.ogg        Sclolex   CC0   https://freesound.org/people/Sclolex/sounds/177958/ (real recording "Water Dripping in Cave.wav"; cut, faded, mono, volume adjusted)
+
+models/Kobold.skeleton (clips Relieve, Clean)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte; the Clean clip is the same kind of authoring
+models/Dwarf1.skeleton (clips Relieve, Clean)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte; the Clean clip is the same kind of authoring
+models/Dwarf2.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Orc.skeleton (clip Relieve)     OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Goblin.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Cultist.skeleton (clip Relieve) OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Adventurer.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Monk.skeleton (clip Relieve)    OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Knight.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Wizard.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Elf.skeleton (clip Relieve)     OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/DarkElf.skeleton (clip Relieve) OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Defender.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/RunelordDwarf.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Gnome.skeleton (clip Relieve)   OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/skeleton.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/lich.skeleton (clip Relieve)    OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Troll.skeleton (clip Relieve)   OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Lizardman.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/PitDemon.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Dragon.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Rat.skeleton (clip Relieve)     OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/LavaSpawn.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Roach.skeleton (clip Relieve)   OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Spider.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/CaveHornet.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Slime.skeleton (clip Relieve)   OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Scarab.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/NatureMonster.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Wyvern.skeleton (clip Relieve)  OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Tentacle.skeleton (clip Relieve)OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+models/Kreatur.skeleton (clip Relieve) OD Team                 GPLv3+                  Own work (dirt models): Added squat clip Relieve (2 s loop) authored in Blender with forward kinematics (original work); original model licences retained as listed above, bind pose and all existing clips preserved byte for byte
+tools/balance/dirt_values.py            OD Team                 GPLv3+
+source/tests/check_dirt_values.py       OD Team                 GPLv3+
+source/tests/check_dirt_rules.py        OD Team                 GPLv3+
+source/tests/check_dirt_streams.py      OD Team                 GPLv3+
+source/tests/check_dirt_assets.py       OD Team                 GPLv3+
+source/tests/check_toilet_room.py       OD Team                 GPLv3+
 
 
 ===================================================

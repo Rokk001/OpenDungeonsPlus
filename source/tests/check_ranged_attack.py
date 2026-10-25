@@ -39,7 +39,10 @@ probe = r'''
 #include <iostream>
 #include <string>
 struct GameMap {};
-struct Tile {int x,y;int getX()const{return x;}int getY()const{return y;}};
+// The room under a tile: only the arena changes the experience of a blow, by the dirt output factor of the room
+enum class RoomType {arena,other};
+struct Room {RoomType type=RoomType::other;double factor=1.0;RoomType getType()const{return type;}double getDirtOutputFactor()const{return factor;}};
+struct Tile {int x,y;Room* room=nullptr;int getX()const{return x;}int getY()const{return y;}Room* getCoveringRoom()const{return room;}};
 enum class GameEntityType {creature,building};
 struct GameEntity {
  GameEntityType type=GameEntityType::building;Ogre::Vector3 position;
@@ -93,6 +96,12 @@ int main(){int checks=0,failures=0;std::function<void(bool)> check=[&](bool v){+
     c.useAttack(data,target,tile,true,false);
     Ogre::Vector3 expected=target.position-c.position;expected.normalise();
     check(c.direction==expected);
+ }
+ // A blow in an arena gives the experience times the dirt output factor of the arena, any other room gives the plain value
+ for(RoomType type:{RoomType::arena,RoomType::other}){
+    Creature c;Skill skill{7.};CreatureSkillData data{&skill};GameEntity target;Room room;room.type=type;room.factor=.5;c.tile.room=&room;Tile tile{3,0};
+    c.useAttack(data,target,tile,true,false);
+    check(c.xp==(type==RoomType::arena?.75:1.5));
  }
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }

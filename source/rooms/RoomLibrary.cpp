@@ -128,9 +128,28 @@ static RoomRegister reg(new RoomLibraryFactory);
 static const Ogre::Real OFFSET_CREATURE = 0.3;
 static const Ogre::Real OFFSET_SPOT = 0.3;
 
+//! \brief Returns the whole work points earned this turn and keeps the fraction for the next turn.
+//! \param base The points before the dirt factor (affinity x research value).
+//! \param factor The room dirt output factor; 1 or more keeps the plain truncation of the points.
+//! \param remainder Fraction left over from earlier turns; updated here.
+//! \return The whole points to add now.
+static int32_t takeWholeWorkPoints(double base, double factor, double& remainder)
+{
+    if(factor >= 1.0)
+        return static_cast<int32_t>(base * factor);
+
+    double total = base * factor + remainder;
+    int32_t whole = static_cast<int32_t>(total + 1e-9);
+    remainder = total - static_cast<double>(whole);
+    if(remainder < 0.0)
+        remainder = 0.0;
+    return whole;
+}
+
 RoomLibrary::RoomLibrary(GameMap* gameMap) :
     Room(gameMap),
-    mSkillPoints(0)
+    mSkillPoints(0),
+    mSkillPointsRemainder(0.0)
 {
     setMeshName("Library");
 }
@@ -389,12 +408,13 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
     OD_ASSERT_TRUE_MSG(creatureRoomAffinity.getRoomType() == getType(), "name=" + getName() + ", creature=" + creature.getName()
         + ", creatureRoomAffinityType=" + Helper::toString(static_cast<int>(creatureRoomAffinity.getRoomType())));
 
-    int32_t pointsEarned = static_cast<int32_t>(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
+    int32_t pointsEarned = takeWholeWorkPoints(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomLibrary, ConfigManager::getSingleton().getRoomConfigDouble("LibraryPointsPerWork"),
-        ResearchEffect::PointsPerWork));
+        ResearchEffect::PointsPerWork), getDirtOutputFactor(), mSkillPointsRemainder);
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("LibraryWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax")));
+    addUseDirt(creature, tileCreature, "LibraryDirtPerWork");
 
     // We check if we have enough points to create a skill entity
     mSkillPoints += pointsEarned;

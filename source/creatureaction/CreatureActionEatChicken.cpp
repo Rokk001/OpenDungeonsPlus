@@ -22,6 +22,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
+#include "rooms/Room.h"
 #include "game/CreatureRelationships.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
@@ -160,6 +161,8 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
             Creature::reportRelationshipEvent(RelationshipEvent::chickenSnatched, *victim, creature);
     }
     creature.foodEaten(ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHungerPerChicken"));
+    // The meal dirties the floor where the creature eats
+    Room::addUseDirt(creature, creature.getPositionTile(), "HatcheryDirtPerMeal");
     // Eaten chickens count for the reset of the skills
     creature.registerChickenEaten();
     // Eating together with a friend is more pleasant

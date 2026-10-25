@@ -72,6 +72,48 @@ public:
     //! key <RoomName>HP; falls back to Building::DEFAULT_TILE_HP when the key is missing.
     double getTileHP() const;
 
+    //! \brief The mean dirt (0 - 100) of the floor of the tiles this room covers, 0 for a room without tiles.
+    double getDirtMean() const;
+
+    //! \brief The dirt stage of the room: 1 (clean) below DirtStage2At, 2 below DirtStage3At, else 3 (filth);
+    //! the limits are the [Dirt] keys of global.cfg.
+    uint32_t getDirtStage() const;
+
+    //! \brief The factor dirt puts on the output of this room: 1 at stage 1, DirtOutputStage2 at stage 2, DirtOutputStage3 at
+    //! stage 3 (global.cfg). Rooms without an output effect from dirt do not call it.
+    double getDirtOutputFactor() const;
+
+    //! \brief The factor for a room whose dirt helps or hurts by stage with keys of its own: 1 at stage 1, the value of
+    //! stage2Key at stage 2 and the value of stage3Key at stage 3 (both keys of the [Dirt] block of global.cfg).
+    //! \param stage2Key The [Dirt] key used at stage 2.
+    //! \param stage3Key The [Dirt] key used at stage 3.
+    double getDirtStageFactor(const std::string& stage2Key, const std::string& stage3Key) const;
+
+    //! \brief Tells whether workers clean this room on their own: every room except prison, torture chamber and
+    //! crypt, where dirt belongs (those are never cleaned).
+    bool isCleanableByWorkers() const;
+
+    //! \brief Tells whether the room is the toilet room. Compared by name so that this works whether or not the
+    //! room type exists in the build; the toilet is cleaned before the other rooms.
+    bool isToiletRoom() const;
+
+    //! \brief Tells whether workers should clean this room now: the room is cleanable and its dirt stage is at
+    //! least CleanRoomFromStage.
+    bool needsCleaning();
+
+    //! \brief Server side. Adds the dirt of one use of a room to a tile: the value of the rooms.cfg key times the DirtFactor
+    //! of the creature. A key that is not in the configuration makes no dirt.
+    //! \param creature The creature that uses the room (its type gives the DirtFactor).
+    //! \param tile The tile that gets the dirt, usually the one the creature stands on; nothing happens if it is null.
+    //! \param key The rooms.cfg key with the dirt of one use, for example WorkshopDirtPerWork.
+    static void addUseDirt(const Creature& creature, Tile* tile, const std::string& key);
+
+    //! \brief Server side. Called by a covered tile after it received dirt. Tells a human owner (once per notice
+    //! interval, see Player::notifyDirtEvent) when the room has just reached dirt stage 3. Prisons, torture
+    //! chambers and crypts are meant to be filthy and never give this notice.
+    //! \param added The dirt the tile really received (after the limit of the tile).
+    void notifyDirtAdded(double added);
+
     //! \brief What enemies can do to a room, read from RoomsClaimableByEnemies
     //! in the room configuration file.
     enum class ClaimMode
@@ -270,6 +312,11 @@ protected:
     //! that was never touched writes nothing extra, and a save without it loads full); portals and
     //! bridges also keep the value their files always had.
     double mClaimHealth;
+
+    //! \brief Reads and ignores the line "CleanOrder 0|1" that older saves and levels have after the prison and
+    //! torture data. Without such a line the stream is left where it was.
+    //! \return False if the line is there but malformed.
+    bool skipLegacyCleanOrderLine(std::istream& is);
 
     /*! \brief Exports the headers needed to recreate the Room. It allows to extend Room as much as wanted.
      * The content of the Room will be exported by exportToPacket.

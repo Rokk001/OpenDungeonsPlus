@@ -48,6 +48,7 @@
 // Contains the rooms the AI will try to build. It will try to build them in the given order
 static const std::vector<RoomType> wantedBuildings = {
     RoomType::dormitory,
+    RoomType::toilet,
     RoomType::treasury,
     RoomType::hatchery,
     RoomType::library,

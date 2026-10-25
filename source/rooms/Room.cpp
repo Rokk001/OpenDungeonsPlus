@@ -330,6 +330,130 @@ double Room::getTileHP() const
         RoomManager::getRoomNameFromRoomType(getType()) + "HP", Building::DEFAULT_TILE_HP);
 }
 
+//! \brief Adds the dirt of one room use (config key times the DirtFactor of the creature type) to the tile.
+void Room::addUseDirt(const Creature& creature, Tile* tile, const std::string& key)
+{
+    if(tile == nullptr)
+        return;
+
+    double dirt = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(key, 0.0);
+    if(dirt <= 0.0)
+        return;
+
+    tile->addDirt(dirt * creature.getDefinition()->getDirtFactor());
+}
+
+//! \brief The mean tile dirt over all covered tiles (0 when there are none).
+double Room::getDirtMean() const
+{
+    if(mCoveredTiles.empty())
+        return 0.0;
+
+    double sum = 0.0;
+    for(const Tile* tile : mCoveredTiles)
+        sum += tile->getDirt();
+
+    return sum / static_cast<double>(mCoveredTiles.size());
+}
+
+//! \brief Tells the owner when the room has just reached dirt stage 3 because of the dirt a tile received.
+void Room::notifyDirtAdded(double added)
+{
+    if((added <= 0.0) || mCoveredTiles.empty() || (getSeat() == nullptr))
+        return;
+
+    RoomType type = getType();
+    if((type == RoomType::prison) || (type == RoomType::torture) || (type == RoomType::crypt))
+        return;
+
+    Player* player = getSeat()->getPlayer();
+    if((player == nullptr) || !player->getIsHuman())
+        return;
+
+    double limit = ConfigManager::getSingleton().getDirtConfigDouble("DirtStage3At");
+    double meanNow = getDirtMean();
+    double meanBefore = meanNow - added / static_cast<double>(mCoveredTiles.size());
+    if((meanBefore < limit) && (meanNow >= limit))
+        player->notifyDirtEvent(Player::DirtEventKind::roomFilthy, RoomManager::getRoomReadableName(type), nullptr);
+}
+
+//! \brief The dirt stage (1 - 3) of the mean dirt of this room.
+uint32_t Room::getDirtStage() const
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    double mean = getDirtMean();
+    if(mean < config.getDirtConfigDouble("DirtStage2At"))
+        return 1;
+
+    if(mean < config.getDirtConfigDouble("DirtStage3At"))
+        return 2;
+
+    return 3;
+}
+
+//! \brief The factor on the output of this room by its dirt stage (DirtOutputStage2 / DirtOutputStage3).
+double Room::getDirtOutputFactor() const
+{
+    return getDirtStageFactor("DirtOutputStage2", "DirtOutputStage3");
+}
+
+//! \brief 1 at dirt stage 1, otherwise the value of the key of the room's stage.
+double Room::getDirtStageFactor(const std::string& stage2Key, const std::string& stage3Key) const
+{
+    uint32_t stage = getDirtStage();
+    if(stage <= 1)
+        return 1.0;
+
+    if(stage == 2)
+        return ConfigManager::getSingleton().getDirtConfigDouble(stage2Key);
+
+    return ConfigManager::getSingleton().getDirtConfigDouble(stage3Key);
+}
+
+//! \brief Workers clean every room except prison, torture chamber and crypt.
+bool Room::isCleanableByWorkers() const
+{
+    RoomType type = getType();
+    return (type != RoomType::prison) && (type != RoomType::torture) && (type != RoomType::crypt);
+}
+
+//! \brief Name of the toilet room as the room factory registers it.
+static const std::string TOILET_ROOM_NAME = "Toilet";
+
+//! \brief The toilet room is found by its registered name.
+bool Room::isToiletRoom() const
+{
+    return RoomManager::getRoomNameFromRoomType(getType()) == TOILET_ROOM_NAME;
+}
+
+//! \brief The dirt stage of a room workers clean decides.
+bool Room::needsCleaning()
+{
+    if(!isCleanableByWorkers())
+        return false;
+
+    return getDirtStage() >= static_cast<uint32_t>(ConfigManager::getSingleton().getDirtConfigDouble("CleanRoomFromStage"));
+}
+
+//! \brief Skips the line "CleanOrder 0|1" that older saves and levels have after the prison and torture data.
+bool Room::skipLegacyCleanOrderLine(std::istream& is)
+{
+    std::streampos pos = is.tellg();
+    std::string tag;
+    if(!(is >> tag) || (tag != "CleanOrder"))
+    {
+        is.clear();
+        is.seekg(pos);
+        return true;
+    }
+
+    uint32_t order = 0;
+    if(!(is >> order) || (order > 1))
+        return false;
+
+    return true;
+}
+
 bool Room::isAttackable(Tile* tile, Seat* seat) const
 {
     if(!isDestructible())

@@ -80,6 +80,8 @@ private:
     uint32_t countCraftedItemsOnRoom();
     Tile* checkIfAvailableSpot();
     int32_t mPoints;
+    //! \brief Fraction of a work point left over by the dirt output factor, added to the next work turn (not saved).
+    double mPointsRemainder;
     TrapType mTrapType;
     void getCreatureWantedPos(Creature* creature, Tile* tileSpot,
         Ogre::Real& wantedX, Ogre::Real& wantedY);

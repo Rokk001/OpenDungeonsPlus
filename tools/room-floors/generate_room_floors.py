@@ -34,7 +34,10 @@ pieces match. The tile borders are made seam-free in two ways:
 The room shader has no specular term, so only a diffuse texture and a matching tangent space normal map
 (red = -d height / dx, green = +d height / dy, image y pointing down) are written.
 
+  - toilet: wet pale flagstones with a drain at the tile centre; one piece per neighbour mask like the dormitory, the
+    exposed sides get a stained fringe and a copper pipe on iron brackets;
 Usage: python generate_room_floors.py [output folder] [--check] [--seamcheck=<folder for the rolled previews>]
+       [--only=<room>]   (paints only that room, for example --only=toilet; the other files stay untouched)
 """
 
 import heapq
@@ -139,7 +142,7 @@ FLATTEN = {
     'dormitory': (48.0, 0.6), 'casino': (48.0, 0.5),
     'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'prison': (40.0, 0.8),
     'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
-    'portalWave': (48.0, 0.7),
+    'portalWave': (48.0, 0.7), 'toilet': (48.0, 0.7),
 }
 
 
@@ -1603,6 +1606,96 @@ def workshop_field():
 
 
 # ---------------------------------------------------------------------------------------------------------------
+# toilet room: wet, pale flagstones with a drain in the middle of every tile; along every exposed (wall) side the
+# floor is stained and a dull copper pipe on iron brackets runs along the wall. Every layer is truly periodic.
+
+TOILET_STONE = np.array([0.262, 0.274, 0.270])
+TOILET_ALGAE = np.array([0.120, 0.150, 0.090])
+TOILET_GRIME = np.array([0.105, 0.095, 0.070])
+TOILET_PIPE = np.array([0.380, 0.255, 0.165])
+TOILET_IRON = np.array([0.120, 0.115, 0.115])
+TOILET_DRAIN_R = 46.0        # radius of the drain recess in px
+TOILET_PIPE_DEPTH = 30.0     # distance of the pipe centre line from the wall side in px
+TOILET_PIPE_R = 11.0         # pipe radius in px
+TOILET_BRACKETS = (0.25, 0.75)   # bracket positions along the wall as a fraction of the tile (mirror symmetric)
+
+
+def toilet_field():
+    """Wet pale flagstones in rows, damp patches, algae streaks and one round drain grate at the tile centre."""
+    pid, dist, count = row_layout(1101, 5, 100, 200, 3.5, 1102)
+    rng = np.random.RandomState(1103)
+    tone_v = rng.uniform(0.92, 1.08, count)[pid]
+    mottle = fbm(1104, 13.0, 13.0, 3)
+    grit = fbm(1105, 160.0, 160.0, 2)
+    col = TOILET_STONE[None, None, :] * tone_v[..., None] * (1.0 + 0.09 * mottle + 0.06 * grit)[..., None]
+    hgt = 0.5 * mottle + 0.4 * grit
+    # wet patches: darker and a little bluer
+    wet = smoothstep(-0.2, 1.1, fbm(1106, 9.0, 9.0, 3))
+    col = col * (1.0 - 0.20 * wet)[..., None] * np.array([0.96, 1.0, 1.05])[None, None, :]
+    # algae streaks
+    algae = smoothstep(1.2, 1.7, fbm(1107, 11.0, 11.0, 3))
+    col = mix(col, TOILET_ALGAE[None, None, :] * (0.85 + 0.3 * grit[..., None]), algae * 0.55)
+    # dark wet joints with a bevel
+    t = smoothstep(0.8, 3.4, dist)
+    col = mix(np.broadcast_to(np.array([0.050, 0.056, 0.058]), col.shape), col, t)
+    hgt = hgt * 0.7 + 2.4 * smoothstep(0.8, 5.0, dist)
+    # drain: dark recess with a ring and a cross of bars, drawn with all tile offsets
+    drain = Layer()
+    bars = Layer()
+    ring = Layer()
+    centre = N / 2.0
+    pts = [(centre + TOILET_DRAIN_R * np.cos(a), centre + TOILET_DRAIN_R * np.sin(a))
+           for a in np.linspace(0.0, 2.0 * np.pi, 36, endpoint=False)]
+    drain.polygon(pts)
+    for a in np.linspace(0.0, np.pi, 4, endpoint=False):
+        bars.line([(centre - TOILET_DRAIN_R * np.cos(a) * 0.95, centre - TOILET_DRAIN_R * np.sin(a) * 0.95),
+                   (centre + TOILET_DRAIN_R * np.cos(a) * 0.95, centre + TOILET_DRAIN_R * np.sin(a) * 0.95)], 5.0)
+    ring.polygon([(centre + (TOILET_DRAIN_R + 7.0) * np.cos(a), centre + (TOILET_DRAIN_R + 7.0) * np.sin(a))
+                  for a in np.linspace(0.0, 2.0 * np.pi, 36, endpoint=False)])
+    rm = np.clip(ring.result(), 0.0, 1.0)
+    dm = np.clip(drain.result(), 0.0, 1.0)
+    bm = np.clip(bars.result(), 0.0, 1.0)
+    col = mix(col, TOILET_IRON[None, None, :] * (0.9 + 0.3 * grit[..., None]), rm * 0.9)
+    col = mix(col, np.array([0.020, 0.024, 0.026])[None, None, :], dm * 0.95)
+    col = mix(col, TOILET_IRON[None, None, :] * (1.0 + 0.4 * grit[..., None]), bm * 0.9)
+    hgt = hgt + 1.8 * rm - 4.0 * dm + 3.4 * bm
+    return col, hgt
+
+
+def toilet_band(col, hgt, side):
+    """Wall fringe of one exposed side: stained, damp floor at the wall and a copper pipe on two iron brackets."""
+    d = depth_map(side)
+    along = (_XX if side in 'TB' else _YY).astype(float)
+    wob = 7.0 * nz(1151, 10.0, 10.0, 2)
+    dw = d + wob
+    dark = 0.40 * (1.0 - smoothstep(2.0, 60.0, dw)) + 0.10 * (1.0 - smoothstep(0.0, 120.0, dw))
+    col = col * (1.0 - dark)[..., None]
+    grime = (1.0 - smoothstep(8.0, 44.0, dw + 14.0 * nz(1152, 14.0, 14.0, 2))) * 0.5
+    col = mix(col, TOILET_GRIME[None, None, :] * (1.0 + 0.25 * nz(1153, 90.0, 90.0, 2)[..., None]), grime)
+    hgt = hgt + 0.4 * grime
+    # the pipe: a cylinder seen from above, lit from the top left, with a soft shadow on the floor beside it
+    pr = (d - TOILET_PIPE_DEPTH) / TOILET_PIPE_R
+    body = 1.0 - smoothstep(0.92, 1.0, np.abs(pr))
+    lift = np.sqrt(np.clip(1.0 - np.clip(pr, -1.0, 1.0) ** 2, 0.0, 1.0))
+    shine = 0.55 + 0.6 * lift ** 1.5 - 0.15 * np.clip(pr, -1.0, 1.0)
+    pipe_col = TOILET_PIPE[None, None, :] * shine[..., None] * (1.0 + 0.15 * nz(1154, 60.0, 8.0, 2)[..., None])
+    shadow = smoothstep(1.0, 1.3, pr) * (1.0 - smoothstep(1.3, 2.4, pr))
+    col = col * (1.0 - 0.35 * shadow)[..., None]
+    col = mix(col, pipe_col, body)
+    # verdigris on the pipe
+    green = body * smoothstep(1.0, 1.6, nz(1155, 30.0, 6.0, 2)) * 0.45
+    col = mix(col, np.array([0.18, 0.28, 0.22])[None, None, :], green)
+    # iron brackets across the pipe
+    bracket = np.zeros_like(along)
+    for pos in TOILET_BRACKETS:
+        bracket = np.maximum(bracket, 1.0 - smoothstep(5.0, 8.0, np.abs(along - pos * N)))
+    bracket = bracket * (1.0 - smoothstep(1.25, 1.45, np.abs(pr)))
+    col = mix(col, TOILET_IRON[None, None, :] * (0.9 + 0.5 * lift[..., None]), bracket)
+    hgt = hgt + 5.0 * body * lift + 1.5 * bracket
+    return col, hgt
+
+
+# ---------------------------------------------------------------------------------------------------------------
 # portal, portal wave (F2 batch 5): every layer is truly periodic; the wooden bridge atlas follows below
 
 PORTAL_STONE = np.array([0.182, 0.172, 0.208])
@@ -1928,6 +2021,14 @@ ROOMS = {
         'field': portal_wave_field, 'band': None, 'strength': 1.3,
         'pieces': {'PortalWaveFloor': ('', 'PortalWaveFloorNormal')},
     },
+    'toilet': {
+        # wet flagstones with a drain; the 16 pieces (one per neighbour mask, see [toiletRoom] in tilesets.cfg) differ
+        # only by the wall fringe with the pipe on the exposed sides; every tile uses rotation 0
+        'field': toilet_field, 'band': toilet_band, 'strength': 1.3, 'rot_invariant': False,
+        'pieces': dict(('Toilet' + m, (''.join(s for bit, s in zip(m, 'RBLT') if bit == '0'), 'Toilet' + m + 'Normal'))
+                       for m in ('1111', '1011', '0111', '1101', '1110', '0110', '1100', '0011', '1001', '0000',
+                                 '0001', '0010', '0100', '1000', '0101', '1010')),
+    },
 }
 
 
@@ -2002,7 +2103,7 @@ def seam_image(result):
 
 # Rooms whose floors are periodic and get the wrap seam ratio (--check) and the rolled preview (--seamcheck).
 SEAM_CHECK_ROOMS = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena',
-                    'torture', 'workshop', 'portal', 'portalWave')
+                    'torture', 'workshop', 'portal', 'portalWave', 'toilet')
 
 
 def main():
@@ -2014,7 +2115,10 @@ def main():
         if a.startswith('--seamcheck='):
             seam_dir = a.split('=', 1)[1]
     seam_rooms = SEAM_CHECK_ROOMS if seam_dir else ()
+    only = [a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith('--only=')]
     for room in ROOMS:
+        if only and room not in only:
+            continue
         result, strength = build(room)
         if '--check' in sys.argv and ROOMS[room].get('rot_invariant', room in ('library',)):
             print(room, 'max asymmetry on open borders (0..1): %.3f' % border_check(result))
@@ -2027,6 +2131,8 @@ def main():
             if normal_name is not None:
                 to_image(normal_map(hgt, strength)).save(os.path.join(out, normal_name + '.png'), optimize=True)
             print(name, 'mean RGB', (col.reshape(-1, 3).mean(0) * 255).round().astype(int))
+    if only:
+        return
     # wooden bridge atlas (repainted in place, the UV layout comes from the mesh)
     col, hgt, zone, covered = bridge_atlas(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
                                                         'models', 'WoodBridge.mesh'))

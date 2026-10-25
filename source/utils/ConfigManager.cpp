@@ -324,6 +324,15 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
             paramsOk |= 4;
             continue;
         }
+
+        if(nextParam == "[Dirt]")
+        {
+            // The dirt block is optional: without it every dirt key reads as 0
+            if(!loadGlobalDirtConfig(configFile))
+                break;
+
+            continue;
+        }
     }
 
     if(paramsOk != 0x07)
@@ -333,6 +342,42 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
     }
 
     return true;
+}
+
+//! \brief Reads the [Dirt] block of global.cfg: one "key value" pair per line up to [/Dirt].
+bool ConfigManager::loadGlobalDirtConfig(std::stringstream& configFile)
+{
+    std::string nextParam;
+    while(configFile.good())
+    {
+        if(!(configFile >> nextParam))
+            break;
+
+        if(nextParam == "[/Dirt]")
+            return true;
+
+        std::string value;
+        if(!(configFile >> value))
+            break;
+
+        mDirtConfig[nextParam] = Helper::toDouble(value);
+    }
+
+    OD_LOG_ERR("Missing [/Dirt] in global.cfg");
+    return false;
+}
+
+//! \brief Returns the value of a [Dirt] key of global.cfg, 0 (and an error in the log) when the key is unknown.
+double ConfigManager::getDirtConfigDouble(const std::string& param) const
+{
+    std::map<std::string, double>::const_iterator it = mDirtConfig.find(param);
+    if(it == mDirtConfig.end())
+    {
+        OD_LOG_ERR("Unknown dirt parameter param=" + param);
+        return 0.0;
+    }
+
+    return it->second;
 }
 
 bool ConfigManager::loadGlobalConfigDefinitionFiles(std::stringstream& configFile)
@@ -1804,6 +1849,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
         if(!loadTilesetValues(defFile, TileVisual::manaWellGround, tileSet->configureTileValues(TileVisual::manaWellGround),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::templeRoom, tileSet->configureTileValues(TileVisual::templeRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::toiletRoom, tileSet->configureTileValues(TileVisual::toiletRoom),*mHighMap))
             return false;
 
     }

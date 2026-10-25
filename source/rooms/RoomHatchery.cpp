@@ -394,6 +394,10 @@ HatcheryCycleSettings RoomHatchery::getCycleSettings() const
     settings.mFightApproachTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryFightApproachTurns", settings.mFightApproachTurns));
     settings.mLayShowTurns = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryLayShowTurns", settings.mLayShowTurns));
     settings.mLayFactor = config.getRoomConfigDoubleOrDefault("HatcheryLayFactor", settings.mLayFactor);
+    // A dirty hatchery makes the hens lay slower: the laying times grow by 1 / factor
+    double dirtOutputFactor = getDirtOutputFactor();
+    if(dirtOutputFactor > 0.0)
+        settings.mLayFactor /= dirtOutputFactor;
 
     // The research of the hatchery shortens the waiting times
     double coopWait = config.getRoomConfigDoubleOrDefault("HatcheryChickenSpawnRate", settings.mCoopWait);
@@ -1340,6 +1344,8 @@ void RoomHatchery::doUpkeep()
     std::vector<ChickenEntity*> eggs;
     std::vector<ChickenEntity*> roosters;
     HatcheryCounts counts;
+    // Dirt the floor under every hen, chick and rooster gets per turn (eggs make none)
+    const double animalDirtPerTurn = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryDirtPerHenTurn", 0.0);
     for(Tile* tile : mCoveredTiles)
     {
         std::vector<GameEntity*> entities;
@@ -1353,6 +1359,9 @@ void RoomHatchery::doUpkeep()
             if(((chicken->getKind() == ChickenKind::egg) || (chicken->getKind() == ChickenKind::chick)) &&
                (chicken->getHomeSeat() != nullptr) && (chicken->getHomeSeat() != getSeat()))
                 continue;
+
+            if(chicken->getKind() != ChickenKind::egg)
+                tile->addDirt(animalDirtPerTurn);
 
             switch(chicken->getKind())
             {

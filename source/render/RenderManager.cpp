@@ -4955,6 +4955,11 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         {
             anim = EntityAnimation::walk_anim;
         }
+        else if (anim == EntityAnimation::clean_anim)
+        {
+            // A skeleton without the cleaning clip wipes with the claim clip
+            anim = EntityAnimation::claim_anim;
+        }
         else if (anim == EntityAnimation::dig_anim || anim == EntityAnimation::claim_anim)
         {
             anim = EntityAnimation::attack_anim;

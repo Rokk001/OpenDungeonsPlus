@@ -2167,6 +2167,9 @@ NatureMonster	5
     Heal/Turn	0.03
     WakefulnessLost/Turn	0.1
     HungerGrowth/Turn	0.1
+    UrgeGrowth/Turn	0.1
+    Cleanliness	0.25
+    DirtFactor	1.75
     TileSightRadius	18
     MaxGoldCarryable	0
     DigRate	0

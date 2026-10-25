@@ -121,7 +121,17 @@ enum class CosmeticEventType : int32_t
     //! configuration and starts the strike clip when the turn is done (at the latest after the configured delay, the turn
     //! then runs over the wind-up). Damage and its timing are decided by the server and are not touched. Older clients skip
     //! the kind and turn as before, an older server sends none.
-    attackTurn = 18
+    attackTurn = 18,
+    //! The dirt of the floor tiles and of the rooms that the receiving keeper sees changed or is told again. mText
+    //! "x,y,stage;x,y,stage;...|roomName,stage;roomName,stage;..." (the part after the bar can be missing): a tile
+    //! entry gives the dirt stage of one floor tile (0 = clean, 1 to 3 like the dirt stages of a room, taken from the
+    //! value of the tile itself), a room entry the dirt stage (1 clean, 2 dirty, 3 filthy) of the whole room.
+    //! A tile or room that is not in the text keeps the last stage it was told. mValue 1: the whole state of the tiles
+    //! in sight is sent again, 0: only what changed since the last message. mValue2 and mPosition are not used (0).
+    //! Sent to the keepers that see the tiles when something changed (after DirtSyncTurns), every DirtResyncTurns
+    //! and at once to a keeper who gains sight, joins or loads. Only shows the dirt decals and the room text; the game
+    //! never depends on it. Older clients skip the kind.
+    tileDirt = 19
 };
 
 //! \brief The result in mValue of the event hitResult

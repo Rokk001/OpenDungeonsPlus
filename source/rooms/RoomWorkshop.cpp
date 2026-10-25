@@ -134,9 +134,28 @@ static const Ogre::Real Y_OFFSET_CREATURE = 0.0;
 static const Ogre::Real X_OFFSET_SPOT = 0.0;
 static const Ogre::Real Y_OFFSET_SPOT = 0.2;
 
+//! \brief Returns the whole work points earned this turn and keeps the fraction for the next turn.
+//! \param base The points before the dirt factor (affinity x research value).
+//! \param factor The room dirt output factor; 1 or more keeps the plain truncation of the points.
+//! \param remainder Fraction left over from earlier turns; updated here.
+//! \return The whole points to add now.
+static int32_t takeWholeWorkPoints(double base, double factor, double& remainder)
+{
+    if(factor >= 1.0)
+        return static_cast<int32_t>(base * factor);
+
+    double total = base * factor + remainder;
+    int32_t whole = static_cast<int32_t>(total + 1e-9);
+    remainder = total - static_cast<double>(whole);
+    if(remainder < 0.0)
+        remainder = 0.0;
+    return whole;
+}
+
 RoomWorkshop::RoomWorkshop(GameMap* gameMap) :
     Room(gameMap),
     mPoints(0),
+    mPointsRemainder(0.0),
     mTrapType(TrapType::nullTrapType)
 {
     setMeshName("Workshop");
@@ -198,6 +217,8 @@ void RoomWorkshop::absorbRoom(Room *r)
 
     mPoints += roomAbs->mPoints;
     roomAbs->mPoints = 0;
+    mPointsRemainder += roomAbs->mPointsRemainder;
+    roomAbs->mPointsRemainder = 0.0;
 
     OD_ASSERT_TRUE_MSG(roomAbs->mCreaturesSpots.empty(), "room=" + getName() + ", roomAbs=" + roomAbs->getName());
 }
@@ -484,12 +505,13 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
     OD_ASSERT_TRUE_MSG(creatureRoomAffinity.getRoomType() == getType(), "name=" + getName() + ", creature=" + creature.getName()
         + ", creatureRoomAffinityType=" + Helper::toString(static_cast<int>(creatureRoomAffinity.getRoomType())));
 
-    mPoints += static_cast<int32_t>(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
+    mPoints += takeWholeWorkPoints(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork"),
-        ResearchEffect::PointsPerWork));
+        ResearchEffect::PointsPerWork), getDirtOutputFactor(), mPointsRemainder);
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));
+    addUseDirt(creature, tileCreature, "WorkshopDirtPerWork");
 
     return false;
 }

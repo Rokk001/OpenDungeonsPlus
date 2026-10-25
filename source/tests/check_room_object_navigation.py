@@ -91,6 +91,7 @@ void placeBed(BuildingObject& bed,int x,int y,int width,int height,float rotatio
 }
 struct Room {
  RoomType type=RoomType::hatchery;std::map<Tile*,BuildingObject*> objects;std::vector<Creature*> users;
+ static void addUseDirt(const Creature&,Tile*,const std::string&){}
  struct InteractionPosition {const BuildingObject* object;Ogre::Vector2 position,direction;};
  std::map<Creature*,InteractionPosition> interactionPositions;
  const std::map<Creature*,InteractionPosition>& getInteractionPositions()const{return interactionPositions;}

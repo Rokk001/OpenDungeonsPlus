@@ -2052,7 +2052,7 @@ void Gui::arrangeActionButtonPanels(CEGUI::Window* gameSheet)
 void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
 {
     rooms->getChild("DestroyRoomButton")->hide();
-    arrangeActionButtons(rooms, {"DormitoryButton", "HatcheryButton", "LibraryButton", "TrainingHallButton",
+    arrangeActionButtons(rooms, {"DormitoryButton", "ToiletButton", "HatcheryButton", "LibraryButton", "TrainingHallButton",
         "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
         "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton", "GuardRoomButton", "PrayerTempleButton"});
 }
