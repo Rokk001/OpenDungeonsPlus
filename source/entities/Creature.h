@@ -85,7 +85,9 @@ enum class CreatureSound
     Attack,
     Die,
     Slap,
-    Dig
+    Dig,
+    Relieve,
+    Clean
 };
 
 //! \brief A skill of a creature together with its running cooldown and warmup counters.
