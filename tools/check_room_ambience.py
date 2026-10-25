@@ -240,6 +240,7 @@ def pile_levels(match):
     return set(int(n[len(PILE_PREFIX)]) for n in names)
 
 
+# Validates one effect against the engine contract, including default sound intervals and object sound loops.
 def check_effect(effect, where, problems, visuals, systems, mats, counts):
     for key in effect:
         if key not in EFFECT_KEYS:
@@ -281,8 +282,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 problems.append("%s: no .ogg file for sound family %s" % (where, family))
         if "Delay" in effect and target != "Event":
             problems.append("%s: Delay only works for events" % where)
-        if target == "Object" and "Every" not in effect:
-            problems.append("%s: a sound on an object needs Every" % where)
+        # Object sounds inherit AmbienceEffect.mEvery when omitted; sound loops bypass that timer.
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
     if when in ("Locked", "Reloading", "Ready", "LowHealth", "Sleeping") and target != "Object":
@@ -428,8 +428,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: %s needs three numbers" % (where, key))
     if "Object" in effect and not (kind == "Clip" and target == "Event"):
         problems.append("%s: Object only belongs to clips of events" % where)
-    if "Loop" in effect and kind != "Clip":
-        problems.append("%s: Loop only belongs to clips" % where)
+    if "Loop" in effect and not (kind == "Clip" or (kind == "Sound" and target == "Object")):
+        problems.append("%s: Loop only belongs to clips or sounds of objects" % where)
     for pattern in effect.get("Object", []):
         if "*" not in pattern and not mesh_exists(pattern):
             problems.append("%s: no mesh %s" % (where, pattern))
