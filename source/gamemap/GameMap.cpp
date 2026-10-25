@@ -3746,6 +3746,7 @@ std::string GameMap::nextUniqueNameMapLight()
     return ret;
 }
 
+//! \brief Looks up an entity by its synchronized type and unique name.
 GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
     const std::string& entityName)
 {
@@ -3765,6 +3766,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::skillEntity:
         case GameEntityType::giftBoxEntity:
         case GameEntityType::lavaRock:
+        case GameEntityType::infirmaryShamanEntity:
         case GameEntityType::dirtPileEntity:
             return getRenderedMovableEntity(entityName);
 

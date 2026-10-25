@@ -348,6 +348,8 @@ set(OD_SOURCEFILES
 
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
+    ${SRC}/rooms/RoomInfirmaryShaman.cpp
+    ${SRC}/entities/InfirmaryShamanEntity.cpp
     ${SRC}/entities/ChickenEntity.cpp
     ${SRC}/entities/CraftedTrap.cpp
     ${SRC}/entities/Creature.cpp

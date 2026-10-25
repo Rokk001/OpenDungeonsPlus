@@ -19,6 +19,7 @@
 #include "entities/GameEntityType.h"
 #include "entities/BuildingObject.h"
 #include "entities/ChickenEntity.h"
+#include "entities/InfirmaryShamanEntity.h"
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
 #include "entities/DirtPileEntity.h"
@@ -136,6 +137,7 @@ GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::
     return entity;
 }
 
+//! \brief Recreates a typed entity received from the server, including decorative room figures.
 GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
 {
     GameEntity* entity = nullptr;
@@ -146,6 +148,11 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
         case GameEntityType::buildingObject:
         {
             entity = BuildingObject::getBuildingObjectFromPacket(gameMap, is);
+            break;
+        }
+        case GameEntityType::infirmaryShamanEntity:
+        {
+            entity = InfirmaryShamanEntity::getFromPacket(gameMap, is);
             break;
         }
         case GameEntityType::chickenEntity:

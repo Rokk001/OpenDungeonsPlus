@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+class InfirmaryShamanEntity;
+
 //! \brief A permanent cot layout and the patients treated on it.
 class RoomInfirmary : public Room
 {
@@ -94,7 +96,15 @@ public:
     static int cotSize(const Creature& creature);
     //! \brief Tests the minimum contiguous square required when building.
     static bool containsMinimumBlock(GameMap& map, Seat* seat, const std::vector<Tile*>& tiles);
+    //! \brief Returns the one decorative room figure, if the room has a spawn tile.
+    InfirmaryShamanEntity* getShaman() const { return mShaman; }
+    //! \brief Plays the real rattle recording at the figure's current tile.
+    void playShamanRattle(Tile& tile);
 protected:
+    //! \brief Saves the existing figure's exact room position.
+    void exportShamanToStream(std::ostream& stream) const;
+    //! \brief Reads an optional figure position, rewinding when the tag is absent.
+    bool importShamanFromStream(std::istream& stream);
     //! \brief Saves the exact cot, admission and reservation state.
     void exportToStream(std::ostream& stream) const override;
     //! \brief Reads optional cot, admission and reservation tags.
@@ -116,6 +126,13 @@ private:
     void abandon(size_t id);
     //! \brief Releases all treatments and reservations on loss of the room.
     void abandonAll();
+    //! \brief Creates or reassigns the single room figure after rebuilding or loading.
+    void updateShaman();
+    //! \brief Removes the figure when its room is actually removed.
+    void removeShaman();
+    InfirmaryShamanEntity* mShaman = nullptr;
+    bool mHasLoadedShamanPosition = false;
+    Ogre::Vector2 mLoadedShamanPosition = Ogre::Vector2::ZERO;
     std::map<size_t, CotInfo> mCots;
     std::map<size_t, PatientInfo> mPatients;
     std::map<size_t, BuildingObject*> mCotObjects;
