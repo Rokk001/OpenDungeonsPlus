@@ -29,7 +29,7 @@ header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-3:] != ["timeLimit", "campaignVictory", "roomCleanOrder"]:
+if names[-2:] != ["timeLimit", "campaignVictory"]:
     problems.append("campaignVictory must follow timeLimit without moving existing values")
 
 # 2. Beam and projectile are wired

@@ -23,7 +23,7 @@
 class Tile;
 
 //! \brief (worker only) Looks for something to clean and starts cleaning it: the nearest pile first, then the
-//! dirtiest tile of a room that needs cleaning (ordered rooms first, then the toilet, then the others), then a
+//! dirtiest tile of a room that needs cleaning (the toilet first, then the others), then a
 //! dirty corridor tile. Ends without success when there is nothing to clean.
 class CreatureActionSearchDirtToClean : public CreatureAction
 {
@@ -44,7 +44,7 @@ public:
     static bool handleSearchDirtToClean(Creature& creature, int32_t nbTurns);
 
     //! \brief Tells whether workers of the seat may clean a pile on this tile: not when the tile lies in a room
-    //! workers never clean (prison, torture chamber, crypt), unless the keeper ordered that room to be cleaned once.
+    //! workers never clean (prison, torture chamber, crypt).
     //! Used by the search and by the seat's check for cleaning work, so both always agree.
     //! \param tile The tile of the pile.
     //! \return True if the pile may be cleaned.

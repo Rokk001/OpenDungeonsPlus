@@ -3261,42 +3261,6 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             break;
         }
 
-        case ClientNotificationType::askCleanRoom:
-        {
-            Player* player = clientSocket->getPlayer();
-            if(player == nullptr)
-                break;
-
-            std::string roomName;
-            bool isSet = false;
-            if(!(packetReceived >> roomName >> isSet))
-            {
-                OD_LOG_ERR("Truncated askCleanRoom packet");
-                break;
-            }
-
-            // Only prisons and torture chambers are cleaned on order, workers clean the other rooms on their own
-            Room* room = gameMap->getRoomByName(roomName);
-            if((room == nullptr) || ((room->getType() != RoomType::prison) && (room->getType() != RoomType::torture)))
-                break;
-
-            // Only the owner of the room can order it to be cleaned
-            if(room->getSeat() != player->getSeat())
-                break;
-
-            // An order for a room that is clean already would only hang around until the room gets dirty
-            if(isSet)
-            {
-                room->setCleanOrder(true);
-                room->updateCleanOrder();
-            }
-
-            ServerNotification notif(ServerNotificationType::roomCleanOrder, player);
-            notif.mPacket << roomName << room->getCleanOrder();
-            sendAsyncMsg(notif);
-            break;
-        }
-
         case ClientNotificationType::askExecuteConsoleCommand:
         {
             uint32_t nbArgs;

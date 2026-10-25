@@ -1,12 +1,12 @@
-"""Dirt in saves: the [Needs] block of a creature, the [Dirt] and [DirtPiles] sections and the CleanOrder line of a room.
+"""Dirt in saves: the [Needs] block of a creature, the [Dirt] and [DirtPiles] sections and the old CleanOrder line of a room, which is read and ignored.
 
 The real write and read functions are cut out of the sources and run against small stubs:
   MapHandler  writeDirtSections / readDirtSections (tile dirt and piles round trip, a level without the sections loads,
               the next section is left untouched)
   DirtPileEntity  exportToSaveStream / importFromSaveStream / kindToString / kindFromString
   Creature    the writing statement and the reading block of the optional "[Needs] urge dirt [/Needs]" block
-  Room        exportCleanOrderToStream / importCleanOrderFromStream (a missing line is not an error)
-The order of the sections in the level file and the rooms that write the order line are checked on the source text.
+  Room        skipLegacyCleanOrderLine (an old line is read and ignored, a missing line is not an error)
+The order of the sections in the level file and the rooms that read the old line are checked on the source text.
 
 Calls (from the repository root):
   python source/tests/check_dirt_streams.py
@@ -42,11 +42,12 @@ read_order = [map_cpp.index(t) for t in ('readGameEntity(gameMap, "GiftBoxEntity
 assert read_order == sorted(read_order), 'level reading order: gift boxes, dirt sections, missiles'
 write_order = [map_cpp.index(t) for t in ('levelFile << "[/GiftBoxEntity]" << std::endl;', 'writeDirtSections(levelFile, gameMap);', 'levelFile << "\\n[Missiles]\\n";')]
 assert write_order == sorted(write_order), 'level writing order: gift boxes, dirt sections, missiles'
-# Prison and torture rooms write the order line last and read it as the last item; the toilet writes nothing of its own
+# Prison and torture rooms write no order line any more and skip an old one as the last item; the toilet writes nothing of its own
 for path in ('source/rooms/RoomPrison.cpp', 'source/rooms/RoomTorture.cpp'):
     text = read(path)
-    assert 'exportCleanOrderToStream(os);' in text and 'return importCleanOrderFromStream(is);' in text, path
-assert 'exportCleanOrderToStream' not in read('source/rooms/RoomToilet.cpp'), 'toilet reservations are rebuilt, not saved'
+    assert 'return skipLegacyCleanOrderLine(is);' in text and 'exportCleanOrder' not in text, path
+assert 'skipLegacyCleanOrderLine' not in read('source/rooms/RoomToilet.cpp'), 'toilet reservations are rebuilt, not saved'
+assert 'mCleanOrder' not in read('source/rooms/Room.h') and 'getCleanOrder' not in read('source/rooms/Room.h'), 'the clean order is gone'
 # Creature: the needs block is written after the skill build (last), and read in the token loop
 export_text = extract(creature_cpp, 'void Creature::exportToStream(')
 assert export_text.index('SKILL_BUILD_MARKER') < export_text.index('NEEDS_SAVE_OPEN'), 'needs block comes after the skill block'
@@ -124,13 +125,10 @@ namespace MapHandler {
 @@MAP_FUNCTIONS@@
 }
 
-// The room's clean order
+// The old clean order line of a room
 struct Room
 {
-    bool mCleanOrder;
-    Room() : mCleanOrder(false) {}
-    void exportCleanOrderToStream(std::ostream& os) const;
-    bool importCleanOrderFromStream(std::istream& is);
+    bool skipLegacyCleanOrderLine(std::istream& is);
 };
 @@ROOM_FUNCTIONS@@
 
@@ -234,23 +232,21 @@ static void checkSections()
 
 static void checkCleanOrder()
 {
-    Room on; on.mCleanOrder = true;
-    std::stringstream out; on.exportCleanOrderToStream(out);
-    expect(out.str() == "CleanOrder 1\n", "an open order is written as CleanOrder 1");
-    Room off; std::stringstream outOff; off.exportCleanOrderToStream(outOff);
-    expect(outOff.str() == "CleanOrder 0\n", "no order is written as CleanOrder 0");
-    Room loaded; std::stringstream in(out.str());
-    expect(loaded.importCleanOrderFromStream(in) && loaded.mCleanOrder, "CleanOrder 1 round trip");
-    Room zero; zero.mCleanOrder = true; std::stringstream inZero(outOff.str());
-    expect(zero.importCleanOrderFromStream(inZero) && !zero.mCleanOrder, "CleanOrder 0 round trip");
-    // An old save has no line: the stream is put back for the next reader
+    // An old save or level has the line after the prison and torture data: it is read and ignored
+    Room on; std::stringstream in("CleanOrder 1\nNextToken 5");
+    expect(on.skipLegacyCleanOrderLine(in), "CleanOrder 1 is skipped");
+    std::string after; in >> after; expect(after == "NextToken", "the token after the line is still there, got " + after);
+    Room zero; std::stringstream inZero("CleanOrder 0\nNextToken 5");
+    expect(zero.skipLegacyCleanOrderLine(inZero), "CleanOrder 0 is skipped");
+    std::string afterZero; inZero >> afterZero; expect(afterZero == "NextToken", "the token after CleanOrder 0 is still there, got " + afterZero);
+    // A new save has no line: the stream is put back for the next reader
     Room old; std::stringstream oldSave("NextToken 5");
-    expect(old.importCleanOrderFromStream(oldSave) && !old.mCleanOrder, "an old save without the line loads");
+    expect(old.skipLegacyCleanOrderLine(oldSave), "a save without the line loads");
     std::string next; oldSave >> next; expect(next == "NextToken", "the next token is still there, got " + next);
     Room empty; std::stringstream nothing("");
-    expect(empty.importCleanOrderFromStream(nothing), "an empty rest loads");
+    expect(empty.skipLegacyCleanOrderLine(nothing), "an empty rest loads");
     Room bad; std::stringstream invalid("CleanOrder 2");
-    expect(!bad.importCleanOrderFromStream(invalid), "a value other than 0 and 1 is refused");
+    expect(!bad.skipLegacyCleanOrderLine(invalid), "a value other than 0 and 1 is refused");
 }
 
 static void checkNeeds()
@@ -311,7 +307,7 @@ replacements = {
         'void DirtPileEntity::exportToSaveStream(', 'bool DirtPileEntity::importFromSaveStream(']),
     '@@MAP_FUNCTIONS@@': map_part + '\n' + write_part.replace('static void writeDirtSections(', 'void writeDirtSections('),
     '@@ROOM_FUNCTIONS@@': '\n'.join(extract(room_cpp, h) for h in [
-        'void Room::exportCleanOrderToStream(', 'bool Room::importCleanOrderFromStream(']),
+        'bool Room::skipLegacyCleanOrderLine(']),
     '@@NEEDS_STRINGS@@': needs_strings,
     '@@NEEDS_WRITE@@': needs_write,
     '@@NEEDS_READ@@': needs_read,

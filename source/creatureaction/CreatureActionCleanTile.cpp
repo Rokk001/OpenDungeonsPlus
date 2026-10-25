@@ -114,11 +114,6 @@ bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClea
     double cleanRate = creature.getClaimRate() * Tile::MAX_DIRT * config.getDirtConfigDouble("CleanRateFactor");
     cleanTileStep(tileClean, cleanRate);
 
-    // A room the keeper ordered to be cleaned once is done as soon as it is clean again
-    Room* room = tileClean.getCoveringRoom();
-    if(room != nullptr)
-        room->updateCleanOrder();
-
     // Since we wiped a tile we are done for this turn
     return false;
 }

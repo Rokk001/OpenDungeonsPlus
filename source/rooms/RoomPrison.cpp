@@ -713,7 +713,6 @@ void RoomPrison::exportToStream(std::ostream& os) const
         os << "\t" << creature->getName();
     }
     os << "\n";
-    exportCleanOrderToStream(os);
 }
 
 bool RoomPrison::importFromStream(std::istream& is)
@@ -734,7 +733,7 @@ bool RoomPrison::importFromStream(std::istream& is)
         nb--;
     }
 
-    return importCleanOrderFromStream(is);
+    return skipLegacyCleanOrderLine(is);
 }
 
 void RoomPrison::restoreInitialEntityState()

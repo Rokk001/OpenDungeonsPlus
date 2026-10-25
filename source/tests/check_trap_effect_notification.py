@@ -26,16 +26,16 @@ header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-3:] != ["timeLimit", "campaignVictory", "roomCleanOrder"]:
+if names[-2:] != ["timeLimit", "campaignVictory"]:
     problems.append("campaignVictory must follow timeLimit without moving existing values")
-if "trapEffect" not in names or names.index("trapEffect") != len(names) - 4:
+if "trapEffect" not in names or names.index("trapEffect") != len(names) - 3:
     problems.append("trapEffect must be right before timeLimit")
 # Only the chicken notifications of the hatchery may sit between relationshipTier and trapEffect, in this order
 BETWEEN_RELATIONSHIP_AND_TRAP = ["chickenKindChanged", "chickenFight", "hatcheryNests", "chickenRoofFlight", "chickenMount"]
 if "relationshipTier" not in names:
     problems.append("trapEffect must follow relationshipTier")
 else:
-    between = names[names.index("relationshipTier") + 1:-4]
+    between = names[names.index("relationshipTier") + 1:-3]
     if between != [name for name in BETWEEN_RELATIONSHIP_AND_TRAP if name in between]:
         problems.append("trapEffect must follow relationshipTier (only %s may be between them, in this order): %s"
                         % (", ".join(BETWEEN_RELATIONSHIP_AND_TRAP), between))

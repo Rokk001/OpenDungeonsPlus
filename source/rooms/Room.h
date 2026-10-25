@@ -89,28 +89,16 @@ public:
     //! \param stage3Key The [Dirt] key used at stage 3.
     double getDirtStageFactor(const std::string& stage2Key, const std::string& stage3Key) const;
 
-    //! \brief Tells whether the keeper has ordered this room to be cleaned once.
-    inline bool getCleanOrder() const
-    { return mCleanOrder; }
-
-    //! \brief Opens or closes the keeper's order to clean this room once.
-    inline void setCleanOrder(bool order)
-    { mCleanOrder = order; }
-
     //! \brief Tells whether workers clean this room on their own: every room except prison, torture chamber and
-    //! crypt, where dirt belongs (those are only cleaned on the keeper's order).
+    //! crypt, where dirt belongs (those are never cleaned).
     bool isCleanableByWorkers() const;
 
     //! \brief Tells whether the room is the toilet room. Compared by name so that this works whether or not the
     //! room type exists in the build; the toilet is cleaned before the other rooms.
     bool isToiletRoom() const;
 
-    //! \brief Closes the keeper's order to clean this room once as soon as the room is clean again (stage 1).
-    void updateCleanOrder();
-
-    //! \brief Tells whether workers should clean this room now: the keeper's order is open and the room is not
-    //! clean yet (an order of a room that is clean again is closed first), or the room is cleanable and its dirt
-    //! stage is at least CleanRoomFromStage.
+    //! \brief Tells whether workers should clean this room now: the room is cleanable and its dirt stage is at
+    //! least CleanRoomFromStage.
     bool needsCleaning();
 
     //! \brief Server side. Adds the dirt of one use of a room to a tile: the value of the rooms.cfg key times the DirtFactor
@@ -325,17 +313,10 @@ protected:
     //! bridges also keep the value their files always had.
     double mClaimHealth;
 
-    //! \brief True while the keeper has ordered the workers to clean this room once (prison and torture chamber,
-    //! which workers never clean on their own). Cleared when the room is clean again (stage 1).
-    bool mCleanOrder;
-
-    //! \brief Writes the clean order of this room (a line "CleanOrder 0|1") for the rooms that save it.
-    void exportCleanOrderToStream(std::ostream& os) const;
-
-    //! \brief Reads the clean order written by exportCleanOrderToStream. Saves from before the order existed
-    //! have no such line; then the stream is left where it was and no order is open.
+    //! \brief Reads and ignores the line "CleanOrder 0|1" that older saves and levels have after the prison and
+    //! torture data. Without such a line the stream is left where it was.
     //! \return False if the line is there but malformed.
-    bool importCleanOrderFromStream(std::istream& is);
+    bool skipLegacyCleanOrderLine(std::istream& is);
 
     /*! \brief Exports the headers needed to recreate the Room. It allows to extend Room as much as wanted.
      * The content of the Room will be exported by exportToPacket.

@@ -35,12 +35,10 @@
 #include <algorithm>
 #include <vector>
 
-//! \brief Rank of a room the keeper ordered to be cleaned: cleaned before every other room.
-static const int32_t ROOM_RANK_ORDER = 0;
 //! \brief Rank of the toilet room: cleaned before the other rooms of the same dirt stage.
-static const int32_t ROOM_RANK_TOILET = 1;
+static const int32_t ROOM_RANK_TOILET = 0;
 //! \brief Rank of every other room.
-static const int32_t ROOM_RANK_OTHER = 2;
+static const int32_t ROOM_RANK_OTHER = 1;
 
 CreatureActionSearchDirtToClean::CreatureActionSearchDirtToClean(Creature& creature) :
     CreatureAction(creature)
@@ -65,7 +63,7 @@ bool CreatureActionSearchDirtToClean::isPileCleanable(const Tile& tile)
     if(room == nullptr)
         return true;
 
-    return room->isCleanableByWorkers() || room->getCleanOrder();
+    return room->isCleanableByWorkers();
 }
 
 //! \brief Orders tiles with the most dirt first.
@@ -111,12 +109,9 @@ static Tile* findPileTile(Creature& creature, Tile* myTile)
     return bestTile;
 }
 
-//! \brief Tells how urgent the cleaning of a room is: ordered rooms first, then the toilet, then the others.
+//! \brief Tells how urgent the cleaning of a room is: the toilet first, then the others.
 static int32_t getRoomRank(const Room* room)
 {
-    if(room->getCleanOrder())
-        return ROOM_RANK_ORDER;
-
     if(room->isToiletRoom())
         return ROOM_RANK_TOILET;
 

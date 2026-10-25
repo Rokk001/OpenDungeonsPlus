@@ -59,15 +59,13 @@ workers clean as a side job. All numbers are keys of `config/global.cfg` (block 
 - A worker walks to the nearest pile, else the dirtiest tile of the nearest dirty room (the toilet room
   first), else a dirty corridor tile, and removes `ClaimRate x 100 x CleanRateFactor` dirt per turn
   (at most `CleaningMaxTurnsPerTile` turns per tile).
-- Prison, torture chamber and crypt are never cleaned by workers. The keeper can order one cleaning
-  of a prison or torture chamber with the button "Clean" in the window that opens when its tile is
-  clicked; the order ends when the room is clean.
+- Prison, torture chamber and crypt are never cleaned by anyone.
 
 ## Saves and tools
 
 - Creature streams hold an optional block `[Needs] <urge> <dirt> [/Needs]`; level and save files hold
   the optional sections `[Dirt]` (`x y dirt`) and `[DirtPiles]` (`kind creatureClass x y dirtLeft ageTurns`)
-  after the gift boxes; prison and torture rooms end with `CleanOrder <0|1>`. Files without them load.
+  after the gift boxes; the `CleanOrder <0|1>` line that prison and torture rooms once had after their data is read and ignored (nothing writes it any more). Files without them load.
 - `python tools/balance/dirt_values.py --check` recomputes the per-room keys and holds the config to
   them. The checks are `check_dirt_values.py`, `check_dirt_rules.py`, `check_dirt_streams.py`,
   `check_dirt_assets.py` and `check_toilet_room.py` in `source/tests`.

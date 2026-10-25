@@ -216,9 +216,7 @@ struct Room
     std::vector<Tile*> mCoveredTiles;
     RoomType mType;
     double notified;
-    bool mCleanOrder;
-    Room() : mType(RoomType::workshop), notified(0.0), mCleanOrder(false) {}
-    bool getCleanOrder() const { return mCleanOrder; }
+    Room() : mType(RoomType::workshop), notified(0.0) {}
     bool isCleanableByWorkers() const;
     RoomType getType() const { return mType; }
     void notifyDirtAdded(double added) { notified += added; }
@@ -432,9 +430,6 @@ static void checkPileCleaningRule()
         Room* room = makeRoom(map, 1, 1, 2, 2, blocked[i]);
         Tile* tile = map.getTile(1, 1);
         expect(!CreatureActionSearchDirtToClean::isPileCleanable(*tile), "a pile in prison, torture chamber or crypt is not cleaned");
-        room->mCleanOrder = true;
-        expect(CreatureActionSearchDirtToClean::isPileCleanable(*tile), "a keeper order makes the piles of that room cleanable");
-        room->mCleanOrder = false;
         for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mRoom = nullptr;
     }
     makeRoom(map, 4, 4, 2, 2, RoomType::workshop);
