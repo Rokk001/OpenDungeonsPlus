@@ -124,7 +124,7 @@ bool Creature::receiveGiftedPotion(std::unique_ptr<ItemInstance>& item)
     return false;
 }
 
-//! \brief Uses the same resource thresholds and combat-start rule for all seats and heroes.
+//! \brief Refills outside combat, gates resource drinks to combat and permits thawing on every turn for all seats.
 void Creature::decidePotion()
 {
     if(!getIsOnServerMap() || !isAlive() || !getIsOnMap())
@@ -189,12 +189,12 @@ void Creature::decidePotion()
         const std::string& kind = potion->getKind();
         const double hpShare = getMaxHp() > 0.0 ? getHP() / getMaxHp() : 1.0;
         const double manaShare = getMaxMana() > 0.0 ? getCurrentMana() / getMaxMana() : 1.0;
-        bool useful = (kind == "HealPercent" && hpShare < healBelow) ||
-            (kind == "FullRestore" && (hpShare < LIFESPRING_LOW_HP ||
+        bool useful = (kind == "HealPercent" && fighting && hpShare < healBelow) ||
+            (kind == "FullRestore" && fighting && (hpShare < LIFESPRING_LOW_HP ||
                 (hpShare < LIFESPRING_HP && manaShare < LIFESPRING_MANA))) ||
             (kind == "EndFreeze" && isFrozen()) ||
             (isPotionBuff(kind) && combatStart && !hasPotionEffect(kind));
-        if(kind == "ManaPercent" && manaShare < MANA_DRINK_SHARE)
+        if(kind == "ManaPercent" && fighting && manaShare < MANA_DRINK_SHARE)
         {
             const double after = std::min(getMaxMana(), getCurrentMana()+getMaxMana()*potion->getValue()/PERCENT);
             for(const CreatureSkillData& data : mSkillData)

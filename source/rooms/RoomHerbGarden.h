@@ -4,6 +4,7 @@
 #include "rooms/Room.h"
 #include <map>
 #include <string>
+#include <vector>
 
 //! \brief A bed's persistent herb and growth, retained when room tiles change owner.
 class HerbGardenTileData : public TileData
@@ -70,6 +71,12 @@ private:
     void syncPlant(Tile* tile, HerbGardenTileData& data);
     //! \brief Removes the supplementary plant object of one bed.
     void removePlant(Tile* tile);
+    //! \brief Rebuilds ground lamps between adjacent beds with two-tile spacing.
+    void syncLamps();
+    //! \brief Removes supplementary lamps before the garden changes ownership or disappears.
+    void removeLamps();
+    //! \brief Ground lamps are presentation only and are recreated from the covered beds.
+    std::vector<BuildingObject*> mLamps;
     //! \brief Supplementary plant objects and gardener reservations, keyed by their actual tiles.
     std::map<Tile*, BuildingObject*> mPlants;
     std::map<Creature*, Tile*> mGardeners;

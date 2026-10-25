@@ -3,8 +3,10 @@
 
 #include "rooms/Room.h"
 #include <cstdint>
+#include <cstddef>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 class PotionDefinition;
@@ -70,8 +72,16 @@ public:
     Tile* askSpotForCarriedEntity(GameEntity* carried) override;
     //! \brief Moves delivered recipe units into storage, leaving any excess in the bundle.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carried) override;
-    //! \brief Unions the ingredients of absorbed laboratories without discarding overflow.
+    //! \brief Unions ingredients and paused batches of absorbed laboratories without discarding overflow.
     void absorbRoom(Room* room) override;
+    //! \brief Divides stored herbs by transferred tile count, leaving integer remainders here.
+    void splitRoom(Room& room, const std::vector<Tile*>& tiles) override;
+    //! \brief Uses one stock snapshot for all pieces split off in the same operation.
+    void checkForSplit() override;
+    //! \brief Preserves a removed tile's reserved batch before its tile data is retired.
+    bool removeCoveredTile(Tile* tile) override;
+    //! \brief Restores paused batches after the cauldron layout has settled.
+    void updateActiveSpots(GameMap* map = nullptr) override;
     //! \brief Sends the owner's combined laboratory state to its human player.
     static void sendWindow(GameMap& map, Player& player);
     //! \brief Counts loose finished potions waiting in this seat's labs and treasuries.
@@ -85,9 +95,9 @@ protected:
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     //! \brief Releases a brewer before its physical cauldron is removed.
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
-    //! \brief Writes per-room herb storage after the existing room fields.
+    //! \brief Writes per-room herb storage and reserved paused batches after the existing room fields.
     void exportToStream(std::ostream& stream) const override;
-    //! \brief Reads optional herb storage without consuming a following room.
+    //! \brief Reads optional herb storage and paused batches without consuming a following room.
     bool importFromStream(std::istream& stream) override;
     //! \brief Saves per-cauldron progress and current brewer after the base tile record.
     void exportTileDataToStream(std::ostream& stream, Tile* tile, TileData* data) const override;
@@ -108,6 +118,15 @@ private:
     uint32_t finishedCount() const;
     //! \brief Emits a harmless busy-cauldron accident at the prescribed interval.
     void showBang();
+    //! \brief Moves a reserved tile batch into the room's persistent paused queue exactly once.
+    void preserveBatch(Tile* tile);
+    //! \brief Assigns paused batches to unoccupied real cauldrons without consuming herbs again.
+    void resumeBatches();
+    //! \brief Reserved recipe ids and elapsed work remain here while no cauldron is free.
+    std::vector<std::pair<std::string, double>> mPausedBatches;
+    //! \brief A transient split snapshot keeps all integer remainders in the original room.
+    std::map<std::string, uint32_t> mSplitHerbs;
+    std::size_t mSplitTiles = 0;
     //! \brief Stored ingredients, working assignments and cosmetic-only seconds to the next bang.
     std::map<std::string, uint32_t> mHerbs;
     std::map<Creature*, Tile*> mBrewers;

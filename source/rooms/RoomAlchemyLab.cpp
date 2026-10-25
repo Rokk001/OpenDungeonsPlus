@@ -138,7 +138,7 @@ BuildingObject* RoomAlchemyLab::notifyActiveSpotCreated(ActiveSpotPlace place, T
     return new BuildingObject(getGameMap(), *this, "StillShelf", *tile, angle, false);
 }
 
-//! \brief Frees a departing cauldron's assigned creature before removing the furniture.
+//! \brief Releases the brewer and preserves a departing cauldron's reserved batch.
 void RoomAlchemyLab::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
 {
     std::vector<Creature*> stopped;
@@ -147,6 +147,8 @@ void RoomAlchemyLab::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
             stopped.push_back(brewer.first);
     for(Creature* creature : stopped)
         creature->clearActionQueue();
+    if(place == activeSpotCenter)
+        preserveBatch(tile);
     Room::notifyActiveSpotRemoved(place, tile);
 }
 
@@ -404,6 +406,7 @@ void RoomAlchemyLab::notifyCarryingStateChanged(Creature* carrier, GameEntity* c
 void RoomAlchemyLab::doUpkeep()
 {
     Room::doUpkeep();
+    resumeBatches();
     if(mCoveredTiles.empty())
         return;
     for(Tile* tile : mCentralActiveSpotTiles)
@@ -494,7 +497,7 @@ void RoomAlchemyLab::sendWindow(GameMap& map, Player& player)
     ODServer::getSingleton().sendAsyncMsg(notification);
 }
 
-//! \brief Saves storage after the existing room record; per-cauldron fields live on their tile lines.
+//! \brief Saves herb storage and paused batches after the room record; active batches stay on tile lines.
 void RoomAlchemyLab::exportToStream(std::ostream& stream) const
 {
     Room::exportToStream(stream);
@@ -502,9 +505,13 @@ void RoomAlchemyLab::exportToStream(std::ostream& stream) const
     for(const std::pair<const std::string, uint32_t>& herb : mHerbs)
         stream << ' ' << herb.first << ' ' << herb.second;
     stream << " [/HerbStock]\n";
+    stream << "[PausedBrews] " << mPausedBatches.size();
+    for(const std::pair<std::string, double>& batch : mPausedBatches)
+        stream << ' ' << batch.first << ' ' << batch.second;
+    stream << " [/PausedBrews]\n";
 }
 
-//! \brief Reads optional storage while retaining the following room's input position for older records.
+//! \brief Reads optional herb storage and paused batches without consuming the following room in older saves.
 bool RoomAlchemyLab::importFromStream(std::istream& stream)
 {
     if(!Room::importFromStream(stream))
@@ -532,6 +539,29 @@ bool RoomAlchemyLab::importFromStream(std::istream& stream)
     if(!(stream >> tag) || tag != "[/HerbStock]")
         return false;
     mHerbs = herbs;
+    const std::streampos pausedPosition = stream.tellg();
+    if(!(stream >> tag) || tag != "[PausedBrews]")
+    {
+        stream.clear();
+        stream.seekg(pausedPosition);
+        return true;
+    }
+    if(!(stream >> count))
+        return false;
+    std::vector<std::pair<std::string, double>> batches;
+    for(uint32_t index = 0; index < count; ++index)
+    {
+        std::string potion;
+        double done = 0.0;
+        if(!(stream >> potion >> done) || !std::isfinite(done) || done < 0.0 ||
+           ConfigManager::getSingleton().getPotion(potion) == nullptr)
+            return false;
+        batches.push_back(std::make_pair(potion, done));
+    }
+    if(!(stream >> tag) || tag != "[/PausedBrews]")
+        return false;
+    mPausedBatches.insert(mPausedBatches.end(), batches.begin(), batches.end());
+    resumeBatches();
     return true;
 }
 
@@ -544,7 +574,7 @@ void RoomAlchemyLab::exportTileDataToStream(std::ostream& stream, Tile* tile, Ti
         << ' ' << (data.mBrewer.empty() ? "none" : data.mBrewer) << ' ' << data.mReserved << " [/Cauldron]";
 }
 
-//! \brief Accepts optional cauldron state and validates complete recipe data before adopting it.
+//! \brief Loads cauldron progress and releases saved brewer names until a new work action reserves them.
 bool RoomAlchemyLab::importTileDataFromStream(std::istream& stream, Tile* tile, TileData* tileData)
 {
     if(!Room::importTileDataFromStream(stream, tile, tileData))
@@ -563,18 +593,122 @@ bool RoomAlchemyLab::importTileDataFromStream(std::istream& stream, Tile* tile, 
         return false;
     AlchemyLabTileData& destination = *static_cast<AlchemyLabTileData*>(tileData);
     destination.mPotion = data.mPotion == "none" ? "" : data.mPotion;
-    destination.mBrewer = data.mBrewer == "none" ? "" : data.mBrewer;
+    destination.mBrewer.clear();
     destination.mDone = data.mDone;
     destination.mReserved = data.mReserved;
     return true;
 }
 
-//! \brief Keeps every ingredient when laboratories merge, even when the resulting storage exceeds its limit.
+//! \brief Keeps every ingredient and paused batch when laboratories merge, including storage overflow.
 void RoomAlchemyLab::absorbRoom(Room* room)
 {
     RoomAlchemyLab* lab = static_cast<RoomAlchemyLab*>(room);
     for(const std::pair<const std::string, uint32_t>& herb : lab->mHerbs)
         mHerbs[herb.first] += herb.second;
     lab->mHerbs.clear();
+    mPausedBatches.insert(mPausedBatches.end(), lab->mPausedBatches.begin(), lab->mPausedBatches.end());
+    lab->mPausedBatches.clear();
     Room::absorbRoom(room);
+}
+
+//! \brief Retains reserved ingredients and completed work when a cauldron or its tile disappears.
+void RoomAlchemyLab::preserveBatch(Tile* tile)
+{
+    std::map<Tile*, TileData*>::iterator found = mTileData.find(tile);
+    if(found == mTileData.end())
+        return;
+    AlchemyLabTileData& data = *static_cast<AlchemyLabTileData*>(found->second);
+    if(!data.mReserved)
+        return;
+    mPausedBatches.push_back(std::make_pair(data.mPotion, data.mDone));
+    data.mPotion.clear();
+    data.mDone = 0.0;
+    data.mReserved = false;
+    data.mBrewer.clear();
+}
+
+//! \brief Resumes reserved batches on the next free cauldrons without charging their herbs twice.
+void RoomAlchemyLab::resumeBatches()
+{
+    for(Tile* tile : mCentralActiveSpotTiles)
+    {
+        if(mPausedBatches.empty())
+            break;
+        BuildingObject* object = getBuildingObjectFromTile(tile);
+        if(tile->getCoveringRoom() != this || object == nullptr || object->getMeshName() != "Cauldron")
+            continue;
+        AlchemyLabTileData& data = *static_cast<AlchemyLabTileData*>(mTileData[tile]);
+        if(data.mReserved || !data.mBrewer.empty())
+            continue;
+        data.mPotion = mPausedBatches.front().first;
+        data.mDone = mPausedBatches.front().second;
+        data.mReserved = true;
+        mPausedBatches.erase(mPausedBatches.begin());
+    }
+}
+
+//! \brief Rehomes batches after the inherited layout rebuild leaves only the real current cauldrons.
+void RoomAlchemyLab::updateActiveSpots(GameMap* map)
+{
+    Room::updateActiveSpots(map);
+    if(!getIsOnServerMap())
+        return;
+    for(Tile* tile : mCoveredTiles)
+        if(std::find(mCentralActiveSpotTiles.begin(), mCentralActiveSpotTiles.end(), tile) == mCentralActiveSpotTiles.end())
+            preserveBatch(tile);
+    resumeBatches();
+}
+
+//! \brief Saves a disappearing tile's batch before the inherited removal retires its tile data.
+bool RoomAlchemyLab::removeCoveredTile(Tile* tile)
+{
+    if(std::find(mCoveredTiles.begin(), mCoveredTiles.end(), tile) == mCoveredTiles.end())
+        return false;
+    preserveBatch(tile);
+    return Room::removeCoveredTile(tile);
+}
+
+//! \brief Uses the same original stock and tile denominator for every piece in a multi-part split.
+void RoomAlchemyLab::checkForSplit()
+{
+    mSplitHerbs = mHerbs;
+    mSplitTiles = mCoveredTiles.size();
+    Room::checkForSplit();
+    mSplitHerbs.clear();
+    mSplitTiles = 0;
+}
+
+//! \brief Shares herbs by tile count and removes old copies of the batches that moved with cloned tiles.
+void RoomAlchemyLab::splitRoom(Room& room, const std::vector<Tile*>& tiles)
+{
+    RoomAlchemyLab& lab = static_cast<RoomAlchemyLab&>(room);
+    const size_t totalTiles = mSplitTiles == 0 ? mCoveredTiles.size()+tiles.size() : mSplitTiles;
+    const std::map<std::string, uint32_t>& stock = mSplitTiles == 0 ? mHerbs : mSplitHerbs;
+    if(totalTiles != 0)
+        for(const std::pair<const std::string, uint32_t>& herb : stock)
+        {
+            const uint32_t share = static_cast<uint32_t>(static_cast<uint64_t>(herb.second)*tiles.size()/totalTiles);
+            lab.mHerbs[herb.first] += share;
+            mHerbs[herb.first] -= share;
+        }
+    std::vector<Creature*> stopped;
+    for(const std::pair<Creature* const, Tile*>& brewer : mBrewers)
+        if(std::find(tiles.begin(), tiles.end(), brewer.second) != tiles.end())
+            stopped.push_back(brewer.first);
+    for(Creature* creature : stopped)
+        creature->clearActionQueue();
+    for(Tile* tile : tiles)
+    {
+        AlchemyLabTileData& old = *static_cast<AlchemyLabTileData*>(mTileData[tile]);
+        old.mPotion.clear();
+        old.mBrewer.clear();
+        old.mDone = 0.0;
+        old.mReserved = false;
+        static_cast<AlchemyLabTileData*>(lab.mTileData[tile])->mBrewer.clear();
+    }
+    if(mCoveredTiles.empty())
+    {
+        lab.mPausedBatches.insert(lab.mPausedBatches.end(), mPausedBatches.begin(), mPausedBatches.end());
+        mPausedBatches.clear();
+    }
 }
