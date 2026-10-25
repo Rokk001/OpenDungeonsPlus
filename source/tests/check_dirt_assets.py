@@ -116,13 +116,24 @@ files = ['models/Pile_Orc.mesh', 'assets-src/dirt/Pile_Orc.blend', 'materials/te
          'sounds/Spatial/Rooms/Toilet/Flush/FxToiletFlush01.ogg', 'sounds/Spatial/Rooms/Toilet/Drip/FxToiletDrip01.ogg']
 for path in files:
     assert credited(path), 'CREDITS has no row for ' + path
-assert re.search(r'ODIcons\.png \(ToiletButton\)', credits), 'CREDITS row for the toilet icon'
+assert re.search(r'^gui/ODIcons\.png \(ToiletButton\)', credits, re.M), 'CREDITS row for the toilet icon'
 for skeleton in sorted(set(skeletons.values())):
     assert re.search(r'^models/' + re.escape(skeleton) + r' \(clip', credits, re.M | re.I), 'CREDITS has no row for the clip in ' + skeleton
 # The floor and wall pieces of the toilet room
 for mask in range(16):
     name = 'Toilet' + format(mask, '04b')
     assert (root / 'materials' / 'textures' / (name + '.png')).is_file(), name + '.png missing'
-assert credited('materials/textures/Toilet0000.png') or 'Toilet' in credits, 'CREDITS row for the toilet floor textures'
+# The credits must hold a row that names exactly the toilet floor pattern and its normal maps (no looser fallback), and
+# every piece and normal map must be covered by a pattern of such a row
+toilet_row = [line for line in credit_lines if line.startswith('materials/textures/Toilet????.png')]
+assert len(toilet_row) == 1, 'CREDITS needs exactly one row that starts with the pattern materials/textures/Toilet????.png'
+assert 'materials/textures/Toilet????Normal.png' in toilet_row[0].split('  ')[0], 'the toilet row must also name the Normal variants'
+toilet_patterns = [part.strip() for part in re.split(r'\s{2,}', toilet_row[0].strip())[0].split(',')]
+for mask in range(16):
+    for suffix in ('', 'Normal'):
+        piece = 'materials/textures/Toilet' + format(mask, '04b') + suffix + '.png'
+        assert (root / piece).is_file(), piece + ' missing'
+        assert any(fnmatch.fnmatchcase(piece.lower(), pattern.lower()) for pattern in toilet_patterns), 'the toilet row does not cover ' + piece
+assert credited('materials/scripts/ToiletFloor.material'), 'CREDITS has no row for the toilet floor material'
 
 print('dirt assets ok')

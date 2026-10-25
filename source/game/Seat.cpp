@@ -22,6 +22,7 @@
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "creatureaction/CreatureActionSearchDirtToClean.h"
 #include "entities/DirtPileEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
@@ -2355,7 +2356,7 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
     os << goldDensity;
 }
 
-//! \brief Looks for a pile first, then for a room that needs cleaning.
+//! \brief Looks for a pile first (not in rooms workers never clean), then for a room that needs cleaning.
 bool Seat::hasDirtToClean() const
 {
     if(mGameMap == nullptr)
@@ -2371,7 +2372,7 @@ bool Seat::hasDirtToClean() const
             continue;
 
         Tile* tile = dirtPile->getPositionTile();
-        if((tile != nullptr) && (tile->getSeat() == this))
+        if((tile != nullptr) && (tile->getSeat() == this) && CreatureActionSearchDirtToClean::isPileCleanable(*tile))
             return true;
     }
 
