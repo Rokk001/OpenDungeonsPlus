@@ -1,0 +1,205 @@
+// Original textured wood, metal, stone and figure surfaces for the tavern room.
+
+material TavernWood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernWood.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernBrass
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernBrass.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernStone
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernStone.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernIron
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernIron.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernCloth
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernCloth.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernHood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernHood.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernSkin
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernSkin.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernFoam
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernFoam.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernSign
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            texture_unit
+            {
+                texture TavernSign.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material TavernVomit
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12.5
+            scene_blend alpha_blend
+            depth_write off
+            cull_hardware none
+            depth_bias 1
+            texture_unit
+            {
+                texture TavernVomit.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}

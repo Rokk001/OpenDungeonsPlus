@@ -1472,3 +1472,46 @@ docs/design/ingame-gui/vorschlag-A-steuerungseinstellungen.png	AI-generated with
 docs/design/ingame-gui/vorschlag-A-spieleinstellungen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
 docs/design/ingame-gui/vorschlag-A-neustart-bestaetigung.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
 shaders/MenuSky.vert, shaders/MenuSky.frag	Original project code	GPLv3+	Self-lit cloudy menu atmosphere and lunar surface shaders.
+
+== Tavern sound recordings ==
+sounds/Rooms/Tavern/Pour.ogg             zembacraftworks          CC0 1.0                 "Pouring a Beer from the Tap", https://freesound.org/people/zembacraftworks/sounds/428334/ ; real HQ recording preview, cut 0-3 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Rooms/Tavern/Murmur.ogg           kyles                    CC0 1.0                 "crowd int murmur bar pub comedy club roomy NYC.flac", https://freesound.org/people/kyles/sounds/455732/ ; real HQ recording preview, cut 0-20 s, 1-s loop crossfade, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Rooms/Tavern/Clink.ogg            EpicWizard               CC0 1.0                 "Drinking Glasses contact (Clink)", https://freesound.org/people/EpicWizard/sounds/325195/ ; real HQ recording preview, cut 0-1 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Creatures/Default/Slap.ogg        Windwalk_Entertainment   CC0 1.0                 "Huge Slap in the Face", https://freesound.org/people/Windwalk_Entertainment/sounds/564230/ ; same recording ID 564230, current account njjjjjjjjjjjjjjjjjjjjjjjj; whole real HQ recording preview, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Creatures/Default/Cheer.ogg       qubodup                  CC0 1.0                 "Short Crowd Cheer.flac", https://freesound.org/people/qubodup/sounds/182571/ ; real HQ recording preview, cut 0-2.5 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+
+== Tavern original visual assets ==
+assets-src/dirt/Vomit.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+assets-src/rooms/tavern/DuelBird.png    AI-generated with Codex    GPLv3+    Original painted yellow bird sprite source, 2026-10-25
+assets-src/rooms/tavern/Innkeeper.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+assets-src/rooms/tavern/TavernCounter.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+assets-src/rooms/tavern/TavernKeg.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+assets-src/rooms/tavern/TavernMug.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+assets-src/rooms/tavern/TavernTable.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+materials/scripts/TavernEffects.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
+materials/scripts/TavernFloor.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
+materials/scripts/TavernObjects.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
+materials/scripts/TavernWall.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
+materials/textures/tavern/DuelBird.png    AI-generated with Codex    GPLv3+    Three-bird orbit atlas assembled from the original painted source, 64 phases, 2026-10-25
+materials/textures/tavern/TavernBrass.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernCloth.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernFloor.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernFloorNormal.png    AI-generated with Codex    GPLv3+    Original tangent-space normal map from the matching tavern surface height field, 2026-10-25
+materials/textures/tavern/TavernFoam.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernHood.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernIron.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernSign.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernSkin.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernStone.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernVomit.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernWall.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernWallNormal.png    AI-generated with Codex    GPLv3+    Original tangent-space normal map from the matching tavern surface height field, 2026-10-25
+materials/textures/tavern/TavernWood.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+models/Innkeeper.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/Innkeeper.skeleton    AI-generated with Codex    GPLv3+    Original Innkeeper rig and Idle, Pour and Cheer animation clips, 2026-10-25
+models/TavernCounter.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/TavernKeg.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/TavernMug.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/TavernTable.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/Vomit.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+particles/Tavern.particle    AI-generated with Codex    GPLv3+    New standalone TavernSmoke and DuelBirds asset definitions, existing particle files unchanged, 2026-10-25

@@ -1,0 +1,65 @@
+// A quiet continuous plume placed above the tavern counter's pipe.
+particle_system TavernSmoke
+{
+    material        ReactionParticleSmoke
+    point_rendering false
+    particle_width  0.13
+    particle_height 0.13
+    cull_each       false
+    quota           12
+    billboard_type  point
+
+    emitter Point
+    {
+        angle          12
+        colour         0.35 0.32 0.28 0.32
+        emission_rate  3
+        time_to_live   3.0
+        direction      0 0 1
+        velocity       0.12
+        position       0 0 0.75
+    }
+
+    affector Scaler
+    {
+        rate 0.06
+    }
+
+    affector ColourFader
+    {
+        alpha -0.11
+    }
+}
+
+// Attach this system to the creature's head node; the effect sits 0.3 tiles above it.
+// One billboard carries three painted bird sprites around an empty centre, not a glowing ring.
+particle_system DuelBirds
+{
+    material            TavernDuelBirds
+    point_rendering     false
+    particle_width      0.80
+    particle_height     0.80
+    cull_each           false
+    quota               1
+    billboard_type      point
+    texture_sheet_size  8 8
+
+    emitter Point
+    {
+        angle          0
+        colour         1 1 1 1
+        emission_rate  32
+        time_to_live   2.0
+        direction      0 0 1
+        velocity       0
+        position       0 0 0.3
+    }
+
+    affector TextureAnimator
+    {
+        texcoord_start  0
+        texcoord_count  64
+        duration        2.0
+        random_offset   false
+    }
+}
