@@ -124,7 +124,7 @@ bool Creature::receiveGiftedPotion(std::unique_ptr<ItemInstance>& item)
     return false;
 }
 
-//! \brief Refills outside combat, gates resource drinks to combat and permits thawing on every turn for all seats.
+//! \brief Refills outside combat, drinks resources and buffs only in actual combat, and permits thawing on every turn.
 void Creature::decidePotion()
 {
     if(!getIsOnServerMap() || !isAlive() || !getIsOnMap())
@@ -176,8 +176,9 @@ void Creature::decidePotion()
         if(enemyInRange)
             break;
     }
-    const bool combatStart = enemyInRange && !mPotionEnemyInRange;
-    mPotionEnemyInRange = enemyInRange;
+    const bool combatRange = fighting && enemyInRange;
+    const bool combatStart = combatRange && !mPotionEnemyInRange;
+    mPotionEnemyInRange = combatRange;
     const double healBelow = ConfigManager::getSingleton().getItemSetting("Potions", "PotionDrinkHpBelow");
     for(std::unique_ptr<ItemInstance>& slot : mPotionSlots)
     {
