@@ -41,26 +41,26 @@ function Get-ReleaseCompilerArgs {
     $releaseSource = Join-Path (Split-Path (Split-Path (Split-Path $ReleaseProject))) 'source'
     $result = New-Object System.Collections.ArrayList
     [void]$result.Add('/c'); [void]$result.Add('/nologo')
-    foreach ($inc in ($cl.AdditionalIncludeDirectories.InnerText -split ';')) {
+    foreach ($inc in ($cl.AdditionalIncludeDirectories -split ';')) {
         if ($inc -eq '' -or $inc -like '%(*') { continue }
         if ($inc.TrimEnd('\') -ieq $releaseSource.TrimEnd('\')) { $inc = "$wt\source" }
         [void]$result.Add('/I' + (Format-RspArg $inc))
     }
-    foreach ($def in ($cl.PreprocessorDefinitions.InnerText -split ';(?=[A-Za-z_])')) {
+    foreach ($def in ($cl.PreprocessorDefinitions -split ';(?=[A-Za-z_])')) {
         if ($def -eq '' -or $def -like '%(*') { continue }
         [void]$result.Add('/D' + (Format-RspArg $def))
     }
     # Options set as project properties
-    if ($cl.LanguageStandard.InnerText -eq 'stdcpp17') { [void]$result.Add('/std:c++17') }
-    if ($cl.ExceptionHandling.InnerText -eq 'Sync') { [void]$result.Add('/EHsc') }
-    if ($cl.Optimization.InnerText -eq 'MaxSpeed') { [void]$result.Add('/O2') }
-    if ($cl.RuntimeLibrary.InnerText -eq 'MultiThreadedDLL') { [void]$result.Add('/MD') }
-    if ($cl.FloatingPointModel.InnerText -eq 'Fast') { [void]$result.Add('/fp:fast') }
-    if ($cl.FunctionLevelLinking.InnerText -eq 'true') { [void]$result.Add('/Gy') }
-    if ($cl.WarningLevel.InnerText -eq 'Level3') { [void]$result.Add('/W3') }
-    if ($cl.ExternalWarningLevel.InnerText -eq 'TurnOffAllWarnings') { [void]$result.Add('/external:W0') }
+    if ($cl.LanguageStandard -eq 'stdcpp17') { [void]$result.Add('/std:c++17') }
+    if ($cl.ExceptionHandling -eq 'Sync') { [void]$result.Add('/EHsc') }
+    if ($cl.Optimization -eq 'MaxSpeed') { [void]$result.Add('/O2') }
+    if ($cl.RuntimeLibrary -eq 'MultiThreadedDLL') { [void]$result.Add('/MD') }
+    if ($cl.FloatingPointModel -eq 'Fast') { [void]$result.Add('/fp:fast') }
+    if ($cl.FunctionLevelLinking -eq 'true') { [void]$result.Add('/Gy') }
+    if ($cl.WarningLevel -eq 'Level3') { [void]$result.Add('/W3') }
+    if ($cl.ExternalWarningLevel -eq 'TurnOffAllWarnings') { [void]$result.Add('/external:W0') }
     # Free-form options (the /external:I entries)
-    foreach ($m in [regex]::Matches($cl.AdditionalOptions.InnerText, '/external:I\s+"([^"]+)"')) {
+    foreach ($m in [regex]::Matches($cl.AdditionalOptions, '/external:I\s+"([^"]+)"')) {
         [void]$result.Add('/external:I ' + (Format-RspArg $m.Groups[1].Value))
     }
     return $result
@@ -69,17 +69,17 @@ function Get-ReleaseCompilerArgs {
 # Wait while a full build runs, then require 2 GB free RAM
 $deadline = (Get-Date).AddMinutes($MaxWaitMinutes)
 while ((Get-FullBuildCount) -gt 0) {
-    if ((Get-Date) -gt $deadline) { "WAIT_TIMEOUT: a full build still runs" | Out-File $log; exit 4 }
+    if ((Get-Date) -gt $deadline) { "WAIT_TIMEOUT: a full build still runs" | Out-File -Encoding ascii $log; exit 4 }
     Write-Host 'waiting: a full build is running'
     Start-Sleep -Seconds 30
 }
 $free = [math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024)
-if ($free -lt 2048) { "RAM too low: $free MB" | Out-File $log; exit 3 }
+if ($free -lt 2048) { "RAM too low: $free MB" | Out-File -Encoding ascii $log; exit 3 }
 
 $files = @(& git -C $wt diff --name-only --diff-filter=AM "$Base...HEAD" -- source | Where-Object { $_ -like '*.cpp' })
 $rsp = "$outDir\args.rsp"
 (Get-ReleaseCompilerArgs) | Out-File -Encoding ascii $rsp
-"compile check of $($files.Count) file(s) against $Base" | Out-File $log
+"compile check of $($files.Count) file(s) against $Base" | Out-File -Encoding ascii $log
 $failed = 0
 foreach ($f in $files) {
     $start = Get-Date
@@ -88,13 +88,13 @@ foreach ($f in $files) {
     $output = & cmd /c $cmd 2>&1
     $code = $LASTEXITCODE
     $secs = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
-    "$f exit=$code seconds=$secs" | Out-File -Append $log
+    "$f exit=$code seconds=$secs" | Out-File -Append -Encoding ascii $log
     if ($code -ne 0) {
         $failed++
-        $output | Select-String 'error' | ForEach-Object { $_.Line } | Out-File -Append $log
+        $output | Select-String 'error' | ForEach-Object { $_.Line } | Out-File -Append -Encoding ascii $log
     }
 }
-"files=$($files.Count) failed=$failed" | Out-File -Append $log
+"files=$($files.Count) failed=$failed" | Out-File -Append -Encoding ascii $log
 Get-Content $log | Write-Host
 if ($failed -gt 0) { exit 1 }
 exit 0
