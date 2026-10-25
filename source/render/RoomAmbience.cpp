@@ -319,6 +319,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
 
 RoomAmbience::~RoomAmbience()
 {
+    stopSoundLoops();
 }
 
 bool RoomAmbience::reloadConfig()
@@ -711,6 +712,7 @@ void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
 void RoomAmbience::stopAll()
 {
     mWallTorches.stopAll();
+    stopSoundLoops();
     if(RenderManager::getSingletonPtr() != nullptr)
     {
         for(std::map<std::string, Emitter>::iterator it = mEmitters.begin(); it != mEmitters.end(); ++it)
@@ -1901,12 +1903,29 @@ void RoomAmbience::playClips()
 {
     const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
     uint32_t nbPlayed = 0;
+    // The sound loops that are wanted in this scan; the others are stopped at the end
+    std::set<std::string> wantedLoops;
     for(const Candidate& candidate : mClipCandidates)
     {
         const AmbienceEffect& effect = effects[candidate.mEffect];
         bool isSound = (effect.mKind == AmbienceKind::sound);
         if(isSound ? effect.mFamily.empty() : effect.mClips.empty())
             continue;
+
+        if(effect.mLoop && isSound)
+        {
+            // A sound that runs as long as the condition holds: started once at the object, not by a timer
+            std::string loopKey = candidate.mTarget + "|" + effect.mName;
+            wantedLoops.insert(loopKey);
+            if((mSoundLoops.find(loopKey) == mSoundLoops.end()) && (SoundEffectsManager::getSingletonPtr() != nullptr))
+            {
+                uint32_t handle = SoundEffectsManager::getSingleton().startSpatialLoop(effect.mFamily,
+                    candidate.mPosition.x, candidate.mPosition.y);
+                if(handle != 0)
+                    mSoundLoops[loopKey] = handle;
+            }
+            continue;
+        }
 
         if(effect.mLoop && !isSound)
         {
@@ -1962,6 +1981,30 @@ void RoomAmbience::playClips()
         timerIt->second = mClock + effect.mEvery * next(mRandom);
         ++nbPlayed;
     }
+
+    // A loop whose condition no longer holds (or whose object is out of range or gone) ends
+    for(std::map<std::string, uint32_t>::iterator loopIt = mSoundLoops.begin(); loopIt != mSoundLoops.end();)
+    {
+        if(wantedLoops.find(loopIt->first) != wantedLoops.end())
+        {
+            ++loopIt;
+            continue;
+        }
+
+        if(SoundEffectsManager::getSingletonPtr() != nullptr)
+            SoundEffectsManager::getSingleton().stopSpatialLoop(loopIt->second);
+        mSoundLoops.erase(loopIt++);
+    }
+}
+
+void RoomAmbience::stopSoundLoops()
+{
+    if(SoundEffectsManager::getSingletonPtr() != nullptr)
+    {
+        for(std::map<std::string, uint32_t>::iterator it = mSoundLoops.begin(); it != mSoundLoops.end(); ++it)
+            SoundEffectsManager::getSingleton().stopSpatialLoop(it->second);
+    }
+    mSoundLoops.clear();
 }
 
 void RoomAmbience::stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect)

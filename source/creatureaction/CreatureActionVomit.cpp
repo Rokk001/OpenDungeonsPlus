@@ -21,6 +21,8 @@
 #include "entities/DirtPileEntity.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
+#include "network/CosmeticEvent.h"
+#include "rooms/RoomTavern.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
@@ -54,6 +56,7 @@ bool CreatureActionVomit::handleVomit()
 
     // Done: the vomit stays on the floor until a worker cleans it
     DirtPileEntity::createOnTile(mCreature.getGameMap(), myTile, DirtPileKind::vomit, std::string());
+    RoomTavern::sendTavernEvent(mCreature, static_cast<int32_t>(CosmeticTavernKind::vomit), nullptr);
     mCreature.setAnimationState(EntityAnimation::idle_anim, true);
     mCreature.popAction();
     return true;
