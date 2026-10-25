@@ -54,6 +54,10 @@ room_cpp = read('source/rooms/Room.cpp')
 pile_cpp = read('source/entities/DirtPileEntity.cpp')
 mood_cpp = read('source/creaturemood/CreatureMoodDirt.cpp')
 creature_cpp = read('source/entities/Creature.cpp')
+search_cpp = read('source/creatureaction/CreatureActionSearchDirtToClean.cpp')
+library_cpp = read('source/rooms/RoomLibrary.cpp')
+workshop_cpp = read('source/rooms/RoomWorkshop.cpp')
+seat_cpp = read('source/game/Seat.cpp')
 
 # ---- Source wiring -----------------------------------------------------------------------------------------------
 # Urge: grows per turn for creatures with a seat that is not rogue, from UrgeSeek the creature looks for a toilet,
@@ -80,6 +84,12 @@ for path, token in [('source/rooms/RoomLibrary.cpp', 'getDirtOutputFactor()'), (
                     ('source/rooms/RoomTorture.cpp', 'getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3")')]:
     assert token in read(path), path + ' must use ' + token
 assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor())' in creature_cpp, 'arena experience per hit'
+# Piles in rooms workers never clean: the search and the seat check use the same rule
+assert 'isPileCleanable(*tile)' in extract(search_cpp, 'static Tile* findPileTile('), 'the pile search must use the shared rule'
+assert 'isPileCleanable(*tile)' in extract(seat_cpp, 'bool Seat::hasDirtToClean() const'), 'hasDirtToClean must use the shared rule'
+# Library and workshop points keep the fraction of the dirt factor
+for text, member in [(library_cpp, 'mSkillPointsRemainder'), (workshop_cpp, 'mPointsRemainder')]:
+    assert 'takeWholeWorkPoints(' in text and member in text, 'work points must carry the remainder in ' + member
 # Rooms without output effect do not read the factor (crypt, treasury, portals, heart, bridges, toilet)
 for path in ('RoomCrypt', 'RoomTreasury', 'RoomPortal', 'RoomPortalWave', 'RoomDungeonTemple', 'RoomBridge', 'RoomToilet'):
     candidate = root / 'source' / 'rooms' / (path + '.cpp')
@@ -206,7 +216,10 @@ struct Room
     std::vector<Tile*> mCoveredTiles;
     RoomType mType;
     double notified;
-    Room() : mType(RoomType::workshop), notified(0.0) {}
+    bool mCleanOrder;
+    Room() : mType(RoomType::workshop), notified(0.0), mCleanOrder(false) {}
+    bool getCleanOrder() const { return mCleanOrder; }
+    bool isCleanableByWorkers() const;
     RoomType getType() const { return mType; }
     void notifyDirtAdded(double added) { notified += added; }
     double getDirtMean() const;
@@ -215,6 +228,8 @@ struct Room
     double getDirtStageFactor(const std::string& stage2Key, const std::string& stage3Key) const;
     static void addUseDirt(const Creature& creature, Tile* tile, const std::string& key);
 };
+
+struct CreatureActionSearchDirtToClean { static bool isPileCleanable(const Tile& tile); };
 
 struct GameMap
 {
@@ -297,6 +312,8 @@ struct Creature
 @@MAXDIRT@@
 @@TILE_FUNCTIONS@@
 @@ROOM_FUNCTIONS@@
+@@SEARCH_FUNCTIONS@@
+@@WORKPOINT_FUNCTIONS@@
 @@PILE_FUNCTIONS@@
 @@CREATURE_FUNCTIONS@@
 void Creature::fightEndBlock()
@@ -404,6 +421,48 @@ static void checkUseDirt()
     Room::addUseDirt(creature, tile, "CryptDirtPerNothing");
     expectNear(tile->getDirt(), before, "a room without a key makes no dirt");
     Room::addUseDirt(creature, nullptr, "WorkshopDirtPerWork");
+}
+
+static void checkPileCleaningRule()
+{
+    GameMap map(12, 12); map.link();
+    RoomType blocked[] = {RoomType::prison, RoomType::torture, RoomType::crypt};
+    for(unsigned i = 0; i < 3; ++i)
+    {
+        Room* room = makeRoom(map, 1, 1, 2, 2, blocked[i]);
+        Tile* tile = map.getTile(1, 1);
+        expect(!CreatureActionSearchDirtToClean::isPileCleanable(*tile), "a pile in prison, torture chamber or crypt is not cleaned");
+        room->mCleanOrder = true;
+        expect(CreatureActionSearchDirtToClean::isPileCleanable(*tile), "a keeper order makes the piles of that room cleanable");
+        room->mCleanOrder = false;
+        for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mRoom = nullptr;
+    }
+    makeRoom(map, 4, 4, 2, 2, RoomType::workshop);
+    expect(CreatureActionSearchDirtToClean::isPileCleanable(*map.getTile(4, 4)), "a pile in a workshop is cleaned");
+    expect(CreatureActionSearchDirtToClean::isPileCleanable(*map.getTile(8, 8)), "a pile in a corridor is cleaned");
+}
+
+static void checkWorkPoints()
+{
+    // Stage 2 and stage 3 factors over four work turns of 5.0 base points lose no fraction
+    double factors[] = {0.75, 0.5};
+    int expected[] = {15, 10};
+    for(unsigned f = 0; f < 2; ++f)
+    {
+        double remainderLibrary = 0.0, remainderWorkshop = 0.0;
+        int totalLibrary = 0, totalWorkshop = 0;
+        for(int turn = 0; turn < 4; ++turn)
+        {
+            totalLibrary += libraryTakeWholeWorkPoints(5.0, factors[f], remainderLibrary);
+            totalWorkshop += workshopTakeWholeWorkPoints(5.0, factors[f], remainderWorkshop);
+        }
+        expect(totalLibrary == expected[f], "library points over 4 turns at factor " + std::to_string(factors[f]) + " got " + std::to_string(totalLibrary));
+        expect(totalWorkshop == expected[f], "workshop points over 4 turns at factor " + std::to_string(factors[f]) + " got " + std::to_string(totalWorkshop));
+    }
+    // Stage 1 keeps the plain truncation without carrying anything
+    double remainder = 0.0;
+    expect(libraryTakeWholeWorkPoints(2.9, 1.0, remainder) == 2 && remainder == 0.0, "library stage 1 truncates as before");
+    expect(workshopTakeWholeWorkPoints(2.9, 1.0, remainder) == 2 && remainder == 0.0, "workshop stage 1 truncates as before");
 }
 
 static void checkPiles()
@@ -567,6 +626,8 @@ int main()
     loadConfig();
     checkTile();
     checkStages();
+    checkPileCleaningRule();
+    checkWorkPoints();
     checkUseDirt();
     checkPiles();
     checkMood();
@@ -595,8 +656,11 @@ replacements = {
         'bool Tile::canCarryDirt() const', 'void Tile::addDirt(double amount)', 'void Tile::cleanDirt(double amount)',
         'void Tile::setDirt(double dirt)']),
     '@@ROOM_FUNCTIONS@@': '\n'.join(extract(room_cpp, h) for h in [
-        'void Room::addUseDirt(', 'double Room::getDirtMean() const', 'uint32_t Room::getDirtStage() const',
+        'bool Room::isCleanableByWorkers() const', 'void Room::addUseDirt(', 'double Room::getDirtMean() const', 'uint32_t Room::getDirtStage() const',
         'double Room::getDirtOutputFactor() const', 'double Room::getDirtStageFactor(']),
+    '@@SEARCH_FUNCTIONS@@': extract(search_cpp, 'bool CreatureActionSearchDirtToClean::isPileCleanable('),
+    '@@WORKPOINT_FUNCTIONS@@': extract(library_cpp, 'static int32_t takeWholeWorkPoints(').replace('takeWholeWorkPoints', 'libraryTakeWholeWorkPoints') + '\n' +
+        extract(workshop_cpp, 'static int32_t takeWholeWorkPoints(').replace('takeWholeWorkPoints', 'workshopTakeWholeWorkPoints'),
     '@@PILE_FUNCTIONS@@': '\n'.join(extract(pile_cpp, h) for h in [
         'void DirtPileEntity::doUpkeep()', 'DirtPileEntity* DirtPileEntity::getEntityOnTile(',
         'DirtPileEntity* DirtPileEntity::createOnTile(', 'bool DirtPileEntity::cleanBy(']),

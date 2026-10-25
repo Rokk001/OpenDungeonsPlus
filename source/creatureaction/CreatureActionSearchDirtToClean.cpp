@@ -59,13 +59,23 @@ std::function<bool()> CreatureActionSearchDirtToClean::action() // allowed-lambd
         std::ref(mCreature), getNbTurns());
 }
 
+bool CreatureActionSearchDirtToClean::isPileCleanable(const Tile& tile)
+{
+    const Room* room = tile.getCoveringRoom();
+    if(room == nullptr)
+        return true;
+
+    return room->isCleanableByWorkers() || room->getCleanOrder();
+}
+
 //! \brief Orders tiles with the most dirt first.
 static bool isDirtier(const Tile* first, const Tile* second)
 {
     return first->getDirt() > second->getDirt();
 }
 
-//! \brief Finds the pile nearest to the worker that lies on a tile of the worker's seat and can be reached.
+//! \brief Finds the pile nearest to the worker that lies on a tile of the worker's seat, outside the rooms workers
+//! never clean, and can be reached.
 //! \return The tile of the pile, nullptr if there is none.
 static Tile* findPileTile(Creature& creature, Tile* myTile)
 {
@@ -82,6 +92,9 @@ static Tile* findPileTile(Creature& creature, Tile* myTile)
 
         Tile* tile = dirtPile->getPositionTile();
         if((tile == nullptr) || (tile->getSeat() != creature.getSeat()))
+            continue;
+
+        if(!CreatureActionSearchDirtToClean::isPileCleanable(*tile))
             continue;
 
         float dist = Pathfinding::squaredDistanceTile(*myTile, *tile);
