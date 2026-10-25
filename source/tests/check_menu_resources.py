@@ -19,6 +19,8 @@ from pathlib import Path
 import re
 import struct
 
+from PIL import Image
+
 
 # Return the folders of the Graphics section of the resource list, relative to the repository.
 def graphics_folders(root):
@@ -216,12 +218,72 @@ def check_sky_programs(root, folders):
     assert "1.0 / 2.2" in shader, "linear atmosphere colours need their display transfer"
 
 
+# Read named script blocks while retaining nested emitter, affector and material settings.
+def script_blocks(text, declaration):
+    blocks = {}
+    for match in re.finditer(r"(?m)^" + declaration + r"\s+([^\s:{]+)[^{]*\{", text):
+        depth, end = 1, match.end()
+        while depth and end < len(text):
+            depth += (text[end] == "{") - (text[end] == "}")
+            end += 1
+        assert depth == 0, "unclosed " + declaration + " " + match.group(1)
+        blocks[match.group(1)] = text[match.end():end - 1]
+    return blocks
+
+
+# Validate every configured menu effect and prevent dense bowl smoke from replacing sparks.
+def check_menu_particles(root, folders):
+    systems = script_blocks((root / "particles/MenuScene.particle").read_text(encoding="utf-8"), "particle_system")
+    config = (root / "config/mainmenuscene.cfg").read_text(encoding="utf-8")
+    configured = re.findall(r"(?m)^AddParticleEffect\s+(\S+)\s+(\S+)", config)
+    materials = {}
+    for path in (root / "materials/scripts").rglob("*.material"):
+        materials.update(script_blocks(path.read_text(encoding="utf-8", errors="replace"), "material"))
+    for name in sorted({system for entity, system in configured}):
+        assert name in systems, name + " has no particle definition"
+        block = systems[name]
+        material_name = re.search(r"\bmaterial\s+(\S+)", block).group(1)
+        assert material_name in materials, name + " has no material " + material_name
+        material = materials[material_name]
+        for setting in (r"\blighting\s+off", r"\bdepth_write\s+off", r"\bscene_blend\s+(?:add|alpha_blend|src_alpha\s+one)\b"):
+            assert re.search(setting, material), name + " lacks transparent particle setting " + setting
+        textures = re.findall(r"\btexture\s+(\S+)", material)
+        assert textures, name + " needs a textured sprite"
+        for texture in textures:
+            assert any((folder / texture).is_file() for folder in folders), name + " cannot resolve " + texture
+        for setting in ("particle_width", "particle_height", "quota", "emission_rate", "time_to_live_min", "time_to_live_max"):
+            assert float(re.search(r"\b" + setting + r"\s+([0-9.]+)", block).group(1)) > 0, name + " has invalid " + setting
+        for colour in re.findall(r"\bcolour_range_(?:start|end)\s+([^\n]+)", block):
+            assert len(colour.split()) == 4 and 0 <= float(colour.split()[3]) <= 1, name + " has invalid particle alpha"
+    smoke_texture = next(folder / "RoomAmbSmoke.png" for folder in folders if (folder / "RoomAmbSmoke.png").is_file())
+    with Image.open(smoke_texture) as image:
+        assert "A" in image.getbands(), "smoke must keep its transparent texture mask"
+        alpha = image.getchannel("A")
+        assert alpha.getextrema()[0] == 0 and alpha.getextrema()[1] > 0, "smoke mask must contain transparent and visible pixels"
+        assert alpha.getpixel((0, image.height // 2)) == 0, "smoke texture edge must fade into transparency"
+    smoke = systems["MenuBrazierSmoke"]
+    quota = float(re.search(r"\bquota\s+([0-9.]+)", smoke).group(1))
+    rate = float(re.search(r"\bemission_rate\s+([0-9.]+)", smoke).group(1))
+    lifetime = float(re.search(r"\btime_to_live_max\s+([0-9.]+)", smoke).group(1))
+    assert quota <= 6 and rate * lifetime <= 6, "bowl smoke must remain sparse instead of stacking opaque puffs"
+    assert all(float(colour.split()[3]) <= 0.18 for colour in re.findall(r"\bcolour_range_(?:start|end)\s+([^\n]+)", smoke)), "bowl smoke must retain a thin alpha profile"
+    assert float(re.search(r"\bparticle_height\s+([0-9.]+)", smoke).group(1)) <= 2.5, "bowl smoke must not start as a facade-sized billboard"
+    fire_bowls = {entity for entity, system in configured if system == "MenuBrazierFire"}
+    ember_bowls = {entity for entity, system in configured if system == "MenuBrazierEmbers"}
+    assert len(fire_bowls) == 4 and ember_bowls == fire_bowls, "all four bowls need separate small rising sparks"
+    assert "material CombatSparks" in systems["MenuBrazierEmbers"], "bowl embers must use the existing additive spark sprite"
+    assert "material RoomAmbGlow" in systems["MenuSpireGlow"], "spire light needs alpha-weighted additive glow instead of opaque smoke"
+    assert "scene_blend src_alpha one" in materials["RoomAmbGlow"], "spire glow must weight its soft texture by alpha"
+    print(f"OK: {len(set(system for entity, system in configured))} configured menu particle systems use transparent textured sprites; sparse bowl smoke and rising sparks")
+
+
 # Fail when a menu scene texture, material, mesh or skeleton cannot be resolved.
 def main():
     root = Path(__file__).resolve().parents[2]
     folders = graphics_folders(root)
     assert root / "materials/textures/menu" in folders, "menu textures folder must be listed in resources.cfg.in"
     check_sky_programs(root, folders)
+    check_menu_particles(root, folders)
     missing = []
     menu_count = 0
     for script, number, name in texture_references(root):
