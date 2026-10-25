@@ -591,7 +591,7 @@ private:
     int mCasinoY;
     uint32_t mCasinoPayout;
     int32_t mInfirmaryPayer = 0;
-    int32_t mInfirmaryThreshold = 100;
+    int32_t mInfirmaryThreshold;
     bool mInfirmaryHealOn = true;
     bool mUpdatingInfirmary = false;
     std::vector<std::string> mInfirmaryPatientNames;

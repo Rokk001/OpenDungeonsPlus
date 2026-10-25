@@ -3295,7 +3295,10 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(player == nullptr || player->getSeat() == nullptr || player->getHasLost() || !player->getIsHuman())
                 break;
             Seat* seat = player->getSeat();
-            if((payer != 0 && payer != 1) || threshold < 40 || threshold > 100 || threshold % 10 != 0)
+            const int32_t minimum = ConfigManager::getSingleton().getRoomConfigInt32("InfirmaryDischargeMinPercent");
+            const int32_t maximum = ConfigManager::getSingleton().getRoomConfigInt32("InfirmaryDischargeMaxPercent");
+            const int32_t step = ConfigManager::getSingleton().getRoomConfigInt32("InfirmaryDischargeStepPercent");
+            if((payer != 0 && payer != 1) || threshold < minimum || threshold > maximum || (threshold - minimum) % step != 0)
                 break;
             seat->setInfirmaryPayer(payer);
             seat->setInfirmaryThreshold(threshold);

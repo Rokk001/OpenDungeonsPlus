@@ -411,6 +411,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mCasinoX(-1),
     mCasinoY(-1),
     mCasinoPayout(1),
+    mInfirmaryThreshold(ConfigManager::getSingleton().getRoomConfigInt32("InfirmaryDischargeDefaultPercent")),
     showTileDebugWindow(false),
     config(ConfigManager::getSingleton())
 {
@@ -774,8 +775,11 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(mRootWindow->getChild("InfirmaryWindow/HealButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleInfirmaryHealing, this)));
     CEGUI::Slider* infirmarySlider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("InfirmaryWindow/ThresholdSlider"));
-    infirmarySlider->setMaxValue(60.0f);
-    infirmarySlider->setClickStep(10.0f);
+    const int32_t infirmaryMinimum = config.getRoomConfigInt32("InfirmaryDischargeMinPercent");
+    const int32_t infirmaryMaximum = config.getRoomConfigInt32("InfirmaryDischargeMaxPercent");
+    const int32_t infirmaryStep = config.getRoomConfigInt32("InfirmaryDischargeStepPercent");
+    infirmarySlider->setMaxValue(static_cast<float>(infirmaryMaximum - infirmaryMinimum));
+    infirmarySlider->setClickStep(static_cast<float>(infirmaryStep));
     addEventConnection(infirmarySlider->subscribeEvent(CEGUI::Slider::EventValueChanged,
         CEGUI::Event::Subscriber(&GameMode::changeInfirmaryThreshold, this)));
     CEGUI::MultiColumnList* patients = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("InfirmaryWindow/PatientList"));
@@ -2745,14 +2749,16 @@ bool GameMode::changeInfirmaryThreshold(const CEGUI::EventArgs&)
     if(mUpdatingInfirmary)
         return true;
     CEGUI::Slider* slider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("InfirmaryWindow/ThresholdSlider"));
-    const int32_t threshold = 40 + static_cast<int32_t>(std::round(slider->getCurrentValue() / 10.0f)) * 10;
+    const int32_t minimum = config.getRoomConfigInt32("InfirmaryDischargeMinPercent");
+    const int32_t step = config.getRoomConfigInt32("InfirmaryDischargeStepPercent");
+    const int32_t threshold = minimum + static_cast<int32_t>(std::round(slider->getCurrentValue() / step)) * step;
     if(threshold != mInfirmaryThreshold)
     {
         mInfirmaryThreshold = threshold;
         sendInfirmarySettings();
     }
     mUpdatingInfirmary = true;
-    slider->setCurrentValue(static_cast<float>(mInfirmaryThreshold - 40));
+    slider->setCurrentValue(static_cast<float>(mInfirmaryThreshold - minimum));
     mUpdatingInfirmary = false;
     return true;
 }
@@ -2779,7 +2785,7 @@ void GameMode::receiveInfirmaryWindow(ODPacket& packet, bool patients)
     mRootWindow->getChild("InfirmaryWindow/HealButton")->setText(mInfirmaryHealOn ? "Healing on" : "Healing off");
     mRootWindow->getChild("InfirmaryWindow/ThresholdLabel")->setText("Discharge at: " + Helper::toString(mInfirmaryThreshold) + " %");
     static_cast<CEGUI::Slider*>(mRootWindow->getChild("InfirmaryWindow/ThresholdSlider"))->setCurrentValue(
-        static_cast<float>(mInfirmaryThreshold - 40));
+        static_cast<float>(mInfirmaryThreshold - config.getRoomConfigInt32("InfirmaryDischargeMinPercent")));
     mUpdatingInfirmary = false;
     if(!patients)
         return;
