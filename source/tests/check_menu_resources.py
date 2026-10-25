@@ -274,6 +274,26 @@ def script_blocks(text, declaration):
     return blocks
 
 
+# Keep textured menu surfaces and inherited colour overrides in their normal-mapped lighting pass.
+def check_menu_surface_passes(root):
+    text = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8")
+    materials = script_blocks(text, "material")
+    bases = {
+        "MenuStone": "MenuFortressStoneNormal.png", "MenuIron": "MenuRustIronNormal.png",
+        "MenuCloth": "MenuTornClothNormal.png", "MenuWetStone": "MenuWetPavingNormal.png",
+        "MenuDemonStone": "MenuDemonStoneNormal.png",
+    }
+    parents = dict(re.findall(r"(?m)^material\s+(\w+)\s*:\s*(\w+)", text))
+    for name, normal in bases.items():
+        block = materials[name]
+        assert re.findall(r"\bpass\s+(\w+)\s*\{", block) == ["lighting"], name + " must not overwrite its normal map with a second surface pass"
+        assert normal in block and "normal_map tangent_space" in block, name + " must retain its authored tangent-space normal map"
+    for name, parent in parents.items():
+        if parent in bases:
+            assert re.findall(r"\bpass\s+(\w+)\s*\{", materials[name]) == ["lighting"], name + " must override the inherited normal-mapped pass"
+    print("OK: menu surface colours and normal maps share one lighting pass, including inherited overrides")
+
+
 # Validate every configured menu effect and prevent dense bowl smoke from replacing sparks.
 def check_menu_particles(root, folders):
     systems = script_blocks((root / "particles/MenuScene.particle").read_text(encoding="utf-8"), "particle_system")
@@ -374,6 +394,7 @@ def main():
     folders = graphics_folders(root)
     assert root / "materials/textures/menu" in folders, "menu textures folder must be listed in resources.cfg.in"
     check_sky_programs(root, folders)
+    check_menu_surface_passes(root)
     check_menu_particles(root, folders)
     check_menu_lighting(root)
     missing = []
