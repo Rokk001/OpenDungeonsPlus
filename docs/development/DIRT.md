@@ -12,8 +12,8 @@ workers clean as a side job. All numbers are keys of `config/global.cfg` (block 
   keeps the dirt of its floor.
 - The dirt stage of a room comes from the mean dirt of its tiles: stage 1 below `DirtStage2At`
   (clean), stage 2 below `DirtStage3At` (dirty), stage 3 above (filthy). The same thresholds applied to
-  one tile value give the decal that is drawn on the floor (`DirtStage1/2/3.mesh`); stage 3 adds
-  flies.
+  one tile value give the decal that is drawn on the floor (`DirtStage1/2/3.mesh`); a tile below
+  `DirtVisibleFrom` (10) shows no decal; stage 3 adds flies.
 - The server tells each human player the stages of the tiles and rooms in sight (cosmetic event
   `tileDirt`), a change after `DirtSyncTurns` turns, a full resend every `DirtResyncTurns` turns.
 

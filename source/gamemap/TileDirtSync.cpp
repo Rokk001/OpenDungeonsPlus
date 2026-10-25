@@ -66,10 +66,10 @@ int64_t TileDirtSync::makeKey(int32_t x, int32_t y)
 
 int32_t TileDirtSync::stageForValue(double dirt)
 {
-    if(dirt <= 0.0)
+    const ConfigManager& config = ConfigManager::getSingleton();
+    if((dirt <= 0.0) || (dirt < config.getDirtConfigDouble("DirtVisibleFrom")))
         return 0;
 
-    const ConfigManager& config = ConfigManager::getSingleton();
     if(dirt < config.getDirtConfigDouble("DirtStage2At"))
         return 1;
 

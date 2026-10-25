@@ -45,7 +45,7 @@ assert result.returncode == 0, 'dirt_values.py --check failed:\n' + result.stdou
 
 # 2. Every key of the [Dirt] block with the value of the design
 DIRT = {
-    'DirtStage2At': '33.3333', 'DirtStage3At': '66.6667', 'DirtMoodStage2': '-30', 'DirtMoodStage3': '-60',
+    'DirtVisibleFrom': '10', 'DirtStage2At': '33.3333', 'DirtStage3At': '66.6667', 'DirtMoodStage2': '-30', 'DirtMoodStage3': '-60',
     'DirtPileMood': '-30', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
     'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '20', 'UrgePerDrink': '15',
     'ToiletUseTurns': '4', 'ToiletWaitRadius': '1', 'ToiletReserveFactor': '3',

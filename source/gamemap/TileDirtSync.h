@@ -74,8 +74,8 @@ public:
     //! \return True if there is something to send.
     bool buildEvent(GameMap* gameMap, Seat* seat, TileDirtClientState& state, CosmeticEvent& event);
 
-    //! \brief The dirt stage of a tile value: 0 for a clean tile (value 0), else 1 below DirtStage2At, 2 below
-    //! DirtStage3At and 3 above (global.cfg [Dirt]).
+    //! \brief The dirt stage of a tile value: 0 for a tile without visible dirt (value below DirtVisibleFrom),
+    //! else 1 below DirtStage2At, 2 below DirtStage3At and 3 above (global.cfg [Dirt]).
     static int32_t stageForValue(double dirt);
 
     //! \brief The word shown for a dirt stage of a room: "clean" (1), "dirty" (2) or "filthy" (3).
