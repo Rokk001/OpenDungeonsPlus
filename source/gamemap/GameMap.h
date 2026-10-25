@@ -388,7 +388,8 @@ public:
     //! \brief Read-only access to the triggers and actions of the level, for code that does not change the script
     const LevelScript& getLevelScript() const;
 
-    bool withdrawFromTreasuries(int gold, Seat* seat);
+    //! \brief Withdraws the complete gold amount, including fractional admissions, or refuses it.
+    bool withdrawFromTreasuries(double gold, Seat* seat);
 
     inline const std::string& getLevelFileName() const
     { return mLevelFileName; }
@@ -562,7 +563,8 @@ public:
     std::vector<Tile*> getBuildableTilesForPlayerInArea(int x1, int y1, int x2, int y2,
         Player* player);
 
-    int addGoldToSeat(int gold, int seatId);
+    //! \brief Deposits gold without truncation and returns any amount that did not fit.
+    double addGoldToSeat(double gold, int seatId);
     int addManaToSeat(int mana, int seatId);
 
     //! \brief Searches for a worker owned by the seat for path finding

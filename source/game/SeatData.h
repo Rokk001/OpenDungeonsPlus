@@ -36,6 +36,7 @@ class SeatData
 {
 public:
     // Constructors
+    //! \brief Creates seat data with the configured default discharge threshold.
     SeatData();
 
     inline void setId(int id)
@@ -73,7 +74,8 @@ public:
     inline const std::string& getColorId() const
     { return mColorId; }
 
-    inline int getGold() const
+    //! \brief Returns stored gold, including fractional admission payments.
+    inline double getGold() const
     { return mGold; }
 
     inline int getGoldMax() const
@@ -81,6 +83,19 @@ public:
 
     inline double getMana() const
     { return mMana; }
+
+    //! \brief Returns the admission payer; AI keepers always pay themselves.
+    int32_t getInfirmaryPayer() const { return mPlayerType == "AI" ? 0 : mInfirmaryPayer; }
+    //! \brief Selects keeper (0) or creature (1) admission payment.
+    void setInfirmaryPayer(int32_t payer) { if(payer == 0 || payer == 1) mInfirmaryPayer = payer; }
+    //! \brief Returns the discharge health percentage.
+    int32_t getInfirmaryThreshold() const { return mInfirmaryThreshold; }
+    //! \brief Accepts discharge percentages from 40 to 100 in steps of ten.
+    void setInfirmaryThreshold(int32_t threshold);
+    //! \brief Reports whether treatments may spend mana.
+    bool getInfirmaryHealOn() const { return mInfirmaryHealOn; }
+    //! \brief Enables or pauses healing for this keeper.
+    void setInfirmaryHealOn(bool healOn) { mInfirmaryHealOn = healOn; }
 
     inline double getManaDelta() const
     { return mManaDelta; }
@@ -128,7 +143,9 @@ public:
     //! unit tests use them to get the data from the Seat (without having to take Seat and all its dependencies)
     bool importFromPacket(ODPacket& is);
     void exportToPacket(ODPacket& os) const;
+    //! \brief Reads changing seat state and the three infirmary settings.
     bool importFromPacketForUpdate(ODPacket& is);
+    //! \brief Sends changing seat state followed by the three infirmary settings.
     void exportToPacketForUpdate(ODPacket& os) const;
 
     static std::string displayAsString(const SeatData* seat);
@@ -183,7 +200,12 @@ protected:
     bool mHasGoalsChanged;
 
     //! \brief The total amount of gold coins in the keeper's treasury and in the dungeon heart.
-    int mGold;
+    double mGold;
+
+    //! \brief Admission payer, discharge health and healing switch shared by all infirmaries.
+    int32_t mInfirmaryPayer;
+    int32_t mInfirmaryThreshold;
+    bool mInfirmaryHealOn;
 
     //! \brief The total amount of gold coins that the keeper treasuries can have.
     int mGoldMax;

@@ -59,7 +59,7 @@ bool CreatureActionGetFee::handleGetFee(Creature& creature)
     if((myTile->getCoveringRoom() != nullptr) &&
        (creature.getSeat()->canOwnedCreatureUseRoomFrom(myTile->getCoveringRoom()->getSeat())))
     {
-        int goldTaken = myTile->getCoveringRoom()->withdrawGold(creature.getGoldFee());
+        double goldTaken = myTile->getCoveringRoom()->withdrawGold(creature.getGoldFee());
         if(goldTaken > 0)
         {
             creature.decreaseGoldFee(goldTaken);

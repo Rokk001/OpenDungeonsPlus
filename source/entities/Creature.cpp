@@ -16,6 +16,8 @@
  */
 
 #include "entities/Creature.h"
+#include "creaturemood/CreatureMoodFee.h"
+#include "creaturemood/CreatureMoodRested.h"
 #include "entities/CreatureProgression.h"
 
 #include "ODApplication.h"
@@ -154,6 +156,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <utility>
 
@@ -646,6 +649,8 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
     mCasinoMood              (0.0),
+    mInfirmaryMood           (0.0),
+    mInfirmaryMoodTurns      (0.0),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -769,6 +774,8 @@ Creature::Creature(GameMap* gameMap) :
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
     mCasinoMood              (0.0),
+    mInfirmaryMood           (0.0),
+    mInfirmaryMoodTurns      (0.0),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -950,6 +957,8 @@ std::string Creature::getCreatureStreamFormat()
 //! \brief Writes the creature to a stream; the skill state is the last, optional part.
 void Creature::exportToStream(std::ostream& os) const
 {
+    const std::streamsize precision = os.precision();
+    os << std::setprecision(std::numeric_limits<double>::max_digits10);
     MovableGameEntity::exportToStream(os);
     os << mDefinition->getClassName() << "\t";
     os << getLevel() << "\t" << mExp << "\t";
@@ -999,6 +1008,7 @@ void Creature::exportToStream(std::ostream& os) const
 
     // Current mana as a labelled token after the appearance, missing in old saves (they load with full mana)
     os << "\t" << MANA_SAVE_LABEL << mMana;
+    os << "\t[Infirmary] " << mInfirmaryMood << " " << mInfirmaryMoodTurns << " [/Infirmary]";
 
     // Optional skill state (after the mana token), missing in old saves: their points are spent again at load
     if(mSkillBuild.mSeed != 0)
@@ -1010,6 +1020,7 @@ void Creature::exportToStream(std::ostream& os) const
     // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
     if((mUrge > 0.0) || (mCreatureDirt > 0.0))
         os << "\t" << NEEDS_SAVE_OPEN << " " << mUrge << " " << mCreatureDirt << " " << NEEDS_SAVE_CLOSE;
+    os.precision(precision);
 }
 
 //! \brief Reads the creature from a stream; the appearance and the skill state at the end are optional.
@@ -1086,6 +1097,13 @@ bool Creature::importFromStream(std::istream& is)
     std::string appearanceToken;
     while(is >> appearanceToken)
     {
+        if(appearanceToken == "[Infirmary]")
+        {
+            std::string close;
+            if(!(is >> mInfirmaryMood >> mInfirmaryMoodTurns >> close) || close != "[/Infirmary]")
+                return false;
+            continue;
+        }
         if(appearanceToken.compare(0, MANA_SAVE_LABEL.size(), MANA_SAVE_LABEL) == 0)
         {
             const std::string manaValue = appearanceToken.substr(MANA_SAVE_LABEL.size());
@@ -1362,6 +1380,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     // for the stats window as the last fields
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
+    os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     os << mUrge;
     os << mCreatureDirt;
 }
@@ -1432,6 +1451,7 @@ void Creature::importFromPacket(ODPacket& is)
     }
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
+    OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
 
@@ -1784,6 +1804,13 @@ void Creature::doUpkeep()
 
     mTorturedThisTurn = false;
     mRestedThisTurn = false;
+
+    if(mInfirmaryMoodTurns > 0.0)
+    {
+        mInfirmaryMoodTurns -= 1.0;
+        if(mInfirmaryMoodTurns <= 0.0)
+            mInfirmaryMood = 0.0;
+    }
 
     // if creature is not on map (picked up or being carried), we do nothing
     if(!getIsOnMap())
@@ -4066,6 +4093,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     // as the last fields: only the own seat sees them, every other seat gets 0 for both
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
+    os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     if(seat == getSeat())
     {
         os << mUrge;
@@ -4161,6 +4189,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mMana);
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
+    OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
@@ -6224,7 +6253,7 @@ void Creature::drop(const Ogre::Vector3& v)
         if((mGoldCarried > 0) && (mDigRate > 0.0) &&
            (position->getCoveringRoom() != nullptr))
         {
-            int deposited = position->getCoveringRoom()->depositGold(mGoldCarried, position);
+            double deposited = position->getCoveringRoom()->depositGold(mGoldCarried, position);
             if(deposited > 0)
             {
                 mGoldCarried -= deposited;
@@ -7626,6 +7655,23 @@ void Creature::decreaseWakefulness(double value)
         return;
 
     mWakefulness = std::max(0.0, mWakefulness - value);
+}
+
+//! \brief Applies the admission mood using the configured fee modifier and rested lifetime.
+void Creature::setInfirmaryAdmissionMood(bool creaturePaid)
+{
+    mInfirmaryMood = 0.0;
+    mInfirmaryMoodTurns = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryMoodDefaultTurns");
+    for(const CreatureMood* mood : getDefinition()->getCreatureMoods())
+    {
+        const CreatureMoodFee* fee = dynamic_cast<const CreatureMoodFee*>(mood);
+        if(fee != nullptr)
+            mInfirmaryMood = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryMoodWageShare") *
+                fee->getMoodModifier() * (creaturePaid ? 1.0 : -1.0);
+        const CreatureMoodRested* rested = dynamic_cast<const CreatureMoodRested*>(mood);
+        if(rested != nullptr)
+            mInfirmaryMoodTurns = rested->getTurnsMax();
+    }
 }
 
 void Creature::addCasinoMood(double points)

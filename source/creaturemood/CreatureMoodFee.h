@@ -31,6 +31,8 @@ public:
     {}
 
     const std::string& getModifierName() const override;
+    //! \brief Returns the configured unpaid wage mood for admission mood calculation.
+    int32_t getMoodModifier() const { return mMoodModifier; }
 
     virtual int32_t computeMood(const Creature& creature) const override;
 

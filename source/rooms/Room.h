@@ -256,17 +256,17 @@ public:
     { return 0; }
 
     //! \brief Returns the total gold that is stored in the room
-    virtual int getTotalGoldStored() const
+    virtual double getTotalGoldStored() const
     { return 0; }
 
     //! \brief Deposits the given gold in the room. Returns the gold that could
     //! be deposited (may be less than the given amount if not enough space)
-    virtual int depositGold(int gold, Tile *tile)
+    virtual double depositGold(double gold, Tile *tile)
     { return 0; }
 
     //! \brief Tries to withdraw gold from the room. Returns the amount that could
     //! be taken (may be less than gold if not enough gold)
-    virtual int withdrawGold(int gold)
+    virtual double withdrawGold(double gold)
     { return 0; }
 
     virtual void creatureDropped(Creature& creature) override;

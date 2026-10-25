@@ -467,6 +467,7 @@ public:
      */
     //! brief Updates creature actions and recovery display for AI and player possession, including actual death
     //! observations when a lethal knockout expires. Spaces standing bodies while retaining action targets.
+    //! \brief Advances needs, activities and timed mood effects once per turn.
     void doUpkeep() override;
 
     //! \brief Computes the visible tiles and tags them to know which are visible
@@ -1020,10 +1021,12 @@ public:
     inline double getHunger() const
     { return mHunger; }
 
-    inline int32_t getGoldFee() const
+    //! \brief Returns any wage still owed, retaining partial payments from a fractional pile.
+    inline double getGoldFee() const
     { return mGoldFee; }
 
-    void decreaseGoldFee(int32_t value)
+    //! \brief Credits the exact amount of wage received.
+    void decreaseGoldFee(double value)
     {
         mGoldFee -= value;
         if(mGoldFee < 0)
@@ -1033,9 +1036,9 @@ public:
     //! \brief Gold given by the player. It pays the whole wage owed until the next pay day
     //! (clearing the pay day annoyance). Never more than the wage owed is used and there is
     //! no credit. Returns the gold that was used, the rest is left to the caller.
-    int32_t receiveTreat(int32_t gold)
+    double receiveTreat(double gold)
     {
-        int32_t used = (gold < mGoldFee) ? gold : mGoldFee;
+        double used = (gold < mGoldFee) ? gold : mGoldFee;
         if(used <= 0)
             return 0;
 
@@ -1044,13 +1047,15 @@ public:
         return used;
     }
 
-    inline int32_t getGoldCarried() const
+    //! \brief Returns purse gold without discarding fractional admissions.
+    inline double getGoldCarried() const
     { return mGoldCarried; }
 
     inline void resetGoldCarried()
     { mGoldCarried = 0; }
 
-    inline void addGoldCarried(int32_t gold)
+    //! \brief Adds or spends purse gold, including fractional admission fees.
+    inline void addGoldCarried(double gold)
     { mGoldCarried += gold; }
 
     //! \brief Returns how much gold the creature can carry before it has to haul it to a treasury: MaxGoldCarryable
@@ -1094,6 +1099,11 @@ public:
 
     //! \brief Changes the casino mood points. They are limited by the CasinoMoodMax room setting
     void addCasinoMood(double points);
+
+    //! \brief Returns the temporary mood from the last paid infirmary admission.
+    double getInfirmaryMood() const { return mInfirmaryMood; }
+    //! \brief Applies the type's fee mood and rested duration for a paid admission.
+    void setInfirmaryAdmissionMood(bool creaturePaid);
 
     inline GameEntity* getCarriedEntity() const
     { return mCarriedEntity; }
@@ -1284,7 +1294,9 @@ public:
 
     virtual void clientUpkeep() override;
 
+    //! \brief Sends changing creature state with admission mood visible only to its keeper.
     virtual void exportToPacketForUpdate(ODPacket& os, Seat* seat) override;
+    //! \brief Applies changing creature state and admission mood from the server.
     virtual void updateFromPacket(ODPacket& is) override;
 
     //! \brief Called when an angry creature wants to attack a natural enemy
@@ -1404,9 +1416,13 @@ public:
     void leavePossessionGroup();
 
 protected:
+    //! \brief Sends initial creature state with admission mood visible only to its keeper.
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
+    //! \brief Reads initial creature state and admission mood.
     virtual void importFromPacket(ODPacket& is) override;
+    //! \brief Saves exact health, purse and optional state, including admission mood.
     virtual void exportToStream(std::ostream& os) const override;
+    //! \brief Loads creature state and optional tagged blocks in any order.
     virtual bool importFromStream(std::istream& is) override;
 
     virtual void createMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
@@ -1506,15 +1522,15 @@ private:
     uint32_t mJobCooldownDuration = 0;
 
     //! \brief At pay day, mGoldFee will be set to the creature fee and decreased when the creature gets gold
-    int32_t         mGoldFee;
+    double          mGoldFee;
     //! \brief Gold carried by the creature that will be dropped if it gets killed
-    int32_t         mGoldCarried;
+    double          mGoldCarried;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
     double          mGoldRemainder;
     //! \brief Server side: the amount of carried gold the clients were last told about
-    int32_t         mGoldCarriedNotified;
+    double          mGoldCarriedNotified;
     //! \brief Server side. The gold carried that the clients were told last (cosmetic events only, not saved)
-    int32_t         mGoldCarriedCosmeticNotified;
+    double          mGoldCarriedCosmeticNotified;
     //! \brief Server side. Whether the clients were told that the creature has a bed: -1 not yet, 0 no, 1 yes
     //! (cosmetic events only, not saved)
     int32_t         mBedNotified;
@@ -1547,6 +1563,9 @@ private:
 
     //! \brief Used on server side for the mood. Set by the casino, fades by CasinoMoodDecay per second
     double          mCasinoMood;
+    //! \brief Admission mood and its remaining lifetime, saved exactly.
+    double          mInfirmaryMood;
+    double          mInfirmaryMoodTurns;
 
     //! \brief Every tiles within the creature sight radius, used for common actions.
     std::vector<Tile*>              mTilesWithinSightRadius;
