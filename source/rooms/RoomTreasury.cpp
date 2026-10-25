@@ -432,7 +432,15 @@ int RoomTreasury::depositGold(int gold, Tile *tile)
             delivery.mObject = getName();
             delivery.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTile->getX()),
                 static_cast<Ogre::Real>(heartTile->getY()), 0.0f);
-            fireRoomCosmeticEvent(*tile, delivery);
+            const std::vector<Seat*>& heartViewers = heartTile->getSeatsWithVision();
+            for(Seat* seat : tile->getSeatsWithVision())
+            {
+                if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman() ||
+                    std::find(heartViewers.begin(), heartViewers.end(), seat) == heartViewers.end())
+                    continue;
+
+                ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), delivery);
+            }
         }
     }
 
