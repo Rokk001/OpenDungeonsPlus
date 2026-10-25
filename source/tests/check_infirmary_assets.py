@@ -1,6 +1,7 @@
 """Inspect shipped infirmary assets, their registration and licences without compiling."""
 from pathlib import Path
 import importlib.util
+import json
 import re
 import struct
 import xml.etree.ElementTree as ET
@@ -108,11 +109,20 @@ def main():
     imageset = ET.parse(repo / "gui/ODIcons.imageset").getroot()
     image = imageset.find("Image[@name='InfirmaryButton']")
     assert image is not None, "missing logical atlas image: OpenDungeonsIcons/InfirmaryButton"
-    assert int(image.get("width")) == 128 and int(image.get("height")) == 128
+    # The existing painted atlas builder doubles the logical slot coordinates and dimensions.
+    slot = next(entry for entry in json.loads(read("assets-src/gui/icons/slots.json"))
+                if entry["name"] == "InfirmaryButton")
+    assert (int(slot["width"]), int(slot["height"])) == (128, 128)
+    icon_width, icon_height = int(image.get("width")), int(image.get("height"))
+    assert (icon_width, icon_height) == (int(slot["width"]) * 2, int(slot["height"]) * 2)
+    assert (int(image.get("xPos")), int(image.get("yPos"))) == (int(slot["xPos"]) * 2, int(slot["yPos"]) * 2)
+    source = (repo / "assets-src/gui/icons" / slot["source"]).read_bytes()
+    assert source[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
+    assert struct.unpack_from(">II", source, 16) == (icon_width, icon_height)
     atlas = (repo / "gui" / imageset.get("imagefile")).read_bytes()
     assert atlas[:8] == b"\x89PNG\r\n\x1a\n", "icon atlas must be a PNG"
     width, height = struct.unpack_from(">II", atlas, 16)
-    assert int(image.get("xPos")) + 128 <= width and int(image.get("yPos")) + 128 <= height
+    assert int(image.get("xPos")) + icon_width <= width and int(image.get("yPos")) + icon_height <= height
     print("infirmary assets: ok")
 
 
