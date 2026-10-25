@@ -1,5 +1,34 @@
 # Item image prompts
 
+## ARC_C_Head_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Cap of Skirmish (do not write the name): one lightweight reddish-brown hide cap with a low close-fitting crown, short swept-back side flaps and a stitched diagonal brow band. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Vest of Skirmish (do not write the name): one lightweight reddish-brown hide skirmisher vest with angled overlapping chest panels, short split hem and compact shoulder straps, hollow clothing with no body inside. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Boots_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Treads of Skirmish (do not write the name): one matching pair of lightweight reddish-brown hide ankle boots with low notched cuffs, thin crisscross straps and flexible stitched soles. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Ring_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Band of Skirmish (do not write the name): one finger-sized narrow ring wrapped in reddish-brown hide with diagonal seam stitching and a small angular bronze fitting, no jewel or lettering. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Bow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Bow of Skirmish (do not write the name): one complete slim wooden shortbow with gently recurved tips, reddish-brown hide wrapping at the grip and thin leather tip bindings, taut string connecting both tips, no arrow. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_C_Crossbow_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon matching an illustrated bronze-and-iron dungeon interface. Subject: Hide Crossbow of Skirmish (do not write the name): one complete small wooden crossbow with a slim light stock wrapped in reddish-brown hide, symmetric short iron bow at front and taut correctly joined bowstring, no loaded bolt. Common quality functional hide, wood and plain metal fittings, restrained detail, no jewels or magical glow. This is its own equipment line. One isolated centred equipment object, entirely visible with generous transparent margins, clear chunky silhouette readable at128x128, painterly material shading and warm upper-left light. Diagonal three-quarter inventory view for long objects, every end visible. Square1:1 canvas. No wearer, person, skin, limbs, mannequin, letters, text, numbers, border, frame, tile, floor, scenery, background shadow, watermark or branding. Genuine transparent alpha background.
+
 ## FLK_A_Head_base.png
 
 Use case: stylized-concept. Asset type: one original hand-painted fantasy inventory icon, square suitable for downsampling to128x128. Subject: Leather Hood of Shadow (do not write that name): one empty dark brown leather hood with a deep rounded face opening, a close-fitting crown and a short folded neck drape, no head or face. Common-quality functional equipment, clean but modest, no gems or magic. Chunky readable silhouette, painterly shaded leather, metal and wood with warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible inside a generous transparent border. No wearer, person, mannequin, body, text, numbers, frame, tile, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
