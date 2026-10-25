@@ -32,9 +32,9 @@
 
 /*! \brief Shows the wall torches the server sent, client side only.
  *
- * Every torch has a bracket (the model WallTorch.mesh, a billboard if it cannot be loaded), a flickering flame and a thread of smoke (the particle systems
+ * Every torch has a bracket (the model WallTorch.mesh, a billboard if it cannot be loaded), a flickering flame and glow, and a thread of smoke (the particle systems
  * of the room ambience). Only the nearest few torches to the camera also get a warm, flickering point
- * light (no shadows); the others show flame without a light source. How many depends on the
+ * light (no shadows); the others show flame and glow without a light source. How many depends on the
  * room ambience mode (full / reduced / off). Strength, colour, range and flicker of the light come from
  * config/rooms.cfg (keys WallTorch...); a missing key falls back to a default and is logged once.
  */
@@ -48,8 +48,8 @@ public:
         off
     };
 
-    //! The parts of a torch: bracket, flame, smoke
-    static const uint32_t NB_TORCH_PARTS = 3;
+    //! The parts of a torch: bracket, flame, glow, smoke
+    static const uint32_t NB_TORCH_PARTS = 4;
 
     //! \brief Creates the view without any torch; the settings are read when the first torches arrive
     WallTorchView();
@@ -97,10 +97,10 @@ private:
         //! Where the light hangs: a little in front of the wall and higher than the flame
         Ogre::Vector3 mLightPosition;
         double mPhase;
-        //! Distance to the camera at the last check
+        //! Distance to the floor look point at the last check
         double mDistance;
         bool mShown;
-        //! Bracket, flame, smoke (an unused part has no node)
+        //! Bracket, flame, glow, smoke (an unused part has no node)
         Part mParts[NB_TORCH_PARTS];
         Ogre::SceneNode* mLightNode;
         Ogre::Light* mLight;
@@ -133,9 +133,9 @@ private:
 
     //! \brief Reads the torch settings once (WallTorchConfig)
     void loadSettings();
-    //! \brief Chooses which torches are shown and which of them get a light, from their distance to the camera
+    //! \brief Chooses visible torches around the floor look point and gives the nearest ones a light
     void refresh(Mode mode, Ogre::Camera* camera);
-    //! \brief Creates particle system number index of the torch (flame, smoke) beside the holder
+    //! \brief Creates particle system number index of the torch (flame, glow, smoke) beside the holder
     void createPart(Torch& torch, uint32_t index, const std::string& name);
     //! Creates the bracket model; false if the mesh cannot be loaded
     bool createModel(Torch& torch, const std::string& name);
