@@ -36,6 +36,7 @@ public:
 
     virtual CreatureBehaviour* clone() const override;
 
+    //! \brief Starts combat only when a lying creature has enough health to rise.
     virtual bool processBehaviour(Creature& creature) const override;
 };
 

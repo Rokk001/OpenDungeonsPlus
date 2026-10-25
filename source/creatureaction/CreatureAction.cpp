@@ -60,6 +60,9 @@ std::string CreatureAction::toString(CreatureActionType actionType)
     case CreatureActionType::findHome:
         return "findHome";
 
+    case CreatureActionType::infirmaryRest:
+        return "infirmaryRest";
+
     case CreatureActionType::sleep:
         return "sleep";
 

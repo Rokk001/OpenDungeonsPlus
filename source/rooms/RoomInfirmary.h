@@ -1,4 +1,4 @@
-﻿#ifndef ROOMINFIRMARY_H
+#ifndef ROOMINFIRMARY_H
 #define ROOMINFIRMARY_H
 
 #include "rooms/Room.h"
@@ -44,6 +44,8 @@ public:
     void updateActiveSpots(GameMap* gameMap = nullptr) override;
     //! \brief Transfers occupied cots before adjoining rooms join.
     void absorbRoom(Room* room) override;
+    //! \brief Transfers intact cots and admissions when the floor splits.
+    void splitRoom(Room& room, const std::vector<Tile*>& tiles) override;
     //! \brief Releases a patient whose cot loses a tile.
     bool removeCoveredTile(Tile* tile) override;
     //! \brief Stops treatments before ownership changes.
@@ -143,5 +145,8 @@ private:
     size_t mNextCotId;
     bool mLayingOut;
     bool mLoadedCots;
+    bool mManaShortageNotified;
+    int64_t mHealingTurn;
+    bool mHealingTurnFailed;
 };
 #endif

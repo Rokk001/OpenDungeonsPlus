@@ -41,6 +41,7 @@ public:
     bool notifyDropped(GameEntity* entity) override;
 
     //! \brief Starts carry only after validating the actual cargo tile and its reachable destination.
+    //! \brief Picks a reachable infirmary before a bed for an eligible knockout.
     static bool handleGrabEntity(Creature& creature, GameEntity* entityToCarry);
 
 private:

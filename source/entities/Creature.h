@@ -391,6 +391,10 @@ public:
     inline double getMoveSpeedLava() const
     { return mLavaSpeed; }
 
+    //! \brief Restores the remaining knockout countdown after a treatment is lost.
+    inline void setKoTurnCounter(int32_t counter)
+    { mKoTurnCounter = counter; }
+
     inline int32_t getKoTurnCounter() const
     { return mKoTurnCounter; }
 
@@ -855,6 +859,7 @@ public:
     //! \brief Server side, once per turn. At UrgeRelieve the creature relieves itself (not while it fights, is held in the
     //! hand, KO, dragged, possessed or already on a toilet seat; then at the first turn after that). From UrgeOnTheWay on,
     //! a creature that walks over a free toilet seat of a room it may use stops and uses it.
+    //! \brief Starts toilet use without interrupting lying patients.
     void handleUrge();
 
     //! \brief Returns the urge to use a toilet (0 = none, 100 = cannot hold it any longer).
@@ -884,6 +889,7 @@ public:
     //! \brief Tells whether the creature can go through the given tile.
     bool canGoThroughTile(Tile* tile) const;
 
+    //! \brief Makes own knockouts carryable when a bed or infirmary can receive them.
     virtual EntityCarryType getEntityCarryType(Creature* carrier) override;
     virtual void notifyEntityCarryOn(Creature* carrier) override;
     virtual void notifyEntityCarryOff(const Ogre::Vector3& position) override;
@@ -1797,12 +1803,14 @@ private:
     //! \brief A sub-function called by doTurn()
     //! This one checks if there is something prioritary to do (like fighting). If it is the case,
     //! it should empty the action list before adding what to do.
+    //! \brief Keeps lying creatures below the carry health limit in bed or on their cot.
     void decidePrioritaryAction();
 
     //! \brief A sub-function called by doTurn()
     //! While the seat's heart defence is on, the runners (the workers and the two cheap,
     //! fast scout creatures) drop their current job and run to the seat's fighters, or to
     //! the heart while it is damaged. A runner that is already fighting or fleeing keeps doing so.
+    //! \brief Sends healthy available defenders to the heart without moving resting patients.
     void handleHeartDefence();
 
     //! \brief A sub-function called by doTurn()
