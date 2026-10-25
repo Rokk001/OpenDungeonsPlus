@@ -100,4 +100,21 @@
     <Image height="256" name="HeartMendingButton" width="256" xPos="1536" yPos="2304" />
     <Image height="256" name="ManaFlowButton" width="256" xPos="1792" yPos="2304" />
     <Image height="256" name="ToiletButton" width="256" xPos="0" yPos="2560" />
+    <Image height="256" name="MerchantButton" width="256" xPos="256" yPos="2560" />
+    <Image height="256" name="LabButton" width="256" xPos="512" yPos="2560" />
+    <Image height="256" name="HerbGardenButton" width="256" xPos="768" yPos="2560" />
+    <Image height="256" name="AlchemyLabButton" width="256" xPos="1024" yPos="2560" />
+    <Image height="256" name="FineToolsButton" width="256" xPos="1280" yPos="2560" />
+    <Image height="256" name="MasterToolsButton" width="256" xPos="1536" yPos="2560" />
+    <Image height="256" name="SunthornButton" width="256" xPos="1792" yPos="2560" />
+    <Image height="256" name="ItemBoxButton" width="256" xPos="0" yPos="2816" />
+    <Image height="256" name="ItemBagButton" width="256" xPos="256" yPos="2816" />
+    <Image height="256" name="ItemFramePoor" width="256" xPos="512" yPos="2816" />
+    <Image height="256" name="ItemFrameCommon" width="256" xPos="768" yPos="2816" />
+    <Image height="256" name="ItemFrameRare" width="256" xPos="1024" yPos="2816" />
+    <Image height="256" name="ItemFrameEpic" width="256" xPos="1280" yPos="2816" />
+    <Image height="256" name="ItemSlotEmpty" width="256" xPos="1536" yPos="2816" />
+    <Image height="256" name="TavernButton" width="256" xPos="1792" yPos="2816" />
+    <Image height="256" name="BeerButton" width="256" xPos="0" yPos="3072" />
+    <Image height="256" name="InfirmaryButton" width="256" xPos="256" yPos="3072" />
 </Imageset>
