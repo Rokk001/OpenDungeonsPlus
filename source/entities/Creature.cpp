@@ -6553,6 +6553,9 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 
 bool Creature::isWoundedForBedCarry() const
 {
+    if(isActionInList(CreatureActionType::infirmaryRest))
+        return false;
+
     if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingDragged || mIsInHand ||
        isPossessed() || isInPrison() || getDefinition()->isWorker() || getDefinition()->isChampion())
     {

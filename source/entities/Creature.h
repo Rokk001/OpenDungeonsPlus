@@ -898,7 +898,7 @@ public:
     //! alive, own bed in a dormitory, not standing on it, hit points below the configured share,
     //! no fight or flight going on, no hostile creature close, not in jail, not possessed, not a
     //! worker or in the hand and not on cooldown after the last time. The worker and the distance
-    //! are not considered here.
+    //! are not considered here. An admitted infirmary patient stays on its paid cot.
     bool isWoundedForBedCarry() const;
 
     //! \brief Server side. True if the creature is knocked out to death and a worker may pull it to its
