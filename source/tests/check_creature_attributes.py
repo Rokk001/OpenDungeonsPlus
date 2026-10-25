@@ -7,6 +7,7 @@ from pathlib import Path
 import glob
 import re
 import sys
+import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / 'tools/balance'))
@@ -730,6 +731,7 @@ def check_part_e():
 import math
 check_part_e()
 
+# Check client overlays and profile displays while keeping HUD styling separate from creature mana tint.
 def check_part_g():
     """Part G: the client side. The mana ring in the overhead status (6.7), the critical hit feedback with the sound
     (8.5 client and 8.6 file) and the displays of attributes, mana, path and skills (11)."""
@@ -757,7 +759,7 @@ def check_part_g():
             'Ogre::OverlayManager::getSingleton().getViewportHeight()') in update
     assert 'previousPosition = childPosition;' in update, 'the next child centres on the unshifted position'
 
-    # ---- 6.7 the mana ring: built like the experience ring, HUD mana colour, right of the health ring
+    # ---- 6.7 the mana ring: built like the experience ring, original mana tint, right of the health ring
     enum_body = status[status.index('enum class CreatureOverlays'):status.index('};', status.index('enum class CreatureOverlays'))]
     assert enum_body.index('mana,') < enum_body.index('nbCreatureOverlays'), 'enum value mana before nbCreatureOverlays'
     constructor = function(status, 'CreatureOverlayStatus::CreatureOverlayStatus(')
@@ -770,8 +772,10 @@ def check_part_g():
     assert 'MANA_RING_SIZE = 64;' in status and 'MANA_RING_OFFSET_X = 64;' in status
     channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_RING_RED', 'MANA_RING_GREEN', 'MANA_RING_BLUE')]
     assert channels == [127, 227, 166]
-    hud = text('gui/ModeGame.layout')
-    assert 'FF%02X%02X%02X' % tuple(channels) == 'FF7FE3A6' and 'value="FF7FE3A6"' in hud, 'the colour of the HUD mana number'
+    # The painted HUD uses ivory text; the creature's mana ring keeps its original green tint.
+    hud = ET.fromstring(text('gui/ModeGame.layout'))
+    mana_display = hud.find('.//Window[@name="ManaDisplay"]')
+    assert mana_display.find('Property[@name="TextColours"]').get('value') == 'FFF0E2C0', 'ivory HUD mana number'
     progress = function(status, 'void CreatureOverlayStatus::updateProgress(')
     assert 'getCurrentMana() / maxMana' in progress and 'Creature::MANA_RING_STEPS' in progress
     assert 'setAtlasFrame(manaId' in progress

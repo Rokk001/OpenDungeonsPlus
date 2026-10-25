@@ -590,10 +590,10 @@ print('WIRING OK: the statistics area is a scrollable pane and the debriefing bu
 # The CEGUI arrow of this game is fully transparent: without the keeper hand the debriefing had no visible
 # pointer at all, which looked like a blocked mouse
 from PIL import Image
-skin = (repo / 'gui/ODSkin.imageset').read_text()
-arrow = re.search(r'<Image height="(\d+)" name="MouseArrow" width="(\d+)" xPos="(\d+)" yPos="(\d+)"', skin)
-assert arrow
-height, width, left, top = (int(value) for value in arrow.groups())
+skin = ElementTree.parse(repo / 'gui/ODSkin.imageset').getroot()
+arrow = skin.find("Image[@name='MouseArrow']")
+assert arrow is not None
+height, width, left, top = (int(arrow.attrib[key]) for key in ('height', 'width', 'xPos', 'yPos'))
 arrow_pixels = Image.open(repo / 'gui/ODSkin.png').convert('RGBA').crop((left, top, left + width, top + height))
 assert max(pixel[3] for pixel in arrow_pixels.getdata()) == 0, 'the arrow became visible: the hand may not be needed any more'
 show = function(game_mode, 'void GameMode::showDefeatDebriefing(')

@@ -14,22 +14,33 @@ dumps the textures and checks the geometry that the layout and the map renderer 
   that it reads as metal on the dark well;
 - the compass marker is round and empty outside its rim.
 
+The same native probe also decodes the painted runtime atlas with Ogre and copies its twenty
+registered sprites with the production helper. Those copies are checked against the actual PNG
+rectangles, including all corner cutouts and the distinct painted interaction states. The older
+procedural assertions remain a separate regression check, not a specification of painted colours.
+
 With --preview DIRECTORY it also writes enlarged PNGs (needs PIL): every texture, and a mock-up of
 the minimap at the size of the 1920x1200 game (176 layout units at scale 1.7).
 """
 from pathlib import Path
 import argparse
 import math
+import os
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
+
+from PIL import Image
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--preview', help='directory for enlarged preview PNGs')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/render/Gui.cpp').read_text()
+prefix = Path(os.environ.get('CMAKE_PREFIX_PATH', str(Path(os.environ.get('OD_DEPS_ROOT', str(Path.home() / 'od-deps'))) / 'install')))
 
 
+# Extract one complete production drawing or atlas-copy function without changing its body.
 def function(signature):
     start = source.index(signature)
     end = source.index('{', start) + 1
@@ -44,20 +55,32 @@ helpers = ['float badgeClamp(', 'void badgeMix(', 'void badgeSet(', 'float badge
            'float badgeSmoothMin(', 'float badgeHash(', 'float badgeValueNoise(', 'float badgeFbm(', 'float badgeCircle(',
            'float badgeTaper(', 'float badgeBox(', 'float badgeRound(', 'void badgeNormal(']
 navigation = source[source.index('//! \\brief Puts a layer (colour 0-255'):source.index('//! \\brief Creates a texture and an image')]
+painted_constants = source[source.index('//! Painted navigation atlas coordinates,'):source.index('// Layout of the room, trap and spell buttons')]
 code = r'''
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <Ogre.h>
 HELPERS
 NAVIGATION
+PAINTED
+//! \brief Writes the native output bytes consumed by the existing geometry assertions.
 static void dump(const std::string& directory, const std::string& name, const std::vector<unsigned char>& pixels)
 {
     FILE* file = std::fopen((directory + "/" + name + ".rgba").c_str(), "wb");
     std::fwrite(pixels.data(), 1, pixels.size(), file);
     std::fclose(file);
 }
+//! \brief Copies one real runtime atlas rectangle with the unchanged production helper.
+static void dumpPainted(const std::string& directory, const std::string& name, int x, int y, int size)
+{
+    std::vector<unsigned char> pixels;
+    copyPaintedNavigationPixels(pixels, x, y, size);
+    dump(directory, "painted-" + name, pixels);
+}
+//! \brief Exercises the legacy drawings and actual painted PNG copies in one native fixture.
 int main(int, char** argv)
 {
     const std::string directory = argv[1];
@@ -77,9 +100,28 @@ int main(int, char** argv)
         drawNavigationSymbolPixels(pixels, symbol);
         dump(directory, "symbol" + std::to_string(symbol), pixels);
     }
+    Ogre::Root root("", "", directory + "/navigation-Ogre.log");
+    root.loadPlugin(std::string(argv[3]) + "/bin/Codec_STBI");
+    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(std::string(argv[2]) + "/gui", "FileSystem", "General");
+    paintedNavigationAtlas.load(PAINTED_NAVIGATION_ATLAS, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
+    dumpPainted(directory, "MiniMapRim", 0, 0, PAINTED_RIM_SIZE);
+    dumpPainted(directory, "MiniMapNorth", PAINTED_BADGE_X, PAINTED_NORTH_Y, PAINTED_SYMBOL_SIZE);
+    dumpPainted(directory, "ManaBadge", PAINTED_BADGE_X, 0, PAINTED_BADGE_SIZE);
+    dumpPainted(directory, "GoldBadge", PAINTED_BADGE_X, PAINTED_BADGE_SIZE, PAINTED_BADGE_SIZE);
+    const char* suffixes[] = {"", "Hover", "Pressed"};
+    for(int corner = 0; corner < 4; ++corner)
+        for(int state = 0; state < 3; ++state)
+            dumpPainted(directory, "MiniMapCorner" + std::to_string(corner) + suffixes[state],
+                PAINTED_CORNER_X + corner * PAINTED_CORNER_SIZE, state * PAINTED_CORNER_SIZE, PAINTED_CORNER_SIZE);
+    dumpPainted(directory, "NavHelp", PAINTED_BADGE_X, PAINTED_HELP_Y, PAINTED_SYMBOL_SIZE);
+    dumpPainted(directory, "NavSell", PAINTED_SELL_X, PAINTED_NORTH_Y, PAINTED_SYMBOL_SIZE);
+    dumpPainted(directory, "NavOptions", PAINTED_SELL_X, PAINTED_HELP_Y, PAINTED_SYMBOL_SIZE);
+    dumpPainted(directory, "MapZoom", 0, PAINTED_ZOOM_Y, PAINTED_SYMBOL_SIZE);
     return 0;
 }
-'''.replace('HELPERS', '\n'.join(function(s) for s in helpers)).replace('NAVIGATION', navigation)
+'''.replace('\nHELPERS\n', '\n' + '\n'.join(function(s) for s in helpers) + '\n').replace(
+    '\nNAVIGATION\n', '\n' + navigation + '\n').replace(
+    '\nPAINTED\n', '\n' + painted_constants + '\n' + function('void copyPaintedNavigationPixels(') + '\n')
 
 checks = 0
 failures = 0
@@ -111,10 +153,45 @@ def brightness(p):
 with tempfile.TemporaryDirectory(prefix='odp-navigation-style-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(code)
-    subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', 'check.cpp', '/Fecheck.exe'], cwd=work, check=True,
+    subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I' + str(prefix / 'include/OGRE'),
+                    'check.cpp', '/Fecheck.exe', '/link', '/LIBPATH:' + str(prefix / 'lib'), 'OgreMain.lib'], cwd=work, check=True,
                    stdout=subprocess.DEVNULL)
-    subprocess.run([str(work / 'check.exe'), str(work)], check=True)
+    environment = dict(os.environ)
+    environment['PATH'] = str(prefix / 'bin') + os.pathsep + environment.get('PATH', '')
+    subprocess.run([str(work / 'check.exe'), str(work), str(repo), str(prefix)], check=True,
+                   env=environment, stdin=subprocess.DEVNULL, timeout=180)
 
+    # Real runtime sprites: native Ogre decoding and copying must match the registered PNG rectangles.
+    painted = {}
+    entries = ET.parse(repo / 'gui/ODNavigation.imageset').getroot().findall('Image')
+    check(len(entries) == 20, 'all twenty painted runtime sprites are registered')
+    with Image.open(repo / 'gui/ODNavigation.png') as atlas:
+        rgba = atlas.convert('RGBA')
+        for entry in entries:
+            name = entry.attrib['name']
+            x, y, width, height = (int(entry.attrib[key]) for key in ('xPos', 'yPos', 'width', 'height'))
+            check(width == height, name + ' is a square runtime sprite')
+            data = load(work, 'painted-' + name, width)
+            expected = rgba.crop((x, y, x + width, y + height)).tobytes()
+            check(data == expected, name + ' retains the actual registered PNG pixels through the production copy')
+            check(any(data[i + 3] for i in range(0, len(data), 4)), name + ' has visible painted content')
+            painted[name] = (width, data)
+    for corner in range(4):
+        states = []
+        for suffix in ('', 'Hover', 'Pressed'):
+            name = 'MiniMapCorner' + str(corner) + suffix
+            size, data = painted[name]
+            states.append(data)
+            outside_x = size // 4 if not corner & 1 else size - 1 - size // 4
+            outside_y = size // 4 if not corner & 2 else size - 1 - size // 4
+            bite_x = size - 16 if not corner & 1 else 16
+            bite_y = size - 16 if not corner & 2 else 16
+            check(pixel(data, size, outside_x, outside_y)[3] == 255, name + ' keeps its outer plate opaque')
+            check(pixel(data, size, bite_x, bite_y)[3] == 0, name + ' preserves the minimap circle cutout')
+        check(states[0] != states[1] and states[0] != states[2] and states[1] != states[2],
+              'painted corner %d has distinct resting, hovered and pressed states' % corner)
+
+    # Legacy procedural helpers retain every original assertion independently of the painted runtime sprites.
     rim_size, north_size, plate_size, symbol_size = 384, 64, 128, 64
     rim = load(work, 'rim', rim_size)
     centre = rim_size // 2

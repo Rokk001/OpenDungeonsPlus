@@ -131,7 +131,7 @@ public:
     void setUserScalePercent(float scalePercent);
 
     //! \brief Redraws the heart badge of the top-left corner: its ring shows the given health
-    //! fraction (0 to 1) of the dungeon heart and its background glows while under attack.
+    //! fraction (0 to 1) of the dungeon heart and its painted background glows while under attack.
     void updateHeartBadge(float healthFraction, bool underAttack);
 
     //! \brief Arranges the room, trap and spell buttons of the in game sheet.
@@ -297,7 +297,7 @@ private:
     //! \param layoutScale Scale from display size and user scale, before the fit to the screen.
     void applyScaleToWindow(CEGUI::Window* window, const WindowScaleData& data, float layoutScale);
 
-    //! \brief Sets the native resolution of fonts and skin images from the user scale.
+    //! \brief Sets resource native resolutions from user scale while preserving atlas design sizes.
     void updateResourceScaling(const CEGUI::Sizef& displaySize);
 };
 

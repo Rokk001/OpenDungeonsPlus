@@ -110,8 +110,8 @@ const double AUTOSCROLL_EDGE_RATIO = 0.02;
 const float TRAP_PRODUCTION_REFRESH_INTERVAL = 1.0f;
 
 // Text colours (ARGB) of the mana change next to the mana display.
-const std::string MANA_GAIN_TEXT_COLOUR = "FF7FE3A6";
-const std::string MANA_LOSS_TEXT_COLOUR = "FFFF4848";
+const std::string MANA_GAIN_TEXT_COLOUR = "FFF0E2C0";
+const std::string MANA_LOSS_TEXT_COLOUR = "FFF0E2C0";
 
 //! Text colour of the time limit display (ARGB)
 static const char* const TIME_LIMIT_COLOUR = "FFF6CB62";
