@@ -1482,3 +1482,10 @@ sounds/Rooms/Infirmary/Discharge.ogg         krb21                    CC0 1.0   
 sounds/Rooms/Infirmary/Chant.ogg             bolkmar                  CC0 1.0                 "Voice Male humming - Thinking", https://freesound.org/people/bolkmar/sounds/469603/ ; whole real HQ recording preview, 0.2-s loop crossfade, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
 sounds/Rooms/Infirmary/Rattle.ogg            Sassaby                  CC0 1.0                 "Shekere Hit", https://freesound.org/people/Sassaby/sounds/506383/ ; whole real HQ recording preview, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
 sounds/Spatial/Rooms/Infirmary/Chant/Chant.ogg             bolkmar                  CC0 1.0                 "Voice Male humming - Thinking", https://freesound.org/people/bolkmar/sounds/469603/ ; whole real HQ recording preview, 0.2-s loop crossfade, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+
+== Infirmary room surface and healing effect ==
+
+materials/textures/InfirmaryFloor.png          OD Team; AI-generated with Codex    CC0    Original prescribed procedural infirmary flagstones, stains and straw, generated with the existing room-floor pipeline, 2026-10-25
+materials/textures/InfirmaryFloorNormal.png    OD Team; AI-generated with Codex    CC0    Matching tangent normal map of the prescribed original infirmary floor height field, 2026-10-25
+materials/scripts/InfirmaryFloor.material     OpenDungeonsPlus contributors    GPLv3+    Existing room-floor shader material with infirmary texture references; original material attribution retained, 2026-10-25; additional definition AI-generated with Codex
+particles/CreatureReactions.particle (InfirmaryHealGlow)    OpenDungeonsPlus contributors    GPLv3+    Additional continuous healing glow based on the existing ReactionHeal definition, 2026-10-25; existing particle definitions unchanged; additional definition AI-generated with Codex
