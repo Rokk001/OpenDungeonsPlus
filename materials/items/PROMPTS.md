@@ -1,5 +1,79 @@
 # Item image prompts
 
+## WKF_Head_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Circlet of Workfolk: one practical tan canvas headband circlet, a sturdy woven strip with simple stitched seams and a modest iron brow clasp, an open empty loop without a cap or head. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Head_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Head_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Armour_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Mantle of Workfolk: one empty sturdy tan canvas work mantle with short shoulder flaps and a modest leather front fastening, practical thick cloth, no wearer. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Armour_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Armour_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Boots_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Striders of Workfolk: a matching pair of durable tan canvas ankle boots with brown leather toe and heel reinforcement, modest plain laces and sturdy soles, one equipment item. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Boots_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Boots_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Ring_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Seal of Workfolk: one plain iron finger ring with a small flat oval signet face, tan canvas binding around the shank, restrained seam stitches, no letters or symbol. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Ring_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Ring_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Pick_base.png
+
+Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Pick of Workfolk: one sturdy iron mining pick with a curved pointed head, straight brown wooden shaft and a modest tan canvas grip wrap. Common-quality practical worker equipment, modest functional craftsmanship, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible within generous transparent margins. No wearer, person, body, mannequin, text, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## WKF_Pick_rare.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Rare-quality Steadyhand version: refine canvas to a dense fine weave with precise decorative seam stitching, refined existing leather and restrained bronze trim on existing metal fittings. No glow. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
+
+## WKF_Pick_epic.png
+
+Edit target: the supplied original canvas worker-family equipment icon. Create its Epic-quality Steady Hand version: refine existing canvas with intricate seam stitching, polished leather, delicate silver and gold detailing on existing fittings, and a faint warm amber glow along a few existing edges. Preserve EXACTLY the same item, object shape, outer silhouette, pose, viewing angle, proportions, openings, straps, scale, composition, lighting direction and transparent margins. Change surface craftsmanship only. Keep the practical work-clothing or tool identity and original hand-painted fantasy inventory icon style. No added parts, protrusions, gems, extra objects, wearer, person, body, background, frame, text, letters, numbers, brand or watermark. Genuine transparent alpha, square suitable for128px downsampling.
+
 ## ARC_B_Head_rare.png
 
 Edit target: supplied original dark brown hide head inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
