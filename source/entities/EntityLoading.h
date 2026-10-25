@@ -29,6 +29,7 @@ class ODPacket;
 namespace Entities
 {
     GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::istream& is);
+    //! \brief Recreates a typed entity received from the server, including decorative room figures.
     GameEntity* getGameEntityFromPacket(GameMap* gameMap,  ODPacket& is);
 }
 

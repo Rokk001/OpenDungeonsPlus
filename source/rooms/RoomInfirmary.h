@@ -96,6 +96,8 @@ public:
     static int cotSize(const Creature& creature);
     //! \brief Tests the minimum contiguous square required when building.
     static bool containsMinimumBlock(GameMap& map, Seat* seat, const std::vector<Tile*>& tiles);
+    //! \brief Returns one target per cot and the instrument table, without weighting large cots more.
+    std::vector<Tile*> getShamanWalkTargets() const;
     //! \brief Returns the one decorative room figure, if the room has a spawn tile.
     InfirmaryShamanEntity* getShaman() const { return mShaman; }
     //! \brief Plays the real rattle recording at the figure's current tile.

@@ -4,6 +4,10 @@
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
+#include "network/ODServer.h"
+#include "network/ServerNotification.h"
+#include "game/Seat.h"
+#include "game/Player.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomType.h"
 #include "ODApplication.h"
@@ -49,7 +53,7 @@ double InfirmaryShamanEntity::interval(const std::string& minimumKey, const std:
 //! \brief Finds a connected floor path entirely within the owning room.
 bool InfirmaryShamanEntity::walkToCot(RoomInfirmary& room)
 {
-    const std::vector<Tile*> destinations = room.getCotTiles();
+    const std::vector<Tile*> destinations = room.getShamanWalkTargets();
     Tile* start = getPositionTile();
     if(destinations.empty() || start == nullptr)
         return false;
@@ -99,7 +103,7 @@ void InfirmaryShamanEntity::doUpkeep()
         return;
     }
     RoomInfirmary& room = *static_cast<RoomInfirmary*>(base);
-    setSeat(room.getSeat());
+    setRoomOwner(room.getSeat());
     mWalkTurns -= 1.0;
     mPoseTurns -= 1.0;
     if(mPoseRemaining > 0.0)
@@ -156,4 +160,54 @@ InfirmaryShamanEntity* InfirmaryShamanEntity::getFromPacket(GameMap* map, ODPack
     InfirmaryShamanEntity* shaman = new InfirmaryShamanEntity(map);
     shaman->importFromPacket(packet);
     return shaman;
+}
+
+//! \brief Keeps clicks on a surviving figure attached to the room after joining rooms.
+void InfirmaryShamanEntity::setRoomName(const std::string& roomName)
+{
+    if(mRoomName == roomName)
+        return;
+    mRoomName = roomName;
+    notifyRoomChanged();
+}
+
+//! \brief Keeps the same figure while its room changes owner.
+void InfirmaryShamanEntity::setRoomOwner(Seat* seat)
+{
+    if(getSeat() == seat)
+        return;
+    setSeat(seat);
+    notifyRoomChanged();
+}
+
+//! \brief Refreshes the existing figure rather than replacing it on room takeover.
+void InfirmaryShamanEntity::notifyRoomChanged()
+{
+    if(!getIsOnServerMap())
+        return;
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+        ServerNotification* notification = new ServerNotification(ServerNotificationType::entitiesRefresh, seat->getPlayer());
+        notification->mPacket << static_cast<uint32_t>(1) << getObjectType() << getName();
+        exportToPacketForUpdate(notification->mPacket, seat);
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+}
+
+//! \brief Appends room ownership and the merged room name to the standard refresh.
+void InfirmaryShamanEntity::exportToPacketForUpdate(ODPacket& packet, Seat* seat)
+{
+    RenderedMovableEntity::exportToPacketForUpdate(packet, seat);
+    packet << mRoomName << static_cast<int32_t>(getSeat() == nullptr ? -1 : getSeat()->getId());
+}
+
+//! \brief Rebinds a visible figure after a room merge or takeover.
+void InfirmaryShamanEntity::updateFromPacket(ODPacket& packet)
+{
+    RenderedMovableEntity::updateFromPacket(packet);
+    int32_t seatId;
+    OD_ASSERT_TRUE(packet >> mRoomName >> seatId);
+    setSeat(seatId < 0 ? nullptr : getGameMap()->getSeatById(seatId));
 }
