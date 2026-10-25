@@ -89,6 +89,7 @@ public:
     //! A 3x3 heart has no ring and stores no gold.
     virtual int getTotalGoldStorage() const override;
     virtual int getTotalGoldStored() const override;
+    //! \brief Deposits gold into the ring and reports the actual heart position for the delivery burst.
     virtual int depositGold(int gold, Tile* tile) override;
     virtual int withdrawGold(int gold) override;
 
