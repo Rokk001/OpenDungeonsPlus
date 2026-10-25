@@ -1710,7 +1710,7 @@ const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
 //! Tolerance (design pixels) before the rows count as higher than the page
 const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
 //! Names of the rows that flow from top to bottom and so change their position when the texts change
-const char* const PROFILE_FLOW_ROWS[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", "LikesText",
+const char* const PROFILE_FLOW_ROWS[] = {"AttributesText", "EquipmentText", "EquipmentRow", "PathText", "SkillsText", "BioText", "LikesText",
     "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
 const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
@@ -1750,6 +1750,7 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
     return y + height + PROFILE_ROW_GAP;
 }
 
+//! \brief Fits the profile flow and wrapped item groups into the existing scrolling page.
 float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
 {
     const float scale = getLayoutScale();
@@ -1763,7 +1764,35 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     const char* const linkRows[PROFILE_LINK_ROWS][PROFILE_LINK_ROW_WINDOWS] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
 
     for(std::size_t i = 0; i < 8; ++i)
+    {
         y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);
+        if(i != 0)
+            continue;
+        CEGUI::Window* equipment = page->getChild("EquipmentRow");
+        const float width = std::max(1.0f, page->getPixelSize().d_width / scale - PROFILE_ROW_INSET_TOTAL);
+        const float edge = std::min(56.0f, width);
+        float x = 0.0f;
+        float rowY = 0.0f;
+        for(std::size_t slot = 0; slot < 13; ++slot)
+        {
+            const float gap = slot == 6 || slot == 9 ? 12.0f : 4.0f;
+            if(slot != 0 && x + gap + edge > width)
+            {
+                x = 0.0f;
+                rowY += edge + PROFILE_ROW_GAP;
+            }
+            else if(slot != 0)
+                x += gap;
+            setScaledArea(equipment->getChild("Slot" + Helper::toString(slot)),
+                CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, rowY),
+                    CEGUI::UDim(0, x + edge), CEGUI::UDim(0, rowY + edge)));
+            x += edge;
+        }
+        const float height = rowY + edge;
+        setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
+            CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y + height)));
+        y += height + PROFILE_ROW_GAP;
+    }
 
     for(std::size_t row = 0; row < PROFILE_LINK_ROWS; ++row)
     {

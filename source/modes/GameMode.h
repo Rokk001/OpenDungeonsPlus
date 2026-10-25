@@ -368,7 +368,7 @@ protected:
     bool raiseShownDialog(const CEGUI::EventArgs& e);
 
     //! \brief Handle the keyboard input in normal mode
-    //! \brief Handles normal game shortcuts, including L for the laboratory overview.
+    //! \brief Handles normal shortcuts, including K for trading and L for the laboratory overview.
     virtual bool keyPressedNormal   (const OIS::KeyEvent &arg);
 
     //! \brief Handle the keyboard input when chat is activated
@@ -498,6 +498,7 @@ private:
     void openStatsWindowUnderPointer(const OIS::MouseEvent& arg);
 
     //! \brief Set the help window (quite long) text.
+    //! \brief Describes the current game controls, including the merchant shortcut.
     void setHelpWindowText();
 
     //! \brief Picks room floors through walls and uses normal surface picking for other actions.

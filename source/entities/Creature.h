@@ -228,7 +228,8 @@ public:
     //! \brief Fills a profile page (gui/WindowCreatureProfilePage.layout) with the social profile of the
     //! creature. Used by the creature card and by the Dungeonbook. The names in the friends and foe rows are
     //! buttons (FriendLink0, FriendLink1, FoeLink) carrying the creature name in the user string "Creature"; the
-    //! caller decides what a click does. Returns the bottom edge of the page content in design pixels.
+    //! caller decides what a click does. Shows transmitted item slots with quality frames and tooltips.
+    //! Returns the bottom edge of the page content in design pixels.
     float fillProfilePage(CEGUI::Window* page);
 
     //! \brief Gender of the creature ("Female", "Male" or empty), derived from its name and class. Same

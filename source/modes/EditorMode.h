@@ -31,6 +31,7 @@
 #include <boost/circular_buffer.hpp>
 
 #include <iostream>
+#include <vector>
 
 
 
@@ -92,6 +93,10 @@ public:
     //! \param content A random-quality token or a catalogue item id followed by its quality.
     //! \param placeBag True creates an item bag; false creates an item gift box.
     void askCreateGiftBox(GiftBoxType type, const std::string& content, bool placeBag);
+    //! \brief Fills the shared item selection and connects item-box and bag creation.
+    void initialiseItemBoxControls();
+    //! \brief Sends the selected catalogue row or random token without rolling client bonuses.
+    bool createSelectedItem(const CEGUI::EventArgs& event);
 
     //! \brief Options window functions
     bool toggleOptionsWindow(const CEGUI::EventArgs& arg = {});
@@ -142,6 +147,7 @@ public:
     //! \brief Replaces the region markers shown by the ones the server has just sent
     void setRegions(const std::vector<LevelScriptRegion>& regions);
 private:
+    std::vector<std::string> mItemBoxContents;
 
     DraggableTileContainer* draggableTileContainer;
     

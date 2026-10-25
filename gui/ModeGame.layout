@@ -348,12 +348,13 @@
             <Property name="NormalImage" value="OpenDungeonsIcons/MerchantButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
-            <Property name="TooltipText" value="Merchant" />
+            <Property name="TooltipText" value="Merchant (K)" />
+            <UserString name="ContextHelp" value="Merchant: stock, purchases and trading settings (K)" />
             <Property name="Visible" value="False" />
             <UserString name="AllowEdgeScrolling" value="true" />
         </Window>
         <Window type="OD/GameTabButton" name="SandboxButton">
-            <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />
+            <Property name="Area" value="{{0,292},{1,-224},{0,332},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WavePortalButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />

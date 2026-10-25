@@ -55,6 +55,8 @@ class RoomMerchant : public Room
 public:
     //! \brief Creates an empty merchant room.
     RoomMerchant(GameMap* gameMap);
+    //! \brief Removes decorative stock before the room leaves its map.
+    void removeFromGameMap(GameMap* gameMap = nullptr) override;
     //! \brief Returns the appended merchant room type.
     RoomType getType() const override;
     //! \brief Updates reservations, the single seat merchant, and live stock windows.
@@ -73,9 +75,9 @@ public:
     Tile* askSpotForCarriedEntity(GameEntity* entity) override;
     //! \brief Buys an owner bag on delivery, or returns sealed goods to stock without a second purchase.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* entity) override;
-    //! \brief Reports whether the creature can visit this room to trade.
+    //! \brief Rejects leisure jobs; dedicated trading actions still visit the tables.
     bool hasOpenCreatureSpot(Creature* creature) override;
-    //! \brief Tries one trade when an eligible visitor uses the room as leisure.
+    //! \brief Rejects leisure use without changing dedicated buying or selling.
     bool useRoom(Creature& creature, bool forced) override;
     //! \brief Saves table goods and the merchant's current position.
     void exportToStream(std::ostream& stream) const override;
@@ -136,6 +138,12 @@ protected:
     bool importTileDataFromStream(std::istream& stream, Tile* tile, TileData* data) override;
 
 private:
+    //! \brief Removes the transmitted decorative bags without changing the real stock.
+    void clearDisplayedGoods();
+    //! \brief Places sealed quality bags in evenly spaced positions on each sales table.
+    void refreshDisplayedGoods();
+    std::vector<BuildingObject*> mDisplayedGoods;
+    size_t mDisplayedCapacity = 0;
     //! \brief Creates the seat figure only when at least one centre table exists.
     void ensureMerchant();
     //! \brief Drops every remaining good from a table as a sealed bag.
