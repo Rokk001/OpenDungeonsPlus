@@ -396,7 +396,7 @@ private:
     //! shows it, has gone down since the last scan
     void scanHeartHit();
     void reconcile();
-    //! \brief Plays the clips of the objects whose time has come
+    //! \brief Plays due object clips and sounds and maintains visible looping room sounds
     void playClips();
     void updateEmitters(double timeSinceLastFrame);
     //! \brief Ends the one-shot effects of the list whose time is over
@@ -586,6 +586,8 @@ private:
     //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
+    //! Sound-loop handles by object and effect, stopped when that visible effect disappears.
+    std::map<std::string, uint32_t> mSoundLoops;
     //! The remains of destroyed doors that are shown
     std::vector<Collapse> mCollapses;
     //! The bolts and flying objects that are on their way

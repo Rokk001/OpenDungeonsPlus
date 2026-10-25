@@ -350,6 +350,7 @@ void RoomInfirmary::cancelReservation(Creature& carrier)
     }
 }
 
+//! \brief Charges once, places an eligible patient on its cot and plays admission audio.
 bool RoomInfirmary::admit(size_t id, Creature& creature, bool manual)
 {
     double paid=0.0; int payer=0;
@@ -365,6 +366,7 @@ bool RoomInfirmary::admit(size_t id, Creature& creature, bool manual)
     creature.setPosition(Ogre::Vector3(static_cast<Ogre::Real>(cot.x+(cot.width-1)*0.5),static_cast<Ogre::Real>(cot.y+(cot.height-1)*0.5),0.0));
     creature.clearDestinations(EntityAnimation::sleep_anim,false,false);
     creature.pushAction(Utils::make_unique<CreatureActionInfirmaryRest>(creature,*this));
+    if(creature.getPositionTile()!=nullptr) fireRoomSound(*creature.getPositionTile(), "Infirmary/Admit");
     return true;
 }
 
@@ -402,11 +404,14 @@ void RoomInfirmary::releasePatient(Creature& creature)
         if(it->second.creature==&creature) { mPatients.erase(it);return; }
 }
 
+//! \brief Keeps switched-off patients lying and otherwise discharges at the chosen health.
 bool RoomInfirmary::restPatient(Creature& creature)
 {
     if(getPatient(creature)==nullptr) return false;
     healPatient(creature);
+    if(!getSeat()->getInfirmaryHealOn()) return true;
     if(creature.getHP()*100.0<creature.getMaxHp()*getDischargeThreshold()) return true;
+    if(creature.getPositionTile()!=nullptr) fireRoomSound(*creature.getPositionTile(), "Infirmary/Discharge");
     releasePatient(creature);
     creature.popAction();
     if(creature.getHP()<creature.getMaxHp() && creature.getHomeTile()!=nullptr) creature.pushAction(Utils::make_unique<CreatureActionSleep>(creature));

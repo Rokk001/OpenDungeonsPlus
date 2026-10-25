@@ -114,12 +114,24 @@ void GameSound::play(float x, float y, float z)
 // SoundEffectsManager class
 template<> SoundEffectsManager* Ogre::Singleton<SoundEffectsManager>::msSingleton = nullptr;
 
+//! \brief Loads the normal sound families and the named infirmary recordings.
 SoundEffectsManager::SoundEffectsManager() :
     mNextLoopHandle(1)
 {
     const std::string& soundFolderPath = ResourceManager::getSingleton().getSoundPath();
     // We read the spatial sound directory
     readSounds(mSpatialSounds, soundFolderPath + "Spatial/", "", true);
+    // These room recordings are individual files rather than per-family directories.
+    static const char* const infirmarySounds[] = {"Admit", "Discharge", "Chant", "Rattle"};
+    for(const char* name : infirmarySounds)
+    {
+        const std::string family = std::string("Rooms/Infirmary/") + name;
+        if(mSpatialSounds.find(family) != mSpatialSounds.end())
+            continue;
+        GameSound* sound = getGameSound(soundFolderPath + family + ".ogg", true);
+        if(sound != nullptr)
+            mSpatialSounds[family].push_back(sound);
+    }
 
     // We read the relative sound directory
     for(const std::string& keeper : ConfigManager::getSingleton().getKeeperVoices())
@@ -267,6 +279,14 @@ uint32_t SoundEffectsManager::startSpatialLoop(const std::string& family,
     uint32_t handle = mNextLoopHandle++;
     mSpatialLoops[handle] = sound;
     return handle;
+}
+
+//! \brief Moves a room ambience loop without restarting its recording.
+void SoundEffectsManager::setSpatialLoopPosition(uint32_t handle, float x, float y, float height)
+{
+    std::map<uint32_t, sf::Sound*>::iterator sound = mSpatialLoops.find(handle);
+    if(sound != mSpatialLoops.end())
+        sound->second->setPosition(sf::Vector3f(x, y, height));
 }
 
 void SoundEffectsManager::stopSpatialLoop(uint32_t handle)
