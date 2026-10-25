@@ -137,7 +137,7 @@ enum class CosmeticEventType : int32_t
     digStroke = 20,
     //! A successful deposit in a heart ring or treasury with one owner heart. mObject deposit room,
     //! mPosition actual heart tile.
-    //! Sent once per successful deposit to the keepers who see its deposit tile.
+    //! Sent once per successful deposit only to keepers seeing both the deposit and heart tiles.
     goldDelivery = 21
 };
 
