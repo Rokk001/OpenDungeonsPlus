@@ -273,6 +273,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
     ${SRC}/creatureaction/CreatureActionUseToilet.cpp
+    ${SRC}/creatureaction/CreatureActionVomit.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
     ${SRC}/creatureaction/CreatureActionPossessed.cpp
 
@@ -312,6 +313,7 @@ set(OD_SOURCEFILES
     ${SRC}/creaturemood/CreatureMoodNoLair.cpp
     ${SRC}/creaturemood/CreatureMoodOutOfWork.cpp
     ${SRC}/creaturemood/CreatureMoodSlapped.cpp
+    ${SRC}/creaturemood/CreatureMoodThirst.cpp
     ${SRC}/creaturemood/CreatureMoodTortured.cpp
     ${SRC}/creaturemood/CreatureMoodRested.cpp
     ${SRC}/creaturemood/CreatureMoodHatedCompany.cpp

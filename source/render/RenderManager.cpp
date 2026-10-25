@@ -4935,6 +4935,18 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     {
         anim = EntityAnimation::walk_hurt_anim;
     }
+    // A drunk creature staggers when the skeleton has the clip (same length as Walk, same entity state)
+    else if((dropCreature != nullptr) && (anim == EntityAnimation::walk_anim) && dropCreature->isStaggering() &&
+       objectEntity->getSkeleton()->hasAnimation(EntityAnimation::stagger_anim))
+    {
+        anim = EntityAnimation::stagger_anim;
+    }
+    // A creature with a hangover holds its head when it stands, if the skeleton has the clip
+    else if((dropCreature != nullptr) && (anim == EntityAnimation::idle_anim) && dropCreature->isHungover() &&
+       objectEntity->getSkeleton()->hasAnimation(EntityAnimation::hangover_anim))
+    {
+        anim = EntityAnimation::hangover_anim;
+    }
 
     // Handle the case where this entity does not have the requested animation.
     while (!objectEntity->getSkeleton()->hasAnimation(anim))

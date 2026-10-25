@@ -29,21 +29,39 @@
 
 const std::string DirtPileEntity::PILE_MESH_PREFIX = "Pile_";
 const std::string DirtPileEntity::BLOOD_MESH_NAME = "BloodStain";
+const std::string DirtPileEntity::VOMIT_MESH_NAME = "Vomit";
 const double DirtPileEntity::DIRT_LEFT_START = 100.0;
 
 //! \brief Text of the kind "pile" in the saved dirt piles.
 static const std::string KIND_PILE_TEXT = "pile";
 //! \brief Text of the kind "blood" in the saved dirt piles.
 static const std::string KIND_BLOOD_TEXT = "blood";
+//! \brief Text of the kind "vomit" in the saved dirt piles.
+static const std::string KIND_VOMIT_TEXT = "vomit";
 //! \brief Written in the saved dirt piles instead of an empty creature class.
 static const std::string NO_CLASS_TEXT = "none";
 //! \brief Base name of the unique name of a pile.
 static const std::string PILE_BASE_NAME = "DirtPile_";
 //! \brief Base name of the unique name of a blood stain.
 static const std::string BLOOD_BASE_NAME = "BloodStain_";
+//! \brief Base name of the unique name of vomit.
+static const std::string VOMIT_BASE_NAME = "Vomit_";
+
+//! \brief Returns the base of the unique entity name for a kind.
+//! \param kind Pile, blood or vomit.
+static const std::string& getBaseNameFor(DirtPileKind kind)
+{
+    if(kind == DirtPileKind::blood)
+        return BLOOD_BASE_NAME;
+
+    if(kind == DirtPileKind::vomit)
+        return VOMIT_BASE_NAME;
+
+    return PILE_BASE_NAME;
+}
 
 DirtPileEntity::DirtPileEntity(GameMap* gameMap, DirtPileKind kind, const std::string& creatureClass) :
-    RenderedMovableEntity(gameMap, (kind == DirtPileKind::pile) ? PILE_BASE_NAME : BLOOD_BASE_NAME,
+    RenderedMovableEntity(gameMap, getBaseNameFor(kind),
         getMeshNameFor(kind, creatureClass), 0.0f, false),
     mKind(kind),
     mCreatureClass(creatureClass),
@@ -70,6 +88,9 @@ std::string DirtPileEntity::getMeshNameFor(DirtPileKind kind, const std::string&
 {
     if(kind == DirtPileKind::blood)
         return BLOOD_MESH_NAME;
+
+    if(kind == DirtPileKind::vomit)
+        return VOMIT_MESH_NAME;
 
     return PILE_MESH_PREFIX + creatureClass;
 }
@@ -139,8 +160,8 @@ DirtPileEntity* DirtPileEntity::createOnTile(GameMap* gameMap, Tile* tile, DirtP
         dirtPile->mDirtLeft = DIRT_LEFT_START;
     }
 
-    // A pile makes its tile as dirty as can be at once; blood only adds what the fight itself did
-    if(kind == DirtPileKind::pile)
+    // A pile or vomit makes its tile as dirty as can be at once; blood only adds what the fight itself did
+    if((kind == DirtPileKind::pile) || (kind == DirtPileKind::vomit))
         tile->addDirt(Tile::MAX_DIRT);
 
     return dirtPile;
@@ -170,6 +191,9 @@ std::string DirtPileEntity::kindToString(DirtPileKind kind)
     if(kind == DirtPileKind::blood)
         return KIND_BLOOD_TEXT;
 
+    if(kind == DirtPileKind::vomit)
+        return KIND_VOMIT_TEXT;
+
     return KIND_PILE_TEXT;
 }
 
@@ -184,6 +208,12 @@ bool DirtPileEntity::kindFromString(const std::string& text, DirtPileKind& kind)
     if(text == KIND_BLOOD_TEXT)
     {
         kind = DirtPileKind::blood;
+        return true;
+    }
+
+    if(text == KIND_VOMIT_TEXT)
+    {
+        kind = DirtPileKind::vomit;
         return true;
     }
 
@@ -254,7 +284,11 @@ void DirtPileEntity::importFromPacket(ODPacket& is)
     RenderedMovableEntity::importFromPacket(is);
     int32_t kind = 0;
     OD_ASSERT_TRUE(is >> kind);
-    mKind = (kind == static_cast<int32_t>(DirtPileKind::blood)) ? DirtPileKind::blood : DirtPileKind::pile;
+    mKind = DirtPileKind::pile;
+    if(kind == static_cast<int32_t>(DirtPileKind::blood))
+        mKind = DirtPileKind::blood;
+    else if(kind == static_cast<int32_t>(DirtPileKind::vomit))
+        mKind = DirtPileKind::vomit;
     OD_ASSERT_TRUE(is >> mCreatureClass);
     OD_ASSERT_TRUE(is >> mDirtLeft);
     OD_ASSERT_TRUE(is >> mAgeTurns);

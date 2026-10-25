@@ -73,7 +73,7 @@ static void expectNear(double a, double b, double eps, const std::string& what)
 
 namespace Helper { int toInt(const std::string& s) { return std::atoi(s.c_str()); } std::string toString(int v) { return std::to_string(v); } }
 
-enum class DirtPileKind { pile, blood };
+enum class DirtPileKind { pile, blood, vomit };
 struct GameMap; struct DirtPileEntity;
 struct Tile
 {
@@ -292,7 +292,7 @@ needs_strings = '\n'.join(re.search(r'^static const std::string ' + name + r' = 
                           for name in ('NEEDS_SAVE_OPEN', 'NEEDS_SAVE_CLOSE'))
 
 pile_strings = '\n'.join(re.search(r'^[^\n]*' + name + r' = "[^"]*";$', pile_cpp, re.M).group(0)
-                         for name in ('KIND_PILE_TEXT', 'KIND_BLOOD_TEXT', 'NO_CLASS_TEXT'))
+                         for name in ('KIND_PILE_TEXT', 'KIND_BLOOD_TEXT', 'KIND_VOMIT_TEXT', 'NO_CLASS_TEXT'))
 
 section_start = map_cpp.index('//! \\brief Section tag that opens the dirt of the tiles')
 section_end = map_cpp.index('bool readGameEntity(GameMap& gameMap, const std::string& item')

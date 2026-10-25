@@ -252,6 +252,8 @@ public:
     inline double getCleanliness() const { return mCleanliness; }
     //! \brief Returns the factor on all dirt the creature produces (1 = normal, 2 = twice as much).
     inline double getDirtFactor() const { return mDirtFactor; }
+    //! \brief Returns how fast the thirst grows per turn (0 = the creature never gets thirsty).
+    inline double getThirstGrowthPerTurn() const { return mThirstGrowthPerTurn; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -432,6 +434,9 @@ private:
 
     //! \brief Optional (DirtFactor, 0 - 2): factor on all dirt the creature produces. Default 1.0 when not set
     double mDirtFactor;
+
+    //! \brief Optional (ThirstGrowth/Turn): how fast the thirst grows per turn. Default 0.0 when not set
+    double mThirstGrowthPerTurn;
 
     //! \brief The name of the creatures class
     std::string mClassName;

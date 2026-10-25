@@ -73,6 +73,9 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
             }
             RoomDormitory* dormitory = static_cast<RoomDormitory*>(roomHomeTile);
             creature.setAnimationState(EntityAnimation::sleep_anim, false, dormitory->getSleepDirection(&creature), false);
+
+            // A creature that falls asleep drunk wakes up with a hangover
+            creature.sleepStarted();
         }
 
         // Sleeping in the lair relieves the mood
@@ -99,6 +102,7 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
 
         if (creature.getWakefulness() >= 100.0 && creature.getHP() >= creature.getMaxHp())
         {
+            creature.sleepEnded();
             creature.popAction();
             return false;
         }

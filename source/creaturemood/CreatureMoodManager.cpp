@@ -89,6 +89,8 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += creature.getSpecialMood();
     // Fights in the arena
     moodValue += Helper::round(creature.getPitMood());
+    // A drink, a game won or lost and a hangover at the tavern
+    moodValue += Helper::round(creature.getTavernMood());
     // Dirty rooms and dirt piles nearby (no line in the creature configuration, the global dirt values apply to all)
     static const CreatureMoodDirt dirtMood;
     moodValue += dirtMood.computeMood(creature);
