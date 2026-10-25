@@ -90,9 +90,10 @@ Diese Pfade direkt verwenden, nie danach suchen.
   5. Then it runs the check scripts for its changed source files, pushes normally and registers ready in
      docs/internal/projects/git-integration/INTEGRATION-STATE.md with the checked tip and 'Kompiliertest: Exit 0'.
   6. The integrator refuses a ready row without 'Kompiliertest: Exit 0' for its exact tip and sends it back.
-  7. No two branches work on the same code area at the same time. Before a new branch starts, its planned files are compared
-     with the files changed by every branch that is in progress or ready (git diff --name-only against
-     origin/integration/all). If they share a source file, header or config file, the new branch waits until the other one
-     is integrated, or the work goes into the existing branch. The coordinator applies the same rule when planning.
+  7. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
+     on code that plan adds) waits until that plan is integrated. Every window merges the current origin/integration/all into
+     its branch whenever another branch has been integrated (checked at the start of every package and at least once per
+     hour) and always before ready, and resolves all conflicts so that the content of both sides is kept completely. The
+     coordinator applies the same rule when planning.
 - Check scripts in source/tests that compile small C++ probes with cl are not a game build. Feature windows run them before marking a branch ready for every source file the branch changes; skipping them is not allowed.
 - Every integrator release build that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on Mario's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every integrator build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
