@@ -25,6 +25,7 @@
 #include "entities/Tile.h"
 #include "rooms/Room.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomTreasury.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -378,8 +379,12 @@ bool CreatureActionCarryEntity::handleDragCreature()
     return false;
 }
 
+//! \brief Releases carried cargo and any promised treasury place when the cargo is removed or picked up.
 void CreatureActionCarryEntity::releaseEntity(const std::string& reason)
 {
+    if(mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(mBuildingDest)->getType() == RoomType::treasury)
+        static_cast<RoomTreasury*>(mBuildingDest)->releaseItemDelivery(mEntityToCarry);
     mEntityToCarry->setCarryLock(mCreature, false);
     const Ogre::Vector3& pos = mCreature.getPosition();
     OD_LOG_INF("creature=" + mCreature.getName() + " is releasing " + reason + " carried " + mEntityToCarry->getName() + ", pos=" + Helper::toString(pos));
