@@ -218,7 +218,7 @@ material MenuCloud
 }
 
 // The sky dome has no texture and no vertex colours. An unlit fixed pass falls back to white.
-// Its explicit shader instead uses emission and cloud structure, with the authored display transfer.
+// Its explicit shader keeps the upper sky nearly black; cloud structure belongs to the horizon.
 material MenuSky
 {
     receive_shadows off
@@ -237,7 +237,7 @@ material MenuSky
             ambient 0 0 0 1
             diffuse 0 0 0 1
             specular 0 0 0 1 0
-            emissive 0.012 0.018 0.022
+            emissive 0.0006 0.0005 0.0004
         }
     }
 }
