@@ -18,6 +18,7 @@
 #include "creatureaction/CreatureActionUseToilet.h"
 
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/DirtPileEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
