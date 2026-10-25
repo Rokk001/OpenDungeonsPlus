@@ -3766,6 +3766,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::giftBoxEntity:
         case GameEntityType::lavaRock:
         case GameEntityType::dirtPileEntity:
+        case GameEntityType::innkeeperEntity:
             return getRenderedMovableEntity(entityName);
 
         case GameEntityType::spell:

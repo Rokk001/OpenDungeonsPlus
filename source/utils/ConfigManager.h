@@ -597,6 +597,7 @@ private:
     bool loadSkills(const std::string& fileName);
     //! \brief Reads config/creatureSkills.cfg (skill trees, tier 4 skills and templates of the creatures).
     bool loadCreatureSkills(const std::string& fileName);
+    //! \brief Reads config/tilesets.cfg: the tile links and the floor and wall pieces of every tile visual, rooms included.
     bool loadTilesets(const std::string& fileName);
     bool loadTilesetValues(std::istream& defFile, TileVisual tileVisual, std::vector<std::vector<TileSetValue>>& tileValues, std::map<TileVisual,std::map<int,float>>& highMap);
     bool loadEditorSettings(const std::string& fileName);
