@@ -8,6 +8,8 @@ Rebuild from the repository root with `python scripts/gui/build_skin_atlas.py` (
 
 State suffixes `__Hover`, `__Pushed`, `__Disabled` reference the corresponding painted state column. `__Edge2` selects the second independently damaged stretch of an edge. The complete nine-slice roles are HudPlate, WindowFrame, InsetPanel, Button, TabButton, Checkbox, Combobox, EditBox, Listbox, ScrollbarTrack, ScrollbarThumb, ProgressBar, Tooltip and IconSlot. Each exposes TopLeft, TopRight, BottomLeft, BottomRight, Top, Bottom, Left, Right and Middle pieces, with both edge variants in every state. Normal image names and every public widget/property/child/named-area contract remain unchanged. Glyphs are cut from their painted sources; alpha is retained. The separate `OrbRing` and `MinimapRing` images are provided for the HUD navigation.
 
+`MouseArrow` deliberately remains fully transparent at its original logical 12x12 size (48x48 source pixels at density 4), because the existing 3D hand provides the visible default cursor. The painted arrow remains in the source sheet but is not installed as a second cursor. The other mouse cursor images were opaque in the original skin and retain their painted replacements; the text-editing caret is unchanged.
+
 Exact generation prompts follow. Outputs were 1254x1254 even though a 2048 square was requested; atlas assembly resamples the source crops.
 
 ## Source 1: frames.png

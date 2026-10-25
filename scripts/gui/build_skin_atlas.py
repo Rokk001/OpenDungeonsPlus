@@ -110,9 +110,11 @@ def seamless_stone():
     return result
 
 
-# Cut painted sprites and frame parts; no procedural drawing substitutes for the artwork.
+# Cut painted sprites and frames, preserving the empty default cursor used with the existing 3D hand.
 def render_tile(name, size, stone):
     base = name.split("__", 1)[0]
+    if base == "MouseArrow":
+        return Image.new("RGBA", size, (0, 0, 0, 0))
     state = image_state(name)
     family, piece = frame_recipe(base)
     frame = Image.open(SOURCES / f"frame-{family}-{state}.png").convert("RGBA")

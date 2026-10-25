@@ -51,7 +51,7 @@ ODMainMenuButtons.png                  Mario                   GPLv3+           
 ODMainMenuLogo.imageset                Mario                   GPLv3+
 ODMainMenuLogo.png                     AI-generated with Codex  GPLv3+                  AI-generated for this project (Codex, 2026-09), see "Generated assets" below
 ODSkin.imageset                        OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
-ODSkin.png                             AI-generated with Codex  GPLv3+                  Painted for this project (2026-10-24), assembled by scripts/gui/build_skin_atlas.py
+ODSkin.png                             AI-generated with Codex  GPLv3+                  Painted for this project (2026-10-24), regenerated 2026-10-25 by scripts/gui/build_skin_atlas.py; original transparent default cursor preserved for the 3D hand
 ODSkin.scheme                          OD Team                 MIT                     CEGUI file based on the TaharezLook gui sample - http://cegui.org.uk
 assets-src/gui/skin/frames.png          AI-generated with Codex  GPLv3+                  Original painted frame-state source sheet, 2026-10-24
 assets-src/gui/skin/stone.png           AI-generated with Codex  GPLv3+                  Original painted dark stone source, 2026-10-24
