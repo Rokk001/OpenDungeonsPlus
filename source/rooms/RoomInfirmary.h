@@ -33,6 +33,7 @@ public:
         std::string reservedByName;
         double admissionPaid = 0.0;
         int payer = 0;
+        //! \brief Paid patient's remaining death time; a saved reservation uses the incoming signed KO counter.
         int32_t storedCounter = 0;
         bool manual = false;
     };
@@ -54,7 +55,7 @@ public:
     void removeFromGameMap(GameMap* gameMap = nullptr) override;
     //! \brief Checks defeat and interrupted reservations.
     void doUpkeep() override;
-    //! \brief Rebinds saved patients and reserved carries after loading.
+    //! \brief Rebinds patients and restores incoming knockout countdowns before recreating reserved carries.
     void restoreInitialEntityState() override;
     //! \brief Reports whether a knockout has an available infirmary admission.
     static bool wouldAccept(const Creature& creature);
