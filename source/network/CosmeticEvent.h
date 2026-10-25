@@ -135,7 +135,8 @@ enum class CosmeticEventType : int32_t
     //! A successful mining stroke. mSubject worker, mValue TileType, mPosition the actual mined tile.
     //! Sent once after the server removed material; timing, gold and gameplay are unchanged.
     digStroke = 20,
-    //! A successful deposit in a heart ring. mObject room, mPosition actual heart tile.
+    //! A successful deposit in a heart ring or treasury with one owner heart. mObject deposit room,
+    //! mPosition actual heart tile.
     //! Sent once per successful deposit to the keepers who see its deposit tile.
     goldDelivery = 21
 };

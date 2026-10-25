@@ -34,6 +34,7 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "sound/SoundEffectsManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -379,6 +380,7 @@ int RoomTreasury::getTotalGoldStored() const
     return totalGold;
 }
 
+//! \brief Deposits unchanged gold and reports its burst when the owner has one unambiguous heart.
 int RoomTreasury::depositGold(int gold, Tile *tile)
 {
     int goldDeposited, goldToDeposit = gold, emptySpace;
@@ -419,6 +421,20 @@ int RoomTreasury::depositGold(int gold, Tile *tile)
     // Tells the client to play a deposit gold sound. For now, we only send it to the players
     // with vision on tile
     fireRoomSound(*tile, "Treasury/DepositGold");
+
+    const std::vector<Room*> hearts = getGameMap()->getRoomsByTypeAndSeat(RoomType::dungeonTemple, getSeat());
+    if(hearts.size() == 1)
+    {
+        Tile* heartTile = static_cast<RoomDungeonTemple*>(hearts[0])->getHeartTile();
+        if(heartTile != nullptr)
+        {
+            CosmeticEvent delivery(CosmeticEventType::goldDelivery);
+            delivery.mObject = getName();
+            delivery.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTile->getX()),
+                static_cast<Ogre::Real>(heartTile->getY()), 0.0f);
+            fireRoomCosmeticEvent(*tile, delivery);
+        }
+    }
 
     // The treasury just became full: the clients may show the workers out of breath (cosmetic only)
     if(getTotalGoldStored() >= getTotalGoldStorage())

@@ -76,6 +76,7 @@ public:
 
     virtual int getTotalGoldStorage() const override;
     virtual int getTotalGoldStored() const override;
+    //! \brief Deposits gold and reports a delivery burst only when the owner has exactly one heart.
     virtual int depositGold(int gold, Tile *tile) override;
     virtual int withdrawGold(int gold) override;
 
