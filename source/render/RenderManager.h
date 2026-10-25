@@ -1046,6 +1046,11 @@ private:
     void destroyRoomConstructionEffect(const RoomConstructionEffect& effect);
     //! Removes the fly swarm of a rotting corpse and puts the original materials back on its entity
     void clearCreatureDecay(Creature* creature);
+    //! Removes the mug of a drinking guest and the birds over a knocked-out guest of a tavern, if the creature has them
+    void removeCreatureTavernProps(Creature* creature);
+    //! Gives the creature the props of the clip it plays (mug in the right hand for Drink, circling birds for
+    //! KnockedOut) and removes the props of the clip before
+    void updateCreatureTavernProps(Creature* creature, const std::string& anim);
     //! For each rotting corpse, the original materials of its sub-entities; while a corpse is listed here its
     //! entity uses private cloned materials whose corpseDecay value is driven by the animation progress
     std::map<Creature*, std::vector<Ogre::MaterialPtr>> mCreatureDecayMaterials;
