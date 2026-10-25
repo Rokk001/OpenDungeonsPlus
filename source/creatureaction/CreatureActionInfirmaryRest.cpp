@@ -18,7 +18,7 @@ CreatureActionInfirmaryRest::CreatureActionInfirmaryRest(Creature& creature, Roo
 }
 CreatureActionInfirmaryRest::~CreatureActionInfirmaryRest()
 { mRoom.releasePatient(mCreature); }
-std::function<bool()> CreatureActionInfirmaryRest::action()
+std::function<bool()> CreatureActionInfirmaryRest::action() // allowed-lambda: signature required by CreatureAction
 { return std::bind(&CreatureActionInfirmaryRest::handleRest,this); }
 bool CreatureActionInfirmaryRest::handleRest()
 {

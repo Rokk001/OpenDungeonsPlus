@@ -13,7 +13,7 @@ public:
     //! \brief Returns the patient rest action type.
     CreatureActionType getType() const override { return CreatureActionType::infirmaryRest; }
     //! \brief Returns the next patient upkeep step.
-    std::function<bool()> action() override;
+    std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
     //! \brief Runs one turn of the patient's treatment.
     bool handleRest();
 private:
