@@ -95,6 +95,8 @@ public:
     void askCreateGiftBox(GiftBoxType type, const std::string& content, bool placeBag);
     //! \brief Fills the shared item selection and connects item-box and bag creation.
     void initialiseItemBoxControls();
+    //! \brief Opens the bottom-toolbar choices upward within the screen instead of clipping them to the tab.
+    bool positionItemBoxChoices(const CEGUI::EventArgs& event);
     //! \brief Sends the selected catalogue row or random token without rolling client bonuses.
     bool createSelectedItem(const CEGUI::EventArgs& event);
 

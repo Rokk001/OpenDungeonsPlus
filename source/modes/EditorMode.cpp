@@ -85,6 +85,7 @@
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/Listbox.h>
 #include <CEGUI/widgets/Combobox.h>
+#include <CEGUI/widgets/ComboDropList.h>
 #include <CEGUI/widgets/MultiLineEditbox.h>
 #include <CEGUI/Window.h>
 #include <CEGUI/WindowManager.h>
@@ -2162,10 +2163,27 @@ void EditorMode::initialiseItemBoxControls()
     }
     choices->setItemSelectState(choices->getListboxItemFromIndex(0), true);
     choices->setText(labels.front());
+    addEventConnection(choices->subscribeEvent(CEGUI::Combobox::EventDropListDisplayed,
+        CEGUI::Event::Subscriber(&EditorMode::positionItemBoxChoices, this)));
     addEventConnection(mRootWindow->getChild("MainTabControl/Boxes/ItemBoxButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&EditorMode::createSelectedItem, this)));
     addEventConnection(mRootWindow->getChild("MainTabControl/Boxes/ItemBagButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&EditorMode::createSelectedItem, this)));
+}
+
+//! \brief Fits the open list above the bottom toolbar; the skin retains its normal closed editbox height.
+bool EditorMode::positionItemBoxChoices(const CEGUI::EventArgs& event)
+{
+    CEGUI::Combobox* choices = static_cast<CEGUI::Combobox*>(
+        static_cast<const CEGUI::WindowEventArgs&>(event).window);
+    CEGUI::ComboDropList* list = choices->getDropList();
+    const float height = std::min(200.0f * getModeManager().getGui().getLayoutScale(),
+        choices->getPixelPosition().d_y);
+    list->setClippedByParent(false);
+    list->setAlwaysOnTop(true);
+    list->setArea(CEGUI::UVector2(CEGUI::UDim(0, 0), CEGUI::UDim(0, -height)),
+        CEGUI::USize(CEGUI::UDim(1, 0), CEGUI::UDim(0, height)));
+    return true;
 }
 
 //! \brief Uses the selected entry for either a box or bag, leaving the complete roll to the server.
