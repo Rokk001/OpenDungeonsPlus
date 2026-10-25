@@ -217,6 +217,7 @@ struct Creature : public GameEntity
     int mKoTurnCounter;
     int mDeaths;
     bool mDirtKoThisFight = false;
+    bool mFoughtSinceFightEnd = false;
     CreatureDefinition mDefinition;
 };
 void recordScriptEvent(const Creature&, const std::string&) {}

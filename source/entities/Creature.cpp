@@ -640,6 +640,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
     mDirtKoThisFight         (false),
+    mFoughtSinceFightEnd     (false),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
@@ -664,6 +665,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mNbTurnsInHand           (0),
     mIsInHand                (false),
     mIsBeingDragged          (false),
+    mDragDirtFactor          (1.0),
     mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
@@ -761,6 +763,7 @@ Creature::Creature(GameMap* gameMap) :
     mStatsWindow             (nullptr),
     mNbTurnsWithoutBattle    (0),
     mDirtKoThisFight         (false),
+    mFoughtSinceFightEnd     (false),
     mCasinoMood              (0.0),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
@@ -785,6 +788,7 @@ Creature::Creature(GameMap* gameMap) :
     mNbTurnsInHand           (0),
     mIsInHand                (false),
     mIsBeingDragged          (false),
+    mDragDirtFactor          (1.0),
     mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
@@ -1350,12 +1354,12 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mMana;
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
-    // The needs (urge and creature dirt) for the stats window, then the skill state and the last field: the carried
-    // gold, shown as a sack on the thief
-    os << mUrge;
-    os << mCreatureDirt;
+    // The skill state, then the carried gold (shown as a sack on the thief), then the needs (urge and creature dirt)
+    // for the stats window as the last fields
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
+    os << mUrge;
+    os << mCreatureDirt;
 }
 
 //! \brief Reads the full creature data sent by the server, the skill state last.
@@ -1422,10 +1426,10 @@ void Creature::importFromPacket(ODPacket& is)
     {
         OD_LOG_ERR("Invalid appearance token=" + appearanceToken);
     }
-    OD_ASSERT_TRUE(is >> mUrge);
-    OD_ASSERT_TRUE(is >> mCreatureDirt);
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
+    OD_ASSERT_TRUE(is >> mUrge);
+    OD_ASSERT_TRUE(is >> mCreatureDirt);
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2046,12 +2050,14 @@ void Creature::doUpkeep()
 
     ++mNbTurnsWithoutBattle;
     // The turn the counter goes from 0 to 1 is the end of a fight: the creature gets a little dirty
-    // unless it was already dirtied by being knocked out in this fight
+    // unless it was already dirtied by being knocked out in this fight. A creature that never fought (the counter
+    // starts at 0 on spawn and load) gets nothing.
     if(mNbTurnsWithoutBattle == 1)
     {
-        if(!mDirtKoThisFight)
+        if(mFoughtSinceFightEnd && !mDirtKoThisFight)
             increaseCreatureDirt(ConfigManager::getSingleton().getDirtConfigDouble("CreatureDirtPerFightWon"));
         mDirtKoThisFight = false;
+        mFoughtSinceFightEnd = false;
     }
 
     // The pit mood fades towards 0
@@ -4037,8 +4043,11 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportProgressToPacket(os, seat);
     // Current mana, next to the health value (the maximum follows from type, level and equipment)
     os << mMana;
-    // The needs (urge and creature dirt) are sent for allied creatures only, foreign creatures send 0 for both
-    if(seat->isAlliedSeat(getSeat()))
+    // The skill state, then the carried gold (shown as a sack on the thief), then the needs (urge and creature dirt)
+    // as the last fields: only the own seat sees them, every other seat gets 0 for both
+    exportSkillBuildToPacket(os);
+    os << mGoldCarried;
+    if(seat == getSeat())
     {
         os << mUrge;
         os << mCreatureDirt;
@@ -4048,9 +4057,6 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         os << 0.0;
         os << 0.0;
     }
-    // The skill state, then the last field: the carried gold, shown as a sack on the thief
-    exportSkillBuildToPacket(os);
-    os << mGoldCarried;
 }
 
 //! \brief Reads the changing creature data sent by the server, the skill state last.
@@ -4134,10 +4140,10 @@ void Creature::updateFromPacket(ODPacket& is)
     importActivityFromPacket(is);
     importProgressFromPacket(is);
     OD_ASSERT_TRUE(is >> mMana);
-    OD_ASSERT_TRUE(is >> mUrge);
-    OD_ASSERT_TRUE(is >> mCreatureDirt);
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
+    OD_ASSERT_TRUE(is >> mUrge);
+    OD_ASSERT_TRUE(is >> mCreatureDirt);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -5639,6 +5645,7 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     bool wasAlive = isAlive();
     bool wasKo = isKo();
     mNbTurnsWithoutBattle = 0;
+    mFoughtSinceFightEnd = true;
     // The champion cannot be hurt
     if(getDefinition()->isChampion())
         return 0.0;
@@ -5878,6 +5885,7 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         EntityAnimation::combat_attack_anim, false, walkDirection, true);
     fireCreatureSound(CreatureSound::Attack);
     setNbTurnsWithoutBattle(0);
+    mFoughtSinceFightEnd = true;
 
     // Calculate how much damage we do.
     Tile* myTile = getPositionTile();
@@ -6631,9 +6639,10 @@ void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
     addEntityToPositionTile();
 }
 
-void Creature::notifyDragStart()
+void Creature::notifyDragStart(double pullerDirtFactor)
 {
     mIsBeingDragged = true;
+    mDragDirtFactor = pullerDirtFactor;
 
     // A hurt creature stops what it did, it lies on the ground and the worker pulls it (one knocked out to death
     // included: its counter goes on running). It stays on the map (it is not carried): the walk paths the worker
@@ -6651,6 +6660,7 @@ void Creature::notifyDragEnd()
         return;
 
     mIsBeingDragged = false;
+    mDragDirtFactor = 1.0;
     if(!getIsOnServerMap())
         return;
 
@@ -7538,7 +7548,7 @@ void Creature::upkeepCreatureDirt()
 }
 
 //! \brief Adds the trail dirt of this creature to the tile it entered: TrailDirtPerTile times DirtFactor for a load
-//! carried or a pulled wounded creature, plus the share of it that the creature dirt makes.
+//! carried or a pulled wounded creature (the DirtFactor of the worker that pulls it), plus the share of it that the creature dirt makes.
 void Creature::dirtyEnteredTile(Tile* tile)
 {
     if((tile == nullptr) || (mDefinition == nullptr))
@@ -7552,7 +7562,9 @@ void Creature::dirtyEnteredTile(Tile* tile)
     if((mCarriedEntity != nullptr) || mIsBeingDragged)
         share += 1.0;
 
-    tile->addDirt(trailDirt * share * mDefinition->getDirtFactor());
+    // A pulled creature leaves the trail of the worker that pulls it, so the DirtFactor of the puller counts
+    double dirtFactor = mIsBeingDragged ? mDragDirtFactor : mDefinition->getDirtFactor();
+    tile->addDirt(trailDirt * share * dirtFactor);
 }
 
 //! \brief A corpse adds CombatDirtPerHit to the tile it lies on every turn.
