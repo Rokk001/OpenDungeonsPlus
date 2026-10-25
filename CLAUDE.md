@@ -75,3 +75,4 @@ Diese Pfade direkt verwenden, nie danach suchen.
 
 - Kein Release- oder Abschlussbuild ohne ausdrueckliche Build-Freigabe durch Mario in der unmittelbar vorhergehenden Nachricht. Vorher muss die Vollstaendigkeitsfrage im Format "Offene Anforderungen: <Anzahl>" mit Liste aller offenen und teilweise erledigten Punkte beantwortet sein. Ein Plan-Schritt "Abschlussbuild" ersetzt diese Freigabe nicht. Ohne Freigabe: warten und melden.
 - Check scripts in source/tests that compile small C++ probes with cl are not a game build. Feature windows run them before marking a branch ready for every source file the branch changes; skipping them is not allowed.
+- Every integrator release build that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on Mario's explicit instruction.

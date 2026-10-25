@@ -18,9 +18,14 @@ set(OD_MAJOR_VERSION 0)
 set(OD_MINOR_VERSION 7)
 set(OD_PATCH_LEVEL   3)
 
+# Fourth version digit: the integrator passes the next running number (-DOD_BUILD_NUMBER=N)
+# for release builds that are pushed and deployed; branch and test builds keep 0.
+set(OD_BUILD_NUMBER 0 CACHE STRING "Fourth version digit (running build number)")
+set(OD_VERSION "${OD_MAJOR_VERSION}.${OD_MINOR_VERSION}.${OD_PATCH_LEVEL}.${OD_BUILD_NUMBER}")
+
 # Set the project version ready to be used in the code.
 if(NOT MSVC)
-    add_definitions(-DOD_VERSION="${OD_MAJOR_VERSION}.${OD_MINOR_VERSION}.${OD_PATCH_LEVEL}")
+    add_definitions(-DOD_VERSION="${OD_VERSION}")
 endif()
 
 # Set the data path depending on the platform
@@ -179,7 +184,7 @@ if(WIN32 AND MSVC)
     set(PLATFORM_C_FLAGS_DEBUG "/W3 /MDd /Od /Gm- /Gy /fp:fast /ZI /DOD_DEBUG" )
 
     # Set the application version
-    add_definitions(/DOD_VERSION="${OD_MAJOR_VERSION}.${OD_MINOR_VERSION}.${OD_PATCH_LEVEL}")
+    add_definitions(/DOD_VERSION="${OD_VERSION}")
 
     # Set the data paths
     add_definitions(/DOD_DATA_PATH="${OD_DATA_PATH}")
