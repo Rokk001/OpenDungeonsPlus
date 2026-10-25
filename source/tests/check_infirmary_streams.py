@@ -40,17 +40,26 @@ void Creature::pushAction(std::unique_ptr<CreatureActionCarryEntity> action){
     code += r"""
 //! \brief Retains the production optional seat block and threshold validator.
 struct SeatData{int32_t mInfirmaryPayer=0,mInfirmaryThreshold=100;bool mInfirmaryHealOn=true;
+ //! \brief Returns the payer serialized by the actual seat save fragment.
  int getInfirmaryPayer()const{return mInfirmaryPayer;}
+ //! \brief Accepts only the two production admission payer choices.
  void setInfirmaryPayer(int32_t value){if(value==0||value==1)mInfirmaryPayer=value;}
- void setInfirmaryThreshold(int32_t);void setInfirmaryHealOn(bool value){mInfirmaryHealOn=value;}
+ //! \brief Executes the actual configured discharge-threshold validator.
+ void setInfirmaryThreshold(int32_t);
+ //! \brief Restores the healing switch used by the actual seat load fragment.
+ void setInfirmaryHealOn(bool value){mInfirmaryHealOn=value;}
+ //! \brief Writes the extracted production infirmary seat block.
  void save(std::ostream& os)const{SEAT_SAVE}
+ //! \brief Reads the production seat block while preserving ownership of the next tag.
  bool load(std::istream& is){std::string str;if(!(is>>str))return false;while(true){SEAT_IMPORT
   if(str=="[Other]"){std::string payload,close;if(!(is>>payload>>close>>str)||close!="[/Other]")return false;continue;}
   return str=="EndSeat";}return true;}
 };
 //! \brief Retains the production optional creature mood block, including old-save defaults.
 struct MoodRecord{double mInfirmaryMood=0,mInfirmaryMoodTurns=0;
+ //! \brief Writes the production mood block with enough precision for an exact round-trip.
  void save(std::ostream& os)const{os<<std::setprecision(std::numeric_limits<double>::max_digits10);CREATURE_SAVE}
+ //! \brief Reads the production mood block alongside unrelated optional creature tags.
  bool load(std::istream& is){std::string appearanceToken;while(is>>appearanceToken){CREATURE_IMPORT
   if(appearanceToken=="[Other]"){std::string payload,close;if(!(is>>payload>>close)||close!="[/Other]")return false;continue;}
   return appearanceToken=="EndCreature";}return true;}
@@ -65,6 +74,7 @@ struct MoodRecord{double mInfirmaryMood=0,mInfirmaryMoodTurns=0;
     for needle in ("getCreature(patient.creatureName)", "getCreature(patient.reservedByName)", "CreatureActionCarryEntity"):
         assert needle in rebind, needle
     code += r"""
+//! \brief Runs room, reservation, seat and creature save compatibility regression cases.
 int main(){try{
  // The waiting reservation has 47 turns left; one already being dragged has counted down to 29.
  for(int remaining:{-47,-29}){

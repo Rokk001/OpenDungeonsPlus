@@ -61,17 +61,33 @@ PRELUDE = r"""
 void check(bool result,const char* name){if(!result)throw std::runtime_error(name);}
 //! \brief Compares fractional values without rounding their production storage.
 void near(double result,double expected,const char* name){check(std::abs(result-expected)<1e-8,name);}
+//! \brief Declares creatures referenced by fixture rooms and actions.
 struct Creature;
+//! \brief Declares rooms referenced by fixture tiles.
 struct Room;
+//! \brief Declares infirmaries referenced by fixture rest and carry actions.
 struct RoomInfirmary;
+//! \brief Identifies the room kinds required by admission and bed redirection fixtures.
 enum class RoomType{infirmary,dormitory,other};
 //! \brief Provides only the vectors required by cot geometry and saved shaman positions.
-namespace Ogre {struct Vector3{float x,y,z;Vector3(float a=0,float b=0,float c=0):x(a),y(b),z(c){}};struct Vector2{float x=0,y=0;};using Real=float;}
+namespace Ogre {
+//! \brief Stores the position coordinates used by the production room methods.
+struct Vector3{float x,y,z;
+ //! \brief Initializes the fixture position from its three coordinates.
+ Vector3(float a=0,float b=0,float c=0):x(a),y(b),z(c){}
+};
+//! \brief Stores the two saved shaman position coordinates.
+struct Vector2{float x=0,y=0;};using Real=float;}
 //! \brief Supplies the current figure position to the real room stream writer.
-struct InfirmaryShamanEntity{Ogre::Vector3 position;const Ogre::Vector3& getPosition()const{return position;}};
+struct InfirmaryShamanEntity{Ogre::Vector3 position;
+ //! \brief Returns the position written by the real shaman stream codec.
+ const Ogre::Vector3& getPosition()const{return position;}
+};
 //! \brief Supplies declared room parameters independently of production code.
 struct ConfigManager {
+ //! \brief Returns the fixture's shared configuration service.
  static ConfigManager& getSingleton(){static ConfigManager config;return config;}
+ //! \brief Returns the independently specified value for the requested room key.
  double getRoomConfigDouble(const std::string& name){
   const std::map<std::string,double> values={{"InfirmaryAdmissionWageShare",.3},{"InfirmaryManaPerWage",2},
    {"InfirmaryFullHealSeconds",60},{"DormitoryFullHealSeconds",150},{"InfirmaryMoodWageShare",.3},
@@ -81,66 +97,171 @@ struct ConfigManager {
    {"InfirmaryDischargeStepPercent",10},{"InfirmaryDischargeDefaultPercent",100},
    {"DormitoryWoundedCarryHpPercent",35},{"InfirmaryDirtPerTreatment",15.6}};
   return values.at(name);}
+ //! \brief Returns a signed integer room parameter from the fixture configuration.
  int getRoomConfigInt32(const std::string& name){return int(getRoomConfigDouble(name));}
+ //! \brief Returns an unsigned integer room parameter from the fixture configuration.
  uint32_t getRoomConfigUInt32(const std::string& name){return uint32_t(getRoomConfigDouble(name));}
+ //! \brief Returns the full death countdown used for manually admitted patients.
  int getNbTurnsKoCreatureAttacked(){return 120;}
 };
 //! \brief Captures room shortage messages while preserving human-player routing.
-struct Player{bool human=true;int notices=0;bool getIsHuman()const{return human;}void notifyInfirmaryEvent(){if(human)++notices;}};
+struct Player{bool human=true;int notices=0;
+ //! \brief Reports whether the fixture keeper is human.
+ bool getIsHuman()const{return human;}
+ //! \brief Counts shortage notices only for human keepers.
+ void notifyInfirmaryEvent(){if(human)++notices;}
+};
 //! \brief Represents the keeper resource and setting services used by the real room.
 struct Seat{Player player;double mana=10000;int payer=0,threshold=100;bool heal=true;
- Player* getPlayer(){return &player;}const Player* getPlayer()const{return &player;}
- int getId()const{return 1;}int getInfirmaryPayer()const{return payer;}int getInfirmaryThreshold()const{return threshold;}
- bool getInfirmaryHealOn()const{return heal;}bool takeMana(double amount){if(mana<amount)return false;mana-=amount;return true;}
- bool isRogueSeat()const{return false;}std::string getFaction()const{return "Keeper";}
+ //! \brief Returns the keeper whose notices the fixture records.
+ Player* getPlayer(){return &player;}
+ //! \brief Returns the keeper for const admission checks.
+ const Player* getPlayer()const{return &player;}
+ //! \brief Returns the keeper identifier used by admission gold transfers.
+ int getId()const{return 1;}
+ //! \brief Returns the selected admission payer.
+ int getInfirmaryPayer()const{return payer;}
+ //! \brief Returns the selected discharge health percentage.
+ int getInfirmaryThreshold()const{return threshold;}
+ //! \brief Reports whether healing may spend mana.
+ bool getInfirmaryHealOn()const{return heal;}
+ //! \brief Takes the exact requested mana only when the complete amount is available.
+ bool takeMana(double amount){if(mana<amount)return false;mana-=amount;return true;}
+ //! \brief Identifies this fixture as an owned keeper seat.
+ bool isRogueSeat()const{return false;}
+ //! \brief Returns the keeper faction accepted by infirmary admission rules.
+ std::string getFaction()const{return "Keeper";}
 };
+//! \brief Identifies fixture entities to the actual carry and admission methods.
 enum class GameEntityType{creature,room,other};
 //! \brief Supplies the real carry-entry type and ownership contract.
-struct GameEntity{Seat* owner=nullptr;virtual ~GameEntity(){}virtual GameEntityType getObjectType()const{return GameEntityType::creature;}
+struct GameEntity{Seat* owner=nullptr;
+ //! \brief Allows fixture creatures to be destroyed through their entity interface.
+ virtual ~GameEntity(){}
+ //! \brief Identifies this fixture entity as a creature for carrying checks.
+ virtual GameEntityType getObjectType()const{return GameEntityType::creature;}
  //! \brief Supplies carry listener attachment without changing fixture state.
  void addGameEntityListener(void*){}
  //! \brief Supplies the production carry-lock service without changing eligibility.
  void setCarryLock(Creature&,bool){}
  //! \brief Supplies non-drag pickup notification to the actual constructor.
  void notifyEntityCarryOn(Creature*){}
- Seat* getSeat()const{return owner;}virtual const std::string& getName()const=0;};
+ //! \brief Returns the owner used by carry eligibility.
+ Seat* getSeat()const{return owner;}
+ //! \brief Requires a stable name for saved entity rebinding.
+ virtual const std::string& getName()const=0;
+};
 //! \brief Exposes the tile geometry used by the actual layout and minimum-square methods.
 struct Tile{int x,y;bool full=true;Room* room=nullptr;std::vector<Tile*> neighbors;
- int getX()const{return x;}int getY()const{return y;}bool isFullTile()const{return full;}
- Room* getCoveringRoom(){return room;}const std::vector<Tile*>& getAllNeighbors(){return neighbors;}void addDirt(double){} };
+ //! \brief Returns the fixture tile's horizontal coordinate.
+ int getX()const{return x;}
+ //! \brief Returns the fixture tile's vertical coordinate.
+ int getY()const{return y;}
+ //! \brief Reports whether the tile blocks an infirmary entrance.
+ bool isFullTile()const{return full;}
+ //! \brief Returns the room used by joined-floor and own-bed checks.
+ Room* getCoveringRoom(){return room;}
+ //! \brief Returns the registered neighbors used by the minimum-square rule.
+ const std::vector<Tile*>& getAllNeighbors(){return neighbors;}
+ //! \brief Supplies admission dirt handling without changing the geometry fixture.
+ void addDirt(double){}
+};
 //! \brief Holds fixed fixture terrain, production room membership and precise treasury transfers.
 struct GameMap{std::map<std::pair<int,int>,Tile> tiles;std::vector<Room*> rooms;std::map<std::string,Creature*> creatures;int64_t turn=0;double treasury=1000,credited=0;
+ //! \brief Finds a fixture tile without creating terrain outside the registered map.
  Tile* getTile(int x,int y){const std::pair<int,int> cell(x,y);return tiles.count(cell)?&tiles.at(cell):nullptr;}
- const std::vector<Room*>& getRooms(){return rooms;}int64_t getTurnNumber(){return turn;}
+ //! \brief Returns the physical rooms whose gold can pay an admission.
+ const std::vector<Room*>& getRooms(){return rooms;}
+ //! \brief Returns the controlled turn used by shortage and glow checks.
+ int64_t getTurnNumber(){return turn;}
+ //! \brief Withdraws a complete fractional admission without partially charging a refusal.
  bool withdrawFromTreasuries(double amount,Seat*){if(treasury<amount)return false;treasury-=amount;return true;}
+ //! \brief Records gold transferred from a creature purse to its keeper.
  void addGoldToSeat(double amount,int){credited+=amount;}
+ //! \brief Resolves saved patient and carrier names to the registered fixture creatures.
  Creature* getCreature(const std::string& name){return creatures.count(name)?creatures.at(name):nullptr;}
 };
 //! \brief Represents just the inherited services invoked by the selected production methods.
 struct Room{GameMap* map;Seat* seat;std::vector<Tile*> mCoveredTiles;double gold=1000;RoomType type=RoomType::infirmary;Tile* delivery=nullptr;
- Room(GameMap* m=nullptr,Seat* s=nullptr):map(m),seat(s){}virtual ~Room(){}
- Seat* getSeat()const{return seat;}GameMap* getGameMap()const{return map;}RoomType getType()const{return type;}
+ //! \brief Attaches the fixture room to its terrain and owning keeper.
+ Room(GameMap* m=nullptr,Seat* s=nullptr):map(m),seat(s){}
+ //! \brief Supports destruction through the inherited room interface.
+ virtual ~Room(){}
+ //! \brief Returns the room owner used by admission and joined-floor checks.
+ Seat* getSeat()const{return seat;}
+ //! \brief Returns the fixture map supplying tiles, entities and resources.
+ GameMap* getGameMap()const{return map;}
+ //! \brief Returns the room kind used by cot and bed redirection rules.
+ RoomType getType()const{return type;}
+ //! \brief Identifies rooms to the actual carry constructor.
  GameEntityType getObjectType()const{return GameEntityType::room;}
+ //! \brief Supplies the fixture destination selected after a carry redirects to a bed.
  virtual Tile* askSpotForCarriedEntity(GameEntity*){return delivery;}
- void removeGameEntityListener(void*){}void addGameEntityListener(void*){}
- unsigned numCoveredTiles()const{return unsigned(mCoveredTiles.size());}Tile* getCoveredTile(unsigned i){return mCoveredTiles.at(i);}
- double getTotalGoldStored()const{return gold;}void removeBuildingObject(Tile*){}
- void exportToStream(std::ostream&)const{}bool importFromStream(std::istream&){return true;}
+ //! \brief Supplies listener detachment without changing fixture ownership.
+ void removeGameEntityListener(void*){}
+ //! \brief Supplies listener attachment without changing fixture ownership.
+ void addGameEntityListener(void*){}
+ //! \brief Returns the number of room tiles available to minimum-square checks.
+ unsigned numCoveredTiles()const{return unsigned(mCoveredTiles.size());}
+ //! \brief Returns a covered tile in the fixture's registered order.
+ Tile* getCoveredTile(unsigned i){return mCoveredTiles.at(i);}
+ //! \brief Returns physical room gold used by the actual admission preflight.
+ double getTotalGoldStored()const{return gold;}
+ //! \brief Supplies cot object removal without invoking rendering services.
+ void removeBuildingObject(Tile*){}
+ //! \brief Omits inherited room data so the probe isolates the infirmary save payload.
+ void exportToStream(std::ostream&)const{}
+ //! \brief Accepts inherited room data already supplied by the fixture.
+ bool importFromStream(std::istream&){return true;}
+ //! \brief Supplies room audio without playing a sound during the rule probe.
  void fireRoomSound(Tile&,const char*){}
+ //! \brief Supplies unrelated room dirt handling without changing rule inputs.
  static void addUseDirt(const Creature&,Tile*,const std::string&){}
+ //! \brief Supplies the inherited restore hook before the actual infirmary restoration.
  void restoreInitialEntityState(){}
 };
 //! \brief Models the fee and optional mood definitions read by production admission logic.
-struct CreatureMood{virtual ~CreatureMood(){}};
-struct CreatureMoodFee:CreatureMood{double getMoodModifier()const{return -120;}};
-struct CreatureMoodRested:CreatureMood{double getTurnsMax()const{return 30;}};
+struct CreatureMood{
+ //! \brief Supports the production mood casts through the fixture base interface.
+ virtual ~CreatureMood(){}
+};
+//! \brief Supplies the independently specified fee mood modifier.
+struct CreatureMoodFee:CreatureMood{
+ //! \brief Returns the fee modifier scaled by the production admission mood rule.
+ double getMoodModifier()const{return -120;}
+};
+//! \brief Supplies the configured rested lifetime used by admission moods.
+struct CreatureMoodRested:CreatureMood{
+ //! \brief Returns the rested lifetime used by the production mood initializer.
+ double getTurnsMax()const{return 30;}
+};
+//! \brief Holds controlled creature fee, eligibility, bed size and mood definitions.
 struct Definition{double fee=58,sleepHeal=2.05;std::vector<const CreatureMood*> moods;bool worker=false,champion=false;int width=1,height=1;
- double getFee(int)const{return fee;}double getSleepHeal()const{return sleepHeal;}
+ //! \brief Returns the wage used for proportional admission and mana costs.
+ double getFee(int)const{return fee;}
+ //! \brief Returns the retained legacy flag controlling zero bed healing.
+ double getSleepHeal()const{return sleepHeal;}
+ //! \brief Returns optional fee and rested definitions for the actual mood initializer.
  const std::vector<const CreatureMood*>& getCreatureMoods()const{return moods;}
- bool isWorker()const{return worker;}bool isChampion()const{return champion;}int getBedDim1()const{return width;}int getBedDim2()const{return height;}};
+ //! \brief Reports the worker exclusion used by admission checks.
+ bool isWorker()const{return worker;}
+ //! \brief Reports the champion exclusion used by admission checks.
+ bool isChampion()const{return champion;}
+ //! \brief Returns the first bed dimension used to select the matching cot size.
+ int getBedDim1()const{return width;}
+ //! \brief Returns the second bed dimension used to select the matching cot size.
+ int getBedDim2()const{return height;}
+};
 //! \brief Records action transitions without reimplementing their production decisions.
-struct CreatureActionSleep{CreatureActionSleep(Creature&){} };
-struct CreatureActionInfirmaryRest{CreatureActionInfirmaryRest(Creature&,RoomInfirmary&){} };
+struct CreatureActionSleep{
+ //! \brief Represents the production transition to an own-bed sleep action.
+ CreatureActionSleep(Creature&){}
+};
+//! \brief Represents a newly created infirmary rest action without animation services.
+struct CreatureActionInfirmaryRest{
+ //! \brief Accepts the creature and room passed by actual admission and restoration.
+ CreatureActionInfirmaryRest(Creature&,RoomInfirmary&){}
+};
 //! \brief Provides the owning creature reference used by the actual carry constructor.
 struct CreatureAction{Creature& mCreature;
  //! \brief Retains the owning creature for the actual carry constructor.
@@ -158,35 +279,88 @@ struct CreatureActionCarryEntity:CreatureAction{
  //! \brief Supplies drag attachment without changing the saved knockout countdown.
  void startDrag(){}
 };
-namespace Utils{template<class T,class... A>std::unique_ptr<T> make_unique(A&&... a){return std::unique_ptr<T>(new T(std::forward<A>(a)...));}}
+namespace Utils{
+//! \brief Constructs the fixture action requested by an extracted production method.
+template<class T,class... A>std::unique_ptr<T> make_unique(A&&... a){return std::unique_ptr<T>(new T(std::forward<A>(a)...));}}
 namespace EntityAnimation{const char* sleep_anim="sleep";const char* die_anim="die";const char* idle_anim="idle";}
+//! \brief Identifies the action states used by the actual attack behaviour.
 enum class CreatureActionType{fight,flee,sleep,infirmaryRest};
+//! \brief Supplies the mood states handled by the actual attack behaviour.
 enum class CreatureMoodLevel{Happy,Angry,Furious};
-namespace Random{int Int(int,int){return 0;}}
+namespace Random{
+//! \brief Supplies a deterministic non-flee result for the production attack behaviour.
+int Int(int,int){return 0;}}
 //! \brief Supplies mutable resources and records actual admission, healing and action effects.
 struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=100,mInfirmaryMood=0,mInfirmaryMoodTurns=0;
  int counter=-73,glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
  Tile* resumedCarryTarget=nullptr;int resumedCarryCounter=0;bool resumedCarryIsDrag=false;
- Definition* getDefinition(){return &definition;}const Definition* getDefinition()const{return &definition;}
- int getLevel()const{return 1;}double getGoldCarried()const{return gold;}void addGoldCarried(double v){gold+=v;}
- double getHP()const{return hp;}double getMaxHp()const{return maximum;}void setHP(double v){hp=v;}
- int getKoTurnCounter()const{return counter;}void setKoTurnCounter(int v){counter=v;}void resetKoTurns(){counter=0;}
- const std::string& getName()const{return name;}void setInfirmaryAdmissionMood(bool);
- bool isAlive()const{return hp>0;}bool isInPrison()const{return false;}
+ //! \brief Returns mutable creature definitions for the actual treatment methods.
+ Definition* getDefinition(){return &definition;}
+ //! \brief Returns creature definitions during const admission checks.
+ const Definition* getDefinition()const{return &definition;}
+ //! \brief Returns the fixture level used when the production methods request a wage.
+ int getLevel()const{return 1;}
+ //! \brief Returns the precise purse balance used by admission checks.
+ double getGoldCarried()const{return gold;}
+ //! \brief Applies an exact fractional change to the fixture purse.
+ void addGoldCarried(double v){gold+=v;}
+ //! \brief Returns the current health used by treatment and lying rules.
+ double getHP()const{return hp;}
+ //! \brief Returns the controlled maximum health used by proportional healing.
+ double getMaxHp()const{return maximum;}
+ //! \brief Records the health change produced by the actual healing rule.
+ void setHP(double v){hp=v;}
+ //! \brief Returns the signed remaining knockout countdown.
+ int getKoTurnCounter()const{return counter;}
+ //! \brief Restores the exact saved knockout countdown.
+ void setKoTurnCounter(int v){counter=v;}
+ //! \brief Stops the knockout countdown after a paid admission.
+ void resetKoTurns(){counter=0;}
+ //! \brief Returns the stable entity name used by reservations and saves.
+ const std::string& getName()const{return name;}
+ //! \brief Applies the extracted production admission mood initializer.
+ void setInfirmaryAdmissionMood(bool);
+ //! \brief Reports whether the fixture creature is alive for admission and dragging.
+ bool isAlive()const{return hp>0;}
+ //! \brief Identifies the fixture as an eligible creature outside prison.
+ bool isInPrison()const{return false;}
  std::set<CreatureActionType> actions;std::vector<int> enemies;int fights=0,flees=0;
+ //! \brief Reports the action states consumed by the actual attack behaviour.
  bool isActionInList(CreatureActionType action)const{return actions.count(action)>0;}
- const std::vector<int>& getVisibleEnemyObjects()const{return enemies;}CreatureMoodLevel getMoodValue()const{return CreatureMoodLevel::Happy;}
- void fight(){++fights;}void flee(){++flees;}
- void addParticleEffect(const char*,uint32_t){++glows;}Tile* getPositionTile(){return tile;}Tile* getHomeTile(){return home;}
- void clearActionQueue(){}void clearDestinations(const char*,bool,bool){}void setPosition(const Ogre::Vector3&){}
+ //! \brief Returns the controlled visible-enemy list for combat decisions.
+ const std::vector<int>& getVisibleEnemyObjects()const{return enemies;}
+ //! \brief Supplies a happy mood so combat boundary checks do not randomly flee.
+ CreatureMoodLevel getMoodValue()const{return CreatureMoodLevel::Happy;}
+ //! \brief Records the attack behaviour's decision to fight.
+ void fight(){++fights;}
+ //! \brief Records the attack behaviour's decision to flee.
+ void flee(){++flees;}
+ //! \brief Counts healing glow requests without invoking the renderer.
+ void addParticleEffect(const char*,uint32_t){++glows;}
+ //! \brief Returns the tile used by admission arrival and audio checks.
+ Tile* getPositionTile(){return tile;}
+ //! \brief Returns the own bed used after refusal or partial discharge.
+ Tile* getHomeTile(){return home;}
+ //! \brief Supplies queue cleanup without altering the controlled fixture actions.
+ void clearActionQueue(){}
+ //! \brief Supplies animation destination cleanup without invoking pathfinding.
+ void clearDestinations(const char*,bool,bool){}
+ //! \brief Supplies patient placement without changing the fixture's explicit tile binding.
+ void setPosition(const Ogre::Vector3&){}
  //! \brief Supplies ordinary attachment for the real carry constructor's non-drag branch.
  void carryEntity(GameEntity*){}
  //! \brief Records the actual constructor's resumed destination and countdown for assertions.
  void pushAction(std::unique_ptr<CreatureActionCarryEntity>);
- template<class T>void pushAction(std::unique_ptr<T>){++sleeps;}void popAction(){++popped;}
+ //! \brief Counts non-carry action transitions requested by production methods.
+ template<class T>void pushAction(std::unique_ptr<T>){++sleeps;}
+ //! \brief Counts action completions requested by production methods.
+ void popAction(){++popped;}
 };
 //! \brief Executes the actual attack behaviour with controlled visible-enemy inputs.
-struct CreatureBehaviourAttackEnemy{bool processBehaviour(Creature&)const;};
+struct CreatureBehaviourAttackEnemy{
+ //! \brief Executes the extracted production attack decision for the supplied creature.
+ bool processBehaviour(Creature&)const;
+};
 namespace SkillType{const int roomInfirmary=1,roomDormitory=2;}
 namespace ResearchEffect{const char* SleepRecovery="SleepRecovery";const char* HealTime="HealTime";}
 namespace SkillManager{double factor=1;
@@ -198,24 +372,69 @@ const size_t noCot=std::numeric_limits<size_t>::max();
 
 # Assemble the room declaration with actual state records and the methods under test.
 def room_declaration():
-    return "struct RoomInfirmary:Room {\n" + records() + r"""
+    return "//! \\brief Declares the infirmary state and production methods exercised by the probes.\nstruct RoomInfirmary:Room {\n" + records() + r"""
+ //! \brief Inherits fixture construction with an explicit map and keeper.
  using Room::Room;
  std::map<size_t,CotInfo> mCots;std::map<size_t,PatientInfo> mPatients;std::map<size_t,Tile*> mCotObjects;
  std::vector<Tile*> mAccessoryTiles;size_t mNextCotId=0;bool mLoadedCots=false;
  bool mManaShortageNotified=false,mHealingTurnFailed=false;int64_t mHealingTurn=-1;
- bool canPayAdmission(const Creature&,bool)const;bool payAdmission(Creature&,bool,double&,int&);
- bool healPatient(Creature&);int getDischargeThreshold()const;bool admit(size_t,Creature&,bool);
- PatientInfo* getPatient(Creature&);void releasePatient(Creature&);bool restPatient(Creature&);
- void abandon(size_t);void abandonAll();void layoutCots();static bool containsMinimumBlock(GameMap&,Seat*,const std::vector<Tile*>&);
- static int cotSize(const Creature&);size_t findCot(const Creature&,bool)const;bool hasCarryEntitySpot(GameEntity*);
- Tile* reserveCot(Creature&,Creature&);Tile* askSpotForCarriedEntity(GameEntity*);void cancelReservation(Creature&);
- void notifyCarryingStateChanged(Creature*,GameEntity*);void creatureDropped(Creature&);
+ //! \brief Tests the production admission preflight without spending resources.
+ bool canPayAdmission(const Creature&,bool)const;
+ //! \brief Executes production admission charging and reports the amount and payer.
+ bool payAdmission(Creature&,bool,double&,int&);
+ //! \brief Executes one production treatment turn for the supplied patient.
+ bool healPatient(Creature&);
+ //! \brief Returns the shared keeper discharge threshold through the production method.
+ int getDischargeThreshold()const;
+ //! \brief Executes production admission onto a specified cot.
+ bool admit(size_t,Creature&,bool);
+ //! \brief Finds the actual active admission for the supplied creature.
+ PatientInfo* getPatient(Creature&);
+ //! \brief Executes production treatment interruption cleanup.
+ void releasePatient(Creature&);
+ //! \brief Executes production healing and threshold discharge for an admitted creature.
+ bool restPatient(Creature&);
+ //! \brief Restores the saved death countdown for one abandoned admission.
+ void abandon(size_t);
+ //! \brief Executes production abandonment for every patient and reservation.
+ void abandonAll();
+ //! \brief Executes the production deterministic cot placement algorithm.
+ void layoutCots();
+ //! \brief Executes production validation of the joined floor's minimum build square.
+ static bool containsMinimumBlock(GameMap&,Seat*,const std::vector<Tile*>&);
+ //! \brief Maps the production creature bed footprint to its required cot size.
+ static int cotSize(const Creature&);
+ //! \brief Executes production matching-cot selection with the requested manual policy.
+ size_t findCot(const Creature&,bool)const;
+ //! \brief Executes actual carrying eligibility and admission preflight.
+ bool hasCarryEntitySpot(GameEntity*);
+ //! \brief Executes the actual cot reservation or saved-reservation reuse path.
+ Tile* reserveCot(Creature&,Creature&);
+ //! \brief Returns the delivery tile owned by the creature's actual reservation.
+ Tile* askSpotForCarriedEntity(GameEntity*);
+ //! \brief Executes production reservation cleanup when a worker stops carrying.
+ void cancelReservation(Creature&);
+ //! \brief Executes production admission handling when a carrier reaches its destination.
+ void notifyCarryingStateChanged(Creature*,GameEntity*);
+ //! \brief Executes the actual manual-drop eligibility and keeper-payment rule.
+ void creatureDropped(Creature&);
+ //! \brief Records a cot's tile without creating a rendered building object.
  void createCotObject(size_t id){mCotObjects[id]=getGameMap()->getTile(mCots.at(id).x,mCots.at(id).y);}
- void restoreInitialEntityState();void updateActiveSpots(){layoutCots();}
+ //! \brief Executes production rebinding of saved patients and reserved carries.
+ void restoreInitialEntityState();
+ //! \brief Invokes actual layout at the fixture's initial entity-creation stage.
+ void updateActiveSpots(){layoutCots();}
+ //! \brief Rebinds the saved figure position without creating renderer resources.
  void updateShaman(){if(mHasLoadedShamanPosition){static InfirmaryShamanEntity figure;figure.position=Ogre::Vector3(mLoadedShamanPosition.x,mLoadedShamanPosition.y,0);mShaman=&figure;}}
- void exportToStream(std::ostream&)const;bool importFromStream(std::istream&);
+ //! \brief Writes the actual infirmary room save payload.
+ void exportToStream(std::ostream&)const;
+ //! \brief Reads the actual optional infirmary room save tags.
+ bool importFromStream(std::istream&);
  InfirmaryShamanEntity* mShaman=nullptr;bool mHasLoadedShamanPosition=false;Ogre::Vector2 mLoadedShamanPosition;
- void exportShamanToStream(std::ostream&)const;bool importShamanFromStream(std::istream&);
+ //! \brief Writes the actual optional shaman position record.
+ void exportShamanToStream(std::ostream&)const;
+ //! \brief Reads the actual optional shaman position without consuming later room tags.
+ bool importShamanFromStream(std::istream&);
 };
 """
 
@@ -236,11 +455,11 @@ def main():
     code += function(read("source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp"),
         "bool CreatureBehaviourAttackEnemy::processBehaviour(")
     expiry = function(read("source/entities/Creature.cpp"), "    if(mInfirmaryMoodTurns > 0.0)")
-    code += "\nvoid expireMood(Creature& creature){" + expiry.replace("mInfirmaryMood", "creature.mInfirmaryMood") + "}\n"
+    code += "\n//! \\brief Executes the production per-turn admission mood expiration block.\nvoid expireMood(Creature& creature){" + expiry.replace("mInfirmaryMood", "creature.mInfirmaryMood") + "}\n"
     sleep = read("source/creatureaction/CreatureActionSleep.cpp")
     start = sleep.index("        creature.setHP(")
     bed = sleep[start:sleep.index(";", start)+1]
-    code += "\nvoid bedHeal(Creature& creature,Seat* sleepingSeat,double dirtOutputFactor){" + bed + "}\n"
+    code += "\n//! \\brief Executes the production bed-healing expression with explicit research and dirt inputs.\nvoid bedHeal(Creature& creature,Seat* sleepingSeat,double dirtOutputFactor){" + bed + "}\n"
     # Keep cross-component gates tied to the actual paths rather than a second invented admission model.
     for path, needle in (("source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp", "DormitoryWoundedCarryHpPercent"),
             ("source/creatureaction/CreatureActionCarryEntity.cpp", "RoomType::infirmary"),
@@ -255,15 +474,21 @@ def main():
     code += r"""
 //! \brief Exercises the actual same-carry infirmary-to-bed redirection fragment.
 struct CarryRedirect{Creature& mCreature;Room* mBuildingDest;Tile* mTileDest;int mDragPhase=2,mDragLayTurns=8;bool stopped=false;
+ //! \brief Records that actual carry redirection had to stop the transport.
  bool stopDragging(bool){stopped=true;return false;}
+ //! \brief Executes the actual infirmary-to-bed redirection fragment.
  bool redirect(Creature* dragged){REDIRECT return true;}
 };
 //! \brief Executes the production rest-action cleanup independently of rendering and animation services.
-struct RestLifecycle{Creature& mCreature;RoomInfirmary& mRoom;~RestLifecycle();};
+struct RestLifecycle{Creature& mCreature;RoomInfirmary& mRoom;
+ //! \brief Executes the actual rest-action destructor to release its patient's cot.
+ ~RestLifecycle();
+};
 """.replace("REDIRECT", redirect)
     code += function(read("source/creatureaction/CreatureActionInfirmaryRest.cpp"),
         "CreatureActionInfirmaryRest::~CreatureActionInfirmaryRest(").replace("CreatureActionInfirmaryRest", "RestLifecycle")
     code += r"""
+//! \brief Runs treatment, admission, carry, combat and resource regression cases.
 int main(){try{
  GameMap map;Seat seat;Room treasury(&map,&seat);map.rooms.push_back(&treasury);RoomInfirmary room(&map,&seat);
  Creature creature;CreatureMoodFee fee;CreatureMoodRested rested;creature.definition.moods={&fee,&rested};
