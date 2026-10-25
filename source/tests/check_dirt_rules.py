@@ -267,10 +267,11 @@ struct Creature
 {
     Seat* mSeat; CreatureDefinition* mDefinition; GameMap* mMap; Tile* mTile;
     double mUrge, mCreatureDirt, mHunger;
+    double mDragDirtFactor; bool mFoughtSinceFightEnd;
     bool mDirtKoThisFight, mIsBeingDragged, mTorturedThisTurn, inPrison, inContainment, koTemp, koDeath;
     int mNbTurnsWithoutBattle; GameEntity* mCarriedEntity;
     Creature(Seat* seat, CreatureDefinition* definition, GameMap* map, Tile* tile)
-      : mSeat(seat), mDefinition(definition), mMap(map), mTile(tile), mUrge(0.0), mCreatureDirt(0.0), mHunger(50.0),
+      : mSeat(seat), mDefinition(definition), mMap(map), mTile(tile), mUrge(0.0), mCreatureDirt(0.0), mHunger(50.0), mDragDirtFactor(1.0), mFoughtSinceFightEnd(false),
         mDirtKoThisFight(false), mIsBeingDragged(false), mTorturedThisTurn(false), inPrison(false), inContainment(false),
         koTemp(false), koDeath(false), mNbTurnsWithoutBattle(5), mCarriedEntity(nullptr) {}
     Seat* getSeat() const { return mSeat; }
@@ -523,16 +524,18 @@ static void checkUrgeAndCreatureDirt()
     // Creature dirt: fight end +5, knock-out +25 and then nothing at the fight end, then +5 for the next fight
     creature.setCreatureDirt(0.0);
     creature.mNbTurnsWithoutBattle = 0; creature.fightEndBlock();
-    expectNear(creature.mCreatureDirt, 5.0, "a fight won adds CreatureDirtPerFightWon");
+    expectNear(creature.mCreatureDirt, 0.0, "no fight, no dirt: a creature that never fought gets nothing at the first count");
+    creature.mNbTurnsWithoutBattle = 0; creature.mFoughtSinceFightEnd = true; creature.fightEndBlock();
+    expectNear(creature.mCreatureDirt, 5.0, "a fight won adds CreatureDirtPerFightWon"); expect(!creature.mFoughtSinceFightEnd, "the fight flag is cleared at the fight end");
     creature.mNbTurnsWithoutBattle = 5; creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 5.0, "only the turn the counter reaches 1 counts");
-    creature.mNbTurnsWithoutBattle = 0; creature.koTemp = true; creature.koBlock(false);
+    creature.mNbTurnsWithoutBattle = 0; creature.mFoughtSinceFightEnd = true; creature.koTemp = true; creature.koBlock(false);
     expectNear(creature.mCreatureDirt, 30.0, "a knock-out adds CreatureDirtPerKo"); expect(creature.mDirtKoThisFight, "the knock-out is remembered");
     creature.koBlock(true);
     expectNear(creature.mCreatureDirt, 30.0, "a creature that was KO already adds nothing again");
     creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 30.0, "the fight end after a knock-out adds nothing"); expect(!creature.mDirtKoThisFight, "the flag is reset at the fight end");
-    creature.mNbTurnsWithoutBattle = 0; creature.koTemp = false; creature.fightEndBlock();
+    creature.mNbTurnsWithoutBattle = 0; creature.mFoughtSinceFightEnd = true; creature.koTemp = false; creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 35.0, "the next fight adds again");
     creature.setCreatureDirt(500.0); expectNear(creature.mCreatureDirt, 100.0, "creature dirt is clamped");
     // Decay 0.1 per turn, prison and torture hold it at 100
@@ -549,9 +552,11 @@ static void checkUrgeAndCreatureDirt()
     expectNear(entered->getDirt(), 0.0, "a clean creature leaves no trail");
     creature.setCreatureDirt(50.0); creature.dirtyEnteredTile(entered);
     expectNear(entered->getDirt(), 0.1448 * 0.5 * 1.5, "creature dirt trail");
-    entered->setDirt(0.0); creature.setCreatureDirt(0.0); creature.mIsBeingDragged = true; creature.dirtyEnteredTile(entered);
+    entered->setDirt(0.0); creature.setCreatureDirt(0.0); creature.mIsBeingDragged = true; creature.mDragDirtFactor = 1.5; creature.dirtyEnteredTile(entered);
     expectNear(entered->getDirt(), 0.1448 * 1.0 * 1.5, "a pulled creature leaves a full trail");
-    entered->setDirt(0.0); creature.mIsBeingDragged = false;
+    entered->setDirt(0.0); creature.mDragDirtFactor = 3.0; creature.dirtyEnteredTile(entered);
+    expectNear(entered->getDirt(), 0.1448 * 1.0 * 3.0, "a pulled creature leaves the trail with the DirtFactor of the pulling worker");
+    entered->setDirt(0.0); creature.mIsBeingDragged = false; creature.mDragDirtFactor = 1.0;
     struct Load : GameEntity { GameEntityType getObjectType() const { return GameEntityType::other; } } load;
     creature.mCarriedEntity = &load; creature.dirtyEnteredTile(entered);
     expectNear(entered->getDirt(), 0.1448 * 1.0 * 1.5, "a worker with a load leaves a full trail");
@@ -573,7 +578,7 @@ int main()
 
 # The statements of the fight blocks as they stand in Creature::doUpkeep and Creature::takeDamage
 fight_start = creature_cpp.index('    ++mNbTurnsWithoutBattle;')
-fight_end_text = 'mDirtKoThisFight = false;\n    }'
+fight_end_text = 'mFoughtSinceFightEnd = false;\n    }'
 fight_block = creature_cpp[fight_start:creature_cpp.index(fight_end_text, fight_start) + len(fight_end_text)]
 ko_start = creature_cpp.index('    if(!wasKo && getIsOnServerMap() && (isKoTemp() || isKoDeath()))')
 ko_end_text = 'mDirtKoThisFight = true;\n    }'

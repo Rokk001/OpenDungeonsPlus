@@ -907,7 +907,8 @@ public:
 
     //! \brief Server side. A worker starts pulling this creature by the legs: it stops what it did, stays on the
     //! map and lies on the ground (clip dragged_anim). It moves with the paths the worker gives it.
-    void notifyDragStart();
+    //! \param pullerDirtFactor DirtFactor of the pulling worker, used for the trail dirt of the pulled creature
+    void notifyDragStart(double pullerDirtFactor);
 
     //! \brief Server side. The worker stopped pulling (arrived, gave up, the creature died or was picked up):
     //! starts the pause before it can be pulled again
@@ -1533,6 +1534,9 @@ private:
     //! \brief Runtime only (not saved): true when this creature was knocked out in the current fight, so the fight end adds no extra creature dirt
     bool            mDirtKoThisFight;
 
+    //! \brief Runtime only (not saved): true once the creature took or dealt a hit since the last fight end, so a creature that never fought gets no creature dirt when the battle counter first counts up
+    bool            mFoughtSinceFightEnd;
+
     //! \brief Used on server side for the mood. Set by the casino, fades by CasinoMoodDecay per second
     double          mCasinoMood;
 
@@ -1675,6 +1679,9 @@ private:
 
     //! \brief Used on server side. True while a worker pulls the creature to its bed (not saved: actions are not saved)
     bool                            mIsBeingDragged;
+
+    //! \brief Used on server side (not saved). DirtFactor of the worker that pulls the creature, used for the trail dirt while it is pulled
+    double                          mDragDirtFactor;
 
     //! \brief Used on server side. No worker pulls the creature to its bed again before this turn (not saved)
     int64_t                         mWoundedCarryNextTurn;

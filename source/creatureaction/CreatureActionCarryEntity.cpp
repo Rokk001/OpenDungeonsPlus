@@ -207,7 +207,7 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
 void CreatureActionCarryEntity::startDrag()
 {
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
-    dragged->notifyDragStart();
+    dragged->notifyDragStart(mCreature.getDefinition()->getDirtFactor());
 
     // The creature lies down on the spot (the clip of the pulled creature, the clients show a fallback pose when
     // the skeleton has none). It keeps its place on the map.
