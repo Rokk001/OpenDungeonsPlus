@@ -23,6 +23,7 @@ def accessory_cells(width, height):
 def main():
     source = read("source/rooms/RoomInfirmary.cpp")
     code = PRELUDE + room_declaration()
+    code += function(source, "Tile* RoomInfirmary::askSpotForCarriedEntity(")
     code += function(source, "void RoomInfirmary::layoutCots(")
     code += function(source, "bool RoomInfirmary::containsMinimumBlock(")
     code += r"""
