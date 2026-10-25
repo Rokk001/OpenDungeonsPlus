@@ -1,5 +1,54 @@
 # Item image prompts
 
+## ARC_A_Head_rare.png
+
+Edit target: supplied original brown hide head inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Head_epic.png
+
+Edit target: supplied original brown hide head inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Armour_rare.png
+
+Edit target: supplied original brown hide armour inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Armour_epic.png
+
+Edit target: supplied original brown hide armour inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Boots_rare.png
+
+Edit target: supplied original brown hide boots inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Boots_epic.png
+
+Edit target: supplied original brown hide boots inventory icon. Create its epic quality version. Refine the leather with finer stitching and restrained embossed borders; existing fittings become noble polished bronze; add a faint narrow violet magical glow only tracing existing edges and seams. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep the original leather material; no metal armour conversion, no added attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
+
+
+## ARC_A_Ring_rare.png
+
+Edit target: supplied original ring inventory icon. Create its rare quality version. Refine the leather wrapping with finer stitching and restrained embossed borders, the wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_A_Ring_epic.png
+
+Edit target: supplied original ring inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_A_Bow_rare.png
+
+Edit target: supplied original bow inventory icon. Create its rare quality version. Refine the leather wrapping with finer stitching and restrained embossed borders, the wood with subtle carved grooves, and existing metal fittings with polished bronze and fine etched details. No magical glow. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
+
+## ARC_A_Bow_epic.png
+
+Edit target: supplied original bow inventory icon. Create its epic quality version. Refine leather wrapping with fine stitching, wood with delicate carved grooves and existing metal fittings with noble polished bronze; add a faint narrow violet magical glow only along existing edges and engraved grooves, no detached aura or particles. Preserve EXACTLY the complete outer silhouette, openings, bowstring shape and endpoints where present, every visible part, position, proportions, angle, scale, transparent margins and light direction. Preserve wood and leather materials. No new parts, arrows or bolts, no weapon-shape change. Original hand-painted fantasy inventory style, one isolated object on genuine transparent alpha, square1:1canvas suitable for128px. No person, wearer, skin, limbs, frame, background, text, lettering, numbers, branding or watermark.
+
 ## WRK_B_Head_base.png
 
 Use case: stylized-concept. Original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Canvas Cap of Claiming: a sturdy tan canvas worker cap with a softly squared crown, short brim and simple brown leather brow band, empty without a head. Common-quality practical worker equipment, modest and sturdy, no gems, magic or glow. Chunky readable silhouette, painterly shaded materials and warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entire object visible within generous transparent margins. No wearer, person, mannequin, body, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha background.
