@@ -332,8 +332,18 @@ Tile* RoomInfirmary::askSpotForCarriedEntity(GameEntity* entity)
     return nullptr;
 }
 
+//! rief Reuses a running carry's reservation before testing a new admission's payment.
 Tile* RoomInfirmary::reserveCot(Creature& creature, Creature& carrier)
 {
+    // Saved room reservations resume before the server refills the saved treasury balance.
+    for(const std::pair<const size_t,PatientInfo>& entry : mPatients)
+        if(entry.second.creature==nullptr && entry.second.reservedBy==&carrier &&
+            entry.second.creatureName==creature.getName() && creature.getKoTurnCounter()<0 &&
+            creature.isAlive() && mCots.count(entry.first)!=0)
+        {
+            const CotInfo& cot=mCots.at(entry.first);
+            return getGameMap()->getTile(cot.x,cot.y);
+        }
     if(!hasCarryEntitySpot(&creature)) return nullptr;
     size_t id=findCot(creature,false);
     PatientInfo& patient=mPatients[id];

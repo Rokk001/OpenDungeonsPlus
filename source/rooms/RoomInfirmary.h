@@ -63,7 +63,7 @@ public:
     bool hasCarryEntitySpot(GameEntity* entity) override;
     //! \brief Finds or reserves the fitting cot for a carried creature.
     Tile* askSpotForCarriedEntity(GameEntity* entity) override;
-    //! \brief Records which worker owns a cot reservation.
+    //! \brief Reserves a cot or reuses this worker's existing carry reservation.
     Tile* reserveCot(Creature& creature, Creature& carrier);
     //! \brief Releases a worker reservation when carrying ends.
     void cancelReservation(Creature& carrier);
