@@ -139,7 +139,7 @@ void RoomMerchant::clearDisplayedGoods()
     mDisplayedGoods.clear();
 }
 
-//! \brief Fits three or four sealed bags to the delivered table's 0.712-high cloth surface.
+//! \brief Fits all retained table goods to the 0.712-high cloth, including takeover overflow.
 void RoomMerchant::refreshDisplayedGoods()
 {
     clearDisplayedGoods();
@@ -150,7 +150,9 @@ void RoomMerchant::refreshDisplayedGoods()
     {
         const RoomMerchantTileData* data = static_cast<const RoomMerchantTileData*>(mTileData.at(tile));
         if(!data->mTable) continue;
-        const float spacing = 0.63f / static_cast<float>(capacity);
+        // Retained stock still fits when its new owner has researched fewer table places.
+        const size_t displayPlaces = std::max(capacity, data->mGoods.size());
+        const float spacing = 0.63f / static_cast<float>(displayPlaces);
         const float scale = std::min(0.6f, spacing / 0.36f);
         for(size_t index = 0; index < data->mGoods.size(); ++index)
         {
