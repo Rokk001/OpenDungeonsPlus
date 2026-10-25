@@ -34,7 +34,7 @@ class RenderSceneGroup;
 #include <string>
 #include <vector>
 
-//! \brief This class is basically used to store the needed scenes to display a menu
+//! \brief Stores a menu scene with its configured lighting, animation and camera paths.
 class RenderSceneMenu : public RenderSceneListener
 {
 public:
@@ -46,14 +46,14 @@ public:
     //! \brief Sends a scripted synchronization event to every scene group.
     void dispatchSyncPost(const std::string& event) override;
 
-    //! \brief Instantiates the configured scene and places the camera at its overview.
+    //! \brief Instantiates the configured scene and ambient lighting at the overview camera.
     void resetMenu(CameraManager& cameraManager, RenderManager& renderManager);
     //! \brief Releases active scene commands in reverse order and restores the world background.
     void freeMenu(CameraManager& cameraManager, RenderManager& renderManager);
     //! \brief Advances native scene animations, firelight, camera paths and the unchanged hand hover pose.
     void updateMenu(CameraManager& cameraManager, RenderManager& renderManager,
         Ogre::Real timeSinceLastFrame);
-    //! \brief Loads scripted groups, named camera paths and firelight timing from one configuration file.
+    //! \brief Loads scripted groups, camera paths, firelight timing and menu ambient from one file.
     void readSceneMenu(const std::string& fileName);
 
     //! \brief Starts the configured arrival from outside the fortress; rejects overlapping flights.
@@ -135,6 +135,8 @@ private:
     MenuFlight mFlight;
     //! Whether parsed groups currently own live render objects.
     bool mActive = false;
+    //! Parsed menu fill, independent of the game ambient restored on exit.
+    Ogre::ColourValue mMenuAmbient = Ogre::ColourValue::Black;
     //! World ambient lighting restored when the menu releases its scene.
     Ogre::ColourValue mSavedAmbient = Ogre::ColourValue::Black;
 };

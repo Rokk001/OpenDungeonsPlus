@@ -1,3 +1,25 @@
+// Explicit atmosphere programs preserve authored linear emission on the game display target.
+vertex_program MenuSkyVertex glsl
+{
+    source MenuSky.vert
+    default_params
+    {
+        param_named_auto worldViewProj worldviewproj_matrix
+        param_named_auto worldMatrix world_matrix
+    }
+}
+
+fragment_program MenuSkyFragment glsl
+{
+    source MenuSky.frag
+    default_params
+    {
+        param_named_auto surfaceEmission surface_emissive_colour
+        param_named atmosphereKind int 0
+        param_named moonMap int 0
+    }
+}
+
 // Original fortress materials; colours belong to the surfaces, lights to the scene.
 import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
 
@@ -173,10 +195,18 @@ material MenuMountain
 
 material MenuCloud
 {
+    receive_shadows off
     technique
     {
         pass
         {
+            lighting off
+            vertex_program_ref MenuSkyVertex {}
+            fragment_program_ref MenuSkyFragment
+            {
+                param_named atmosphereKind int 2
+            }
+
             scene_blend alpha_blend
             depth_write off
             cull_hardware none
@@ -187,15 +217,22 @@ material MenuCloud
     }
 }
 
-// The sky dome has no texture and no vertex colours. With lighting off the fixed pipeline falls back to
-// white vertex colour, which rendered the sky white. Lighting stays on with only an emissive colour, so
-// the dome shows the exact sky colour of the approved Blender scene (its MenuSky entry).
+// The sky dome has no texture and no vertex colours. An unlit fixed pass falls back to white.
+// Its explicit shader instead uses emission and cloud structure, with the authored display transfer.
 material MenuSky
 {
+    receive_shadows off
     technique
     {
         pass
         {
+            lighting off
+            vertex_program_ref MenuSkyVertex {}
+            fragment_program_ref MenuSkyFragment
+            {
+                param_named atmosphereKind int 0
+            }
+
             cull_hardware none
             ambient 0 0 0 1
             diffuse 0 0 0 1
@@ -504,7 +541,15 @@ material MenuBannerSymbol
 // The far sky carries ember light below the mountain silhouettes, never a foreground wash.
 material MenuHorizonGlow
 {
-    technique { pass { ambient 0 0 0 1
+    receive_shadows off
+    technique { pass {
+        lighting off
+        vertex_program_ref MenuSkyVertex {}
+        fragment_program_ref MenuSkyFragment
+        {
+            param_named atmosphereKind int 1
+        }
+        ambient 0 0 0 1
         diffuse 0 0 0 1
         cull_hardware none
         emissive 0.18 0.035 0.006
@@ -514,7 +559,15 @@ material MenuHorizonGlow
 // A darker upper transition keeps the distant glow beneath the storm-cloud ceiling.
 material MenuHorizonDark
 {
-    technique { pass { ambient 0 0 0 1
+    receive_shadows off
+    technique { pass {
+        lighting off
+        vertex_program_ref MenuSkyVertex {}
+        fragment_program_ref MenuSkyFragment
+        {
+            param_named atmosphereKind int 1
+        }
+        ambient 0 0 0 1
         diffuse 0 0 0 1
         cull_hardware none
         emissive 0.032 0.012 0.007
@@ -631,14 +684,30 @@ material MenuTitleCrest
 }
 
 // Fractured lunar stone glows a desaturated blood red behind drifting cloud fragments.
-material MenuBloodMoon : MenuStone
+material MenuBloodMoon
 {
-    technique { pass decal {
-        ambient 0.30 0.018 0.010 1
-        diffuse 0.30 0.018 0.010 1
-        emissive 0.22 0.013 0.006
-        specular 0 0 0 1 1
-    } }
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            ambient 0.30 0.018 0.010 1
+            diffuse 0.30 0.018 0.010 1
+            emissive 0.22 0.013 0.006
+            specular 0 0 0 1 1
+            vertex_program_ref MenuSkyVertex {}
+            fragment_program_ref MenuSkyFragment
+            {
+                param_named atmosphereKind int 3
+            }
+            texture_unit
+            {
+                texture MenuFortressStone.png
+                tex_address_mode wrap
+            }
+        }
+    }
 }
 
 // Faint eyes are embedded in darkness behind the grille rather than floating lanterns.
