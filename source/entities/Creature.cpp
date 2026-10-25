@@ -36,6 +36,7 @@
 #include "creatureaction/CreatureActionPossessed.h"
 #include "creatureaction/CreatureActionReloadTrap.h"
 #include "creatureaction/CreatureActionSearchDirtToClean.h"
+#include "creatureaction/CreatureActionSearchDrink.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -2487,6 +2488,16 @@ bool Creature::handleIdleAction()
         (Random::Double(70.0, 80.0) < mHunger))
     {
         pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    // If we are thirsty, we go to a tavern. Without a tavern nothing happens here: the thirst keeps rising and
+    // its mood malus acts
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::searchDrink) &&
+        (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
         return true;
     }
 

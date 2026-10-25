@@ -120,6 +120,8 @@ std::string CreatureAction::toString(CreatureActionType actionType)
         return "useToilet";
     case CreatureActionType::vomit:
         return "vomit";
+    case CreatureActionType::searchDrink:
+        return "searchDrink";
 
     default:
         assert(false);
