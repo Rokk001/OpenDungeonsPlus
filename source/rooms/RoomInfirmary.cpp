@@ -616,5 +616,5 @@ void RoomInfirmary::restoreInitialEntityState()
                 patient.creature->pushAction(Utils::make_unique<CreatureActionInfirmaryRest>(*patient.creature,*this));
         }
     }
-    updateActiveSpots();
+    updateShaman();
 }
