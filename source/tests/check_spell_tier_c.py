@@ -3,8 +3,8 @@
 
     python source/tests/check_spell_tier_c.py
 
-No compiler is needed. Checks the preserved network tail before the appended campaign victory
-notification (trapEffect still sits right before timeLimit), that the new kinds are wired from the config
+No compiler is needed. Checks the preserved network tail before the appended infirmary
+notifications (trapEffect still sits right before timeLimit), that the new kinds are wired from the config
 to the code, that the shake is only applied while a frame is rendered and taken away again, that every
 texture exists with a material and a CREDITS entry, and that every event of the config is raised.
 """
@@ -23,14 +23,14 @@ def read(*parts):
 
 problems = []
 
-# 1. Existing network values keep their order before the appended campaign victory.
+# 1. Existing network values keep their order before the appended infirmary notifications.
 header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-2:] != ["timeLimit", "campaignVictory"]:
-    problems.append("campaignVictory must follow timeLimit without moving existing values")
-if "trapEffect" not in names or names.index("trapEffect") != len(names) - 3:
+if names[-4:] != ["timeLimit", "campaignVictory", "infirmaryWindow", "infirmarySettings"]:
+    problems.append("infirmaryWindow and infirmarySettings must follow campaignVictory after timeLimit without moving existing values")
+if "trapEffect" not in names or "timeLimit" not in names or names.index("trapEffect") + 1 != names.index("timeLimit"):
     problems.append("trapEffect must be right before timeLimit")
 
 # 2. Config kinds
