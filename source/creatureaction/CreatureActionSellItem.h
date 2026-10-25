@@ -13,6 +13,7 @@ public:
     //! \brief Returns the appended sale action type.
     CreatureActionType getType() const override;
     //! \brief Binds a sale step using the existing creature action dispatcher.
+    // allowed-lambda: CreatureAction requires the existing std::function action interface.
     std::function<bool()> action() override;
     //! \brief Walks to a valid free table and completes or abandons this sale.
     static bool handle(Creature& creature, const std::string& room, uint32_t slot);
