@@ -160,6 +160,8 @@ skirmish/
 -> TestSingleplayerSmall.level        OD Team                 GPLv3+
 -> TestSingleplayerSmallEmpty.level    OD Team                 GPLv3+
 -> TestSingleplayerSmallPassability.level OD Team              GPLv3+
+-> TestTavern.level                    OD Team                 GPLv3+
+-> TestTavernNone.level                OD Team                 GPLv3+
 -> TriadDeeps.level                    OD Team                 GPLv3+
 -> TwinDelve.level                     OD Team                 GPLv3+
 -> Wyrmhollow.level                    OD Team                 GPLv3+
@@ -1443,6 +1445,12 @@ source/tests/check_dirt_rules.py        OD Team                 GPLv3+
 source/tests/check_dirt_streams.py      OD Team                 GPLv3+
 source/tests/check_dirt_assets.py       OD Team                 GPLv3+
 source/tests/check_toilet_room.py       OD Team                 GPLv3+
+source/tests/check_tavern_config.py     OD Team                 GPLv3+
+source/tests/check_tavern_rules.py      OD Team                 GPLv3+
+source/tests/check_tavern_room.py       OD Team                 GPLv3+
+source/tests/check_tavern_streams.py    OD Team                 GPLv3+
+source/tests/check_tavern_assets.py     OD Team                 GPLv3+
+docs/development/TAVERN.md              OD Team                 GPLv3+
 
 
 ===================================================
