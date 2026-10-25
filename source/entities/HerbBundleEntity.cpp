@@ -1,6 +1,7 @@
 #include "entities/HerbBundleEntity.h"
 
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/PotionDefinition.h"
 #include "gamemap/GameMap.h"
@@ -44,7 +45,7 @@ uint32_t HerbBundleEntity::take(uint32_t maximum)
 //! \brief Lets own and enemy workers carry free bundles into their own available laboratory.
 EntityCarryType HerbBundleEntity::getEntityCarryType(Creature* carrier)
 {
-    if(carrier == nullptr || !getIsOnMap() || mCount == 0 || getCarryLock(*carrier))
+    if(carrier == nullptr || !carrier->getDefinition()->isWorker() || !getIsOnMap() || mCount == 0 || getCarryLock(*carrier))
         return EntityCarryType::notCarryable;
     return EntityCarryType::herbBundle;
 }
