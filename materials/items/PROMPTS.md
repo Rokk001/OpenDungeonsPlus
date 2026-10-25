@@ -1,5 +1,304 @@
 # Item image prompts
 
+## HUM_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Circlet of Human: an empty plain iron circlet band with neat beige linen wrapping and a modest central clasp, no head. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Mantle of Human: an empty short beige linen mantle with practical brown leather clasp and neatly stitched hem, no wearer. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Striders of Human: one matching pair of beige linen ankle boots with simple brown leather reinforcement and plain laces. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Seal of Human: one plain iron finger ring with an empty oval signet face and a narrow beige linen binding around the shank, no letters. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Shield_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Shield of Human: one sturdy oval wooden shield faced with beige linen, a modest plain iron rim and a small central iron boss. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Shield_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Shield_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Linen Sword of Human: one plain straight steel sword with modest crossguard and a beige linen-wrapped brown grip, isolated object. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## HUM_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## HUM_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Circlet of Undead: one weathered dark iron circlet with a modest pointed brow plate and grey woven cloth binding, empty without a head. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Mantle of Undead: one empty ash-grey woven mantle with simple aged iron clasps and a worn stitched hem, no wearer. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Striders of Undead: one matching pair of dark grey cloth and leather ankle boots with modest weathered iron toe guards. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Seal of Undead: one weathered dark iron finger ring with an empty oval signet face and grey cloth binding, no symbols or letters. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Sword_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Sword of Undead: one plain weathered grey steel sword, restrained aged iron crossguard and dark grey cloth-wrapped grip. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Sword_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Sword_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Staff_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Grave Staff of Undead: one dark wooden staff with an aged iron ferrule and a small grey stone enclosed in a simple iron cradle at the top. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## UND_Staff_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## UND_Staff_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Circlet of Vermin: one empty ring-shaped circlet crafted from overlapping muted brown chitin plates with simple dark leather binding. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Mantle of Vermin: one empty mantle of smooth overlapping brown and olive chitin shell plates, bound with modest dark leather straps. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Striders of Vermin: one matching pair of compact dark leather boots protected by smooth overlapping brown chitin plates. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Chitin Seal of Vermin: one thick finger ring carved from layered brown chitin, with a simple flat oval seal face and no markings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## VRM_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## VRM_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Head_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Circlet of Tentacle: one empty circlet made from interwoven muted green kelp strips and modest weathered bronze binding, no head. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Head_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Head_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Armour_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Mantle of Tentacle: one empty short mantle woven from muted green kelp-like strips over dark leather, with a simple bronze clasp. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Armour_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Armour_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Boots_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Striders of Tentacle: one matching pair of dark leather ankle boots wrapped in neat muted green kelp strips, with simple bronze fastenings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Boots_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Boots_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Ring_base.png
+
+Use case: stylized-concept. Create one original hand-painted fantasy inventory icon for this project, square suitable for128px downsampling. Subject: Kelp Seal of Tentacle: one bronze finger ring with an empty oval seal face and neatly braided muted green kelp binding, no markings. Common-quality functional equipment, modest original craftsmanship, no gems, magic or glow unless a small ordinary stone is specified. Chunky readable silhouette, painterly shaded materials, warm upper-left lighting matching an illustrated bronze-and-iron dungeon interface. Exactly one centred equipment item, entirely visible with generous transparent margins. No character, wearer, body, person, mannequin, scene, text, letters, numbers, frame, floor, backdrop, cast background shadow, branding or watermark. Genuine transparent alpha.
+
+
+## TNT_Ring_rare.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Rare quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Only improve material finish and add restrained small decorative detail. No magic glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
+
+## TNT_Ring_epic.png
+
+Use case: precise-object-edit. Input image is the exact Common/base inventory icon to edit. Produce the Epic quality of the same single item. Preserve its exact recognizable outline, object count, proportions, silhouette, pose, framing, camera, craftsmanship style and genuine transparent alpha. Use nobler materials and richer restrained decorative detail, with a faint warm amber magical edge glow. Do not redesign or substitute the item. No character, wearer, scene, text, frame, background, shadow or watermark. Square canvas, entire item visible with transparent margins; readable at128px.
+
 ## ARC_Head_base.png
 
 Use case: stylized-concept. SQUARE128x128 INVENTORY COMPOSITION. The image canvas MUST be perfectly square1:1, not landscape. Keep ample genuinely transparent space above and below the wide item; do not auto-fit the canvas to the item. Subject: Runed Circlet of Arcane, one modest empty bronze circlet, a complete thin oval headband with a small pointed front panel, dark navy-blue inset, restrained engraved concentric arcs and geometric grooves. Exactly one head-equipment object, Common quality: functional dark bronze, modest craftsmanship, no gems and no magic glow. Entire oval loop fully visible, centred within a square image with generous transparent padding on all four sides. Hand-painted fantasy inventory icon with chunky readable silhouette, painterly shaded bronze and warm upper-left light matching a bronze-and-iron dungeon interface. No wearer, head, face, skin, body, mannequin, floating props, letters, readable runes, writing, numbers, border, frame, tile, floor, scenery, background, cast shadow, branding or watermark. Native square RGBA canvas with genuine transparent alpha.
