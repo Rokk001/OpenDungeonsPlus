@@ -485,6 +485,7 @@ int RoomTreasury::getLevelOfTile(const std::map<Tile*, int>& levels, int x, int 
     return it->second;
 }
 
+//! \brief Replaces changed pile meshes atomically while retaining their gold and neighbour shape.
 void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData,
     const std::map<Tile*, int>& levels)
 {
@@ -531,14 +532,12 @@ void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTre
     if (roomTreasuryTileData->mMeshOfTile.compare(newMeshName) == 0)
         return;
 
-    // If the mesh has changed we need to destroy the existing treasury if there was one
-    if (!roomTreasuryTileData->mMeshOfTile.empty())
-        removeBuildingObject(tile);
+    // If the mesh changed, keep the existing treasury visible until its replacement is created.
 
     // The pile fills its tile exactly so it joins the piles next to it
     BuildingObject* ro = new BuildingObject(getGameMap(), *this, newMeshName, tile,
         static_cast<double>(x), static_cast<double>(y), 0.0, 0.0, false);
-    addBuildingObject(tile, ro);
+    replaceBuildingObject(tile, ro);
 
     roomTreasuryTileData->mMeshOfTile = newMeshName;
 }

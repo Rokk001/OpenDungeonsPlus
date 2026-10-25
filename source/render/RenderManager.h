@@ -191,6 +191,8 @@ public:
     void rrDetachEntity(GameEntity* curEntity, bool really_do = true);
     void rrAttachEntity(GameEntity* curEntity);
     void rrCreateRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
+    //! \brief Flushes a replaced gold pile's batch after its new mesh exists and its old entity is gone.
+    void rrFinishBuildingObjectReplacement(RenderedMovableEntity* entity);
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
     void rrCreateCreature(Creature* curCreature);

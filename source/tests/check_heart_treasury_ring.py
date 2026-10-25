@@ -157,6 +157,8 @@ struct Room:Building {
   return true;
  }
  void addBuildingObject(Tile* t,BuildingObject* o){mBuildingObjects[t]=o;}
+ //! \brief Models the pile replacement without removing other building objects.
+ void replaceBuildingObject(Tile* t,BuildingObject* o){mBuildingObjects[t]=o;}
  void removeBuildingObject(Tile* t){mBuildingObjects.erase(t);}
  void removeAllBuildingObjects(){mBuildingObjects.clear();}
  static int roomSounds;

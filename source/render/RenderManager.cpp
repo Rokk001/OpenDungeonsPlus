@@ -3797,6 +3797,12 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 }
 
 
+//! \brief Drops any stale batched pile after an atomic building-object replacement.
+void RenderManager::rrFinishBuildingObjectReplacement(RenderedMovableEntity* entity)
+{
+    mTreasuryBatch.rebuildForPile(entity->getName());
+}
+
 void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt)
 {
     std::string tempString = curRenderedMovableEntity->getOgreNamePrefix()

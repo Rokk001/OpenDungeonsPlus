@@ -804,6 +804,7 @@ int RoomDungeonTemple::withdrawGold(int gold)
     return withdrawalAmount;
 }
 
+//! \brief Replaces changed ring pile meshes without a client-visible empty state.
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData)
 {
     int gold = roomTreasuryTileData->mGoldInTile;
@@ -847,16 +848,14 @@ void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTile
     if(roomTreasuryTileData->mMeshOfTile.compare(newMeshName) == 0)
         return;
 
-    // If the mesh has changed we need to destroy the existing gold stack if there was one
-    if(!roomTreasuryTileData->mMeshOfTile.empty())
-        removeBuildingObject(tile);
+    // If the mesh changed, keep the existing gold stack visible until its replacement is created.
 
     if(gold > 0)
     {
         // The pile fills its tile exactly so it joins the piles next to it
         BuildingObject* ro = new BuildingObject(getGameMap(), *this, newMeshName, tile,
             static_cast<double>(tile->getX()), static_cast<double>(tile->getY()), 0.0, 0.0, false);
-        addBuildingObject(tile, ro);
+        replaceBuildingObject(tile, ro);
     }
 
     roomTreasuryTileData->mMeshOfTile = newMeshName;
@@ -965,6 +964,7 @@ const std::string& RoomDungeonTemple::getMeshNameForHeartTier(HeartHealthTier ti
     }
 }
 
+//! \brief Replaces only the heart object when its health tier changes, preserving the gold ring.
 void RoomDungeonTemple::checkHeartHealthTier()
 {
     if(!getIsOnServerMap())
@@ -982,10 +982,14 @@ void RoomDungeonTemple::checkHeartHealthTier()
     if(tier == mCurrentHeartTier)
         return;
 
-    // The heart's health tier changed: rebuild the temple object with the
-    // matching mesh/rig/animation. updateTemplePosition() recomputes the tier
-    // itself and keeps the object on the same central tile.
-    updateTemplePosition();
+    // The heart's health tier changed: rebuild only its object with the
+    // matching mesh/rig/animation, keeping its tile and every ring pile.
+    Tile* tile = mTempleObject->getPositionTile();
+    BuildingObject* replacement = new DungeonHeartObject(getGameMap(), *this, tile,
+        getMeshNameForHeartTier(tier));
+    replaceBuildingObject(tile, replacement);
+    mTempleObject = replacement;
+    mCurrentHeartTier = tier;
 }
 
 void RoomDungeonTemple::destroyMeshLocal(NodeType nt)
