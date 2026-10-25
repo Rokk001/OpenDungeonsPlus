@@ -19,6 +19,7 @@
 
 #include "entities/Building.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/MissileStone.h"
 #include "entities/Tile.h"
