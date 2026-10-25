@@ -1144,7 +1144,7 @@ public:
     void socialCreatureRemoved();
 
     //! \brief Adds a post of this category to the feed if the creature belongs to the local player.
-    void socialEvent(social::PostCategory category);
+    void socialEvent(social::PostCategory category, const std::string& other = std::string());
 
     //! \brief Client side. The creature of the local player entered a filthy room: posts about it unless it posted about
     //! the same room less than FilthyPostSeconds ago.

@@ -4171,6 +4171,8 @@ void Creature::updateFromPacket(ODPacket& is)
     social::CreatureSnapshot socialBefore;
     if(postSource)
         fillSocialSnapshot(socialBefore);
+    const bool wasStaggering = isStaggering();
+    const bool hadHangover = (mHangoverTurns > 0.0);
 
     MovableGameEntity::updateFromPacket(is);
 
@@ -4259,6 +4261,20 @@ void Creature::updateFromPacket(ODPacket& is)
             getDefinition()->getClassName(), getDefinition()->isWorker(), socialBefore, socialAfter);
         if(!socialAfter.mFilthyRoom.empty() && (socialAfter.mFilthyRoom != socialBefore.mFilthyRoom))
             socialFilthyRoom(socialAfter.mFilthyRoom);
+
+        // The creature began to stagger (first time of a drunk episode) or woke up with a hangover
+        if(!wasStaggering && isStaggering())
+        {
+            socialEvent(social::PostCategory::Drunk);
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().trigger(this, "Drunk");
+        }
+        if(!hadHangover && (mHangoverTurns > 0.0))
+        {
+            socialEvent(social::PostCategory::Hungover);
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().trigger(this, "Hangover");
+        }
     }
 
     // Level up and payday are shown as cosmetic reactions of the creature
@@ -4323,13 +4339,16 @@ void Creature::socialCreatureRemoved()
         getDefinition()->getClassName(), getDefinition()->isWorker(), mOverlayMoodValue);
 }
 
-void Creature::socialEvent(social::PostCategory category)
+//! \brief Adds a post of the given category for this creature to the feed. Only creatures of the local player post.
+//! \param category What the creature posts about.
+//! \param other Profile name of the second creature of the post (the opponent of a duel), empty for other posts.
+void Creature::socialEvent(social::PostCategory category, const std::string& other)
 {
     if(!isSocialFeedSource())
         return;
 
     social::PostLog::getSingleton().addPost(getGameMap()->getTurnNumber(), getName(),
-        getDefinition()->getClassName(), getDefinition()->isWorker(), category, 0);
+        getDefinition()->getClassName(), getDefinition()->isWorker(), category, 0, other);
 }
 
 //! \brief Posts "filthy room" for this creature, at most once per FilthyPostSeconds for the same room.
@@ -7586,13 +7605,16 @@ void Creature::drinkTaken(DrinkKind kind)
     }
 }
 
-//! \brief Raises the thirst, limited to THIRST_STATE_MAX; rogue creatures have none.
+//! \brief Raises the thirst, limited to THIRST_STATE_MAX; rogue creatures have none. A creature of a human keeper that
+//! is at the limit lets the keeper know when there is no tavern (the keeper limits the notices itself).
 void Creature::increaseThirst(double value)
 {
     if(getSeat()->isRogueSeat())
         return;
 
     mThirst = std::min(THIRST_STATE_MAX, mThirst + value);
+    if((mThirst >= THIRST_STATE_MAX) && getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
+        getSeat()->getPlayer()->notifyTavernEvent();
 }
 
 //! \brief Sets the thirst, limited to 0 - THIRST_STATE_MAX.

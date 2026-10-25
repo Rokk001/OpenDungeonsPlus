@@ -262,6 +262,12 @@ public:
     //! \param creature The creature for relieved (not used for roomFilthy), may be nullptr otherwise.
     void notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Creature* creature);
 
+    //! \brief Tells a human keeper that creatures are thirsty and there is no tavern: "Your creatures are thirsty
+    //! and you have no tavern.". Called when a creature of the keeper has thirst 100. Nothing is sent while the
+    //! keeper has a tavern; at most one notice is sent per TavernNoticeSeconds (global.cfg), the others are dropped.
+    //! Should be called on the server game map.
+    void notifyTavernEvent();
+
     void fireEvents();
 
     //! \brief Called on client side to update the current list of events. Note that
@@ -372,6 +378,10 @@ private:
 
     //! \brief Seconds left before the player gets another dirt notice (see notifyDirtEvent).
     float mDirtNoticeTime;
+
+    //! \brief Seconds left before the player gets another notice that creatures are thirsty and there is no
+    //! tavern (see notifyTavernEvent).
+    float mTavernNoticeTime;
 
     //! \brief Time left before the player is told again that a creature has died.
     float mCreatureKilledTime;

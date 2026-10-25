@@ -2149,6 +2149,42 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::tavernWindow:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            int xx = 0;
+            int yy = 0;
+            uint32_t payer = 0;
+            bool beerResearched = false;
+            double beerPrice = 0.0;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer >> beerResearched >> beerPrice);
+
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setTavernWindowShown(xx, yy, payer, beerResearched, beerPrice);
+            break;
+        }
+
+        case ServerNotificationType::tavernPayer:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            int xx = 0;
+            int yy = 0;
+            uint32_t payer = 0;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer);
+
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setTavernPayerShown(xx, yy, payer);
+            break;
+        }
+
         case ServerNotificationType::editorPortalWaveData:
         {
             if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::EDITOR)

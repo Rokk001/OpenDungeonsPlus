@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<GUILayout version="4" >
+    <Window type="OD/FrameWindow" name="TavernWindow" >
+        <Property name="Area" value="{{0.5,-210},{0.5,-110},{0.5,210},{0.5,110}}" />
+        <Property name="Text" value="Tavern" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="AlwaysOnTop" value="True" />
+
+        <Window type="OD/StaticText" name="BeerText" >
+            <Property name="Area" value="{{0,20},{0,45},{1,-20},{0,75}}" />
+            <Property name="Text" value="Beer: not researched" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Button" name="PayerButton" >
+            <Property name="Area" value="{{0.5,-120},{0,95},{0.5,120},{0,125}}" />
+            <Property name="Text" value="Keeper pays" />
+            <Property name="TooltipText" value="Who pays for beer" />
+        </Window>
+        <Window type="OD/Button" name="CloseButton" >
+            <Property name="Area" value="{{0.5,-64},{1,-50},{0.5,64},{1,-16}}" />
+            <Property name="Text" value="Close" />
+        </Window>
+    </Window>
+</GUILayout>
