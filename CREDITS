@@ -42,6 +42,8 @@ assets-src/gui/icons/icons-*.png        AI-generated with Codex  GPLv3+         
 assets-src/gui/icons/overrides/*.png     AI-generated with Codex  GPLv3+                  Complete lantern silhouette and isolated heart without baked health-ring segments, 2026-10-25
 assets-src/gui/icons/tiles/*.png        AI-generated with Codex  GPLv3+                  Individual existing icon slots extracted from icons-*.png by scripts/gui/build_icon_atlas.py
 assets-src/gui/icons/navigation/*.png   AI-generated with Codex  GPLv3+                  Existing navigation sprites assembled from painted icon and skin sources, 2026-10-25
+assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
+assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
 ODLogo.imageset                        OD Team                 GPLv3+
 ODLogo.png                             Svenskmand              CC-BY-SA 3.0
 ODMainMenuBackground.imageset          Bertram                 GPLv3+
