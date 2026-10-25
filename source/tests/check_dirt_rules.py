@@ -83,7 +83,7 @@ for path, token in [('source/rooms/RoomLibrary.cpp', 'getDirtOutputFactor()'), (
                     ('source/rooms/RoomPrison.cpp', 'getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3")'),
                     ('source/rooms/RoomTorture.cpp', 'getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3")')]:
     assert token in read(path), path + ' must use ' + token
-assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor())' in creature_cpp, 'arena experience per hit'
+assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor())' in creature_cpp, 'arena experience per hit'
 # Piles in rooms workers never clean: the search and the seat check use the same rule
 assert 'isPileCleanable(*tile)' in extract(search_cpp, 'static Tile* findPileTile('), 'the pile search must use the shared rule'
 assert 'isPileCleanable(*tile)' in extract(seat_cpp, 'bool Seat::hasDirtToClean() const'), 'hasDirtToClean must use the shared rule'
@@ -157,7 +157,7 @@ static void loadConfig()
 enum class RoomType { dungeonTemple, treasury, crypt, workshop, prison, torture, temple, library, nbRooms };
 enum class TileType { dirt, water, lava, gold, rock };
 enum class GameEntityType { creature, dirtPileEntity, other };
-enum class DirtPileKind { pile, blood };
+enum class DirtPileKind { pile, blood, vomit };
 
 struct Room; struct GameMap; struct Tile; struct Creature;
 

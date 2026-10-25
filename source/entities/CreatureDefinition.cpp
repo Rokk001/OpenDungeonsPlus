@@ -103,6 +103,7 @@ CreatureDefinition::CreatureDefinition(
         mUrgeGrowthPerTurn (0.0),
         mCleanliness (1.0),
         mDirtFactor (1.0),
+        mThirstGrowthPerTurn (0.0),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -184,6 +185,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mUrgeGrowthPerTurn(def.mUrgeGrowthPerTurn),
         mCleanliness(def.mCleanliness),
         mDirtFactor(def.mDirtFactor),
+        mThirstGrowthPerTurn(def.mThirstGrowthPerTurn),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -461,6 +463,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mUrgeGrowthPerTurn;
     os << c->mCleanliness;
     os << c->mDirtFactor;
+    os << c->mThirstGrowthPerTurn;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -530,6 +533,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mUrgeGrowthPerTurn;
     is >> c->mCleanliness;
     is >> c->mDirtFactor;
+    is >> c->mThirstGrowthPerTurn;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -863,6 +867,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mUrgeGrowthPerTurn = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "ThirstGrowth/Turn")
+            {
+                defFile >> nextParam;
+                creatureDef->mThirstGrowthPerTurn = Helper::toDouble(nextParam);
                 continue;
             }
             else if (nextParam == "Cleanliness")
@@ -1207,6 +1217,8 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if((def1 == nullptr) ? (def2->mUrgeGrowthPerTurn != 0.0) : (def1->mUrgeGrowthPerTurn != def2->mUrgeGrowthPerTurn))
         file << "    UrgeGrowth/Turn\t" << def2->mUrgeGrowthPerTurn << std::endl;
+    if((def1 == nullptr) ? (def2->mThirstGrowthPerTurn != 0.0) : (def1->mThirstGrowthPerTurn != def2->mThirstGrowthPerTurn))
+        file << "    ThirstGrowth/Turn\t" << def2->mThirstGrowthPerTurn << std::endl;
     if((def1 == nullptr) ? (def2->mCleanliness != 1.0) : (def1->mCleanliness != def2->mCleanliness))
         file << "    Cleanliness\t" << def2->mCleanliness << std::endl;
     if((def1 == nullptr) ? (def2->mDirtFactor != 1.0) : (def1->mDirtFactor != def2->mDirtFactor))

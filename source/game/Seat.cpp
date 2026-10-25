@@ -2368,7 +2368,8 @@ bool Seat::hasDirtToClean() const
             continue;
 
         DirtPileEntity* dirtPile = static_cast<DirtPileEntity*>(entity);
-        if(dirtPile->getKind() != DirtPileKind::pile)
+        // Piles and vomit are cleaned as piles, blood dries by itself
+        if(dirtPile->getKind() == DirtPileKind::blood)
             continue;
 
         Tile* tile = dirtPile->getPositionTile();

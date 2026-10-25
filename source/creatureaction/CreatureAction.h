@@ -61,6 +61,7 @@ enum class CreatureActionType
     cleanTile, // (worker only) Wipes the dirt, pile or blood stain off a tile
     searchToilet, // (fighters only) Looks for a free toilet seat, or waits near the toilet room while all seats are busy
     useToilet, // (fighters only) Squats on a toilet seat, or relieves itself on the spot when it has no toilet
+    vomit, // (fighters only) A drunk creature vomits where it stands and leaves a pile of vomit
     nb // Must be the last value of this enum
 };
 

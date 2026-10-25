@@ -507,7 +507,7 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
 
     mPoints += takeWholeWorkPoints(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork"),
-        ResearchEffect::PointsPerWork), getDirtOutputFactor(), mPointsRemainder);
+        ResearchEffect::PointsPerWork), getDirtOutputFactor() * creature.getHangoverWorkFactor(), mPointsRemainder);
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));

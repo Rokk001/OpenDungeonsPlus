@@ -62,6 +62,14 @@ namespace EntityAnimation
     //! The hurt creature that is pulled lies on the ground and slides behind the worker (see
     //! DormitoryWoundedDragCreatureClip)
     static const std::string dragged_anim = "Dragged";
+    //! Clip of a drunk creature that walks (swaying walk, same length and key times as Walk; clients only, chosen
+    //! where the Walk clip is applied when the skeleton has it, the entity state stays Walk)
+    static const std::string stagger_anim = "Stagger";
+    //! A drunk creature vomits (server action state; a skeleton without the clip plays Idle)
+    static const std::string vomit_anim = "Vomit";
+    //! Idle clip of a creature with a hangover (clients only, chosen where the Idle clip is applied when the
+    //! skeleton has it, the entity state stays Idle)
+    static const std::string hangover_anim = "Hangover";
 };
 
 //! \brief Moves and animates an entity while keeping deferred strikes synchronized with its displayed pose.
