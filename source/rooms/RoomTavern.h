@@ -297,6 +297,14 @@ public:
     //! \param tile The tile the creature drinks on; nothing happens if it is null.
     static void addDrinkDirt(Tile* tile);
 
+    //! \brief Server side. Tells the keepers that see the creature what happened to it, so their clients show the
+    //! thought bubble and the dungeon book post (cosmetic event tavernEvent). Nothing is sent for a creature that is not
+    //! on a tile, and the game never depends on it.
+    //! \param creature The creature the event is about.
+    //! \param kind What happened (CosmeticTavernKind as a number, kept as int32_t so that this header needs no network header).
+    //! \param opponent The other creature of a slap duel, null for the other kinds.
+    static void sendTavernEvent(Creature& creature, int32_t kind, const Creature* opponent);
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
 

@@ -173,8 +173,9 @@ const std::string TAVERN_MUG_PREFIX = "TavernMug_";
 const std::string DUEL_BIRDS_TEMPLATE = "DuelBirds";
 //! Prefix of the name of the bird particle system (and its node, with the suffix _node) of a creature
 const std::string DUEL_BIRDS_PREFIX = "DuelBirds_";
-//! Height above the ground position of a knocked-out creature at which the little birds circle (0.3 tiles)
-const Ogre::Real DUEL_BIRDS_HEIGHT = 0.3f;
+//! Extra height of the bird node above the position of a knocked-out creature. The particle template DuelBirds already
+//! emits its birds 0.3 tiles above its node, which is the height the little birds circle at, so no more is added here.
+const Ogre::Real DUEL_BIRDS_HEIGHT = 0.0f;
 
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 

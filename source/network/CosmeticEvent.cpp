@@ -25,7 +25,8 @@ bool CosmeticEvent::isKnownType() const
             (mType == static_cast<int32_t>(CosmeticEventType::keeperWealth)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::hitResult)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::attackTurn)) ||
-            (mType == static_cast<int32_t>(CosmeticEventType::tileDirt)));
+            (mType == static_cast<int32_t>(CosmeticEventType::tileDirt)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::tavernEvent)));
 }
 
 std::string CosmeticEvent::typeString() const
@@ -72,6 +73,8 @@ std::string CosmeticEvent::typeString() const
             return "attackTurn";
         case static_cast<int32_t>(CosmeticEventType::tileDirt):
             return "tileDirt";
+        case static_cast<int32_t>(CosmeticEventType::tavernEvent):
+            return "tavernEvent";
         default:
             break;
     }

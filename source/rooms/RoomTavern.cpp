@@ -27,6 +27,7 @@
 #include "game/Seat.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
@@ -702,6 +703,7 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
     else if(noCoin)
         creature->addTavernMood(getTavernValue("NoCoinMood"), getTavernValue("NoCoinMoodTurns"));
 
+    sendTavernEvent(*creature, static_cast<int32_t>((kind == DrinkKind::beer) ? CosmeticTavernKind::beer : CosmeticTavernKind::water), nullptr);
     addDrinkDirt(tile);
     if(mInnkeeper != nullptr)
         mInnkeeper->onDrink();
@@ -920,6 +922,13 @@ void RoomTavern::concludeGame(std::map<Tile*, RoomTavernGame>::iterator it, Crea
     winner->receiveExp(winnerXp);
     cheerSpectators(game);
 
+    // Only a slap duel is told to the clients (bubbles and posts of the winner and the loser)
+    if(game.mKind == TavernGameKind::slapDuel)
+    {
+        sendTavernEvent(*winner, static_cast<int32_t>(CosmeticTavernKind::duelWon), loser);
+        sendTavernEvent(*loser, static_cast<int32_t>(CosmeticTavernKind::duelLost), winner);
+    }
+
     if(mInnkeeper != nullptr)
         mInnkeeper->onCheer();
     playSoundAt(mCounterTile, SOUND_CHEER);
@@ -1037,6 +1046,33 @@ void RoomTavern::addDrinkDirt(Tile* tile)
         return;
 
     tile->addDirt(ConfigManager::getSingleton().getRoomConfigDouble("TavernDirtPerDrink"));
+}
+
+void RoomTavern::sendTavernEvent(Creature& creature, int32_t kind, const Creature* opponent)
+{
+    Tile* tile = creature.getPositionTile();
+    if(tile == nullptr)
+        return;
+
+    CosmeticEvent event(CosmeticEventType::tavernEvent);
+    event.mSubject = creature.getName();
+    if(opponent != nullptr)
+        event.mObject = opponent->getName();
+    event.mValue = kind;
+    event.mPosition = creature.getPosition();
+
+    // The keepers that see the tile and the keeper of the creature itself (its post is written on its own client)
+    std::vector<Seat*> receivers = tile->getSeatsWithVision();
+    if((creature.getSeat() != nullptr) && (std::find(receivers.begin(), receivers.end(), creature.getSeat()) == receivers.end()))
+        receivers.push_back(creature.getSeat());
+
+    for(Seat* seat : receivers)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
+    }
 }
 
 bool RoomTavern::servesBeer() const

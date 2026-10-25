@@ -131,7 +131,28 @@ enum class CosmeticEventType : int32_t
     //! Sent to the keepers that see the tiles when something changed (after DirtSyncTurns), every DirtResyncTurns
     //! and at once to a keeper who gains sight, joins or loads. Only shows the dirt decals and the room text; the game
     //! never depends on it. Older clients skip the kind.
-    tileDirt = 19
+    tileDirt = 19,
+    //! Something happened to a creature in or around a tavern that the client shows as a thought bubble and a post of
+    //! the dungeon book. mSubject the creature, mObject the other creature of a slap duel (empty otherwise), mValue the
+    //! CosmeticTavernKind, mValue2 and mText are not used (0, empty), mPosition the position of the creature. Sent to the
+    //! keepers that see the tile of the creature. Only shows bubbles and posts; the game never depends on it. Older
+    //! clients skip the kind.
+    tavernEvent = 20
+};
+
+//! \brief The kind in mValue of the event tavernEvent
+enum class CosmeticTavernKind : int32_t
+{
+    //! The creature drank a beer (bubble TavernBeer, post Drank)
+    beer = 0,
+    //! The creature drank water (post Drank, no bubble)
+    water = 1,
+    //! The creature won a slap duel against mObject (bubble DuelWin, post DuelWon)
+    duelWon = 2,
+    //! The creature lost a slap duel against mObject (bubble DuelLoss, post DuelLost)
+    duelLost = 3,
+    //! The creature vomited (bubble Vomit)
+    vomit = 4
 };
 
 //! \brief The result in mValue of the event hitResult
