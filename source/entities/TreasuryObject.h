@@ -28,10 +28,12 @@ class GameMap;
 class ODPacket;
 class Room;
 
+//! \brief A carried or loose gold pile whose value retains fractional payments.
 class TreasuryObject: public RenderedMovableEntity
 {
 public:
-    TreasuryObject(GameMap* gameMap, int goldValue);
+    //! \brief Creates a loose pile retaining fractional admission gold.
+    TreasuryObject(GameMap* gameMap, double goldValue);
     TreasuryObject(GameMap* gameMap);
 
     virtual void doUpkeep() override;
@@ -51,13 +53,14 @@ public:
     //! \brief Called when a creature tries to steal gold. value represents
     //! the amount the creature wants to steal.
     //! Returns the gold stolen
-    int stealGold(Creature& creature, int value);
+    double stealGold(Creature& creature, double value);
 
     virtual EntityCarryType getEntityCarryType(Creature* carrier) override;
     virtual void notifyEntityCarryOn(Creature* carrier) override;
     virtual void notifyEntityCarryOff(const Ogre::Vector3& position) override;
 
-    static const char* getMeshNameForGold(int gold);
+    //! \brief Selects the existing visual tier for a possibly fractional gold amount.
+    static const char* getMeshNameForGold(double gold);
 
     static std::string getTreasuryObjectStreamFormat();
     static TreasuryObject* getTreasuryObjectFromStream(GameMap* gameMap, std::istream& is);
@@ -66,13 +69,15 @@ public:
     virtual void addEntityToPositionTile(GameMap *gameMap = nullptr) override;
 
 protected:
+    //! \brief Writes the pile with enough precision to restore its exact value.
     virtual void exportToStream(std::ostream& os) const override;
     virtual bool importFromStream(std::istream& is) override;
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
     virtual void importFromPacket(ODPacket& is) override;
 
 private:
-    int mGoldValue;
+    //! \brief The exact gold in this pile.
+    double mGoldValue;
     bool mHasGoldValueChanged;
     Seat* mDropSeat;
     bool mDroppedByHand;

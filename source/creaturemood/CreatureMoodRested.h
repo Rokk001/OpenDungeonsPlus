@@ -33,6 +33,8 @@ public:
     {}
 
     const std::string& getModifierName() const override;
+    //! \brief Returns the configured lifetime of rested and admission mood.
+    int32_t getTurnsMax() const { return mTurnsMax; }
 
     virtual int32_t computeMood(const Creature& creature) const override;
 

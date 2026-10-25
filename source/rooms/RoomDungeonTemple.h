@@ -88,9 +88,12 @@ public:
     //! \brief The outer tiles of a 5x5 heart form a treasury ring, 1000 gold each.
     //! A 3x3 heart has no ring and stores no gold.
     virtual int getTotalGoldStorage() const override;
-    virtual int getTotalGoldStored() const override;
-    virtual int depositGold(int gold, Tile* tile) override;
-    virtual int withdrawGold(int gold) override;
+    //! \brief Returns ring gold without truncating fractional payments.
+    virtual double getTotalGoldStored() const override;
+    //! \brief Deposits gold in the ring while retaining fractional payments.
+    virtual double depositGold(double gold, Tile* tile) override;
+    //! \brief Withdraws ring gold while retaining fractional payments.
+    virtual double withdrawGold(double gold) override;
 
     //! \brief Never splits the temple, so that damaged floor cannot create a second dungeon core.
     void checkForSplit() override

@@ -98,7 +98,7 @@ bool CreatureActionStealFreeGold::handleStealFreeGold(Creature& creature)
 
     if(myTile == treasuryTile)
     {
-        int gold = treasuryClosest->stealGold(creature, creature.getDefinition()->getStealGold());
+        double gold = treasuryClosest->stealGold(creature, creature.getDefinition()->getStealGold());
         creature.addGoldCarried(gold);
         if((gold > 0) && creature.getIsOnServerMap())
             creature.getGameMap()->getLevelScript().recordEvent(creature.getName(), "steals");
