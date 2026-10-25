@@ -1,5 +1,274 @@
 # Item image prompts
 
+## ARC_Head_base.png
+
+Use case: stylized-concept. SQUARE128x128 INVENTORY COMPOSITION. The image canvas MUST be perfectly square1:1, not landscape. Keep ample genuinely transparent space above and below the wide item; do not auto-fit the canvas to the item. Subject: Runed Circlet of Arcane, one modest empty bronze circlet, a complete thin oval headband with a small pointed front panel, dark navy-blue inset, restrained engraved concentric arcs and geometric grooves. Exactly one head-equipment object, Common quality: functional dark bronze, modest craftsmanship, no gems and no magic glow. Entire oval loop fully visible, centred within a square image with generous transparent padding on all four sides. Hand-painted fantasy inventory icon with chunky readable silhouette, painterly shaded bronze and warm upper-left light matching a bronze-and-iron dungeon interface. No wearer, head, face, skin, body, mannequin, floating props, letters, readable runes, writing, numbers, border, frame, tile, floor, scenery, background, cast shadow, branding or watermark. Native square RGBA canvas with genuine transparent alpha.
+
+
+## ARC_Head_rare.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition, retain Image1's exact square1:1 canvas and transparent padding. Edit target: the original empty bronze and navy-blue Runed Circlet of Arcane. Create the Rare Sigilmarked Circlet by refining only existing metal to carefully brushed noble silver with restrained warm bronze edge trim, and adding fine geometric engraving inside the existing concentric grooves. Keep the navy-blue inset. No glow. Preserve EXACTLY the original complete wide oval band, its inner opening, small pointed front panel, all outer edges and existing pieces, their pixel placement, scale, proportions, angle and warm upper-left lighting. Do not zoom, stretch, crop, reframe or change the shape. No additional jewels, parts, protrusions, markings resembling letters, wearer, person, face, mannequin, writing, text, numbers, frame, floor, scenery, background, cast shadow, branding or watermark. Original hand-painted fantasy inventory style, genuine transparent alpha on a native square canvas.
+
+
+## ARC_Head_epic.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition: retain Image1's exact square1:1 canvas, transparent padding and pixel placement; never landscape, zoom, stretch or crop. Edit target: Image1, original empty bronze-and-navy Runed Circlet of Arcane. Produce Epic Crown of the Hidden Sigil. Preserve EXACTLY its wide oval band, completely open interior, pointed front panel, concentric motifs, original outer perimeter, proportions, scale, angle and every existing piece. Refine only existing surfaces to exceptionally crafted silver and gold with fine etched geometric detail. Preserve navy-blue insets. A faint narrow violet magical glimmer may trace a few existing engraved grooves only, with no broad bloom, floating aura or particles. Same hand-painted fantasy material shading and warm upper-left light. No added gems, blades, spikes, parts, protrusions, text, readable runes, letters, numbers, wearer, face, mannequin, body, props, border, frame, floor, scenery, background, cast shadow, branding or watermark. Genuine transparent alpha, native square RGBA canvas.
+
+
+## ARC_Armour_base.png
+
+Use case: stylized-concept. Asset type: original hand-painted fantasy inventory icon, square suitable for128x128 downsampling. Subject: Runed Mantle of Arcane, one empty short dark navy-blue cloth mantle with a clear open neck, broad folded shoulder collar, tapered hanging cloth panels, modest dark leather edge binding and a small bronze front clasp etched with simple concentric grooves. An unoccupied garment displayed as a single equipment object, no wearer or mannequin. Common-quality practical arcane equipment: subdued woven cloth, restrained bronze fittings, no gemstones or magical glow. Entire garment visible, centred with generous genuinely transparent margins, strong chunky silhouette readable at128px. Painterly shaded fabric and metal, warm upper-left light matching an illustrated bronze-and-iron dungeon interface. No body, person, face, skin, hands, limbs, extra props, letters, readable runes, numbers, writing, border, frame, tile, floor, scenery, cast background shadow, watermark or branding. Genuine transparent alpha background.
+
+
+## ARC_Armour_rare.png
+
+Use case: precise-object-edit. Square128x128 inventory composition on a perfectly square1:1 canvas with transparent margins; retain the input canvas, no landscape reframing. Edit target Image1 is the original empty navy-blue Runed Mantle of Arcane. Make the Rare Sigilmarked Mantle: refine the existing navy fabric to a denser finer weave, add careful small stitching on existing seams and fine geometric etching on the existing round clasp, refine existing bronze borders with restrained noble silver inlay. No magical glow. Preserve EXACTLY the same garment silhouette, open neck, collar, every cloth panel and fold, draped openings, hems, angle, position, proportions, scale, warm upper-left lighting and transparent margins. No new ornaments, shapes, collar points, gemstones, attached objects or extensions. Original hand-painted fantasy inventory style. No wearer, body, skin, person, mannequin, text, letters, readable runes, numbers, frame, floor, scenery, background, cast shadow, watermark or branding. Genuine transparent alpha.
+
+
+## ARC_Armour_epic.png
+
+Use case: precise-object-edit. Square128x128 inventory composition on the same perfectly square1:1 canvas as Image1; no cropping, stretching or reframing. Edit target: original empty navy-blue Runed Mantle of Arcane. Create the Epic Mantle of the Hidden Sigil. Preserve EXACTLY the original garment's outer silhouette, neck opening, raised collar, every draped panel and fold, hems, existing clasp, proportions, scale, viewing angle, placement, transparent margins and warm upper-left light. Upgrade only existing cloth to exceptionally fine woven navy fabric and existing leather/bronze borders to detailed noble silver-and-gold craftsmanship. Add careful small geometric etching and a very faint narrow violet glimmer along existing border grooves and around the existing clasp, never a broad aura. No new parts, ornaments, jewels, tips, runes that resemble letters, props or floating particles. Hand-painted fantasy inventory icon. No wearer, body, person, skin, mannequin, writing, letters, numbers, text, frame, floor, scenery, background, cast shadow, watermark or branding. Genuine transparent alpha.
+
+
+## ARC_Boots_base.png
+
+Use case: stylized-concept. SQUARE128x128 inventory composition on a perfectly square1:1 transparent canvas, not portrait or landscape. Subject: Runed Striders of Arcane, one matching pair of empty practical navy-blue cloth-and-dark-leather ankle boots, soft folded cuffs, sturdy dark soles, modest bronze toe trim and a small concentric geometric groove on each existing bronze fastening. The boots are the single equipment item, arranged slightly offset in a clear three-quarter view, both boots entirely visible within generous transparent margins. Common quality, modest functional craftsmanship, no gems and no magical glow. Chunky readable silhouette and original hand-painted fantasy inventory shading, warm upper-left light matching a bronze-and-iron dungeon interface. No feet, legs, skin, person, wearer, mannequin, extra props, letters, readable runes, writing, numbers, text, border, frame, tile, floor, scenery, cast background shadow, branding or watermark. Genuine transparent alpha, square canvas.
+
+
+## ARC_Boots_rare.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition on Image1's unchanged square1:1 transparent canvas. Edit target is the original pair of empty navy-blue and dark-leather Runed Striders of Arcane. Create the Rare Sigilmarked Striders: finer tighter cloth weave, carefully finished leather, fine stitched seams and restrained noble silver inlay on the existing bronze toe trim and circular fastenings. No glow. Preserve EXACTLY both boots' outer silhouettes, open cuffs, every strap, seam, toe, heel and sole, their relative arrangement, pose, viewing angle, proportions, scale, placement, transparent margins and warm upper-left light. Change only existing surfaces and craftsmanship; add no extra pieces, tips, jewels or ornaments. Same hand-painted fantasy inventory style. No feet, legs, wearer, body, person, skin, mannequin, writing, readable runes, letters, text, numbers, border, frame, floor, scenery, background, cast shadow, watermark or branding. Native square RGBA canvas, genuine transparent alpha.
+
+
+## ARC_Boots_epic.png
+
+Use case: precise-object-edit. SQUARE128x128 inventory composition, same perfectly square1:1 canvas and genuine transparent padding as Image1. Edit target: the original pair of empty navy-blue cloth and dark-leather Runed Striders of Arcane. Create Epic Steps of the Hidden Sigil. Preserve EXACTLY both boots' complete outer outlines, open folded cuffs, soles, heels, toes, straps, circular fastenings, relative positions, scale, proportions, viewing angle and warm upper-left lighting. Upgrade only existing materials to fine tightly woven navy cloth, carefully worked leather and noble silver-and-gold detailing on the existing bronze trims and fastenings. Add delicate geometric etching and only a faint narrow violet glow tracing a few existing seams and circular grooves. No broad aura or particles. Do not add extra shapes, jewels, tips, ornaments or parts. Original hand-painted fantasy inventory icon. No feet, legs, skin, wearer, person, mannequin, writing, readable runes, letters, text, numbers, border, frame, floor, backdrop, scenery, cast shadow, branding or watermark. Native square RGBA with genuine transparent alpha.
+
+
+## ARC_Ring_base.png
+
+Use case: stylized-concept. SQUARE128x128 inventory composition on a perfectly square1:1 native canvas. Subject: Runed Seal of Arcane, one modest bronze finger ring with a broad flat circular signet face, a dark navy-blue enamel inset engraved only with simple concentric circles and angular geometric grooves, no readable writing. A complete hollow band is visible in a three-quarter view, no finger. Common-quality practical arcane equipment, plain sturdy bronze with restrained craft detail, no gemstones and no magical glow. Exactly one centred ring, entirely visible with generous transparent padding on every side. Original hand-painted fantasy inventory icon with clear chunky silhouette, painterly metal and warm upper-left light matching an illustrated bronze-and-iron dungeon interface. No hand, wearer, person, body, mannequin, floating props, letters, text, numbers, readable runes, frame, border, floor, tile, scenery, background, cast shadow, watermark or branding. Genuine transparent alpha, square image.
+
+
+## ARC_Ring_rare.png
+
+Use case: precise-object-edit. Keep Image1's exact SQUARE1:1 transparent canvas and128x128 inventory composition. Edit target is the original bronze finger ring with navy circular signet face. Create the Rare Sigilmarked Seal. Preserve EXACTLY the entire band and opening, circular signet plate, all concentric circles and four existing geometric points, every existing surface boundary, pose, viewing angle, proportions, scale, placement, margins and warm upper-left light. Refine only existing bronze to carefully worked noble silver with restrained polished bronze edge trim; improve the navy enamel finish and fine etched geometric grooves. No magical glow. Same original hand-painted fantasy icon. No new gems, ornaments, shapes, protrusions, marks resembling letters, hands, finger, wearer, body, person, mannequin, text, numbers, writing, frame, floor, scenery, backdrop, cast shadow, watermark or branding. Genuine transparent alpha on a native square canvas; no crop, stretch or reframing.
+
+
+## ARC_Ring_epic.png
+
+Use case: precise-object-edit. Keep Image1's exact SQUARE 1:1 transparent canvas and 128x128 inventory composition. Create the Epic Seal of the Hidden Sigil from this original bronze finger ring with navy circular signet face. Preserve EXACTLY the entire band and open hole, circular signet plate, concentric circles and four geometric points, all surface boundaries, pose, angle, proportions, scale, placement, margins and warm upper-left light. Refine existing bronze to finely worked noble silver and gold trim, navy enamel, exquisite geometric engraving. Add only a restrained violet magical glimmer in the existing engraved lines, not an aura obscuring the ring. Original hand-painted fantasy inventory icon. No new gems, ornaments, shapes, protrusions, readable runes, hands, fingers, wearer, body, person, mannequin, text, numbers, frame, floor, scenery, backdrop, cast shadow, watermark or branding. Genuine transparent alpha on native square canvas; no crop, stretch or reframing.
+
+
+## ARC_Dagger_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on a perfectly SQUARE 1:1 native canvas, not portrait or landscape. One original Runed Dagger of Arcane: short sharp double-edged steel blade with dark navy central groove containing abstract concentric geometric engravings, simple bronze swept crossguard, navy wrapped grip and bronze ring pommel. Entire dagger diagonal from lower-left pommel to upper-right point, clear readable silhouette, ample transparent margins on all sides. Hand-painted fantasy inventory icon, warm upper-left light, physically coherent blade, grip, guard. Bronze and dark navy restrained Common quality, no magical glow. No readable runes, text, numbers, lettering, hands, person, body, mannequin, frame, floor, scenery, background shadow, watermark or branding. Genuine transparent background with alpha zero; complete object centered within square, no clipping.
+
+
+## ARC_Dagger_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Sigilmarked Dagger. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bronze into finely worked noble silver with bronze trim, navy enamel/leather more finely finished and existing geometric grooves delicately etched. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Dagger_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Fang of the Hidden Sigil. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing fittings into finely worked noble silver and gold trim, navy surfaces richer, existing geometric grooves exquisite and faintly violet luminous. Restrained magical glow only along existing grooves, keep all edges clear. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Staff_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas, no portrait or landscape. One original Runed Staff of Arcane, entire long staff diagonal from lower-left foot to upper-right finial. Slender dark walnut shaft partly wrapped navy leather, restrained bronze collars and pointed bronze foot. Head is a clear circular bronze open ring with a small navy enamel solid disc suspended centrally by three short spokes, abstract concentric geometric grooves, no writing. Strong readable silhouette, entire staff inside ample transparent margins, complete endpoints not clipped. Hand-painted fantasy inventory icon, warm upper-left light, modest bronze Common quality, no magical glow. No extra accessories, text, letters, numbers, readable runes, people, hand, body, mannequin, floor, frame, scenery, backdrop, shadow, watermark or branding. Genuine transparent alpha-zero background. Centered in a square.
+
+
+## ARC_Staff_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Sigilmarked Staff. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bronze into finely worked noble silver with bronze trim, navy enamel/leather more finely finished and existing geometric grooves delicately etched. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Staff_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Rod of the Hidden Sigil. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing fittings into finely worked noble silver and gold trim, navy surfaces richer, existing geometric grooves exquisite and faintly violet luminous. Restrained magical glow only along existing grooves, keep all edges clear. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Wand_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Runed Wand of Arcane, compact thin tapered dark walnut magical wand diagonal lower-left grip to upper-right tip, navy leather wrapped handle, modest bronze handle collar and butt, bronze spiral inlay following the slender wood towards a small pointed navy enamel tip held in a bronze collar. Distinct wand, no staff head, no blade, no extra objects. Entire wand centered with generous transparent margins and intact endpoints. Hand-painted fantasy inventory icon, warm upper-left light, dark navy and bronze Common quality, no glow. No readable runes, letters, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, shadow, branding or watermark. Genuine alpha-zero transparent background, native square composition.
+
+
+## ARC_Wand_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Sigilmarked Wand. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing bronze into finely worked noble silver with bronze trim, navy enamel/leather more finely finished and existing geometric grooves delicately etched. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## ARC_Wand_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Spark of the Hidden Sigil. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing fittings into finely worked noble silver and gold trim, navy surfaces richer, existing geometric grooves exquisite and faintly violet luminous. Restrained magical glow only along existing grooves, keep all edges clear. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Head_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on a perfectly SQUARE 1:1 native canvas. One original Scale Circlet of Dragonkin: empty wearable oval bronze circlet with overlapping broad dark copper scale plates along the front, shallow angular central crest, two small upswept scale-shaped side fins, brown leather inner band. Three-quarter view showing the open center clearly transparent. Modest weathered bronze and dark copper Common quality, no gems or glow. Hand-painted fantasy inventory icon, warm upper-left light, full object centered within generous transparent margins. Original generic scale craftsmanship, no creature head, face, skull, wearer, person, hair, skin, mannequin, readable runes, writing, text, numbers, floor, scenery, frame, backdrop, cast background shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Armour_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Scale Mantle of Dragonkin: empty short protective shoulder mantle, broad brown leather shoulders covered by overlapping dark copper scale plates, shallow standing collar visibly empty, simple bronze clasp, tapered overlapping scale panels descending in front to a pointed hem. Three-quarter front view, entire garment centered, ample transparent margins. No wearer, no torso, no body, no mannequin, no head or arms. Restrained bronze and leather Common craftsmanship, physically coherent wearable mantle, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No creature face, readable runes, text, letters, numbers, additional items, frame, scenery, floor, backdrop, cast shadow, watermark or branding. Genuine transparent alpha-zero background, square canvas.
+
+
+## DRK_Armour_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Mantle. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Armour_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Mantle of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Boots_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original matching pair of Scale Striders of Dragonkin, two empty sturdy brown leather boots with overlapping dark copper scale plates on the shins and reinforced toes, simple bronze ankle fastenings, dark leather soles. Both boots fully visible in three-quarter view, left boot slightly behind, separate readable contours, open empty cuffs, full centered pair inside generous transparent margins. Modest bronze and leather Common quality, no glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, body, skin, mannequin, dragon face, readable runes, text, numbers, letters, extra objects, floor, frame, scenery, backdrop, cast background shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Ring_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Scale Seal of Dragonkin: thick hollow bronze finger ring, wide band with overlapping dark copper scale relief along shoulders, flat hexagonal bronze signet plate with simple raised geometric scale pattern, no writing or face. Three-quarter view with the finger opening clearly visible and genuinely transparent, coherent wearable ring. Modest weathered bronze Common quality, no gems or glow. Entire ring centered within generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No wearer, finger, hand, body, creature head, person, mannequin, readable runes, letters, text, numbers, frame, floor, scenery, backdrop, cast shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Staff_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Scale Staff of Dragonkin, long dark brown wooden shaft diagonal lower-left foot to upper-right head. Brown leather grip, bronze collars made of overlapping scale relief. Head is a large tapered dark copper scale-shaped solid finial, three broad overlapping metal scales aligned like a closed spearbud, blunt ceremonial crown not a weapon blade, no dragon face. Bronze pointed foot. Full staff centered inside generous transparent margins, both endpoints intact. Restrained bronze and leather Common quality, no gems, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No creatures, faces, people, hands, body, mannequin, readable runes, text, letters, numbers, scenery, floor, frame, backdrop, cast shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## DRK_Staff_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Scaleforged Staff. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing metal scale surfaces into finely forged burnished dark steel and noble warm gold edging, sharper fine scale etching and polished rivets, richer brown leather. No magical glow. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## DRK_Staff_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Rod of the Scaled Flame. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine existing scale surfaces into exquisite dark steel and gold, fine scale engraving and restrained ember-orange magical glimmer only in existing seams and grooves. Keep object readable, do not add flames or surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Head_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Circlet of Wild: empty oval wearable circlet woven from two slender brown woody vines, small thorn tips turned outward, clustered soft green moss and a few short oak-shaped leaves following the front and sides. Simple central leaf-shaped bronze fastening, clearly visible open center genuinely transparent, three-quarter view. Entire circlet centered inside generous transparent margins. Modest natural Common craftsmanship, no flowers, gemstones or magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No face, wearer, head, hair, person, body, mannequin, text, letters, readable runes, numbers, extra objects, frame, scenery, floor, backdrop, cast shadow, watermark or branding. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Head_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Circlet. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Head_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Crown of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Armour_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Mantle of Wild: empty short forest-green cloth shoulder mantle with layered broad leaf-shaped panels, braided brown thorn-vine trim, modest soft moss patches on shoulders, small bronze leaf clasp, raised folded collar visibly empty. Front three-quarter view, physically coherent garment suspended alone, no wearer, torso, head, arms, body or mannequin. Entire mantle centered with generous transparent margins. Natural modest Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light, distinct cloth folds, wood and moss texture. No flowers, readable runes, letters, text, numbers, additional items, scene, floor, frame, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Armour_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Mantle. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Armour_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Mantle of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Boots_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original matching pair of Moss Striders of Wild: two empty dark brown leather woodland boots with deep forest-green cloth cuffs, braided thin thorn-vine straps around ankles, small moss patches and two short leaf-shaped leather overlays on each shin. Sturdy clearly readable soles, no roots growing out. Three-quarter view, left boot slightly behind, both empty cuff openings visible, full pair centered inside generous transparent margins. Modest natural Common craftsmanship, no glow. Hand-painted fantasy inventory icon, warm upper-left light. No feet, legs, wearer, body, person, mannequin, flowers, readable runes, text, letters, numbers, frame, scene, floor, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Boots_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Striders. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Boots_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Steps of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Ring_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Seal of Wild: broad hollow finger ring of smoothly carved dark brown wood, braided slender thorn-vines integrated along shoulders, little green moss patches, oval flat signet face with bronze leaf-shaped inset showing plain leaf veins. Three-quarter view, empty finger hole clearly visible and genuinely transparent, complete physically coherent band. Modest natural Common craftsmanship, no gems, no magical glow. Full object centered with generous transparent margins, hand-painted fantasy inventory icon, warm upper-left light. No wearer, fingers, hand, face, people, mannequin, readable runes, text, letters, numbers, flowers, frame, floor, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Ring_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Seal. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Ring_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Seal of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Shield_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Shield of Wild: sturdy rounded wooden shield, broad vertical dark brown planks, braided thorn-vine outer rim, modest green moss patches around rim, central plain bronze leaf-shaped boss with simple veins. Three-quarter frontal view with slight visible wooden thickness, no arm, back straps only if naturally visible. Shield entire centered within generous transparent margins. Modest natural Common craftsmanship, practical intact protective shield, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No faces, people, hand, body, mannequin, flowers, readable runes, text, letters, numbers, additional objects, floor, scenery, frame, backdrop, cast background shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Shield_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Shield. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Shield_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Bastion of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Sword_base.png
+
+Use case: game-asset. SQUARE 128x128 inventory composition on perfectly SQUARE 1:1 native canvas. One original Moss Sword of Wild: practical straight double-edged steel sword with leaf-shaped blade, narrow bronze central vein inlay, short curved woody-vine crossguard with small thorns and modest green moss near its base, dark brown leather wrapped grip, simple bronze leaf-shaped pommel. Entire sword diagonal lower-left pommel to upper-right tip, clear continuous sharp blade, full object centered with generous transparent margins and both ends intact. Modest natural Common craftsmanship, no magical glow. Hand-painted fantasy inventory icon, warm upper-left light. No readable runes, text, letters, numbers, flowers, gems, extra items, hands, people, body, mannequin, floor, frame, scenery, backdrop, cast shadow, branding or watermark. Genuine alpha-zero transparent background, native square.
+
+
+## WLD_Sword_rare.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Rare Thornwoven Sword. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with finely carved thorn-vine grain, richer living moss and leaves, delicate noble silver detailing on existing metal fittings and leaf veins. Finer craftsmanship and surface detail, no magical glow, keep all vegetation exactly the same shape and size. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
+
+## WLD_Sword_epic.png
+
+Use case: precise-object-edit. Image1 is the original BASE icon. Create Epic Edge of the Overgrowth. Keep EXACTLY the native SQUARE 1:1 canvas and square 128x128 inventory composition, same object silhouette, all openings, every part and surface boundary, pose, angle, proportions, scale, placement, generous transparent margins, and warm upper-left light. Refine only existing surfaces with exquisite thorn-vine carving, richly textured deep green moss and leaves, fine noble gold and silver detailing on existing fittings and leaf veins. Add a restrained pale green magical glimmer following existing veins and seams only. Keep all vegetation exactly the same shape and size, no new growth, no particles, no surrounding aura. Original hand-painted fantasy equipment icon. No added parts, no geometry changes, no readable runes, text, numbers, hands, people, mannequins, frame, scenery, floor, backdrop, cast background shadow, branding or watermark. Preserve genuine transparent alpha. No crop, stretch, rotation or reframing.
+
 ## ARC_C_Head_rare.png
 
 Edit target: supplied original reddish-brown hide head inventory icon. Create its rare quality version. Refine the hide to supple finely finished leather with finer stitching and restrained embossed borders; existing metal fittings become polished bronze. No magical glow. Preserve EXACTLY the same complete silhouette, openings, every part, position, proportions, angle, scale and margins. Keep original leather material; no metal armour conversion or new attachments. Warm upper-left lighting, original hand-painted inventory style, one isolated item on genuine transparent alpha. No wearer, person, skin, limbs, mannequin, background, frame, letters, numbers, branding, watermark or separate particles. Square1:1 canvas suitable for128px downsampling.
