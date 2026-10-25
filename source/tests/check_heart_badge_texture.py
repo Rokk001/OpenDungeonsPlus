@@ -9,7 +9,7 @@ so the redrawn ring went into a texture the badge never showed again.
 This check links OgreMain and the CEGUI Ogre renderer, opens a hidden window, bootstraps CEGUI, creates
 the badge texture the way Gui.cpp does, and then:
 - reproduces the cause: loadFromMemory replaces the Ogre texture;
-- runs the real Gui::updateHeartBadge and drawBadgePixels, cut out of Gui.cpp by signature, and checks
+- runs the real Gui::updateHeartBadge, drawBadgePixels and painted composition, cut out of Gui.cpp by signature, and checks
   that the Ogre texture stays the same and that its pixels, read back from the texture, are the ring of
   the new health (and differ from the full ring).
 """
@@ -65,7 +65,11 @@ badge_helpers = ('float badgeClamp(', 'void badgeMix(', 'void badgeSet(', 'float
                  'float badgeRound(', 'float badgeHeartDistance(', 'float badgeHeartVeins(', 'float badgeHeartHeight(', 'float badgeSkullDistance(',
                  'float badgeCoinHeight(', 'void badgeNormal(', 'float badgeDiffuse(', 'float badgeHalfway(', 'float badgeCavity(', 'void badgeFrame(', 'void badgeGemRing(', 'void badgeBeadRing(',
                  'void badgeHeartWell(', 'void badgeCoinWell(', 'void drawBadgePixels(')
-badge_code = 'const int BADGE_SIZE = 128;\n' + '\n'.join(function(gui, signature) for signature in badge_helpers) + '\n'
+painted_constants = gui[gui.index('//! Painted navigation atlas coordinates,'):gui.index('// Layout of the room, trap and spell buttons')]
+badge_code = (painted_constants + 'const int BADGE_SIZE = 128;\n'
+              + '\n'.join(function(gui, signature) for signature in badge_helpers)
+              + '\n' + function(gui, 'void copyPaintedNavigationPixels(')
+              + '\n' + function(gui, 'void applyPaintedBadgePixels(') + '\n')
 
 probe = r'''
 #include <cmath>
@@ -100,22 +104,24 @@ MENU_HELPERS
 int gChecks = 0, gFailures = 0;
 void check(bool ok, const std::string& msg) {++gChecks;if(!ok){++gFailures;std::cout << "FAIL " << msg << '\n';}}
 
+//! \brief Reads the actual painted-size badge pixels from the existing Ogre texture.
 std::vector<unsigned char> readBack(CEGUI::Texture& texture)
 {
     Ogre::TexturePtr ogreTexture = static_cast<CEGUI::OgreTexture&>(texture).getOgreTexture();
-    std::vector<unsigned char> pixels(BADGE_SIZE * BADGE_SIZE * 4);
-    Ogre::PixelBox box(BADGE_SIZE, BADGE_SIZE, 1, ogreTexture->getFormat(), pixels.data());
+    std::vector<unsigned char> pixels(PAINTED_BADGE_SIZE * PAINTED_BADGE_SIZE * 4);
+    Ogre::PixelBox box(PAINTED_BADGE_SIZE, PAINTED_BADGE_SIZE, 1, ogreTexture->getFormat(), pixels.data());
     ogreTexture->getBuffer()->blitToMemory(box);
     return pixels;
 }
 
 // Is the ring pixel at an angle (degrees clockwise from the top) green? Spokes are grey, the groove is dark.
+//! \brief Samples the unchanged health annulus in the composited 256-pixel badge.
 bool ringGreen(const std::vector<unsigned char>& pixels, float angle)
 {
     const float radians = angle * 3.14159265f / 180.0f;
-    const int x = static_cast<int>((23.0f * std::sin(radians) + 32.0f) * BADGE_SIZE / 64.0f);
-    const int y = static_cast<int>((-23.0f * std::cos(radians) + 32.0f) * BADGE_SIZE / 64.0f);
-    const int i = (y * BADGE_SIZE + x) * 4;
+    const int x = static_cast<int>((23.0f * std::sin(radians) + 32.0f) * PAINTED_BADGE_SIZE / 64.0f);
+    const int y = static_cast<int>((-23.0f * std::cos(radians) + 32.0f) * PAINTED_BADGE_SIZE / 64.0f);
+    const int i = (y * PAINTED_BADGE_SIZE + x) * 4;
     return pixels[i + 1] - pixels[i] > 40;
 }
 
@@ -140,7 +146,9 @@ int main(int argc, char** argv)
     Ogre::ResourceGroupManager& resources = Ogre::ResourceGroupManager::getSingleton();
     resources.addResourceLocation(prefix + "/Media/Main", "FileSystem", "OgreInternal");
     resources.addResourceLocation(prefix + "/Media/RTShaderLib", "FileSystem", "General");
+    resources.addResourceLocation(std::string(argv[2]) + "/gui", "FileSystem", "General");
     resources.initialiseAllResourceGroups();
+    paintedNavigationAtlas.load(PAINTED_NAVIGATION_ATLAS, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
     Ogre::RTShader::ShaderGenerator::initialize();
     Ogre::RTShader::ShaderGenerator* shaders = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
     OgreBites::SGTechniqueResolverListener listener(shaders);
@@ -156,17 +164,18 @@ int main(int argc, char** argv)
     // As Gui.cpp at start: the full ring, loaded once
     std::vector<unsigned char> full;
     drawBadgePixels(full, 0, 1.0f, false);
+    applyPaintedBadgePixels(full, 0, false);
     CEGUI::Texture& badge = renderer.createTexture("ManaBadge");
-    badge.loadFromMemory(full.data(), CEGUI::Sizef(BADGE_SIZE, BADGE_SIZE), CEGUI::Texture::PF_RGBA);
+    badge.loadFromMemory(full.data(), CEGUI::Sizef(PAINTED_BADGE_SIZE, PAINTED_BADGE_SIZE), CEGUI::Texture::PF_RGBA);
     const Ogre::TexturePtr shown = static_cast<CEGUI::OgreTexture&>(badge).getOgreTexture();
     check(readBack(badge) == full, "the full ring is in the badge texture");
 
     // The cause: loading again makes a new Ogre texture; a window that cached the first one keeps showing it
     {
         CEGUI::Texture& probe = renderer.createTexture("Probe");
-        probe.loadFromMemory(full.data(), CEGUI::Sizef(BADGE_SIZE, BADGE_SIZE), CEGUI::Texture::PF_RGBA);
+        probe.loadFromMemory(full.data(), CEGUI::Sizef(PAINTED_BADGE_SIZE, PAINTED_BADGE_SIZE), CEGUI::Texture::PF_RGBA);
         const Ogre::Texture* first = static_cast<CEGUI::OgreTexture&>(probe).getOgreTexture().get();
-        probe.loadFromMemory(full.data(), CEGUI::Sizef(BADGE_SIZE, BADGE_SIZE), CEGUI::Texture::PF_RGBA);
+        probe.loadFromMemory(full.data(), CEGUI::Sizef(PAINTED_BADGE_SIZE, PAINTED_BADGE_SIZE), CEGUI::Texture::PF_RGBA);
         const Ogre::Texture* second = static_cast<CEGUI::OgreTexture&>(probe).getOgreTexture().get();
         check(first != second, "reproduced: loadFromMemory replaces the Ogre texture the badge window had cached");
         renderer.destroyTexture("Probe");
@@ -176,14 +185,20 @@ int main(int argc, char** argv)
     updateHeartBadge(0.4f, true);
     std::vector<unsigned char> expected;
     drawBadgePixels(expected, 0, 0.4f, true);
+    applyPaintedBadgePixels(expected, 0, true);
     check(static_cast<CEGUI::OgreTexture&>(badge).getOgreTexture().get() == shown.get(),
         "updateHeartBadge keeps the Ogre texture the badge window shows");
     const std::vector<unsigned char> after = readBack(badge);
     check(after == expected, "the shown texture holds the ring of the new health");
     check(after != full, "the shown ring is no longer the full ring");
+    std::vector<unsigned char> peaceful;
+    drawBadgePixels(peaceful, 0, 0.4f, false);
+    applyPaintedBadgePixels(peaceful, 0, false);
+    check(after != peaceful, "the painted badge retains the attack-colour change at the same health");
     updateHeartBadge(0.0f, false);
     std::vector<unsigned char> empty;
     drawBadgePixels(empty, 0, 0.0f, false);
+    applyPaintedBadgePixels(empty, 0, false);
     check(readBack(badge) == empty && static_cast<CEGUI::OgreTexture&>(badge).getOgreTexture().get() == shown.get(),
         "a destroyed heart empties the shown ring");
 
@@ -295,7 +310,7 @@ if args.loading_screens:
     CEGUI::WindowManager::getSingleton().destroyWindow(layout);
 '''
 probe = probe.replace('LOADING_HELPERS', loading_helpers).replace('LOADING_RENDER', loading_render)
-probe = probe.replace('LOADING_CODEC', 'root->loadPlugin(prefix + "/bin/Codec_STBI");' if args.loading_screens else '')
+probe = probe.replace('LOADING_CODEC', 'root->loadPlugin(prefix + "/bin/Codec_STBI");')
 
 # Keep the existing native asset setup while exercising production camera and menu navigation below.
 menu_render = ''
@@ -803,7 +818,7 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     navigation_functions += '\n' + function((repo / 'source/modes/ModeManager.cpp').read_text(), 'void ModeManager::requestPreviousMode(')
     menu_helpers = menu_helpers.replace('PRODUCTION_MENU_CODE', menu_source).replace('PRODUCTION_PROJECTION', projection)
     menu_helpers = menu_helpers.replace('NAV_CONSTANTS', navigation_constants).replace('PRODUCTION_NAVIGATION', navigation_functions)
-probe = probe.replace('MENU_PLUGINS', 'root->loadPlugin(prefix + "/bin/Codec_STBI");\n    root->loadPlugin(prefix + "/bin/Plugin_ParticleFX");' if args.menu_scene else '')
+probe = probe.replace('MENU_PLUGINS', 'root->loadPlugin(prefix + "/bin/Plugin_ParticleFX");' if args.menu_scene else '')
 probe = probe.replace('MENU_HELPERS', menu_helpers)
 probe = probe.replace('MENU_RENDER', menu_render)
 # Style of the fixture itself (the extracted production code is compiled as it is)
@@ -832,11 +847,11 @@ with tempfile.TemporaryDirectory(prefix='odp-heart-badge-') as directory:
     # Windows may block a freshly compiled executable (WinError 4551) for a moment
     for attempt in range(4):
         try:
-            command = [str(work / 'check.exe'), (deps / 'install').as_posix()]
+            command = [str(work / 'check.exe'), (deps / 'install').as_posix(), repo.as_posix()]
             if args.loading_screens:
-                command.extend([repo.as_posix(), args.loading_output.resolve().as_posix()])
+                command.append(args.loading_output.resolve().as_posix())
             if args.menu_scene:
-                command.extend([repo.as_posix(), args.menu_output.resolve().as_posix()])
+                command.append(args.menu_output.resolve().as_posix())
             subprocess.run(command, cwd=work, check=True, env=environment, stdin=subprocess.DEVNULL, timeout=180)
             break
         except OSError as error:

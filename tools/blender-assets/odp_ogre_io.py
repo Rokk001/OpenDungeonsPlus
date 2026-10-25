@@ -420,6 +420,7 @@ def _round_key(vals, nd=5):
     return tuple(round(v, nd) for v in vals)
 
 
+# Export the unchanged evaluated mesh with index buffers wide enough for every referenced vertex.
 def export_mesh_xml(obj, arm, path, skeleton_name, smooth=True):
     """Export one mesh object (rest pose, modifiers applied except armature) as Ogre XML. Material
     slots become submeshes. Vertices are split per (position, normal, uv)."""
@@ -501,7 +502,8 @@ def export_mesh_xml(obj, arm, path, skeleton_name, smooth=True):
     lines.append("\t\t</vertexbuffer>\n\t</sharedgeometry>\n\t<submeshes>\n")
     for mi in sorted(sub_faces):
         mname = obj.material_slots[mi].material.name if mi < len(obj.material_slots) and obj.material_slots[mi].material else "BaseWhite"
-        lines.append('\t\t<submesh material="%s" usesharedvertices="true" use32bitindexes="false" operationtype="triangle_list">\n\t\t\t<faces count="%d">\n' % (mname, len(sub_faces[mi])))
+        use_32bit_indexes = "true" if max(index for face in sub_faces[mi] for index in face) > 65535 else "false"
+        lines.append('\t\t<submesh material="%s" usesharedvertices="true" use32bitindexes="%s" operationtype="triangle_list">\n\t\t\t<faces count="%d">\n' % (mname, use_32bit_indexes, len(sub_faces[mi])))
         for f in sub_faces[mi]:
             lines.append('\t\t\t\t<face v1="%d" v2="%d" v3="%d" />\n' % tuple(f))
         lines.append("\t\t\t</faces>\n\t\t\t<boneassignments />\n\t\t</submesh>\n")

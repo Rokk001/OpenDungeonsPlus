@@ -233,9 +233,13 @@ for name, (button, title, tab) in KEEPERS.items():
     assert bar is not None and bar.get("type") == "OD/ProgressBar", "progress bar child of " + button
     assert 'name="%s"' % button in imageset, "icon of " + button
 cells = {"DominionButton": (512, 1152), "HeartFortitudeButton": (640, 1152), "HeartMendingButton": (768, 1152), "ManaFlowButton": (896, 1152)}
+icon_images = ET.fromstring(imageset)
 for button, (x, y) in cells.items():
-    assert re.search(r'name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset) or \
-        re.search(r'height="128" name="%s" width="128" xPos="%d" yPos="%d"' % (button, x, y), imageset), "cell of " + button
+    # The painted atlas doubles source coordinates, retaining each original logical cell.
+    nodes = icon_images.findall('Image[@name="%s"]' % button)
+    assert len(nodes) == 1, "unique icon of " + button
+    assert tuple(int(nodes[0].get(key)) for key in ('xPos', 'yPos', 'width', 'height')) == \
+        (x * 2, y * 2, 256, 256), "doubled cell of " + button
 motifs = read("tools/forged_motifs.py")
 last_four = re.findall(r'^    "(\w+)": _slot\(m_\w+, "(\w+)"\),', motifs, re.M)[-4:]
 assert last_four == [("DominionButton", "room"), ("HeartFortitudeButton", "trap"), ("HeartMendingButton", "trap"),

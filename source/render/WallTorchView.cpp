@@ -45,9 +45,9 @@ const double TWO_PI = 6.283185307179586;
 const double REFRESH_INTERVAL = 0.25;
 //! Distance factor of the mode "reduced"
 const double REDUCED_DISTANCE_FACTOR = 0.7;
-//! Distance from the camera within which a torch is shown at all
+//! Distance from the camera look point on the floor within which a torch is shown at all
 const double SHOW_DISTANCE = 16.0;
-//! Torches this close to the camera are shown even when they are just out of view
+//! Torches this close to the floor look point are shown even when they are just out of view
 const double ALWAYS_SHOWN_DISTANCE = 3.0;
 //! Torches must be this close to the look point of the camera to get a real light
 const double LIGHT_DISTANCE = 30.0;
@@ -78,21 +78,21 @@ const float VISIBILITY_BOX_HEIGHT = 1.4f;
 const char* const LOOP_FAMILY = "Rooms/Torch/Loop";
 
 //! Bracket model: mesh name, height of its origin (the contact point with the wall) and the shift of
-//! flame and smoke from the wall towards the open tile (the cup of the model)
+//! flame, glow and smoke from the wall towards the open tile (the cup of the model)
 const char* const MODEL_MESH = "WallTorch.mesh";
 const double MODEL_HEIGHT = 0.85;
 const double FLAME_WALL_OFFSET = 0.194;
 
-//! The parts of a torch: bracket, flame, smoke
+//! The parts of a torch: bracket, flame, glow, smoke
 const uint32_t NB_PARTS = WallTorchView::NB_TORCH_PARTS;
-const char* const PART_SYSTEMS[NB_PARTS] = {"RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchSmoke"};
-const double PART_HEIGHTS[NB_PARTS] = {1.25, 1.4, 1.4};
-const double PART_DISTANCES[NB_PARTS] = {16.0, 16.0, 12.0};
-//! The mode "reduced" shows only the bracket and the flame
-const uint32_t NB_REDUCED_PARTS = 2;
-//! Flicker of the flame
-const double PART_FLICKER_FACTORS[NB_PARTS] = {0.0, 1.0, 0.0};
-const double PART_SPEED_FACTORS[NB_PARTS] = {0.0, 1.0, 0.0};
+const char* const PART_SYSTEMS[NB_PARTS] = {"RoomAmbTorchBracket", "RoomAmbTorchFlame", "RoomAmbTorchGlow", "RoomAmbTorchSmoke"};
+const double PART_HEIGHTS[NB_PARTS] = {1.25, 1.4, 1.4, 1.4};
+const double PART_DISTANCES[NB_PARTS] = {16.0, 16.0, 16.0, 12.0};
+//! The mode "reduced" keeps the bracket, flame and glow without smoke
+const uint32_t NB_REDUCED_PARTS = 3;
+//! Flicker of the flame and glow; the glow uses its original slower pulse
+const double PART_FLICKER_FACTORS[NB_PARTS] = {0.0, 1.0, 1.2, 0.0};
+const double PART_SPEED_FACTORS[NB_PARTS] = {0.0, 1.0, 0.74, 0.0};
 
 //! \brief Packs the tile coordinates of a wall into one number that identifies the torch
 uint64_t makeKey(int32_t x, int32_t y)
@@ -393,6 +393,7 @@ void WallTorchView::update(double timeSinceLastFrame, Mode mode, Ogre::Camera* c
     animate();
 }
 
+//! \brief Selects visible torches around the floor look point, independent of camera height.
 void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
 {
     Ogre::Vector3 cameraPosition = camera->getDerivedPosition();
@@ -400,6 +401,7 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
     Ogre::Vector3 lookPoint = cameraPosition;
     if(direction.z < LOOK_DOWN_MIN_DIRECTION_Z)
         lookPoint = cameraPosition + direction * (cameraPosition.z / -direction.z);
+    lookPoint.z = 0.0f;
 
     double distanceFactor = 1.0;
     uint32_t nbParts = NB_PARTS;
@@ -411,13 +413,13 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
         nbLights = mSettings.mActiveLightsReduced;
     }
 
-    // Flame for what is close to the camera and in view
+    // Keep flame and glow near the floor look point; zoom height must not hide them
     std::vector<std::map<uint64_t, Torch>::iterator> shown;
     std::vector<double> lookDistances;
     for(std::map<uint64_t, Torch>::iterator it = mTorches.begin(); it != mTorches.end(); ++it)
     {
         Torch& torch = it->second;
-        torch.mDistance = (torch.mPosition - cameraPosition).length();
+        torch.mDistance = (torch.mPosition - lookPoint).length();
         torch.mShown = false;
         if(torch.mDistance <= SHOW_DISTANCE * distanceFactor)
         {
@@ -468,7 +470,7 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
         else
             destroyLight(torch);
 
-        // Without a real light, keep only the holder and flame.
+        // Without a real light, keep the holder, flame and glow; only smoke needs a light.
         for(uint32_t part = 0; part < NB_PARTS; ++part)
         {
             bool wanted = (part < nbParts) && (torch.mDistance <= PART_DISTANCES[part] * distanceFactor) &&
@@ -485,7 +487,7 @@ void WallTorchView::refresh(Mode mode, Ogre::Camera* camera)
     std::vector<uint32_t> loudOrder;
     for(uint32_t i = 0; i < shown.size(); ++i)
     {
-        cameraDistances.push_back(shown[i]->second.mDistance);
+        cameraDistances.push_back((shown[i]->second.mPosition - cameraPosition).length());
         loudOrder.push_back(i);
     }
     std::sort(loudOrder.begin(), loudOrder.end(), NearerTorch(cameraDistances));
