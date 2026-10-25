@@ -30,6 +30,10 @@ These instructions apply to every change made to this repository with an AI assi
 
 Working mode: never wait idle. While a build, load test or agent runs, start every other task that does not depend on its result at once as a separate subagent (analysis, code fixes on own branches, checks, documentation). Only Blender work stays sequential, and timing measurements run without competing game instances. Before reporting 'waiting', list what else could run now and start it.
 
+## Agent model
+
+- Agent model: Claude Code agents use Sonnet 5.5 medium, Codex agents use GPT-6.1-Sol medium. Both are equivalent; a plan's model line is fulfilled by either. Never ask Mario about the model.
+
 ## Protected content
 
 - Never copy or derive levels, maps, graphics, models, sounds, texts or data tables from
