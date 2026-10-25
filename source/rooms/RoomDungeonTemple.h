@@ -150,6 +150,7 @@ private:
     Tile* getRingCenterTile() const;
     //! \brief A covered tile outside the 3x3 core is part of the treasury ring.
     bool isTreasuryTile(Tile* tile) const;
+    //! \brief Replaces changed ring pile meshes without hiding their previous mesh first.
     void updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData);
 
     //! True when the gold of a ring tile changed and its mesh needs a refresh in doUpkeep().
