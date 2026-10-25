@@ -97,27 +97,37 @@ def write_imageset(path, imagefile, name, entries):
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
 
 
-# Rebuild all original slots at twice their source resolution and the navigation source atlas.
+# Rebuild original grid slots and explicit painted sources, retaining the existing navigation atlas.
 def main():
     slots = json.loads((SOURCE / "slots.json").read_text(encoding="utf-8"))
     sheets = [Image.open(SOURCE / f"icons-{i}.png").convert("RGBA") for i in range(1, 8)]
     (SOURCE / "tiles").mkdir(exist_ok=True)
     (SOURCE / "navigation").mkdir(exist_ok=True)
-    atlas = Image.new("RGBA", (2048, 2560))
+    atlas_width = max(2048, max((int(slot["xPos"]) + int(slot["width"])) * 2 for slot in slots))
+    atlas_height = max((int(slot["yPos"]) + int(slot["height"])) * 2 for slot in slots)
+    atlas = Image.new("RGBA", (atlas_width, atlas_height))
     entries = []
     for index, slot in enumerate(slots):
         attrs = dict(slot)
+        source_name = attrs.pop("source", None)
         for key in ("xPos", "yPos", "width", "height", "xOffset", "yOffset"):
             if key in attrs:
                 attrs[key] = str(int(attrs[key]) * 2)
-        tile = source_cell(sheets[index // 16], index % 16).resize(
-            (int(attrs["width"]), int(attrs["height"])), Image.Resampling.LANCZOS)
+        if source_name:
+            tile = Image.open(SOURCE / source_name).convert("RGBA")
+            if tile.size != (int(attrs["width"]), int(attrs["height"])):
+                raise ValueError(f"Painted source size differs from its atlas rectangle: {source_name}")
+        else:
+            tile = source_cell(sheets[index // 16], index % 16).resize(
+                (int(attrs["width"]), int(attrs["height"])), Image.Resampling.LANCZOS)
         if slot["name"] == "MapLightButton":
             source = Image.open(SOURCE / "overrides/MapLightButton.png").convert("RGBA")
             tile = Image.new("RGBA", (int(attrs["width"]), int(attrs["height"])))
             lantern = fit_sprite(source, int(attrs["width"]) * 4 // 5)
             tile.alpha_composite(lantern, ((tile.width - lantern.width) // 2, (tile.height - lantern.height) // 2))
-        tile.save(SOURCE / "tiles" / (slot["name"] + ".png"))
+        tile_path = SOURCE / "tiles" / (slot["name"] + ".png")
+        if not source_name:
+            tile.save(tile_path)
         atlas.paste(tile, (int(attrs["xPos"]), int(attrs["yPos"])))
         entries.append(attrs)
     atlas.save(ROOT / "gui/ODIcons.png")
@@ -153,7 +163,7 @@ def main():
         nav_entries.append({"name": name, "xPos": str(x), "yPos": str(y), "width": str(width), "height": str(height)})
     navigation.save(ROOT / "gui/ODNavigation.png")
     write_imageset(ROOT / "gui/ODNavigation.imageset", "ODNavigation.png", "OpenDungeonsNavigation", nav_entries)
-    print(f"Painted icons: {len(slots)} slots at 2048x2560; navigation: {len(sprites)} sprites at 2048x2048")
+    print(f"Painted icons: {len(slots)} slots at {atlas_width}x{atlas_height}; navigation: {len(sprites)} sprites at 2048x2048")
 
 
 if __name__ == "__main__":
