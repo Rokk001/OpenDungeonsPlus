@@ -104,6 +104,7 @@ enum class SkillType
     roomToilet,
 
     // This should be the last
+    roomInfirmary,
     countSkill
 };
 

@@ -49,6 +49,7 @@
 #include "network/ServerNotification.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/RoomInfirmary.h"
 #include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
@@ -73,6 +74,8 @@
 #include <SFML/System.hpp>
 
 #include <chrono>
+#include <algorithm>
+#include <vector>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -91,6 +94,44 @@ static const int32_t MASTER_SERVER_STATUS_FINISHED = 2;
 
 namespace
 {
+    //! \brief Sends the current patients of all owned infirmaries and their remaining healing time.
+    void notifyInfirmaryWindow(GameMap* gameMap, Player* player)
+    {
+        Seat* seat = player->getSeat();
+        if(seat == nullptr || !player->getIsHuman())
+            return;
+        std::vector<Creature*> patients;
+        const std::vector<Room*> rooms = gameMap->getRoomsByTypeAndSeat(RoomType::infirmary, seat);
+        for(Room* room : rooms)
+        {
+            const RoomInfirmary* infirmary = static_cast<const RoomInfirmary*>(room);
+            for(const std::pair<const size_t, RoomInfirmary::PatientInfo>& patient : infirmary->getPatients())
+                if(patient.second.creature != nullptr)
+                    patients.push_back(patient.second.creature);
+        }
+        ServerNotification* notification = new ServerNotification(ServerNotificationType::infirmaryWindow, player);
+        notification->mPacket << seat->getInfirmaryPayer() << seat->getInfirmaryThreshold() << seat->getInfirmaryHealOn()
+            << static_cast<uint32_t>(patients.size());
+        const double fullSeconds = SkillManager::getResearchValue(seat, SkillType::roomInfirmary,
+            ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryFullHealSeconds"), "HealTime");
+        double mana = seat->getMana();
+        for(Creature* creature : patients)
+        {
+            const double maxHp = creature->getMaxHp();
+            const double hpLeft = std::max(0.0, maxHp * seat->getInfirmaryThreshold() / 100.0 - creature->getHP());
+            const double gain = std::min(hpLeft, maxHp / (fullSeconds * ODApplication::turnsPerSecond));
+            const double cost = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryManaPerWage") *
+                creature->getDefinition()->getFee(creature->getLevel()) * gain / maxHp;
+            const bool paused = !seat->getInfirmaryHealOn() || mana < cost;
+            if(!paused)
+                mana -= cost;
+            const double remaining = paused ? -1.0 : fullSeconds * hpLeft / maxHp;
+            notification->mPacket << creature->getName() << creature->getDefinition()->getClassName()
+                << creature->getDefinition()->isWorker() << creature->getHP() << maxHp << remaining;
+        }
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+
     //! \brief Tells a human player about the health of its dungeon heart when the fraction changed
     //! by at least one percentage point since the last message, when the heart is destroyed,
     //! and once when the game starts or is loaded (nothing was sent to this client yet). A drop
@@ -568,6 +609,7 @@ void ODServer::handleConsoleCommand(Player* player, GameMap* gameMap, const std:
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Starts a synchronized turn and sends the current player and subscribed room state.
 void ODServer::startNewTurn(double timeSinceLastTurn)
 {
     GameMap* gameMap = mGameMap;
@@ -613,6 +655,8 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
         notifyHeartStages(gameMap, sock, player);
         notifyHatcheryGrainSeen(gameMap, sock, player);
         notifyTileDirt(gameMap, sock, player);
+        if(sock->getInfirmaryWindowOpen())
+            notifyInfirmaryWindow(gameMap, player);
 
         // A client that joined or loaded gets the current relationship tiers once
         if(!sock->getRelationshipsSynced())
@@ -954,6 +998,7 @@ bool refuseIfDefeated(Player* player)
 }
 }
 
+//! \brief Validates and handles requests received from a connected player.
 bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 {
     if (!clientSocket)
@@ -3225,6 +3270,41 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                 break;
 
             player->getSeat()->useStoredSpecial(static_cast<GiftBoxType>(giftBoxTypeInt));
+            break;
+        }
+
+        case ClientNotificationType::askInfirmaryWindow:
+        {
+            bool open;
+            OD_ASSERT_TRUE(packetReceived >> open);
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr || !player->getIsHuman())
+                break;
+            clientSocket->setInfirmaryWindowOpen(open);
+            if(open)
+                notifyInfirmaryWindow(gameMap, player);
+            break;
+        }
+        case ClientNotificationType::askInfirmarySettings:
+        {
+            int32_t payer;
+            int32_t threshold;
+            bool healOn;
+            OD_ASSERT_TRUE(packetReceived >> payer >> threshold >> healOn);
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr || player->getHasLost() || !player->getIsHuman())
+                break;
+            Seat* seat = player->getSeat();
+            if((payer != 0 && payer != 1) || threshold < 40 || threshold > 100 || threshold % 10 != 0)
+                break;
+            seat->setInfirmaryPayer(payer);
+            seat->setInfirmaryThreshold(threshold);
+            seat->setInfirmaryHealOn(healOn);
+            ServerNotification* notification = new ServerNotification(ServerNotificationType::infirmarySettings, player);
+            notification->mPacket << seat->getInfirmaryPayer() << seat->getInfirmaryThreshold() << seat->getInfirmaryHealOn();
+            queueServerNotification(notification);
+            if(clientSocket->getInfirmaryWindowOpen())
+                notifyInfirmaryWindow(gameMap, player);
             break;
         }
 

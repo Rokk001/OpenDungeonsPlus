@@ -25,6 +25,7 @@ ClientNotification::ClientNotification(ClientNotificationType type):
     mPacket << type;
 }
 
+//! \brief Returns the diagnostic name of a client request.
 std::string ClientNotification::typeString(ClientNotificationType type)
 {
     switch(type)
@@ -153,6 +154,10 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askPossessSkill";
         case ClientNotificationType::editorRegionEdit:
             return "editorRegionEdit";
+        case ClientNotificationType::askInfirmaryWindow:
+            return "askInfirmaryWindow";
+        case ClientNotificationType::askInfirmarySettings:
+            return "askInfirmarySettings";
         case ClientNotificationType::askUseSpecial:
             return "askUseSpecial";
         default:

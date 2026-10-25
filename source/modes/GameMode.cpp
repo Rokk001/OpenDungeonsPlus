@@ -24,6 +24,7 @@
 #include "entities/DirtPileEntity.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
+#include "entities/InfirmaryShamanEntity.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "giftboxes/GiftBoxBonus.h"
@@ -59,6 +60,7 @@
 #include "render/SocialWindow.h"
 #include "render/TextRenderer.h"
 #include "social/PostLog.h"
+#include "social/CreatureProfile.h"
 #include "social/SocialGenerator.h"
 #include "social/SocialProfileCache.h"
 #include "rooms/Room.h"
@@ -87,6 +89,10 @@
 #include <CEGUI/widgets/Listbox.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/Scrollbar.h>
+#include <CEGUI/widgets/Slider.h>
+#include <CEGUI/widgets/MultiColumnList.h>
+#include <iomanip>
+#include <sstream>
 
 #include <OgreRoot.h>
 #include <OgreRenderWindow.h>
@@ -387,7 +393,7 @@ const float SKILL_BADGE_NODE_GAP = 16.0f;
 //! \brief Horizontal padding in pixels added to the counter text width to get the width of the counter window
 const float SKILL_BADGE_WIDTH_PADDING = 8.0f;
 
-//! \brief Connects game controls, including both entry points to the existing objectives window.
+//! \brief Connects game controls, room windows and both entry points to the existing objectives window.
 GameMode::GameMode(ModeManager *modeManager):
     GameEditorModeBase(modeManager, ModeManager::GAME, modeManager->getGui().getGuiSheet(Gui::guiSheet::inGameMenu)),
     mDigSetBool(false),
@@ -755,6 +761,33 @@ GameMode::GameMode(ModeManager *modeManager):
         )
     );
 
+    addEventConnection(mRootWindow->getChild("InfirmaryButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleInfirmaryWindow, this)));
+    addEventConnection(mRootWindow->getChild("InfirmaryWindow")->subscribeEvent(
+        CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::hideInfirmaryWindow, this)));
+    addEventConnection(mRootWindow->getChild("InfirmaryWindow")->subscribeEvent(
+        CEGUI::Window::EventHidden, CEGUI::Event::Subscriber(&GameMode::hideInfirmaryWindow, this)));
+    addEventConnection(mRootWindow->getChild("InfirmaryWindow/CloseButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::hideInfirmaryWindow, this)));
+    addEventConnection(mRootWindow->getChild("InfirmaryWindow/PayerButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleInfirmaryPayer, this)));
+    addEventConnection(mRootWindow->getChild("InfirmaryWindow/HealButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleInfirmaryHealing, this)));
+    CEGUI::Slider* infirmarySlider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("InfirmaryWindow/ThresholdSlider"));
+    infirmarySlider->setMaxValue(60.0f);
+    infirmarySlider->setClickStep(10.0f);
+    addEventConnection(infirmarySlider->subscribeEvent(CEGUI::Slider::EventValueChanged,
+        CEGUI::Event::Subscriber(&GameMode::changeInfirmaryThreshold, this)));
+    CEGUI::MultiColumnList* patients = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("InfirmaryWindow/PatientList"));
+    while(patients->getColumnCount() > 0)
+        patients->removeColumn(0);
+    patients->addColumn("Patient", 0, CEGUI::UDim(0.45f, 0));
+    patients->addColumn("Health", 1, CEGUI::UDim(0.30f, 0));
+    patients->addColumn("Remaining", 2, CEGUI::UDim(0.25f, 0));
+    patients->setSelectionMode(CEGUI::MultiColumnList::SelectionMode::RowSingle);
+    addEventConnection(patients->subscribeEvent(CEGUI::Window::EventMouseClick,
+        CEGUI::Event::Subscriber(&GameMode::selectInfirmaryPatient, this)));
+
     // Set the help window text
     setHelpWindowText();
 
@@ -848,6 +881,7 @@ GameMode::~GameMode()
     }
 }
 
+//! \brief Activates the game interface with its room control windows initially hidden.
 void GameMode::activate()
 {
     resetIdleHand();
@@ -874,6 +908,8 @@ void GameMode::activate()
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
+    guiSheet->getChild("InfirmaryWindow")->hide();
+    guiSheet->getChild("InfirmaryButton")->hide();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
     guiSheet->getChild("ProductionWindow")->hide();
@@ -1468,6 +1504,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         double closestDist = 0;
         for(GameEntity* entity : entities)
         {
+            if(entity->getObjectType() == GameEntityType::infirmaryShamanEntity)
+            {
+                InfirmaryShamanEntity* shaman = static_cast<InfirmaryShamanEntity*>(entity);
+                for(Room* room : mGameMap->getRoomsByTypeAndSeat(RoomType::infirmary, mGameMap->getLocalPlayer()->getSeat()))
+                {
+                    if(room->getName() == shaman->getRoomName())
+                    {
+                        showInfirmaryWindow();
+                        return true;
+                    }
+                }
+                continue;
+            }
             if(!entity->tryPickup(mGameMap->getLocalPlayer()->getSeat()))
                 continue;
 
@@ -1496,6 +1545,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
         }
     }
 
+
+    // An owned infirmary tile opens the keeper-wide patient controls.
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+    {
+        Room* room = tileClicked->getCoveringRoom();
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        if(room != nullptr && localPlayer != nullptr && room->getType() == RoomType::infirmary &&
+           room->getSeat() == localPlayer->getSeat())
+        {
+            showInfirmaryWindow(tileClicked);
+            return true;
+        }
+    }
 
     // Clicking on one of our casinos opens its payout control
     if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
@@ -1606,6 +1668,7 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     return true;
 }
 
+//! \brief Handles game shortcuts, camera keys and room control windows.
 bool GameMode::keyPressed(const OIS::KeyEvent& arg)
 {
     if(handleScreenshotKey(arg))
@@ -1642,6 +1705,7 @@ bool GameMode::keyPressed(const OIS::KeyEvent& arg)
     }
 }
 
+//! \brief Handles normal game shortcuts, including the infirmary window, and camera controls.
 bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 {
     ODFrameListener& frameListener = ODFrameListener::getSingleton();
@@ -1716,6 +1780,9 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
         enterConsole();
         break;
 
+    case OIS::KC_I:
+        toggleInfirmaryWindow();
+        break;
     case OIS::KC_B:
         toggleSocialWindow();
         break;
@@ -2297,6 +2364,7 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
     }
 }
 
+//! \brief Updates the game HUD and the availability of keeper controls each frame.
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
 
@@ -2411,6 +2479,10 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
         waveCountdownDisplay->show();
     }
 
+    const bool hasInfirmary = !mGameMap->getRoomsByTypeAndSeat(RoomType::infirmary, player->getSeat()).empty();
+    mRootWindow->getChild("InfirmaryButton")->setVisible(hasInfirmary);
+    if(!hasInfirmary && mRootWindow->getChild("InfirmaryWindow")->isVisible())
+        hideInfirmaryWindow();
     updateSandboxStatus();
 
     updatePossessionInput(evt.timeSinceLastFrame);
@@ -2603,6 +2675,147 @@ void GameMode::showSocialWindow(const std::string& selectedCreature)
         return;
 
     mSocialWindow->showCreature(selectedCreature);
+}
+
+//! \brief Opens the owned keeper-wide infirmary window and subscribes to its patient updates.
+void GameMode::showInfirmaryWindow(Tile* tile)
+{
+    Player* player = mGameMap->getLocalPlayer();
+    if(player == nullptr || player->getSeat() == nullptr)
+        return;
+    if(tile != nullptr)
+    {
+        Room* room = tile->getCoveringRoom();
+        if(room == nullptr || room->getType() != RoomType::infirmary || room->getSeat() != player->getSeat())
+            return;
+    }
+    if(mGameMap->getRoomsByTypeAndSeat(RoomType::infirmary, player->getSeat()).empty())
+        return;
+    mRootWindow->getChild("InfirmaryWindow")->show();
+    ODClient::getSingleton().queueClientNotification(ClientNotificationType::askInfirmaryWindow, true);
+}
+
+//! \brief Toggles the infirmary patient window from its button or key.
+bool GameMode::toggleInfirmaryWindow(const CEGUI::EventArgs&)
+{
+    if(mRootWindow->getChild("InfirmaryWindow")->isVisible())
+        hideInfirmaryWindow();
+    else
+        showInfirmaryWindow();
+    return true;
+}
+
+//! \brief Stops server updates whenever the infirmary window is hidden.
+bool GameMode::hideInfirmaryWindow(const CEGUI::EventArgs&)
+{
+    CEGUI::Window* window = mRootWindow->getChild("InfirmaryWindow");
+    if(window->isVisible())
+        window->hide();
+    else if(ODClient::getSingleton().isConnected())
+        ODClient::getSingleton().queueClientNotification(ClientNotificationType::askInfirmaryWindow, false);
+    return true;
+}
+
+//! \brief Sends all infirmary settings together to keep the switches and slider consistent.
+void GameMode::sendInfirmarySettings()
+{
+    ODClient::getSingleton().queueClientNotification(ClientNotificationType::askInfirmarySettings,
+        mInfirmaryPayer, mInfirmaryThreshold, mInfirmaryHealOn);
+}
+
+//! \brief Switches which purse pays for automatic admissions.
+bool GameMode::cycleInfirmaryPayer(const CEGUI::EventArgs&)
+{
+    mInfirmaryPayer = 1 - mInfirmaryPayer;
+    sendInfirmarySettings();
+    return true;
+}
+
+//! \brief Enables or pauses all infirmary healing of the keeper.
+bool GameMode::toggleInfirmaryHealing(const CEGUI::EventArgs&)
+{
+    mInfirmaryHealOn = !mInfirmaryHealOn;
+    sendInfirmarySettings();
+    return true;
+}
+
+//! \brief Converts the slider offset to the permitted discharge health steps.
+bool GameMode::changeInfirmaryThreshold(const CEGUI::EventArgs&)
+{
+    if(mUpdatingInfirmary)
+        return true;
+    CEGUI::Slider* slider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("InfirmaryWindow/ThresholdSlider"));
+    const int32_t threshold = 40 + static_cast<int32_t>(std::round(slider->getCurrentValue() / 10.0f)) * 10;
+    if(threshold != mInfirmaryThreshold)
+    {
+        mInfirmaryThreshold = threshold;
+        sendInfirmarySettings();
+    }
+    mUpdatingInfirmary = true;
+    slider->setCurrentValue(static_cast<float>(mInfirmaryThreshold - 40));
+    mUpdatingInfirmary = false;
+    return true;
+}
+
+//! \brief Opens the selected patient's existing stats window.
+bool GameMode::selectInfirmaryPatient(const CEGUI::EventArgs&)
+{
+    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("InfirmaryWindow/PatientList"));
+    CEGUI::ListboxItem* item = list->getFirstSelectedItem();
+    if(item == nullptr || item->getID() >= mInfirmaryPatientNames.size())
+        return true;
+    Creature* creature = mGameMap->getCreature(mInfirmaryPatientNames[item->getID()]);
+    if(creature != nullptr)
+        creature->createStatsWindow();
+    return true;
+}
+
+//! \brief Applies the server's settings and rebuilds the open patient table.
+void GameMode::receiveInfirmaryWindow(ODPacket& packet, bool patients)
+{
+    OD_ASSERT_TRUE(packet >> mInfirmaryPayer >> mInfirmaryThreshold >> mInfirmaryHealOn);
+    mUpdatingInfirmary = true;
+    mRootWindow->getChild("InfirmaryWindow/PayerButton")->setText(mInfirmaryPayer == 0 ? "Keeper pays" : "Creatures pay");
+    mRootWindow->getChild("InfirmaryWindow/HealButton")->setText(mInfirmaryHealOn ? "Healing on" : "Healing off");
+    mRootWindow->getChild("InfirmaryWindow/ThresholdLabel")->setText("Discharge at: " + Helper::toString(mInfirmaryThreshold) + " %");
+    static_cast<CEGUI::Slider*>(mRootWindow->getChild("InfirmaryWindow/ThresholdSlider"))->setCurrentValue(
+        static_cast<float>(mInfirmaryThreshold - 40));
+    mUpdatingInfirmary = false;
+    if(!patients)
+        return;
+    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("InfirmaryWindow/PatientList"));
+    list->resetList();
+    mInfirmaryPatientNames.clear();
+    uint32_t count;
+    OD_ASSERT_TRUE(packet >> count);
+    for(uint32_t row = 0; row < count; ++row)
+    {
+        std::string name;
+        std::string className;
+        bool worker;
+        double hp;
+        double maxHp;
+        double remaining;
+        OD_ASSERT_TRUE(packet >> name >> className >> worker >> hp >> maxHp >> remaining);
+        mInfirmaryPatientNames.push_back(name);
+        std::ostringstream health;
+        health << std::fixed << std::setprecision(1) << hp << " / " << maxHp;
+        std::ostringstream seconds;
+        if(remaining < 0.0)
+            seconds << "-";
+        else
+            seconds << std::fixed << std::setprecision(1) << remaining;
+        list->addRow();
+        const std::string patientName = social::SocialProfileCache::getSingleton().getProfile(name,
+            className, worker).getFullName();
+        const std::vector<std::string> cells{patientName, health.str(), seconds.str()};
+        for(uint32_t column = 0; column < cells.size(); ++column)
+        {
+            CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(cells[column], row);
+            item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+            list->setItem(item, column, row);
+        }
+    }
 }
 
 void GameMode::showCasinoPayoutWindow(Tile* tile)
@@ -3787,6 +4000,7 @@ bool GameMode::toggleHelpWindow(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Lists the game controls and their keyboard shortcuts.
 void GameMode::setHelpWindowText()
 {
     CEGUI::Window* textWindow = mRootWindow->getChild("GameHelpWindow/TextDisplay");
@@ -3805,6 +4019,7 @@ void GameMode::setHelpWindowText()
         << "  - Define user cameras in Options; H focuses the dungeon heart; P cycles portals; F focuses fights." << std::endl
         << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
         << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl
+        << "  - I opens the infirmary window: payer, discharge health, healing switch, patients." << std::endl
         << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;
     txt << formatTitleOn << "Keeper hand controls" << formatTitleOff << std::endl
         << "Use your hand wisely to keep all minions under control and let your dungeon thrive!" << std::endl
