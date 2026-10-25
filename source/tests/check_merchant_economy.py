@@ -1,8 +1,8 @@
 """Compile actual merchant, inventory, gift and recipe branches against controlled world services.
 
 This check compiles C++; feature windows with a compilation prohibition must not execute it.
-The unresolved automatic-drinking combat gate and room-remodelling stock policies are not replaced
-with fixture assumptions: their exact outstanding semantics remain coordinator decisions.
+The probe covers trade arithmetic, potion slots, gifts, brew choice and herb reservation through actual production code.
+Automatic-drinking gates and room-remodelling persistence are separate production paths outside this probe's scope.
 """
 import re
 from item_probe_support import catalogue_fixture, creature_fixture, compile_and_run, function, source
