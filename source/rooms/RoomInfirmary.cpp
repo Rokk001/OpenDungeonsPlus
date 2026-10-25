@@ -604,6 +604,7 @@ Tile* RoomInfirmary::getShamanSpawnTile() const
     return best;
 }
 
+//! \brief Restores paid patients and reestablishes incoming countdowns before reserving their carries.
 void RoomInfirmary::restoreInitialEntityState()
 {
     Room::restoreInitialEntityState();
@@ -633,7 +634,10 @@ void RoomInfirmary::restoreInitialEntityState()
             Creature* carried=getGameMap()->getCreature(patient.creatureName);
             mPatients[entry.first]=patient;
             if(patient.reservedBy!=nullptr && carried!=nullptr)
+            {
+                carried->setKoTurnCounter(patient.storedCounter);
                 patient.reservedBy->pushAction(Utils::make_unique<CreatureActionCarryEntity>(*patient.reservedBy,*carried,*this));
+            }
         }
         else if(!patient.creatureName.empty() && patient.creatureName!="none")
         {

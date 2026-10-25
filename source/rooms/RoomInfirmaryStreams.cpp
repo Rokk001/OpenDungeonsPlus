@@ -7,7 +7,7 @@
 #include <istream>
 #include <ostream>
 
-//! \brief Saves cots in contiguous stream order and preserves all patient and carry state.
+//! \brief Saves cots, admissions and the incoming creature's current knockout countdown for reservations.
 void RoomInfirmary::exportToStream(std::ostream& stream) const
 {
     Room::exportToStream(stream);
@@ -29,9 +29,16 @@ void RoomInfirmary::exportToStream(std::ostream& stream) const
         const PatientInfo& patient = entry.second;
         const std::string name = patient.creature == nullptr ? patient.creatureName : patient.creature->getName();
         const std::string carrier = patient.reservedBy == nullptr ? patient.reservedByName : patient.reservedBy->getName();
+        int32_t storedCounter = patient.storedCounter;
+        if(patient.creature == nullptr && !carrier.empty() && carrier != "none")
+        {
+            const Creature* incoming = getGameMap()->getCreature(name);
+            if(incoming != nullptr)
+                storedCounter = incoming->getKoTurnCounter();
+        }
         stream << indices.at(entry.first) << '\t' << (name.empty() ? "none" : name) << '\t'
             << (carrier.empty() ? "none" : carrier) << '\t' << patient.admissionPaid << '\t'
-            << patient.payer << '\t' << patient.storedCounter << '\t' << patient.manual << '\n';
+            << patient.payer << '\t' << storedCounter << '\t' << patient.manual << '\n';
     }
     stream.precision(precision);
 }
