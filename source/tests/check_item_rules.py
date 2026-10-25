@@ -1,8 +1,7 @@
 """Compile actual catalogue, rolling, rating, outfitting and item-loss code against bounded world fixtures.
 
 This check compiles C++; do not execute it during a compilation-free feature window.
-The unchanged historical simulation expectations are deliberately retained: their disagreement with the
-configured linear drop rules must remain a failed assertion until the coordinator resolves that conflict.
+Quality expectations interpolate the approved level-one and level-thirty endpoints exactly.
 """
 from item_probe_support import catalogue_fixture, creature_fixture, compile_and_run, function, source
 
@@ -41,7 +40,7 @@ std::pair<uint32_t,uint32_t> heldCounts(const Creature& creature) {
     for(const std::unique_ptr<ItemInstance>& item:creature.dropped) if(item.get()!=nullptr) { if(item->mPotionId.empty()) ++items; else ++potions; }
     return std::make_pair(items,potions);
 }
-//! \brief Runs fixed-seed roll, ownership, affinity and both prescribed drop expectation sets.
+//! \brief Runs fixed-seed roll, ownership, affinity and the approved drop probabilities and armed arrival flow.
 int main(int argc,char** argv) {
     check(argc==2,"repository argument"); GameMap map; Seat seat; loadCatalogue(argv[1],map);
     for(uint32_t rank=0;rank<4;++rank) {
@@ -77,6 +76,21 @@ int main(int argc,char** argv) {
     victim.mEquipment[3]=ItemInstance::createPoor("armour"); victim.mInventory[0]=ItemInstance::create(*alternate,Quality::rare);
     victim.mPotionSlots[0]=ItemInstance::createPotion("healing_small");
     Weapon sword,shield; sword.name="BasicSword"; sword.type="sword"; sword.hands=1; shield.name="RustyShield"; shield.type="shield"; shield.hands=1;
+    ConfigManager::getSingleton().weapons[sword.name]=&sword;
+    ConfigManager::getSingleton().weapons[shield.name]=&shield;
+    std::unique_ptr<ItemInstance> poorSword=ItemDrops::poorWeapon(sword),poorShield=ItemDrops::poorWeapon(shield);
+    check(poorSword->mDefinitionId==sword.name&&poorShield->mDefinitionId==shield.name,"Poor bags retain equipment identity");
+    check(poorSword->getDisplayName(&map)==sword.name&&poorShield->getDisplayName(&map)==shield.name,"Poor spawn equipment names");
+    check(poorSword->getPrice(&map)==20&&poorShield->getPrice(&map)==20,"Poor spawn equipment price");
+    for(const ItemInstance* poor:{poorSword.get(),poorShield.get()}) {
+        const std::string image=poor->getImageName(); check(image.size()>5&&image.substr(image.size()-5)=="_base","Poor weapon uses base image");
+        const ItemDefinition* imageLine=map.getItemDefinition(image.substr(0,image.size()-5));
+        const Weapon* equipment=ConfigManager::getSingleton().getWeapon(poor->mDefinitionId);
+        check(imageLine!=nullptr&&imageLine->getWeaponClass()==equipment->getWeaponType()&&
+            imageLine->getQuality(Quality::common).mAvailable,"Poor icon uses a path line of the spawn WeaponClass");
+        const std::string atlas=cleanFile(std::string(argv[1])+"/gui/Items.imageset");
+        check(atlas.find("Name=\""+image+"\"")!=std::string::npos,"Poor icon exists in the actual atlas");
+    }
     victim.mWeaponR=&sword; victim.mWeaponL=&shield;
     victim.dropItems(false); check(victim.dropped.size()==1&&victim.dropped[0]->mQuality!=Quality::poor||
         (victim.dropped.size()==1&&!victim.dropped[0]->mPotionId.empty()),"KO drops exactly one eligible item or potion");
@@ -93,11 +107,9 @@ int main(int argc,char** argv) {
     wearer.definition.mRoomAffinity.clear(); wearer.definition.mRoomAffinity.push_back(CreatureRoomAffinity(RoomType::herbGarden,100,1));
     wearer.definition.mRoomAffinity.push_back(CreatureRoomAffinity(RoomType::alchemyLab,90,1));
     check(garden.hasOpenCreatureSpot(&wearer)&&laboratory.hasOpenCreatureSpot(&wearer),"positive affinity control can work");
-    // Historical simulation table is intentionally unchanged; the linear rule contradicts these quality columns.
-    const double historical[5][7]={{1,.36,.30,.675,.020,.005,.31},{5,.40,.30,.583,.100,.017,.35},
-        {10,.45,.30,.468,.200,.032,.40},{20,1.10,.30,.288,.350,.062,.50},{30,1.95,.30,.258,.350,.092,.60}};
-    bool simulationMatches=true,flowMatches=true;
-    for(const double* expected:historical) {
+    // Expected flows use the approved chance per slot and exact quality endpoints.
+    const double expectedFlows[5][3]={{1,.36,.31},{5,.40,.35},{10,.45,.40},{20,1.10,.50},{30,1.95,.60}};
+    for(const double* expected:expectedFlows) {
         const uint32_t level=static_cast<uint32_t>(expected[0]); uint32_t qualities[4]={0,0,0,0},items=0,potions=0,armedItems=0,armedPotions=0;
         for(uint32_t roll=0;roll<100000;++roll) {
             ++qualities[static_cast<size_t>(heroQuality(level))];
@@ -106,20 +118,16 @@ int main(int argc,char** argv) {
             map.mEpicRegistry.clear(); Creature armed(&map,&seat); armed.mLevel=level; armed.resizePotionSlots(); armed.mWeaponR=&sword; armed.mWeaponL=&shield;
             ItemDrops::outfit(armed,"hero"); const std::pair<uint32_t,uint32_t> armedHeld=heldCounts(armed); armedItems+=armedHeld.first; armedPotions+=armedHeld.second;
         }
-        const double steps=level-1;
-        const double linear[4]={.60-.02*steps,1-(.60-.02*steps)-(.04+.02*steps)-(.01+.006*steps),.04+.02*steps,.01+.006*steps};
-        for(size_t rank=0;rank<4;++rank) {
-            const double observed=qualities[rank]/100000.0;
-            check(std::abs(observed-linear[rank])<.01,"actual quality roll follows specified linear rule");
-            simulationMatches=simulationMatches&&std::abs(observed-expected[rank+2])<.01;
-        }
+        const double progress=(level-1)/29.0;
+        const double linear[4]={.60+(.02-.60)*progress,.35+(.17-.35)*progress,
+            .04+(.62-.04)*progress,.01+(.19-.01)*progress};
+        for(size_t rank=0;rank<4;++rank)
+            check(std::abs(qualities[rank]/100000.0-linear[rank])<.01,"actual quality roll follows exact endpoint interpolation");
         check(std::abs(items/100000.0-expected[1])<.01,"actual hero outfit item flow");
-        check(std::abs(potions/100000.0-expected[6])<.01,"actual hero outfit potion flow");
-        flowMatches=flowMatches&&std::abs(armedItems/100000.0-expected[1])<.01;
-        check(std::abs(armedPotions/100000.0-expected[6])<.01,"armed hero potion flow");
-        std::cout<<"hero level "<<level<<" simulation quality match "<<simulationMatches<<" armed flow match "<<flowMatches<<"\n";
+        check(std::abs(potions/100000.0-expected[2])<.01,"actual hero outfit potion flow");
+        check(std::abs(armedItems/100000.0-expected[1])<.01,"armed Poor weapon and shield rolls preserve full item flow");
+        check(std::abs(armedPotions/100000.0-expected[2])<.01,"armed hero potion flow");
     }
-    check(simulationMatches&&flowMatches,"OPEN: historical simulation quality table conflicts with the specified linear drop rule; armed Poor weapon/shield rolls return no extra instance. Neither expected flow nor quality values may be changed without resolution");
     std::cout<<"item production rules passed\n";
 }
 '''

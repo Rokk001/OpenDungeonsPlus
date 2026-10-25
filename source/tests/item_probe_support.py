@@ -106,6 +106,7 @@ struct SkillTreeConfig {
 struct ConfigManager {
     std::map<std::string, std::unique_ptr<ItemDefinition>> items;
     std::map<std::string, PotionDefinition> potions;
+    std::map<std::string, const Weapon*> weapons;
     std::vector<PotionDefinition> potionOrder;
     std::map<std::string, std::map<std::string,double>> settings;
     CreatureSkillTree::SkillTreeConfig tree;
@@ -117,8 +118,10 @@ struct ConfigManager {
     const PotionDefinition* getPotion(const std::string& id) const { std::map<std::string,PotionDefinition>::const_iterator i=potions.find(id); return i==potions.end()?nullptr:&i->second; }
     //! \brief Preserves the actual potion-file order for production brew selection.
     const std::vector<PotionDefinition>& getPotions() const { return potionOrder; }
-    //! \brief Keeps spawn-weapon fallback services outside catalogue-price tests.
-    const Weapon* getWeapon(const std::string&) const { return nullptr; }
+    //! \brief Supplies the configured item lines for Poor weapon image lookup.
+    std::vector<const ItemDefinition*> getItems() const { std::vector<const ItemDefinition*> result; for(const std::pair<const std::string,std::unique_ptr<ItemDefinition>>& entry:items) result.push_back(entry.second.get()); return result; }
+    //! \brief Resolves the fixture's explicit spawn equipment identities.
+    const Weapon* getWeapon(const std::string& id) const { std::map<std::string,const Weapon*>::const_iterator found=weapons.find(id); return found==weapons.end()?nullptr:found->second; }
     //! \brief Returns a required numeric global configuration input.
     double getItemSetting(const std::string& section,const std::string& key) const { return settings.at(section).at(key); }
     //! \brief Returns a required numeric room configuration input.

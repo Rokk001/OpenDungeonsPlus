@@ -117,11 +117,6 @@ bool Creature::acceptItem(std::unique_ptr<ItemInstance> item, bool equip)
     bool equipped = false;
     if(item.get() == nullptr)
         return false;
-    if(item->mQuality == Quality::poor && ConfigManager::getSingleton().getWeapon(item->mDefinitionId) != nullptr)
-    {
-        dropCreatureItem(*this, std::move(item));
-        return false;
-    }
     if(!item->mPotionId.empty())
     {
         if(!isActionInList(CreatureActionType::fight))

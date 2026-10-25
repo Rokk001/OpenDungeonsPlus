@@ -215,7 +215,7 @@ double ItemInstance::getBonus(const std::string& kind) const { return sumValues(
 //! \brief Returns this instance's contribution to one effect.
 double ItemInstance::getEffect(const std::string& id) const { return sumValues(mEffects, id); }
 
-//! \brief Resolves the display name from the transferred item or potion catalogue.
+//! \brief Resolves catalogue display names and the equipment name of Poor spawn weapons.
 std::string ItemInstance::getDisplayName(const GameMap* map) const
 {
     if(!mPotionId.empty())
@@ -224,7 +224,10 @@ std::string ItemInstance::getDisplayName(const GameMap* map) const
         return potion == nullptr ? std::string() : potion->getDisplay();
     }
     const ItemDefinition* definition = resolveItemDefinition(mDefinitionId, map);
-    return definition == nullptr ? std::string() : definition->getQuality(mQuality).mDisplay;
+    if(definition != nullptr)
+        return definition->getQuality(mQuality).mDisplay;
+    const Weapon* weapon = ConfigManager::getSingleton().getWeapon(mDefinitionId);
+    return mQuality == Quality::poor && weapon != nullptr ? weapon->getName() : std::string();
 }
 
 //! \brief Resolves the base price and adds per-bonus pricing for the rolled instance.
@@ -261,7 +264,7 @@ uint32_t ItemInstance::getLevelMin(const GameMap* map) const
     return definition == nullptr ? 1 : definition->getQuality(mQuality).mLevelMin;
 }
 
-//! \brief Resolves the file-based image entry, leaving Poor slot names unsuffixed.
+//! \brief Uses a matching weapon-class base image for Poor spawn gear, otherwise the catalogue image.
 std::string ItemInstance::getImageName() const
 {
     if(!mPotionId.empty())
@@ -270,7 +273,19 @@ std::string ItemInstance::getImageName() const
         return potion == nullptr ? std::string() : potion->getImage();
     }
     if(mQuality == Quality::poor)
+    {
+        const Weapon* weapon = ConfigManager::getSingleton().getWeapon(mDefinitionId);
+        if(weapon != nullptr)
+        {
+            const std::string slot = weapon->getWeaponType() == "shield" ? "shield" : "weapon";
+            for(const ItemDefinition* definition : ConfigManager::getSingleton().getItems())
+                if(definition->getSlot() == slot && definition->getWeaponClass() == weapon->getWeaponType() &&
+                   definition->getQuality(Quality::common).mAvailable)
+                    return definition->getId() + "_base";
+            return std::string();
+        }
         return mDefinitionId;
+    }
     return mDefinitionId + "_" + QUALITY_SUFFIXES.at(static_cast<size_t>(mQuality));
 }
 

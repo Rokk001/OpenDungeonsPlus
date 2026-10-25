@@ -2065,10 +2065,11 @@ void Creature::setLevel(unsigned int level)
     mNeedFireRefresh = true;
 }
 
-//! \brief Drops carried gold and eligible item instances while preserving the existing death presentation.
+//! \brief Drops carried gold and death items; combat knockout item loss is handled by takeDamage.
 void Creature::dropCarriedEquipment()
 {
-    dropItems(!isAlive());
+    if(!isAlive())
+        dropItems(true);
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
@@ -6206,6 +6207,7 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
             mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked() *
                 ItemEffects::remainingFactor(*this, "QuickRise");
             OD_LOG_INF("creature=" + getName() + " has been KO by " + attacker->getName());
+            dropItems(false);
             dropCarriedEquipment();
 
             // Enemies that knock this creature out are remembered in case it is converted later

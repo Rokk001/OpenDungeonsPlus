@@ -47,8 +47,9 @@ std::unique_ptr<ItemInstance> rollForCreature(Creature& creature, Quality qualit
     const std::string slot = slots[Random::Uint(0, static_cast<uint32_t>(slots.size() - 1))];
     if(quality == Quality::poor)
     {
-        // A living creature already has its permanent Poor fallback; it cannot store a second one.
-        if(slot == "weapon" || slot == "shield") return std::unique_ptr<ItemInstance>();
+        // Rolled Poor weapons are carried instances in addition to the permanent spawn fallback.
+        if(slot == "weapon") return ItemDrops::poorWeapon(*weapon);
+        if(slot == "shield") return ItemDrops::poorWeapon(*shield);
         return ItemInstance::createPoor(slot);
     }
     CreatureSkillTree::TypeInfo type;
