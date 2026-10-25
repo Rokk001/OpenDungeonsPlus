@@ -312,6 +312,7 @@ Tile* RoomTavern::pickFreeSpotTile(const Creature& creature) const
     Tile* creatureTile = creature.getPositionTile();
     Tile* best = nullptr;
     int32_t bestDistance = std::numeric_limits<int32_t>::max();
+    bool bestNextToGuest = false;
     for(Tile* tile : mCoveredTiles)
     {
         if(!isFreeSpotTile(tile))
@@ -324,9 +325,23 @@ Tile* RoomTavern::pickFreeSpotTile(const Creature& creature) const
             const int32_t dy = tile->getY() - creatureTile->getY();
             distance = dx * dx + dy * dy;
         }
-        if(distance < bestDistance)
+
+        // A place next to a guest comes first, so that two guests can play a game
+        bool nextToGuest = false;
+        static const int32_t SIDE_DX[] = { 1, -1, 0, 0 };
+        static const int32_t SIDE_DY[] = { 0, 0, 1, -1 };
+        static const uint32_t NB_SIDES = 4;
+        for(uint32_t i = 0; i < NB_SIDES; ++i)
+        {
+            Tile* side = getGameMap()->getTile(tile->getX() + SIDE_DX[i], tile->getY() + SIDE_DY[i]);
+            if((side != nullptr) && (mSpots.find(side) != mSpots.end()))
+                nextToGuest = true;
+        }
+
+        if((nextToGuest && !bestNextToGuest) || ((nextToGuest == bestNextToGuest) && (distance < bestDistance)))
         {
             bestDistance = distance;
+            bestNextToGuest = nextToGuest;
             best = tile;
         }
     }
@@ -485,6 +500,7 @@ void RoomTavern::setSpotState(RoomTavernSpot& spot, TavernGuestState state, int3
 void RoomTavern::setSpotDone(RoomTavernSpot& spot, int32_t turns)
 {
     setSpotState(spot, TavernGuestState::done, turns);
+    spot.mWantsGame = false;
     if((spot.mCreature != nullptr) && spot.mCreature->getIsOnMap())
         spot.mCreature->setAnimationState(EntityAnimation::idle_anim, true);
 }
@@ -581,6 +597,13 @@ void RoomTavern::doUpkeep()
     abortDisturbedGuests();
     upkeepGames();
     upkeepSpots();
+
+    // A guest that wants a game and waits for a neighbour looks for a partner again every turn
+    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    {
+        if((it->second.mState == TavernGuestState::done) && it->second.mWantsGame && (it->second.mTurnsLeft > 0))
+            tryStartGame(it->first);
+    }
 
     // A guest that is done is looked for by a partner during these turns only
     for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
@@ -724,18 +747,20 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
         }
     }
 
-    // The visit is over; a game with a neighbour may follow
+    // The visit is over. With GameChancePercent the guest wants a game and waits up to DrinkTurns turns for a neighbour
     setSpotDone(spot, DONE_WAIT_TURNS);
-    tryStartGame(tile);
+    if(Random::Double(0.0, PERCENT_SCALE) < getTavernValue("GameChancePercent"))
+    {
+        spot.mWantsGame = true;
+        spot.mTurnsLeft = std::max(DONE_WAIT_TURNS, static_cast<int32_t>(getTavernValue("DrinkTurns")));
+        tryStartGame(tile);
+    }
 }
 
 void RoomTavern::tryStartGame(Tile* tile)
 {
-    if(Random::Double(0.0, PERCENT_SCALE) >= getTavernValue("GameChancePercent"))
-        return;
-
     std::map<Tile*, RoomTavernSpot>::iterator own = mSpots.find(tile);
-    if(own == mSpots.end())
+    if((own == mSpots.end()) || !own->second.mWantsGame)
         return;
 
     // A neighbour on one of the four sides that is done too (and waits for the turns to pass) and of the same seat
@@ -790,6 +815,8 @@ void RoomTavern::startGame(Tile* tileA, Tile* tileB)
         game.mTurnsLeft = static_cast<int32_t>(getTavernValue("GameTurns"));
     mGames[tileA] = game;
 
+    spotA->second.mWantsGame = false;
+    spotB->second.mWantsGame = false;
     setSpotState(spotA->second, TavernGuestState::game, 0);
     setSpotState(spotB->second, TavernGuestState::game, 0);
     showSpotState(tileA, spotA->second);

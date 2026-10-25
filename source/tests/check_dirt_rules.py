@@ -537,6 +537,8 @@ static void checkMood()
     for(unsigned t = 0; t < crypt->mCoveredTiles.size(); ++t) crypt->mCoveredTiles[t]->mDirt = 90.0;
     Creature inCrypt(&seat, &definition, &map, cryptTile);
     expect(mood(inCrypt) == 0, "a crypt gives no dirt mood");
+    DirtPileEntity::createOnTile(&map, map.getTile(9, 9), DirtPileKind::vomit, "Orc");
+    expect(mood(inCrypt) == -30, "a vomit puddle counts like a pile");
     // No mood without a seat, none for a free hero or rogue creature, but a captured hero is a prisoner
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 90.0;
     Creature seatless(nullptr, &definition, &map, tile);

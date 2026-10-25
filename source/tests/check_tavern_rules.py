@@ -130,6 +130,7 @@ probe = r'''
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <string>
 #include <vector>
@@ -328,6 +329,8 @@ public:
     void abortDisturbedGuests();
     void finishDrink(Tile* tile, RoomTavernSpot& spot);
     bool payForBeer(Creature& creature, bool& noCoin);
+    bool isFreeSpotTile(Tile* tile) const;
+    Tile* pickFreeSpotTile(const Creature& creature) const;
     void tryStartGame(Tile* tile);
     void startGame(Tile* tileA, Tile* tileB);
     void playContestTurn(std::map<Tile*, RoomTavernGame>::iterator it);
@@ -513,28 +516,38 @@ static void checkDrinks()
 // ---- Games
 static void checkGameStart()
 {
-    // 50 percent chance, a neighbour of the same seat that is done and waits
-    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); f.guest("B", 3, 1, TavernGuestState::done, 2);
-      Random::script({ 49.9 }, { 0 }); f.room.tryStartGame(a->mTile);
+    // 50 percent chance after the last drink, a neighbour of the same seat that is done and waits
+    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::drinking, 0); f.guest("B", 3, 1, TavernGuestState::done, 2);
+      RoomTavernSpot& spot = f.room.mSpots.find(a->mTile)->second; spot.mDrinks = 4;
+      Random::script({ 49.9 }, { 0 }); f.room.finishDrink(a->mTile, spot);
       expect(f.room.mGames.size() == 1, "a roll below 50 starts a game with the neighbour");
       expect(f.stateOf(a) == TavernGuestState::game, "both guests are in the game"); }
-    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); f.guest("B", 3, 1, TavernGuestState::done, 2);
-      Random::script({ 50.0 }, { 0 }); f.room.tryStartGame(a->mTile);
-      expect(f.room.mGames.empty(), "a roll of 50 starts no game"); }
+    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::drinking, 0); f.guest("B", 3, 1, TavernGuestState::done, 2);
+      RoomTavernSpot& spot = f.room.mSpots.find(a->mTile)->second; spot.mDrinks = 4;
+      Random::script({ 50.0 }, { 0 }); f.room.finishDrink(a->mTile, spot);
+      expect(f.room.mGames.empty() && !spot.mWantsGame, "a roll of 50 starts no game and the guest wants none"); }
+    // Without a neighbour the guest waits DrinkTurns (4) turns for one and starts the game when one is done
+    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
+      RoomTavernSpot& spot = f.room.mSpots.find(a->mTile)->second; spot.mDrinks = 4;
+      Random::script({ 1.0 }, { 0 }); f.room.finishDrink(a->mTile, spot);
+      expect(f.room.mGames.empty() && spot.mWantsGame && spot.mState == TavernGuestState::done && spot.mTurnsLeft == 4, "a guest that wants a game waits for 4 turns");
+      f.guest("B", 3, 1, TavernGuestState::done, 2);
+      Random::script({}, { 0 }); f.room.tryStartGame(a->mTile);
+      expect(f.room.mGames.size() == 1 && !spot.mWantsGame, "the waiting guest starts the game when a neighbour is done"); }
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2);
-      Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
+      f.room.mSpots.find(a->mTile)->second.mWantsGame = true; Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
       expect(f.room.mGames.empty(), "no neighbour, no game"); }
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); f.guest("B", 5, 1, TavernGuestState::done, 2);
-      Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
+      f.room.mSpots.find(a->mTile)->second.mWantsGame = true; Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
       expect(f.room.mGames.empty(), "a guest two tiles away is no neighbour"); }
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); Creature* b = f.guest("B", 3, 1, TavernGuestState::done, 0); (void)b;
-      Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
+      f.room.mSpots.find(a->mTile)->second.mWantsGame = true; Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
       expect(f.room.mGames.empty(), "a neighbour whose waiting turns ran out is gone"); }
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); Creature* b = f.guest("B", 3, 1, TavernGuestState::done, 2); Seat other; b->mSeat = &other;
-      Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
+      f.room.mSpots.find(a->mTile)->second.mWantsGame = true; Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
       expect(f.room.mGames.empty(), "a guest of another seat is no partner"); }
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); f.guest("B", 3, 1, TavernGuestState::drinking, 2);
-      Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
+      f.room.mSpots.find(a->mTile)->second.mWantsGame = true; Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(a->mTile);
       expect(f.room.mGames.empty(), "a neighbour that still drinks is no partner"); }
 
     // The draw: arm wrestling and dice without beer, the slap duel joins with beer
@@ -546,6 +559,16 @@ static void checkGameStart()
       Random::script({}, { 2 }); f.room.startGame(a->mTile, b->mTile);
       expect(Random::lastUintMax == 2, "with beer three games are drawn");
       expect(f.room.mGames.begin()->second.mKind == TavernGameKind::slapDuel && f.room.mGames.begin()->second.mTurnsLeft == 32, "the duel ends after 4 x 8 turns at the latest"); }
+
+    // A new guest takes the free place next to a guest, not the one nearest to it
+    { Fixture f; f.guest("G", 8, 1, TavernGuestState::drinking, 2); Creature* n = f.guest("N", 3, 1, TavernGuestState::arriving, 0);
+      f.room.mSpots.erase(n->mTile);
+      Tile* picked = f.room.pickFreeSpotTile(*n);
+      expect((picked != nullptr) && (picked->x == 7), "a new guest takes the place next to a guest"); }
+    { Fixture f; Creature* n = f.guest("N", 4, 1, TavernGuestState::arriving, 0);
+      f.room.mSpots.erase(n->mTile);
+      Tile* picked = f.room.pickFreeSpotTile(*n);
+      expect((picked != nullptr) && (picked->x == 4), "without guests the nearest place is taken"); }
 }
 
 static void checkContest()
@@ -741,7 +764,7 @@ constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) '
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'Ogre::Vector3 directionTo('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
-    'bool RoomTavern::servesBeer(', 'void RoomTavern::addDrinkDirt(', 'std::map<Tile*, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
+    'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSpotTile(', 'Tile* RoomTavern::pickFreeSpotTile(', 'void RoomTavern::addDrinkDirt(', 'std::map<Tile*, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',
     'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
     'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',

@@ -79,7 +79,8 @@ struct RoomTavernSpot
         mState(TavernGuestState::arriving),
         mTurnsLeft(0),
         mDrinks(0),
-        mSleepAfter(false)
+        mSleepAfter(false),
+        mWantsGame(false)
     {}
 
     //! The guest that uses the place, not owned.
@@ -92,6 +93,8 @@ struct RoomTavernSpot
     uint32_t mDrinks;
     //! True when the guest goes to its bed after the visit (the loser of a slap duel).
     bool mSleepAfter;
+    //! True while the guest, done with its drinks, waits for a neighbour to play a game with (not saved).
+    bool mWantsGame;
 };
 
 //! \brief A game two guests of a tavern play. It is kept under the tile of the first guest.
@@ -321,7 +324,7 @@ private:
     //! \param tile The tile to test.
     bool isFreeSpotTile(Tile* tile) const;
 
-    //! \brief Picks the free place nearest to the creature.
+    //! \brief Picks the free place nearest to the creature; a place next to a guest comes before any other.
     //! \param creature The guest.
     //! \return The tile, nullptr if every place is taken.
     Tile* pickFreeSpotTile(const Creature& creature) const;
@@ -370,7 +373,8 @@ private:
     //! \return True when the beer is paid.
     bool payForBeer(Creature& creature, bool& noCoin);
 
-    //! \brief Lets the guest that finished its last drink start a game with a neighbour, with GameChancePercent.
+    //! \brief Lets the guest that wants a game start it with a neighbour that is done too. The guest asks again every
+    //! turn while it waits (up to DrinkTurns turns after its last drink).
     //! \param tile The tile of the guest.
     void tryStartGame(Tile* tile);
 
