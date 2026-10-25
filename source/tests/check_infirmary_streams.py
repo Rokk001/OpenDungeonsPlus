@@ -2,7 +2,7 @@
 import re
 from check_infirmary_rules import PRELUDE, function, read, room_declaration, run_probe
 
-# Keep the optional-tag reader and writer bodies verbatim while isolating surrounding map services.
+# Exercise production save bodies and the real resumed-carry constructor with controlled world services.
 def main():
     room = read("source/rooms/RoomInfirmaryStreams.cpp")
     code = PRELUDE + room_declaration() + re.sub(r'^#include[^\n]*\n', '', room, flags=re.M)
@@ -12,6 +12,22 @@ def main():
     core = read("source/rooms/RoomInfirmary.cpp")
     code += function(core, "void RoomInfirmary::layoutCots(")
     code += function(core, "void RoomInfirmary::restoreInitialEntityState(")
+    for signature in ("int RoomInfirmary::cotSize(", "size_t RoomInfirmary::findCot(",
+            "bool RoomInfirmary::hasCarryEntitySpot(", "Tile* RoomInfirmary::reserveCot(",
+            "Tile* RoomInfirmary::askSpotForCarriedEntity("):
+        code += function(core, signature)
+    code += function(read("source/rooms/RoomInfirmaryEconomy.cpp"), "bool RoomInfirmary::canPayAdmission(")
+    carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
+    code += "\n#define OD_LOG_INF(message) ((void)0)\n"
+    code += function(carry, "CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest)")
+    code += function(carry, "bool CreatureActionCarryEntity::isPulledOverGround(")
+    code += r"""
+//! \brief Captures the destination selected by the actual constructor and its actual knockout counter.
+void Creature::pushAction(std::unique_ptr<CreatureActionCarryEntity> action){
+ ++sleeps;resumedCarryTarget=action->mTileDest;resumedCarryIsDrag=action->mIsDrag;
+ resumedCarryCounter=static_cast<Creature*>(action->mEntityToCarry)->getKoTurnCounter();
+}
+"""
     seat = read("source/game/Seat.cpp")
     creature = read("source/entities/Creature.cpp")
     seat_import = function(seat, '    if(str == "[Infirmary]")')
@@ -50,33 +66,54 @@ struct MoodRecord{double mInfirmaryMood=0,mInfirmaryMoodTurns=0;
         assert needle in rebind, needle
     code += r"""
 int main(){try{
+ // The waiting reservation has 47 turns left; one already being dragged has counted down to 29.
+ for(int remaining:{-47,-29}){
  GameMap map;Seat seat;RoomInfirmary original(&map,&seat);
+ map.rooms.push_back(&original);
  for(int x=0;x<8;++x)for(int y=0;y<8;++y)map.tiles[{x,y}]={x,y};
  RoomInfirmary::CotInfo small={};small.size=1;small.x=1;small.y=2;small.width=1;small.height=1;
  RoomInfirmary::CotInfo medium=small;medium.size=2;medium.x=3;medium.width=2;medium.rotation=90;
  original.mCots[7]=small;original.mCots[91]=medium;original.mCots[120]=small;original.mCots[120].x=6;
- Creature patient,carrier;carrier.name="carrier";
+ Creature patient,carrier,originalIncoming;carrier.name="carrier";carrier.owner=&seat;
+ originalIncoming.name="incoming";originalIncoming.owner=&seat;originalIncoming.definition.height=2;originalIncoming.counter=-80;
+ map.creatures["incoming"]=&originalIncoming;
  RoomInfirmary::PatientInfo admission;admission.creature=&patient;admission.admissionPaid=17.400000000000002;admission.payer=1;admission.storedCounter=73;admission.manual=false;
  original.mPatients[7]=admission;
- RoomInfirmary::PatientInfo reservation;reservation.creatureName="incoming";reservation.reservedBy=&carrier;original.mPatients[91]=reservation;
+ check(original.reserveCot(originalIncoming,carrier)==map.getTile(3,2),"initial reservation uses actual eligibility and cot-size gate");
+ original.mPatients.at(91).storedCounter=-80;originalIncoming.counter=remaining;
  InfirmaryShamanEntity figure;figure.position=Ogre::Vector3(2.25,3.75,0);original.mShaman=&figure;
  std::ostringstream saved;saved.precision(6);original.exportToStream(saved);check(saved.precision()==6,"room restores caller precision");
  std::istringstream input(saved.str()+"NextRoom");RoomInfirmary loaded(&map,&seat);
  check(loaded.importFromStream(input),"mid-treatment room load");check(loaded.mCots.size()==3&&loaded.mPatients.size()==2,"cots and patients resumed");
  check(loaded.mPatients.at(0).creatureName=="patient","noncontiguous cot id remapped");
  check(loaded.mPatients.at(1).creatureName=="incoming"&&loaded.mPatients.at(1).reservedByName=="carrier","running reservation names preserved");
+ check(loaded.mPatients.at(1).storedCounter==remaining,"reservation saves current signed countdown rather than stale record");
  check(loaded.mPatients.at(0).admissionPaid==admission.admissionPaid,"admission fraction exact");
  check(loaded.mPatients.at(0).payer==1&&loaded.mPatients.at(0).storedCounter==73&&!loaded.mPatients.at(0).manual,"paid state preserved");
  check(loaded.mCots.at(1).width==2&&loaded.mCots.at(1).height==1&&loaded.mCots.at(1).rotation==90,"rotated cot footprint restored");
  std::string next;input>>next;check(next=="NextRoom","reader leaves next room unread");
  check(loaded.mHasLoadedShamanPosition,"shaman position tag restored");near(loaded.mLoadedShamanPosition.x,2.25,"shaman x");near(loaded.mLoadedShamanPosition.y,3.75,"shaman y");
- loaded.updateShaman();std::ostringstream again;loaded.exportToStream(again);check(again.str()==saved.str(),"room round-trip lossless");
- Creature incoming;incoming.name="incoming";map.creatures["patient"]=&patient;map.creatures["carrier"]=&carrier;map.creatures["incoming"]=&incoming;
+ Creature incoming;incoming.name="incoming";incoming.owner=&seat;incoming.definition.height=2;incoming.counter=0;
+ map.creatures["patient"]=&patient;map.creatures["carrier"]=&carrier;map.creatures["incoming"]=&incoming;
+ check(!loaded.hasCarryEntitySpot(&incoming),"freshly loaded zero-countdown creature cannot bypass the production eligibility gate");
+ const double savedSeatGold=5000;map.rooms.clear();map.rooms.push_back(&loaded);loaded.gold=savedSeatGold;
+ Creature unreserved;unreserved.name="new-patient";unreserved.owner=&seat;
+ check(loaded.hasCarryEntitySpot(&unreserved),"new patient has a free matching cot before the treasury load-order case");
+ // Entity creation resumes carries before the saved keeper balance is redistributed into room tiles.
+ loaded.gold=0;map.treasury=0;
  const std::map<size_t,RoomInfirmary::CotInfo> cotSnapshot=loaded.mCots;
  loaded.updateActiveSpots();loaded.restoreInitialEntityState();
  check(loaded.mCots.size()==cotSnapshot.size(),"initial entity restoration retains occupied, reserved and empty saved cots");
  for(const std::pair<const size_t,RoomInfirmary::CotInfo>& entry:cotSnapshot){check(loaded.mCots.count(entry.first),"saved cot identity retained");const RoomInfirmary::CotInfo& actual=loaded.mCots.at(entry.first);check(actual.x==entry.second.x&&actual.y==entry.second.y&&actual.rotation==entry.second.rotation,"saved cot placement retained");}
  check(loaded.mPatients.at(0).creature==&patient&&loaded.mPatients.at(1).reservedBy==&carrier,"actual restore rebinds treatment and reservation");
+ check(incoming.counter==remaining&&carrier.resumedCarryCounter==remaining,"exact saved countdown restored before the real carry constructor");
+ check(carrier.resumedCarryTarget==map.getTile(3,2)&&carrier.resumedCarryIsDrag,"actual constructor resumes dragging to the original reserved cot");
+ check(loaded.askSpotForCarriedEntity(&incoming)==carrier.resumedCarryTarget,"resumed reservation remains owned by its incoming creature");
+ check(!loaded.canPayAdmission(incoming,false),"existing reservation resumes before physical treasury refill");
+ check(!loaded.hasCarryEntitySpot(&unreserved)&&loaded.reserveCot(unreserved,carrier)==nullptr,"new unreserved admission still requires physical treasury funds");
+ loaded.gold=savedSeatGold;map.treasury=savedSeatGold;
+ check(loaded.hasCarryEntitySpot(&unreserved),"new admissions become eligible only after saved treasury funds are redistributed");
+ std::ostringstream again;loaded.exportToStream(again);check(again.str()==saved.str(),"complete room restoration round-trip lossless");
  std::istringstream old("NextRoom");RoomInfirmary oldRoom(&map,&seat);check(oldRoom.importFromStream(old)&&oldRoom.mCots.empty()&&oldRoom.mPatients.empty(),"old room without tags loads");old>>next;check(next=="NextRoom","old reader retains next token");
  std::istringstream reordered("InfirmaryPatients 1 0 patient none 17.4 0 51 1 InfirmaryShaman 1.5 2.5 InfirmaryCots 1 1 2 2 0 NextRoom");
  RoomInfirmary mixed(&map,&seat);check(mixed.importFromStream(reordered)&&mixed.mPatients.at(0).manual&&mixed.mPatients.at(0).storedCounter==51,"optional room tags in any order");
@@ -93,6 +130,7 @@ int main(){try{
  for(const std::string& text:{moodText.str()+" [Other] payload [/Other] EndCreature",std::string("[Other] payload [/Other] ")+moodText.str()+" EndCreature"}){
   MoodRecord copy;std::istringstream stream(text);check(copy.load(stream)&&copy.mInfirmaryMood==mood.mInfirmaryMood&&copy.mInfirmaryMoodTurns==12.5,"creature mood exact round-trip amid optional tags");}
  MoodRecord oldMood;std::istringstream oldCreature("EndCreature");check(oldMood.load(oldCreature)&&oldMood.mInfirmaryMood==0&&oldMood.mInfirmaryMoodTurns==0,"old creature defaults");
+ }
  std::cout<<"infirmary streams: ok\n";
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
 """
