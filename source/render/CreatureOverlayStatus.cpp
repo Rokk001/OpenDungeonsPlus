@@ -102,6 +102,7 @@ static void showLevelDisplay(MovableTextOverlay* overlay, uint32_t levelId, uint
     overlay->setCaption(levelId, Helper::toString(level));
 }
 
+//! \brief Creates the layered health, experience, recovery and mana displays for a creature.
 CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* ent,
         Ogre::Camera* cam) :
     mCreature(creature),
@@ -159,7 +160,15 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mMovableTextOverlay->setMaterialName(statusId, CREATURE_OVERLAY_STATUS_PREFIX + "1");
     mMovableTextOverlay->displayOverlay(statusId, 0);
 
-    // The mana ring is built like the experience ring, tinted with the HUD mana colour and shifted right of the health ring
+    // The mana ring uses the same health frame and backing under the experience arc, shifted right of the health ring.
+    const std::string manaBackingMaterial = RenderManager::getSingleton().rrBuildTintedMaterial("CreatureOverlay0",
+        Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f));
+    const uint32_t manaBackingId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
+        Ogre::ColourValue::White, manaBackingMaterial, false);
+    mMovableTextOverlay->forceTextArea(manaBackingId, MANA_RING_SIZE, MANA_RING_SIZE);
+    mMovableTextOverlay->setOffset(manaBackingId, MANA_RING_OFFSET_X, 0.0f);
+    mMovableTextOverlay->displayOverlay(manaBackingId, -1);
+    // The arc keeps the HUD mana colour and the same progress atlas as the experience ring.
     const Ogre::ColourValue manaColour(MANA_RING_RED / COLOUR_CHANNEL_MAX, MANA_RING_GREEN / COLOUR_CHANNEL_MAX,
         MANA_RING_BLUE / COLOUR_CHANNEL_MAX);
     const std::string manaMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(MANA_RING_BASE_MATERIAL,

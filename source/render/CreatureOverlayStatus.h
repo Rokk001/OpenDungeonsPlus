@@ -38,6 +38,7 @@ namespace Ogre
 class CreatureOverlayStatus
 {
 public:
+    //! \brief Creates the layered status displays attached to the creature entity and camera.
     CreatureOverlayStatus(Creature* creature, Ogre::Entity* ent,
         Ogre::Camera* cam);
     ~CreatureOverlayStatus();
