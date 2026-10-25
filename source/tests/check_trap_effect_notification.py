@@ -3,7 +3,7 @@
 
     python source/tests/check_trap_effect_notification.py
 
-Checks that the trap notification keeps its position before timeLimit (campaign victory is appended,
+Checks that the trap notification keeps its position before timeLimit (campaign victory and infirmary notifications are appended,
 so existing values stay unchanged), that packet fields are written and read in the same order, that the
 trap effect kinds only grew at the end, and that every event the client raises has a handler in the
 config and every event of the config is raised.
@@ -26,16 +26,16 @@ header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-2:] != ["timeLimit", "campaignVictory"]:
-    problems.append("campaignVictory must follow timeLimit without moving existing values")
-if "trapEffect" not in names or names.index("trapEffect") != len(names) - 3:
+if names[-4:] != ["timeLimit", "campaignVictory", "infirmaryWindow", "infirmarySettings"]:
+    problems.append("infirmaryWindow and infirmarySettings must follow campaignVictory after timeLimit without moving existing values")
+if "trapEffect" not in names or "timeLimit" not in names or names.index("trapEffect") + 1 != names.index("timeLimit"):
     problems.append("trapEffect must be right before timeLimit")
 # Only the chicken notifications of the hatchery may sit between relationshipTier and trapEffect, in this order
 BETWEEN_RELATIONSHIP_AND_TRAP = ["chickenKindChanged", "chickenFight", "hatcheryNests", "chickenRoofFlight", "chickenMount"]
 if "relationshipTier" not in names:
     problems.append("trapEffect must follow relationshipTier")
-else:
-    between = names[names.index("relationshipTier") + 1:-3]
+elif "trapEffect" in names:
+    between = names[names.index("relationshipTier") + 1:names.index("trapEffect")]
     if between != [name for name in BETWEEN_RELATIONSHIP_AND_TRAP if name in between]:
         problems.append("trapEffect must follow relationshipTier (only %s may be between them, in this order): %s"
                         % (", ".join(BETWEEN_RELATIONSHIP_AND_TRAP), between))

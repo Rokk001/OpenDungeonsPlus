@@ -24,13 +24,13 @@ def read(*parts):
 
 problems = []
 
-# 1. Existing network values remain before the appended campaign victory.
+# 1. Existing network values remain before the appended infirmary notifications.
 header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-2:] != ["timeLimit", "campaignVictory"]:
-    problems.append("campaignVictory must follow timeLimit without moving existing values")
+if names[-4:] != ["timeLimit", "campaignVictory", "infirmaryWindow", "infirmarySettings"]:
+    problems.append("infirmaryWindow and infirmarySettings must follow campaignVictory after timeLimit without moving existing values")
 
 # 2. Beam and projectile are wired
 config_h = read("source", "render", "RoomAmbienceConfig.h")
