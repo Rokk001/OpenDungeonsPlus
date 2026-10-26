@@ -1519,3 +1519,5 @@ assets-src/creatures/ghosts/Roach.blend    AI-generated animation with Codex    
 models/Roach.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Scared clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
 assets-src/creatures/ghosts/Spider.blend    AI-generated animation with Codex    GPLv3+    Original Scared gestures on the unchanged native Spider rig and mesh; editable animation source, 2026-10-26
 models/Spider.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Scared clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
+assets-src/creatures/ghosts/Adventurer.blend    AI-generated animation with Codex    GPLv3+    Original Scared gestures on the unchanged native Adventurer rig and mesh; editable animation source, 2026-10-26
+models/Adventurer.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Scared clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
