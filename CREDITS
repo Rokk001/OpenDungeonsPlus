@@ -1470,3 +1470,6 @@ assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+       
 assets-src/gui/icons/tiles/InfirmaryButton.png    AI-generated with Codex    GPLv3+    Original painted cot and crossed bandages in the project icon style, 2026-10-25; generated at native resolution and downsampled to the 256-pixel source.
 assets-src/gui/icons/tiles/GhostRoomButton.png    AI-generated with Codex    GPLv3+    Original painted iron press cauldron with green window and leather backpack; 256-pixel source, 2026-10-26
 gui/ODIcons.png (GhostRoomButton)    AI-generated with Codex    GPLv3+    Original painted ghost-room tile, 128-pixel atlas entry from assets-src/gui/icons/tiles/GhostRoomButton.png; all prior entries preserved, 2026-10-26
+assets-src/gui/items/soul_crystal.png    AI-generated with Codex    GPLv3+    Original painted jagged pale-green crystal with glowing core; transparent 256-pixel source, 2026-10-26
+gui/potions/soul_crystal.png    AI-generated with Codex    GPLv3+    Original soul crystal inventory image, transparent 128 pixels, from assets-src/gui/items/soul_crystal.png, 2026-10-26
+materials/textures/GhostNoise.png    AI-generated with Codex    GPLv3+    Original grayscale mottled spectral noise painting for the scrolling translucent ghost material, 1024 pixels, 2026-10-26
