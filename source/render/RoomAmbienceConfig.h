@@ -197,7 +197,7 @@ struct AmbienceEffect
     //! Event clips: mesh names (* as first or last character as wildcard) of the objects that play the clip, the nearest
     //! one within Amount tiles of the event is used
     std::vector<std::string> mObjects;
-    //! Object clips: the clip runs in a loop as long as the condition holds (and stops at its last pose when it ends)
+    //! Object clips and sounds run in a loop while the condition holds; clips stop at their last pose.
     bool mLoop;
     //! How the object is moved (kind motion)
     AmbienceMotion mMotion;

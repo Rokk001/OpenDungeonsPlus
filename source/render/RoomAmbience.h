@@ -67,12 +67,13 @@ public:
     };
 
     RoomAmbience(GameMap* gameMap, const std::string& configPath);
+    //! \brief Stops the spatial sound loops owned by this ambience instance.
     ~RoomAmbience();
 
     //! \brief Called every frame while the game is running
     void update(Ogre::Real timeSinceLastFrame);
 
-    //! \brief Removes every running effect and puts the moved objects back
+    //! \brief Removes every running effect, stops owned sound loops and puts the moved objects back
     void stopAll();
 
     void setMode(Mode mode);
@@ -396,8 +397,10 @@ private:
     //! shows it, has gone down since the last scan
     void scanHeartHit();
     void reconcile();
-    //! \brief Plays the clips of the objects whose time has come
+    //! \brief Plays timed object clips and sounds, and reconciles visible looping sounds.
     void playClips();
+    //! \brief Stops and forgets every spatial sound loop owned by this ambience instance.
+    void stopSoundLoops();
     void updateEmitters(double timeSinceLastFrame);
     //! \brief Ends the one-shot effects of the list whose time is over
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
@@ -598,6 +601,8 @@ private:
     std::vector<Candidate> mParticleCandidates;
     std::vector<Candidate> mMotionCandidates;
     std::vector<Candidate> mClipCandidates;
+    //! Spatial sound loop handles, keyed by object name and effect name.
+    std::map<std::string, uint32_t> mSoundLoops;
     //! Time at which an object plays its next clip (kind clip)
     std::map<std::string, double> mClipTimers;
     //! Time until which an object plays a clip of an event (a bed that wakes up) and must not be restarted by a looping clip
