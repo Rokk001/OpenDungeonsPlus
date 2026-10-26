@@ -862,8 +862,8 @@ def check_part_g():
         assert '"' + name + '"' in flow
     layout_function = function(gui, 'float Gui::layoutCreatureProfilePage(')
     assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
-    assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('page->getChild("EquipmentRow")') < layout_function.index('const char* const personalRows')
-    assert 'slot < 13' in layout_function and 'x + gap + edge > width' in layout_function
+    assert layout_function.index('page->getChild("EquipmentRow")') < layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
+    assert 'const std::size_t slotCount = 13;' in layout_function and 'slot % columns == 0' in layout_function
     assert ('const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",\n'
             '        "DislikesText", "RelationsText"};') in layout_function
     assert 'for(std::size_t i = 0; i < 6; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function
