@@ -3872,7 +3872,7 @@ std::string GameMap::nextUniqueNameMapLight()
     return ret;
 }
 
-//! \brief Resolves an entity identity, including room-owned merchant figures.
+//! \brief Resolves entity identities, including equipment bags, merchants and herb bundles.
 GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
     const std::string& entityName)
 {
@@ -3892,6 +3892,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::skillEntity:
         case GameEntityType::giftBoxEntity:
         case GameEntityType::lavaRock:
+        case GameEntityType::itemBagEntity:
         case GameEntityType::merchantEntity:
         case GameEntityType::herbBundleEntity:
         case GameEntityType::dirtPileEntity:

@@ -9,6 +9,56 @@ from item_probe_support import catalogue_fixture, creature_fixture, compile_and_
 # Exercise actual catalogue and creature rules with fixed-seed production fixtures.
 def main():
     """Exercise production item rules without replacing their algorithms with a Python model."""
+    entity_types = source("source/entities/GameEntityType.h")
+    entity_types = entity_types[entity_types.index("enum class GameEntityType"):]
+    entity_types = entity_types[:entity_types.index("};") + 2]
+    lookup = function(source("source/gamemap/GameMap.cpp"), "GameEntity* GameMap::getEntityFromTypeAndName(")
+    lookup_fixture = r"""
+#include <string>
+#include <vector>
+#include <stdexcept>
+//! \brief Supplies named registered entities to the actual typed lookup dispatcher.
+struct GameEntity { std::string name; };
+//! \brief Isolates the real dispatch from unrelated map systems without replacing its switch.
+struct GameMap {
+    std::vector<GameEntity*> rendered;
+    //! \brief Finds the exact registered rendered identity, or preserves a missing-name result.
+    GameEntity* getRenderedMovableEntity(const std::string& name) {
+        for(GameEntity* entity:rendered) if(entity->name==name) return entity;
+        return nullptr;
+    }
+    //! \brief Keeps creatures outside this rendered-equipment fixture.
+    GameEntity* getCreature(const std::string&) { return nullptr; }
+    //! \brief Keeps spells outside this rendered-equipment fixture.
+    GameEntity* getSpell(const std::string&) { return nullptr; }
+    //! \brief Keeps lights outside this rendered-equipment fixture.
+    GameEntity* getMapLight(const std::string&) { return nullptr; }
+    //! \brief Keeps rooms outside this rendered-equipment fixture.
+    GameEntity* getRoomByName(const std::string&) { return nullptr; }
+    //! \brief Keeps traps outside this rendered-equipment fixture.
+    GameEntity* getTrapByName(const std::string&) { return nullptr; }
+    //! \brief Runs the unchanged production type-to-registry dispatcher.
+    GameEntity* getEntityFromTypeAndName(GameEntityType type,const std::string& name);
+};
+"""
+    lookup_checks = r"""
+//! \brief Verifies every new equipment entity resolves its registered identity and missing names stay missing.
+int main() {
+    GameMap map; GameEntity bag={"ItemBag__171"},merchant={"Merchant_1"},bundle={"HerbBundle_1"};
+    map.rendered={&bag,&merchant,&bundle};
+    const GameEntityType types[]={GameEntityType::itemBagEntity,GameEntityType::merchantEntity,GameEntityType::herbBundleEntity};
+    for(size_t index=0;index<map.rendered.size();++index) {
+        if(map.getEntityFromTypeAndName(types[index],map.rendered[index]->name)!=map.rendered[index])
+            throw std::runtime_error("registered equipment entity lookup failed");
+        if(map.getEntityFromTypeAndName(types[index],"missing")!=nullptr)
+            throw std::runtime_error("missing equipment identity resolved");
+    }
+    if(map.getEntityFromTypeAndName(GameEntityType::unknown,bag.name)!=nullptr)
+        throw std::runtime_error("unknown entity type resolved");
+}
+"""
+    compile_and_run("equipment-entity-lookup", entity_types + lookup_fixture +
+                    "\n//! \\brief Runs the production entity lookup without changing its dispatch.\n" + lookup + lookup_checks)
     garden = function(source("source/rooms/RoomHerbGarden.cpp"), "bool RoomHerbGarden::hasOpenCreatureSpot(")
     lab = function(source("source/rooms/RoomAlchemyLab.cpp"), "bool RoomAlchemyLab::hasOpenCreatureSpot(")
     affinity_rooms = r'''
