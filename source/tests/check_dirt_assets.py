@@ -48,7 +48,17 @@ for name in types:
     assert (root / 'assets-src' / 'dirt' / ('Pile_' + name + '.blend')).is_file(), 'assets-src/dirt/Pile_' + name + '.blend missing'
     assert png_size('materials/textures/Pile_' + name + '.png') == (PILE_TEXTURE_SIZE, PILE_TEXTURE_SIZE), name + ' texture size'
     assert re.search(r'^material Pile_' + name + r'\b', materials, re.M), 'material Pile_' + name + ' missing'
-assert len(list((root / 'models').glob('Pile_*.mesh'))) == 35, 'exactly 35 pile models'
+# Level-specific classes keep their explicitly declared species mesh, including its unchanged pile geometry.
+pile_aliases = {'DragonBoss': 'Dragon', 'BossDragon': 'Dragon', 'VeteranScarab': 'Scarab'}
+expected_piles = {'Pile_' + name + '.mesh' for name in types} | {'Pile_' + name + '.mesh' for name in pile_aliases}
+assert {path.name for path in (root / 'models').glob('Pile_*.mesh')} == expected_piles, 'exactly 35 species piles and three declared-species aliases'
+for alias, original in pile_aliases.items():
+    original_bytes = (root / 'models' / ('Pile_' + original + '.mesh')).read_bytes()
+    assert (root / 'models' / ('Pile_' + alias + '.mesh')).read_bytes() == original_bytes, alias + ' changes the original geometry'
+    assert ('Pile_' + original + '\n').encode('ascii') in original_bytes, original + ' pile material is missing'
+    assert re.search(r'^material Pile_' + original + r'\b', materials, re.M), original + ' pile material has no definition'
+    alias_credit = next((line for line in credits.splitlines() if line.startswith('models/Pile_' + alias + '.mesh ')), '')
+    assert 'OD Team' in alias_credit and 'GPLv3+' in alias_credit and 'models/Pile_' + original + '.mesh' in alias_credit, alias + ' needs its own original-source credit'
 assert len(list((root / 'materials' / 'textures').glob('Pile_*.png'))) == 35, 'exactly 35 pile textures'
 
 # 2. Stain, decals and the seat: model, texture, material, Blender source
