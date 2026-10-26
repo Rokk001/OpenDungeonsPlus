@@ -6015,15 +6015,21 @@ void RenderManager::rrMiningCoinBurst(const Ogre::Vector3& position)
     mTreasuryEffects.push_back(effect);
 }
 
-//! \brief Retains the deposit pour pose; the server goldDelivery event owns the coin burst.
+//! \brief Shows the existing treasury deposit coins and worker pour pose.
 void RenderManager::rrTreasuryDeposit(GameMap* gameMap, int x, int y)
 {
-    Tile* tile = gameMap != nullptr ? gameMap->getTile(x, y) : nullptr;
     int level = 0;
-    TreasuryGoldMesh::surfaceHeight(static_cast<float>(x), static_cast<float>(y), level);
+    const float height = TreasuryGoldMesh::surfaceHeight(static_cast<float>(x), static_cast<float>(y), level);
     // Only treasuries drawn with a gold layer have a pile to pour onto
-    if(level > 0)
-        startTreasuryPour(tile, level);
+    if(level <= 0)
+        return;
+
+    Tile* tile = gameMap != nullptr ? gameMap->getTile(x, y) : nullptr;
+    const void* roomKey = (tile != nullptr && tile->getCoveringRoom() != nullptr) ?
+        static_cast<const void*>(tile->getCoveringRoom()) : static_cast<const void*>(tile);
+    createTreasuryEffect(roomKey, "TreasuryCoinPour",
+        Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), height + TreasuryCoinEffectHeightOffset));
+    startTreasuryPour(tile, level);
 }
 
 void RenderManager::startTreasuryPour(Tile* tile, int level)
