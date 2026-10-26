@@ -844,7 +844,8 @@ def check_part_g():
     job = windows['JobText']
     for name in ('AttributesText', 'EquipmentText', 'PathText', 'SkillsText'):
         block = windows[name]
-        assert 'value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}"' in block, name
+        # The profile rows reserve the existing scrollbar gutter at the right edge.
+        assert 'value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}"' in block, name
         for key in ('FrameEnabled', 'BackgroundEnabled', 'Font', 'VertFormatting', 'HorzFormatting'):
             assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == re.search(
                 r'name="' + key + r'" value="([^"]*)"', job)[1], name + ' ' + key
