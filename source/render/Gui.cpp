@@ -1878,7 +1878,7 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
     return y + height + PROFILE_ROW_GAP;
 }
 
-//! \brief Fits the essential profile header, wrapped equipment images and scrolling social rows.
+//! \brief Fits equipment beside the portrait, attributes below, and social rows in the existing scroll document.
 float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
 {
     const float scale = getLayoutScale();
@@ -1889,10 +1889,49 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
         CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, 26)));
     // Keep the portrait, carried equipment and attributes on the opening page. Personal details and
     // social activity follow them in the same scrollable document rather than displacing the essentials.
-    CEGUI::Window* equipment = page->getChild("EquipmentText");
-    const float equipmentWidth = page->getPixelSize().d_width - (148.0f + PROFILE_RIGHT_MARGIN) * scale;
-    const float equipmentHeight = getProfileLinesHeight(equipment,
-        countWrappedLines(equipment, equipmentWidth), scale);
+    CEGUI::Window* equipment = page->getChild("EquipmentRow");
+    const float equipmentWidth = std::max(1.0f, page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN);
+    const float headerHeight = PROFILE_FLOW_TOP - 34.0f - 2.0f * PROFILE_ROW_GAP;
+    const std::size_t slotCount = 13;
+    std::size_t columns = 1;
+    float edge = 0.0f;
+    // Fit the largest square slots beside the portrait, preserving the existing gaps between item groups.
+    for(std::size_t count = 1; count <= slotCount; ++count)
+    {
+        const std::size_t rows = (slotCount + count - 1) / count;
+        float candidate = std::min(56.0f, (headerHeight - static_cast<float>(rows - 1) * PROFILE_ROW_GAP) /
+            static_cast<float>(rows));
+        for(std::size_t first = 0; first < slotCount; first += count)
+        {
+            const std::size_t last = std::min(slotCount, first + count);
+            float gaps = 0.0f;
+            for(std::size_t slot = first + 1; slot < last; ++slot)
+                gaps += (slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP;
+            candidate = std::min(candidate, (equipmentWidth - gaps) / static_cast<float>(last - first));
+        }
+        if(candidate > edge)
+        {
+            edge = candidate;
+            columns = count;
+        }
+    }
+    float x = 0.0f;
+    float rowY = 0.0f;
+    for(std::size_t slot = 0; slot < slotCount; ++slot)
+    {
+        if(slot % columns == 0)
+        {
+            x = 0.0f;
+            rowY = static_cast<float>(slot / columns) * (edge + PROFILE_ROW_GAP);
+        }
+        else
+            x += (slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP;
+        setScaledArea(equipment->getChild("Slot" + Helper::toString(slot)),
+            CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, rowY),
+                CEGUI::UDim(0, x + edge), CEGUI::UDim(0, rowY + edge)));
+        x += edge;
+    }
+    const float equipmentHeight = rowY + edge;
     setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),
         CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, 34 + equipmentHeight)));
     float y = std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);
@@ -1910,34 +1949,6 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
         setScaledArea(child, area);
     }
     y += 24.0f;
-
-    {
-        CEGUI::Window* equipment = page->getChild("EquipmentRow");
-        const float width = std::max(1.0f, page->getPixelSize().d_width / scale - PROFILE_ROW_INSET_TOTAL);
-        const float edge = std::min(56.0f, width);
-        float x = 0.0f;
-        float rowY = 0.0f;
-        for(std::size_t slot = 0; slot < 13; ++slot)
-        {
-            const float gap = slot == 6 || slot == 9 ? 12.0f : 4.0f;
-            if(slot != 0 && x + gap + edge > width)
-            {
-                x = 0.0f;
-                rowY += edge + PROFILE_ROW_GAP;
-            }
-            else if(slot != 0)
-                x += gap;
-            setScaledArea(equipment->getChild("Slot" + Helper::toString(slot)),
-                CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, rowY),
-                    CEGUI::UDim(0, x + edge), CEGUI::UDim(0, rowY + edge)));
-            x += edge;
-        }
-        const float height = rowY + edge;
-        setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
-            CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y + height)));
-        y += height + PROFILE_ROW_GAP;
-    }
-
 
     const char* const personalRows[] = {"HandleText", "AgeText", "RelationText", "FromText", "JobText"};
     for(std::size_t i = 0; i < 5; ++i)
