@@ -1486,3 +1486,5 @@ materials/textures/GhostLamps_6.png    AI-generated with Codex    GPLv3+    Orig
 materials/textures/GhostLamps_7.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
 materials/textures/GhostLeather.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
 materials/textures/GhostStone.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+assets-src/rooms/ghostroom/GhostCauldronFill.blend    AI-generated with Codex    GPLv3+    Original independent ectoplasm level behind the cauldron window, floor-origin height-scaled mesh, 2026-10-26
+models/GhostCauldronFill.mesh    AI-generated with Codex    GPLv3+    Original independent ectoplasm level behind the cauldron window, floor-origin height-scaled mesh, 2026-10-26
