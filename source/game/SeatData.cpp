@@ -26,7 +26,18 @@
 #include <istream>
 #include <ostream>
 
+namespace
+{
+static const int32_t DEFAULT_MERCHANT_MARGIN = 10;
+static const int32_t LAB_MODE_AUTOMATIC = 0;
+static const int32_t LAB_MODE_COMBAT = 2;
+}
+
+//! \brief Creates seat data with the specified shared room-setting defaults.
 SeatData::SeatData() :
+    mMerchantMargin(DEFAULT_MERCHANT_MARGIN),
+    mMerchantMode("fair"),
+    mLabMode(LAB_MODE_AUTOMATIC),
     mId(-1),
     mTeamId(-1),
     mMana(1000),
@@ -88,6 +99,7 @@ uint32_t SeatData::getNbStoredSpecials(uint32_t giftBoxType) const
     return mStoredSpecials[giftBoxType];
 }
 
+//! \brief Receives changing seat data followed by shared room settings.
 bool SeatData::importFromPacketForUpdate(ODPacket& is)
 {
     // We only refresh data that changes over time (gold, mana, ...)
@@ -126,9 +138,10 @@ bool SeatData::importFromPacketForUpdate(ODPacket& is)
         OD_ASSERT_TRUE(is >> nbSpecial);
         mStoredSpecials.push_back(nbSpecial);
     }
-    return true;
+    return importItemSettingsFromPacket(is);
 }
 
+//! \brief Sends changing seat data followed by shared room settings.
 void SeatData::exportToPacketForUpdate(ODPacket& os) const
 {
     os << mGold;
@@ -155,8 +168,10 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
     os << nbSpecials;
     for(uint32_t nbSpecial : mStoredSpecials)
         os << nbSpecial;
+    exportItemSettingsToPacket(os);
 }
 
+//! \brief Sends full seat data followed by shared room settings.
 void SeatData::exportToPacket(ODPacket& os) const
 {
     os << mId << mTeamId << mPlayerType << mFaction << mStartingX
@@ -183,8 +198,10 @@ void SeatData::exportToPacket(ODPacket& os) const
     os << nb;
     for(SkillType resType : mSkillNotAllowed)
         os << resType;
+    exportItemSettingsToPacket(os);
 }
 
+//! \brief Receives full seat data and its trailing room-setting values.
 bool SeatData::importFromPacket(ODPacket& is)
 {
     is >> mId >> mTeamId >> mPlayerType;
@@ -220,7 +237,28 @@ bool SeatData::importFromPacket(ODPacket& is)
         mSkillNotAllowed.push_back(resType);
     }
 
+    return importItemSettingsFromPacket(is);
+}
+
+//! \brief Adopts the complete room-settings record only when its values are well formed.
+bool SeatData::importItemSettingsFromPacket(ODPacket& packet)
+{
+    int32_t margin = 0;
+    int32_t labMode = LAB_MODE_AUTOMATIC;
+    std::string mode;
+    if(!(packet >> margin >> mode >> labMode) || margin < 0 || (mode != "fair" && mode != "profit") ||
+        labMode < LAB_MODE_AUTOMATIC || labMode > LAB_MODE_COMBAT)
+        return false;
+    mMerchantMargin = margin;
+    mMerchantMode = mode;
+    mLabMode = labMode;
     return true;
+}
+
+//! \brief Sends the shared merchant/laboratory values in their documented order.
+void SeatData::exportItemSettingsToPacket(ODPacket& packet) const
+{
+    packet << mMerchantMargin << mMerchantMode << mLabMode;
 }
 
 std::string SeatData::displayAsString(const SeatData* seat)

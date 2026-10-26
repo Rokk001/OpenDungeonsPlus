@@ -2032,6 +2032,67 @@ ROOMS = {
 }
 
 
+def merchant_field():
+    """Paint worn bazaar planks with scattered remnants of a red woven carpet."""
+    ids, joints, count = row_layout(2101, 7, 110, 260, 1.3, 2102)
+    rng = np.random.RandomState(2103)
+    grain = fbm(2104, 3.0, 90.0, 3)
+    shade = rng.uniform(0.72, 1.08, count)[ids]
+    col = np.array([0.27, 0.18, 0.11])[None, None, :] * shade[..., None]
+    col = col * (1.0 + 0.10 * grain[..., None])
+    bevel = smoothstep(1.0, 5.0, joints)
+    col = mix(col, np.array([0.06, 0.045, 0.035]), 1.0 - bevel)
+    hgt = bevel + 0.10 * grain
+    remnant = smoothstep(0.35, 0.70, fbm(2105, 4.0, 4.0, 2))
+    weave = 0.85 + 0.15 * np.sin(_XX * np.pi / 2.0) * np.sin(_YY * np.pi / 2.0)
+    carpet = np.array([0.28, 0.055, 0.055])[None, None, :] * weave[..., None]
+    faded = smoothstep(0.3, 1.3, fbm(2106, 16.0, 16.0, 2))
+    carpet = mix(carpet, np.array([0.25, 0.18, 0.12]), faded * 0.65)
+    col = mix(col, carpet, remnant)
+    hgt = hgt + 0.45 * remnant + 0.05 * weave
+    return col, hgt
+
+
+def alchemy_lab_field():
+    """Paint dark stone laboratory slabs marked by dried herbal spills."""
+    ids, joints, count = row_layout(2111, 4, 100, 240, 3.0, 2112)
+    rng = np.random.RandomState(2113)
+    shade = rng.uniform(0.72, 1.10, count)[ids]
+    grain = fbm(2114, 30.0, 30.0, 3)
+    col = np.array([0.15, 0.16, 0.15])[None, None, :] * shade[..., None]
+    col = col * (1.0 + 0.08 * grain[..., None])
+    bevel = smoothstep(1.0, 5.0, joints)
+    col = mix(col, np.array([0.04, 0.045, 0.04]), 1.0 - bevel)
+    green_spill = smoothstep(1.1, 1.8, fbm(2115, 7.0, 7.0, 3))
+    purple_spill = smoothstep(1.35, 2.0, fbm(2116, 8.0, 8.0, 3))
+    col = mix(col, np.array([0.10, 0.18, 0.065]), green_spill * 0.65)
+    col = mix(col, np.array([0.17, 0.07, 0.13]), purple_spill * 0.50)
+    hgt = bevel + 0.12 * grain + 0.04 * (green_spill + purple_spill)
+    return col, hgt
+
+
+def herb_garden_field():
+    """Paint moist dark garden earth with small grains and wooden bed edges."""
+    grain = fbm(2121, 45.0, 45.0, 4)
+    clods = fbm(2122, 12.0, 12.0, 3)
+    col = np.array([0.115, 0.085, 0.055])[None, None, :] * (1.0 + 0.16 * clods[..., None])
+    col = col + grain[..., None] * np.array([0.012, 0.009, 0.005])
+    timber = 1.0 - smoothstep(8.0, 13.0, _LO.astype(float))
+    woodgrain = 1.0 + 0.10 * fbm(2123, 4.0, 80.0, 2)
+    wood = np.array([0.20, 0.13, 0.075])[None, None, :] * woodgrain[..., None]
+    col = mix(col, wood, timber)
+    hgt = 0.25 * clods + 0.10 * grain + 1.2 * timber
+    return col, hgt
+
+
+ROOMS['merchant'] = {'field': merchant_field, 'band': None, 'strength': 1.1,
+                     'pieces': {'MerchantFloor': ('', 'MerchantFloorNormal')}}
+ROOMS['alchemyLab'] = {'field': alchemy_lab_field, 'band': None, 'strength': 1.0,
+                       'pieces': {'AlchemyLabFloor': ('', 'AlchemyLabFloorNormal')}}
+ROOMS['herbGarden'] = {'field': herb_garden_field, 'band': None, 'strength': 1.2,
+                       'pieces': {'HerbGardenFloor': ('', 'HerbGardenFloorNormal')}}
+
+
 def build(room):
     spec = ROOMS[room]
     fields = {}

@@ -43,6 +43,8 @@ public:
     virtual void updateActiveSpots(GameMap* gameMap = nullptr) override;    
     bool useRoom(Creature& creature, bool forced) override;
     bool shouldStopUseIfHungrySleepy(Creature& creature, bool forced) override;
+    //! \brief True while gifts in this arena must wait for its winning creature.
+    bool hasRunningFight() const { return mFightOngoing; }
     //! \brief The arena is used even by a creature in a bad mood, so this always returns false.
     bool shouldNotUseIfBadMood(Creature& creature, bool forced) override
     { return false; }
@@ -64,7 +66,7 @@ protected:
 
     
 private:
-    //! \brief Mood points of the victor, the spectators and a creature alone in the pit
+    //! \brief Updates pit moods and awards pending gifts to the actual fight winner.
     void updatePitMood();
 
     std::vector<Creature*> mCreaturesFighting;

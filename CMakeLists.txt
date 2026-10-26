@@ -16,7 +16,7 @@ endif()
 # Project version
 set(OD_MAJOR_VERSION 0)
 set(OD_MINOR_VERSION 7)
-set(OD_PATCH_LEVEL   3)
+set(OD_PATCH_LEVEL   4)
 
 # Fourth version digit: the integrator passes the next running number (-DOD_BUILD_NUMBER=N)
 # for release builds that are pushed and deployed; branch and test builds keep 0.
@@ -242,6 +242,8 @@ set(OD_SOURCEFILES
     ${SRC}/camera/SlopeWalk.cpp
 
     ${SRC}/creatureaction/CreatureAction.cpp
+    ${SRC}/creatureaction/CreatureActionBuyItem.cpp
+    ${SRC}/creatureaction/CreatureActionSellItem.cpp
     ${SRC}/creatureaction/CreatureActionCarryEntity.cpp
     ${SRC}/creatureaction/CreatureActionClaimGroundTile.cpp
     ${SRC}/creatureaction/CreatureActionClaimWallTile.cpp
@@ -270,6 +272,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionSearchWallTileToClaim.cpp
     ${SRC}/creatureaction/CreatureActionSleep.cpp
     ${SRC}/creatureaction/CreatureActionStealFreeGold.cpp
+    ${SRC}/creatureaction/CreatureActionPickupItem.cpp
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
     ${SRC}/creatureaction/CreatureActionUseToilet.cpp
@@ -300,6 +303,8 @@ set(OD_SOURCEFILES
     ${SRC}/creatureeffect/CreatureEffectTemporary.cpp
     ${SRC}/creatureeffect/CreatureEffectAreaDamage.cpp
     ${SRC}/creatureeffect/CreatureEffectStrengthChange.cpp
+    ${SRC}/creatureeffect/CreatureEffectBleed.cpp
+    ${SRC}/creatureeffect/CreatureEffectPotion.cpp
 
     ${SRC}/creaturemood/CreatureMood.cpp
     ${SRC}/creaturemood/CreatureMoodWakefulness.cpp
@@ -349,8 +354,11 @@ set(OD_SOURCEFILES
     ${SRC}/entities/Building.cpp
     ${SRC}/entities/BuildingObject.cpp
     ${SRC}/entities/ChickenEntity.cpp
+    ${SRC}/entities/MerchantEntity.cpp
     ${SRC}/entities/CraftedTrap.cpp
     ${SRC}/entities/Creature.cpp
+    ${SRC}/entities/CreaturePotions.cpp
+    ${SRC}/entities/HerbBundleEntity.cpp
     ${SRC}/entities/CreatureDefinition.cpp
     ${SRC}/entities/DirtPileEntity.cpp
     ${SRC}/entities/DoorEntity.cpp
@@ -376,6 +384,12 @@ set(OD_SOURCEFILES
     ${SRC}/entities/TrapEntity.cpp
     ${SRC}/entities/TreasuryObject.cpp
     ${SRC}/entities/Weapon.cpp
+    ${SRC}/entities/ItemDefinition.cpp
+    ${SRC}/entities/ItemInstance.cpp
+    ${SRC}/entities/ItemBagEntity.cpp
+    ${SRC}/entities/CreatureEquipmentAI.cpp
+    ${SRC}/entities/ItemEffects.cpp
+    ${SRC}/entities/PotionDefinition.cpp
 
 
 	${SRC}/eventsystem/CreatureMoved.cpp
@@ -385,7 +399,9 @@ set(OD_SOURCEFILES
     ${SRC}/game/Campaign.cpp
     ${SRC}/game/CampaignWorld.cpp
     ${SRC}/game/Player.cpp
+    ${SRC}/game/ItemDrops.cpp
     ${SRC}/game/CreaturePanelData.cpp
+    ${SRC}/game/CreatureMerchantAI.cpp
     ${SRC}/game/CreatureAppearance.cpp
     ${SRC}/game/CreatureRelationships.cpp
     ${SRC}/game/TrapProductionData.cpp
@@ -413,6 +429,7 @@ set(OD_SOURCEFILES
 
     ${SRC}/giftboxes/GiftBoxBonus.cpp
     ${SRC}/giftboxes/GiftBoxSkill.cpp
+    ${SRC}/giftboxes/GiftBoxItem.cpp
 
     ${SRC}/goals/Goal.cpp
     ${SRC}/goals/GoalClaimNTiles.cpp
@@ -429,6 +446,8 @@ set(OD_SOURCEFILES
     ${SRC}/modes/ConsoleInterface.cpp
     ${SRC}/modes/EditorMode.cpp
     ${SRC}/modes/GameMode.cpp
+    ${SRC}/modes/GameModeMerchant.cpp
+    ${SRC}/modes/GameModeAlchemy.cpp
     ${SRC}/modes/InputCommand.cpp
     ${SRC}/modes/GameEditorModeBase.cpp
     ${SRC}/modes/GameEditorModeConsole.cpp
@@ -530,6 +549,9 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomBridgeStone.cpp
     ${SRC}/rooms/RoomBridgeWooden.cpp
     ${SRC}/rooms/RoomCasino.cpp
+    ${SRC}/rooms/RoomMerchant.cpp
+    ${SRC}/rooms/RoomHerbGarden.cpp
+    ${SRC}/rooms/RoomAlchemyLab.cpp
     ${SRC}/rooms/RoomCrypt.cpp
     ${SRC}/rooms/RoomDormitory.cpp
     ${SRC}/rooms/RoomDungeonTemple.cpp

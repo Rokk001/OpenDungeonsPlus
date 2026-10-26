@@ -108,7 +108,7 @@ assert 'addGoldCarried(added);' in fraction
 assert 'double          mGoldRemainder;' in creature_header
 assert creature_source.count('mGoldRemainder           (0.0),') == 2
 export = creature_source[creature_source.index('mWakefulness << "\\t" << mHunger'):]
-assert 'mGoldRemainder' not in export[:export.index('\n}\n')]             # the remainder is not saved
+assert 'GoldRemainder=' in export[:export.index('\n}\n')] and '<< mGoldRemainder' in export[:export.index('\n}\n')]  # item transactions preserve fractional gold
 capacity = function_body(creature_source, 'int32_t Creature::getGoldCapacity() const')
 assert 'const int32_t baseCapacity = mDefinition->getMaxGoldCarryable();' in capacity   # plan 4 extends the capacity
 assert 'getGoldCarryPerStrength()' in capacity and 'getSkillPassive("carry%")' in capacity

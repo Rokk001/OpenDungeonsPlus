@@ -1,5 +1,6 @@
 """Exercise the production level statistics counting hooks and the levelStatistics notification without a game."""
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import time
@@ -183,6 +184,7 @@ struct ConfigManager
     // The creature dirt of a knock-out is outside the statistics contract (the fixture runs the non-server path)
     double getDirtConfigDouble(const std::string&) { return 0.0; }
 };
+//! \brief Holds the exact knockout and neutral item-hook storage used by production kill statistics.
 struct Creature : public GameEntity
 {
     Creature(Seat* seat, double hp) : GameEntity(seat), mHp(hp), mNbTurnsWithoutBattle(3), mKoTurnCounter(0), mDeaths(0) {}
@@ -191,6 +193,8 @@ struct Creature : public GameEntity
     double getMagicalDefense() { return 0.0; }
     double getElementDefense() { return 0.0; }
     const CreatureDefinition* getDefinition() { return &mDefinition; }
+    //! \brief Leaves item loss outside the kill-counting fixture while preserving the real knockout hook.
+    void dropItems(bool) {}
     void dropCarriedEquipment() {}
     void computeCreatureOverlayHealthValue() {}
     void computeCreatureOverlayMoodValue() {}
@@ -214,7 +218,7 @@ struct Creature : public GameEntity
         double elementDamage, Tile* tileTakingDamage, bool ko);
     double mHp;
     int mNbTurnsWithoutBattle;
-    int mKoTurnCounter;
+    double mKoTurnCounter;
     int mDeaths;
     bool mDirtKoThisFight = false;
     bool mFoughtSinceFightEnd = false;
@@ -225,6 +229,12 @@ void recordScriptEvent(const Creature&, const std::string&) {}
 bool isHitByBlowOrShot(const GameEntity*) { return false; }
 // Same: no tile dirt in the statistics fixture.
 void addHitDirt(Tile*) {}
+namespace ItemEffects {
+//! \brief Supplies neutral QuickRise resistance to the production statistics damage path.
+double remainingFactor(const Creature&,const std::string&) {return 1.0;}
+//! \brief Leaves server-only item healing outside the non-server kill-counting fixture.
+void onDamageDealt(GameEntity*,Creature&,double) {}
+}
 TAKE_DAMAGE
 struct MockRoom
 {
@@ -618,7 +628,7 @@ wiring_checks = 0
 
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and enum_body.rstrip().endswith('campaignVictory')
+assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-5:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings']
 assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')
 assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout') < enum_body.index('possessionStart')
 assert enum_body.index('playerDefeated') < enum_body.index('levelStatistics')
@@ -672,12 +682,13 @@ wiring_checks += 5
 print('WIRING OK (%d assertions): enum value last, hooks in place, client reads in server order and stores only in game mode' % wiring_checks)
 
 
+# Compile and exercise an existing production probe with visible compiler diagnostics.
 def run_probe(name, code):
     with tempfile.TemporaryDirectory(prefix='odp-level-statistics-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(code)
         subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', 'check.cpp', '/Fecheck.exe'],
-                       cwd=work, check=True, stdout=subprocess.DEVNULL)
+                       cwd=work, check=True)
         for attempt in range(4):
             try:
                 subprocess.run([str(work / 'check.exe')], cwd=work, check=True)

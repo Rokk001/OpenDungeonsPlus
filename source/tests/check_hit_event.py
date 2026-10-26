@@ -44,9 +44,9 @@ enum_body = event_h.split('enum class CosmeticEventType')[1].split('};')[0]
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', enum_body, re.M)
 numbers = [int(number) for _, number in kinds]
 names = [name for name, _ in kinds]
-assert names[-8:] == ['roomTakeover', 'casinoResult', 'keeperWealth', 'hitResult', 'attackTurn', 'tileDirt',
-                      'digStroke', 'goldDelivery'], names[-8:]
-assert numbers == list(range(22)), numbers
+assert names[-10:] == ['roomTakeover', 'casinoResult', 'keeperWealth', 'hitResult', 'attackTurn', 'tileDirt',
+                      'digStroke', 'goldDelivery', 'boxCracked', 'cauldronBang'], names[-10:]
+assert numbers == list(range(24)), numbers
 assert dict(kinds)['hitResult'] == '17' and dict(kinds)['roomTakeover'] == '14' and dict(kinds)['meleeResult'] == '5'
 assert 'return "hitResult";' in event_cpp
 known = function_body(event_cpp, 'bool CosmeticEvent::isKnownType() const')
@@ -84,7 +84,7 @@ stopped = function_body(one_hit, 'void MissileOneHit::missileStopped()')
 assert 'mHasHit' in stopped and 'fireHitMissed(mShooterName)' in stopped and 'isAlive()' in stopped
 assert 'virtual void missileStopped()' in missile_h and 'missileStopped();' in missile
 assert missile.index('setWalkPath(EntityAnimation::idle_anim') < missile.index('missileStopped();')
-assert 'setShooter(creature->getName(), targetName)' in launch and 'MissileObjectType::oneHit' in launch
+assert 'setShooter(creature->getName(), targetName)' in launch and 'return new MissileOneHit(' in function_body(launch, 'MissileOneHit* CreatureSkillMissileLaunch::createMissile(')
 # Saved creature shots retain their launch accuracy and cosmetic names; old rows keep loading.
 export = function_body(one_hit, 'void MissileOneHit::exportToStream')
 load = function_body(one_hit, 'bool MissileOneHit::importFromStream')

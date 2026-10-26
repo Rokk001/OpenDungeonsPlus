@@ -59,6 +59,8 @@ for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeLabel'):
 profile_layout = gui[gui.index('float Gui::layoutCreatureProfilePage'):gui.index('void Gui::applyProfileScroll')]
 assert profile_layout.index('CEGUI::Window* equipment') < profile_layout.index('page->getChild("AttributesText")')
 assert profile_layout.index('page->getChild("AttributesText")') < profile_layout.index('const char* const personalRows')
+assert profile_layout.index('const char* const barNames') < profile_layout.index('page->getChild("EquipmentRow")') < profile_layout.index('const char* const personalRows')
+assert '"EquipmentRow"' in gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):gui.index('const std::size_t PROFILE_FLOW_ROW_COUNT')]
 assert 'countWrappedLines(equipment, equipmentWidth)' in profile_layout
 assert '34.0f + equipmentHeight + PROFILE_ROW_GAP' in profile_layout
 assert 'getProfileLinesHeight(window, lines, scale)' in gui
@@ -157,7 +159,24 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             assert core_bottom <= viewport, (owner, screen_width, screen_height, percent, core_bottom, viewport)
             assert 124 <= attribute_top and 26 <= 34, 'portrait/header overlaps the following essential rows'
             # Overflowed social rows are clipped to this viewport and reachable through the full scroll range.
-            rows_bottom = core_bottom
+            # Preserve all thirteen real item images, their 56-pixel wrap and reachability before social metadata.
+            image_width = max(1.0, page_width - 48.0)
+            image_edge = min(56.0, image_width)
+            image_x, image_y = 0.0, 0.0
+            image_rows = []
+            for slot in range(13):
+                gap = 12.0 if slot in (6, 9) else 4.0
+                if slot and image_x + gap + image_edge > image_width:
+                    image_x, image_y = 0.0, image_y + image_edge + 4.0
+                elif slot:
+                    image_x += gap
+                assert image_x + image_edge <= image_width + 1e-6
+                image_rows.append(core_bottom + image_y)
+                image_x += image_edge
+            rows_bottom = core_bottom + image_y + image_edge + 4.0
+            for image_top in image_rows:
+                offset = min(image_top, max(0.0, rows_bottom - viewport))
+                assert image_top - offset >= 0 and image_top + image_edge - offset <= viewport + 1e-6
             for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
                 top = rows_bottom + 4
                 rows_bottom = top + lines * line_height + 4

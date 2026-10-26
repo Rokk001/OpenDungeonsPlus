@@ -22,6 +22,7 @@
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "entities/Tile.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -56,6 +57,7 @@ const std::string& CreatureEffectAreaDamage::getEffectName() const
     return CreatureEffectAreaDamageName;
 }
 
+//! \brief Deals the caster's area damage with equipment critical and hero-target factors.
 void CreatureEffectAreaDamage::applyEffect(Creature& creature)
 {
     // The zone only exists on the server and while its caster is alive
@@ -84,10 +86,11 @@ void CreatureEffectAreaDamage::applyEffect(Creature& creature)
 
         // Every damage application on a target may be critical (the damage is absolute, so there is no defense)
         const bool critical = creature.rollCritical();
-        const double criticalFactor = critical ? ConfigManager::getSingleton().getCritDamageMultiplier() : 1.0;
+        const double criticalFactor = critical ? ItemEffects::criticalMultiplier(creature) : 1.0;
         // In the last turn of the effect only the fraction of the turn that was left counts
         target->takeDamage(&creature, Random::Double(mDamagePerTurnMin, mDamagePerTurn) * getTurnFraction() *
-            criticalFactor, 0.0, 0.0, 0.0, targetTile, false);
+            criticalFactor * ItemEffects::targetDamageFactor(creature, *target),
+            0.0, 0.0, 0.0, targetTile, false);
         if(critical)
             target->fireCriticalSpell(creature.getName());
     }

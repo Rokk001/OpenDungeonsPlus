@@ -19,6 +19,7 @@
 
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "utils/LogManager.h"
 
 static const std::string CreatureEffectSpeedChangeName = "SpeedChange";
@@ -43,6 +44,14 @@ static CreatureEffectRegister reg(new CreatureEffectSpeedChangeFactory);
 const std::string& CreatureEffectSpeedChange::getEffectName() const
 {
     return CreatureEffectSpeedChangeName;
+}
+
+//! \brief Applies Sure Footing once to a newly inflicted slow, preserving saved remaining time.
+void CreatureEffectSpeedChange::startEffect(Creature& creature)
+{
+    if(!mItemResistanceApplied && mEffectValue < 1.0)
+        mNbTurnsEffect *= ItemEffects::remainingFactor(creature, "SureFooting");
+    mItemResistanceApplied = true;
 }
 
 //! \brief Keeps the factor of this effect in the speed modifier of the creature (the modifier is the product of the

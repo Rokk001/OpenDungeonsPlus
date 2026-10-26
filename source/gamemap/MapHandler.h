@@ -53,12 +53,14 @@ namespace MapHandler
     //! \param fileName The level file to read.
     //! \param gameMap The game map to fill.
     //! \return False if the file or one of its sections is invalid.
+    //! \brief Loads supported level formats and reports every rejected section.
     bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap);
 
     //! \brief Writes the game map to a level file, including the [Triggers] section if the level has a script.
     //! \param fileName The level file to write.
     //! \param gameMap The game map to save.
     //! \return False if the file could not be written.
+    //! \brief Saves map entities, including loose harvested herb bundles.
     bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap);
 
     bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType type, std::stringstream& levelFile);
@@ -77,6 +79,7 @@ namespace MapHandler
 
     //! \brief Reads the main user map info. Returns true if the level could be read and levelInfo is set to
     //! corresponding info. Returns false otherwise.
+    //! \brief Reads supported level headers regardless of the executable build suffix.
     bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo);
 
     //! \brief Counts the number of all seats in the levelfile, needed to initialize the structure

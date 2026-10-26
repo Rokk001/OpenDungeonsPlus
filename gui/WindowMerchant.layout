@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GUILayout version="4">
+    <Window type="OD/FrameWindow" name="MerchantWindow">
+        <Property name="Area" value="{{0.5,-390},{0.5,-260},{0.5,390},{0.5,260}}" />
+        <Property name="Text" value="Merchant" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="AlwaysOnTop" value="True" />
+        <Property name="Visible" value="False" />
+        <Window type="OD/MenuMultiColumnList" name="StockList">
+            <Property name="Area" value="{{0,20},{0,40},{1,-20},{0,300}}" />
+        </Window>
+        <Window type="OD/StaticText" name="MarginLabel">
+            <Property name="Area" value="{{0,20},{0,310},{0,180},{0,340}}" />
+            <Property name="Text" value="Margin: 10 %" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+        </Window>
+        <Window type="OD/SettingsSlider" name="MarginSlider">
+            <Property name="Area" value="{{0,190},{0,315},{0,480},{0,340}}" />
+            <Property name="MaxValue" value="50" />
+            <Property name="ClickStepSize" value="5" />
+        </Window>
+        <Window type="OD/GameTabButton" name="ModeButton">
+            <Property name="Area" value="{{0,510},{0,310},{1,-20},{0,345}}" />
+            <Property name="Text" value="Fair" />
+            <Property name="TooltipText" value="Fair: the creature that needs the item most buys it. Profit: the strongest creature buys it." />
+        </Window>
+        <Window type="OD/StaticText" name="HistoryText">
+            <Property name="Area" value="{{0,20},{0,355},{1,-20},{1,-65}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+            <Property name="VertScrollbar" value="True" />
+        </Window>
+        <Window type="OD/Button" name="BuyButton">
+            <Property name="Area" value="{{0,20},{1,-55},{0,250},{1,-20}}" />
+            <Property name="Text" value="Buy" />
+            <Property name="Disabled" value="True" />
+        </Window>
+        <Window type="OD/Button" name="CloseButton">
+            <Property name="Area" value="{{1,-160},{1,-55},{1,-20},{1,-20}}" />
+            <Property name="Text" value="Close" />
+        </Window>
+    </Window>
+</GUILayout>

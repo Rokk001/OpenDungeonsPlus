@@ -102,6 +102,12 @@ enum class SkillType
 
     // Added later, appended so that existing saves stay valid
     roomToilet,
+    roomMerchant,
+    roomHerbGarden,
+    roomAlchemyLab,
+    trapFineTools,
+    trapMasterTools,
+    spellSunthornCultivation,
 
     // This should be the last
     countSkill

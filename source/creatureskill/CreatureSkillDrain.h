@@ -56,7 +56,7 @@ public:
     virtual bool tryUseSupport(GameMap& gameMap, Creature* creature) const override
     { return false; }
 
-    //! \brief Tries to use the skill against the attacked object. Returns true if it was used.
+    //! \brief Tries to drain the target with Hero Bane and heals by the actual damage. Returns true if used.
     virtual bool tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const override;
 
