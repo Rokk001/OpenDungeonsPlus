@@ -809,7 +809,8 @@ def check_part_g():
     assert not (root / 'tools/gen_critical_hit_sound.py').exists(), 'no generator any more'
 
     # ---- 11 the stats text: after "Level:" the attributes, critical chance, mana, path and skills
-    stats = function(creature, 'std::string Creature::getStatsText()')
+    stats = function(creature, 'std::string Creature::getStatsText(const Seat* viewer)')
+    assert 'return getStatsText(getSeat());' in function(creature, 'std::string Creature::getStatsText()')
     order = ['"Level: " << getLevel()', '"Strength / Dexterity / Life / Mana: "', '"Critical chance: "',
              '"Mana: " << formatDisplayNumber(getCurrentMana()) << " / " << formatDisplayNumber(getMaxMana())',
              '"Path: " << getSkillPathText()', '"Skills: " << getSkillListText()', '"Experience: "']
@@ -850,15 +851,19 @@ def check_part_g():
             assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == ('WordWrapLeftAligned' if key == 'HorzFormatting' else re.search(
                 r'name="' + key + r'" value="([^"]*)"', job)[1]), name + ' ' + key
     names = re.findall(r'<Window type="OD/\w+" name="(\w+)"', layout)
-    assert names.index('AttributesText') + 1 == names.index('EquipmentText') and names.index('PathText') < names.index('SkillsText')
+    assert names.index('AttributesText') < names.index('EquipmentText') and names.index('PathText') < names.index('SkillsText')
+    children = [window.attrib['name'] for window in ET.fromstring(layout).find('Window').findall('Window')]
+    assert children[children.index('AttributesText'):children.index('EquipmentText') + 1] == ['AttributesText', 'EquipmentRow', 'EquipmentText']
     assert 'name="FrameEnabled" value="False"' in windows['AttributesText'] and 'MedievalSharp-8' in windows['AttributesText']
     flow = gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):]
     flow = flow[:flow.index('};')]
-    assert flow.index('"AttributesText", "EquipmentText"') > 0
+    assert flow.index('"AttributesText", "EquipmentText", "EquipmentRow"') > 0
     for name in ('PathText', 'SkillsText', 'BioText'):
         assert '"' + name + '"' in flow
     layout_function = function(gui, 'float Gui::layoutCreatureProfilePage(')
     assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
+    assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('page->getChild("EquipmentRow")') < layout_function.index('const char* const personalRows')
+    assert 'slot < 13' in layout_function and 'x + gap + edge > width' in layout_function
     assert ('const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",\n'
             '        "DislikesText", "RelationsText"};') in layout_function
     assert 'for(std::size_t i = 0; i < 6; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function

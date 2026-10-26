@@ -19,6 +19,7 @@
 
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
@@ -69,6 +70,7 @@ bool CreatureSkillDrain::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Drains the target's health, including the caster's Hero Bane damage bonus.
 bool CreatureSkillDrain::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -80,7 +82,8 @@ bool CreatureSkillDrain::tryUseFight(GameMap& gameMap, Creature* creature, float
 
     Creature* attackedCreature = static_cast<Creature*>(attackedObject);
     // Removes a percentage of the full health of the target and gives the same amount to the caster
-    const double drained = attackedCreature->getMaxHp() * mDrainPercent / 100.0;
+    const double drained = attackedCreature->getMaxHp() * mDrainPercent / 100.0
+        * ItemEffects::targetDamageFactor(*creature, *attackedCreature);
     const double damageDone = attackedCreature->takeDamage(creature, drained, 0.0, 0.0, 0.0, attackedTile, ko);
     if(damageDone > 0.0)
         creature->heal(damageDone);

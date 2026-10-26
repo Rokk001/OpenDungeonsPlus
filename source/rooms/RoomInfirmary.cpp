@@ -430,12 +430,13 @@ bool RoomInfirmary::restPatient(Creature& creature)
     return false;
 }
 
+//! \brief Restores the exact stored knockout countdown when a cot treatment is lost.
 void RoomInfirmary::abandon(size_t id)
 {
     std::map<size_t,PatientInfo>::iterator it=mPatients.find(id);
     if(it==mPatients.end()) return;
     Creature* creature=it->second.creature;
-    int32_t counter=it->second.storedCounter;
+    double counter=it->second.storedCounter;
     mPatients.erase(it);
     if(creature==nullptr) return;
     creature->clearActionQueue();

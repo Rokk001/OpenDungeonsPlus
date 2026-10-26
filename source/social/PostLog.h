@@ -60,6 +60,11 @@ enum class PostCategory : uint8_t
     Relieved,
     //! A creature of the local player entered a room that is at dirt stage 3
     Filthy,
+    Bought,
+    Bargain,
+    Fleeced,
+    Gift,
+    EpicFind,
     Nb
 };
 
@@ -84,7 +89,7 @@ struct Post
     uint32_t mVariant;
     //! Level for level-up and payday posts, room type for work and train posts
     int32_t mArgument;
-    //! Profile name of the second creature of a relationship post, empty for other posts
+    //! Profile name for relationship posts, or the approved item name for item-deal posts.
     std::string mOther;
     std::string mCreature;
     std::string mClassName;

@@ -61,6 +61,13 @@ enum class CreatureActionType
     cleanTile, // (worker only) Wipes the dirt, pile or blood stain off a tile
     searchToilet, // (fighters only) Looks for a free toilet seat, or waits near the toilet room while all seats are busy
     useToilet, // (fighters only) Squats on a toilet seat, or relieves itself on the spot when it has no toilet
+    pickupItem,
+    stealItem,
+    crackBox,
+    harvestHerbs,
+    brewPotion,
+    sellItem, // Visits a merchant table to sell unwanted inventory goods.
+    buyItem, // Visits a merchant table to buy a reserved wanted good.
     infirmaryRest, // A patient lying on an infirmary cot.
     nb // Must be the last value of this enum
 };
@@ -104,7 +111,12 @@ public:
     { return CreatureMoodValues::Nothing; }
 
     //! \brief Returns the stable name of an action, including patient rest.
+    //! \brief Returns the diagnostic name of an action, including item and new work actions.
+    //! \brief Returns the stable action name used by creature activity and diagnostics.
     static std::string toString(CreatureActionType actionType);
+
+    //! \brief Identifies ordinary room use and its specialized workshop, garden and lab actions.
+    static bool isRoomWorkAction(CreatureActionType actionType);
 
 protected:
     Creature& mCreature;

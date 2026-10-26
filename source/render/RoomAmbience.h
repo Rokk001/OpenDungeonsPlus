@@ -66,7 +66,9 @@ public:
         off
     };
 
+    //! \brief Creates client room effects for the map using the configuration directory.
     RoomAmbience(GameMap* gameMap, const std::string& configPath);
+    //! \brief Releases spatial sound loops owned by this instance.
     ~RoomAmbience();
 
     //! \brief Called every frame while the game is running
@@ -397,7 +399,12 @@ private:
     void scanHeartHit();
     void reconcile();
     //! \brief Plays due object clips and sounds and maintains visible looping room sounds
+    //! \brief Plays due object clips and sounds, and maintains configured sound loops.
     void playClips();
+    //! \brief Starts visible sound loops and stops loops whose targets no longer qualify.
+    void updateSoundLoops();
+    //! \brief Stops and releases all sound loops owned by the room ambience.
+    void stopSoundLoops();
     void updateEmitters(double timeSinceLastFrame);
     //! \brief Ends the one-shot effects of the list whose time is over
     void updateOneShots(std::vector<OneShot>& oneShots, double timeSinceLastFrame);
@@ -586,8 +593,6 @@ private:
     //! Time until which a door (key "x,y" of its tile) counts as destroyed, so that it is not also reported as sold
     std::map<std::string, double> mWreckedUntil;
     std::vector<PendingSound> mPendingSounds;
-    //! Sound-loop handles by object and effect, stopped when that visible effect disappears.
-    std::map<std::string, uint32_t> mSoundLoops;
     //! The remains of destroyed doors that are shown
     std::vector<Collapse> mCollapses;
     //! The bolts and flying objects that are on their way
@@ -602,6 +607,9 @@ private:
     std::vector<Candidate> mClipCandidates;
     //! Time at which an object plays its next clip (kind clip)
     std::map<std::string, double> mClipTimers;
+    //! Sound-loop handles by object and effect, stopped when that visible effect disappears.
+    //! \brief Spatial sound handles keyed by target and effect, owned until the target leaves view.
+    std::map<std::string, uint32_t> mSoundLoops;
     //! Time until which an object plays a clip of an event (a bed that wakes up) and must not be restarted by a looping clip
     std::map<std::string, double> mClipHoldUntil;
     //! Clips that a mesh has (key "mesh|clip"), so that the skeleton is asked only once

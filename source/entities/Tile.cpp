@@ -146,6 +146,7 @@ GameEntityType Tile::getObjectType() const
 }
 
 
+//! \brief Keeps room floors, including merchant floors, outside the wall-digging rules.
 bool Tile::isDiggable(const Seat* seat) const
 {
     // Handle non claimed
@@ -164,10 +165,13 @@ bool Tile::isDiggable(const Seat* seat) const
         case TileVisual::prisonRoom:
         case TileVisual::arenaRoom:
         case TileVisual::casinoRoom:
+        case TileVisual::merchantRoom:
         case TileVisual::tortureRoom:        
         case TileVisual::guardRoom:
         case TileVisual::infirmaryRoom:
         case TileVisual::templeRoom:
+        case TileVisual::herbGardenRoom:
+        case TileVisual::alchemyLabRoom:
         case TileVisual::toiletRoom:
         case TileVisual::claimedGround:
         case TileVisual::dirtGround:
@@ -428,6 +432,7 @@ std::string Tile::tileTypeToString(TileType t)
     }
 }
 
+//! \brief Returns the terrain or room visual's tileset configuration name.
 std::string Tile::tileVisualToString(TileVisual tileVisual)
 {
     switch (tileVisual)
@@ -513,6 +518,9 @@ std::string Tile::tileVisualToString(TileVisual tileVisual)
         case TileVisual::casinoRoom:
             return "casinoRoom";
 
+        case TileVisual::merchantRoom:
+            return "merchantRoom";
+
         case TileVisual::tortureRoom:
             return "tortureRoom";
 
@@ -524,6 +532,10 @@ std::string Tile::tileVisualToString(TileVisual tileVisual)
 
         case TileVisual::templeRoom:
             return "templeRoom";
+        case TileVisual::herbGardenRoom:
+            return "herbGardenRoom";
+        case TileVisual::alchemyLabRoom:
+            return "alchemyLabRoom";
 
         case TileVisual::toiletRoom:
             return "toiletRoom";
@@ -912,6 +924,7 @@ bool Tile::isClaimedForSeat(const Seat* seat) const
     return true;
 }
 
+//! \brief Recognises claimed floors and all room visuals on the client.
 bool Tile::isClaimed() const
 {
     if(!getIsOnServerMap())
@@ -938,10 +951,13 @@ bool Tile::isClaimed() const
             case TileVisual::prisonRoom:
             case TileVisual::arenaRoom:
             case TileVisual::casinoRoom:
+            case TileVisual::merchantRoom:
             case TileVisual::tortureRoom:  
             case TileVisual::guardRoom:
             case TileVisual::infirmaryRoom:
             case TileVisual::templeRoom:
+            case TileVisual::herbGardenRoom:
+            case TileVisual::alchemyLabRoom:
             case TileVisual::toiletRoom:
                 return true;
         }
@@ -1016,6 +1032,7 @@ void Tile::changeNotifiedForSeat(Seat* seat)
     }
 }
 
+//! \brief Assigns the visual of the terrain or its covering room.
 void Tile::computeTileVisual()
 {
     switch(getType())
@@ -1075,6 +1092,9 @@ void Tile::computeTileVisual()
                            case RoomType::casino: 
                                mTileVisual = TileVisual::casinoRoom;
                                return;
+                           case RoomType::merchant:
+                               mTileVisual = TileVisual::merchantRoom;
+                               return;
                            case RoomType::torture: 
                                mTileVisual = TileVisual::tortureRoom;
                                return;
@@ -1089,6 +1109,12 @@ void Tile::computeTileVisual()
                                return;
                            case RoomType::toilet:
                                mTileVisual = TileVisual::toiletRoom;
+                               return;
+                           case RoomType::herbGarden:
+                               mTileVisual = TileVisual::herbGardenRoom;
+                               return;
+                           case RoomType::alchemyLab:
+                               mTileVisual = TileVisual::alchemyLabRoom;
                                return;
                            default:
                                OD_LOG_ERR("Computing tile visual for unknown room type tile=" + Tile::displayAsString(this) + ", TileType=" + roomTypeToString(getCoveringRoom()->getType()));
@@ -1163,6 +1189,9 @@ void Tile::computeTileVisual()
                            case RoomType::casino: 
                                mTileVisual = TileVisual::casinoRoom;
                                return;
+                           case RoomType::merchant:
+                               mTileVisual = TileVisual::merchantRoom;
+                               return;
                            case RoomType::torture: 
                                mTileVisual = TileVisual::tortureRoom;
                                return;
@@ -1177,6 +1206,12 @@ void Tile::computeTileVisual()
                                return;
                            case RoomType::toilet:
                                mTileVisual = TileVisual::toiletRoom;
+                               return;
+                           case RoomType::herbGarden:
+                               mTileVisual = TileVisual::herbGardenRoom;
+                               return;
+                           case RoomType::alchemyLab:
+                               mTileVisual = TileVisual::alchemyLabRoom;
                                return;
                            default:
                                OD_LOG_ERR("Computing tile visual for unknown room type tile=" + Tile::displayAsString(this) + ", TileType=" + roomTypeToString(getCoveringRoom()->getType()));
@@ -2416,6 +2451,7 @@ void Tile::fireTileSound(TileSound sound)
     getGameMap()->fireGameSound(*this, soundFamily);
 }
 
+//! \brief Uses ground speed on room floors and the corresponding speed on liquid terrain.
 double Tile::getCreatureSpeedDefault(const Creature* creature) const
 {
     // If we are on a full tile, we set the speed to ground speed. That can happen
@@ -2439,10 +2475,13 @@ double Tile::getCreatureSpeedDefault(const Creature* creature) const
         case TileVisual::prisonRoom:
         case TileVisual::arenaRoom:
         case TileVisual::casinoRoom:
+        case TileVisual::merchantRoom:
         case TileVisual::tortureRoom:        
         case TileVisual::guardRoom:
         case TileVisual::infirmaryRoom:
         case TileVisual::templeRoom:
+        case TileVisual::herbGardenRoom:
+        case TileVisual::alchemyLabRoom:
         case TileVisual::toiletRoom:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:

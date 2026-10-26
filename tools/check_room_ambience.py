@@ -240,6 +240,7 @@ def pile_levels(match):
     return set(int(n[len(PILE_PREFIX)]) for n in names)
 
 
+# Validates one effect against the engine contract, including default sound intervals and object sound loops.
 def check_effect(effect, where, problems, visuals, systems, mats, counts):
     """Validate effect data, including object sounds with an implemented spatial-loop lifecycle."""
     for key in effect:
@@ -282,8 +283,13 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 problems.append("%s: no .ogg file for sound family %s" % (where, family))
         if "Delay" in effect and target != "Event":
             problems.append("%s: Delay only works for events" % where)
+        # Object sounds inherit AmbienceEffect.mEvery when omitted; sound loops bypass that timer.
         if target == "Object" and "Every" not in effect and effect.get("Loop", ["no"])[0] not in ("yes", "true", "1"):
-            problems.append("%s: a sound on an object needs Every" % where)
+            with open(os.path.join(ROOT, "source", "render", "RoomAmbienceConfig.h"), encoding="utf-8") as handle:
+                runtime_defaults = handle.read()
+            default_every = re.search(r"const double DEFAULT_EFFECT_EVERY\s*=\s*([0-9.]+)\s*;", runtime_defaults)
+            if default_every is None or float(default_every.group(1)) <= 0.0 or "mEvery(DEFAULT_EFFECT_EVERY)" not in runtime_defaults:
+                problems.append("%s: a sound on an object needs Every or a positive runtime default" % where)
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
     if when in ("Locked", "Reloading", "Ready", "LowHealth", "Sleeping") and target != "Object":

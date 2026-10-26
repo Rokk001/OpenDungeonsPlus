@@ -138,7 +138,11 @@ enum class CosmeticEventType : int32_t
     //! A successful deposit in a heart ring or treasury with one owner heart. mObject deposit room,
     //! mPosition actual heart tile.
     //! Sent once per successful deposit only to keepers seeing both the deposit and heart tiles.
-    goldDelivery = 21
+    goldDelivery = 21,
+    //! \brief A workshop cracked an item box: mObject room name, mPosition box tile.
+    boxCracked = 22,
+    //! A busy cauldron emits harmless smoke; mSubject brewer, mPosition cauldron tile.
+    cauldronBang = 23
 };
 
 //! \brief The result in mValue of the event hitResult

@@ -28,6 +28,8 @@
 #include "modes/SettingsWindow.h"
 #include "game/CreaturePanelData.h"
 #include "game/TrapProductionData.h"
+#include "entities/ItemInstance.h"
+#include "rooms/RoomAlchemyLab.h"
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
@@ -46,6 +48,7 @@ class Window;
 class Creature;
 class CreaturePanel;
 class GameEntity;
+class ItemBagEntity;
 class MiniMapDrawnFull;
 class MenuModeLoad;
 class SocialWindow;
@@ -89,6 +92,7 @@ public:
 
 
 //! \brief Handles keeper input, game windows and synchronized room controls.
+//! \brief Handles dungeon play controls, the keeper's room and creature windows, and contextual item information.
 class GameMode final : public GameEditorModeBase, public InputCommand
 {
  public:
@@ -109,6 +113,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
      * This function uses the current action target to determine whether a creature
      * or a selection of eligible tiles is being dragged.
      */
+    //! \brief Handles game clicks and opens the owner's laboratory from its floor tile.
     virtual bool mousePressed   (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
 
     /*! \brief Handle mouse button releases.
@@ -135,6 +140,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     virtual void handleHotkeys  (OIS::KeyCode keycode) override;
 
     //! \brief Updates game HUD state and keeper control availability each frame.
+    //! \brief Refreshes the interface and the laboratory button's room availability.
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
     void onFrameEnded(const Ogre::FrameEvent& evt) override;
     void receiveEventShortNotice(EventMessage* event) override;
@@ -161,6 +167,24 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     //! \brief Shows/toggles the Dungeonbook (creature list and post feed) and closes it again
     bool toggleSocialWindow(const CEGUI::EventArgs& = {});
+    //! \brief Connects the approved merchant controls to owner-only requests.
+    void initializeMerchantWindow();
+    //! \brief Opens or closes the merchant stock window and its live subscription.
+    bool toggleMerchantWindow(const CEGUI::EventArgs& = {});
+    //! \brief Closes the window and ends live stock updates.
+    bool hideMerchantWindow(const CEGUI::EventArgs& = {});
+    //! \brief Sends the selected five-point margin step to the server.
+    bool changeMerchantMargin(const CEGUI::EventArgs& = {});
+    //! \brief Switches the merchant reservation mode between fair and profit.
+    bool cycleMerchantMode(const CEGUI::EventArgs& = {});
+    //! \brief Buys the selected stable goods index for the keeper.
+    bool buyMerchantItem(const CEGUI::EventArgs& = {});
+    //! \brief Refreshes selected-row tooltip, price and treasury affordability.
+    bool refreshMerchantSelection(const CEGUI::EventArgs& = {});
+    //! \brief Reads a complete merchant stock snapshot without adopting a truncated response.
+    void receiveMerchantWindow(ODPacket& packet);
+    //! \brief Applies the validated margin and mode snapshot from the server.
+    void setMerchantSettingsShown(int32_t margin, const std::string& mode);
     //! \brief Shows the Dungeonbook above the other windows with the creature selected, used by the
     //! creature card (the card stays open)
     void showSocialWindow(const std::string& selectedCreature);
@@ -210,6 +234,18 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Called when the server tells the payout level of a casino. It is only shown if
     //! it is the casino the window is open for.
     void setCasinoPayoutShown(int tileX, int tileY, uint32_t level);
+    //! \brief Opens or closes this keeper's laboratory overview.
+    bool toggleAlchemyLabWindow(const CEGUI::EventArgs& e);
+    //! \brief Opens the owner's laboratory overview after a tile click.
+    void showAlchemyLabWindow();
+    //! \brief Stops laboratory updates when its close control is used.
+    bool hideAlchemyLabWindow(const CEGUI::EventArgs& e);
+    //! \brief Requests the next approved brewing mode from the server.
+    bool cycleLabMode(const CEGUI::EventArgs& e);
+    //! \brief Displays a validated owner-seat laboratory snapshot.
+    void setLabWindowData(const LabWindowData& data);
+    //! \brief Updates the mode label and client seat from an authoritative setting.
+    void setLabModeShown(int32_t mode);
 
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
@@ -274,6 +310,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void selectTiles(const std::vector<Tile*> tiles) override;
     void unselectAllTiles() override;
 
+    //! \brief Displays ordinary context text and clears any preceding item image.
     void displayText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
     //! \brief Displays the text next to the pointer (for example a price) rather than in the context line.
     void displayPointerText(const Ogre::ColourValue& txtColour, const std::string& txt) override;
@@ -352,6 +389,7 @@ protected:
     bool raiseShownDialog(const CEGUI::EventArgs& e);
 
     //! \brief Handle the keyboard input in normal mode
+    //! \brief Handles normal shortcuts, including K for trading and L for the laboratory overview.
     virtual bool keyPressedNormal   (const OIS::KeyEvent &arg);
 
     //! \brief Handle the keyboard input when chat is activated
@@ -482,6 +520,7 @@ private:
 
     //! \brief Set the help window (quite long) text.
     //! \brief Lists the game controls and their keyboard shortcuts.
+    //! \brief Describes the current game controls, including the merchant shortcut.
     void setHelpWindowText();
 
     //! \brief Picks room floors through walls and uses normal surface picking for other actions.
@@ -521,6 +560,7 @@ private:
     //! \brief The player pressed the button of a stored special: asks the server to use it
     bool useSpecial(const CEGUI::EventArgs& args);
     //! \brief Shows the buttons of the specials the local player has stored
+    //! \brief Updates only existing stored-special buttons; item gift boxes are never stored specials.
     void refreshSpecialButtons();
     //! \brief The number of stored specials the buttons show, indexed by gift box type
     std::vector<uint32_t> mSpecialCountsShown;
@@ -596,6 +636,15 @@ private:
     bool mInfirmaryHealOn = true;
     bool mUpdatingInfirmary = false;
     std::vector<std::string> mInfirmaryPatientNames;
+    //! \brief Latest stock entries and stable indices received from the server.
+    std::vector<std::pair<uint32_t, ItemInstance>> mMerchantItems;
+    //! \brief Tracks changed deal history so a live push also triggers the prescribed client refresh.
+    std::string mMerchantHistoryShown;
+    bool mMerchantSnapshotReceived = false;
+    int32_t mMerchantMarginShown = 10;
+    std::string mMerchantModeShown = "fair";
+    //! \brief Prevents applying a received slider value from sending a new setting request.
+    bool mMerchantUpdating = false;
 
     //! \brief whether to allow showing the window with debug Tile info under middlemouse button click
     bool showTileDebugWindow;
@@ -637,8 +686,12 @@ private:
 
     //! \brief Called when there is a mouse input change
     void checkInputCommand();
+    //! \brief Restores the ordinary context area and hides its item image and quality frame.
+    void clearItemContextImage();
+    //! \brief Shows one bag's image, quality frame and complete pointer tooltip.
+    void showItemContext(const ItemBagEntity& bag);
     //! \brief Handles the hover when no action is selected: unexplored tiles get a dig hint, otherwise
-    //! the closest pickable entity or the wall or ground under the pointer is described.
+    //! the closest pickable entity, visible item bag, wall or ground under the pointer is described.
     void handlePlayerActionNone();
     //! \brief Handles the dig-mark selection drag: previews the diggable tiles and, once validated,
     //! asks the server to mark or unmark them for digging.

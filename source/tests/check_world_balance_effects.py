@@ -31,6 +31,12 @@ DAMAGE = ("4.50", "10.63", "18.86")
 DOOR_HP = ("1.840", "2.882", "9.044")
 # (skill type, effect, mode, level 1, level 2, level 3) in the order of the plan table
 EXPECTED = [
+    ("roomMerchant", "Capacity", "mul", "1.0", "1.25", "1.5"),
+    ("roomHerbGarden", "GrowTime", "mul", "1.0", "0.8", "0.667"),
+    ("roomAlchemyLab", "BrewTime", "mul", "1.0", "0.8", "0.667"),
+    ("trapFineTools", "CrackTime", "mul", "1.0", "0.8", "0.667"),
+    ("trapMasterTools", "CrackTime", "mul", "1.0", "0.8", "0.667"),
+    ("spellSunthornCultivation", "GrowTime", "mul", "1.0", "0.8", "0.667"),
     ("roomTreasury", "GoldPerTile", "mul", "1.0", "1.25", "1.5"),
     ("roomDormitory", "SleepRecovery", "mul", "1.0", "1.2", "1.4"),
     ("roomHatchery", "LayInterval", "mul", "1.0", "0.8", "0.8"),
@@ -83,19 +89,19 @@ EXPECTED = [
     ("spellHexenHen", "Duration", "mul", "1.0", "1.25", "1.5"),
     ("spellCreateGold", "Gold", "mul", "1.0", "1.25", "1.5"),
 ]
-assert len(EXPECTED) == 59, "the effect table has 59 lines (rows with several skill types count once per skill type)"
+assert len(EXPECTED) == 65, "the effect table has 65 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
 skills_cfg = read("config/skills.cfg")
 block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
 lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 59, "one line per effect: %d" % len(lines)
+assert len(lines) == 65, "one line per effect: %d" % len(lines)
 for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
 skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
-assert len(skill_names) == 55
-assert {line[0] for line in lines} <= skill_names, "every line names one of the 55 skills"
+assert len(skill_names) == 61
+assert {line[0] for line in lines} <= skill_names, "every line names one of the 61 skills"
 header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
 assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
 for effect in sorted({line[1] for line in lines}):
@@ -168,14 +174,16 @@ for text_path, text in sources.items():
         applied.append((text_path, arguments))
 # the skill of a bridge and of a door is picked by a helper in the file of the call
 INDIRECT = {"roomBridgeWooden": "RoomBridge.cpp", "roomBridgeStone": "RoomBridge.cpp",
+            "trapFineTools": "RoomWorkshop.cpp", "trapMasterTools": "RoomWorkshop.cpp",
             "trapDoorWooden": "TrapDoor.cpp", "trapDoorIronbound": "TrapDoor.cpp", "trapDoorSteel": "TrapDoor.cpp",
             "trapDoorBarricade": "TrapDoor.cpp", "trapDoorSecret": "TrapDoor.cpp", "trapDoorRuned": "TrapDoor.cpp"}
 for skill, effect, *_ in EXPECTED:
-    direct = [path for path, arguments in applied if ("SkillType::" + skill) in arguments and ("ResearchEffect::" + effect) in arguments]
+    effect_token = ('"' + effect + '"') if skill in {"roomHerbGarden", "roomAlchemyLab", "trapFineTools", "trapMasterTools", "spellSunthornCultivation"} else ("ResearchEffect::" + effect)
+    direct = [path for path, arguments in applied if ("SkillType::" + skill) in arguments and effect_token in arguments]
     if direct:
         continue
     assert skill in INDIRECT, "%s %s is not applied anywhere" % (skill, effect)
-    assert any(path.name == INDIRECT[skill] and ("ResearchEffect::" + effect) in arguments for path, arguments in applied), \
+    assert any(path.name == INDIRECT[skill] and effect_token in arguments for path, arguments in applied), \
         "%s %s is not applied by %s" % (skill, effect, INDIRECT[skill])
 door = read("source/traps/TrapDoor.cpp")
 for skill in ("trapDoorWooden", "trapDoorIronbound", "trapDoorSteel", "trapDoorBarricade", "trapDoorSecret", "trapDoorRuned"):
@@ -234,10 +242,12 @@ texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "
          "AuraRadius": "Alarm radius", "Radius": "Radius", "HP": "Health", "HeartHP": "Heart health",
          "HeartHeal": "Heart healing per second", "HeartMana": "Heart mana per second", "Price": "Price",
          "HealPerTurn": "Healing per turn", "Speed": "Speed", "Bonus": "Defense bonus", "Factor": "Factor",
-         "Lifetime": "Duration", "ManaPerSecond": "Mana per second", "Gold": "Gold"}
+         "Lifetime": "Duration", "ManaPerSecond": "Mana per second", "Gold": "Gold",
+         "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort"}
 assert set(texts) == effect_names, "the plan names a text for every effect"
 for effect, text in texts.items():
-    assert 'texts[ResearchEffect::%s] = "%s";' % (effect, text) in manager, effect
+    text_key = ('"' + effect + '"') if effect in {"GrowTime", "BrewTime", "CrackTime"} else ("ResearchEffect::" + effect)
+    assert 'texts[%s] = "%s";' % (text_key, text) in manager, effect
 for sentence in ("More creatures in your dungeon.", "Your dungeon heart has more health.",
                  "Your dungeon heart heals faster.", "Your dungeon heart gives more mana."):
     assert '"%s"' % sentence in manager, sentence

@@ -31,6 +31,7 @@
 #include <boost/circular_buffer.hpp>
 
 #include <iostream>
+#include <vector>
 
 
 
@@ -86,8 +87,18 @@ public:
 
     virtual void notifyGuiAction(GuiAction guiAction) override;
 
-    //! \brief Asks the server to create a gift box of the given type and put it in the hand
+    //! \brief Asks the server to create an existing gift box type and put it in the hand.
     void askCreateGiftBox(GiftBoxType type);
+    //! \brief Sends an item-box or bag selection for the server to roll and create.
+    //! \param content A random-quality token or a catalogue item id followed by its quality.
+    //! \param placeBag True creates an item bag; false creates an item gift box.
+    void askCreateGiftBox(GiftBoxType type, const std::string& content, bool placeBag);
+    //! \brief Fills the shared item selection and connects item-box and bag creation.
+    void initialiseItemBoxControls();
+    //! \brief Opens the bottom-toolbar choices upward within the screen instead of clipping them to the tab.
+    bool positionItemBoxChoices(const CEGUI::EventArgs& event);
+    //! \brief Sends the selected catalogue row or random token without rolling client bonuses.
+    bool createSelectedItem(const CEGUI::EventArgs& event);
 
     //! \brief Options window functions
     bool toggleOptionsWindow(const CEGUI::EventArgs& arg = {});
@@ -138,6 +149,7 @@ public:
     //! \brief Replaces the region markers shown by the ones the server has just sent
     void setRegions(const std::vector<LevelScriptRegion>& regions);
 private:
+    std::vector<std::string> mItemBoxContents;
 
     DraggableTileContainer* draggableTileContainer;
     

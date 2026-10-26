@@ -28,7 +28,7 @@ ServerNotification::ServerNotification(ServerNotificationType type,
     mPacket << type;
 }
 
-//! \brief Returns the diagnostic name of a server notification, including campaign victory.
+//! \brief Returns the diagnostic name of a server notification, including campaign victory and shared room data.
 std::string ServerNotification::typeString(ServerNotificationType type)
 {
     switch(type)
@@ -187,6 +187,14 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "infirmarySettings";
         case ServerNotificationType::campaignVictory:
             return "campaignVictory";
+        case ServerNotificationType::merchantWindow:
+            return "merchantWindow";
+        case ServerNotificationType::merchantSettings:
+            return "merchantSettings";
+        case ServerNotificationType::labWindow:
+            return "labWindow";
+        case ServerNotificationType::labSettings:
+            return "labSettings";
         case ServerNotificationType::relationshipTier:
             return "relationshipTier";
         case ServerNotificationType::trapEffect:

@@ -36,6 +36,7 @@ static const MeshBounds meshBounds[] = {
     {"Bookshelf", -.52309f, -.0069419f, .530155f, .428917f},
     {"CasinoPokerTable", -.287885f, -.249315f, .287885f, .249315f},
     {"CasinoWallBeer", -.502785f, .325887f, .502785f, .493482f},
+    {"Cauldron", -.462f, -.34f, .462f, .34f},
     {"CelticCross", -.391612f, -.28f, .391607f, .28f},
     {"ChickenCoop", -.203275f, -.4f, .796725f, .4f},
     {"ChickenCoopHouse", -.203275f, -.4f, .796725f, .4f},
@@ -52,17 +53,23 @@ static const MeshBounds meshBounds[] = {
     {"GoldstackLv3", -.331379f, -.301391f, .290679f, .182552f},
     {"GoldstackLv4", -.331379f, -.301391f, .290679f, .282221f},
     {"Grindstone", -.329974f, -.215496f, .329974f, .371096f},
+    {"HerbBed", -.4675f, -.47f, .4675f, .47f},
+    {"ItemBag", -.18f, -.144f, .18f, .14f},
     {"KnightCoffin", -.254848f, -.627449f, .517051f, .632155f, .841464f},
     {"KnightStatue", -.293943f, -.32853f, .295722f, .325329f},
     {"KnightStatue2", -.323145f, -.358743f, .332038f, .367767f},
     {"LizardmanBed", -.32835f, -.77042f, .328337f, .769587f, .952407f},
+    {"MerchantShelf", -.435f, -.28f, .45f, .215f},
+    {"MushroomLamp", -.29f, -.29f, .29f, .29f},
     {"OrcBed", -.533745f, -.997136f, .529433f, .987434f, .560469f},
     {"Podium", -.193612f, -.148315f, .193891f, .148315f},
     {"PortalObject", -1.66302f, -1.66302f, 1.66302f, 1.66302f},
     {"RangerBed", -.53459f, -.777014f, .534418f, .775852f, .805918f},
     {"Roulette", -.292486f, -.296162f, .292326f, .296652f},
+    {"SalesTable", -.385f, -.36f, .385f, .36f},
     {"Skull", -.205408f, -.216924f, .205408f, .460773f},
     {"SpiderBed", -.35f, -.435f, .35f, .435f, .59f},
+    {"StillShelf", -.435f, -.185f, .435f, .215f},
     {"StoneCoffin", -.425477f, -.693722f, .425477f, .693722f, .767922f},
     {"TentacleBed", -.448981f, -.476366f, .461978f, .436628f, .276672f},
     {"TortureObject", -.7007f, -.606824f, .7007f, .606824f},
@@ -71,6 +78,7 @@ static const MeshBounds meshBounds[] = {
     {"TrainingDummy3", -.263341f, -.228943f, .30858f, .121115f},
     {"TrainingDummy4", -.462458f, -.248657f, .462458f, .248657f},
     {"TrollBed", -.787227f, -.794584f, .954702f, .813162f, 1.28522f},
+    {"WaterTrough", -.4325f, -.2725f, .4325f, .2725f},
     {"WorkerBed", -.3f, -.425f, .3f, .445f, .71f},
     {"WorkshopMachine1", -.5376f, -.506479f, .761215f, .337512f},
     {"WorkshopMachine2", -.730786f, -.336f, .5376f, .338177f}
@@ -107,13 +115,17 @@ constexpr float treasuryPileDiagonal = 0.4f;
 
 // Returns how much the mesh is narrowed so that it fits the footprint of its kind.
 //! \brief Keeps cots at their authored footprint and narrows other furniture as required.
+//! \brief Matches renderer and navigation scales while preserving authored equipment-room furniture sizes.
 inline FurnitureScale furnitureScale(const MeshBounds& bounds)
 {
     const std::string name(bounds.name);
     if(name.compare(0, 12, "InfirmaryCot") == 0)
         return {1.0f, 1.0f};
     if(name == "FenceCorner" || name == "FenceStraight" ||
-       name == "PortalObject" || isDungeonHeartMesh(name))
+       name == "PortalObject" || isDungeonHeartMesh(name) ||
+       name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
+       name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
+       name == "MushroomLamp" || name == "ItemBag")
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
     // diagonal, not just their unrotated width, so rotation retains the margin.

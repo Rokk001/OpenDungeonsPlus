@@ -124,7 +124,7 @@ enum_body = notif[notif.index('enum class ServerNotificationType'):notif.index('
 enum_names = [line.split(',')[0].strip() for line in enum_body.splitlines()
               if line.strip() and not line.strip().startswith(('//', 'enum', '{'))]
 assert enum_names.index('chickenKindChanged') < enum_names.index('chickenFight') < enum_names.index('timeLimit')
-assert re.search(r'campaignVictory,\s*(?://[^\n]*\n\s*)*infirmaryWindow,\s*(?://[^\n]*\n\s*)*infirmarySettings\s*$', enum_body)
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-7:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings']
 assert 'ServerNotificationType::chickenFight' in chicken and 'ServerNotificationType::chickenFight' in client
 assert 'case ServerNotificationType::chickenFight' in (root / 'source/network/ServerNotification.cpp').read_text()
 print('hatchery rooster fight checks passed')
@@ -189,7 +189,7 @@ assert 'void RenderManager::rrEggTrampled' in render and '"ChickenEggTrample"' i
 particles = (root / 'particles/ChickenEggShell.particle').read_text()
 trample = particles[particles.index('particle_system ChickenEggTrample'):]
 assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
-assert 'enum class ServerNotificationType' in notif and re.search(r'campaignVictory,\s*(?://[^\n]*\n\s*)*infirmaryWindow,\s*(?://[^\n]*\n\s*)*infirmarySettings\s*$', notif[notif.index('enum class ServerNotificationType'):notif.index('};')])
+assert 'enum class ServerNotificationType' in notif and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', notif[notif.index('enum class ServerNotificationType'):notif.index('};')], re.M)[-7:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings']
 print('hatchery nest egg and trample checks passed')
 
 # The numbers of the rooster and the flock are settings read from the config, not fixed numbers in the room code

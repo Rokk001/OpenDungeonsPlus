@@ -554,15 +554,15 @@ enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
 enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect',
                                                  'creatureAppearance', 'cosmeticEvent')]
-# Infirmary notifications follow campaign victory without changing existing ordinals.
-assert enumerators[-6:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'infirmaryWindow', 'infirmarySettings'], enumerators[-6:]
+# Equipment and infirmary notifications follow campaign victory without changing existing ordinals.
+assert enumerators[-10:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings'], enumerators[-10:]
 assert enumerators.count('campaignVictory') == 1
-enumerators = enumerators[:-3]
+enumerators = enumerators[:-7]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
 assert enumerators.count('wallTorches') == 1
 assert enumerators[-4] == 'possessionEnd' and enumerators[-5] == 'possessionStart', enumerators[-6:]
-assert enumerators[-6] == 'casinoPayout' and enumerators[-7] == 'heartHealth', enumerators[-8:]
+assert enumerators[-6] == 'casinoPayout' and enumerators[-7] == 'heartHealth', enumerators[-10:]
 assert enumerators[-8] == 'levelStatistics' and enumerators[-9] == 'playerDefeated'
 assert enumerators.count('heartHealth') == 1
 assert 'case ServerNotificationType::heartHealth:\n            return "heartHealth";' in notification_source

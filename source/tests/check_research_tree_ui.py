@@ -47,7 +47,7 @@ for line in constructor.splitlines():
         if current != 'spellSummonChampion':  # the reward skill has no node in the tree
             model[current] = (prefixes[match[1]] + match[2], parents, int(match[3]), tab_of_prefix[prefixes[match[1]]])
             order.append(current)
-assert len(model) == 55
+assert len(model) == 61
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}, %d, %d};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents), tier, tab)
     for key, (path, parents, tier, tab) in model.items())
@@ -81,7 +81,10 @@ struct Player {Seat seat;Seat* getSeat(){return &seat;}};
 struct GameMap {Player player;Player* getLocalPlayer(){return &player;}};
 enum class SkillTab {rooms,traps,spells,nb};
 //! \brief Selects only the keeper-only entries, excluding later appended room research.
+//! \brief Identifies the original four keeper entries without absorbing appended research types.
 bool isKeeper(SkillType t){return t>=SkillType::keeperDominion&&t<=SkillType::keeperManaFlow;}
+//! \brief Keeps the appended research-only tool and cultivation entries out of the cast-button fixture.
+bool hasCastButton(SkillType t){return !isKeeper(t)&&t!=SkillType::trapFineTools&&t!=SkillType::trapMasterTools&&t!=SkillType::spellSunthornCultivation;}
 struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;int tier=1;int tab=0;
  SkillType getType()const{return type;}const std::vector<const Skill*>& getDependencies()const{return parents;}
  int getNeededSkillPoints(uint32_t level)const{return 100*level;}};
@@ -95,7 +98,7 @@ struct SkillManager {static std::map<SkillType,Skill> data;
  static const std::string& getTabTitle(SkillTab t){static const std::string titles[3]={"Rooms","Traps and doors","Spells"};return titles[static_cast<int>(t)];}
  static std::string getTreeButtonPath(SkillType t){return data.at(t).path;}
  static void listTabSkills(SkillTab tab,std::vector<SkillType>& out){out.clear();for(size_t i=0;i<order.size();++i)if(data.at(order[i]).tab==static_cast<int>(tab))out.push_back(order[i]);}
- template<class F>static void listAllSkills(F f){for(std::map<SkillType,Skill>::iterator it=data.begin();it!=data.end();++it){const std::string cast=isKeeper(it->first)?std::string():"cast"+std::to_string(int(it->first));f(it->second.path,cast,it->second.path+"/"+it->second.path.substr(it->second.path.find_last_of('/')+1)+"ProgressBar",it->first);}}};
+ template<class F>static void listAllSkills(F f){for(std::map<SkillType,Skill>::iterator it=data.begin();it!=data.end();++it){const std::string cast=hasCastButton(it->first)?"cast"+std::to_string(int(it->first)):std::string();f(it->second.path,cast,it->second.path+"/"+it->second.path.substr(it->second.path.find_last_of('/')+1)+"ProgressBar",it->first);}}};
 std::map<SkillType,Skill> SkillManager::data;
 std::vector<SkillType> SkillManager::order;
 namespace Skills {NAMES}
@@ -120,7 +123,7 @@ int main(int argc,char** argv){try{
  auto& data=SkillManager::data;INITIALIZERS
  GameMap map;GameMode game{root,&map};int checks=0,failures=0;
  auto check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cout<<"FAIL "<<why<<'\n';}};
- for(std::map<SkillType,Skill>::const_iterator it=data.begin();it!=data.end();++it)if(!isKeeper(it->first))root->addChild(windows.createWindow("OD/GameTabButton","cast"+std::to_string(int(it->first))));
+ for(std::map<SkillType,Skill>::const_iterator it=data.begin();it!=data.end();++it)if(hasCastButton(it->first))root->addChild(windows.createWindow("OD/GameTabButton","cast"+std::to_string(int(it->first))));
  for(uint32_t level=0;level<=3;++level){
   map.player.seat.level=level;map.player.seat.queue=2;map.player.seat.current=level<3;
   SkillManager::listAllSkills([&](const std::string& name,const std::string& cast,const std::string& bar,SkillType type){

@@ -76,8 +76,8 @@ struct MoodRecord{double mInfirmaryMood=0,mInfirmaryMoodTurns=0;
     code += r"""
 //! \brief Runs room, reservation, seat and creature save compatibility regression cases.
 int main(){try{
- // The waiting reservation has 47 turns left; one already being dragged has counted down to 29.
- for(int remaining:{-47,-29}){
+ // Keep integer countdown regressions and also preserve fractional waiting, dragging and admitted death times.
+ for(double remaining:{-47.0,-29.0,-47.25,-29.5})for(double paidCounter:{73.0,73.375}){
  GameMap map;Seat seat;RoomInfirmary original(&map,&seat);
  map.rooms.push_back(&original);
  for(int x=0;x<8;++x)for(int y=0;y<8;++y)map.tiles[{x,y}]={x,y};
@@ -87,7 +87,7 @@ int main(){try{
  Creature patient,carrier,originalIncoming;carrier.name="carrier";carrier.owner=&seat;
  originalIncoming.name="incoming";originalIncoming.owner=&seat;originalIncoming.definition.height=2;originalIncoming.counter=-80;
  map.creatures["incoming"]=&originalIncoming;
- RoomInfirmary::PatientInfo admission;admission.creature=&patient;admission.admissionPaid=17.400000000000002;admission.payer=1;admission.storedCounter=73;admission.manual=false;
+ RoomInfirmary::PatientInfo admission;admission.creature=&patient;admission.admissionPaid=17.400000000000002;admission.payer=1;admission.storedCounter=paidCounter;admission.manual=false;
  original.mPatients[7]=admission;
  check(original.reserveCot(originalIncoming,carrier)==map.getTile(3,2),"initial reservation uses actual eligibility and cot-size gate");
  original.mPatients.at(91).storedCounter=-80;originalIncoming.counter=remaining;
@@ -99,7 +99,7 @@ int main(){try{
  check(loaded.mPatients.at(1).creatureName=="incoming"&&loaded.mPatients.at(1).reservedByName=="carrier","running reservation names preserved");
  check(loaded.mPatients.at(1).storedCounter==remaining,"reservation saves current signed countdown rather than stale record");
  check(loaded.mPatients.at(0).admissionPaid==admission.admissionPaid,"admission fraction exact");
- check(loaded.mPatients.at(0).payer==1&&loaded.mPatients.at(0).storedCounter==73&&!loaded.mPatients.at(0).manual,"paid state preserved");
+ check(loaded.mPatients.at(0).payer==1&&loaded.mPatients.at(0).storedCounter==paidCounter&&!loaded.mPatients.at(0).manual,"paid state preserved");
  check(loaded.mCots.at(1).width==2&&loaded.mCots.at(1).height==1&&loaded.mCots.at(1).rotation==90,"rotated cot footprint restored");
  std::string next;input>>next;check(next=="NextRoom","reader leaves next room unread");
  check(loaded.mHasLoadedShamanPosition,"shaman position tag restored");near(loaded.mLoadedShamanPosition.x,2.25,"shaman x");near(loaded.mLoadedShamanPosition.y,3.75,"shaman y");

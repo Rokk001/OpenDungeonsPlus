@@ -174,6 +174,7 @@ private:
      * results.
      * \returns false When the client has disconnected.
      */
+    //! \brief Validates player requests, including laboratory ownership and brewing-mode bounds.
     bool processClientNotifications(ODSocketClient* clientSocket);
 
     //! \brief Sends the packet to the given player. If player is nullptr, the packet is sent to every connected player

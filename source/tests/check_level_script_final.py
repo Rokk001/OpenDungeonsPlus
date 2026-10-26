@@ -66,7 +66,7 @@ send = function(gamemap, 'void GameMap::sendTimeLimit(')
 assert 'ServerNotificationType::timeLimit' in send and 'getIsHuman()' in send
 assert 'rebaseTimeLimit(' in map_handler
 enum_body = server_h.split('enum class ServerNotificationType')[1].split('};')[0]
-assert re.search(r'campaignVictory,\s*(?://[^\n]*\n\s*)*infirmaryWindow,\s*(?://[^\n]*\n\s*)*infirmarySettings\s*$', enum_body), 'infirmary messages must follow campaignVictory without moving existing notifications'
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-7:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings'], 'campaignVictory must be appended after the existing notifications'
 assert 'case ServerNotificationType::timeLimit:' in server_cpp
 handler = client[client.index('case ServerNotificationType::timeLimit:'):]
 handler = handler[:handler.index('break;')]

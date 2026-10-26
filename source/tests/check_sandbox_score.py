@@ -57,8 +57,8 @@ check("Reward: " in code and "mWaveHeroPoints" in code, "a beaten wave must anno
 
 # The notifications are appended after the existing ones and named
 names = re.findall(r"^\s*(\w+),?\s*$", notification_h[notification_h.index("enum class ServerNotificationType"):notification_h.index("};")], re.M)
-check(names[-4:] == ["timeLimit", "campaignVictory", "infirmaryWindow", "infirmarySettings"] and "sandboxStatus" in names and names.index("sandboxStatus") + 1 == names.index("sandboxRealmComplete"),
-      "sandbox notifications follow each other; infirmary notifications follow campaignVictory after the existing tail: %s" % names[-6:])
+check(names[-8:] == ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings", "infirmaryWindow", "infirmarySettings"] and "sandboxStatus" in names and names.index("sandboxStatus") + 1 == names.index("sandboxRealmComplete"),
+      "sandbox notifications follow each other; equipment and infirmary notifications follow the existing tail: %s" % names[-8:])
 for entry in ("sandboxStatus", "sandboxRealmComplete"):
     check('return "%s";' % entry in notification_cpp, "ServerNotification.cpp has no name for " + entry)
 

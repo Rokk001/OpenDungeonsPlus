@@ -50,6 +50,7 @@
 #include <cmath>
 #include <functional>
 #include <random>
+#include <set>
 #include <utility>
 
 template<> RoomAmbience* Ogre::Singleton<RoomAmbience>::msSingleton = nullptr;
@@ -289,6 +290,7 @@ struct IndexOrder
 
 } // namespace
 
+//! \brief Creates the map's cosmetic room effects with no running sound loops.
 RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mGameMap(gameMap),
     mConfigPath(configPath),
@@ -308,6 +310,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     mShakeSpeed(DEFAULT_SHAKE_SPEED),
     mShakePhase(0.0),
     mShakeApplied(Ogre::Vector3::ZERO),
+    mSoundLoops(),
     mRandom(RANDOM_SEED),
     mCreaturesInitialized(false),
     mGeneration(0),
@@ -317,8 +320,10 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
     reloadConfig();
 }
 
+//! \brief Releases the spatial sound loops owned by this ambience instance.
 RoomAmbience::~RoomAmbience()
 {
+    stopSoundLoops();
 }
 
 bool RoomAmbience::reloadConfig()
@@ -709,13 +714,11 @@ void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
 }
 
 //! \brief Stops room effects and their looping sounds when the map, view or ambience mode changes.
+//! \brief Stops all room effects and releases their visual and sound resources.
 void RoomAmbience::stopAll()
 {
+    stopSoundLoops();
     mWallTorches.stopAll();
-    if(SoundEffectsManager::getSingletonPtr() != nullptr)
-        for(const std::pair<const std::string, uint32_t>& sound : mSoundLoops)
-            SoundEffectsManager::getSingleton().stopSpatialLoop(sound.second);
-    mSoundLoops.clear();
     if(RenderManager::getSingletonPtr() != nullptr)
     {
         for(std::map<std::string, Emitter>::iterator it = mEmitters.begin(); it != mEmitters.end(); ++it)
@@ -1902,10 +1905,10 @@ void RoomAmbience::reconcile()
     }
 }
 
-//! \brief Plays due object effects and retains one spatial loop per visible object sound.
+//! \brief Plays due clips and sounds and keeps visible configured sound loops active.
 void RoomAmbience::playClips()
 {
-    std::set<std::string> activeSoundLoops;
+    updateSoundLoops();
     const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
     uint32_t nbPlayed = 0;
     for(const Candidate& candidate : mClipCandidates)
@@ -1916,24 +1919,7 @@ void RoomAmbience::playClips()
             continue;
 
         if(effect.mLoop && isSound)
-        {
-            if(SoundEffectsManager::getSingletonPtr() == nullptr)
-                continue;
-            const std::string key = candidate.mTarget + "|" + effect.mName;
-            activeSoundLoops.insert(key);
-            std::map<std::string, uint32_t>::iterator sound = mSoundLoops.find(key);
-            if(sound == mSoundLoops.end())
-            {
-                const uint32_t handle = SoundEffectsManager::getSingleton().startSpatialLoop(
-                    effect.mFamily, candidate.mPosition.x, candidate.mPosition.y);
-                if(handle != 0)
-                    mSoundLoops[key] = handle;
-            }
-            else
-                SoundEffectsManager::getSingleton().setSpatialLoopPosition(
-                    sound->second, candidate.mPosition.x, candidate.mPosition.y);
             continue;
-        }
 
         if(effect.mLoop && !isSound)
         {
@@ -1989,18 +1975,61 @@ void RoomAmbience::playClips()
         timerIt->second = mClock + effect.mEvery * next(mRandom);
         ++nbPlayed;
     }
-    for(std::map<std::string, uint32_t>::iterator sound = mSoundLoops.begin(); sound != mSoundLoops.end();)
+
+}
+
+//! \brief Starts qualifying sound loops once and releases those no longer selected by the scan.
+void RoomAmbience::updateSoundLoops()
+{
+    SoundEffectsManager* sounds = SoundEffectsManager::getSingletonPtr();
+    if(sounds == nullptr)
     {
-        if(activeSoundLoops.find(sound->first) != activeSoundLoops.end())
+        mSoundLoops.clear();
+        return;
+    }
+    std::set<std::string> activeSoundLoops;
+    const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
+    for(const Candidate& candidate : mClipCandidates)
+    {
+        const AmbienceEffect& effect = effects[candidate.mEffect];
+        if((effect.mKind != AmbienceKind::sound) || !effect.mLoop || effect.mFamily.empty())
+            continue;
+        const std::string key = candidate.mTarget + "|" + effect.mName;
+        activeSoundLoops.insert(key);
+        std::map<std::string, uint32_t>::const_iterator sound = mSoundLoops.find(key);
+        if(sound != mSoundLoops.end())
         {
-            ++sound;
+            sounds->setSpatialLoopPosition(sound->second,
+                candidate.mPosition.x, candidate.mPosition.y, candidate.mPosition.z);
             continue;
         }
-        if(SoundEffectsManager::getSingletonPtr() != nullptr)
-            SoundEffectsManager::getSingleton().stopSpatialLoop(sound->second);
-        sound = mSoundLoops.erase(sound);
+        const uint32_t handle = sounds->startSpatialLoop(effect.mFamily,
+            candidate.mPosition.x, candidate.mPosition.y, candidate.mPosition.z);
+        if(handle != 0)
+            mSoundLoops[key] = handle;
     }
+    for(std::map<std::string, uint32_t>::iterator it = mSoundLoops.begin(); it != mSoundLoops.end();)
+    {
+        if(activeSoundLoops.find(it->first) != activeSoundLoops.end())
+        {
+            ++it;
+            continue;
+        }
+        sounds->stopSpatialLoop(it->second);
+        it = mSoundLoops.erase(it);
+    }
+}
 
+//! \brief Stops every loop owned by room ambience before clearing its sound handles.
+void RoomAmbience::stopSoundLoops()
+{
+    SoundEffectsManager* sounds = SoundEffectsManager::getSingletonPtr();
+    if(sounds != nullptr)
+    {
+        for(const std::pair<const std::string, uint32_t>& loop : mSoundLoops)
+            sounds->stopSpatialLoop(loop.second);
+    }
+    mSoundLoops.clear();
 }
 
 void RoomAmbience::stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect)

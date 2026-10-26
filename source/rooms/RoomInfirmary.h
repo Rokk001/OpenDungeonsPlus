@@ -34,7 +34,7 @@ public:
         double admissionPaid = 0.0;
         int payer = 0;
         //! \brief Paid patient's remaining death time; a saved reservation uses the incoming signed KO counter.
-        int32_t storedCounter = 0;
+        double storedCounter = 0.0;
         bool manual = false;
     };
     //! \brief Creates an empty infirmary.

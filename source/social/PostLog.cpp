@@ -81,6 +81,11 @@ std::string getPostCategoryName(PostCategory category)
             return "couple";
         case PostCategory::SplitUp:
             return "splitup";
+        case PostCategory::Bought: return "bought";
+        case PostCategory::Bargain: return "bargain";
+        case PostCategory::Fleeced: return "fleeced";
+        case PostCategory::Gift: return "gift";
+        case PostCategory::EpicFind: return "epicfind";
         case PostCategory::Relieved:
             return "relieved";
         case PostCategory::Filthy:

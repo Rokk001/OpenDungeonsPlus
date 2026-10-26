@@ -21,18 +21,22 @@ struct RenderedMovableEntity {
  void exportToPacket(ODPacket& packet,const Seat*)const{packet<<uint32_t(123);}
  void importFromPacket(ODPacket& packet){uint32_t marker=0;OD_ASSERT_TRUE(packet>>marker);OD_ASSERT_TRUE(marker==123);}
 };
+//! \brief Holds the exact production furniture and decorative bag packet fields.
 struct BuildingObject:RenderedMovableEntity {
  Ogre::Vector2 mFurnitureScale=Ogre::Vector2::ZERO;
+ int32_t mItemBagQuality=-1;bool mItemBagSealed=false;
  void exportToPacket(ODPacket&,const Seat*)const;
  void importFromPacket(ODPacket&);
 };
 METHODS
+//! \brief Checks furniture and decorative bag fields without consuming the following packet.
 int main(){try{
  int checks=0;
  for(const auto scale:{Ogre::Vector2::ZERO,Ogre::Vector2(.75f,.54f),Ogre::Vector2(1.1f,1.7f)}){
-  BuildingObject source,destination;source.mFurnitureScale=scale;ODPacket packet;
+  BuildingObject source,destination;source.mFurnitureScale=scale;source.mItemBagQuality=2;source.mItemBagSealed=true;ODPacket packet;
   source.exportToPacket(packet,nullptr);packet<<uint32_t(456);
   destination.importFromPacket(packet);++checks;OD_ASSERT_TRUE(destination.mFurnitureScale==scale);
+  ++checks;OD_ASSERT_TRUE(destination.mItemBagQuality==2&&destination.mItemBagSealed);
   uint32_t following=0;OD_ASSERT_TRUE(packet>>following);++checks;OD_ASSERT_TRUE(following==456);
  }
  ODPacket truncated;truncated<<uint32_t(123)<<.75f;BuildingObject destination;bool rejected=false;

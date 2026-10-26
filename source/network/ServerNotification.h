@@ -213,6 +213,14 @@ enum class ServerNotificationType
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
     campaignVictory,
+    //! \brief Owner-only merchant stock, deal history, margin and reservation-mode snapshot.
+    merchantWindow,
+    //! \brief Owner-only merchant settings: int32_t margin, string fair/profit mode.
+    merchantSettings,
+    //! \brief Owner-only cauldron progress, herb stocks and laboratory-mode snapshot.
+    labWindow,
+    //! \brief Owner-only laboratory settings: int32_t production mode.
+    labSettings,
     //! Keeper preferences (int32_t payer, int32_t threshold, bool healOn), uint32_t patient count,
     //! then patient rows: string creature, string class, bool worker, double HP, double maxHP,
     //! double remaining seconds (negative while paused).

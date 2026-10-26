@@ -25,10 +25,11 @@ def enum_names(text, header):
     return names
 
 
-# 1. RoomType: infirmary follows the toilet without moving its existing value.
+# 1. RoomType: published toilet and equipment identifiers stay before the appended infirmary.
 room_type = read('source/rooms/RoomType.h')
 rooms = enum_names(room_type, 'enum class RoomType')
-assert rooms[-3:] == ['toilet', 'infirmary', 'nbRooms'], rooms[-4:]
+assert rooms.index('toilet') == 19 and rooms[-1] == 'nbRooms', rooms
+assert rooms[19:24] == ['toilet', 'merchant', 'herbGarden', 'alchemyLab', 'infirmary']
 assert rooms.count('toilet') == 1
 
 # 2. The room class, factory, names and registration in the build
@@ -44,10 +45,11 @@ for name in ('rooms/RoomToilet.cpp', 'creatureaction/CreatureActionSearchToilet.
 # Every covered tile gets a seat object (one per tile, removed with the tile)
 assert 'ToiletSeat' in room_cpp
 
-# 3. TileVisual: toiletRoom directly before countTileVisual, with the switch cases of the tile code
+# 3. TileVisual: published toilet and equipment visuals stay before the appended infirmary visual.
 tile_h = read('source/entities/Tile.h')
 visuals = enum_names(tile_h, 'enum class TileVisual')
-assert visuals[-2:] == ['toiletRoom', 'countTileVisual'], visuals[-3:]
+assert visuals.index('toiletRoom') == 30 and visuals[-1] == 'countTileVisual', visuals
+assert visuals[30:35] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'infirmaryRoom']
 tile_cpp = read('source/entities/Tile.cpp')
 assert tile_cpp.count('case TileVisual::toiletRoom:') >= 4, 'toiletRoom is missing in the Tile switches'
 assert 'return "toiletRoom";' in tile_cpp
@@ -61,6 +63,18 @@ lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
 assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
 for words in lines:
     assert words[1] == 'Room.mesh' and words[2] == 'Toilet' + words[0], words
+# Every visual block must be consumed by the sequential loader in the shipped file order.
+config_manager = read('source/utils/ConfigManager.cpp')
+tileset_loader = config_manager[config_manager.index('bool ConfigManager::loadTilesets('):
+                               config_manager.index('bool ConfigManager::loadTilesetValues(')]
+loaded_visuals = re.findall(r'loadTilesetValues\(defFile, TileVisual::(\w+),', tileset_loader)
+assert len(loaded_visuals) == len(set(loaded_visuals)), 'duplicate tileset loader visual'
+assert set(loaded_visuals) == set(visuals[:-1]), 'tileset loader must consume every TileVisual exactly once'
+assert loaded_visuals[-5:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'infirmaryRoom']
+for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
+    block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
+    block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
+    assert block_order == loaded_visuals, 'tileset blocks must match the sequential ConfigManager loader order'
 # The materials of the pieces exist
 materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
 for words in lines:
@@ -83,10 +97,12 @@ assert '"DormitoryButton", "ToiletButton", "HatcheryButton"' in arrange, 'the to
 # Button names are unique per layout file
 assert rooms_layout.count('name="ToiletButton"') == 1 and skill_layout.count('name="ToiletButton"') == 1
 
-# 6. Research: skill type appended before countSkill, registered under the dormitory in the Rooms tab (tier II)
+# 6. Research: preserve the published toilet skill id before the appended equipment research (tier II).
 skill_type = read('source/game/SkillType.h')
 skills = enum_names(skill_type, 'enum class SkillType')
-assert skills[-3:] == ['roomToilet', 'roomInfirmary', 'countSkill'], skills[-4:]
+assert skills.index('roomToilet') == 55 and skills[-1] == 'countSkill', skills
+assert skills[55:63] == ['roomToilet', 'roomMerchant', 'roomHerbGarden', 'roomAlchemyLab',
+                         'trapFineTools', 'trapMasterTools', 'spellSunthornCultivation', 'roomInfirmary']
 assert 'case SkillType::roomToilet:' in read('source/game/SkillType.cpp') and '"roomToilet"' in read('source/game/SkillType.cpp')
 manager = read('source/game/SkillManager.cpp')
 assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{SkillType::roomDormitory});\n'
@@ -94,7 +110,7 @@ assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomToilet') == 1
-assert len(registered) == 55, 'the research tree has 55 entries, found ' + str(len(registered))
+assert len(registered) == 61, 'the combined research tree has 61 entries, found ' + str(len(registered))
 skills_cfg = read('config/skills.cfg')
 assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
 # No research effect line for the toilet

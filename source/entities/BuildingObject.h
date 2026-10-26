@@ -19,6 +19,7 @@
 #define BUILDINGOBJECT_H
 
 #include "entities/RenderedMovableEntity.h"
+#include "entities/ItemDefinition.h"
 #include <OgreVector2.h>
 
 #include <string>
@@ -31,6 +32,7 @@ class GameMap;
 class Tile;
 class ODPacket;
 
+//! \brief Renders room furniture and decorative goods with their transmitted appearance.
 class BuildingObject: public RenderedMovableEntity
 {
 public:
@@ -55,13 +57,25 @@ public:
 
     const Ogre::Vector2& getFurnitureScale() const { return mFurnitureScale; }
     void setFurnitureScale(const Ogre::Vector2& scale) { mFurnitureScale = scale; }
+    //! \brief Marks a decorative table bag for the shared quality and wax-seal material treatment.
+    void setItemBagAppearance(Quality quality, bool sealed)
+    { mItemBagQuality = static_cast<int32_t>(quality); mItemBagSealed = sealed; }
+    //! \brief Writes furniture scale and optional decorative bag presentation.
     void exportToPacket(ODPacket& os, const Seat* seat) const override;
+    //! \brief Reads furniture scale and optional decorative bag presentation.
     void importFromPacket(ODPacket& is) override;
 
     static BuildingObject* getBuildingObjectFromPacket( GameMap* gameMap,   ODPacket& is);
 
+protected:
+    //! \brief Builds normal furniture, then styles any decorative merchant bag using the shared renderer.
+    void createMeshLocal(NodeType type = NodeType::MTILES_NODE) override;
+
 private:
     Ogre::Vector2 mFurnitureScale = Ogre::Vector2::ZERO;
+    //! \brief Negative means ordinary furniture; otherwise this is a decorative bag quality.
+    int32_t mItemBagQuality = -1;
+    bool mItemBagSealed = false;
 };
 
 #endif // BUILDINGOBJECT_H

@@ -18,6 +18,7 @@
 #include "utils/ConfigManager.h"
 
 #include "entities/CreatureDefinition.h"
+#include "entities/ItemDefinition.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
 #include "game/Skill.h"
@@ -79,6 +80,8 @@ template<> ConfigManager* Ogre::Singleton<ConfigManager>::msSingleton = nullptr;
 //! \brief Loads game settings, including the global dodge and shield block defaults.
 ConfigManager::ConfigManager(const std::string& configPath, const std::string& userConfigPath,
         const std::string& soundPath) :
+    mFilenameItems("items.cfg"),
+    mFilenamePotions("potions.cfg"),
     mConfigPath(configPath),
     mFilenameCreatureSkills("creatureSkills.cfg"),
     mNetworkPort(0),
@@ -176,6 +179,11 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
         OD_LOG_ERR("Couldn't read loadEquipements");
         exit(1);
     }
+    if(!loadItems(configPath + mFilenameItems) || !loadPotions(configPath + mFilenamePotions))
+    {
+        OD_LOG_ERR("Couldn't read item and potion definitions");
+        exit(1);
+    }
     fileName = configPath + mFilenameSpawnConditions;
     if(!loadSpawnConditions(fileName))
     {
@@ -243,6 +251,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     loadKeeperVoices(soundPath);
 }
 
+//! \brief Releases all configuration-owned definitions, including item lines.
 ConfigManager::~ConfigManager()
 {
     for(std::pair<const std::string, CreatureDefinition*> pair : mCreatureDefs)
@@ -258,6 +267,10 @@ ConfigManager::~ConfigManager()
         delete def;
     }
     mWeapons.clear();
+
+    for(const ItemDefinition* definition : mItems)
+        delete definition;
+    mItems.clear();
 
     for(std::pair<const CreatureDefinition*, std::vector<const SpawnCondition*>> p : mCreatureSpawnConditions)
     {
@@ -281,6 +294,7 @@ ConfigManager::~ConfigManager()
     recentlyUsedLevels.clear();
 }
 
+//! \brief Reads global settings and the numeric item-system rule sections.
 bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 {
     std::stringstream configFile;
@@ -323,6 +337,12 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 
             paramsOk |= 4;
             continue;
+        }
+        if(nextParam == "[ItemDrops]" || nextParam == "[ItemRating]" || nextParam == "[Potions]")
+        {
+            const std::string section = nextParam.substr(1, nextParam.size() - 2);
+            if(!loadItemSettings(configFile, section))
+                return false;
         }
 
         if(nextParam == "[Dirt]")
@@ -380,6 +400,7 @@ double ConfigManager::getDirtConfigDouble(const std::string& param) const
     return it->second;
 }
 
+//! \brief Reads configured data filenames without changing existing required-file flags.
 bool ConfigManager::loadGlobalConfigDefinitionFiles(std::stringstream& configFile)
 {
     std::string nextParam;
@@ -447,6 +468,10 @@ bool ConfigManager::loadGlobalConfigDefinitionFiles(std::stringstream& configFil
             mFilenameSpawnConditions = fileName;
             filesOk |= 4;
         }
+        else if(type == "Items")
+            mFilenameItems = fileName;
+        else if(type == "Potions")
+            mFilenamePotions = fileName;
         else if(type == "Factions")
         {
             mFilenameFactions = fileName;
@@ -1435,6 +1460,120 @@ bool ConfigManager::loadFactions(const std::string& fileName)
     return true;
 }
 
+//! \brief Loads immutable item lines while preserving catalogue order.
+bool ConfigManager::loadItems(const std::string& fileName)
+{
+    std::stringstream stream;
+    if(!Helper::readFile(fileName, stream, true))
+        return false;
+    std::string tag;
+    if(!(stream >> tag) || tag != "[ItemDefinitions]")
+        return false;
+    while(stream >> tag)
+    {
+        if(tag == "[/ItemDefinitions]")
+            return true;
+        if(tag != "[Item]")
+            return false;
+        ItemDefinition* definition = ItemDefinition::load(stream);
+        if(definition == nullptr)
+            return false;
+        if(getItem(definition->getId()) != nullptr)
+        {
+            delete definition;
+            return false;
+        }
+        mItems.push_back(definition);
+    }
+    return false;
+}
+
+//! \brief Loads the potion and herb blocks without recalculating any supplied values.
+bool ConfigManager::loadPotions(const std::string& fileName)
+{
+    std::stringstream stream;
+    if(!Helper::readFile(fileName, stream, true))
+        return false;
+    std::string tag;
+    while(stream >> tag)
+    {
+        if(tag == "[Potion]")
+        {
+            PotionDefinition definition;
+            if(!definition.importFromStream(stream) || getPotion(definition.getId()) != nullptr)
+                return false;
+            mPotions.push_back(definition);
+        }
+        else if(tag == "[Herb]")
+        {
+            HerbDefinition definition;
+            if(!definition.importFromStream(stream) || getHerb(definition.mId) != nullptr)
+                return false;
+            mHerbs.push_back(definition);
+        }
+        else if(tag != "[PotionDefinitions]" && tag != "[/PotionDefinitions]" &&
+            tag != "[HerbDefinitions]" && tag != "[/HerbDefinitions]")
+            return false;
+    }
+    return !mPotions.empty() && !mHerbs.empty();
+}
+
+//! \brief Reads one numeric settings section used by item rolls, evaluation or drinking.
+bool ConfigManager::loadItemSettings(std::stringstream& stream, const std::string& section)
+{
+    std::string key;
+    const std::string end = "[/" + section + "]";
+    while(stream >> key)
+    {
+        if(key == end)
+            return true;
+        double value = 0.0;
+        if(!(stream >> value))
+            return false;
+        mItemSettings[section][key] = value;
+    }
+    return false;
+}
+
+//! \brief Looks up an immutable item line by id.
+const ItemDefinition* ConfigManager::getItem(const std::string& id) const
+{
+    for(const ItemDefinition* definition : mItems)
+    {
+        if(definition->getId() == id)
+            return definition;
+    }
+    return nullptr;
+}
+
+//! \brief Looks up a potion recipe by id.
+const PotionDefinition* ConfigManager::getPotion(const std::string& id) const
+{
+    for(const PotionDefinition& definition : mPotions)
+    {
+        if(definition.getId() == id)
+            return &definition;
+    }
+    return nullptr;
+}
+
+//! \brief Looks up a herb's growth parameters by id.
+const HerbDefinition* ConfigManager::getHerb(const std::string& id) const
+{
+    for(const HerbDefinition& definition : mHerbs)
+    {
+        if(definition.mId == id)
+            return &definition;
+    }
+    return nullptr;
+}
+
+//! \brief Returns a required configured rule value, failing clearly when its key is missing.
+double ConfigManager::getItemSetting(const std::string& section, const std::string& key) const
+{
+    return mItemSettings.at(section).at(key);
+}
+
 bool ConfigManager::loadRooms(const std::string& fileName)
 {
     OD_LOG_INF("Load Rooms file: " + fileName);
@@ -1845,8 +1984,6 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
             return false;
         if(!loadTilesetValues(defFile, TileVisual::tortureRoom, tileSet->configureTileValues(TileVisual::tortureRoom),*mHighMap))
             return false;
-        if(!loadTilesetValues(defFile, TileVisual::infirmaryRoom, tileSet->configureTileValues(TileVisual::infirmaryRoom),*mHighMap))
-            return false;
         if(!loadTilesetValues(defFile, TileVisual::guardRoom, tileSet->configureTileValues(TileVisual::guardRoom),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::manaWellGround, tileSet->configureTileValues(TileVisual::manaWellGround),*mHighMap))
@@ -1854,6 +1991,14 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
         if(!loadTilesetValues(defFile, TileVisual::templeRoom, tileSet->configureTileValues(TileVisual::templeRoom),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::toiletRoom, tileSet->configureTileValues(TileVisual::toiletRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::merchantRoom, tileSet->configureTileValues(TileVisual::merchantRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::herbGardenRoom, tileSet->configureTileValues(TileVisual::herbGardenRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::alchemyLabRoom, tileSet->configureTileValues(TileVisual::alchemyLabRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::infirmaryRoom, tileSet->configureTileValues(TileVisual::infirmaryRoom),*mHighMap))
             return false;
 
     }

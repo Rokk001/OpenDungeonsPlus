@@ -183,6 +183,7 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! the carrier as carrying or not carrying on the client.
     //! Building-object replacement adds create the new mesh before releasing the old one in this handler.
     //! \return true if the notification was processed.
+    //! \brief Adopts authoritative game updates and complete owner-only laboratory snapshots.
     bool processMessage(ServerNotificationType cmd, ODPacket& packetReceived) override;
     //! \brief Restores any loading presentation and reports the lost connection.
     void playerDisconnected() override;

@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <utility>
 
+//! \brief Classifies current activity while preserving room-work criteria for specialized room actions.
 bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const CreatureActivity& activity,
     CreatureMoodLevel mood, bool worker)
 {
@@ -29,7 +30,7 @@ bool matchesCreaturePanelCriterion(CreaturePanelCriterion criterion, const Creat
         activity.task == CreatureActionType::reloadTrap ||
         activity.task == CreatureActionType::grabEntity ||
         activity.task == CreatureActionType::carryEntity);
-    const bool usingRoom = activity.action == CreatureActionType::useRoom && activity.inAssignedRoom;
+    const bool usingRoom = CreatureAction::isRoomWorkAction(activity.action) && activity.inAssignedRoom;
     const bool manufacturing = usingRoom && (activity.assignedRoom == RoomType::workshop ||
         activity.assignedRoom == RoomType::library);
     const bool inTrainingRoom = usingRoom && (activity.assignedRoom == RoomType::trainingHall ||

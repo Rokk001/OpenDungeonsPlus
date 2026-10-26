@@ -111,6 +111,16 @@ enum class ClientNotificationType
     editorRegionEdit,
     //! Use a stored special (the button of the special was pressed): + int32_t giftBoxType
     askUseSpecial,
+    //! \brief Requests the owner's current merchant stock and history, without further fields.
+    askMerchantWindow,
+    //! \brief Requests merchant settings: int32_t margin, string fair/profit mode.
+    askMerchantSettings,
+    //! \brief Buys merchant stock for the keeper: uint32_t goods index.
+    askMerchantBuy,
+    //! \brief Requests the owner's cauldron progress and herb stock, without further fields.
+    askLabWindow,
+    //! \brief Requests a laboratory production mode: int32_t mode.
+    askLabSetting,
     //! Subscribe to patient updates: bool open.
     askInfirmaryWindow,
     //! Set keeper preferences: int32_t payer, int32_t threshold, bool healOn.
@@ -145,6 +155,7 @@ public:
 
     ODPacket mPacket;
 
+    //! \brief Returns the diagnostic name, including merchant and laboratory request types.
     static std::string typeString(ClientNotificationType type);
 
 private:

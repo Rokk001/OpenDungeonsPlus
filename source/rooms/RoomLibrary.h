@@ -61,6 +61,7 @@ public:
     bool addCreatureUsingRoom(Creature* c) override;
     void removeCreatureUsingRoom(Creature* c) override;
     void absorbRoom(Room *r) override;
+    //! \brief Earns research points using room research and the wearer's Scholar effect.
     bool useRoom(Creature& creature, bool forced) override;
 
     static const RoomType mRoomType;
@@ -80,9 +81,8 @@ private:
         Ogre::Real& wantedX, Ogre::Real& wantedY);
     std::vector<Tile*> mUnusedSpots;
     std::map<Creature*,Tile*> mCreaturesSpots;
-    int32_t mSkillPoints;
-    //! \brief Fraction of a work point left over by the dirt output factor, added to the next work turn (not saved).
-    double mSkillPointsRemainder;
+    //! \brief Research points retain fractional work and equipment contributions.
+    double mSkillPoints;
 };
 
 #endif // ROOMLIBRARY_H

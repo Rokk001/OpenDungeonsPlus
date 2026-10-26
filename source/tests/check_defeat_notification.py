@@ -124,7 +124,7 @@ assert 'startDefeatSequence(conquerorSeatId, heartTileX, heartTileY)' in handler
 assert 'ModeManager::GAME' in handler
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'playerDefeated,' in enum_body and 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.search(r'campaignVictory,\s*(?://[^\n]*\n\s*)*infirmaryWindow,\s*(?://[^\n]*\n\s*)*infirmarySettings\s*$', enum_body)
+assert 'playerDefeated,' in enum_body and 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-7:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings']
 assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')
 print('WIRING OK: enum value is not moved (only later values were appended after it), client handler reads 3 int32 and guards on GAME mode')
 

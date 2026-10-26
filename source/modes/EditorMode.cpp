@@ -52,6 +52,7 @@
 #include "sound/MusicPlayer.h"
 #include "traps/TrapManager.h"
 #include "utils/ConfigManager.h"
+#include "entities/ItemDefinition.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
 #include "utils/Helper.h"
@@ -84,6 +85,7 @@
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/Listbox.h>
 #include <CEGUI/widgets/Combobox.h>
+#include <CEGUI/widgets/ComboDropList.h>
 #include <CEGUI/widgets/MultiLineEditbox.h>
 #include <CEGUI/Window.h>
 #include <CEGUI/WindowManager.h>
@@ -119,6 +121,7 @@ namespace
     };
 }
 
+//! \brief Creates the editor widgets and connects the existing tools and shared item choices.
 EditorMode::EditorMode(ModeManager* modeManager):
     GameEditorModeBase(modeManager, ModeManager::EDITOR, modeManager->getGui().getGuiSheet(Gui::guiSheet::editorModeGui)),
     draggableTileContainer(nullptr),
@@ -437,6 +440,7 @@ EditorMode::EditorMode(ModeManager* modeManager):
                      AbstractApplicationMode::GuiAction::ButtonPressedBoxKillCreatures);
 
     //Tile selection
+    initialiseItemBoxControls();
     connectTileSelect(Gui::EDITOR_CLAIMED_BUTTON,TileVisual::claimedGround);
     connectTileSelect(Gui::EDITOR_GEM_BUTTON,TileVisual::gemGround);
     connectTileSelect(Gui::EDITOR_MANAWELL_BUTTON,TileVisual::manaWellGround);
@@ -2135,14 +2139,83 @@ void EditorMode::notifyGuiAction(GuiAction guiAction)
     }
 }
 
+//! \brief Populates server-resolved item choices in the same order as the shared catalogue.
+void EditorMode::initialiseItemBoxControls()
+{
+    CEGUI::Combobox* choices = static_cast<CEGUI::Combobox*>(mRootWindow->getChild("MainTabControl/Boxes/ItemBoxContent"));
+    choices->resetList();
+    mItemBoxContents = {"RandomEpic", "RandomRare", "RandomCommon"};
+    std::vector<std::string> labels = mItemBoxContents;
+    for(const ItemDefinition* definition : ConfigManager::getSingleton().getItems())
+        for(uint32_t index = 0; index < 4; ++index)
+        {
+            const Quality quality = static_cast<Quality>(index);
+            const ItemQuality& values = definition->getQuality(quality);
+            if(!values.mAvailable) continue;
+            mItemBoxContents.push_back(definition->getId() + " " + qualityName(quality));
+            labels.push_back(values.mDisplay + " (" + qualityName(quality) + ")");
+        }
+    for(size_t index = 0; index < labels.size(); ++index)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(labels[index], static_cast<uint32_t>(index));
+        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        choices->addItem(item);
+    }
+    choices->setItemSelectState(choices->getListboxItemFromIndex(0), true);
+    choices->setText(labels.front());
+    addEventConnection(choices->subscribeEvent(CEGUI::Combobox::EventDropListDisplayed,
+        CEGUI::Event::Subscriber(&EditorMode::positionItemBoxChoices, this)));
+    addEventConnection(mRootWindow->getChild("MainTabControl/Boxes/ItemBoxButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&EditorMode::createSelectedItem, this)));
+    addEventConnection(mRootWindow->getChild("MainTabControl/Boxes/ItemBagButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&EditorMode::createSelectedItem, this)));
+}
+
+//! \brief Fits the open list above the bottom toolbar; the skin retains its normal closed editbox height.
+bool EditorMode::positionItemBoxChoices(const CEGUI::EventArgs& event)
+{
+    CEGUI::Combobox* choices = static_cast<CEGUI::Combobox*>(
+        static_cast<const CEGUI::WindowEventArgs&>(event).window);
+    CEGUI::ComboDropList* list = choices->getDropList();
+    const float height = std::min(200.0f * getModeManager().getGui().getLayoutScale(),
+        choices->getPixelPosition().d_y);
+    list->setClippedByParent(false);
+    list->setAlwaysOnTop(true);
+    list->setArea(CEGUI::UVector2(CEGUI::UDim(0, 0), CEGUI::UDim(0, -height)),
+        CEGUI::USize(CEGUI::UDim(1, 0), CEGUI::UDim(0, height)));
+    return true;
+}
+
+//! \brief Uses the selected entry for either a box or bag, leaving the complete roll to the server.
+bool EditorMode::createSelectedItem(const CEGUI::EventArgs& event)
+{
+    CEGUI::Combobox* choices = static_cast<CEGUI::Combobox*>(mRootWindow->getChild("MainTabControl/Boxes/ItemBoxContent"));
+    const CEGUI::ListboxItem* selected = choices->getSelectedItem();
+    if(selected == nullptr || selected->getID() >= mItemBoxContents.size()) return true;
+    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(event);
+    askCreateGiftBox(GiftBoxType::item, mItemBoxContents[selected->getID()], args.window->getName() == "ItemBagButton");
+    return true;
+}
+
+//! \brief Keeps the existing gift-box request payload unchanged for existing box types.
 void EditorMode::askCreateGiftBox(GiftBoxType type)
 {
+    askCreateGiftBox(type, std::string(), false);
+}
+
+//! \brief Adds the content selection and placement flag only for the new item-box type.
+void EditorMode::askCreateGiftBox(GiftBoxType type, const std::string& content, bool placeBag)
+{
     if(!ODClient::getSingleton().isConnected())
+        return;
+    if(type == GiftBoxType::item && content.empty())
         return;
 
     ClientNotification *clientNotification = new ClientNotification(
         ClientNotificationType::editorCreateGiftBox);
     clientNotification->mPacket << static_cast<int32_t>(type);
+    if(type == GiftBoxType::item)
+        clientNotification->mPacket << content << placeBag;
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 

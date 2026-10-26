@@ -292,8 +292,8 @@ namespace Random{
 int Int(int,int){return 0;}}
 //! \brief Supplies mutable resources and records actual admission, healing and action effects.
 struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=100,mInfirmaryMood=0,mInfirmaryMoodTurns=0;
- int counter=-73,glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
- Tile* resumedCarryTarget=nullptr;int resumedCarryCounter=0;bool resumedCarryIsDrag=false;
+ double counter=-73;int glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
+ Tile* resumedCarryTarget=nullptr;double resumedCarryCounter=0;bool resumedCarryIsDrag=false;
  //! \brief Returns mutable creature definitions for the actual treatment methods.
  Definition* getDefinition(){return &definition;}
  //! \brief Returns creature definitions during const admission checks.
@@ -311,9 +311,9 @@ struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=10
  //! \brief Records the health change produced by the actual healing rule.
  void setHP(double v){hp=v;}
  //! \brief Returns the signed remaining knockout countdown.
- int getKoTurnCounter()const{return counter;}
+ double getKoTurnCounter()const{return counter;}
  //! \brief Restores the exact saved knockout countdown.
- void setKoTurnCounter(int v){counter=v;}
+ void setKoTurnCounter(double v){counter=v;}
  //! \brief Stops the knockout countdown after a paid admission.
  void resetKoTurns(){counter=0;}
  //! \brief Returns the stable entity name used by reservations and saves.
@@ -520,6 +520,7 @@ int main(){try{
  seat.mana=10000;map.turn=140;creature.hp=10;int glows=creature.glows;room.healPatient(creature);check(creature.glows==glows+1,"seventh turn glow");
  RoomInfirmary::CotInfo cot={};cot.size=1;cot.width=1;cot.height=1;room.mCots[0]=cot;
  creature.counter=-73;check(room.admit(0,creature,false),"carried admission");check(creature.counter==0&&room.mPatients[0].storedCounter==73,"admission stores counter");room.abandon(0);check(creature.counter==-73,"loss restores remaining counter");
+ creature.counter=-73.375;check(room.admit(0,creature,false),"fractional carried admission");check(creature.counter==0&&room.mPatients[0].storedCounter==73.375,"admission preserves fractional death time");room.abandon(0);check(creature.counter==-73.375,"loss restores exact fractional death time");
  check(room.admit(0,creature,true),"manual admission");room.abandon(0);check(creature.counter==-120,"manual loss restores full counter");
  Tile home={0,0};creature.home=&home;creature.hp=500;seat.threshold=40;seat.heal=false;room.mPatients[0].creature=&creature;
  check(room.restPatient(creature),"switched-off threshold does not discharge");seat.heal=true;int sleeps=creature.sleeps;
@@ -540,6 +541,7 @@ int main(){try{
  check(!room.hasCarryEntitySpot(&other),"another creature cannot take reservation");room.cancelReservation(carrier);check(room.mPatients.empty(),"interrupted carry releases reservation");
  room.reserveCot(incoming,carrier);before=map.treasury;room.notifyCarryingStateChanged(&carrier,&incoming);
  check(room.mPatients.at(0).creature==&incoming&&incoming.counter==0,"reserved arrival becomes patient");near(before-map.treasury,17.4,"arrival charges once");room.abandonAll();check(incoming.counter==-51,"abandon all restores admitted counter");
+ incoming.counter=-51.625;room.reserveCot(incoming,carrier);room.notifyCarryingStateChanged(&carrier,&incoming);check(room.mPatients.at(0).storedCounter==51.625&&incoming.counter==0,"carried arrival preserves fractional death time");room.abandonAll();check(incoming.counter==-51.625,"abandon all restores exact fractional arrival counter");
  incoming.counter=-51;room.reserveCot(incoming,carrier);seat.payer=1;creature.owner=&seat;creature.hp=10;creature.home=&home;before=map.treasury;
  room.creatureDropped(creature);check(room.mPatients.at(0).creature==&creature&&room.mPatients.at(0).manual&&room.mPatients.at(0).payer==0,"manual drop overrides reservation and forces keeper");near(before-map.treasury,17.4,"manual keeper charge");
  before=map.treasury;room.notifyCarryingStateChanged(&carrier,&incoming);near(map.treasury,before,"cot taken at arrival never charges carried creature");

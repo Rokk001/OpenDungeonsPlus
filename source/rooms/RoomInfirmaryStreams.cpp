@@ -29,7 +29,7 @@ void RoomInfirmary::exportToStream(std::ostream& stream) const
         const PatientInfo& patient = entry.second;
         const std::string name = patient.creature == nullptr ? patient.creatureName : patient.creature->getName();
         const std::string carrier = patient.reservedBy == nullptr ? patient.reservedByName : patient.reservedBy->getName();
-        int32_t storedCounter = patient.storedCounter;
+        double storedCounter = patient.storedCounter;
         if(patient.creature == nullptr && !carrier.empty() && carrier != "none")
         {
             const Creature* incoming = getGameMap()->getCreature(name);

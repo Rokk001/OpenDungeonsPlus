@@ -98,6 +98,12 @@ namespace ResearchEffect
     static const std::string Lifetime = "Lifetime";
     static const std::string ManaPerSecond = "ManaPerSecond";
     static const std::string Gold = "Gold";
+    //! \brief Scales the configured herb growth time.
+    static const std::string GrowTime = "GrowTime";
+    //! \brief Scales the configured potion brewing time.
+    static const std::string BrewTime = "BrewTime";
+    //! \brief Scales the configured workshop item-box opening effort.
+    static const std::string CrackTime = "CrackTime";
 }
 
 //! \brief Local class that will be used to store Skill data and link it to the gui

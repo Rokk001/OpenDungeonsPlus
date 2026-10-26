@@ -22,9 +22,14 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/MissileStone.h"
+#include "entities/ItemBagEntity.h"
 #include "entities/Tile.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomDormitory.h"
+#include "rooms/Room.h"
+#include "rooms/RoomMerchant.h"
+#include "rooms/RoomTreasury.h"
+#include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -174,6 +179,7 @@ bool CreatureActionCarryEntity::isPulledOverGround(const Creature& carrier, Game
     return creature.isAlive() && (creature.getSeat() == carrier.getSeat());
 }
 
+//! \brief Delivers cargo at its tile or the merchant table's existing furniture-aware stand position.
 bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest)
 {
     if(tileDest == nullptr)
@@ -194,6 +200,19 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     if(entityToCarry == nullptr)
     {
         OD_LOG_ERR("creature=" + creature.getName());
+        creature.popAction();
+        return false;
+    }
+
+    Room* room = tileDest->getCoveringRoom();
+    if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity && room != nullptr &&
+        room->getType() == RoomType::merchant)
+    {
+        RoomMerchant* merchant = static_cast<RoomMerchant*>(room);
+        const MerchantApproach approach = merchant->approachTable(creature, tileDest);
+        if(approach == MerchantApproach::walking)
+            return false;
+        merchant->releaseInteractionPosition(&creature);
         creature.popAction();
         return false;
     }
@@ -397,8 +416,12 @@ bool CreatureActionCarryEntity::handleDragCreature()
     return false;
 }
 
+//! \brief Releases carried cargo and any promised treasury place when the cargo is removed or picked up.
 void CreatureActionCarryEntity::releaseEntity(const std::string& reason)
 {
+    if(mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(mBuildingDest)->getType() == RoomType::treasury)
+        static_cast<RoomTreasury*>(mBuildingDest)->releaseItemDelivery(mEntityToCarry);
     if(mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room && static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary)
         static_cast<RoomInfirmary*>(mBuildingDest)->cancelReservation(mCreature);
     mEntityToCarry->setCarryLock(mCreature, false);

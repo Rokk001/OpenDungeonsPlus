@@ -147,7 +147,7 @@ notif = read("source", "network", "ServerNotification.h")
 body = notif[notif.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-need(names[-4:] == ["timeLimit", "campaignVictory", "infirmaryWindow", "infirmarySettings"], "infirmary messages must follow campaignVictory without moving earlier values")
+need(names[-8:] == ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings", "infirmaryWindow", "infirmarySettings"], "campaignVictory must be appended after timeLimit")
 need("casinoPayout" in names, "casinoPayout must stay")
 
 if problems:

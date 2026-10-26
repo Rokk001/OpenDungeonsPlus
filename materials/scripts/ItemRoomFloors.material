@@ -1,0 +1,38 @@
+// Original merchant, alchemy laboratory and herb garden floor textures.
+import * from "WorkshopFloor.material"
+
+material MerchantFloor : WorkshopFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap { texture MerchantFloor.png }
+            texture_unit normalmap { texture MerchantFloorNormal.png }
+        }
+    }
+}
+
+material AlchemyLabFloor : WorkshopFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap { texture AlchemyLabFloor.png }
+            texture_unit normalmap { texture AlchemyLabFloorNormal.png }
+        }
+    }
+}
+
+material HerbGardenFloor : WorkshopFloor
+{
+    technique
+    {
+        pass
+        {
+            texture_unit decalmap { texture HerbGardenFloor.png }
+            texture_unit normalmap { texture HerbGardenFloorNormal.png }
+        }
+    }
+}

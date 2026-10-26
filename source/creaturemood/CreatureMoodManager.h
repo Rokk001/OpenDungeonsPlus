@@ -54,6 +54,7 @@ public:
     static CreatureMoodLevel getCreatureMoodLevel(int32_t moodModifiersPoints);
 
     //! \brief Sums type modifiers and temporary moods, including paid admission mood.
+    //! \brief Sums moods after Iron Will reduces negative modifiers, then adds Charisma.
     static int32_t computeCreatureMoodModifiers(const Creature& creature);
 
     static CreatureMood* clone(const CreatureMood* mood);

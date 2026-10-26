@@ -43,6 +43,9 @@ enum class GameEntityType
     giftBoxEntity,
     lavaRock,
     dirtPileEntity,
+    itemBagEntity,
+    merchantEntity,
+    herbBundleEntity,
     infirmaryShamanEntity
 };
 
