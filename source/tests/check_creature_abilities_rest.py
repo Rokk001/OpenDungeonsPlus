@@ -65,7 +65,7 @@ def base_line_of(skill_id):
 abilities = {
     "Whirlwind": ("VRM_1", "Whirlwind 14 1 2 8 3 3"),
     "Teleport": ("WRK_C1", "Teleport 7 0 8 8 30"),
-    "GasCloud": ("WLD_1", "GasCloud 7 1 2 4 1.5 2 14.35 Smoke 9.57"),
+    "GasCloud": ("WLD_1", "GasCloud 7 1 2 4 1.5 2 14.35 Examples/Smoke 9.57"),
     "HailStorm": ("DRK_1", "HailStorm 21 2 4 8 2 11 3.08 none 2.05"),
     "SkeletonArmy": ("UND_3", "SkeletonArmy 21 2 10 3 42 Skeleton"),
     "GuidedBolt": ("ARC_A2", "GuidedBolt 3 2 7 0 8 ArrowProjectile none 2 0 0 0 0 13 0.25 0 0 0 0 18.11 27.17"),
