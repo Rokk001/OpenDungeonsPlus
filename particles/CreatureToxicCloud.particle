@@ -1,5 +1,5 @@
 // Toxic Cloud: a low, mottled poisonous cloud for the radius-1.5 creature ability.
-// The emitter footprint plus billboard half-diagonal stays inside that radius.
+// The local footprint plus billboard half-diagonal stays inside that radius at every configured level scale.
 // The existing creature-effect lifecycle removes the whole system after two game turns,
 // including live billboards; there is no wall-clock duration that could desynchronise at another game speed.
 particle_system CreatureToxicCloud
@@ -10,6 +10,7 @@ particle_system CreatureToxicCloud
     particle_height 0.55
     cull_each       false
     quota           64
+    local_space     true
     billboard_type  point
 
     emitter Ellipsoid
@@ -21,8 +22,8 @@ particle_system CreatureToxicCloud
         direction           0 0 1
         velocity            0
         position            0 0 0.4
-        width               2.2
-        height              2.2
+        width               1.9
+        height              1.9
         depth               0.2
     }
 

@@ -89,7 +89,20 @@ width = float(re.search(r"^\s+width\s+([0-9.]+)", particle, re.M)[1])
 height = float(re.search(r"^\s+height\s+([0-9.]+)", particle, re.M)[1])
 billboard_width = float(re.search(r"^\s+particle_width\s+([0-9.]+)", particle, re.M)[1])
 billboard_height = float(re.search(r"^\s+particle_height\s+([0-9.]+)", particle, re.M)[1])
-assert max(width, height) / 2 + math.hypot(billboard_width, billboard_height) / 2 <= float(gas[5])
+assert re.search(r"^\s+local_space\s+true$", particle, re.M), "the cloud follows the caster without leaving a trail"
+# The attached creature node grows with level; include the real configured maximum in the radius bound.
+max_level = int(re.search(r"MAX_LEVEL = (\d+)", read("source/entities/CreatureDefinition.h"))[1])
+growth = float(re.search(r"^\s+CreatureLevelGrowthMax\s+([0-9.]+)", read("config/global.cfg"), re.M)[1])
+growth = max(0.0, min(1.0, growth))
+scale_source = read("source/entities/Creature.cpp")
+assert "1.0 + ConfigManager::getSingleton().getCreatureLevelGrowthMax() * levelSteps / static_cast<double>(MAX_LEVEL - 1u)" in scale_source
+renderer = read("source/render/RenderManager.cpp")
+assert "creature.getEntityNode()->setScale(Ogre::Vector3::UNIT_SCALE * scaleFactor)" in renderer
+assert "getCreatureLevelGrowthMax() const" in read("source/utils/ConfigManager.h")
+local_radius = max(width, height) / 2 + math.hypot(billboard_width, billboard_height) / 2
+for level in range(1, max_level + 1):
+    node_scale = 1.0 + growth * (level - 1) / (max_level - 1)
+    assert local_radius * node_scale <= float(gas[5]), (level, local_radius * node_scale, gas[5])
 assert re.search(r"^\s+velocity\s+0$", particle, re.M) and "affector Scaler" not in particle
 assert not re.search(r"^\s+(?:duration|repeat_delay)\s", particle, re.M), "game turns control the whole system lifetime"
 turn_rate = float(re.search(r"double ODApplication::turnsPerSecond = ([0-9.]+);", read("source/ODApplication.cpp"))[1])
