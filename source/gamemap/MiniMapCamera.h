@@ -40,6 +40,7 @@ class GameMap;
 class MiniMapCamera : public MiniMap, public Ogre::RenderTargetListener
 {
 public:
+    //! \brief Creates the camera map with transparent empty pixels over the circular HUD stone backing.
     MiniMapCamera(CEGUI::Window* miniMapWindow);
     ~MiniMapCamera() override;
 

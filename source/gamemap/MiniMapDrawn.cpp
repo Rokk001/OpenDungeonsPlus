@@ -46,6 +46,7 @@
 #include <CEGUI/Window.h>
 #include <CEGUI/WindowManager.h>
 
+//! \brief Creates the drawn map with the existing HUD stone behind unexplored ground.
 MiniMapDrawn::MiniMapDrawn(CEGUI::Window* miniMapWindow) :
     mMiniMapWindow(miniMapWindow),
     mTopLeftCornerX(0),
@@ -56,12 +57,12 @@ MiniMapDrawn::MiniMapDrawn(CEGUI::Window* miniMapWindow) :
     mHeight(static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_height)
             + mGrainSize - (static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_height) % mGrainSize)),
     mTiles(mWidth * mHeight, Color(0,0,0)),
-    mPixelBox(mWidth, mHeight, 1, Ogre::PF_R8G8B8),
+    mPixelBox(mWidth, mHeight, 1, Ogre::PF_R8G8B8A8),
     mMiniMapOgreTexture(Ogre::TextureManager::getSingletonPtr()->createManual(
             "miniMapOgreTexture",
             Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
             Ogre::TEX_TYPE_2D,
-            mWidth, mHeight, 0, Ogre::PF_R8G8B8,
+            mWidth, mHeight, 0, Ogre::PF_R8G8B8A8,
             Ogre::TU_DYNAMIC_WRITE_ONLY)),
     mPixelBuffer(mMiniMapOgreTexture->getBuffer()),
     mGameMap(*ODFrameListener::getSingleton().getClientGameMap()),
@@ -113,6 +114,7 @@ Ogre::Vector2 MiniMapDrawn::camera_2dPositionFromClick(int xx, int yy)
         -pp * mHeight / mGrainSize) * getZoomScale();
 }
 
+//! \brief Updates visible map colours and keeps unexplored ground on the HUD stone surface.
 void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles)
 {
     advanceAnimation(timeSinceLastFrame);
@@ -122,6 +124,8 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
     mCamera_2dPosition = Ogre::Vector2(vv.x, vv.y);
     mCosRotation = cos(rotation);
     mSinRotation = sin(rotation);
+    const bool circular = mMiniMapWindow->isUserStringDefined("Circular") &&
+        mMiniMapWindow->getUserString("Circular") == "true";
 
     for (int ii = 0, mm = mCamera_2dPosition.x - mWidth / (2 * mGrainSize); ii < static_cast<int>(mWidth); ++mm, ii += mGrainSize)
     {
@@ -133,21 +137,21 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
             int oo = mCamera_2dPosition.x + static_cast<int>(((mm - mCamera_2dPosition.x) * mCosRotation - (nn - mCamera_2dPosition.y) * mSinRotation) * getZoomScale());
             int pp = mCamera_2dPosition.y + static_cast<int>(((mm - mCamera_2dPosition.x) * mSinRotation + (nn - mCamera_2dPosition.y) * mCosRotation) * getZoomScale());
 
-            /*FIXME: even if we use a THREE byte pixel format (PF_R8G8B8),
-             * for some reason it only works if we have FOUR increments
-             * (the empty one is the unused alpha channel)
-             * this is not how it is intended/expected
+            /* The texture now uses all four RGBA channels. Unknown circular-map grains
+             * keep their black RGB but use transparent alpha over the shared stone backing;
+             * revealed colours, including the black creature blink, remain opaque.
              */
             Tile* tile = mGameMap.getTile(oo, pp);
             if(tile == nullptr)
             {
-                drawPixel(ii, jj, 0x00, 0x00, 0x00);
+                drawPixel(ii, jj, 0x00, 0x00, 0x00, circular ? 0 : 255);
                 continue;
             }
 
             const TileColour colour = colourFromTile(*tile, *mGameMap.getLocalPlayer()->getSeat(),
                 animationPhase);
-            drawPixel(ii, jj, colour.colour.r * 255.0f, colour.colour.g * 255.0f, colour.colour.b * 255.0f);
+            drawPixel(ii, jj, colour.colour.r * 255.0f, colour.colour.g * 255.0f, colour.colour.b * 255.0f,
+                circular && colour.priority == 0 ? 0 : 255);
         }
     }
 
@@ -158,7 +162,7 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
     for(const Color& color : mTiles)
     {
         // TODO: This is probably a bit inefficient at the moment.
-        output.setColourAt(Ogre::ColourValue(color.RR/255.0, color.GG/255.0, color.BB/255.0), xx, yy, 0);
+        output.setColourAt(Ogre::ColourValue(color.RR/255.0, color.GG/255.0, color.BB/255.0, color.AA/255.0), xx, yy, 0);
         ++xx;
         if(xx == mWidth) {
             xx = 0;

@@ -75,8 +75,13 @@ probe = r"""
 #define OD_ASSERT_TRUE_MSG(cond,msg) do{if(!(cond)){std::cout<<"ASSERT FAILED: "<<(msg)<<'\n';std::exit(1);}}while(0)
 namespace Helper {template<typename T> std::string toString(const T& v){return std::to_string(v);}}
 
+struct Seat;
+//! \brief Supplies tile coordinates and current vision to the extracted ring methods.
 struct Tile {
  int mX=0,mY=0;
+ std::vector<Seat*> viewers;
+ //! \brief Returns the current vision list used by the extracted deposit method.
+ const std::vector<Seat*>& getSeatsWithVision(){return viewers;}
  Tile(int x=0,int y=0):mX(x),mY(y){}
  int getX()const{return mX;}
  int getY()const{return mY;}
@@ -97,6 +102,38 @@ namespace Ogre {
   Vector3(Real a,Real b,Real c):x(a),y(b),z(c){}
  };
 }
+//! \brief Represents a cosmetic-event recipient without a game connection.
+struct Player {
+ bool human=true;
+ //! \brief Reports whether this fixture player receives cosmetic notifications.
+ bool getIsHuman()const{return human;}
+};
+//! \brief Connects a visible seat to its optional player.
+struct Seat {
+ Player* player=nullptr;
+ //! \brief Returns the fixture player, including null for seats without one.
+ Player* getPlayer()const{return player;}
+};
+//! \brief Supplies the existing delivery identifier used by production deposits.
+enum class CosmeticEventType {goldDelivery=21};
+//! \brief Stores the delivery fields used by the production deposit method.
+struct CosmeticEvent {
+ std::string mObject;
+ Ogre::Vector3 mPosition;
+ //! \brief Initializes the delivery position required by the extracted production method.
+ CosmeticEvent(CosmeticEventType):mPosition(0,0,0){}
+};
+//! \brief Records production delivery sends without creating network infrastructure.
+struct ODServer {
+ std::vector<Player*> recipients;
+ Ogre::Vector3 lastPosition;
+ //! \brief Initializes the last delivered position without a real network server.
+ ODServer():lastPosition(0,0,0){}
+ //! \brief Returns the notification recorder shared by the extracted deposit calls.
+ static ODServer& getSingleton(){static ODServer server;return server;}
+ //! \brief Records a delivery recipient and its actual heart position.
+ void sendCosmeticEvent(Player* player,const CosmeticEvent& event){recipients.push_back(player);lastPosition=event.mPosition;}
+};
 struct Random {
  static double Double(double min,double max){return (min+max)*0.5;}
 };
@@ -158,6 +195,8 @@ struct Room:Building {
   return true;
  }
  void addBuildingObject(Tile* t,BuildingObject* o){mBuildingObjects[t]=o;}
+ //! \brief Models the pile replacement without removing other building objects.
+ void replaceBuildingObject(Tile* t,BuildingObject* o){mBuildingObjects[t]=o;}
  void removeBuildingObject(Tile* t){mBuildingObjects.erase(t);}
  void removeAllBuildingObjects(){mBuildingObjects.clear();}
  static int roomSounds;
@@ -291,8 +330,20 @@ int main(){
 
  Tile* ringA=tileAt(heart,12,10);
  check(heart.isTreasuryTile(ringA),"a tile two east of the heart is a ring tile");
+ // Only the intersection of deposit and heart vision receives the delivery.
+ Player bothPlayer,sourcePlayer,targetPlayer,botPlayer;
+ botPlayer.human=false;
+ Seat bothSeat,sourceSeat,targetSeat,botSeat,noPlayerSeat;
+ bothSeat.player=&bothPlayer;sourceSeat.player=&sourcePlayer;
+ targetSeat.player=&targetPlayer;botSeat.player=&botPlayer;
+ ringA->viewers={&bothSeat,&sourceSeat,&botSeat,&noPlayerSeat};
+ center->viewers={&bothSeat,&targetSeat,&botSeat,&noPlayerSeat};
+ ODServer& server=ODServer::getSingleton();
+ server.recipients.clear();
  int soundsBefore=Room::roomSounds;
  check(heart.depositGold(1150,ringA)==1150,"a deposit fills the requested ring tile first");
+ check(server.recipients.size()==1&&server.recipients[0]==&bothPlayer,"only a human seeing both tiles receives exactly one burst");
+ check(server.lastPosition.x==center->getX()&&server.lastPosition.y==center->getY()&&server.lastPosition.z==0,"the delivery reports the actual heart center");
  check(goldIn(heart,ringA)==1000,"the requested tile is capped at 1000 gold");
  check(heart.getTotalGoldStored()==1150,"the heart counts the stored gold");
  check(goldIn(heart,center)==0,"core tiles never hold ring gold");
@@ -304,7 +355,9 @@ int main(){
  for(Tile* t:heart.mCoveredTiles)if(heart.isTreasuryTile(t))allFull=allFull&&(goldIn(heart,t)==1000);
  check(allFull,"every ring tile holds its 1000 gold");
  check(goldIn(heart,center)==0,"the core still holds no gold");
+ const size_t deliveriesBeforeFullDeposit=server.recipients.size();
  check(heart.depositGold(1,ringA)==0,"a full ring refuses new gold");
+ check(server.recipients.size()==deliveriesBeforeFullDeposit,"a rejected full-ring deposit sends no delivery burst");
  check(heart.hasCarryEntitySpot(&gold)==false,"a full ring refuses a carried treasure");
  check(heart.askSpotForCarriedEntity(&gold)==nullptr,"a full ring has no spot for a carried treasure");
  check(heart.hasCarryEntitySpot(&gift),"a full ring still accepts gifts");

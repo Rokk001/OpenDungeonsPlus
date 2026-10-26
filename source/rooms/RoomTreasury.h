@@ -82,6 +82,7 @@ public:
     //! \brief Returns all stored gold without truncating fractional payments.
     virtual double getTotalGoldStored() const override;
     //! \brief Deposits gold and returns the amount stored, including fractions.
+    //! \brief Deposits gold and reports a delivery burst only when the owner has exactly one heart.
     virtual double depositGold(double gold, Tile *tile) override;
     //! \brief Withdraws up to the requested gold, including fractions.
     virtual double withdrawGold(double gold) override;
@@ -104,6 +105,7 @@ private:
     //! \brief Fill step of the tile at the given position, 0 for tiles that are not part of this room
     int getLevelOfTile(const std::map<Tile*, int>& levels, int x, int y) const;
     //! \brief Refreshes a pile's visual tier without changing its exact stored value.
+    //! \brief Replaces changed pile meshes while preserving gold amounts and neighbour joins.
     void updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData,
         const std::map<Tile*, int>& levels);
     bool mGoldChanged;

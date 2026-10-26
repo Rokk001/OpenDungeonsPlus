@@ -8,14 +8,14 @@ material Background
         {
             depth_write off
             ambient 0.0 0.0 0.0 1.0
-            diffuse 0.8 0.8 0.8 1.0
+            diffuse 0.0 0.0 0.0 1.0
             specular 0.0 0.0 0.0 1.0 2.0
-            emissive 1.0 1.0 1.0 1.0
+            emissive 0.25 0.25 0.25 1.0
             texture_unit
             {
                 texture WorldRock.png
                 tex_address_mode wrap
-                scale 0.03846154 0.06666667
+                scale 0.125 0.2
                 filtering trilinear
             }
         }

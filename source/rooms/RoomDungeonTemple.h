@@ -91,6 +91,7 @@ public:
     //! \brief Returns ring gold without truncating fractional payments.
     virtual double getTotalGoldStored() const override;
     //! \brief Deposits gold in the ring while retaining fractional payments.
+    //! \brief Deposits gold into the ring and reports the actual heart position for the delivery burst.
     virtual double depositGold(double gold, Tile* tile) override;
     //! \brief Withdraws ring gold while retaining fractional payments.
     virtual double withdrawGold(double gold) override;
@@ -153,6 +154,7 @@ private:
     Tile* getRingCenterTile() const;
     //! \brief A covered tile outside the 3x3 core is part of the treasury ring.
     bool isTreasuryTile(Tile* tile) const;
+    //! \brief Replaces changed ring pile meshes without hiding their previous mesh first.
     void updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData);
 
     //! True when the gold of a ring tile changed and its mesh needs a refresh in doUpkeep().

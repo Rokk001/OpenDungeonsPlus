@@ -76,7 +76,7 @@ static void payMinedGold(Creature& creature, Tile& tileDig, double gold)
         tileDig.getX(), tileDig.getY(), wholeGold);
 }
 
-//! \brief Performs digging with unchanged timing and reports actual gold and the interval to the next step.
+//! \brief Performs digging with unchanged timing and reports actual gold, stroke tile and the next step interval.
 bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos)
 {
     Tile* myTile = creature.getPositionTile();
@@ -136,6 +136,16 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         amountDug = tileDig.digOut(creature.getDigRate() * digFactor * criticalFactor);
     if(amountDug > 0.0)
     {
+        if(tileDig.getType() == TileType::gold)
+        {
+            CosmeticEvent stroke(CosmeticEventType::digStroke);
+            stroke.mSubject = creature.getName();
+            stroke.mValue = static_cast<int32_t>(tileDig.getType());
+            stroke.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(tileDig.getX()),
+                static_cast<Ogre::Real>(tileDig.getY()), 0.0f);
+            creature.fireCosmeticEvent(stroke, false);
+        }
+
         if(critical)
         {
             creature.fireCriticalOnStructure("dig", Ogre::Vector3(static_cast<Ogre::Real>(tileDig.getX()),

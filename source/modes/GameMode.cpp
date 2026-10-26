@@ -295,6 +295,8 @@ static const std::string& getResearchFrameColour(uint32_t level)
 //! \param level The research level of the node, above 0 means learned.
 static std::string getResearchTileImage(const std::string& state, uint32_t level)
 {
+    if(state == "Unavailable")
+        return "OpenDungeonsSkin/ResearchTileLocked";
     if(state == "Researching")
         return "OpenDungeonsSkin/ResearchTileWorking";
     if(state == "Queued")
@@ -394,6 +396,7 @@ const float SKILL_BADGE_NODE_GAP = 16.0f;
 const float SKILL_BADGE_WIDTH_PADDING = 8.0f;
 
 //! \brief Connects game controls, room windows and both entry points to the existing objectives window.
+//! \brief Connects game controls, including the scroll button for the existing objectives window.
 GameMode::GameMode(ModeManager *modeManager):
     GameEditorModeBase(modeManager, ModeManager::GAME, modeManager->getGui().getGuiSheet(Gui::guiSheet::inGameMenu)),
     mDigSetBool(false),
@@ -509,12 +512,6 @@ GameMode::GameMode(ModeManager *modeManager):
     //Objectives window
     addEventConnection(
         guiSheet->getChild("GoalsButton")->subscribeEvent(
-            CEGUI::PushButton::EventClicked,
-            CEGUI::Event::Subscriber(&GameMode::toggleObjectivesWindow, this)
-        )
-    );
-    addEventConnection(
-        guiSheet->getChild("ObjectivesButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&GameMode::toggleObjectivesWindow, this)
         )
@@ -4058,6 +4055,7 @@ void GameMode::setHelpWindowText()
     textWindow->setText(reinterpret_cast<const CEGUI::utf8*>(txt.str().c_str()));
 }
 
+//! \brief Updates research icons, progress and the plain-language hover state without changing research rules.
 void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const std::string& castButtonName,
         const std::string& skillProgressBarName, SkillType resType)
 {
@@ -4065,7 +4063,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     Seat* localPlayerSeat = mGameMap->getLocalPlayer()->getSeat();
     const uint32_t level = localPlayerSeat->getSkillLevel(resType);
     bool isDone = level >= 3;
-    bool isAllowed = true;
+    bool isAllowed = !localPlayerSeat->isSkillNotAllowed(resType);
     uint32_t queueNumber = 0;
     if(!isDone)
     {
@@ -4118,23 +4116,23 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     CEGUI::Window* skillButton = skillsWindow->getChild(skillButtonName);
     CEGUI::ProgressBar* skillProgressBar =
         static_cast<CEGUI::ProgressBar*>(skillsWindow->getChild(skillProgressBarName));
-    if(isDone)
-    {
-        if(!castButtonName.empty())
-            guiSheet->getChild(castButtonName)->show();
-        skillButton->setText("");
-        skillButton->setProperty("StateImage", okIcon);
-        skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_DONE);
-        skillButton->setEnabled(false);
-        skillProgressBar->hide();
-    }
-    else if(!isAllowed)
+    if(!isAllowed)
     {
         if(!castButtonName.empty())
             guiSheet->getChild(castButtonName)->show();
         skillButton->setText("");
         skillButton->setProperty("StateImage", abortIcon);
         skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_UNAVAILABLE);
+        skillButton->setEnabled(false);
+        skillProgressBar->hide();
+    }
+    else if(isDone)
+    {
+        if(!castButtonName.empty())
+            guiSheet->getChild(castButtonName)->show();
+        skillButton->setText("");
+        skillButton->setProperty("StateImage", okIcon);
+        skillButton->setProperty("StateImageColour", RESEARCH_ICON_COLOUR_DONE);
         skillButton->setEnabled(false);
         skillProgressBar->hide();
     }
@@ -4196,7 +4194,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     }
     skillButton->setText("");
-    skillButton->setProperty("ButtonImageColour", level == 0 ? "FF666666" : "FFFFFFFF");
+    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF333333" : (level == 0 ? "FF666666" : "FFFFFFFF"));
     skillButton->setProperty("ResearchLevelColour", getResearchFrameColour(level));
     CEGUI::Window* levelBadge;
     if(skillButton->isChild("ResearchLevel"))
@@ -4218,8 +4216,10 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
     levelBadge->setText(Helper::toString(level) + "/3");
     std::string description = Skills::skillTypeToPlayerVisibleString(resType) + " - level " +
         Helper::toString(level) + "/3";
+    if(level > 0)
+        description += "\nLearned " + Helper::toString(level) + "/3";
     if(!isAllowed)
-        description += "\nUnavailable on this map.";
+        description += "\nNot available in this level.";
     else if(isLockedByLibrary)
         description += "\nCannot be cast: the library was lost.";
     else if(level >= 3)
@@ -4281,8 +4281,9 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         state = "Queued";
     else if(!prerequisitesReady || isTabLocked)
         state = "Locked";
-    description += "\nStatus: " + state + (mIsSkillWindowOpen && queueNumber > 0 && resType != curResType ?
-        " (Apply saves queue changes)." : ".");
+    const std::string status = isAllowed ? state : "Not available in this level";
+    description = "Status: " + status + (mIsSkillWindowOpen && queueNumber > 0 && resType != curResType ?
+        " (Apply saves queue changes)." : ".") + "\n" + description;
     skillButton->setUserString("ResearchDetails", description);
     skillButton->setUserString("ResearchState", state);
     // Keep explanations optional; the main tree communicates through its nodes and paths.

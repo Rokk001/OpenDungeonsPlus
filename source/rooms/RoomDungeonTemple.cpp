@@ -38,6 +38,7 @@
 #include "modes/InputManager.h"
 #include "network/ODClient.h"
 #include "network/ODPacket.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
@@ -719,6 +720,7 @@ double RoomDungeonTemple::getTotalGoldStored() const
 }
 
 //! \brief Deposits exact gold into treasury ring tiles.
+//! \brief Deposits unchanged gold into the ring and reports one cosmetic burst at the actual heart.
 double RoomDungeonTemple::depositGold(double gold, Tile* tile)
 {
     double goldDeposited = 0.0, goldToDeposit = gold, emptySpace = 0.0;
@@ -765,6 +767,24 @@ double RoomDungeonTemple::depositGold(double gold, Tile* tile)
     // with vision on tile
     fireRoomSound(*tile, "Treasury/DepositGold");
 
+    Tile* heartTile = getHeartTile();
+    if(heartTile != nullptr)
+    {
+        CosmeticEvent delivery(CosmeticEventType::goldDelivery);
+        delivery.mObject = getName();
+        delivery.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTile->getX()),
+            static_cast<Ogre::Real>(heartTile->getY()), 0.0f);
+        const std::vector<Seat*>& heartViewers = heartTile->getSeatsWithVision();
+        for(Seat* seat : tile->getSeatsWithVision())
+        {
+            if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman() ||
+                std::find(heartViewers.begin(), heartViewers.end(), seat) == heartViewers.end())
+                continue;
+
+            ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), delivery);
+        }
+    }
+
     return wasDeposited;
 }
 
@@ -807,6 +827,7 @@ double RoomDungeonTemple::withdrawGold(double gold)
     return withdrawalAmount;
 }
 
+//! \brief Replaces changed ring pile meshes without a client-visible empty state.
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData)
 {
     double gold = roomTreasuryTileData->mGoldInTile;
@@ -850,16 +871,14 @@ void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTile
     if(roomTreasuryTileData->mMeshOfTile.compare(newMeshName) == 0)
         return;
 
-    // If the mesh has changed we need to destroy the existing gold stack if there was one
-    if(!roomTreasuryTileData->mMeshOfTile.empty())
-        removeBuildingObject(tile);
+    // If the mesh changed, keep the existing gold stack visible until its replacement is created.
 
     if(gold > 0)
     {
         // The pile fills its tile exactly so it joins the piles next to it
         BuildingObject* ro = new BuildingObject(getGameMap(), *this, newMeshName, tile,
             static_cast<double>(tile->getX()), static_cast<double>(tile->getY()), 0.0, 0.0, false);
-        addBuildingObject(tile, ro);
+        replaceBuildingObject(tile, ro);
     }
 
     roomTreasuryTileData->mMeshOfTile = newMeshName;
@@ -968,6 +987,7 @@ const std::string& RoomDungeonTemple::getMeshNameForHeartTier(HeartHealthTier ti
     }
 }
 
+//! \brief Replaces only the heart object when its health tier changes, preserving the gold ring.
 void RoomDungeonTemple::checkHeartHealthTier()
 {
     if(!getIsOnServerMap())
@@ -985,10 +1005,14 @@ void RoomDungeonTemple::checkHeartHealthTier()
     if(tier == mCurrentHeartTier)
         return;
 
-    // The heart's health tier changed: rebuild the temple object with the
-    // matching mesh/rig/animation. updateTemplePosition() recomputes the tier
-    // itself and keeps the object on the same central tile.
-    updateTemplePosition();
+    // The heart's health tier changed: rebuild only its object with the
+    // matching mesh/rig/animation, keeping its tile and every ring pile.
+    Tile* tile = mTempleObject->getPositionTile();
+    BuildingObject* replacement = new DungeonHeartObject(getGameMap(), *this, tile,
+        getMeshNameForHeartTier(tier));
+    replaceBuildingObject(tile, replacement);
+    mTempleObject = replacement;
+    mCurrentHeartTier = tier;
 }
 
 void RoomDungeonTemple::destroyMeshLocal(NodeType nt)

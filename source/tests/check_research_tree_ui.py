@@ -140,6 +140,8 @@ int main(int argc,char** argv){try{
    check(b->getUserString("ResearchDetails").find(level==3?"Maximum level":"Queue position: 2")!=CEGUI::String::npos,"queue and level information remains accessible");
    check(b->getUserString("ResearchDetails").find("Requires all (level 1):")!=CEGUI::String::npos || data.at(type).parents.empty(),"prerequisites are explicitly all required");
    check(b->getTooltipText()==b->getUserString("ResearchDetails"),"descriptions are optional hover help, not persistent panels");
+   check(b->getTooltipText().find("Status: "+b->getUserString("ResearchState"))==0,"plain research state leads the hover text");
+   if(level>0)check(b->getTooltipText().find("Learned "+std::to_string(level)+"/3")!=CEGUI::String::npos,"hover text explicitly names the learned level");
    check(b->getChild(b->getName()+"ProgressBar")->isVisible()==(type==SkillType::roomTrainingHall&&level<3),"only the current node displays progress");
   });
   game.refreshSkillConnections();game.refreshSkillConnections();
@@ -194,6 +196,16 @@ int main(int argc,char** argv){try{
   const std::string bannerText=banner->getUserString("ResearchDetails").c_str();
   check(bannerText.find("Needs: ")!=std::string::npos&&bannerText.find("- MISSING")==std::string::npos,"a parent the level does not allow counts as ready");
   check(banner->getUserString("ResearchState")!="Locked","an entry whose parents are done or not allowed is not locked");
+  const std::string guardPath=data.at(SkillType::roomGuardRoom).path;
+  CEGUI::Window* guard=root->getChild("SkillTreeWindow/Skills/"+guardPath);
+  for(uint32_t learned=0;learned<=3;++learned){
+   seat.levels[SkillType::roomGuardRoom]=learned;
+   game.refreshSkillButtonState(guardPath,"cast"+std::to_string(int(SkillType::roomGuardRoom)),guardPath+"/"+guardPath.substr(guardPath.find_last_of('/')+1)+"ProgressBar",SkillType::roomGuardRoom);
+   check(guard->isDisabled()&&guard->getUserString("ResearchState")=="Unavailable","level exclusions still disable selection");
+   check(guard->getTooltipText().find("Status: Not available in this level")==0,"excluded tiles explain the level restriction on hover");
+   check(guard->getProperty("ButtonImageColour")=="FF333333","excluded icons stay darkened even after a learned level");
+   check(guard->getProperty("ResearchTileImage")=="OpenDungeonsSkin/ResearchTileLocked"&&guard->getProperty("StateImage")=="OpenDungeonsIcons/AbortIcon","excluded tiles retain the existing X and frame");
+  }
   seat.denied.clear();seat.levels.clear();seat.levels[SkillType::roomTreasury]=1;seat.gate=false;
   const std::string treasuryPath=data.at(SkillType::roomTreasury).path;
   game.refreshSkillButtonState(treasuryPath,"cast"+std::to_string(int(SkillType::roomTreasury)),treasuryPath+"/"+treasuryPath.substr(treasuryPath.find_last_of('/')+1)+"ProgressBar",SkillType::roomTreasury);

@@ -44,9 +44,9 @@ settled = batch.split('void TreasuryGoldBatch::pileSettled')[1].split('void Trea
 assert 'mChunks[it->second.mKey].mDirty = true' in settled
 removal = batch.split('void TreasuryGoldBatch::removePile')[1].split('void TreasuryGoldBatch::update')[0]
 assert 'mBatched' in removal and 'mDirty = true' in removal
-update = batch.split('void TreasuryGoldBatch::update')[1].split('void TreasuryGoldBatch::rebuild')[0]
+update = batch.split('void TreasuryGoldBatch::update')[1].split('void TreasuryGoldBatch::rebuild(')[0]
 assert '!chunk.mDirty || chunk.mSinceRebuild < TreasuryCreatureRules::batchRebuildInterval' in update
-rebuild = batch.split('void TreasuryGoldBatch::rebuild')[1].split('void TreasuryGoldBatch::clear')[0]
+rebuild = batch.split('void TreasuryGoldBatch::rebuild(')[1].split('void TreasuryGoldBatch::clear')[0]
 # only the room's own members are added, settling piles stay visible entities, build before hiding
 assert 'chunk.mMembers' in rebuild and 'if(member.mSettling)' in rebuild and 'setVisible(true)' in rebuild
 assert rebuild.index('->build()') < rebuild.index('setVisible(false)')

@@ -132,6 +132,8 @@ struct Room:Building {
  bool getIsOnServerMap()const{return true;}Tile* getCentralTile()const{return central;}
  uint32_t numCoveredTiles()const{return static_cast<uint32_t>(mCoveredTiles.size());}
  void addBuildingObject(Tile* t,BuildingObject* o){++added;mBuildingObjects[t]=o;}
+ //! \brief Models a targeted object replacement while retaining all other tile objects.
+ void replaceBuildingObject(Tile* t,BuildingObject* o){mBuildingObjects[t]=o;}
  void removeBuildingObject(Tile* t){mBuildingObjects.erase(t);}
  static int roomSounds;static void fireRoomSound(Tile&,const std::string&){++roomSounds;}
  void removeAllBuildingObjects(){objectsRemoved+=static_cast<int>(mBuildingObjects.size());mBuildingObjects.clear();}

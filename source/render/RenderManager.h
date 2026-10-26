@@ -191,6 +191,8 @@ public:
     void rrDetachEntity(GameEntity* curEntity, bool really_do = true);
     void rrAttachEntity(GameEntity* curEntity);
     void rrCreateRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
+    //! \brief Flushes a replaced gold pile's batch after its new mesh exists and its old entity is gone.
+    void rrFinishBuildingObjectReplacement(RenderedMovableEntity* entity);
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
     void rrCreateCreature(Creature* curCreature);
@@ -267,7 +269,9 @@ public:
     //! (entityFound tells whether the entity is drawn, an answer for an entity that is not can change later)
     bool rrHasObjectClip(MovableGameEntity* animatedObject, const std::string& clip, bool& entityFound);
     void rrMoveEntity(GameEntity* entity, const Ogre::Vector3& position);
-    //! A worker poured gold onto the treasury tile (x, y): coins fall onto the top of the pile
+    //! \brief Shows one bounded stationary coin burst at the actual mined tile or heart.
+    void rrMiningCoinBurst(const Ogre::Vector3& position);
+    //! \brief Retains the treasury deposit pour pose; server events place coin bursts at the heart.
     void rrTreasuryDeposit(GameMap* gameMap, int x, int y);
     void rrMoveMapLightFlicker(MapLight* mapLight, const Ogre::Vector3& position);
     //! \brief Attaches the carried entity to the carrier, resting on the highest point of the carrier. A carrier
@@ -718,12 +722,13 @@ private:
     //! Creatures that are currently lifted onto low furniture.
     std::set<Creature*> mSteppingCreatures;
 
-    //! The kinds of treasury effect; each has a budget per room of its own
+    //! Timed treasury effects use room budgets; actual mining/deposit bursts are counted by their event.
     enum class TreasuryEffectKind
     {
         splash,
         dust,
-        ambient
+        ambient,
+        coinBurst
     };
     struct TreasuryEffect
     {
@@ -1024,7 +1029,7 @@ private:
     void applyTreasuryGlowLights();
     void setTreasuryGlowLight(const std::string& name, const TreasuryGlowPatch& patch);
     void destroyTreasuryGlowLight(const std::string& name);
-    //! \brief Ends the effects whose time is over and gives their places back to the budget of their room.
+    //! \brief Removes expired effects and returns acquired places to their room budget.
     void updateTreasuryEffects(Ogre::Real timeSinceLastFrame);
     //! \brief The worker standing on the tile climbs the pile and tips its gold out (only what is in view).
     void startTreasuryPour(Tile* tile, int level);
