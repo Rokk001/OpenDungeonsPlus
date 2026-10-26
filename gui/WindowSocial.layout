@@ -63,15 +63,6 @@
             <Window type="DefaultWindow" name="ProfileHolder">
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             </Window>
-            <Window type="OD/StaticText" name="OwnPostsText">
-                <Property name="Area" value="{{0,0},{0,420},{1,0},{1,0}}" />
-                <Property name="FrameEnabled" value="False" />
-                <Property name="BackgroundEnabled" value="False" />
-                <Property name="Font" value="MedievalSharp-8" />
-                <Property name="VertScrollbar" value="True" />
-                <Property name="VertFormatting" value="TopAligned" />
-                <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-            </Window>
         </Window>
     </Window>
 </GUILayout>

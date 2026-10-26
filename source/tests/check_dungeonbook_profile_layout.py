@@ -74,9 +74,9 @@ page_height = (card_height - title_height - 2 * border) * 0.88
 text_width = card_width - 2 * side - 48
 assert 'PROFILE_RIGHT_MARGIN = 32.0f' in gui
 
-LINE, PAD, GAP, TOP = 18.0, 4.0, 4.0, 174.0
-# attributes, equipment, path and skills: four one line rows above the bio
-ATTRIBUTE_ROWS = 4
+LINE, PAD, GAP, TOP = 18.0, 4.0, 4.0, 132.0
+# Attributes, health/XP, five personal rows, then path and skills precede the bio.
+ATTRIBUTE_ROWS = 9
 CHAR = 8.2  # design pixels of an average character of the font
 
 
@@ -163,34 +163,27 @@ for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
         # the status keeps its place whatever the resolution: its top does not depend on the remarks
         assert typical[0] == without_quirks[0]
 
-# Dungeonbook: the profile gets the pane minus the room kept for the recent posts
+# Dungeonbook: posts follow the complete profile inside its scrollable document, without a fixed reserve.
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
-minimum = float(re.search(r'PROFILE_MIN_POSTS_HEIGHT = ([0-9.]+)f', social)[1])
-gap = float(re.search(r'OWN_POSTS_GAP = ([0-9.]+)f', social)[1])
-assert 'UDim(1, -PROFILE_MIN_POSTS_HEIGHT)' in social, 'the profile holder must leave the room for the posts'
-assert social.index('UDim(1, -PROFILE_MIN_POSTS_HEIGHT)') < social.index('fillProfilePage(mProfilePage)'), 'the holder is set after the fill'
+assert 'PROFILE_MIN_POSTS_HEIGHT' not in social, 'posts must not displace essentials from the opening page'
+assert 'ownPosts->setText(posts)' in social and 'mProfilePage->getChild("OwnPostsText")' in social
+assert social.index('ownPosts->setText(posts)') < social.index('fillProfilePage(mProfilePage)')
+assert 'page->getChild("OwnPostsText")' in body
 social_layout = (repo / 'gui/WindowSocial.layout').read_text()
 window = re.search(r'name="SocialWindow">\s*<Property name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
 pane = ET.fromstring(social_layout).find(".//Window[@name='ProfilePane']/Property[@name='Area']").get('value')
 assert pane == '{{0.48,0},{0.08,0},{0.98,0},{0.98,0}}'
 pane_height = ((int(window[4]) - int(window[2])) - title_height - 2 * border) * 0.9
 pane_width = ((int(window[3]) - int(window[1])) - 2 * side) * 0.5
-
-dungeonbook_viewport = pane_height - minimum
-posts_height = pane_height - (dungeonbook_viewport + gap)
-assert posts_height >= minimum - gap > 0, 'the recent posts keep no room'
-assert dungeonbook_viewport >= 300, 'the profile viewport of the Dungeonbook is too small'
-# the profile of the Dungeonbook scrolls as well: all rows are reachable also in the smaller viewport
+assert pane_height >= 300, 'the profile viewport of the Dungeonbook is too small'
 for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
-    reachable_rows(remarks_bottom, dungeonbook_viewport)
-# worst case: the profile scrolls, the posts keep their height
-for name, (latest_bottom, remarks_bottom) in (('typical', typical), ('worst', worst)):
-    shown = min(remarks_bottom, dungeonbook_viewport)
-    assert pane_height - (shown + gap) >= minimum - gap, name
+    posts_bottom = remarks_bottom + row(15)  # five multi-line posts remain reachable below every profile row
+    reachable_rows(posts_bottom, pane_height)
+    assert posts_bottom - max(0.0, posts_bottom - pane_height) <= pane_height + 1e-6
 for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
     scale = min(width / 1024.0, height / 768.0)
-    report.append('%dx%d Dungeonbook: pane %.0f px, profile %.0f px (typical %.0f, worst %.0f design px of content), posts at least %.0f px' % (
-        width, height, pane_height * scale, dungeonbook_viewport * scale, typical[1], worst[1], (minimum - gap) * scale))
+    report.append('%dx%d Dungeonbook: profile %.0f px, all profile rows and recent posts scroll together' % (
+        width, height, pane_height * scale))
 
 print('profile layout ok: card %dx%d design px, page %d px, typical latest ends %.0f, remarks %.0f, worst %.0f' % (
     card_width, card_height, page_height, typical[0], typical[1], worst[1]))

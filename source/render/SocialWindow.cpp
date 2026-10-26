@@ -49,11 +49,6 @@ namespace
 const std::size_t MAX_FEED_ROWS = 25;
 //! Number of posts shown below the profile at most
 const std::size_t MAX_OWN_POSTS = 5;
-//! Distance between the profile and the recent posts below it (design pixels)
-const float OWN_POSTS_GAP = 6.0f;
-//! The profile never takes more of the pane than leaves this much (design pixels) for the recent posts; what
-//! does not fit scrolls inside the profile
-const float PROFILE_MIN_POSTS_HEIGHT = 110.0f;
 //! Space the creature list keeps free right of its items (design pixels), so the horizontal scrollbar never appears
 const float LIST_TEXT_MARGIN = 34.0f;
 //! The window checks for changes at most this often (real seconds), so at most 4 redraws per second
@@ -389,6 +384,7 @@ void SocialWindow::showTab(bool profile)
         refreshProfile();
 }
 
+//! \brief Fills the selected creature and its recent posts into one scrollable profile.
 void SocialWindow::refreshProfile()
 {
     social::PostLog& log = social::PostLog::getSingleton();
@@ -401,9 +397,7 @@ void SocialWindow::refreshProfile()
     CEGUI::Window* holder = pane->getChild("ProfileHolder");
     pane->getChild("ProfileHint")->setVisible(!hasCreature);
     holder->setVisible(hasCreature);
-    pane->getChild("OwnPostsText")->setVisible(hasCreature);
 
-    float profileBottom = 0.0f;
     if(hasCreature)
     {
         Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
@@ -419,12 +413,17 @@ void SocialWindow::refreshProfile()
             }
         }
 
-        // The profile gets the pane minus the room kept for the recent posts, and scrolls if it needs more
-        gui.setScaledArea(holder, CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0),
-            CEGUI::UDim(1, -PROFILE_MIN_POSTS_HEIGHT)));
+        // A newly selected creature opens on its essential information, while timed refreshes keep the scroll position.
+        if(!mProfilePage->isUserStringDefined("ProfileCreature") ||
+            mProfilePage->getUserString("ProfileCreature") != mSelectedCreature)
+        {
+            static_cast<CEGUI::Scrollbar*>(mProfilePage->getChild("ProfileScrollbar"))->setScrollPosition(0);
+            mProfilePage->setUserString("ProfileCreature", mSelectedCreature);
+        }
 
-        // The same code fills the creature card
-        profileBottom = creature->fillProfilePage(mProfilePage);
+        // The full pane is the opening page; the recent posts follow the profile in the same scroll area.
+        gui.setScaledArea(holder, CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0),
+            CEGUI::UDim(1, 0)));
     }
 
     std::string posts;
@@ -450,13 +449,16 @@ void SocialWindow::refreshProfile()
         if(!posts.empty())
             posts = std::string(FEED_NAME_COLOUR) + "Recent posts\n" + posts;
     }
-    CEGUI::Window* ownPosts = pane->getChild("OwnPostsText");
-    ownPosts->setText(posts);
+    if(mProfilePage != nullptr)
+    {
+        CEGUI::Window* ownPosts = mProfilePage->getChild("OwnPostsText");
+        ownPosts->setText(posts);
+        ownPosts->setVisible(hasCreature && !posts.empty());
+    }
     if(hasCreature)
     {
-        // The recent posts follow directly below the profile, whatever its height
-        ODFrameListener::getSingleton().getModeManager()->getGui().setScaledArea(ownPosts,
-            CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, profileBottom + OWN_POSTS_GAP), CEGUI::UDim(1, 0), CEGUI::UDim(1, 0)));
+        // The same code fills the creature card; here it also measures the recent posts after all social rows.
+        creature->fillProfilePage(mProfilePage);
     }
 }
 
