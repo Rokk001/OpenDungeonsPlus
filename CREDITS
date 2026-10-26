@@ -1480,3 +1480,13 @@ sounds/Spatial/Rooms/GhostRoom/Beam/Beam.ogg    kev_durr    CC0 1.0    "Electric
 sounds/Spatial/Rooms/GhostRoom/BoxSnap/BoxSnap.ogg    Crinkem    CC0 1.0    "Metallic latch release.wav", https://freesound.org/people/Crinkem/sounds/481789/ ; Whole HQ recording preview, high-pass 60 Hz, 20-ms fades, transient peak conditioning and normalization, mono 22050 Hz Vorbis, near -20 LUFS
 sounds/Spatial/Rooms/GhostRoom/PressHiss/PressHiss.ogg    brunoboselli    CC0 1.0    "Air (or steam) pressure release", https://freesound.org/people/brunoboselli/sounds/457294/ ; HQ recording preview, trim trailing silence below -40 dBFS, last 2.5 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis, near -20 LUFS
 sounds/Spatial/Rooms/GhostRoom/CrystalRing/CrystalRing.ogg    bozerikje    CC0 1.0    "Glass and chrystal ping ding", https://freesound.org/people/bozerikje/sounds/478038/ ; HQ recording preview, trim leading silence below -40 dBFS, first 2.5 s, high-pass 60 Hz, 20-ms fade-in and 0.5-s fade-out, mono 22050 Hz Vorbis, near -20 LUFS
+
+particles/RoomAmbienceProduction.particle (CauldronSteam)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostRise)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostDissolve)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostBeam)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (EctoplasmBurst)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostRevive)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (SoulCrystalBreak)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (WorkerVanish)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+materials/scripts/GhostParticles.material    Codex    GPLv3+    Original AI-generated spectral beam and fragment materials, reusing credited project sprites
