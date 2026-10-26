@@ -1,6 +1,6 @@
 # Painted skin sources
 
-Original painted source art generated with the built-in image generation tool, 2026-10-24, using `docs/design/ingame-gui/vorschlag-A-hud-korrigiert.png` as the material reference. GPLv3+. The reference supplies the art direction, not game-scene pixels.
+Original painted source art generated with the built-in image generation tool, 2026-10-24. GPLv3+.
 
 `frames.png` contains four frame families (HUD, window, inset, icon/button), each with four separately painted states. `frame-<family>-<state>.png` are the individual source tiles. Their independently chipped corners and four different edge crops supply the nine-slice pieces; opposing edges are not mirrored copies. `glyphs.png` and its separate `glyph-*.png` tiles supply symbols and orb/minimap rings. `controls.png` and `control-*.png` supply independently painted radio, tick and progress states. `stone.png` supplies the quiet HUD surface and mirrored centre assembly with matching opposite boundaries.
 
