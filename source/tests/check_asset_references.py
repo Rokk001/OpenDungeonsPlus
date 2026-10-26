@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import argparse
 import ast
+import json
 import re
 import sys
 import tempfile
@@ -210,6 +211,8 @@ def expression_values(tokens, constants, seen=frozenset()):
         return result
     if len(parts) >= 3 and parts[1] == '[' and parts[-1] == ']':
         return expression_values(tokens[:1], constants, seen)
+    if len(parts) >= 3 and parts[1] == '(' and parts[-1] == ')':
+        return expression_values([('@return:' + parts[0], tokens[0][1])], constants, seen)
     # A conditional contributes each branch, not the strings in its condition.
     if '?' in parts and ':' in parts:
         question = parts.index('?')
@@ -284,8 +287,9 @@ def cpp_references(root, assets):
                         consumers[name].append(rule)
     # Follow a helper which converts a mesh name argument to a generated mesh.
     providers = {}
+    returned_constants = {}
     for path, text, tokens, local in sources:
-        for definition in re.finditer(r'\b(\w+)\s*\(([^;{}]*)\)\s*\{', text):
+        for definition in re.finditer(r'\b((?:\w+::)*\w+)\s*\(([^;{}]*)\)\s*\{', text):
             if definition[1] in {'if', 'for', 'while', 'switch', 'catch'}:
                 continue
             start = definition.end()
@@ -294,6 +298,18 @@ def cpp_references(root, assets):
                 depth += (text[end] == '{') - (text[end] == '}')
                 end += 1
             body = text[start:end]
+            function_constants = dict(global_constants)
+            function_constants.update(local)
+            body_constants = {}
+            for assigned in re.finditer(r'\b([A-Za-z_]\w*)(?:\s*\[[^\]]*\])?\s*=\s*([^;]+)', body):
+                body_constants.setdefault(assigned[1], []).append(
+                    [(token[0], start + assigned.start(2) + token.start()) for token in CPP_TOKEN.finditer(assigned[2])])
+            function_constants.update(body_constants)
+            for returned in re.finditer(r'\breturn\s+([^;]+);', body):
+                expression = [(token[0], start + returned.start(1) + token.start())
+                              for token in CPP_TOKEN.finditer(returned[1])]
+                for value in expression_values(expression, function_constants):
+                    returned_constants.setdefault('@return:' + definition[1], []).append([(json.dumps(value, ensure_ascii=False), start + returned.start(1))])
             for parameter_index, parameter in enumerate(definition[2].split(',')):
                 words = re.findall(r'\w+', parameter.split('=')[0])
                 if not words:
@@ -301,6 +317,14 @@ def cpp_references(root, assets):
                 parameter_name = words[-1]
                 if re.search(r'convertToMesh\(\s*' + re.escape(parameter_name) + r'\s*\+\s*"\.mesh"', body):
                     providers[definition[1]] = parameter_index
+    global_constants.update(returned_constants)
+    # A uniquely named class helper can also be called unqualified from another method of that class.
+    short_names = {}
+    for name in returned_constants:
+        short_names.setdefault(name.split('::')[-1], []).append(name)
+    for short, names in short_names.items():
+        if len(names) == 1:
+            global_constants['@return:' + short] = returned_constants[names[0]]
     for path, text, tokens, local in sources:
         relative = path.relative_to(root).as_posix()
         constants = dict(global_constants)
@@ -450,7 +474,7 @@ def self_test():
             'config/roomAmbienceFixture.cfg': 'System ValidParticle\nMeshName Valid.mesh\nMaterial ValidMaterial\nFamily Test/Valid\nMusic Song.ogg\nBaseLine HailStorm 1 1 1 1 1 1 1 ValidParticle\nBaseLine GuidedBolt 1 1 1 1 1 Valid ValidParticle 1\n',
             'levels/Fixture.level': '[TreasuryObject]\n0 Saved Valid 0 0 0\n[/TreasuryObject]\n',
             'levels/Effects.level': '[CreatureEffects]\nBurn 2 ValidParticle 1.0\n[/CreatureEffects]\n',
-            'source/Fixture.cpp': 'const std::string MeshId = "Valid.mesh";\nconst char* systems[] = {"ValidParticle"};\nvoid shape(const std::string& meshName) { object->convertToMesh(meshName + ".mesh", "Graphics"); }\nvoid create() {\n shape("Generated");\n scene->createEntity("runtime", "Generated.mesh");\n scene->createEntity("static", MeshId);\n scene->createParticleSystem("p", systems[0]);\n entity->setMaterialName("ValidMaterial");\n playSpatialSound("Test/Valid", 0, 0);\n playRelativeSound("Interface/Click");\n sound->loadFromFile("Spatial/Test/Valid/sound.ogg");\n setLevelMusicFile("Song.ogg");\n}\n',
+            'source/Fixture.cpp': 'const std::string MeshId = "Valid.mesh";\nconst char* systems[] = {"ValidParticle"};\nvoid shape(const std::string& meshName) { object->convertToMesh(meshName + ".mesh", "Graphics"); }\nvoid create() {\n shape("Generated");\n scene->createEntity("runtime", "Generated.mesh");\n scene->createEntity("static", MeshId);\n scene->createParticleSystem("p", systems[0]);\n entity->setMaterialName("ValidMaterial");\n playSpatialSound("Test/Valid", 0, 0);\n playRelativeSound("Interface/Click");\n sound->loadFromFile("Spatial/Test/Valid/sound.ogg");\n setLevelMusicFile("Song.ogg");\n scene->createParticleSystem("helper", particleFor(true));\n}\nconst std::string& particleFor(bool b) { static const std::string selected = "ValidParticle"; return selected; }\nconst std::string& unrelated() { static const std::string selected = "NotAnAsset"; return selected; }\n',
             'source/tests/test_Fixture.cpp': 'void fixture() {\n setCatalogId("Missing.mesh");\n scene->createEntity("test", "Valid.mesh");\n}\n',
         }
         for filename, text in files.items():
@@ -480,6 +504,7 @@ def self_test():
             ('source/Fixture.cpp', 'playSpatialSound("Test/Valid"', 'playSpatialSound("Test/Missing"', 'sound', 'Test/Missing', 10),
             ('source/Fixture.cpp', 'Spatial/Test/Valid/sound.ogg', 'Spatial/Wrong/sound.ogg', 'sound_file', 'Spatial/Wrong/sound.ogg', 12),
             ('source/Fixture.cpp', 'setLevelMusicFile("Song.ogg")', 'setLevelMusicFile("song.ogg")', 'music_file', 'song.ogg', 13),
+            ('source/Fixture.cpp', 'selected = "ValidParticle"', 'selected = "MissingReturned"', 'particle', 'MissingReturned', 14),
             ('source/tests/test_Fixture.cpp', 'createEntity("test", "Valid.mesh")', 'createEntity("test", "MissingActual.mesh")', 'mesh', 'MissingActual.mesh', 3),
         ]
         for filename, old, new, kind, name, line in cases:
@@ -497,7 +522,7 @@ def self_test():
         path.write_text(files['source/Fixture.cpp'].replace('object->convertToMesh', 'object->notAProducer'), encoding='utf-8')
         _, missing = audit(root)
         assert any(r.name == 'Generated.mesh' for r in missing), 'unproven runtime mesh was accepted'
-    print('asset reference self-test: 21 cases passed')
+    print(f'asset reference self-test: {len(cases) + 2} cases passed')
 
 
 def main():
