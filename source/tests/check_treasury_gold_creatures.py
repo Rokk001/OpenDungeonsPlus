@@ -28,9 +28,14 @@ assert 'camera->isVisible(position)' in render
 assert 'splashBudget(TreasuryGoldMesh::getDetail())' in render
 assert 'updateTreasuryEffects(timeSinceLastFrame)' in render
 assert 'Rooms/Treasury/CoinStep' in render
-# Workers pouring gold: the client reacts to the existing deposit sound message, no new packet.
+# Deposit sound keeps the worker pour pose; the server delivery event owns the coin burst.
 assert 'rrTreasuryDeposit(gameMap, xPos, yPos)' in read('source/network/ODClient.cpp')
-assert 'TreasuryCoinSplash' in render and 'TreasuryCoinPour' in render
+assert 'TreasuryCoinSplash' in render
+pour = render.split('void RenderManager::rrTreasuryDeposit(')[1].split('\n}\n')[0]
+assert 'TreasuryCoinPour' not in pour and 'startTreasuryPour(tile, level)' in pour
+worker = read('source/render/WorkerReactions.cpp')
+delivery = worker.split('if(event.is(CosmeticEventType::goldDelivery))')[1].split('\n    double now', 1)[0]
+assert 'rrMiningCoinBurst(event.mPosition)' in delivery
 particles = read('particles/TreasuryCoins.particle')
 assert 'particle_system TreasuryCoinSplash' in particles and 'particle_system TreasuryCoinPour' in particles
 assert 'material        ReactionParticleCoin' in particles
