@@ -197,7 +197,7 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window) : mContinueLoading(fals
         Ogre::RTShader::ShaderGenerator::getSingleton().addSceneManager(startupScene);
         window.addViewport(camera, STARTUP_VIEWPORT_ORDER)->setMaterialScheme(
             Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
-        loadingRectangle = new Ogre::Rectangle2D("LoadingScreenRectangle", true);
+        loadingRectangle = new Ogre::Rectangle2D(Ogre::String("LoadingScreenRectangle"), true);
         loadingRectangle->setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
         startupScene->getRootSceneNode()->attachObject(loadingRectangle);
         selectLoadingImage();
