@@ -1473,3 +1473,40 @@ gui/ODIcons.png (GhostRoomButton)    AI-generated with Codex    GPLv3+    Origin
 assets-src/gui/items/soul_crystal.png    AI-generated with Codex    GPLv3+    Original painted jagged pale-green crystal with glowing core; transparent 256-pixel source, 2026-10-26
 gui/potions/soul_crystal.png    AI-generated with Codex    GPLv3+    Original soul crystal inventory image, transparent 128 pixels, from assets-src/gui/items/soul_crystal.png, 2026-10-26
 materials/textures/GhostNoise.png    AI-generated with Codex    GPLv3+    Original grayscale mottled spectral noise painting for the scrolling translucent ghost material, 1024 pixels, 2026-10-26
+
+assets-src/rooms/ghostroom/create_models.py    AI-generated with Codex    GPLv3+    Original editable model authoring and baked-surface source, 2026-10-26
+assets-src/rooms/ghostroom/GhostCauldron.blend    AI-generated with Codex    GPLv3+    Original iron press cauldron on four clawed feet, brass pipes and a real glazed opening, 2026-10-26
+models/GhostCauldron.mesh    AI-generated with Codex    GPLv3+    Export of the original GhostCauldron Blender source; two-tile footprint, 2026-10-26
+materials/scripts/Ghost.material    AI-generated with Codex    GPLv3+    Original weathered room-object surfaces, flowing ghost glow, glass and warning-lamp pulse, 2026-10-26
+materials/textures/GhostBrass.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostGaugeFace.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostIron.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_0.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_1.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_2.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_3.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_4.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_5.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_6.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_7.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLeather.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostStone.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+assets-src/rooms/ghostroom/GhostCauldronFill.blend    AI-generated with Codex    GPLv3+    Original independent ectoplasm level behind the cauldron window, floor-origin height-scaled mesh, 2026-10-26
+models/GhostCauldronFill.mesh    AI-generated with Codex    GPLv3+    Original independent ectoplasm level behind the cauldron window, floor-origin height-scaled mesh, 2026-10-26
+assets-src/rooms/ghostroom/GhostBell.blend    AI-generated with Codex    GPLv3+    Iron alarm bell, wall bracket and striking hammer; original editable source and export, 2026-10-26
+models/GhostBell.mesh    AI-generated with Codex    GPLv3+    Iron alarm bell, wall bracket and striking hammer; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/GhostWallGauges.blend    AI-generated with Codex    GPLv3+    Brass pipe instruments, trembling needles and red and green warning lamps; original editable source and export, 2026-10-26
+models/GhostWallGauges.mesh    AI-generated with Codex    GPLv3+    Brass pipe instruments, trembling needles and red and green warning lamps; original editable source and export, 2026-10-26
+models/GhostWallGauges.skeleton    AI-generated with Codex    GPLv3+    Original three-bone instrument rig (Root, NeedleLeft, NeedleRight), repeating one-second Idle needle tremble, 2026-10-26
+assets-src/rooms/ghostroom/GhostBox.blend    AI-generated with Codex    GPLv3+    Hinged and latched capture box with green containment slit; original editable source and export, 2026-10-26
+models/GhostBox.mesh    AI-generated with Codex    GPLv3+    Hinged and latched capture box with green containment slit; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/SoulCrystal.blend    AI-generated with Codex    GPLv3+    Original jagged pale-green crystal with a luminous core; original editable source and export, 2026-10-26
+models/SoulCrystal.mesh    AI-generated with Codex    GPLv3+    Original jagged pale-green crystal with a luminous core; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/CrystalBowl.blend    AI-generated with Codex    GPLv3+    Chipped stone bowl and pedestal with actual missing rim pieces; original editable source and export, 2026-10-26
+models/CrystalBowl.mesh    AI-generated with Codex    GPLv3+    Chipped stone bowl and pedestal with actual missing rim pieces; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/GhostHook.blend    AI-generated with Codex    GPLv3+    Forged iron wall hook, leather capture backpack and brass canister; original editable source and export, 2026-10-26
+models/GhostHook.mesh    AI-generated with Codex    GPLv3+    Forged iron wall hook, leather capture backpack and brass canister; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/GhostHookEmpty.blend    AI-generated with Codex    GPLv3+    Empty forged iron hook matching the equipped wall rack; original editable source and export, 2026-10-26
+models/GhostHookEmpty.mesh    AI-generated with Codex    GPLv3+    Empty forged iron hook matching the equipped wall rack; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/GhostBackpack.blend    AI-generated with Codex    GPLv3+    Leather capture backpack with brass pressure canister, hose, nozzle and stitched straps; original editable source and export, 2026-10-26
+models/GhostBackpack.mesh    AI-generated with Codex    GPLv3+    Leather capture backpack with brass pressure canister, hose, nozzle and stitched straps; original editable source and export, 2026-10-26
