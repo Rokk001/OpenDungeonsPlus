@@ -1490,3 +1490,6 @@ assets-src/rooms/ghostroom/GhostCauldronFill.blend    AI-generated with Codex   
 models/GhostCauldronFill.mesh    AI-generated with Codex    GPLv3+    Original independent ectoplasm level behind the cauldron window, floor-origin height-scaled mesh, 2026-10-26
 assets-src/rooms/ghostroom/GhostBell.blend    AI-generated with Codex    GPLv3+    Iron alarm bell, wall bracket and striking hammer; original editable source and export, 2026-10-26
 models/GhostBell.mesh    AI-generated with Codex    GPLv3+    Iron alarm bell, wall bracket and striking hammer; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/GhostWallGauges.blend    AI-generated with Codex    GPLv3+    Brass pipe instruments, trembling needles and red and green warning lamps; original editable source and export, 2026-10-26
+models/GhostWallGauges.mesh    AI-generated with Codex    GPLv3+    Brass pipe instruments, trembling needles and red and green warning lamps; original editable source and export, 2026-10-26
+models/GhostWallGauges.skeleton    AI-generated with Codex    GPLv3+    Original three-bone instrument rig (Root, NeedleLeft, NeedleRight), repeating one-second Idle needle tremble, 2026-10-26
