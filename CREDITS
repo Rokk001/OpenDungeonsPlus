@@ -1468,3 +1468,7 @@ assets-src/gui/icons/tiles/ItemSlotEmpty.png    AI-generated with Codex    GPLv3
 assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/InfirmaryButton.png    AI-generated with Codex    GPLv3+    Original painted cot and crossed bandages in the project icon style, 2026-10-25; generated at native resolution and downsampled to the 256-pixel source.
+
+materials/textures/GhostRoomFloor.png    AI-generated with Codex    CC0    Original cold dark stone floor made with the existing periodic room-floor generator, 2026-10-26
+materials/textures/GhostRoomFloorNormal.png    AI-generated with Codex    CC0    Original matching tangent-space normal map from the same generated stone height field, 2026-10-26
+materials/scripts/GhostRoomFloor.material    AI-generated with Codex    GPLv3+    Ghost room material using the existing TortureFloor shader structure and the new original floor textures, 2026-10-26

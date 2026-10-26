@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates the floor textures of the hatchery, library, dormitory, dungeon temple, treasury, crypt, training hall,
-casino, prison, arena, torture chamber, workshop, portal and portal wave, plus the UV atlas of the wooden bridge
+casino, prison, arena, ghost room, torture chamber, workshop, portal and portal wave, plus the UV atlas of the wooden bridge
 (materials/textures/).
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
@@ -131,6 +131,7 @@ TONE = {
     'casino': (0.22, 0.90, (1.03, 1.00, 1.03)),
     'workshop': (0.50, 1.00, (1.00, 1.00, 1.12)),
     'bridgeWooden': (0.45, 0.80, (1.08, 1.00, 0.92)),
+    'ghostroom': (0.42, 0.80, (0.92, 1.02, 0.95)),
 }
 
 
@@ -141,7 +142,7 @@ TONE = {
 FLATTEN = {
     'dormitory': (48.0, 0.6), 'casino': (48.0, 0.5),
     'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'prison': (40.0, 0.8),
-    'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
+    'ghostroom': (48.0, 0.7), 'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
     'portalWave': (48.0, 0.7), 'toilet': (48.0, 0.7),
 }
 
@@ -2004,6 +2005,10 @@ ROOMS = {
         'field': flagstone_field, 'band': None, 'strength': 1.3, 'tone': 'treasury',
         'pieces': {'Arena': ('', 'ArenaNormal')},
     },
+    'ghostroom': {
+        'field': torture_field, 'band': None, 'strength': 1.3, 'tone': 'ghostroom',
+        'pieces': {'GhostRoomFloor': ('', 'GhostRoomFloorNormal')},
+    },
     'torture': {
         'field': torture_field, 'band': None, 'strength': 1.3,
         'pieces': {'TortureFloor': ('', 'TortureFloorNormal')},
@@ -2103,7 +2108,7 @@ def seam_image(result):
 
 # Rooms whose floors are periodic and get the wrap seam ratio (--check) and the rolled preview (--seamcheck).
 SEAM_CHECK_ROOMS = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena',
-                    'torture', 'workshop', 'portal', 'portalWave', 'toilet')
+                    'ghostroom', 'torture', 'workshop', 'portal', 'portalWave', 'toilet')
 
 
 def main():
