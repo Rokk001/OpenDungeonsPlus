@@ -1612,32 +1612,7 @@ source/tests/check_dirt_assets.py       OD Team                 GPLv3+
 source/tests/check_toilet_room.py       OD Team                 GPLv3+
 
 
-===================================================
-== In-game GUI design reference: docs/design/ingame-gui/ ==
-===================================================
-
 Name	Author	License	Source
-docs/design/ingame-gui/vorschlag-A-hud-korrigiert.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-dungeonbook-final.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-optionen-final.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-forschungsbaum.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-dungeonbook-profil.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-ziele.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-ereignismeldung.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-kreaturenuebersicht.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-bauen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-grabauswahl.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-zauber.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-fallen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-produktion.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-spielerinformationen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-sandbox.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-einstellungen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-grafikeinstellungen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-toneinstellungen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-steuerungseinstellungen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-spieleinstellungen.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
-docs/design/ingame-gui/vorschlag-A-neustart-bestaetigung.png	AI-generated with Codex	GPLv3+	AI-generated for this project, 2026-10-24; project in-game screenshot and approved variant A style; exact prompts in docs/design/ingame-gui/GENERATION-PROMPT.md.
 shaders/MenuSky.vert, shaders/MenuSky.frag	Original project code	GPLv3+	Self-lit cloudy menu atmosphere and lunar surface shaders.
 
 == Historical procedural icon predecessors (superseded by the painted sources below) ==
