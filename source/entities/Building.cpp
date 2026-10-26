@@ -95,6 +95,19 @@ void Building::addBuildingObject(Tile* targetTile, BuildingObject* obj, GameMap*
             creature->checkWalkPathValid(true);
 }
 
+//! \brief Replaces one tile object without a separate client removal before the new mesh exists.
+void Building::replaceBuildingObject(Tile* targetTile, BuildingObject* obj)
+{
+    BuildingObject* previous = getBuildingObjectFromTile(targetTile);
+    addBuildingObject(targetTile, obj);
+    if(previous == nullptr)
+        return;
+
+    obj->notifyReplacement(*previous);
+    previous->removeFromGameMap();
+    previous->deleteYourself();
+}
+
 void Building::removeBuildingObject(Tile* tile)
 {
     std::map<Tile*, BuildingObject*>::iterator it = mBuildingObjects.find(tile);

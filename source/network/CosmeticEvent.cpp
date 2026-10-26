@@ -17,7 +17,7 @@
 
 #include "network/CosmeticEvent.h"
 
-//! \brief Recognizes the supported event numbers, including workshop opening and cauldron smoke.
+//! \brief Recognizes supported cosmetic IDs, including mining, deposits, box opening and cauldron smoke.
 bool CosmeticEvent::isKnownType() const
 {
     return (mType >= static_cast<int32_t>(CosmeticEventType::moodStage)) &&
@@ -26,13 +26,14 @@ bool CosmeticEvent::isKnownType() const
             (mType == static_cast<int32_t>(CosmeticEventType::keeperWealth)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::hitResult)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::attackTurn)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::tileDirt)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::digStroke)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::goldDelivery)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::boxCracked)) ||
-            (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)) ||
-
-            (mType == static_cast<int32_t>(CosmeticEventType::tileDirt)));
+            (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)));
 }
 
-//! \brief Returns the diagnostic name of a known cosmetic event without changing its wire number.
+//! \brief Returns the diagnostic name of a supported cosmetic event.
 std::string CosmeticEvent::typeString() const
 {
     switch(mType)
@@ -81,6 +82,10 @@ std::string CosmeticEvent::typeString() const
             return "cauldronBang";
         case static_cast<int32_t>(CosmeticEventType::tileDirt):
             return "tileDirt";
+        case static_cast<int32_t>(CosmeticEventType::digStroke):
+            return "digStroke";
+        case static_cast<int32_t>(CosmeticEventType::goldDelivery):
+            return "goldDelivery";
         default:
             break;
     }

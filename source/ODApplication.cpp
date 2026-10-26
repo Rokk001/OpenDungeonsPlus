@@ -27,6 +27,7 @@
 #include "sound/MusicPlayer.h"
 #include "sound/SoundEffectsManager.h"
 #include "render/Gui.h"
+#include "render/LoadingScreen.h"
 #include "render/ODFrameListener.h"
 #include "render/TextRenderer.h"
 #include "render/RenderManager.h"
@@ -236,6 +237,7 @@ void ODApplication::startClient()
 
     // sfmlWindow.setActive(true);
     sfmlWindow.setMouseCursorVisible(false);
+    sfmlWindow.setVisible(false);
 
 
     ogreRoot.initialise(false);
@@ -257,12 +259,13 @@ void ODApplication::startClient()
 #endif
         return ogreRoot.createRenderWindow(windowTitle, w, h, fullscreen, &misc);
     }();
-    renderWindow->setVisible(true);
+    renderWindow->setVisible(false);
 #else /* OD_USE_SFML_WINDOW */
     
     ogreRoot.initialise(false);
 
     Ogre::NameValuePairList misc = ogreRoot.getRenderSystem()->getRenderWindowDescription().miscParams;
+    misc["hidden"] = "true";
 
     OD_LOG_INF("Creating window: with resolution " + Helper::toString(w) + " " + Helper::toString(h));
     
@@ -303,6 +306,15 @@ void ODApplication::startClient()
     Ogre::MaterialManager::getSingleton().addListener(sgListener);
 #endif
     
+    // Keep the first visible frame on the loading picture while resources and the menu are created.
+    LoadingScreen startupLoading(*renderWindow);
+#ifdef OD_USE_SFML_WINDOW
+    sfmlWindow.display();
+    sfmlWindow.setVisible(true);
+#else
+    renderWindow->setVisible(true);
+#endif
+
     Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
 
     MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
@@ -402,6 +414,7 @@ void ODApplication::startClient()
     if(menuTestSeconds > 0)
         std::cout << "MENUTEST frames=" << menuTestFrames << std::endl;
 
+    LoadingScreen::finishStartup();
     OD_LOG_INF("Disconnecting client...");
     client.disconnect();
     OD_LOG_INF("Stopping server...");

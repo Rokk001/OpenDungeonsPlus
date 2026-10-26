@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 
-from PIL import Image
+from PIL import Image, ImageStat
 
 repo = Path(__file__).resolve().parents[2]
 material = (repo / "materials/scripts/Background.material").read_text()
@@ -10,9 +10,23 @@ texture = repo / "materials/textures/WorldRock.png"
 
 assert re.search(r"\btexture\s+WorldRock\.png\b", material), "Background must use WorldRock.png"
 assert re.search(r"\btex_address_mode\s+wrap\b", material), "Background texture must wrap"
+# Keep the background dark independently of ambient light and nearby world lights.
+for component in ("ambient", "diffuse", "specular"):
+    assert re.search(rf"\b{component}\s+0\.0\s+0\.0\s+0\.0\b", material), \
+        f"Background {component} must not add world lighting"
+assert re.search(r"\bemissive\s+0\.25\s+0\.25\s+0\.25\s+1\.0\b", material), \
+    "Background must retain the dark earth tint at quarter emission"
+# Eight by five repeats give square 240px patches at the reference 1920x1200 viewport.
+assert re.search(r"\bscale\s+0\.125\s+0\.2\b", material), \
+    "Background rock structure must not be minified into the old 26-by-15 repeats"
 assert texture.is_file(), "WorldRock.png is missing"
 with Image.open(texture) as image:
     assert image.format == "PNG" and image.size == (1024, 1024), "WorldRock.png must be a 1024x1024 PNG"
+    # Broad rock relief must survive tile-sized minification instead of averaging to flat brown.
+    rock = image.convert("L")
+    coarse_rock = rock.resize((32, 32), Image.Resampling.BOX)
+    assert ImageStat.Stat(coarse_rock).stddev[0] >= ImageStat.Stat(rock).stddev[0] * 0.25, \
+        "WorldRock.png must retain broad rock contrast when fine gravel is filtered out"
 
 assert re.search(r"\bdepth_write\s+off\b", material), "Background must not obscure world geometry"
 

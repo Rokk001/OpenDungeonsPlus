@@ -181,6 +181,7 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! \brief Applies a server notification, including the saved campaign victory result; creature notices
     //! get the profile name shown on the creature card. For the carry and release notifications it also flags
     //! the carrier as carrying or not carrying on the client.
+    //! Building-object replacement adds create the new mesh before releasing the old one in this handler.
     //! \return true if the notification was processed.
     //! \brief Adopts authoritative game updates and complete owner-only laboratory snapshots.
     bool processMessage(ServerNotificationType cmd, ODPacket& packetReceived) override;

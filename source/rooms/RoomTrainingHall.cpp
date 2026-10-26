@@ -37,6 +37,11 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <iomanip>
+#include <limits>
+#include <sstream>
+#include <set>
+
 const std::string RoomTrainingHallName = "TrainingHall";
 const std::string RoomTrainingHallNameDisplay = "Training hall room";
 const RoomType RoomTrainingHall::mRoomType = RoomType::trainingHall;
@@ -154,8 +159,11 @@ void RoomTrainingHall::absorbRoom(Room *r)
     OD_ASSERT_TRUE_MSG(roomAbs->mCreaturesDummies.empty(), "room=" + getName() + ", roomAbs=" + roomAbs->getName());
 }
 
+//! \brief Creates unchanged center targets or a wall rack, retaining any loaded rack.
 BuildingObject* RoomTrainingHall::notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile)
 {
+    if(place != activeSpotCenter && getBuildingObjectFromTile(tile) != nullptr)
+        return nullptr;
     Ogre::Real x = static_cast<Ogre::Real>(tile->getX());
     Ogre::Real y = static_cast<Ogre::Real>(tile->getY());
     Ogre::Real z = 0;
@@ -207,6 +215,126 @@ BuildingObject* RoomTrainingHall::notifyActiveSpotCreated(ActiveSpotPlace place,
             break;
     }
     return nullptr;
+}
+
+//! \brief Rejects racks without their matching wall and tiles that connect room parts.
+void RoomTrainingHall::filterWallActiveSpots(ActiveSpotPlace place, std::vector<Tile*>& tiles)
+{
+    int dx = 0;
+    int dy = 0;
+    switch(place)
+    {
+        case activeSpotLeft: dx = -1; break;
+        case activeSpotRight: dx = 1; break;
+        case activeSpotTop: dy = 1; break;
+        case activeSpotBottom: dy = -1; break;
+        default: return;
+    }
+    for(std::vector<Tile*>::iterator it = tiles.begin(); it != tiles.end();)
+    {
+        Tile* tile = *it;
+        Tile* wall = getGameMap()->getTile(tile->getX() + dx, tile->getY() + dy);
+        bool allowed = tile->getCoveringBuilding() == this && wall != nullptr
+            && wall->isWallClaimedForSeat(getSeat()) && rackLeavesRoomConnected(tile);
+        // A saved layout is restored exactly; later room edits use the placement rules.
+        if(mRestoringRackLayout)
+            allowed = getBuildingObjectFromTile(tile) != nullptr;
+        if(allowed)
+            ++it;
+        else
+            it = tiles.erase(it);
+    }
+}
+
+//! \brief Tests the room's existing tile adjacency with the proposed rack tile excluded.
+bool RoomTrainingHall::rackLeavesRoomConnected(Tile* tile) const
+{
+    std::set<Tile*> remaining(mCoveredTiles.begin(), mCoveredTiles.end());
+    remaining.erase(tile);
+    if(remaining.empty())
+        return true;
+    std::vector<Tile*> toVisit(1, *remaining.begin());
+    remaining.erase(remaining.begin());
+    while(!toVisit.empty())
+    {
+        Tile* current = toVisit.back();
+        toVisit.pop_back();
+        for(Tile* neighbor : current->getAllNeighbors())
+        {
+            std::set<Tile*>::iterator it = remaining.find(neighbor);
+            if(it == remaining.end())
+                continue;
+            remaining.erase(it);
+            toVisit.push_back(neighbor);
+        }
+    }
+    return remaining.empty();
+}
+
+//! \brief Updates work spots without rerolling the rack layout read from a save.
+void RoomTrainingHall::updateActiveSpots(GameMap* gameMap)
+{
+    Room::updateActiveSpots(gameMap);
+    mRestoringRackLayout = false;
+}
+
+//! \brief Saves rack absence or its mesh, position and facing with each room tile.
+void RoomTrainingHall::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileData) const
+{
+    Room::exportTileDataToStream(os, tile, tileData);
+    if(getGameMap()->isInEditorMode())
+        return;
+    os << "\tTrainingRack ";
+    std::map<Tile*, BuildingObject*>::const_iterator it = mBuildingObjects.find(tile);
+    if(it == mBuildingObjects.end() || (it->second->getMeshName() != "WeaponShield1"
+        && it->second->getMeshName() != "WeaponShield2"))
+    {
+        os << "none";
+        return;
+    }
+    const BuildingObject& rack = *it->second;
+    const Ogre::Vector3& position = rack.getPosition();
+    std::streamsize precision = os.precision();
+    os << std::setprecision(std::numeric_limits<Ogre::Real>::max_digits10)
+        << rack.getMeshName() << " " << position.x << " " << position.y << " " << position.z
+        << " " << rack.getRotationAngle();
+    os.precision(precision);
+}
+
+//! \brief Restores optional rack records verbatim, without changing center target placement.
+bool RoomTrainingHall::importTileDataFromStream(std::istream& is, Tile* tile, TileData* tileData)
+{
+    std::string data;
+    std::getline(is, data);
+    std::stringstream roomData(data);
+    roomData >> std::ws;
+    if(!Room::importTileDataFromStream(roomData, tile, tileData))
+        return false;
+    std::stringstream rackData(data);
+    std::string tag;
+    while(rackData >> tag)
+    {
+        if(tag == "TrainingRack")
+            break;
+    }
+    if(tag != "TrainingRack")
+        return true;
+    std::string mesh;
+    if(!(rackData >> mesh))
+        return false;
+    mRestoringRackLayout = true;
+    if(mesh == "none")
+        return true;
+    if(mesh != "WeaponShield1" && mesh != "WeaponShield2")
+        return false;
+    Ogre::Vector3 position;
+    Ogre::Real rotation;
+    if(!(rackData >> position.x >> position.y >> position.z >> rotation))
+        return false;
+    BuildingObject* rack = new BuildingObject(getGameMap(), *this, mesh, tile,
+        position.x, position.y, position.z, rotation, false);
+    addBuildingObject(tile, rack);
+    return true;
 }
 
 void RoomTrainingHall::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)

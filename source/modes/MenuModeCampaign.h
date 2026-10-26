@@ -47,7 +47,7 @@ public:
     //! Used to call the corresponding Gui Sheet.
     void activate() final override;
 
-    //! \brief Fades the lift layer of the province under the mouse
+    //! \brief Fades the province lift and fits a visible debriefing after screen or UI-scale changes
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
 
     //! \brief Reads the campaign definition and the saved progress from disk.
@@ -79,6 +79,9 @@ private:
     float mLiftFade;
     //! Level of the open briefing, or the number of levels if none
     size_t mBriefingLevel;
+    //! Screen dimensions and GUI scale used by the last debriefing fit.
+    CEGUI::Vector2f mDebriefingScreen;
+    float mDebriefingScale;
 
     //! \brief Reads the world description and the id map once. Returns false if one of them cannot be read.
     bool loadWorld();
@@ -103,8 +106,10 @@ private:
     void updateTooltip(const CEGUI::Vector2f& position, size_t province, size_t site);
     //! \brief Shows the unchanged story beside the level goals and its preview when available.
     void showBriefing(size_t level);
-    //! \brief Shows the last level result at full text width without a preview or goal list.
+    //! \brief Shows the last level result fitted to its text without a preview or goal list.
     void showDebriefing();
+    //! \brief Fits a visible debriefing to rendered text and existing margins, limited to the screen.
+    void fitDebriefingPanel();
     //! \brief Shows or hides the preview and registers scaled panel and text areas.
     void setBriefingPreviewVisible(bool visible);
     //! \brief Closes the briefing or debriefing panel

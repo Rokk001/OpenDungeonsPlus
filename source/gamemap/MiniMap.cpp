@@ -44,6 +44,8 @@ namespace
 //! Names of the frame and compass images drawn by Gui.cpp.
 const CEGUI::String MINIMAP_RIM_IMAGE("OpenDungeonsIcons/MiniMapRim");
 const CEGUI::String MINIMAP_NORTH_IMAGE("OpenDungeonsIcons/MiniMapNorth");
+//! Existing slab image loaded by ODSkin.scheme alongside the minimap artwork.
+static const CEGUI::String MINIMAP_STONE_IMAGE("ODHudSurface/Stone");
 
 //! The minimap is laid out for a map area of this many pixels; sizes scale with the actual area.
 const float MINIMAP_REFERENCE_SIZE = 176.0f;
@@ -73,7 +75,7 @@ const Ogre::Real ANIMATION_PHASES_PER_SECOND = 2.0f;
 const Ogre::ColourValue DIRT_COLOUR(0.36f, 0.18f, 0.05f);
 
 //! \brief Minimap image that clips the map to a circle when requested and draws the camera
-//! area outline and the direction to the dungeon heart above it.
+//! area outline and the direction to the dungeon heart above its stone backing and map.
 class MiniMapImage : public CEGUI::BasicImage
 {
 public:
@@ -91,6 +93,7 @@ public:
     Ogre::Vector2 mDirectionEnd = Ogre::Vector2::ZERO;
     Ogre::Vector2 mNorthDirection = Ogre::Vector2(0.0f, -1.0f);
 
+    //! \brief Composes the circular stone backing, revealed map, frame and existing map markers.
     void render(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& area,
         const CEGUI::Rectf* clip, const CEGUI::ColourRect& colours) const override
     {
@@ -102,7 +105,9 @@ public:
         const float centerX = area.left() + radiusX;
         if(!mCircular)
             CEGUI::BasicImage::render(buffer, area, clip, colours);
-        else for(float y = area.top(); y < area.bottom(); y += 1.0f)
+        // Submit the stone and map as separate layers to keep each texture in one draw batch.
+        else for(unsigned int layer = 0; layer < 2; ++layer)
+        for(float y = area.top(); y < area.bottom(); y += 1.0f)
         {
             const float nextY = std::min(y + 1.0f, area.bottom());
             const float dy = ((y + nextY) * 0.5f - area.top() - radiusY) / radiusY;
@@ -111,7 +116,13 @@ public:
             if(clip != nullptr)
                 strip = strip.getIntersection(*clip);
             if(strip.getWidth() > 0.0f && strip.getHeight() > 0.0f)
-                CEGUI::BasicImage::render(buffer, area, &strip, colours);
+            {
+                CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+                if(layer == 0 && images.isDefined(MINIMAP_STONE_IMAGE))
+                    images.get(MINIMAP_STONE_IMAGE).render(buffer, area, &strip, colours);
+                else if(layer == 1)
+                    CEGUI::BasicImage::render(buffer, area, &strip, colours);
+            }
         }
         if(mShowDirection)
             drawLine(buffer, area, clip, colours, mDirectionStart, mDirectionEnd, true);

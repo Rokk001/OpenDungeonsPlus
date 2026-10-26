@@ -89,6 +89,7 @@ public:
     //! A 3x3 heart has no ring and stores no gold.
     virtual int getTotalGoldStorage() const override;
     virtual int getTotalGoldStored() const override;
+    //! \brief Deposits gold into the ring and reports the actual heart position for the delivery burst.
     virtual int depositGold(int gold, Tile* tile) override;
     virtual int withdrawGold(int gold) override;
 
@@ -151,6 +152,7 @@ private:
     Tile* getRingCenterTile() const;
     //! \brief A covered tile outside the 3x3 core is part of the treasury ring.
     bool isTreasuryTile(Tile* tile) const;
+    //! \brief Replaces changed ring pile meshes without hiding their previous mesh first.
     void updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData);
 
     //! True when the gold of a ring tile changed and its mesh needs a refresh in doUpkeep().

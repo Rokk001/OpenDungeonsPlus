@@ -114,7 +114,6 @@ const float GOLD_BODY_TOP_SHARE = 0.92f;
 const double CLAIM_STOMP_DELAY = 0.4;
 const double WEAK_FIGHT_DELAY = 0.1;
 const double GOLD_CHEER_DELAY = 0.4;
-const double GOLD_CLOUD_DELAY = 0.1;
 const double GOLD_CLOUD_HANDLED_DELAY = 0.15;
 const double TREASURY_TOSS_DELAY = 0.3;
 const double TREASURY_SMOOTH_DELAY = 3.5;
@@ -435,6 +434,7 @@ void WorkerReactions::noteAnimation(CreatureReactions& reactions, Creature* crea
     }
 }
 
+//! \brief Handles actual mining strokes and the existing worker cosmetic notifications.
 void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const CosmeticEvent& event)
 {
     if(!isActive(reactions))
@@ -446,12 +446,25 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
         return;
     }
 
+    if(event.is(CosmeticEventType::goldDelivery))
+    {
+        if(reactions.mMode == CreatureReactions::Mode::full)
+            RenderManager::getSingleton().rrMiningCoinBurst(event.mPosition);
+        return;
+    }
+
     double now = reactions.mTime;
     Creature* worker = reactions.mGameMap->getCreature(event.mSubject);
     if(!isWorker(worker))
         return;
 
-    if(event.is(CosmeticEventType::digFinished))
+    if(event.is(CosmeticEventType::digStroke))
+    {
+        if(reactions.mMode == CreatureReactions::Mode::full &&
+            static_cast<TileType>(event.mValue) == TileType::gold)
+            RenderManager::getSingleton().rrMiningCoinBurst(event.mPosition);
+    }
+    else if(event.is(CosmeticEventType::digFinished))
     {
         TileType type = static_cast<TileType>(event.mValue);
         std::string eventName;
@@ -482,9 +495,8 @@ void WorkerReactions::noteCosmeticEvent(CreatureReactions& reactions, const Cosm
             ConfigManager::getSingleton().getWorkerCheerGoldShare());
         if((event.mValue - oldGold) >= std::max(threshold, 1))
             later(reactions, worker, "GoldCheer", GOLD_CHEER_DELAY);
-        // The gold is gone but not put into a treasury: it was thrown off
-        else if((event.mValue == 0) && (oldGold > 0) && (reactions.getRoomName(worker) != "Treasury"))
-            later(reactions, worker, "GoldCloud", GOLD_CLOUD_DELAY);
+        // A zero amount also means that mined gold was packed into a carried sack.
+        // Only the explicit hand, slap and death hooks create a spill cloud.
     }
 }
 

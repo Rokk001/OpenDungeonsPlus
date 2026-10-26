@@ -189,6 +189,7 @@ public:
 
     void initGameRenderer();
     void stopGameRenderer();
+    //! \brief Creates the native menu scene and dismisses the startup loading picture when ready.
     void createMainMenuScene();
     void freeMainMenuScene();
     //! \brief Starts the configured flight from outside the fortress into the overview.

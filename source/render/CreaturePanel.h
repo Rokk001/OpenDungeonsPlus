@@ -25,6 +25,7 @@ namespace CEGUI { class Window; }
 class CreaturePanel
 {
 public:
+    //! \brief Creates the population controls directly on the navigation slab surface.
     CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent);
     ~CreaturePanel();
     //! \brief Stores the counts received from the server and schedules a refresh of the labels

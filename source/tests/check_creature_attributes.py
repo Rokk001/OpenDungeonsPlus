@@ -845,22 +845,29 @@ def check_part_g():
     job = windows['JobText']
     for name in ('AttributesText', 'EquipmentText', 'PathText', 'SkillsText'):
         block = windows[name]
-        assert 'value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}"' in block, name
+        # The profile rows reserve the existing scrollbar gutter at the right edge.
+        assert 'value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}"' in block, name
         for key in ('FrameEnabled', 'BackgroundEnabled', 'Font', 'VertFormatting', 'HorzFormatting'):
-            assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == re.search(
-                r'name="' + key + r'" value="([^"]*)"', job)[1], name + ' ' + key
-    names = [window.attrib['name'] for window in ET.fromstring(layout).find('Window').findall('Window')]
-    assert names[names.index('AttributesText'):names.index('EquipmentText') + 1] == ['AttributesText', 'EquipmentRow', 'EquipmentText']
-    assert names.index('PathText') < names.index('SkillsText')
+            assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == ('WordWrapLeftAligned' if key == 'HorzFormatting' else re.search(
+                r'name="' + key + r'" value="([^"]*)"', job)[1]), name + ' ' + key
+    names = re.findall(r'<Window type="OD/\w+" name="(\w+)"', layout)
+    assert names.index('AttributesText') < names.index('EquipmentText') and names.index('PathText') < names.index('SkillsText')
+    children = [window.attrib['name'] for window in ET.fromstring(layout).find('Window').findall('Window')]
+    assert children[children.index('AttributesText'):children.index('EquipmentText') + 1] == ['AttributesText', 'EquipmentRow', 'EquipmentText']
     assert 'name="FrameEnabled" value="False"' in windows['AttributesText'] and 'MedievalSharp-8' in windows['AttributesText']
     flow = gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):]
     flow = flow[:flow.index('};')]
-    assert flow.index('"AttributesText", "EquipmentText", "EquipmentRow", "PathText", "SkillsText", "BioText"') > 0
+    assert flow.index('"AttributesText", "EquipmentText", "EquipmentRow"') > 0
+    for name in ('PathText', 'SkillsText', 'BioText'):
+        assert '"' + name + '"' in flow
     layout_function = function(gui, 'float Gui::layoutCreatureProfilePage(')
-    assert ('const char* const textRowsBefore[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", '
-            '"LikesText",\n        "DislikesText", "RelationsText"};') in layout_function
-    assert re.search(r'for\(std::size_t i = 0; i < 8; \+\+i\)\s*\{\s*' + re.escape('y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);'), layout_function)
-    assert layout_function.index('if(i != 0)') < layout_function.index('page->getChild("EquipmentRow")')
+    assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
+    assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('page->getChild("EquipmentRow")') < layout_function.index('const char* const personalRows')
+    assert 'slot < 13' in layout_function and 'x + gap + edge > width' in layout_function
+    assert ('const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",\n'
+            '        "DislikesText", "RelationsText"};') in layout_function
+    assert 'for(std::size_t i = 0; i < 6; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function
+
 
 
 check_part_g()

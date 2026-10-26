@@ -82,6 +82,7 @@ public:
 
     virtual int getTotalGoldStorage() const override;
     virtual int getTotalGoldStored() const override;
+    //! \brief Deposits gold and reports a delivery burst only when the owner has exactly one heart.
     virtual int depositGold(int gold, Tile *tile) override;
     virtual int withdrawGold(int gold) override;
 
@@ -104,6 +105,7 @@ private:
     int getGoldCapacityPerTile() const;
     //! \brief Fill step of the tile at the given position, 0 for tiles that are not part of this room
     int getLevelOfTile(const std::map<Tile*, int>& levels, int x, int y) const;
+    //! \brief Replaces changed pile meshes while preserving gold amounts and neighbour joins.
     void updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData,
         const std::map<Tile*, int>& levels);
     bool mGoldChanged;

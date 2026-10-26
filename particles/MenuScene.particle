@@ -41,8 +41,8 @@ particle_system MenuBrazierFire
 particle_system MenuBrazierEmbers
 {
     material CombatSparks
-    particle_width 0.035
-    particle_height 0.09
+    particle_width 0.10
+    particle_height 0.24
     quota 75
     billboard_type point
     emitter Box
@@ -58,23 +58,23 @@ particle_system MenuBrazierEmbers
         time_to_live_max 5
         velocity_min 0.55
         velocity_max 1.75
-        colour_range_start 0.9 0.17 0.015 0.8
-        colour_range_end 1 0.42 0.05 0.9
+        colour_range_start 1 0.42 0.05 0.8
+        colour_range_end 1 0.6 0.12 0.9
     }
     affector ColourFader
     {
-        red -0.22
-        green -0.09
-        blue -0.02
-        alpha -0.2
+        red -0.16
+        green -0.07
+        blue -0.01
+        alpha -0.16
     }
 }
 
 particle_system MenuCourtyardEmbers
 {
     material CombatSparks
-    particle_width 0.035
-    particle_height 0.09
+    particle_width 0.10
+    particle_height 0.24
     quota 160
     billboard_type point
     emitter Box
@@ -90,15 +90,15 @@ particle_system MenuCourtyardEmbers
         time_to_live_max 5
         velocity_min 0.1
         velocity_max 0.6
-        colour_range_start 0.9 0.17 0.015 0.8
-        colour_range_end 1 0.42 0.05 0.9
+        colour_range_start 1 0.42 0.05 0.8
+        colour_range_end 1 0.6 0.12 0.9
     }
     affector ColourFader
     {
-        red -0.22
-        green -0.09
-        blue -0.02
-        alpha -0.2
+        red -0.16
+        green -0.07
+        blue -0.01
+        alpha -0.16
     }
 }
 
@@ -123,12 +123,12 @@ particle_system MenuCourtyardFog
         time_to_live_max 14
         velocity_min 0.1
         velocity_max 0.3
-        colour_range_start 0.14 0.15 0.16 0.09
-        colour_range_end 0.11 0.13 0.12 0.07
+        colour_range_start 0.48 0.51 0.49 0.16
+        colour_range_end 0.40 0.43 0.41 0.12
     }
     affector ColourFader
     {
-        alpha -0.012
+        alpha -0.009
     }
     affector Scaler
     {
@@ -253,10 +253,10 @@ particle_system MenuGraveMist
         time_to_live_max 5
         velocity_min 0.06
         velocity_max 0.18
-        colour_range_start 0.16 0.18 0.13 0.18
-        colour_range_end 0.10 0.12 0.09 0.10
+        colour_range_start 0.48 0.51 0.49 0.18
+        colour_range_end 0.40 0.43 0.41 0.14
     }
-    affector ColourFader { alpha -0.035 }
+    affector ColourFader { alpha -0.028 }
     affector Scaler { rate 0.12 }
 }
 

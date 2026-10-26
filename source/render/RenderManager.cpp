@@ -3814,6 +3814,12 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 }
 
 
+//! \brief Drops any stale batched pile after an atomic building-object replacement.
+void RenderManager::rrFinishBuildingObjectReplacement(RenderedMovableEntity* entity)
+{
+    mTreasuryBatch.rebuildForPile(entity->getName());
+}
+
 void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt)
 {
     std::string tempString = curRenderedMovableEntity->getOgreNamePrefix()
@@ -6100,6 +6106,20 @@ void RenderManager::treasuryCreatureStep(Creature* creature, const Ogre::Vector3
         SoundEffectsManager::getSingleton().playSpatialSound("Rooms/Treasury/CoinStep", position.x, position.y);
 }
 
+//! \brief Emits a bounded stationary burst using the existing timed free-particle cleanup.
+void RenderManager::rrMiningCoinBurst(const Ogre::Vector3& position)
+{
+    const std::string name = "TreasuryEffect_" + Helper::toString(++mTreasuryEffectNumber);
+    rrCreateFreeParticleEffect(name, "WorkerMiningCoins", position, nullptr);
+    TreasuryEffect effect;
+    effect.mName = name;
+    effect.mRemaining = 1.0f;
+    effect.mRoomKey = nullptr;
+    effect.mKind = TreasuryEffectKind::coinBurst;
+    mTreasuryEffects.push_back(effect);
+}
+
+//! \brief Shows the existing treasury deposit coins and worker pour pose.
 void RenderManager::rrTreasuryDeposit(GameMap* gameMap, int x, int y)
 {
     int level = 0;
@@ -6292,6 +6312,7 @@ bool RenderManager::createTreasuryEffect(const void* roomKey, const std::string&
     return true;
 }
 
+//! \brief Removes expired free particles and releases budgets only for effects that acquired one.
 void RenderManager::updateTreasuryEffects(Ogre::Real timeSinceLastFrame)
 {
     for(std::vector<TreasuryEffect>::iterator it = mTreasuryEffects.begin(); it != mTreasuryEffects.end();)
@@ -6308,7 +6329,7 @@ void RenderManager::updateTreasuryEffects(Ogre::Real timeSinceLastFrame)
             mTreasuryDustBudget.release(it->mRoomKey);
         else if(it->mKind == TreasuryEffectKind::ambient)
             mTreasuryAmbientBudget.release(it->mRoomKey);
-        else
+        else if(it->mKind == TreasuryEffectKind::splash)
             mTreasurySplashBudget.release(it->mRoomKey);
         it = mTreasuryEffects.erase(it);
     }

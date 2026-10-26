@@ -33,6 +33,7 @@
 #include "utils/Random.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
 #include <iostream>
 
 BuildingObject::BuildingObject(GameMap* gameMap, Building& building, const std::string& meshName, Tile* targetTile,
@@ -159,5 +160,27 @@ void BuildingObject::fireRefresh()
         serverNotification->mPacket << name;
         exportToPacketForUpdate(serverNotification->mPacket, seat);
         ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+//! \brief Sends one add packet per current viewer, carrying the old identity for removal after mesh creation.
+void BuildingObject::notifyReplacement(BuildingObject& previous)
+{
+    mSeatsWithVisionNotified = getPositionTile()->getSeatsWithVision();
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        std::vector<Seat*>::iterator oldSeat = std::find(previous.mSeatsWithVisionNotified.begin(),
+            previous.mSeatsWithVisionNotified.end(), seat);
+        if(oldSeat != previous.mSeatsWithVisionNotified.end())
+            previous.mSeatsWithVisionNotified.erase(oldSeat);
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(ServerNotificationType::addEntity, seat->getPlayer());
+        notification->mPacket << getGameMap()->getNodeType();
+        exportHeadersToPacket(notification->mPacket);
+        exportToPacket(notification->mPacket, seat);
+        notification->mPacket << previous.getObjectType() << previous.getName();
+        ODServer::getSingleton().queueServerNotification(notification);
     }
 }

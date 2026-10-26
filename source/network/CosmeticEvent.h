@@ -132,10 +132,17 @@ enum class CosmeticEventType : int32_t
     //! and at once to a keeper who gains sight, joins or loads. Only shows the dirt decals and the room text; the game
     //! never depends on it. Older clients skip the kind.
     tileDirt = 19,
+    //! A successful mining stroke. mSubject worker, mValue TileType, mPosition the actual mined tile.
+    //! Sent once after the server removed material; timing, gold and gameplay are unchanged.
+    digStroke = 20,
+    //! A successful deposit in a heart ring or treasury with one owner heart. mObject deposit room,
+    //! mPosition actual heart tile.
+    //! Sent once per successful deposit only to keepers seeing both the deposit and heart tiles.
+    goldDelivery = 21,
     //! \brief A workshop cracked an item box: mObject room name, mPosition box tile.
-    boxCracked = 20,
+    boxCracked = 22,
     //! A busy cauldron emits harmless smoke; mSubject brewer, mPosition cauldron tile.
-    cauldronBang = 21
+    cauldronBang = 23
 };
 
 //! \brief The result in mValue of the event hitResult

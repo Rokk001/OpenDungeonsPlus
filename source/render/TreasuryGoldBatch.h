@@ -54,6 +54,9 @@ public:
     //! The pile is gone (its entity may already be destroyed): the batch of its room is rebuilt
     void removePile(const std::string& entityName);
 
+    //! \brief Rebuilds the replacement pile's room now, dropping the previous mesh in the same frame.
+    void rebuildForPile(const std::string& entityName);
+
     //! Rebuilds the dirty room batches whose interval is over
     void update(float timeSinceLastFrame);
 

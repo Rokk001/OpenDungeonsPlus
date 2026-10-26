@@ -91,7 +91,7 @@ private:
     void showTab(bool profile);
     //! \brief Selects the creature in the list (resetting the filter if it hides the creature) and shows its profile.
     void selectCreature(const std::string& creatureName);
-    //! \brief Fills the profile pane with the profile of the selected creature.
+    //! \brief Fills the shared scrolling profile with the selected creature and its recent posts.
     void refreshProfile();
 
     GameMap& mGameMap;

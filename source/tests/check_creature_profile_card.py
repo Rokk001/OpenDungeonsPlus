@@ -6,6 +6,8 @@ the statistics.
 """
 from pathlib import Path
 import re
+import xml.etree.ElementTree as ET
+from PIL import ImageFont
 
 repo = Path(__file__).resolve().parents[2]
 gui = (repo / 'source/render/Gui.cpp').read_text()
@@ -28,7 +30,9 @@ stats = stats[:stats.index('</Window>')]
 for prop in ('Font" value="MedievalSharp-8', 'VertFormatting" value="TopAligned',
              'HorzFormatting" value="WordWrapLeftAligned'):
     assert prop in stats, prop
-assert 'VertScrollbar' not in layout and 'VertScrollbar' not in page, 'no scrolling wanted'
+assert 'name="VertScrollbar" value="True"' in stats, 'statistics must remain scrollable'
+assert 'type="OD/VerticalScrollbar" name="ProfileScrollbar"' in page, 'the shared profile must scroll'
+assert 'name="ClippedByParent" value="True"' in page, 'the profile must clip at its viewport'
 
 body = gui[gui.index('Gui::createCreatureProfileWindow'):]
 body = body[:body.index('\n}\n')]
@@ -49,22 +53,145 @@ assert 'createCreatureProfilePage(mStatsWindow->getChild("ProfilePage"))' in cre
 assert 'WindowCreatureProfilePage.layout' in gui and 'setName("Content")' in gui
 assert 'fillProfilePage(mProfilePage)' in (repo / 'source/render/SocialWindow.cpp').read_text()
 
-# ---- rows: visible labels for the bars, no overlap, nothing below the tab buttons ----
+# The initial viewport reserves the portrait, equipment and attributes; social metadata follows.
 for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeLabel'):
     assert 'name="%s"' % name in page, name
-rows = []
-for name in ('NameText', 'HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText', 'BioText', 'LikesText',
-             'DislikesText', 'FriendsLabel', 'FoeLabel', 'StatusText'):
-    block = page[page.index('name="%s"' % name):]
-    area = re.search(r'name="Area" value="\{\{[^,]*,(-?\d+)\},\{0\.0,(\d+)\},\{[^,]*,(-?\d+)\},\{0\.0,(\d+)\}\}"', block)
-    rows.append((name, int(area[2]), int(area[4])))
-for (name, top, bottom), (nextName, nextTop, nextBottom) in zip(rows, rows[1:]):
-    if name in ('NameText', 'HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText') and             nextName in ('HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText', 'BioText'):
-        assert bottom <= nextTop, (name, nextName)
-    elif nextName not in ('NameText',):
-        assert bottom <= nextTop, (name, nextName)
-lastBottom = max(bottom for _, _, bottom in rows)
-assert lastBottom + 34 <= height - 56, 'a row reaches into the tab buttons'
+profile_layout = gui[gui.index('float Gui::layoutCreatureProfilePage'):gui.index('void Gui::applyProfileScroll')]
+assert profile_layout.index('CEGUI::Window* equipment') < profile_layout.index('page->getChild("AttributesText")')
+assert profile_layout.index('page->getChild("AttributesText")') < profile_layout.index('const char* const personalRows')
+assert profile_layout.index('const char* const barNames') < profile_layout.index('page->getChild("EquipmentRow")') < profile_layout.index('const char* const personalRows')
+assert '"EquipmentRow"' in gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):gui.index('const std::size_t PROFILE_FLOW_ROW_COUNT')]
+assert 'countWrappedLines(equipment, equipmentWidth)' in profile_layout
+assert '34.0f + equipmentHeight + PROFILE_ROW_GAP' in profile_layout
+assert 'getProfileLinesHeight(window, lines, scale)' in gui
+assert 'getRenderedString()' in gui, 'measure the actual rendered text rather than a fixed number of rows'
+assert 'setDocumentSize(y)' in profile_layout and 'setPageSize(viewport)' in profile_layout
+assert 'std::min(scrollbar->getScrollPosition(), y - viewport)' in profile_layout
+assert 'applyProfileScroll(page, offset)' in profile_layout
+assert 'isFlowRow || (mProfileBaseAreas.find(child) == mProfileBaseAreas.end())' in profile_layout
+for name in ('Portrait', 'NameText', 'EquipmentText', 'HandleText', 'AgeText', 'RelationText', 'FromText', 'JobText',
+             'HealthLabel', 'HealthBar', 'ExperienceLabel', 'ExperienceBar'):
+    cache_rows = gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):gui.index('const std::size_t PROFILE_FLOW_ROW_COUNT')]
+    assert '"' + name + '"' in cache_rows, name + ' must refresh its unscrolled bounds on every layout'
+
+# Use the shipped font and every configured weapon name, not short invented equipment labels.
+font_spec = ET.parse(repo / 'gui/fonts/MedievalSharp-8.font').getroot()
+font = ImageFont.truetype(str(repo / 'gui/fonts' / font_spec.get('filename')), 1024)
+font_factor = float(font_spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0
+line_height = sum(font.getmetrics()) * font_factor
+weapon_names = re.findall(r'^\s*Name\s+(\S+)', (repo / 'config/equipments.cfg').read_text(), re.M)
+assert weapon_names
+longest_weapon = max(weapon_names + ['none'], key=font.getlength)
+equipment_text = 'Equipment: ' + longest_weapon + ' / ' + longest_weapon
+assert '"Equipment: " + getEquipmentText()' in creature
+assert 'right + " / " + left' in creature
+# Exercise the current attribute formula through MAX_LEVEL, including the two carried-item bonuses.
+creature_config = (repo / 'config/creatures.cfg').read_text()
+equipment_config = (repo / 'config/equipments.cfg').read_text()
+max_level = int(re.search(r'MAX_LEVEL = (\d+)', (repo / 'source/entities/CreatureDefinition.h').read_text())[1])
+attribute_values = []
+for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creature_config, re.S):
+    stats_values = dict((key, float(value)) for key, value in re.findall(
+        r'^\s*(Strength|Dexterity|Life|Mana|StrengthPerLevel|DexterityPerLevel|LifePerLevel|ManaPerLevel)\s+(-?[0-9.]+)', block, re.M))
+    for attribute in ('Strength', 'Dexterity', 'Life', 'Mana'):
+        bonus = max([0.0] + [float(value) for value in re.findall(
+            r'^\s*' + attribute + r'\s+(-?[0-9.]+)', equipment_config, re.M)]) * 2
+        for level in (1, max_level):
+            attribute_values.append(stats_values.get(attribute, 0.0) +
+                                    stats_values.get(attribute + 'PerLevel', 0.0) * (level - 1) + bonus)
+assert attribute_values
+number_texts = [format(value, '.1f').removesuffix('.0') for value in attribute_values]
+longest_number = max(number_texts, key=font.getlength)
+critical_text = max([format(value, '.1f') for value in attribute_values], key=font.getlength)
+attribute_text = 'Strength {0} - Dexterity {0} - Life {0} - Mana {0} - Critical {1} %'.format(longest_number, critical_text)
+for label in ('Strength ', ' - Dexterity ', ' - Life ', ' - Mana ', ' - Critical '):
+    assert '"' + label + '"' in creature
+
+
+def wrapped_lines(text, available):
+    """Measure word wrapping with the shipped font, including a word wider than the available row."""
+    lines, current = 1, ''
+    for word in text.split():
+        candidate = (current + ' ' + word).strip()
+        if current and font.getlength(candidate) * font_factor > available:
+            lines += 1
+            current = word
+        else:
+            current = candidate
+        assert font.getlength(word) * font_factor <= available, ('word overflows the profile', word, available)
+    return lines
+
+
+skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
+side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4.0
+border = float(skin.find("Image[@name='WindowTopEdge']").get('height')) / 4.0
+title = 18.0 * 10.0 / 8.0 + 12.0
+social_layout = (repo / 'gui/WindowSocial.layout').read_text()
+social_size = re.search(r'Area" value="\{\{0.5,(-?\d+)\},\{0.5,(-?\d+)\},\{0.5,(\d+)\},\{0.5,(\d+)\}\}"', social_layout)
+social_width = int(social_size[3]) - int(social_size[1])
+social_height = int(social_size[4]) - int(social_size[2])
+social = (repo / 'source/render/SocialWindow.cpp').read_text()
+assert 'OwnPostsText' in page and 'OwnPostsText' not in social_layout
+assert 'ownPosts->setText(posts)' in social and 'ownPosts->setVisible(hasCreature && !posts.empty())' in social
+assert social.index('ownPosts->setText(posts)') < social.index('creature->fillProfilePage(mProfilePage)')
+assert 'y = layoutProfileTextRow(page->getChild("OwnPostsText"), y, scale)' in profile_layout
+assert profile_layout.index('page->getChild("OwnPostsText")') > profile_layout.index('textRowsAfter[i]')
+assert 'mProfilePage->setUserString("ProfileCreature", mSelectedCreature)' in social
+assert 'setScrollPosition(0)' in social, 'a newly selected creature must open on the essential information'
+scale_body = gui[gui.index('void Gui::applyScale('):gui.index('bool Gui::isScreenSizedContainer')]
+assert 'layoutCreatureProfilePage(page)' in scale_body, 'profiles must reflow after UI or resolution changes'
+assert scale_body.index('updateResourceScaling(displaySize)') < scale_body.index('layoutCreatureProfilePage(page)')
+
+for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
+    for percent in range(80, 121):
+        scale = min(screen_width / 1024.0, screen_height / 768.0) * percent / 100.0
+        for owner, outer_width, outer_height, fraction, reserve in (
+                ('card', width, height, .88, 0.0),
+                ('Dungeonbook', social_width, social_height, .9, 0.0)):
+            fit = min(1.0, screen_width / (outer_width * scale), screen_height / (outer_height * scale))
+            viewport = (outer_height * fit - title - 2 * border) * fraction - reserve
+            page_width = (outer_width * fit - 2 * side) * (.5 if owner == 'Dungeonbook' else 1.0)
+            equipment_width = page_width - 148.0 - 32.0
+            equipment_bottom = 34 + wrapped_lines(equipment_text, equipment_width) * line_height + 4
+            attribute_top = max(132.0, equipment_bottom + 4)
+            attribute_bottom = attribute_top + wrapped_lines(attribute_text, page_width - 48) * line_height + 4
+            core_bottom = attribute_bottom + 4 + 20
+            assert core_bottom <= viewport, (owner, screen_width, screen_height, percent, core_bottom, viewport)
+            assert 124 <= attribute_top and 26 <= 34, 'portrait/header overlaps the following essential rows'
+            # Overflowed social rows are clipped to this viewport and reachable through the full scroll range.
+            # Preserve all thirteen real item images, their 56-pixel wrap and reachability before social metadata.
+            image_width = max(1.0, page_width - 48.0)
+            image_edge = min(56.0, image_width)
+            image_x, image_y = 0.0, 0.0
+            image_rows = []
+            for slot in range(13):
+                gap = 12.0 if slot in (6, 9) else 4.0
+                if slot and image_x + gap + image_edge > image_width:
+                    image_x, image_y = 0.0, image_y + image_edge + 4.0
+                elif slot:
+                    image_x += gap
+                assert image_x + image_edge <= image_width + 1e-6
+                image_rows.append(core_bottom + image_y)
+                image_x += image_edge
+            rows_bottom = core_bottom + image_y + image_edge + 4.0
+            for image_top in image_rows:
+                offset = min(image_top, max(0.0, rows_bottom - viewport))
+                assert image_top - offset >= 0 and image_top + image_edge - offset <= viewport + 1e-6
+            for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
+                top = rows_bottom + 4
+                rows_bottom = top + lines * line_height + 4
+                maximum = max(0.0, rows_bottom - viewport)
+                offset = min(top, maximum)
+                assert top - offset >= 0 and rows_bottom - offset <= viewport + 1e-6
+            # The final widget can contain all five long posts; every line is reachable even when the widget is taller than the viewport.
+            posts_top = rows_bottom + 4
+            document_bottom = posts_top + 50 * line_height + 4
+            maximum = document_bottom - viewport
+            for line in range(50):
+                line_top = posts_top + line * line_height
+                offset = min(line_top, maximum)
+                assert line_top - offset >= 0 and line_top + line_height - offset <= viewport + 1e-6
+            assert abs(document_bottom - maximum - viewport) < 1e-6
 assert 'setDisabled(' not in creature[creature.index('void Creature::showStatsPage'):creature.index('void Creature::refreshProfilePage')],     'the active tab must not be shown disabled'
 assert 'Unspecified' not in (repo / 'source/social/SocialGenerator.cpp').read_text()
 assert '"@" + getName()' not in creature, 'the handle must not be the internal name'
