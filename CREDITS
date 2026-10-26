@@ -1510,3 +1510,25 @@ assets-src/rooms/ghostroom/GhostHookEmpty.blend    AI-generated with Codex    GP
 models/GhostHookEmpty.mesh    AI-generated with Codex    GPLv3+    Empty forged iron hook matching the equipped wall rack; original editable source and export, 2026-10-26
 assets-src/rooms/ghostroom/GhostBackpack.blend    AI-generated with Codex    GPLv3+    Leather capture backpack with brass pressure canister, hose, nozzle and stitched straps; original editable source and export, 2026-10-26
 models/GhostBackpack.mesh    AI-generated with Codex    GPLv3+    Leather capture backpack with brass pressure canister, hose, nozzle and stitched straps; original editable source and export, 2026-10-26
+
+materials/textures/GhostRoomFloor.png    AI-generated with Codex    CC0    Original cold dark stone floor made with the existing periodic room-floor generator, 2026-10-26
+materials/textures/GhostRoomFloorNormal.png    AI-generated with Codex    CC0    Original matching tangent-space normal map from the same generated stone height field, 2026-10-26
+materials/scripts/GhostRoomFloor.material    AI-generated with Codex    GPLv3+    Ghost room material using the existing TortureFloor shader structure and the new original floor textures, 2026-10-26
+
+sounds/Spatial/Ghost/Howl/Howl.ogg    felix.blume    CC0 1.0    "Wind blowing and howling in an antenna and its wire on the top of the chilean cliff.", https://freesound.org/people/felix.blume/sounds/147599/ ; HQ recording preview, cut 30-36 s, high-pass 60 Hz, 0.5-s fades, mono 22050 Hz Vorbis, near -20 LUFS
+sounds/Spatial/Rooms/GhostRoom/Hum/Hum.ogg    Ironlink15    CC0 1.0    "Humming sound effect | from fridge", https://freesound.org/people/Ironlink15/sounds/353797/ ; HQ recording preview, cut 2-10 s, high-pass 60 Hz, 20-ms fades before 0.5-s circular loop crossfade (7.5 s), mono 22050 Hz Vorbis, near -20 LUFS
+sounds/Spatial/Rooms/GhostRoom/Bell/Bell.ogg    WebbFilmsUK    CC0 1.0    "Hand Bell.wav", https://freesound.org/people/WebbFilmsUK/sounds/200318/ ; HQ recording preview, trim leading silence below -40 dBFS, first 3 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis, near -20 LUFS
+sounds/Spatial/Rooms/GhostRoom/Beam/Beam.ogg    kev_durr    CC0 1.0    "Electric Sparks.wav", https://freesound.org/people/kev_durr/sounds/396470/ ; HQ recording preview, cut 2-4 s, high-pass 60 Hz, 20-ms fades before 0.3-s circular loop crossfade (1.7 s), transient peak conditioning and normalization, mono 22050 Hz Vorbis, near -20 LUFS
+sounds/Spatial/Rooms/GhostRoom/BoxSnap/BoxSnap.ogg    Crinkem    CC0 1.0    "Metallic latch release.wav", https://freesound.org/people/Crinkem/sounds/481789/ ; Whole HQ recording preview, high-pass 60 Hz, 20-ms fades, transient peak conditioning and normalization, mono 22050 Hz Vorbis, near -20 LUFS
+sounds/Spatial/Rooms/GhostRoom/PressHiss/PressHiss.ogg    brunoboselli    CC0 1.0    "Air (or steam) pressure release", https://freesound.org/people/brunoboselli/sounds/457294/ ; HQ recording preview, trim trailing silence below -40 dBFS, last 2.5 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis, near -20 LUFS
+sounds/Spatial/Rooms/GhostRoom/CrystalRing/CrystalRing.ogg    bozerikje    CC0 1.0    "Glass and chrystal ping ding", https://freesound.org/people/bozerikje/sounds/478038/ ; HQ recording preview, trim leading silence below -40 dBFS, first 2.5 s, high-pass 60 Hz, 20-ms fade-in and 0.5-s fade-out, mono 22050 Hz Vorbis, near -20 LUFS
+
+particles/RoomAmbienceProduction.particle (CauldronSteam)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostRise)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostDissolve)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostBeam)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (EctoplasmBurst)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (GhostRevive)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (SoulCrystalBreak)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+particles/ChickenFeathers.particle (WorkerVanish)    Codex    GPLv3+    Original AI-generated spectral particle resource, reusing credited project sprites
+materials/scripts/GhostParticles.material    Codex    GPLv3+    Original AI-generated spectral beam and fragment materials, reusing credited project sprites
