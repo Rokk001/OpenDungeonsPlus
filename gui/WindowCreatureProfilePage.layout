@@ -3,6 +3,7 @@
 <GUILayout version="4" >
     <Window type="DefaultWindow" name="ProfilePage" >
         <Property name="Area" value="{{0.0,0},{0.0,0},{1.0,0},{1.0,0}}" />
+        <Property name="ClippedByParent" value="True" />
         <Window type="OD/StaticImage" name="Portrait" >
             <Property name="Area" value="{{0.0,16},{0.0,4},{0.0,136},{0.0,124}}" />
             <Window type="OD/StaticImage" name="Image" >
@@ -30,7 +31,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="AgeText" >
             <Property name="Area" value="{{0.0,148},{0.0,50},{1.0,-32},{0.0,70}}" />
@@ -38,7 +39,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="RelationText" >
             <Property name="Area" value="{{0.0,148},{0.0,72},{1.0,-32},{0.0,92}}" />
@@ -46,7 +47,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="FromText" >
             <Property name="Area" value="{{0.0,148},{0.0,94},{1.0,-32},{0.0,114}}" />
@@ -54,7 +55,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="JobText" >
             <Property name="Area" value="{{0.0,148},{0.0,116},{1.0,-32},{0.0,136}}" />
@@ -62,7 +63,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="HealthLabel" >
             <Property name="Area" value="{{0.0,16},{0.0,146},{0.0,64},{0.0,166}}" />
@@ -98,7 +99,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="EquipmentText" >
             <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
@@ -106,7 +107,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="PathText" >
             <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
@@ -114,7 +115,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="SkillsText" >
             <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}" />
@@ -122,7 +123,7 @@
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="BioText" >
             <Property name="Area" value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,214}}" />
@@ -219,6 +220,16 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="OwnPostsText">
+            <Property name="Area" value="{{0,0},{0,420},{1,0},{1,0}}" />
+            <Property name="Visible" value="False" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertScrollbar" value="True" />
             <Property name="VertFormatting" value="TopAligned" />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
