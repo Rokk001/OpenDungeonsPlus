@@ -1515,3 +1515,5 @@ assets-src/creatures/ghosts/PitDemon.blend    AI-generated animation with Codex 
 models/PitDemon.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Beam, Throw and Empty clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
 assets-src/creatures/ghosts/RunelordDwarf.blend    AI-generated animation with Codex    GPLv3+    Original Beam, Throw and Empty gestures on the unchanged native RunelordDwarf rig and mesh; editable animation source, 2026-10-26
 models/RunelordDwarf.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Beam, Throw and Empty clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
+assets-src/creatures/ghosts/Roach.blend    AI-generated animation with Codex    GPLv3+    Original Scared gestures on the unchanged native Roach rig and mesh; editable animation source, 2026-10-26
+models/Roach.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Scared clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
