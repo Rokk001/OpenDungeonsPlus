@@ -46,7 +46,23 @@ def main():
     assert total < 25_000_000, f"loading picture set exceeds 25 MB: {total}"
     resources = (root / "cmake/config/resources.cfg.in").read_text(encoding="utf-8")
     assert "FileSystem=materials/textures/loading" in resources, "loading images must be discoverable by Ogre"
-    print(f"OK: 25 referenced loading pictures, 1920x1080, {total} bytes")
+    application = (root / "source/ODApplication.cpp").read_text(encoding="utf-8")
+    startup = application.index("LoadingScreen startupLoading(*renderWindow);")
+    assert application.index('misc["hidden"] = "true";') < startup, "native window must start hidden"
+    assert startup < application.index("initialiseAllResourceGroups();", startup), "startup picture must precede blocking resource initialization"
+    assert startup < application.index("renderWindow->setVisible(true);", startup), "present the loading picture before showing the native window"
+    constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window)", 1)[1].split("LoadingScreen::finishStartup()", 1)[0]
+    assert "selectLoadingImage();" in constructor and "update();" in constructor and "window.update();" in constructor, "startup must present the shared picture mechanism"
+    assert "addSceneManager(startupScene)" in constructor and "DEFAULT_SCHEME_NAME" in constructor, "startup viewport needs the existing shader generator"
+    finish = source.split("void LoadingScreen::finish()", 1)[1].split("void LoadingScreen::update()", 1)[0]
+    for cleanup in ("removeViewport(STARTUP_VIEWPORT_ORDER)", "removeSceneManager(startupScene)", "destroySceneManager(startupScene)"):
+        assert cleanup in finish, f"missing startup resource cleanup: {cleanup}"
+    destructor = source.split("LoadingScreen::~LoadingScreen()", 1)[1].split("void LoadingScreen::continueLoading()", 1)[0]
+    assert "if(mStartup)" in destructor and "finishStartup();" in destructor, "startup guard must not finish later load stages"
+    listener = (root / "source/render/ODFrameListener.cpp").read_text(encoding="utf-8")
+    menu = listener.split("void ODFrameListener::createMainMenuScene()", 1)[1].split("void ODFrameListener::freeMainMenuScene()", 1)[0]
+    assert menu.index("resetMenu(") < menu.index("LoadingScreen::finishStartup();"), "keep the startup picture until menu creation finishes"
+    print(f"OK: 25 referenced loading pictures, 1920x1080, {total} bytes; startup order and cleanup")
 
 
 if __name__ == "__main__":

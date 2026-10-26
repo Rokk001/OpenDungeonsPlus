@@ -42,23 +42,22 @@ float cloudDensity(vec3 point)
     return smoothstep(0.28, 0.78, density / totalWeight);
 }
 
-// Shade self-lit atmosphere independently of scene lights, shadows and missing vertex colours.
+// Shade the dark sky, cloudy horizon and moon independently of scene lights and shadows.
 void main()
 {
     vec3 linearColour = surfaceEmission.rgb;
     float alpha = 1.0;
-    if(atmosphereKind < 2)
+    if(atmosphereKind == 1)
     {
         vec3 point = skyPosition * 0.055;
         // The same world-space distortion and height fade keep the layered horizon continuous.
         point += vec3(cloudNoise(point)) * 2.8;
         linearColour = mix(vec3(0.002, 0.0025, 0.002), linearColour, cloudDensity(point));
-        if(atmosphereKind == 1)
-            linearColour *= mix(1.0, 0.03, clamp((skyPosition.z - 12.0) / (38.0 - 12.0), 0.0, 1.0));
+        linearColour *= mix(1.0, 0.03, clamp((skyPosition.z - 12.0) / (38.0 - 12.0), 0.0, 1.0));
     }
     else if(atmosphereKind == 2)
         alpha = 0.0; // Cloud volumes belong to the particle layers, as in the authored atmosphere.
-    else
+    else if(atmosphereKind == 3)
         linearColour *= texture(moonMap, skyUV).rgb;
 
     // The atmosphere is authored in linear light at exposure one; the game target is not sRGB.

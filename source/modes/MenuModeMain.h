@@ -39,13 +39,13 @@ public:
     //! from the game.
     void activate() final override;
 
-    //! \brief Opens the requested pane only after its flight reaches the configured destination.
+    //! \brief Opens the overview or requested pane only after its flight reaches the configured destination.
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
 
     //! \brief Defers replay navigation until arrival and keeps quitting immediate during a flight.
     bool changeModeAfterFlight(AbstractModeManager::ModeType mode, const CEGUI::EventArgs& e);
 
-    //! \brief Closes the open submenu and flies back to the overview without overlapping a flight.
+    //! \brief Hides the open submenu and restores overview entries only after the return flight.
     bool goBack(const CEGUI::EventArgs& e = {}) override;
 
 private:
@@ -59,6 +59,8 @@ private:
     bool mSettingsPageOpen = false;
     //! True while the menu waits for the flight to end before it shows the skirmish sub-menu
     bool mSkirmishSubMenuPending = false;
+    //! True while overview entries wait for the outside arrival or return flight to finish.
+    bool mOverviewPending = false;
     //! Existing submenu waiting for its configured scene flight to finish.
     std::string mPendingSubMenu = std::string();
     //! Existing mode waiting for its configured scene flight to finish.

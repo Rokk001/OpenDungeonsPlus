@@ -100,6 +100,7 @@ void fillPixelRegion(const Ogre::ColourValue& colour, Ogre::PixelBox& output,
 }
 }
 
+//! \brief Creates the full drawn map with an alpha channel for the circular HUD backing.
 MiniMapDrawnFull::MiniMapDrawnFull(CEGUI::Window* miniMapWindow, const std::string& suffix) :
     mMiniMapWindow(miniMapWindow),
     mResourceSuffix(suffix),
@@ -109,13 +110,13 @@ MiniMapDrawnFull::MiniMapDrawnFull(CEGUI::Window* miniMapWindow, const std::stri
     mTopLeftCornerY(0),
     mWidth(static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_width)),
     mHeight(static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_height)),
-    mPixels(mWidth * mHeight * 3, 0),
-    mPixelBox(mWidth, mHeight, 1, Ogre::PF_R8G8B8, mPixels.data()),
+    mPixels(mWidth * mHeight * 4, 0),
+    mPixelBox(mWidth, mHeight, 1, Ogre::PF_R8G8B8A8, mPixels.data()),
     mMiniMapOgreTexture(Ogre::TextureManager::getSingletonPtr()->createManual(
             "miniMapOgreTexture" + suffix,
             Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
             Ogre::TEX_TYPE_2D,
-            mWidth, mHeight, 0, Ogre::PF_R8G8B8,
+            mWidth, mHeight, 0, Ogre::PF_R8G8B8A8,
             Ogre::TU_DYNAMIC_WRITE_ONLY)),
     mPixelBuffer(mMiniMapOgreTexture->getBuffer())
 {
@@ -241,6 +242,7 @@ Ogre::Vector2 MiniMapDrawnFull::camera_2dPositionFromClick(int xx, int yy)
     return v;
 }
 
+//! \brief Updates revealed tile colours and exposes the HUD backing only for unknown circular-map pixels.
 bool MiniMapDrawnFull::updateTileState(uint32_t minimapXMin, uint32_t minimapXMax,
         uint32_t minimapYMin, uint32_t minimapYMax, uint32_t tileXMin,
         uint32_t tileXMax, uint32_t tileYMin, uint32_t tileYMax)
@@ -261,6 +263,10 @@ bool MiniMapDrawnFull::updateTileState(uint32_t minimapXMin, uint32_t minimapXMa
                 selected = colour;
         }
     }
+    selected.colour.a = 1.0f;
+    if(selected.priority == 0 && mMiniMapWindow->isUserStringDefined("Circular") &&
+        mMiniMapWindow->getUserString("Circular") == "true")
+        selected.colour.a = 0.0f;
     fillPixelRegion(selected.colour, mPixelBox, minimapXMin, minimapXMax, minimapYMin, minimapYMax);
     mPixelsDirty = true;
     return animated;

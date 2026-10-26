@@ -215,6 +215,8 @@ protected:
     virtual TileData* createTileData(Tile* tile);
 
     void addBuildingObject(Tile* targetTile, BuildingObject* obj, GameMap* gameMap = nullptr);
+    //! \brief Registers the replacement and notifies its visible clients before releasing the previous object.
+    void replaceBuildingObject(Tile* targetTile, BuildingObject* obj);
     void removeBuildingObject(Tile* tile);
     void removeBuildingObject(BuildingObject* obj);
     BuildingObject* getBuildingObjectFromTile(Tile* tile);

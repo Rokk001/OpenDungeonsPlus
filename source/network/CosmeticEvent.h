@@ -132,12 +132,19 @@ enum class CosmeticEventType : int32_t
     //! and at once to a keeper who gains sight, joins or loads. Only shows the dirt decals and the room text; the game
     //! never depends on it. Older clients skip the kind.
     tileDirt = 19,
+    //! A successful mining stroke. mSubject worker, mValue TileType, mPosition the actual mined tile.
+    //! Sent once after the server removed material; timing, gold and gameplay are unchanged.
+    digStroke = 20,
+    //! A successful deposit in a heart ring or treasury with one owner heart. mObject deposit room,
+    //! mPosition actual heart tile.
+    //! Sent once per successful deposit only to keepers seeing both the deposit and heart tiles.
+    goldDelivery = 21,
     //! Something happened to a creature in or around a tavern that the client shows as a thought bubble and a post of
     //! the dungeon book. mSubject the creature, mObject the other creature of a slap duel (empty otherwise), mValue the
     //! CosmeticTavernKind, mValue2 and mText are not used (0, empty), mPosition the position of the creature. Sent to the
     //! keepers that see the tile of the creature. Only shows bubbles and posts; the game never depends on it. Older
     //! clients skip the kind.
-    tavernEvent = 20
+    tavernEvent = 22
 };
 
 //! \brief The kind in mValue of the event tavernEvent

@@ -123,6 +123,21 @@ def briefing_layout_errors(layout, mode, gui):
                                                     "script.importFromStream(level)", "LevelScriptActionType::objective",
                                                      'descriptions += "\\n[image=\'GoalStatus/Open\'] " + action.mText')):
         errors.append("briefing must read actual goal descriptions and parsed script objectives")
+    debriefing = mode.split("void MenuModeCampaign::showDebriefing()", 1)[-1].split(
+        "void MenuModeCampaign::fitDebriefingPanel()", 1)[0]
+    fit = mode.split("void MenuModeCampaign::fitDebriefingPanel()", 1)[-1].split(
+        "void MenuModeCampaign::setBriefingPreviewVisible", 1)[0]
+    frame = mode.split("void MenuModeCampaign::onFrameStarted", 1)[-1].split(
+        "void MenuModeCampaign::updateLift", 1)[0]
+    if any(token not in debriefing for token in ('setBriefingPreviewVisible(false)',
+            'getChild(CMP_BRIEFING_START)->setVisible(false)', 'fitDebriefingPanel();')):
+        errors.append("debriefing must stay text only and fit after setting its result")
+    if any(token not in fit for token in ('getProperty("VertExtent")', 'getRootContainerSize()',
+            'gui.getLayoutScale()', 'BRIEFING_TEXT_AREA.d_min.d_y.d_offset',
+            'BRIEFING_TEXT_AREA.d_max.d_y.d_offset', 'std::min(maxHeight,',
+            'getChild(CMP_BRIEFING_IMAGE)->isVisible()', 'mDebriefingScale == scale')) or \
+            'fitDebriefingPanel();' not in frame:
+        errors.append("debriefing must use rendered text, existing margins and screen limits after UI changes")
     number = r"-?\d+(?:\.\d+)?"
     areas = {name: [float(value) for value in re.findall(number, properties[name]["Area"])] for name in required}
     runtime = {}
@@ -307,6 +322,8 @@ def self_test():
     assert briefing_layout_errors(ET.fromstring(layout_text), unscaled, gui), "unscaled runtime area accepted"
     runtime_overlap = mode.replace("CEGUI::UDim(0.4f, -8)", "CEGUI::UDim(1, -16)")
     assert briefing_layout_errors(ET.fromstring(layout_text), runtime_overlap, gui), "overlapping runtime story accepted"
+    fixed_debriefing = mode.replace('getProperty("VertExtent")', 'getProperty("Text")')
+    assert briefing_layout_errors(ET.fromstring(layout_text), fixed_debriefing, gui), "fixed-height debriefing accepted"
     print("campaign preview checker self-tests passed")
 
 

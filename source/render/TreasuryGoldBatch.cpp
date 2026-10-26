@@ -106,6 +106,17 @@ void TreasuryGoldBatch::removePile(const std::string& entityName)
     mMembers.erase(it);
 }
 
+//! \brief Flushes only the replacement pile's dirty room after its old entity has been removed.
+void TreasuryGoldBatch::rebuildForPile(const std::string& entityName)
+{
+    std::map<std::string, Member>::iterator member = mMembers.find(entityName);
+    if(member == mMembers.end())
+        return;
+    std::map<ChunkKey, Chunk>::iterator chunk = mChunks.find(member->second.mKey);
+    if(chunk != mChunks.end() && chunk->second.mDirty)
+        rebuild(chunk->second);
+}
+
 void TreasuryGoldBatch::update(float timeSinceLastFrame)
 {
     for(std::map<ChunkKey, Chunk>::iterator it = mChunks.begin(); it != mChunks.end();)

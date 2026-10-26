@@ -34,6 +34,7 @@
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "sound/SoundEffectsManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
@@ -379,6 +380,7 @@ int RoomTreasury::getTotalGoldStored() const
     return totalGold;
 }
 
+//! \brief Deposits unchanged gold and reports its burst when the owner has one unambiguous heart.
 int RoomTreasury::depositGold(int gold, Tile *tile)
 {
     int goldDeposited, goldToDeposit = gold, emptySpace;
@@ -419,6 +421,28 @@ int RoomTreasury::depositGold(int gold, Tile *tile)
     // Tells the client to play a deposit gold sound. For now, we only send it to the players
     // with vision on tile
     fireRoomSound(*tile, "Treasury/DepositGold");
+
+    const std::vector<Room*> hearts = getGameMap()->getRoomsByTypeAndSeat(RoomType::dungeonTemple, getSeat());
+    if(hearts.size() == 1)
+    {
+        Tile* heartTile = static_cast<RoomDungeonTemple*>(hearts[0])->getHeartTile();
+        if(heartTile != nullptr)
+        {
+            CosmeticEvent delivery(CosmeticEventType::goldDelivery);
+            delivery.mObject = getName();
+            delivery.mPosition = Ogre::Vector3(static_cast<Ogre::Real>(heartTile->getX()),
+                static_cast<Ogre::Real>(heartTile->getY()), 0.0f);
+            const std::vector<Seat*>& heartViewers = heartTile->getSeatsWithVision();
+            for(Seat* seat : tile->getSeatsWithVision())
+            {
+                if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman() ||
+                    std::find(heartViewers.begin(), heartViewers.end(), seat) == heartViewers.end())
+                    continue;
+
+                ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), delivery);
+            }
+        }
+    }
 
     // The treasury just became full: the clients may show the workers out of breath (cosmetic only)
     if(getTotalGoldStored() >= getTotalGoldStorage())
@@ -485,6 +509,7 @@ int RoomTreasury::getLevelOfTile(const std::map<Tile*, int>& levels, int x, int 
     return it->second;
 }
 
+//! \brief Replaces changed pile meshes atomically while retaining their gold and neighbour shape.
 void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData,
     const std::map<Tile*, int>& levels)
 {
@@ -531,14 +556,12 @@ void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTre
     if (roomTreasuryTileData->mMeshOfTile.compare(newMeshName) == 0)
         return;
 
-    // If the mesh has changed we need to destroy the existing treasury if there was one
-    if (!roomTreasuryTileData->mMeshOfTile.empty())
-        removeBuildingObject(tile);
+    // If the mesh changed, keep the existing treasury visible until its replacement is created.
 
     // The pile fills its tile exactly so it joins the piles next to it
     BuildingObject* ro = new BuildingObject(getGameMap(), *this, newMeshName, tile,
         static_cast<double>(x), static_cast<double>(y), 0.0, 0.0, false);
-    addBuildingObject(tile, ro);
+    replaceBuildingObject(tile, ro);
 
     roomTreasuryTileData->mMeshOfTile = newMeshName;
 }

@@ -767,6 +767,26 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             entity->restoreEntityState();
             entity->setPosition( entity->getPosition(), gameMapPointer);
 
+            // Replacement metadata is present only for a building-object mesh tier switch.
+            // Both meshes are handled in this notification, so no frame can see an empty tile.
+            if(!packetReceived.endOfPacket())
+            {
+                GameEntityType previousType;
+                std::string previousName;
+                OD_ASSERT_TRUE(packetReceived >> previousType >> previousName);
+                GameEntity* previous = gameMapPointer->getEntityFromTypeAndName(previousType, previousName);
+                if(previous != nullptr)
+                {
+                    if(CreatureReactions::getSingletonPtr() != nullptr)
+                        CreatureReactions::getSingleton().noteEntityRemoved(previous);
+                    previous->removeEntityFromPositionTile(gameMapPointer);
+                    previous->removeFromGameMap(gameMapPointer);
+                    previous->deleteYourself(gameMapPointer, nt);
+                }
+                RenderManager::getSingleton().rrFinishBuildingObjectReplacement(
+                    static_cast<RenderedMovableEntity*>(entity));
+            }
+
             if(entity->getObjectType() == GameEntityType::creature)
                 static_cast<Creature*>(entity)->socialCreatureAdded();
 

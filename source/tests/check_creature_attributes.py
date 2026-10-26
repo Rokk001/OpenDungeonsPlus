@@ -844,20 +844,25 @@ def check_part_g():
     job = windows['JobText']
     for name in ('AttributesText', 'EquipmentText', 'PathText', 'SkillsText'):
         block = windows[name]
-        assert 'value="{{0.0,16},{0.0,174},{1.0,-16},{0.0,194}}"' in block, name
+        # The profile rows reserve the existing scrollbar gutter at the right edge.
+        assert 'value="{{0.0,16},{0.0,174},{1.0,-32},{0.0,194}}"' in block, name
         for key in ('FrameEnabled', 'BackgroundEnabled', 'Font', 'VertFormatting', 'HorzFormatting'):
-            assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == re.search(
-                r'name="' + key + r'" value="([^"]*)"', job)[1], name + ' ' + key
+            assert re.search(r'name="' + key + r'" value="([^"]*)"', block)[1] == ('WordWrapLeftAligned' if key == 'HorzFormatting' else re.search(
+                r'name="' + key + r'" value="([^"]*)"', job)[1]), name + ' ' + key
     names = re.findall(r'<Window type="OD/\w+" name="(\w+)"', layout)
     assert names.index('AttributesText') + 1 == names.index('EquipmentText') and names.index('PathText') < names.index('SkillsText')
     assert 'name="FrameEnabled" value="False"' in windows['AttributesText'] and 'MedievalSharp-8' in windows['AttributesText']
     flow = gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):]
     flow = flow[:flow.index('};')]
-    assert flow.index('"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText"') > 0
+    assert flow.index('"AttributesText", "EquipmentText"') > 0
+    for name in ('PathText', 'SkillsText', 'BioText'):
+        assert '"' + name + '"' in flow
     layout_function = function(gui, 'float Gui::layoutCreatureProfilePage(')
-    assert ('const char* const textRowsBefore[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", '
-            '"LikesText",\n        "DislikesText", "RelationsText"};') in layout_function
-    assert 'for(std::size_t i = 0; i < 8; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function
+    assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
+    assert ('const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",\n'
+            '        "DislikesText", "RelationsText"};') in layout_function
+    assert 'for(std::size_t i = 0; i < 6; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function
+
 
 
 check_part_g()

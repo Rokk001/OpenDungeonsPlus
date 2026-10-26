@@ -2,11 +2,11 @@
 <GUILayout version="4">
     <Window type="OD/EventPanel" name="GameEventText">
         <Property name="Visible" value="False" />
-        <Property name="Area" value="{{0.668,-373},{1,-309},{0.668,279},{1,-193}}" />
+        <Property name="Area" value="{{0.668,-373},{1,-413},{0.668,279},{1,-193}}" />
         <Property name="FrameEnabled" value="True" />
         <Property name="BackgroundEnabled" value="True" />
         <Window type="OD/StaticText" name="Message">
-            <Property name="Area" value="{{0,8},{0,8},{1,-8},{1,-44}}" />
+            <Property name="Area" value="{{0.07,0},{0.19,0},{0.93,0},{0.6,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="VertFormatting" value="TopAligned" />
@@ -14,14 +14,14 @@
             <Property name="VertScrollbar" value="True" />
         </Window>
         <Window type="OD/MenuSymbolButton" name="Dismiss">
-            <Property name="Area" value="{{0,52},{1,-40},{0,92},{1,-8}}" />
+            <Property name="Area" value="{{0.36,0},{0.66,0},{0.43,0},{0.8,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="HoverImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="PushedImage" value="OpenDungeonsIcons/AbortIcon" />
             <Property name="TooltipText" value="Dismiss this read message" />
         </Window>
         <Window type="OD/MenuSymbolButton" name="Close">
-            <Property name="Area" value="{{0,144},{1,-40},{0,184},{1,-8}}" />
+            <Property name="Area" value="{{0.57,0},{0.66,0},{0.64,0},{0.8,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/CheckIcon" />
             <Property name="HoverImage" value="OpenDungeonsIcons/CheckIcon" />
             <Property name="PushedImage" value="OpenDungeonsIcons/CheckIcon" />

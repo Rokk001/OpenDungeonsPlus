@@ -39,13 +39,14 @@ reactions_cfg = read('config/creatureReactions.cfg')
 server = read('source/network/ODServer.cpp')
 client = read('source/network/ODClient.cpp')
 
-# Kind list: appended after the last kind, 15 and 16 stay free for another branch, the old numbers never change
+# Kind list: mining and deposit kinds follow the existing kinds; all earlier numbers remain unchanged
 enum_body = event_h.split('enum class CosmeticEventType')[1].split('};')[0]
 kinds = re.findall(r'^\s+(\w+) = (\d+),?\s*$', enum_body, re.M)
 numbers = [int(number) for _, number in kinds]
 names = [name for name, _ in kinds]
-assert names[-7:] == ['roomTakeover', 'casinoResult', 'keeperWealth', 'hitResult', 'attackTurn', 'tileDirt', 'tavernEvent'], names[-7:]
-assert numbers == list(range(21)), numbers
+assert names[-9:] == ['roomTakeover', 'casinoResult', 'keeperWealth', 'hitResult', 'attackTurn', 'tileDirt',
+                      'digStroke', 'goldDelivery', 'tavernEvent'], names[-9:]
+assert numbers == list(range(23)), numbers
 assert dict(kinds)['hitResult'] == '17' and dict(kinds)['roomTakeover'] == '14' and dict(kinds)['meleeResult'] == '5'
 assert 'return "hitResult";' in event_cpp
 known = function_body(event_cpp, 'bool CosmeticEvent::isKnownType() const')

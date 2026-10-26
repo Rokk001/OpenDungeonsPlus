@@ -1814,8 +1814,8 @@ CEGUI::Window* Gui::createCreatureProfilePage(CEGUI::Window* holder)
 
 namespace
 {
-//! Top edge of the first flowing row of the profile page (design pixels, matches WindowCreatureProfilePage.layout)
-const float PROFILE_FLOW_TOP = 174.0f;
+//! Top edge of the attributes below the opening portrait and equipment (design pixels).
+const float PROFILE_FLOW_TOP = 132.0f;
 //! Width of the "Friends:" and "Foe:" labels when links follow them, and where the links start
 const float PROFILE_LABEL_WIDTH = 88.0f;
 const float PROFILE_LINK_LEFT = 92.0f;
@@ -1823,10 +1823,12 @@ const float PROFILE_ROW_GAP = 4.0f;
 const float PROFILE_LINE_PADDING = 4.0f;
 //! Scroll step of the profile page (design pixels), about two lines
 const float PROFILE_SCROLL_STEP = 28.0f;
-//! Width the rows of the profile page leave free next to the text: 16 design pixels on each side
-const float PROFILE_ROW_INSET_TOTAL = 32.0f;
-//! Distance of the rows of the profile page from the left and the right edge (design pixels)
+//! Width reserved by the profile margins and the existing scrollbar gutter
+const float PROFILE_ROW_INSET_TOTAL = 48.0f;
+//! Distance of the profile rows from the left edge (design pixels)
 const float PROFILE_SIDE_MARGIN = 16.0f;
+//! Right inset including the existing profile scrollbar gutter (design pixels).
+const float PROFILE_RIGHT_MARGIN = 32.0f;
 //! Height of one text line if the window has no font (design pixels)
 const float PROFILE_FALLBACK_LINE_HEIGHT = 16.0f;
 //! Number of rows with a label and links (friends, foe) and the most windows in such a row (label and two links)
@@ -1835,8 +1837,8 @@ const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
 //! Tolerance (design pixels) before the rows count as higher than the page
 const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
 //! Names of the rows that flow from top to bottom and so change their position when the texts change
-const char* const PROFILE_FLOW_ROWS[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", "LikesText",
-    "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText"};
+const char* const PROFILE_FLOW_ROWS[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "HandleText", "AgeText", "RelationText", "FromText", "JobText", "HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar", "PathText", "SkillsText", "BioText", "LikesText",
+    "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText", "OwnPostsText"};
 const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
 //! \brief Number of lines the window text occupies when CEGUI wraps it at the given pixel width
@@ -1858,12 +1860,13 @@ float getProfileLinesHeight(const CEGUI::Window* window, std::size_t lines, floa
 }
 }
 
+//! \brief Fits a wrapped profile row between the left margin and scrollbar gutter.
 float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
 {
     if(!window->isVisible())
         return y;
 
-    // The row spans the page minus 16 design pixels on each side; the text uses that whole width
+    // The row uses the page width between its margin and the scrollbar gutter
     const CEGUI::Window* parent = window->getParent();
     float width = window->getPixelSize().d_width;
     if(parent != nullptr)
@@ -1871,23 +1874,53 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
     const std::size_t lines = countWrappedLines(window, width);
     const float height = getProfileLinesHeight(window, lines, scale);
     setScaledArea(window, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
-        CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y + height)));
+        CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, y + height)));
     return y + height + PROFILE_ROW_GAP;
 }
 
+//! \brief Arranges the existing profile rows and scrollbar inside the fitted profile viewport.
 float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
 {
     const float scale = getLayoutScale();
-    float y = PROFILE_FLOW_TOP;
+    // Fonts use the global UI scale, so reset the compact header to that same scale after a fitted-window resize.
+    setScaledArea(page->getChild("Portrait"), CEGUI::URect(CEGUI::UDim(0, 16), CEGUI::UDim(0, 4),
+        CEGUI::UDim(0, 136), CEGUI::UDim(0, 124)));
+    setScaledArea(page->getChild("NameText"), CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 2),
+        CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, 26)));
+    // Keep the portrait, carried equipment and attributes on the opening page. Personal details and
+    // social activity follow them in the same scrollable document rather than displacing the essentials.
+    CEGUI::Window* equipment = page->getChild("EquipmentText");
+    const float equipmentWidth = page->getPixelSize().d_width - (148.0f + PROFILE_RIGHT_MARGIN) * scale;
+    const float equipmentHeight = getProfileLinesHeight(equipment,
+        countWrappedLines(equipment, equipmentWidth), scale);
+    setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),
+        CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, 34 + equipmentHeight)));
+    float y = std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);
+    y = layoutProfileTextRow(page->getChild("AttributesText"), y, scale);
 
-    // Attributes, equipment, path and skills, then bio, likes and dislikes, then the rows with friends and foe, then
-    // status and latest post. The quirks of the picture come last, so they never move the status and the latest post (the creature card has a fixed height).
-    const char* const textRowsBefore[] = {"AttributesText", "EquipmentText", "PathText", "SkillsText", "BioText", "LikesText",
+    // The existing health and experience bars follow the attributes without overlapping a wrapped line.
+    const char* const barNames[] = {"HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar"};
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        CEGUI::Window* child = page->getChild(barNames[i]);
+        CEGUI::URect area = mScaledWindows.find(child)->second.area;
+        area.d_min.d_y = CEGUI::UDim(0, y + ((i % 2 == 0) ? 0.0f : 2.0f));
+        area.d_max.d_y = CEGUI::UDim(0, y + ((i % 2 == 0) ? 20.0f : 18.0f));
+        setScaledArea(child, area);
+    }
+    y += 24.0f;
+
+    const char* const personalRows[] = {"HandleText", "AgeText", "RelationText", "FromText", "JobText"};
+    for(std::size_t i = 0; i < 5; ++i)
+        y = layoutProfileTextRow(page->getChild(personalRows[i]), y, scale);
+
+    // Remarks stay after status and latest post, so adding them never moves the preceding social rows.
+    const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",
         "DislikesText", "RelationsText"};
     const char* const textRowsAfter[] = {"StatusText", "LatestText", "QuirksText"};
     const char* const linkRows[PROFILE_LINK_ROWS][PROFILE_LINK_ROW_WINDOWS] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
 
-    for(std::size_t i = 0; i < 8; ++i)
+    for(std::size_t i = 0; i < 6; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);
 
     for(std::size_t row = 0; row < PROFILE_LINK_ROWS; ++row)
@@ -1906,12 +1939,12 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
                 continue;
 
             setScaledArea(link, CEGUI::URect(CEGUI::UDim(0, PROFILE_LINK_LEFT), CEGUI::UDim(0, linkY),
-                CEGUI::UDim(1, -PROFILE_SIDE_MARGIN), CEGUI::UDim(0, linkY + lineHeight)));
+                CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, linkY + lineHeight)));
             linkY += lineHeight;
         }
         const bool hasLinks = (linkY > y);
         setScaledArea(label, CEGUI::URect(CEGUI::UDim(0, PROFILE_SIDE_MARGIN), CEGUI::UDim(0, y),
-            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -PROFILE_SIDE_MARGIN),
+            hasLinks ? CEGUI::UDim(0, PROFILE_LABEL_WIDTH) : CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN),
             CEGUI::UDim(0, y + lineHeight)));
         y = std::max(y + lineHeight, linkY) + PROFILE_ROW_GAP;
     }
@@ -1919,8 +1952,11 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     for(std::size_t i = 0; i < 3; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsAfter[i]), y, scale);
 
-    // Remember where every row sits without scrolling. The rows laid out above are fresh, the rows of the
-    // header (portrait to experience bar) are never moved by the layout and are noted once.
+    // The Dungeonbook's existing recent-posts widget shares the document; it stays hidden on the creature card.
+    y = layoutProfileTextRow(page->getChild("OwnPostsText"), y, scale);
+
+    // Remember the fresh unscrolled areas of the header and every flowing row after each reflow.
+    // The cached areas are the stable origin for scrolling, including after a display or UI-scale change.
     for(std::size_t i = 0; i < page->getChildCount(); ++i)
     {
         CEGUI::Window* child = page->getChildAtIdx(i);
@@ -2124,6 +2160,7 @@ bool Gui::onWindowDestroyed(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Rescales registered widgets and reflows their fitted profile documents.
 void Gui::applyScale(const CEGUI::Sizef& displaySize)
 {
     const float resolutionScale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
@@ -2147,6 +2184,14 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
         if(pane == nullptr || !pane->isUserStringDefined(VISIBLE_CONTROL_EXTENT_STRING))
             continue;
         limitScrollingToVisibleControls(pane);
+    }
+
+    // Reflow the existing profile pages after the fitted frame, fonts and child areas have all been scaled.
+    for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
+    {
+        CEGUI::Window* page = scaledWindow.first;
+        if(page->getName() == "Content" && page->isChild("ProfileScrollbar"))
+            layoutCreatureProfilePage(page);
     }
 
     CEGUI::System::getSingleton().getDefaultGUIContext().markAsDirty();

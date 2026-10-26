@@ -93,7 +93,11 @@ enum class HeartHealthTier {healthy,damaged,critical};
 struct RoomDungeonTemple:Room {
  BuildingObject* mTempleObject=nullptr;double mHeartHP=-1;bool mCriticalWarningSent=false;bool mGoldChanged=false;
  HeartHealthTier mCurrentHeartTier=HeartHealthTier::healthy;int templeRebuilds=0;
- bool getIsOnServerMap()const{return true;}void updateTemplePosition(){++templeRebuilds;}
+ bool getIsOnServerMap()const{return true;}
+ //! \brief Records the targeted replacement without removing any ring objects.
+ void replaceBuildingObject(Tile*,BuildingObject*){++templeRebuilds;}
+ //! \brief Supplies the mesh argument to the extracted tier-switch method.
+ static const std::string& getMeshNameForHeartTier(HeartHealthTier){static const std::string mesh="fixture";return mesh;}
  double getHeartHealthFraction()const;HeartHealthTier computeHeartHealthTier()const;void checkHeartHealthTier();
  bool isTreasuryTile(Tile*)const;void updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*);Tile* getHeartTile()const;
  RoomDungeonTemple(GameMap* m,Seat* s):Room(m,s){}
@@ -108,8 +112,8 @@ struct PersistentObject:BuildingObject {
  PersistentObject(GameMap*,Room&,const std::string&,Tile* t,double,bool,float,const char*,bool):BuildingObject(t){}
 };
 HEART_REWARD
-METHODS
 HEART_OBJECT;
+METHODS
 bool RoomDungeonTemple::isTreasuryTile(Tile*)const{return false;}
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile*,RoomTreasuryTileData*){}
 Tile* RoomDungeonTemple::getHeartTile()const{return nullptr;}
@@ -223,7 +227,7 @@ int main(){
  // The heart object follows the health tier, but a destroyed heart is only released (never rebuilt)
  {BuildingObject obj{&centre};RoomDungeonTemple h(&map,&owner);h.mTempleObject=&obj;h.doUpkeep();
   check(h.templeRebuilds==0,"a healthy heart keeps its object");
-  h.mHeartHP=5000;h.doUpkeep();check(h.templeRebuilds==1,"a heart that fell to a lower tier is rebuilt with the matching object");
+  h.mHeartHP=5000;h.doUpkeep();check(h.templeRebuilds==1&&h.mTempleObject->getPositionTile()==&centre&&h.objectsRemoved==0,"a lower tier replaces only the heart on its existing tile");
   h.mHeartHP=0;h.doUpkeep();check(h.templeRebuilds==1,"a destroyed heart is not rebuilt as a critical one");}
  // Critical-health warning (threshold 11 % of 15100 = 1661)
  ODServer& server=ODServer::getSingleton();GameEntity hitter{&enemy};

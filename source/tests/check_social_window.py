@@ -31,17 +31,36 @@ width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
 check('name="Visible" value="False"' in layout, 'hidden by default')
 for name in ('CreaturesLabel', 'FilterButton', 'CreatureList', 'FeedTab', 'ProfileTab', 'FeedPane', 'FeedModeButton',
-             'FeedText', 'ProfilePane', 'ProfileHint', 'ProfileHolder',
-             'OwnPostsText'):
+             'FeedText', 'ProfilePane', 'ProfileHint', 'ProfileHolder'):
     check('name="%s"' % name in layout, name)
 check('OpenProfileButton' not in layout, 'the profile opens in the right pane, not in a window')
-# the right part (feed or profile) starts right of the list and both panes use the same area
-list_block = layout[layout.index('name="CreatureList"'):]
-list_right = int(re.search(r'Area" value="\{\{0,\d+\},\{0,\d+\},\{0,(\d+)\}', list_block)[1])
-pane_lefts = [int(re.search(r'Area" value="\{\{0,(\d+)\}', layout[layout.index('name="%s"' % n):])[1])
-              for n in ('FeedTab', 'FeedPane', 'ProfilePane')]
-check(all(left > list_right for left in pane_lefts), 'the right part must not overlap the list')
-check(width - 16 - min(pane_lefts) >= 400, 'the profile needs about 400 design pixels')
+# Both columns use the shared frame client rectangle with proportional margins.
+import xml.etree.ElementTree as ET
+social_root = ET.fromstring(layout).find('Window')
+
+
+def area(name):
+    """Return the relative coordinates of a named social-window child."""
+    window = social_root.find(".//Window[@name='%s']" % name)
+    value = window.find("Property[@name='Area']").get('value')
+    dims = re.findall(r'\{(-?[0-9.]+),(-?[0-9.]+)\}', value)
+    check(len(dims) == 4 and all(float(offset) == 0 for _, offset in dims), name + ' scales with its client')
+    return [float(scale) for scale, _ in dims]
+
+
+list_area = area('CreatureList')
+feed = area('FeedPane')
+profile = area('ProfilePane')
+check(feed == profile, 'feed and profile use the same grid')
+check(feed[0] > list_area[2], 'the right part must not overlap the list')
+# Preserve the original minimum text-column width after subtracting the actual forged frame.
+skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
+side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4
+check((width - 2 * side) * (profile[2] - profile[0]) >= 400, 'the profile needs about 400 design pixels')
+check(abs(list_area[0] - (1 - profile[2])) < 1e-6, 'equal outer margins')
+check(area('FeedTab')[0] == feed[0] and area('ProfileTab')[2] == feed[2], 'tabs align to the right column')
+check(abs((area('FeedTab')[2] - area('FeedTab')[0]) -
+          (area('ProfileTab')[2] - area('ProfileTab')[0])) < 1e-6, 'equal tab widths')
 check('name="Visible" value="False"' in layout[layout.index('name="ProfilePane"'):layout.index('name="ProfileHint"')],
       'the feed is shown first')
 check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
@@ -81,6 +100,9 @@ for handler in ('onFeedTabClicked', 'onProfileTabClicked'):
 check('SocialWindow::onLinkClicked' in window and '&SocialWindow::onLinkClicked' in window,
       'the names in the friends and foe rows select a creature')
 page = read('gui/WindowCreatureProfilePage.layout')
+check('name="OwnPostsText"' in page and 'mProfilePage->getChild("OwnPostsText")' in window,
+      'the existing recent posts share the scrolling profile')
+check('MAX_OWN_POSTS = 5' in window and '(rows < MAX_OWN_POSTS)' in window, 'all five recent posts remain available')
 for name in ('FriendLink0', 'FriendLink1', 'FoeLink'):
     check('type="OD/InvisibleButton" name="%s"' % name in page, name + ' is a borderless button')
 check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')
