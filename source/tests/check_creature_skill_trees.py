@@ -116,7 +116,7 @@ EXPECTED_SKILLS = [
     ('DRK_1', 'Family', 'dragonkin', 'Dragonkin', '1', 'Hail of Scales', 'HAILSTORM', '0.221 0.257 0.294 0.331 0.368', '22 23 24 25 26', '21', '-', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05'),
     ('DRK_2', 'Family', 'dragonkin', 'Dragonkin', '2', 'Scaled Hide', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
     ('DRK_3', 'Family', 'dragonkin', 'Dragonkin', '3', 'Wing Buffet', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3'),
-    ('WLD_1', 'Family', 'wild', 'Wild', '1', 'Toxic Cloud', 'GASCLOUD', '0.221 0.257 0.294 0.331 0.368', '20 20 20 20 20', '7', '-', '-', '-', 'GasCloud 7 1 2 4 1.5 2 14.35 Smoke 9.57'),
+    ('WLD_1', 'Family', 'wild', 'Wild', '1', 'Toxic Cloud', 'GASCLOUD', '0.221 0.257 0.294 0.331 0.368', '20 20 20 20 20', '7', '-', '-', '-', 'GasCloud 7 1 2 4 1.5 2 14.35 CreatureToxicCloud 9.57'),
     ('WLD_2', 'Family', 'wild', 'Wild', '2', 'Ooze Skin', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
     ('WLD_3', 'Family', 'wild', 'Wild', '3', 'Overgrowth', 'HEAL_SELF', '2.206 2.758 3.309 3.861 4.412', '10 10 10 10 10', '35', '5', '-', '-', '-'),
     ('WKF_1', 'Family', 'workfolk', 'Workfolk', '1', 'Tireless', 'PASSIVE_wake%', '6 12 18 24 30', '-', '-', '-', '-', '-', '-'),
