@@ -259,7 +259,7 @@ void cargoLifecycle(GameMap& map) {
     check(bundle.getCount()==2&&herbs["Bloodroot"]==1&&!bundle.removed&&bundle.removalCalls==0,"partial delivery preserves registered remainder");
     HerbTransfer complete(herbs,bundle,2); std::vector<GameEntity*> fullActive={&complete,&bundle}; bundle.activeList=&fullActive;
     runUpkeepSnapshot(fullActive);
-    std::cout<<"BAG_REMOVALS="<<bag.removalCalls<<" BAG_DELETIONS="<<bag.deletionCalls
+    std::cerr<<"BAG_REMOVALS="<<bag.removalCalls<<" BAG_DELETIONS="<<bag.deletionCalls
              <<" HERB_REMOVALS="<<bundle.removalCalls<<" HERB_DELETIONS="<<bundle.deletionCalls<<'\n';
     check(bag.getItem()==nullptr&&bag.removed&&bag.deleted&&bag.removalCalls==1&&bag.deletionCalls==1&&active.size()==1,
           "consumed bag is removed exactly once despite remaining in the upkeep snapshot");
