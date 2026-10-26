@@ -280,15 +280,15 @@ def rivets(name, p, radius, count, front=False, size=0.025):
             rod(name+str(i), (x,y,z-0.01), (x,y,z+0.02), size, 'GhostBrass', 8)
 
 
-# Make a bent pipe from short joined, beveled brass segments.
-def pipe(name, points, radius=0.035):
+# Make a bent pipe or hook from short joined, beveled metal segments.
+def pipe(name, points, radius=0.035, material='GhostBrass'):
     for i in range(len(points)-1):
-        rod(name+str(i), points[i], points[i+1], radius, 'GhostBrass', 12)
+        rod(name+str(i), points[i], points[i+1], radius, material, 12)
     for i in range(1, len(points)-1):
         bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=radius*1.18, location=points[i])
         obj=bpy.context.object
         obj.name=name+'Elbow'+str(i)
-        finish(obj, 'GhostBrass')
+        finish(obj, material)
 
 
 # Create the leather pack, canister, stitched straps and a curved nozzle hose.
@@ -302,9 +302,9 @@ def backpack(scale=1.0, centre=(0,0,0), group='Root'):
         box('Strap buckle', pos(x,0.111,0.20), (0.043*scale,0.012*scale,0.047*scale), 'GhostBrass', 0.003*scale, group=group)
         for z in (0.08,0.13,0.32,0.37):
             box('Stitch', pos(x,0.108,z), (0.018*scale,0.003*scale,0.004*scale), 'GhostBrass', 0.001*scale, group=group)
-    rod('Pressure canister', pos(0.0,-0.105,0.13), pos(0.0,-0.105,0.40), 0.065*scale, 'GhostBrass', 20, group)
-    ring('Canister collar', pos(0,-0.105,0.37), 0.067*scale,0.012*scale,'GhostIron',group=group)
-    pipe('Flexible hose', [pos(.03,-.10,.43),pos(.13,-.10,.46),pos(.17,-.05,.35),pos(.16,.06,.17)], .012*scale)
+    rod('Pressure canister', pos(-0.145,0.02,0.13), pos(-0.145,0.02,0.40), 0.065*scale, 'GhostBrass', 20, group)
+    ring('Canister collar', pos(-0.145,0.02,0.37), 0.067*scale,0.012*scale,'GhostIron',group=group)
+    pipe('Flexible hose', [pos(-.145,.02,.43),pos(-.04,.02,.46),pos(.17,-.05,.35),pos(.16,.06,.17)], .012*scale)
     cone('Capture nozzle', pos(.16,.06,.17), pos(.16,.10,.24), .025*scale,.014*scale,'GhostBrass',12,group)
 
 
@@ -357,10 +357,19 @@ def fill_level():
 def crystal_bowl():
     box('Chipped foot',(0,0,.045),(.36,.36,.09),'GhostStone',.025,rot=.055)
     cone('Stone pedestal',(0,0,.07),(0,0,.25),.14,.10,'GhostStone',9)
-    lathe('Chipped stone basin',[(.0,.21),(.17,.21),(.25,.33),(.245,.40),(.20,.39),(.15,.27),(.0,.26)],'GhostStone',19)
+    basin=lathe('Chipped stone basin',[(.0,.21),(.17,.21),(.25,.33),(.245,.40),(.20,.39),(.15,.27),(.0,.26)],'GhostStone',19)
     for angle in (.8,2.7,4.3):
         x,y=.21*math.cos(angle),.21*math.sin(angle)
-        box('Exposed chipped lip',(x,y,.37),(.07,.08,.06),'GhostStone',.012,rot=angle)
+        bpy.ops.mesh.primitive_cube_add(size=1,location=(x,y,.41),rotation=(.23,-.21,angle))
+        cutter=bpy.context.object
+        cutter.scale=(.08,.13,.095)
+        modifier=basin.modifiers.new('Broken rim','BOOLEAN')
+        modifier.operation='DIFFERENCE'
+        modifier.solver='EXACT'
+        modifier.object=cutter
+        bpy.context.view_layer.objects.active=basin
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
+        bpy.data.objects.remove(cutter,do_unlink=True)
 
 
 # Make an iron alarm bell with a deep skirt, clapper, bracket and striking hammer.
@@ -385,7 +394,7 @@ def hook(with_pack):
     box('Worn hook backing',(0,-.02,.40),(.34,.05,.80),'GhostIron',.02)
     for z in (.12,.65):
         rod('Hook wall bolt',(0,-.055,z),(0,.025,z),.027,'GhostBrass',8)
-    pipe('Forged curved hook',[(0,.025,.64),(0,.095,.60),(0,.12,.49),(0,.10,.45),(0,.07,.49)],.024)
+    pipe('Forged curved hook',[(0,.025,.64),(0,.095,.60),(0,.12,.49),(0,.10,.45),(0,.07,.49)],.024,'GhostIron')
     if with_pack:
         backpack(.62,(0,.12,.06))
 
