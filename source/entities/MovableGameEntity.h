@@ -62,6 +62,14 @@ namespace EntityAnimation
     //! The hurt creature that is pulled lies on the ground and slides behind the worker (see
     //! DormitoryWoundedDragCreatureClip)
     static const std::string dragged_anim = "Dragged";
+    //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
+    static const std::string scared_anim = "Scared";
+    //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.
+    static const std::string beam_anim = "Beam";
+    //! A hunter throws its capture box underhand; the client falls back to Attack when absent.
+    static const std::string throw_anim = "Throw";
+    //! A hunter tips its box over the press rim; the client falls back to Attack when absent.
+    static const std::string empty_anim = "Empty";
 };
 
 //! \brief Moves and animates an entity while keeping deferred strikes synchronized with its displayed pose.
