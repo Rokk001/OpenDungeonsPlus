@@ -1652,3 +1652,9 @@ assets-src/gui/icons/tiles/ItemSlotEmpty.png    AI-generated with Codex    GPLv3
 assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/InfirmaryButton.png    AI-generated with Codex    GPLv3+    Original painted cot and crossed bandages in the project icon style, 2026-10-25; generated at native resolution and downsampled to the 256-pixel source.
+
+particles/CreatureToxicCloud.particle    AI-generated with Codex    GPLv3+    Original low poison-gas ability effect; radius-bounded puffs, lifetime controlled by the existing creature effect, 2026-10-26
+materials/scripts/CreatureToxicCloud.material    AI-generated with Codex    GPLv3+    Original transparent ability material reusing the existing credited ReactionParticleSmoke.png sprite, 2026-10-26
+models/Pile_DragonBoss.mesh    OD Team    GPLv3+    Byte-identical alias of models/Pile_Dragon.mesh for a level creature explicitly using Dragon.mesh; original Blender source assets-src/dirt/Pile_Dragon.blend, unchanged geometry alias prepared with Codex, 2026-10-26
+models/Pile_BossDragon.mesh    OD Team    GPLv3+    Byte-identical alias of models/Pile_Dragon.mesh for a level creature explicitly using Dragon.mesh; original Blender source assets-src/dirt/Pile_Dragon.blend, unchanged geometry alias prepared with Codex, 2026-10-26
+models/Pile_VeteranScarab.mesh    OD Team    GPLv3+    Byte-identical alias of models/Pile_Scarab.mesh for a level creature explicitly using Scarab.mesh; original Blender source assets-src/dirt/Pile_Scarab.blend, unchanged geometry alias prepared with Codex, 2026-10-26

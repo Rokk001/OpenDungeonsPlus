@@ -2442,10 +2442,10 @@ MineNGold	50
 
 [Creatures]
 # SeatId	Name	MeshName	PosX	PosY	PosZ	ClassName	Level	CurrentXP	CurrentHP	CurrentWakefulness	CurrentHunger	GoldToDeposit	LeftWeapon	RightWeapon	CarriedSkill	CarriedWeapon	NbCreatureEffects	N*CreatureEffects
-0	BossDragon1	BossDragon	62	14	0	BossDragon	4	0	max	100	0	0	none	none	nullSkillType	none	0
-0	BossDragon2	BossDragon	40	68	0	BossDragon	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	BossDragon3	BossDragon	33	65	0	BossDragon	3	0	max	100	0	0	none	none	nullSkillType	none	0
-0	BossDragon4	BossDragon	9	14	0	BossDragon	4	0	max	100	0	0	none	none	nullSkillType	none	0
+0	BossDragon1	Dragon	62	14	0	BossDragon	4	0	max	100	0	0	none	none	nullSkillType	none	0
+0	BossDragon2	Dragon	40	68	0	BossDragon	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	BossDragon3	Dragon	33	65	0	BossDragon	3	0	max	100	0	0	none	none	nullSkillType	none	0
+0	BossDragon4	Dragon	9	14	0	BossDragon	4	0	max	100	0	0	none	none	nullSkillType	none	0
 [/Creatures]
 
 [Spells]
