@@ -42,6 +42,8 @@ bool infirmaryFirst(Building* building)
     return building->getObjectType() == GameEntityType::room &&
         static_cast<Room*>(building)->getType() == RoomType::infirmary;
 }
+}
+
 //! \brief Keeps appended item bags below gold and knockout transports without changing saved enum values.
 static int32_t carryPriority(EntityCarryType type)
 {
