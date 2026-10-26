@@ -1507,3 +1507,5 @@ assets-src/rooms/ghostroom/GhostBackpack.blend    AI-generated with Codex    GPL
 models/GhostBackpack.mesh    AI-generated with Codex    GPLv3+    Leather capture backpack with brass pressure canister, hose, nozzle and stitched straps; original editable source and export, 2026-10-26
 assets-src/creatures/ghosts/Goblin.blend    AI-generated animation with Codex    GPLv3+    Original Scared gestures on the unchanged native Goblin rig and mesh; editable animation source, 2026-10-26
 models/Goblin.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Scared clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
+assets-src/creatures/ghosts/Rat.blend    AI-generated animation with Codex    GPLv3+    Original Scared gestures on the unchanged native Rat rig and mesh; editable animation source, 2026-10-26
+models/Rat.skeleton    AI-generated animation with Codex    GPLv3+    Original one-second Scared clips; every pre-existing bone, hierarchy, mount and animation chunk preserved byte-for-byte, 2026-10-26
