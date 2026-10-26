@@ -59,9 +59,18 @@ for name in ('HealthLabel', 'ExperienceLabel', 'RelationText', 'FoeLabel'):
 profile_layout = gui[gui.index('float Gui::layoutCreatureProfilePage'):gui.index('void Gui::applyProfileScroll')]
 assert profile_layout.index('CEGUI::Window* equipment') < profile_layout.index('page->getChild("AttributesText")')
 assert profile_layout.index('page->getChild("AttributesText")') < profile_layout.index('const char* const personalRows')
-assert profile_layout.index('const char* const barNames') < profile_layout.index('page->getChild("EquipmentRow")') < profile_layout.index('const char* const personalRows')
+assert profile_layout.index('page->getChild("EquipmentRow")') < profile_layout.index('page->getChild("AttributesText")') < profile_layout.index('const char* const barNames') < profile_layout.index('const char* const personalRows')
 assert '"EquipmentRow"' in gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):gui.index('const std::size_t PROFILE_FLOW_ROW_COUNT')]
-assert 'countWrappedLines(equipment, equipmentWidth)' in profile_layout
+assert 'page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN' in profile_layout
+assert 'PROFILE_FLOW_TOP - 34.0f - 2.0f * PROFILE_ROW_GAP' in profile_layout
+assert 'const std::size_t slotCount = 13;' in profile_layout
+assert 'count <= slotCount' in profile_layout and '(slotCount + count - 1) / count' in profile_layout
+assert '(equipmentWidth - gaps) / static_cast<float>(last - first)' in profile_layout
+assert 'if(candidate > edge)' in profile_layout and 'slot % columns == 0' in profile_layout
+assert 'static_cast<float>(slot / columns) * (edge + PROFILE_ROW_GAP)' in profile_layout
+assert '(slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP' in profile_layout
+assert 'setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),' in profile_layout
+assert 'countWrappedLines(equipment' not in profile_layout, 'hidden equipment text must not displace the item slots'
 assert '34.0f + equipmentHeight + PROFILE_ROW_GAP' in profile_layout
 assert 'getProfileLinesHeight(window, lines, scale)' in gui
 assert 'getRenderedString()' in gui, 'measure the actual rendered text rather than a fixed number of rows'
@@ -152,31 +161,44 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             viewport = (outer_height * fit - title - 2 * border) * fraction - reserve
             page_width = (outer_width * fit - 2 * side) * (.5 if owner == 'Dungeonbook' else 1.0)
             equipment_width = page_width - 148.0 - 32.0
-            equipment_bottom = 34 + wrapped_lines(equipment_text, equipment_width) * line_height + 4
+            image_edge, columns = 0.0, 1
+            for count in range(1, 14):
+                row_count = (13 + count - 1) // count
+                candidate = min(56.0, (90.0 - (row_count - 1) * 4.0) / row_count)
+                for first in range(0, 13, count):
+                    last = min(13, first + count)
+                    gaps = sum(12.0 if slot in (6, 9) else 4.0 for slot in range(first + 1, last))
+                    candidate = min(candidate, (equipment_width - gaps) / (last - first))
+                if candidate > image_edge:
+                    image_edge, columns = candidate, count
+            assert 0 < image_edge <= 56.0
+            image_x = 0.0
+            slot_bounds = []
+            for slot in range(13):
+                if slot % columns == 0:
+                    image_x = 0.0
+                    image_y = (slot // columns) * (image_edge + 4.0)
+                else:
+                    image_x += 12.0 if slot in (6, 9) else 4.0
+                left, top = 148.0 + image_x, 34.0 + image_y
+                right, bottom = left + image_edge, top + image_edge
+                assert left >= 148.0 > 136.0 and top >= 34.0 > 26.0, 'slots overlap the portrait or headline'
+                assert right <= page_width - 32.0 + 1e-6
+                assert bottom <= 124.0 + 1e-6 and bottom <= viewport, 'all slots must open without scrolling'
+                for previous_left, previous_top, previous_right, previous_bottom in slot_bounds:
+                    assert right <= previous_left + 1e-6 or left >= previous_right - 1e-6 or bottom <= previous_top + 1e-6 or top >= previous_bottom - 1e-6, 'equipment slots overlap'
+                slot_bounds.append((left, top, right, bottom))
+                image_x += image_edge
+            assert len(slot_bounds) == 13
+            equipment_bottom = max(bounds[3] for bounds in slot_bounds)
             attribute_top = max(132.0, equipment_bottom + 4)
             attribute_bottom = attribute_top + wrapped_lines(attribute_text, page_width - 48) * line_height + 4
             core_bottom = attribute_bottom + 4 + 20
             assert core_bottom <= viewport, (owner, screen_width, screen_height, percent, core_bottom, viewport)
             assert 124 <= attribute_top and 26 <= 34, 'portrait/header overlaps the following essential rows'
+            assert equipment_bottom + 4 <= attribute_top, 'attributes overlap the equipment header'
             # Overflowed social rows are clipped to this viewport and reachable through the full scroll range.
-            # Preserve all thirteen real item images, their 56-pixel wrap and reachability before social metadata.
-            image_width = max(1.0, page_width - 48.0)
-            image_edge = min(56.0, image_width)
-            image_x, image_y = 0.0, 0.0
-            image_rows = []
-            for slot in range(13):
-                gap = 12.0 if slot in (6, 9) else 4.0
-                if slot and image_x + gap + image_edge > image_width:
-                    image_x, image_y = 0.0, image_y + image_edge + 4.0
-                elif slot:
-                    image_x += gap
-                assert image_x + image_edge <= image_width + 1e-6
-                image_rows.append(core_bottom + image_y)
-                image_x += image_edge
-            rows_bottom = core_bottom + image_y + image_edge + 4.0
-            for image_top in image_rows:
-                offset = min(image_top, max(0.0, rows_bottom - viewport))
-                assert image_top - offset >= 0 and image_top + image_edge - offset <= viewport + 1e-6
+            rows_bottom = core_bottom
             for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
                 top = rows_bottom + 4
                 rows_bottom = top + lines * line_height + 4
