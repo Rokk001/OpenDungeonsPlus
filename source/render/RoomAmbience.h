@@ -459,8 +459,6 @@ private:
     //! \brief Lets an object that loops the clip of the effect (kind clip with Loop) finish on the last pose of the clip,
     //! which is its pose at rest
     void stopLoopClip(RenderedMovableEntity* entity, const AmbienceEffect& effect);
-    //! \brief Stops every running sound loop (kind sound with Loop) and forgets it.
-    void stopSoundLoops();
     //! \brief True if the dungeon heart at the position belongs to the local keeper and its health fraction (as the
     //! heart badge shows it) is below the given value
     //! \param position Where the heart stands.
@@ -612,8 +610,6 @@ private:
     std::map<std::string, uint32_t> mSoundLoops;
     //! Time until which an object plays a clip of an event (a bed that wakes up) and must not be restarted by a looping clip
     std::map<std::string, double> mClipHoldUntil;
-    //! The running sound loops (kind sound with Loop), by object and effect name, with the handle of the spatial loop
-    std::map<std::string, uint32_t> mSoundLoops;
     //! Clips that a mesh has (key "mesh|clip"), so that the skeleton is asked only once
     std::map<std::string, bool> mClipKnown;
     //! Dice of its own, so the game random sequence is untouched
