@@ -50,7 +50,7 @@ PostCategory getActivityCategory(const CreatureActivity& activity, int32_t& room
        ((activity.assignedRoom == RoomType::dormitory) && activity.inAssignedRoom))
         return PostCategory::Sleep;
 
-    if(activity.task != CreatureActionType::useRoom)
+    if(!CreatureAction::isRoomWorkAction(activity.task))
         return PostCategory::Nb;
 
     roomType = static_cast<int32_t>(activity.assignedRoom);

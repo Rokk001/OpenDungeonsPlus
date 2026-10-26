@@ -32,8 +32,9 @@ def check(condition, message):
 
 entity = read('source/entities/GiftBoxEntity.h')
 types = re.findall(r'(\w+),', entity[entity.index('enum class GiftBoxType'):entity.index('nbTypes')])
-check(types[0] == 'skill' and len(types) == 13, 'GiftBoxType starts with skill and holds the twelve specials: %s' % types)
-specials = types[1:]
+check(types == ['skill', 'mana', 'gold', 'revealMap', 'levelUp', 'healAll', 'makeSafe', 'weakenWalls', 'stunWorkers', 'receiveWorkers', 'makeHappy', 'makeUnhappy', 'killCreatures', 'item'], 'GiftBoxType starts with skill and holds the twelve specials: %s' % types)
+specials = types[1:types.index('item')]
+check(types[-1] == 'item', 'item boxes append after the twelve stored specials')
 
 bonus = read('source/giftboxes/GiftBoxBonus.cpp')
 for name in ('getDisplayName', 'getDescription'):
@@ -46,10 +47,12 @@ editor_layout = read('gui/ModeEditor.layout')
 gui = read('source/render/Gui.cpp')
 for special in specials:
     check('askCreateGiftBox(GiftBoxType::%s)' % special in editor, 'the editor has a button action for %s' % special)
-check(editor_layout.count('BoxButton" >') == len(specials), 'the editor layout holds one box button per special')
+check(len(re.findall(r'<Window\b[^>]*\bname="\w+BoxButton"\s*>', editor_layout)) == len(specials) + 1, 'the editor layout holds one box button per special')
 check(len(re.findall(r'EDITOR_BOX_\w+_BUTTON = ', gui)) == len(specials), 'one editor box button path per special')
 check(len(re.findall(r'connectGuiAction\(Gui::EDITOR_BOX_', editor)) == len(specials), 'every editor box button is connected')
 
+check('askCreateGiftBox(GiftBoxType::item, mItemBoxContents[selected->getID()]' in editor, 'item boxes use their content selector')
+check('special < static_cast<uint32_t>(GiftBoxType::item)' in read('source/modes/GameMode.cpp'), 'item boxes are excluded from stored special buttons')
 server = read('source/network/ODServer.cpp')
 create = server[server.index('case ClientNotificationType::editorCreateGiftBox:'):server.index('case ClientNotificationType::editorCreateGiftBox:') + 1200]
 check('GiftBoxType::skill' in create and 'GiftBoxType::nbTypes' in create, 'the server accepts every special box type of the editor')

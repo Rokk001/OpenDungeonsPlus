@@ -38,6 +38,7 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Chooses an allowed room and its existing or specialized work action.
     static bool handleSearchJob(Creature& creature, bool forced);
 
 private:

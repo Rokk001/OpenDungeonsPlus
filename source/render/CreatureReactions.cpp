@@ -491,6 +491,7 @@ ReactionPriority CreatureReactions::getCreaturePriority(const Creature* creature
     return ReactionPriority::none;
 }
 
+//! \brief Recognises production-room attack clips as work, including herb harvesting and brewing.
 bool CreatureReactions::isWorkingInRoom(const Creature* creature) const
 {
     Tile* tile = creature->getPositionTile();
@@ -502,7 +503,8 @@ bool CreatureReactions::isWorkingInRoom(const Creature* creature) const
         return false;
 
     RoomType type = room->getType();
-    return (type == RoomType::library) || (type == RoomType::workshop) || (type == RoomType::trainingHall) ||
+    return (type == RoomType::herbGarden) || (type == RoomType::alchemyLab) ||
+        (type == RoomType::library) || (type == RoomType::workshop) || (type == RoomType::trainingHall) ||
         (type == RoomType::casino) || (type == RoomType::hatchery);
 }
 
@@ -2721,6 +2723,16 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
         return;
 
     WorkerReactions::noteCosmeticEvent(*this, event);
+    if(event.is(CosmeticEventType::cauldronBang))
+    {
+        Creature* brewer = mGameMap->getCreature(event.mSubject);
+        if(brewer != nullptr)
+        {
+            trigger(brewer, "SootFace");
+            queueReaction(brewer, "Sweat", -1.0, 3.0);
+        }
+        return;
+    }
 
     // Blow results and launched missiles (dodges, trails, arrows) are handled in their own file
     if(CreatureWeaponVisuals::noteCosmeticEvent(*this, event))

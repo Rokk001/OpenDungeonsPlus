@@ -213,6 +213,14 @@ enum class ServerNotificationType
     //! \brief Owner-only campaign victory after levelStatistics and saved progress: string goalsDisplay.
     //! Appended so existing notification values remain unchanged.
     campaignVictory,
+    //! \brief Owner-only merchant stock, deal history, margin and reservation-mode snapshot.
+    merchantWindow,
+    //! \brief Owner-only merchant settings: int32_t margin, string fair/profit mode.
+    merchantSettings,
+    //! \brief Owner-only cauldron progress, herb stocks and laboratory-mode snapshot.
+    labWindow,
+    //! \brief Owner-only laboratory settings: int32_t production mode.
+    labSettings,
     //! \brief Answer to askTavernWindow, owner only: + int32_t tileX, int32_t tileY (a tile of the tavern),
     //! uint32_t payer (TavernPayer), bool beerResearched, double beerPrice (gold per beer).
     //! Appended last so that no existing numeric value changes.

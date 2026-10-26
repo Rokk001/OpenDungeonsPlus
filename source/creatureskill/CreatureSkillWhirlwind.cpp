@@ -20,6 +20,7 @@
 
 #include "creatureskill/CreatureSkillManager.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
@@ -73,6 +74,7 @@ bool CreatureSkillWhirlwind::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Pushes the target through traversable tiles, reduced by its Brace equipment effect.
 bool CreatureSkillWhirlwind::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const
 {
@@ -97,7 +99,8 @@ bool CreatureSkillWhirlwind::tryUseFight(GameMap& gameMap, Creature* creature, f
 
     // We follow the line away from the caster until something blocks the way
     Tile* lastTile = startTile;
-    for(uint32_t i = 1; i <= mPushTiles; ++i)
+    const double pushTiles = mPushTiles * ItemEffects::remainingFactor(*attackedCreature, "Brace");
+    for(uint32_t i = 1; i <= pushTiles; ++i)
     {
         Ogre::Vector3 pos = attackedCreature->getPosition() + (direction * static_cast<Ogre::Real>(i));
         Tile* tile = gameMap.getTile(Helper::round(pos.x), Helper::round(pos.y));

@@ -23,6 +23,9 @@
 #include "entities/MissileStone.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "entities/GiftBoxEntity.h"
+#include "rooms/Room.h"
+#include "rooms/RoomType.h"
 #include "gamemap/GameMap.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -104,8 +107,25 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
     // We try to find a building that wants the entity
     std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
     std::vector<Tile*> tilesDest;
+    bool hasPreferredRoom = false;
+    RoomType preferredRoom = RoomType::nullRoomType;
+    if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity)
+        preferredRoom = RoomType::merchant;
+    else if(entityToCarry->getObjectType() == GameEntityType::giftBoxEntity &&
+        static_cast<GiftBoxEntity*>(entityToCarry)->getGiftBoxType() == GiftBoxType::item)
+        preferredRoom = RoomType::workshop;
+    if(preferredRoom != RoomType::nullRoomType)
+    {
+        for(Building* building : buildings)
+            if(building->getObjectType() == GameEntityType::room &&
+                static_cast<Room*>(building)->getType() == preferredRoom && building->hasCarryEntitySpot(entityToCarry))
+                hasPreferredRoom = true;
+    }
     for(Building* building : buildings)
     {
+        if(hasPreferredRoom && (building->getObjectType() != GameEntityType::room ||
+            static_cast<Room*>(building)->getType() != preferredRoom))
+            continue;
         if(building->hasCarryEntitySpot(entityToCarry))
         {
             Tile* tile = building->getCoveredTile(0);

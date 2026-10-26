@@ -1,0 +1,920 @@
+import RTSS/NormalMapping_MultiPass from "RTShaderSystem.material"
+import RTSS/PerPixel_SinglePass from "RTShaderSystem.material"
+
+material BasicAxe_common : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicAxeNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture BasicAxe.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material ItemQualityMetal_common
+{
+ technique
+ {
+  pass
+  {
+   ambient 0.900000 0.900000 0.900000
+   diffuse 0.900000 0.900000 0.900000 1
+   specular 0.65 0.65 0.65 1 24
+   emissive 0.000000 0.000000 0.000000
+  }
+ }
+}
+
+
+material BasicAxe_rare : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicAxeNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture BasicAxe.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material ItemQualityMetal_rare
+{
+ technique
+ {
+  pass
+  {
+   ambient 0.521569 0.641176 0.900000
+   diffuse 0.521569 0.641176 0.900000 1
+   specular 0.65 0.65 0.65 1 24
+   emissive 0.000000 0.000000 0.000000
+  }
+ }
+}
+
+
+material BasicAxe_epic : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicAxeNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.104157 0.048314 0.160000
+
+            texture_unit decalmap
+            {
+                texture BasicAxe.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material ItemQualityMetal_epic
+{
+ technique
+ {
+  pass
+  {
+   ambient 0.725490 0.550980 0.900000
+   diffuse 0.725490 0.550980 0.900000 1
+   specular 0.65 0.65 0.65 1 24
+   emissive 0.143216 0.066431 0.220000
+  }
+ }
+}
+
+
+material ArmamentWeapons_common
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.02 0.04 0.04 1.0 12.5
+            emissive 0.0 0.0 0.0 1.0
+            texture_unit
+            {
+                texture ArmamentWeaponsSurface.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material ArmamentWeapons_rare
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.02 0.04 0.04 1.0 12.5
+            emissive 0.0 0.0 0.0 1.0
+            texture_unit
+            {
+                texture ArmamentWeaponsSurface.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material ArmamentWeapons_epic
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.02 0.04 0.04 1.0 12.5
+            emissive 0.104157 0.048314 0.160000
+            texture_unit
+            {
+                texture ArmamentWeaponsSurface.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material ReflMetal_common
+{
+    technique
+    {
+        pass
+        {
+            vertex_program_ref myReflMetalVertexShader
+            {
+            }
+
+            fragment_program_ref myReflMetalFragmentShader
+            {
+                param_named envmap int 0
+                param_named ambient float3 1.0 1.0 1.0  // This will be set from C++ code
+            }
+
+            texture_unit
+            {
+                texture EnvmapMetal.png
+            }
+        }
+    }
+}
+
+material ReflMetal_rare
+{
+    technique
+    {
+        pass
+        {
+            vertex_program_ref myReflMetalVertexShader
+            {
+            }
+
+            fragment_program_ref myReflMetalFragmentShader
+            {
+                param_named envmap int 0
+                param_named ambient float3 1.0 1.0 1.0  // This will be set from C++ code
+            }
+
+            texture_unit
+            {
+                texture EnvmapMetal.png
+            }
+        }
+    }
+}
+
+material ReflMetal_epic
+{
+    technique
+    {
+        pass
+        {
+            vertex_program_ref myReflMetalVertexShader
+            {
+            }
+
+            fragment_program_ref myReflMetalFragmentShader
+            {
+                param_named envmap int 0
+                param_named ambient float3 1.0 1.0 1.0  // This will be set from C++ code
+            }
+
+            texture_unit
+            {
+                texture EnvmapMetal.png
+            }
+        }
+    }
+}
+
+material BasicSword_common : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicSwordNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture BasicSword.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material BasicSword_rare : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicSwordNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture BasicSword.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material BasicSword_epic : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicSwordNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.104157 0.048314 0.160000
+
+            texture_unit decalmap
+            {
+                texture BasicSword.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material Longsword_common
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.02 0.04 0.04 1.0 12.5
+            emissive 0.0 0.0 0.0 1.0
+            texture_unit
+            {
+                texture Longsword.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material Longsword_rare
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.02 0.04 0.04 1.0 12.5
+            emissive 0.0 0.0 0.0 1.0
+            texture_unit
+            {
+                texture Longsword.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material Longsword_epic
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.02 0.04 0.04 1.0 12.5
+            emissive 0.104157 0.048314 0.160000
+            texture_unit
+            {
+                texture Longsword.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material BasicHammer_common : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicHammerNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture BasicHammer.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material BasicHammer_rare : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicHammerNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture BasicHammer.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material BasicHammer_epic : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BasicHammerNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.104157 0.048314 0.160000
+
+            texture_unit decalmap
+            {
+                texture BasicHammer.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material Staff_common
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.5 0.5 0.5 1.0 12.5
+            emissive 0.0 0.0 0.0 1.0
+            texture_unit
+            {
+                texture Staff.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material Staff_rare
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.5 0.5 0.5 1.0 12.5
+            emissive 0.0 0.0 0.0 1.0
+            texture_unit
+            {
+                texture Staff.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material Staff_epic
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.5 0.5 0.5 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.5 0.5 0.5 1.0 12.5
+            emissive 0.104157 0.048314 0.160000
+            texture_unit
+            {
+                texture Staff.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material Bow_common : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BowNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture Bow.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material Bow_rare : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BowNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture Bow.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material Bow_epic : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture BowNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.104157 0.048314 0.160000
+
+            texture_unit decalmap
+            {
+                texture Bow.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material Crossbow_common : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture CrossbowNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture Crossbow.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material Crossbow_rare : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture CrossbowNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit decalmap
+            {
+                texture Crossbow.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material Crossbow_epic : RTSS/NormalMapping_MultiPass
+{
+    receive_shadows on
+
+    technique
+    {
+        pass lighting
+        {
+            // Override the normal map.
+            texture_unit
+            {
+                texture CrossbowNormal.png
+                rtshader_system
+                {
+                    normal_map object_space
+                }
+            }
+        }
+
+        pass decal
+        {
+            ambient 0.8 0.8 0.8 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.0 0.0 0.0 0.0 2.0
+            emissive 0.104157 0.048314 0.160000
+
+            texture_unit decalmap
+            {
+                texture Crossbow.png
+                tex_address_mode wrap
+                scale 1.0 1.0
+                colour_op modulate
+            }
+        }
+    }
+}
+
+material DwarfPick_common : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            ambient 1.0 1.0 1.0 1.0
+            diffuse 1.000000 1.000000 1.000000 1
+            specular 0.3 0.3 0.3 1.0 16.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit
+            {
+                texture DwarfPickSurface.png
+            }
+        }
+    }
+}
+
+material DwarfPick_rare : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            ambient 1.0 1.0 1.0 1.0
+            diffuse 0.243137 0.482353 1.000000 1
+            specular 0.3 0.3 0.3 1.0 16.0
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit
+            {
+                texture DwarfPickSurface.png
+            }
+        }
+    }
+}
+
+material DwarfPick_epic : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            ambient 1.0 1.0 1.0 1.0
+            diffuse 0.650980 0.301961 1.000000 1
+            specular 0.3 0.3 0.3 1.0 16.0
+            emissive 0.104157 0.048314 0.160000
+
+            texture_unit
+            {
+                texture DwarfPickSurface.png
+            }
+        }
+    }
+}

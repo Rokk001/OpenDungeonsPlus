@@ -8,6 +8,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Add creature equipment, unique Epic items, collectible bags and workshop-opened item boxes; trade goods through a merchant, grow herbs and brew potions with room and tool research.
 * Paint the in-game HUD and windows in worn black iron and cracked stone, with new painted icons and scalable book serif text, while keeping the existing controls and layout.
 
 * Explore a ruined fortress in the main menu, with flights to each menu location and back to the courtyard, flickering firelight, a green-lit spired tower, low ground mist and embers. A replaceable chain-hung title, moving crows and cages, blood moon and weathered graveyard details deepen the scene.
@@ -539,3 +540,6 @@ craft creature's equipment (#459)
 **Distribution:**
 
 * A Windows installer (msi-package).
+
+- Equipment and potion networking now uses version 0.7.4. Poor weapon bags preserve the spawn equipment identity,
+  name and matching base icon; hero quality chances interpolate the level 1 and 30 endpoints exactly.

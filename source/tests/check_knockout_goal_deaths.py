@@ -14,7 +14,7 @@ def check_transition(source):
     still_ko = transition.index('return;', guard)
     death = transition.index('mHp = 0;')
     observation = transition.index('recordScriptEvent(*this, "killed");')
-    assert transition.index('++mKoTurnCounter;') < guard < still_ko < death < observation
+    assert transition.index('mKoTurnCounter = std::min(0.0, mKoTurnCounter + 1.0);') < guard < still_ko < death < observation
     assert transition.count('recordScriptEvent(*this, "killed");') == 1
     # The outer lethal-KO branch excludes an ordinary temporary knockout and already-dead creatures.
     upkeep = source[source.index('void Creature::doUpkeep()'):end]

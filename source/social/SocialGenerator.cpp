@@ -339,9 +339,10 @@ std::string SocialGenerator::postTemplate(const SocialData& data, const std::str
     return pickFrom(rng, candidates, emptyText);
 }
 
+//! \brief Expands a feed post with the profile, relationship or traded-item display name.
 std::string SocialGenerator::renderPost(const SocialData& data, const CreatureProfile& profile, bool isWorker,
     const std::string& category, uint32_t variant, int32_t level, const std::string& room,
-    const std::string& friendName)
+    const std::string& friendName, const std::string& itemName)
 {
     std::string text = postTemplate(data, profile.mCreatureName, profile.mClassName, isWorker, category, variant);
     if(text.empty())
@@ -365,6 +366,7 @@ std::string SocialGenerator::renderPost(const SocialData& data, const CreaturePr
     // The texts of a slap duel speak of the opponent as {name}, not of the poster itself
     if((category == DUEL_WON_CATEGORY) || (category == DUEL_LOST_CATEGORY))
         slots["name"] = friendName;
+    slots["item"] = itemName;
     return renderText(text, slots);
 }
 

@@ -432,7 +432,7 @@ double ODApplication::turnsPerSecond = 1.4;
 #ifdef OD_VERSION
 const std::string ODApplication::VERSION = OD_VERSION;
 #else
-const std::string ODApplication::VERSION = "undefined";
+const std::string ODApplication::VERSION = "0.7.4";
 #endif
 const std::string ODApplication::VERSIONSTRING = "OpenDungeons_Version:" + VERSION;
 std::string ODApplication::MOTD = "Welcome to Open Dungeons\tVersion:  " + VERSION;

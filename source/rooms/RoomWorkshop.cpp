@@ -16,6 +16,7 @@
  */
 
 #include "rooms/RoomWorkshop.h"
+#include "ODApplication.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 
@@ -25,6 +26,10 @@
 #include "utils/MakeUnique.h"
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
+#include "entities/ItemEffects.h"
+#include "entities/ItemBagEntity.h"
+#include "giftboxes/GiftBoxItem.h"
+#include "network/CosmeticEvent.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/RenderedMovableEntity.h"
@@ -40,6 +45,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include <sstream>
 
 const std::string RoomWorkshopName = "Workshop";
 const std::string RoomWorkshopNameDisplay = "Workshop room";
@@ -134,28 +140,9 @@ static const Ogre::Real Y_OFFSET_CREATURE = 0.0;
 static const Ogre::Real X_OFFSET_SPOT = 0.0;
 static const Ogre::Real Y_OFFSET_SPOT = 0.2;
 
-//! \brief Returns the whole work points earned this turn and keeps the fraction for the next turn.
-//! \param base The points before the dirt factor (affinity x research value).
-//! \param factor The room dirt output factor; 1 or more keeps the plain truncation of the points.
-//! \param remainder Fraction left over from earlier turns; updated here.
-//! \return The whole points to add now.
-static int32_t takeWholeWorkPoints(double base, double factor, double& remainder)
-{
-    if(factor >= 1.0)
-        return static_cast<int32_t>(base * factor);
-
-    double total = base * factor + remainder;
-    int32_t whole = static_cast<int32_t>(total + 1e-9);
-    remainder = total - static_cast<double>(whole);
-    if(remainder < 0.0)
-        remainder = 0.0;
-    return whole;
-}
-
 RoomWorkshop::RoomWorkshop(GameMap* gameMap) :
     Room(gameMap),
     mPoints(0),
-    mPointsRemainder(0.0),
     mTrapType(TrapType::nullTrapType)
 {
     setMeshName("Workshop");
@@ -201,6 +188,7 @@ BuildingObject* RoomWorkshop::notifyActiveSpotCreated(ActiveSpotPlace place, Til
     return nullptr;
 }
 
+//! \brief Merges trap and box work without destroying item-box entities on the transferred tiles.
 void RoomWorkshop::absorbRoom(Room *r)
 {
     if(r->getType() != getType())
@@ -217,8 +205,14 @@ void RoomWorkshop::absorbRoom(Room *r)
 
     mPoints += roomAbs->mPoints;
     roomAbs->mPoints = 0;
-    mPointsRemainder += roomAbs->mPointsRemainder;
-    roomAbs->mPointsRemainder = 0.0;
+    mCrackPoints += roomAbs->mCrackPoints;
+    roomAbs->mCrackPoints = 0.0;
+    if(mCrackBox == nullptr)
+    {
+        mCrackBox = roomAbs->mCrackBox;
+        mCrackBoxName = roomAbs->mCrackBoxName;
+    }
+    roomAbs->mCrackBox = nullptr;
 
     OD_ASSERT_TRUE_MSG(roomAbs->mCreaturesSpots.empty(), "room=" + getName() + ", roomAbs=" + roomAbs->getName());
 }
@@ -254,10 +248,11 @@ void RoomWorkshop::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
     mUnusedSpots.erase(itEr);
 }
 
+//! \brief Allows workshop labour whenever a trap or item-box job has a free worker place.
 bool RoomWorkshop::hasOpenCreatureSpot(Creature* c)
 {
     // If there is no need, we do not allow creature to work
-    if(mTrapType == TrapType::nullTrapType)
+    if(mTrapType == TrapType::nullTrapType && mCrackBox == nullptr)
         return false;
 
     // We accept all creatures as soon as there are free active spots
@@ -324,12 +319,71 @@ void RoomWorkshop::removeCreatureUsingRoom(Creature* c)
     mCreaturesSpots.erase(c);
 }
 
+//! \brief Cracks researched item boxes before starting a new trap job.
 void RoomWorkshop::doUpkeep()
 {
     Room::doUpkeep();
 
     if (mCoveredTiles.empty())
         return;
+
+    if(mTrapType == TrapType::nullTrapType)
+    {
+        GiftBoxItem* nextBox = nullptr;
+        for(Tile* tile : mCoveredTiles)
+        {
+            for(GameEntity* entity : tile->getEntitiesInTile())
+            {
+                if(entity->getObjectType() != GameEntityType::giftBoxEntity ||
+                    static_cast<GiftBoxEntity*>(entity)->getGiftBoxType() != GiftBoxType::item)
+                    continue;
+                GiftBoxItem* box = static_cast<GiftBoxItem*>(entity);
+                if(!box->canCrack(*getSeat()))
+                    continue;
+                if(nextBox == nullptr || box->getName() == mCrackBoxName)
+                    nextBox = box;
+            }
+        }
+        if(nextBox == nullptr || (!mCrackBoxName.empty() && nextBox->getName() != mCrackBoxName))
+            mCrackPoints = 0.0;
+        mCrackBox = nextBox;
+        mCrackBoxName = nextBox == nullptr ? std::string() : nextBox->getName();
+        if(mCrackBox != nullptr)
+        {
+            if(mCrackPoints >= getNeededCrackPoints())
+            {
+                Tile* tile = mCrackBox->getPositionTile();
+                std::unique_ptr<ItemInstance> item = mCrackBox->crack();
+                if(item.get() != nullptr && tile != nullptr)
+                {
+                    ItemBagEntity* bag = new ItemBagEntity(getGameMap(), std::move(item));
+                    bag->setSeat(getSeat());
+                    bag->addToGameMap();
+                    bag->createMesh();
+                    bag->setPosition(tile->getPosition());
+                    mCrackBox->removeFromGameMap();
+                    mCrackBox->deleteYourself();
+                    CosmeticEvent event(CosmeticEventType::boxCracked);
+                    event.mObject = getName();
+                    event.mPosition = tile->getPosition();
+                    fireRoomCosmeticEvent(*tile, event);
+                    fireRoomSound(*tile, "Workshop/Crack");
+                    BuildingObject* machine = getBuildingObjectFromTile(tile);
+                    if(machine == nullptr && !mCreaturesSpots.empty())
+                        machine = getBuildingObjectFromTile(mCreaturesSpots.begin()->second);
+                    if(machine != nullptr)
+                    {
+                        machine->addParticleEffect("CrackSparks", static_cast<uint32_t>(ODApplication::turnsPerSecond));
+                        machine->fireRefresh();
+                    }
+                }
+                mCrackBox = nullptr;
+                mCrackBoxName.clear();
+                mCrackPoints = 0.0;
+            }
+            return;
+        }
+    }
 
     // If we are not already working on something, we check if a trap have a need. If so,
     // we check that no reachable Workshop can supply the trap before starting crafting
@@ -454,7 +508,7 @@ void RoomWorkshop::doUpkeep()
     mTrapType = TrapType::nullTrapType;
 }
 
-//! \brief A creature works; the points per work follow the workshop research.
+//! \brief A creature works with the workshop research and Craftsman equipment factors.
 bool RoomWorkshop::useRoom(Creature& creature, bool forced)
 {
     std::map<Creature*, Tile*>::iterator it = mCreaturesSpots.find(&creature);
@@ -505,15 +559,62 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
     OD_ASSERT_TRUE_MSG(creatureRoomAffinity.getRoomType() == getType(), "name=" + getName() + ", creature=" + creature.getName()
         + ", creatureRoomAffinityType=" + Helper::toString(static_cast<int>(creatureRoomAffinity.getRoomType())));
 
-    mPoints += takeWholeWorkPoints(creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
+    const double work = creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork"),
-        ResearchEffect::PointsPerWork), getDirtOutputFactor() * creature.getHangoverWorkFactor(), mPointsRemainder);
+        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Craftsman") * getDirtOutputFactor() * creature.getHangoverWorkFactor();
+    if(mCrackBox != nullptr) mCrackPoints += work;
+    else mPoints += work;
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
     creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));
     addUseDirt(creature, tileCreature, "WorkshopDirtPerWork");
 
     return false;
+}
+
+//! \brief Accepts researched item boxes while a centre place remains available.
+bool RoomWorkshop::hasCarryEntitySpot(GameEntity* entity)
+{
+    if(entity == nullptr || entity->getObjectType() != GameEntityType::giftBoxEntity ||
+        static_cast<GiftBoxEntity*>(entity)->getGiftBoxType() != GiftBoxType::item)
+        return false;
+    GiftBoxItem* box = static_cast<GiftBoxItem*>(entity);
+    if(!box->canCrack(*getSeat()))
+        return false;
+    size_t storedBoxes = 0;
+    for(Tile* tile : mCoveredTiles)
+        for(GameEntity* stored : tile->getEntitiesInTile())
+            if(stored->getObjectType() == GameEntityType::giftBoxEntity) ++storedBoxes;
+    return storedBoxes < mUnusedSpots.size() + mCreaturesSpots.size();
+}
+
+//! \brief Returns a centre spot for an accepted box.
+Tile* RoomWorkshop::askSpotForCarriedEntity(GameEntity* entity)
+{
+    if(!hasCarryEntitySpot(entity)) return nullptr;
+    if(!mUnusedSpots.empty()) return mUnusedSpots.front();
+    if(!mCreaturesSpots.empty()) return mCreaturesSpots.begin()->second;
+    return nullptr;
+}
+
+//! \brief Keeps delivered boxes on the floor and marks them as belonging to the workshop's keeper.
+void RoomWorkshop::notifyCarryingStateChanged(Creature* carrier, GameEntity* entity)
+{
+    if(entity != nullptr && entity->getObjectType() == GameEntityType::giftBoxEntity && entity->getIsOnMap())
+        entity->setSeat(getSeat());
+}
+
+//! \brief Applies the matching tool-research effort factor without changing the configured crack values.
+double RoomWorkshop::getNeededCrackPoints() const
+{
+    if(mCrackBox == nullptr) return 0.0;
+    const Quality quality = mCrackBox->getItemQuality();
+    const double base = ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerCrack" + qualityName(quality));
+    if(quality == Quality::rare)
+        return SkillManager::getResearchValue(getSeat(), SkillType::trapFineTools, base, "CrackTime");
+    if(quality == Quality::epic)
+        return SkillManager::getResearchValue(getSeat(), SkillType::trapMasterTools, base, "CrackTime");
+    return base;
 }
 
 uint32_t RoomWorkshop::countCraftedItemsOnRoom()
@@ -555,13 +656,15 @@ void RoomWorkshop::getCreatureWantedPos(Creature* creature, Tile* tileSpot,
     wantedY += Y_OFFSET_CREATURE;
 }
 
+//! \brief Writes the optional stable box name and fractional cracking progress after trap work.
 void RoomWorkshop::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
     os << mPoints << "\t";
-    os << mTrapType << "\n";
+    os << mTrapType << "\tCrack " << (mCrackBoxName.empty() ? "none" : mCrackBoxName) << ' ' << mCrackPoints << "\n";
 }
 
+//! \brief Accepts both legacy trap-only work records and the optional saved box job.
 bool RoomWorkshop::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
@@ -570,6 +673,17 @@ bool RoomWorkshop::importFromStream(std::istream& is)
         return false;
     if(!(is >> mTrapType))
         return false;
+
+    std::string tail;
+    std::getline(is, tail);
+    std::stringstream extra(tail);
+    std::string tag;
+    if(extra >> tag)
+    {
+        if(tag != "Crack" || !(extra >> mCrackBoxName >> mCrackPoints))
+            return false;
+        if(mCrackBoxName == "none") mCrackBoxName.clear();
+    }
 
     return true;
 }

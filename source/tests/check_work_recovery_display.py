@@ -12,7 +12,7 @@ def function(path, signature):
 
 
 packet = function("source/entities/Creature.cpp", "void Creature::exportProgressToPacket(")
-assert 'getActivity().action == CreatureActionType::useRoom' in packet
+assert 'CreatureAction::isRoomWorkAction(getActivity().action)' in packet
 assert 'mJobCooldown > 0 && mJobCooldownDuration > 0' in packet
 assert 'working ? static_cast<double>(mJobCooldown) : mAttackRecoveryTurns' in packet
 assert 'working ? static_cast<double>(mJobCooldownDuration) : mAttackRecoveryDuration' in packet

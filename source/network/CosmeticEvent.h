@@ -139,12 +139,16 @@ enum class CosmeticEventType : int32_t
     //! mPosition actual heart tile.
     //! Sent once per successful deposit only to keepers seeing both the deposit and heart tiles.
     goldDelivery = 21,
+    //! \brief A workshop cracked an item box: mObject room name, mPosition box tile.
+    boxCracked = 22,
+    //! A busy cauldron emits harmless smoke; mSubject brewer, mPosition cauldron tile.
+    cauldronBang = 23,
     //! Something happened to a creature in or around a tavern that the client shows as a thought bubble and a post of
     //! the dungeon book. mSubject the creature, mObject the other creature of a slap duel (empty otherwise), mValue the
     //! CosmeticTavernKind, mValue2 and mText are not used (0, empty), mPosition the position of the creature. Sent to the
     //! keepers that see the tile of the creature. Only shows bubbles and posts; the game never depends on it. Older
     //! clients skip the kind.
-    tavernEvent = 22
+    tavernEvent = 24
 };
 
 //! \brief The kind in mValue of the event tavernEvent

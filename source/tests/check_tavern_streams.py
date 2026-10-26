@@ -55,7 +55,7 @@ assert creature_cpp.count('if(appearanceToken == THIRST_SAVE_OPEN)') == 1
 # The full packet and the update packet end with urge, creature dirt and the thirst state; the update packet sends
 # zeros to the seats that do not own the creature (the same number of fields)
 full_packet = extract(creature_cpp, 'void Creature::exportToPacket(')
-assert re.search(r'os << mGoldCarried;\s*os << mUrge;\s*os << mCreatureDirt;\s*exportThirstStateToPacket\(os\);', full_packet)
+assert re.search(r'os << mGoldCarried;\s*exportItemsToPacket\(os, seat\);\s*os << mUrge;\s*os << mCreatureDirt;\s*exportThirstStateToPacket\(os\);', full_packet)
 update_packet = extract(creature_cpp, 'void Creature::exportToPacketForUpdate(') if 'void Creature::exportToPacketForUpdate(' in creature_cpp else None
 if update_packet is None:
     update_start = creature_cpp.index('os << mGoldCarried;\n    if(seat == getSeat())')

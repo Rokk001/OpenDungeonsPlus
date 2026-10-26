@@ -28,6 +28,7 @@
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
+#include "entities/ItemDefinition.h"
 #include "game/Campaign.h"
 #include "game/CreatureRelationships.h"
 #include "game/Player.h"
@@ -310,6 +311,18 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 Weapon* def = new Weapon();
                 OD_ASSERT_TRUE(packetReceived >> def);
                 gameMap->addWeapon(def);
+            }
+
+            // Item definitions use their canonical block representation after the weapon list.
+            uint32_t itemCount = 0;
+            OD_ASSERT_TRUE(packetReceived >> itemCount);
+            for(uint32_t itemIndex = 0; itemIndex < itemCount; ++itemIndex)
+            {
+                ItemDefinition* definition = ItemDefinition::loadFromPacket(packetReceived);
+                OD_ASSERT_TRUE(definition != nullptr);
+                if(definition == nullptr)
+                    return false;
+                gameMap->addItemDefinition(definition);
             }
 
             // Tiles
@@ -1215,6 +1228,9 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 RoomAmbience::getSingleton().triggerEvent("CasinoWin", event.mPosition, false, "casinoRoom");
                 RoomAmbience::getSingleton().triggerEvent("CasinoLoss", loserPosition, false, "casinoRoom");
             }
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
+               event.is(CosmeticEventType::cauldronBang) && RoomAmbience::getSingletonPtr() != nullptr)
+                RoomAmbience::getSingleton().triggerEvent("CauldronBang", event.mPosition, false, "alchemyLabRoom");
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
                CreatureReactions::getSingletonPtr() != nullptr)
@@ -2196,6 +2212,54 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         }
 
+        case ServerNotificationType::merchantWindow:
+        case ServerNotificationType::merchantSettings:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME) break;
+            GameMode* mode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            if(cmd == ServerNotificationType::merchantWindow) mode->receiveMerchantWindow(packetReceived);
+            else
+            {
+                int32_t margin = 0;
+                std::string allocation;
+                if(packetReceived >> margin >> allocation) mode->setMerchantSettingsShown(margin, allocation);
+            }
+            break;
+        }
+        case ServerNotificationType::labSettings:
+        {
+            int32_t mode;
+            OD_ASSERT_TRUE(packetReceived >> mode);
+            if(mode < 0 || mode > 2)
+                break;
+            if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+                static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode())->setLabModeShown(mode);
+            break;
+        }
+        case ServerNotificationType::labWindow:
+        {
+            LabWindowData data;
+            uint32_t herbCount, cauldronCount;
+            OD_ASSERT_TRUE(packetReceived >> data.mMode >> herbCount);
+            for(uint32_t index = 0; index < herbCount; ++index)
+            {
+                std::string herb;
+                uint32_t count;
+                OD_ASSERT_TRUE(packetReceived >> herb >> count);
+                data.mHerbs[herb] = count;
+            }
+            OD_ASSERT_TRUE(packetReceived >> cauldronCount);
+            for(uint32_t index = 0; index < cauldronCount; ++index)
+            {
+                LabCauldronRow row;
+                OD_ASSERT_TRUE(packetReceived >> row.mPotion >> row.mBrewer >> row.mRemaining);
+                data.mCauldrons.push_back(row);
+            }
+            if(data.mMode >= 0 && data.mMode <= 2 &&
+               frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME)
+                static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode())->setLabWindowData(data);
+            break;
+        }
         case ServerNotificationType::casinoPayout:
         {
             if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)

@@ -111,6 +111,16 @@ enum class ClientNotificationType
     editorRegionEdit,
     //! Use a stored special (the button of the special was pressed): + int32_t giftBoxType
     askUseSpecial,
+    //! \brief Requests the owner's current merchant stock and history, without further fields.
+    askMerchantWindow,
+    //! \brief Requests merchant settings: int32_t margin, string fair/profit mode.
+    askMerchantSettings,
+    //! \brief Buys merchant stock for the keeper: uint32_t goods index.
+    askMerchantBuy,
+    //! \brief Requests the owner's cauldron progress and herb stock, without further fields.
+    askLabWindow,
+    //! \brief Requests a laboratory production mode: int32_t mode.
+    askLabSetting,
     //! Asks for the state shown in the window of a tavern (who pays, whether beer is researched): + int32_t tileX,
     //! int32_t tileY (a tile of the tavern). The server answers with tavernWindow.
     askTavernWindow,
@@ -147,6 +157,7 @@ public:
 
     ODPacket mPacket;
 
+    //! \brief Returns the diagnostic name, including merchant and laboratory request types.
     static std::string typeString(ClientNotificationType type);
 
 private:

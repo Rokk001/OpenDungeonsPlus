@@ -32,7 +32,7 @@ names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
 if names[-2:] != ["tavernWindow", "tavernPayer"]:
     problems.append("the tavern notifications must follow campaignVictory")
 names = names[:-2]
-if names[-2:] != ["timeLimit", "campaignVictory"]:
+if names[-6:] != ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings"]:
     problems.append("campaignVictory must follow timeLimit without moving existing values")
 
 # 2. Beam and projectile are wired

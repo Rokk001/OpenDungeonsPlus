@@ -1,6 +1,7 @@
 <GUIScheme name="OpenDungeons" version="5">
     <Imageset filename="ODSkin.imageset" name="OpenDungeonsSkin" />
     <Imageset filename="ODIcons.imageset" name="OpenDungeonsIcons" />
+    <Imageset filename="Items.imageset" name="ItemImages" />
     <Imageset filename="ODNavigation.imageset" name="OpenDungeonsNavigation" />
     <Imageset filename="ChampionCrown.imageset" name="ChampionCrown" />
     <Imageset filename="GoalStatus.imageset" name="GoalStatus" />

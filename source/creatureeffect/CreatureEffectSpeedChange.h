@@ -20,17 +20,22 @@
 
 #include "creatureeffect/CreatureEffect.h"
 
+//! \brief Maintains a speed contribution and applies equipment resistance to newly inflicted slows.
 class CreatureEffectSpeedChange : public CreatureEffect
 {
 public:
+    //! \brief Creates a speed effect whose slowing duration is reduced when it first reaches the wearer.
     CreatureEffectSpeedChange(double nbTurnsEffect, double effectValue, const std::string& particleEffectName) :
         CreatureEffect(nbTurnsEffect, particleEffectName),
-        mEffectValue(effectValue)
+        mEffectValue(effectValue),
+        mItemResistanceApplied(false)
     {}
 
+    //! \brief Creates a saved effect whose remaining duration already includes item resistance.
     CreatureEffectSpeedChange() :
         CreatureEffect(),
-        mEffectValue(0.0)
+        mEffectValue(0.0),
+        mItemResistanceApplied(true)
     {}
 
     virtual ~CreatureEffectSpeedChange()
@@ -43,12 +48,18 @@ public:
 
     static CreatureEffectSpeedChange* load(std::istream& is);
 
+    //! \brief Shortens a newly applied slowing effect by the wearer's Sure Footing.
+    void startEffect(Creature& creature) override;
+
 protected:
+    //! \brief Maintains this effect's speed factor while the wearer lives.
     virtual void applyEffect(Creature& creature) override;
     virtual void releaseEffect(Creature& creature) override;
 
 private:
     double mEffectValue;
+    //! \brief Saved durations are already shortened; loading must not shorten them again.
+    bool mItemResistanceApplied;
 };
 
 #endif // CREATUREEFFECTSPEEDCHANGE_H

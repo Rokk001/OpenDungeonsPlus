@@ -16,6 +16,7 @@
  */
 
 #include "entities/BuildingObject.h"
+#include "render/RenderManager.h"
 
 #include "entities/Building.h"
 #include "entities/GameEntityType.h"
@@ -116,16 +117,28 @@ void BuildingObject::addParticleEffect(const std::string& effectScript, uint32_t
     mEntityParticleEffects.push_back(effect);
 }
 
+//! \brief Builds the furniture and applies a decorative bag's shared quality materials.
+void BuildingObject::createMeshLocal(NodeType type)
+{
+    RenderedMovableEntity::createMeshLocal(type);
+    if(!getIsOnServerMap() && mItemBagQuality >= 0)
+        RenderManager::getSingleton().rrRefreshItemBagAppearance(this, static_cast<Quality>(mItemBagQuality), mItemBagSealed);
+}
+
+//! \brief Sends the furniture footprint and decorative merchant bag properties.
 void BuildingObject::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     RenderedMovableEntity::exportToPacket(os, seat);
     os << mFurnitureScale.x << mFurnitureScale.y;
+    os << mItemBagQuality << mItemBagSealed;
 }
 
+//! \brief Reads the furniture footprint and decorative merchant bag properties.
 void BuildingObject::importFromPacket(ODPacket& is)
 {
     RenderedMovableEntity::importFromPacket(is);
     OD_ASSERT_TRUE(is >> mFurnitureScale.x >> mFurnitureScale.y);
+    OD_ASSERT_TRUE(is >> mItemBagQuality >> mItemBagSealed);
 }
 
 void BuildingObject::fireRefresh()

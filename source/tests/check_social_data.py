@@ -119,12 +119,12 @@ for class_name in class_to_group:
     check(class_name in classes, 'group lists the unknown class %s' % class_name)
 
 # ---- texts file ----
-SLOTS = set(['name', 'hometown', 'job', 'like', 'dislike', 'quirk', 'level', 'room', 'friend'])
+SLOTS = set(['name', 'hometown', 'job', 'like', 'dislike', 'quirk', 'level', 'room', 'friend', 'item'])
 SIMPLE_KEYS = ('Job', 'Like', 'Dislike', 'Quirk', 'Bio', 'Relation', 'ClassName')
 MOOD_STATES = ['Hungry', 'Tired', 'GetFee', 'LeaveDungeon', 'KoTemp', 'InJail', 'Happy', 'Neutral', 'Upset',
                'Angry', 'Furious', 'Unknown']
 POST_CATEGORIES = ['eat', 'sleep', 'train', 'work', 'fight', 'hurt', 'levelup', 'payday', 'unhappy', 'ko', 'jail',
-                   'pickedup', 'slapped', 'arrived', 'left', 'died', 'idle', 'friendship', 'hatred', 'nemesis', 'breakup', 'converted', 'couple', 'splitup', 'relieved', 'filthy',
+                   'pickedup', 'slapped', 'arrived', 'left', 'died', 'idle', 'friendship', 'hatred', 'nemesis', 'breakup', 'converted', 'couple', 'splitup', 'relieved', 'filthy', 'bought', 'bargain', 'fleeced', 'gift', 'epicfind',
                    'drank', 'duelwon', 'duellost', 'drunk', 'hungover']
 MAX_LENGTH = {'Job': 40, 'Like': 40, 'Dislike': 40, 'Quirk': 40, 'Bio': 100, 'Relation': 40, 'ClassName': 24, 'MoodLine': 80,
               'Post': 110}

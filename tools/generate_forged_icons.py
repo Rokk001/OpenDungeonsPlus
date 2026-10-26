@@ -69,7 +69,7 @@ SMALL_ROW = ("GoldCoin", "TerritoryIcon", "ManaIcon", "OptionsIcon", "CreaturesI
              "AbortIcon", "CheckIcon", "ObjectivesIcon", "SkillIcon", "SeatIcon", "CogIcon", "HourglassIcon", "HammerAnvilIcon")
 SECOND_ROW = ("CameraIcon", "MenuReturn", "MapLightButton")
 ATLAS_W = 1024
-BIG_ROWS = 10   # rows of 8 slot emblems (128 px) below the two small rows
+BIG_ROWS = 11   # rows of 8 slot emblems (128 px) below the two small rows
 BIG_SLOTS = 8 * BIG_ROWS
 ATLAS_H = 128 + 128 * BIG_ROWS
 PLAY_ROW = ("PlayIcon",)   # after the seven terrain swatches of the second row

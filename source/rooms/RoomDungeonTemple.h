@@ -104,6 +104,7 @@ public:
     //! which includes the tiles it has handed over, so it has to let go of theirs.
     void splitRoom(Room& newRoom, const std::vector<Tile*>& tiles) override;
 
+    //! \brief Accepts existing temple cargo while rejecting workshop-only item boxes.
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;

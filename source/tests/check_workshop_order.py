@@ -29,7 +29,9 @@ def read_source(path):
 
 workshop = read_source("source/rooms/RoomWorkshop.cpp")
 upkeep = workshop[workshop.index("void RoomWorkshop::doUpkeep()") :]
-schedule = upkeep[upkeep.index("    if(mTrapType ==") : upkeep.index("    // If there is nothing to do")]
+schedule_start = upkeep.index("    // If we are not already working on something")
+schedule = upkeep[upkeep.index("    if(mTrapType ==", schedule_start) : upkeep.index("    // If there is nothing to do")]
+assert upkeep.index("if(mCrackBox != nullptr)") < schedule_start, "item cracking retains priority over trap scheduling"
 map_handler = read_source("source/gamemap/MapHandler.cpp")
 save = map_handler[map_handler.index("    std::vector<Trap*> traps = gameMap.getTraps();") :]
 save = save[: save.index("    // Write out the lights")]

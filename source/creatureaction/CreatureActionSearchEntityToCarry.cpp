@@ -31,6 +31,14 @@
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 
+//! \brief Keeps appended item bags below gold and knockout transports without changing saved enum values.
+static int32_t carryPriority(EntityCarryType type)
+{
+    if(type == EntityCarryType::itemBag || type == EntityCarryType::herbBundle)
+        return static_cast<int32_t>(EntityCarryType::gold) - 1;
+    return static_cast<int32_t>(type);
+}
+
 CreatureActionSearchEntityToCarry::CreatureActionSearchEntityToCarry(Creature& creature, bool forced) :
     CreatureAction(creature),
     mForced(forced)
@@ -89,7 +97,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
         }
 
         // We check if the current entity is highest or equal to the older one (if any)
-        if(entity->getEntityCarryType(&creature) > highestPriority)
+        if(carryPriority(entity->getEntityCarryType(&creature)) > carryPriority(highestPriority))
         {
             // We check if a buildings wants this entity
             std::vector<Tile*> tilesDest = missionDestinations;
@@ -116,7 +124,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
                 }
             }
         }
-        else if(entity->getEntityCarryType(&creature) == highestPriority)
+        else if(carryPriority(entity->getEntityCarryType(&creature)) == carryPriority(highestPriority))
         {
             // We check if a buildings wants this entity
             std::vector<Tile*> tilesDest = missionDestinations;

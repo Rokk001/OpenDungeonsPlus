@@ -57,7 +57,10 @@ static const std::vector<RoomType> wantedBuildings = {
     RoomType::workshop,
     RoomType::arena,
     RoomType::crypt,
-    RoomType::guardRoom
+    RoomType::guardRoom,
+    RoomType::merchant,
+    RoomType::herbGarden,
+    RoomType::alchemyLab
 };
 
 //! \brief Range of turns between two checks of the attack state (before the reaction scaling)

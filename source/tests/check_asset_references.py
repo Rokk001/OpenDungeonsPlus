@@ -132,7 +132,8 @@ def data_references(root):
                     add(refs, relative, line_no, 'mesh', word)
                 elif word.endswith(('.ogg', '.wav', '.flac')):
                     add(refs, relative, line_no, 'music_file' if key in {'Music', 'FightMusic', 'MenuMusic', 'MainMenuMusic'} else 'sound_file', word)
-            if key in {'System', 'EndSystem', 'Effect', 'LateEffect'}:
+            if key in {'System', 'EndSystem', 'Effect', 'LateEffect'} and not (
+                    key == 'Effect' and path.name == 'items.cfg' and sections and sections[-1] == 'Quality'):
                 add(refs, relative, line_no, 'particle', values[0])
             elif key in {'AddParticleEffect', 'AddParticleEffectBone'} and len(values) >= 2:
                 add(refs, relative, line_no, 'particle', values[1])
@@ -246,6 +247,22 @@ def cpp_references(root, assets):
         for match in re.finditer(r'namespace\s+(\w+)\s*\{([^{}]*)\}', text, re.S):
             for definition in re.finditer(r'\b(?:string|char\s*\*)\s+(\w+)\s*=\s*("[^"\n]*")', match[2]):
                 global_constants.setdefault(match[1] + '::' + definition[1], []).append([(definition[2], 0)])
+    # Room constructor names label tiled room geometry, rather than a rendered mesh resource.
+    room_classes = set()
+    for path, text, tokens, local in sources:
+        room_classes.update(re.findall(r'class\s+(\w+)\s*:\s*public\s+Room\b', text))
+    room_constructor_spans = {}
+    for path, text, tokens, local in sources:
+        spans = []
+        for constructor in re.finditer(r'\b(\w+)::\1\s*\([^{}]*\)\s*:[^{]+\{', text):
+            if constructor[1] not in room_classes:
+                continue
+            end, depth = constructor.end(), 1
+            while end < len(text) and depth:
+                depth += (text[end] == '{') - (text[end] == '}')
+                end += 1
+            spans.append((constructor.end(), end))
+        room_constructor_spans[path] = spans
     consumers = {
         'createParticleSystem': ('particle', 1, ''),
         'getTemplate': ('particle', 0, ''),
@@ -349,6 +366,9 @@ def cpp_references(root, assets):
                 continue
             for kind, argument, prefix in consumers[name]:
                 receiver = text[max(0, position - 50):position].rstrip()
+                if name == 'setMeshName' and not receiver.endswith(('->', '.')) and any(
+                        start <= position < end for start, end in room_constructor_spans[path]):
+                    continue
                 if name == 'createParticleSystem' and not receiver.endswith('->'):
                     argument = 0
                 if name == 'setMaterialName' and receiver.endswith('mMovableTextOverlay->'):
@@ -473,6 +493,10 @@ def self_test():
             'music/Song.ogg': '',
             'config/roomAmbienceFixture.cfg': 'System ValidParticle\nMeshName Valid.mesh\nMaterial ValidMaterial\nFamily Test/Valid\nMusic Song.ogg\nBaseLine HailStorm 1 1 1 1 1 1 1 ValidParticle\nBaseLine GuidedBolt 1 1 1 1 1 Valid ValidParticle 1\n',
             'levels/Fixture.level': '[TreasuryObject]\n0 Saved Valid 0 0 0\n[/TreasuryObject]\n',
+            'config/items.cfg': '[Item]\n[Quality]\nEffect GameplayRule 1\n[/Quality]\n[/Item]\n',
+            'config/creatureReactions.cfg': 'Effect ValidParticle 1\nLateEffect ValidParticle 1 1\n',
+            'source/rooms/RoomFixture.h': '//! \\brief Identifies the tiled-room fixture for constructor classification.\nclass RoomFixture : public Room {};\n',
+            'source/rooms/RoomFixture.cpp': '//! \\brief Labels the tiled room while retaining a real furniture mesh consumer.\nRoomFixture::RoomFixture(GameMap* map) : Room(map) { setMeshName("RoomLabel"); object->setMeshName("Valid"); }\n',
             'levels/Effects.level': '[CreatureEffects]\nBurn 2 ValidParticle 1.0\n[/CreatureEffects]\n',
             'source/Fixture.cpp': 'const std::string MeshId = "Valid.mesh";\nconst char* systems[] = {"ValidParticle"};\nvoid shape(const std::string& meshName) { object->convertToMesh(meshName + ".mesh", "Graphics"); }\nvoid create() {\n shape("Generated");\n scene->createEntity("runtime", "Generated.mesh");\n scene->createEntity("static", MeshId);\n scene->createParticleSystem("p", systems[0]);\n entity->setMaterialName("ValidMaterial");\n playSpatialSound("Test/Valid", 0, 0);\n playRelativeSound("Interface/Click");\n sound->loadFromFile("Spatial/Test/Valid/sound.ogg");\n setLevelMusicFile("Song.ogg");\n scene->createParticleSystem("helper", particleFor(true));\n}\nconst std::string& particleFor(bool b) { static const std::string selected = "ValidParticle"; return selected; }\nconst std::string& unrelated() { static const std::string selected = "NotAnAsset"; return selected; }\n',
             'source/tests/test_Fixture.cpp': 'void fixture() {\n setCatalogId("Missing.mesh");\n scene->createEntity("test", "Valid.mesh");\n}\n',
@@ -486,6 +510,9 @@ def self_test():
         assert any(r.name == 'Generated.mesh' for r in refs), 'runtime mesh consumer missing'
         assert any(r.name == 'ValidParticle' and r.path == 'source/Fixture.cpp' for r in refs), 'constant array not followed'
         cases = [
+            ('config/creatureReactions.cfg', 'Effect ValidParticle', 'Effect MissingReaction', 'particle', 'MissingReaction', 1),
+            ('config/creatureReactions.cfg', 'LateEffect ValidParticle', 'LateEffect MissingLateReaction', 'particle', 'MissingLateReaction', 2),
+            ('source/rooms/RoomFixture.cpp', 'object->setMeshName("Valid")', 'object->setMeshName("MissingFurniture")', 'mesh', 'MissingFurniture.mesh', 2),
             ('config/roomAmbienceFixture.cfg', 'System ValidParticle', 'System MissingParticle', 'particle', 'MissingParticle', 1),
             ('config/roomAmbienceFixture.cfg', 'MeshName Valid.mesh', 'MeshName Missing.mesh', 'mesh', 'Missing.mesh', 2),
             ('config/roomAmbienceFixture.cfg', 'Material ValidMaterial', 'Material validmaterial', 'material', 'validmaterial', 3),

@@ -88,8 +88,12 @@ assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFact
 assert 'isPileCleanable(*tile)' in extract(search_cpp, 'static Tile* findPileTile('), 'the pile search must use the shared rule'
 assert 'isPileCleanable(*tile)' in extract(seat_cpp, 'bool Seat::hasDirtToClean() const'), 'hasDirtToClean must use the shared rule'
 # Library and workshop points keep the fraction of the dirt factor
-for text, member in [(library_cpp, 'mSkillPointsRemainder'), (workshop_cpp, 'mPointsRemainder')]:
-    assert 'takeWholeWorkPoints(' in text and member in text, 'work points must carry the remainder in ' + member
+for text, room, member, work in [(library_cpp, 'RoomLibrary', 'mSkillPoints', 'pointsEarned'),
+                                 (workshop_cpp, 'RoomWorkshop', 'mPoints', 'work')]:
+    assert 'double ' + member + ';' in read('source/rooms/' + room + '.h'), 'work accumulator must retain fractions'
+    assert member + ' += ' + work + ';' in text, 'work must reach the fractional accumulator'
+    assert 'os << ' + member in text and 'is >> ' + member in text, 'fractional work must survive saves'
+assert 'mPoints += roomAbs->mPoints;' in workshop_cpp, 'absorbed workshop fractions must be retained'
 # Rooms without output effect do not read the factor (crypt, treasury, portals, heart, bridges, toilet)
 for path in ('RoomCrypt', 'RoomTreasury', 'RoomPortal', 'RoomPortalWave', 'RoomDungeonTemple', 'RoomBridge', 'RoomToilet'):
     candidate = root / 'source' / 'rooms' / (path + '.cpp')
@@ -100,6 +104,17 @@ rooms_values = block_values(read('config/rooms.cfg'), 'Rooms')
 sources = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'source').rglob('*.cpp'))
 for key in [k for k in rooms_values if 'DirtPer' in k]:
     assert '"' + key + '"' in sources, key + ' is not used in the source'
+
+# Extracts the real fractional work expression with its base, item bonus and dirt factor exposed to the probe.
+def work_point_function(text, variable, name):
+    statement = re.search(r'    const double ' + variable + r' = .*?;', text, re.S).group(0)
+    statement = re.sub(r'creatureRoomAffinity.getEfficiency\(\) \* SkillManager::getResearchValue\(.*?ResearchEffect::PointsPerWork\)',
+                       'base', statement, flags=re.S)
+    statement = re.sub(r'ItemEffects::increaseFactor\(creature, "(?:Scholar|Craftsman)"\)', 'bonus', statement)
+    statement = statement.replace('getDirtOutputFactor()', 'factor')
+    return ('static double ' + name + '(double base, double factor, double bonus = 1.0)\n{\n' +
+            statement + '\n    return ' + variable + ';\n}')
+
 
 # ---- Probe -------------------------------------------------------------------------------------------------------
 dirt = block_values(read('config/global.cfg'), 'Dirt')
@@ -444,20 +459,20 @@ static void checkWorkPoints()
     int expected[] = {15, 10};
     for(unsigned f = 0; f < 2; ++f)
     {
-        double remainderLibrary = 0.0, remainderWorkshop = 0.0;
-        int totalLibrary = 0, totalWorkshop = 0;
+        double totalLibrary = 0.0, totalWorkshop = 0.0;
         for(int turn = 0; turn < 4; ++turn)
         {
-            totalLibrary += libraryTakeWholeWorkPoints(5.0, factors[f], remainderLibrary);
-            totalWorkshop += workshopTakeWholeWorkPoints(5.0, factors[f], remainderWorkshop);
+            totalLibrary += libraryWorkPoints(5.0, factors[f]);
+            totalWorkshop += workshopWorkPoints(5.0, factors[f]);
         }
         expect(totalLibrary == expected[f], "library points over 4 turns at factor " + std::to_string(factors[f]) + " got " + std::to_string(totalLibrary));
         expect(totalWorkshop == expected[f], "workshop points over 4 turns at factor " + std::to_string(factors[f]) + " got " + std::to_string(totalWorkshop));
     }
-    // Stage 1 keeps the plain truncation without carrying anything
-    double remainder = 0.0;
-    expect(libraryTakeWholeWorkPoints(2.9, 1.0, remainder) == 2 && remainder == 0.0, "library stage 1 truncates as before");
-    expect(workshopTakeWholeWorkPoints(2.9, 1.0, remainder) == 2 && remainder == 0.0, "workshop stage 1 truncates as before");
+    // Clean rooms also retain equipment fractions; item bonuses and dirt factors compose without truncation.
+    expect(std::abs(libraryWorkPoints(2.9, 1.0) - 2.9) < 1e-9, "library clean-room fractions");
+    expect(std::abs(workshopWorkPoints(2.9, 1.0) - 2.9) < 1e-9, "workshop clean-room fractions");
+    expect(std::abs(libraryWorkPoints(2.9, 0.5, 1.25) - 1.8125) < 1e-9, "library item bonus with dirt");
+    expect(std::abs(workshopWorkPoints(2.9, 0.5, 1.25) - 1.8125) < 1e-9, "workshop item bonus with dirt");
 }
 
 static void checkPiles()
@@ -656,8 +671,8 @@ replacements = {
         'bool Room::isCleanableByWorkers() const', 'void Room::addUseDirt(', 'double Room::getDirtMean() const', 'uint32_t Room::getDirtStage() const',
         'double Room::getDirtOutputFactor() const', 'double Room::getDirtStageFactor(']),
     '@@SEARCH_FUNCTIONS@@': extract(search_cpp, 'bool CreatureActionSearchDirtToClean::isPileCleanable('),
-    '@@WORKPOINT_FUNCTIONS@@': extract(library_cpp, 'static int32_t takeWholeWorkPoints(').replace('takeWholeWorkPoints', 'libraryTakeWholeWorkPoints') + '\n' +
-        extract(workshop_cpp, 'static int32_t takeWholeWorkPoints(').replace('takeWholeWorkPoints', 'workshopTakeWholeWorkPoints'),
+    '@@WORKPOINT_FUNCTIONS@@': work_point_function(library_cpp, 'pointsEarned', 'libraryWorkPoints') + '\n' +
+        work_point_function(workshop_cpp, 'work', 'workshopWorkPoints'),
     '@@PILE_FUNCTIONS@@': '\n'.join(extract(pile_cpp, h) for h in [
         'void DirtPileEntity::doUpkeep()', 'DirtPileEntity* DirtPileEntity::getEntityOnTile(',
         'DirtPileEntity* DirtPileEntity::createOnTile(', 'bool DirtPileEntity::cleanBy(']),

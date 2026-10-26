@@ -23,6 +23,8 @@
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
+#include "entities/ItemBagEntity.h"
+#include "game/CreatureMerchantAI.h"
 #include "game/SkillManager.h"
 #include "game/Seat.h"
 #include "game/WorkerShare.h"
@@ -354,6 +356,7 @@ bool Player::isDropHandPossible(Tile *t, unsigned int index)
     return entity->tryDrop(getSeat(), t);
 }
 
+//! \brief Drops a held entity, notifies its placement, then offers an item gift so clients first receive a valid bag.
 void Player::dropHand(Tile *t, unsigned int index)
 {
     // Add the creature to the map
@@ -380,6 +383,12 @@ void Player::dropHand(Tile *t, unsigned int index)
 
         entity->drop(pos);
         entity->fireDropEntity(this, t);
+        if(entity->getObjectType() == GameEntityType::itemBagEntity)
+        {
+            ItemBagEntity* bag = static_cast<ItemBagEntity*>(entity);
+            if(bag->getItem() != nullptr && bag->getItem()->mGifted)
+                CreatureMerchantAI::offerGift(*bag, *t);
+        }
         if(!mGameMap->isInEditorMode() && entity->getObjectType() == GameEntityType::creature)
         {
             Creature* creature = static_cast<Creature*>(entity);

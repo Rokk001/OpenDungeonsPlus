@@ -25,6 +25,7 @@ ClientNotification::ClientNotification(ClientNotificationType type):
     mPacket << type;
 }
 
+//! \brief Returns the diagnostic name of a client request, including shared room requests.
 std::string ClientNotification::typeString(ClientNotificationType type)
 {
     switch(type)
@@ -159,6 +160,16 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askTavernWindow";
         case ClientNotificationType::askTavernPayer:
             return "askTavernPayer";
+        case ClientNotificationType::askMerchantWindow:
+            return "askMerchantWindow";
+        case ClientNotificationType::askMerchantSettings:
+            return "askMerchantSettings";
+        case ClientNotificationType::askMerchantBuy:
+            return "askMerchantBuy";
+        case ClientNotificationType::askLabWindow:
+            return "askLabWindow";
+        case ClientNotificationType::askLabSetting:
+            return "askLabSetting";
         default:
             OD_LOG_ERR("Unknown enum for ClientNotificationType="
                 + Helper::toString(static_cast<int>(type)));

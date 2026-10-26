@@ -397,6 +397,48 @@ public:
     }
 };
 
+//! \brief A research-only entry with no cast or action-bar button.
+class SkillDefPlain : public SkillDef
+{
+public:
+    //! \brief Creates a research-only entry in its configured tab and tier.
+    SkillDefPlain(const std::string& skillFamily, const std::string& buttonName, const Skill* skill, uint32_t tier) :
+        SkillDef(skillFamily, buttonName, skill, tier),
+        mTitle(Skills::skillTypeToPlayerVisibleString(skill->getType()))
+    {}
+
+    //! \brief A research-only entry has no buildable or castable family.
+    SkillFamily getSkillFamily() const override
+    { return SkillFamily::keeper; }
+
+    //! \brief Returns the approved research title.
+    const std::string& getTooltipTitle() const override
+    { return mTitle; }
+
+    //! \brief A passive research entry has no build or cast cost.
+    std::string getCostText(GameMap* gameMap) const override
+    { return ""; }
+
+    //! \brief A research-only entry has no action-bar event to connect.
+    void connectGuiButtons(GameEditorModeBase* mode, CEGUI::Window* rootWindow, PlayerSelection& playerSelection) const override
+    {}
+
+    //! \brief Returns an empty action-bar path for this research-only entry.
+    const std::string& getGuiPath() const override
+    {
+        static const std::string path;
+        return path;
+    }
+
+    //! \brief Research-only entries have no room, trap or spell mapping.
+    void mapSkill(std::vector<std::vector<SkillType>>& skillsFamily) const override
+    {}
+
+private:
+    //! \brief Player-facing title retained for the tooltip reference.
+    std::string mTitle;
+};
+
 //! \brief Creates the Skill of the given type with its parents. The cost and the free level one come from skills.cfg.
 //! \param skills The entries registered so far; the parents must be among them
 //! \param type The type of the new skill
@@ -436,6 +478,7 @@ static void registerSkillDef(SkillDef* def, std::vector<const SkillDef*>& skills
         tabSkills[static_cast<uint32_t>(def->mTab)].push_back(def->mSkill->getType());
 }
 
+//! \brief Registers the research tree, including equipment tools and the three new rooms.
 SkillManager::SkillManager() :
     mSkills(static_cast<uint32_t>(SkillType::countSkill)),
     mTabSkills(static_cast<uint32_t>(SkillTab::nb)),
@@ -535,6 +578,16 @@ SkillManager::SkillManager() :
     def = new SkillDefKeeper(TREE_PREFIX_ROOMS, "DominionButton", skill, 4);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
+    skill = createSkill(mSkills, SkillType::roomMerchant, std::vector<SkillType>{SkillType::roomTreasury});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "MerchantButton", skill, 2, RoomType::merchant);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomHerbGarden, std::vector<SkillType>{SkillType::roomHatchery});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "HerbGardenButton", skill, 2, RoomType::herbGarden);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomAlchemyLab, std::vector<SkillType>{SkillType::roomHerbGarden});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "AlchemyLabButton", skill, 3, RoomType::alchemyLab);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+
     // Traps tab, tier I
     skill = createSkill(mSkills, SkillType::trapDoorWooden, std::vector<SkillType>{SkillType::roomWorkshop});
     def = new SkillDefTrap(TREE_PREFIX_TRAPS, "WoodenDoorTrapButton", skill, 1, TrapType::doorWooden);
@@ -600,6 +653,13 @@ SkillManager::SkillManager() :
     def = new SkillDefKeeper(TREE_PREFIX_TRAPS, "HeartMendingButton", skill, 4);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
+    skill = createSkill(mSkills, SkillType::trapFineTools, std::vector<SkillType>{SkillType::roomWorkshop});
+    def = new SkillDefPlain(TREE_PREFIX_TRAPS, "FineToolsButton", skill, 2);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::trapMasterTools, std::vector<SkillType>{SkillType::trapFineTools});
+    def = new SkillDefPlain(TREE_PREFIX_TRAPS, "MasterToolsButton", skill, 3);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+
     // Spells tab, tier I
     skill = createSkill(mSkills, SkillType::spellSummonWorker, NO_PARENTS);
     def = new SkillDefSpell(TREE_PREFIX_SPELLS, "SummonWorkerButton", skill, 1, SpellType::summonWorker);
@@ -660,6 +720,10 @@ SkillManager::SkillManager() :
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::keeperManaFlow, std::vector<SkillType>{SkillType::roomTemple});
     def = new SkillDefKeeper(TREE_PREFIX_SPELLS, "ManaFlowButton", skill, 4);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+
+    skill = createSkill(mSkills, SkillType::spellSunthornCultivation, std::vector<SkillType>{SkillType::roomAlchemyLab});
+    def = new SkillDefPlain(TREE_PREFIX_SPELLS, "SunthornButton", skill, 3);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
     // Not researchable: the campaign Heartstone unlocks it. It has no parent, no cost and no node in the skill tree window
@@ -921,6 +985,12 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::roomBridgeStone, "ClaimResistance", ResearchBaseSource::factor, "", ""},
     {SkillType::roomTorture, "ConversionSpeed", ResearchBaseSource::factor, "", ""},
     {SkillType::roomTemple, "PrayerMana", ResearchBaseSource::rooms, "TemplePrayerManaPerSecond", ""},
+    {SkillType::roomMerchant, "Capacity", ResearchBaseSource::rooms, "MerchantGoodsPerTable", ""},
+    {SkillType::roomHerbGarden, "GrowTime", ResearchBaseSource::factor, "", ""},
+    {SkillType::roomAlchemyLab, "BrewTime", ResearchBaseSource::factor, "", ""},
+    {SkillType::trapFineTools, "CrackTime", ResearchBaseSource::factor, "", ""},
+    {SkillType::trapMasterTools, "CrackTime", ResearchBaseSource::factor, "", ""},
+    {SkillType::spellSunthornCultivation, "GrowTime", ResearchBaseSource::factor, "", ""},
     {SkillType::keeperDominion, "CreatureLimit", ResearchBaseSource::creatureLimit, "", ""},
     {SkillType::trapCannon, "Damage", ResearchBaseSource::traps, "CannonDamagePerHitMax", "CannonDamagePerHitMin"},
     {SkillType::trapSpike, "Damage", ResearchBaseSource::traps, "SpikeDamagePerHitMax", "SpikeDamagePerHitMin"},
@@ -1030,6 +1100,9 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::ManaPerSecond] = "Mana per second";
         texts[ResearchEffect::Gold] = "Gold";
         texts[ResearchEffect::PortalCooldown] = "Portal cooldown";
+        texts["GrowTime"] = "Growth time";
+        texts["BrewTime"] = "Brewing time";
+        texts["CrackTime"] = "Cracking effort";
     }
 
     std::map<std::string, std::string>::const_iterator it = texts.find(effect);
@@ -1070,6 +1143,7 @@ static std::string getResearchValueText(const std::string& effect, double value)
 }
 }
 
+//! \brief Describes research effects, showing the merchant's actual whole places per table.
 std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
 {
     const ConfigManager& config = ConfigManager::getSingleton();
@@ -1093,8 +1167,11 @@ std::string SkillManager::getResearchDescription(SkillType type, uint32_t level)
             continue;
         }
 
-        std::string value = getResearchValueText(line.first, getResearchValue(type, level,
-            readResearchBase(researchBase->mSource, researchBase->mKey), line.first));
+        double numericValue = getResearchValue(type, level,
+            readResearchBase(researchBase->mSource, researchBase->mKey), line.first);
+        if((type == SkillType::roomMerchant) && (line.first == ResearchEffect::Capacity))
+            numericValue = std::floor(numericValue);
+        std::string value = getResearchValueText(line.first, numericValue);
         // A range (damage) shows the smallest and the largest value
         if(researchBase->mKeyMin[0] != '\0')
         {
