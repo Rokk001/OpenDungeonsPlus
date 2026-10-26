@@ -44,16 +44,17 @@ probe = r'''
 #include <stdexcept>
 #include <string>
 #define OD_LOG_WRN(message) ((void)0)
-namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:VERSION"; }
+namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:VERSION.1"; }
 namespace Helper { READER }
 bool load(std::stringstream& levelFile) { std::string nextParam; LOAD return true; }
 bool list(std::stringstream& levelFile) { std::string nextParam; LIST return true; }
+// Exercise stable level formats against a numbered executable build and reject unsupported headers.
 int main(int argc,char** argv) {
  int checks=0,failures=0;
  auto check=[&](bool result,const std::string& label){++checks;if(!result){++failures;std::cerr<<"FAIL "<<label<<"\n";}};
- for(const auto& version:{ODApplication::VERSIONSTRING,std::string("OpenDungeons_Version:0.7.1"),std::string("OpenDungeons_Version:0.7.2"),
+ for(const auto& version:{ODApplication::VERSIONSTRING,std::string("OpenDungeons_Version:0.7.1"),std::string("OpenDungeons_Version:0.7.2"),std::string("OpenDungeons_Version:0.7.4"),
      std::string("OpenDungeons_Version:0.6.0"),std::string("OpenDungeons_Version:99.0.0"),std::string("invalid")}) {
-  const bool supported=version==ODApplication::VERSIONSTRING || version=="OpenDungeons_Version:0.7.1" || version=="OpenDungeons_Version:0.7.2";
+  const bool supported=version==ODApplication::VERSIONSTRING || version=="OpenDungeons_Version:0.7.1" || version=="OpenDungeons_Version:0.7.2" || version=="OpenDungeons_Version:0.7.4";
   for(bool validInfo:{false,true}) {
    std::stringstream input(version+(validInfo?"\n[Info]\n":"\n[Broken]\n"));
    check(load(input)==(supported && validInfo),"loader: "+version);
@@ -80,4 +81,4 @@ with tempfile.TemporaryDirectory(prefix="map-version-") as directory:
     executable = work / "check.exe"
     subprocess.run(["cl", "/nologo", "/EHsc", "/std:c++17", str(cpp), f"/Fe:{executable}"],
                    cwd=work, check=True)
-    subprocess.run([str(executable), *args.save], check=True)
+    subprocess.run([str(executable), str(root / "levels/skirmish/TestItemsPotions.level"), *args.save], check=True)

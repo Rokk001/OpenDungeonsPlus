@@ -64,12 +64,15 @@
 
 namespace MapHandler {
 
-//! \brief Loads map state including optional item bags while retaining legacy maps without that section.
+//! \brief Loads map state and reports the failing section, retaining optional legacy sections.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 {
     std::stringstream levelFile;
     if(!Helper::readFile(fileName, levelFile,true))
+    {
+        OD_LOG_ERR("Could not read level file=" + fileName);
         return false;
+    }
     
     std::string nextParam;
     int mapSizeX;
@@ -89,7 +92,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     CreatureMoved::GAME_MAP_WIDTH = mapSizeX;
     
     levelFile >> nextParam;
-    if (nextParam.compare(ODApplication::VERSIONSTRING) != 0 && nextParam != "OpenDungeons_Version:0.7.1" && nextParam != "OpenDungeons_Version:0.7.2")
+    if (nextParam.compare(ODApplication::VERSIONSTRING) != 0 && nextParam != "OpenDungeons_Version:0.7.1" && nextParam != "OpenDungeons_Version:0.7.2" && nextParam != "OpenDungeons_Version:0.7.4")
     {
         OD_LOG_WRN("Attempting to load a file produced by a different version of OpenDungeons, filename="
             + fileName + ", file version=" + nextParam + ", odversion=" + ODApplication::VERSION);
@@ -114,7 +117,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     while (true)
     {
         if(!levelFile.good())
+        {
+            OD_LOG_ERR("Unexpected end or invalid stream in [Info], file=" + fileName);
             return false;
+        }
         // Information can contain spaces. We need to use std::getline to get content
         std::getline(levelFile, nextParam);
         std::string param;
@@ -202,7 +208,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     while (true)
     {
         if(!levelFile.good())
+        {
+            OD_LOG_ERR("Unexpected end or invalid stream in [Seats], file=" + fileName);
             return false;
+        }
 
         levelFile >> nextParam;
         if (nextParam == "[/Seats]")
@@ -217,6 +226,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         Seat* tempSeat = new Seat(&gameMap);
         if(!tempSeat->importSeatFromStream(levelFile))
         {
+            OD_LOG_ERR("Invalid Seat data for seat id=" + Helper::toString(tempSeat->getId()) + ", file=" + fileName);
             delete tempSeat;
             return false;
         }
@@ -240,7 +250,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     while(true)
     {
         if(!levelFile.good())
+        {
+            OD_LOG_ERR("Unexpected end or invalid stream in [Goals], file=" + fileName);
             return false;
+        }
 
         levelFile >> nextParam;
         if (nextParam == "[/Goals]")
@@ -265,7 +278,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile >> mapSizeY;
 
     if (!gameMap.createNewMap(mapSizeX, mapSizeY))
+    {
+        OD_LOG_ERR("Could not create map " + Helper::toString(mapSizeX) + "x" + Helper::toString(mapSizeY) + ", file=" + fileName);
         return false;
+    }
 
 
 
@@ -416,7 +432,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     while(true)
     {
         if(!levelFile.good())
+        {
+            OD_LOG_ERR("Unexpected end or invalid stream in [Lights], file=" + fileName);
             return false;
+        }
 
         levelFile >> nextParam;
         if (nextParam == "[/Lights]")
@@ -467,7 +486,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
                     return false;
                 }
                 if(!CreatureDefinition::update(def, levelFile, ConfigManager::getSingleton().getCreatureDefinitions()))
+                {
+                    OD_LOG_ERR("Invalid CreatureDefinitions data for " + nextParam + ", file=" + fileName);
                     return false;
+                }
             }
         }
 
@@ -502,7 +524,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
                     return false;
                 }
                 if(!Weapon::update(def, levelFile))
+                {
+                    OD_LOG_ERR("Invalid EquipmentDefinitions data for " + nextParam + ", file=" + fileName);
                     return false;
+                }
             }
         }
 
@@ -520,7 +545,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     while(true)
     {
         if(!levelFile.good())
+        {
+            OD_LOG_ERR("Unexpected end or invalid stream in [Creatures], file=" + fileName);
             return false;
+        }
 
         levelFile >> nextParam;
         if (nextParam == "[/Creatures]")
@@ -572,7 +600,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile >> nextParam;
     levelFile.seekg(itemBagPosition);
     if(nextParam == "[ItemBags]" && !readGameEntity(gameMap, "ItemBags", GameEntityType::itemBagEntity, levelFile))
+    {
+        OD_LOG_ERR("Invalid ItemBags section, file=" + fileName);
         return false;
+    }
     if(!readDirtSections(gameMap, levelFile))
     {
         OD_LOG_WRN("Invalid Dirt or DirtPiles section");
@@ -605,7 +636,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         {
             levelFile >> nextParam;
             if(!levelFile.good())
+            {
+                OD_LOG_ERR("Unexpected end or invalid stream in [HerbBundles], file=" + fileName);
                 return false;
+            }
             if(nextParam == "[/HerbBundles]")
                 break;
             std::string remainder;
@@ -613,7 +647,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             std::stringstream bundleLine(nextParam + remainder);
             GameEntity* bundle = Entities::getGameEntityFromStream(&gameMap, GameEntityType::herbBundleEntity, bundleLine);
             if(bundle == nullptr)
+            {
+                OD_LOG_ERR("Invalid HerbBundles entry=" + nextParam + remainder + ", file=" + fileName);
                 return false;
+            }
             bundle->addToGameMap();
         }
         levelFile >> nextParam;
@@ -623,7 +660,10 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         while(true)
         {
             if(!levelFile.good())
+            {
+                OD_LOG_ERR("Unexpected end or invalid stream in [Scripts], file=" + fileName);
                 return false;
+            }
 
             levelFile >> nextParam;
             if (nextParam == "[/Scripts]")
@@ -1196,6 +1236,7 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     return true;
 }
 
+//! \brief Lists supported level formats independently of the executable build suffix.
 bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
 {
     // Prepare an invalid level reference
@@ -1206,7 +1247,7 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
     std::string nextParam;
     // Read in the version number from the level file
     levelFile >> nextParam;
-    if (nextParam.compare(ODApplication::VERSIONSTRING) != 0 && nextParam != "OpenDungeons_Version:0.7.1" && nextParam != "OpenDungeons_Version:0.7.2")
+    if (nextParam.compare(ODApplication::VERSIONSTRING) != 0 && nextParam != "OpenDungeons_Version:0.7.1" && nextParam != "OpenDungeons_Version:0.7.2" && nextParam != "OpenDungeons_Version:0.7.4")
         return false;
 
     levelFile >> nextParam;
