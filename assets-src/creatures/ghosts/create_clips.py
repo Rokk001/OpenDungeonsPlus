@@ -225,7 +225,9 @@ def pose(rig,name,clip,t,height,forward):
         return spec
     if clip=='Beam':
         # A fixed grip with periodic recoil makes the loop endpoints identical.
-        recoil=.5-.5*math.cos(t*math.pi*6)
+        # Repeated boundary poses give the sampled linear curves zero velocity on both sides of the wrap.
+        envelope=fk.ease(1/24,3/24,t)*(1-fk.ease(21/24,23/24,t))
+        recoil=(.5-.5*math.cos(t*math.pi*6))*envelope
         turn(spec,TORSO[name],(1,0,0),forward*(5+2*recoil))
         world=worlds(rig,rig.solve(spec))
         for index,chain in enumerate(ARMS[name]):
@@ -310,6 +312,9 @@ def main():
     source=Path(__file__).parent/(name+'.blend')
     bpy.ops.wm.save_as_mainfile(filepath=str(source))
     shutil.copy2(source,private/source.name)
+    if '--source-only' in args:
+        print('GHOST_CLIPS_DONE',name,','.join(clips),flush=True)
+        return
     scene.render.engine='BLENDER_EEVEE'
     scene.render.resolution_x=640
     scene.render.resolution_y=640
