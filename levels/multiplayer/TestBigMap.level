@@ -6053,7 +6053,7 @@ ProtectDungeonTemple	NULL
 3	Knight_c3	Knight	192	314	0	Knight	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
 4	Knight_c4	Knight	196	315	0	Knight	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
 5	Knight_c5	Knight	194	315	0	Knight	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
-5	LizardMan_001	LizardMan	185	233	0	LizardMan	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
+5	LizardMan_001	Lizardman	185	233	0	LizardMan	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
 1	Kobold	Kobold	197	205	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
 1	Kobold_012	Kobold	193	205	0	Kobold	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
 1	Kobold_007	Kobold	195	205	0	Kobold	1	0	max	100	0	0	none	none	nullSkillType	none	0
@@ -6065,7 +6065,7 @@ ProtectDungeonTemple	NULL
 2	RunelordDwarf_003	RunelordDwarf	264	221	0	RunelordDwarf	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Dwarf2_003	Dwarf2	216	185	0	Dwarf2	1	0	max	100	0	0	none	Longsword	nullSkillType	none	0
 2	Dwarf1_002	Dwarf1	217	187	0	Dwarf1	1	0	max	100	0	0	Roundshield	Longsword	nullSkillType	none	0
-3	LizardMan_002	LizardMan	229	168	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
+3	LizardMan_002	Lizardman	229	168	0	LizardMan	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Kre	Kreatur	262	220	0	Kreatur	10	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Orc_0001	Orc	228	166	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
 2	Orc_0002	Orc	262	222	0	Orc	1	0	max	100	0	0	none	none	nullSkillType	none	0
