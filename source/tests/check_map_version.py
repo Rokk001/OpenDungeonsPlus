@@ -48,11 +48,11 @@ namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:
 namespace Helper { READER }
 bool load(std::stringstream& levelFile) { std::string nextParam; LOAD return true; }
 bool list(std::stringstream& levelFile) { std::string nextParam; LIST return true; }
-// Exercise stable level formats against a numbered executable build and reject unsupported headers.
+//! \brief Checks stable level formats with a numbered build and rejects unsupported headers.
 int main(int argc,char** argv) {
  int checks=0,failures=0;
  auto check=[&](bool result,const std::string& label){++checks;if(!result){++failures;std::cerr<<"FAIL "<<label<<"\n";}};
- for(const auto& version:{ODApplication::VERSIONSTRING,std::string("OpenDungeons_Version:0.7.1"),std::string("OpenDungeons_Version:0.7.2"),std::string("OpenDungeons_Version:0.7.4"),
+ for(const std::string& version:{ODApplication::VERSIONSTRING,std::string("OpenDungeons_Version:0.7.1"),std::string("OpenDungeons_Version:0.7.2"),std::string("OpenDungeons_Version:0.7.4"),
      std::string("OpenDungeons_Version:0.6.0"),std::string("OpenDungeons_Version:99.0.0"),std::string("invalid")}) {
   const bool supported=version==ODApplication::VERSIONSTRING || version=="OpenDungeons_Version:0.7.1" || version=="OpenDungeons_Version:0.7.2" || version=="OpenDungeons_Version:0.7.4";
   for(bool validInfo:{false,true}) {
