@@ -1495,3 +1495,5 @@ models/GhostWallGauges.mesh    AI-generated with Codex    GPLv3+    Brass pipe i
 models/GhostWallGauges.skeleton    AI-generated with Codex    GPLv3+    Original three-bone instrument rig (Root, NeedleLeft, NeedleRight), repeating one-second Idle needle tremble, 2026-10-26
 assets-src/rooms/ghostroom/GhostBox.blend    AI-generated with Codex    GPLv3+    Hinged and latched capture box with green containment slit; original editable source and export, 2026-10-26
 models/GhostBox.mesh    AI-generated with Codex    GPLv3+    Hinged and latched capture box with green containment slit; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/SoulCrystal.blend    AI-generated with Codex    GPLv3+    Original jagged pale-green crystal with a luminous core; original editable source and export, 2026-10-26
+models/SoulCrystal.mesh    AI-generated with Codex    GPLv3+    Original jagged pale-green crystal with a luminous core; original editable source and export, 2026-10-26
