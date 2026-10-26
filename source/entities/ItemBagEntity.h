@@ -24,7 +24,7 @@ public:
     std::unique_ptr<ItemInstance> takeItem();
     //! \brief Restores an unaccepted gift to this same bag without changing Epic ownership.
     void restoreItem(std::unique_ptr<ItemInstance> item) { mItem = std::move(item); }
-    //! \brief Ages ground bags without expiring them and claims bags stored in a treasury.
+    //! \brief Ages ground bags and claims treasury ownership; successful transfers remove consumed bags.
     void doUpkeep() override;
     //! \brief Allows the owning keeper to pick up visible bags except sealed merchant goods.
     bool tryPickup(Seat* seat) override;

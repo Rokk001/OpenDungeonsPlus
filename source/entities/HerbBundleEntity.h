@@ -27,8 +27,6 @@ public:
     void notifyEntityCarryOn(Creature* carrier) override;
     //! \brief Places a released bundle on the destination floor.
     void notifyEntityCarryOff(const Ogre::Vector3& position) override;
-    //! \brief Removes empty bundles after storage has taken all their units.
-    void doUpkeep() override;
     //! \brief Saves the identity and count after the existing movable entity fields.
     void exportToStream(std::ostream& stream) const override;
     //! \brief Restores a complete saved bundle.

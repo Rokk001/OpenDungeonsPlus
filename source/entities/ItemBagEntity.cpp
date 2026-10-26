@@ -39,15 +39,9 @@ GameEntityType ItemBagEntity::getObjectType() const { return GameEntityType::ite
 //! \brief Transfers the live instance to another holder on the same map.
 std::unique_ptr<ItemInstance> ItemBagEntity::takeItem() { return std::move(mItem); }
 
-//! \brief Keeps bags indefinitely and transfers treasury-floor ownership to that treasury's seat.
+//! \brief Ages ground bags and claims treasury ownership; item transfers own consumed-bag removal.
 void ItemBagEntity::doUpkeep()
 {
-    if(mItem.get() == nullptr)
-    {
-        removeFromGameMap();
-        deleteYourself();
-        return;
-    }
     if(!getIsOnMap())
         return;
     ++mIdleTurns;

@@ -4,12 +4,28 @@ This check compiles C++; feature windows with a compilation prohibition must not
 The probe covers trade arithmetic, potion slots, gifts, brew choice and herb reservation through actual production code.
 Automatic-drinking gates and room-remodelling persistence are separate production paths outside this probe's scope.
 """
+import argparse
 import re
+import subprocess
 from item_probe_support import catalogue_fixture, creature_fixture, compile_and_run, function, source
 
 
 def main():
-    """Build a probe containing the real transactions, capacity, gift, cloning and brewing choice code."""
+    """Exercise production trades and snapshot upkeep after item and herb ownership transfers."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cargo-source-ref", help="Use committed bag and bundle code for a negative lifecycle control")
+    args = parser.parse_args()
+
+    # Read the requested production cargo revision without changing the working tree.
+    def cargo_source(path):
+        """Use the current cargo code or the explicitly requested committed lifecycle baseline."""
+        if args.cargo_source_ref:
+            return subprocess.check_output(["git", "show", args.cargo_source_ref + ":" + path], text=True)
+        return source(path)
+
+    bag_source = cargo_source("source/entities/ItemBagEntity.cpp")
+    bundle_source = cargo_source("source/entities/HerbBundleEntity.cpp")
+    bundle_header = cargo_source("source/entities/HerbBundleEntity.h")
     merchant = source("source/rooms/RoomMerchant.cpp")
     header = source("source/rooms/RoomMerchant.h")
     lab = source("source/rooms/RoomAlchemyLab.cpp")
@@ -38,15 +54,49 @@ struct MerchantEntity {
 };
 @GOODS@
 @MERCHANT_TILE@
+//! \brief Records real snapshot membership and deferred teardown requests without a renderer.
+struct GameEntity {
+    bool removed=false,deleted=false; uint32_t removalCalls=0,deletionCalls=0;
+    std::vector<GameEntity*>* activeList=nullptr;
+    //! \brief Releases fixture objects through their shared snapshot interface.
+    virtual ~GameEntity() {}
+    //! \brief Uses production-specific upkeep through the actual map snapshot loop.
+    virtual void doUpkeep()=0;
+    //! \brief Removes the registration while retaining the object until deferred deletion.
+    void removeFromGameMap() {
+        ++removalCalls; removed=true;
+        if(activeList!=nullptr) activeList->erase(std::remove(activeList->begin(),activeList->end(),this),activeList->end());
+    }
+    //! \brief Records teardown requests while keeping the fixture alive for the remainder of the snapshot.
+    void deleteYourself() { ++deletionCalls; deleted=true; }
+};
+//! \brief Uses the existing production base upkeep inherited by bundles after delivery.
+struct RenderedMovableEntity:GameEntity {
+    //! \brief Retains the unchanged base upkeep instead of inventing a replacement bundle handler.
+    @BASE_UPKEEP@
+};
+//! \brief Owns recipe units while the actual laboratory transfer consumes partial or complete bundles.
+struct HerbBundleEntity:RenderedMovableEntity {
+    std::string mHerb="Bloodroot"; uint32_t mCount;
+    //! \brief Creates a controlled positive recipe-unit count for delivery checks.
+    explicit HerbBundleEntity(uint32_t count):mCount(count){}
+    //! \brief Uses the actual immutable herb identity accessor.
+    @HERB_ID@
+    //! \brief Uses the actual remaining-unit accessor.
+    @HERB_COUNT@
+    //! \brief Transfers recipe units through the actual production method.
+    uint32_t take(uint32_t maximum);
+    @HERB_UPKEEP_DECL@
+};
 //! \brief Supplies a real owning bag to the actual gift-delivery and keeper-purchase methods.
-struct ItemBagEntity {
-    std::unique_ptr<ItemInstance> mItem; GameMap* map; Seat* seat=nullptr; Tile tile; bool removed=false,deleted=false;
+struct ItemBagEntity:GameEntity {
+    std::unique_ptr<ItemInstance> mItem; GameMap* map; Seat* seat=nullptr; Tile tile; uint32_t mIdleTurns=0;
     //! \brief Owns the supplied instance exactly once.
     ItemBagEntity(GameMap* world,std::unique_ptr<ItemInstance> item):mItem(std::move(item)),map(world){}
     //! \brief Exposes the held instance without transferring ownership.
     const ItemInstance* getItem() const { return mItem.get(); }
     //! \brief Transfers ownership to the actual gift-delivery method.
-    std::unique_ptr<ItemInstance> takeItem() { return std::move(mItem); }
+    std::unique_ptr<ItemInstance> takeItem();
     //! \brief Accepts a rejected full-inventory gift without dropping its ownership.
     void restoreItem(std::unique_ptr<ItemInstance> item) { mItem=std::move(item); }
     //! \brief Returns the fixture keeper.
@@ -61,10 +111,8 @@ struct ItemBagEntity {
     bool getIsOnMap() const { return !removed; }
     //! \brief Uses the unchanged production sealed-goods pickup rule.
     bool tryPickup(Seat* owner);
-    //! \brief Records successful gift removal without a world renderer.
-    void removeFromGameMap() { removed=true; }
-    //! \brief Records deferred successful gift deletion without deleting a stack fixture.
-    void deleteYourself() { deleted=true; }
+    //! \brief Uses actual ground aging without duplicating transfer-owned removal.
+    void doUpkeep() override;
     //! \brief Supplies unused keeper-purchase placement services.
     void addToGameMap() {}
     //! \brief Supplies unused keeper-purchase rendering services.
@@ -140,6 +188,11 @@ static const double PERCENT=100.0,EQUIP_MARGIN=0.5;
 static const uint32_t LARGE_LEVEL=20,MEDIUM_LEVEL=10;
 static uint32_t nextGoodsIndex=1;
 '''
+    fixture = fixture.replace("@BASE_UPKEEP@", function(source("source/entities/RenderedMovableEntity.h"), "virtual void doUpkeep() override"))
+    fixture = fixture.replace("@HERB_ID@", function(bundle_header, "const std::string& getHerb("))
+    fixture = fixture.replace("@HERB_COUNT@", function(bundle_header, "uint32_t getCount("))
+    has_bundle_upkeep = "void doUpkeep() override;" in bundle_header
+    fixture = fixture.replace("@HERB_UPKEEP_DECL@", r"//! \brief Uses the requested production bundle upkeep for the baseline control." + "\n    void doUpkeep() override;" if has_bundle_upkeep else "")
     fixture = fixture.replace("@GOODS@", function(header, "struct MerchantGood") + ";")
     fixture = fixture.replace("@MERCHANT_TILE@", function(header, "class RoomMerchantTileData") + ";")
     definitions = "\n".join(function(merchant, signature) for signature in (
@@ -151,6 +204,19 @@ static uint32_t nextGoodsIndex=1;
         "bool RoomMerchant::buyFromCreature(", "bool RoomMerchant::sellToCreature(", "bool RoomMerchant::sellToKeeper(",
         "void RoomMerchant::splitRoom("))
     definitions += "\n" + function(source("source/entities/ItemBagEntity.cpp"), "bool ItemBagEntity::tryPickup(")
+    definitions += "\n" + r"//! \brief Runs the production item transfer without reproducing its ownership logic." + "\n" + function(bag_source, "std::unique_ptr<ItemInstance> ItemBagEntity::takeItem(")
+    definitions += "\n" + r"//! \brief Runs actual bag upkeep after a preceding snapshot entry removes it." + "\n" + function(bag_source, "void ItemBagEntity::doUpkeep(")
+    definitions += "\n" + r"//! \brief Consumes recipe units through the requested production cargo revision." + "\n" + function(bundle_source, "uint32_t HerbBundleEntity::take(")
+    if has_bundle_upkeep:
+        definitions += "\n" + r"//! \brief Retains the old bundle handler only for the negative source control." + "\n" + function(bundle_source, "void HerbBundleEntity::doUpkeep(")
+    snapshot_source = source("source/gamemap/GameMap.cpp")
+    snapshot_begin = snapshot_source.index("    std::vector<GameEntity*> activeObjects = mActiveObjects;")
+    snapshot_end = snapshot_source.index("        ge->doUpkeep();", snapshot_begin) + len("        ge->doUpkeep();")
+    definitions += "\n" + r"//! \brief Executes the real map snapshot iteration while transfers change active membership." + "\nvoid runUpkeepSnapshot(std::vector<GameEntity*>& mActiveObjects) {\n" + snapshot_source[snapshot_begin:snapshot_end] + "\n}\n"
+    delivery = function(lab, "void RoomAlchemyLab::notifyCarryingStateChanged(")
+    delivery = delivery[delivery.index("    mHerbs[bundle.getHerb()]"):delivery.rindex("}")]
+    definitions += "\n" + r"//! \brief Runs the actual accepted-unit transfer and retirement branch of laboratory delivery." + "\nvoid transferHerbs(std::map<std::string,uint32_t>& mHerbs,HerbBundleEntity& bundle,uint32_t available) {\n" + delivery + "\n}\n"
+
     definitions += "\n" + function(source("source/game/CreatureMerchantAI.cpp"), "bool deliverGift(")
     definitions += "\n" + "\n".join(function(lab, signature) for signature in (
         "bool usableSize(", "bool RoomAlchemyLab::canBrew(", "const PotionDefinition* RoomAlchemyLab::choosePotion("))
@@ -164,6 +230,47 @@ static uint32_t nextGoodsIndex=1;
     assert pickup_guard, "missing actual sealed-goods creature pickup guard"
     definitions += "\n//! \\brief Exercises the unchanged production ownership guard around one candidate.\nbool mayTakeGoods(const ItemInstance* item,bool enemy) { for(int once=0;once<1;++once) {\n" + pickup_guard[0] + "\nreturn true; } return false; }\n"
     tests = r'''
+//! \brief Represents a real successful gift earlier than the bag in one upkeep snapshot.
+struct GiftTransfer:GameEntity {
+    Creature& recipient; ItemBagEntity& bag;
+    //! \brief Binds the recipient and unchanged bag identity for this transfer.
+    GiftTransfer(Creature& owner,ItemBagEntity& value):recipient(owner),bag(value){}
+    //! \brief Executes the production gift routine, including its sole teardown request.
+    void doUpkeep() override { check(deliverGift(recipient,bag),"snapshot gift accepted"); }
+};
+//! \brief Represents laboratory delivery earlier than its bundle in one upkeep snapshot.
+struct HerbTransfer:GameEntity {
+    std::map<std::string,uint32_t>& herbs; HerbBundleEntity& bundle; uint32_t available;
+    //! \brief Binds a capacity-limited actual delivery without changing recipe values.
+    HerbTransfer(std::map<std::string,uint32_t>& stock,HerbBundleEntity& value,uint32_t capacity):herbs(stock),bundle(value),available(capacity){}
+    //! \brief Executes the extracted production transfer and retirement branch.
+    void doUpkeep() override { transferHerbs(herbs,bundle,available); }
+};
+//! \brief Detects duplicate removal from real snapshot upkeep and preserves live and partial cargo.
+void cargoLifecycle(GameMap& map) {
+    Seat owner,oldOwner; Creature recipient(&map,&owner);
+    ItemBagEntity bag(&map,map.rollItem(Quality::common));
+    check(bag.getItem()!=nullptr&&bag.getItem()->mQuality==Quality::common,"RandomCommon uses the real item roller");
+    GiftTransfer pickup(recipient,bag); std::vector<GameEntity*> active={&pickup,&bag}; bag.activeList=&active;
+    runUpkeepSnapshot(active);
+    HerbBundleEntity bundle(3); std::map<std::string,uint32_t> herbs;
+    HerbTransfer partial(herbs,bundle,1); std::vector<GameEntity*> partialActive={&partial,&bundle}; bundle.activeList=&partialActive;
+    runUpkeepSnapshot(partialActive);
+    check(bundle.getCount()==2&&herbs["Bloodroot"]==1&&!bundle.removed&&bundle.removalCalls==0,"partial delivery preserves registered remainder");
+    HerbTransfer complete(herbs,bundle,2); std::vector<GameEntity*> fullActive={&complete,&bundle}; bundle.activeList=&fullActive;
+    runUpkeepSnapshot(fullActive);
+    std::cout<<"BAG_REMOVALS="<<bag.removalCalls<<" BAG_DELETIONS="<<bag.deletionCalls
+             <<" HERB_REMOVALS="<<bundle.removalCalls<<" HERB_DELETIONS="<<bundle.deletionCalls<<'\n';
+    check(bag.getItem()==nullptr&&bag.removed&&bag.deleted&&bag.removalCalls==1&&bag.deletionCalls==1&&active.size()==1,
+          "consumed bag is removed exactly once despite remaining in the upkeep snapshot");
+    check(bundle.getCount()==0&&herbs["Bloodroot"]==3&&bundle.removed&&bundle.deleted&&bundle.removalCalls==1&&bundle.deletionCalls==1&&fullActive.size()==1,
+          "fully delivered bundle is removed exactly once despite remaining in the upkeep snapshot");
+    ItemBagEntity live(&map,map.rollItem(Quality::common)); live.seat=&oldOwner;
+    live.doUpkeep(); check(live.mIdleTurns==1&&!live.removed&&!live.deleted,"live ground bags age without retirement");
+    Room treasury(&map,&owner,RoomType::treasury); live.tile.room=&treasury; live.doUpkeep();
+    check(live.mIdleTurns==2&&live.getSeat()==&owner&&live.removalCalls==0,"treasury ownership and ground aging remain intact");
+}
+
 //! \brief Creates controlled quality instances using the production parser and roller.
 std::unique_ptr<ItemInstance> itemFor(GameMap& map,const std::string& id,Quality quality) {
     const ItemDefinition* definition=map.getItemDefinition(id); check(definition!=nullptr,id); return ItemInstance::create(*definition,quality);
@@ -193,9 +300,10 @@ void transactions(GameMap& map,int32_t marginValue) {
     check(keeper.hand.size()==1&&keeper.hand[0]->mItem->mGifted&&!keeper.hand[0]->mItem->mMerchantGoods,"keeper gets unsealed gifted hand bag");
     check(mayTakeGoods(seller.mEquipment[2].get(),false),"ordinary own non-goods control");
 }
-//! \brief Runs all required economy, ownership, combat, gifted-potion and recipe cases.
+//! \brief Runs cargo lifecycle, economy, ownership, combat, gifted-potion and recipe cases.
 int main(int argc,char** argv) {
     check(argc==2,"repository argument"); GameMap map; loadCatalogue(argv[1],map);
+    cargoLifecycle(map);
     for(int marginValue=0;marginValue<=50;++marginValue) transactions(map,marginValue);
     Seat owner,enemy; RoomMerchant room(&map,&owner); map.rooms={&room}; Tile one,two; one.room=&room; two.room=&room;
     RoomMerchantTileData first,second; first.mTable=true; second.mTable=true; room.mCoveredTiles={&one,&two}; room.mTileData={{&one,&first},{&two,&second}};
@@ -233,6 +341,7 @@ int main(int argc,char** argv) {
     for(std::unique_ptr<ItemInstance>& slot:recipient.mInventory) if(slot.get()==nullptr) slot=ItemInstance::createPotion("mana_small");
     const double moodBefore=recipient.mood; ItemBagEntity rejected(&map,ItemInstance::createPotion("mana_small")); ItemInstance* rejectedIdentity=rejected.mItem.get();
     check(!deliverGift(recipient,rejected)&&rejected.mItem.get()==rejectedIdentity&&rejected.mItem->mGifted&&!rejected.removed&&recipient.mood==moodBefore+300,"full gift remains the same bag yet grants300 mood");
+    rejected.doUpkeep(); check(rejected.mItem.get()==rejectedIdentity&&rejected.mIdleTurns==1&&rejected.removalCalls==0&&rejected.deletionCalls==0,"rejected gift remains a live aging bag without teardown");
     Creature brewer(&map,&owner); brewer.mLevel=30; map.creatures={&brewer}; RoomAlchemyLab laboratory(&map,&owner);
     laboratory.mHerbs={{"Bloodroot",40},{"Moonlily",40},{"Ironfern",40},{"Sunthorn",40}};
     check(laboratory.choosePotion()->getId()=="healing_large","file order and largest usable size");

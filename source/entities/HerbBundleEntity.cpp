@@ -64,15 +64,6 @@ void HerbBundleEntity::notifyEntityCarryOff(const Ogre::Vector3& position)
     addEntityToPositionTile();
 }
 
-//! \brief Releases a bundle only after its recipe units were transferred to storage.
-void HerbBundleEntity::doUpkeep()
-{
-    if(mCount != 0)
-        return;
-    removeFromGameMap();
-    deleteYourself();
-}
-
 //! \brief Saves recipe data in addition to the standard movable entity record.
 void HerbBundleEntity::exportToStream(std::ostream& stream) const
 {
