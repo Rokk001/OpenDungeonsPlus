@@ -1468,3 +1468,5 @@ assets-src/gui/icons/tiles/ItemSlotEmpty.png    AI-generated with Codex    GPLv3
 assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/InfirmaryButton.png    AI-generated with Codex    GPLv3+    Original painted cot and crossed bandages in the project icon style, 2026-10-25; generated at native resolution and downsampled to the 256-pixel source.
+assets-src/gui/icons/tiles/GhostRoomButton.png    AI-generated with Codex    GPLv3+    Original painted iron press cauldron with green window and leather backpack; 256-pixel source, 2026-10-26
+gui/ODIcons.png (GhostRoomButton)    AI-generated with Codex    GPLv3+    Original painted ghost-room tile, 128-pixel atlas entry from assets-src/gui/icons/tiles/GhostRoomButton.png; all prior entries preserved, 2026-10-26
