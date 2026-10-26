@@ -112,6 +112,7 @@ def work_point_function(text, variable, name):
                        'base', statement, flags=re.S)
     statement = re.sub(r'ItemEffects::increaseFactor\(creature, "(?:Scholar|Craftsman)"\)', 'bonus', statement)
     statement = statement.replace('getDirtOutputFactor()', 'factor')
+    statement = statement.replace('creature.getHangoverWorkFactor()', '1.0')
     return ('static double ' + name + '(double base, double factor, double bonus = 1.0)\n{\n' +
             statement + '\n    return ' + variable + ';\n}')
 
