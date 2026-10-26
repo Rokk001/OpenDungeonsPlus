@@ -38,6 +38,7 @@
 #include "modes/InputManager.h"
 #include "network/ODClient.h"
 #include "network/ODPacket.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
