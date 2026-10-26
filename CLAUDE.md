@@ -88,7 +88,7 @@ Diese Pfade direkt verwenden, nie danach suchen.
      changed against origin/integration/all, with the compiler settings of the integrator's build folder, without linking
      and without building the game. The window fixes every compile error and repeats until the script exits 0.
   5. Then it runs the check scripts for its changed source files, pushes normally and registers ready in
-     docs/internal/projects/git-integration/INTEGRATION-STATE.md with the checked tip and 'Kompiliertest: Exit 0'.
+     the integration queue file with the checked tip and 'Kompiliertest: Exit 0'.
   6. The integrator refuses a ready row without 'Kompiliertest: Exit 0' for its exact tip and sends it back.
   7. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
      on code that plan adds) waits until that plan is integrated. Every window merges the current origin/integration/all into
