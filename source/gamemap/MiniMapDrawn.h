@@ -41,23 +41,29 @@ namespace CEGUI
 class CameraManager;
 class GameMap;
 
+//! \brief One drawn-map pixel; alpha keeps unexplored ground on the HUD backing.
 struct Color
 {
 public:
     Ogre::uint8 RR;
     Ogre::uint8 GG;
     Ogre::uint8 BB;
+    Ogre::uint8 AA;
 
+    //! \brief Creates an opaque black map pixel.
     Color():
         RR(0),
         GG(0),
-        BB(0)
+        BB(0),
+        AA(255)
     {}
 
-    Color(Ogre::uint8 rr, Ogre::uint8 gg, Ogre::uint8 bb):
+    //! \brief Creates a map pixel with the supplied colour and backing visibility.
+    Color(Ogre::uint8 rr, Ogre::uint8 gg, Ogre::uint8 bb, Ogre::uint8 aa = 255):
         RR(rr),
         GG(gg),
-        BB(bb)
+        BB(bb),
+        AA(aa)
     {}
 };
 
@@ -66,6 +72,7 @@ public:
 class MiniMapDrawn : public MiniMap
 {
 public:
+    //! \brief Creates the drawn map with the existing HUD stone behind unexplored ground.
     MiniMapDrawn(CEGUI::Window* miniMapWindow);
     ~MiniMapDrawn();
 
@@ -75,6 +82,7 @@ public:
     Ogre::uint getHeight() const
     { return mHeight; }
 
+    //! \brief Updates visible map colours and keeps unexplored ground on the HUD stone surface.
     void update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles) override;
 
     Ogre::Vector2 camera_2dPositionFromClick(int xx, int yy) override;
@@ -100,13 +108,14 @@ private:
     Ogre::TexturePtr mMiniMapOgreTexture;
     Ogre::HardwarePixelBufferSharedPtr mPixelBuffer;
 
-    inline void drawPixel(int xx, int yy, Ogre::uint8 RR, Ogre::uint8 GG, Ogre::uint8 BB)
+    //! \brief Fills a map grain; transparent unknown grains reveal only the HUD stone backing.
+    inline void drawPixel(int xx, int yy, Ogre::uint8 RR, Ogre::uint8 GG, Ogre::uint8 BB, Ogre::uint8 AA = 255)
     {
         for(int gg = 0; gg < mGrainSize; ++gg)
         {
             for(int hh = 0; hh < mGrainSize; ++hh)
             {
-                mTiles[xx + gg + ((yy + hh) * mWidth)] = Color(RR, GG, BB);
+                mTiles[xx + gg + ((yy + hh) * mWidth)] = Color(RR, GG, BB, AA);
             }
         }
 

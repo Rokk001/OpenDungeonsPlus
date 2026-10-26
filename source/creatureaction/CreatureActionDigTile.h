@@ -33,7 +33,7 @@ public:
 
     std::function<bool()> action() override;
 
-    //! \brief Digs with unchanged timing, reports the next worker step, and observes actual credited gold.
+    //! \brief Digs with unchanged timing and reports the actual stroke tile, next worker step and credited gold.
     static bool handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos);
 
 private:

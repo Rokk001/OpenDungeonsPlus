@@ -712,6 +712,7 @@ void ODFrameListener::stopGameRenderer()
     mRenderManager->stopGameRenderer(mGameMap.get());
 }
 
+//! \brief Creates the native menu scene before dismissing the startup loading picture.
 void ODFrameListener::createMainMenuScene()
 {
     if(mIsMainMenuCreated)
@@ -720,6 +721,7 @@ void ODFrameListener::createMainMenuScene()
     mIsMainMenuCreated = true;
     mCameraManager.setMainMenuProjection(true);
     mMainScene->resetMenu(mCameraManager, *mRenderManager);
+    LoadingScreen::finishStartup();
 }
 
 void ODFrameListener::freeMainMenuScene()

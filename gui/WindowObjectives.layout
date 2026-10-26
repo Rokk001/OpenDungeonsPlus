@@ -6,7 +6,7 @@
         <Property name="Text" value="Goals" />
 
         <Window type="OD/StaticText" name="ObjectivesText" >
-            <Property name="Area" value="{{0,20},{0,30},{1,-20},{1,-20}}" />
+            <Property name="Area" value="{{0.02,0},{0.02,0},{0.98,0},{0.98,0}}" />
             <Property name="Text" value="Goals" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />

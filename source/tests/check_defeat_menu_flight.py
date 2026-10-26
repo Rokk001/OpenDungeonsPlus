@@ -63,6 +63,8 @@ const std::string WINDOW_SKIRMISH = "SkirmishSubMenuWindow";
 int gToggles = 0;
 int gShown = 0;
 int gChanged = 0;
+bool gButtonsVisible = false;
+int gOverviewReveals = 0;
 std::string gToggled;
 MenuFlight gFlight;
 struct ODFrameListener
@@ -94,11 +96,12 @@ public:
     {++gToggles;gToggled = name;mPendingSubMenu = name;return gFlight.start();}
     //! \brief Records an existing pane becoming visible after arrival.
     void showSubMenu(const std::string& name) {++gShown;gToggled = name;}
-    //! \brief Leaves button presentation outside this isolated timing fixture.
-    void showMainMenuButtons(bool) {}
+    //! \brief Records overview visibility at the same production arrival boundary.
+    void showMainMenuButtons(bool visible) {gButtonsVisible = visible;if(visible) ++gOverviewReveals;}
     //! \brief Records a deferred mode request once its flight completes.
     bool changeModeEvent(AbstractModeManager::ModeType, const CEGUI::EventArgs&) {++gChanged;return true;}
     bool mSkirmishSubMenuPending = false;
+    bool mOverviewPending = false;
     std::string mPendingSubMenu;
     AbstractModeManager::ModeType mPendingMode = AbstractModeManager::NONE;
 };
@@ -171,7 +174,7 @@ int main()
         menu.onFrameStarted(event);
         gFlight.advance(0.1f);
     }
-    check(gToggles == 0 && menu.mSkirmishSubMenuPending, "during the flight the sub-menu stays closed");
+    check(gToggles == 0 && menu.mSkirmishSubMenuPending && !gButtonsVisible, "during the flight the sub-menu and overview entries stay hidden");
     menu.onFrameStarted(event);
     check(gToggles == 1 && gToggled == WINDOW_SKIRMISH && !menu.mSkirmishSubMenuPending && gShown == 0 && gFlight.isActive(), "after arrival the cave flight starts before showing the skirmish pane");
     for(int i = 0; i < 100 && gFlight.isActive(); ++i)
@@ -182,7 +185,16 @@ int main()
     check(gShown == 0, "during the cave flight the skirmish pane remains hidden");
     menu.onFrameStarted(event);
     menu.onFrameStarted(event);
-    check(gToggles == 1 && gShown == 1, "the pane is revealed exactly once after both flights");
+    check(gToggles == 1 && gShown == 1 && gOverviewReveals == 0, "the pane is revealed exactly once after both flights without flashing overview entries");
+    menu.mOverviewPending = true;
+    gFlight.start();
+    menu.onFrameStarted(event);
+    check(menu.mOverviewPending && !gButtonsVisible, "overview entries remain hidden during the return flight");
+    while(gFlight.isActive())
+        gFlight.advance(0.1f);
+    menu.onFrameStarted(event);
+    menu.onFrameStarted(event);
+    check(!menu.mOverviewPending && gButtonsVisible && gOverviewReveals == 1, "overview entries reappear exactly once on return arrival");
     menu.mPendingMode = AbstractModeManager::MENU_REPLAY;
     gFlight.start();
     menu.onFrameStarted(event);

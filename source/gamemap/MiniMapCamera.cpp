@@ -53,6 +53,7 @@ static const Ogre::Real CAM_HEIGHT = NB_TILES_DISPLAYED_IN_MINIMAP * 0.5f / Ogre
 static const Ogre::uint TEXTURE_SIZE = 512;
 static const Ogre::Real MIN_TIME_REFRESH_SECS = 0.5;
 
+//! \brief Creates the camera map with transparent empty pixels over the circular HUD stone backing.
 MiniMapCamera::MiniMapCamera(CEGUI::Window* miniMapWindow) :
     mMiniMapWindow(miniMapWindow),
     mGameMap(*ODFrameListener::getSingleton().getClientGameMap()),
@@ -68,7 +69,7 @@ MiniMapCamera::MiniMapCamera(CEGUI::Window* miniMapWindow) :
             "miniMapOgreTexture",
             Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
             Ogre::TEX_TYPE_2D,
-            TEXTURE_SIZE, TEXTURE_SIZE, 0, Ogre::PF_R8G8B8,
+            TEXTURE_SIZE, TEXTURE_SIZE, 0, Ogre::PF_R8G8B8A8,
             Ogre::TU_RENDERTARGET)),
     mCurCamPosX(-1),
     mCurCamPosY(-1),
@@ -90,7 +91,10 @@ MiniMapCamera::MiniMapCamera(CEGUI::Window* miniMapWindow) :
     Ogre::Viewport* vp = rt->addViewport(mMiniMapCam);
     vp->setClearEveryFrame(true);
     vp->setOverlaysEnabled(false);
-    vp->setBackgroundColour(Ogre::ColourValue::Black);
+    Ogre::ColourValue background = Ogre::ColourValue::Black;
+    if(mMiniMapWindow->isUserStringDefined("Circular") && mMiniMapWindow->getUserString("Circular") == "true")
+        background.a = 0.0f;
+    vp->setBackgroundColour(background);
 
     CEGUI::Texture& miniMapTextureGui = static_cast<CEGUI::OgreRenderer*>(CEGUI::System::getSingletonPtr()
                                             ->getRenderer())->createTexture("miniMapTextureGui", mMiniMapOgreTexture);

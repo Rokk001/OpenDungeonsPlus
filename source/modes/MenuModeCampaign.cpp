@@ -48,6 +48,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <iterator>
 #include <sstream>
@@ -91,6 +92,9 @@ static const CEGUI::URect BRIEFING_STORY_AREA(
 static const CEGUI::URect BRIEFING_GOALS_AREA(
     CEGUI::UDim(0.4f, 8), CEGUI::UDim(0, 16),
     CEGUI::UDim(1, -16), CEGUI::UDim(1, -72));
+static const CEGUI::URect BRIEFING_CLOSE_AREA(
+    CEGUI::UDim(0.5f, 8), CEGUI::UDim(1, -56),
+    CEGUI::UDim(1, -16), CEGUI::UDim(1, -16));
 const std::string CMP_BRIEFING_START = "CampaignWindowFrame/BriefingPanel/BriefingStartButton";
 const std::string CMP_BRIEFING_CLOSE = "CampaignWindowFrame/BriefingPanel/BriefingCloseButton";
 
@@ -285,6 +289,7 @@ bool decodeImage(const std::string& path, int& width, int& height, std::vector<u
 }
 } // namespace
 
+//! \brief Connects campaign controls and initializes map and debriefing layout state.
 MenuModeCampaign::MenuModeCampaign(ModeManager* modeManager):
     AbstractApplicationMode(modeManager, ModeManager::MENU_CAMPAIGN),
     mWorldLoaded(false),
@@ -293,7 +298,8 @@ MenuModeCampaign::MenuModeCampaign(ModeManager* modeManager):
     mHoveredProvince(0),
     mLiftProvince(0),
     mLiftFade(0.0f),
-    mBriefingLevel(0)
+    mBriefingLevel(0),
+    mDebriefingScale(0.0f)
 {
     CEGUI::Window* window = modeManager->getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
 
@@ -729,9 +735,11 @@ void MenuModeCampaign::fillMap()
     mTooltip->setVisible(false);
 }
 
+//! \brief Updates the map lift and fits a visible debriefing after display or UI-scale changes.
 void MenuModeCampaign::onFrameStarted(const Ogre::FrameEvent& evt)
 {
     updateLift(evt.timeSinceLastFrame);
+    fitDebriefingPanel();
 }
 
 void MenuModeCampaign::updateLift(float elapsed)
@@ -951,7 +959,7 @@ void MenuModeCampaign::showBriefing(size_t level)
     mBriefingLevel = level;
 }
 
-//! \brief Shows the last level result in the full-width text-only panel without a goal preview.
+//! \brief Shows the last level result in a fitted full-width text-only panel without a goal preview.
 void MenuModeCampaign::showDebriefing()
 {
     CEGUI::Window* sheet = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
@@ -961,6 +969,42 @@ void MenuModeCampaign::showDebriefing()
     sheet->getChild(CMP_BRIEFING_START)->setVisible(false);
     sheet->getChild(CMP_BRIEFING)->setVisible(true);
     mBriefingLevel = Campaign::getSingleton().getNumLevels();
+    mDebriefingScale = 0.0f;
+    fitDebriefingPanel();
+}
+
+//! \brief Fits the visible text-only result to its rendered text, existing margins and Close button.
+void MenuModeCampaign::fitDebriefingPanel()
+{
+    Gui& gui = getModeManager().getGui();
+    CEGUI::Window* sheet = gui.getGuiSheet(Gui::guiSheet::campaignMenu);
+    CEGUI::Window* panel = sheet->getChild(CMP_BRIEFING);
+    if(!panel->isVisible() || sheet->getChild(CMP_BRIEFING_IMAGE)->isVisible() ||
+       sheet->getChild(CMP_BRIEFING_START)->isVisible())
+        return;
+
+    const float scale = gui.getLayoutScale();
+    const CEGUI::Sizef screen = panel->getRootContainerSize();
+    if(mDebriefingScale == scale && mDebriefingScreen.d_x == screen.d_width &&
+       mDebriefingScreen.d_y == screen.d_height)
+        return;
+    mDebriefingScale = scale;
+    mDebriefingScreen = CEGUI::Vector2f(screen.d_width, screen.d_height);
+    const float halfWidth = std::min(300.0f, screen.d_width / (2.0f * scale));
+    const float maxHeight = screen.d_height / scale;
+    // Measure at the available height so a previous scrollbar cannot add needless wrapped lines.
+    gui.setScaledArea(panel, CEGUI::URect(CEGUI::UDim(0.5f, -halfWidth),
+        CEGUI::UDim(0.5f, -maxHeight * 0.5f), CEGUI::UDim(0.5f, halfWidth),
+        CEGUI::UDim(0.5f, maxHeight * 0.5f)));
+    CEGUI::Window* text = sheet->getChild(CMP_BRIEFING_TEXT);
+    gui.setScaledArea(text, BRIEFING_TEXT_AREA);
+    gui.setScaledArea(sheet->getChild(CMP_BRIEFING_CLOSE), BRIEFING_CLOSE_AREA);
+    const float textHeight = CEGUI::PropertyHelper<float>::fromString(text->getProperty("VertExtent"));
+    const float margins = BRIEFING_TEXT_AREA.d_min.d_y.d_offset - BRIEFING_TEXT_AREA.d_max.d_y.d_offset;
+    const float height = std::min(maxHeight, margins + (std::ceil(textHeight) + 1.0f) / scale);
+    gui.setScaledArea(panel, CEGUI::URect(CEGUI::UDim(0.5f, -halfWidth),
+        CEGUI::UDim(0.5f, -height * 0.5f), CEGUI::UDim(0.5f, halfWidth),
+        CEGUI::UDim(0.5f, height * 0.5f)));
 }
 
 //! \brief Registers scaled panel and text areas around the preview, or restores the text-only layout.

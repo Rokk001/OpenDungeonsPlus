@@ -910,6 +910,7 @@ void Room::checkForSplit()
     updateActiveSpots(gameMap);
 }
 
+//! \brief Finds room work spots and lets each room restrict its wall furniture.
 void Room::updateActiveSpots(GameMap* gameMap)
 {
     if(gameMap == nullptr)
@@ -1116,6 +1117,11 @@ void Room::updateActiveSpots(GameMap* gameMap)
             }
         }
     }
+
+    filterWallActiveSpots(activeSpotLeft, leftWallsActiveSpotTiles);
+    filterWallActiveSpots(activeSpotRight, rightWallsActiveSpotTiles);
+    filterWallActiveSpots(activeSpotTop, topWallsActiveSpotTiles);
+    filterWallActiveSpots(activeSpotBottom, bottomWallsActiveSpotTiles);
 
     activeSpotCheckChange(activeSpotCenter, mCentralActiveSpotTiles, centralActiveSpotTiles, gameMap);
     activeSpotCheckChange(activeSpotLeft, mLeftWallsActiveSpotTiles, leftWallsActiveSpotTiles, gameMap);

@@ -50,6 +50,9 @@ public:
 
     void fireRefresh();
 
+    //! \brief Sends this object and the previous identity together to current tile viewers only.
+    virtual void notifyReplacement(BuildingObject& previous);
+
     const Ogre::Vector2& getFurnitureScale() const { return mFurnitureScale; }
     void setFurnitureScale(const Ogre::Vector2& scale) { mFurnitureScale = scale; }
     void exportToPacket(ODPacket& os, const Seat* seat) const override;

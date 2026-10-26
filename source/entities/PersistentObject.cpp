@@ -26,6 +26,7 @@
 #include "gamemap/GameMap.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
 #include <iostream>
 
 PersistentObject::PersistentObject(GameMap* gameMap, Building& building, const std::string& meshName,
@@ -180,4 +181,22 @@ bool PersistentObject::notifyRemoveAsked()
     }
 
     return true;
+}
+
+//! \brief Keeps persistent visibility history for current viewers without revealing the replacement through fog.
+void PersistentObject::notifyReplacement(BuildingObject& previous)
+{
+    BuildingObject::notifyReplacement(previous);
+    mSeatsAlreadyNotifiedOnce = mSeatsWithVisionNotified;
+    PersistentObject* persistentPrevious = dynamic_cast<PersistentObject*>(&previous);
+    if(persistentPrevious == nullptr)
+        return;
+
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        std::vector<Seat*>::iterator oldSeat = std::find(persistentPrevious->mSeatsAlreadyNotifiedOnce.begin(),
+            persistentPrevious->mSeatsAlreadyNotifiedOnce.end(), seat);
+        if(oldSeat != persistentPrevious->mSeatsAlreadyNotifiedOnce.end())
+            persistentPrevious->mSeatsAlreadyNotifiedOnce.erase(oldSeat);
+    }
 }

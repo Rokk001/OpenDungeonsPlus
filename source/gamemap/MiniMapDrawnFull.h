@@ -42,6 +42,7 @@ class Tile;
 class MiniMapDrawnFull : public MiniMap
 {
 public:
+    //! \brief Creates the full drawn map with an alpha channel for the circular HUD backing.
     MiniMapDrawnFull(CEGUI::Window* miniMapWindow, const std::string& suffix = "");
     ~MiniMapDrawnFull();
 
@@ -53,6 +54,7 @@ public:
 
     void update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles) override;
 
+    //! \brief Updates revealed tile colours and exposes the HUD backing only for unknown circular-map pixels.
     bool updateTileState(uint32_t minimapXMin, uint32_t xMinimapMax,
         uint32_t minimapYMin, uint32_t minimapYMax, uint32_t tileXMin,
         uint32_t tileXMax, uint32_t tileYMin, uint32_t tileYMax);

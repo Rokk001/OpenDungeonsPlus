@@ -122,6 +122,7 @@ int selectedLevelOrder()
 }
 }
 
+//! \brief Creates the population controls directly on the navigation slab surface.
 CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) :
     mGameMap(gameMap), mGui(gui)
 {
@@ -129,13 +130,6 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
     mWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, PANEL_TOP),
         CEGUI::UDim(1, PANEL_RIGHT_MARGIN), CEGUI::UDim(0, PANEL_BOTTOM)));
     mWindow->setUserString("AllowEdgeScrolling", "true");
-    CEGUI::Window* workerBackground = createWindow(mWindow, "OD/StaticImage", "WorkerBackground",
-        0, 0, 74, ROW_HEIGHT);
-    workerBackground->setProperty("FrameEnabled", "False");
-    workerBackground->setProperty("BackgroundEnabled", "False");
-    workerBackground->setProperty("Image", "OpenDungeonsSkin/SelectionBrush");
-    workerBackground->setProperty("ImageColours", "tl:FF101010 tr:FF101010 bl:FF101010 br:FF101010");
-    workerBackground->setMousePassThroughEnabled(true);
     const char* workerIcons[] = {"WorkerButton", "HourglassIcon", "HammerAnvilIcon", "TrainingHallButton"};
     for(size_t i = 0; i < mWorkerCounts.size(); ++i)
     {

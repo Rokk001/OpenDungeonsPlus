@@ -57,6 +57,9 @@ public:
     virtual void notifySeatsWithVision(const std::vector<Seat*>& seats, NodeType nt = NodeType::MTILES_NODE ) override;
     virtual void fireRemoveEntityToSeatsWithVision(GameMap* gameMap = nullptr) override;
 
+    //! \brief Transfers current replacement viewers while leaving hidden clients on the ordinary removal path.
+    void notifyReplacement(BuildingObject& previous) override;
+
     virtual bool notifyRemoveAsked() override;
 
     const std::vector<Seat*>& getSeatsAlreadyNotifiedOnce() const

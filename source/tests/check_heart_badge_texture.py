@@ -489,6 +489,7 @@ class MenuModeMain
 public:
     ModeManager mManager;
     bool mSkirmishSubMenuPending = false;
+    bool mOverviewPending = false;
     std::string mPendingSubMenu;
     AbstractModeManager::ModeType mPendingMode = AbstractModeManager::NONE;
     AbstractModeManager::ModeType mLastMode = AbstractModeManager::NONE;
@@ -523,6 +524,10 @@ void finishMenuFlight(RenderSceneMenu& menu, CameraManager& camera, RenderManage
     while(menu.isFlightActive() && frames < 200)
     {
         navigation.onFrameStarted(frame);
+        for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER,
+            BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+            check(!navigation.mManager.mGui.mRoot->getChild(name)->isVisible(),
+                "overview entries stay hidden for every flight frame: " + name);
         menu.updateMenu(camera, render, frame.timeSinceLastFrame);
         ++frames;
     }
@@ -735,6 +740,9 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
             "Back hides the submenu and starts its return route");
         finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
         checkMenuPose(menuScene, menuCamera, "overview");
+        for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER,
+            BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+            check(menuRoot->getChild(name)->isVisible(), "overview entries return after arrival: " + name);
     }
     navigation.changeModeAfterFlight(AbstractModeManager::MENU_REPLAY, CEGUI::EventArgs());
     check(navigation.mLastMode == AbstractModeManager::NONE && menuScene.isFlightActive(), "replay mode waits for its archive flight");
@@ -751,6 +759,7 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     navigation.mManager.requestPreviousMode();
     check(navigation.mManager.mPreviousModeTypes.size() == 1, "repeated Escape cannot consume return history twice");
     check(menuScene.flyTo(menuCamera, "overview"), "the replay pane can return through its authored overview route");
+    navigation.mOverviewPending = true;
     finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
     checkMenuPose(menuScene, menuCamera, "overview");
 
@@ -765,8 +774,12 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     check(navigation.mLastMode == AbstractModeManager::ADVERTISMENT && !menuRoot->getChild(WINDOW_CAMPAIGN)->isVisible(),
         "completed flight cannot overwrite Quit or reveal its canceled pane");
     check(menuScene.flyTo(menuCamera, "overview"), "restore overview after the Quit timing assertion");
+    navigation.showMainMenuButtons(false);
+    navigation.mOverviewPending = true;
     finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
     check(menuScene.startFlight(menuCamera), "the configured outside arrival starts");
+    navigation.showMainMenuButtons(false);
+    navigation.mOverviewPending = true;
     check(!menuScene.startFlight(menuCamera), "a second outside arrival is rejected");
     finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
     checkMenuPose(menuScene, menuCamera, "overview");

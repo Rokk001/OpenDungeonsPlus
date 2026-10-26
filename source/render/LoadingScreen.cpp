@@ -4,6 +4,10 @@
 #include "render/RenderManager.h"
 #include "utils/LogManager.h"
 
+#include <RTShaderSystem/OgreShaderGenerator.h>
+#include <OgreCamera.h>
+#include <OgreRoot.h>
+#include <OgreViewport.h>
 #include <OgreColourValue.h>
 #include <OgreMaterial.h>
 #include <OgreMaterialManager.h>
@@ -41,6 +45,10 @@ const char* const LOADING_TEXTURES[] = {
     "loading_21.jpg", "loading_22.jpg", "loading_23.jpg", "loading_24.jpg", "loading_25.jpg"
 };
 Ogre::Rectangle2D* loadingRectangle = nullptr;
+Ogre::SceneManager* startupScene = nullptr;
+Ogre::RenderWindow* startupWindow = nullptr;
+//! Startup sits above the normal viewport until the first menu scene is ready.
+const int STARTUP_VIEWPORT_ORDER = 1;
 Ogre::MaterialPtr previousMaterial;
 Ogre::MaterialPtr loadingMaterial;
 Ogre::uint8 previousQueue = Ogre::RENDER_QUEUE_SKIES_EARLY;
@@ -163,10 +171,55 @@ Ogre::MaterialPtr createLoadingMaterial(const std::string& texture)
     image->setTextureFiltering(Ogre::TFO_BILINEAR);
     return material;
 }
+
+//! \brief Selects and loads one picture for both startup and every existing loading path.
+void selectLoadingImage()
+{
+    static std::mt19937 generator(std::random_device{}());
+    std::uniform_int_distribution<int> distribution(0, previousImage < 0 ? 24 : 23);
+    int image = distribution(generator);
+    if(previousImage >= 0 && image >= previousImage)
+        ++image;
+    Ogre::TextureManager::getSingleton().load(LOADING_TEXTURES[image], "Graphics");
+    loadingMaterial = createLoadingMaterial(LOADING_TEXTURES[image]);
+    previousImage = image;
+}
+}
+
+//! \brief Uses the existing picture mechanism with only a camera and rectangle before full resource initialization.
+LoadingScreen::LoadingScreen(Ogre::RenderWindow& window) : mContinueLoading(false), mStartup(true)
+{
+    try
+    {
+        startupWindow = &window;
+        startupScene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "LoadingScreenScene");
+        Ogre::Camera* camera = startupScene->createCamera("LoadingScreenCamera");
+        Ogre::RTShader::ShaderGenerator::getSingleton().addSceneManager(startupScene);
+        window.addViewport(camera, STARTUP_VIEWPORT_ORDER)->setMaterialScheme(
+            Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+        loadingRectangle = new Ogre::Rectangle2D(Ogre::String("LoadingScreenRectangle"), true);
+        loadingRectangle->setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
+        startupScene->getRootSceneNode()->attachObject(loadingRectangle);
+        selectLoadingImage();
+        update();
+        window.update();
+    }
+    catch(...)
+    {
+        finish();
+        throw;
+    }
+}
+
+//! \brief Ends only startup loading, leaving every later load path under its existing ownership.
+void LoadingScreen::finishStartup()
+{
+    if(startupScene != nullptr)
+        finish();
 }
 
 //! \brief Saves the background visibility and immediately presents a uniformly selected nonrepeating picture.
-LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(false)
+LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(false), mStartup(false)
 {
     try
     {
@@ -175,19 +228,12 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
             return;
         if(loadingRectangle == nullptr)
         {
-            static std::mt19937 generator(std::random_device{}());
-            std::uniform_int_distribution<int> distribution(0, previousImage < 0 ? 24 : 23);
-            int image = distribution(generator);
-            if(previousImage >= 0 && image >= previousImage)
-                ++image;
-            Ogre::TextureManager::getSingleton().load(LOADING_TEXTURES[image], "Graphics");
             loadingRectangle = static_cast<Ogre::Rectangle2D*>(RenderManager::getSingleton().getSceneManager()
                 ->getSceneNode("Background")->getAttachedObject(0));
             previousMaterial = loadingRectangle->getMaterial();
             previousQueue = loadingRectangle->getRenderQueueGroup();
             previousRectangleVisible = loadingRectangle->isVisible();
-            loadingMaterial = createLoadingMaterial(LOADING_TEXTURES[image]);
-            previousImage = image;
+            selectLoadingImage();
         }
         if(existingStatus != nullptr)
         {
@@ -210,7 +256,12 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
 LoadingScreen::~LoadingScreen()
 {
     if(!mContinueLoading)
-        finish();
+    {
+        if(mStartup)
+            finishStartup();
+        else
+            finish();
+    }
 }
 
 //! \brief Leaves the picture visible while the client receives and creates the map.
@@ -219,12 +270,33 @@ void LoadingScreen::continueLoading()
     mContinueLoading = true;
 }
 
-//! \brief Restores the game or menu material, rectangle visibility, texture coordinates and interface after loading.
+//! \brief Releases startup resources or restores the game/menu material, rectangle and interface after loading.
 void LoadingScreen::finish()
 {
-    if(loadingRectangle == nullptr)
+    if(loadingRectangle == nullptr && startupScene == nullptr)
         return;
     restoreLoadingInterface();
+    if(startupScene != nullptr)
+    {
+        if(startupWindow->hasViewportWithZOrder(STARTUP_VIEWPORT_ORDER))
+            startupWindow->removeViewport(STARTUP_VIEWPORT_ORDER);
+        if(loadingRectangle != nullptr)
+        {
+            loadingRectangle->detachFromParent();
+            delete loadingRectangle;
+            loadingRectangle = nullptr;
+        }
+        Ogre::RTShader::ShaderGenerator::getSingleton().removeSceneManager(startupScene);
+        Ogre::Root::getSingleton().destroySceneManager(startupScene);
+        startupScene = nullptr;
+        startupWindow = nullptr;
+        if(loadingMaterial)
+        {
+            loadingMaterial.reset();
+            Ogre::MaterialManager::getSingleton().remove("LoadingScreen", "Graphics");
+        }
+        return;
+    }
     ODFrameListener* frame = ODFrameListener::getSingletonPtr();
     Ogre::MaterialPtr material = frame != nullptr && frame->getIsMainMenuCreated() ? previousMaterial
         : Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics");
@@ -241,17 +313,19 @@ void LoadingScreen::finish()
         frame->updateMenuScene(0.0f);
 }
 
-//! \brief Shows the fitted picture above the world or 3D menu, retaining only the layout's own loading text.
+//! \brief Fits the shared startup/world/menu picture and retains the existing loading text once the GUI exists.
 void LoadingScreen::update()
 {
     if(loadingRectangle == nullptr)
         return;
     ODFrameListener* frame = ODFrameListener::getSingletonPtr();
-    Ogre::RenderWindow* window = frame->getRenderWindow();
+    Ogre::RenderWindow* window = startupWindow != nullptr ? startupWindow : frame->getRenderWindow();
     loadingRectangle->setMaterial(loadingMaterial);
     loadingRectangle->setVisible(true);
     loadingRectangle->setRenderQueueGroup(RenderManager::OD_RENDER_QUEUE_ID_GUI - 1);
     fitLoadingImage(*loadingRectangle, window->getWidth(), window->getHeight());
+    if(CEGUI::System::getSingletonPtr() == nullptr)
+        return;
     CEGUI::Window* root = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
     if(root == hiddenRoot)
     {
