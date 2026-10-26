@@ -5,6 +5,7 @@ Disruption is a slow, strong MissileLaunch. Every skill must be registered under
 build, and every config line must have as many values as the column comment above it names."""
 from pathlib import Path
 import re
+import math
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -65,7 +66,7 @@ def base_line_of(skill_id):
 abilities = {
     "Whirlwind": ("VRM_1", "Whirlwind 14 1 2 8 3 3"),
     "Teleport": ("WRK_C1", "Teleport 7 0 8 8 30"),
-    "GasCloud": ("WLD_1", "GasCloud 7 1 2 4 1.5 2 14.35 Smoke 9.57"),
+    "GasCloud": ("WLD_1", "GasCloud 7 1 2 4 1.5 2 14.35 CreatureToxicCloud 9.57"),
     "HailStorm": ("DRK_1", "HailStorm 21 2 4 8 2 11 3.08 none 2.05"),
     "SkeletonArmy": ("UND_3", "SkeletonArmy 21 2 10 3 42 Skeleton"),
     "GuidedBolt": ("ARC_A2", "GuidedBolt 3 2 7 0 8 ArrowProjectile none 2 0 0 0 0 13 0.25 0 0 0 0 18.11 27.17"),
@@ -75,6 +76,30 @@ abilities = {
 for ability, (skill_id, line) in abilities.items():
     assert base_line_of(skill_id) == line, f"{skill_id} scales the {ability} line"
     assert len(line.split()) > 1
+
+# The dedicated toxic-cloud template uses the existing two-turn effect lifecycle, not a trap effect.
+gas = base_line_of("WLD_1").split()
+assert float(gas[5]) == 1.5 and float(gas[6]) == 2, "the ability radius and turn duration stay unchanged"
+particle = read("particles/CreatureToxicCloud.particle")
+assert re.search(r"^particle_system\s+" + re.escape(gas[8]) + r"\s*\{", particle, re.M)
+assert "RoomAmbGasCloud" not in particle and "RoomAmbSmoke" not in particle
+assert "emitter Ellipsoid" in particle and "material        CreatureToxicCloud" in particle
+# Zero velocity and no size growth keep every billboard inside the configured circle.
+width = float(re.search(r"^\s+width\s+([0-9.]+)", particle, re.M)[1])
+height = float(re.search(r"^\s+height\s+([0-9.]+)", particle, re.M)[1])
+billboard_width = float(re.search(r"^\s+particle_width\s+([0-9.]+)", particle, re.M)[1])
+billboard_height = float(re.search(r"^\s+particle_height\s+([0-9.]+)", particle, re.M)[1])
+assert max(width, height) / 2 + math.hypot(billboard_width, billboard_height) / 2 <= float(gas[5])
+assert re.search(r"^\s+velocity\s+0$", particle, re.M) and "affector Scaler" not in particle
+assert not re.search(r"^\s+(?:duration|repeat_delay)\s", particle, re.M), "game turns control the whole system lifetime"
+turn_rate = float(re.search(r"double ODApplication::turnsPerSecond = ([0-9.]+);", read("source/ODApplication.cpp"))[1])
+assert float(re.search(r"^\s+time_to_live\s+([0-9.]+)", particle, re.M)[1]) <= float(gas[6]) / turn_rate
+assert "rrEntityRemoveParticleEffect" in read("source/entities/GameEntity.cpp")
+material = read("materials/scripts/CreatureToxicCloud.material")
+for setting in ("lighting off", "scene_blend alpha_blend", "depth_write off", "diffuse vertexcolour", "tex_address_mode clamp"):
+    assert setting in material, setting
+texture = re.search(r"^\s+texture\s+(\S+)", material, re.M)[1]
+assert (repo / "materials/textures" / texture).is_file(), texture
 
 # Types that have an ability from level 1 carry it as their pre-skill
 pre_skills = {"CaveHornet": "VRM_1", "Kobold": "WRK_C1", "DwarfWorker": "WRK_C1", "Slime": "WLD_1", "Dragon": "DRK_1",
