@@ -533,7 +533,8 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         Creature* tempCreature = Creature::getCreatureFromStream(&gameMap, ss);
         if(tempCreature == nullptr)
         {
-            OD_LOG_ERR("unexpected null creature");
+            OD_LOG_ERR("Creature number " + Helper::toString(nbCreatures + 1)
+                + " of the level could not be read (see the warning above for the reason), line=" + entire_line);
             return false;
         }
 

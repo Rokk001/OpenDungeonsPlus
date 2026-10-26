@@ -1138,7 +1138,9 @@ bool Creature::importFromStream(std::istream& is)
             double loadedDirt = 0.0;
             if(!(is >> loadedUrge >> loadedDirt >> needsClose) || (needsClose != NEEDS_SAVE_CLOSE))
             {
-                OD_LOG_WRN("Invalid needs block for creature=" + getName());
+                OD_LOG_WRN("Invalid needs block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + needsClose
+                    + "' instead of '" + NEEDS_SAVE_CLOSE + "'"));
                 return false;
             }
             setUrge(loadedUrge);
@@ -1158,10 +1160,14 @@ bool Creature::importFromStream(std::istream& is)
             if(!(is >> loadedThirst >> loadedTavernMood >> loadedTavernMoodTurns >> loadedDrunk >> loadedVomited >>
                  loadedHangoverTurns >> thirstClose) || (thirstClose != THIRST_SAVE_CLOSE))
             {
-                OD_LOG_WRN("Invalid thirst block for creature=" + getName());
+                OD_LOG_WRN("Invalid thirst block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + thirstClose
+                    + "' instead of '" + THIRST_SAVE_CLOSE + "'"));
                 return false;
             }
-            setThirst(loadedThirst);
+            // The definition is not resolved yet (see the note at the top), so only the range is limited here;
+            // setupDefinition clears the thirst of a creature type that cannot get thirsty.
+            mThirst = std::min(THIRST_STATE_MAX, std::max(0.0, loadedThirst));
             addTavernMood(loadedTavernMood, loadedTavernMoodTurns);
             setDrunk(loadedDrunk);
             setVomited(loadedVomited != 0);
@@ -7178,6 +7184,10 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             OD_LOG_ERR("Definition=" + mDefinitionString);
             return;
         }
+
+        // A creature type that cannot get thirsty never keeps a thirst value read from a level or a save
+        if(!mDefinition->hasThirst())
+            mThirst = 0.0;
 
         if(getIsOnServerMap())
         {

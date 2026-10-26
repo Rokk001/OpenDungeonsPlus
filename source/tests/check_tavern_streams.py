@@ -258,9 +258,13 @@ static void checkThirstBlock()
     Creature clamp("Clamp", &thirstyType); std::stringstream clampIn("[Thirst] 500 0 0 -4 0 -9 [/Thirst]");
     expect(clamp.readBlocks(clampIn) && clamp.mThirst == 100.0 && clamp.mDrunk == 0.0 && clamp.mHangoverTurns == 0.0, "loaded values are clamped");
 
-    // A type that cannot get thirsty stays at 0 (no hunger, no thirst)
+    // A type that cannot get thirsty stays at 0 (no hunger, no thirst): the reader keeps the value, the statement of
+    // Creature::setupDefinition (checked in the python part) clears it once the definition is known
     Creature dry("Dry", &dryType); std::stringstream dryIn("[Thirst] 90 0 0 0 0 0 [/Thirst]");
-    expect(dry.readBlocks(dryIn) && dry.mThirst == 0.0, "a type without thirst stays at 0");
+    expect(dry.readBlocks(dryIn), "a block of a type without thirst is read");
+    if(!dry.mDefinition->hasThirst())
+        dry.mThirst = 0.0;
+    expect(dry.mThirst == 0.0, "a type without thirst stays at 0");
 
     // Packet fields
     ODPacket packet; drunk.exportThirstStateToPacket(packet);
@@ -389,6 +393,10 @@ needs_read = creature_cpp[needs_read_start:creature_cpp.index(needs_read_end, ne
 thirst_read_start = creature_cpp.index('        if(appearanceToken == THIRST_SAVE_OPEN)')
 thirst_read_end = 'setHangoverTurns(loadedHangoverTurns);\n            continue;\n        }'
 thirst_read = creature_cpp[thirst_read_start:creature_cpp.index(thirst_read_end, thirst_read_start) + len(thirst_read_end)]
+# The definition is not resolved while a creature is read from a level or save: the reader must not call setThirst
+# (it dereferences mDefinition and crashed the loading of the tavern test levels)
+assert 'setThirst(' not in thirst_read, 'the thirst reader must not use setThirst before the definition is set'
+assert 'if(!mDefinition->hasThirst())\n            mThirst = 0.0;' in creature_cpp, 'setupDefinition must clear the thirst of a type without thirst'
 needs_write_start = creature_cpp.index('    if((mUrge > 0.0) || (mCreatureDirt > 0.0))\n        os << "\\t" << NEEDS_SAVE_OPEN')
 needs_write = creature_cpp[needs_write_start:creature_cpp.index('\n', creature_cpp.index('NEEDS_SAVE_CLOSE;', needs_write_start))]
 thirst_write_start = creature_cpp.index('    if((mThirst > 0.0) || (mTavernMood != 0.0)')
