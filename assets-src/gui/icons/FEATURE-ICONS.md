@@ -159,4 +159,7 @@ Use case: stylized-concept. Production raster GUI sprite for OpenDungeonsPlus. R
 ## SpaButton
 Built-in image generation, 2026-10-26; reference TavernButton.png; native output retained privately, downsampled to 256x256.
 
-Prompt: One painted square dungeon room button matching the detailed aged dark stone and iron frame style, restrained warm copper edge glints and tactile materials of the TavernButton reference. Hot dark brown mud pool built of rough dungeon stones, gently steaming, a folded pale linen towel over its rim, subtle orange ember seam between stones. No people, lettering or logos.
+Prompt:
+```text
+Use case: stylized-concept. Generate ONE painted square dungeon room button for OpenDungeonsPlus. Reference image supplies the exact established hand-painted detailed aged dark stone and iron frame style, restrained warm copper edge glints, tactile materials and composition. New subject: a hot dark brown mud pool built of rough dungeon stones, gently steaming, a folded pale linen towel draped over its stone rim, a subtle warm orange ember seam between rim stones. Clear full silhouette, strong readable mud pool and towel at small UI size. Frame matching reference: thin weathered square black iron border with corner rivets and cracked dark stone background. No people, no text, no letters, no symbols, no logos, no red lava pool. Original painted game artwork. Output square intended to downsample cleanly to 256x256 source.
+```
