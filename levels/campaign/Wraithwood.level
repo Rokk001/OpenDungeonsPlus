@@ -4766,8 +4766,8 @@ Monk	6
 3	Ashen6	Cultist.mesh	19	15	0	Cultist	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Ashen7	Spider.mesh	8	18	0	Spider	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	Ashen8	Spider.mesh	26	19	0	Spider	5	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Ashen9	LizardMan.mesh	14	18	0	LizardMan	5	0	max	100	0	0	none	none	nullSkillType	none	0
-3	Ashen10	LizardMan.mesh	17	12	0	LizardMan	5	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Ashen9	Lizardman.mesh	14	18	0	LizardMan	5	0	max	100	0	0	none	none	nullSkillType	none	0
+3	Ashen10	Lizardman.mesh	17	12	0	LizardMan	5	0	max	100	0	0	none	none	nullSkillType	none	0
 3	AshWorker1	Kobold.mesh	13	14	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	AshWorker2	Kobold.mesh	18	24	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
 3	AshWorker3	Kobold.mesh	17	20	0	DefaultWorker	1	0	max	100	0	0	none	none	nullSkillType	none	0
