@@ -1468,3 +1468,21 @@ assets-src/gui/icons/tiles/ItemSlotEmpty.png    AI-generated with Codex    GPLv3
 assets-src/gui/icons/tiles/TavernButton.png AI-generated with Codex GPLv3+                 Original painted foaming wooden tankard source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/BeerButton.png AI-generated with Codex  GPLv3+                  Original painted beer keg and brass tap source, 256x256, 2026-10-25
 assets-src/gui/icons/tiles/InfirmaryButton.png    AI-generated with Codex    GPLv3+    Original painted cot and crossed bandages in the project icon style, 2026-10-25; generated at native resolution and downsampled to the 256-pixel source.
+
+assets-src/rooms/ghostroom/create_models.py    AI-generated with Codex    GPLv3+    Original editable model authoring and baked-surface source, 2026-10-26
+assets-src/rooms/ghostroom/GhostCauldron.blend    AI-generated with Codex    GPLv3+    Original iron press cauldron on four clawed feet, brass pipes and a real glazed opening, 2026-10-26
+models/GhostCauldron.mesh    AI-generated with Codex    GPLv3+    Export of the original GhostCauldron Blender source; two-tile footprint, 2026-10-26
+materials/scripts/Ghost.material    AI-generated with Codex    GPLv3+    Original weathered room-object surfaces, flowing ghost glow, glass and warning-lamp pulse, 2026-10-26
+materials/textures/GhostBrass.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostGaugeFace.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostIron.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_0.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_1.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_2.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_3.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_4.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_5.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_6.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLamps_7.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostLeather.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
+materials/textures/GhostStone.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
