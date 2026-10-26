@@ -1501,3 +1501,5 @@ assets-src/rooms/ghostroom/CrystalBowl.blend    AI-generated with Codex    GPLv3
 models/CrystalBowl.mesh    AI-generated with Codex    GPLv3+    Chipped stone bowl and pedestal with actual missing rim pieces; original editable source and export, 2026-10-26
 assets-src/rooms/ghostroom/GhostHook.blend    AI-generated with Codex    GPLv3+    Forged iron wall hook, leather capture backpack and brass canister; original editable source and export, 2026-10-26
 models/GhostHook.mesh    AI-generated with Codex    GPLv3+    Forged iron wall hook, leather capture backpack and brass canister; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/GhostHookEmpty.blend    AI-generated with Codex    GPLv3+    Empty forged iron hook matching the equipped wall rack; original editable source and export, 2026-10-26
+models/GhostHookEmpty.mesh    AI-generated with Codex    GPLv3+    Empty forged iron hook matching the equipped wall rack; original editable source and export, 2026-10-26
