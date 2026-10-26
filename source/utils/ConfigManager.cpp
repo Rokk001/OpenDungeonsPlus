@@ -1991,6 +1991,12 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
             return false;
         if(!loadTilesetValues(defFile, TileVisual::toiletRoom, tileSet->configureTileValues(TileVisual::toiletRoom),*mHighMap))
             return false;
+        if(!loadTilesetValues(defFile, TileVisual::merchantRoom, tileSet->configureTileValues(TileVisual::merchantRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::herbGardenRoom, tileSet->configureTileValues(TileVisual::herbGardenRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::alchemyLabRoom, tileSet->configureTileValues(TileVisual::alchemyLabRoom),*mHighMap))
+            return false;
 
     }
 

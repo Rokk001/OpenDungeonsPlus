@@ -63,6 +63,18 @@ lines = [l.split() for l in block.group(1).splitlines() if l.strip()]
 assert [l[0] for l in lines] == ['%04d' % int(format(i, 'b')) for i in range(16)], 'the block needs the 16 masks 0000-1111'
 for words in lines:
     assert words[1] == 'Room.mesh' and words[2] == 'Toilet' + words[0], words
+# Every visual block must be consumed by the sequential loader in the shipped file order.
+config_manager = read('source/utils/ConfigManager.cpp')
+tileset_loader = config_manager[config_manager.index('bool ConfigManager::loadTilesets('):
+                               config_manager.index('bool ConfigManager::loadTilesetValues(')]
+loaded_visuals = re.findall(r'loadTilesetValues\(defFile, TileVisual::(\w+),', tileset_loader)
+assert len(loaded_visuals) == len(set(loaded_visuals)), 'duplicate tileset loader visual'
+assert set(loaded_visuals) == set(visuals[:-1]), 'tileset loader must consume every TileVisual exactly once'
+assert loaded_visuals[-4:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom']
+for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
+    block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
+    block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
+    assert block_order == loaded_visuals, 'tileset blocks must match the sequential ConfigManager loader order'
 # The materials of the pieces exist
 materials = ''.join(p.read_text(encoding='utf-8', errors='replace') for p in (root / 'materials' / 'scripts').glob('*.material'))
 for words in lines:
