@@ -69,12 +69,13 @@ public:
     //! \brief Creates client room effects for the map using the configuration directory.
     RoomAmbience(GameMap* gameMap, const std::string& configPath);
     //! \brief Releases spatial sound loops owned by this instance.
+    //! \brief Stops the spatial sound loops owned by this ambience instance.
     ~RoomAmbience();
 
     //! \brief Called every frame while the game is running
     void update(Ogre::Real timeSinceLastFrame);
 
-    //! \brief Removes every running effect and puts the moved objects back
+    //! \brief Removes every running effect, stops owned sound loops and puts the moved objects back
     void stopAll();
 
     void setMode(Mode mode);
@@ -400,10 +401,12 @@ private:
     void reconcile();
     //! \brief Plays due object clips and sounds and maintains visible looping room sounds
     //! \brief Plays due object clips and sounds, and maintains configured sound loops.
+    //! \brief Plays timed object clips and sounds, and reconciles visible looping sounds.
     void playClips();
     //! \brief Starts visible sound loops and stops loops whose targets no longer qualify.
     void updateSoundLoops();
     //! \brief Stops and releases all sound loops owned by the room ambience.
+    //! \brief Stops and forgets every spatial sound loop owned by this ambience instance.
     void stopSoundLoops();
     void updateEmitters(double timeSinceLastFrame);
     //! \brief Ends the one-shot effects of the list whose time is over
@@ -607,6 +610,7 @@ private:
     std::vector<Candidate> mClipCandidates;
     //! Time at which an object plays its next clip (kind clip)
     std::map<std::string, double> mClipTimers;
+    //! Spatial sound loop handles, keyed by object name and effect name.
     //! Sound-loop handles by object and effect, stopped when that visible effect disappears.
     //! \brief Spatial sound handles keyed by target and effect, owned until the target leaves view.
     std::map<std::string, uint32_t> mSoundLoops;

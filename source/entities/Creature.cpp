@@ -16,6 +16,7 @@
  */
 
 #include "entities/Creature.h"
+#include "entities/GhostEntity.h"
 #include "creaturemood/CreatureMoodFee.h"
 #include "creaturemood/CreatureMoodRested.h"
 #include "entities/CreatureProgression.h"
@@ -364,6 +365,7 @@ static const std::string NEEDS_SAVE_CLOSE = "[/Needs]";
 //! \brief Tag that opens the optional block of the thirst state (thirst, tavern mood, drunkenness, hangover) at the
 //! end of a saved creature, after the needs block. The blocks are read in any order.
 static const std::string THIRST_SAVE_OPEN = "[Thirst]";
+static const std::string CORPSE_CARRIER_SAVE_LABEL = "CorpseCarrier=";
 //! \brief Tag that closes the block of the thirst state.
 static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
 //! \brief The highest value of the thirst and of the drunkenness (both go from 0 to this value).
@@ -637,6 +639,7 @@ CreatureParticleEffect::~CreatureParticleEffect()
     
 }
 
+//! \brief Creates a living creature with inactive corpse timers and no worker carrier.
 Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat* seat, Ogre::Vector3 position) :
 
     MovableGameEntity        (gameMap),
@@ -665,6 +668,9 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mCorpseTurns             (0.0),
+    mDecayTurns              (-1.0),
+    mIsCarried               (false),
     mMana                    (0.0),
     mManaFromSave            (false),
     mManaRingStepNotified    (MANA_RING_STEPS),
@@ -770,6 +776,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     
 }
 
+//! \brief Initializes a creature for loading, with legacy corpse phase defaults.
 Creature::Creature(GameMap* gameMap) :
     MovableGameEntity        (gameMap),
     parkingBit               (false),
@@ -797,6 +804,9 @@ Creature::Creature(GameMap* gameMap) :
     mDigRate                 (0.0),
     mClaimRate               (0.0),
     mDeathCounter            (0),
+    mCorpseTurns             (0.0),
+    mDecayTurns              (-1.0),
+    mIsCarried               (false),
     mMana                    (0.0),
     mManaFromSave            (false),
     mManaRingStepNotified    (MANA_RING_STEPS),
@@ -965,8 +975,14 @@ void Creature::addToGameMap(GameMap* gameMap)
     getGameMap()->addActiveObject(this);
 }
 
+//! \brief Removes the creature and releases any crypt spot or delivery reservation holding its body.
 void Creature::removeFromGameMap(GameMap* gameMap)
 {
+    if(getIsOnServerMap())
+    {
+        for(Room* room : getGameMap()->getRoomsByType(RoomType::crypt))
+            static_cast<RoomCrypt*>(room)->removeCorpse(*this);
+    }
     fireEntityRemoveFromGameMap();
     removeEntityFromPositionTile();
     getGameMap()->removeCreature(this);
@@ -991,6 +1007,15 @@ void Creature::removeFromGameMap(GameMap* gameMap)
     getGameMap()->removeActiveObject(this);
 }
 
+//! \brief Restores the base visual state, then seeks a decaying body to its authoritative phase counter.
+void Creature::restoreEntityState()
+{
+    MovableGameEntity::restoreEntityState();
+    if(!getIsOnServerMap() && mDecayTurns >= 0.0 &&
+       getAnimationStateName() == EntityAnimation::rot_anim && getAnimationState() != nullptr)
+        getAnimationState()->setTimePosition(static_cast<Ogre::Real>(mDecayTurns));
+}
+
 //! \brief Describes the legacy creature fields and optional trailing appearance, skill and item data.
 std::string Creature::getCreatureStreamFormat()
 {
@@ -1001,7 +1026,8 @@ std::string Creature::getCreatureStreamFormat()
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
             "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]"
-            "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]";
+            "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]"
+            "\t[Corpse corpseTurns decayTurns /Corpse]";
 
     return format;
 }
@@ -1080,6 +1106,16 @@ void Creature::exportToStream(std::ostream& os) const
         os << "\t" << THIRST_SAVE_OPEN << " " << mThirst << " " << mTavernMood << " " << mTavernMoodTurns << " "
            << mDrunk << " " << (mVomited ? 1 : 0) << " " << mHangoverTurns << " " << THIRST_SAVE_CLOSE;
     }
+    if(!isAlive())
+    {
+        os << "\t[Corpse] " << mCorpseTurns << " " << mDecayTurns << " [/Corpse]";
+        if(mDeathCounter == std::numeric_limits<unsigned int>::max())
+            os << "\tCorpseConsumed=1";
+        else if(mDeathCounter == 0)
+            os << "\tCorpseDeathPending=1";
+        if(mIsCarried)
+            os << "\t" << CORPSE_CARRIER_SAVE_LABEL << mCorpseCarrierName;
+    }
     os.precision(precision);
 }
 
@@ -1155,8 +1191,37 @@ bool Creature::importFromStream(std::istream& is)
     // labelled mana token (see exportToStream) and the skill state marker with its tokens; each of them can also stand
     // alone when the creature has no appearance or the save is older.
     std::string appearanceToken;
+    bool corpseConsumed = false;
+    bool corpseDeathPending = false;
     while(is >> appearanceToken)
     {
+        if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size(), CORPSE_CARRIER_SAVE_LABEL) == 0)
+        {
+            mCorpseCarrierName = appearanceToken.substr(CORPSE_CARRIER_SAVE_LABEL.size());
+            continue;
+        }
+        if(appearanceToken == "CorpseDeathPending=1")
+        {
+            corpseDeathPending = true;
+            continue;
+        }
+        if(appearanceToken == "CorpseConsumed=1")
+        {
+            corpseConsumed = true;
+            continue;
+        }
+        if(appearanceToken == "[Corpse]")
+        {
+            std::string close;
+            if(!(is >> mCorpseTurns >> mDecayTurns >> close) || close != "[/Corpse]" ||
+               !std::isfinite(mCorpseTurns) || !std::isfinite(mDecayTurns) ||
+               mCorpseTurns < 0.0 || mDecayTurns < -1.0)
+                return false;
+            // Loaded corpses must never repeat the death drops, blood, notice or ghost.
+            if(mHpString != "max" && Helper::toDouble(mHpString) <= 0.0)
+                mDeathCounter = 1;
+            continue;
+        }
         if(appearanceToken == "[Infirmary]")
         {
             std::string close;
@@ -1260,6 +1325,14 @@ bool Creature::importFromStream(std::istream& is)
         }
     }
 
+    // Apply last so arbitrary tag order preserves unprocessed deaths and consumed bodies exactly.
+    if(mHpString != "max" && Helper::toDouble(mHpString) <= 0.0)
+    {
+        if(corpseConsumed)
+            mDeathCounter = std::numeric_limits<unsigned int>::max();
+        else if(corpseDeathPending)
+            mDeathCounter = 0;
+    }
     return true;
 }
 
@@ -1962,7 +2035,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << CreatureAppearanceLogic::toToken(mAppearance);
     // The skill state and carried gold are followed by the visible item slots and active owner contributions, then
     // the needs (urge and creature dirt) for the stats window, then the thirst state (thirst, tavern mood,
-    // drunkenness, hangover) as the last fields
+    // drunkenness, hangover), followed by corpse lie and decay turns
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
@@ -1970,6 +2043,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mUrge;
     os << mCreatureDirt;
     exportThirstStateToPacket(os);
+    os << mCorpseTurns << mDecayTurns;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2043,6 +2117,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
+    OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2418,12 +2493,12 @@ void Creature::doUpkeep()
             mInfirmaryMood = 0.0;
     }
 
-    // if creature is not on map (picked up or being carried), we do nothing
-    if(!getIsOnMap())
+    // Off-map living creatures stay idle; delivered bodies still advance their own corpse phases.
+    if(!getIsOnMap() && isAlive())
         return;
 
     // The champion costs mana and leaves when the owner cannot pay it
-    if(getDefinition()->isChampion() && handleChampionUpkeep())
+    if(isAlive() && getDefinition()->isChampion() && handleChampionUpkeep())
         return;
 
     // A creature that is working is not frustrated anymore
@@ -2501,33 +2576,76 @@ void Creature::doUpkeep()
     // Handle creature death
     if (!isAlive())
     {
-        // The corpse dirties the tile it lies on
-        if(getIsOnServerMap())
+        // A consumed body is removed on the next upkeep, without a decay reward.
+        if(mDeathCounter == std::numeric_limits<unsigned int>::max())
+        {
+            removeFromGameMap();
+            deleteYourself();
+            return;
+        }
+        // The corpse dirties the tile it lies on, never the tile under a carrying worker.
+        if(getIsOnServerMap() && !mIsCarried)
             dirtyTileByCorpse();
 
-        // Let the creature lay dead on the ground for a few turns before removing it from the GameMap.
-        if (mDeathCounter == 0 )
+        if(mDeathCounter == 0)
         {
             OD_LOG_INF("Creature=" + getName() + " RIP");
-
             dropCarriedEquipment();
 
-            // The fight leaves blood on the tile where the creature fell
+            // The fight leaves blood on the tile where the creature fell.
             if(getIsOnServerMap() && (getPositionTile() != nullptr))
                 DirtPileEntity::createOnTile(getGameMap(), getPositionTile(), DirtPileKind::blood, getDefinition()->getClassName());
 
             if(getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
                 getSeat()->getPlayer()->notifyCreatureKilled(*this);
+            if(getIsOnServerMap() && !getDefinition()->isWorker())
+            {
+                GhostEntity* ghost = new GhostEntity(getGameMap(), *this);
+                ghost->addToGameMap();
+                ghost->createMesh();
+                ghost->setPosition(ghost->getPosition());
+            }
+            mDeathCounter = 1;
         }
-        else if ((getDefinition()->isWorker() && mDeathCounter == 1) || mDeathCounter >= ConfigManager::getSingleton().getCreatureDeathCounter())
+        if(getDefinition()->isWorker())
         {
-            // Remove the creature from the game map and into the deletion queue, it will be deleted
-            // when it is safe, i.e. all other pointers to it have been wiped from the program.
+            if(getIsOnServerMap() && getPositionTile() != nullptr)
+                Spell::fireSpellEffect(*getPositionTile(), "WorkerVanish", "");
+            // Worker bodies never remain on the map, even for one extra upkeep.
             removeFromGameMap();
             deleteYourself();
+            return;
         }
-
-        ++mDeathCounter;
+        if(!mIsCarried)
+        {
+            mCorpseTurns += 1.0;
+            ConfigManager& config = ConfigManager::getSingleton();
+            if(mDecayTurns < 0.0 && mCorpseTurns >= config.getCorpseLieSeconds() * ODApplication::turnsPerSecond)
+            {
+                mDecayTurns = 0.0;
+                mNeedFireRefresh = true;
+                clearDestinations(EntityAnimation::rot_anim, false, false);
+                setAnimationState(EntityAnimation::rot_anim, false, Ogre::Vector3::ZERO, false);
+            }
+            if(mDecayTurns >= 0.0)
+            {
+                mDecayTurns += 1.0;
+                if(mDecayTurns >= config.getCorpseDecaySeconds() * ODApplication::turnsPerSecond)
+                {
+                    Tile* tile = getPositionTile();
+                    Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
+                    if(room != nullptr && room->getType() == RoomType::crypt)
+                    {
+                        static_cast<RoomCrypt*>(room)->notifyCorpseDecayed(*this);
+                        return;
+                    }
+                    else if(tile != nullptr)
+                        tile->addDirt(Tile::MAX_DIRT);
+                    removeFromGameMap();
+                    deleteYourself();
+                }
+            }
+        }
         return;
     }
 
@@ -3026,6 +3144,9 @@ bool Creature::handleIdleAction()
         pushAction(Utils::make_unique<CreatureActionPickupItem>(*this));
         return true;
     }
+
+    if(CreatureMerchantAI::decideSoulCrystal(*this))
+        return true;
 
     // We check if there is a go to war spell reachable
     std::vector<Spell*> callToWars = getGameMap()->getSpellsBySeatAndType(getSeat(), SpellType::callToWar);
@@ -4813,7 +4934,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     os << mMana;
     // The skill state and carried gold are followed by the visible item slots and active owner contributions, then
     // the needs (urge and creature dirt) as the last fields, followed by the thirst state: only the own seat sees
-    // them, every other seat gets 0 for all
+    // them, every other seat gets 0 for all. The final two fields are public corpse phase counters.
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
@@ -4834,6 +4955,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         os << 0.0;
         os << 0.0;
     }
+    os << mCorpseTurns << mDecayTurns;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -4945,6 +5067,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
+    OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -7406,6 +7529,7 @@ bool Creature::isAttackable(Tile* tile, Seat* seat) const
     return true;
 }
 
+//! \brief Preserves living patient priorities and refuses workers, decaying or consumed bodies.
 EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 {
     // Workers cannot be carried to crypt/prison
@@ -7423,9 +7547,10 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
         return EntityCarryType::koCreature;
     }
 
-    // Dead creatures are carryable
+    // Only an intact, unconsumed body can still be carried.
     if(getHP() <= 0.0)
-        return EntityCarryType::corpse;
+        return (mDecayTurns < 0.0 && mDeathCounter != std::numeric_limits<unsigned int>::max()) ?
+            EntityCarryType::corpse : EntityCarryType::notCarryable;
 
     // A hurt creature of the carrier's seat close enough is pulled to its bed (the worker takes it by the legs,
     // see CreatureActionCarryEntity: it is not carried, but it takes the place of a carried thing in the search)
@@ -7560,13 +7685,19 @@ bool Creature::isHostileNear(double radius) const
     return false;
 }
 
+//! \brief Pauses corpse time while the worker carries the creature.
 void Creature::notifyEntityCarryOn(Creature* carrier)
 {
+    mIsCarried = true;
+    mCorpseCarrierName = carrier->getName();
     removeEntityFromPositionTile();
 }
 
+//! \brief Resumes corpse time at the worker delivery or interruption position.
 void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
 {
+    mIsCarried = false;
+    mCorpseCarrierName.clear();
     mPosition = position;
     addEntityToPositionTile();
 }
@@ -8008,6 +8139,12 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             mHp = Helper::toDouble(mHpString);
 
         computeCreatureOverlayHealthValue();
+        if(!isAlive() && mDeathCounter != 0)
+        {
+            const std::string& animation = mDecayTurns >= 0.0 ? EntityAnimation::rot_anim : EntityAnimation::die_anim;
+            clearDestinations(animation, false, false);
+            setAnimationState(animation, false, Ogre::Vector3::ZERO, false);
+        }
 
         // The mana comes from the save, or the pool is full (old saves and creatures from a level file)
         if(mManaFromSave)
@@ -9392,7 +9529,8 @@ void Creature::flee()
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
 }
 
-void Creature::fleeFromTile(Tile* fearTile, double nbTurns)
+//! \brief Starts fear flight, optionally playing the ghost flinch before moving.
+void Creature::fleeFromTile(Tile* fearTile, double nbTurns, bool scaredPose)
 {
     // Fear breaks the possession of the creature
     if(isPossessed())
@@ -9402,7 +9540,9 @@ void Creature::fleeFromTile(Tile* fearTile, double nbTurns)
     fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::scared), 1, 0, false);
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
-    pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns));
+    pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns, scaredPose));
+    if(scaredPose)
+        setAnimationState("Scared", false, Ogre::Vector3::ZERO, false);
 }
 
 //! \brief Applies a resisted temporary stun while retaining fractional duration.
@@ -9529,19 +9669,18 @@ Tile* Creature::getWalkDestinationTile() const
     return getGameMap()->getTile(Helper::round(destination.x), Helper::round(destination.y));
 }
 
+//! \brief Reserves an intact dead body for Raise Dead and removes it on the next upkeep.
 bool Creature::takeCorpse()
 {
     if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker())
         return false;
 
-    // The counter is 0 until the death was handled (items dropped, owner told). Once the body is gone
-    // (it is removed from the map when the counter is over), it cannot be raised
-    uint32_t deathCounterMax = ConfigManager::getSingleton().getCreatureDeathCounter();
-    if((mDeathCounter == 0) || (mDeathCounter >= deathCounterMax))
+    // The counter is 0 until death drops and notices have run; consumption is deferred safely.
+    if(mDeathCounter == 0 || mDeathCounter == std::numeric_limits<unsigned int>::max() ||
+       mDecayTurns >= 0.0 || mIsCarried)
         return false;
 
-    // The body is removed by the next upkeep
-    mDeathCounter = deathCounterMax;
+    mDeathCounter = std::numeric_limits<unsigned int>::max();
     return true;
 }
 

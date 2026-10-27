@@ -1,0 +1,211 @@
+// Original weathered surfaces and translucent ectoplasm for the ghost room.
+
+material GhostIron
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.65 0.65 0.65
+            diffuse 0.85 0.85 0.85 1
+            specular 0.24 0.22 0.18 1 18
+            texture_unit
+            {
+                texture GhostIron.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostBrass
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.65 0.65 0.65
+            diffuse 0.85 0.85 0.85 1
+            specular 0.24 0.22 0.18 1 18
+            texture_unit
+            {
+                texture GhostBrass.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostLeather
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.65 0.65 0.65
+            diffuse 0.85 0.85 0.85 1
+            specular 0.025 0.025 0.025 1 4
+            texture_unit
+            {
+                texture GhostLeather.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostStone
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.65 0.65 0.65
+            diffuse 0.85 0.85 0.85 1
+            specular 0.025 0.025 0.025 1 4
+            texture_unit
+            {
+                texture GhostStone.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostGaugeFace
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.65 0.65 0.65
+            diffuse 0.85 0.85 0.85 1
+            specular 0.025 0.025 0.025 1 4
+            texture_unit
+            {
+                texture GhostGaugeFace.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// The flowing noise and deliberately translucent colour replace the creature's own surfaces.
+material GhostGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.45 1.0 0.55 0.45
+            emissive 0.25 0.8 0.35
+            texture_unit
+            {
+                texture GhostNoise.png
+                tex_address_mode wrap
+                scroll_anim 0 0.05
+            }
+        }
+    }
+}
+
+// Two UV halves keep the red and green lenses separate while their brightness pulses.
+material GhostLamps
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            emissive 1 1 1
+            texture_unit
+            {
+                anim_texture GhostLamps_0.png GhostLamps_1.png GhostLamps_2.png GhostLamps_3.png GhostLamps_4.png GhostLamps_5.png GhostLamps_6.png GhostLamps_7.png 2.0
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostWindow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.15 0.65 0.26 0.28
+            ambient 0.15 0.65 0.26
+            emissive 0.04 0.22 0.07
+            specular 0.22 0.30 0.24 1 24
+        }
+    }
+}
+
+material GhostEctoplasm
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.25 0.95 0.38 0.90
+            ambient 0.25 0.95 0.38
+            emissive 0.22 0.70 0.30
+            specular 0.22 0.30 0.24 1 24
+        }
+    }
+}
+
+material GhostCrystal
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.47 0.88 0.59 0.70
+            ambient 0.47 0.88 0.59
+            emissive 0.10 0.26 0.14
+            specular 0.22 0.30 0.24 1 24
+        }
+    }
+}
+
+material GhostCrystalCore
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.76 1.0 0.82 1.0
+            ambient 0.76 1.0 0.82
+            emissive 0.60 0.90 0.65
+            specular 0.22 0.30 0.24 1 24
+        }
+    }
+}

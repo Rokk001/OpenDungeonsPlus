@@ -1,0 +1,42 @@
+// The hunt renderer supplies the two moving endpoints and jagged billboard-chain vertices.
+material GhostBeam
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend src_alpha one
+            depth_write off
+            cull_hardware none
+            diffuse vertexcolour
+            texture_unit
+            {
+                texture RoomAmbGlow.png
+                tex_address_mode clamp
+            }
+        }
+    }
+}
+
+// Narrow pale fragments reuse the existing neutral spark sprite and are tinted by the emitter.
+material GhostShard
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend src_alpha one
+            depth_write off
+            diffuse vertexcolour
+            texture_unit
+            {
+                texture RoomAmbSpark.png
+                tex_address_mode clamp
+            }
+        }
+    }
+}
