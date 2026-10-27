@@ -29,7 +29,7 @@ The default output is `build/portrait-export/`. To select the installed librarie
 and an output folder:
 
 ```powershell
-./scripts/win32/export-creature-portraits.ps1 -DependencyPrefix 'C:/dev/od-deps/install' -OutputDirectory 'build/portrait previews'
+./scripts/win32/export-creature-portraits.ps1 -DependencyPrefix '%USERPROFILE%/build-deps/install' -OutputDirectory 'build/portrait previews'
 ```
 
 The C++ entry point and build wrapper are tracked source; generated executables,
