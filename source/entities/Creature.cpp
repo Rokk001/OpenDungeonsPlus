@@ -364,6 +364,7 @@ static const std::string NEEDS_SAVE_CLOSE = "[/Needs]";
 //! \brief Tag that opens the optional block of the thirst state (thirst, tavern mood, drunkenness, hangover) at the
 //! end of a saved creature, after the needs block. The blocks are read in any order.
 static const std::string THIRST_SAVE_OPEN = "[Thirst]";
+static const std::string CORPSE_CARRIER_SAVE_LABEL = "CorpseCarrier=";
 //! \brief Tag that closes the block of the thirst state.
 static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
 //! \brief The highest value of the thirst and of the drunkenness (both go from 0 to this value).
@@ -1111,6 +1112,8 @@ void Creature::exportToStream(std::ostream& os) const
             os << "\tCorpseConsumed=1";
         else if(mDeathCounter == 0)
             os << "\tCorpseDeathPending=1";
+        if(mIsCarried)
+            os << "\t" << CORPSE_CARRIER_SAVE_LABEL << mCorpseCarrierName;
     }
     os.precision(precision);
 }
@@ -1191,6 +1194,11 @@ bool Creature::importFromStream(std::istream& is)
     bool corpseDeathPending = false;
     while(is >> appearanceToken)
     {
+        if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size(), CORPSE_CARRIER_SAVE_LABEL) == 0)
+        {
+            mCorpseCarrierName = appearanceToken.substr(CORPSE_CARRIER_SAVE_LABEL.size());
+            continue;
+        }
         if(appearanceToken == "CorpseDeathPending=1")
         {
             corpseDeathPending = true;
@@ -7670,6 +7678,7 @@ bool Creature::isHostileNear(double radius) const
 void Creature::notifyEntityCarryOn(Creature* carrier)
 {
     mIsCarried = true;
+    mCorpseCarrierName = carrier->getName();
     removeEntityFromPositionTile();
 }
 
@@ -7677,6 +7686,7 @@ void Creature::notifyEntityCarryOn(Creature* carrier)
 void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
 {
     mIsCarried = false;
+    mCorpseCarrierName.clear();
     mPosition = position;
     addEntityToPositionTile();
 }

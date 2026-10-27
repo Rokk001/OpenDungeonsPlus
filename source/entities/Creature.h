@@ -1525,6 +1525,10 @@ public:
     //! \brief Returns whether a worker carries the body, pausing its lie countdown.
     bool isCorpseCarried() const
     { return mIsCarried; }
+
+    //! \brief Returns the saved or current worker name used to restore a corpse carry.
+    const std::string& getCorpseCarrierName() const
+    { return mCorpseCarrierName; }
     
     void showOutliner();
 
@@ -1696,6 +1700,8 @@ private:
     double          mDecayTurns;
     //! \brief Whether a worker currently carries this creature.
     bool            mIsCarried;
+    //! \brief Worker name saved with a carried body and rebound by its reserved crypt after loading.
+    std::string     mCorpseCarrierName;
     //! \brief Current mana. Starts full, regenerates every turn, is saved and sent to the clients
     double          mMana;
     //! \brief True when the mana was read from a save, so the creature does not start with a full pool

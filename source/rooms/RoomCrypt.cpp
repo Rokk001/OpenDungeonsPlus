@@ -18,6 +18,7 @@
 #include "rooms/RoomCrypt.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
+#include "creatureaction/CreatureActionCarryEntity.h"
 
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
@@ -34,6 +35,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/MakeUnique.h"
 
 #include <cmath>
 
@@ -180,7 +182,7 @@ void RoomCrypt::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
     if(place != ActiveSpotPlace::activeSpotCenter)
         return;
 
-    auto it = mRottingCreatures.find(tile);
+    std::map<Tile*, Creature*>::iterator it = mRottingCreatures.find(tile);
     if(it == mRottingCreatures.end())
         return;
     Creature* corpse = it->second;
@@ -238,7 +240,7 @@ Tile* RoomCrypt::getCorpseSpot(const Creature& creature) const
     Tile* tile = creature.getPositionTile();
     if(creature.isAlive() || creature.isCorpseCarried() || tile == nullptr || tile->getCoveringRoom() != this)
         return nullptr;
-    for(const auto& spot : mRottingCreatures)
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
     {
         if(spot.second == &creature)
             return spot.first;
@@ -251,7 +253,7 @@ void RoomCrypt::removeCorpse(Creature& creature)
 {
     if(getCorpseSpot(creature) != nullptr)
         creature.addEntityToPositionTile();
-    for(auto& spot : mRottingCreatures)
+    for(std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
     {
         if(spot.second == &creature)
             spot.second = nullptr;
@@ -329,7 +331,7 @@ bool RoomCrypt::hasCarryEntitySpot(GameEntity* carriedEntity)
     if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
         return false;
 
-    for(auto& p : mRottingCreatures)
+    for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
     {
         if(p.second == nullptr && getDeliveryTile(p.first) != nullptr)
             return true;
@@ -349,7 +351,12 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
     Creature* creature = static_cast<Creature*>(carriedEntity);
     if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
         return nullptr;
-    for(auto& p : mRottingCreatures)
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+    {
+        if(spot.second == creature)
+            return getDeliveryTile(spot.first);
+    }
+    for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
     {
         if(p.second == nullptr)
         {
@@ -366,7 +373,7 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
 //! \brief Confirms delivery without an independent rot timer, or releases an interrupted delivery.
 void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
-    for(auto& p : mRottingCreatures)
+    for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
     {
         if(p.second == carriedEntity)
         {
@@ -422,7 +429,7 @@ void RoomCrypt::exportToStream(std::ostream& os) const
     for(unsigned int level : mCorpseLevels)
         os << " " << level;
     os << "\nCryptSpots " << mRottingCreatures.size() << "\n";
-    for(const auto& spot : mRottingCreatures)
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
         os << spot.first->getX() << " " << spot.first->getY() << " "
            << (spot.second == nullptr ? "none" : spot.second->getName()) << "\n";
 }
@@ -476,18 +483,29 @@ bool RoomCrypt::importFromStream(std::istream& is)
 void RoomCrypt::restoreInitialEntityState()
 {
     Room::restoreInitialEntityState();
-    for(const auto& saved : mCorpseSpotNames)
+    for(const std::pair<const std::pair<int, int>, std::string>& saved : mCorpseSpotNames)
     {
         Tile* tile = getGameMap()->getTile(saved.first.first, saved.first.second);
-        auto spot = mRottingCreatures.find(tile);
+        std::map<Tile*, Creature*>::iterator spot = mRottingCreatures.find(tile);
         if(spot == mRottingCreatures.end() || saved.second == "none")
             continue;
         Creature* creature = getGameMap()->getCreature(saved.second);
         if(creature == nullptr || creature->isAlive() || creature->getDefinition()->isWorker())
             continue;
         spot->second = creature;
-        if(getCorpseSpot(*creature) != nullptr)
+        if(creature->getCorpseCarrierName().empty() && getCorpseSpot(*creature) != nullptr)
             creature->removeEntityFromPositionTile();
     }
     mCorpseSpotNames.clear();
+    // All occupants are rebound before a restored carry asks for its existing reservation.
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+    {
+        Creature* creature = spot.second;
+        if(creature == nullptr || creature->getCorpseCarrierName().empty())
+            continue;
+        Creature* carrier = getGameMap()->getCreature(creature->getCorpseCarrierName());
+        if(carrier != nullptr && carrier->isAlive() && carrier->getDefinition()->isWorker() &&
+           carrier->getCarriedEntity() == nullptr)
+            carrier->pushAction(Utils::make_unique<CreatureActionCarryEntity>(*carrier, *creature, *this));
+    }
 }
