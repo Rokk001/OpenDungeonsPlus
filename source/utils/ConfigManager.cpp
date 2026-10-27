@@ -88,6 +88,18 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mClientConnectionTimeout(5000),
     mBaseSpawnPoint(10),
     mCreatureDeathCounter(10),
+    mGhostLifetimeSeconds(0.0),
+    mGhostFloatSpeed(0.0),
+    mGhostWanderRadius(0.0),
+    mGhostAiGoldPerResearchPoint(0.0),
+    mGhostAiGoldPerXp(0.0),
+    mSoulCrystalPrice(0.0),
+    mSoulCrystalBreakBelow(0.0),
+    mSoulCrystalNormalXpPerSecond(0.0),
+    mSoulCrystalHeroRareStart(0.0),
+    mSoulCrystalHeroRareEnd(0.0),
+    mCorpseLieSeconds(0.0),
+    mCorpseDecaySeconds(0.0),
     mMaxCreaturesPerSeatAbsolute(30),
     mMaxCreaturesPerSeatDefault(10),
     mCreaturesPerPortal(5),
@@ -701,6 +713,74 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             configFile >> nextParam;
             mClientConnectionTimeout = Helper::toUInt32(nextParam);
             // Not mandatory
+        }
+
+        if(nextParam == "GhostLifetimeSeconds")
+        {
+            configFile >> nextParam;
+            mGhostLifetimeSeconds = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "GhostFloatSpeed")
+        {
+            configFile >> nextParam;
+            mGhostFloatSpeed = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "GhostWanderRadius")
+        {
+            configFile >> nextParam;
+            mGhostWanderRadius = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "GhostAiGoldPerResearchPoint")
+        {
+            configFile >> nextParam;
+            mGhostAiGoldPerResearchPoint = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "GhostAiGoldPerXp")
+        {
+            configFile >> nextParam;
+            mGhostAiGoldPerXp = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalPrice")
+        {
+            configFile >> nextParam;
+            mSoulCrystalPrice = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalBreakBelow")
+        {
+            configFile >> nextParam;
+            mSoulCrystalBreakBelow = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalNormalXpPerSecond")
+        {
+            configFile >> nextParam;
+            mSoulCrystalNormalXpPerSecond = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalHeroRareStart")
+        {
+            configFile >> nextParam;
+            mSoulCrystalHeroRareStart = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalHeroRareEnd")
+        {
+            configFile >> nextParam;
+            mSoulCrystalHeroRareEnd = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "CorpseLieSeconds")
+        {
+            configFile >> nextParam;
+            mCorpseLieSeconds = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "CorpseDecaySeconds")
+        {
+            configFile >> nextParam;
+            mCorpseDecaySeconds = Helper::toDouble(nextParam);
         }
 
         if(nextParam == "CreatureDeathCounter")
@@ -2060,6 +2140,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
         if(!loadTilesetValues(defFile, TileVisual::tavernRoom, tileSet->configureTileValues(TileVisual::tavernRoom),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::infirmaryRoom, tileSet->configureTileValues(TileVisual::infirmaryRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::ghostRoom, tileSet->configureTileValues(TileVisual::ghostRoom),*mHighMap))
             return false;
 
     }

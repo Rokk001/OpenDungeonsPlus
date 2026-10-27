@@ -25,6 +25,9 @@
 #include "modes/InputCommand.h"
 #include "modes/InputManager.h"
 #include "network/ODClient.h"
+#include "network/ODPacket.h"
+#include <istream>
+#include <ostream>
 #include "spells/SpellManager.h"
 #include "utils/ConfigManager.h"
 #include "game/SkillManager.h"
@@ -72,7 +75,8 @@ static SpellRegister reg(new SpellEyeEvilFactory);
 
 SpellEyeEvil::SpellEyeEvil(GameMap* gameMap) :
     Spell(gameMap, SpellManager::getSpellNameFromSpellType(getSpellType()), "FlyingSkull", 0.0,
-        ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilNbTurns"))
+        ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilNbTurns")),
+    mFreeMode(false), mFreeRadius(0), mFreeTurns(0)
 {
     mPrevAnimationState = "Triggered";
     mPrevAnimationStateLoop = true;
@@ -82,10 +86,10 @@ SpellEyeEvil::~SpellEyeEvil()
 {
 }
 
-//! \brief Reveals the tiles around the eye; the radius follows the eye of evil research.
+//! \brief Reveals the persisted base radius for a free eye, or the researched ordinary spell radius.
 void SpellEyeEvil::computeVisibleTiles()
 {
-    uint32_t radius = static_cast<uint32_t>(std::round(SkillManager::getResearchValue(getSeat(), SkillType::spellEyeEvil,
+    uint32_t radius = mFreeMode ? mFreeRadius : static_cast<uint32_t>(std::round(SkillManager::getResearchValue(getSeat(), SkillType::spellEyeEvil,
         ConfigManager::getSingleton().getSpellConfigDouble("EyeEvilRadiusTiles"), ResearchEffect::Radius)));
     Tile* posTile = getPositionTile();
     if(posTile == nullptr)
@@ -97,6 +101,83 @@ void SpellEyeEvil::computeVisibleTiles()
     std::vector<Tile*> tiles = getGameMap()->circularRegion(posTile->getX(), posTile->getY(), radius);
     for(Tile* tile : tiles)
         tile->notifyVision(getSeat());
+}
+
+//! \brief Keeps the free-reveal save counter synchronized with the ordinary spell lifetime.
+void SpellEyeEvil::doUpkeep()
+{
+    Spell::doUpkeep();
+    if(mFreeMode && mFreeTurns > 0)
+        --mFreeTurns;
+}
+
+//! \brief Spawns a free reveal with the base radius and no research or mana transaction.
+SpellEyeEvil* SpellEyeEvil::spawnFree(GameMap* map, Seat* seat, Tile* tile, int32_t turns)
+{
+    if(map == nullptr || seat == nullptr || tile == nullptr)
+        return nullptr;
+    SpellEyeEvil* eye = new SpellEyeEvil(map);
+    eye->mFreeMode = true;
+    eye->mFreeRadius = ConfigManager::getSingleton().getSpellConfigUInt32("EyeEvilRadiusTiles");
+    eye->mFreeTurns = turns;
+    eye->setDuration(turns);
+    eye->setSeat(seat);
+    eye->addToGameMap();
+    eye->createMesh();
+    eye->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+        static_cast<Ogre::Real>(tile->getY()), 3.0f));
+    return eye;
+}
+
+//! \brief Saves the optional free mode and exact remaining lifetime.
+void SpellEyeEvil::exportToStream(std::ostream& stream) const
+{
+    Spell::exportToStream(stream);
+    if(mFreeMode)
+        stream << " [FreeEye] " << mFreeRadius << ' ' << mFreeTurns << " [/FreeEye]";
+}
+
+//! \brief Restores free reveals while preserving legacy ordinary eye records.
+bool SpellEyeEvil::importFromStream(std::istream& stream)
+{
+    if(!Spell::importFromStream(stream))
+        return false;
+    const std::streampos position = stream.tellg();
+    std::string tag;
+    if(stream >> tag)
+    {
+        if(tag == "[FreeEye]")
+        {
+            if(!(stream >> mFreeRadius >> mFreeTurns >> tag) || tag != "[/FreeEye]")
+                return false;
+            mFreeMode = true;
+            setDuration(mFreeTurns);
+        }
+        else
+            stream.seekg(position);
+    }
+    else
+    {
+        stream.clear();
+        stream.seekg(position);
+    }
+    return true;
+}
+
+//! \brief Appends free-reveal presentation and lifetime to the common eye packet.
+void SpellEyeEvil::exportToPacket(ODPacket& packet, const Seat* seat) const
+{
+    Spell::exportToPacket(packet, seat);
+    packet << mFreeMode << mFreeRadius << mFreeTurns;
+}
+
+//! \brief Reads the symmetric free-reveal fields and restores its exact duration.
+void SpellEyeEvil::importFromPacket(ODPacket& packet)
+{
+    Spell::importFromPacket(packet);
+    OD_ASSERT_TRUE(packet >> mFreeMode >> mFreeRadius >> mFreeTurns);
+    if(mFreeMode)
+        setDuration(mFreeTurns);
 }
 
 void SpellEyeEvil::checkSpellCast(GameMap* gameMap, const InputManager& inputManager, InputCommand& inputCommand)
@@ -167,10 +248,15 @@ bool SpellEyeEvil::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     return true;
 }
 
+//! \brief Loads only a valid ordinary or free eye record.
 Spell* SpellEyeEvil::getSpellFromStream(GameMap* gameMap, std::istream &is)
 {
     SpellEyeEvil* spell = new SpellEyeEvil(gameMap);
-    spell->importFromStream(is);
+    if(!spell->importFromStream(is))
+    {
+        delete spell;
+        return nullptr;
+    }
     return spell;
 }
 

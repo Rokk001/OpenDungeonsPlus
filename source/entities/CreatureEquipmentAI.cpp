@@ -7,6 +7,11 @@
 #include "entities/Weapon.h"
 #include "gamemap/GameMap.h"
 #include "game/ItemDrops.h"
+#include "game/Player.h"
+#include "game/Seat.h"
+#include "network/ODServer.h"
+#include "network/ServerNotification.h"
+#include "spells/Spell.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
@@ -51,7 +56,7 @@ void dropCreatureItem(Creature& creature, std::unique_ptr<ItemInstance> item)
 //! \brief Resolves body slots or the matching spawn-weapon hand without allowing new weapon classes.
 int32_t Creature::getItemEquipmentSlot(const ItemInstance& item) const
 {
-    if(!item.mPotionId.empty())
+    if(item.mSoulCrystal || !item.mPotionId.empty())
         return -1;
     const ItemDefinition* definition = getGameMap()->getItemDefinition(item.mDefinitionId);
     if(definition == nullptr)
@@ -83,9 +88,11 @@ bool Creature::isItemEquippable(const ItemInstance& item) const
     return getItemEquipmentSlot(item) >= 0 && getLevel() >= item.getLevelMin(getGameMap());
 }
 
-//! \brief Scores bonuses with the configured kind weights, path weights and quality rank.
+//! \brief Scores equipment bonuses and marks worthwhile crystals as wanted.
 double Creature::rateItem(const ItemInstance& item) const
 {
+    if(item.mSoulCrystal)
+        return wantsSoulCrystal(item.getPrice(getGameMap())) ? 1.0 : 0.0;
     if(!item.mPotionId.empty() || item.mQuality == Quality::poor)
         return 0.0;
     const ItemDefinition* definition = getGameMap()->getItemDefinition(item.mDefinitionId);
@@ -194,7 +201,8 @@ void Creature::decideEquipment()
     for(size_t index = 0; index < mInventory.size(); ++index)
     {
         ItemInstance* item = mInventory[index].get();
-        if(item != nullptr && item->mPotionId.empty() && getLevel() >= item->getLevelMin(getGameMap()))
+        if(item != nullptr && item->mPotionId.empty() && getLevel() >= item->getLevelMin(getGameMap())
+            && (!item->mSoulCrystal || !wantsSoulCrystal(item->getPrice(getGameMap()))))
             dropCreatureItem(*this, setInventorySlot(index, std::unique_ptr<ItemInstance>()));
     }
 }
@@ -236,4 +244,35 @@ void Creature::unregisterHeldEpics()
         if(item.get() != nullptr) getGameMap()->unregisterEpic(*item);
     for(const std::unique_ptr<ItemInstance>& item : mInventory)
         if(item.get() != nullptr) getGameMap()->unregisterEpic(*item);
+}
+
+//! \brief Compares the time saved by a full XP step with the creature's payday earning time.
+bool Creature::wantsSoulCrystal(double price) const
+{
+    if(getLevel() >= MAX_LEVEL) return false;
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double wage = mDefinition->getFee(getLevel()) / static_cast<double>(config.getTimePayDay());
+    return wage > 0.0 && mDefinition->getXPNeededWhenLevel(getLevel()) / config.getSoulCrystalNormalXpPerSecond() >= price / wage;
+}
+
+//! \brief Grants the normal level transition and destroys the consumed crystal.
+bool Creature::breakSoulCrystal(std::unique_ptr<ItemInstance>& item)
+{
+    if(item.get() == nullptr || !item->mSoulCrystal || getLevel() >= MAX_LEVEL) return false;
+    setLevel(getLevel() + 1);
+    item.reset();
+    itemsChanged();
+    Tile* tile = getPositionTile();
+    if(tile != nullptr)
+    {
+        Spell::fireSpellEffect(*tile, "SoulCrystalBreak", "");
+        for(Seat* seat : tile->getSeatsWithVision())
+            if(seat->getPlayer() != nullptr && seat->getPlayer()->getIsHuman())
+            {
+                ServerNotification* sound = new ServerNotification(ServerNotificationType::playSpatialSound, seat->getPlayer());
+                sound->mPacket << std::string("Rooms/GhostRoom/CrystalRing") << tile->getX() << tile->getY();
+                ODServer::getSingleton().queueServerNotification(sound);
+            }
+    }
+    return true;
 }

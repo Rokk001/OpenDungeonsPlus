@@ -130,7 +130,9 @@ enum class ClientNotificationType
     //! Subscribe to patient updates: bool open.
     askInfirmaryWindow,
     //! Set keeper preferences: int32_t payer, int32_t threshold, bool healOn.
-    askInfirmarySettings
+    askInfirmarySettings,
+    //! Ghost controls: int32_t x, y, uint32_t product, bool revive, bool isSet.
+    askGhostRoomSettings
 };
 
 //! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.

@@ -24,6 +24,8 @@
 #include "network/ODPacket.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "ODApplication.h"
+#include <OgreSubEntity.h>
 #include "gamemap/GameMap.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
@@ -121,6 +123,14 @@ void BuildingObject::addParticleEffect(const std::string& effectScript, uint32_t
 void BuildingObject::createMeshLocal(NodeType type)
 {
     RenderedMovableEntity::createMeshLocal(type);
+    if(!getIsOnServerMap() && getMeshName()=="GhostCauldron" && getEntityNode()!=nullptr)
+    {
+        Ogre::Entity* fill=RenderManager::getSingleton().getSceneManager()->createEntity(getName()+"_GhostFill","GhostCauldronFill.mesh");
+        fill->setCastShadows(false);fill->setQueryFlags(0);
+        mGhostFillNode=getEntityNode()->createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.69f,0.35f));
+        mGhostFillNode->attachObject(fill);
+        mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,mGhostFill)));
+    }
     if(!getIsOnServerMap() && mItemBagQuality >= 0)
         RenderManager::getSingleton().rrRefreshItemBagAppearance(this, static_cast<Quality>(mItemBagQuality), mItemBagSealed);
 }
@@ -131,6 +141,7 @@ void BuildingObject::exportToPacket(ODPacket& os, const Seat* seat) const
     RenderedMovableEntity::exportToPacket(os, seat);
     os << mFurnitureScale.x << mFurnitureScale.y;
     os << mItemBagQuality << mItemBagSealed;
+    os << mGhostFill << mGhostAlarm;
 }
 
 //! \brief Reads the furniture footprint and decorative merchant bag properties.
@@ -139,6 +150,7 @@ void BuildingObject::importFromPacket(ODPacket& is)
     RenderedMovableEntity::importFromPacket(is);
     OD_ASSERT_TRUE(is >> mFurnitureScale.x >> mFurnitureScale.y);
     OD_ASSERT_TRUE(is >> mItemBagQuality >> mItemBagSealed);
+    OD_ASSERT_TRUE(is >> mGhostFill >> mGhostAlarm);
 }
 
 void BuildingObject::fireRefresh()
@@ -183,4 +195,52 @@ void BuildingObject::notifyReplacement(BuildingObject& previous)
         notification->mPacket << previous.getObjectType() << previous.getName();
         ODServer::getSingleton().queueServerNotification(notification);
     }
+}
+
+void BuildingObject::setGhostRoomState(double fill,double alarm)
+{
+    if(mGhostFill==fill && mGhostAlarm==alarm) return;
+    mGhostFill=fill;mGhostAlarm=alarm;
+    fireRefresh();
+}
+void BuildingObject::exportToPacketForUpdate(ODPacket& packet,Seat* seat)
+{
+    RenderedMovableEntity::exportToPacketForUpdate(packet,seat);
+    packet << mGhostFill << mGhostAlarm;
+}
+void BuildingObject::updateFromPacket(ODPacket& packet)
+{
+    RenderedMovableEntity::updateFromPacket(packet);
+    OD_ASSERT_TRUE(packet >> mGhostFill >> mGhostAlarm);
+}
+void BuildingObject::update(Ogre::Real seconds)
+{
+    RenderedMovableEntity::update(seconds);
+    if(getIsOnServerMap()) return;
+    if(mGhostFillNode!=nullptr) mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,std::min(1.0,mGhostFill))));
+    mGhostAlarm=std::max(0.0,mGhostAlarm-seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor());
+    if(getMeshName()!="GhostWallGauges" || getEntityNode()==nullptr) return;
+    const bool flash=mGhostAlarm>0.0 && std::fmod(mGhostAlarm/ODApplication::turnsPerSecond,0.5)<0.25;
+    for(unsigned short index=0;index<getEntityNode()->numAttachedObjects();++index)
+    {
+        Ogre::MovableObject* object=getEntityNode()->getAttachedObject(index);
+        if(object->getMovableType()!="Entity") continue;
+        Ogre::Entity* entity=static_cast<Ogre::Entity*>(object);
+        for(unsigned int sub=0;sub<entity->getNumSubEntities();++sub)
+            if(entity->getSubEntity(sub)->getMaterialName()=="GhostLamps") entity->getSubEntity(sub)->setVisible(flash);
+    }
+}
+void BuildingObject::destroyMeshLocal(NodeType type)
+{
+    if(mGhostFillNode!=nullptr)
+    {
+        Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+        while(mGhostFillNode->numAttachedObjects()>0)
+        {
+            Ogre::MovableObject* object=mGhostFillNode->getAttachedObject(static_cast<unsigned short>(0));
+            mGhostFillNode->detachObject(object);scene->destroyMovableObject(object);
+        }
+        scene->destroySceneNode(mGhostFillNode);mGhostFillNode=nullptr;
+    }
+    RenderedMovableEntity::destroyMeshLocal(type);
 }

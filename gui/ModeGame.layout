@@ -153,6 +153,7 @@
         <LayoutImport type="DefaultWindow" filename="WindowPlayerSettings.layout" name="PlayerSettingsWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowObjectives.layout" name="ObjectivesWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowCasinoPayout.layout" name="CasinoPayoutWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowGhostRoom.layout" name="GhostRoomWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowInfirmary.layout" name="InfirmaryWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowTavern.layout" name="TavernWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMerchant.layout" name="MerchantWindowImport" />

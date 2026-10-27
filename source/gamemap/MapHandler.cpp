@@ -27,6 +27,8 @@
 #include "goals/Goal.h"
 #include "goals/GoalLoading.h"
 #include "entities/ChickenEntity.h"
+#include "entities/GhostEntity.h"
+#include "entities/GhostBoxEntity.h"
 #include "entities/CraftedTrap.h"
 #include "entities/DirtPileEntity.h"
 #include "entities/Creature.h"
@@ -605,6 +607,38 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         OD_LOG_ERR("Invalid ItemBags section, file=" + fileName);
         return false;
     }
+    // Ghosts are absent from legacy maps; leave the next section untouched.
+    const std::streampos ghostPosition = levelFile.tellg();
+    if(levelFile >> nextParam)
+    {
+        levelFile.seekg(ghostPosition);
+        if(nextParam == "[Ghosts]" && !readGameEntity(gameMap, "Ghosts", GameEntityType::ghostEntity, levelFile))
+        {
+            OD_LOG_ERR("Invalid Ghosts section, file=" + fileName);
+            return false;
+        }
+    }
+    else
+    {
+        levelFile.clear();
+        levelFile.seekg(ghostPosition);
+    }
+    // Closed capture boxes follow ghosts; legacy maps have neither section.
+    const std::streampos boxPosition = levelFile.tellg();
+    if(levelFile >> nextParam)
+    {
+        levelFile.seekg(boxPosition);
+        if(nextParam == "[GhostBoxes]" && !readGameEntity(gameMap, "GhostBoxes", GameEntityType::ghostBoxEntity, levelFile))
+        {
+            OD_LOG_ERR("Invalid GhostBoxes section, file=" + fileName);
+            return false;
+        }
+    }
+    else
+    {
+        levelFile.clear();
+        levelFile.seekg(boxPosition);
+    }
     if(!readDirtSections(gameMap, levelFile))
     {
         OD_LOG_WRN("Invalid Dirt or DirtPiles section");
@@ -1147,6 +1181,26 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
         levelFile << '\n';
     }
     levelFile << "[/ItemBags]\n";
+    levelFile << "\n[Ghosts]\n";
+    levelFile << "# SeatId Name ClassName CreatureName PosX PosY Level LifeLeft State AssignedHunter\n";
+    for(RenderedMovableEntity* rendered : rendereds)
+    {
+        if(rendered->getObjectType() != GameEntityType::ghostEntity)
+            continue;
+        GameEntity::exportToStream(rendered, levelFile);
+        levelFile << '\n';
+    }
+    levelFile << "[/Ghosts]\n";
+    levelFile << "\n[GhostBoxes]\n";
+    levelFile << "# Name PosX PosY OpenTurns NbGhosts (GhostName)*\n";
+    for(RenderedMovableEntity* rendered : rendereds)
+    {
+        if(rendered->getObjectType() != GameEntityType::ghostBoxEntity)
+            continue;
+        GameEntity::exportToStream(rendered, levelFile);
+        levelFile << '\n';
+    }
+    levelFile << "[/GhostBoxes]\n";
     writeDirtSections(levelFile, gameMap);
 
     levelFile << "\n[Missiles]\n";

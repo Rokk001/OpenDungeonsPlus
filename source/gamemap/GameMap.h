@@ -366,6 +366,8 @@ public:
 
     //! \brief Assigns an ai to the chosen player
     bool assignAI(Player& player, KeeperAIType aiType);
+    //! \brief Returns the manager-owned controller for the given player.
+    BaseAI* getAI(const Player& player) const { return mAiManager.getAI(player); }
 
     //! \brief Returns a pointer to the player structure stored by this GameMap whose name matches pName.
     Player* getPlayer(const std::string& cName) const;
@@ -753,6 +755,7 @@ public:
     //! \brief Looks up an entity by its synchronized type and unique name.
     //! \brief Resolves a typed entity identity for movement, hand and appearance notifications.
     //! \brief Includes equipment bags, merchant figures and carryable herb bundles.
+    //! \brief Resolves a typed identity, checking ghost and box types before returning a shared-registry entity.
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 
