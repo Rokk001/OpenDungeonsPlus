@@ -19,8 +19,8 @@ body = body[:body.index('};')]
 names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.MULTILINE)
          if m.group(1) not in ('enum', 'class')]
 # The tavern notifications follow campaignVictory; the tail pinned below is the one before them
-assert names[-2:] == ["tavernWindow", "tavernPayer"], names[-3:]
-names = names[:-2]
+assert names[-4:] == ["tavernWindow", "tavernPayer", "spaPayer", "creatureJump"], names[-5:]
+names = names[:-4]
 # Existing kinds retain their order before the appended campaign victory.
 assert names[-15:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
                        'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings'], names[-12:]

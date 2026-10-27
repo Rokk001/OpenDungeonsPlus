@@ -30,9 +30,11 @@
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/RoomObjectBounds.h"
+#include "network/CosmeticEvent.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomTavern.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -329,7 +331,9 @@ bool RoomSpa::isPoolTile(const Tile* tile)
 
 void RoomSpa::sendBathFinished(Creature& creature)
 {
-    // The post "Relaxed" of the creature is written by the interface package; the bath itself needs nothing here
+    // The post "Relaxed" is written on the client of the keeper of the creature: the cosmetic tavern event of the kind
+    // relaxed carries it (no thought bubble belongs to this kind)
+    RoomTavern::sendTavernEvent(creature, static_cast<int32_t>(CosmeticTavernKind::relaxed), nullptr);
 }
 
 SpaTileSet RoomSpa::getCoveredSet() const

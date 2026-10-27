@@ -215,8 +215,15 @@ void PoolAttendantEntity::moveTo(const Ogre::Vector3& position)
 
 void PoolAttendantEntity::sendJumpNotification()
 {
-    // The notification type ServerNotificationType::creatureJump belongs to the interface package, which sends name,
-    // from, to, turns and elapsed to the seats with vision here (the pattern of the rooster hop)
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(ServerNotificationType::creatureJump, seat->getPlayer());
+        notification->mPacket << getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
 }
 
 void PoolAttendantEntity::doUpkeep()

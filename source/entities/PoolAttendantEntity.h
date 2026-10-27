@@ -182,8 +182,8 @@ private:
     void moveTo(const Ogre::Vector3& position);
 
     //! \brief Server side. Tells the clients that see the attendant about the jump that has just started
-    //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed). The notification type is added
-    //! by the interface package; until then this does nothing.
+    //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed, the same message as for a
+    //! creature); seats without a human player are skipped.
     void sendJumpNotification();
 
     //! \brief The position on the arc of a jump.

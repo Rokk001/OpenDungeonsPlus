@@ -1838,7 +1838,7 @@ const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
 const float PROFILE_OVERFLOW_TOLERANCE = 0.5f;
 //! Names of the rows that flow from top to bottom and so change their position when the texts change
 const char* const PROFILE_FLOW_ROWS[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "EquipmentRow", "HandleText", "AgeText", "RelationText", "FromText", "JobText", "HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar", "PathText", "SkillsText", "BioText", "LikesText",
-    "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "LatestText", "QuirksText", "OwnPostsText"};
+    "DislikesText", "RelationsText", "FriendsLabel", "FriendLink0", "FriendLink1", "FoeLabel", "FoeLink", "StatusText", "EffectsText", "LatestText", "QuirksText", "OwnPostsText"};
 const std::size_t PROFILE_FLOW_ROW_COUNT = sizeof(PROFILE_FLOW_ROWS) / sizeof(PROFILE_FLOW_ROWS[0]);
 
 //! \brief Number of lines the window text occupies when CEGUI wraps it at the given pixel width
@@ -1957,7 +1957,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     // Remarks stay after status and latest post, so adding them never moves the preceding social rows.
     const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",
         "DislikesText", "RelationsText"};
-    const char* const textRowsAfter[] = {"StatusText", "LatestText", "QuirksText"};
+    const char* const textRowsAfter[] = {"StatusText", "EffectsText", "LatestText", "QuirksText"};
     const char* const linkRows[PROFILE_LINK_ROWS][PROFILE_LINK_ROW_WINDOWS] = {{"FriendsLabel", "FriendLink0", "FriendLink1"}, {"FoeLabel", "FoeLink", nullptr}};
 
     for(std::size_t i = 0; i < 6; ++i)
@@ -1989,7 +1989,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
         y = std::max(y + lineHeight, linkY) + PROFILE_ROW_GAP;
     }
 
-    for(std::size_t i = 0; i < 3; ++i)
+    for(std::size_t i = 0; i < 4; ++i)
         y = layoutProfileTextRow(page->getChild(textRowsAfter[i]), y, scale);
 
     // The Dungeonbook's existing recent-posts widget shares the document; it stays hidden on the creature card.
@@ -2129,7 +2129,7 @@ void Gui::arrangeActionButtonPanels(CEGUI::Window* gameSheet)
 void Gui::arrangeRoomButtons(CEGUI::Window* rooms)
 {
     rooms->getChild("DestroyRoomButton")->hide();
-    arrangeActionButtons(rooms, {"DormitoryButton", "ToiletButton", "HatcheryButton", "TavernButton", "LibraryButton", "TrainingHallButton",
+    arrangeActionButtons(rooms, {"DormitoryButton", "ToiletButton", "HatcheryButton", "TavernButton", "SpaButton", "LibraryButton", "TrainingHallButton",
         "TreasuryButton", "WorkshopButton", "CasinoButton", "PrisonButton", "WoodenBridgeButton",
         "TortureButton", "StoneBridgeButton", "CryptButton", "ArenaButton", "GuardRoomButton", "PrayerTempleButton",
         "MerchantButton", "HerbGardenButton", "AlchemyLabButton"});

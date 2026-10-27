@@ -5623,6 +5623,38 @@ std::string Creature::getGender() const
     return social::SocialProfileCache::getCreatureGender(getName(), getDefinition()->getClassName());
 }
 
+//! \brief Seconds of one minute, for the time in the effect lines of the Dungeonbook page.
+static const uint32_t PROFILE_SECONDS_PER_MINUTE = 60;
+
+//! \brief The lines of the active buffs and debuffs of a creature for the Dungeonbook page, buffs first: the buff
+//! Relaxed while the relaxation lasts, the debuff Hangover while the hangover lasts. Each line shows the time that is
+//! left as minutes:seconds (turns divided by the turns per second, seconds rounded down).
+//! \param relaxTurns The turns the relaxation lasts, 0 or less for none.
+//! \param hangoverTurns The turns the hangover lasts, 0 or less for none.
+//! \return The lines separated by a line break, empty when no effect is active.
+static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns)
+{
+    std::string effects;
+    const double turnsPerSecond = ODApplication::turnsPerSecond;
+    for(uint32_t kind = 0; kind < 2; ++kind)
+    {
+        const bool isBuff = (kind == 0);
+        const double turns = isBuff ? relaxTurns : hangoverTurns;
+        if(turns <= 0.0)
+            continue;
+
+        const uint32_t totalSeconds = static_cast<uint32_t>(std::floor(turns / turnsPerSecond));
+        const uint32_t seconds = totalSeconds % PROFILE_SECONDS_PER_MINUTE;
+        std::string line = isBuff ? "Buff: Relaxed (" : "Debuff: Hangover (";
+        line += Helper::toString(totalSeconds / PROFILE_SECONDS_PER_MINUTE) + ":" + (seconds < 10 ? "0" : "") +
+            Helper::toString(seconds) + ")";
+        if(!effects.empty())
+            effects += "\n";
+        effects += line;
+    }
+    return effects;
+}
+
 //! \brief Fills the social page and transmitted item slots before its normal responsive layout.
 float Creature::fillProfilePage(CEGUI::Window* page)
 {
@@ -5762,6 +5794,12 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     foeLink->setVisible(false);
     statusText->setVisible(isAllied);
     latestText->setVisible(isAllied);
+
+    // The buffs and debuffs row: only for the creatures of our own side and only while an effect is active
+    CEGUI::Window* effectsText = page->getChild("EffectsText");
+    const std::string effects = getProfileEffectsText(mRelaxTurns, mHangoverTurns);
+    effectsText->setText(effects);
+    effectsText->setVisible(isAllied && !effects.empty());
     if(!isAllied)
         return gui.layoutCreatureProfilePage(page);
 
@@ -8616,10 +8654,20 @@ void Creature::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector
     setPosition(jumpPosition(from, to, elapsed / static_cast<Ogre::Real>(mJumpTurns)));
 }
 
-//! \brief Stub: the notification type ServerNotificationType::creatureJump belongs to the interface package, which
-//! sends name, from, to, turns and elapsed to the seats with vision here (the pattern of the rooster hop).
+//! \brief Tells the human seats that see the creature about the jump that has just started (name, from, to, turns
+//! and elapsed; the pattern of the rooster hop).
 void Creature::sendJumpNotification()
 {
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* notification = new ServerNotification(
+            ServerNotificationType::creatureJump, seat->getPlayer());
+        notification->mPacket << getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
 }
 
 //! \brief Notes that the creature falls asleep drunk, so it wakes up with a hangover.

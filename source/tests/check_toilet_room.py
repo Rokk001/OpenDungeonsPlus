@@ -113,7 +113,7 @@ assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomToilet') == 1
-assert len(registered) == 62, 'the combined research tree has 62 entries, found ' + str(len(registered))
+assert len(registered) == 63, 'the combined research tree has 63 entries, found ' + str(len(registered))
 skills_cfg = read('config/skills.cfg')
 assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
 # No research effect line for the toilet

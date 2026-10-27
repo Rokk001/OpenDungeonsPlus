@@ -160,6 +160,8 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askTavernWindow";
         case ClientNotificationType::askTavernPayer:
             return "askTavernPayer";
+        case ClientNotificationType::askSpaPayer:
+            return "askSpaPayer";
         case ClientNotificationType::askMerchantWindow:
             return "askMerchantWindow";
         case ClientNotificationType::askMerchantSettings:

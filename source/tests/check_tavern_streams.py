@@ -65,8 +65,8 @@ assert 'exportThirstStateToPacket(os);' in update_packet and update_packet.count
 thirst_export = extract(creature_cpp, 'void Creature::exportThirstStateToPacket(')
 assert re.findall(r'os << (m\w+);', thirst_export) == ['mThirst', 'mTavernMood', 'mDrunk', 'mHangoverTurns']
 assert creature_cpp.count('importThirstStateFromPacket(is);') == 2, 'full and update packet read the thirst state'
-for notification, names in (('source/network/ServerNotification.h', ('tavernWindow', 'tavernPayer')),
-                            ('source/network/ClientNotification.h', ('askTavernWindow', 'askTavernPayer'))):
+for notification, names in (('source/network/ServerNotification.h', ('spaPayer', 'creatureJump')),
+                            ('source/network/ClientNotification.h', ('askTavernPayer', 'askSpaPayer'))):
     text = read(notification)
     enum_body = text[text.index('enum class '):text.index('};', text.index('enum class '))]
     tail = [w for w in re.findall(r'^\s*(\w+),?\s*(?://.*)?$', enum_body, re.M) if w not in ('enum', 'class')][-2:]

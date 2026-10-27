@@ -227,7 +227,16 @@ enum class ServerNotificationType
     tavernWindow,
     //! \brief Answer to askTavernPayer, owner only: + int32_t tileX, int32_t tileY, uint32_t payer (TavernPayer)
     //! Appended last so that no existing numeric value changes.
-    tavernPayer
+    tavernPayer,
+    //! \brief Answer to askSpaPayer, owner only: + int32_t tileX, int32_t tileY (a tile of the lava spa),
+    //! uint32_t payer (SpaPayer), double bathPrice (gold per bath, the beer price).
+    //! Appended after tavernPayer so that no existing numeric value changes.
+    spaPayer,
+    //! \brief A creature jumps from the springboard of a lava spa into the mud (presentation only), sent to the
+    //! human seats that see the jump: + string creature name, Vector3 start, Vector3 goal, uint32_t total turns,
+    //! float turns that are over (a client that joins in the middle starts there).
+    //! Appended after spaPayer so that no existing numeric value changes.
+    creatureJump
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
