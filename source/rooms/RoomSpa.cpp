@@ -986,6 +986,36 @@ void RoomSpa::absorbRoom(Room* r)
         other->removeAttendant();
     }
 
+    // The bathers of the other room go on with their bath: place, state and progress move over and their room action
+    // is bound to this room, so the base class does not send them away. A bather without a room action stays with the
+    // other room and is released by the base class.
+    std::vector<Creature*> otherUsers = other->mCreaturesUsingRoom;
+    for(Creature* bather : otherUsers)
+    {
+        CreatureActionUseRoom* useRoom = nullptr;
+        for(const std::unique_ptr<CreatureAction>& action : bather->getActions())
+        {
+            if(action->getType() != CreatureActionType::useRoom)
+                continue;
+
+            CreatureActionUseRoom* candidate = static_cast<CreatureActionUseRoom*>(action.get());
+            if(candidate->getRoom() == other)
+                useRoom = candidate;
+        }
+
+        std::vector<RoomSpaBather>::iterator place = other->findBatherOf(bather);
+        if((useRoom == nullptr) || (place == other->mBathers.end()))
+            continue;
+
+        mBathers.push_back(*place);
+        other->mBathers.erase(place);
+        mCreaturesUsingRoom.push_back(bather);
+        other->mCreaturesUsingRoom.erase(std::find(other->mCreaturesUsingRoom.begin(), other->mCreaturesUsingRoom.end(), bather));
+        useRoom->changeRoom(*this);
+    }
+    mPendingBathers.insert(other->mPendingBathers.begin(), other->mPendingBathers.end());
+    other->mPendingBathers.clear();
+
     Room::absorbRoom(r);
 }
 

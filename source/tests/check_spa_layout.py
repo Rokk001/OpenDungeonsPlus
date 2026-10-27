@@ -69,7 +69,16 @@ for name, value in (('TOP', '0.0'), ('LEFT', '90.0'), ('BOTTOM', '180.0'), ('RIG
 for function in ('void RoomSpa::setupRoom(', 'void RoomSpa::absorbRoom(', 'bool RoomSpa::removeCoveredTile('):
     body = extract(room_cpp, function)
     assert 'mBathers.clear' not in body and 'mBlock =' not in body, function + ' must not move a place'
-assert 'updateActiveSpots' in read('source/rooms/Room.cpp'), 'the base room calls the recomputation after tile changes'
+# An extension keeps the running baths: absorbRoom hands the places over and binds the room action to the absorbing room,
+# because the base class would clear the action queue of every user and so end the bath through the action destructor
+absorb = extract(room_cpp, 'void RoomSpa::absorbRoom(')
+assert 'mBathers.push_back(*place)' in absorb and 'useRoom->changeRoom(*this)' in absorb, 'absorbRoom hands over the places'
+assert 'mPendingBathers.insert(other->mPendingBathers' in absorb, 'absorbRoom hands over the saved places'
+assert absorb.index('useRoom->changeRoom(*this)') < absorb.index('Room::absorbRoom(r)'), 'the hand-over comes before the base class'
+use_room_cpp = read('source/creatureaction/CreatureActionUseRoom.cpp')
+change = extract(use_room_cpp, 'void CreatureActionUseRoom::changeRoom(')
+assert 'removeGameEntityListener(this)' in change and 'addGameEntityListener(this)' in change and 'removeCreatureUsingRoom' not in change
+assert 'updateActiveSpots' in read('source/rooms/Room.cpp'),'the base room calls the recomputation after tile changes'
 for token in ('mBlock.mX = ', 'mBlock = block', 'mBlock = '):
     assert room_cpp.count(token) <= 2, 'a place is set once when it is reserved: ' + token
 lost = extract(room_cpp, 'void RoomSpa::releaseBathersOnLostTiles(')

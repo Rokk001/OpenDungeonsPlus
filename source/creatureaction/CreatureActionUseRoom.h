@@ -35,6 +35,11 @@ public:
     Room* getRoom() const
     { return mRoom; }
 
+    //! \brief Moves the action to another room without leaving the old one through removeCreatureUsingRoom. The caller
+    //! has already registered the creature with the new room (used when a room absorbs another one and keeps its users).
+    //! \param room The room the creature goes on using.
+    void changeRoom(Room& room);
+
     std::function<bool()> action() override;
 
     std::string getListenerName() const override;

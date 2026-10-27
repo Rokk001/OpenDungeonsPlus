@@ -56,6 +56,15 @@ CreatureActionUseRoom::~CreatureActionUseRoom()
     }
 }
 
+void CreatureActionUseRoom::changeRoom(Room& room)
+{
+    if(mRoom != nullptr)
+        mRoom->removeGameEntityListener(this);
+
+    mRoom = &room;
+    mRoom->addGameEntityListener(this);
+}
+
 std::function<bool()> CreatureActionUseRoom::action()
 {
     return std::bind(&CreatureActionUseRoom::handleJob,
