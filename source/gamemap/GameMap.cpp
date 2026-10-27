@@ -32,6 +32,7 @@
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
 #include "entities/RenderedMovableEntity.h"
+#include "entities/GhostBoxEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
 #include "entities/ItemDefinition.h"
@@ -1230,6 +1231,7 @@ const CreatureDefinition* GameMap::getClassDescription(int index)
         return def.first;
 }
 
+//! \brief Creates loaded entities and restores closed boxes before room-owned action continuation.
 void GameMap::createAllEntities()
 {
     mTileSet = ConfigManager::getSingleton().getTileSet(mTileSetName);
@@ -1321,6 +1323,12 @@ void GameMap::createAllEntities()
             spell->setPosition(spell->getPosition());
         }
     }
+
+    // Resolve closed-box contents only after every ghost and creature exists.
+    if(isServerGameMap())
+        for(RenderedMovableEntity* rendered : mRenderedMovableEntities)
+            if(rendered->getObjectType() == GameEntityType::ghostBoxEntity)
+                rendered->restoreInitialEntityState();
 
     for (Room* room : mRooms)
     {
@@ -3896,6 +3904,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::buildingObject:
         case GameEntityType::chickenEntity:
         case GameEntityType::ghostEntity:
+        case GameEntityType::ghostBoxEntity:
         case GameEntityType::craftedTrap:
         case GameEntityType::missileObject:
         case GameEntityType::persistentObject:

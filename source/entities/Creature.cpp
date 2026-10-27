@@ -9711,6 +9711,43 @@ bool Creature::takeCorpse()
 }
 
 
+//! \brief Restores a delivered crypt corpse's life and needs after freeing its grave reservation.
+bool Creature::reviveFromCorpse(double hpShare)
+{
+    if(!getIsOnServerMap() || isAlive() || getDefinition()->isWorker() || mIsCarried ||
+       mDeathCounter == 0 || mDeathCounter == std::numeric_limits<unsigned int>::max())
+        return false;
+    Tile* tile = getPositionTile();
+    Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
+    if(room == nullptr || room->getType() != RoomType::crypt || room->getSeat() != getSeat())
+        return false;
+    RoomCrypt* crypt = static_cast<RoomCrypt*>(room);
+    if(crypt->getCorpseSpot(*this) == nullptr)
+        return false;
+
+    Spell::fireSpellEffect(*tile, "GhostRevive", "");
+    crypt->removeCorpse(*this);
+    clearActionQueue();
+    mDeathCounter = 0;
+    mCorpseTurns = 0.0;
+    mDecayTurns = -1.0;
+    mIsCarried = false;
+    mCorpseCarrierName.clear();
+    resetKoTurns();
+    setHP(mMaxHP * hpShare);
+    mHunger = 80.0;
+    mWakefulness = ConfigManager::getSingleton().getTiredWakefulness();
+    mThirst = 80.0;
+    removeAnnoyance();
+    computeMood();
+    computeCreatureOverlayMoodValue();
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    setAnimationState(EntityAnimation::idle_anim, true, Ogre::Vector3::ZERO, false);
+    mNeedFireRefresh = true;
+    return true;
+}
+
+
 void Creature::showOutliner()
 {
     RenderManager::getSingleton().rrAddOutliner(this);

@@ -1531,6 +1531,11 @@ public:
     //! Returns false before death handling, during decay, while carried, or for a worker or consumed body
     bool takeCorpse();
 
+    //! \brief Revives a delivered own crypt corpse without changing its level, experience or seat.
+    //! \param hpShare The configured fraction of maximum health restored.
+    //! \return False if this body is no longer a valid delivered corpse.
+    bool reviveFromCorpse(double hpShare);
+
     //! \brief Returns whether the body has entered its uncarryable decay phase.
     bool isCorpseDecaying() const
     { return mDecayTurns >= 0.0; }
