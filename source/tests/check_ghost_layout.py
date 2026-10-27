@@ -99,8 +99,11 @@ int main(){
  room.layoutCauldrons();room.createWalls(&map);check(room.mHookTiles.size()==room.getBackpackCount()&&room.mHookObjects.size()==room.getBackpackCount(),"three actual wall hooks per cauldron");int bells=0;std::set<BuildingObject*> objects;
  for(BuildingObject* object:room.mWallObjects){check(objects.insert(object).second,"distinct auxiliary wall object identities");if(object->mesh=="GhostBell")++bells;check(object->scale.x>0&&object->scale.x<=1&&object->scale.y==1,"native wall subdivision scale");}
  check(bells==1,"one original wall bell");check(room.mWallObjects.size()>=room.getBackpackCount()+1,"no overwritten hook map keys");}
- GameMap map;RoomGhostRoom noWall;noWall.map=&map;noWall.seat=&seat;for(int y=-1;y<=4;++y)for(int x=-1;x<=4;++x){Tile& tile=map.tiles[{x,y}];tile.x=x;tile.y=y;if(x>=0&&x<4&&y>=0&&y<4)noWall.mCoveredTiles.push_back(&tile);}noWall.layoutCauldrons();noWall.createWalls(&map);check(noWall.mHookObjects.empty()&&noWall.getBackpackCount()==3,"known unresolved zero-wall equipment boundary has no fictional wall fallback");
- std::cout<<"actual wall hook placement: ok; zero-wall requirement remains open\n";
+ GameMap map;RoomGhostRoom noWall;noWall.map=&map;noWall.seat=&seat;for(int y=-1;y<=4;++y)for(int x=-1;x<=4;++x){Tile& tile=map.tiles[{x,y}];tile.x=x;tile.y=y;if(x>=0&&x<4&&y>=0&&y<4){tile.room=&noWall;noWall.mCoveredTiles.push_back(&tile);}}noWall.layoutCauldrons();noWall.createWalls(&map);
+ int rackBells=0;for(BuildingObject* object:noWall.mWallObjects)if(object->mesh=="GhostBell")++rackBells;
+ check(noWall.mHookObjects.size()==3&&noWall.mHookTiles.size()==3&&noWall.getBackpackCount()==3,"free-standing room keeps all three hooks on room-edge racks");check(rackBells==1,"free-standing room keeps its bell on a room-edge rack");
+ for(Tile* tile:noWall.mHookTiles)check(tile->x==0||tile->y==0||tile->x==3||tile->y==3,"rack hooks stand on the room edge ring, not on the cauldron tiles");
+ std::cout<<"actual wall hook placement and free-standing room-edge racks: ok\n";
 }
 '''
     run_probe('ghost-wall-layout',code)

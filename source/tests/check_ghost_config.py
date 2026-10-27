@@ -36,7 +36,7 @@ def main():
         assert global_values[key] == value, (key, global_values.get(key), value)
     expected = {"GhostBeamTurns":5.5,"GhostEmptyTurns":5.5,"GhostBoxCapacity":1,"GhostBeamRange":1,
         "GhostBoxOpenSeconds":120,"GhostHuntersPerCauldron":3,"GhostLevelsPerEctoplasm":10,
-        "GhostEctoplasmMana":10000,"GhostEctoplasmResearchPoints":2000,"GhostReviveMana":14000,
+        "GhostEctoplasmMana":10000,"GhostEctoplasmResearchPoints":2000,"GhostEctoplasmPerCrystal":2,"GhostReviveMana":14000,
         "GhostReviveHpShare":.35,"CryptCorpsesPerLich":10,"CryptLichLevelBonus":0,
         "GhostRoomCostPerTile":620,"GhostRoomHP":50,"GhostRoomMinSide":4,
         "GhostRiseSeconds":1.5,"GhostDissolveSeconds":1.5,"GhostHowlMinSeconds":10,

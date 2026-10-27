@@ -78,6 +78,9 @@ private:
     void layoutCauldrons();
     //! \brief Recreates furniture for the current cauldron layout.
     void createCauldronObjects();
+    //! \brief Returns the free floor tile nearest to a cauldron where a finished soul crystal falls, or nullptr if none is free.
+    //! \param cauldron Anchor tile of the cauldron that pressed the crystal.
+    Tile* findCrystalDropTile(const Tile& cauldron) const;
     //! \brief Releases hunters assigned to this room before equipment is lost.
     void interruptHunters();
     std::vector<Cauldron> mCauldrons;
@@ -90,7 +93,6 @@ private:
     std::vector<Tile*> mHookTiles;
     std::vector<Tile*> mDecorationTiles;
     std::vector<BuildingObject*> mCauldronObjects;
-    Tile* mBowl = nullptr;
     bool mLayingOut = false;
     double mAlarmTurns = 0.0;
 };

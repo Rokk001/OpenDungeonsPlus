@@ -141,7 +141,7 @@ struct ConfigManager{
  //! \brief Returns the fixture configuration.
  static ConfigManager& getSingleton(){static ConfigManager config;return config;}
  //! \brief Returns named room values required by these bodies.
- double getRoomConfigDouble(const std::string& key)const{const std::map<std::string,double> values={{"GhostRiseSeconds",1.5},{"GhostDissolveSeconds",1.5},{"GhostHowlMinSeconds",10},{"GhostHowlMaxSeconds",20},{"GhostBoxOpenSeconds",120},{"GhostRoomMinSide",4},{"GhostHuntersPerCauldron",3},{"GhostLevelsPerEctoplasm",10},{"GhostEctoplasmMana",10000},{"GhostEctoplasmResearchPoints",2000},{"CryptCorpsesPerLich",10},{"CryptLichLevelBonus",0},{"GhostBeamRange",1},{"GhostReviveMana",14000},{"TrainHallXpPerAttack",5},{"TrainHallCooldownHitMin",3},{"TrainHallCooldownHitMax",6}};return values.at(key);}
+ double getRoomConfigDouble(const std::string& key)const{const std::map<std::string,double> values={{"GhostRiseSeconds",1.5},{"GhostDissolveSeconds",1.5},{"GhostHowlMinSeconds",10},{"GhostHowlMaxSeconds",20},{"GhostBoxOpenSeconds",120},{"GhostRoomMinSide",4},{"GhostHuntersPerCauldron",3},{"GhostLevelsPerEctoplasm",10},{"GhostEctoplasmMana",10000},{"GhostEctoplasmResearchPoints",2000},{"GhostEctoplasmPerCrystal",2},{"CryptCorpsesPerLich",10},{"CryptLichLevelBonus",0},{"GhostBeamRange",1},{"GhostReviveMana",14000},{"TrainHallXpPerAttack",5},{"TrainHallCooldownHitMin",3},{"TrainHallCooldownHitMax",6}};return values.at(key);}
  //! \brief Reads an integer room setting.
  int getRoomConfigInt32(const std::string& key)const{return int(getRoomConfigDouble(key));}
  //! \brief Reads an unsigned room setting.
@@ -633,18 +633,18 @@ struct ItemInstance{
  static std::unique_ptr<ItemInstance> createSoulCrystal(){return std::unique_ptr<ItemInstance>(new ItemInstance);}
 };
 //! \brief Counts real product calls without duplicating their conditions.
-struct ItemBagEntity{static int crystals;
+struct ItemBagEntity{static int crystals;static Ogre::Vector3 position;
  //! \brief Observes central crystal factory delivery.
  ItemBagEntity(GameMap*,std::unique_ptr<ItemInstance>){++crystals;}
  //! \brief Receives keeper ownership.
  void setSeat(Seat*){}
- //! \brief Receives the original bowl tile placement.
- void setPosition(const Ogre::Vector3&){}
+ //! \brief Records the floor tile where the crystal bag falls.
+ void setPosition(const Ogre::Vector3& value){position=value;}
  //! \brief Receives normal map registration.
  void addToGameMap(){}
  //! \brief Receives normal mesh creation.
  void createMesh(){}
-};int ItemBagEntity::crystals=0;
+};int ItemBagEntity::crystals=0;Ogre::Vector3 ItemBagEntity::position;
 //! \brief Records free reveal candidates and exact unresearched duration.
 struct SpellEyeEvil{static std::vector<Tile*> reveals;
  //! \brief Observes free reveals chosen by the original product body.
@@ -674,7 +674,7 @@ struct PostLog{int posts=0;
  void addPost(int,const std::string&,const std::string&,bool,PostCategory,int){++posts;}
 };}
 //! \brief Supplies floor, hook and cauldron services while retaining actual product logic.
-struct RoomGhostRoom:Room{GameMap* map=nullptr;Tile* mBowl=nullptr;int backpacks=3,bells=0,emptied=0;std::vector<GhostEntity*> emptiedGhosts;
+struct RoomGhostRoom:Room{GameMap* map=nullptr;std::vector<Tile*>& mCoveredTiles=floor;int backpacks=3,bells=0,emptied=0;std::vector<GhostEntity*> emptiedGhosts;
  //! \brief Stores actual emptying reservation identity.
  struct Cauldron{Tile* anchor;Creature* hunter;};std::vector<Cauldron> mCauldrons;
  //! \brief Returns controlled world.
@@ -700,6 +700,7 @@ struct RoomGhostRoom:Room{GameMap* map=nullptr;Tile* mBowl=nullptr;int backpacks
  //! \brief Runs the actual research threshold consumer.
  static double getLevelsPerEctoplasm(const Seat&);
  //! \brief Runs the full actual reveal/bar/product body.
+ Tile* findCrystalDropTile(const Tile&)const;
  void emptyGhost(Creature&,GhostEntity&);
 };
 //! \brief Stores the exact timed hunt continuation used by real branches.
@@ -736,7 +737,7 @@ struct CreatureActionHuntGhost{Creature& mCreature;std::string mTarget,mBeamTarg
         'size_t pathLength(', 'Tile* targetEndpoint(', 'double CreatureActionHuntGhost::researched(',
         'void CreatureActionHuntGhost::releaseTarget(', 'void CreatureActionHuntGhost::interrupt(',
         'void CreatureActionHuntGhost::assignHunters(', 'void CreatureActionHuntGhost::upkeep(', 'bool CreatureActionHuntGhost::selectRevival('])
-    code += function(room,'double RoomGhostRoom::getLevelsPerEctoplasm(')+function(room,'void RoomGhostRoom::emptyGhost(')
+    code += function(room,'bool tileOrder(')+function(room,'double RoomGhostRoom::getLevelsPerEctoplasm(')+function(room,'Tile* RoomGhostRoom::findCrystalDropTile(')+function(room,'void RoomGhostRoom::emptyGhost(')
     branches = ''.join(function(action, sig) for sig in ['    if(mState==2 || mState==3)', '    if(mState==4)',
         '    if(mState==5)', '    if(mState==6)'])
     code += '\nbool CreatureActionHuntGhost::step(){GameMap& map=*mCreature.getGameMap();ConfigManager& config=ConfigManager::getSingleton();'+branches+'return false;}\n'
@@ -748,7 +749,7 @@ def hunt_checks():
 //! \brief Runs original hunt decisions with independent expected timing and economy results.
 int main(){
  GameMap map;Seat seat,enemy;enemy.id=2;for(int y=0;y<8;++y)for(int x=0;x<8;++x){Tile& tile=map.tiles[{x,y}];tile.x=x;tile.y=y;tile.owner=&seat;}
- RoomGhostRoom room;room.map=&map;room.type=RoomType::ghostRoom;room.seat=&seat;room.name="press";room.floor={map.getTile(1,1),map.getTile(2,2)};room.mBowl=map.getTile(1,2);map.rooms.push_back(&room);
+ RoomGhostRoom room;room.map=&map;room.type=RoomType::ghostRoom;room.seat=&seat;room.name="press";room.floor={map.getTile(1,1),map.getTile(2,2)};map.rooms.push_back(&room);
  Creature hunter;hunter.name="hunter";hunter.map=&map;hunter.seat=&seat;hunter.tile=map.getTile(2,2);map.creatures.push_back(&hunter);
  GhostEntity ghost;ghost.name="target";ghost.seat=&enemy;ghost.tile=map.getTile(3,2);map.entities.push_back(&ghost);
  check(eligible(ghost,seat),"own-territory ghost eligible");ghost.tile->owner=&enemy;check(!eligible(ghost,seat),"foreign territory not hunted");ghost.tile->owner=&seat;ghost.state=GhostState::rising;check(!eligible(ghost,seat),"rising ghost not assigned");ghost.state=GhostState::floating;ghost.assigned="other";check(!eligible(ghost,seat),"assigned ghost not stolen");ghost.assigned.clear();
@@ -774,9 +775,10 @@ int main(){
  for(int tier=1;tier<=3;++tier){seat.tier=tier;CreatureActionHuntGhost action(hunter);action.mReviveGhosts={"target"};seat.mana=14000-2000*(tier-1);check(action.selectRevival(),"exact researched revival price is sufficient");seat.mana-=.125;action.mReviveTarget.clear();check(!action.selectRevival(),"fraction below revival price rejected");}
  seat.tier=1;seat.mana=14000;CreatureActionHuntGhost trip(hunter);trip.mState=5;trip.mReviveGhosts={"target"};trip.mGhosts={"target"};hunter.tile=grave;trip.step();check(corpse.revivals==1&&seat.mana==0&&ghost.deleted,"arrival revival pays exact price and removes ghost");corpse.alive=false;ghost.deleted=false;seat.mana=14000;trip.mReviveTarget="target";trip.mReviveGhosts={"target"};seat.mana=13999.875;trip.step();check(corpse.revivals==1&&!ghost.deleted,"arrival rechecks changed mana");
  hunter.tile=room.floor.front();room.mCauldrons={{room.floor.back(),&hunter}};ghost.seat=&enemy;ghost.deleted=false;ghost.level=1;ghost.tile=map.getTile(3,2);for(std::pair<const std::pair<int,int>,Tile>& entry:map.tiles)entry.second.owner=&seat;Tile* seen=map.getTile(6,6);Tile* unseen=map.getTile(7,7);seen->owner=unseen->owner=&enemy;seat.seen.insert(seen);
- for(int tier=1;tier<=3;++tier){seat.tier=tier;const double threshold=tier==1?10:tier==2?8:6;for(GhostProduct product:{GhostProduct::mana,GhostProduct::research,GhostProduct::crystal}){seat.product=product;seat.bar=threshold*2-.625;seat.mana=1000;seat.points=0;int crystals=ItemBagEntity::crystals;int policies=KeeperAI::updates;room.emptyGhost(hunter,ghost);near(seat.bar,.375,"product loop retains fractional bar");if(product==GhostProduct::mana)near(seat.mana,21000,"two products give exact mana");if(product==GhostProduct::research)near(seat.points,4000,"two products give exact research");if(product==GhostProduct::crystal)check(ItemBagEntity::crystals==crystals+2,"one factory crystal per ectoplasm");check(KeeperAI::updates==policies+2,"AI evaluated before each product");check(SpellEyeEvil::reveals.back()==unseen,"enemy reveal chooses unseen territory first");}}
- seat.tier=1;seat.product=GhostProduct::crystal;seat.bar=9.375;room.mBowl=nullptr;int crystals=ItemBagEntity::crystals;room.emptyGhost(hunter,ghost);near(seat.bar,10.375,"known no-bowl gap retains pending bar without consuming it");check(ItemBagEntity::crystals==crystals,"no invented crystal bowl");
- seat.seen.insert(unseen);room.mBowl=map.getTile(1,2);seat.product=GhostProduct::research;seat.bar=0;room.emptyGhost(hunter,ghost);check(SpellEyeEvil::reveals.back()==seen||SpellEyeEvil::reveals.back()==unseen,"seen territory fallback");size_t reveals=SpellEyeEvil::reveals.size();ghost.seat=&seat;room.emptyGhost(hunter,ghost);check(SpellEyeEvil::reveals.size()==reveals,"own ghost never reveals");
+ for(int tier=1;tier<=3;++tier){seat.tier=tier;const double threshold=tier==1?10:tier==2?8:6;for(GhostProduct product:{GhostProduct::mana,GhostProduct::research,GhostProduct::crystal}){seat.product=product;seat.bar=threshold*2-.625;seat.mana=1000;seat.points=0;int crystals=ItemBagEntity::crystals;int policies=KeeperAI::updates;room.emptyGhost(hunter,ghost);near(seat.bar,.375,"product loop retains fractional bar");if(product==GhostProduct::mana)near(seat.mana,21000,"two products give exact mana");if(product==GhostProduct::research)near(seat.points,4000,"two products give exact research");if(product==GhostProduct::crystal)check(ItemBagEntity::crystals==crystals+1&&ItemBagEntity::position.x==1&&ItemBagEntity::position.y==1,"one crystal per two ectoplasm falls on the free floor tile beside the cauldron");check(KeeperAI::updates==policies+(product==GhostProduct::crystal?1:2),"AI evaluated before each product");check(SpellEyeEvil::reveals.back()==unseen,"enemy reveal chooses unseen territory first");}}
+ seat.tier=1;seat.product=GhostProduct::crystal;seat.bar=9.375;int crystals=ItemBagEntity::crystals;room.emptyGhost(hunter,ghost);near(seat.bar,10.375,"one ectoplasm is not enough for a crystal and stays in the bar");check(ItemBagEntity::crystals==crystals,"no crystal below two ectoplasm");
+ seat.bar=19.375;room.mCauldrons={{room.floor.front(),&hunter}};room.emptyGhost(hunter,ghost);near(seat.bar,20.375,"no free floor tile keeps the pending bar without consuming it");check(ItemBagEntity::crystals==crystals,"no crystal without a free floor tile");room.mCauldrons={{room.floor.back(),&hunter}};
+ seat.seen.insert(unseen);seat.product=GhostProduct::research;seat.bar=0;room.emptyGhost(hunter,ghost);check(SpellEyeEvil::reveals.back()==seen||SpellEyeEvil::reveals.back()==unseen,"seen territory fallback");size_t reveals=SpellEyeEvil::reveals.size();ghost.seat=&seat;room.emptyGhost(hunter,ghost);check(SpellEyeEvil::reveals.size()==reveals,"own ghost never reveals");
  CreatureActionHuntGhost interrupted(hunter,"target");interrupted.equipment=&room;interrupted.mGhosts={"extra1","extra2"};interrupted.mLastPosition=Ogre::Vector3(2.125f,3.875f,.5f);hunter.onMap=false;ghost.state=GhostState::beamed;ghost.assigned=hunter.name;int drops=GhostBoxEntity::dropped,pops=hunter.pops;interrupted.interrupt();interrupted.interrupt();check(GhostBoxEntity::dropped==drops+1&&interrupted.mGhosts.empty()&&!interrupted.mEquipped,"interruption drops full box exactly once");near(GhostBoxEntity::droppedPosition.x,2.125,"hand interruption uses saved last world X");near(GhostBoxEntity::droppedPosition.y,3.875,"hand interruption uses saved last world Y");check(hunter.pops==pops&&ghost.state==GhostState::floating&&ghost.assigned.empty(),"interruption releases target without queue reentrancy");
  CreatureActionHuntGhost incomplete(hunter);incomplete.mRegistered=false;incomplete.mGhosts={"extra1"};incomplete.interrupt();check(GhostBoxEntity::dropped==drops+1,"incomplete imported action cannot manufacture a dropped box");
  std::cout<<"hunt timing, assignment, revival, products and reveal: ok\n";

@@ -1359,6 +1359,8 @@ void KeeperAI::updateGhostRoomSettings(Seat& seat)
         crystalValue = config.getSoulCrystalPrice() * config.getRoomConfigDouble("MerchantBuyShare") +
             config.getSoulCrystalPrice() * seat.getMerchantMargin() / GHOST_VALUE_PERCENT +
             buyer->getDefinition()->getXPNeededWhenLevel(buyer->getLevel()) * config.getGhostAiGoldPerXp();
+    // The other products are valued per ectoplasm, a crystal takes several of them.
+    crystalValue /= config.getRoomConfigDouble("GhostEctoplasmPerCrystal");
     GhostProduct product = GhostProduct::crystal;
     double bestValue = 0.0;
     if(researchValue > bestValue) { bestValue = researchValue; product = GhostProduct::research; }

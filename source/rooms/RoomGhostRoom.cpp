@@ -168,11 +168,9 @@ void RoomGhostRoom::createCauldronObjects()
 {
     std::vector<BuildingObject*> oldCauldrons;
     for(const std::pair<Tile* const,BuildingObject*>& entry : getBuildingObjects())
-        if(entry.second->getMeshName()=="GhostCauldron" || entry.second->getMeshName()=="CrystalBowl") oldCauldrons.push_back(entry.second);
+        if(entry.second->getMeshName()=="GhostCauldron") oldCauldrons.push_back(entry.second);
     for(BuildingObject* object : oldCauldrons) removeBuildingObject(object);
     mCauldronObjects.clear();
-    mBowl=nullptr;
-    std::set<Tile*> occupied;
     for(const Cauldron& cauldron : mCauldrons)
     {
         Tile* tile=cauldron.anchor;
@@ -186,23 +184,25 @@ void RoomGhostRoom::createCauldronObjects()
             std::map<Creature*,InteractionPosition>::iterator occupied=mInteractionPositions.find(cauldron.hunter);
             if(occupied!=mInteractionPositions.end()) occupied->second.object=object;
         }
-        for(int y=0;y<2;++y) for(int x=0;x<2;++x) occupied.insert(getGameMap()->getTile(tile->getX()+x,tile->getY()+y));
     }
-    if(mCauldrons.empty()) return;
-    Tile* first=mCauldrons.front().anchor;
-    std::vector<Tile*> candidates=mCoveredTiles;
-    std::sort(candidates.begin(),candidates.end(),tileOrder);
-    for(Tile* tile : candidates)
+}
+
+Tile* RoomGhostRoom::findCrystalDropTile(const Tile& cauldron) const
+{
+    Tile* best=nullptr;double distance=std::numeric_limits<double>::max();
+    for(Tile* tile : mCoveredTiles)
     {
-        if(occupied.count(tile) || std::abs(tile->getX()-first->getX())>2 || std::abs(tile->getY()-first->getY())>2) continue;
-        bool inner=true;
-        for(int y=-1;y<=1;++y) for(int x=-1;x<=1;++x)
-            if(std::find(mCoveredTiles.begin(),mCoveredTiles.end(),getGameMap()->getTile(tile->getX()+x,tile->getY()+y))==mCoveredTiles.end()) inner=false;
-        if(!inner) continue;
-        mBowl=tile;
-        BuildingObject* bowl=new BuildingObject(getGameMap(),*this,"CrystalBowl",*tile,0.0f,false);
-        addBuildingObject(tile,bowl); bowl->createMesh(); break;
+        // Tiles under any cauldron are never used; the bag itself is no obstacle, so every other floor tile keeps all passages free.
+        bool underCauldron=false;
+        for(const Cauldron& placed : mCauldrons)
+            if(tile->getX()>=placed.anchor->getX() && tile->getX()<=placed.anchor->getX()+1 &&
+               tile->getY()>=placed.anchor->getY() && tile->getY()<=placed.anchor->getY()+1) underCauldron=true;
+        if(underCauldron) continue;
+        const double dx=tile->getX()-(cauldron.getX()+0.5),dy=tile->getY()-(cauldron.getY()+0.5);
+        const double squared=dx*dx+dy*dy;
+        if(best==nullptr || squared<distance || (squared==distance && tileOrder(tile,best))) { best=tile;distance=squared; }
     }
+    return best;
 }
 
 void RoomGhostRoom::updateActiveSpots(GameMap* map)
@@ -226,7 +226,22 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
             walls.push_back(Wall(tile,i==0?activeSpotTop:i==1?activeSpotLeft:i==2?activeSpotRight:activeSpotBottom));
         }
     }
-    // Subdivide existing wall faces using the native mesh widths; decoration never overwrites a floor-object key.
+    // A free-standing room has no adjacent wall: bell, hooks and gauges then stand on racks along the open room edge.
+    // They stay decoration (no obstacle), so every passage remains free, and the supply is not reduced.
+    if(walls.empty())
+    {
+        for(Tile* tile : ordered)
+        {
+            const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};
+            for(int i=0;i<4;++i)
+            {
+                Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
+                if(neighbor!=nullptr && neighbor->getCoveringRoom()==this) continue;
+                walls.push_back(Wall(tile,i==0?activeSpotTop:i==1?activeSpotLeft:i==2?activeSpotRight:activeSpotBottom));
+            }
+        }
+    }
+    // Subdivide the wall faces (or room-edge rack faces) using the native mesh widths; decoration never overwrites a floor-object key.
     if(!walls.empty())
     {
         const size_t slots=std::max(walls.size(),static_cast<size_t>(getBackpackCount())+1);
@@ -357,7 +372,7 @@ void RoomGhostRoom::absorbRoom(Room* room)
     mDecorationTiles.insert(mDecorationTiles.end(),other->mDecorationTiles.begin(),other->mDecorationTiles.end());
     mWallObjects.insert(mWallObjects.end(),other->mWallObjects.begin(),other->mWallObjects.end());
     other->mWallObjects.clear();other->mHookObjects.clear();other->mHookSlots.clear();
-    other->mHooks.clear();other->mCauldrons.clear();other->mCauldronObjects.clear();other->mDecorationTiles.clear();other->mBowl=nullptr;
+    other->mHooks.clear();other->mCauldrons.clear();other->mCauldronObjects.clear();other->mDecorationTiles.clear();
     Room::absorbRoom(room); updateActiveSpots();
 }
 
@@ -436,20 +451,24 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
     while(seat->getEctoplasmLevels()>=getLevelsPerEctoplasm(*seat))
     {
         KeeperAI::updateGhostRoomSettings(*seat);
-        // The prescribed bowl position is unavailable in some legal layouts; keep this product pending.
-        if(seat->getGhostProduct()==GhostProduct::crystal && mBowl==nullptr) break;
-        seat->setEctoplasmLevels(seat->getEctoplasmLevels()-getLevelsPerEctoplasm(*seat));
+        const bool crystal=seat->getGhostProduct()==GhostProduct::crystal;
+        // A soul crystal costs several ectoplasm; the bar keeps its rest until enough levels are collected.
+        const double cost=getLevelsPerEctoplasm(*seat)*(crystal?config.getRoomConfigDouble("GhostEctoplasmPerCrystal"):1.0);
+        if(seat->getEctoplasmLevels()<cost) break;
+        Tile* drop=crystal?findCrystalDropTile(*cauldron):nullptr;
+        if(crystal && drop==nullptr) break;
+        seat->setEctoplasmLevels(seat->getEctoplasmLevels()-cost);
         Spell::fireSpellEffect(*cauldron,"EctoplasmBurst","");
         CreatureActionHuntGhost::playSound(*getGameMap(),*cauldron,"Rooms/GhostRoom/PressHiss");
         if(seat->getGhostProduct()==GhostProduct::mana) seat->addMana(config.getRoomConfigDouble("GhostEctoplasmMana"));
         else if(seat->getGhostProduct()==GhostProduct::research) seat->addSkillPoints(config.getRoomConfigInt32("GhostEctoplasmResearchPoints"));
         else
         {
-            Tile* bowl=mBowl;
+            // The finished crystal falls as a bag onto a free floor tile of the room.
             ItemBagEntity* bag=new ItemBagEntity(getGameMap(),ItemInstance::createSoulCrystal());
-            bag->setSeat(seat);bag->setPosition(Ogre::Vector3(bowl->getX(),bowl->getY(),0.0f));
+            bag->setSeat(seat);bag->setPosition(Ogre::Vector3(drop->getX(),drop->getY(),0.0f));
             bag->addToGameMap();bag->createMesh();
-            CreatureActionHuntGhost::playSound(*getGameMap(),*bowl,"Rooms/GhostRoom/CrystalRing");
+            CreatureActionHuntGhost::playSound(*getGameMap(),*drop,"Rooms/GhostRoom/CrystalRing");
         }
     }
 }
