@@ -2978,9 +2978,9 @@ void Creature::doUpkeep()
     {
         int32_t decay = ConfigManager::getSingleton().getRoomConfigInt32("SpecialMoodDecayPerTurn");
         if(mSpecialMood > 0)
-            mSpecialMood = std::max(0, mSpecialMood - decay);
+            mSpecialMood = std::max(0.0, mSpecialMood - decay);
         else
-            mSpecialMood = std::min(0, mSpecialMood + decay);
+            mSpecialMood = std::min(0.0, mSpecialMood + decay);
     }
 
     // The clients show the gold on the body of the carrier. They are told when it changed (cosmetic only).
@@ -9423,6 +9423,7 @@ void Creature::addPrayerRelief(int32_t relief, int32_t maxRelief)
     mPrayerRelief = std::min(mPrayerRelief + relief, maxRelief);
 }
 
+//! \brief Clears annoyance and temporarily offsets remaining negative mood.
 void Creature::removeAnnoyance()
 {
     mNbTurnsInHand = 0;
@@ -9433,10 +9434,11 @@ void Creature::removeAnnoyance()
     mSpecialMood = 0;
     // What is left (hunger, tiredness, wounds, unpaid wage) is cancelled for a while, it builds up again
     double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
-    mSpecialMood = std::max(0, -points);
+    mSpecialMood = std::max(0.0, -points);
     mMoodCooldownTurns = 0;
 }
 
+//! \brief Applies a temporary mood penalty towards the angry level.
 void Creature::makeUnhappy()
 {
     mSpecialMood = 0;
@@ -9444,8 +9446,8 @@ void Creature::makeUnhappy()
     // The middle of the angry level
     int32_t target = (ConfigManager::getSingleton().getCreatureMoodAngry()
         + ConfigManager::getSingleton().getCreatureMoodFurious()) / 2;
-    int32_t wanted = target - ConfigManager::getSingleton().getCreatureBaseMood() - points;
-    mSpecialMood = std::min(0, wanted);
+    double wanted = target - ConfigManager::getSingleton().getCreatureBaseMood() - points;
+    mSpecialMood = std::min(0.0, wanted);
     mMoodCooldownTurns = 0;
 }
 

@@ -325,7 +325,7 @@ public:
 
     //! \brief Returns the mood points of the last mood computation (CreatureBaseMood is not included). Prison and
     //! torture use it to tell when a captured creature is broken.
-    inline int32_t getMoodPoints() const
+    inline double getMoodPoints() const
     { return mMoodPoints; }
 
     //! \brief What the creature is doing, for the creature panel. On the server it is derived from the
@@ -1549,7 +1549,7 @@ public:
 
     //! \brief Mood points given by a special (positive after Make Happy, negative after Make Unhappy).
     //! They fade towards 0 over time
-    inline int32_t getSpecialMood() const
+    inline double getSpecialMood() const
     { return mSpecialMood; }
 
     //! \brief Make Happy special: clears the annoyance the creature has gathered
@@ -2045,7 +2045,7 @@ private:
     int32_t                         mPrayerRelief;
 
     //! \brief Mood points set by the Make Happy and Make Unhappy specials. They fade towards 0 every turn
-    int32_t                         mSpecialMood;
+    double                          mSpecialMood;
 
     //! \brief Counts turns the creature is furious. If it stays like this for too long, it will become rogue
     int32_t                         mNbTurnFurious;
