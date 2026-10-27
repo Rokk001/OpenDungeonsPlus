@@ -143,7 +143,10 @@ void writeAttendantLine(std::ostream& os, const PoolAttendantSave& save)
 {
     os << STREAM_TAG_ATTENDANT << " " << save.mX << " " << save.mY << " " << PoolAttendantStateNames::toString(save.mState)
        << " " << save.mTurnsLeft << " " << save.mCannonballTurnsLeft << " " << (save.mHasPlace ? 1 : 0) << " "
-       << save.mPlaceX << " " << save.mPlaceY << std::endl;
+       << save.mPlaceX << " " << save.mPlaceY;
+    if(save.mHasClipTime)
+        os << " " << save.mClipTime;
+    os << std::endl;
 }
 
 //! \brief True when the block contains the tile position.
@@ -1360,7 +1363,11 @@ bool RoomSpa::importFromStream(std::istream& is)
             saved.mHasCannonball = static_cast<bool>(line >> saved.mCannonballTurnsLeft);
             int32_t hasPlace = 0;
             if(saved.mHasCannonball && (line >> hasPlace >> saved.mPlaceX >> saved.mPlaceY))
+            {
                 saved.mHasPlace = (hasPlace != 0);
+                // The time the clip had really run is the last value; an older line ends before it
+                saved.mHasClipTime = static_cast<bool>(line >> saved.mClipTime);
+            }
 
             mPendingAttendant.mPresent = true;
             mPendingAttendant.mSave = saved;

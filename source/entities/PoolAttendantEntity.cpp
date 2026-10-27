@@ -541,6 +541,9 @@ void PoolAttendantEntity::exportSaveData(PoolAttendantSave& save) const
     save.mHasPlace = mHasPlace;
     save.mPlaceX = mPlaceX;
     save.mPlaceY = mPlaceY;
+    // The clip time the server really reached, so that an act or a climb goes on at the same picture after loading
+    save.mHasClipTime = true;
+    save.mClipTime = getAnimationTime();
 }
 
 void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
@@ -565,19 +568,20 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::whistle, false, Ogre::Vector3::ZERO, false);
-            setAnimationTime(getClipTurns() - mTurnsLeft);
+            // The saved clip time is used; an old save without it gets the time worked out from the turns left
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
             break;
         case PoolAttendantState::towelWaving:
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::towelWave, false, Ogre::Vector3::ZERO, false);
-            setAnimationTime(getClipTurns() - mTurnsLeft);
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
             break;
         case PoolAttendantState::dozing:
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::doze, false, Ogre::Vector3::ZERO, false);
-            setAnimationTime(getClipTurns() - mTurnsLeft);
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
             break;
         case PoolAttendantState::climbingDown:
         case PoolAttendantState::climbingUp:
@@ -592,8 +596,8 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::climb, true, AWAY_FROM_POOL, false);
-            // The clip goes on at the turn of the climb that was reached, it does not start again
-            setAnimationTime(getClipTurns() - mTurnsLeft);
+            // The clip goes on at the time that was reached, it does not start again
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
             const double done = 1.0 - mTurnsLeft / getClipTurns();
             placeOnLadder(down ? done : 1.0 - done);
             break;

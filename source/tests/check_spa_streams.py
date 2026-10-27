@@ -75,7 +75,9 @@ assert 'const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);' 
 assert 'effectsText->setVisible(isOwn && !effects.empty());' in profile_page
 # The restored acts and climbs go on at the reached turn of their clip instead of starting it again
 attendant_restore = extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::restoreFromSave(')
-assert attendant_restore.count('setAnimationTime(getClipTurns() - mTurnsLeft);') == 4
+assert attendant_restore.count('setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);') == 4
+assert 'save.mClipTime = getAnimationTime();' in extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::exportSaveData(')
+assert 'double MovableGameEntity::getAnimationTime() const' in read('source/entities/MovableGameEntity.cpp')
 assert 'void MovableGameEntity::setAnimationTime(' in read('source/entities/MovableGameEntity.cpp')
 # A seat that gains sight in the middle of a jump gets the running arc after the entity data, for creature and attendant
 # (the notification of the jump goes to the seats that already see the entity, so the new seat needs its own message)
@@ -282,7 +284,7 @@ static void checkRoomStream()
     PoolAttendantEntity attendant;
     attendant.save.mX = 12.5; attendant.save.mY = 8.25; attendant.save.mState = PoolAttendantState::dozing; attendant.save.mTurnsLeft = 7.5;
     attendant.save.mHasCannonball = true; attendant.save.mCannonballTurnsLeft = 99.5; attendant.save.mHasPlace = true;
-    attendant.save.mPlaceX = 16; attendant.save.mPlaceY = 9;
+    attendant.save.mPlaceX = 16; attendant.save.mPlaceY = 9; attendant.save.mHasClipTime = true; attendant.save.mClipTime = 12.25;
     RoomSpa room; room.mPayer = SpaPayer::creature; room.mAttendant = &attendant;
     RoomSpaBather b1(&reserved); b1.mBlock.mX = 16; b1.mBlock.mY = 8; b1.mBlock.mWidth = 1; b1.mBlock.mHeight = 2; b1.mState = SpaBatherState::reserved; b1.mJump = true;
     jumping.mJumpTurnsLeft = 1;
@@ -292,7 +294,7 @@ static void checkRoomStream()
     room.mBathers.push_back(b1); room.mBathers.push_back(b2); room.mBathers.push_back(b3); room.mBathers.push_back(b4);
     const std::string text = exported(room);
     expect(text.find("SpaPayer 1") != std::string::npos, "payer line");
-    expect(text.find("PoolAttendant 12.5 8.25 doze 7.5 99.5 1 16 9") != std::string::npos, "attendant line: " + text);
+    expect(text.find("PoolAttendant 12.5 8.25 doze 7.5 99.5 1 16 9 12.25") != std::string::npos, "attendant line: " + text);
     expect(text.find("SpaBathers 3") != std::string::npos, "three bathers, the one that is done is not written: " + text);
     expect(text.find("Orc1 16 8 1 2 reserved 0 1") != std::string::npos, "reserved bather line: " + text);
     expect(text.find("Troll1 17 9 2 2 jumping 1 1") != std::string::npos, "jumping bather line keeps the turns of the jump that are left");
@@ -307,6 +309,8 @@ static void checkRoomStream()
     expectNear(loaded.mPendingAttendant.mSave.mTurnsLeft, 7.5, "attendant turns left");
     expectNear(loaded.mPendingAttendant.mSave.mCannonballTurnsLeft, 99.5, "attendant cannonball turns");
     expect(loaded.mPendingAttendant.mSave.mHasPlace && loaded.mPendingAttendant.mSave.mPlaceX == 16 && loaded.mPendingAttendant.mSave.mPlaceY == 9, "attendant place");
+    expect(loaded.mPendingAttendant.mSave.mHasClipTime, "attendant clip time present");
+    expectNear(loaded.mPendingAttendant.mSave.mClipTime, 12.25, "attendant clip time");
     expectNear(loaded.mPendingAttendant.mSave.mX, 12.5, "attendant x"); expectNear(loaded.mPendingAttendant.mSave.mY, 8.25, "attendant y");
     expect(loaded.mPendingBathers.size() == 3, "three pending bathers");
     expect(loaded.mPendingBathers["Orc1"].mState == SpaBatherState::reserved && loaded.mPendingBathers["Orc1"].mBlock.mHeight == 2 && loaded.mPendingBathers["Orc1"].mJump, "reserved bather");
@@ -332,6 +336,9 @@ static void checkRoomStream()
         expect(back.importFromStream(is) && back.mPendingAttendant.mPresent && back.mPendingAttendant.mSave.mState == states[i], "attendant state " + std::to_string(i));
         expectNear(back.mPendingAttendant.mSave.mTurnsLeft, 1.5 + i, "attendant turns " + std::to_string(i));
     }
+    // An older line with the place but without the clip time loads, the time is then worked out from the turns left
+    RoomSpa noClip; std::istringstream noClipIn("RoomHead\nPoolAttendant 3 4 doze 5 9 1 2 3\n");
+    expect(noClip.importFromStream(noClipIn) && noClip.mPendingAttendant.mSave.mHasPlace && !noClip.mPendingAttendant.mSave.mHasClipTime, "attendant line without the clip time");
     // A short line (the first four values only) loads with new jump timers and without a place
     RoomSpa shortLine; std::istringstream shortIn("RoomHead\nPoolAttendant 3 4 sit 5\n");
     expect(shortLine.importFromStream(shortIn) && shortLine.mPendingAttendant.mPresent && !shortLine.mPendingAttendant.mSave.mHasCannonball
@@ -414,6 +421,7 @@ struct AttendantProbe
         mCannonballTurnsLeft(0.0), mHasPlace(false), mPlaceX(0), mPlaceY(0), mJumpTurns(0), mJumpTurnsLeft(0), mJumpElapsed(0.0f), clipTime(-1.0), aborts(0), ladderProgress(-1.0) {}
     void setAnimationState(const std::string& state, bool loop, const Ogre::Vector3& direction, bool idle) { clip = state; clipTime = 0.0; }
     void setAnimationTime(double time) { clipTime = (time < 0.0) ? 0.0 : time; }
+    double getAnimationTime() const { return clipTime; }
     void moveTo(const Ogre::Vector3& position) { }
     void placeOnLadder(double progress) { ladderProgress = progress; }
     void abortToChair() { ++aborts; mState = PoolAttendantState::sitting; }
@@ -443,6 +451,17 @@ static void checkAttendantRestore()
         AttendantProbe b(&room, &chair); save.mTurnsLeft = 40.0; b.restoreFromSave(save);
         expectNear(b.clipTime, 0.0, std::string("an act that had just begun starts at 0: ") + clips[i]);
     }
+    // A saved clip time that differs from the turns (the clip runs on the frame clock) wins and survives a save of the restored attendant
+    for(int i = 0; i < 3; ++i)
+    {
+        AttendantProbe a(&room, &chair); PoolAttendantSave save; save.mState = acts[i]; save.mTurnsLeft = 30.0; save.mHasClipTime = true; save.mClipTime = 13.25;
+        a.restoreFromSave(save);
+        expectNear(a.clipTime, 13.25, std::string("the saved clip time is used: ") + clips[i]);
+    }
+    // The saved clip time of a climb is used for the clip, the height follows the turns left
+    AttendantProbe timedClimb(&room, &chair); PoolAttendantSave timed; timed.mState = PoolAttendantState::climbingUp; timed.mTurnsLeft = 10.0;
+    timed.mHasClipTime = true; timed.mClipTime = 27.5; timedClimb.restoreFromSave(timed);
+    expectNear(timedClimb.clipTime, 27.5, "the saved clip time of the climb is used");
     // The climb: the clip and the height are set from the same reached turn
     AttendantProbe down(&room, &chair); PoolAttendantSave climb; climb.mState = PoolAttendantState::climbingDown; climb.mTurnsLeft = 10.0;
     climb.mHasPlace = true; down.restoreFromSave(climb);

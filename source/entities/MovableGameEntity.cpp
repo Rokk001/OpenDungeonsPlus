@@ -527,6 +527,11 @@ void MovableGameEntity::setAnimationTime(double time)
     mAnimationTime = std::max(0.0, time);
 }
 
+double MovableGameEntity::getAnimationTime() const
+{
+    return mAnimationTime;
+}
+
 void MovableGameEntity::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     GameEntity::exportToPacket(os, seat);

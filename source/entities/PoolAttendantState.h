@@ -59,7 +59,9 @@ struct PoolAttendantSave
         mCannonballTurnsLeft(0.0),
         mHasPlace(false),
         mPlaceX(0),
-        mPlaceY(0)
+        mPlaceY(0),
+        mHasClipTime(false),
+        mClipTime(0.0)
     {}
 
     //! Position (x) of the attendant in tiles.
@@ -80,6 +82,10 @@ struct PoolAttendantSave
     int32_t mPlaceX;
     //! Pool tile (y) the attendant jumps to.
     int32_t mPlaceY;
+    //! True when the time the clip had really run was saved (an old line misses it and the time is worked out from the turns left).
+    bool mHasClipTime;
+    //! Turns the clip of an act or of the climb had really run when the attendant was saved.
+    double mClipTime;
 };
 
 namespace PoolAttendantStateNames

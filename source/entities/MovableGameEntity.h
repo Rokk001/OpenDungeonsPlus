@@ -204,6 +204,11 @@ protected:
     //! \param time The turns the clip has run; negative values count as 0.
     void setAnimationTime(double time);
 
+    //! \brief Server: the time the current clip has really run (in turns, like the server counts it), the value a save
+    //! keeps so that a clip can go on exactly where it was.
+    //! \return The turns the current clip has run.
+    double getAnimationTime() const;
+
     std::deque<Ogre::Vector2> mWalkQueue;
     std::string mPrevAnimationState;
     bool mPrevAnimationStateLoop;
