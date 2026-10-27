@@ -114,6 +114,43 @@ void reportRelationshipPost(GameMap* gameMap, const std::string& creatureA, cons
     social::CreaturePosts::reportRelationshipChange(gameMap->getTurnNumber(), creatureA, classA, nameA,
         creatureB, classB, nameB, oldTier, newTier);
 }
+
+//! \brief Dungeonbook post for a tavern event of a creature of the local player: a drink, or a won or lost slap duel.
+//! Only the local keeper's creatures write posts (Creature::socialEvent checks it); the opponent of a duel is named by
+//! the name of its profile.
+//! \param gameMap The map the creatures are on.
+//! \param event The cosmetic event of the kind tavernEvent.
+void reportTavernPost(GameMap* gameMap, const CosmeticEvent& event)
+{
+    Creature* creature = gameMap->getCreature(event.mSubject);
+    if(creature == nullptr)
+        return;
+
+    std::string opponentName;
+    Creature* opponent = gameMap->getCreature(event.mObject);
+    if(opponent != nullptr)
+    {
+        social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+        opponentName = cache.getProfile(opponent->getName(), opponent->getDefinition()->getClassName(),
+            opponent->getDefinition()->isWorker()).getFullName();
+    }
+
+    switch(static_cast<CosmeticTavernKind>(event.mValue))
+    {
+        case CosmeticTavernKind::beer:
+        case CosmeticTavernKind::water:
+            creature->socialEvent(social::PostCategory::Drank);
+            break;
+        case CosmeticTavernKind::duelWon:
+            creature->socialEvent(social::PostCategory::DuelWon, opponentName);
+            break;
+        case CosmeticTavernKind::duelLost:
+            creature->socialEvent(social::PostCategory::DuelLost, opponentName);
+            break;
+        default:
+            break;
+    }
+}
 }
 
 ODClient::ODClient() :
@@ -1163,6 +1200,13 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                     RoomAmbience::getSingleton().notifyTileDirt(event.mText);
                 }
                 break;
+            }
+
+            if(event.is(CosmeticEventType::tavernEvent))
+            {
+                // A drink, a slap duel or a vomit in or around a tavern: the post is written here, the thought bubble
+                // follows in CreatureReactions::noteCosmeticEvent below
+                reportTavernPost(gameMap, event);
             }
 
             if(frameListener->getModeManager()->getCurrentModeType() == ModeManager::ModeType::GAME &&
@@ -2230,6 +2274,42 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
             gameMode->setCasinoPayoutShown(xx, yy, level);
+            break;
+        }
+
+        case ServerNotificationType::tavernWindow:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            int xx = 0;
+            int yy = 0;
+            uint32_t payer = 0;
+            bool beerResearched = false;
+            double beerPrice = 0.0;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer >> beerResearched >> beerPrice);
+
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setTavernWindowShown(xx, yy, payer, beerResearched, beerPrice);
+            break;
+        }
+
+        case ServerNotificationType::tavernPayer:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            int xx = 0;
+            int yy = 0;
+            uint32_t payer = 0;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer);
+
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setTavernPayerShown(xx, yy, payer);
             break;
         }
 

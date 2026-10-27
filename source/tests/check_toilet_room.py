@@ -25,11 +25,12 @@ def enum_names(text, header):
     return names
 
 
-# 1. RoomType: the published toilet identifier stays before the appended equipment rooms
+# 1. RoomType: the published toilet identifier stays before the appended equipment rooms, the tavern follows them
 room_type = read('source/rooms/RoomType.h')
 rooms = enum_names(room_type, 'enum class RoomType')
 assert rooms.index('toilet') == 19 and rooms[-1] == 'nbRooms', rooms
-assert rooms[19:23] == ['toilet', 'merchant', 'herbGarden', 'alchemyLab']
+assert rooms[19:24] == ['toilet', 'merchant', 'herbGarden', 'alchemyLab', 'tavern']
+assert rooms[-3:] == ['alchemyLab', 'tavern', 'nbRooms'], rooms[-4:]
 assert rooms.count('toilet') == 1
 
 # 2. The room class, factory, names and registration in the build
@@ -45,11 +46,12 @@ for name in ('rooms/RoomToilet.cpp', 'creatureaction/CreatureActionSearchToilet.
 # Every covered tile gets a seat object (one per tile, removed with the tile)
 assert 'ToiletSeat' in room_cpp
 
-# 3. TileVisual: the published toilet visual stays before the appended equipment visuals
+# 3. TileVisual: the published toilet visual stays before the appended equipment visuals, the tavern visual follows them
 tile_h = read('source/entities/Tile.h')
 visuals = enum_names(tile_h, 'enum class TileVisual')
 assert visuals.index('toiletRoom') == 30 and visuals[-1] == 'countTileVisual', visuals
-assert visuals[30:34] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom']
+assert visuals[30:35] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom']
+assert visuals[-3:] == ['alchemyLabRoom', 'tavernRoom', 'countTileVisual'], visuals[-4:]
 tile_cpp = read('source/entities/Tile.cpp')
 assert tile_cpp.count('case TileVisual::toiletRoom:') >= 4, 'toiletRoom is missing in the Tile switches'
 assert 'return "toiletRoom";' in tile_cpp
@@ -70,7 +72,7 @@ tileset_loader = config_manager[config_manager.index('bool ConfigManager::loadTi
 loaded_visuals = re.findall(r'loadTilesetValues\(defFile, TileVisual::(\w+),', tileset_loader)
 assert len(loaded_visuals) == len(set(loaded_visuals)), 'duplicate tileset loader visual'
 assert set(loaded_visuals) == set(visuals[:-1]), 'tileset loader must consume every TileVisual exactly once'
-assert loaded_visuals[-4:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom']
+assert loaded_visuals[-5:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom']
 for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
     block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
     block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
@@ -103,6 +105,7 @@ skills = enum_names(skill_type, 'enum class SkillType')
 assert skills.index('roomToilet') == 55 and skills[-1] == 'countSkill', skills
 assert skills[55:62] == ['roomToilet', 'roomMerchant', 'roomHerbGarden', 'roomAlchemyLab',
                          'trapFineTools', 'trapMasterTools', 'spellSunthornCultivation']
+assert skills[-3:] == ['roomTavern', 'tavernBeer', 'countSkill'], skills[-4:]
 assert 'case SkillType::roomToilet:' in read('source/game/SkillType.cpp') and '"roomToilet"' in read('source/game/SkillType.cpp')
 manager = read('source/game/SkillManager.cpp')
 assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{SkillType::roomDormitory});\n'
@@ -110,7 +113,7 @@ assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomToilet') == 1
-assert len(registered) == 60, 'the combined research tree has 60 entries, found ' + str(len(registered))
+assert len(registered) == 62, 'the combined research tree has 62 entries, found ' + str(len(registered))
 skills_cfg = read('config/skills.cfg')
 assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
 # No research effect line for the toilet

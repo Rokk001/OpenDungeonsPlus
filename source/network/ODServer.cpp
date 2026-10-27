@@ -59,6 +59,7 @@
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortalWave.h"
+#include "rooms/RoomTavern.h"
 #include "rooms/RoomWorkshop.h"
 #include "rooms/RoomType.h"
 #include "spells/Spell.h"
@@ -97,6 +98,28 @@ static const int32_t MASTER_SERVER_STATUS_FINISHED = 2;
 
 namespace
 {
+    //! \brief Returns the tavern of the player on a tile, nullptr if there is none or the tavern belongs to
+    //! another seat (only the owner may look at or change a tavern).
+    //! \param gameMap The server map.
+    //! \param player The player that asked.
+    //! \param xx The x coordinate of a tile of the tavern.
+    //! \param yy The y coordinate of a tile of the tavern.
+    RoomTavern* getOwnedTavern(GameMap* gameMap, Player* player, int xx, int yy)
+    {
+        Tile* tile = gameMap->getTile(xx, yy);
+        if(tile == nullptr)
+            return nullptr;
+
+        Room* room = tile->getCoveringRoom();
+        if((room == nullptr) || (room->getType() != RoomType::tavern))
+            return nullptr;
+
+        if(room->getSeat() != player->getSeat())
+            return nullptr;
+
+        return static_cast<RoomTavern*>(room);
+    }
+
     //! \brief Tells a human player about the health of its dungeon heart when the fraction changed
     //! by at least one percentage point since the last message, when the heart is destroyed,
     //! and once when the game starts or is loaded (nothing was sent to this client yet). A drop
@@ -3308,6 +3331,50 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             ServerNotification notif(ServerNotificationType::casinoPayout, player);
             notif.mPacket << xx << yy << static_cast<uint32_t>(roomCasino->getPayout());
+            sendAsyncMsg(notif);
+            break;
+        }
+
+        case ClientNotificationType::askTavernWindow:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr)
+                break;
+
+            int xx;
+            int yy;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy);
+            RoomTavern* roomTavern = getOwnedTavern(gameMap, player, xx, yy);
+            if(roomTavern == nullptr)
+                break;
+
+            ServerNotification notif(ServerNotificationType::tavernWindow, player);
+            notif.mPacket << xx << yy << static_cast<uint32_t>(roomTavern->getPayer()) << roomTavern->servesBeer()
+                << ConfigManager::getSingleton().getTavernConfigDouble("BeerPrice");
+            sendAsyncMsg(notif);
+            break;
+        }
+
+        case ClientNotificationType::askTavernPayer:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr)
+                break;
+
+            int xx;
+            int yy;
+            uint32_t payer;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer);
+            RoomTavern* roomTavern = getOwnedTavern(gameMap, player, xx, yy);
+            if(roomTavern == nullptr)
+                break;
+
+            // A value that is no payer is ignored; the answer tells the current one anyway
+            if(payer <= static_cast<uint32_t>(TavernPayer::creature))
+                roomTavern->setPayer(static_cast<TavernPayer>(payer));
+
+            ServerNotification notif(ServerNotificationType::tavernPayer, player);
+            notif.mPacket << xx << yy << static_cast<uint32_t>(roomTavern->getPayer());
             sendAsyncMsg(notif);
             break;
         }

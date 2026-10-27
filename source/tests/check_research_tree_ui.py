@@ -47,7 +47,7 @@ for line in constructor.splitlines():
         if current != 'spellSummonChampion':  # the reward skill has no node in the tree
             model[current] = (prefixes[match[1]] + match[2], parents, int(match[3]), tab_of_prefix[prefixes[match[1]]])
             order.append(current)
-assert len(model) == 60
+assert len(model) == 62
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}, %d, %d};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents), tier, tab)
     for key, (path, parents, tier, tab) in model.items())

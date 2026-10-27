@@ -125,9 +125,9 @@ assert 'mFlight' not in cpp[cpp.index('void ChickenEntity::exportToStream'):]
 
 # Network: stable earlier kinds and appended mining/deposit events share the layout; old clients never get it
 event_h = read('source/network/CosmeticEvent.h')
-assert re.search(r'portalArrival = 8,.*?chickenFlee = 9,.*?calmed = 10,.*?bedStatus = 11,.*?casinoResult = 15,.*?keeperWealth = 16,.*?attackTurn = 18,.*?tileDirt = 19,.*?digStroke = 20,.*?goldDelivery = 21,.*?boxCracked = 22,.*?cauldronBang = 23\s*\};', event_h, re.S)
+assert re.search(r'portalArrival = 8,.*?chickenFlee = 9,.*?calmed = 10,.*?bedStatus = 11,.*?casinoResult = 15,.*?keeperWealth = 16,.*?attackTurn = 18,.*?tileDirt = 19,.*?digStroke = 20,.*?goldDelivery = 21,.*?boxCracked = 22,.*?cauldronBang = 23,.*?tavernEvent = 24\s*\};', event_h, re.S)
 event_cpp = read('source/network/CosmeticEvent.cpp')
-assert 'CosmeticEventType::goldDelivery)) ||' in event_cpp and 'CosmeticEventType::cauldronBang)));\n}' in event_cpp and 'return "chickenFlee";' in event_cpp
+assert 'CosmeticEventType::goldDelivery)) ||' in event_cpp and 'CosmeticEventType::tavernEvent)));\n}' in event_cpp and 'return "chickenFlee";' in event_cpp
 server = read('source/network/ODServer.cpp')
 send = server[server.index('void ODServer::sendCosmeticEvent('):]
 send = send[:send.index('\n}\n')]

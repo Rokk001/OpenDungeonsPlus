@@ -263,6 +263,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionParkToTile.cpp
     ${SRC}/creatureaction/CreatureActionReloadTrap.cpp
     ${SRC}/creatureaction/CreatureActionSearchDirtToClean.cpp
+    ${SRC}/creatureaction/CreatureActionSearchDrink.cpp
     ${SRC}/creatureaction/CreatureActionSearchEntityToCarry.cpp
     ${SRC}/creatureaction/CreatureActionSearchFood.cpp
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp
@@ -276,6 +277,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionTunnel.cpp
     ${SRC}/creatureaction/CreatureActionUseRoom.cpp
     ${SRC}/creatureaction/CreatureActionUseToilet.cpp
+    ${SRC}/creatureaction/CreatureActionVomit.cpp
     ${SRC}/creatureaction/CreatureActionWalkToTile.cpp
     ${SRC}/creatureaction/CreatureActionPossessed.cpp
 
@@ -317,6 +319,7 @@ set(OD_SOURCEFILES
     ${SRC}/creaturemood/CreatureMoodNoLair.cpp
     ${SRC}/creaturemood/CreatureMoodOutOfWork.cpp
     ${SRC}/creaturemood/CreatureMoodSlapped.cpp
+    ${SRC}/creaturemood/CreatureMoodThirst.cpp
     ${SRC}/creaturemood/CreatureMoodTortured.cpp
     ${SRC}/creaturemood/CreatureMoodRested.cpp
     ${SRC}/creaturemood/CreatureMoodHatedCompany.cpp
@@ -361,6 +364,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/HerbBundleEntity.cpp
     ${SRC}/entities/CreatureDefinition.cpp
     ${SRC}/entities/DirtPileEntity.cpp
+    ${SRC}/entities/InnkeeperEntity.cpp
     ${SRC}/entities/DoorEntity.cpp
     ${SRC}/entities/EntityLoading.cpp
     ${SRC}/entities/GameEntity.cpp
@@ -565,6 +569,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomGuardRoom.cpp
     ${SRC}/rooms/RoomTemple.cpp
     ${SRC}/rooms/RoomToilet.cpp
+    ${SRC}/rooms/RoomTavern.cpp
     ${SRC}/rooms/RoomTrainingHall.cpp
     ${SRC}/rooms/RoomTreasury.cpp
     ${SRC}/rooms/RoomType.cpp

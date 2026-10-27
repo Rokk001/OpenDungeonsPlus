@@ -172,6 +172,7 @@ bool Tile::isDiggable(const Seat* seat) const
         case TileVisual::herbGardenRoom:
         case TileVisual::alchemyLabRoom:
         case TileVisual::toiletRoom:
+        case TileVisual::tavernRoom:
         case TileVisual::claimedGround:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:
@@ -535,6 +536,9 @@ std::string Tile::tileVisualToString(TileVisual tileVisual)
 
         case TileVisual::toiletRoom:
             return "toiletRoom";
+
+        case TileVisual::tavernRoom:
+            return "tavernRoom";
   
             
         default:
@@ -954,6 +958,7 @@ bool Tile::isClaimed() const
             case TileVisual::herbGardenRoom:
             case TileVisual::alchemyLabRoom:
             case TileVisual::toiletRoom:
+            case TileVisual::tavernRoom:
                 return true;
         }
         
@@ -1108,6 +1113,9 @@ void Tile::computeTileVisual()
                            case RoomType::alchemyLab:
                                mTileVisual = TileVisual::alchemyLabRoom;
                                return;
+                           case RoomType::tavern:
+                               mTileVisual = TileVisual::tavernRoom;
+                               return;
                            default:
                                OD_LOG_ERR("Computing tile visual for unknown room type tile=" + Tile::displayAsString(this) + ", TileType=" + roomTypeToString(getCoveringRoom()->getType()));
                                mTileVisual = TileVisual::nullTileVisual;
@@ -1201,6 +1209,9 @@ void Tile::computeTileVisual()
                                return;
                            case RoomType::alchemyLab:
                                mTileVisual = TileVisual::alchemyLabRoom;
+                               return;
+                           case RoomType::tavern:
+                               mTileVisual = TileVisual::tavernRoom;
                                return;
                            default:
                                OD_LOG_ERR("Computing tile visual for unknown room type tile=" + Tile::displayAsString(this) + ", TileType=" + roomTypeToString(getCoveringRoom()->getType()));
@@ -2471,6 +2482,7 @@ double Tile::getCreatureSpeedDefault(const Creature* creature) const
         case TileVisual::herbGardenRoom:
         case TileVisual::alchemyLabRoom:
         case TileVisual::toiletRoom:
+        case TileVisual::tavernRoom:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:
         case TileVisual::rockGround:

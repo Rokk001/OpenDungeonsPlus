@@ -65,6 +65,7 @@
 #include "social/SocialProfileCache.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/RoomTavern.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
 #include "sound/MusicPlayer.h"
@@ -393,6 +394,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::templeRoom;
         case RoomType::toilet:
             return tile.getTileVisual() == TileVisual::toiletRoom;
+        case RoomType::tavern:
+            return tile.getTileVisual() == TileVisual::tavernRoom;
         default:
             return false;
     }
@@ -440,6 +443,9 @@ GameMode::GameMode(ModeManager *modeManager):
     mCasinoX(-1),
     mCasinoY(-1),
     mCasinoPayout(1),
+    mTavernX(-1),
+    mTavernY(-1),
+    mTavernPayer(0),
     showTileDebugWindow(false),
     config(ConfigManager::getSingleton())
 {
@@ -561,6 +567,26 @@ GameMode::GameMode(ModeManager *modeManager):
         guiSheet->getChild("CasinoPayoutWindow/CasinoPayoutButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&GameMode::cycleCasinoPayout, this)
+        )
+    );
+
+    //Tavern window
+    addEventConnection(
+        guiSheet->getChild("TavernWindow")->subscribeEvent(
+            CEGUI::FrameWindow::EventCloseClicked,
+            CEGUI::Event::Subscriber(&GameMode::hideTavernWindow, this)
+        )
+    );
+    addEventConnection(
+        guiSheet->getChild("TavernWindow/CloseButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::hideTavernWindow, this)
+        )
+    );
+    addEventConnection(
+        guiSheet->getChild("TavernWindow/PayerButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::cycleTavernPayer, this)
         )
     );
 
@@ -914,6 +940,7 @@ void GameMode::activate()
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
+    guiSheet->getChild("TavernWindow")->hide();
     hideMerchantWindow();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
@@ -1559,6 +1586,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
            (room->getSeat() == localPlayer->getSeat()))
         {
             showCasinoPayoutWindow(tileClicked);
+            return true;
+        }
+    }
+
+    // Clicking on one of our taverns (its counter with the innkeeper included) opens its window
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+    {
+        Room* room = tileClicked->getCoveringRoom();
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        if((room != nullptr) && (localPlayer != nullptr) && (room->getType() == RoomType::tavern) &&
+           (room->getSeat() == localPlayer->getSeat()))
+        {
+            showTavernWindow(tileClicked);
             return true;
         }
     }
@@ -2731,6 +2771,71 @@ void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
     }
     mRootWindow->getChild("CasinoPayoutWindow/CasinoPayoutButton")->setText(levelText);
     mRootWindow->getChild("CasinoPayoutWindow/CasinoPayoutText")->setText(infoText);
+}
+
+//! \brief Opens the tavern window for the clicked tile and asks the server for the state of the tavern.
+void GameMode::showTavernWindow(Tile* tile)
+{
+    mTavernX = tile->getX();
+    mTavernY = tile->getY();
+    mRootWindow->getChild("TavernWindow")->show();
+
+    // The payer and the research are kept by the server, so we ask it what they currently are
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askTavernWindow);
+    clientNotification->mPacket << mTavernX << mTavernY;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+}
+
+//! \brief Closes the tavern window.
+bool GameMode::hideTavernWindow(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("TavernWindow")->hide();
+    mTavernX = -1;
+    mTavernY = -1;
+    return true;
+}
+
+//! \brief Asks the server for the other payer; the button shows the answer.
+bool GameMode::cycleTavernPayer(const CEGUI::EventArgs&)
+{
+    uint32_t nextPayer = static_cast<uint32_t>(TavernPayer::keeper);
+    if(mTavernPayer == static_cast<uint32_t>(TavernPayer::keeper))
+        nextPayer = static_cast<uint32_t>(TavernPayer::creature);
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askTavernPayer);
+    clientNotification->mPacket << mTavernX << mTavernY << nextPayer;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+    return true;
+}
+
+//! \brief Shows the answer of the server about the tavern the window is open for: payer and beer.
+void GameMode::setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool beerResearched, double beerPrice)
+{
+    if((tileX != mTavernX) || (tileY != mTavernY))
+        return;
+
+    std::string beerText = "Beer: not researched";
+    if(beerResearched)
+        beerText = "Beer: " + Helper::toString(static_cast<int32_t>(beerPrice + 0.5)) + " gold";
+    mRootWindow->getChild("TavernWindow/BeerText")->setText(beerText);
+    setTavernPayerShown(tileX, tileY, payer);
+}
+
+//! \brief Shows who pays for the beer on the button of the tavern window.
+void GameMode::setTavernPayerShown(int tileX, int tileY, uint32_t payer)
+{
+    if((tileX != mTavernX) || (tileY != mTavernY))
+        return;
+
+    if(payer > static_cast<uint32_t>(TavernPayer::creature))
+        return;
+
+    mTavernPayer = payer;
+    std::string payerText = "Keeper pays";
+    if(payer == static_cast<uint32_t>(TavernPayer::creature))
+        payerText = "Creatures pay";
+    mRootWindow->getChild("TavernWindow/PayerButton")->setText(payerText);
 }
 
 bool GameMode::toggleSandboxWindow(const CEGUI::EventArgs&)

@@ -45,7 +45,8 @@ enum class GameEntityType
     dirtPileEntity,
     itemBagEntity,
     merchantEntity,
-    herbBundleEntity
+    herbBundleEntity,
+    innkeeperEntity
 };
 
 ODPacket& operator<<(ODPacket& os, const GameEntityType& type);

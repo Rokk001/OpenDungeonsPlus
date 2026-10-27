@@ -25,6 +25,8 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
 #include "network/ODServer.h"
@@ -40,6 +42,17 @@
 
 //! \brief Seconds before a taken over portal spawns its first creature when the room config has no PortalFirstSpawnSeconds
 static const double DEFAULT_PORTAL_FIRST_SPAWN_SECONDS = 25.0;
+
+//! \brief The turns of a portal cooldown bound after the research Beer of the tavern: the bound of the room config
+//! times the factor of the research level of the seat (both bounds get the same factor).
+//! \param seat The seat that owns the portal.
+//! \param key The room config key of the bound, PortalCooldownSpawnMin or PortalCooldownSpawnMax.
+//! \return The bound in turns, rounded.
+static uint32_t getResearchedCooldown(const Seat* seat, const std::string& key)
+{
+    const double base = static_cast<double>(ConfigManager::getSingleton().getRoomConfigUInt32(key));
+    return static_cast<uint32_t>(std::round(SkillManager::getResearchValue(seat, SkillType::tavernBeer, base, ResearchEffect::PortalCooldown)));
+}
 
 const std::string RoomPortalName = "Portal";
 const std::string RoomPortalNameDisplay = "Portal room";
@@ -232,8 +245,8 @@ void RoomPortal::doUpkeep()
         --mSpawnCreatureCountdown;
         return;
     }
-    mSpawnCreatureCountdown = Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("PortalCooldownSpawnMin"),
-        ConfigManager::getSingleton().getRoomConfigUInt32("PortalCooldownSpawnMax"));
+    mSpawnCreatureCountdown = Random::Uint(getResearchedCooldown(getSeat(), "PortalCooldownSpawnMin"),
+        getResearchedCooldown(getSeat(), "PortalCooldownSpawnMax"));
 
     if (mCoveredTiles.empty())
         return;

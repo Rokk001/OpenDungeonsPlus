@@ -122,6 +122,7 @@ enum class TileVisual
     merchantRoom,
     herbGardenRoom,
     alchemyLabRoom,
+    tavernRoom,
     countTileVisual
 };
 
@@ -513,6 +514,7 @@ public:
      */
     static std::string tileTypeToString(TileType t);
 
+    //! \brief Returns the name of a tile visual as it is written in the tileset configuration (for example "tavernRoom").
     //! \brief Returns the configuration name for terrain and room visuals.
     //! \brief Returns the serialised tile-visual name used by tilesets and ambience rules.
     static std::string tileVisualToString(TileVisual tileVisual);
@@ -623,6 +625,7 @@ public:
 
     void fireTileSound(TileSound sound);
 
+    //! \brief Returns the speed of the creature on this tile for the tile visual (ground, water or lava speed of the creature).
     //! \brief Uses the creature's ground, water or lava speed on this tile.
     //! \brief Uses ground movement speed on traversable room floors.
     double getCreatureSpeedDefault(const Creature* creature) const;

@@ -747,8 +747,9 @@ public:
     void removeRenderedMovableEntity(RenderedMovableEntity *obj);
     RenderedMovableEntity* getRenderedMovableEntity(const std::string& name);
     void clearRenderedMovableEntities(NodeType nt = NodeType::MTILES_NODE);
-    //! \brief Resolves a typed entity identity for movement, hand and appearance notifications.
-    //! \brief Includes equipment bags, merchant figures and carryable herb bundles.
+    //! \brief Looks an entity up by its type and unique name (rendered entities, creatures, rooms, traps, spells and lights).
+    //! Also resolves a typed entity identity for movement, hand and appearance notifications.
+    //! Includes equipment bags, merchant figures and carryable herb bundles.
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 

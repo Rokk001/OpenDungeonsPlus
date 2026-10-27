@@ -123,6 +123,8 @@ enum_body = notif[notif.index('enum class ServerNotificationType'):notif.index('
 enum_names = [line.split(',')[0].strip() for line in enum_body.splitlines()
               if line.strip() and not line.strip().startswith(('//', 'enum', '{'))]
 assert enum_names.index('chickenKindChanged') < enum_names.index('chickenFight') < enum_names.index('timeLimit')
+assert enum_body.rstrip().endswith('tavernPayer') and enum_body.index('tavernWindow') < enum_body.index('tavernPayer')
+enum_body = enum_body[:enum_body.index('Answer to askTavernWindow')].rsplit('//!', 1)[0].rstrip().rstrip(',')
 assert enum_body.rstrip().endswith('labSettings')
 assert 'ServerNotificationType::chickenFight' in chicken and 'ServerNotificationType::chickenFight' in client
 assert 'case ServerNotificationType::chickenFight' in (root / 'source/network/ServerNotification.cpp').read_text()
@@ -188,7 +190,9 @@ assert 'void RenderManager::rrEggTrampled' in render and '"ChickenEggTrample"' i
 particles = (root / 'particles/ChickenEggShell.particle').read_text()
 trample = particles[particles.index('particle_system ChickenEggTrample'):]
 assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
-assert 'enum class ServerNotificationType' in notif and notif[notif.index('enum class ServerNotificationType'):notif.index('};')].rstrip().endswith('labSettings')
+notif_enum = notif[notif.index('enum class ServerNotificationType'):notif.index('};')]
+assert 'enum class ServerNotificationType' in notif and notif_enum.rstrip().endswith('tavernPayer')
+assert notif_enum[:notif_enum.index('Answer to askTavernWindow')].rsplit('//!', 1)[0].rstrip().rstrip(',').endswith('labSettings')
 print('hatchery nest egg and trample checks passed')
 
 # The numbers of the rooster and the flock are settings read from the config, not fixed numbers in the room code

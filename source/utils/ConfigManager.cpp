@@ -353,6 +353,15 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 
             continue;
         }
+
+        if(nextParam == "[Tavern]")
+        {
+            // The tavern block is optional: without it every tavern key reads as 0
+            if(!loadGlobalTavernConfig(configFile))
+                break;
+
+            continue;
+        }
     }
 
     if(paramsOk != 0x07)
@@ -385,6 +394,56 @@ bool ConfigManager::loadGlobalDirtConfig(std::stringstream& configFile)
 
     OD_LOG_ERR("Missing [/Dirt] in global.cfg");
     return false;
+}
+
+//! \brief Reads "key value" pairs up to a closing tag into a map of numbers.
+//! \param configFile The stream of global.cfg, positioned after the opening tag.
+//! \param closeTag The tag that ends the block.
+//! \param values Receives the pairs.
+//! \return False if the stream ends before the closing tag.
+static bool readGlobalNumberBlock(std::stringstream& configFile, const std::string& closeTag,
+    std::map<std::string, double>& values)
+{
+    std::string nextParam;
+    while(configFile.good())
+    {
+        if(!(configFile >> nextParam))
+            break;
+
+        if(nextParam == closeTag)
+            return true;
+
+        std::string value;
+        if(!(configFile >> value))
+            break;
+
+        values[nextParam] = Helper::toDouble(value);
+    }
+
+    return false;
+}
+
+//! \brief Reads the [Tavern] block of global.cfg: one "key value" pair per line up to [/Tavern].
+bool ConfigManager::loadGlobalTavernConfig(std::stringstream& configFile)
+{
+    if(readGlobalNumberBlock(configFile, "[/Tavern]", mTavernConfig))
+        return true;
+
+    OD_LOG_ERR("Missing [/Tavern] in global.cfg");
+    return false;
+}
+
+//! \brief Returns the value of a [Tavern] key of global.cfg, 0 (and an error in the log) when the key is unknown.
+double ConfigManager::getTavernConfigDouble(const std::string& param) const
+{
+    std::map<std::string, double>::const_iterator it = mTavernConfig.find(param);
+    if(it == mTavernConfig.end())
+    {
+        OD_LOG_ERR("Unknown tavern parameter param=" + param);
+        return 0.0;
+    }
+
+    return it->second;
 }
 
 //! \brief Returns the value of a [Dirt] key of global.cfg, 0 (and an error in the log) when the key is unknown.
@@ -1996,6 +2055,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
         if(!loadTilesetValues(defFile, TileVisual::herbGardenRoom, tileSet->configureTileValues(TileVisual::herbGardenRoom),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::alchemyLabRoom, tileSet->configureTileValues(TileVisual::alchemyLabRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::tavernRoom, tileSet->configureTileValues(TileVisual::tavernRoom),*mHighMap))
             return false;
 
     }

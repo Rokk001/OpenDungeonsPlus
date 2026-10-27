@@ -147,6 +147,8 @@ notif = read("source", "network", "ServerNotification.h")
 body = notif[notif.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
+need(names[-2:] == ["tavernWindow", "tavernPayer"], "the tavern notifications must be appended last")
+names = names[:-2]
 need(names[-6:] == ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings"], "campaignVictory must be appended after timeLimit")
 need("casinoPayout" in names, "casinoPayout must stay")
 

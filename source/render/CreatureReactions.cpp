@@ -2788,6 +2788,35 @@ void CreatureReactions::noteCosmeticEvent(const CosmeticEvent& event)
         return;
     }
 
+    if(event.is(CosmeticEventType::tavernEvent))
+    {
+        // A drink, a slap duel or a vomit: the creature shows the bubble of the event (water has none)
+        std::string tavernReaction;
+        switch(static_cast<CosmeticTavernKind>(event.mValue))
+        {
+            case CosmeticTavernKind::beer:
+                tavernReaction = "TavernBeer";
+                break;
+            case CosmeticTavernKind::duelWon:
+                tavernReaction = "DuelWin";
+                break;
+            case CosmeticTavernKind::duelLost:
+                tavernReaction = "DuelLoss";
+                break;
+            case CosmeticTavernKind::vomit:
+                tavernReaction = "Vomit";
+                break;
+            default:
+                break;
+        }
+
+        Creature* tavernCreature = mGameMap->getCreature(event.mSubject);
+        if(!tavernReaction.empty() && (tavernCreature != nullptr) && tavernCreature->getIsOnMap() && tavernCreature->isAlive())
+            queueReaction(tavernCreature, tavernReaction, DONE_WAIT_MAX, 0.4);
+
+        return;
+    }
+
     // The rest is about the creatures of the local keeper
     Creature* creature = mGameMap->getCreature(event.mSubject);
     if((creature == nullptr) || (creature->getSeat() != localPlayer->getSeat()))

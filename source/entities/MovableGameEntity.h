@@ -62,6 +62,25 @@ namespace EntityAnimation
     //! The hurt creature that is pulled lies on the ground and slides behind the worker (see
     //! DormitoryWoundedDragCreatureClip)
     static const std::string dragged_anim = "Dragged";
+    //! Clip of a drunk creature that walks (swaying walk, same length and key times as Walk; clients only, chosen
+    //! where the Walk clip is applied when the skeleton has it, the entity state stays Walk)
+    static const std::string stagger_anim = "Stagger";
+    //! A drunk creature vomits (server action state; a skeleton without the clip plays Idle)
+    static const std::string vomit_anim = "Vomit";
+    //! Idle clip of a creature with a hangover (clients only, chosen where the Idle clip is applied when the
+    //! skeleton has it, the entity state stays Idle)
+    static const std::string hangover_anim = "Hangover";
+    //! A creature raises a mug to its mouth in a tavern, with the mug in its right hand (a skeleton without the clip
+    //! plays Idle)
+    static const std::string drink_anim = "Drink";
+    //! Two guests of a tavern arm-wrestle (a skeleton without the clip plays the attack clip)
+    static const std::string armwrestle_anim = "ArmWrestle";
+    //! A guest of a tavern slaps its opponent in a slap duel (a skeleton without the clip plays the attack clip)
+    static const std::string slap_anim = "Slap";
+    //! Two guests of a tavern shake and throw dice (a skeleton without the clip plays Idle)
+    static const std::string dice_anim = "Dice";
+    //! The loser of a slap duel lies on the floor (a skeleton without the clip plays Dragged, then Idle)
+    static const std::string knockedout_anim = "KnockedOut";
 };
 
 //! \brief Moves and animates an entity while keeping deferred strikes synchronized with its displayed pose.

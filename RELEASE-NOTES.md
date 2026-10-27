@@ -37,6 +37,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 * Creature strength follows the wage: a creature with twice the wage is as strong as two of half the wage; the Champion fights at level 30 with a crown instead of a level.
 * Gold seams hold 3000 gold in three visible densities, gem seams are endless, workers carry 100 gold; every level has enough gold for a game of at least four hours.
 * Creatures need the toilet: a new toilet room, piles where none is reachable, rooms get dirty with use and are cleaned by workers; dirt lowers output and mood, prisons and torture chambers profit from it.
+* Creatures get thirsty: a tavern serves water and, once researched, beer paid by the keeper or the creature; guests arm-wrestle, play dice and hold slap duels, drink too much, stagger, vomit and wake up with a hangover; beer research draws more creatures through the portal.
 
 ### Version 0.7.3 - 20 September 2026
 

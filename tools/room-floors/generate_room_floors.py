@@ -36,12 +36,15 @@ The room shader has no specular term, so only a diffuse texture and a matching t
 
   - toilet: wet pale flagstones with a drain at the tile centre; one piece per neighbour mask like the dormitory, the
     exposed sides get a stained fringe and a copper pipe on iron brackets;
+  - tavern: original flagstones, drink rings and straw; the same sixteen-mask convention paints dungeon stone,
+    wooden wainscot and a mug shelf into exposed fringes while the interior keeps the original floor;
 Usage: python generate_room_floors.py [output folder] [--check] [--seamcheck=<folder for the rolled previews>]
        [--only=<room>]   (paints only that room, for example --only=toilet; the other files stay untouched)
 """
 
 import heapq
 import io
+import math
 import os
 import struct
 import subprocess
@@ -1696,6 +1699,118 @@ def toilet_band(col, hgt, side):
 
 
 # ---------------------------------------------------------------------------------------------------------------
+# Make a periodic dark flagstone field without borrowing another room's decoration.
+def tavern_stone_field():
+    ids, distance, count = row_layout(3101, 5, 100, 205, 3.4, 3102)
+    random = np.random.RandomState(3103)
+    tint = random.uniform(0.87, 1.12, count)[ids]
+    grain = fbm(3104, 105, 105, 2)
+    mottle = fbm(3105, 12, 12, 3)
+    colour = np.array([0.242, 0.222, 0.200])[None, None, :] * tint[..., None]
+    colour = colour * (1 + 0.055 * grain + 0.075 * mottle)[..., None]
+    crack = (1 - smoothstep(0.02, 0.09, np.abs(fbm(3106, 9, 9, 3))))
+    crack *= smoothstep(0.4, 1.2, np.abs(fbm(3107, 3, 3, 2)))
+    colour *= (1 - 0.40 * crack)[..., None]
+    height = 0.22 * grain + 0.35 * mottle - 0.7 * crack
+    seam = smoothstep(0.5, 3.5, distance)
+    colour = mix(np.broadcast_to([0.044, 0.038, 0.032], colour.shape), colour, seam)
+    height += 2.4 * smoothstep(0.5, 5.0, distance)
+    return colour, height
+
+
+# Add dark spilled-mug rings and scattered short straw while preserving the tile wrap.
+def tavern_floor():
+    colour, height = tavern_stone_field()
+    random = np.random.RandomState(3110)
+    ripple = fbm(3111, 16, 16, 2)
+    for cx, cy, radius in ((113, 157, 38), (341, 333, 29), (445, 83, 24)):
+        dx = (_XX - cx + N / 2) % N - N / 2
+        dy = (_YY - cy + N / 2) % N - N / 2
+        distance = np.sqrt(dx * dx + dy * dy)
+        ring = np.exp(-((distance - radius - ripple * 0.9) / 2.7) ** 2)
+        ring *= 0.55 + 0.35 * smoothstep(-1, 1, ripple)
+        colour = mix(colour, np.broadcast_to([0.10, 0.063, 0.029], colour.shape), ring * 0.68)
+        height -= ring * 0.08
+    straw = Sprites(wrap=True)
+    for index in range(105):
+        cx, cy = random.uniform(0, N, 2)
+        angle = random.uniform(0, math.pi)
+        half_length = random.uniform(5, 18)
+        dx, dy = math.cos(angle) * half_length, math.sin(angle) * half_length
+        shade = random.uniform(0.8, 1.14)
+        straw.line((cx - dx, cy - dy), (cx + dx, cy + dy), random.uniform(0.7, 1.3),
+                   np.array([0.40, 0.30, 0.155]) * shade, 0.40, 220)
+    colour, height = overlay(colour, height, straw, 0.6)
+    # A mortar joint at the horizontal tile boundary joins the wrapping slab rows cleanly.
+    edge_distance = np.minimum(_YY, N - 1 - _YY)
+    edge = smoothstep(0.0, 5.0, edge_distance)
+    colour = mix(np.broadcast_to([0.044, 0.038, 0.032], colour.shape), colour, edge)
+    height *= edge
+    return flatten(colour, 48.0, 0.6), height
+
+
+# Paint a horizontally wrapping stone wall with a dark wooden wainscot and a shelf of wooden mugs.
+def tavern_wall():
+    colour, height = tavern_stone_field()
+    grain = fbm(3120, 80, 3, 3)
+    dirt = fbm(3121, 18, 18, 2)
+    planks = _XX % 64
+    joint = np.minimum(planks, 63 - planks)
+    wood = np.array([0.164, 0.104, 0.063])[None, None, :] * (1 + 0.10 * grain + 0.055 * dirt)[..., None]
+    wood = mix(np.broadcast_to([0.031, 0.022, 0.016], wood.shape), wood,
+                      smoothstep(0.4, 3.2, joint))
+    lower = _YY >= 292
+    colour[lower] = wood[lower]
+    height[lower] = (0.18 * grain + 1.2 * smoothstep(0.4, 3.2, joint))[lower]
+    rail = (_YY >= 285) & (_YY <= 300)
+    colour[rail] = (wood * 1.12)[rail]
+    height[rail] = 2.0
+    shelf_shadow = (_YY >= 270) & (_YY <= 282)
+    colour[shelf_shadow] *= 0.53
+    shelf = (_YY >= 252) & (_YY <= 269)
+    colour[shelf] = (wood * 1.08)[shelf]
+    height[shelf] = 3.2
+    for index, cx in enumerate((46, 130, 217, 304, 390, 474)):
+        mug_top = 191 + (index % 3) * 5
+        left, right = cx - 19, cx + 19
+        body = (_XX >= left) & (_XX <= right) & (_YY >= mug_top + 8) & (_YY <= 251)
+        shade = np.clip(1.0 - (_XX - cx) * 0.006, 0.76, 1.2)
+        mug = np.array([0.26, 0.165, 0.084])[None, None, :] * shade[..., None]
+        mug = mug * (1 + 0.12 * grain)[..., None]
+        colour[body] = mug[body]
+        height[body] = 3.0 + (1 - ((_XX - cx) / 24) ** 2)[body]
+        handle_distance = np.sqrt(((_XX - (cx + 23)) / 10) ** 2 + ((_YY - (mug_top + 34)) / 17) ** 2)
+        handle = (handle_distance >= 0.66) & (handle_distance <= 1.0) & (_XX >= right - 1)
+        colour[handle] = (mug * 0.84)[handle]
+        height[handle] = 2.9
+        rim_distance = ((_XX - cx) / 19.5) ** 2 + ((_YY - (mug_top + 8)) / 8) ** 2
+        rim = rim_distance <= 1
+        colour[rim] = (mug * 1.18)[rim]
+        height[rim] = 4.2
+        inside = (((_XX - cx) / 15.2) ** 2 + ((_YY - (mug_top + 8)) / 4.8) ** 2) < 1
+        colour[inside] = [0.037, 0.025, 0.014]
+        height[inside] = 3.2
+        for band_y in (mug_top + 17, 243):
+            band = (_XX >= left) & (_XX <= right) & (np.abs(_YY - band_y) <= 2)
+            colour[band] = [0.12, 0.115, 0.10]
+            height[band] = 4.0
+    return colour, height
+
+
+# Paint the existing tavern wall artwork into exposed floor fringes, using the toilet tile-mask convention.
+def tavern_band(col, hgt, sides):
+    wall_col, wall_hgt = tavern_wall()
+    nearest = np.minimum.reduce([depth_map(side) for side in sides])
+    for side in sides:
+        depth = depth_map(side)
+        along = _XX if side in 'TB' else _YY
+        row = np.clip(np.rint(depth * (N - 1) / 79.0), 0, N - 1).astype(int)
+        weight = (depth == nearest) * (1.0 - smoothstep(76.0, 80.0, depth))
+        col = mix(col, wall_col[row, along], weight)
+        hgt = hgt * (1.0 - weight) + wall_hgt[row, along] * weight
+    return col, hgt
+
+
 # portal, portal wave (F2 batch 5): every layer is truly periodic; the wooden bridge atlas follows below
 
 PORTAL_STONE = np.array([0.182, 0.172, 0.208])
@@ -2021,6 +2136,13 @@ ROOMS = {
         'field': portal_wave_field, 'band': None, 'strength': 1.3,
         'pieces': {'PortalWaveFloor': ('', 'PortalWaveFloorNormal')},
     },
+    'tavern': {
+        # Like the toilet, zero bits in RBLT order expose the painted wall fringe; the open piece keeps the original floor.
+        'field': tavern_floor, 'band': tavern_band, 'band_all': True, 'strength': 1.3, 'rot_invariant': False,
+        'pieces': dict(('Tavern' + m, (''.join(side for bit, side in zip(m, 'RBLT') if bit == '0'), 'Tavern' + m + 'Normal'))
+                       for m in ('1111', '1011', '0111', '1101', '1110', '0110', '1100', '0011', '1001', '0000',
+                                 '0001', '0010', '0100', '1000', '0101', '1010')),
+    },
     'toilet': {
         # wet flagstones with a drain; the 16 pieces (one per neighbour mask, see [toiletRoom] in tilesets.cfg) differ
         # only by the wall fringe with the pipe on the exposed sides; every tile uses rotation 0
@@ -2164,7 +2286,7 @@ def seam_image(result):
 
 # Rooms whose floors are periodic and get the wrap seam ratio (--check) and the rolled preview (--seamcheck).
 SEAM_CHECK_ROOMS = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena',
-                    'torture', 'workshop', 'portal', 'portalWave', 'toilet')
+                    'torture', 'workshop', 'portal', 'portalWave', 'toilet', 'tavern')
 
 
 def main():

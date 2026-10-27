@@ -85,7 +85,7 @@ double getRoomDirtMood(const Tile& tile)
     return ConfigManager::getSingleton().getDirtConfigDouble("DirtMoodStage3");
 }
 
-//! \brief The mood of the dirt piles (not blood) within DirtPileRadius tiles (Chebyshev distance) of a tile.
+//! \brief The mood of the dirt piles and vomit puddles (not blood) within DirtPileRadius tiles (Chebyshev distance) of a tile.
 //! \param gameMap The map the tile belongs to.
 //! \param tile The tile the creature stands on.
 double getPileMood(const GameMap& gameMap, const Tile& tile)
@@ -103,6 +103,10 @@ double getPileMood(const GameMap& gameMap, const Tile& tile)
                 continue;
 
             if(DirtPileEntity::getEntityOnTile(neighbour, DirtPileKind::pile) != nullptr)
+                mood += pileMood;
+
+            // A vomit puddle counts like a pile
+            if(DirtPileEntity::getEntityOnTile(neighbour, DirtPileKind::vomit) != nullptr)
                 mood += pileMood;
         }
     }

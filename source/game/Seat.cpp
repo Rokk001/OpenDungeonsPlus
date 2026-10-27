@@ -2213,6 +2213,7 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
         case TileVisual::guardRoom:
         case TileVisual::templeRoom:
         case TileVisual::toiletRoom:
+        case TileVisual::tavernRoom:
             if(tile->getSeat() == nullptr)
             {
                 OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
@@ -2334,6 +2335,7 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
             case TileVisual::guardRoom:
             case TileVisual::templeRoom:
             case TileVisual::toiletRoom:
+            case TileVisual::tavernRoom:
                 
                 tileSeatId = tileState.mSeatIdOwner;
                 break;
@@ -2419,7 +2421,8 @@ bool Seat::hasDirtToClean() const
             continue;
 
         DirtPileEntity* dirtPile = static_cast<DirtPileEntity*>(entity);
-        if(dirtPile->getKind() != DirtPileKind::pile)
+        // Piles and vomit are cleaned as piles, blood dries by itself
+        if(dirtPile->getKind() == DirtPileKind::blood)
             continue;
 
         Tile* tile = dirtPile->getPositionTile();
@@ -2494,6 +2497,7 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
         case TileVisual::guardRoom:
         case TileVisual::templeRoom:
         case TileVisual::toiletRoom:
+        case TileVisual::tavernRoom:
         case TileVisual::claimedGround:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:

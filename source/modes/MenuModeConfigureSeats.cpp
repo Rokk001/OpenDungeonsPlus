@@ -121,6 +121,9 @@ std::string itemPageName(SkillType type)
     // The keeper skills stand in the tab of the research tree that holds them
     if(type == SkillType::keeperDominion)
         return "Rooms";
+    // Beer is researched in the Rooms tab next to the tavern it belongs to
+    if(type == SkillType::tavernBeer)
+        return "Rooms";
     if((type == SkillType::keeperHeartFortitude) || (type == SkillType::keeperHeartMending))
         return "Traps";
     if(type == SkillType::keeperManaFlow)

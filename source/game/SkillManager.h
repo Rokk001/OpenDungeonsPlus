@@ -97,6 +97,7 @@ namespace ResearchEffect
     static const std::string Lifetime = "Lifetime";
     static const std::string ManaPerSecond = "ManaPerSecond";
     static const std::string Gold = "Gold";
+    static const std::string PortalCooldown = "PortalCooldown";
     //! \brief Scales the configured herb growth time.
     static const std::string GrowTime = "GrowTime";
     //! \brief Scales the configured potion brewing time.

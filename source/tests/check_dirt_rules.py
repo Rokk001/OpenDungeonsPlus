@@ -83,7 +83,7 @@ for path, token in [('source/rooms/RoomLibrary.cpp', 'getDirtOutputFactor()'), (
                     ('source/rooms/RoomPrison.cpp', 'getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3")'),
                     ('source/rooms/RoomTorture.cpp', 'getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3")')]:
     assert token in read(path), path + ' must use ' + token
-assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor())' in creature_cpp, 'arena experience per hit'
+assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor())' in creature_cpp, 'arena experience per hit'
 # Piles in rooms workers never clean: the search and the seat check use the same rule
 assert 'isPileCleanable(*tile)' in extract(search_cpp, 'static Tile* findPileTile('), 'the pile search must use the shared rule'
 assert 'isPileCleanable(*tile)' in extract(seat_cpp, 'bool Seat::hasDirtToClean() const'), 'hasDirtToClean must use the shared rule'
@@ -112,6 +112,7 @@ def work_point_function(text, variable, name):
                        'base', statement, flags=re.S)
     statement = re.sub(r'ItemEffects::increaseFactor\(creature, "(?:Scholar|Craftsman)"\)', 'bonus', statement)
     statement = statement.replace('getDirtOutputFactor()', 'factor')
+    statement = statement.replace('creature.getHangoverWorkFactor()', '1.0')
     return ('static double ' + name + '(double base, double factor, double bonus = 1.0)\n{\n' +
             statement + '\n    return ' + variable + ';\n}')
 
@@ -172,7 +173,7 @@ static void loadConfig()
 enum class RoomType { dungeonTemple, treasury, crypt, workshop, prison, torture, temple, library, nbRooms };
 enum class TileType { dirt, water, lava, gold, rock };
 enum class GameEntityType { creature, dirtPileEntity, other };
-enum class DirtPileKind { pile, blood };
+enum class DirtPileKind { pile, blood, vomit };
 
 struct Room; struct GameMap; struct Tile; struct Creature;
 
@@ -552,6 +553,8 @@ static void checkMood()
     for(unsigned t = 0; t < crypt->mCoveredTiles.size(); ++t) crypt->mCoveredTiles[t]->mDirt = 90.0;
     Creature inCrypt(&seat, &definition, &map, cryptTile);
     expect(mood(inCrypt) == 0, "a crypt gives no dirt mood");
+    DirtPileEntity::createOnTile(&map, map.getTile(9, 9), DirtPileKind::vomit, "Orc");
+    expect(mood(inCrypt) == -30, "a vomit puddle counts like a pile");
     // No mood without a seat, none for a free hero or rogue creature, but a captured hero is a prisoner
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 90.0;
     Creature seatless(nullptr, &definition, &map, tile);

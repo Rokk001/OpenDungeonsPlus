@@ -91,6 +91,7 @@
 #include <OgreOverlayContainer.h>
 #include <OgreParticleEmitter.h>
 #include <OgreParticleSystem.h>
+#include <OgreParticleSystemManager.h>
 #include <OgrePrerequisites.h>
 #include <OgreQuaternion.h>
 #include <OgreSceneManager.h>
@@ -167,6 +168,17 @@ const Ogre::Real CREATURE_TURN_INTERRUPT_TOLERANCE = 0.02f;
 const Ogre::Real CHICKEN_FEATHER_EFFECT_DURATION = 2.6f;
 //! Height above the corpse position at which its fly swarm hovers
 const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
+//! Mesh of the mug a guest of a tavern holds in its right hand while it drinks
+const std::string TAVERN_MUG_MESH = "TavernMug.mesh";
+//! Prefix of the name of the mug entity of a creature
+const std::string TAVERN_MUG_PREFIX = "TavernMug_";
+//! Name of the particle template of the little birds that circle over a knocked-out creature
+const std::string DUEL_BIRDS_TEMPLATE = "DuelBirds";
+//! Prefix of the name of the bird particle system (and its node, with the suffix _node) of a creature
+const std::string DUEL_BIRDS_PREFIX = "DuelBirds_";
+//! Extra height of the bird node above the position of a knocked-out creature. The particle template DuelBirds already
+//! emits its birds 0.3 tiles above its node, which is the height the little birds circle at, so no more is added here.
+const Ogre::Real DUEL_BIRDS_HEIGHT = 0.0f;
 
 const Ogre::ColourValue BASE_AMBIENT_VALUE = Ogre::ColourValue(0.3f, 0.3f, 0.3f);
 
@@ -4018,6 +4030,7 @@ bool RenderManager::isLastBlowLeftHanded(const Creature* creature) const
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
     clearCreatureDecay(curCreature);
+    removeCreatureTavernProps(curCreature);
     cancelCreatureStep(curCreature);
     removeTreasuryThiefSack(curCreature);
     cancelCreatureSleepAnimation(curCreature);
@@ -4531,6 +4544,7 @@ void RenderManager::rrPickUpEntity(GameEntity* curEntity, Player* localPlayer)
     if(curEntity->getObjectType() == GameEntityType::creature)
     {
         clearCreatureDecay(static_cast<Creature*>(curEntity));
+        removeCreatureTavernProps(static_cast<Creature*>(curEntity));
         cancelCreatureStep(static_cast<Creature*>(curEntity));
         cancelCreatureFeedingAnimation(static_cast<Creature*>(curEntity));
         cancelCreatureSleepAnimation(static_cast<Creature*>(curEntity));
@@ -4819,7 +4833,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         dropCreature = static_cast<Creature*>(curAnimatedObject);
 
     if(dropCreature != nullptr)
+    {
         clearCreatureDecay(dropCreature);
+        updateCreatureTavernProps(dropCreature, anim);
+    }
     // The sniffing of a creature has no clip of its own: it stands (idle clip), the reaction shows the sniffing
     if((anim == EntityAnimation::sniff_anim) && (dropCreature != nullptr))
         anim = EntityAnimation::idle_anim;
@@ -5045,6 +5062,18 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     {
         anim = EntityAnimation::walk_hurt_anim;
     }
+    // A drunk creature staggers when the skeleton has the clip (same length as Walk, same entity state)
+    else if((dropCreature != nullptr) && (anim == EntityAnimation::walk_anim) && dropCreature->isStaggering() &&
+       objectEntity->getSkeleton()->hasAnimation(EntityAnimation::stagger_anim))
+    {
+        anim = EntityAnimation::stagger_anim;
+    }
+    // A creature with a hangover holds its head when it stands, if the skeleton has the clip
+    else if((dropCreature != nullptr) && (anim == EntityAnimation::idle_anim) && dropCreature->isHungover() &&
+       objectEntity->getSkeleton()->hasAnimation(EntityAnimation::hangover_anim))
+    {
+        anim = EntityAnimation::hangover_anim;
+    }
 
     // Handle the case where this entity does not have the requested animation.
     while (!objectEntity->getSkeleton()->hasAnimation(anim))
@@ -5074,8 +5103,19 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         {
             anim = EntityAnimation::attack_anim;
         }
+        else if (anim == EntityAnimation::armwrestle_anim || anim == EntityAnimation::slap_anim)
+        {
+            // A skeleton without the tavern game clips plays its attack clip
+            anim = EntityAnimation::attack_anim;
+        }
+        else if (anim == EntityAnimation::knockedout_anim)
+        {
+            // A skeleton without the knocked-out clip lies like a creature that is pulled to its bed (then Idle)
+            anim = EntityAnimation::dragged_anim;
+        }
         else
         {
+            // Drink, Dice, Hangover and GetUp without a clip, and everything else, play Idle
             anim = EntityAnimation::idle_anim;
             break;
         }
@@ -7611,6 +7651,70 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
     // The carrier that still walks changes back to the plain walk clip
     if(carrier->getAnimationStateName() == EntityAnimation::walk_anim)
         rrSetObjectAnimationState(carrier, EntityAnimation::walk_anim, true);
+}
+
+//! \brief Removes the mug from the hand and the circling birds from over the head of a creature, if it has them.
+void RenderManager::removeCreatureTavernProps(Creature* creature)
+{
+    const std::string mugName = TAVERN_MUG_PREFIX + creature->getName();
+    if(mSceneManager->hasEntity(mugName))
+    {
+        Ogre::Entity* mugEntity = mSceneManager->getEntity(mugName);
+        mugEntity->detachFromParent();
+        mSceneManager->destroyEntity(mugEntity);
+    }
+
+    const std::string birdsName = DUEL_BIRDS_PREFIX + creature->getName();
+    if(mSceneManager->hasParticleSystem(birdsName))
+    {
+        Ogre::ParticleSystem* birds = mSceneManager->getParticleSystem(birdsName);
+        Ogre::SceneNode* node = birds->getParentSceneNode();
+        if(node != nullptr)
+            node->detachObject(birds);
+        mSceneManager->destroyParticleSystem(birds);
+        if(node != nullptr)
+            mSceneManager->destroySceneNode(node);
+    }
+}
+
+//! \brief Gives a creature the props of the clip it plays: the mug in the right hand while it drinks and the
+//! little birds over its head while it lies knocked out. The props of an earlier clip are removed first. A mug or
+//! birds whose asset is missing are left out.
+void RenderManager::updateCreatureTavernProps(Creature* creature, const std::string& anim)
+{
+    removeCreatureTavernProps(creature);
+
+    const std::string objectName = creature->getOgreNamePrefix() + creature->getName();
+    if(!mSceneManager->hasEntity(objectName))
+        return;
+
+    Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
+    if(anim == EntityAnimation::drink_anim)
+    {
+        Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
+        if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(TAVERN_MUG_MESH))
+            return;
+
+        WeaponMount mount;
+        if(!getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount))
+            return;
+
+        Ogre::Entity* mugEntity = mSceneManager->createEntity(TAVERN_MUG_PREFIX + creature->getName(), TAVERN_MUG_MESH);
+        objectEntity->attachObjectToBone(mount.mBoneName, mugEntity, mount.mRotation, mount.mOffset);
+    }
+    else if(anim == EntityAnimation::knockedout_anim)
+    {
+        if(Ogre::ParticleSystemManager::getSingleton().getTemplate(DUEL_BIRDS_TEMPLATE) == nullptr)
+            return;
+
+        const std::string birdsName = DUEL_BIRDS_PREFIX + creature->getName();
+        Ogre::ParticleSystem* birds = mSceneManager->createParticleSystem(birdsName, DUEL_BIRDS_TEMPLATE);
+        birds->setCastShadows(false);
+        birds->setQueryFlags(0);
+        Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(birdsName + "_node",
+            creature->getPosition() + Ogre::Vector3(0, 0, DUEL_BIRDS_HEIGHT));
+        node->attachObject(birds);
+    }
 }
 
 void RenderManager::clearCreatureDecay(Creature* creature)
