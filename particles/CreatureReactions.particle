@@ -282,6 +282,39 @@ particle_system ReactionHeal
     }
 }
 
+// Continuous healing glow; the patient treatment controls its lifetime.
+particle_system InfirmaryHealGlow
+{
+    material        ReactionParticleGlow
+    point_rendering false
+    particle_width  0.9
+    particle_height 0.9
+    cull_each       false
+    quota           6
+    billboard_type  point
+
+    emitter Point
+    {
+        angle               20
+        colour              0.45 1.0 0.55 0.8
+        emission_rate       4
+        time_to_live        0.9
+        direction           0 0 1
+        velocity            0.25
+        position            0 0 0.6
+    }
+
+    affector Scaler
+    {
+        rate 0.3
+    }
+
+    affector ColourFader
+    {
+        alpha -1.0
+    }
+}
+
 // A small grey cloud that rises from the creature (failed attempt at the workbench)
 particle_system ReactionSmoke
 {

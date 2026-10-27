@@ -242,6 +242,7 @@ def pile_levels(match):
 
 # Validates one effect against the engine contract, including default sound intervals and object sound loops.
 def check_effect(effect, where, problems, visuals, systems, mats, counts):
+    """Validate effect data, including object sounds with an implemented spatial-loop lifecycle."""
     for key in effect:
         if key not in EFFECT_KEYS:
             problems.append("%s: unknown key %s" % (where, key))
@@ -283,6 +284,12 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
         if "Delay" in effect and target != "Event":
             problems.append("%s: Delay only works for events" % where)
         # Object sounds inherit AmbienceEffect.mEvery when omitted; sound loops bypass that timer.
+        if target == "Object" and "Every" not in effect and effect.get("Loop", ["no"])[0] not in ("yes", "true", "1"):
+            with open(os.path.join(ROOT, "source", "render", "RoomAmbienceConfig.h"), encoding="utf-8") as handle:
+                runtime_defaults = handle.read()
+            default_every = re.search(r"const double DEFAULT_EFFECT_EVERY\s*=\s*([0-9.]+)\s*;", runtime_defaults)
+            if default_every is None or float(default_every.group(1)) <= 0.0 or "mEvery(DEFAULT_EFFECT_EVERY)" not in runtime_defaults:
+                problems.append("%s: a sound on an object needs Every or a positive runtime default" % where)
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
     if when in ("Locked", "Reloading", "Ready", "LowHealth", "Sleeping") and target != "Object":
@@ -428,8 +435,14 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: %s needs three numbers" % (where, key))
     if "Object" in effect and not (kind == "Clip" and target == "Event"):
         problems.append("%s: Object only belongs to clips of events" % where)
-    if "Loop" in effect and not (kind == "Clip" or (kind == "Sound" and target == "Object")):
-        problems.append("%s: Loop only belongs to clips or sounds of objects" % where)
+    if "Loop" in effect and kind != "Clip" and not (kind == "Sound" and target == "Object"):
+        problems.append("%s: Loop only belongs to object clips or object sounds" % where)
+    if kind == "Sound" and target == "Object" and effect.get("Loop", ["no"])[0] in ("yes", "true", "1"):
+        with open(os.path.join(ROOT, "source", "render", "RoomAmbience.cpp"), encoding="utf-8") as handle:
+            runtime = handle.read()
+        for required in ("effect.mLoop && isSound", "startSpatialLoop(", "setSpatialLoopPosition(", "stopSpatialLoop(", "activeSoundLoops"):
+            if required not in runtime:
+                problems.append("%s: sound loop lacks its runtime lifecycle (%s)" % (where, required))
     for pattern in effect.get("Object", []):
         if "*" not in pattern and not mesh_exists(pattern):
             problems.append("%s: no mesh %s" % (where, pattern))

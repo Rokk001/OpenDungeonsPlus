@@ -23,9 +23,9 @@ editor = read('source/modes/EditorMode.cpp')
 client_ids = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', client_h.split('};')[0], re.M)
 # Later messages may be appended after it, but it must follow the previous last message directly
 assert client_ids.index('editorRegionEdit') == client_ids.index('askPossessSkill') + 1, 'client message moved'
-assert client_ids[-10:] == ['editorRegionEdit', 'askUseSpecial', 'askMerchantWindow', 'askMerchantSettings', 'askMerchantBuy', 'askLabWindow', 'askLabSetting', 'askTavernWindow', 'askTavernPayer', 'askSpaPayer'], client_ids[-11:]
+assert client_ids[-12:] == ['editorRegionEdit', 'askUseSpecial', 'askMerchantWindow', 'askMerchantSettings', 'askMerchantBuy', 'askLabWindow', 'askLabSetting', 'askTavernWindow', 'askTavernPayer', 'askInfirmaryWindow', 'askInfirmarySettings', 'askSpaPayer'], client_ids[-11:]
 assert 'case ClientNotificationType::editorRegionEdit:' in client_cpp
-assert server_h.split('};')[0].rstrip().endswith('creatureJump') and 'labSettings,' in server_h and 'editorRegionData,' in server_h, 'server message appended out of order'
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', server_h.split('};')[0], re.M)[-11:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'spaPayer', 'creatureJump'] and 'editorRegionData,' in server_h, 'server message appended out of order'
 assert 'case ServerNotificationType::editorRegionData:' in server_cpp
 
 # The three operations of the request are named, the editor and the server use the names.

@@ -112,7 +112,7 @@ class SoundEffectsManager: public Ogre::Singleton<SoundEffectsManager>
 public:
     static const std::string DEFAULT_KEEPER_VOICE;
 
-    //! \brief Loads every available interface sounds
+    //! \brief Loads normal sound families and named infirmary room recordings
     SoundEffectsManager();
 
     //! \brief Deletes both sound caches.
@@ -128,6 +128,9 @@ public:
     //! \brief Starts a looping spatial sound at the given position, with the same attenuation as the
     //! other spatial sounds. Returns a handle for stopSpatialLoop, or 0 if the family has no sound.
     uint32_t startSpatialLoop(const std::string& family, float XPos, float YPos, float height = TILE_ZPOS);
+
+    //! \brief Moves an existing spatial loop with its room figure; unknown handles are ignored.
+    void setSpatialLoopPosition(uint32_t handle, float x, float y, float height = TILE_ZPOS);
 
     //! \brief Stops and frees a loop started with startSpatialLoop. Unknown handles (and 0) are ignored.
     void stopSpatialLoop(uint32_t handle);

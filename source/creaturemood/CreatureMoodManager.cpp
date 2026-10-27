@@ -92,6 +92,7 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += ItemEffects::moodModifier(creature, creature.getSpecialMood());
     // Fights in the arena
     moodValue += ItemEffects::moodModifier(creature, creature.getPitMood());
+    moodValue += ItemEffects::moodModifier(creature, creature.getInfirmaryMood());
     // A bath in the lava spa lifts the mood (rounded to whole points)
     moodValue += ItemEffects::moodModifier(creature, Helper::round(creature.getSpaMood()));
     // A drink, a game won or lost and a hangover at the tavern

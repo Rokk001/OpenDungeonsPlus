@@ -49,14 +49,14 @@ def extract(text, header):
 
 # 1. RoomType, TileVisual and SkillType: the tavern entries are appended, one each
 rooms = enum_names(read('source/rooms/RoomType.h'), 'enum class RoomType')
-assert rooms[-3:] == ['tavern', 'spa', 'nbRooms'] and rooms.count('tavern') == 1, rooms[-4:]
+assert rooms[-4:] == ['tavern', 'infirmary', 'spa', 'nbRooms'] and rooms.count('tavern') == 1, rooms[-5:]
 visuals = enum_names(read('source/entities/Tile.h'), 'enum class TileVisual')
-assert visuals[-3:] == ['tavernRoom', 'spaRoom', 'countTileVisual'] and visuals.count('tavernRoom') == 1, visuals[-4:]
+assert visuals[-4:] == ['tavernRoom', 'infirmaryRoom', 'spaRoom', 'countTileVisual'] and visuals.count('tavernRoom') == 1, visuals[-5:]
 tile_cpp = read('source/entities/Tile.cpp')
 assert tile_cpp.count('case TileVisual::tavernRoom:') >= 4, 'tavernRoom is missing in the Tile switches'
 assert 'return "tavernRoom";' in tile_cpp
 skills = enum_names(read('source/game/SkillType.h'), 'enum class SkillType')
-assert skills[-4:] == ['roomTavern', 'tavernBeer', 'roomSpa', 'countSkill'], skills[-5:]
+assert skills[-5:] == ['roomTavern', 'tavernBeer', 'roomInfirmary', 'roomSpa', 'countSkill'], skills[-6:]
 skill_type_cpp = read('source/game/SkillType.cpp')
 for name in ('roomTavern', 'tavernBeer'):
     assert 'case SkillType::' + name + ':' in skill_type_cpp and '"' + name + '"' in skill_type_cpp, name + ' in SkillType.cpp'
@@ -109,7 +109,7 @@ gui_cpp = read('source/render/Gui.cpp')
 arrange = extract(gui_cpp, 'void Gui::arrangeRoomButtons(')
 assert '"HatcheryButton", "TavernButton"' in arrange, 'the tavern button follows the hatchery in the action bar'
 
-# 5. Research: tavern (tier I) and Beer (tier II, keeper entry), 62 entries, tooltip, portal cooldown wiring
+# 5. Research: tavern (tier I) and Beer (tier II, keeper entry), 64 entries, tooltip, portal cooldown wiring
 manager = read('source/game/SkillManager.cpp')
 assert ('createSkill(mSkills, SkillType::roomTavern, NO_PARENTS);\n'
         '    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "TavernButton", skill, 1, RoomType::tavern);') in manager
@@ -118,7 +118,7 @@ assert ('createSkill(mSkills, SkillType::tavernBeer, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomTavern') == 1 and registered.count('tavernBeer') == 1
-assert len(registered) == 63, 'the research tree has 63 entries, found ' + str(len(registered))
+assert len(registered) == 64, 'the research tree has 64 entries, found ' + str(len(registered))
 assert registered.index('roomCasino') < registered.index('tavernBeer'), 'Beer follows the casino in the tier II row'
 assert 'KEEPER_TITLE_BEER = "Beer"' in manager and 'Your taverns serve beer.' in manager
 assert 'ResearchEffect::PortalCooldown' in manager or '"PortalCooldown"' in manager

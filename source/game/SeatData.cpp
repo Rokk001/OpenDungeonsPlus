@@ -21,6 +21,7 @@
 #include "network/ODPacket.h"
 #include "rooms/RoomType.h"
 #include "utils/Helper.h"
+#include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
 #include <istream>
@@ -53,12 +54,26 @@ SeatData::SeatData() :
     mNumClaimedTiles(0),
     mHasGoalsChanged(true),
     mGold(0),
+    mInfirmaryPayer(0),
+    mInfirmaryThreshold(ConfigManager::getSingleton().getRoomConfigInt32("InfirmaryDischargeDefaultPercent")),
+    mInfirmaryHealOn(true),
     mGoldMax(0),
     mNbRooms(std::vector<uint32_t>(static_cast<uint32_t>(RoomType::nbRooms), 0)),
     mHadLibrary(false),
     mCurrentSkillType(SkillType::nullSkillType),
     mCurrentSkillProgress(0.0f)
 {
+}
+
+//! \brief Accepts only the configured discharge percentages and step.
+void SeatData::setInfirmaryThreshold(int32_t threshold)
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    const int32_t minimum = config.getRoomConfigInt32("InfirmaryDischargeMinPercent");
+    const int32_t maximum = config.getRoomConfigInt32("InfirmaryDischargeMaxPercent");
+    const int32_t step = config.getRoomConfigInt32("InfirmaryDischargeStepPercent");
+    if(threshold >= minimum && threshold <= maximum && (threshold - minimum) % step == 0)
+        mInfirmaryThreshold = threshold;
 }
 
 void SeatData::setTeamId(int teamId)
@@ -99,6 +114,7 @@ uint32_t SeatData::getNbStoredSpecials(uint32_t giftBoxType) const
     return mStoredSpecials[giftBoxType];
 }
 
+//! \brief Reads changing seat data and the three infirmary settings.
 //! \brief Receives changing seat data followed by shared room settings.
 bool SeatData::importFromPacketForUpdate(ODPacket& is)
 {
@@ -138,10 +154,20 @@ bool SeatData::importFromPacketForUpdate(ODPacket& is)
         OD_ASSERT_TRUE(is >> nbSpecial);
         mStoredSpecials.push_back(nbSpecial);
     }
-    return importItemSettingsFromPacket(is);
+    if(!importItemSettingsFromPacket(is))
+        return false;
+    int32_t payer = 0;
+    int32_t threshold = mInfirmaryThreshold;
+    bool healOn = true;
+    if(!(is >> payer >> threshold >> healOn))
+        return false;
+    setInfirmaryPayer(payer);
+    setInfirmaryThreshold(threshold);
+    setInfirmaryHealOn(healOn);
+    return true;
 }
 
-//! \brief Sends changing seat data followed by shared room settings.
+//! \brief Sends changing seat data followed by payer, discharge threshold and healing switch.
 void SeatData::exportToPacketForUpdate(ODPacket& os) const
 {
     os << mGold;
@@ -169,6 +195,7 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
     for(uint32_t nbSpecial : mStoredSpecials)
         os << nbSpecial;
     exportItemSettingsToPacket(os);
+    os << getInfirmaryPayer() << mInfirmaryThreshold << mInfirmaryHealOn;
 }
 
 //! \brief Sends full seat data followed by shared room settings.

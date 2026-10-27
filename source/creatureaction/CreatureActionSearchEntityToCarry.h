@@ -20,6 +20,7 @@
 
 #include "creatureaction/CreatureAction.h"
 
+//! \brief Finds eligible cargo and prioritizes available infirmary admissions.
 class CreatureActionSearchEntityToCarry : public CreatureAction
 {
 public:
@@ -32,6 +33,7 @@ public:
     std::function<bool()> action() override;
 
     //! \brief Selects reachable cargo and its existing building or configured mission destination.
+    //! \brief Searches cargo with infirmaries considered before beds.
     static bool handleSearchEntityToCarry(Creature& creature, bool forced);
 
 private:

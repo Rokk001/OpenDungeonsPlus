@@ -23,6 +23,9 @@
 #include "entities/MissileStone.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "rooms/Room.h"
+#include "rooms/RoomType.h"
+#include <algorithm>
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -30,6 +33,16 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+
+namespace
+{
+//! \brief Prioritizes infirmaries before other reachable delivery buildings.
+bool infirmaryFirst(Building* building)
+{
+    return building->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(building)->getType() == RoomType::infirmary;
+}
+}
 
 //! \brief Keeps appended item bags below gold and knockout transports without changing saved enum values.
 static int32_t carryPriority(EntityCarryType type)
@@ -69,6 +82,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
     }
 
     std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
+    std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
     std::vector<GameEntity*> carryableEntities = creature.getGameMap()->getCarryableEntities(&creature, creature.getTilesWithinSightRadius());
     std::vector<Tile*> carryableEntityInMyTileClients;
     std::vector<GameEntity*> availableEntities;

@@ -18,12 +18,11 @@ body = notification_h[notification_h.index('enum class ServerNotificationType'):
 body = body[:body.index('};')]
 names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.MULTILINE)
          if m.group(1) not in ('enum', 'class')]
-# The tavern notifications follow campaignVictory; the tail pinned below is the one before them
-assert names[-4:] == ["tavernWindow", "tavernPayer", "spaPayer", "creatureJump"], names[-5:]
-names = names[:-4]
+# The tavern notifications follow the equipment notifications; the complete combined tail is pinned below
 # Existing kinds retain their order before the appended campaign victory.
-assert names[-15:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
-                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings'], names[-12:]
+# Existing kinds retain their order before the appended equipment and infirmary notifications.
+assert names[-21:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
+                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'spaPayer', 'creatureJump'], names[-19:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')

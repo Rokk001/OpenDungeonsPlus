@@ -1,0 +1,170 @@
+// Original rough infirmary furniture and shaman materials.
+import RTSS/PerPixel_SinglePass from "RTShaderSystem.material"
+material InfirmaryObjectWood : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectWood.png
+   }
+  }
+ }
+}
+material InfirmaryObjectStone : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectStone.png
+   }
+  }
+ }
+}
+material InfirmaryObjectCloth : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectCloth.png
+   }
+  }
+ }
+}
+material InfirmaryObjectIron : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectIron.png
+   }
+  }
+ }
+}
+material InfirmaryObjectStraw : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectStraw.png
+   }
+  }
+ }
+}
+material InfirmaryObjectBone : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectBone.png
+   }
+  }
+ }
+}
+material InfirmaryObjectHerb : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectHerb.png
+   }
+  }
+ }
+}
+material InfirmaryObjectBottle : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectBottle.png
+   }
+  }
+ }
+}
+material InfirmaryObjectSkin : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectSkin.png
+   }
+  }
+ }
+}
+material InfirmaryObjectLeather : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectLeather.png
+   }
+  }
+ }
+}
+material InfirmaryObjectFeather : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectFeather.png
+   }
+  }
+ }
+}
+material InfirmaryObjectDark : RTSS/PerPixel_SinglePass
+{
+ technique
+ {
+  pass
+  {
+   specular 0 0 0 0 1
+   texture_unit
+   {
+    texture InfirmaryObjectDark.png
+   }
+  }
+ }
+}

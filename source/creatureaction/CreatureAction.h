@@ -70,6 +70,7 @@ enum class CreatureActionType
     buyItem, // Visits a merchant table to buy a reserved wanted good.
     vomit, // (fighters only) A drunk creature vomits where it stands and leaves a pile of vomit
     searchDrink, // (fighters only) Looks for a tavern with a free spot to drink at
+    infirmaryRest, // A patient lying on an infirmary cot.
     searchSpa, // (fighters only) Looks for a lava spa with a free bath place and lets that room handle the bath
     nb // Must be the last value of this enum
 };
@@ -112,6 +113,7 @@ public:
     virtual uint32_t updateMoodModifier() const
     { return CreatureMoodValues::Nothing; }
 
+    //! \brief Returns the stable name of an action, including patient rest.
     //! \brief Returns the diagnostic name of an action, including item and new work actions.
     //! \brief Returns the stable action name used by creature activity and diagnostics.
     static std::string toString(CreatureActionType actionType);

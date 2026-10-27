@@ -529,7 +529,7 @@ bool RoomDungeonTemple::removeCoveredTile(Tile* tile)
 
     if(roomTreasuryTileData->mGoldInTile > 0)
     {
-        int value = roomTreasuryTileData->mGoldInTile;
+        double value = roomTreasuryTileData->mGoldInTile;
         OD_LOG_INF("Room " + getName()
             + ", tile=" + Tile::displayAsString(tile) + " releases gold amount = "
             + Helper::toString(value));
@@ -705,9 +705,10 @@ int RoomDungeonTemple::getTotalGoldStorage() const
     return numTreasuryTiles * treasuryTileCapacity;
 }
 
-int RoomDungeonTemple::getTotalGoldStored() const
+//! \brief Sums exact gold held in the heart's treasury ring.
+double RoomDungeonTemple::getTotalGoldStored() const
 {
-    int totalGold = 0;
+    double totalGold = 0;
     for(const std::pair<Tile* const, TileData*>& p : mTileData)
     {
         if(!isTreasuryTile(p.first))
@@ -718,17 +719,18 @@ int RoomDungeonTemple::getTotalGoldStored() const
     return totalGold;
 }
 
+//! \brief Deposits exact gold into treasury ring tiles.
 //! \brief Deposits unchanged gold into the ring and reports one cosmetic burst at the actual heart.
-int RoomDungeonTemple::depositGold(int gold, Tile* tile)
+double RoomDungeonTemple::depositGold(double gold, Tile* tile)
 {
-    int goldDeposited, goldToDeposit = gold, emptySpace;
+    double goldDeposited = 0.0, goldToDeposit = gold, emptySpace = 0.0;
 
     // Start by trying to deposit the gold in the requested tile, if it is part of the ring.
     // The core tiles of the heart are never filled.
     if(isTreasuryTile(tile))
     {
         RoomTreasuryTileData* roomTreasuryTileData = static_cast<RoomTreasuryTileData*>(mTileData[tile]);
-        emptySpace = std::max(0, treasuryTileCapacity - roomTreasuryTileData->mGoldInTile);
+        emptySpace = std::max(0.0, treasuryTileCapacity - roomTreasuryTileData->mGoldInTile);
         goldDeposited = std::min(emptySpace, goldToDeposit);
         roomTreasuryTileData->mGoldInTile += goldDeposited;
         goldToDeposit -= goldDeposited;
@@ -746,7 +748,7 @@ int RoomDungeonTemple::depositGold(int gold, Tile* tile)
             continue;
 
         RoomTreasuryTileData* roomTreasuryTileData = static_cast<RoomTreasuryTileData*>(p.second);
-        emptySpace = std::max(0, treasuryTileCapacity - roomTreasuryTileData->mGoldInTile);
+        emptySpace = std::max(0.0, treasuryTileCapacity - roomTreasuryTileData->mGoldInTile);
         goldDeposited = std::min(emptySpace, goldToDeposit);
         roomTreasuryTileData->mGoldInTile += goldDeposited;
         goldToDeposit -= goldDeposited;
@@ -754,7 +756,7 @@ int RoomDungeonTemple::depositGold(int gold, Tile* tile)
 
     // Return the amount we were actually able to deposit
     // (i.e. the amount we wanted to deposit minus the amount we were unable to deposit).
-    int wasDeposited = gold - goldToDeposit;
+    double wasDeposited = gold - goldToDeposit;
     // If we couldn't deposit anything, we do not notify
     if(wasDeposited == 0)
         return wasDeposited;
@@ -786,9 +788,10 @@ int RoomDungeonTemple::depositGold(int gold, Tile* tile)
     return wasDeposited;
 }
 
-int RoomDungeonTemple::withdrawGold(int gold)
+//! \brief Withdraws exact gold from the treasury ring.
+double RoomDungeonTemple::withdrawGold(double gold)
 {
-    int withdrawalAmount = 0;
+    double withdrawalAmount = 0;
     for(std::pair<Tile* const, TileData*>& p : mTileData)
     {
         if(withdrawalAmount >= gold)
@@ -803,7 +806,7 @@ int RoomDungeonTemple::withdrawGold(int gold)
 
         // Check to see if the current ring tile has enough gold to fill the amount we still
         // need to pick up.
-        int goldStillNeeded = gold - withdrawalAmount;
+        double goldStillNeeded = gold - withdrawalAmount;
         if(roomTreasuryTileData->mGoldInTile >= goldStillNeeded)
         {
             withdrawalAmount += goldStillNeeded;
@@ -827,7 +830,7 @@ int RoomDungeonTemple::withdrawGold(int gold)
 //! \brief Replaces changed ring pile meshes without a client-visible empty state.
 void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData)
 {
-    int gold = roomTreasuryTileData->mGoldInTile;
+    double gold = roomTreasuryTileData->mGoldInTile;
     OD_ASSERT_TRUE_MSG(gold >= 0, "room=" + getName() + ", gold=" + Helper::toString(gold));
 
     // If the tile was and is empty, nothing to do

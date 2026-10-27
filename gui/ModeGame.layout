@@ -153,6 +153,7 @@
         <LayoutImport type="DefaultWindow" filename="WindowPlayerSettings.layout" name="PlayerSettingsWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowObjectives.layout" name="ObjectivesWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowCasinoPayout.layout" name="CasinoPayoutWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowInfirmary.layout" name="InfirmaryWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSpa.layout" name="SpaWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowTavern.layout" name="TavernWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMerchant.layout" name="MerchantWindowImport" />
@@ -344,6 +345,15 @@
             <Property name="TooltipText" value="Dungeonbook" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <UserString name="ContextHelp" value="Dungeonbook: creature profiles and what your minions are posting (B)" />
+        </Window>
+        <Window type="OD/GameTabButton" name="InfirmaryButton">
+            <Property name="Area" value="{{0,340},{1,-224},{0,380},{1,-184}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/InfirmaryButton" />
+            <Property name="NavigationFrame" value="True" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="TooltipText" value="Infirmary" />
+            <UserString name="AllowEdgeScrolling" value="true" />
+            <UserString name="ContextHelp" value="Infirmary: payer, discharge health, healing switch, patients (I)" />
         </Window>
         <Window type="OD/GameTabButton" name="MerchantButton">
             <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />

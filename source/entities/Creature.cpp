@@ -16,6 +16,8 @@
  */
 
 #include "entities/Creature.h"
+#include "creaturemood/CreatureMoodFee.h"
+#include "creaturemood/CreatureMoodRested.h"
 #include "entities/CreatureProgression.h"
 
 #include "ODApplication.h"
@@ -53,6 +55,9 @@
 #include "creatureaction/CreatureActionVomit.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturebehaviour/CreatureBehaviour.h"
+#include "creaturebehaviour/CreatureBehaviourAttackEnemy.h"
+#include "creaturebehaviour/CreatureBehaviourFleeWhenWeak.h"
+#include "creaturebehaviour/CreatureBehaviourFleeWhenOutmatched.h"
 #include "creatureeffect/CreatureEffect.h"
 #include "creatureeffect/CreatureEffectDigTile.h"
 #include "creatureeffect/CreatureEffectManager.h"
@@ -125,6 +130,7 @@
 #include "social/SocialRng.h"
 #include "rooms/RoomCrypt.h"
 #include "rooms/RoomDormitory.h"
+#include "rooms/RoomInfirmary.h"
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
 #include "rooms/RoomSpa.h"
@@ -161,6 +167,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <utility>
 
@@ -685,6 +692,8 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
     mCasinoMood              (0.0),
+    mInfirmaryMood           (0.0),
+    mInfirmaryMoodTurns      (0.0),
     mThirst                  (0.0),
     mTavernMood              (0.0),
     mTavernMoodTurns         (0.0),
@@ -824,6 +833,8 @@ Creature::Creature(GameMap* gameMap) :
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
     mCasinoMood              (0.0),
+    mInfirmaryMood           (0.0),
+    mInfirmaryMoodTurns      (0.0),
     mThirst                  (0.0),
     mTavernMood              (0.0),
     mTavernMoodTurns         (0.0),
@@ -1026,6 +1037,8 @@ std::string Creature::getCreatureStreamFormat()
 //! \brief Writes the creature, its optional skill state and its trailing tagged item block.
 void Creature::exportToStream(std::ostream& os) const
 {
+    const std::streamsize precision = os.precision();
+    os << std::setprecision(std::numeric_limits<double>::max_digits10);
     MovableGameEntity::exportToStream(os);
     os << mDefinition->getClassName() << "\t";
     os << getLevel() << "\t" << mExp << "\t";
@@ -1074,6 +1087,7 @@ void Creature::exportToStream(std::ostream& os) const
     // Current mana as a labelled token after the appearance, missing in old saves (they load with full mana)
     os << "\t" << MANA_SAVE_LABEL << mMana;
     os << "\tMerchantMood=" << mMerchantMood << "\tGoldRemainder=" << mGoldRemainder;
+    os << "\t[Infirmary] " << mInfirmaryMood << " " << mInfirmaryMoodTurns << " [/Infirmary]";
 
     // Optional skill state (after the mana token), missing in old saves: their points are spent again at load
     if(mSkillBuild.mSeed != 0)
@@ -1101,6 +1115,7 @@ void Creature::exportToStream(std::ostream& os) const
         os << "\t" << SPA_SAVE_OPEN << " " << mSpaMood << " " << mRelaxTurns << " " << mSpaMudTilesLeft << " "
            << SPA_SAVE_CLOSE;
     }
+    os.precision(precision);
 }
 
 //! \brief Reads legacy creature data with optional appearance, mana, skill state and item data.
@@ -1177,6 +1192,13 @@ bool Creature::importFromStream(std::istream& is)
     std::string appearanceToken;
     while(is >> appearanceToken)
     {
+        if(appearanceToken == "[Infirmary]")
+        {
+            std::string close;
+            if(!(is >> mInfirmaryMood >> mInfirmaryMoodTurns >> close) || close != "[/Infirmary]")
+                return false;
+            continue;
+        }
         if(appearanceToken.compare(0, MERCHANT_MOOD_SAVE_LABEL.size(), MERCHANT_MOOD_SAVE_LABEL) == 0 ||
             appearanceToken.compare(0, GOLD_REMAINDER_SAVE_LABEL.size(), GOLD_REMAINDER_SAVE_LABEL) == 0)
         {
@@ -1998,6 +2020,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
+    os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     os << mUrge;
     os << mCreatureDirt;
     exportThirstStateToPacket(os);
@@ -2071,6 +2094,7 @@ void Creature::importFromPacket(ODPacket& is)
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
     OD_ASSERT_TRUE(importItemsFromPacket(is));
+    OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
@@ -2462,6 +2486,13 @@ void Creature::doUpkeep()
 
     mTorturedThisTurn = false;
     mRestedThisTurn = false;
+
+    if(mInfirmaryMoodTurns > 0.0)
+    {
+        mInfirmaryMoodTurns -= 1.0;
+        if(mInfirmaryMoodTurns <= 0.0)
+            mInfirmaryMood = 0.0;
+    }
 
     // if creature is not on map (picked up or being carried), we do nothing
     if(!getIsOnMap())
@@ -2955,8 +2986,19 @@ void Creature::doUpkeep()
 
 void Creature::decidePrioritaryAction()
 {
+    const bool patient = isActionInList(CreatureActionType::infirmaryRest);
+    const bool tooWeakToRise = getHP() * 100.0 < getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent");
+    if((patient || isActionInList(CreatureActionType::sleep)) && tooWeakToRise)
+        return;
+    if(patient && getVisibleEnemyObjects().empty())
+        return;
     for(const CreatureBehaviour* behaviour : getDefinition()->getCreatureBehaviours())
     {
+        // A patient may answer visible enemies using its configured combat policy, but cannot leave treatment for a job.
+        if(patient && behaviour->getName() != CreatureBehaviourAttackEnemy::mNameCreatureBehaviourAttackEnemy &&
+            behaviour->getName() != CreatureBehaviourFleeWhenWeak::mNameCreatureBehaviourFleeWhenWeak &&
+            behaviour->getName() != CreatureBehaviourFleeWhenOutmatched::mNameCreatureBehaviourFleeWhenOutmatched)
+            continue;
         if(!behaviour->processBehaviour(*this))
             return;
     }
@@ -2964,6 +3006,10 @@ void Creature::decidePrioritaryAction()
 
 void Creature::handleHeartDefence()
 {
+    if(isActionInList(CreatureActionType::infirmaryRest) ||
+        (isActionInList(CreatureActionType::sleep) && getHP() * 100.0 < getMaxHp() *
+            ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent")))
+        return;
     if(!getDefinition()->isHeartDefenceRunner())
         return;
 
@@ -4859,6 +4905,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
+    os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     if(seat == getSeat())
     {
         os << mUrge;
@@ -4999,6 +5046,7 @@ void Creature::updateFromPacket(ODPacket& is)
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
     OD_ASSERT_TRUE(importItemsFromPacket(is));
+    OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
@@ -5917,6 +5965,7 @@ std::string Creature::getRelationshipTooltip()
     return line;
 }
 
+//! \brief Builds the creature stats, including its current infirmary discharge target.
 //! \brief Returns the unmasked server-side statistics for existing internal callers.
 std::string Creature::getStatsText()
 {
@@ -5975,6 +6024,17 @@ std::string Creature::getStatsText(const Seat* viewer)
     tempSS << "Experience: " << mExp << std::endl;
     tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
     tempSS << "Gold: " << mGoldCarried << std::endl;
+    for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::infirmary, getSeat()))
+    {
+        RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(room);
+        const RoomInfirmary::PatientInfo* patient = infirmary->getPatient(*this);
+        if(patient != nullptr && patient->creature == this)
+        {
+            tempSS << "Infirmary: " << formatFixedNumber(getHP() * 100.0 / getMaxHp()) << " % -> "
+                << infirmary->getDischargeThreshold() << " %" << std::endl;
+            break;
+        }
+    }
     if (!getDefinition()->isWorker())
     {
         tempSS << "Wakefulness: " << mWakefulness << std::endl;
@@ -7207,7 +7267,7 @@ void Creature::drop(const Ogre::Vector3& v)
         if((mGoldCarried > 0) && (mDigRate > 0.0) &&
            (position->getCoveringRoom() != nullptr))
         {
-            int deposited = position->getCoveringRoom()->depositGold(mGoldCarried, position);
+            double deposited = position->getCoveringRoom()->depositGold(mGoldCarried, position);
             if(deposited > 0)
             {
                 mGoldCarried -= deposited;
@@ -7502,7 +7562,7 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
     if(mKoTurnCounter < 0)
     {
         if((carrier != nullptr) && (carrier->getSeat() == getSeat()))
-            return isKoToDeathForBedPull() ? EntityCarryType::koCreature : EntityCarryType::notCarryable;
+            return (isKoToDeathForBedPull() || RoomInfirmary::wouldAccept(*this)) ? EntityCarryType::koCreature : EntityCarryType::notCarryable;
 
         return EntityCarryType::koCreature;
     }
@@ -7540,6 +7600,9 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 
 bool Creature::isWoundedForBedCarry() const
 {
+    if(isActionInList(CreatureActionType::infirmaryRest))
+        return false;
+
     if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingDragged || mIsInHand ||
        isPossessed() || isInPrison() || getDefinition()->isWorker() || getDefinition()->isChampion())
     {
@@ -8779,6 +8842,10 @@ void Creature::relieve()
 //! \brief Relieves the creature at the highest urge and lets it use a toilet seat it walks over from UrgeOnTheWay on.
 void Creature::handleUrge()
 {
+    if(isActionInList(CreatureActionType::infirmaryRest) ||
+        (isActionInList(CreatureActionType::sleep) && getHP() * 100.0 < getMaxHp() *
+            ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent")))
+        return;
     ConfigManager& config = ConfigManager::getSingleton();
     if(mDefinition->isWorker() || (mUrge < config.getDirtConfigDouble("UrgeOnTheWay")))
         return;
@@ -8897,6 +8964,23 @@ void Creature::decreaseWakefulness(double value)
         return;
 
     mWakefulness = std::max(0.0, mWakefulness - value);
+}
+
+//! \brief Applies the admission mood using the configured fee modifier and rested lifetime.
+void Creature::setInfirmaryAdmissionMood(bool creaturePaid)
+{
+    mInfirmaryMood = 0.0;
+    mInfirmaryMoodTurns = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryMoodDefaultTurns");
+    for(const CreatureMood* mood : getDefinition()->getCreatureMoods())
+    {
+        const CreatureMoodFee* fee = dynamic_cast<const CreatureMoodFee*>(mood);
+        if(fee != nullptr)
+            mInfirmaryMood = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryMoodWageShare") *
+                fee->getMoodModifier() * (creaturePaid ? 1.0 : -1.0);
+        const CreatureMoodRested* rested = dynamic_cast<const CreatureMoodRested*>(mood);
+        if(rested != nullptr)
+            mInfirmaryMoodTurns = rested->getTurnsMax();
+    }
 }
 
 void Creature::addCasinoMood(double points)

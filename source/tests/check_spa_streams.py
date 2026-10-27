@@ -57,7 +57,7 @@ assert creature_cpp.count('if(appearanceToken == SPA_SAVE_OPEN)') == 1
 # the seats that do not own the creature (the same number of fields: urge, dirt, four thirst fields, two spa fields)
 full_packet = extract(creature_cpp, 'void Creature::exportToPacket(')
 assert re.search(r'exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);\s*\}', full_packet)
-update_start = creature_cpp.index('os << mGoldCarried;\n    exportItemsToPacket(os, seat);\n    if(seat == getSeat())')
+update_start = creature_cpp.index('os << mGoldCarried;\n    exportItemsToPacket(os, seat);\n    os << (seat == getSeat() ? mInfirmaryMood : 0.0);\n    if(seat == getSeat())')
 update_packet = creature_cpp[update_start:creature_cpp.index('\n}\n', update_start)]
 assert re.search(r'exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);', update_packet)
 assert update_packet.count('os << 0.0;') == 8, 'urge, dirt, four thirst fields and two spa fields as zeros for other seats'

@@ -854,6 +854,16 @@ void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix, 
     ODServer::getSingleton().queueServerNotification(notification);
 }
 
+//! \brief Sends the collected no-mana notice for a room to its human keeper.
+void Player::notifyInfirmaryEvent()
+{
+    if(mHasLost || !getIsHuman())
+        return;
+    ServerNotification* notification = new ServerNotification(ServerNotificationType::chatServer, this);
+    notification->mPacket << std::string("Your infirmary has no mana to heal.") << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(notification);
+}
+
 void Player::notifyNewCreatureType(const std::string& creatureClassName)
 {
     if(mHasLost)

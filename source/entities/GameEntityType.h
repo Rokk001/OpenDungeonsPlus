@@ -47,6 +47,7 @@ enum class GameEntityType
     merchantEntity,
     herbBundleEntity,
     innkeeperEntity,
+    infirmaryShamanEntity,
     poolAttendantEntity
 };
 

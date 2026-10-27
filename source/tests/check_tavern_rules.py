@@ -240,12 +240,14 @@ struct CreatureDefinition
     bool hasThirst() const { return thirsty; }
 };
 
+//! \brief Supplies tavern creature state with the production fractional purse API.
 struct Creature
 {
     CreatureDefinition* mDefinition; Seat* mSeat; std::string mName; Tile* mTile; Ogre::Vector3 mPos;
     double mUrge, mThirst, mTavernMood, mTavernMoodTurns, mDrunk, mHangoverTurns, mHp, mExp;
     bool mVomited, mHangoverPending, mOnMap, mAlive, mKo, mDragged, mPossessed, mFighting, mFleeing, mHit;
-    uint32_t mLevel; int32_t mGold; int takeDamageCalls;
+    uint32_t mLevel; double mGold; int takeDamageCalls;
+    //! \brief Initializes the tavern creature with the production fractional gold balance.
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat, uint32_t level)
       : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mUrge(0.0), mThirst(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mDrunk(0.0),
         mHangoverTurns(0.0), mHp(100.0), mExp(0.0), mVomited(false), mHangoverPending(false), mOnMap(true), mAlive(true), mKo(false),
@@ -268,8 +270,10 @@ struct Creature
     double takeDamage(Creature* attacker, double absoluteDamage, double a, double b, double c, Tile* tile, bool d)
     { ++takeDamageCalls; mHp -= absoluteDamage; return absoluteDamage; }
     void receiveExp(double xp) { mExp += xp; }
-    int32_t getGoldCarried() const { return mGold; }
-    void addGoldCarried(int32_t gold) { mGold += gold; }
+    //! \brief Returns the full production purse balance without narrowing.
+    double getGoldCarried() const { return mGold; }
+    //! \brief Applies the production fractional purse charge.
+    void addGoldCarried(double gold) { mGold += gold; }
     Tile* getPositionTile() const { return mTile; }
     const Ogre::Vector3& getPosition() const { return mPos; }
     void setAnimationState(const std::string& state, bool loop = true, const Ogre::Vector3& direction = Ogre::Vector3::ZERO, bool idle = true) {}
@@ -288,13 +292,17 @@ struct Creature
 };
 @@CREATURE_FUNCTIONS@@
 
+//! \brief Supplies tavern tiles and production fractional keeper balances.
 struct GameMap
 {
-    int sizeX, sizeY; std::vector<Tile> tiles; int treasury, seatGold; std::vector<Creature*> creatures;
+    int sizeX, sizeY; std::vector<Tile> tiles; double treasury, seatGold; std::vector<Creature*> creatures;
+    //! \brief Initializes the tavern map with fractional treasury and seat balances.
     GameMap(int x, int y) : sizeX(x), sizeY(y), treasury(0), seatGold(0) { for(int yy = 0; yy < y; ++yy) for(int xx = 0; xx < x; ++xx) tiles.push_back(Tile(xx, yy)); }
     Tile* getTile(int x, int y) { return ((x < 0) || (y < 0) || (x >= sizeX) || (y >= sizeY)) ? nullptr : &tiles[y * sizeX + x]; }
-    bool withdrawFromTreasuries(int gold, Seat* seat) { if(treasury < gold) return false; treasury -= gold; return true; }
-    void addGoldToSeat(int gold, int seatId) { seatGold += gold; }
+    //! \brief Withdraws the complete production amount from the treasury fixture.
+    bool withdrawFromTreasuries(double gold, Seat* seat) { if(treasury < gold) return false; treasury -= gold; return true; }
+    //! \brief Credits the complete production amount to the seat fixture.
+    void addGoldToSeat(double gold, int seatId) { seatGold += gold; }
     const std::vector<Creature*>& getCreaturesBySeat(Seat* seat) const { return creatures; }
 };
 
@@ -455,6 +463,7 @@ static void checkThirst()
 }
 
 // ---- Drinks, payment, the chain
+//! \brief Tests the original drink rules and preserves fractional balances through both payment paths.
 static void checkDrinks()
 {
     // Without the research the tavern serves water: nothing is paid, no mood
@@ -483,6 +492,14 @@ static void checkDrinks()
       f.room.finishDrink(c->mTile, f.room.mSpots.find(c->mTile)->second);
       expect(c->mGold == 7 && f.map.seatGold == 5 && f.map.treasury == 0, "the creature pays 5 from its purse to the seat");
       expectNear(c->mTavernMood, 15.0, "beer mood"); expectNear(c->mDrunk, 25.0, "beer drunkenness"); }
+    // Keep the original integer payment cases and preserve existing fractional balances as well.
+    { Fixture f; Creature* c = f.guest("Fractional", 2, 1, TavernGuestState::drinking, 0); bool noCoin = true;
+      f.map.treasury = 50.625; c->mGold = 12.375;
+      expect(f.room.payForBeer(*c, noCoin) && !noCoin, "fractional treasury can pay the unchanged beer price");
+      expect(f.map.treasury == 45.625 && c->mGold == 12.375, "keeper payment retains both gold fractions");
+      f.room.mPayer = TavernPayer::creature; f.map.seatGold = 0.625;
+      expect(f.room.payForBeer(*c, noCoin) && !noCoin, "fractional purse can pay the unchanged beer price");
+      expect(c->mGold == 7.375 && f.map.seatGold == 5.625 && f.map.treasury == 45.625, "purse payment retains purse, seat and treasury fractions"); }
     // The creature cannot pay: water and mood -5 for 168 turns
     { Fixture f; f.seat.beerLevel = 1; f.room.mPayer = TavernPayer::creature; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); c->mGold = 4; f.map.treasury = 100;
       Random::script({ 99.0, 99.0 }, {});

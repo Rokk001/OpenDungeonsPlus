@@ -22,6 +22,13 @@ struct MeshBounds
 // Mesh-local XY bounds measured from the shipped room furniture, not tile
 // centers. Keep these synchronized with assets using check_room_object_bounds.py.
 static const MeshBounds meshBounds[] = {
+    {"InfirmaryCotSmall", -0.349999994f, -0.350000024f, 0.349999994f, 0.350000024f, 0.300000012f},
+    {"InfirmaryCotMedium", -0.349999994f, -0.850000024f, 0.349999994f, 0.850000024f, 0.300000012f},
+    {"InfirmaryCotLarge", -0.849999964f, -0.850000024f, 0.849999964f, 0.850000024f, 0.319999993f},
+    {"MedicineCabinet", -0.275000006f, -0.149999991f, 0.275000006f, 0.149999991f},
+    {"InstrumentTable", -0.299999982f, -0.200000003f, 0.299999982f, 0.200000003f},
+    {"WashBasin", -0.25f, -0.200000003f, 0.25f, 0.200000003f},
+    {"HerbShelf", -0.299999982f, -0.125f, 0.299999982f, 0.125f},
     {"AdventurerBed", -.406797f, -.679228f, .406797f, .679228f, .087917f},
     {"Anvil", -.335981f, -.280187f, .341827f, .231204f},
     {"Bed", -.337495f, -.681989f, .344794f, .702338f, .686024f},
@@ -122,10 +129,13 @@ constexpr float largeBedFootprint = 1.2f;
 constexpr float treasuryPileDiagonal = 0.4f;
 
 // Returns how much the mesh is narrowed so that it fits the footprint of its kind.
+//! \brief Keeps cots at their authored footprint and narrows other furniture as required.
 //! \brief Matches renderer and navigation scales while preserving authored equipment-room furniture sizes.
 inline FurnitureScale furnitureScale(const MeshBounds& bounds)
 {
     const std::string name(bounds.name);
+    if(name.compare(0, 12, "InfirmaryCot") == 0)
+        return {1.0f, 1.0f};
     if(name == "FenceCorner" || name == "FenceStraight" ||
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
@@ -275,6 +285,73 @@ struct BodyBand
     float minZ;
 };
 static const BodyBand bodyBands[] = {
+    // Measured at the cot tops over 121 Walk poses; both nearly equal small/medium tops share their outer envelope.
+    {"Adventurer.mesh", 0.3f, -0.154314f, -0.402246f, 0.149287f, 0.323578f, false, -0.02034f},
+    {"Adventurer.mesh", 0.32f, -0.154314f, -0.402246f, 0.149287f, 0.323578f, false, -0.02034f},
+    {"CaveHornet.mesh", 0.3f, -0.326558f, -0.194049f, 0.326531f, 0.213642f, false, 0.128645f},
+    {"CaveHornet.mesh", 0.32f, -0.326558f, -0.194049f, 0.326531f, 0.213642f, false, 0.128645f},
+    {"Cultist.mesh", 0.3f, -0.170541f, -0.427019f, 0.189733f, 0.36038f, false, -0.080379f},
+    {"Cultist.mesh", 0.32f, -0.176719f, -0.427019f, 0.195952f, 0.36038f, false, -0.080379f},
+    {"DarkElf.mesh", 0.3f, -0.124278f, -0.202566f, 0.130499f, 0.291945f, false, -0.07872f},
+    {"DarkElf.mesh", 0.32f, -0.124278f, -0.202566f, 0.130499f, 0.291945f, false, -0.07872f},
+    {"Defender.mesh", 0.3f, -0.251304f, -0.988676f, 0.166706f, 0.321638f, false, -0.075047f},
+    {"Defender.mesh", 0.32f, -0.251304f, -0.988676f, 0.171537f, 0.321638f, false, -0.075047f},
+    {"Dragon.mesh", 0.3f, -0.342277f, -0.427237f, 0.338384f, 0.756296f, false, -0.039586f},
+    {"Dragon.mesh", 0.32f, -0.342277f, -0.427237f, 0.338384f, 0.789978f, false, -0.039586f},
+    {"Dwarf1.mesh", 0.3f, -0.248594f, -0.309074f, 0.248075f, 0.227622f, false, -0.057376f},
+    {"Dwarf1.mesh", 0.32f, -0.248594f, -0.309074f, 0.24818f, 0.227622f, false, -0.057376f},
+    {"Dwarf2.mesh", 0.3f, -0.241958f, -0.302233f, 0.241539f, 0.213686f, false, -0.034414f},
+    {"Dwarf2.mesh", 0.32f, -0.243821f, -0.302233f, 0.243376f, 0.213686f, false, -0.034414f},
+    {"Elf.mesh", 0.3f, -0.131449f, -0.21842f, 0.131301f, 0.312731f, false, -0.07402f},
+    {"Elf.mesh", 0.32f, -0.131449f, -0.21842f, 0.131301f, 0.312731f, false, -0.07402f},
+    {"Gnome.mesh", 0.3f, -0.247508f, -0.214375f, 0.247507f, 0.206508f, false, -0.042925f},
+    {"Gnome.mesh", 0.32f, -0.247508f, -0.214375f, 0.247507f, 0.206508f, false, -0.042925f},
+    {"Goblin.mesh", 0.3f, -0.123498f, -0.33374f, 0.254931f, 0.252987f, false, -0.065341f},
+    {"Goblin.mesh", 0.32f, -0.125039f, -0.343292f, 0.254931f, 0.252987f, false, -0.065341f},
+    {"Knight.mesh", 0.3f, -0.239724f, -0.418838f, 0.262491f, 0.385971f, false, -0.075899f},
+    {"Knight.mesh", 0.32f, -0.245443f, -0.418838f, 0.262491f, 0.385971f, false, -0.075899f},
+    {"Kobold.mesh", 0.3f, -0.205426f, -0.192767f, 0.136456f, 0.267816f, false, -0.026297f},
+    {"Kobold.mesh", 0.32f, -0.205426f, -0.192767f, 0.136456f, 0.267816f, false, -0.026297f},
+    {"Kreatur.mesh", 0.3f, -0.720492f, -0.686044f, 0.72051f, 0.590146f, false, -0.027044f},
+    {"Kreatur.mesh", 0.32f, -0.720492f, -0.686044f, 0.72051f, 0.590146f, false, -0.027044f},
+    {"LavaSpawn.mesh", 0.3f, -0.794634f, -0.702337f, 0.789449f, 1.11894f, false, -0.052282f},
+    {"LavaSpawn.mesh", 0.32f, -0.794634f, -0.702783f, 0.789449f, 1.11894f, false, -0.052282f},
+    {"Lizardman.mesh", 0.3f, -0.114618f, -0.484859f, 0.114548f, 0.707054f, false, -0.006661f},
+    {"Lizardman.mesh", 0.32f, -0.268888f, -0.484859f, 0.269736f, 0.707054f, false, -0.006661f},
+    {"Monk.mesh", 0.3f, -0.147469f, -0.363016f, 0.149341f, 0.291613f, false, -0.031453f},
+    {"Monk.mesh", 0.32f, -0.147469f, -0.363016f, 0.149341f, 0.291613f, false, -0.031453f},
+    {"NatureMonster.mesh", 0.3f, -0.470428f, -0.418676f, 0.470428f, 0.498262f, false, -0.054203f},
+    {"NatureMonster.mesh", 0.32f, -0.475821f, -0.418676f, 0.475819f, 0.498262f, false, -0.054203f},
+    {"Orc.mesh", 0.3f, -0.285059f, -0.432845f, 0.284237f, 0.420059f, false, -0.017526f},
+    {"Orc.mesh", 0.32f, -0.289101f, -0.432845f, 0.28825f, 0.420059f, false, -0.017526f},
+    {"PitDemon.mesh", 0.3f, -0.182359f, -0.638509f, 0.203589f, 0.613724f, false, -0.06426f},
+    {"PitDemon.mesh", 0.32f, -0.182359f, -0.638509f, 0.203589f, 0.614876f, false, -0.06426f},
+    {"Rat.mesh", 0.3f, -0.131283f, -0.46173f, 0.122514f, 0.570713f, false, -0.040884f},
+    {"Rat.mesh", 0.32f, -0.131283f, -0.46173f, 0.122514f, 0.570713f, false, -0.040884f},
+    {"Roach.mesh", 0.3f, -0.302113f, -0.480705f, 0.304484f, 0.493523f, false, -0.006572f},
+    {"Roach.mesh", 0.32f, -0.302113f, -0.480705f, 0.304484f, 0.493523f, false, -0.006572f},
+    {"RunelordDwarf.mesh", 0.3f, -0.165403f, -0.393727f, 0.194826f, 0.188577f, false, -0.036456f},
+    {"RunelordDwarf.mesh", 0.32f, -0.206045f, -0.393727f, 0.210382f, 0.188577f, false, -0.036456f},
+    {"Scarab.mesh", 0.3f, -0.54801f, -0.191101f, 0.551911f, 0.357729f, false, -0.071964f},
+    {"Scarab.mesh", 0.32f, -0.55077f, -0.191101f, 0.555196f, 0.357729f, false, -0.071964f},
+    {"Slime.mesh", 0.3f, -0.129409f, -0.517889f, 0.129396f, 0.195001f, false, -0.016886f},
+    {"Slime.mesh", 0.32f, -0.129409f, -0.52768f, 0.129396f, 0.195001f, false, -0.016886f},
+    {"Spider.mesh", 0.3f, -0.37984f, -0.413525f, 0.374666f, 0.404982f, false, -0.085179f},
+    {"Spider.mesh", 0.32f, -0.37984f, -0.413525f, 0.374666f, 0.404982f, false, -0.085179f},
+    {"TentacleAlbine.mesh", 0.3f, -0.175996f, -0.270396f, 0.16886f, 0.293374f, false, 0.011767f},
+    {"TentacleAlbine.mesh", 0.32f, -0.175996f, -0.270396f, 0.16886f, 0.293374f, false, 0.011767f},
+    {"TentacleGreen.mesh", 0.3f, -0.175996f, -0.270396f, 0.16886f, 0.293374f, false, 0.011767f},
+    {"TentacleGreen.mesh", 0.32f, -0.175996f, -0.270396f, 0.16886f, 0.293374f, false, 0.011767f},
+    {"Troll.mesh", 0.3f, -0.589225f, -0.502311f, 0.602605f, 0.424564f, false, -0.008895f},
+    {"Troll.mesh", 0.32f, -0.594577f, -0.502311f, 0.607941f, 0.424564f, false, -0.008895f},
+    {"Wizard.mesh", 0.3f, -0.147413f, -0.22372f, 0.13172f, 0.368029f, false, -0.047371f},
+    {"Wizard.mesh", 0.32f, -0.147413f, -0.22372f, 0.13172f, 0.368029f, false, -0.047371f},
+    {"Wyvern.mesh", 0.3f, -0.30656f, -0.0707f, 0.30656f, 0.522831f, false, 0.095168f},
+    {"Wyvern.mesh", 0.32f, -0.307941f, -0.0707f, 0.307942f, 0.541114f, false, 0.095168f},
+    {"lich.mesh", 0.3f, -0.332446f, -0.81278f, 0.335793f, 0.651376f, false, -0.08541f},
+    {"lich.mesh", 0.32f, -0.332446f, -0.81278f, 0.372842f, 0.651376f, false, -0.08541f},
+    {"skeleton.mesh", 0.3f, -0.149769f, -0.576067f, 0.158873f, 0.430293f, false, -0.056416f},
+    {"skeleton.mesh", 0.32f, -0.149769f, -0.576067f, 0.158873f, 0.430293f, false, -0.056416f},
     {"Adventurer.mesh", .073802f, -.112152f, -.402246f, .109564f, .323578f, false, -.02034f},
     {"Adventurer.mesh", .087917f, -.112152f, -.402246f, .109564f, .323578f, false, -.02034f},
     {"Adventurer.mesh", .276672f, -.148989f, -.402246f, .149287f, .323578f, false, -.02034f},

@@ -1909,6 +1909,7 @@ bool ConfigManager::loadSkills(const std::string& fileName)
     return true;
 }
 
+//! \brief Loads every registered tile visual, including the infirmary floor masks.
 bool ConfigManager::loadTilesets(const std::string& fileName)
 {
     OD_LOG_INF("Load Tilesets file: " + fileName);
@@ -2057,6 +2058,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
         if(!loadTilesetValues(defFile, TileVisual::alchemyLabRoom, tileSet->configureTileValues(TileVisual::alchemyLabRoom),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::tavernRoom, tileSet->configureTileValues(TileVisual::tavernRoom),*mHighMap))
+            return false;
+        if(!loadTilesetValues(defFile, TileVisual::infirmaryRoom, tileSet->configureTileValues(TileVisual::infirmaryRoom),*mHighMap))
             return false;
         if(!loadTilesetValues(defFile, TileVisual::spaRoom, tileSet->configureTileValues(TileVisual::spaRoom),*mHighMap))
             return false;

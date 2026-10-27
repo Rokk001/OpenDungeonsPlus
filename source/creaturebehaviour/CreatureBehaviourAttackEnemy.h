@@ -20,6 +20,7 @@
 
 #include "creaturebehaviour/CreatureBehaviour.h"
 
+//! \brief Applies the configured enemy response while keeping badly hurt sleepers lying.
 class CreatureBehaviourAttackEnemy : public CreatureBehaviour
 {
 public:
@@ -36,6 +37,7 @@ public:
 
     virtual CreatureBehaviour* clone() const override;
 
+    //! \brief Starts combat only when a lying creature has enough health to rise.
     virtual bool processBehaviour(Creature& creature) const override;
 };
 

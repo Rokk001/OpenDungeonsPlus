@@ -52,6 +52,7 @@ class ItemBagEntity;
 class MiniMapDrawnFull;
 class MenuModeLoad;
 class SocialWindow;
+class ODPacket;
 
 enum class SpellType;
 enum class SkillType;
@@ -90,6 +91,7 @@ public:
 
 
 
+//! \brief Handles keeper input, game windows and synchronized room controls.
 //! \brief Handles dungeon play controls, the keeper's room and creature windows, and contextual item information.
 class GameMode final : public GameEditorModeBase, public InputCommand
 {
@@ -137,6 +139,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
      */
     virtual void handleHotkeys  (OIS::KeyCode keycode) override;
 
+    //! \brief Updates game HUD state and keeper control availability each frame.
     //! \brief Refreshes the interface and the laboratory button's room availability.
     void onFrameStarted(const Ogre::FrameEvent& evt) override;
     void onFrameEnded(const Ogre::FrameEvent& evt) override;
@@ -208,6 +211,24 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Shows/hides/toggles the player settings window
     //! \brief Casino payout control, opened by clicking on one of the player's casinos
     void showCasinoPayoutWindow(Tile* tile);
+    //! \brief Opens the keeper-wide patient list from an owned infirmary tile or navigation control.
+    void showInfirmaryWindow(Tile* tile = nullptr);
+    //! \brief Toggles the keeper-wide infirmary controls.
+    bool toggleInfirmaryWindow(const CEGUI::EventArgs& = {});
+    //! \brief Hides the patient list and stops its server subscription.
+    bool hideInfirmaryWindow(const CEGUI::EventArgs& = {});
+    //! \brief Switches the payer and sends the current settings.
+    bool cycleInfirmaryPayer(const CEGUI::EventArgs& = {});
+    //! \brief Switches healing and sends the current settings.
+    bool toggleInfirmaryHealing(const CEGUI::EventArgs& = {});
+    //! \brief Snaps the discharge slider to ten-percent steps and sends its setting.
+    bool changeInfirmaryThreshold(const CEGUI::EventArgs& = {});
+    //! \brief Opens the same stats window as a middle click for the selected patient.
+    bool selectInfirmaryPatient(const CEGUI::EventArgs& = {});
+    //! \brief Applies authoritative settings and optionally patient rows from the server.
+    void receiveInfirmaryWindow(ODPacket& packet, bool patients);
+    //! \brief Sends the three current keeper settings to the server.
+    void sendInfirmarySettings();
     bool hideCasinoPayoutWindow(const CEGUI::EventArgs& = {});
     bool cycleCasinoPayout(const CEGUI::EventArgs& = {});
     //! \brief Called when the server tells the payout level of a casino. It is only shown if
@@ -537,6 +558,7 @@ private:
     void openStatsWindowUnderPointer(const OIS::MouseEvent& arg);
 
     //! \brief Set the help window (quite long) text.
+    //! \brief Lists the game controls and their keyboard shortcuts.
     //! \brief Describes the current game controls, including the merchant shortcut.
     void setHelpWindowText();
 
@@ -648,6 +670,11 @@ private:
     int mCasinoX;
     int mCasinoY;
     uint32_t mCasinoPayout;
+    int32_t mInfirmaryPayer = 0;
+    int32_t mInfirmaryThreshold;
+    bool mInfirmaryHealOn = true;
+    bool mUpdatingInfirmary = false;
+    std::vector<std::string> mInfirmaryPatientNames;
     //! \brief Latest stock entries and stable indices received from the server.
     std::vector<std::pair<uint32_t, ItemInstance>> mMerchantItems;
     //! \brief Tracks changed deal history so a live push also triggers the prescribed client refresh.

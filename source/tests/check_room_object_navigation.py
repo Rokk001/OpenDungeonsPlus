@@ -103,6 +103,16 @@ struct Room {
 struct RoomPrison : Room {
  std::map<Tile*,BuildingObject*> fences;const auto& getFencingObjects()const{return fences;}
 };
+//! \brief Supplies the new cot delivery metadata used by the production navigation selector.
+struct RoomInfirmary : Room {
+ struct CotInfo {int x=0,y=0;};
+ struct PatientInfo {Creature* reservedBy=nullptr;std::string creatureName;};
+ std::map<size_t,CotInfo> cots;std::map<size_t,PatientInfo> patients;
+ //! \brief Returns the fixture's assigned cot footprints.
+ const std::map<size_t,CotInfo>& getCots()const{return cots;}
+ //! \brief Returns the fixture's patient and carrier reservations.
+ const std::map<size_t,PatientInfo>& getPatients()const{return patients;}
+};
 enum class RelationshipEvent{chickenSnatched};
 //! \brief Supplies navigation terrain, rooms and explicitly registered creature bodies.
 struct GameMap {
@@ -121,6 +131,8 @@ struct GameMap {
 //! \brief Represents a live server creature with measured geometry and an assigned path.
 struct Creature {
  GameMap* map;Ogre::Vector3 pos{1,5,0};Tile* home=nullptr;std::set<CreatureActionType> actions;int level=1;
+ //! \brief Names the fixture creature for infirmary reservation matching.
+ std::string getName()const{return "walker";}
  std::string mesh="Kobold.mesh";const std::string& getMeshName()const{return mesh;}
  Ogre::Vector3 direction{0,-1,0};const Ogre::Vector3& getWalkDirection()const{return direction;}
  int cooldown=0,popped=0,walkActions=0,feeding=0,workReady=0;double food=0,hp=10;

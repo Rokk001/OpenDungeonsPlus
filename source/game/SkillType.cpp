@@ -39,6 +39,7 @@ SkillType fromString(const std::string& typeName)
     return SkillType::nullSkillType;
 }
 
+//! \brief Returns the stored name of a research type.
 //! \brief Returns the stable saved name of every research entry.
 std::string toString(SkillType type)
 {
@@ -66,6 +67,8 @@ std::string toString(SkillType type)
             return "roomLibrary";
         case SkillType::roomPrison:
             return "roomPrison";
+        case SkillType::roomInfirmary:
+            return "roomInfirmary";
         case SkillType::roomGuardRoom:
             return "roomGuardRoom";
         case SkillType::roomToilet:
@@ -179,6 +182,7 @@ std::string toString(SkillType type)
     }
 }
 
+//! \brief Returns the player-visible name of a research type.
 //! \brief Returns the approved player-facing research entry name.
 std::string skillTypeToPlayerVisibleString(SkillType type)
 {
@@ -210,6 +214,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Treasury Room";
         case SkillType::roomPrison:
             return "The Prison Room";
+        case SkillType::roomInfirmary:
+            return "The Infirmary Room";
         case SkillType::roomGuardRoom:
             return "The Guard Room";
         case SkillType::roomToilet:

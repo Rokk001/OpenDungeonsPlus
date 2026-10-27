@@ -1801,7 +1801,7 @@ bool LevelScriptRunner::doCreatureOrder(Creature& creature)
             if(amount <= 0)
                 amount = DEFAULT_STEAL_GOLD_AMOUNT;
 
-            int32_t gold = room->withdrawGold(amount);
+            double gold = room->withdrawGold(amount);
             creature.addGoldCarried(gold);
             if(gold > 0)
                 gameMap->getLevelScript().recordEvent(name, "steals");

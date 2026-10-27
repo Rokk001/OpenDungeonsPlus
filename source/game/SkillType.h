@@ -112,6 +112,7 @@ enum class SkillType
     // Added later, appended so that existing saves stay valid
     roomTavern,
     tavernBeer,
+    roomInfirmary,
     roomSpa,
 
     // This should be the last

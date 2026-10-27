@@ -52,10 +52,10 @@ room_h = read('source/rooms/RoomTavern.h')
 export_text = extract(creature_cpp, 'void Creature::exportToStream(')
 assert export_text.index('NEEDS_SAVE_OPEN') < export_text.index('THIRST_SAVE_OPEN'), 'the thirst block follows the needs block'
 assert creature_cpp.count('if(appearanceToken == THIRST_SAVE_OPEN)') == 1
-# The full packet and the update packet end with urge, creature dirt and the thirst state; the update packet sends
+# The full packet and the update packet retain the owner-only infirmary mood before urge, creature dirt and thirst; the update packet sends
 # zeros to the seats that do not own the creature (the same number of fields)
 full_packet = extract(creature_cpp, 'void Creature::exportToPacket(')
-assert re.search(r'os << mGoldCarried;\s*exportItemsToPacket\(os, seat\);\s*os << mUrge;\s*os << mCreatureDirt;\s*exportThirstStateToPacket\(os\);', full_packet)
+assert re.search(r'os << mGoldCarried;\s*exportItemsToPacket\(os, seat\);\s*os << \(seat == getSeat\(\) \? mInfirmaryMood : 0\.0\);\s*os << mUrge;\s*os << mCreatureDirt;\s*exportThirstStateToPacket\(os\);', full_packet)
 update_packet = extract(creature_cpp, 'void Creature::exportToPacketForUpdate(') if 'void Creature::exportToPacketForUpdate(' in creature_cpp else None
 if update_packet is None:
     update_start = creature_cpp.index('os << mGoldCarried;\n    if(seat == getSeat())')
@@ -65,11 +65,11 @@ assert 'exportThirstStateToPacket(os);' in update_packet and update_packet.count
 thirst_export = extract(creature_cpp, 'void Creature::exportThirstStateToPacket(')
 assert re.findall(r'os << (m\w+);', thirst_export) == ['mThirst', 'mTavernMood', 'mDrunk', 'mHangoverTurns']
 assert creature_cpp.count('importThirstStateFromPacket(is);') == 2, 'full and update packet read the thirst state'
-for notification, names in (('source/network/ServerNotification.h', ('spaPayer', 'creatureJump')),
-                            ('source/network/ClientNotification.h', ('askTavernPayer', 'askSpaPayer'))):
+for notification, names in (('source/network/ServerNotification.h', ('tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'spaPayer', 'creatureJump')),
+                            ('source/network/ClientNotification.h', ('askTavernWindow', 'askTavernPayer', 'askInfirmaryWindow', 'askInfirmarySettings', 'askSpaPayer'))):
     text = read(notification)
     enum_body = text[text.index('enum class '):text.index('};', text.index('enum class '))]
-    tail = [w for w in re.findall(r'^\s*(\w+),?\s*(?://.*)?$', enum_body, re.M) if w not in ('enum', 'class')][-2:]
+    tail = [w for w in re.findall(r'^\s*(\w+),?\s*(?://.*)?$', enum_body, re.M) if w not in ('enum', 'class')][-len(names):]
     assert tail == list(names), notification + ' must end with ' + ', '.join(names) + ', found ' + ', '.join(tail)
 for path, names in (('source/network/ServerNotification.cpp', ('tavernWindow', 'tavernPayer')),
                     ('source/network/ClientNotification.cpp', ('askTavernWindow', 'askTavernPayer'))):

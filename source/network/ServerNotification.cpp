@@ -181,6 +181,10 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "hatcheryNests";
         case ServerNotificationType::timeLimit:
             return "timeLimit";
+        case ServerNotificationType::infirmaryWindow:
+            return "infirmaryWindow";
+        case ServerNotificationType::infirmarySettings:
+            return "infirmarySettings";
         case ServerNotificationType::campaignVictory:
             return "campaignVictory";
         case ServerNotificationType::tavernWindow:

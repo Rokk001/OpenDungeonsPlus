@@ -398,6 +398,7 @@ private:
     //! shows it, has gone down since the last scan
     void scanHeartHit();
     void reconcile();
+    //! \brief Plays due object clips and sounds and maintains visible looping room sounds
     //! \brief Plays due object clips and sounds, and maintains configured sound loops.
     void playClips();
     //! \brief Starts visible sound loops and stops loops whose targets no longer qualify.
@@ -606,6 +607,7 @@ private:
     std::vector<Candidate> mClipCandidates;
     //! Time at which an object plays its next clip (kind clip)
     std::map<std::string, double> mClipTimers;
+    //! Sound-loop handles by object and effect, stopped when that visible effect disappears.
     //! \brief Spatial sound handles keyed by target and effect, owned until the target leaves view.
     std::map<std::string, uint32_t> mSoundLoops;
     //! Time until which an object plays a clip of an event (a bed that wakes up) and must not be restarted by a looping clip

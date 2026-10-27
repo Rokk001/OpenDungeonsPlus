@@ -201,7 +201,7 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
         case GiftBoxType::gold:
         {
             // What the treasuries cannot hold is left on the ground where the box was
-            int notStored = gameMap->addGoldToSeat(static_cast<int>(amount), seat->getId());
+            double notStored = gameMap->addGoldToSeat(static_cast<int>(amount), seat->getId());
             Tile* tile = positionTile;
             if((notStored > 0) && (tile != nullptr))
             {

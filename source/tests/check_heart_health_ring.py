@@ -554,18 +554,17 @@ enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
 enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect',
                                                  'creatureAppearance', 'cosmeticEvent')]
-# The tavern notifications follow campaignVictory; the tail pinned below is the one before them
-assert enumerators[-4:] == ["tavernWindow", "tavernPayer", "spaPayer", "creatureJump"], enumerators[-5:]
-enumerators = enumerators[:-4]
+# The tavern notifications follow the equipment notifications; the complete combined tail is pinned below
 # Campaign victory appends one value after the historical tail without changing existing ordinals.
-assert enumerators[-8:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings'], enumerators[-8:]
+# Equipment and infirmary notifications follow campaign victory without changing existing ordinals.
+assert enumerators[-14:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'spaPayer', 'creatureJump'], enumerators[-12:]
 assert enumerators.count('campaignVictory') == 1
-enumerators = enumerators[:-5]
+enumerators = enumerators[:-11]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
 assert enumerators.count('wallTorches') == 1
 assert enumerators[-4] == 'possessionEnd' and enumerators[-5] == 'possessionStart', enumerators[-6:]
-assert enumerators[-6] == 'casinoPayout' and enumerators[-7] == 'heartHealth', enumerators[-8:]
+assert enumerators[-6] == 'casinoPayout' and enumerators[-7] == 'heartHealth', enumerators[-10:]
 assert enumerators[-8] == 'levelStatistics' and enumerators[-9] == 'playerDefeated'
 assert enumerators.count('heartHealth') == 1
 assert 'case ServerNotificationType::heartHealth:\n            return "heartHealth";' in notification_source

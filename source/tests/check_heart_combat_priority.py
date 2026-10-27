@@ -10,21 +10,24 @@ source = (root / 'source/entities/Creature.cpp').read_text()
 start = source.index('void Creature::handleHeartDefence()')
 body = source[start:source.index('bool Creature::handleIdleAction()', start)]
 conditions = re.findall(r'if\((.*?)\)\s*return;', body, re.S)
-assert len(conditions) == 4, 'all production early-return conditions must be modeled'
+assert len(conditions) == 5, 'all production early-return conditions must be modeled'
 assert body.index('CreatureActionType::fight') < body.index('clearActionQueue();')
 assert body.index('CreatureActionType::flee') < body.index('clearActionQueue();')
 assert source.index('decidePrioritaryAction();') < source.index('handleHeartDefence();')
 assert 'pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this))' in body
 
-def apply(queue, runner=True, seat=True, active=True, conditions=conditions):
-    values = {'runner': runner, 'seat': seat, 'active': active, 'queue': queue}
+# Execute every extracted early return with explicit health and action fixture inputs.
+def apply(queue, runner=True, seat=True, active=True, conditions=conditions, hp=100, maximum=100):
+    values = {'runner': runner, 'seat': seat, 'active': active, 'queue': queue, 'hp': hp, 'maximum': maximum}
     for expression in conditions:
         expression = expression.replace('getDefinition()->isHeartDefenceRunner()', 'runner')
         expression = expression.replace('seat == nullptr', '(not seat)')
         expression = expression.replace('seat->getHeartDefenceActive()', 'active')
+        expression = expression.replace('getHP()', 'hp').replace('getMaxHp()', 'maximum')
+        expression = expression.replace('ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent")', '35')
         expression = re.sub(r'isActionInList\(CreatureActionType::(\w+)\)', r"('\1' in queue)", expression)
         expression = expression.replace('||', ' or ').replace('&&', ' and ')
-        expression = re.sub(r'!(?!=)', ' not ', expression).strip()
+        expression = ' '.join(re.sub(r'!(?!=)', ' not ', expression).split())
         if eval(expression, {'__builtins__': {}}, values):
             return list(queue)
     return ['goDefendHeart']
@@ -42,6 +45,9 @@ assert apply(['goDefendHeart', 'walkToTile']) == ['goDefendHeart', 'walkToTile']
 assert apply(['searchFood'], active=False) == ['searchFood']
 assert apply(['sleep'], runner=False) == ['sleep']
 assert apply(['idle'], seat=False) == ['idle']
+assert apply(['infirmaryRest']) == ['infirmaryRest']
+assert apply(['sleep'], hp=34) == ['sleep']
+assert apply(['sleep'], hp=35) == ['goDefendHeart']
 attack = (root / 'source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp').read_text()
 assert 'creature.getVisibleEnemyObjects().empty()' in attack
 assert 'creature.fight();' in attack and 'creature.flee();' in attack

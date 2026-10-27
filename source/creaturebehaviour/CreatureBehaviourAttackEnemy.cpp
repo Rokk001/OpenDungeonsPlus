@@ -23,6 +23,7 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "utils/Random.h"
+#include "utils/ConfigManager.h"
 
 const std::string CreatureBehaviourAttackEnemy::mNameCreatureBehaviourAttackEnemy = "AttackEnemy";
 
@@ -56,6 +57,12 @@ bool CreatureBehaviourAttackEnemy::processBehaviour(Creature& creature) const
 
     if (creature.getVisibleEnemyObjects().empty())
         return true;
+
+    // Patients too weak to rise remain vulnerable, also when unhappy.
+    if((creature.isActionInList(CreatureActionType::sleep) || creature.isActionInList(CreatureActionType::infirmaryRest)) &&
+        creature.getHP() * 100.0 < creature.getMaxHp() *
+            ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWoundedCarryHpPercent"))
+        return false;
 
     // Unhappy creatures might flee instead of engaging enemies
     switch(creature.getMoodValue())
