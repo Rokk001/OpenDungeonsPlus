@@ -3,7 +3,7 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
-#include "creatureaction/CreatureActionType.h"
+#include "creatureaction/CreatureAction.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -315,6 +315,9 @@ void GhostEntity::updateLook()
         alpha *= static_cast<float>(1.0 - progress);
     else if(mState == GhostState::boxed)
         alpha = 0.0f;
+    const double levelSteps=static_cast<double>(std::max(1u,std::min(MAX_LEVEL,mLevel))-1u);
+    const double scale=(1.0+ConfigManager::getSingleton().getCreatureLevelGrowthMax()*levelSteps/static_cast<double>(MAX_LEVEL-1u))*(1.0-mCaptureProgress);
+    node->setScale(Ogre::Vector3::UNIT_SCALE*static_cast<Ogre::Real>(scale));
     node->setVisible(mState != GhostState::boxed);
     node->setPosition(mPosition + Ogre::Vector3(0, 0, height));
     setMeshOpacity(alpha);

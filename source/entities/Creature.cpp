@@ -1,3 +1,6 @@
+#include "creatureaction/CreatureActionHuntGhost.h"
+#include <OgreBillboardChain.h>
+#include <OgreParticleSystem.h>
 /*
  *  Copyright (C) 2011-2017  OpenDungeons Team
  *
@@ -878,6 +881,8 @@ Creature::Creature(GameMap* gameMap) :
 //! \brief Frees the active skills made from the skill tree and, on a client, clears the highlighted creature pointer.
 Creature::~Creature()
 {
+    interruptGhostHunt();
+    clearGhostHuntVisuals();
     if(getIsOnServerMap())
         unregisterHeldEpics();
     // The active skills made from the skill tree belong to the creature
@@ -915,6 +920,7 @@ void Creature::createMeshLocal(NodeType nt)
 
 void Creature::destroyMeshLocal(NodeType nt)
 {
+    clearGhostHuntVisuals();
     destroyMeshWeapons();
     MovableGameEntity::destroyMeshLocal();
     if(getIsOnServerMap())
@@ -978,6 +984,7 @@ void Creature::addToGameMap(GameMap* gameMap)
 //! \brief Removes the creature and releases any crypt spot or delivery reservation holding its body.
 void Creature::removeFromGameMap(GameMap* gameMap)
 {
+    interruptGhostHunt();
     if(getIsOnServerMap())
     {
         for(Room* room : getGameMap()->getRoomsByType(RoomType::crypt))
@@ -1116,6 +1123,11 @@ void Creature::exportToStream(std::ostream& os) const
         if(mIsCarried)
             os << "\t" << CORPSE_CARRIER_SAVE_LABEL << mCorpseCarrierName;
     }
+    if(mGhostRevived)
+        os << " [GhostRevival] " << mSpecialMood << ' ' << mThirst << " [/GhostRevival]";
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+            static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
     os.precision(precision);
 }
 
@@ -1210,6 +1222,21 @@ bool Creature::importFromStream(std::istream& is)
             corpseConsumed = true;
             continue;
         }
+        if(appearanceToken == "[GhostRevival]")
+        {
+            std::string close;
+            if(!(is >> mSpecialMood >> mSavedRevivalThirst >> close) || close!="[/GhostRevival]" ||
+               !std::isfinite(mSavedRevivalThirst) || mSavedRevivalThirst<0.0 || mSavedRevivalThirst>THIRST_STATE_MAX) return false;
+            mGhostRevived=true;mRevivalThirstFromSave=true;
+            continue;
+        }
+        if(appearanceToken == "[GhostHunt]")
+        {
+            std::unique_ptr<CreatureActionHuntGhost> hunt(new CreatureActionHuntGhost(*this));
+            if(!hunt->importFromStream(is)) return false;
+            mActions.emplace_back(std::move(hunt));mGhostHuntLoaded=true;
+            continue;
+        }
         if(appearanceToken == "[Corpse]")
         {
             std::string close;
@@ -1297,7 +1324,7 @@ bool Creature::importFromStream(std::istream& is)
                 return false;
             }
             // The definition is not resolved yet (see the note at the top), so only the range is limited here;
-            // setupDefinition clears the thirst of a creature type that cannot get thirsty.
+            // setupDefinition clears non-thirsty types except the exact thirst restored by GhostRevival.
             mThirst = std::min(THIRST_STATE_MAX, std::max(0.0, loadedThirst));
             addTavernMood(loadedTavernMood, loadedTavernMoodTurns);
             setDrunk(loadedDrunk);
@@ -2044,6 +2071,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mCreatureDirt;
     exportThirstStateToPacket(os);
     os << mCorpseTurns << mDecayTurns;
+    os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2118,6 +2146,8 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
+    OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
+    mGhostThrowClientTurns=mGhostThrowTurns;
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2335,6 +2365,7 @@ void Creature::dropCarriedEquipment()
 //! Spaces authoritative standing bodies before their next action without changing action targets.
 void Creature::doUpkeep()
 {
+    upkeepGhostHunt();
     const double oldMaximumHealth = mMaxHP;
     buildStats();
     if(oldMaximumHealth != mMaxHP)
@@ -3010,6 +3041,7 @@ void Creature::doUpkeep()
         }
     } while (loopBack && loops < 20);
 
+    refreshGhostHuntVisuals();
     if(!mActions.empty())
         mActions.back().get()->increaseNbTurnActive();
 
@@ -3784,6 +3816,7 @@ double Creature::getTileSpeedRatio() const
 
 void Creature::updateClientPose(double timeSinceLastFrame)
 {
+    updateGhostHuntVisuals(timeSinceLastFrame);
     if(getAnimationStateName() != EntityAnimation::walk_anim)
     {
         mClientTileSpeedRatio = -1.0;
@@ -4956,6 +4989,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         os << 0.0;
     }
     os << mCorpseTurns << mDecayTurns;
+    os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5068,6 +5102,8 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
+    OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
+    mGhostThrowClientTurns=mGhostThrowTurns;
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -6747,6 +6783,7 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
 
     if(mHp <= 0)
     {
+        interruptGhostHunt();
         // A possessed creature is not knocked out, it dies and the keeper loses mana
         if(isPossessed())
         {
@@ -6970,6 +7007,7 @@ bool Creature::isActionInList(CreatureActionType action) const
 
 void Creature::clearActionQueue()
 {
+    interruptGhostHunt();
     mActions.clear();
 }
 
@@ -7063,6 +7101,7 @@ bool Creature::tryPickup(Seat* seat)
 
 void Creature::pickup()
 {
+    interruptGhostHunt();
     if(getIsOnServerMap())
         LevelScriptRunner::dropCarriedStone(*this);
 
@@ -7151,6 +7190,7 @@ bool Creature::tryDrop(Seat* seat, Tile* tile)
 
 void Creature::drop(const Ogre::Vector3& v)
 {
+    interruptGhostHunt();
     if(getIsOnServerMap())
         getGameMap()->getLevelScript().clearFatalShot(getName());
     setPosition(v);
@@ -8093,9 +8133,11 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             return;
         }
 
-        // A creature type that cannot get thirsty never keeps a thirst value read from a level or a save
+        // Non-thirsty types clear ordinary saved thirst; GhostRevival restores the explicitly required value afterwards.
         if(!mDefinition->hasThirst())
             mThirst = 0.0;
+        if(mRevivalThirstFromSave)
+        { mThirst=mSavedRevivalThirst;mRevivalThirstFromSave=false; }
 
         if(getIsOnServerMap())
         {
@@ -9685,6 +9727,44 @@ bool Creature::takeCorpse()
 }
 
 
+//! \brief Restores a delivered crypt corpse's life and needs after freeing its grave reservation.
+bool Creature::reviveFromCorpse(double hpShare)
+{
+    if(!getIsOnServerMap() || isAlive() || getDefinition()->isWorker() || mIsCarried ||
+       mDeathCounter == 0 || mDeathCounter == std::numeric_limits<unsigned int>::max())
+        return false;
+    Tile* tile = getPositionTile();
+    Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
+    if(room == nullptr || room->getType() != RoomType::crypt || room->getSeat() != getSeat())
+        return false;
+    RoomCrypt* crypt = static_cast<RoomCrypt*>(room);
+    if(crypt->getCorpseSpot(*this) == nullptr)
+        return false;
+
+    Spell::fireSpellEffect(*tile, "GhostRevive", "");
+    crypt->removeCorpse(*this);
+    clearActionQueue();
+    mDeathCounter = 0;
+    mCorpseTurns = 0.0;
+    mDecayTurns = -1.0;
+    mIsCarried = false;
+    mCorpseCarrierName.clear();
+    resetKoTurns();
+    setHP(mMaxHP * hpShare);
+    mHunger = 80.0;
+    mWakefulness = ConfigManager::getSingleton().getTiredWakefulness();
+    mThirst = 80.0;
+    mGhostRevived = true;
+    removeAnnoyance();
+    computeMood();
+    computeCreatureOverlayMoodValue();
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    setAnimationState(EntityAnimation::idle_anim, true, Ogre::Vector3::ZERO, false);
+    mNeedFireRefresh = true;
+    return true;
+}
+
+
 void Creature::showOutliner()
 {
     RenderManager::getSingleton().rrAddOutliner(this);
@@ -10274,4 +10354,186 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
         useAttack(skillData, *entity, *tile, false, true);
         return;
     }
+}
+
+void Creature::interruptGhostHunt()
+{
+    if(!getIsOnServerMap()) return;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+            static_cast<CreatureActionHuntGhost*>(action.get())->interrupt();
+}
+
+void Creature::refreshGhostHuntVisuals()
+{
+    bool backpack=false;std::string target,thrown;uint32_t boxMode=0;double turns=0.0;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+        {
+            CreatureActionHuntGhost* hunt=static_cast<CreatureActionHuntGhost*>(action.get());
+            backpack=hunt->hasBackpack();target=hunt->getBeamTarget();boxMode=hunt->getBoxVisualState();
+            thrown=hunt->getThrowGhostName();turns=hunt->getStepTurns();break;
+        }
+    if(backpack!=mGhostBackpack || target!=mGhostBeamTarget || boxMode!=mGhostBoxMode || thrown!=mGhostThrowTarget ||
+       (boxMode==1 && turns!=mGhostThrowTurns))
+    {
+        mGhostBackpack=backpack;mGhostBeamTarget=target;mGhostBoxMode=boxMode;
+        mGhostThrowTarget=thrown;mGhostThrowTurns=turns;mNeedFireRefresh=true;
+    }
+}
+
+void Creature::upkeepGhostHunt()
+{
+    if(!getIsOnServerMap()) return;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+        {
+            CreatureActionHuntGhost* hunt=static_cast<CreatureActionHuntGhost*>(action.get());
+            hunt->upkeep();
+        }
+}
+
+void Creature::restoreGhostHunt()
+{
+    if(!getIsOnServerMap() || !mGhostHuntLoaded) return;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+            static_cast<CreatureActionHuntGhost*>(action.get())->restore();
+    mGhostHuntLoaded=false;
+}
+
+void Creature::clearGhostHuntVisuals()
+{
+    if(getIsOnServerMap()) return;
+    Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+    if(!mGhostShrinkTarget.empty())
+    {
+        GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
+        if(ghost!=nullptr) ghost->setCaptureProgress(0.0);
+        mGhostShrinkTarget.clear();
+    }
+    if(mGhostBoxNode!=nullptr)
+    {
+        while(mGhostBoxNode->numAttachedObjects()>0)
+        {
+            Ogre::MovableObject* object=mGhostBoxNode->getAttachedObject(static_cast<unsigned short>(0));
+            mGhostBoxNode->detachObject(object);scene->destroyMovableObject(object);
+        }
+        scene->destroySceneNode(mGhostBoxNode);mGhostBoxNode=nullptr;
+    }
+    if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
+    if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
+    if(mGhostSparkNode!=nullptr) { scene->destroySceneNode(mGhostSparkNode);mGhostSparkNode=nullptr; }
+    if(mGhostBeamChain!=nullptr) { scene->destroyBillboardChain(mGhostBeamChain);mGhostBeamChain=nullptr; }
+    if(mGhostBeamNode!=nullptr) { scene->destroySceneNode(mGhostBeamNode);mGhostBeamNode=nullptr; }
+    if(mGhostBackpackNode!=nullptr)
+    {
+        while(mGhostBackpackNode->numAttachedObjects()>0)
+        {
+            Ogre::MovableObject* object=mGhostBackpackNode->getAttachedObject(static_cast<unsigned short>(0));
+            mGhostBackpackNode->detachObject(object);scene->destroyMovableObject(object);
+        }
+        scene->destroySceneNode(mGhostBackpackNode);mGhostBackpackNode=nullptr;
+    }
+}
+
+void Creature::updateGhostHuntVisuals(double seconds)
+{
+    if(getIsOnServerMap() || getEntityNode()==nullptr) return;
+    if(!mGhostBackpack) { clearGhostHuntVisuals();return; }
+    Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+    if(mGhostBackpackNode==nullptr)
+    {
+        Ogre::Entity* pack=scene->createEntity(getName()+"_GhostBackpack","GhostBackpack.mesh");
+        pack->setQueryFlags(0);pack->setCastShadows(true);
+        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,-0.18f,0.6f));
+        mGhostBackpackNode->attachObject(pack);
+    }
+    if(!mGhostShrinkTarget.empty() && mGhostShrinkTarget!=mGhostThrowTarget)
+    {
+        GhostEntity* previous=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
+        if(previous!=nullptr) previous->setCaptureProgress(0.0);
+        mGhostShrinkTarget.clear();
+    }
+    if(mGhostBoxMode!=0 && mGhostBoxNode==nullptr)
+    {
+        Ogre::Entity* box=scene->createEntity(getName()+"_HeldGhostBox","GhostBox.mesh");
+        box->setQueryFlags(0);
+        mGhostBoxNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_HeldGhostBoxNode");mGhostBoxNode->attachObject(box);
+    }
+    if(mGhostBoxNode!=nullptr)
+    {
+        mGhostBoxNode->setVisible(mGhostBoxMode!=0);
+        const Ogre::Vector3 start=getPosition()+getWalkDirection()*0.35f+Ogre::Vector3(0.0f,0.0f,0.65f);
+        Ogre::Vector3 position=start;
+        if(mGhostBoxMode==1)
+        {
+            GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
+            if(ghost!=nullptr)
+            {
+                mGhostThrowClientTurns+=seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor();
+                const double duration=ConfigManager::getSingleton().getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond;
+                const float progress=static_cast<float>(std::min(1.0,mGhostThrowClientTurns/duration));
+                position=start+(ghost->getPosition()-start)*progress;
+                position.z+=4.0f*progress*(1.0f-progress)*0.5f;
+                ghost->setCaptureProgress(progress);mGhostShrinkTarget=mGhostThrowTarget;
+            }
+        }
+        mGhostBoxNode->setPosition(position);
+    }
+    GameEntity* target=getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostBeamTarget);
+    if(target==nullptr || mGhostBeamTarget.empty())
+    {
+        if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
+        if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
+        if(mGhostSparkNode!=nullptr) { scene->destroySceneNode(mGhostSparkNode);mGhostSparkNode=nullptr; }
+        if(mGhostBeamChain!=nullptr) { scene->destroyBillboardChain(mGhostBeamChain);mGhostBeamChain=nullptr; }
+        if(mGhostBeamNode!=nullptr) { scene->destroySceneNode(mGhostBeamNode);mGhostBeamNode=nullptr; }
+        return;
+    }
+    if(mGhostBeamChain==nullptr)
+    {
+        mGhostBeamChain=scene->createBillboardChain(getName()+"_GhostBeam");
+        mGhostBeamChain->setNumberOfChains(3);mGhostBeamChain->setMaxChainElements(9);
+        mGhostBeamChain->setMaterialName("GhostBeam");mGhostBeamChain->setCastShadows(false);mGhostBeamChain->setQueryFlags(0);
+        mGhostBeamNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_GhostBeamNode");mGhostBeamNode->attachObject(mGhostBeamChain);
+        mGhostBeamSparks=scene->createParticleSystem(getName()+"_GhostBeamSparks","GhostBeam");
+        mGhostBeamSparks->setQueryFlags(0);
+        mGhostSparkNode=mGhostBeamNode->createChildSceneNode(getName()+"_GhostSparkNode");mGhostSparkNode->attachObject(mGhostBeamSparks);
+        mGhostBeamSample=0.1;
+        mGhostBeamSound=SoundEffectsManager::getSingleton().startSpatialLoop("Rooms/GhostRoom/Beam",getPosition().x,getPosition().y);
+    }
+    SoundEffectsManager::getSingleton().setSpatialLoopPosition(mGhostBeamSound,getPosition().x,getPosition().y);
+    if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(getPosition()+getWalkDirection()*0.35f+Ogre::Vector3(0.0f,0.0f,0.65f));
+    mGhostBeamSample+=seconds;
+    if(mGhostBeamSample<0.1) return;
+    mGhostBeamSample=std::fmod(mGhostBeamSample,0.1);
+    const Ogre::Vector3 start=getPosition()+getWalkDirection()*0.35f+Ogre::Vector3(0.0f,0.0f,0.65f);
+    const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
+    for(size_t chain=0;chain<3;++chain)
+    {
+        mGhostBeamChain->clearChain(chain);
+        for(size_t i=0;i<9;++i)
+        {
+            const float fraction=static_cast<float>(i)/8.0f;
+            Ogre::Vector3 point=start+(end-start)*fraction;
+            if(i!=0 && i!=8) point+=Ogre::Vector3(Random::Double(-0.08,0.08),Random::Double(-0.08,0.08),Random::Double(-0.08,0.08));
+            mGhostBeamChain->addChainElement(chain,Ogre::BillboardChain::Element(point,0.025f,fraction,Ogre::ColourValue(0.55f,1.0f,0.65f,1.0f),Ogre::Quaternion::IDENTITY));
+        }
+    }
+}
+
+void Creature::transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty)
+{
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+            static_cast<CreatureActionHuntGhost*>(action.get())->transferRoom(previous,current,hook,empty);
+}
+
+void Creature::restoreGhostHuntLayout()
+{
+    if(!getIsOnServerMap() || !mGhostHuntLoaded) return;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+            static_cast<CreatureActionHuntGhost*>(action.get())->restoreLayout();
 }

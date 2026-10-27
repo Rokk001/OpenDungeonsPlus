@@ -32,6 +32,7 @@
 #include <map>
 #include <utility>
 #include <deque>
+#include <set>
 
 class Building;
 class MerchantEntity;
@@ -55,6 +56,9 @@ enum class SpellType;
 enum class TileVisual;
 enum class TileType;
 enum class TrapType;
+
+//! \brief Selects the product made by each finished ectoplasm.
+enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 
 //! Class used to save the last tile state notified to each seat
 class TileStateNotified
@@ -87,6 +91,21 @@ public:
     //! \brief Creates a seat with its configured merchant margin and shared room settings.
     Seat(GameMap* gameMap);
 
+    //! \brief Returns the shared fractional ectoplasm bar of this keeper.
+    double getEctoplasmLevels() const { return mEctoplasmLevels; }
+    //! \brief Sets the exact shared bar after catching or consuming ghost levels.
+    void setEctoplasmLevels(double levels) { mEctoplasmLevels = levels; }
+    //! \brief Returns this keeper's selected ectoplasm product.
+    GhostProduct getGhostProduct() const { return mGhostProduct; }
+    //! \brief Sets this keeper's selected ectoplasm product.
+    void setGhostProduct(GhostProduct product) { mGhostProduct = product; }
+    //! \brief Returns whether hunters attempt to revive this keeper's own ghosts.
+    bool getGhostRevive() const { return mGhostRevive; }
+    //! \brief Enables or disables own-ghost revival for all rooms of this keeper.
+    void setGhostRevive(bool revive) { mGhostRevive = revive; }
+
+    //! \brief Marks a newly discovered hunt target, preventing repeated bell alarms.
+    bool announceGhostTarget(const std::string& name) { return mGhostBellTargets.insert(name).second; }
     //! \brief Returns this seat's single non-creature merchant figure, if one exists.
     MerchantEntity* getMerchant() const { return mMerchant; }
     //! \brief Updates the weak reference when the figure spawns, changes owner or despawns.
@@ -589,6 +608,10 @@ private:
     int32_t mConfigFactionIndex;
 
     //! \brief Weak reference to this seat's one merchant, owned by the map.
+    double mEctoplasmLevels = 0.0;
+    GhostProduct mGhostProduct = GhostProduct::research;
+    bool mGhostRevive = true;
+    std::set<std::string> mGhostBellTargets;
     MerchantEntity* mMerchant = nullptr;
     //! \brief Fractional gold already earned from merchant deals, persisted with the seat.
     double mMerchantGoldRemainder = 0.0;

@@ -124,6 +124,7 @@ enum class TileVisual
     alchemyLabRoom,
     tavernRoom,
     infirmaryRoom,
+    ghostRoom,
     countTileVisual
 };
 
@@ -475,6 +476,7 @@ public:
     //! The function will check whether a tile is not already a reinforced wall owned by another team.
     //! \brief Reports whether the keeper may dig this tile, excluding infirmary floors.
     //! \brief Rejects digging room floors, including the garden and laboratory.
+    //! \brief Includes appended room visuals in ground digging rules.
     bool isDiggable(const Seat* seat) const;
 
     //! \brief Tells whether the tile fullness is empty (ground tile) and can be claimed by the given seat.
@@ -490,6 +492,7 @@ public:
     //! \brief Tells whether the tile is claimed for the given seat.
     //! \brief Recognizes keeper-owned ground and room floors, including the infirmary.
     //! \brief Recognises every claimed floor visual on clients and the authoritative claim on servers.
+    //! \brief Recognizes claimed ground and every registered room floor.
     bool isClaimed() const;
 
     //! \brief Tells whether the given tile is a claimed wall for the given seat team.
@@ -521,6 +524,7 @@ public:
     //! \brief Returns the name of a tile visual as it is written in the tileset configuration (for example "tavernRoom").
     //! \brief Returns the configuration name for terrain and room visuals.
     //! \brief Returns the serialised tile-visual name used by tilesets and ambience rules.
+    //! \brief Names every visual including the appended ghost room.
     static std::string tileVisualToString(TileVisual tileVisual);
     static TileVisual tileVisualFromString(const std::string& strTileVisual);
 
@@ -596,6 +600,7 @@ public:
     //! Used only on server side
     //! \brief Selects the floor visual of the covering room.
     //! \brief Chooses the claimed floor visual from its covering room type.
+    //! \brief Selects the visual matching terrain and its covering room.
     void computeTileVisual();
 
     //! Function that allows to know if the tile is full or not. Works for both
@@ -634,6 +639,7 @@ public:
     //! \brief Returns the speed of the creature on this tile for the tile visual (ground, water or lava speed of the creature).
     //! \brief Uses the creature's ground, water or lava speed on this tile.
     //! \brief Uses ground movement speed on traversable room floors.
+    //! \brief Returns terrain movement speed including ghost-room floors.
     double getCreatureSpeedDefault(const Creature* creature) const;
 
     //! \brief Allows to lock the tile for the workers claiming it. Returns true if the worker could be added

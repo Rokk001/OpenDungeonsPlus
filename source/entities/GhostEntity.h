@@ -48,6 +48,8 @@ public:
     GhostState getState() const { return mState; }
     //! \brief Sets capture state, stopping autonomous movement and hiding boxed ghosts.
     void setState(GhostState state);
+    //! \brief Applies the hunter's client-only shrink into its thrown capture box.
+    void setCaptureProgress(double progress) { mCaptureProgress = progress; }
     //! \brief Returns the name of the hunter that reserved this ghost.
     const std::string& getAssignedHunter() const { return mAssignedHunter; }
     //! \brief Stores or releases the hunter reservation.
@@ -78,7 +80,7 @@ private:
     void scareCreatures();
     //! \brief Sends changed lifetime and state to current observers.
     void refresh();
-    //! \brief Applies fade, vertical rise and boxed visibility to an existing client node.
+    //! \brief Applies fade, rise, capture shrinking and boxed visibility to the client node.
     void updateLook();
     std::string mClassName;
     std::string mCreatureName;
@@ -89,5 +91,6 @@ private:
     std::set<std::string> mScaredCreatures;
     double mStateTurns;
     double mHowlTurns;
+    double mCaptureProgress = 0.0;
 };
 #endif

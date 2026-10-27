@@ -20,6 +20,7 @@
 #include "entities/BuildingObject.h"
 #include "entities/ChickenEntity.h"
 #include "entities/GhostEntity.h"
+#include "entities/GhostBoxEntity.h"
 #include "entities/InfirmaryShamanEntity.h"
 #include "entities/CraftedTrap.h"
 #include "entities/Creature.h"
@@ -124,6 +125,9 @@ GameEntity* getGameEntityFromStream(GameMap* gameMap, GameEntityType type, std::
             OD_LOG_ERR("Cannot create entity from stream");
             break;
         }
+        case GameEntityType::ghostBoxEntity:
+            entity = GhostBoxEntity::loadFromStream(gameMap, is);
+            break;
         case GameEntityType::ghostEntity:
             entity = GhostEntity::loadFromStream(gameMap, is);
             break;
@@ -235,6 +239,9 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
             entity = TrapEntity::getTrapEntityFromPacket(gameMap, is);
             break;
         }
+        case GameEntityType::ghostBoxEntity:
+            entity = GhostBoxEntity::loadFromPacket(gameMap, is);
+            break;
         case GameEntityType::ghostEntity:
             entity = GhostEntity::loadFromPacket(gameMap, is);
             break;

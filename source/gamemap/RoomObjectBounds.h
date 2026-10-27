@@ -132,7 +132,7 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
-       name == "MushroomLamp" || name == "ItemBag")
+       name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron")
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
     // diagonal, not just their unrotated width, so rotation retains the margin.
