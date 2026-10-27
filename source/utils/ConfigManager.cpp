@@ -166,6 +166,15 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mGemGoldPerDigStep(DEFAULT_GEM_GOLD_PER_DIG_STEP),
     mWorkerCheerGoldShare(DEFAULT_WORKER_CHEER_GOLD_SHARE),
     mDigCoefClaimedWall(0.5),
+    mUnpaidWagesLeave(3),
+    mUnpaidWagesStopWork(2),
+    mFindHomeChance(0.5),
+    mSleepSeekWakefulnessMin(20.0),
+    mSleepSeekWakefulnessMax(30.0),
+    mStealGoldTryChance(0.18181818181818182),
+    mTunnelTryChance(0.36363636363636365),
+    mStealItemChancePerIdle(0.2),
+    mHungerSeek(80.0),
     mNbTurnsKoCreatureAttacked(10),
     mCreatureDefinitionDefaultWorker(nullptr),
     mNbWorkersDigSameFaceTile(3),
@@ -1264,6 +1273,60 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             configFile >> nextParam;
             mNbWorkersClaimSameTile = Helper::toUInt32(nextParam);
             // Not mandatory
+        }
+
+        if(nextParam == "UnpaidWagesLeave")
+        {
+            configFile >> nextParam;
+            mUnpaidWagesLeave = Helper::toUInt32(nextParam);
+        }
+
+        if(nextParam == "UnpaidWagesStopWork")
+        {
+            configFile >> nextParam;
+            mUnpaidWagesStopWork = Helper::toUInt32(nextParam);
+        }
+
+        if(nextParam == "FindHomeChance")
+        {
+            configFile >> nextParam;
+            mFindHomeChance = Helper::toDouble(nextParam);
+        }
+
+        if(nextParam == "SleepSeekWakefulnessMin")
+        {
+            configFile >> nextParam;
+            mSleepSeekWakefulnessMin = Helper::toDouble(nextParam);
+        }
+
+        if(nextParam == "SleepSeekWakefulnessMax")
+        {
+            configFile >> nextParam;
+            mSleepSeekWakefulnessMax = Helper::toDouble(nextParam);
+        }
+
+        if(nextParam == "StealGoldTryChance")
+        {
+            configFile >> nextParam;
+            mStealGoldTryChance = Helper::toDouble(nextParam);
+        }
+
+        if(nextParam == "TunnelTryChance")
+        {
+            configFile >> nextParam;
+            mTunnelTryChance = Helper::toDouble(nextParam);
+        }
+
+        if(nextParam == "StealItemChancePerIdle")
+        {
+            configFile >> nextParam;
+            mStealItemChancePerIdle = Helper::toDouble(nextParam);
+        }
+
+        if(nextParam == "HungerSeek")
+        {
+            configFile >> nextParam;
+            mHungerSeek = Helper::toDouble(nextParam);
         }
 
         if(nextParam == "NbTurnsKoCreatureAttacked")

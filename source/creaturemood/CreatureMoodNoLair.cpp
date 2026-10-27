@@ -51,7 +51,8 @@ const std::string& CreatureMoodNoLair::getModifierName() const
 }
 
 //! \brief Returns the mood change while the creature has no home tile, otherwise 0.
-int32_t CreatureMoodNoLair::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodNoLair::computeMood(const Creature& creature) const
 {
     if(creature.getHomeTile() != nullptr)
         return 0;

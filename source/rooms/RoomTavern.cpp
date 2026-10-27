@@ -425,6 +425,14 @@ void RoomTavern::removeCreatureUsingRoom(Creature* creature)
     }
 }
 
+//! \brief Returns whether this guest is arriving for a drink or drinking.
+bool RoomTavern::isGuestDrinking(const Creature& creature)
+{
+    std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(&creature);
+    return it != mSpots.end() && (it->second.mState == TavernGuestState::arriving ||
+        it->second.mState == TavernGuestState::drinking);
+}
+
 bool RoomTavern::shouldStopUseIfHungrySleepy(Creature& creature, bool forced)
 {
     std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(&creature);

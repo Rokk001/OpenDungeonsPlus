@@ -1292,6 +1292,12 @@ public:
     inline double getGoldFee() const
     { return mGoldFee; }
 
+    //! \brief Returns the number of unpaid wages.
+    uint32_t getMissedWages() const { return mMissedWages; }
+
+    //! \brief Records the number of unpaid wages.
+    void setMissedWages(uint32_t count) { mMissedWages = count; }
+
     //! \brief Credits the exact amount of wage received.
     void decreaseGoldFee(double value)
     {
@@ -1310,6 +1316,7 @@ public:
             return 0;
 
         mGoldFee = 0;
+        mMissedWages = 0;
         mMoodCooldownTurns = 0;
         return used;
     }
@@ -1503,6 +1510,9 @@ public:
     { return isLowHealthWalkStage(mOverlayHealthValue); }
 
     bool isHungry() const;
+
+    //! \brief Returns whether an urgent need interrupts the current activity.
+    bool needInterrupt(bool servingNeed) const;
 
     //! \brief Clears knockout, lethal-shot credit and the prior fight item-drop guard after recovery or revival.
     void resetKoTurns();
@@ -1835,6 +1845,8 @@ private:
 
     //! \brief At pay day, mGoldFee will be set to the creature fee and decreased when the creature gets gold
     double          mGoldFee;
+    //! \brief Number of whole wages still owed.
+    uint32_t        mMissedWages;
     //! \brief Gold carried by the creature that will be dropped if it gets killed
     double          mGoldCarried;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
@@ -1970,7 +1982,7 @@ private:
     CreatureActivity                mActivity;
     //! \brief Mood points. Computed by the creature MoodModifiers. It is promoted to class variable for debug purposes and
     //! should not be used to check mood. If the mood is to be tested, mMoodValue should be used
-    int32_t                         mMoodPoints;
+    double                          mMoodPoints;
 
     //! \brief Mood points gained by praying in a temple. They fade every turn
     int32_t                         mPrayerRelief;

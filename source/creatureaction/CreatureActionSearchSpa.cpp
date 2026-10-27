@@ -18,6 +18,7 @@
 #include "creatureaction/CreatureActionSearchSpa.h"
 
 #include "creatureaction/CreatureActionUseRoom.h"
+#include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "game/Seat.h"
@@ -26,6 +27,7 @@
 #include "rooms/RoomSpa.h"
 #include "rooms/RoomType.h"
 #include "utils/LogManager.h"
+#include "utils/ConfigManager.h"
 #include "utils/MakeUnique.h"
 
 //! \brief Gets the function that runs this action.
@@ -94,6 +96,8 @@ bool CreatureActionSearchSpa::handleSearchSpa(Creature& creature)
 
     // Now, the spa reserves the bath place and handles the creature
     creature.popAction();
-    creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *chosenTile->getCoveringRoom(), false));
+    const bool moodRoom = creature.getMoodValue() >= CreatureMoodLevel::Upset ||
+        creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork();
+    creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *chosenTile->getCoveringRoom(), false, moodRoom));
     return true;
 }

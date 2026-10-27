@@ -38,7 +38,8 @@ public:
     const std::string& getModifierName() const override;
 
     //! \brief Returns the mood of the creature's thirst: 0 below the start value, else (thirst - start) x modifier.
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
     inline CreatureMoodThirst* clone() const override;
@@ -52,7 +53,7 @@ public:
 
 private:
     //! \brief Creates the modifier with the given values (used by clone).
-    CreatureMoodThirst(int32_t startThirst, int32_t moodModifier) :
+    CreatureMoodThirst(int32_t startThirst, double moodModifier) :
         mStartThirst(startThirst),
         mMoodModifier(moodModifier)
     {}
@@ -60,7 +61,7 @@ private:
     //! \brief The thirst (0 - 100) from which the modifier acts.
     int32_t mStartThirst;
     //! \brief The mood per point of thirst above the start value (negative = a malus).
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODTHIRST_H
