@@ -774,12 +774,14 @@ void RoomSpa::finishBath(RoomSpaBather& bather)
 {
     Creature* creature = bather.mCreature;
 
-    // The relaxation lasts as long as the research level of the keeper allows; a hangover ends at once and the
-    // creature carries mud out of the pool. The bath does not clean the creature.
+    // The relaxation lasts as long as the research level of the keeper allows; a hangover ends at once together with
+    // the tavern mood malus (the spa mood always applies) and the creature carries mud out of the pool. The bath does
+    // not clean the creature.
     const ConfigManager& config = ConfigManager::getSingleton();
     creature->setRelaxTurns(SkillManager::getResearchValue(getSeat(), SkillType::roomSpa,
         config.getRoomConfigDouble("SpaRelaxTurns"), ResearchEffect::RelaxTime));
     creature->setHangoverTurns(0.0);
+    creature->addTavernMood(0.0, 0.0);
     creature->setSpaMudTilesLeft(static_cast<int32_t>(config.getRoomConfigUInt32("SpaMudTrailTiles")));
     sendBathFinished(*creature);
     bather.mDone = true;

@@ -101,7 +101,7 @@ for path in ('source/entities/Creature.cpp',):
 # A broken-off bath: the room code that ends it neither gives relaxation nor money back
 for function in ('void RoomSpa::abortDisturbedBathers(', 'void RoomSpa::removeCreatureUsingRoom('):
     body = extract(room_cpp, function)
-    for forbidden in ('setRelaxTurns', 'setHangoverTurns', 'addGoldCarried', 'addGoldToSeat', 'addTreasury', 'setCreatureDirt', 'washed'):
+    for forbidden in ('setRelaxTurns', 'setHangoverTurns', 'addTavernMood', 'addGoldCarried', 'addGoldToSeat', 'addTreasury', 'setCreatureDirt', 'washed'):
         assert forbidden not in body, function + ' must not call ' + forbidden
 finish = extract(room_cpp, 'void RoomSpa::finishBath(')
 assert 'washed(' not in finish and 'setCreatureDirt' not in finish and 'mCreatureDirt' not in finish, 'the bath does not clean the creature'
@@ -238,11 +238,11 @@ class RoomSpa;
 struct Creature
 {
     CreatureDefinition* mDefinition; Seat* mSeat; std::string mName; Tile* mTile;
-    double mHangoverTurns, mSpaMood, mRelaxTurns, mCreatureDirt; int32_t mSpaMudTilesLeft; bool mSpaBathing;
+    double mHangoverTurns, mTavernMood, mTavernMoodTurns, mSpaMood, mRelaxTurns, mCreatureDirt; int32_t mSpaMudTilesLeft; bool mSpaBathing;
     bool mIsInHand, mPrison, mOnMap, mAlive, mKo, mDragged, mFighting, mFriendlyFight, mFleeing, mJumping;
     CreatureMoodLevel mMood; int32_t mGold; int cancelJumpCalls;
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat)
-      : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mHangoverTurns(0.0), mSpaMood(0.0), mRelaxTurns(0.0),
+      : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mHangoverTurns(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mSpaMood(0.0), mRelaxTurns(0.0),
         mCreatureDirt(7.0), mSpaMudTilesLeft(0), mSpaBathing(false), mIsInHand(false), mPrison(false), mOnMap(true), mAlive(true),
         mKo(false), mDragged(false), mFighting(false), mFriendlyFight(false), mFleeing(false), mJumping(false),
         mMood(CreatureMoodLevel::Neutral), mGold(0), cancelJumpCalls(0) {}
@@ -267,6 +267,7 @@ struct Creature
     void cancelJump() { ++cancelJumpCalls; mJumping = false; }
     void setSpaBathing(bool bathing) { mSpaBathing = bathing; }
     void setHangoverTurns(double turns);
+    void addTavernMood(double points, double turns);
     void addSpaMood(double points);
     void setSpaMood(double val);
     void setRelaxTurns(double turns);
@@ -434,6 +435,7 @@ static void checkBath(uint32_t level, double expectedRelax)
 {
     Fixture f; f.seat.spaLevel = level; Creature c("c", &f.medium, &f.seat);
     c.mMood = CreatureMoodLevel::Upset; c.mHangoverTurns = 100.0; c.mSpaMood = 0.0; c.mCreatureDirt = 7.0;
+    c.mTavernMood = -10.0; c.mTavernMoodTurns = 200.0;
     f.room->mPayer = SpaPayer::keeper; f.seat.gold = 50;
     expect(f.room->payForBath(c) && f.seat.gold == 45, "the bath costs 5");
     f.startBathFor(c);
@@ -450,6 +452,7 @@ static void checkBath(uint32_t level, double expectedRelax)
     expectNear(c.mSpaMood, 1500.0, "mood limited to 1500");
     expectNear(c.mRelaxTurns, expectedRelax, "relaxation at research level " + std::to_string(level));
     expectNear(c.mHangoverTurns, 0.0, "the hangover ends at once");
+    expectNear(c.mTavernMood, 0.0, "the tavern mood malus ends at once"); expectNear(c.mTavernMoodTurns, 0.0, "its timer too");
     expect(f.room->posts == 1, "one post written");
     expectNear(c.mCreatureDirt, 7.0, "the bath does not change the creature dirt");
     expect(c.mSpaMudTilesLeft == 3, "three mud tiles to go");
@@ -564,7 +567,7 @@ mood_h = read('source/creaturemood/CreatureMood.h')
 mood_level = mood_h[mood_h.index('enum class CreatureMoodLevel'):]
 mood_level = mood_level[:mood_level.index('};') + 2]
 creature_functions = '\n'.join(extract(creature_cpp, h) for h in [
-    'void Creature::setHangoverTurns(', 'void Creature::addSpaMood(', 'void Creature::setSpaMood(', 'void Creature::setRelaxTurns(',
+    'void Creature::setHangoverTurns(', 'void Creature::addTavernMood(', 'void Creature::addSpaMood(', 'void Creature::setSpaMood(', 'void Creature::setRelaxTurns(',
     'double Creature::getRelaxWorkFactor(', 'void Creature::setSpaMudTilesLeft(', 'bool Creature::wantsSpaBath(',
     'void Creature::upkeepSpaState('])
 trail_start = creature_cpp.index('    if((mSpaMudTilesLeft > 0) && !RoomSpa::isPoolTile(tile))')
