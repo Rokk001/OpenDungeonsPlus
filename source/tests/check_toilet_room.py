@@ -72,7 +72,7 @@ tileset_loader = config_manager[config_manager.index('bool ConfigManager::loadTi
 loaded_visuals = re.findall(r'loadTilesetValues\(defFile, TileVisual::(\w+),', tileset_loader)
 assert len(loaded_visuals) == len(set(loaded_visuals)), 'duplicate tileset loader visual'
 assert set(loaded_visuals) == set(visuals[:-1]), 'tileset loader must consume every TileVisual exactly once'
-assert loaded_visuals[-6:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom', 'infirmaryRoom']
+assert loaded_visuals[-7:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom', 'infirmaryRoom', 'ghostRoom']
 for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
     block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
     block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
@@ -112,7 +112,7 @@ assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomToilet') == 1
-assert len(registered) == 63, 'the combined research tree has 63 entries, found ' + str(len(registered))
+assert len(registered) == 64, 'the combined research tree has 64 entries, found ' + str(len(registered))
 skills_cfg = read('config/skills.cfg')
 assert re.search(r'^    roomToilet\t250\s*$', skills_cfg, re.M), 'roomToilet costs 250 (tier II)'
 # No research effect line for the toilet

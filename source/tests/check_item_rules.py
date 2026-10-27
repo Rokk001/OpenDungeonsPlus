@@ -18,7 +18,14 @@ def main():
 #include <vector>
 #include <stdexcept>
 //! \brief Supplies named registered entities to the actual typed lookup dispatcher.
-struct GameEntity { std::string name; };
+struct GameEntity { std::string name;GameEntityType type=GameEntityType::unknown;
+    //! \brief Constructs a named identity with its independently selected registered type.
+    GameEntity(const std::string& value,GameEntityType kind=GameEntityType::unknown):name(value),type(kind){}
+    //! \brief Supplies the type checked by the production ghost and box dispatcher.
+    GameEntityType getObjectType()const{return type;}
+};
+//! \brief Uses the rendered registry interface expected by the production ghost dispatcher.
+using RenderedMovableEntity=GameEntity;
 //! \brief Isolates the real dispatch from unrelated map systems without replacing its switch.
 struct GameMap {
     std::vector<GameEntity*> rendered;
@@ -53,6 +60,16 @@ int main() {
         if(map.getEntityFromTypeAndName(types[index],"missing")!=nullptr)
             throw std::runtime_error("missing equipment identity resolved");
     }
+    GameEntity ghost("Ghost_1",GameEntityType::ghostEntity),box("GhostBox_1",GameEntityType::ghostBoxEntity);
+    map.rendered.push_back(&ghost);map.rendered.push_back(&box);
+    if(map.getEntityFromTypeAndName(GameEntityType::ghostEntity,ghost.name)!=&ghost ||
+       map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,box.name)!=&box)
+        throw std::runtime_error("registered ghost and box identities must resolve");
+    if(map.getEntityFromTypeAndName(GameEntityType::ghostEntity,box.name)!=nullptr ||
+       map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,ghost.name)!=nullptr ||
+       map.getEntityFromTypeAndName(GameEntityType::ghostEntity,bag.name)!=nullptr ||
+       map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,"missing")!=nullptr)
+        throw std::runtime_error("ghost lookup must reject wrong concrete types and missing identities");
     if(map.getEntityFromTypeAndName(GameEntityType::unknown,bag.name)!=nullptr)
         throw std::runtime_error("unknown entity type resolved");
 }

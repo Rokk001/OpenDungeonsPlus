@@ -51,7 +51,13 @@ EXPECTED = [
     ("roomPrison", "Capacity", "mul", "1.0", "1.5", "2.0"),
     ("roomPrison", "SkeletonLevel", "add", "0", "1", "2"),
     ("roomInfirmary", "HealTime", "mul", "1.0", "0.8", "0.667"),
-    ("roomCrypt", "RotTime", "mul", "1.0", "0.8", "0.667"),
+    ("roomCrypt", "LichCorpses", "mul", "1.0", "0.8", "0.6"),
+    ("roomCrypt", "LichLevel", "add", "0", "1", "2"),
+    ("roomGhostRoom", "EctoplasmLevels", "mul", "1.0", "0.8", "0.6"),
+    ("roomGhostRoom", "BoxCapacity", "add", "0", "1", "2"),
+    ("roomGhostRoom", "BeamRange", "add", "0", "1", "2"),
+    ("roomGhostRoom", "CatchTime", "mul", "1.0", "0.8", "0.667"),
+    ("roomGhostRoom", "RevivePrice", "add", "0", "-2000", "-4000"),
     ("roomBridgeWooden", "ClaimResistance", "mul", "1.0", "1.25", "1.5"),
     ("roomBridgeStone", "ClaimResistance", "mul", "1.0", "1.5", "2.0"),
     ("roomTorture", "ConversionSpeed", "mul", "1.0", "1.2", "1.4"),
@@ -90,19 +96,19 @@ EXPECTED = [
     ("spellHexenHen", "Duration", "mul", "1.0", "1.25", "1.5"),
     ("spellCreateGold", "Gold", "mul", "1.0", "1.25", "1.5"),
 ]
-assert len(EXPECTED) == 66, "the effect table has 66 lines (rows with several skill types count once per skill type)"
+assert len(EXPECTED) == 72, "the effect table has 72 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
 skills_cfg = read("config/skills.cfg")
 block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
 lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 66, "one line per effect: %d" % len(lines)
+assert len(lines) == 72, "one line per effect: %d" % len(lines)
 for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
 skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
-assert len(skill_names) == 63
-assert {line[0] for line in lines} <= skill_names, "every line names one of the 63 skills"
+assert len(skill_names) == 64
+assert {line[0] for line in lines} <= skill_names, "every line names one of the 64 skills"
 header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
 assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
 for effect in sorted({line[1] for line in lines}):
@@ -173,13 +179,21 @@ applied = []
 for text_path, text in sources.items():
     for arguments in calls(text, "SkillManager::getResearchValue"):
         applied.append((text_path, arguments))
+    if text_path.name == "CreatureActionHuntGhost.cpp":
+        # Resolve the existing hunt-specific wrapper to its real skill and literal effect callers.
+        assert any("SkillType::roomGhostRoom" in arguments and "getRoomConfigDouble(key)" in arguments
+                   and arguments.rstrip().endswith(",effect")
+                   for arguments in calls(text, "SkillManager::getResearchValue")), "hunt wrapper must apply the requested key/effect"
+        for arguments in calls(text, "researched"):
+            if re.fullmatch(r'"[A-Za-z]+"\s*,\s*"[A-Za-z]+"', arguments):
+                applied.append((text_path, "SkillType::roomGhostRoom," + arguments))
 # the skill of a bridge and of a door is picked by a helper in the file of the call
 INDIRECT = {"roomBridgeWooden": "RoomBridge.cpp", "roomBridgeStone": "RoomBridge.cpp",
             "trapFineTools": "RoomWorkshop.cpp", "trapMasterTools": "RoomWorkshop.cpp",
             "trapDoorWooden": "TrapDoor.cpp", "trapDoorIronbound": "TrapDoor.cpp", "trapDoorSteel": "TrapDoor.cpp",
             "trapDoorBarricade": "TrapDoor.cpp", "trapDoorSecret": "TrapDoor.cpp", "trapDoorRuned": "TrapDoor.cpp"}
 for skill, effect, *_ in EXPECTED:
-    effect_token = ('"' + effect + '"') if skill in {"roomHerbGarden", "roomAlchemyLab", "trapFineTools", "trapMasterTools", "spellSunthornCultivation"} else ("ResearchEffect::" + effect)
+    effect_token = ('"' + effect + '"') if skill in {"roomHerbGarden", "roomAlchemyLab", "trapFineTools", "trapMasterTools", "spellSunthornCultivation", "roomCrypt", "roomGhostRoom"} else ("ResearchEffect::" + effect)
     direct = [path for path, arguments in applied if ("SkillType::" + skill) in arguments and effect_token in arguments]
     if direct:
         continue
@@ -222,22 +236,24 @@ assert "double mFearTurns;" in read("source/traps/TrapFear.h") and "double mFree
 # the research duration reaches the effect timers as a fraction (Defector level 2 = 43.75), nothing is rounded
 for rounded_file in ("source/traps/TrapFear.cpp", "source/traps/TrapFreeze.cpp", "source/spells/SpellDefector.cpp", "source/spells/SpellHexenHen.cpp"):
     assert "lround" not in read(rounded_file), rounded_file + " must not round the duration"
-assert "void fleeFromTile(Tile* fearTile, double nbTurns);" in read("source/entities/Creature.h")
+assert "void fleeFromTile(Tile* fearTile, double nbTurns, bool scaredPose = false);" in read("source/entities/Creature.h")
 assert "double mFearTurns;" in read("source/creatureaction/CreatureActionFlee.h")
 assert "double fearTurns" in read("source/creatureaction/CreatureActionFlee.h")
 assert "double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellDefector" in read("source/spells/SpellDefector.cpp")
 assert "double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellHexenHen" in read("source/spells/SpellHexenHen.cpp")
 assert "CreatureEffectDefector(double nbTurnsEffect" in read("source/creatureeffect/CreatureEffectDefector.h")
 assert abs(35 * 1.25 - 43.75) < 1e-9
-assert "std::pair<Creature*, double>" in read("source/rooms/RoomCrypt.h")
-assert 'getRoomConfigDouble("CryptRotNbTurns")' in read("source/rooms/RoomCrypt.cpp")
+assert "std::map<Tile*, Creature*>" in read("source/rooms/RoomCrypt.h")
+assert 'getRoomConfigDouble("CryptCorpsesPerLich")' in read("source/rooms/RoomCrypt.cpp")
 assert "double getHeartMaxHP() const;" in read("source/rooms/RoomDungeonTemple.h")
 assert "mCapacityFactor" in read("source/rooms/HatcheryCycle.cpp")
 
 # --- tooltips --------------------------------------------------------------------------------------------------------
 texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "HealTime": "Healing time", "LayInterval": "Egg laying time", "Capacity": "Capacity",
          "PointsPerWork": "Points per work", "XpPerHit": "Experience per hit", "WakefulnessPerDuty": "Tiredness per duty turn",
-         "Fee": "Keeper fee", "Mood": "Mood gain", "LevelCap": "Level cap", "SkeletonLevel": "Skeleton level", "RotTime": "Rot time",
+         "Fee": "Keeper fee", "Mood": "Mood gain", "LevelCap": "Level cap", "SkeletonLevel": "Skeleton level", "LichCorpses": "Corpses per lich", "LichLevel": "Lich level bonus",
+         "EctoplasmLevels": "Ghost levels per ectoplasm", "BoxCapacity": "Ghosts per box", "BeamRange": "Beam range",
+         "CatchTime": "Catch time", "RevivePrice": "Revival price",
          "ClaimResistance": "Claim resistance", "ConversionSpeed": "Conversion speed", "PrayerMana": "Prayer mana",
          "CreatureLimit": "Creature limit", "Damage": "Damage", "Reload": "Reload time", "Duration": "Duration",
          "AuraRadius": "Alarm radius", "Radius": "Radius", "HP": "Health", "HeartHP": "Heart health",
