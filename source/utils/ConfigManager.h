@@ -168,6 +168,13 @@ public:
     //! \brief Returns a configured item-drop, item-rating or potion rule value.
     double getItemSetting(const std::string& section, const std::string& key) const;
 
+    //! \brief Returns the seconds a body lies before decay, excluding worker transport.
+    double getCorpseLieSeconds() const
+    { return mCorpseLieSeconds; }
+    //! \brief Returns the decay duration in seconds, the same inside and outside crypts.
+    double getCorpseDecaySeconds() const
+    { return mCorpseDecaySeconds; }
+
     inline uint32_t getCreatureDeathCounter() const
     { return mCreatureDeathCounter; }
 
@@ -677,6 +684,8 @@ private:
     uint32_t mClientConnectionTimeout;
     uint32_t mBaseSpawnPoint;
     uint32_t mCreatureDeathCounter;
+    double mCorpseLieSeconds;
+    double mCorpseDecaySeconds;
     uint32_t mMaxCreaturesPerSeatAbsolute;
     uint32_t mMaxCreaturesPerSeatDefault;
     //! \brief Creatures more a seat can control for each of its portals
