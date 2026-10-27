@@ -104,6 +104,8 @@ std::string getPostCategoryName(PostCategory category)
             return "ghostscared";
         case PostCategory::GhostHunted:
             return "ghosthunted";
+        case PostCategory::Relaxed:
+            return "relaxed";
         default:
             return "";
     }

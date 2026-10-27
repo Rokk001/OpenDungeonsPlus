@@ -132,7 +132,11 @@ enum class ClientNotificationType
     //! Set keeper preferences: int32_t payer, int32_t threshold, bool healOn.
     askInfirmarySettings,
     //! Ghost controls: int32_t x, y, uint32_t product, bool revive, bool isSet.
-    askGhostRoomSettings
+    askGhostRoomSettings,
+    //! Asks for or sets who pays for a bath of a lava spa: + int32_t tileX, int32_t tileY (a tile of the spa),
+    //! uint32_t payer (SpaPayer), bool isSet (false only asks). Only the owner can set it; the server answers
+    //! with spaPayer.
+    askSpaPayer
 };
 
 //! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.

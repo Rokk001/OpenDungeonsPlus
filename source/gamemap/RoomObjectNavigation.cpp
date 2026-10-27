@@ -324,7 +324,8 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
         if(object->getMeshName()=="GhostBell" || object->getMeshName()=="GhostHook" ||
            object->getMeshName()=="GhostHookEmpty" || object->getMeshName()=="GhostWallGauges" || object->getMeshName()=="GhostRack" ||
            object == interaction || object->getMeshName() == "PortalObject" ||
-            RoomObjectPath::isDungeonHeartMesh(object->getMeshName()))
+            RoomObjectPath::isDungeonHeartMesh(object->getMeshName()) ||
+            RoomObjectPath::isWalkableSpaMesh(object->getMeshName()))
             return;
         for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
         {

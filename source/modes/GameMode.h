@@ -282,6 +282,22 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \param payer The payer (TavernPayer as a number).
     void setTavernPayerShown(int tileX, int tileY, uint32_t payer);
 
+    //! \brief Lava spa window, opened by clicking on a tile of one of the player's lava spas. It shows the price of
+    //! a bath and who pays for it.
+    //! \param tile The clicked spa tile.
+    void showSpaWindow(Tile* tile);
+    //! \brief Closes the lava spa window.
+    bool hideSpaWindow(const CEGUI::EventArgs& = {});
+    //! \brief Asks the server to switch who pays for a bath of the lava spa the window is open for.
+    bool cycleSpaPayer(const CEGUI::EventArgs& = {});
+    //! \brief Called when the server tells the state of a lava spa. It is only shown if it is the spa the window
+    //! is open for.
+    //! \param tileX The x coordinate of a tile of the spa.
+    //! \param tileY The y coordinate of a tile of the spa.
+    //! \param payer The payer (SpaPayer as a number).
+    //! \param bathPrice The gold one bath costs.
+    void setSpaWindowShown(int tileX, int tileY, uint32_t payer, double bathPrice);
+
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool cancelPlayerSettings(const CEGUI::EventArgs& = {});
@@ -688,6 +704,11 @@ private:
     int mTavernX;
     int mTavernY;
     uint32_t mTavernPayer;
+
+    //! \brief Tile of the lava spa whose window is open (-1: none) and who pays for its baths (SpaPayer as a number)
+    int mSpaX;
+    int mSpaY;
+    uint32_t mSpaPayer;
 
     //! \brief whether to allow showing the window with debug Tile info under middlemouse button click
     bool showTileDebugWindow;

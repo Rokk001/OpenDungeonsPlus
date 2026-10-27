@@ -35,6 +35,7 @@
 #include "ODApplication.h"
 
 #include <OgreAnimationState.h>
+#include <algorithm>
 #include <cmath>
 
 //! Playback speed factor of the combat attack animation, so that strikes look quick.
@@ -519,6 +520,16 @@ bool MovableGameEntity::importFromStream(std::istream& is)
 std::string MovableGameEntity::getMovableGameEntityStreamFormat()
 {
     return GameEntity::getGameEntityStreamFormat();
+}
+
+void MovableGameEntity::setAnimationTime(double time)
+{
+    mAnimationTime = std::max(0.0, time);
+}
+
+double MovableGameEntity::getAnimationTime() const
+{
+    return mAnimationTime;
 }
 
 void MovableGameEntity::exportToPacket(ODPacket& os, const Seat* seat) const

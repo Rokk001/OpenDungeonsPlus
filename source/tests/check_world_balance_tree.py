@@ -29,6 +29,7 @@ EXPECTED = [
     ("Rooms", 2, "roomCasino", "CasinoButton", ["roomTreasury"]),
     ("Rooms", 2, "roomToilet", "ToiletButton", ["roomDormitory"]),
     ("Rooms", 2, "tavernBeer", "BeerButton", ["roomTavern"]),
+    ("Rooms", 2, "roomSpa", "SpaButton", ["roomTavern"]),
     ("Rooms", 3, "roomArena", "ArenaButton", ["roomTrainingHall"]),
     ("Rooms", 3, "roomPrison", "PrisonButton", ["roomGuardRoom"]),
     ("Rooms", 3, "roomCrypt", "CryptButton", ["roomLibrary"]),
@@ -87,7 +88,7 @@ FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary"
 TAB_TOTALS = {tab: sum((0 if name in FREE_LEVEL_ONE else TIER_COST[tier]) + 6 * TIER_COST[tier]
     for entry_tab, tier, name, button, parents in EXPECTED if entry_tab == tab)
     for tab in ("Rooms", "Traps", "Spells")}
-assert TAB_TOTALS == {"Rooms": 79650, "Traps": 82250, "Spells": 84950}
+assert TAB_TOTALS == {"Rooms": 81400, "Traps": 82250, "Spells": 84950}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
@@ -97,7 +98,7 @@ KEEPERS = {
     "tavernBeer": ("BeerButton", "Tavern: Beer", "Rooms"),
 }
 
-assert len(EXPECTED) == 64, "the tree has 64 entries"
+assert len(EXPECTED) == 65, "the tree has 65 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree

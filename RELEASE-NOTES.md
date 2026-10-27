@@ -42,6 +42,7 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 * Gold seams hold 3000 gold in three visible densities, gem seams are endless, workers carry 100 gold; every level has enough gold for a game of at least four hours.
 * Creatures need the toilet: a new toilet room, piles where none is reachable, rooms get dirty with use and are cleaned by workers; dirt lowers output and mood, prisons and torture chambers profit from it.
 * Creatures get thirsty: a tavern serves water and, once researched, beer paid by the keeper or the creature; guests arm-wrestle, play dice and hold slap duels, drink too much, stagger, vomit and wake up with a hangover; beer research draws more creatures through the portal.
+* New room: the lava spa. Creatures in a bad mood or with a hangover take a hot mud bath, paid by the keeper or the creature; the bath lifts the mood, ends the hangover and leaves the creature relaxed, so it works, trains and researches faster for a while. A pool attendant watches the pool, creatures jump from the springboard, and the Dungeonbook shows buffs and debuffs.
 
 ### Version 0.7.3 - 20 September 2026
 

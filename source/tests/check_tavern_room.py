@@ -49,14 +49,14 @@ def extract(text, header):
 
 # 1. RoomType, TileVisual and SkillType: the tavern entries are appended, one each
 rooms = enum_names(read('source/rooms/RoomType.h'), 'enum class RoomType')
-assert rooms[-4:] == ['tavern', 'infirmary', 'ghostRoom', 'nbRooms'] and rooms.count('tavern') == 1, rooms[-4:]
+assert rooms[-5:] == ['tavern', 'infirmary', 'ghostRoom', 'spa', 'nbRooms'] and rooms.count('tavern') == 1, rooms[-5:]
 visuals = enum_names(read('source/entities/Tile.h'), 'enum class TileVisual')
-assert visuals[-4:] == ['tavernRoom', 'infirmaryRoom', 'ghostRoom', 'countTileVisual'] and visuals.count('tavernRoom') == 1, visuals[-4:]
+assert visuals[-5:] == ['tavernRoom', 'infirmaryRoom', 'ghostRoom', 'spaRoom', 'countTileVisual'] and visuals.count('tavernRoom') == 1, visuals[-5:]
 tile_cpp = read('source/entities/Tile.cpp')
 assert tile_cpp.count('case TileVisual::tavernRoom:') >= 4, 'tavernRoom is missing in the Tile switches'
 assert 'return "tavernRoom";' in tile_cpp
 skills = enum_names(read('source/game/SkillType.h'), 'enum class SkillType')
-assert skills[-5:] == ['roomTavern', 'tavernBeer', 'roomInfirmary', 'roomGhostRoom', 'countSkill'], skills[-5:]
+assert skills[-6:] == ['roomTavern', 'tavernBeer', 'roomInfirmary', 'roomGhostRoom', 'roomSpa', 'countSkill'], skills[-6:]
 skill_type_cpp = read('source/game/SkillType.cpp')
 for name in ('roomTavern', 'tavernBeer'):
     assert 'case SkillType::' + name + ':' in skill_type_cpp and '"' + name + '"' in skill_type_cpp, name + ' in SkillType.cpp'
@@ -118,7 +118,7 @@ assert ('createSkill(mSkills, SkillType::tavernBeer, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomTavern') == 1 and registered.count('tavernBeer') == 1
-assert len(registered) == 64, 'the research tree has 64 entries, found ' + str(len(registered))
+assert len(registered) == 65, 'the research tree has 65 entries, found ' + str(len(registered))
 assert registered.index('roomCasino') < registered.index('tavernBeer'), 'Beer follows the casino in the tier II row'
 assert 'KEEPER_TITLE_BEER = "Beer"' in manager and 'Your taverns serve beer.' in manager
 assert 'ResearchEffect::PortalCooldown' in manager or '"PortalCooldown"' in manager

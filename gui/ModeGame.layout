@@ -155,6 +155,7 @@
         <LayoutImport type="DefaultWindow" filename="WindowCasinoPayout.layout" name="CasinoPayoutWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowGhostRoom.layout" name="GhostRoomWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowInfirmary.layout" name="InfirmaryWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowSpa.layout" name="SpaWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowTavern.layout" name="TavernWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMerchant.layout" name="MerchantWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowAlchemyLab.layout" name="AlchemyLabWindowImport" />

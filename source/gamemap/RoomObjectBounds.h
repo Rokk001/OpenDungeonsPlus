@@ -76,6 +76,10 @@ static const MeshBounds meshBounds[] = {
     {"Roulette", -.292486f, -.296162f, .292326f, .296652f},
     {"SalesTable", -.385f, -.36f, .385f, .36f},
     {"Skull", -.205408f, -.216924f, .205408f, .460773f},
+    {"SpaChair", -.3f, -.3f, .3f, .3f},
+    {"SpaMudPool", -.5f, -.5f, .5f, .5f},
+    {"SpaPoolRim", -.575f, -.575f, .575f, -.425f},
+    {"SpaSpringboard", -.2f, -.5f, .2f, .5f},
     {"SpiderBed", -.35f, -.435f, .35f, .435f, .59f},
     {"StillShelf", -.435f, -.185f, .435f, .215f},
     {"StoneCoffin", -.425477f, -.693722f, .425477f, .693722f, .767922f},
@@ -102,6 +106,17 @@ static const std::string HEART_MESH_CRITICAL = "DungeonHeartObjectCritical";
 inline bool isDungeonHeartMesh(const std::string& name)
 {
     return name == HEART_MESH_HEALTHY || name == HEART_MESH_DAMAGED || name == HEART_MESH_CRITICAL;
+}
+
+//! Names of the pool pieces of the lava spa. Creatures walk over them (the mud only hides the lower body), so they are
+//! no obstacles; they have to match the entries of meshBounds.
+static const std::string SPA_POOL_MESH = "SpaMudPool";
+static const std::string SPA_RIM_MESH = "SpaPoolRim";
+
+//! Returns true if name is a walkable piece of the lava spa pool (the mud or its rim).
+inline bool isWalkableSpaMesh(const std::string& name)
+{
+    return name == SPA_POOL_MESH || name == SPA_RIM_MESH;
 }
 
 // Narrow the visible furniture and its navigation bounds together. Leave Z
@@ -133,7 +148,8 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
-       name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron")
+       name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron" ||
+       name == "SpaChair" || name == "SpaMudPool" || name == "SpaPoolRim" || name == "SpaSpringboard")
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
     // diagonal, not just their unrotated width, so rotation retains the margin.

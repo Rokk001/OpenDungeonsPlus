@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<GUILayout version="4" >
+    <Window type="OD/FrameWindow" name="SpaWindow" >
+        <Property name="Area" value="{{0.5,-150},{0.5,-70},{0.5,150},{0.5,70}}" />
+        <Property name="Text" value="Lava spa" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="AlwaysOnTop" value="True" />
+
+        <Window type="OD/StaticText" name="SpaPriceText" >
+            <Property name="Area" value="{{0,20},{0,35},{1,-20},{0,60}}" />
+            <Property name="Text" value="Bath: 5 gold" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Button" name="SpaPayerButton" >
+            <Property name="Area" value="{{0.5,-100},{0,70},{0.5,100},{0,100}}" />
+            <Property name="Text" value="Keeper pays" />
+            <Property name="TooltipText" value="Who pays for a bath" />
+        </Window>
+    </Window>
+</GUILayout>

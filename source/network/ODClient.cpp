@@ -25,6 +25,7 @@
 #include "entities/EntityLoading.h"
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
+#include "entities/PoolAttendantEntity.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
@@ -115,7 +116,8 @@ void reportRelationshipPost(GameMap* gameMap, const std::string& creatureA, cons
         creatureB, classB, nameB, oldTier, newTier);
 }
 
-//! \brief Dungeonbook post for a tavern event of a creature of the local player: a drink, or a won or lost slap duel.
+//! \brief Dungeonbook post for a tavern event of a creature of the local player: a drink, a won or lost slap duel, or a
+//! finished lava spa bath.
 //! Only the local keeper's creatures write posts (Creature::socialEvent checks it); the opponent of a duel is named by
 //! the name of its profile.
 //! \param gameMap The map the creatures are on.
@@ -146,6 +148,9 @@ void reportTavernPost(GameMap* gameMap, const CosmeticEvent& event)
             break;
         case CosmeticTavernKind::duelLost:
             creature->socialEvent(social::PostCategory::DuelLost, opponentName);
+            break;
+        case CosmeticTavernKind::relaxed:
+            creature->socialEvent(social::PostCategory::Relaxed);
             break;
         default:
             break;
@@ -1724,6 +1729,26 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 static_cast<ChickenEntity*>(entity)->startRoofFlightFromServer(from, to, turns, elapsed);
             break;
         }
+        case ServerNotificationType::creatureJump:
+        {
+            std::string creatureName;
+            Ogre::Vector3 from(Ogre::Vector3::ZERO);
+            Ogre::Vector3 to(Ogre::Vector3::ZERO);
+            uint32_t turns = 0;
+            Ogre::Real elapsed = 0.0f;
+            OD_ASSERT_TRUE(packetReceived >> creatureName >> from >> to >> turns >> elapsed);
+            // The message carries the jump of a creature or of the pool attendant, told apart by the name
+            Creature* creature = gameMap->getCreature(creatureName);
+            if(creature != nullptr)
+            {
+                creature->startJumpFromServer(from, to, turns, elapsed);
+                break;
+            }
+            GameEntity* attendant = gameMap->getEntityFromTypeAndName(GameEntityType::poolAttendantEntity, creatureName);
+            if((attendant != nullptr) && (attendant->getObjectType() == GameEntityType::poolAttendantEntity))
+                static_cast<PoolAttendantEntity*>(attendant)->startJumpFromServer(from, to, turns, elapsed);
+            break;
+        }
         case ServerNotificationType::chickenKindChanged:
         {
             std::string chickenName;
@@ -2335,6 +2360,24 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
             GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
             gameMode->setTavernPayerShown(xx, yy, payer);
+            break;
+        }
+
+        case ServerNotificationType::spaPayer:
+        {
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
+            {
+                OD_LOG_ERR("Wrong mode " + Helper::toString(frameListener->getModeManager()->getCurrentModeType()));
+                break;
+            }
+            int xx = 0;
+            int yy = 0;
+            uint32_t payer = 0;
+            double bathPrice = 0.0;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer >> bathPrice);
+
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setSpaWindowShown(xx, yy, payer, bathPrice);
             break;
         }
 

@@ -163,7 +163,9 @@ enum class CosmeticTavernKind : int32_t
     //! The creature lost a slap duel against mObject (bubble DuelLoss, post DuelLost)
     duelLost = 3,
     //! The creature vomited (bubble Vomit)
-    vomit = 4
+    vomit = 4,
+    //! The creature finished a bath in a lava spa (post Relaxed, no bubble); sent by the spa through the tavern event
+    relaxed = 5
 };
 
 //! \brief The result in mValue of the event hitResult

@@ -246,6 +246,40 @@ particle_system CauldronSteam
     }
 }
 
+// Steam from the hot mud pool.
+particle_system SpaSteam
+{
+    material        RoomAmbSmoke
+    point_rendering false
+    particle_width  0.28
+    particle_height 0.28
+    cull_each       false
+    quota           8
+    billboard_type  point
+
+    emitter Point
+    {
+        angle               20
+        colour_range_start  0.9 0.9 0.9 0.5
+        colour_range_end    0.9 0.9 0.9 0.5
+        emission_rate       2
+        time_to_live        3
+        direction           0 0 1
+        velocity_min        0.35
+        velocity_max        0.7
+    }
+
+    affector Scaler
+    {
+        rate    0.35
+    }
+
+    affector ColourFader
+    {
+        alpha   -0.2
+    }
+}
+
 // Something was finished: a puff of steam
 particle_system RoomAmbCraftedSteam
 {

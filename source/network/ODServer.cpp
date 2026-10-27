@@ -60,6 +60,7 @@
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortalWave.h"
+#include "rooms/RoomSpa.h"
 #include "rooms/RoomTavern.h"
 #include "rooms/RoomWorkshop.h"
 #include "rooms/RoomType.h"
@@ -159,6 +160,28 @@ namespace
             return nullptr;
 
         return static_cast<RoomTavern*>(room);
+    }
+
+    //! \brief Returns the lava spa of the player on a tile, nullptr if there is none or the spa belongs to
+    //! another seat (only the owner may look at or change a spa).
+    //! \param gameMap The server map.
+    //! \param player The player that asked.
+    //! \param xx The x coordinate of a tile of the spa.
+    //! \param yy The y coordinate of a tile of the spa.
+    RoomSpa* getOwnedSpa(GameMap* gameMap, Player* player, int xx, int yy)
+    {
+        Tile* tile = gameMap->getTile(xx, yy);
+        if(tile == nullptr)
+            return nullptr;
+
+        Room* room = tile->getCoveringRoom();
+        if((room == nullptr) || (room->getType() != RoomType::spa))
+            return nullptr;
+
+        if(room->getSeat() != player->getSeat())
+            return nullptr;
+
+        return static_cast<RoomSpa*>(room);
     }
 
     //! \brief Tells a human player about the health of its dungeon heart when the fraction changed
@@ -3486,6 +3509,32 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             ServerNotification notif(ServerNotificationType::tavernPayer, player);
             notif.mPacket << xx << yy << static_cast<uint32_t>(roomTavern->getPayer());
+            sendAsyncMsg(notif);
+            break;
+        }
+
+        case ClientNotificationType::askSpaPayer:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr)
+                break;
+
+            int xx;
+            int yy;
+            uint32_t payer;
+            bool isSet;
+            OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer >> isSet);
+            RoomSpa* roomSpa = getOwnedSpa(gameMap, player, xx, yy);
+            if(roomSpa == nullptr)
+                break;
+
+            // A value that is no payer is ignored; the answer tells the current one anyway
+            if(isSet && (payer <= static_cast<uint32_t>(SpaPayer::creature)))
+                roomSpa->setPayer(static_cast<SpaPayer>(payer));
+
+            ServerNotification notif(ServerNotificationType::spaPayer, player);
+            notif.mPacket << xx << yy << static_cast<uint32_t>(roomSpa->getPayer())
+                << ConfigManager::getSingleton().getTavernConfigDouble("BeerPrice");
             sendAsyncMsg(notif);
             break;
         }

@@ -553,6 +553,9 @@ SkillManager::SkillManager() :
     skill = createSkill(mSkills, SkillType::tavernBeer, std::vector<SkillType>{SkillType::roomTavern});
     def = new SkillDefKeeper(TREE_PREFIX_ROOMS, "BeerButton", skill, 2);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomSpa, std::vector<SkillType>{SkillType::roomTavern});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "SpaButton", skill, 2, RoomType::spa);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
     // Rooms tab, tier III
     skill = createSkill(mSkills, SkillType::roomArena, std::vector<SkillType>{SkillType::roomTrainingHall});
@@ -1028,6 +1031,7 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::keeperHeartFortitude, "HeartHP", ResearchBaseSource::rooms, "DungeonHeartHP", ""},
     {SkillType::keeperHeartMending, "HeartHeal", ResearchBaseSource::rooms, "DungeonHeartHealPerSecond", ""},
     {SkillType::keeperManaFlow, "HeartMana", ResearchBaseSource::rooms, "DungeonHeartManaPerSecond", ""},
+    {SkillType::roomSpa, "RelaxTime", ResearchBaseSource::rooms, "SpaRelaxTurns", ""},
     {SkillType::tavernBeer, "PortalCooldown", ResearchBaseSource::factor, "", ""},
     {SkillType::spellSummonWorker, "Price", ResearchBaseSource::spells, "SummonWorkerBasePrice", ""},
     {SkillType::spellCreatureHeal, "HealPerTurn", ResearchBaseSource::spells, "CreatureHealValue", ""},
@@ -1122,6 +1126,7 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::ManaPerSecond] = "Mana per second";
         texts[ResearchEffect::Gold] = "Gold";
         texts[ResearchEffect::PortalCooldown] = "Portal cooldown";
+        texts[ResearchEffect::RelaxTime] = "Relaxation time";
         texts["GrowTime"] = "Growth time";
         texts["BrewTime"] = "Brewing time";
         texts["CrackTime"] = "Cracking effort";

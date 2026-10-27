@@ -53,6 +53,7 @@ static const std::vector<RoomType> wantedBuildings = {
     RoomType::treasury,
     RoomType::hatchery,
     RoomType::tavern,
+    RoomType::spa,
     RoomType::library,
     RoomType::trainingHall,
     RoomType::workshop,

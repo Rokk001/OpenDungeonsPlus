@@ -1023,6 +1023,91 @@ public:
     //! (HangoverTurns, mood HangoverMood once). A hangover that still runs is not shortened.
     void sleepEnded();
 
+    //! \brief Mood points the lava spa gave to the creature (0 to SpaMoodMax). Fades by SpaMoodDecayPerTurn per turn.
+    inline double getSpaMood() const
+    { return mSpaMood; }
+
+    //! \brief Raises the spa mood by points, limited to 0 .. SpaMoodMax (rooms.cfg).
+    //! \param points The mood points to add (one turn of a bath adds SpaMoodPerTurn).
+    void addSpaMood(double points);
+
+    //! \brief Sets the spa mood (limited to 0 .. SpaMoodMax), used when a creature is loaded.
+    //! \param val The mood points.
+    void setSpaMood(double val);
+
+    //! \brief Returns the turns the relaxation after a bath still lasts (0 = not relaxed).
+    inline double getRelaxTurns() const
+    { return mRelaxTurns; }
+
+    //! \brief Sets the turns the relaxation still lasts (not below 0), used when a bath ends and when a creature is loaded.
+    //! \param turns The turns left.
+    void setRelaxTurns(double turns);
+
+    //! \brief True while the creature is relaxed after a bath.
+    inline bool isRelaxed() const
+    { return mRelaxTurns > 0.0; }
+
+    //! \brief Returns the factor on the room points and the experience the creature earns: SpaRelaxWorkFactor
+    //! while it is relaxed, else 1. It is used at the places where the hangover factor is used and never in combat.
+    double getRelaxWorkFactor() const;
+
+    //! \brief Returns how many of the next tiles the creature enters outside a pool still get a share of the mud
+    //! it carries out of a bath.
+    inline int32_t getSpaMudTilesLeft() const
+    { return mSpaMudTilesLeft; }
+
+    //! \brief Sets the number of tiles that still get mud (not below 0), used when a bath ends and when a creature is loaded.
+    //! \param tiles The number of tiles left.
+    void setSpaMudTilesLeft(int32_t tiles);
+
+    //! \brief Server side. True when the creature wants a lava spa bath now: it is no worker, not in prison, not in
+    //! the hand and has a hangover, or is Upset, Angry or Furious with its relaxation run out.
+    bool wantsSpaBath() const;
+
+    //! \brief Server side. Starts a jump from the position of the creature to the target and tells the clients
+    //! that see it (see sendJumpNotification). The jump lasts SpaJumpTurns turns and reaches SpaJumpHeight tiles.
+    //! \param target The point the creature lands on.
+    void startJump(const Ogre::Vector3& target);
+
+    //! \brief Server side, once per turn while the creature jumps: moves it one step along the arc; the last step
+    //! puts it on the target.
+    void continueJump();
+
+    //! \brief True while the creature is in a jump (on the server until its last step, on a client until the arc is over).
+    inline bool isJumping() const
+    { return mJumpTurnsLeft > 0; }
+
+    //! \brief Server side. Ends a running jump where the creature is (the bath it belongs to was broken off) and puts a
+    //! living creature that is on the map back on the floor, so that it does not stay in the air. A client ends its arc
+    //! by itself as soon as the clip of the creature is no longer the jump clip (see update).
+    void cancelJump();
+
+    //! \brief Returns the turns of the running jump that are left (0 = no jump); the room saves them.
+    inline uint32_t getJumpTurnsLeft() const
+    { return mJumpTurnsLeft; }
+
+    //! \brief Server side. Goes on with a jump that has just been started again (startJump) at the turn it had when the
+    //! room was saved: moves the creature along the arc to that turn and tells the clients.
+    //! \param turnsLeft The turns of the jump that are left; a value of 0 or not below the length of the jump changes nothing.
+    void resumeJump(uint32_t turnsLeft);
+
+    //! \brief Server side. Marks whether the creature sits in a lava spa bath. While it does, the spa mood does not
+    //! fade (the bath lifts it exactly to SpaMoodMax); it fades again as soon as the bath is over or broken off.
+    //! \param bathing True while the bath runs.
+    inline void setSpaBathing(bool bathing)
+    { mSpaBathing = bathing; }
+
+    //! \brief Client side. Starts the arc that the server told: the clip Jump and the interpolated position.
+    //! \param from The start of the jump.
+    //! \param to The landing point.
+    //! \param turns The length of the jump in turns.
+    //! \param elapsed The turns of the jump that have passed already.
+    void startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to, uint32_t turns, Ogre::Real elapsed);
+
+    //! \brief Client side: puts the Jump clip of a running jump at the phase of the arc (loaded game, seat that gains sight,
+    //! every frame), so the clip does not start again in the middle of the arc.
+    void showJumpClipPhase();
+
     //! \brief Hook for a later bathing room: the creature is clean again (creature dirt 0).
     void washed();
 
@@ -1814,6 +1899,25 @@ private:
     //! \brief Runtime only (not saved): true when the creature fell asleep with a drunkenness above HangoverAt and has not woken up yet.
     bool            mHangoverPending;
 
+    //! \brief Mood points of the lava spa (0 .. SpaMoodMax); rises in a bath, falls by SpaMoodDecayPerTurn per turn.
+    double          mSpaMood;
+    //! \brief Turns the relaxation after a bath still lasts; falls by 1 per turn.
+    double          mRelaxTurns;
+    //! \brief Number of tiles outside a pool that still get mud after a bath.
+    int32_t         mSpaMudTilesLeft;
+    //! \brief Runtime only (not saved): true while the creature sits in a lava spa bath, the spa mood does not fade then.
+    bool            mSpaBathing;
+    //! \brief Runtime only (not saved): start of the running jump.
+    Ogre::Vector3   mJumpFrom;
+    //! \brief Runtime only (not saved): landing point of the running jump.
+    Ogre::Vector3   mJumpTo;
+    //! \brief Runtime only (not saved): length of the running jump in turns.
+    uint32_t        mJumpTurns;
+    //! \brief Runtime only (not saved): turns of the running jump that are left (0 = no jump).
+    uint32_t        mJumpTurnsLeft;
+    //! \brief Runtime only (not saved): turns of the running jump that have passed (fractions on a client).
+    Ogre::Real      mJumpElapsed;
+
     //! \brief Every tiles within the creature sight radius, used for common actions.
     std::vector<Tile*>              mTilesWithinSightRadius;
 
@@ -2047,6 +2151,10 @@ private:
     void exportThirstStateToPacket(ODPacket& os) const;
     //! \brief Reads the thirst state sent by exportThirstStateToPacket.
     void importThirstStateFromPacket(ODPacket& is);
+    //! \brief Writes the lava spa state for clients (after the thirst state): spa mood and relaxation turns.
+    void exportSpaStateToPacket(ODPacket& os) const;
+    //! \brief Reads the lava spa state sent by exportSpaStateToPacket.
+    void importSpaStateFromPacket(ODPacket& is);
     //! \brief Multiplies the three move speeds by the move% passives of the skills.
     void applyMovePassive();
     //! \brief Recomputes the strength modifier as the product of the factors of all running strength effects.
@@ -2130,12 +2238,32 @@ private:
     //! the creature is sober enough again and counts down the tavern mood and the hangover.
     void upkeepTavernState();
 
+    //! \brief Server side, once per turn. Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down.
+    void upkeepSpaState();
+
+    //! \brief Server side. Tells the clients that see the creature about the jump that has just started
+    //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed); seats without a human
+    //! player are skipped.
+    void sendJumpNotification();
+
+    //! \brief Server side. Tells one seat about the jump that is running (the same message as sendJumpNotification, with
+    //! the turns that have passed so far), so a seat that gains sight in the middle of a jump continues the arc. A seat
+    //! without a human player gets nothing.
+    //! \param seat The seat that gains sight of the creature.
+    void sendJumpNotificationTo(Seat* seat);
+
+    //! \brief The position on the arc of a jump.
+    //! \param from The start of the jump.
+    //! \param to The landing point.
+    //! \param progress How far the jump is, 0 (start) to 1 (landing).
+    static Ogre::Vector3 jumpPosition(const Ogre::Vector3& from, const Ogre::Vector3& to, Ogre::Real progress);
+
     //! \brief Server side, once per turn: sets the creature dirt to the maximum while the creature is in prison or
     //! tortured, then lets it decay by CreatureDirtDecayPerTurn.
     void upkeepCreatureDirt();
 
     //! \brief Server side: dirties a tile the creature has just entered (the dirt it carries, a load it carries or
-    //! the trail of a wounded creature that is pulled over the floor).
+    //! the trail of a wounded creature that is pulled over the floor, the mud of a bath for a few tiles outside a pool).
     //! \param tile The tile that was entered.
     void dirtyEnteredTile(Tile* tile);
 

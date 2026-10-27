@@ -43,6 +43,7 @@
 #include "creatureaction/CreatureActionReloadTrap.h"
 #include "creatureaction/CreatureActionSearchDirtToClean.h"
 #include "creatureaction/CreatureActionSearchDrink.h"
+#include "creatureaction/CreatureActionSearchSpa.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -136,6 +137,7 @@
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
+#include "rooms/RoomSpa.h"
 #include "rooms/RoomToilet.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/Spell.h"
@@ -241,6 +243,8 @@ void recordScriptEvent(const Creature& creature, const std::string& eventName);
 const uint32_t APPEARANCE_RETRY_TURNS = 200;
 //! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
 const int64_t BED_STATUS_REPEAT_TURNS = 200;
+//! Length in seconds of the Jump clip of the creature skeletons
+const double JUMP_CLIP_SECONDS = 1.4;
 
 //! \brief Server side registry of the whole-image catalogs used to assign the Dungeonbook appearance.
 //! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
@@ -371,6 +375,13 @@ static const std::string THIRST_SAVE_OPEN = "[Thirst]";
 static const std::string CORPSE_CARRIER_SAVE_LABEL = "CorpseCarrier=";
 //! \brief Tag that closes the block of the thirst state.
 static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
+//! \brief Tag that opens the optional block of the lava spa state (spa mood, relaxation turns, tiles that still get
+//! mud) at the end of a saved creature, after the thirst block. The blocks are read in any order.
+static const std::string SPA_SAVE_OPEN = "[Spa]";
+//! \brief Tag that closes the block of the lava spa state.
+static const std::string SPA_SAVE_CLOSE = "[/Spa]";
+//! \brief Factor of the parabola that gives the height of a jump: 4 x p x (1 - p) is 1 at the apex.
+static const Ogre::Real JUMP_ARC_FACTOR = 4.0f;
 //! \brief The highest value of the thirst and of the drunkenness (both go from 0 to this value).
 static const double THIRST_STATE_MAX = 100.0;
 //! \brief The highest value of the urge and of the creature dirt (both go from 0 to this value).
@@ -701,6 +712,15 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mVomited                 (false),
     mHangoverTurns           (0.0),
     mHangoverPending         (false),
+    mSpaMood                 (0.0),
+    mRelaxTurns              (0.0),
+    mSpaMudTilesLeft         (0),
+    mSpaBathing              (false),
+    mJumpFrom                (Ogre::Vector3::ZERO),
+    mJumpTo                  (Ogre::Vector3::ZERO),
+    mJumpTurns               (0),
+    mJumpTurnsLeft           (0),
+    mJumpElapsed             (0.0f),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -837,6 +857,15 @@ Creature::Creature(GameMap* gameMap) :
     mVomited                 (false),
     mHangoverTurns           (0.0),
     mHangoverPending         (false),
+    mSpaMood                 (0.0),
+    mRelaxTurns              (0.0),
+    mSpaMudTilesLeft         (0),
+    mSpaBathing              (false),
+    mJumpFrom                (Ogre::Vector3::ZERO),
+    mJumpTo                  (Ogre::Vector3::ZERO),
+    mJumpTurns               (0),
+    mJumpTurnsLeft           (0),
+    mJumpElapsed             (0.0f),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -1034,6 +1063,7 @@ std::string Creature::getCreatureStreamFormat()
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
             "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]"
             "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]"
+            "\t[Spa spaMood relaxTurns mudTilesLeft /Spa]"
             "\t[Corpse corpseTurns decayTurns /Corpse]";
 
     return format;
@@ -1112,6 +1142,13 @@ void Creature::exportToStream(std::ostream& os) const
     {
         os << "\t" << THIRST_SAVE_OPEN << " " << mThirst << " " << mTavernMood << " " << mTavernMoodTurns << " "
            << mDrunk << " " << (mVomited ? 1 : 0) << " " << mHangoverTurns << " " << THIRST_SAVE_CLOSE;
+    }
+
+    // Optional lava spa block, after the thirst block; missing in old saves and when all its values are 0
+    if((mSpaMood > 0.0) || (mRelaxTurns > 0.0) || (mSpaMudTilesLeft > 0))
+    {
+        os << "\t" << SPA_SAVE_OPEN << " " << mSpaMood << " " << mRelaxTurns << " " << mSpaMudTilesLeft << " "
+           << SPA_SAVE_CLOSE;
     }
     if(!isAlive())
     {
@@ -1330,6 +1367,25 @@ bool Creature::importFromStream(std::istream& is)
             setDrunk(loadedDrunk);
             setVomited(loadedVomited != 0);
             setHangoverTurns(loadedHangoverTurns);
+            continue;
+        }
+
+        if(appearanceToken == SPA_SAVE_OPEN)
+        {
+            std::string spaClose;
+            double loadedSpaMood = 0.0;
+            double loadedRelaxTurns = 0.0;
+            int32_t loadedMudTilesLeft = 0;
+            if(!(is >> loadedSpaMood >> loadedRelaxTurns >> loadedMudTilesLeft >> spaClose) || (spaClose != SPA_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid spa block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + spaClose
+                    + "' instead of '" + SPA_SAVE_CLOSE + "'"));
+                return false;
+            }
+            setSpaMood(loadedSpaMood);
+            setRelaxTurns(loadedRelaxTurns);
+            setSpaMudTilesLeft(loadedMudTilesLeft);
             continue;
         }
 
@@ -2070,6 +2126,15 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mUrge;
     os << mCreatureDirt;
     exportThirstStateToPacket(os);
+    // The lava spa state is only sent to the own seat (the same two fields as in the update packet, 0 for every other
+    // seat)
+    if(seat == getSeat())
+        exportSpaStateToPacket(os);
+    else
+    {
+        os << 0.0;
+        os << 0.0;
+    }
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
 }
@@ -2145,6 +2210,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
+    importSpaStateFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
@@ -2246,6 +2312,27 @@ void Creature::update(Ogre::Real timeSinceLastFrame)
     Tile* previousPositionTile = getPositionTile();
     // Update movements, direction, ...
     MovableGameEntity::update(timeSinceLastFrame);
+
+    // A client moves a jumping creature along the arc the server told (the server steps it once per turn)
+    if(!getIsOnServerMap() && (mJumpTurnsLeft > 0))
+    {
+        // The server ended the jump (a fight, the hand, a removed room): the clip is not the jump clip any more, so the
+        // arc stops and the creature stands on the floor again
+        if(getAnimationStateName() != EntityAnimation::jump_anim)
+        {
+            mJumpTurnsLeft = 0;
+            setPosition(Ogre::Vector3(getPosition().x, getPosition().y, mJumpTo.z));
+        }
+        else
+        {
+            mJumpElapsed = std::min(static_cast<Ogre::Real>(mJumpTurns), mJumpElapsed +
+                static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
+            setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+            showJumpClipPhase();
+            if(mJumpElapsed >= static_cast<Ogre::Real>(mJumpTurns))
+                mJumpTurnsLeft = 0;
+        }
+    }
 
     // Update the visual debugging entities
     //if we are standing in a different tile than we were last turn
@@ -2881,6 +2968,9 @@ void Creature::doUpkeep()
     // The drunkenness falls, the tavern mood and the hangover run out
     upkeepTavernState();
 
+    // The spa mood fades and the relaxation runs out
+    upkeepSpaState();
+
     // The skill tree: reset window, reset and the active skills of changed ranks
     upkeepSkillTree();
 
@@ -3268,6 +3358,15 @@ bool Creature::handleIdleAction()
         (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
     {
         pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
+        return true;
+    }
+
+    // If we are in a bad mood or have a hangover, we go to a lava spa. Without a spa that can take us nothing
+    // happens here and we try again at the next search
+    if (wantsSpaBath() &&
+        !hasActionBeenTried(CreatureActionType::searchSpa))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchSpa>(*this));
         return true;
     }
 
@@ -4977,12 +5076,15 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         os << mUrge;
         os << mCreatureDirt;
         exportThirstStateToPacket(os);
+        exportSpaStateToPacket(os);
     }
     else
     {
         os << 0.0;
         os << 0.0;
-        // The thirst state of other seats is not sent: every value is 0
+        // The thirst state of other seats is not sent: every value is 0 (the lava spa state follows the tavern fields)
+        os << 0.0;
+        os << 0.0;
         os << 0.0;
         os << 0.0;
         os << 0.0;
@@ -5001,6 +5103,13 @@ void Creature::exportThirstStateToPacket(ODPacket& os) const
     os << mHangoverTurns;
 }
 
+//! \brief Writes the lava spa state to a packet: the spa mood and the turns of the relaxation.
+void Creature::exportSpaStateToPacket(ODPacket& os) const
+{
+    os << mSpaMood;
+    os << mRelaxTurns;
+}
+
 //! \brief Reads the thirst state written by exportThirstStateToPacket.
 void Creature::importThirstStateFromPacket(ODPacket& is)
 {
@@ -5008,6 +5117,13 @@ void Creature::importThirstStateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mTavernMood);
     OD_ASSERT_TRUE(is >> mDrunk);
     OD_ASSERT_TRUE(is >> mHangoverTurns);
+}
+
+//! \brief Reads the lava spa state written by exportSpaStateToPacket.
+void Creature::importSpaStateFromPacket(ODPacket& is)
+{
+    OD_ASSERT_TRUE(is >> mSpaMood);
+    OD_ASSERT_TRUE(is >> mRelaxTurns);
 }
 
 //! \brief Reads the changing creature data sent by the server, the skill state last, and refreshes equipment
@@ -5101,6 +5217,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
+    importSpaStateFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
@@ -5734,6 +5851,38 @@ std::string Creature::getGender() const
     return social::SocialProfileCache::getCreatureGender(getName(), getDefinition()->getClassName());
 }
 
+//! \brief Seconds of one minute, for the time in the effect lines of the Dungeonbook page.
+static const uint32_t PROFILE_SECONDS_PER_MINUTE = 60;
+
+//! \brief The lines of the active buffs and debuffs of a creature for the Dungeonbook page, buffs first: the buff
+//! Relaxed while the relaxation lasts, the debuff Hangover while the hangover lasts. Each line shows the time that is
+//! left as minutes:seconds (turns divided by the turns per second, seconds rounded down).
+//! \param relaxTurns The turns the relaxation lasts, 0 or less for none.
+//! \param hangoverTurns The turns the hangover lasts, 0 or less for none.
+//! \return The lines separated by a line break, empty when no effect is active.
+static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns)
+{
+    std::string effects;
+    const double turnsPerSecond = ODApplication::turnsPerSecond;
+    for(uint32_t kind = 0; kind < 2; ++kind)
+    {
+        const bool isBuff = (kind == 0);
+        const double turns = isBuff ? relaxTurns : hangoverTurns;
+        if(turns <= 0.0)
+            continue;
+
+        const uint32_t totalSeconds = static_cast<uint32_t>(std::floor(turns / turnsPerSecond));
+        const uint32_t seconds = totalSeconds % PROFILE_SECONDS_PER_MINUTE;
+        std::string line = isBuff ? "Buff: Relaxed (" : "Debuff: Hangover (";
+        line += Helper::toString(totalSeconds / PROFILE_SECONDS_PER_MINUTE) + ":" + (seconds < 10 ? "0" : "") +
+            Helper::toString(seconds) + ")";
+        if(!effects.empty())
+            effects += "\n";
+        effects += line;
+    }
+    return effects;
+}
+
 //! \brief Fills the social page and transmitted item slots before its normal responsive layout.
 float Creature::fillProfilePage(CEGUI::Window* page)
 {
@@ -5747,6 +5896,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         localSeat = getGameMap()->getLocalPlayer()->getSeat();
     bool isAllied = (localSeat != nullptr) &&
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
+    // The relaxation and hangover effects are only shown for the creatures of the own seat
+    const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);
 
     // The composed picture of the creature's appearance; without one (no appearance yet, missing or invalid
     // manifest) the tinted preview portrait is the fallback and no remarks are shown. Asked on every fill, since
@@ -5873,6 +6024,12 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     foeLink->setVisible(false);
     statusText->setVisible(isAllied);
     latestText->setVisible(isAllied);
+
+    // The buffs and debuffs row: only for the creatures of our own side and only while an effect is active
+    CEGUI::Window* effectsText = page->getChild("EffectsText");
+    const std::string effects = getProfileEffectsText(mRelaxTurns, mHangoverTurns);
+    effectsText->setText(effects);
+    effectsText->setVisible(isOwn && !effects.empty());
     if(!isAllied)
         return gui.layoutCreatureProfilePage(page);
 
@@ -6985,10 +7142,10 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
 
     // Fighting is tiring
     decreaseWakefulness(0.5);
-    // but gives experience; a dirty arena teaches less, and so does a hangover
+    // but gives experience; a dirty arena teaches less, and so does a hangover, while a relaxed creature learns more
     Room* attackRoom = (myTile == nullptr) ? nullptr : myTile->getCoveringRoom();
     if((attackRoom != nullptr) && (attackRoom->getType() == RoomType::arena))
-        receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor());
+        receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor());
     else
         receiveExp(1.5);
 }
@@ -7940,6 +8097,10 @@ void Creature::fireAddEntity(Seat* seat, bool async, NodeType nt )
         {
             OD_LOG_ERR("Trying to fire add creature in async mode name=" + getName() + " while carrying " + mCarriedEntity->getName());
         }
+
+        // The jump that is running is sent after the entity data (queued: the creature is on the client by then)
+        if(isJumping())
+            sendJumpNotificationTo(seat);
         return;
     }
 
@@ -7949,6 +8110,10 @@ void Creature::fireAddEntity(Seat* seat, bool async, NodeType nt )
     exportHeadersToPacket(serverNotification->mPacket);
     exportToPacket(serverNotification->mPacket, seat);
     ODServer::getSingleton().queueServerNotification(serverNotification);
+
+    // A seat that gains sight in the middle of a jump gets the running arc after the entity data
+    if(isJumping())
+        sendJumpNotificationTo(seat);
 
     if(mCarriedEntity != nullptr)
     {
@@ -8647,6 +8812,177 @@ double Creature::getHangoverWorkFactor() const
     return ConfigManager::getSingleton().getTavernConfigDouble("HangoverWorkFactor");
 }
 
+//! \brief Raises the spa mood, limited to 0 .. SpaMoodMax.
+void Creature::addSpaMood(double points)
+{
+    setSpaMood(mSpaMood + points);
+}
+
+//! \brief Sets the spa mood, limited to 0 .. SpaMoodMax.
+void Creature::setSpaMood(double val)
+{
+    const double maxPoints = ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodMax");
+    mSpaMood = std::max(0.0, std::min(maxPoints, val));
+}
+
+//! \brief Sets the turns the relaxation still lasts, not below 0.
+void Creature::setRelaxTurns(double turns)
+{
+    mRelaxTurns = std::max(0.0, turns);
+}
+
+//! \brief Returns SpaRelaxWorkFactor while the creature is relaxed, else 1.
+double Creature::getRelaxWorkFactor() const
+{
+    if(mRelaxTurns <= 0.0)
+        return 1.0;
+
+    return ConfigManager::getSingleton().getRoomConfigDouble("SpaRelaxWorkFactor");
+}
+
+//! \brief Sets the number of tiles that still get mud, not below 0.
+void Creature::setSpaMudTilesLeft(int32_t tiles)
+{
+    mSpaMudTilesLeft = std::max(0, tiles);
+}
+
+//! \brief True for a creature that is no worker, not in prison and not in the hand and either has a hangover or is
+//! in a bad mood (Upset, Angry, Furious) with its relaxation run out.
+bool Creature::wantsSpaBath() const
+{
+    if((mDefinition == nullptr) || mDefinition->isWorker() || mIsInHand || isInPrison() ||
+       (getSeat() == nullptr) || getSeat()->isRogueSeat())
+        return false;
+
+    if(mHangoverTurns > 0.0)
+        return true;
+
+    if(mRelaxTurns > 0.0)
+        return false;
+
+    const CreatureMoodLevel mood = getMoodValue();
+    return (mood == CreatureMoodLevel::Upset) || (mood == CreatureMoodLevel::Angry) || (mood == CreatureMoodLevel::Furious);
+}
+
+//! \brief Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down by 1 per turn. The mood does not fade
+//! while the creature sits in a bath (the bath lifts it exactly to SpaMoodMax).
+void Creature::upkeepSpaState()
+{
+    if((mSpaMood <= 0.0) && (mRelaxTurns <= 0.0))
+        return;
+
+    if((mSpaMood > 0.0) && !mSpaBathing)
+        mSpaMood = std::max(0.0, mSpaMood - ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodDecayPerTurn"));
+
+    if(mRelaxTurns > 0.0)
+        mRelaxTurns = std::max(0.0, mRelaxTurns - 1.0);
+}
+
+//! \brief The point on the arc: a straight line from the start to the landing point with a parabola on the height
+//! that reaches SpaJumpHeight half way.
+Ogre::Vector3 Creature::jumpPosition(const Ogre::Vector3& from, const Ogre::Vector3& to, Ogre::Real progress)
+{
+    const Ogre::Real clamped = std::min(1.0f, std::max(0.0f, progress));
+    Ogre::Vector3 position = from + (to - from) * clamped;
+    const Ogre::Real height = static_cast<Ogre::Real>(ConfigManager::getSingleton().getRoomConfigDouble("SpaJumpHeight"));
+    position.z += height * JUMP_ARC_FACTOR * clamped * (1.0f - clamped);
+    return position;
+}
+
+//! \brief Starts the jump (the pattern of the hop of a rooster): remembers start and landing point, plays the Jump
+//! clip and tells the clients.
+void Creature::startJump(const Ogre::Vector3& target)
+{
+    const uint32_t turns = static_cast<uint32_t>(std::max(1.0,
+        ConfigManager::getSingleton().getRoomConfigDouble("SpaJumpTurns")));
+    mJumpFrom = getPosition();
+    mJumpTo = target;
+    mJumpTurns = turns;
+    mJumpTurnsLeft = turns;
+    mJumpElapsed = 0.0f;
+    clearDestinations(EntityAnimation::jump_anim, false, false);
+    sendJumpNotification();
+}
+
+//! \brief Ends the jump and puts a living creature on the floor again.
+void Creature::cancelJump()
+{
+    if(mJumpTurnsLeft == 0)
+        return;
+
+    mJumpTurnsLeft = 0;
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive())
+        return;
+
+    const Ogre::Vector3 position = getPosition();
+    if(position.z != 0.0f)
+        setPosition(Ogre::Vector3(position.x, position.y, 0.0f));
+}
+
+//! \brief Moves the restarted jump to the saved turn and tells the clients where it is now.
+void Creature::resumeJump(uint32_t turnsLeft)
+{
+    if((mJumpTurnsLeft == 0) || (turnsLeft == 0) || (turnsLeft >= mJumpTurns))
+        return;
+
+    mJumpTurnsLeft = turnsLeft;
+    mJumpElapsed = static_cast<Ogre::Real>(mJumpTurns - mJumpTurnsLeft);
+    setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+    sendJumpNotification();
+}
+
+//! \brief One step of the jump: the position on the arc after the turns that have passed.
+void Creature::continueJump()
+{
+    if(mJumpTurnsLeft == 0)
+        return;
+
+    --mJumpTurnsLeft;
+    mJumpElapsed = static_cast<Ogre::Real>(mJumpTurns - mJumpTurnsLeft);
+    setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+}
+
+//! \brief Takes over the arc that the server told and shows the Jump clip.
+void Creature::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to, uint32_t turns, Ogre::Real elapsed)
+{
+    mJumpFrom = from;
+    mJumpTo = to;
+    mJumpTurns = std::max<uint32_t>(1, turns);
+    mJumpElapsed = elapsed;
+    mJumpTurnsLeft = 1;
+    setAnimationState(EntityAnimation::jump_anim, false, Ogre::Vector3::ZERO, false);
+    setPosition(jumpPosition(from, to, elapsed / static_cast<Ogre::Real>(mJumpTurns)));
+    showJumpClipPhase();
+}
+
+//! \brief Puts the Jump clip at the phase of the arc, so a jump that is already running when the client learns of it
+//! (loaded game, seat that gains sight) goes on in the middle of the clip instead of starting it again.
+void Creature::showJumpClipPhase()
+{
+    if((getAnimationState() != nullptr) && (getAnimationState()->getAnimationName() == EntityAnimation::jump_anim))
+        getAnimationState()->setTimePosition(static_cast<Ogre::Real>(JUMP_CLIP_SECONDS) * mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns));
+}
+
+//! \brief Tells the human seats that see the creature about the jump that has just started (name, from, to, turns
+//! and elapsed; the pattern of the rooster hop).
+void Creature::sendJumpNotification()
+{
+    for(Seat* seat : mSeatsWithVisionNotified)
+        sendJumpNotificationTo(seat);
+}
+
+//! \brief Tells one human seat about the jump that is running: name, from, to, turns and the turns passed so far.
+void Creature::sendJumpNotificationTo(Seat* seat)
+{
+    if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+        return;
+
+    ServerNotification* notification = new ServerNotification(
+        ServerNotificationType::creatureJump, seat->getPlayer());
+    notification->mPacket << getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;
+    ODServer::getSingleton().queueServerNotification(notification);
+}
+
 //! \brief Notes that the creature falls asleep drunk, so it wakes up with a hangover.
 void Creature::sleepStarted()
 {
@@ -8796,10 +9132,21 @@ void Creature::upkeepCreatureDirt()
 
 //! \brief Adds the trail dirt of this creature to the tile it entered: TrailDirtPerTile times DirtFactor for a load
 //! carried or a pulled wounded creature (the DirtFactor of the worker that pulls it), plus the share of it that the creature dirt makes.
+//! A creature that just left a mud bath also leaves its share of the mud on each of the next tiles outside a pool.
 void Creature::dirtyEnteredTile(Tile* tile)
 {
     if((tile == nullptr) || (mDefinition == nullptr))
         return;
+
+    // A creature that left a mud bath carries mud out: each of the next SpaMudTrailTiles tiles outside a pool gets an
+    // equal share of SpaDirtPerBath times the DirtFactor; the creature dirt itself does not change
+    if((mSpaMudTilesLeft > 0) && !RoomSpa::isPoolTile(tile))
+    {
+        const ConfigManager& config = ConfigManager::getSingleton();
+        tile->addDirt(config.getRoomConfigDouble("SpaDirtPerBath") / config.getRoomConfigDouble("SpaMudTrailTiles") *
+            mDefinition->getDirtFactor());
+        --mSpaMudTilesLeft;
+    }
 
     if((mCarriedEntity == nullptr) && !mIsBeingDragged && (mCreatureDirt <= 0.0))
         return;
@@ -9642,6 +9989,10 @@ void Creature::changeSeat(Seat* newSeat)
     mVomited = false;
     mHangoverTurns = 0.0;
     mHangoverPending = false;
+    mSpaMood = 0.0;
+    mRelaxTurns = 0.0;
+    mSpaMudTilesLeft = 0;
+    mSpaBathing = false;
     mUrge = 0.0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;

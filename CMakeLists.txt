@@ -264,6 +264,7 @@ set(OD_SOURCEFILES
     ${SRC}/creatureaction/CreatureActionReloadTrap.cpp
     ${SRC}/creatureaction/CreatureActionSearchDirtToClean.cpp
     ${SRC}/creatureaction/CreatureActionSearchDrink.cpp
+    ${SRC}/creatureaction/CreatureActionSearchSpa.cpp
     ${SRC}/creatureaction/CreatureActionSearchEntityToCarry.cpp
     ${SRC}/creatureaction/CreatureActionSearchFood.cpp
     ${SRC}/creatureaction/CreatureActionSearchGroundTileToClaim.cpp
@@ -370,6 +371,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/CreatureDefinition.cpp
     ${SRC}/entities/DirtPileEntity.cpp
     ${SRC}/entities/InnkeeperEntity.cpp
+    ${SRC}/entities/PoolAttendantEntity.cpp
     ${SRC}/entities/DoorEntity.cpp
     ${SRC}/entities/EntityLoading.cpp
     ${SRC}/entities/GameEntity.cpp
@@ -579,6 +581,7 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomGuardRoom.cpp
     ${SRC}/rooms/RoomTemple.cpp
     ${SRC}/rooms/RoomToilet.cpp
+    ${SRC}/rooms/RoomSpa.cpp
     ${SRC}/rooms/RoomTavern.cpp
     ${SRC}/rooms/RoomTrainingHall.cpp
     ${SRC}/rooms/RoomTreasury.cpp

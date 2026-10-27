@@ -54,6 +54,10 @@ namespace EntityAnimation
     static const std::string eat_chicken_anim = "EatChicken";
     //! A creature squats to relieve itself, on a toilet seat or on the floor (a skeleton without the clip plays Idle)
     static const std::string relieve_anim = "Relieve";
+    //! A creature sits low in the mud bath; a skeleton without the clip plays Idle.
+    static const std::string bathe_anim = "Bathe";
+    //! A creature tucks into a cannonball jump; a skeleton without the clip plays Idle.
+    static const std::string jump_anim = "Jump";
     //! A creature sniffs at food it was given (server action state; the client shows the idle clip and a reaction)
     static const std::string sniff_anim = "Sniff";
     //! A worker pulls a hurt creature backwards by the legs (the clip it plays while walking; the room
@@ -202,6 +206,16 @@ protected:
     virtual bool importFromStream(std::istream& is) override;
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
     virtual void importFromPacket(ODPacket& is) override;
+
+    //! \brief Server: sets the time the current clip has already run (in turns, like the server counts it). The time is
+    //! sent to a client with the full entity data, so a clip that was restored in the middle goes on from there.
+    //! \param time The turns the clip has run; negative values count as 0.
+    void setAnimationTime(double time);
+
+    //! \brief Server: the time the current clip has really run (in turns, like the server counts it), the value a save
+    //! keeps so that a clip can go on exactly where it was.
+    //! \return The turns the current clip has run.
+    double getAnimationTime() const;
 
     std::deque<Ogre::Vector2> mWalkQueue;
     std::string mPrevAnimationState;

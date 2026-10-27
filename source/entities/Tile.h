@@ -125,6 +125,7 @@ enum class TileVisual
     tavernRoom,
     infirmaryRoom,
     ghostRoom,
+    spaRoom,
     countTileVisual
 };
 

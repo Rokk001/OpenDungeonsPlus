@@ -79,6 +79,8 @@ std::string toString(SkillType type)
             return "roomTavern";
         case SkillType::tavernBeer:
             return "tavernBeer";
+        case SkillType::roomSpa:
+            return "roomSpa";
         case SkillType::roomTemple:
             return "roomTemple";
         case SkillType::roomTorture:
@@ -226,6 +228,8 @@ std::string skillTypeToPlayerVisibleString(SkillType type)
             return "The Tavern Room";
         case SkillType::tavernBeer:
             return "Tavern: Beer";
+        case SkillType::roomSpa:
+            return "The Lava Spa Room";
         case SkillType::roomTemple:
             return "The Temple";
         case SkillType::roomTorture:
