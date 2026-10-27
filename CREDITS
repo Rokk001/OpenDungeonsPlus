@@ -160,6 +160,7 @@ skirmish/
 -> TestSingleplayerSmall.level        OD Team                 GPLv3+
 -> TestSingleplayerSmallEmpty.level    OD Team                 GPLv3+
 -> TestSingleplayerSmallPassability.level OD Team              GPLv3+
+-> TestSpa.level                       OD Team                 GPLv3+
 -> TestTavern.level                    OD Team                 GPLv3+
 -> TestTavernNone.level                OD Team                 GPLv3+
 -> TriadDeeps.level                    OD Team                 GPLv3+
