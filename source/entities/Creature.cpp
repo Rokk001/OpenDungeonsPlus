@@ -2177,11 +2177,21 @@ void Creature::update(Ogre::Real timeSinceLastFrame)
     // A client moves a jumping creature along the arc the server told (the server steps it once per turn)
     if(!getIsOnServerMap() && (mJumpTurnsLeft > 0))
     {
-        mJumpElapsed = std::min(static_cast<Ogre::Real>(mJumpTurns), mJumpElapsed +
-            static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
-        setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
-        if(mJumpElapsed >= static_cast<Ogre::Real>(mJumpTurns))
+        // The server ended the jump (a fight, the hand, a removed room): the clip is not the jump clip any more, so the
+        // arc stops and the creature stands on the floor again
+        if(getAnimationStateName() != EntityAnimation::jump_anim)
+        {
             mJumpTurnsLeft = 0;
+            setPosition(Ogre::Vector3(getPosition().x, getPosition().y, mJumpTo.z));
+        }
+        else
+        {
+            mJumpElapsed = std::min(static_cast<Ogre::Real>(mJumpTurns), mJumpElapsed +
+                static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
+            setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+            if(mJumpElapsed >= static_cast<Ogre::Real>(mJumpTurns))
+                mJumpTurnsLeft = 0;
+        }
     }
 
     // Update the visual debugging entities
@@ -8628,6 +8638,33 @@ void Creature::startJump(const Ogre::Vector3& target)
     mJumpTurnsLeft = turns;
     mJumpElapsed = 0.0f;
     clearDestinations(EntityAnimation::jump_anim, false, false);
+    sendJumpNotification();
+}
+
+//! \brief Ends the jump and puts a living creature on the floor again.
+void Creature::cancelJump()
+{
+    if(mJumpTurnsLeft == 0)
+        return;
+
+    mJumpTurnsLeft = 0;
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive())
+        return;
+
+    const Ogre::Vector3 position = getPosition();
+    if(position.z != 0.0f)
+        setPosition(Ogre::Vector3(position.x, position.y, 0.0f));
+}
+
+//! \brief Moves the restarted jump to the saved turn and tells the clients where it is now.
+void Creature::resumeJump(uint32_t turnsLeft)
+{
+    if((mJumpTurnsLeft == 0) || (turnsLeft == 0) || (turnsLeft >= mJumpTurns))
+        return;
+
+    mJumpTurnsLeft = turnsLeft;
+    mJumpElapsed = static_cast<Ogre::Real>(mJumpTurns - mJumpTurnsLeft);
+    setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
     sendJumpNotification();
 }
 

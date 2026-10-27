@@ -488,9 +488,26 @@ bool RoomSpa::addCreatureUsingRoom(Creature* creature)
         }
     }
 
-    // A jump that was running when the room was saved ends at once, in the middle of the place
+    // A jump that was running when the room was saved goes on: the arc is worked out again from the springboard and the
+    // place and moved to the saved turn (the saved value of a jumping bather is the number of turns that were left). A
+    // save without a springboard or without turns left lands the bather in the middle of its place at once.
     if(fromSave && (bather.mState == SpaBatherState::jumping))
-        creature->setPosition(getBlockCentre(bather));
+    {
+        Tile* springboard = getSpringboardTile();
+        const uint32_t turnsLeft = static_cast<uint32_t>(std::max(0.0, bather.mTurnsDone));
+        if((springboard == nullptr) || (turnsLeft == 0))
+        {
+            creature->setPosition(getBlockCentre(bather));
+        }
+        else
+        {
+            creature->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(springboard->getX()),
+                static_cast<Ogre::Real>(springboard->getY()), 0.0f));
+            creature->startJump(getBlockCentre(bather));
+            creature->resumeJump(turnsLeft);
+        }
+        bather.mTurnsDone = 0.0;
+    }
 
     mBathers.push_back(bather);
     if(fromSave && (bather.mState == SpaBatherState::bathing))
@@ -1240,7 +1257,8 @@ void RoomSpa::exportToStream(std::ostream& os) const
         std::ostringstream line;
         line << bather.mCreature->getName() << " " << bather.mBlock.mX << " " << bather.mBlock.mY << " "
              << bather.mBlock.mWidth << " " << bather.mBlock.mHeight << " " << batherStateToString(bather.mState) << " "
-             << bather.mTurnsDone << " " << (bather.mJump ? 1 : 0);
+             << ((bather.mState == SpaBatherState::jumping) ? static_cast<double>(bather.mCreature->getJumpTurnsLeft()) : bather.mTurnsDone)
+             << " " << (bather.mJump ? 1 : 0);
         lines.push_back(line.str());
     }
     for(std::map<std::string, RoomSpaPendingBather>::const_iterator it = mPendingBathers.begin(); it != mPendingBathers.end(); ++it)
@@ -1267,6 +1285,7 @@ bool RoomSpa::importFromStream(std::istream& is)
 
     // The lines come after the tiles of the room, in any order, and every one of them is optional. The first word that
     // is none of them belongs to what follows in the stream: it is put back.
+    bool payerRead = false;
     while(true)
     {
         std::streampos pos = is.tellg();
@@ -1285,6 +1304,7 @@ bool RoomSpa::importFromStream(std::istream& is)
                 return false;
 
             mPayer = static_cast<SpaPayer>(payer);
+            payerRead = true;
         }
         else if(tag == STREAM_TAG_ATTENDANT)
         {
@@ -1341,6 +1361,15 @@ bool RoomSpa::importFromStream(std::istream& is)
             is.seekg(pos);
             break;
         }
+    }
+
+    // Without the line the payer depends on the kind of seat (the seat is known now, it was read with the room): the
+    // computer lets the creatures pay, a human keeper pays himself
+    if(!payerRead)
+    {
+        mPayer = SpaPayer::keeper;
+        if((getSeat() != nullptr) && (getSeat()->getPlayer() != nullptr) && !getSeat()->getPlayer()->getIsHuman())
+            mPayer = SpaPayer::creature;
     }
 
     return true;

@@ -218,8 +218,10 @@ public:
     //! bather.
     void exportToStream(std::ostream& os) const override;
 
-    //! \brief Reads the room and the lines written by exportToStream. A save without these lines loads with the bath
-    //! paid by the keeper (the computer for a seat that the computer plays) and no bather. The bathers read are bound
+    //! \brief Reads the room and the lines written by exportToStream. A save without a SpaPayer line loads with the
+    //! bath paid by the keeper, or by the creatures for a seat that the computer plays, and a save without bathers has no
+    //! bather. A jumping bather is saved with the turns of its jump that are left in place of the turns done, and the jump
+    //! goes on at that turn. The bathers read are bound
     //! to their creatures again in the first turn (doUpkeep).
     bool importFromStream(std::istream& is) override;
 

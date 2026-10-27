@@ -1042,9 +1042,19 @@ public:
     inline bool isJumping() const
     { return mJumpTurnsLeft > 0; }
 
-    //! \brief Server side. Ends a running jump where the creature is (the bath it belongs to was broken off).
-    inline void cancelJump()
-    { mJumpTurnsLeft = 0; }
+    //! \brief Server side. Ends a running jump where the creature is (the bath it belongs to was broken off) and puts a
+    //! living creature that is on the map back on the floor, so that it does not stay in the air. A client ends its arc
+    //! by itself as soon as the clip of the creature is no longer the jump clip (see update).
+    void cancelJump();
+
+    //! \brief Returns the turns of the running jump that are left (0 = no jump); the room saves them.
+    inline uint32_t getJumpTurnsLeft() const
+    { return mJumpTurnsLeft; }
+
+    //! \brief Server side. Goes on with a jump that has just been started again (startJump) at the turn it had when the
+    //! room was saved: moves the creature along the arc to that turn and tells the clients.
+    //! \param turnsLeft The turns of the jump that are left; a value of 0 or not below the length of the jump changes nothing.
+    void resumeJump(uint32_t turnsLeft);
 
     //! \brief Server side. Marks whether the creature sits in a lava spa bath. While it does, the spa mood does not
     //! fade (the bath lifts it exactly to SpaMoodMax); it fades again as soon as the bath is over or broken off.

@@ -124,10 +124,11 @@ struct ConfigManager
 struct Creature
 {
     std::string mName;
-    double mSpaMood, mRelaxTurns; int32_t mSpaMudTilesLeft;
+    double mSpaMood, mRelaxTurns; int32_t mSpaMudTilesLeft; uint32_t mJumpTurnsLeft;
     std::string mOtherBlock;
-    explicit Creature(const std::string& name) : mName(name), mSpaMood(0.0), mRelaxTurns(0.0), mSpaMudTilesLeft(0) {}
+    explicit Creature(const std::string& name) : mName(name), mSpaMood(0.0), mRelaxTurns(0.0), mSpaMudTilesLeft(0), mJumpTurnsLeft(0) {}
     const std::string& getName() const { return mName; }
+    uint32_t getJumpTurnsLeft() const { return mJumpTurnsLeft; }
     void setSpaMood(double val);
     void setRelaxTurns(double turns);
     void setSpaMudTilesLeft(int32_t tiles);
@@ -205,8 +206,13 @@ static void checkSpaBlock()
 }
 
 // ---- Room stream
+struct Player { bool human; bool getIsHuman() const { return human; } };
+struct Seat { Player* player; Player* getPlayer() const { return player; } };
 struct Room
 {
+    Room() : mSeat(nullptr) {}
+    Seat* mSeat;
+    Seat* getSeat() const { return mSeat; }
     void exportToStream(std::ostream& os) const { os << "RoomHead" << std::endl; }
     bool importFromStream(std::istream& is) { std::string head; return static_cast<bool>(is >> head) && head == "RoomHead"; }
 };
@@ -242,6 +248,7 @@ static void checkRoomStream()
     attendant.save.mPlaceX = 16; attendant.save.mPlaceY = 9;
     RoomSpa room; room.mPayer = SpaPayer::creature; room.mAttendant = &attendant;
     RoomSpaBather b1(&reserved); b1.mBlock.mX = 16; b1.mBlock.mY = 8; b1.mBlock.mWidth = 1; b1.mBlock.mHeight = 2; b1.mState = SpaBatherState::reserved; b1.mJump = true;
+    jumping.mJumpTurnsLeft = 1;
     RoomSpaBather b2(&jumping); b2.mBlock.mX = 17; b2.mBlock.mY = 9; b2.mBlock.mWidth = 2; b2.mBlock.mHeight = 2; b2.mState = SpaBatherState::jumping; b2.mJump = true;
     RoomSpaBather b3(&bathing); b3.mBlock.mX = 18; b3.mBlock.mY = 8; b3.mState = SpaBatherState::bathing; b3.mTurnsDone = 12.5;
     RoomSpaBather b4(&done); b4.mBlock.mX = 16; b4.mBlock.mY = 10; b4.mState = SpaBatherState::bathing; b4.mTurnsDone = 71.5; b4.mDone = true;
@@ -251,7 +258,7 @@ static void checkRoomStream()
     expect(text.find("PoolAttendant 12.5 8.25 doze 7.5 99.5 1 16 9") != std::string::npos, "attendant line: " + text);
     expect(text.find("SpaBathers 3") != std::string::npos, "three bathers, the one that is done is not written: " + text);
     expect(text.find("Orc1 16 8 1 2 reserved 0 1") != std::string::npos, "reserved bather line: " + text);
-    expect(text.find("Troll1 17 9 2 2 jumping 0 1") != std::string::npos, "jumping bather line");
+    expect(text.find("Troll1 17 9 2 2 jumping 1 1") != std::string::npos, "jumping bather line keeps the turns of the jump that are left");
     expect(text.find("Goblin1 18 8 1 1 bathing 12.5 0") != std::string::npos, "bathing bather line");
     expect(text.find("Spider1") == std::string::npos, "finished bath not written");
 
@@ -295,6 +302,15 @@ static void checkRoomStream()
     // A bather line without the jump flag (old or hand written)
     RoomSpa noJump; std::istringstream noJumpIn("RoomHead\nSpaBathers 1\nOrc1 16 8 1 2 bathing 3\n");
     expect(noJump.importFromStream(noJumpIn) && noJump.mPendingBathers["Orc1"].mJump == false, "bather line without the jump flag");
+    // Without a SpaPayer line the payer depends on the kind of seat: the computer lets the creatures pay
+    Player computer; computer.human = false; Player human; human.human = true;
+    Seat computerSeat; computerSeat.player = &computer; Seat humanSeat; humanSeat.player = &human;
+    RoomSpa aiRoom; aiRoom.mSeat = &computerSeat; std::istringstream aiIn("RoomHead\n");
+    expect(aiRoom.importFromStream(aiIn) && aiRoom.mPayer == SpaPayer::creature, "no payer line, computer seat: the creatures pay");
+    RoomSpa humanRoom; humanRoom.mSeat = &humanSeat; std::istringstream humanIn("RoomHead\n");
+    expect(humanRoom.importFromStream(humanIn) && humanRoom.mPayer == SpaPayer::keeper, "no payer line, human seat: the keeper pays");
+    RoomSpa savedRoom; savedRoom.mSeat = &computerSeat; std::istringstream savedIn("RoomHead\nSpaPayer 0\n");
+    expect(savedRoom.importFromStream(savedIn) && savedRoom.mPayer == SpaPayer::keeper, "a saved payer line wins over the seat kind");
     // A room that was saved before the spa (tiles only) loads with the defaults
     RoomSpa plain; std::istringstream plainIn("RoomHead\n");
     expect(plain.importFromStream(plainIn) && plain.mPayer == SpaPayer::keeper && !plain.mPendingAttendant.mPresent && plain.mPendingBathers.empty(), "old room loads with defaults");
