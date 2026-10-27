@@ -200,6 +200,7 @@ struct AmbienceEffect
     //! Object clips or sounds loop while the condition holds; clips stop at their last pose when it ends
     //! Object clips: the clip runs in a loop as long as the condition holds (and stops at its last pose when it ends)
     //! Sound effects loop while the target remains visible and its condition holds.
+    //! Object clips and sounds run in a loop while the condition holds; clips stop at their last pose.
     bool mLoop;
     //! How the object is moved (kind motion)
     AmbienceMotion mMotion;

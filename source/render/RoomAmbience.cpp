@@ -321,6 +321,7 @@ RoomAmbience::RoomAmbience(GameMap* gameMap, const std::string& configPath) :
 }
 
 //! \brief Releases the spatial sound loops owned by this ambience instance.
+//! \brief Stops the spatial sound loops owned by this ambience instance.
 RoomAmbience::~RoomAmbience()
 {
     stopSoundLoops();
@@ -715,6 +716,7 @@ void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
 
 //! \brief Stops room effects and their looping sounds when the map, view or ambience mode changes.
 //! \brief Stops all room effects and releases their visual and sound resources.
+//! \brief Clears active ambience effects and releases their spatial sound loops.
 void RoomAmbience::stopAll()
 {
     stopSoundLoops();
@@ -1905,6 +1907,7 @@ void RoomAmbience::reconcile()
     }
 }
 
+//! \brief Plays timed clips and sounds and keeps loops only for current visible object candidates.
 //! \brief Plays due clips and sounds and keeps visible configured sound loops active.
 void RoomAmbience::playClips()
 {
@@ -2020,6 +2023,7 @@ void RoomAmbience::updateSoundLoops()
     }
 }
 
+//! \brief Releases owned sound handles on mode changes, reloads, map teardown and shutdown.
 //! \brief Stops every loop owned by room ambience before clearing its sound handles.
 void RoomAmbience::stopSoundLoops()
 {
