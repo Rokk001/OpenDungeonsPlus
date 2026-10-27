@@ -1178,7 +1178,8 @@ void Creature::exportToStream(std::ostream& os) const
        mArenaKnockOut)
     {
         os << "	" << CAPTIVITY_SAVE_OPEN << " " << mPrisonMood << " " << mTortureMood << " " << mPrisonBrokenTurns
-           << " " << mTortureBrokenTurns << " " << (mArenaKnockOut ? 1 : 0) << " " << CAPTIVITY_SAVE_CLOSE;
+           << " " << mTortureBrokenTurns << " " << (mArenaKnockOut ? 1 : 0) << " "
+           << (mArenaKnockOut ? mKoTurnCounter : 0.0) << " " << CAPTIVITY_SAVE_CLOSE;
     }
     if(!isAlive())
     {
@@ -1435,8 +1436,16 @@ bool Creature::importFromStream(std::istream& is)
             int32_t loadedPrisonBrokenTurns = 0;
             int32_t loadedTortureBrokenTurns = 0;
             int32_t loadedArenaKnockOut = 0;
-            if(!(is >> loadedPrisonMood >> loadedTortureMood >> loadedPrisonBrokenTurns >> loadedTortureBrokenTurns
-                >> loadedArenaKnockOut >> captivityClose) || (captivityClose != CAPTIVITY_SAVE_CLOSE))
+            double loadedArenaKoTurns = 0.0;
+            // The remaining knock-out time is the last value; a block without it ends right after the arena flag
+            bool captivityRead = static_cast<bool>(is >> loadedPrisonMood >> loadedTortureMood >> loadedPrisonBrokenTurns
+                >> loadedTortureBrokenTurns >> loadedArenaKnockOut >> captivityClose);
+            if(captivityRead && (captivityClose != CAPTIVITY_SAVE_CLOSE))
+            {
+                std::istringstream koStream(captivityClose);
+                captivityRead = static_cast<bool>(koStream >> loadedArenaKoTurns) && static_cast<bool>(is >> captivityClose);
+            }
+            if(!captivityRead || (captivityClose != CAPTIVITY_SAVE_CLOSE))
             {
                 OD_LOG_WRN("Invalid captivity block for creature=" + getName() + ", reason="
                     + (is.fail() ? "a value is missing or not a number" : "closing token is '" + captivityClose
@@ -1448,6 +1457,9 @@ bool Creature::importFromStream(std::istream& is)
             mPrisonBrokenTurns = loadedPrisonBrokenTurns;
             mTortureBrokenTurns = loadedTortureBrokenTurns;
             mArenaKnockOut = (loadedArenaKnockOut != 0);
+            // A loaded arena knock-out goes on with its remaining time and gets up when it runs out
+            if(mArenaKnockOut)
+                mKoTurnCounter = std::max(1.0, loadedArenaKoTurns);
             continue;
         }
 
@@ -2578,6 +2590,21 @@ void Creature::doUpkeep()
         }
     }
 
+    // A creature that left prison and torture chamber for good (setInJail(nullptr) of the room already forgot the
+    // prison seat) loses its prison and torture mood; one picked up or standing in a prison or torture chamber keeps it
+    if((mSeatPrison == nullptr) && getIsOnMap() &&
+       ((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0)))
+    {
+        Tile* releaseTile = getPositionTile();
+        Room* releaseRoom = (releaseTile == nullptr) ? nullptr : releaseTile->getCoveringRoom();
+        if((releaseRoom == nullptr) ||
+           ((releaseRoom->getType() != RoomType::prison) && (releaseRoom->getType() != RoomType::torture)))
+        {
+            resetPrisonMood();
+            resetTortureMood();
+        }
+    }
+
     // The creature may be killed while temporary KO
     if((mKoTurnCounter != 0) && !isAlive())
         mKoTurnCounter = 0;
@@ -2869,7 +2896,14 @@ void Creature::doUpkeep()
             roomPrison->useRoom(*this, true);
 
         // A jailed creature gets hungry and thirsty like any other, and the prison slowly breaks its mood
-        if(!getSeat()->isRogueSeat())
+        // (a rogue prisoner too: the increase functions skip rogue creatures, so its needs grow here directly)
+        if(getSeat()->isRogueSeat())
+        {
+            mHunger = std::min(100.0, mHunger + mDefinition->getHungerGrowthPerTurn());
+            if(mDefinition->hasThirst())
+                mThirst = std::min(THIRST_STATE_MAX, mThirst + mDefinition->getThirstGrowthPerTurn());
+        }
+        else
         {
             increaseHunger(mDefinition->getHungerGrowthPerTurn());
             increaseThirst(mDefinition->getThirstGrowthPerTurn());
@@ -2887,7 +2921,7 @@ void Creature::doUpkeep()
         {
             --mMoodCooldownTurns;
         }
-        else if(!getSeat()->isRogueSeat())
+        else
         {
             computeMood();
             computeCreatureOverlayMoodValue();
