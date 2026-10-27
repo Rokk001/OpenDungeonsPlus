@@ -10437,6 +10437,7 @@ void Creature::clearGhostHuntVisuals()
     }
 }
 
+//! \brief Keeps hunter equipment creature-scaled and starts capture effects at its authored nozzle.
 void Creature::updateGhostHuntVisuals(double seconds)
 {
     if(getIsOnServerMap() || getEntityNode()==nullptr) return;
@@ -10446,9 +10447,14 @@ void Creature::updateGhostHuntVisuals(double seconds)
     {
         Ogre::Entity* pack=scene->createEntity(getName()+"_GhostBackpack","GhostBackpack.mesh");
         pack->setQueryFlags(0);pack->setCastShadows(true);
-        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,-0.18f,0.6f));
+        Ogre::Entity* creatureEntity=scene->getEntity(getOgreNamePrefix()+getName());
+        const Ogre::Real creatureHeight=creatureEntity->getBoundingBox().getSize().z;
+        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,-0.3f,0.5f*creatureHeight));
         mGhostBackpackNode->attachObject(pack);
     }
+    // The fitted Capture nozzle cap from the authored GhostBackpack mesh, in pack-local coordinates.
+    const Ogre::Vector3 nozzlePosition=mGhostBackpackNode->convertLocalToWorldPosition(
+        Ogre::Vector3(0.153606342f, 0.103960392f, 0.239335642f));
     if(!mGhostShrinkTarget.empty() && mGhostShrinkTarget!=mGhostThrowTarget)
     {
         GhostEntity* previous=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
@@ -10504,11 +10510,11 @@ void Creature::updateGhostHuntVisuals(double seconds)
         mGhostBeamSound=SoundEffectsManager::getSingleton().startSpatialLoop("Rooms/GhostRoom/Beam",getPosition().x,getPosition().y);
     }
     SoundEffectsManager::getSingleton().setSpatialLoopPosition(mGhostBeamSound,getPosition().x,getPosition().y);
-    if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(getPosition()+getWalkDirection()*0.35f+Ogre::Vector3(0.0f,0.0f,0.65f));
+    if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(nozzlePosition);
     mGhostBeamSample+=seconds;
     if(mGhostBeamSample<0.1) return;
     mGhostBeamSample=std::fmod(mGhostBeamSample,0.1);
-    const Ogre::Vector3 start=getPosition()+getWalkDirection()*0.35f+Ogre::Vector3(0.0f,0.0f,0.65f);
+    const Ogre::Vector3 start=nozzlePosition;
     const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
     for(size_t chain=0;chain<3;++chain)
     {
