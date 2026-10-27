@@ -103,6 +103,7 @@ Seat::Seat(GameMap* gameMap) :
     mIsDebuggingVision(false),
     mIsMapRevealed(false),
     mSkillPoints(0),
+    mSkillPointsRemainder(0.0),
     mCurrentSkill(nullptr),
     mGuiSkillNeedsRefresh(false),
     mConfigPlayerId(-1),
@@ -1243,8 +1244,16 @@ bool Seat::importSeatFromStream(std::istream& is)
     // Optional seat blocks may occur in any order, including in older saves.
     while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
-        str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]")
+        str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]" ||
+        str == "[ResearchRemainder]")
     {
+    if(str == "[ResearchRemainder]")
+    {
+        if(!(is >> mSkillPointsRemainder) || mSkillPointsRemainder < 0.0 || mSkillPointsRemainder >= 1.0 ||
+           !(is >> str))
+            return false;
+        continue;
+    }
     if(str == "[GhostBells]")
     {
         size_t count=0;
@@ -1621,6 +1630,8 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     for(SkillType type : mSkillDone)
         os << Skills::toString(type) << "\t" << getSkillLevel(type) << "\n";
     os << "[/ResearchProgress]\n";
+    if(mSkillPointsRemainder > 0.0)
+        os << "[ResearchRemainder]\t" << std::setprecision(17) << mSkillPointsRemainder << std::defaultfloat << "\n";
     os << "[Infirmary]\t" << getInfirmaryPayer() << '\t' << mInfirmaryThreshold << '\t'
         << mInfirmaryHealOn << "\t[/Infirmary]\n";
 
@@ -2040,6 +2051,18 @@ void Seat::addSkillPoints(int32_t points)
         completeResearch(type);
         setSkillTree(mSkillPending);
     }
+}
+
+//! \brief Adds fractional skill points: the whole part is added at once, the fraction is kept for the next call.
+void Seat::addSkillPoints(double points)
+{
+    if(points < 0.0)
+        return;
+
+    mSkillPointsRemainder += points;
+    const double whole = std::floor(mSkillPointsRemainder);
+    mSkillPointsRemainder -= whole;
+    addSkillPoints(static_cast<int32_t>(whole));
 }
 
 bool Seat::getCurrentSkillProgress(SkillType& type, float& progress) const

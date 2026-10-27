@@ -8,7 +8,7 @@ What is checked
                           SpaBathTurns = SpaMoodMax / SpaMoodPerTurn,
                           SpaRelaxTurns = HangoverTurns of global.cfg, SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns
                           (both to 4 places), SpaCostPerTile = CasinoCostPerTile, SpaHP = CasinoHP,
-                          SpaDirtPerBath = 1.6154 / (0.62 x 9 / (SpaBathTurns + 1)) to 4 places
+                          SpaDirtPerBath = 1.6154 / (0.557 x 9 / (SpaBathTurns + 1)) to 4 places
   skills.cfg              roomSpa 250 (tier II), the effect line roomSpa RelaxTime mul 1.0 1.2 1.4, both documented
   SkillManager.cpp        the research entry (parent tavern), the base line for RelaxTime and its effect text
   KeeperAI.cpp            the AI builds the spa directly after the tavern
@@ -60,7 +60,7 @@ tavern = block_values(global_cfg, 'Tavern')
 SPA = {
     'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodMax': '300', 'SpaMoodPerTurn': '21',
     'SpaMoodDecayPerTurn': '0.4', 'SpaBathTurns': '14.2857', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
-    'SpaDirtPerBath': '4.4252', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
+    'SpaDirtPerBath': '4.925697143427089', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
     'SpaAttendantActMaxSeconds': '20', 'SpaAttendantCannonballMinSeconds': '120',
     'SpaAttendantCannonballMaxSeconds': '180', 'SpaCannonballChance': '0.25', 'SpaJumpTurns': '2',
     'SpaJumpHeight': '1.0',
@@ -86,10 +86,10 @@ factor = 1.0 + float(rooms['SpaBathTurns']) / float(rooms['SpaRelaxTurns'])
 assert round(factor, 4) == float(rooms['SpaRelaxWorkFactor']), 'SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns'
 assert float(rooms['SpaCostPerTile']) == float(rooms['CasinoCostPerTile'])
 assert float(rooms['SpaHP']) == float(rooms['CasinoHP'])
-# The dirt formula: class high 1.6154, occupancy 0.62, nine pool spots of a 25 tile room, one use per bath turn plus one
+# The dirt formula: class high 1.6154, occupancy 0.557, nine pool spots of a 25 tile room, one use per bath turn plus one
 use_rate = 9.0 / (float(rooms['SpaBathTurns']) + 1.0)
-dirt = 1.6154 / (0.62 * use_rate)
-assert round(dirt, 4) == float(rooms['SpaDirtPerBath']), 'SpaDirtPerBath by the dirt formula: ' + str(round(dirt, 4))
+dirt = 1.6154 / (0.557 * use_rate)
+assert round(dirt, 4) == round(float(rooms['SpaDirtPerBath']), 4), 'SpaDirtPerBath by the dirt formula: ' + str(round(dirt, 4))
 # The jump timings are ordered ranges
 assert float(rooms['SpaAttendantActMinSeconds']) <= float(rooms['SpaAttendantActMaxSeconds'])
 assert float(rooms['SpaAttendantCannonballMinSeconds']) <= float(rooms['SpaAttendantCannonballMaxSeconds'])
