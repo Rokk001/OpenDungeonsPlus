@@ -47,7 +47,8 @@ enum class GameEntityType
     merchantEntity,
     herbBundleEntity,
     innkeeperEntity,
-    infirmaryShamanEntity
+    infirmaryShamanEntity,
+    ghostEntity
 };
 
 ODPacket& operator<<(ODPacket& os, const GameEntityType& type);

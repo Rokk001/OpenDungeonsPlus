@@ -16,6 +16,7 @@
  */
 
 #include "entities/Creature.h"
+#include "entities/GhostEntity.h"
 #include "creaturemood/CreatureMoodFee.h"
 #include "creaturemood/CreatureMoodRested.h"
 #include "entities/CreatureProgression.h"
@@ -2597,6 +2598,13 @@ void Creature::doUpkeep()
 
             if(getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
                 getSeat()->getPlayer()->notifyCreatureKilled(*this);
+            if(getIsOnServerMap() && !getDefinition()->isWorker())
+            {
+                GhostEntity* ghost = new GhostEntity(getGameMap(), *this);
+                ghost->addToGameMap();
+                ghost->createMesh();
+                ghost->setPosition(ghost->getPosition());
+            }
             mDeathCounter = 1;
         }
         if(getDefinition()->isWorker())
@@ -9518,7 +9526,8 @@ void Creature::flee()
     pushAction(Utils::make_unique<CreatureActionFlee>(*this));
 }
 
-void Creature::fleeFromTile(Tile* fearTile, double nbTurns)
+//! \brief Starts fear flight, optionally playing the ghost flinch before moving.
+void Creature::fleeFromTile(Tile* fearTile, double nbTurns, bool scaredPose)
 {
     // Fear breaks the possession of the creature
     if(isPossessed())
@@ -9528,7 +9537,9 @@ void Creature::fleeFromTile(Tile* fearTile, double nbTurns)
     fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::scared), 1, 0, false);
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
-    pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns));
+    pushAction(Utils::make_unique<CreatureActionFlee>(*this, fearTile, nbTurns, scaredPose));
+    if(scaredPose)
+        setAnimationState("Scared", false, Ogre::Vector3::ZERO, false);
 }
 
 //! \brief Applies a resisted temporary stun while retaining fractional duration.
