@@ -88,6 +88,8 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mClientConnectionTimeout(5000),
     mBaseSpawnPoint(10),
     mCreatureDeathCounter(10),
+    mCorpseLieSeconds(0.0),
+    mCorpseDecaySeconds(0.0),
     mMaxCreaturesPerSeatAbsolute(30),
     mMaxCreaturesPerSeatDefault(10),
     mCreaturesPerPortal(5),
@@ -701,6 +703,17 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             configFile >> nextParam;
             mClientConnectionTimeout = Helper::toUInt32(nextParam);
             // Not mandatory
+        }
+
+        if(nextParam == "CorpseLieSeconds")
+        {
+            configFile >> nextParam;
+            mCorpseLieSeconds = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "CorpseDecaySeconds")
+        {
+            configFile >> nextParam;
+            mCorpseDecaySeconds = Helper::toDouble(nextParam);
         }
 
         if(nextParam == "CreatureDeathCounter")

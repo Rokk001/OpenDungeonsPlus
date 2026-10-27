@@ -20,6 +20,7 @@
  */
 
 #include "render/RenderManager.h"
+#include "ODApplication.h"
 #include "render/GroundShadowCameraSetup.h"
 
 #include "camera/CullingManager.h"
@@ -4790,6 +4791,7 @@ void RenderManager::rrDestroySeatVisionVisualDebug(int seatId, Tile* tile)
 }
 
 //! \brief Selects the rendered clip and preserves a natural wake transition when gameplay returns to idle.
+//! \brief Selects object clips, including the turn-scaled corpse decay and fly swarm in every room.
 void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObject, const std::string& animation, bool loop)
 {
     std::string objectName = curAnimatedObject->getOgreNamePrefix()
@@ -4851,7 +4853,7 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
             state->setLoop(false);
             state->setTimePosition(state->getLength());
             const Ogre::Real duration = std::max(1.0f,
-                static_cast<float>(ConfigManager::getSingleton().getRoomConfigInt32("CryptRotNbTurns")));
+                static_cast<float>(ConfigManager::getSingleton().getCorpseDecaySeconds() * ODApplication::turnsPerSecond));
             dropCreature->setAnimationState(setEntityAnimation(objectEntity,
                 createCreatureDecayAnimation(objectEntity, state->getAnimationName(), duration), false));
         }
