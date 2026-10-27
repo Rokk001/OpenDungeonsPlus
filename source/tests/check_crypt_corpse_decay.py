@@ -11,6 +11,7 @@ renderer = (repo / 'source/render/RenderManager.cpp').read_text()
 crypt = (repo / 'source/rooms/RoomCrypt.cpp').read_text()
 
 
+# Extract an unchanged production body for the placement and animation fixture.
 def function(source, signature):
     start = source.index(signature)
     end = source.index('{', start) + 1
@@ -33,7 +34,9 @@ probe = r'''
 #include <vector>
 #define OD_LOG_ERR(x) do {} while(false)
 int checks=0,failures=0;
+//! \brief Records one named production behaviour assertion.
 void check(bool pass,const char* label){++checks;if(!pass){++failures;std::cout<<"FAIL "<<label<<'\n';}}
+//! \brief Compares equivalent quaternion signs without rejecting float identity.
 bool sameRotation(const Ogre::Quaternion& a,const Ogre::Quaternion& b){
  // Component-space comparison avoids acos(dot(q,q)) rejecting q itself after float rounding.
  return std::min((a-b).Norm(),(a+b).Norm())<=1e-10f;
@@ -48,7 +51,19 @@ struct GameMap {Tile destination{4,5};std::map<std::pair<int,int>,Tile*> extra;
  Tile* getTile(int x,int y){if(x==4&&y==5)return &destination;std::map<std::pair<int,int>,Tile*>::iterator i=extra.find({x,y});return i==extra.end()?nullptr:i->second;}};
 struct GameEntity {GameEntityType type=GameEntityType::creature;GameEntityType getObjectType(){return type;}
  std::string getName(){return "test";}};
+//! \brief Supplies the corpse properties read by crypt delivery.
 struct Creature:GameEntity {
+ //! \brief Provides the worker flag used by the real admission gates.
+ struct Definition {bool worker=false;
+  //! \brief Reports the fixture type's worker flag.
+  bool isWorker()const{return worker;}} definition;
+ bool carried=false,decaying=false;double corpseTurns=83.25,decayTurns=-1;
+ //! \brief Supplies the type for the production worker exclusion.
+ Definition* getDefinition(){return &definition;}
+ //! \brief Supplies the production decay exclusion flag.
+ bool isCorpseDecaying()const{return decaying;}
+ //! \brief Distinguishes reservations from delivered bodies on spot removal.
+ bool isCorpseCarried()const{return carried;}
  Tile* tile=nullptr;std::string state,cleared;bool onTile=true;bool loop=true,idle=true;
  bool alive=false;bool isAlive(){return alive;}
  Tile* getPositionTile(){return tile;}
@@ -59,7 +74,7 @@ struct Creature:GameEntity {
 enum class ActiveSpotPlace {activeSpotCenter,other};
 struct Room {void notifyActiveSpotRemoved(ActiveSpotPlace,Tile*){}};
 struct RoomCrypt:Room {
- GameMap map;std::map<Tile*,std::pair<Creature*,double>> mRottingCreatures;
+ GameMap map;std::map<Tile*,Creature*> mRottingCreatures;
  std::map<Tile*,BuildingObject*> objects;const std::map<Tile*,BuildingObject*>& getBuildingObjects(){return objects;}
  RoomCrypt(){map.destination.room=this;}
  GameMap* getGameMap(){return &map;}std::string getName(){return "crypt";}
@@ -73,35 +88,37 @@ int main(int argc,char** argv){try{
  check(!sameRotation(Ogre::Quaternion::IDENTITY,Ogre::Quaternion(Ogre::Radian(.001f),Ogre::Vector3::UNIT_X)),"rotation check rejects a genuine angular error");
  RoomCrypt room;Tile spot{4-OFFSET_TILE_X,5-OFFSET_TILE_Y},wrong{9,9};Creature carrier,corpse;
  carrier.tile=corpse.tile=&room.map.destination;
- room.mRottingCreatures[&spot]={&corpse,-1};
+ room.mRottingCreatures[&spot]=&corpse;
  room.notifyCarryingStateChanged(&carrier,&corpse);
- check(corpse.state=="Rot"&&corpse.cleared=="Rot","placement persists decay state and clears stale walking");
- check(!corpse.loop&&!corpse.idle&&!corpse.onTile,"corpse never returns to idle or normal death upkeep");
- check(room.mRottingCreatures[&spot].second==0,"existing rot counter begins at zero");
+ check(corpse.state.empty()&&corpse.cleared.empty(),"delivery does not start decay or change the body pose");
+ check(corpse.loop&&corpse.idle&&!corpse.onTile,"delivery unregisters the body without changing animation flags");
+ check(corpse.corpseTurns==83.25&&corpse.decayTurns==-1,"delivery preserves the remaining fractional lie time");
  room.notifyActiveSpotRemoved(ActiveSpotPlace::activeSpotCenter,&spot);
- check(corpse.onTile&&corpse.state=="Die"&&corpse.cleared=="Die","removed crypt spot restores ordinary corpse state");
+ check(corpse.onTile&&corpse.state.empty()&&corpse.cleared.empty(),"removed crypt spot restores registration without restarting the phase");
  check(room.mRottingCreatures.empty(),"removed spot releases reservation");
- corpse.state="unchanged";corpse.onTile=true;carrier.tile=&wrong;
- room.mRottingCreatures[&spot]={&corpse,-1};room.notifyCarryingStateChanged(&carrier,&corpse);
+ corpse.state="unchanged";corpse.onTile=true;corpse.carried=true;carrier.tile=&wrong;
+ room.mRottingCreatures[&spot]=&corpse;room.notifyCarryingStateChanged(&carrier,&corpse);
  check(corpse.state=="unchanged"&&corpse.onTile,"interrupted delivery does not start decay");
- check(room.mRottingCreatures[&spot].first==nullptr,"interrupted delivery frees reservation");
- room.mRottingCreatures[&spot]={&corpse,-1};room.notifyActiveSpotRemoved(ActiveSpotPlace::activeSpotCenter,&spot);
+ check(room.mRottingCreatures[&spot]==nullptr,"interrupted delivery frees reservation");
+ room.mRottingCreatures[&spot]=&corpse;room.notifyActiveSpotRemoved(ActiveSpotPlace::activeSpotCenter,&spot);
  check(corpse.state=="unchanged","removing a reserved but unused spot leaves carried corpse unchanged");
 
  BuildingObject marker;RoomCrypt delivery;Tile grave{4,6},side{3,6,&delivery};Creature body;
- delivery.mRottingCreatures[&grave]={nullptr,-1};delivery.map.extra[{3,6}]=&side;
+ delivery.mRottingCreatures[&grave]=nullptr;delivery.map.extra[{3,6}]=&side;
  check(delivery.hasCarryEntitySpot(&body),"available empty delivery tile is advertised");
  body.alive=true;check(!delivery.hasCarryEntitySpot(&body),"crypt still rejects living creatures");body.alive=false;
+ body.definition.worker=true;check(!delivery.hasCarryEntitySpot(&body),"crypt rejects workers");body.definition.worker=false;
+ body.decaying=true;check(!delivery.hasCarryEntitySpot(&body)&&delivery.askSpotForCarriedEntity(&body)==nullptr,"decaying corpses cannot be newly delivered");body.decaying=false;
  delivery.objects[&delivery.map.destination]=&marker;
  check(delivery.askSpotForCarriedEntity(&body)==&side,"statue redirects reservation to free side tile");
- check(delivery.mRottingCreatures[&grave].first==&body&&!delivery.hasCarryEntitySpot(&body),"one corpse reserves one grave");
+ check(delivery.mRottingCreatures[&grave]==&body&&!delivery.hasCarryEntitySpot(&body),"one corpse reserves one grave");
  carrier.tile=&delivery.map.destination;body.tile=carrier.tile;
  delivery.notifyCarryingStateChanged(&carrier,&body);
- check(!delivery.mRottingCreatures[&grave].first&&body.state.empty(),"old blocked tile is not accepted as new delivery");
+ check(!delivery.mRottingCreatures[&grave]&&body.state.empty(),"old blocked tile is not accepted as new delivery");
  check(delivery.askSpotForCarriedEntity(&body)==&side,"interrupted reservation can be reused");
  carrier.tile=body.tile=&side;delivery.notifyCarryingStateChanged(&carrier,&body);
- check(body.state=="Rot"&&!body.onTile&&delivery.mRottingCreatures[&grave].second==0,"free side delivery starts unchanged decay");
- delivery.mRottingCreatures[&grave]={nullptr,-1};delivery.objects[&side]=&marker;
+ check(body.state.empty()&&!body.onTile&&body.corpseTurns==83.25&&body.decayTurns==-1,"free side delivery preserves the corpse clock and pose");
+ delivery.mRottingCreatures[&grave]=nullptr;delivery.objects[&side]=&marker;
  check(!delivery.hasCarryEntitySpot(&body)&&delivery.askSpotForCarriedEntity(&body)==nullptr,"blocked grave is never reserved");
  delivery.objects.clear();delivery.map.destination.room=nullptr;side.room=nullptr;
  check(delivery.getDeliveryTile(&grave)==nullptr,"delivery never targets another room or outside the map");
@@ -169,9 +186,9 @@ with tempfile.TemporaryDirectory(prefix='odp-crypt-decay-') as directory:
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17',
                     f'/I{prefix / "include/OGRE"}', 'check.cpp', '/Fecheck.exe', '/link',
-                    f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True)
+                    f'/LIBPATH:{prefix / "lib"}', 'OgreMain.lib'], cwd=work, check=True, stdin=subprocess.DEVNULL, timeout=180)
     result = subprocess.run([str(work / 'check.exe'), str(repo), str(prefix)], cwd=work,
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=180)
     print('\n'.join(line for line in result.stdout.splitlines() if 'CHECKS=' in line or 'FAIL ' in line))
     if result.returncode:
         print(result.stderr)

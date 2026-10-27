@@ -557,9 +557,9 @@ enumerators = [name for name in enumerators if name not in ('relationshipTier', 
 # The tavern notifications follow the equipment notifications; the complete combined tail is pinned below
 # Campaign victory appends one value after the historical tail without changing existing ordinals.
 # Equipment and infirmary notifications follow campaign victory without changing existing ordinals.
-assert enumerators[-12:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings'], enumerators[-12:]
+assert enumerators[-13:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings'], enumerators[-13:]
 assert enumerators.count('campaignVictory') == 1
-enumerators = enumerators[:-9]
+enumerators = enumerators[:-10]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
 assert enumerators.count('wallTorches') == 1

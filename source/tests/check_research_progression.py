@@ -230,7 +230,7 @@ int main(int argc,char** argv){try {
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
         if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
-    check(all.size()==63,"all 63 research entries");
+    check(all.size()==64,"all 64 research entries");
     check(ConfigManager::getSingleton().freeLevelOne.size()==6,"six free level one entries in skills.cfg");
     const std::vector<std::pair<SkillType,int> > none;
     // The research tree: tabs, tiers and parents of the production constructor
@@ -358,7 +358,10 @@ int main(int argc,char** argv){try {
         {T::roomLibrary,"PointsPerWork",5,5,6,7},{T::roomTrainingHall,"XpPerHit",5,5,6,7},{T::roomWorkshop,"PointsPerWork",5,5,6,7},
         {T::roomGuardRoom,"WakefulnessPerDuty",0.5,0.5,0.4,0.3335},{T::roomCasino,"Fee",.1,.1,.12,.14},{T::roomCasino,"Mood",180,180,216,252},
         {T::roomArena,"LevelCap",20,20,25,30},{T::roomPrison,"Capacity",1,1,1.5,2},{T::roomPrison,"SkeletonLevel",1,1,2,3},
-        {T::roomCrypt,"RotTime",30,30,24,20.01},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
+        {T::roomCrypt,"LichCorpses",10,10,8,6},{T::roomCrypt,"LichLevel",0,0,1,2},
+        {T::roomGhostRoom,"EctoplasmLevels",10,10,8,6},{T::roomGhostRoom,"BoxCapacity",1,1,2,3},
+        {T::roomGhostRoom,"BeamRange",1,1,2,3},{T::roomGhostRoom,"CatchTime",5.5,5.5,4.4,3.6685},
+        {T::roomGhostRoom,"RevivePrice",14000,14000,12000,10000},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
         {T::roomTorture,"ConversionSpeed",1,1,1.2,1.4},{T::roomTemple,"PrayerMana",60,60,72,84},
         {T::keeperDominion,"CreatureLimit",10,12,14,16},{T::tavernBeer,"PortalCooldown",50,50,45,40},
         {T::trapCannon,"Damage",20.5,92.25,217.915,386.63},{T::trapSpike,"Damage",10,45,106.3,188.6},
