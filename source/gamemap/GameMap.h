@@ -753,6 +753,7 @@ public:
     //! \brief Looks up an entity by its synchronized type and unique name.
     //! \brief Resolves a typed entity identity for movement, hand and appearance notifications.
     //! \brief Includes equipment bags, merchant figures and carryable herb bundles.
+    //! \brief Resolves a typed identity, checking ghost and box types before returning a shared-registry entity.
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 

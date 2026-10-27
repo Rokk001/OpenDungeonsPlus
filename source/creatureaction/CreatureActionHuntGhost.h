@@ -29,6 +29,10 @@ public:
     void exportToStream(std::ostream& stream) const;
     //! \brief Reads the hunt and optional exact route continuation.
     bool importFromStream(std::istream& stream);
+    //! \brief Transfers saved equipment and emptying identities with the room floor.
+    void transferRoom(const std::string& previous, const std::string& current, bool hook, bool empty);
+    //! \brief Pins a saved occupied cauldron before any equipment slot is rebound.
+    void restoreLayout();
     //! \brief Restores reserved equipment after all rooms and entities have loaded.
     void restore();
     //! \brief Awards the training hall's fractional experience once per active hunt turn.
@@ -39,6 +43,12 @@ public:
     static void playSound(GameMap& map, Tile& tile, const std::string& family);
     //! \brief Returns whether this hunt currently wears its backpack.
     bool hasBackpack() const { return mEquipped && !mInterrupted; }
+    //! \brief Returns the visual box phase: absent, thrown or carried.
+    uint32_t getBoxVisualState() const { return mState==3?1u:mGhosts.empty()?0u:2u; }
+    //! \brief Returns the ghost under a box being thrown.
+    std::string getThrowGhostName() const { return mState==3?mTarget:std::string(); }
+    //! \brief Returns the current exact fractional phase clock.
+    double getStepTurns() const { return mTurns; }
     //! \brief Returns the active beam target name for the client presentation.
     const std::string& getBeamTarget() const { return mBeamTarget; }
 private:
@@ -59,18 +69,22 @@ private:
     std::string mHookRoom;
     int mHookX = 0;
     int mHookY = 0;
+    size_t mHookSlot = 0;
     double mTurns = 0.0;
     double mRepathTurns = 0.0;
+    int64_t mLastTimedTurn = -1;
     std::vector<std::string> mGhosts;
     std::vector<std::string> mReviveGhosts;
     std::string mReviveTarget;
     std::string mBeamTarget;
     std::string mEmptyRoom;
     Tile* mDestination = nullptr;
+    Tile* mEmptyAnchor = nullptr;
     Ogre::Vector3 mLastPosition;
     bool mEquipped = false;
     bool mInterrupted = false;
     bool mRestoring = false;
+    bool mRegistered = false;
     std::vector<Ogre::Vector2> mLoadedPath;
 };
 #endif

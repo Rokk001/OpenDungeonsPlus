@@ -808,6 +808,7 @@ public:
     //! \brief Applies damage and records actual hostile creature hits for regional script observers. On the server it
     //! also counts the attacked, incapacitated and killed events for the conditions of the level script and the
     //! creatures lost in the statistics of the seat.
+    //! \brief Applies damage and drops hunting equipment immediately on knockout or death.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -830,15 +831,22 @@ public:
     //! \brief Returns whether an action is queued; room-use queries also include its specialized work actions.
     bool isActionInList(CreatureActionType action) const;
 
-    //! \brief Clears the action queue, except for the Idle action at the end.
     //! \brief Drops a hunter's boxed ghosts and releases its equipment without removing queued actions.
     void interruptGhostHunt();
+    //! \brief Rebinds a hunt when its equipment or occupied cauldron moves to another room.
+    void transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty);
+    //! \brief Returns whether the current hunt wears its equipment.
+    bool hasGhostBackpack() const { return mGhostBackpack; }
     //! \brief Copies the current hunting presentation into the replicated creature state.
     void refreshGhostHuntVisuals();
     //! \brief Advances the backpack, box and dynamic connecting beam on a client.
     void updateGhostHuntVisuals(double seconds);
     //! \brief Destroys this hunter's cosmetic scene objects and looping sound.
     void clearGhostHuntVisuals();
+    //! \brief Pins all saved occupied cauldrons before the global equipment rebind pass.
+    void restoreGhostHuntLayout();
+    //! \brief Rebinds saved hunt reservations after every entity and crypt has loaded.
+    void restoreGhostHunt();
     //! \brief Restores a pending hunt and awards its exact training-hall XP each turn.
     void upkeepGhostHunt();
     //! \brief Clears queued actions after releasing hunt ownership without destructor reentrancy.
@@ -884,10 +892,12 @@ public:
     bool isSandboxHeroFor(const Seat* seat) const;
     //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile. It also counts the
     //! pickup in the statistics of the seat and the pickedup event for the level script.
+    //! \brief Drops captured ghosts before the creature is lifted out of the world.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
     //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes. It also counts the
     //! drop in the statistics of the seat.
+    //! \brief Drops the creature without retaining interrupted hunting reservations.
     void drop(const Ogre::Vector3& v) override;
     bool resizeMeshAfterDrop() override;
 
@@ -1316,6 +1326,7 @@ public:
     //! but is now split out since this is needed on the server, while the mesh isn't.
     //! This is normally called by the constructor, but creatures loaded from the map files
     //! use a different constructor, and this is then called by the gameMap when other details have been loaded.
+    //! \brief Resolves the definition and preserves explicitly saved revival needs.
     void setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition);
 
     //! \brief Server side. Chooses the Dungeonbook appearance: random on the first spawn (no duplicate among
@@ -1619,6 +1630,7 @@ protected:
     virtual bool importFromStream(std::istream& is) override;
 
     virtual void createMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
+    //! \brief Releases hunter visual children before the creature mesh is removed.
     virtual void destroyMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
     virtual void fireAddEntity(Seat* seat,  bool async, NodeType nt) override;
     virtual void fireRemoveEntity(Seat* seat,NodeType nt = NodeType::MTILES_NODE) override;
@@ -1812,14 +1824,25 @@ private:
     std::vector<GameEntity*>        mVisibleEnemyObjects;
     std::vector<GameEntity*>        mVisibleAlliedObjects;
     std::vector<GameEntity*>        mReachableAlliedObjects;
+    bool mGhostRevived = false;
+    bool mRevivalThirstFromSave = false;
+    double mSavedRevivalThirst = 0.0;
     bool mGhostHuntLoaded = false;
     bool mGhostBackpack = false;
     std::string mGhostBeamTarget;
+    uint32_t mGhostBoxMode = 0;
+    std::string mGhostThrowTarget;
+    std::string mGhostShrinkTarget;
+    double mGhostThrowTurns = 0.0;
+    double mGhostThrowClientTurns = 0.0;
+    Ogre::SceneNode* mGhostBoxNode = nullptr;
     double mGhostBeamSample = 0.0;
     uint32_t mGhostBeamSound = 0;
     Ogre::SceneNode* mGhostBackpackNode = nullptr;
     Ogre::SceneNode* mGhostBeamNode = nullptr;
     Ogre::BillboardChain* mGhostBeamChain = nullptr;
+    Ogre::SceneNode* mGhostSparkNode = nullptr;
+    Ogre::ParticleSystem* mGhostBeamSparks = nullptr;
     std::vector<std::unique_ptr<CreatureAction>>    mActions;
     std::vector<Tile*>              mVisualDebugEntityTiles;
 

@@ -1,4 +1,5 @@
 #include "rooms/RoomGhostRoom.h"
+#include "ODApplication.h"
 #include "rooms/RoomManager.h"
 #include "creatureaction/CreatureActionHuntGhost.h"
 #include "entities/BuildingObject.h"
@@ -14,6 +15,7 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectBounds.h"
 #include "network/ServerNotification.h"
 #include "network/ODServer.h"
 #include "spells/Spell.h"
@@ -23,6 +25,7 @@
 #include "utils/Random.h"
 #include "utils/MakeUnique.h"
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <set>
 
@@ -33,6 +36,9 @@ const std::string readableName = "Ghost room";
 //! \brief Orders tiles by increasing y, then x, independently of pointers.
 bool tileOrder(Tile* a, Tile* b)
 { return std::make_pair(a->getY(),a->getX()) < std::make_pair(b->getY(),b->getX()); }
+//! \brief Orders cauldrons by the same deterministic anchor order as the scan.
+bool cauldronOrder(const RoomGhostRoom::Cauldron& a,const RoomGhostRoom::Cauldron& b)
+{ return tileOrder(a.anchor,b.anchor); }
 //! \brief Registers the ghost room and validates its joined floor before charging.
 class RoomGhostRoomFactory : public RoomFactory
 {
@@ -155,6 +161,7 @@ void RoomGhostRoom::layoutCauldrons()
             if(std::abs(anchor->getX()-placed.anchor->getX())<=2 && std::abs(anchor->getY()-placed.anchor->getY())<=2) valid=false;
         if(valid) mCauldrons.push_back(Cauldron{anchor,nullptr});
     }
+    std::sort(mCauldrons.begin(),mCauldrons.end(),cauldronOrder);
 }
 
 void RoomGhostRoom::createCauldronObjects()
@@ -172,7 +179,13 @@ void RoomGhostRoom::createCauldronObjects()
         BuildingObject* object=new BuildingObject(getGameMap(),*this,"GhostCauldron",tile,
             tile->getX()+0.5f,tile->getY()+0.5f,0.0f,0.0f,false);
         object->setFurnitureScale(Ogre::Vector2(1.0f,1.0f));
+        object->setGhostRoomState(getSeat()->getEctoplasmLevels()/getLevelsPerEctoplasm(*getSeat()),mAlarmTurns);
         addBuildingObject(tile,object); object->createMesh(); mCauldronObjects.push_back(object);
+        if(cauldron.hunter!=nullptr)
+        {
+            std::map<Creature*,InteractionPosition>::iterator occupied=mInteractionPositions.find(cauldron.hunter);
+            if(occupied!=mInteractionPositions.end()) occupied->second.object=object;
+        }
         for(int y=0;y<2;++y) for(int x=0;x<2;++x) occupied.insert(getGameMap()->getTile(tile->getX()+x,tile->getY()+y));
     }
     if(mCauldrons.empty()) return;
@@ -197,14 +210,12 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
     if(!getIsOnServerMap() || mLayingOut) return;
     mLayingOut=true;
     layoutCauldrons();
-    std::vector<BuildingObject*> decorations;
-    for(const std::pair<Tile* const,BuildingObject*>& entry : getBuildingObjects())
-        if(entry.second->getMeshName()!="GhostCauldron" && entry.second->getMeshName()!="CrystalBowl") decorations.push_back(entry.second);
-    for(BuildingObject* object : decorations) removeBuildingObject(object);
-    mDecorationTiles.clear();mHookTiles.clear();
+    clearWallObjects();
+    mDecorationTiles.clear();mHookTiles.clear();mHookObjects.clear();
     std::vector<Tile*> ordered=mCoveredTiles;
     std::sort(ordered.begin(),ordered.end(),tileOrder);
-    // Use actual wall-adjacent edge tiles rather than the default 3x3 central-spot grid.
+    typedef std::pair<Tile*,ActiveSpotPlace> Wall;
+    std::vector<Wall> walls;
     for(Tile* tile : ordered)
     {
         const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};
@@ -212,13 +223,39 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
         {
             Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
             if(neighbor==nullptr || !neighbor->isFullTile()) continue;
-            ActiveSpotPlace place=i==0?activeSpotTop:i==1?activeSpotLeft:i==2?activeSpotRight:activeSpotBottom;
+            walls.push_back(Wall(tile,i==0?activeSpotTop:i==1?activeSpotLeft:i==2?activeSpotRight:activeSpotBottom));
+        }
+    }
+    // Subdivide existing wall faces using the native mesh widths; decoration never overwrites a floor-object key.
+    if(!walls.empty())
+    {
+        const size_t slots=std::max(walls.size(),static_cast<size_t>(getBackpackCount())+1);
+        for(size_t slot=0;slot<slots;++slot)
+        {
+            const size_t wall=slot%walls.size(),part=slot/walls.size();
+            const size_t parts=slots/walls.size()+(wall<slots%walls.size()?1:0);
+            Tile* tile=walls[wall].first;ActiveSpotPlace place=walls[wall].second;
             BuildingObject* object=notifyActiveSpotCreated(place,tile);
-            addBuildingObject(tile,object,map);object->createMesh();break;
+            const double angle=object->getRotationAngle()*RoomObjectPath::degreesToRadians;
+            const double gap=1.0/static_cast<double>(parts);
+            const double along=-0.5+gap*(static_cast<double>(part)+0.5);
+            double width=1.0,depth=0.0;
+            for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
+                if(object->getMeshName()==bounds.name) { width=bounds.maxX-bounds.minX;depth=bounds.maxY-bounds.minY;break; }
+            const double forward=0.5-depth/2.0;
+            object->setPosition(Ogre::Vector3(static_cast<float>(tile->getX()+std::cos(angle)*along-std::sin(angle)*forward),
+                static_cast<float>(tile->getY()+std::sin(angle)*along+std::cos(angle)*forward),0.0f));
+            object->setFurnitureScale(Ogre::Vector2(static_cast<float>(std::min(1.0,gap/width)),1.0f));
+            object->addToGameMap(map);object->createMesh();mWallObjects.push_back(object);
+            if(object->getMeshName()=="GhostHook") mHookObjects.push_back(object);
         }
     }
     createCauldronObjects();
-    for(const std::pair<Creature* const,Tile*>& hook : mHooks) equipHook(*hook.first,true);
+    std::vector<Creature*> hunters;
+    for(const std::pair<Creature* const,Tile*>& hook : mHooks) hunters.push_back(hook.first);
+    mHooks.clear();mHookSlots.clear();
+    for(Creature* hunter : hunters) reserveHook(*hunter);
+    for(Creature* hunter : hunters) equipHook(*hunter,hunter->hasGhostBackpack());
     mLayingOut=false;
 }
 
@@ -229,7 +266,7 @@ BuildingObject* RoomGhostRoom::notifyActiveSpotCreated(ActiveSpotPlace place, Ti
     if(mesh=="GhostHook") mHookTiles.push_back(tile);
     mDecorationTiles.push_back(tile);
     const double rotation=place==activeSpotLeft?90.0:place==activeSpotRight?270.0:place==activeSpotBottom?180.0:0.0;
-    return new BuildingObject(getGameMap(),*this,mesh,*tile,rotation,false);
+    return new BuildingObject(getGameMap(),*this,mesh,*tile,rotation,false,1.0f,mesh=="GhostWallGauges"?EntityAnimation::idle_anim:std::string(),true);
 }
 
 void RoomGhostRoom::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
@@ -240,33 +277,37 @@ void RoomGhostRoom::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
 Tile* RoomGhostRoom::reserveHook(Creature& hunter)
 {
     if(mHooks.count(&hunter)) return mHooks[&hunter];
-    Tile* best=nullptr;size_t distance=std::numeric_limits<size_t>::max();
-    for(Tile* tile : mHookTiles)
+    Tile* best=nullptr;size_t selected=0,distance=std::numeric_limits<size_t>::max();
+    for(size_t index=0;index<mHookTiles.size();++index)
     {
         bool used=false;
-        for(const std::pair<Creature* const,Tile*>& hook : mHooks) if(hook.second==tile) used=true;
+        for(const std::pair<Creature* const,size_t>& hook : mHookSlots) if(hook.second==index) used=true;
         if(used) continue;
-        std::list<Tile*> path=getGameMap()->path(&hunter,tile);
-        if(!path.empty() && path.size()<distance) { best=tile;distance=path.size(); }
+        const std::list<Tile*> path=getGameMap()->path(&hunter,mHookTiles[index]);
+        if(!path.empty() && path.size()<distance) { best=mHookTiles[index];selected=index;distance=path.size(); }
     }
-    if(best!=nullptr) mHooks[&hunter]=best;
+    if(best!=nullptr) { mHooks[&hunter]=best;mHookSlots[&hunter]=selected; }
     return best;
 }
 
-void RoomGhostRoom::equipHook(Creature& hunter, bool equipped)
+void RoomGhostRoom::equipHook(Creature& hunter,bool equipped)
 {
-    if(!mHooks.count(&hunter)) return;
-    Tile* tile=mHooks[&hunter];
-    BuildingObject* old=getBuildingObjectFromTile(tile);
-    if(old==nullptr) return;
-    BuildingObject* replacement=new BuildingObject(getGameMap(),*this,equipped?"GhostHookEmpty":"GhostHook",tile,
+    if(!mHookSlots.count(&hunter) || mHookSlots[&hunter]>=mHookObjects.size()) return;
+    const size_t index=mHookSlots[&hunter];BuildingObject* old=mHookObjects[index];
+    const std::string mesh=equipped?"GhostHookEmpty":"GhostHook";
+    if(old->getMeshName()==mesh) return;
+    Tile* tile=mHookTiles[index];
+    BuildingObject* replacement=new BuildingObject(getGameMap(),*this,mesh,tile,
         old->getPosition().x,old->getPosition().y,old->getPosition().z,old->getRotationAngle(),false);
-    replaceBuildingObject(tile,replacement);
+    replacement->setFurnitureScale(old->getFurnitureScale());
+    replacement->addToGameMap();replacement->setPosition(replacement->getPosition());replacement->notifyReplacement(*old);
+    for(BuildingObject*& object : mWallObjects) if(object==old) { object=replacement;break; }
+    mHookObjects[index]=replacement;old->removeFromGameMap();old->deleteYourself();
 }
 
 void RoomGhostRoom::releaseHunter(Creature& hunter)
 {
-    equipHook(hunter,false);mHooks.erase(&hunter);
+    equipHook(hunter,false);mHooks.erase(&hunter);mHookSlots.erase(&hunter);
     releaseCauldron(hunter);
 }
 
@@ -300,6 +341,8 @@ void RoomGhostRoom::interruptHunters()
 {
     std::vector<Creature*> hunters;
     for(const std::pair<Creature* const,Tile*>& hook : mHooks) hunters.push_back(hook.first);
+    for(const Cauldron& cauldron : mCauldrons)
+        if(cauldron.hunter!=nullptr && std::find(hunters.begin(),hunters.end(),cauldron.hunter)==hunters.end()) hunters.push_back(cauldron.hunter);
     for(Creature* hunter : hunters) hunter->interruptGhostHunt();
 }
 
@@ -307,9 +350,13 @@ void RoomGhostRoom::absorbRoom(Room* room)
 {
     RoomGhostRoom* other=static_cast<RoomGhostRoom*>(room);
     mCauldrons.insert(mCauldrons.end(),other->mCauldrons.begin(),other->mCauldrons.end());
+    for(Creature* hunter : getGameMap()->getCreaturesBySeat(getSeat()))
+        hunter->transferGhostHuntRoom(other->getName(),getName(),true,true);
     mHooks.insert(other->mHooks.begin(),other->mHooks.end());
     mCauldronObjects.insert(mCauldronObjects.end(),other->mCauldronObjects.begin(),other->mCauldronObjects.end());
     mDecorationTiles.insert(mDecorationTiles.end(),other->mDecorationTiles.begin(),other->mDecorationTiles.end());
+    mWallObjects.insert(mWallObjects.end(),other->mWallObjects.begin(),other->mWallObjects.end());
+    other->mWallObjects.clear();other->mHookObjects.clear();other->mHookSlots.clear();
     other->mHooks.clear();other->mCauldrons.clear();other->mCauldronObjects.clear();other->mDecorationTiles.clear();other->mBowl=nullptr;
     Room::absorbRoom(room); updateActiveSpots();
 }
@@ -322,9 +369,31 @@ void RoomGhostRoom::splitRoom(Room& room, const std::vector<Tile*>& tiles)
         bool complete=true;
         for(int y=0;y<2;++y) for(int x=0;x<2;++x)
             if(std::find(tiles.begin(),tiles.end(),getGameMap()->getTile(it->anchor->getX()+x,it->anchor->getY()+y))==tiles.end()) complete=false;
-        if(complete) { other.mCauldrons.push_back(*it); it=mCauldrons.erase(it); } else ++it;
+        if(complete)
+        {
+            other.mCauldrons.push_back(*it);
+            if(it->hunter!=nullptr)
+            {
+                std::map<Creature*,InteractionPosition>::iterator standing=mInteractionPositions.find(it->hunter);
+                if(standing!=mInteractionPositions.end())
+                { other.mInteractionPositions.insert(*standing);mInteractionPositions.erase(standing); }
+            }
+            it=mCauldrons.erase(it);
+        }
+        else ++it;
     }
-    interruptHunters(); updateActiveSpots(); other.updateActiveSpots();
+    for(std::map<Creature*,Tile*>::iterator it=mHooks.begin();it!=mHooks.end();)
+    {
+        if(std::find(tiles.begin(),tiles.end(),it->second)!=tiles.end())
+        {
+            other.mHooks.insert(*it);mHookSlots.erase(it->first);it->first->transferGhostHuntRoom(getName(),other.getName(),true,false);
+            it=mHooks.erase(it);
+        }
+        else ++it;
+    }
+    for(const Cauldron& cauldron : other.mCauldrons)
+        if(cauldron.hunter!=nullptr) cauldron.hunter->transferGhostHuntRoom(getName(),other.getName(),false,true);
+    updateActiveSpots(); other.updateActiveSpots();
 }
 
 bool RoomGhostRoom::removeCoveredTile(Tile* tile)
@@ -341,7 +410,7 @@ void RoomGhostRoom::changeOwner(Seat* seat)
 { interruptHunters(); Room::changeOwner(seat); updateActiveSpots(); }
 
 void RoomGhostRoom::removeFromGameMap(GameMap* map)
-{ interruptHunters(); Room::removeFromGameMap(map); }
+{ interruptHunters();clearWallObjects();Room::removeFromGameMap(map); }
 
 void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
 {
@@ -367,6 +436,8 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
     while(seat->getEctoplasmLevels()>=getLevelsPerEctoplasm(*seat))
     {
         KeeperAI::updateGhostRoomSettings(*seat);
+        // The prescribed bowl position is unavailable in some legal layouts; keep this product pending.
+        if(seat->getGhostProduct()==GhostProduct::crystal && mBowl==nullptr) break;
         seat->setEctoplasmLevels(seat->getEctoplasmLevels()-getLevelsPerEctoplasm(*seat));
         Spell::fireSpellEffect(*cauldron,"EctoplasmBurst","");
         CreatureActionHuntGhost::playSound(*getGameMap(),*cauldron,"Rooms/GhostRoom/PressHiss");
@@ -374,7 +445,7 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
         else if(seat->getGhostProduct()==GhostProduct::research) seat->addSkillPoints(config.getRoomConfigInt32("GhostEctoplasmResearchPoints"));
         else
         {
-            Tile* bowl=mBowl==nullptr?cauldron:mBowl;
+            Tile* bowl=mBowl;
             ItemBagEntity* bag=new ItemBagEntity(getGameMap(),ItemInstance::createSoulCrystal());
             bag->setSeat(seat);bag->setPosition(Ogre::Vector3(bowl->getX(),bowl->getY(),0.0f));
             bag->addToGameMap();bag->createMesh();
@@ -386,25 +457,76 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
 void RoomGhostRoom::doUpkeep()
 {
     Room::doUpkeep();
+    mAlarmTurns=std::max(0.0,mAlarmTurns-1.0);
+    const double fill=getSeat()->getEctoplasmLevels()/getLevelsPerEctoplasm(*getSeat());
+    for(const std::pair<Tile* const,BuildingObject*>& entry : getBuildingObjects())
+        entry.second->setGhostRoomState(entry.second->getMeshName()=="GhostCauldron"?fill:-1.0,mAlarmTurns);
+    for(BuildingObject* object : mWallObjects) object->setGhostRoomState(-1.0,mAlarmTurns);
     const std::vector<Room*> rooms=getGameMap()->getRoomsByTypeAndSeat(RoomType::ghostRoom,getSeat());
     if(rooms.empty() || rooms.front()!=this) return;
     CreatureActionHuntGhost::assignHunters(*getGameMap(),*getSeat());
 }
 
-void RoomGhostRoom::restoreHunter(Creature& hunter, Tile* hook, bool equipped)
+void RoomGhostRoom::restoreHunter(Creature& hunter,Tile* hook,bool equipped,size_t slot)
 {
-    if(hook==nullptr || hook->getCoveringRoom()!=this) return;
-    mHooks[&hunter]=hook;equipHook(hunter,equipped);
+    if(slot<mHookTiles.size()) { mHooks[&hunter]=mHookTiles[slot];mHookSlots[&hunter]=slot; }
+    else if(hook!=nullptr && hook->getCoveringRoom()==this) reserveHook(hunter);
+    equipHook(hunter,equipped);
 }
-void RoomGhostRoom::restoreCauldron(Creature& hunter, Tile* standing)
+
+void RoomGhostRoom::restoreCauldron(Creature& hunter,Tile* standing,Tile* anchor,bool rebuild)
 {
+    if(standing==nullptr || anchor==nullptr) return;
+    bool complete=true;
+    for(int y=0;y<2;++y) for(int x=0;x<2;++x)
+    {
+        Tile* tile=getGameMap()->getTile(anchor->getX()+x,anchor->getY()+y);
+        if(tile==nullptr || tile->getCoveringRoom()!=this) complete=false;
+    }
+    if(!complete) return;
+    bool found=false;
     for(Cauldron& cauldron : mCauldrons)
-        if(standing!=nullptr && std::abs(standing->getX()-cauldron.anchor->getX())<=2 && std::abs(standing->getY()-cauldron.anchor->getY())<=2)
-        { cauldron.hunter=&hunter;return; }
+        if(cauldron.anchor==anchor) { cauldron.hunter=&hunter;found=true;break; }
+    if(!found) mCauldrons.push_back(Cauldron{anchor,&hunter});
+    if(rebuild) updateActiveSpots();
+    reserveInteractionPosition(&hunter,InteractionPosition{getBuildingObjectFromTile(anchor),Ogre::Vector2(standing->getX(),standing->getY()),Ogre::Vector2(anchor->getX()-standing->getX(),anchor->getY()-standing->getY())});
+}
+
+void RoomGhostRoom::ringBell()
+{
+    if(getCentralTile()!=nullptr) CreatureActionHuntGhost::playSound(*getGameMap(),*getCentralTile(),"Rooms/GhostRoom/Bell");
+    mAlarmTurns=ConfigManager::getSingleton().getRoomConfigDouble("GhostBellSeconds")*ODApplication::turnsPerSecond;
+    const double fill=getSeat()->getEctoplasmLevels()/getLevelsPerEctoplasm(*getSeat());
+    for(const std::pair<Tile* const,BuildingObject*>& entry : getBuildingObjects())
+        entry.second->setGhostRoomState(entry.second->getMeshName()=="GhostCauldron"?fill:-1.0,mAlarmTurns);
+    for(BuildingObject* object : mWallObjects) object->setGhostRoomState(-1.0,mAlarmTurns);
+}
+
+Tile* RoomGhostRoom::getHunterCauldron(const Creature& hunter) const
+{
+    for(const Cauldron& cauldron : mCauldrons) if(cauldron.hunter==&hunter) return cauldron.anchor;
+    return nullptr;
 }
 
 void RoomGhostRoom::releaseCauldron(Creature& hunter)
 {
     for(Cauldron& cauldron : mCauldrons) if(cauldron.hunter==&hunter) cauldron.hunter=nullptr;
     releaseInteractionPosition(&hunter);
+}
+
+RoomGhostRoom::~RoomGhostRoom()
+{ clearWallObjects(); }
+
+void RoomGhostRoom::clearWallObjects()
+{
+    for(BuildingObject* object : mWallObjects)
+        if(std::find(getGameMap()->getRenderedMovableEntities().begin(),getGameMap()->getRenderedMovableEntities().end(),object)!=getGameMap()->getRenderedMovableEntities().end())
+        { object->removeFromGameMap();object->deleteYourself(); }
+    mWallObjects.clear();mHookObjects.clear();
+}
+
+size_t RoomGhostRoom::getHunterHookSlot(const Creature& hunter) const
+{
+    std::map<Creature*,size_t>::const_iterator found=mHookSlots.find(const_cast<Creature*>(&hunter));
+    return found==mHookSlots.end()?std::numeric_limits<size_t>::max():found->second;
 }

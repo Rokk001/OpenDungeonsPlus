@@ -32,6 +32,7 @@
 #include <map>
 #include <utility>
 #include <deque>
+#include <set>
 
 class Building;
 class MerchantEntity;
@@ -103,6 +104,8 @@ public:
     //! \brief Enables or disables own-ghost revival for all rooms of this keeper.
     void setGhostRevive(bool revive) { mGhostRevive = revive; }
 
+    //! \brief Marks a newly discovered hunt target, preventing repeated bell alarms.
+    bool announceGhostTarget(const std::string& name) { return mGhostBellTargets.insert(name).second; }
     //! \brief Returns this seat's single non-creature merchant figure, if one exists.
     MerchantEntity* getMerchant() const { return mMerchant; }
     //! \brief Updates the weak reference when the figure spawns, changes owner or despawns.
@@ -608,6 +611,7 @@ private:
     double mEctoplasmLevels = 0.0;
     GhostProduct mGhostProduct = GhostProduct::research;
     bool mGhostRevive = true;
+    std::set<std::string> mGhostBellTargets;
     MerchantEntity* mMerchant = nullptr;
     //! \brief Fractional gold already earned from merchant deals, persisted with the seat.
     double mMerchantGoldRemainder = 0.0;

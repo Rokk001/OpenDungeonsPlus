@@ -57,11 +57,30 @@ size_t pathLength(GameMap& map, Creature& hunter, Tile* from, Tile* to)
     const std::list<Tile*> path=map.path(from,to,&hunter,hunter.getSeat());
     return path.empty()?std::numeric_limits<size_t>::max():path.size();
 }
+//! \brief Finds the nearest reachable beam endpoint, or the exact tile of a lying box.
+Tile* targetEndpoint(GameMap& map, Creature& hunter, Tile* from, GameEntity& target)
+{
+    Tile* there=target.getPositionTile();
+    if(there==nullptr || from==nullptr) return nullptr;
+    if(target.getObjectType()==GameEntityType::ghostBoxEntity)
+        return pathLength(map,hunter,from,there)==std::numeric_limits<size_t>::max()?nullptr:there;
+    const int range=static_cast<int>(SkillManager::getResearchValue(hunter.getSeat(),SkillType::roomGhostRoom,
+        ConfigManager::getSingleton().getRoomConfigDouble("GhostBeamRange"),"BeamRange"));
+    Tile* best=nullptr;size_t distance=std::numeric_limits<size_t>::max();
+    for(int y=-range;y<=range;++y) for(int x=-range;x<=range;++x)
+    {
+        Tile* tile=map.getTile(there->getX()+x,there->getY()+y);
+        if(tile==nullptr || tile==there || !tile->isClaimedForSeat(hunter.getSeat())) continue;
+        const size_t length=pathLength(map,hunter,from,tile);
+        if(length<distance) { best=tile;distance=length; }
+    }
+    return best;
+}
 }
 
 CreatureActionHuntGhost::CreatureActionHuntGhost(Creature& creature, const std::string& target) :
     CreatureAction(creature),mTarget(target),mLastPosition(creature.getPosition())
-{}
+{ mRegistered=!target.empty(); }
 CreatureActionHuntGhost::~CreatureActionHuntGhost()
 { interrupt(); }
 std::function<bool()> CreatureActionHuntGhost::action()
@@ -105,7 +124,7 @@ void CreatureActionHuntGhost::interrupt()
 {
     if(mInterrupted) return;
     mInterrupted=true;
-    if(!mCreature.getIsOnServerMap()) return;
+    if(!mCreature.getIsOnServerMap() || !mRegistered) return;
     releaseTarget();
     if(mCreature.getIsOnMap()) mLastPosition=mCreature.getPosition();
     if(!mGhosts.empty())
@@ -122,7 +141,7 @@ void CreatureActionHuntGhost::interrupt()
 bool CreatureActionHuntGhost::moveTo(Tile* tile)
 {
     if(tile==nullptr) return false;
-    if(mCreature.getPositionTile()==tile && !mCreature.isMoving()) return true;
+    if(mCreature.getPositionTile()==tile && !mCreature.isMoving()) { mDestination=tile;return true; }
     if(mCreature.isMoving() && mDestination==tile) return true;
     const std::list<Tile*> route=mCreature.getGameMap()->path(&mCreature,tile);
     if(route.empty()) return false;
@@ -137,6 +156,12 @@ void CreatureActionHuntGhost::upkeep()
 {
     if(mInterrupted) return;
     if(mCreature.getIsOnMap()) mLastPosition=mCreature.getPosition();
+    RoomGhostRoom* equipment=hookRoom();
+    if(equipment!=nullptr)
+    {
+        Tile* hook=equipment->reserveHook(mCreature);
+        if(hook!=nullptr) { mHookX=hook->getX();mHookY=hook->getY();mHookSlot=equipment->getHunterHookSlot(mCreature); }
+    }
     if(!mCreature.isAlive() || mCreature.isKo() || !mCreature.getIsOnMap() ||
        mCreature.getGameMap()->getRoomsByTypeAndSeat(RoomType::ghostRoom,mCreature.getSeat()).empty())
     { interrupt();return; }
@@ -156,15 +181,15 @@ bool CreatureActionHuntGhost::nextTarget()
     {
         if(!eligible(*entity,*mCreature.getSeat())) continue;
         if(!mGhosts.empty() && entity->getObjectType()==GameEntityType::ghostBoxEntity) continue;
-        const size_t length=pathLength(map,mCreature,mCreature.getPositionTile(),entity->getPositionTile());
+        const size_t length=pathLength(map,mCreature,mCreature.getPositionTile(),targetEndpoint(map,mCreature,mCreature.getPositionTile(),*entity));
         if(length<distance) { best=entity;distance=length; }
     }
     if(best==nullptr) return false;
     mTarget=best->getName();
     if(best->getObjectType()==GameEntityType::ghostEntity) static_cast<GhostEntity*>(best)->setAssignedHunter(mCreature.getName());
     else static_cast<GhostBoxEntity*>(best)->setAssignedHunter(mCreature.getName());
-    for(Room* room : map.getRoomsByTypeAndSeat(RoomType::ghostRoom,mCreature.getSeat()))
-        if(room->getCentralTile()!=nullptr) playSound(map,*room->getCentralTile(),"Rooms/GhostRoom/Bell");
+    if(mCreature.getSeat()->announceGhostTarget(best->getName()))
+        for(Room* room : map.getRoomsByTypeAndSeat(RoomType::ghostRoom,mCreature.getSeat())) static_cast<RoomGhostRoom*>(room)->ringBell();
     mRepathTurns=ConfigManager::getSingleton().getRoomConfigDouble("GhostRepathTurns");
     return true;
 }
@@ -193,7 +218,23 @@ bool CreatureActionHuntGhost::handleHunt()
     GameMap& map=*mCreature.getGameMap();
     ConfigManager& config=ConfigManager::getSingleton();
     RoomGhostRoom* room=hookRoom();
-    if(mState!=0 && room==nullptr) { interrupt();mCreature.popAction();return false; }
+    if(mState!=0 && room==nullptr)
+    {
+        size_t distance=std::numeric_limits<size_t>::max();
+        for(Room* candidate : map.getRoomsByTypeAndSeat(RoomType::ghostRoom,mCreature.getSeat()))
+        {
+            RoomGhostRoom* replacement=static_cast<RoomGhostRoom*>(candidate);Tile* hook=replacement->reserveHook(mCreature);
+            const size_t length=pathLength(map,mCreature,mCreature.getPositionTile(),hook);
+            if(length<distance)
+            {
+                if(room!=nullptr) room->releaseHunter(mCreature);
+                room=replacement;mHookRoom=room->getName();mHookX=hook->getX();mHookY=hook->getY();distance=length;
+            }
+            else replacement->releaseHunter(mCreature);
+        }
+        if(room==nullptr) { interrupt();mCreature.popAction();return false; }
+        room->equipHook(mCreature,mEquipped);
+    }
     if(mState==0)
     {
         if(room==nullptr)
@@ -219,7 +260,7 @@ bool CreatureActionHuntGhost::handleHunt()
         if(!moveTo(hook)) { interrupt();return false; }
         if(mCreature.isMoving()) return false;
         room->equipHook(mCreature,true);mEquipped=true;mState=1;mDestination=nullptr;
-        mCreature.refreshGhostHuntVisuals();return false;
+        mCreature.refreshGhostHuntVisuals();return true;
     }
     if(mState==1)
     {
@@ -229,8 +270,8 @@ bool CreatureActionHuntGhost::handleHunt()
         if(target==nullptr || target->getPositionTile()==nullptr || !target->getPositionTile()->isClaimedForSeat(mCreature.getSeat()) ||
            (ghost!=nullptr && ghost->getState()!=GhostState::floating))
         {
-            if(nextTarget()) return false;
-            mState=5;return false;
+            if(nextTarget()) return true;
+            mState=5;return true;
         }
         Tile* own=mCreature.getPositionTile();Tile* there=target->getPositionTile();
         const int range=static_cast<int>(researched("GhostBeamRange","BeamRange"));
@@ -239,8 +280,8 @@ bool CreatureActionHuntGhost::handleHunt()
         {
             mCreature.clearDestinations(EntityAnimation::beam_anim,true,false);
             mCreature.setAnimationState(EntityAnimation::beam_anim,true,ghost->getPosition()-mCreature.getPosition(),false);
-            ghost->setState(GhostState::beamed);mState=2;mBeamTarget=mTarget;mTurns=0.0;
-            mCreature.refreshGhostHuntVisuals();return false;
+            ghost->setState(GhostState::beamed);mState=2;mBeamTarget=mTarget;
+            mCreature.refreshGhostHuntVisuals();return true;
         }
         if(!mCreature.isMoving() || mRepathTurns>=config.getRoomConfigDouble("GhostRepathTurns"))
         {
@@ -262,8 +303,8 @@ bool CreatureActionHuntGhost::handleHunt()
     {
         GhostEntity* ghost=ghostNamed(map,mTarget);
         if(ghost==nullptr || ghost->getState()==GhostState::dissolving)
-        { releaseTarget();mState=4;return false; }
-        mTurns+=1.0;
+        { releaseTarget();mTurns=0.0;mState=4;return true; }
+        if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
         const double efficiency=mCreature.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
         if(mState==2)
         {
@@ -289,7 +330,7 @@ bool CreatureActionHuntGhost::handleHunt()
         }
         playSound(map,*ghost->getPositionTile(),"Rooms/GhostRoom/BoxSnap");
         social::PostLog::getSingleton().addPost(map.getTurnNumber(),mCreature.getName(),mCreature.getDefinition()->getClassName(),false,social::PostCategory::GhostHunted,0);
-        mTarget.clear();mState=4;return false;
+        mTarget.clear();mState=4;return true;
     }
     if(mState==8)
     {
@@ -302,19 +343,25 @@ bool CreatureActionHuntGhost::handleHunt()
             {
                 GhostEntity* ghost=ghostNamed(map,name);
                 if(ghost!=nullptr && ghost->getSeat()==mCreature.getSeat() && mCreature.getSeat()->getGhostRevive() &&
-                   mCreature.getSeat()->getMana()>=researched("GhostReviveMana","RevivePrice")) mReviveGhosts.push_back(name);
+                   mCreature.getSeat()->getMana()>=researched("GhostReviveMana","RevivePrice"))
+                {
+                    Creature* corpse=map.getCreature(ghost->getCreatureName());
+                    Room* crypt=corpse==nullptr || corpse->getPositionTile()==nullptr?nullptr:corpse->getPositionTile()->getCoveringRoom();
+                    if(corpse!=nullptr && !corpse->isAlive() && crypt!=nullptr && crypt->getType()==RoomType::crypt &&
+                       crypt->getSeat()==mCreature.getSeat() && static_cast<RoomCrypt*>(crypt)->getCorpseSpot(*corpse)!=nullptr) mReviveGhosts.push_back(name);
+                }
             }
         }
-        mTarget.clear();mState=4;return false;
+        mTarget.clear();mState=4;return true;
     }
     if(mState==4)
     {
-        if(static_cast<double>(mGhosts.size())<researched("GhostBoxCapacity","BoxCapacity") && nextTarget()) { mState=1;return false; }
-        mState=5;return false;
+        if(static_cast<double>(mGhosts.size())<researched("GhostBoxCapacity","BoxCapacity") && nextTarget()) { mState=1;return true; }
+        releaseTarget();mState=5;return true;
     }
     if(mState==5)
     {
-        if(mReviveTarget.empty() && !selectRevival()) { mState=6;mDestination=nullptr;return false; }
+        if(mReviveTarget.empty() && !selectRevival()) { mState=6;mDestination=nullptr;return true; }
         GhostEntity* ghost=ghostNamed(map,mReviveTarget);
         Creature* corpse=ghost==nullptr?nullptr:map.getCreature(ghost->getCreatureName());
         Room* crypt=corpse==nullptr || corpse->getPositionTile()==nullptr?nullptr:corpse->getPositionTile()->getCoveringRoom();
@@ -339,11 +386,11 @@ bool CreatureActionHuntGhost::handleHunt()
             }
         }
         mReviveGhosts.erase(std::remove(mReviveGhosts.begin(),mReviveGhosts.end(),mReviveTarget),mReviveGhosts.end());
-        mReviveTarget.clear();mDestination=nullptr;return false;
+        mReviveTarget.clear();mDestination=nullptr;return true;
     }
     if(mState==6)
     {
-        if(mGhosts.empty()) { mState=7;mDestination=nullptr;return false; }
+        if(mGhosts.empty()) { mState=7;mDestination=nullptr;return true; }
         if(mDestination==nullptr)
         {
             size_t distance=std::numeric_limits<size_t>::max();RoomGhostRoom* nearest=nullptr;Tile* stand=nullptr;
@@ -356,14 +403,20 @@ bool CreatureActionHuntGhost::handleHunt()
                 else other->releaseCauldron(mCreature);
             }
             if(nearest==nullptr) return false;
-            mEmptyRoom=nearest->getName();mDestination=stand;
-            moveTo(stand);mTurns=0.0;
+            mEmptyRoom=nearest->getName();mEmptyAnchor=nearest->getHunterCauldron(mCreature);mDestination=nullptr;
+            if(!moveTo(stand)) { nearest->releaseCauldron(mCreature);mDestination=nullptr;return false; }
         }
         if(mCreature.isMoving()) return false;
+        if(mCreature.getPositionTile()!=mDestination)
+        {
+            RoomGhostRoom* previous=roomNamed(map,mEmptyRoom);
+            if(previous!=nullptr) previous->releaseCauldron(mCreature);
+            mDestination=nullptr;return false;
+        }
         RoomGhostRoom* empty=roomNamed(map,mEmptyRoom);
         if(empty==nullptr || empty->getSeat()!=mCreature.getSeat()) { interrupt();return false; }
-        mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
-        mTurns+=1.0;
+        if(mCreature.getAnimationStateName()!=EntityAnimation::empty_anim) mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
+        if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
         const double duration=config.getRoomConfigDouble("GhostEmptyTurns")/mCreature.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
         while(!mGhosts.empty() && mTurns>=duration)
         {
@@ -371,7 +424,7 @@ bool CreatureActionHuntGhost::handleHunt()
             if(ghost!=nullptr) empty->emptyGhost(mCreature,*ghost);
             mGhosts.erase(mGhosts.begin());
         }
-        if(mGhosts.empty()) { empty->releaseCauldron(mCreature);mDestination=nullptr;mState=7; }
+        if(mGhosts.empty()) { empty->releaseCauldron(mCreature);empty->updateActiveSpots();mDestination=nullptr;mState=7;return true; }
         return false;
     }
     if(mState==7)
@@ -404,9 +457,11 @@ void CreatureActionHuntGhost::assignHunters(GameMap& map, Seat& seat)
     for(RenderedMovableEntity* entity : map.getRenderedMovableEntities())
     {
         if(!eligible(*entity,seat)) continue;
+        if(seat.announceGhostTarget(entity->getName()))
+            for(Room* room : rooms) static_cast<RoomGhostRoom*>(room)->ringBell();
         size_t distance=std::numeric_limits<size_t>::max();
         for(Creature* hunter : hunters) for(Room* room : rooms) for(Tile* tile : room->getCoveredTiles())
-            distance=std::min(distance,pathLength(map,*hunter,tile,entity->getPositionTile()));
+            distance=std::min(distance,pathLength(map,*hunter,tile,targetEndpoint(map,*hunter,tile,*entity)));
         if(distance!=std::numeric_limits<size_t>::max()) targets.push_back(Target(distance,entity->getName(),entity));
     }
     std::sort(targets.begin(),targets.end());
@@ -417,7 +472,7 @@ void CreatureActionHuntGhost::assignHunters(GameMap& map, Seat& seat)
         Creature* nearest=nullptr;size_t distance=std::numeric_limits<size_t>::max();
         for(Creature* hunter : hunters)
         {
-            const size_t length=pathLength(map,*hunter,hunter->getPositionTile(),entity->getPositionTile());
+            const size_t length=pathLength(map,*hunter,hunter->getPositionTile(),targetEndpoint(map,*hunter,hunter->getPositionTile(),*entity));
             if(length<distance) { nearest=hunter;distance=length; }
         }
         if(nearest==nullptr) continue;
@@ -425,7 +480,6 @@ void CreatureActionHuntGhost::assignHunters(GameMap& map, Seat& seat)
         if(entity->getObjectType()==GameEntityType::ghostEntity) static_cast<GhostEntity*>(entity)->setAssignedHunter(nearest->getName());
         else static_cast<GhostBoxEntity*>(entity)->setAssignedHunter(nearest->getName());
         nearest->pushAction(Utils::make_unique<CreatureActionHuntGhost>(*nearest,entity->getName()));
-        for(Room* room : rooms) if(room->getCentralTile()!=nullptr) playSound(map,*room->getCentralTile(),"Rooms/GhostRoom/Bell");
         ++active;hunters.erase(std::remove(hunters.begin(),hunters.end(),nearest),hunters.end());
     }
 }
@@ -435,10 +489,11 @@ void CreatureActionHuntGhost::exportToStream(std::ostream& stream) const
     stream << " [GhostHunt] " << mState << ' ' << (mTarget.empty()?"none":mTarget) << ' '
         << (mHookRoom.empty()?"none":mHookRoom) << ' ' << mHookX << ' ' << mHookY << ' ' << mTurns << ' ' << mGhosts.size();
     for(const std::string& ghost : mGhosts) stream << ' ' << ghost;
-    stream << " [/GhostHunt] [GhostHuntRuntime] " << mEquipped << ' ' << mRepathTurns << ' ' << mReviveGhosts.size();
+    stream << " [/GhostHunt] [GhostHuntRuntime] " << mEquipped << ' ' << mRepathTurns << ' ' << (hookRoom()==nullptr?mHookSlot:hookRoom()->getHunterHookSlot(mCreature)) << ' ' << mReviveGhosts.size();
     for(const std::string& ghost : mReviveGhosts) stream << ' ' << ghost;
     stream << ' ' << (mReviveTarget.empty()?"none":mReviveTarget) << ' ' << (mEmptyRoom.empty()?"none":mEmptyRoom)
         << ' ' << (mDestination==nullptr?-1:mDestination->getX()) << ' ' << (mDestination==nullptr?-1:mDestination->getY())
+        << ' ' << (mEmptyAnchor==nullptr?-1:mEmptyAnchor->getX()) << ' ' << (mEmptyAnchor==nullptr?-1:mEmptyAnchor->getY())
         << ' ' << mCreature.getWalkQueue().size();
     for(const Ogre::Vector2& point : mCreature.getWalkQueue()) stream << ' ' << point.x << ' ' << point.y;
     stream << " [/GhostHuntRuntime]";
@@ -455,11 +510,12 @@ bool CreatureActionHuntGhost::importFromStream(std::istream& stream)
     if(stream>>close)
     {
         if(close!="[GhostHuntRuntime]") { stream.seekg(position);mRestoring=true;return true; }
-        int x=-1,y=-1;
-        if(!(stream>>mEquipped>>mRepathTurns>>count)) return false;
+        int x=-1,y=-1,ax=-1,ay=-1;
+        if(!(stream>>mEquipped>>mRepathTurns>>mHookSlot>>count)) return false;
         while(count-->0) { std::string ghost;if(!(stream>>ghost)) return false;mReviveGhosts.push_back(ghost); }
-        if(!(stream>>mReviveTarget>>mEmptyRoom>>x>>y>>count)) return false;
+        if(!(stream>>mReviveTarget>>mEmptyRoom>>x>>y>>ax>>ay>>count)) return false;
         mDestination=mCreature.getGameMap()->getTile(x,y);
+        mEmptyAnchor=mCreature.getGameMap()->getTile(ax,ay);
         while(count-->0) { Ogre::Vector2 point;if(!(stream>>point.x>>point.y)) return false;mLoadedPath.push_back(point); }
         if(!(stream>>close) || close!="[/GhostHuntRuntime]") return false;
         if(mReviveTarget=="none") mReviveTarget.clear();if(mEmptyRoom=="none") mEmptyRoom.clear();
@@ -471,17 +527,37 @@ bool CreatureActionHuntGhost::importFromStream(std::istream& stream)
 void CreatureActionHuntGhost::restore()
 {
     if(!mRestoring) return;
-    mRestoring=false;
+    mRestoring=false;mRegistered=true;
     RoomGhostRoom* room=hookRoom();
     if(room==nullptr && mState!=0) { interrupt();return; }
-    if(room!=nullptr) { room->restoreHunter(mCreature,mCreature.getGameMap()->getTile(mHookX,mHookY),mEquipped); }
+    if(room!=nullptr) { room->restoreHunter(mCreature,mCreature.getGameMap()->getTile(mHookX,mHookY),mEquipped,mHookSlot); }
     if(mState==6)
     {
         RoomGhostRoom* empty=roomNamed(*mCreature.getGameMap(),mEmptyRoom);
-        if(empty!=nullptr && mDestination!=nullptr) empty->restoreCauldron(mCreature,mDestination);
+        if(empty!=nullptr && mDestination!=nullptr) empty->restoreCauldron(mCreature,mDestination,mEmptyAnchor,false);
     }
     if(!mLoadedPath.empty())
         mCreature.setWalkPath(EntityAnimation::walk_anim,EntityAnimation::idle_anim,true,true,mLoadedPath,false,true);
-    if(mState==2) mBeamTarget=mTarget;
+    if(mState==2 || mState==3)
+    {
+        GhostEntity* ghost=ghostNamed(*mCreature.getGameMap(),mTarget);
+        mCreature.setAnimationState(mState==2?EntityAnimation::beam_anim:EntityAnimation::throw_anim,mState==2,
+            ghost==nullptr?Ogre::Vector3::ZERO:ghost->getPosition()-mCreature.getPosition(),mState!=2);
+        if(mState==2) mBeamTarget=mTarget;
+    }
+    if(mState==6) mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
     mCreature.refreshGhostHuntVisuals();
+}
+
+void CreatureActionHuntGhost::transferRoom(const std::string& previous,const std::string& current,bool hook,bool empty)
+{
+    if(hook && mHookRoom==previous) mHookRoom=current;
+    if(empty && mEmptyRoom==previous) mEmptyRoom=current;
+}
+
+void CreatureActionHuntGhost::restoreLayout()
+{
+    if(!mRestoring || mState!=6 || mDestination==nullptr || mEmptyAnchor==nullptr) return;
+    RoomGhostRoom* room=roomNamed(*mCreature.getGameMap(),mEmptyRoom);
+    if(room!=nullptr) room->restoreCauldron(mCreature,mDestination,mEmptyAnchor);
 }

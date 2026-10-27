@@ -1335,6 +1335,13 @@ void GameMap::createAllEntities()
         room->restoreInitialEntityState();
     }
 
+    // Bind all saved hunters before any room can assign fresh hunts during the first upkeep.
+    if(isServerGameMap())
+    {
+        for(Creature* creature : mCreatures) creature->restoreGhostHuntLayout();
+        for(Creature* creature : mCreatures) creature->restoreGhostHunt();
+    }
+
     for (Trap* trap : mTraps)
     {
         trap->restoreInitialEntityState();
@@ -3901,10 +3908,15 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::creature:
             return getCreature(entityName);
 
-        case GameEntityType::buildingObject:
-        case GameEntityType::chickenEntity:
         case GameEntityType::ghostEntity:
         case GameEntityType::ghostBoxEntity:
+        {
+            RenderedMovableEntity* entity=getRenderedMovableEntity(entityName);
+            return entity!=nullptr && entity->getObjectType()==entityType?entity:nullptr;
+        }
+
+        case GameEntityType::buildingObject:
+        case GameEntityType::chickenEntity:
         case GameEntityType::craftedTrap:
         case GameEntityType::missileObject:
         case GameEntityType::persistentObject:

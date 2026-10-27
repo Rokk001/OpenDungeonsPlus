@@ -20,6 +20,8 @@ public:
     };
     //! \brief Creates a room without cauldrons or reservations.
     RoomGhostRoom(GameMap* map);
+    //! \brief Releases separately owned wall decorations before the room floor is destroyed.
+    ~RoomGhostRoom() override;
     //! \brief Returns the appended ghost room type.
     RoomType getType() const override { return RoomType::ghostRoom; }
     //! \brief Rebuilds deterministic furniture while retaining occupied cauldrons.
@@ -44,14 +46,20 @@ public:
     uint32_t getBackpackCount() const;
     //! \brief Returns the keeper's research-adjusted ghost levels per ectoplasm.
     static double getLevelsPerEctoplasm(const Seat& seat);
+    //! \brief Rings the alarm and starts its prescribed blinking interval.
+    void ringBell();
+    //! \brief Returns the stable current equipment slot of a hunter, or the absent sentinel.
+    size_t getHunterHookSlot(const Creature& hunter) const;
+    //! \brief Returns the exact cauldron anchor reserved by a hunter.
+    Tile* getHunterCauldron(const Creature& hunter) const;
     //! \brief Reserves the nearest free equipment hook for a hunter.
     Tile* reserveHook(Creature& hunter);
     //! \brief Changes a reserved hook between its equipped and empty appearance.
     void equipHook(Creature& hunter, bool equipped);
     //! \brief Rebinds an exact saved equipment hook without selecting another tile.
-    void restoreHunter(Creature& hunter, Tile* hook, bool equipped);
+    void restoreHunter(Creature& hunter, Tile* hook, bool equipped, size_t slot);
     //! \brief Rebinds the occupied cauldron next to the saved standing tile.
-    void restoreCauldron(Creature& hunter, Tile* standing);
+    void restoreCauldron(Creature& hunter, Tile* standing, Tile* anchor, bool rebuild=true);
     //! \brief Releases only the emptying place, retaining the hunter's backpack hook.
     void releaseCauldron(Creature& hunter);
     //! \brief Returns equipment and all cauldron reservations of a hunter.
@@ -73,11 +81,17 @@ private:
     //! \brief Releases hunters assigned to this room before equipment is lost.
     void interruptHunters();
     std::vector<Cauldron> mCauldrons;
+    //! \brief Releases owned decorative entities without touching other room objects.
+    void clearWallObjects();
     std::map<Creature*, Tile*> mHooks;
+    std::map<Creature*, size_t> mHookSlots;
+    std::vector<BuildingObject*> mWallObjects;
+    std::vector<BuildingObject*> mHookObjects;
     std::vector<Tile*> mHookTiles;
     std::vector<Tile*> mDecorationTiles;
     std::vector<BuildingObject*> mCauldronObjects;
     Tile* mBowl = nullptr;
     bool mLayingOut = false;
+    double mAlarmTurns = 0.0;
 };
 #endif
