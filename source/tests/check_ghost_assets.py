@@ -69,7 +69,7 @@ def main():
         assert re.search(r'^\s*material\s+'+name+r'\b',material,re.M), name
     for value in ('scene_blend alpha_blend','depth_write off','scroll_anim 0 0.05'):
         assert value in material, value
-    particles = read('particles/ChickenFeathers.particle')+read('particles/RoomAmbienceProduction.particle')
+    particles = read('particles/ChickenFeathers.particle')+read('particles/RoomAmbienceProduction.particle')+read('particles/RoomAmbienceSpellsExtra.particle')
     for name in ('CauldronSteam','GhostRise','GhostDissolve','GhostBeam','EctoplasmBurst','GhostRevive','SoulCrystalBreak','WorkerVanish'):
         assert re.search(r'^\s*(?:particle_system\s+)?'+name+r'\s*\{',particles,re.M), name
         assert name in credits, name

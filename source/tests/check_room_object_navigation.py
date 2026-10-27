@@ -234,7 +234,8 @@ int main(){
   object.mesh=row.name;object.angle=rotation;object.pos={5,5,0};
   const float angle=rotation*.01745329252f;
   const auto placed=RoomObjectNavigation::collect(map,0);
-  if(object.mesh=="PortalObject"||RoomObjectPath::isDungeonHeartMesh(object.mesh)){
+  if(object.mesh=="PortalObject"||RoomObjectPath::isDungeonHeartMesh(object.mesh)||object.mesh=="GhostBell"||object.mesh=="GhostHook"||
+   object.mesh=="GhostHookEmpty"||object.mesh=="GhostWallGauges"||object.mesh=="GhostRack"){
    check(placed.empty(),"portal and dungeon heart do not create furniture blockers");
    for(const auto& model:RoomObjectPath::walkingRadii)for(int level:{1,30}){
     creature.mesh=model.name;creature.level=level;creature.pos={1,5,0};
