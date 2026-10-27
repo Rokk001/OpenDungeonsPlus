@@ -456,6 +456,32 @@ public:
     inline double getUndeadHealFactor() const { return mUndeadHealFactor; }
     //! \brief Returns whether lava damage follows the health curve.
     inline bool getLavaDamageScalesWithHp() const { return mLavaDamageScalesWithHp; }
+    //! \brief Returns the configured UnpaidWagesLeave value.
+    uint32_t getUnpaidWagesLeave() const { return mUnpaidWagesLeave; }
+
+    //! \brief Returns the configured UnpaidWagesStopWork value.
+    uint32_t getUnpaidWagesStopWork() const { return mUnpaidWagesStopWork; }
+
+    //! \brief Returns the configured FindHomeChance value.
+    double getFindHomeChance() const { return mFindHomeChance; }
+
+    //! \brief Returns the configured SleepSeekWakefulnessMin value.
+    double getSleepSeekWakefulnessMin() const { return mSleepSeekWakefulnessMin; }
+
+    //! \brief Returns the configured SleepSeekWakefulnessMax value.
+    double getSleepSeekWakefulnessMax() const { return mSleepSeekWakefulnessMax; }
+
+    //! \brief Returns the configured StealGoldTryChance value.
+    double getStealGoldTryChance() const { return mStealGoldTryChance; }
+
+    //! \brief Returns the configured TunnelTryChance value.
+    double getTunnelTryChance() const { return mTunnelTryChance; }
+
+    //! \brief Returns the configured StealItemChancePerIdle value.
+    double getStealItemChancePerIdle() const { return mStealItemChancePerIdle; }
+
+    //! \brief Returns the configured HungerSeek value.
+    double getHungerSeek() const { return mHungerSeek; }
 
     inline int32_t getNbTurnsKoCreatureAttacked() const
     { return mNbTurnsKoCreatureAttacked; }
@@ -826,6 +852,15 @@ private:
     double mNaturalFullHealSeconds;
     double mUndeadHealFactor;
     bool mLavaDamageScalesWithHp;
+    uint32_t mUnpaidWagesLeave;
+    uint32_t mUnpaidWagesStopWork;
+    double mFindHomeChance;
+    double mSleepSeekWakefulnessMin;
+    double mSleepSeekWakefulnessMax;
+    double mStealGoldTryChance;
+    double mTunnelTryChance;
+    double mStealItemChancePerIdle;
+    double mHungerSeek;
     int32_t mNbTurnsKoCreatureAttacked;
     std::string mDefaultWorkerRogue;
     std::string mMainMenuMusic;

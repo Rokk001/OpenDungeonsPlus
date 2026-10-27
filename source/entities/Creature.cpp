@@ -691,6 +691,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
+    mMissedWages             (0),
     mGoldCarried             (0),
     mGoldRemainder           (0.0),
     mGoldCarriedNotified     (0),
@@ -836,6 +837,7 @@ Creature::Creature(GameMap* gameMap) :
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
+    mMissedWages             (0),
     mGoldCarried             (0),
     mGoldRemainder           (0.0),
     mGoldCarriedNotified     (0),
@@ -1061,7 +1063,7 @@ std::string Creature::getCreatureStreamFormat()
 
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
-            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]"
+            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]\t[Wages missedWages /Wages]"
             "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]"
             "\t[Spa spaMood relaxTurns mudTilesLeft /Spa]"
             "\t[Corpse corpseTurns decayTurns /Corpse]";
@@ -1131,6 +1133,9 @@ void Creature::exportToStream(std::ostream& os) const
         CreatureSkillTree::writeBuild(mSkillBuild, os);
     }
     exportItemsToStream(os);
+
+    if(mMissedWages > 0)
+        os << "\t[Wages] " << mMissedWages << " [/Wages]";
 
     // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
     if((mUrge > 0.0) || (mCreatureDirt > 0.0))
@@ -1323,6 +1328,14 @@ bool Creature::importFromStream(std::istream& is)
             {
                 OD_LOG_WRN("Invalid mana token=" + appearanceToken);
             }
+            continue;
+        }
+
+        if(appearanceToken == "[Wages]")
+        {
+            std::string wagesClose;
+            if(!(is >> mMissedWages >> wagesClose) || (wagesClose != "[/Wages]"))
+                return false;
             continue;
         }
 
@@ -2449,7 +2462,7 @@ void Creature::dropCarriedEquipment()
 }
 
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
-//! Spaces authoritative standing bodies before their next action without changing action targets.
+//! Spaces authoritative standing bodies and interrupts activities for urgent needs.
 void Creature::doUpkeep()
 {
     upkeepGhostHunt();
@@ -3105,6 +3118,30 @@ void Creature::doUpkeep()
         }
     }
 
+    // Urgent needs interrupt other activities, including travel, unless a need is already being served.
+    bool servingNeed = isActionInList(CreatureActionType::searchFood) ||
+        isActionInList(CreatureActionType::searchDrink) || isActionInList(CreatureActionType::eatChicken);
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+    {
+        if(!CreatureAction::isRoomWorkAction(action->getType()))
+            continue;
+        const Room* room = static_cast<const CreatureActionUseRoom*>(action.get())->getRoom();
+        if(room != nullptr && (room->getType() == RoomType::hatchery || room->getType() == RoomType::tavern))
+            servingNeed = true;
+    }
+    if(!mActions.empty() && !isActionInList(CreatureActionType::searchToilet) &&
+       !isActionInList(CreatureActionType::useToilet) && needInterrupt(servingNeed))
+    {
+        stopWalking();
+        clearActionQueue();
+        if(mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
+            pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
+        else if(isHungry())
+            pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        else
+            pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
+    }
+
     // The loopback variable allows creatures to begin processing a new
     // action immediately after some other action happens.
     bool loopBack = false;
@@ -3193,7 +3230,7 @@ void Creature::handleHeartDefence()
     pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
 }
 
-//! \brief Chooses equipment, trade and visible item actions among the existing idle needs.
+//! \brief Serves idle needs before choosing equipment, trade and other actions.
 bool Creature::handleIdleAction()
 {
     setAnimationState(EntityAnimation::idle_anim);
@@ -3251,6 +3288,46 @@ bool Creature::handleIdleAction()
     // prioritary actions as usual
     if(isInPossessionGroup() && followPossessionLeader())
         return false;
+
+    // If we have to relieve ourselves, we go to a toilet. Without a toilet room nothing happens here: the
+    // creature goes on until the urge is too strong
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::searchToilet) &&
+        (mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
+        return true;
+    }
+
+    // If we are hungry, we go to eat
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::searchFood) &&
+        (isHungry()))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    // If we are thirsty, we go to a tavern. Without a tavern nothing happens here: the thirst keeps rising and
+    // its mood malus acts
+    if (!mDefinition->isWorker() &&
+        mDefinition->hasThirst() &&
+        !hasActionBeenTried(CreatureActionType::searchDrink) &&
+        (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
+        return true;
+    }
+
+    // If we are sleepy, we go to sleep
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::sleep) &&
+        (mHomeTile != nullptr) &&
+        (Random::Double(ConfigManager::getSingleton().getSleepSeekWakefulnessMin(), ConfigManager::getSingleton().getSleepSeekWakefulnessMax()) > mWakefulness))
+    {
+        pushAction(Utils::make_unique<CreatureActionSleep>(*this));
+        return true;
+    }
 
     // We check if we are looking for our fee
     if(!mDefinition->isWorker() &&
@@ -3317,19 +3394,9 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         !hasActionBeenTried(CreatureActionType::findHome) &&
         (mHomeTile == nullptr) &&
-        (Random::Double(0.0, 1.0) < 0.5))
+        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getFindHomeChance()))
     {
         pushAction(Utils::make_unique<CreatureActionFindHome>(*this, false));
-        return true;
-    }
-
-    // If we are sleepy, we go to sleep
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::sleep) &&
-        (mHomeTile != nullptr) &&
-        (Random::Double(20.0, 30.0) > mWakefulness))
-    {
-        pushAction(Utils::make_unique<CreatureActionSleep>(*this));
         return true;
     }
 
@@ -3344,26 +3411,6 @@ bool Creature::handleIdleAction()
         return true;
     }
 
-    // If we are hungry, we go to eat
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::searchFood) &&
-        (Random::Double(70.0, 80.0) < mHunger))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
-        return true;
-    }
-
-    // If we are thirsty, we go to a tavern. Without a tavern nothing happens here: the thirst keeps rising and
-    // its mood malus acts
-    if (!mDefinition->isWorker() &&
-        mDefinition->hasThirst() &&
-        !hasActionBeenTried(CreatureActionType::searchDrink) &&
-        (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
-        return true;
-    }
-
     // If we are in a bad mood or have a hangover, we go to a lava spa. Without a spa that can take us nothing
     // happens here and we try again at the next search
     if (wantsSpaBath() &&
@@ -3373,17 +3420,7 @@ bool Creature::handleIdleAction()
         return true;
     }
 
-    // If we have to relieve ourselves, we go to a toilet. Without a toilet room nothing happens here: the
-    // creature goes on until the urge is too strong
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::searchToilet) &&
-        (mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek")))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
-        return true;
-    }
-
-    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::stealItem) && Random::Double(0.0, 1.0) < 0.2)
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::stealItem) && Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getStealItemChancePerIdle())
     {
         pushAction(Utils::make_unique<CreatureActionStealItem>(*this));
         return true;
@@ -3394,7 +3431,7 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         (mDefinition->getStealGold() > 0) &&
         !hasActionBeenTried(CreatureActionType::stealFreeGold) &&
-        (Random::Uint(0, 10) > 8))
+        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getStealGoldTryChance()))
     {
         pushAction(Utils::make_unique<CreatureActionStealFreeGold>(*this));
         return true;
@@ -3404,7 +3441,7 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         (getDigRate() > 0.0) &&
         !hasActionBeenTried(CreatureActionType::tunnel) &&
-        (Random::Uint(0, 10) > 6))
+        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getTunnelTryChance()))
     {
         pushAction(Utils::make_unique<CreatureActionTunnel>(*this));
         return true;
@@ -3412,8 +3449,7 @@ bool Creature::handleIdleAction()
 
     // Otherwise, we try to work
     if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::searchJob) &&
-        (Random::Double(0.0, 1.0) < 0.4))
+        !hasActionBeenTried(CreatureActionType::searchJob))
     {
         pushAction(Utils::make_unique<CreatureActionSearchJob>(*this, false));
         return true;
@@ -8706,7 +8742,7 @@ void Creature::fireArrivalEvent()
 
     // The creature has no vision yet and the portal belongs to the keeper, so the keeper is told directly.
     // Reading the mood only adds up the modifiers, it does not change the creature.
-    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
     CosmeticEvent event(CosmeticEventType::portalArrival);
     event.mSubject = getName();
     event.mValue = static_cast<int32_t>(CreatureMoodManager::getCreatureMoodLevel(points));
@@ -8714,13 +8750,17 @@ void Creature::fireArrivalEvent()
     ODServer::getSingleton().sendCosmeticEvent(player, event);
 }
 
+//! \brief Accrues a wage and records missed wages when the treasury is empty.
 void Creature::itsPayDay()
 {
     // Rogue creatures do not have to be paid
     if(getSeat()->isRogueSeat())
         return;
 
-    mGoldFee += mDefinition->getFee(getLevel());
+    const double wage = mDefinition->getFee(getLevel());
+    mGoldFee += wage;
+    if(wage > 0.0 && getSeat()->getGold() <= 0)
+        mMissedWages = static_cast<uint32_t>(std::ceil(mGoldFee / wage));
 }
 
 void Creature::increaseHunger(double value)
@@ -9273,7 +9313,7 @@ void Creature::removeAnnoyance()
     mSlapTurns.clear();
     mSpecialMood = 0;
     // What is left (hunger, tiredness, wounds, unpaid wage) is cancelled for a while, it builds up again
-    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
     mSpecialMood = std::max(0, -points);
     mMoodCooldownTurns = 0;
 }
@@ -9281,7 +9321,7 @@ void Creature::removeAnnoyance()
 void Creature::makeUnhappy()
 {
     mSpecialMood = 0;
-    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
     // The middle of the angry level
     int32_t target = (ConfigManager::getSingleton().getCreatureMoodAngry()
         + ConfigManager::getSingleton().getCreatureMoodFurious()) / 2;
@@ -9726,12 +9766,25 @@ bool Creature::isTired() const
     return (mOverlayMoodValue & CreatureMoodValues::Tired) != 0;
 }
 
+//! \brief Returns whether hunger has reached the configured threshold.
 bool Creature::isHungry() const
 {
     if(getIsOnServerMap())
-        return mHunger >= 80.0;
+        return mHunger >= ConfigManager::getSingleton().getHungerSeek();
 
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
+}
+
+//! \brief Detects urgent needs unless fighting, held, knocked out, imprisoned or leaving.
+bool Creature::needInterrupt(bool servingNeed) const
+{
+    if(mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
+       isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly))
+        return false;
+    if(mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
+        return true;
+    return !servingNeed && (isHungry() || (mDefinition->hasThirst() &&
+        mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")));
 }
 
 //! \brief Ends knockout state and permits one item drop in the next fight.

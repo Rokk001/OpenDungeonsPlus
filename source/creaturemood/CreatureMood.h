@@ -49,7 +49,8 @@ public:
     virtual const std::string& getModifierName() const = 0;
 
     //! \brief Computes the creature mood for this modifier
-    virtual int32_t computeMood(const Creature& creature) const = 0;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const = 0;
 
     //! \brief This function should return a copy of the current class
     virtual CreatureMood* clone() const = 0;

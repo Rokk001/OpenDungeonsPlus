@@ -121,7 +121,8 @@ const std::string& CreatureMoodDirt::getModifierName() const
 }
 
 //! \brief Room dirt stage mood plus pile mood, both times the Cleanliness of the creature type.
-int32_t CreatureMoodDirt::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodDirt::computeMood(const Creature& creature) const
 {
     if(!canFeelDirt(creature))
         return 0;
@@ -133,7 +134,7 @@ int32_t CreatureMoodDirt::computeMood(const Creature& creature) const
 
     double mood = getRoomDirtMood(*tile) + getPileMood(*gameMap, *tile);
     mood *= creature.getDefinition()->getCleanliness();
-    return static_cast<int32_t>(std::lround(mood));
+    return mood;
 }
 
 //! \brief Returns a copy of this modifier.
