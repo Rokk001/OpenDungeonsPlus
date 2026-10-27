@@ -2127,6 +2127,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
             return false;
         if(!loadTilesetValues(defFile, TileVisual::infirmaryRoom, tileSet->configureTileValues(TileVisual::infirmaryRoom),*mHighMap))
             return false;
+        if(!loadTilesetValues(defFile, TileVisual::ghostRoom, tileSet->configureTileValues(TileVisual::ghostRoom),*mHighMap))
+            return false;
 
     }
 

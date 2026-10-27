@@ -46,6 +46,7 @@ struct RelationshipCreatureState;
 class Building;
 class Creature;
 class CreatureAction;
+class CreatureActionHuntGhost;
 class CreatureEffectDigTile;
 class CreatureEffect;
 class CreatureDefinition;
@@ -78,6 +79,7 @@ struct CreatureSnapshot;
 namespace Ogre
 {
 class ParticleSystem;
+class BillboardChain;
 }
 
 //! \brief The kinds of drink a creature can take (see Creature::drinkTaken).
@@ -829,6 +831,17 @@ public:
     bool isActionInList(CreatureActionType action) const;
 
     //! \brief Clears the action queue, except for the Idle action at the end.
+    //! \brief Drops a hunter's boxed ghosts and releases its equipment without removing queued actions.
+    void interruptGhostHunt();
+    //! \brief Copies the current hunting presentation into the replicated creature state.
+    void refreshGhostHuntVisuals();
+    //! \brief Advances the backpack, box and dynamic connecting beam on a client.
+    void updateGhostHuntVisuals(double seconds);
+    //! \brief Destroys this hunter's cosmetic scene objects and looping sound.
+    void clearGhostHuntVisuals();
+    //! \brief Restores a pending hunt and awards its exact training-hall XP each turn.
+    void upkeepGhostHunt();
+    //! \brief Clears queued actions after releasing hunt ownership without destructor reentrancy.
     void clearActionQueue();
 
     //! \brief Computes the tiles visible for the creature and sends a message to the clients to mark those tiles. This function
@@ -1794,6 +1807,14 @@ private:
     std::vector<GameEntity*>        mVisibleEnemyObjects;
     std::vector<GameEntity*>        mVisibleAlliedObjects;
     std::vector<GameEntity*>        mReachableAlliedObjects;
+    bool mGhostHuntLoaded = false;
+    bool mGhostBackpack = false;
+    std::string mGhostBeamTarget;
+    double mGhostBeamSample = 0.0;
+    uint32_t mGhostBeamSound = 0;
+    Ogre::SceneNode* mGhostBackpackNode = nullptr;
+    Ogre::SceneNode* mGhostBeamNode = nullptr;
+    Ogre::BillboardChain* mGhostBeamChain = nullptr;
     std::vector<std::unique_ptr<CreatureAction>>    mActions;
     std::vector<Tile*>              mVisualDebugEntityTiles;
 

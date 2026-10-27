@@ -1,3 +1,5 @@
+#include "creatureaction/CreatureActionHuntGhost.h"
+#include <OgreBillboardChain.h>
 /*
  *  Copyright (C) 2011-2017  OpenDungeons Team
  *
@@ -878,6 +880,8 @@ Creature::Creature(GameMap* gameMap) :
 //! \brief Frees the active skills made from the skill tree and, on a client, clears the highlighted creature pointer.
 Creature::~Creature()
 {
+    interruptGhostHunt();
+    clearGhostHuntVisuals();
     if(getIsOnServerMap())
         unregisterHeldEpics();
     // The active skills made from the skill tree belong to the creature
@@ -915,6 +919,7 @@ void Creature::createMeshLocal(NodeType nt)
 
 void Creature::destroyMeshLocal(NodeType nt)
 {
+    clearGhostHuntVisuals();
     destroyMeshWeapons();
     MovableGameEntity::destroyMeshLocal();
     if(getIsOnServerMap())
@@ -978,6 +983,7 @@ void Creature::addToGameMap(GameMap* gameMap)
 //! \brief Removes the creature and releases any crypt spot or delivery reservation holding its body.
 void Creature::removeFromGameMap(GameMap* gameMap)
 {
+    interruptGhostHunt();
     if(getIsOnServerMap())
     {
         for(Room* room : getGameMap()->getRoomsByType(RoomType::crypt))
@@ -1116,6 +1122,9 @@ void Creature::exportToStream(std::ostream& os) const
         if(mIsCarried)
             os << "\t" << CORPSE_CARRIER_SAVE_LABEL << mCorpseCarrierName;
     }
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+            static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
     os.precision(precision);
 }
 
@@ -1208,6 +1217,13 @@ bool Creature::importFromStream(std::istream& is)
         if(appearanceToken == "CorpseConsumed=1")
         {
             corpseConsumed = true;
+            continue;
+        }
+        if(appearanceToken == "[GhostHunt]")
+        {
+            std::unique_ptr<CreatureActionHuntGhost> hunt(new CreatureActionHuntGhost(*this));
+            if(!hunt->importFromStream(is)) return false;
+            mActions.emplace_back(std::move(hunt));mGhostHuntLoaded=true;
             continue;
         }
         if(appearanceToken == "[Corpse]")
@@ -2044,6 +2060,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mCreatureDirt;
     exportThirstStateToPacket(os);
     os << mCorpseTurns << mDecayTurns;
+    os << mGhostBackpack << mGhostBeamTarget;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2118,6 +2135,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
+    OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget);
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2335,6 +2353,7 @@ void Creature::dropCarriedEquipment()
 //! Spaces authoritative standing bodies before their next action without changing action targets.
 void Creature::doUpkeep()
 {
+    upkeepGhostHunt();
     const double oldMaximumHealth = mMaxHP;
     buildStats();
     if(oldMaximumHealth != mMaxHP)
@@ -3784,6 +3803,7 @@ double Creature::getTileSpeedRatio() const
 
 void Creature::updateClientPose(double timeSinceLastFrame)
 {
+    updateGhostHuntVisuals(timeSinceLastFrame);
     if(getAnimationStateName() != EntityAnimation::walk_anim)
     {
         mClientTileSpeedRatio = -1.0;
@@ -4956,6 +4976,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         os << 0.0;
     }
     os << mCorpseTurns << mDecayTurns;
+    os << mGhostBackpack << mGhostBeamTarget;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5068,6 +5089,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
+    OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -6747,6 +6769,7 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
 
     if(mHp <= 0)
     {
+        interruptGhostHunt();
         // A possessed creature is not knocked out, it dies and the keeper loses mana
         if(isPossessed())
         {
@@ -6970,6 +6993,7 @@ bool Creature::isActionInList(CreatureActionType action) const
 
 void Creature::clearActionQueue()
 {
+    interruptGhostHunt();
     mActions.clear();
 }
 
@@ -7063,6 +7087,7 @@ bool Creature::tryPickup(Seat* seat)
 
 void Creature::pickup()
 {
+    interruptGhostHunt();
     if(getIsOnServerMap())
         LevelScriptRunner::dropCarriedStone(*this);
 
@@ -7151,6 +7176,7 @@ bool Creature::tryDrop(Seat* seat, Tile* tile)
 
 void Creature::drop(const Ogre::Vector3& v)
 {
+    interruptGhostHunt();
     if(getIsOnServerMap())
         getGameMap()->getLevelScript().clearFatalShot(getName());
     setPosition(v);
@@ -10273,5 +10299,105 @@ void Creature::possessedUseSkill(uint32_t slot, const Ogre::Vector2& aim)
 
         useAttack(skillData, *entity, *tile, false, true);
         return;
+    }
+}
+
+void Creature::interruptGhostHunt()
+{
+    if(!getIsOnServerMap()) return;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+            static_cast<CreatureActionHuntGhost*>(action.get())->interrupt();
+}
+
+void Creature::refreshGhostHuntVisuals()
+{
+    bool backpack=false;std::string target;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+        {
+            CreatureActionHuntGhost* hunt=static_cast<CreatureActionHuntGhost*>(action.get());
+            backpack=hunt->hasBackpack();target=hunt->getBeamTarget();break;
+        }
+    if(backpack!=mGhostBackpack || target!=mGhostBeamTarget)
+    { mGhostBackpack=backpack;mGhostBeamTarget=target;mNeedFireRefresh=true; }
+}
+
+void Creature::upkeepGhostHunt()
+{
+    if(!getIsOnServerMap()) return;
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType()==CreatureActionType::huntGhost)
+        {
+            CreatureActionHuntGhost* hunt=static_cast<CreatureActionHuntGhost*>(action.get());
+            if(mGhostHuntLoaded) hunt->restore();
+            hunt->upkeep();
+        }
+    mGhostHuntLoaded=false;
+}
+
+void Creature::clearGhostHuntVisuals()
+{
+    if(getIsOnServerMap()) return;
+    Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+    if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
+    if(mGhostBeamChain!=nullptr) { scene->destroyBillboardChain(mGhostBeamChain);mGhostBeamChain=nullptr; }
+    if(mGhostBeamNode!=nullptr) { scene->destroySceneNode(mGhostBeamNode);mGhostBeamNode=nullptr; }
+    if(mGhostBackpackNode!=nullptr)
+    {
+        while(mGhostBackpackNode->numAttachedObjects()>0)
+        {
+            Ogre::MovableObject* object=mGhostBackpackNode->getAttachedObject(static_cast<unsigned short>(0));
+            mGhostBackpackNode->detachObject(object);scene->destroyMovableObject(object);
+        }
+        scene->destroySceneNode(mGhostBackpackNode);mGhostBackpackNode=nullptr;
+    }
+}
+
+void Creature::updateGhostHuntVisuals(double seconds)
+{
+    if(getIsOnServerMap() || getEntityNode()==nullptr) return;
+    if(!mGhostBackpack) { clearGhostHuntVisuals();return; }
+    Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+    if(mGhostBackpackNode==nullptr)
+    {
+        Ogre::Entity* pack=scene->createEntity(getName()+"_GhostBackpack","GhostBackpack.mesh");
+        pack->setQueryFlags(0);pack->setCastShadows(true);
+        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,-0.18f,0.6f));
+        mGhostBackpackNode->attachObject(pack);
+    }
+    GameEntity* target=getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostBeamTarget);
+    if(target==nullptr || mGhostBeamTarget.empty())
+    {
+        if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
+        if(mGhostBeamChain!=nullptr) { scene->destroyBillboardChain(mGhostBeamChain);mGhostBeamChain=nullptr; }
+        if(mGhostBeamNode!=nullptr) { scene->destroySceneNode(mGhostBeamNode);mGhostBeamNode=nullptr; }
+        return;
+    }
+    if(mGhostBeamChain==nullptr)
+    {
+        mGhostBeamChain=scene->createBillboardChain(getName()+"_GhostBeam");
+        mGhostBeamChain->setNumberOfChains(3);mGhostBeamChain->setMaxChainElements(9);
+        mGhostBeamChain->setMaterialName("GhostBeam");mGhostBeamChain->setCastShadows(false);mGhostBeamChain->setQueryFlags(0);
+        mGhostBeamNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_GhostBeamNode");mGhostBeamNode->attachObject(mGhostBeamChain);
+        mGhostBeamSample=0.1;
+        mGhostBeamSound=SoundEffectsManager::getSingleton().startSpatialLoop("Rooms/GhostRoom/Beam",getPosition().x,getPosition().y);
+    }
+    SoundEffectsManager::getSingleton().setSpatialLoopPosition(mGhostBeamSound,getPosition().x,getPosition().y);
+    mGhostBeamSample+=seconds;
+    if(mGhostBeamSample<0.1) return;
+    mGhostBeamSample=std::fmod(mGhostBeamSample,0.1);
+    const Ogre::Vector3 start=getPosition()+getWalkDirection()*0.35f+Ogre::Vector3(0.0f,0.0f,0.65f);
+    const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
+    for(size_t chain=0;chain<3;++chain)
+    {
+        mGhostBeamChain->clearChain(chain);
+        for(size_t i=0;i<9;++i)
+        {
+            const float fraction=static_cast<float>(i)/8.0f;
+            Ogre::Vector3 point=start+(end-start)*fraction;
+            if(i!=0 && i!=8) point+=Ogre::Vector3(Random::Double(-0.08,0.08),Random::Double(-0.08,0.08),Random::Double(-0.08,0.08));
+            mGhostBeamChain->addChainElement(chain,Ogre::BillboardChain::Element(point,0.025f,fraction,Ogre::ColourValue(0.55f,1.0f,0.65f,1.0f),Ogre::Quaternion::IDENTITY));
+        }
     }
 }

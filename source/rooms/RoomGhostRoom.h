@@ -48,6 +48,12 @@ public:
     Tile* reserveHook(Creature& hunter);
     //! \brief Changes a reserved hook between its equipped and empty appearance.
     void equipHook(Creature& hunter, bool equipped);
+    //! \brief Rebinds an exact saved equipment hook without selecting another tile.
+    void restoreHunter(Creature& hunter, Tile* hook, bool equipped);
+    //! \brief Rebinds the occupied cauldron next to the saved standing tile.
+    void restoreCauldron(Creature& hunter, Tile* standing);
+    //! \brief Releases only the emptying place, retaining the hunter's backpack hook.
+    void releaseCauldron(Creature& hunter);
     //! \brief Returns equipment and all cauldron reservations of a hunter.
     void releaseHunter(Creature& hunter);
     //! \brief Reserves a free reachable standing place beside an available cauldron.

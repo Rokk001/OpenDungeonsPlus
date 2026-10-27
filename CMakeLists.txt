@@ -562,6 +562,8 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomAlchemyLab.cpp
     ${SRC}/rooms/RoomCrypt.cpp
     ${SRC}/rooms/RoomDormitory.cpp
+    ${SRC}/rooms/RoomGhostRoom.cpp
+    ${SRC}/creatureaction/CreatureActionHuntGhost.cpp
     ${SRC}/rooms/RoomInfirmary.cpp
     ${SRC}/rooms/RoomInfirmaryEconomy.cpp
     ${SRC}/rooms/RoomInfirmaryStreams.cpp

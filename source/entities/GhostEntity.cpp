@@ -3,7 +3,7 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
-#include "creatureaction/CreatureActionType.h"
+#include "creatureaction/CreatureAction.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
