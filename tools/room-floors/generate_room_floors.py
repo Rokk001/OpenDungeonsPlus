@@ -126,6 +126,7 @@ def normal_map(height, strength):
 # lights push orange tones further, so the raw painted colours of these floors came out too bright and too colourful
 # in the game's lighting. Rooms that are not listed are left as painted.
 TONE = {
+    'spa': (0.50, 0.85, (1.10, 0.98, 0.90)),
     'library': (0.36, 0.72, (1.03, 0.96, 1.04)),
     'hatchery': (0.15, 0.72, (1.09, 1.00, 0.85)),
     'dormitory': (0.22, 1.14, (1.10, 1.00, 0.88)),
@@ -142,6 +143,7 @@ TONE = {
 # luminance (sigma in texture px, strength 0..1), so nothing larger than about a fifth of a tile keeps a different
 # mean brightness; the mean luminance stays. Applied to the open floor field before the wall bands are added.
 FLATTEN = {
+    'spa': (48.0, 0.7),
     'dormitory': (48.0, 0.6), 'casino': (48.0, 0.5),
     'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'prison': (40.0, 0.8),
     'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
@@ -2119,6 +2121,10 @@ ROOMS = {
         'field': flagstone_field, 'band': None, 'strength': 1.3, 'tone': 'treasury',
         'pieces': {'Arena': ('', 'ArenaNormal')},
     },
+    'spa': {
+        'field': torture_field, 'band': None, 'strength': 1.3, 'tone': 'spa',
+        'pieces': {'SpaFloor': ('', 'SpaFloorNormal')},
+    },
     'torture': {
         'field': torture_field, 'band': None, 'strength': 1.3,
         'pieces': {'TortureFloor': ('', 'TortureFloorNormal')},
@@ -2285,7 +2291,7 @@ def seam_image(result):
 
 
 # Rooms whose floors are periodic and get the wrap seam ratio (--check) and the rolled preview (--seamcheck).
-SEAM_CHECK_ROOMS = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena',
+SEAM_CHECK_ROOMS = ('spa', 'hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena',
                     'torture', 'workshop', 'portal', 'portalWave', 'toilet', 'tavern')
 
 

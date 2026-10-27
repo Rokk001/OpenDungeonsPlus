@@ -835,5 +835,13 @@
     "xPos": "128",
     "yPos": "1536",
     "source": "tiles/InfirmaryButton.png"
+  },
+  {
+    "height": "128",
+    "name": "SpaButton",
+    "width": "128",
+    "xPos": "256",
+    "yPos": "1536",
+    "source": "tiles/SpaButton.png"
   }
 ]

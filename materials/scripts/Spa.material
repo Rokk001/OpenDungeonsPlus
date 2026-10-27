@@ -1,0 +1,136 @@
+// Original hot mud bath objects.
+import RTSS/PerPixel_SinglePass from "RTShaderSystem.material"
+
+material SpaMud : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.4 0.25 0.13 1
+            specular 0 0 0 0 1
+            texture_unit
+            {
+                texture Dirt.png
+                scroll_anim 0.02 0.01
+            }
+        }
+    }
+}
+
+material SpaStone : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 1 1 1 1
+            specular 0 0 0 0 1
+            texture_unit
+            {
+                texture SpaFloor.png
+            }
+        }
+    }
+}
+
+material SpaWood : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.72 0.65 0.53 1
+            specular 0 0 0 0 1
+            texture_unit
+            {
+                texture BedWood.png
+            }
+        }
+    }
+}
+
+material SpaIron : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.12 0.11 0.09 1
+            specular 0 0 0 0 1
+        }
+    }
+}
+
+material SpaSkin : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.37 0.42 0.2 1
+            specular 0 0 0 0 1
+        }
+    }
+}
+
+material SpaSuitDark : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.13 0.18 0.22 1
+            specular 0 0 0 0 1
+        }
+    }
+}
+
+material SpaLinen : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.72 0.68 0.52 1
+            specular 0 0 0 0 1
+        }
+    }
+}
+
+material SpaWhistle : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.49 0.39 0.21 1
+            specular 0 0 0 0 1
+        }
+    }
+}
+
+material SpaEyes : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.02 0.018 0.01 1
+            specular 0 0 0 0 1
+        }
+    }
+}
+
+material SpaLavaGlow
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            diffuse 1.0 0.15 0.015 1
+            emissive 1.0 0.15 0.015
+        }
+    }
+}
