@@ -25,13 +25,14 @@ documented in the header of the file) and `config/skills.cfg` (`roomSpa`, the ef
 
 - A creature that is no worker, not in prison and not in the hand wants a bath when its mood is Upset, Angry or Furious and
   its relaxation has run out, or when it has a hangover (a hangover ignores the relaxation).
-- The bath lasts `SpaBathTurns` (71.4286, the counted turns reach it in the 72nd turn). Every turn adds `SpaMoodPerTurn`
-  (21) spa mood up to `SpaMoodMax` (1500); the spa mood is one more part of the creature's mood and fades by
-  `SpaMoodDecayPerTurn` (2) per turn once the bath is over. One bath in `SpaCannonballChance` starts with a jump from the
+- The bath lasts `SpaBathTurns` (14.2857, the counted turns reach it in the 15th turn). Every turn adds `SpaMoodPerTurn`
+  (21) spa mood up to `SpaMoodMax` (300, so a bath restores only a part of a bad mood); the spa mood is one more part of the
+  creature's mood, does not fade while the creature sits in the bath and fades by `SpaMoodDecayPerTurn` (0.4) per turn
+  once the bath is over. One bath in `SpaCannonballChance` starts with a jump from the
   springboard (an arc of `SpaJumpTurns`, `SpaJumpHeight` tiles, then a mud splash). The bath is paid at the landing, before it starts; if it cannot be paid then, the creature gets its place back and does not bathe.
 - At the end of the bath the creature is relaxed for `SpaRelaxTurns` (252; 302.4 and 352.8 with research levels 2 and 3):
   the points and experience it earns in the library, workshop and training hall and in the arena are multiplied by
-  `SpaRelaxWorkFactor` (1.2834). Nothing in combat changes. The hangover ends at once and the creature writes the post
+  `SpaRelaxWorkFactor` (1.0567). Nothing in combat changes. The hangover ends at once and the creature writes the post
   "relaxed".
 - The bath does not clean the creature. A creature that leaves the pool leaves mud on the next `SpaMudTrailTiles` (3) tiles
   it enters outside the pool, `SpaDirtPerBath` in total (times its dirt factor), so the tiles around the pool get dirtier.

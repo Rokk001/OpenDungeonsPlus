@@ -153,7 +153,7 @@ struct ODPacket
 struct ConfigManager
 {
     static ConfigManager& getSingleton() { static ConfigManager instance; return instance; }
-    double getRoomConfigDouble(const std::string& key) const { return (key == "SpaMoodMax") ? 1500.0 : 0.0; }
+    double getRoomConfigDouble(const std::string& key) const { return (key == "SpaMoodMax") ? 300.0 : 0.0; }
 };
 @@STRINGS@@
 
@@ -214,12 +214,12 @@ void Creature::writeFullTail(ODPacket& os, const Seat* seat) const
 static void checkSpaBlock()
 {
     // Round trip with fractions
-    Creature a("a"); a.setSpaMood(812.5); a.setRelaxTurns(302.4); a.setSpaMudTilesLeft(2);
+    Creature a("a"); a.setSpaMood(212.5); a.setRelaxTurns(302.4); a.setSpaMudTilesLeft(2);
     std::ostringstream out; a.writeBlocks(out);
-    expect(out.str() == "\t[Spa] 812.5 302.4 2 [/Spa]", "written block: " + out.str());
+    expect(out.str() == "\t[Spa] 212.5 302.4 2 [/Spa]", "written block: " + out.str());
     Creature b("b"); std::istringstream in(out.str());
     expect(b.readBlocks(in), "block read");
-    expectNear(b.mSpaMood, 812.5, "spa mood"); expectNear(b.mRelaxTurns, 302.4, "relaxation"); expect(b.mSpaMudTilesLeft == 2, "mud tiles");
+    expectNear(b.mSpaMood, 212.5, "spa mood"); expectNear(b.mRelaxTurns, 302.4, "relaxation"); expect(b.mSpaMudTilesLeft == 2, "mud tiles");
     // Nothing set: no block (an old creature line is the same)
     Creature z("z"); std::ostringstream none; z.writeBlocks(none);
     expect(none.str().empty(), "no block when all values are 0");
@@ -236,7 +236,7 @@ static void checkSpaBlock()
     expect(c2.readBlocks(second) && c2.mRelaxTurns == 20.0 && c2.mOtherBlock == "y", "spa block before another block");
     // Limited like the setters limit them
     Creature l("l"); std::istringstream limited("[Spa] 99999 -4 -3 [/Spa]");
-    expect(l.readBlocks(limited) && l.mSpaMood == 1500.0 && l.mRelaxTurns == 0.0 && l.mSpaMudTilesLeft == 0, "values limited");
+    expect(l.readBlocks(limited) && l.mSpaMood == 300.0 && l.mRelaxTurns == 0.0 && l.mSpaMudTilesLeft == 0, "values limited");
     // Broken blocks are refused
     const char* broken[] = { "[Spa] 1 2 [/Spa]", "[Spa] 1 2 3", "[Spa] 1 2 3 [/Other]", "[Spa] a b c [/Spa]", "[Spa]" };
     for(unsigned i = 0; i < sizeof(broken) / sizeof(broken[0]); ++i)
@@ -245,11 +245,11 @@ static void checkSpaBlock()
         expect(!x.readBlocks(bad), std::string("broken block refused: ") + broken[i]);
     }
     // Packet: the spa state keeps its fractions, in the order mood, relaxation
-    Creature p("p"); p.setSpaMood(333.25); p.setRelaxTurns(17.75);
+    Creature p("p"); p.setSpaMood(233.25); p.setRelaxTurns(17.75);
     ODPacket packet; p.exportSpaStateToPacket(packet);
     Creature q("q"); q.importSpaStateFromPacket(packet);
-    expectNear(q.mSpaMood, 333.25, "packet mood"); expectNear(q.mRelaxTurns, 17.75, "packet relaxation");
-    expect(packet.data.str() == "333.25 17.75 ", "two fields: " + packet.data.str());
+    expectNear(q.mSpaMood, 233.25, "packet mood"); expectNear(q.mRelaxTurns, 17.75, "packet relaxation");
+    expect(packet.data.str() == "233.25 17.75 ", "two fields: " + packet.data.str());
 }
 
 // ---- Room stream

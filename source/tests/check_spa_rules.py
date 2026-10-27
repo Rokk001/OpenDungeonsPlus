@@ -5,9 +5,9 @@ What is run (the function bodies are taken from the source files, not copied by 
   Creature::wantsSpaBath             a bath is wanted for Upset, Angry and Furious with the relaxation run out, or with a hangover
                                      (also when relaxed); never for workers, rogue creatures, prisoners and creatures in the hand
   Creature::addSpaMood / setSpaMood / setRelaxTurns / setSpaMudTilesLeft / getRelaxWorkFactor / upkeepSpaState
-                                     the clamp 0..SpaMoodMax, no fading while the creature sits in the bath, then 2 per turn
-                                     (750 turns from the full value), the relaxation counts down by 1 and never below 0,
-                                     the work factor 1.2834 only while relaxed
+                                     the clamp 0..SpaMoodMax, no fading while the creature sits in the bath, then 0.4 per turn
+                                     (750 turns from the full value 300), the relaxation counts down by 1 and never below 0,
+                                     the work factor 1.0567 only while relaxed
   Creature mud trail                 the code of Creature::dirtyEnteredTile that spreads the mud: not on pool tiles, the
                                      next 3 tiles outside the pool each get SpaDirtPerBath / 3 times the DirtFactor, the
                                      creature dirt does not change
@@ -16,7 +16,7 @@ What is run (the function bodies are taken from the source files, not copied by 
                                      bath" (the creature is not accepted, nothing is paid), workers, other seats and a full
                                      pool are refused, so nobody queues
   RoomSpa::startBath / upkeepBathers / finishBath / isBatherDisturbed / abortDisturbedBathers
-                                     the bath lasts 72 turns (the counted turns reach 71.4286), +21 mood per turn up to 1500,
+                                     the bath lasts 15 turns (the counted turns reach 14.2857), +21 mood per turn up to 300,
                                      at the end the relaxation is 252 / 302.4 / 352.8 by research level, the hangover is 0,
                                      the post is sent once, the creature dirt is untouched, the mud counter is 3; a fight, a
                                      flight, a knock-out, a pick-up or a missing creature breaks the bath off: the mood stays,
@@ -447,16 +447,16 @@ static void checkBath(uint32_t level, double expectedRelax)
     expect(f.room->payForBath(c) && f.seat.gold == 45, "the bath costs 5");
     f.startBathFor(c);
     expect(c.mSpaBathing, "the bath marks the creature as bathing (no fading)");
-    int turns = 0; double moodAfter71 = 0.0;
+    int turns = 0; double moodAfter14 = 0.0;
     while(!f.room->mBathers.empty() && !f.room->mBathers.back().mDone && turns < 500)
     {
         c.upkeepSpaState(); f.room->upkeepBathers(); ++turns;
-        if(turns == 71) moodAfter71 = c.mSpaMood;
-        if(turns < 72) expectNear(c.mSpaMood, std::min(1500.0, 21.0 * turns), "mood +21 per turn, turn " + std::to_string(turns));
+        if(turns == 14) moodAfter14 = c.mSpaMood;
+        if(turns < 15) expectNear(c.mSpaMood, std::min(300.0, 21.0 * turns), "mood +21 per turn, turn " + std::to_string(turns));
     }
-    expect(turns == 72, "the bath lasts 72 turns (71.4286 counted), took " + std::to_string(turns));
-    expectNear(moodAfter71, 1491.0, "mood after 71 turns");
-    expectNear(c.mSpaMood, 1500.0, "mood limited to 1500");
+    expect(turns == 15, "the bath lasts 15 turns (14.2857 counted), took " + std::to_string(turns));
+    expectNear(moodAfter14, 294.0, "mood after 14 turns");
+    expectNear(c.mSpaMood, 300.0, "mood limited to 300");
     expectNear(c.mRelaxTurns, expectedRelax, "relaxation at research level " + std::to_string(level));
     expectNear(c.mHangoverTurns, 0.0, "the hangover ends at once");
     expectNear(c.mTavernMood, 0.0, "the tavern mood malus ends at once"); expectNear(c.mTavernMoodTurns, 0.0, "its timer too");
@@ -465,13 +465,13 @@ static void checkBath(uint32_t level, double expectedRelax)
     expect(c.mSpaMudTilesLeft == 3, "three mud tiles to go");
     expect(!c.mSpaBathing && f.room->mBathers.back().mDone, "bath over");
     expect(f.seat.gold == 45, "no second payment");
-    // The mood fades by 2 per turn, the relaxation by 1 per turn, 750 turns from the full value
+    // The mood fades by 0.4 per turn, the relaxation by 1 per turn, 750 turns from the full value
     int fade = 0;
     while(c.mSpaMood > 0.0 && fade < 2000) { c.upkeepSpaState(); ++fade; }
     expect(fade == 750, "the spa mood fades in 750 turns, took " + std::to_string(fade));
     // The relaxation runs out after ceil(relax) turns and never goes below 0; the work factor follows it
     Creature d("d", &f.small, &f.seat); d.setRelaxTurns(expectedRelax);
-    expectNear(d.getRelaxWorkFactor(), 1.2834, "work factor while relaxed");
+    expectNear(d.getRelaxWorkFactor(), 1.0567, "work factor while relaxed");
     int relaxed = 0;
     while(d.mRelaxTurns > 0.0 && relaxed < 2000) { d.upkeepSpaState(); ++relaxed; }
     expect(relaxed == static_cast<int>(std::ceil(expectedRelax - 1e-9)), "relaxation lasts " + std::to_string(relaxed) + " turns");
@@ -483,16 +483,16 @@ static void checkMoodClamp()
 {
     Fixture f; Creature c("c", &f.small, &f.seat);
     c.addSpaMood(21.0); expectNear(c.mSpaMood, 21.0, "add");
-    c.addSpaMood(5000.0); expectNear(c.mSpaMood, 1500.0, "clamped to SpaMoodMax");
+    c.addSpaMood(5000.0); expectNear(c.mSpaMood, 300.0, "clamped to SpaMoodMax");
     c.addSpaMood(-9000.0); expectNear(c.mSpaMood, 0.0, "clamped to 0");
     c.setSpaMood(-3.0); expectNear(c.mSpaMood, 0.0, "set below 0");
-    c.setSpaMood(2000.0); expectNear(c.mSpaMood, 1500.0, "set above the maximum");
+    c.setSpaMood(2000.0); expectNear(c.mSpaMood, 300.0, "set above the maximum");
     c.setRelaxTurns(-4.0); expectNear(c.mRelaxTurns, 0.0, "relaxation not below 0");
     c.setSpaMudTilesLeft(-2); expect(c.mSpaMudTilesLeft == 0, "mud counter not below 0");
     // A creature outside the bath fades, a bathing creature does not
-    c.setSpaMood(100.0); c.upkeepSpaState(); expectNear(c.mSpaMood, 98.0, "fading by 2 per turn");
-    c.mSpaBathing = true; c.upkeepSpaState(); expectNear(c.mSpaMood, 98.0, "no fading in the bath");
-    // The mood bonus is a mood part: at 1500 the mood sum is raised by that much (the sum is the mood manager's job)
+    c.setSpaMood(100.0); c.upkeepSpaState(); expectNear(c.mSpaMood, 99.6, "fading by 0.4 per turn");
+    c.mSpaBathing = true; c.upkeepSpaState(); expectNear(c.mSpaMood, 99.6, "no fading in the bath");
+    // The mood bonus is a mood part: at 300 the mood sum is raised by that much (the sum is the mood manager's job)
 }
 
 // ---- Mud trail
@@ -504,11 +504,11 @@ static void checkMudTrail()
     path[0].pool = true; path[1].pool = true; // two pool tiles first: nothing happens, the counter stays
     for(int i = 0; i < 6; ++i) c.testMudTrail(&path[i]);
     expectNear(path[0].dirt, 0.0, "no mud on a pool tile"); expectNear(path[1].dirt, 0.0, "no mud on the second pool tile");
-    for(int i = 2; i < 5; ++i) expectNear(path[i].dirt, 20.9679 / 3.0 * 1.5, "mud on the tile " + std::to_string(i), 1e-9);
+    for(int i = 2; i < 5; ++i) expectNear(path[i].dirt, 4.4252 / 3.0 * 1.5, "mud on the tile " + std::to_string(i), 1e-9);
     expectNear(path[5].dirt, 0.0, "the fourth tile outside the pool stays clean");
     expect(c.mSpaMudTilesLeft == 0, "counter used up");
     expectNear(c.mCreatureDirt, 7.0, "creature dirt unchanged");
-    expectNear(path[2].dirt + path[3].dirt + path[4].dirt, 20.9679 * 1.5, "the three tiles hold SpaDirtPerBath times the DirtFactor", 1e-9);
+    expectNear(path[2].dirt + path[3].dirt + path[4].dirt, 4.4252 * 1.5, "the three tiles hold SpaDirtPerBath times the DirtFactor", 1e-9);
 }
 
 // ---- A bath that is broken off

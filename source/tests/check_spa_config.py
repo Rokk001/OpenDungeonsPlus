@@ -4,8 +4,8 @@ follows the tavern in the order the AI builds, and every key is documented in th
 
 What is checked
   rooms.cfg [Rooms]       all Spa keys with their values, no Spa key without a design value, every key documented
-  derived values          SpaMoodMax = CasinoMoodMax, SpaMoodPerTurn = TemplePrayerReliefPerTurn,
-                          SpaMoodDecayPerTurn = TemplePrayerReliefDecayPerTurn, SpaBathTurns = SpaMoodMax / SpaMoodPerTurn,
+  derived values          SpaMoodPerTurn = TemplePrayerReliefPerTurn (SpaMoodMax 300 and SpaMoodDecayPerTurn 0.4 are set by the owner),
+                          SpaBathTurns = SpaMoodMax / SpaMoodPerTurn,
                           SpaRelaxTurns = HangoverTurns of global.cfg, SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns
                           (both to 4 places), SpaCostPerTile = CasinoCostPerTile, SpaHP = CasinoHP,
                           SpaDirtPerBath = 1.6154 / (0.62 x 9 / (SpaBathTurns + 1)) to 4 places
@@ -58,9 +58,9 @@ tavern = block_values(global_cfg, 'Tavern')
 
 # 1. Every Spa key with the value of the design (section 4 of the design)
 SPA = {
-    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodMax': '1500', 'SpaMoodPerTurn': '21',
-    'SpaMoodDecayPerTurn': '2', 'SpaBathTurns': '71.4286', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.2834',
-    'SpaDirtPerBath': '20.9679', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
+    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodMax': '300', 'SpaMoodPerTurn': '21',
+    'SpaMoodDecayPerTurn': '0.4', 'SpaBathTurns': '14.2857', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
+    'SpaDirtPerBath': '4.4252', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
     'SpaAttendantActMaxSeconds': '20', 'SpaAttendantCannonballMinSeconds': '120',
     'SpaAttendantCannonballMaxSeconds': '180', 'SpaCannonballChance': '0.25', 'SpaJumpTurns': '2',
     'SpaJumpHeight': '1.0',
@@ -78,9 +78,7 @@ assert 'SpaBathPrice' not in rooms and 'SpaPrice' not in rooms, 'the bath costs 
 assert float(tavern['BeerPrice']) == 5.0, 'BeerPrice is 5 gold'
 
 # 2. The values that derive from existing keys still equal them
-assert float(rooms['SpaMoodMax']) == float(rooms['CasinoMoodMax'])
 assert float(rooms['SpaMoodPerTurn']) == float(rooms['TemplePrayerReliefPerTurn'])
-assert float(rooms['SpaMoodDecayPerTurn']) == float(rooms['TemplePrayerReliefDecayPerTurn'])
 bath_turns = float(rooms['SpaMoodMax']) / float(rooms['SpaMoodPerTurn'])
 assert round(bath_turns, 4) == float(rooms['SpaBathTurns']), 'SpaBathTurns = SpaMoodMax / SpaMoodPerTurn'
 assert float(rooms['SpaRelaxTurns']) == float(tavern['HangoverTurns']), 'SpaRelaxTurns = HangoverTurns'
