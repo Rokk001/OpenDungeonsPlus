@@ -5123,6 +5123,12 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
             // A skeleton without the tavern game clips plays its attack clip
             anim = EntityAnimation::attack_anim;
         }
+        else if (anim == EntityAnimation::beam_anim || anim == EntityAnimation::throw_anim ||
+                 anim == EntityAnimation::empty_anim)
+        {
+            // A hunter skeleton without the ghost hunting clips plays its attack clip
+            anim = EntityAnimation::attack_anim;
+        }
         else if (anim == EntityAnimation::knockedout_anim)
         {
             // A skeleton without the knocked-out clip lies like a creature that is pulled to its bed (then Idle)
