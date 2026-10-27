@@ -52,12 +52,12 @@ def clips(credits):
 def main():
     credits = read('CREDITS')
     models = ('GhostCauldron','GhostCauldronFill','CrystalBowl','GhostBell','GhostHook','GhostHookEmpty',
-        'GhostWallGauges','GhostBackpack','GhostBox','SoulCrystal')
+        'GhostWallGauges','GhostBackpack','GhostBox','SoulCrystal','GhostRack')
     for name in models:
         credited('models/'+name+'.mesh',credits)
         credited('assets-src/rooms/ghostroom/'+name+'.blend',credits)
     bounds = read('source/gamemap/RoomObjectBounds.h')
-    for name in models[:7]:
+    for name in models[:7]+models[10:]:
         assert re.search(r'\{"'+name+r'"\s*,',bounds), name
     for path in ('materials/scripts/Ghost.material','materials/scripts/GhostRoomFloor.material',
             'materials/textures/GhostRoomFloor.png','materials/textures/GhostRoomFloorNormal.png',

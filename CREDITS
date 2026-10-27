@@ -1916,6 +1916,8 @@ assets-src/rooms/ghostroom/GhostHookEmpty.blend    AI-generated with Codex    GP
 models/GhostHookEmpty.mesh    AI-generated with Codex    GPLv3+    Empty forged iron hook matching the equipped wall rack; original editable source and export, 2026-10-26
 assets-src/rooms/ghostroom/GhostBackpack.blend    AI-generated with Codex    GPLv3+    Leather capture backpack with brass pressure canister, hose, nozzle and stitched straps; original editable source and export, 2026-10-26
 models/GhostBackpack.mesh    AI-generated with Codex    GPLv3+    Leather capture backpack with brass pressure canister, hose, nozzle and stitched straps; original editable source and export, 2026-10-26
+assets-src/rooms/ghostroom/GhostRack.blend    AI-generated with Codex    GPLv3+    Open free-standing iron rack frame that carries the bell, hooks and gauges on the room edge; original editable source and export, 2026-10-27
+models/GhostRack.mesh    AI-generated with Codex    GPLv3+    Open free-standing iron rack frame that carries the bell, hooks and gauges on the room edge; original editable source and export, 2026-10-27
 
 materials/textures/GhostRoomFloor.png    AI-generated with Codex    CC0    Original cold dark stone floor made with the existing periodic room-floor generator, 2026-10-26
 materials/textures/GhostRoomFloorNormal.png    AI-generated with Codex    CC0    Original matching tangent-space normal map from the same generated stone height field, 2026-10-26

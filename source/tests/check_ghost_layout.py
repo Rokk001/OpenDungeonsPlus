@@ -58,6 +58,10 @@ enum ActiveSpotPlace{activeSpotCenter,activeSpotTop,activeSpotLeft,activeSpotRig
 struct BuildingObject{std::string mesh;double angle;Ogre::Vector3 position;Ogre::Vector2 scale;
  //! \brief Receives the original wall-object constructor shape.
  BuildingObject(GameMap*,Room&,const std::string& name,Tile&,double rotation,bool,float,const std::string&,bool):mesh(name),angle(rotation){}
+ //! \brief Receives the positioned-object constructor shape used for the room-edge racks.
+ BuildingObject(GameMap*,Room&,const std::string& name,Tile*,float x,float y,float z,float rotation,bool):mesh(name),angle(rotation),position(x,y,z){}
+ //! \brief Returns the placed object position.
+ const Ogre::Vector3& getPosition()const{return position;}
  //! \brief Returns the original object rotation.
  double getRotationAngle()const{return angle;}
  //! \brief Returns the original object mesh.
@@ -100,7 +104,8 @@ int main(){
  for(BuildingObject* object:room.mWallObjects){check(objects.insert(object).second,"distinct auxiliary wall object identities");if(object->mesh=="GhostBell")++bells;check(object->scale.x>0&&object->scale.x<=1&&object->scale.y==1,"native wall subdivision scale");}
  check(bells==1,"one original wall bell");check(room.mWallObjects.size()>=room.getBackpackCount()+1,"no overwritten hook map keys");}
  GameMap map;RoomGhostRoom noWall;noWall.map=&map;noWall.seat=&seat;for(int y=-1;y<=4;++y)for(int x=-1;x<=4;++x){Tile& tile=map.tiles[{x,y}];tile.x=x;tile.y=y;if(x>=0&&x<4&&y>=0&&y<4){tile.room=&noWall;noWall.mCoveredTiles.push_back(&tile);}}noWall.layoutCauldrons();noWall.createWalls(&map);
- int rackBells=0;for(BuildingObject* object:noWall.mWallObjects)if(object->mesh=="GhostBell")++rackBells;
+ int rackBells=0,racks=0,items=0;for(BuildingObject* object:noWall.mWallObjects){if(object->mesh=="GhostBell")++rackBells;if(object->mesh=="GhostRack")++racks;else ++items;}
+ check(racks>0&&racks==items,"free-standing room stands every bell, hook and gauge item on its own room-edge rack");
  check(noWall.mHookObjects.size()==3&&noWall.mHookTiles.size()==3&&noWall.getBackpackCount()==3,"free-standing room keeps all three hooks on room-edge racks");check(rackBells==1,"free-standing room keeps its bell on a room-edge rack");
  for(Tile* tile:noWall.mHookTiles)check(tile->x==0||tile->y==0||tile->x==3||tile->y==3,"rack hooks stand on the room edge ring, not on the cauldron tiles");
  std::cout<<"actual wall hook placement and free-standing room-edge racks: ok\n";

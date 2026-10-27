@@ -228,7 +228,8 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
     }
     // A free-standing room has no adjacent wall: bell, hooks and gauges then stand on racks along the open room edge.
     // They stay decoration (no obstacle), so every passage remains free, and the supply is not reduced.
-    if(walls.empty())
+    const bool rackEdge=walls.empty();
+    if(rackEdge)
     {
         for(Tile* tile : ordered)
         {
@@ -263,6 +264,16 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
             object->setFurnitureScale(Ogre::Vector2(static_cast<float>(std::min(1.0,gap/width)),1.0f));
             object->addToGameMap(map);object->createMesh();mWallObjects.push_back(object);
             if(object->getMeshName()=="GhostHook") mHookObjects.push_back(object);
+            if(rackEdge)
+            {
+                // The free-standing iron rack stands directly behind the item; it is walkable decoration, never an obstacle.
+                const double behind=-depth/2.0+0.04;
+                BuildingObject* rack=new BuildingObject(getGameMap(),*this,"GhostRack",tile,
+                    object->getPosition().x-std::sin(angle)*behind,object->getPosition().y+std::cos(angle)*behind,0.0f,
+                    object->getRotationAngle(),false);
+                rack->setFurnitureScale(Ogre::Vector2(static_cast<float>(std::min(1.0,gap)),1.0f));
+                rack->addToGameMap(map);rack->createMesh();mWallObjects.push_back(rack);
+            }
         }
     }
     createCauldronObjects();

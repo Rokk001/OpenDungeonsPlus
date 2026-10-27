@@ -28,6 +28,7 @@ SPECS = {
     'GhostHook': (0.40, 0.31, 0.80),
     'GhostHookEmpty': (0.40, 0.20, 0.80),
     'GhostWallGauges': (0.90, 0.20, 0.90),
+    'GhostRack': (1.00, 0.16, 1.00),
     'GhostBackpack': (0.35, 0.25, 0.50),
     'GhostBox': (0.25, 0.25, 0.20),
     'SoulCrystal': (0.20, 0.20, 0.35),
@@ -399,6 +400,20 @@ def hook(with_pack):
         backpack(.62,(0,.12,.06))
 
 
+# Build an open free-standing iron rack frame (posts, feet, cross rails, diagonal brace) that carries a bell, hook or gauges.
+def rack():
+    for x in (-.46,.46):
+        box('Rack post',(x,0,.50),(.07,.08,1.0),'GhostIron',.012)
+        box('Rack foot',(x,0,.03),(.10,.16,.06),'GhostIron',.012)
+        rod('Rack foot bolt',(x,-.085,.03),(x,.085,.03),.014,'GhostBrass',8)
+    for z in (.20,.93):
+        box('Rack rail',(0,0,z),(.96,.06,.07),'GhostIron',.01)
+    rod('Rack brace',(-.42,0,.24),(.42,0,.90),.018,'GhostIron',10)
+    for x in (-.46,.46):
+        for z in (.20,.93):
+            rod('Rack rail bolt',(x,-.045,z),(x,.045,z),.016,'GhostBrass',8)
+
+
 # Build two trembling gauge needles, brass pipes and red/green warning lamps.
 def gauges():
     box('Instrument backing',(0,-.025,.45),(.78,.05,.82),'GhostIron',.025)
@@ -540,7 +555,7 @@ def main():
     out.mkdir(parents=True,exist_ok=True)
     start_scene()
     bake_textures('--rebake' in args)
-    builders={'GhostCauldron':cauldron,'GhostCauldronFill':fill_level,'CrystalBowl':crystal_bowl,'GhostBell':bell,'GhostHook':lambda:hook(True),'GhostHookEmpty':lambda:hook(False),'GhostWallGauges':gauges,'GhostBackpack':backpack,'GhostBox':ghost_box,'SoulCrystal':crystal}
+    builders={'GhostCauldron':cauldron,'GhostCauldronFill':fill_level,'CrystalBowl':crystal_bowl,'GhostBell':bell,'GhostHook':lambda:hook(True),'GhostHookEmpty':lambda:hook(False),'GhostWallGauges':gauges,'GhostRack':rack,'GhostBackpack':backpack,'GhostBox':ghost_box,'SoulCrystal':crystal}
     builders[name]()
     obj,factors,centre=join_and_fit(name)
     arm=gauge_rig(obj,factors,centre) if name=='GhostWallGauges' else None
