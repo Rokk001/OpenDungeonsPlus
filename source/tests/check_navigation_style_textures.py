@@ -37,7 +37,7 @@ parser.add_argument('--preview', help='directory for enlarged preview PNGs')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/render/Gui.cpp').read_text()
-prefix = Path(os.environ.get('CMAKE_PREFIX_PATH', str(Path(os.environ.get('OD_DEPS_ROOT', str(Path.home() / 'od-deps'))) / 'install')))
+prefix = Path(os.environ.get('CMAKE_PREFIX_PATH', str(Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps'))) / 'install')))
 
 
 # Extract one complete production drawing or atlas-copy function without changing its body.

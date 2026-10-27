@@ -23,7 +23,7 @@ import tempfile
 import time
 
 repo = Path(__file__).resolve().parents[2]
-deps = Path(os.environ.get('OD_DEPS_ROOT', str(Path.home() / 'od-deps')))
+deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 render_manager = (repo / 'source/render/RenderManager.cpp').read_text()
 camera_manager = (repo / 'source/camera/CameraManager.cpp').read_text()

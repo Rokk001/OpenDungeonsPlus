@@ -4,12 +4,18 @@
 # Writes out\compile-check.log (file, exit code, duration) in this worktree and exits 0 only if every listed file compiled.
 param(
     [string]$Base = 'origin/integration/all',
-    [string]$ReleaseProject = 'C:\Users\mario\GitHub\OpenDungeonsPlus\build\campaign-release-worktree\build\windows\opendungeons-plus.vcxproj',
+    [string]$ReleaseProject = '',
     [int]$MaxWaitMinutes = 30,
     [string]$Worktree = ''
 )
 if ($Worktree -eq '') { $Worktree = Join-Path $PSScriptRoot '..\..' }
 $wt = (Resolve-Path $Worktree).Path
+# Default project file: the integrator's build folder inside the main checkout, found through the shared git directory of this worktree.
+if ($ReleaseProject -eq '') {
+    $commonDir = (& git -C $wt rev-parse --path-format=absolute --git-common-dir).Trim()
+    $mainCheckout = Split-Path -Parent ($commonDir -replace '/', '\')
+    $ReleaseProject = Join-Path $mainCheckout 'build\campaign-release-worktree\build\windows\opendungeons-plus.vcxproj'
+}
 $outDir = "$wt\out\compile-check"
 $log = "$wt\out\compile-check.log"
 $vcvars = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat'
