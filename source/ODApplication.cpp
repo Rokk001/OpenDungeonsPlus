@@ -312,8 +312,12 @@ void ODApplication::startClient()
     sfmlWindow.display();
     sfmlWindow.setVisible(true);
 #else
+    // The window was created with "hidden"; Ogre's setVisible() does not undo that on Win32
+    // (it is a no-op there), only setHidden(false) shows the window.
+    renderWindow->setHidden(false);
     renderWindow->setVisible(true);
 #endif
+    OD_LOG_INF("window shown");
 
     Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
 
