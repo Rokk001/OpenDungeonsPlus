@@ -28,19 +28,31 @@
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
+#include "ODApplication.h"
+#include <cmath>
 
 static const int NB_TURN_FLEE_MAX = 5;
 
+//! \brief Holds an optional ghost flinch, then dispatches the unchanged fear or enemy flight.
 std::function<bool()> CreatureActionFlee::action()
 {
+    const int32_t poseTurns = mScaredPose ? static_cast<int32_t>(std::ceil(ODApplication::turnsPerSecond)) : 0;
+    if(getNbTurns() < poseTurns)
+        return std::bind(&CreatureActionFlee::waitForScaredPose, this);
     if(mFearTurns > 0)
     {
         return std::bind(&CreatureActionFlee::handleFear,
-            std::ref(mCreature), getNbTurns(), mFearTurns, mFearTile);
+            std::ref(mCreature), getNbTurns() - poseTurns, mFearTurns, mFearTile);
     }
 
     return std::bind(&CreatureActionFlee::handleFlee,
         std::ref(mCreature), getNbTurns());
+}
+
+//! \brief Leaves the active ghost flinch untouched until its complete clip has been shown.
+bool CreatureActionFlee::waitForScaredPose()
+{
+    return false;
 }
 
 bool CreatureActionFlee::handleFlee(Creature& creature, int32_t nbTurns)

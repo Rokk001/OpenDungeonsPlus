@@ -386,7 +386,7 @@ void Player::dropHand(Tile *t, unsigned int index)
         if(entity->getObjectType() == GameEntityType::itemBagEntity)
         {
             ItemBagEntity* bag = static_cast<ItemBagEntity*>(entity);
-            if(bag->getItem() != nullptr && bag->getItem()->mGifted)
+            if(bag->getItem() != nullptr && (bag->getItem()->mGifted || bag->getItem()->mSoulCrystal))
                 CreatureMerchantAI::offerGift(*bag, *t);
         }
         if(!mGameMap->isInEditorMode() && entity->getObjectType() == GameEntityType::creature)

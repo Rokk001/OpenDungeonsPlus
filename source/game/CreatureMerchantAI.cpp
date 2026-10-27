@@ -45,11 +45,13 @@ bool deliverGift(Creature& creature, ItemBagEntity& bag)
 {
     const ItemInstance* offered = bag.getItem();
     if(offered == nullptr) return false;
+    if(offered->mSoulCrystal && creature.getLevel() >= MAX_LEVEL) return false;
     const ItemInstance copy = *offered;
     std::unique_ptr<ItemInstance> item = bag.takeItem();
     item->mGifted = false;
     bool consumed = true;
-    if(!item->mPotionId.empty()) consumed = creature.receiveGiftedPotion(item);
+    if(item->mSoulCrystal) consumed = creature.breakSoulCrystal(item);
+    else if(!item->mPotionId.empty()) consumed = creature.receiveGiftedPotion(item);
     else creature.acceptItem(std::move(item), true);
     creature.addMerchantMood(ConfigManager::getSingleton().getRoomConfigDouble("MerchantGiftMood"));
     RoomMerchant::announceDeal(creature, copy, 4);
@@ -75,7 +77,7 @@ bool CreatureMerchantAI::decideTrade(Creature& creature)
         for(Room* base : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::merchant, creature.getSeat()))
         {
             RoomMerchant* room = static_cast<RoomMerchant*>(base);
-            if(room->getFreeTable() != nullptr)
+            if(room->getFreeTable(creature.getInventory()[static_cast<size_t>(slot)].get()) != nullptr)
             {
                 creature.pushAction(Utils::make_unique<CreatureActionSellItem>(creature, room->getName(), static_cast<uint32_t>(slot)));
                 return true;
@@ -89,7 +91,7 @@ bool CreatureMerchantAI::decideTrade(Creature& creature)
         const ItemInstance& item = entry.mGood->mItem;
         const double price = item.getPrice(creature.getGameMap()) * (1.0 + creature.getSeat()->getMerchantMargin() / PERCENT)
             * std::max(0.0, 1.0 - creature.getItemEffect("Thrift") / PERCENT);
-        if(entry.mGood->mReservedBy != creature.getName() || !RoomMerchant::wantsItem(creature, item)
+        if(item.mSoulCrystal || entry.mGood->mReservedBy != creature.getName() || !RoomMerchant::wantsItem(creature, item)
             || creature.getGoldCarriedAmount() < price) continue;
         if(best == nullptr) { best = &entry; continue; }
         if(!item.mPotionId.empty() && !best->mGood->mItem.mPotionId.empty())
@@ -103,12 +105,48 @@ bool CreatureMerchantAI::decideTrade(Creature& creature)
     return true;
 }
 
-//! \brief Gives the bag to the first own creature on its tile, except while its arena fight is running.
+//! \brief Handles crystal use and purchases after the existing equipment and potion decisions.
+bool CreatureMerchantAI::decideSoulCrystal(Creature& creature)
+{
+    if(creature.isActionInList(CreatureActionType::fight) || creature.getLevel() >= MAX_LEVEL) return false;
+    bool hasCrystal = false;
+    bool freeSlot = false;
+    for(size_t slot = 0; slot < creature.getInventory().size(); ++slot)
+    {
+        const ItemInstance* item = creature.getInventory()[slot].get();
+        if(item == nullptr) { freeSlot = true; continue; }
+        if(!item->mSoulCrystal) continue;
+        hasCrystal = true;
+        if(creature.getExperienceProgress() < ConfigManager::getSingleton().getSoulCrystalBreakBelow())
+        {
+            std::unique_ptr<ItemInstance> crystal = creature.setInventorySlot(slot, std::unique_ptr<ItemInstance>());
+            creature.breakSoulCrystal(crystal);
+            return true;
+        }
+    }
+    if(hasCrystal || !freeSlot || creature.hasActionBeenTried(CreatureActionType::buyItem)
+        || Random::Double(0.0, 1.0) >= TRADE_CHANCE) return false;
+    const std::vector<MerchantStockEntry> stock = RoomMerchant::getStock(*creature.getGameMap(), creature.getSeat());
+    for(const MerchantStockEntry& entry : stock)
+    {
+        const ItemInstance& item = entry.mGood->mItem;
+        if(!item.mSoulCrystal || entry.mGood->mReservedBy != creature.getName()) continue;
+        const double price = item.getPrice(creature.getGameMap()) * (1.0 + creature.getSeat()->getMerchantMargin() / PERCENT)
+            * std::max(0.0, 1.0 - creature.getItemEffect("Thrift") / PERCENT);
+        if(creature.getGoldCarriedAmount() < price || !creature.wantsSoulCrystal(price)) continue;
+        creature.pushAction(Utils::make_unique<CreatureActionBuyItem>(creature, entry.mRoom->getName(), entry.mGood->mIndex));
+        return true;
+    }
+    return false;
+}
+
+//! \brief Gives crystals immediately; other gifts wait while the recipient arena fight is running.
 bool CreatureMerchantAI::offerGift(ItemBagEntity& bag, Tile& tile)
 {
-    if(bag.getItem() == nullptr || !bag.getItem()->mGifted || bag.getSeat() == nullptr) return false;
+    if(bag.getItem() == nullptr || (!bag.getItem()->mGifted && !bag.getItem()->mSoulCrystal) || bag.getSeat() == nullptr) return false;
     Room* room = tile.getCoveringRoom();
-    if(room != nullptr && room->getType() == RoomType::arena && static_cast<RoomArena*>(room)->hasRunningFight())
+    if(!bag.getItem()->mSoulCrystal && room != nullptr && room->getType() == RoomType::arena &&
+        static_cast<RoomArena*>(room)->hasRunningFight())
         return false;
     const std::vector<GameEntity*> entities = tile.getEntitiesInTile();
     for(GameEntity* entity : entities)
