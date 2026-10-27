@@ -7,18 +7,20 @@
 
 class GameMap;
 
-//! \brief A rolled item or a single potion, owned by its current holder.
+//! \brief A rolled item, potion or soul crystal owned by its current holder.
 class ItemInstance
 {
 public:
     //! \brief Creates an empty instance with no ownership flags or Epic registration.
-    ItemInstance() : mQuality(Quality::poor), mEpicSerial(0), mMerchantGoods(false), mGifted(false) {}
+    ItemInstance() : mQuality(Quality::poor), mEpicSerial(0), mMerchantGoods(false), mGifted(false), mSoulCrystal(false) {}
     //! \brief Rolls the ordered bonuses of a definition using the server random generator.
     static std::unique_ptr<ItemInstance> create(const ItemDefinition& definition, Quality quality);
     //! \brief Creates the catalogue Poor item for an equipment slot.
     static std::unique_ptr<ItemInstance> createPoor(const std::string& slot);
     //! \brief Creates one unstacked potion.
     static std::unique_ptr<ItemInstance> createPotion(const std::string& id);
+    //! \brief Creates a bonus-free soul crystal for an inventory slot.
+    static std::unique_ptr<ItemInstance> createSoulCrystal();
     //! \brief Writes one complete instance line without a trailing newline.
     void exportToStream(std::ostream& stream) const;
     //! \brief Reads an instance without modifying the destination on a short or invalid line.
@@ -59,6 +61,8 @@ public:
     bool mGifted;
     //! \brief Nonempty only for a potion instance; potion instances have no rolled bonuses.
     std::string mPotionId;
+    //! \brief Identifies a soul crystal independently of equipment quality.
+    bool mSoulCrystal;
 };
 
 #endif

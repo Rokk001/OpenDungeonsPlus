@@ -177,6 +177,16 @@ public:
     //! \brief Returns the configured GhostWanderRadius value.
     double getGhostWanderRadius() const { return mGhostWanderRadius; }
 
+    //! \brief Returns the configured crystal base price.
+    double getSoulCrystalPrice() const { return mSoulCrystalPrice; }
+    //! \brief Returns the XP progress below which a carried crystal is broken.
+    double getSoulCrystalBreakBelow() const { return mSoulCrystalBreakBelow; }
+    //! \brief Returns the normal XP per second used to value a crystal.
+    double getSoulCrystalNormalXpPerSecond() const { return mSoulCrystalNormalXpPerSecond; }
+    //! \brief Returns the hero rare-item chance at the first level.
+    double getSoulCrystalHeroRareStart() const { return mSoulCrystalHeroRareStart; }
+    //! \brief Returns the hero rare-item chance at the maximum level.
+    double getSoulCrystalHeroRareEnd() const { return mSoulCrystalHeroRareEnd; }
     //! \brief Returns the seconds a body lies before decay, excluding worker transport.
     double getCorpseLieSeconds() const
     { return mCorpseLieSeconds; }
@@ -696,6 +706,11 @@ private:
     double mGhostLifetimeSeconds;
     double mGhostFloatSpeed;
     double mGhostWanderRadius;
+    double mSoulCrystalPrice;
+    double mSoulCrystalBreakBelow;
+    double mSoulCrystalNormalXpPerSecond;
+    double mSoulCrystalHeroRareStart;
+    double mSoulCrystalHeroRareEnd;
     double mCorpseLieSeconds;
     double mCorpseDecaySeconds;
     uint32_t mMaxCreaturesPerSeatAbsolute;

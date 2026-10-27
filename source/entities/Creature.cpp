@@ -3145,6 +3145,9 @@ bool Creature::handleIdleAction()
         return true;
     }
 
+    if(CreatureMerchantAI::decideSoulCrystal(*this))
+        return true;
+
     // We check if there is a go to war spell reachable
     std::vector<Spell*> callToWars = getGameMap()->getSpellsBySeatAndType(getSeat(), SpellType::callToWar);
     if(!callToWars.empty())
