@@ -564,6 +564,9 @@ SkillManager::SkillManager() :
     skill = createSkill(mSkills, SkillType::roomCrypt, std::vector<SkillType>{SkillType::roomLibrary});
     def = new SkillDefRoom(TREE_PREFIX_ROOMS, "CryptButton", skill, 3, RoomType::crypt);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomGhostRoom, std::vector<SkillType>{SkillType::roomLibrary});
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "GhostRoomButton", skill, 3, RoomType::ghostRoom);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::roomBridgeStone, std::vector<SkillType>{SkillType::roomBridgeWooden});
     def = new SkillDefRoom(TREE_PREFIX_ROOMS, "StoneBridgeButton", skill, 3, RoomType::bridgeStone);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
@@ -986,7 +989,13 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::roomPrison, "Capacity", ResearchBaseSource::factor, "", ""},
     {SkillType::roomPrison, "SkeletonLevel", ResearchBaseSource::rooms, "PrisonSkeletonBaseLevel", ""},
     {SkillType::roomInfirmary, "HealTime", ResearchBaseSource::rooms, "InfirmaryFullHealSeconds", ""},
-    {SkillType::roomCrypt, "RotTime", ResearchBaseSource::rooms, "CryptRotNbTurns", ""},
+    {SkillType::roomGhostRoom, "EctoplasmLevels", ResearchBaseSource::rooms, "GhostLevelsPerEctoplasm", ""},
+    {SkillType::roomGhostRoom, "BoxCapacity", ResearchBaseSource::rooms, "GhostBoxCapacity", ""},
+    {SkillType::roomGhostRoom, "BeamRange", ResearchBaseSource::rooms, "GhostBeamRange", ""},
+    {SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostBeamTurns", ""},
+    {SkillType::roomGhostRoom, "RevivePrice", ResearchBaseSource::rooms, "GhostReviveMana", ""},
+    {SkillType::roomCrypt, "LichCorpses", ResearchBaseSource::rooms, "CryptCorpsesPerLich", ""},
+    {SkillType::roomCrypt, "LichLevel", ResearchBaseSource::rooms, "CryptLichLevelBonus", ""},
     {SkillType::roomBridgeWooden, "ClaimResistance", ResearchBaseSource::factor, "", ""},
     {SkillType::roomBridgeStone, "ClaimResistance", ResearchBaseSource::factor, "", ""},
     {SkillType::roomTorture, "ConversionSpeed", ResearchBaseSource::factor, "", ""},
@@ -1084,7 +1093,13 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::LevelCap] = "Level cap";
         texts[ResearchEffect::SkeletonLevel] = "Skeleton level";
         texts[ResearchEffect::HealTime] = "Healing time";
-        texts[ResearchEffect::RotTime] = "Rot time";
+        texts[ResearchEffect::EctoplasmLevels] = "Ghost levels per ectoplasm";
+        texts[ResearchEffect::BoxCapacity] = "Ghosts per box";
+        texts[ResearchEffect::BeamRange] = "Beam range";
+        texts[ResearchEffect::CatchTime] = "Catch time";
+        texts[ResearchEffect::RevivePrice] = "Revival price";
+        texts[ResearchEffect::LichCorpses] = "Corpses per lich";
+        texts[ResearchEffect::LichLevel] = "Lich level bonus";
         texts[ResearchEffect::ClaimResistance] = "Claim resistance";
         texts[ResearchEffect::ConversionSpeed] = "Conversion speed";
         texts[ResearchEffect::PrayerMana] = "Prayer mana";

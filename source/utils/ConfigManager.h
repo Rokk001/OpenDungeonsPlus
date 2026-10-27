@@ -177,7 +177,11 @@ public:
     //! \brief Returns the configured GhostWanderRadius value.
     double getGhostWanderRadius() const { return mGhostWanderRadius; }
 
-    //! \brief Returns the configured crystal base price.
+    //! \brief Returns the configured gold equivalent of research points.
+    double getGhostAiGoldPerResearchPoint() const { return mGhostAiGoldPerResearchPoint; }
+    //! \brief Returns the configured gold equivalent of training experience.
+    double getGhostAiGoldPerXp() const { return mGhostAiGoldPerXp; }
+    //! \brief Returns the configured soul crystal price.
     double getSoulCrystalPrice() const { return mSoulCrystalPrice; }
     //! \brief Returns the XP progress below which a carried crystal is broken.
     double getSoulCrystalBreakBelow() const { return mSoulCrystalBreakBelow; }
@@ -706,6 +710,8 @@ private:
     double mGhostLifetimeSeconds;
     double mGhostFloatSpeed;
     double mGhostWanderRadius;
+    double mGhostAiGoldPerResearchPoint;
+    double mGhostAiGoldPerXp;
     double mSoulCrystalPrice;
     double mSoulCrystalBreakBelow;
     double mSoulCrystalNormalXpPerSecond;

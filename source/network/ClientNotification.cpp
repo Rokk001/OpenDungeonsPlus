@@ -159,6 +159,8 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askInfirmaryWindow";
         case ClientNotificationType::askInfirmarySettings:
             return "askInfirmarySettings";
+        case ClientNotificationType::askGhostRoomSettings:
+            return "askGhostRoomSettings";
         case ClientNotificationType::askUseSpecial:
             return "askUseSpecial";
         case ClientNotificationType::askTavernWindow:

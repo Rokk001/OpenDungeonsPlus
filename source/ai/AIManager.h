@@ -26,6 +26,7 @@ class Player;
 
 enum class KeeperAIType;
 
+//! \brief Owns the active controllers and resolves the controller of each player.
 class AIManager
 {
 
@@ -36,6 +37,8 @@ public:
     virtual ~AIManager();
 
     bool assignAI(Player& player, KeeperAIType type);
+    //! \brief Returns the existing controller for this player, or nullptr.
+    BaseAI* getAI(const Player& player) const;
     bool doTurn(double timeSinceLastTurn);
     void clearAIList();
 

@@ -233,7 +233,9 @@ enum class ServerNotificationType
     //! double remaining seconds (negative while paused).
     infirmaryWindow,
     //! Current keeper preferences: int32_t payer, int32_t threshold, bool healOn.
-    infirmarySettings
+    infirmarySettings,
+    //! Owner-only ghost controls: int32_t x, y, uint32_t product, bool revive.
+    ghostRoomSettings
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
