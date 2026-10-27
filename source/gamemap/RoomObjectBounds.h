@@ -41,12 +41,19 @@ static const MeshBounds meshBounds[] = {
     {"ChickenCoop", -.203275f, -.4f, .796725f, .4f},
     {"ChickenCoopHouse", -.203275f, -.4f, .796725f, .4f},
     {"Chimney", -.63f, .0721364f, .63f, .583136f},
+    {"CrystalBowl", -.25f, -.25f, .25f, .25f, .4000001f},
     {"DragonBed", -.941213f, -.96306f, .886655f, .969738f, .306282f},
     {"DungeonHeartObjectCritical", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"DungeonHeartObjectDamaged", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"DungeonHeartObjectHealthy", -1.73308f, -1.73308f, 1.73308f, 1.73308f},
     {"FenceCorner", -.502486f, -.500121f, .521221f, .514487f},
     {"FenceStraight", -.493929f, -.492016f, .516277f, -.462466f},
+    {"GhostBell", -.3f, -.17f, .3f, .17f, .9000001f},
+    {"GhostCauldron", -1.0f, -1.0f, 1.0f, 1.0f, 1.6f},
+    {"GhostCauldronFill", -.2f, -.025f, .2f, .025f, .6f},
+    {"GhostHook", -.2f, -.155f, .2f, .155f, .8000001f},
+    {"GhostHookEmpty", -.2f, -.1f, .2f, .1f, .8000001f},
+    {"GhostWallGauges", -.45f, -.1f, .45f, .1f, .9000001f},
     {"GoblinBed", -.450071f, -.436337f, .444606f, .44576f, .073802f},
     {"GoldstackLv1", -.197478f, -.175391f, .186379f, .185685f},
     {"GoldstackLv2", -.185184f, -.182552f, .185553f, .182552f},
@@ -125,7 +132,7 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
-       name == "MushroomLamp" || name == "ItemBag")
+       name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron")
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
     // diagonal, not just their unrotated width, so rotation retains the margin.

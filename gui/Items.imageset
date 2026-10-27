@@ -767,4 +767,5 @@
     <Image height="128" name="vitality_large" width="128" xPos="1664" yPos="6016" />
     <Image height="128" name="vitality_medium" width="128" xPos="1792" yPos="6016" />
     <Image height="128" name="vitality_small" width="128" xPos="1920" yPos="6016" />
+    <Image height="128" name="soul_crystal" width="128" xPos="0" yPos="6144" />
 </Imageset>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GUILayout version="4">
+    <Window type="OD/FrameWindow" name="GhostRoomWindow">
+        <Property name="Area" value="{{0.5,-170},{0.5,-90},{0.5,170},{0.5,90}}" />
+        <Property name="Text" value="Ghost room" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="AlwaysOnTop" value="True" />
+        <Window type="OD/StaticText" name="GhostBarText">
+            <Property name="Area" value="{{0,20},{0,35},{1,-20},{0,60}}" />
+            <Property name="Text" value="" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Button" name="GhostProductButton">
+            <Property name="Area" value="{{0.5,-150},{0,70},{0.5,150},{0,100}}" />
+            <Property name="Text" value="Product: Research points" />
+            <Property name="TooltipText" value="What every finished ectoplasm becomes" />
+        </Window>
+        <Window type="OD/Button" name="GhostReviveButton">
+            <Property name="Area" value="{{0.5,-150},{0,110},{0.5,150},{0,140}}" />
+            <Property name="Text" value="Revive own: On" />
+            <Property name="TooltipText" value="Hunters bring own ghosts to their corpse in the crypt (mana)" />
+        </Window>
+    </Window>
+</GUILayout>

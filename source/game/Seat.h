@@ -32,6 +32,7 @@
 #include <map>
 #include <utility>
 #include <deque>
+#include <set>
 
 class Building;
 class MerchantEntity;
@@ -83,10 +84,14 @@ class Seat : public SeatData
 public:
     friend class GameMap;
     friend class ODClient;
+    //! \brief Returns the map that owns this keeper.
+    GameMap* getGameMap() const { return mGameMap; }
     // Constructors
     //! \brief Creates a seat with its configured merchant margin and shared room settings.
     Seat(GameMap* gameMap);
 
+    //! \brief Marks a newly discovered hunt target, preventing repeated bell alarms.
+    bool announceGhostTarget(const std::string& name) { return mGhostBellTargets.insert(name).second; }
     //! \brief Returns this seat's single non-creature merchant figure, if one exists.
     MerchantEntity* getMerchant() const { return mMerchant; }
     //! \brief Updates the weak reference when the figure spawns, changes owner or despawns.
@@ -588,6 +593,8 @@ private:
     int32_t mConfigTeamId;
     int32_t mConfigFactionIndex;
 
+    //! \brief Names already announced by this keeper's ghost-room bells.
+    std::set<std::string> mGhostBellTargets;
     //! \brief Weak reference to this seat's one merchant, owned by the map.
     MerchantEntity* mMerchant = nullptr;
     //! \brief Fractional gold already earned from merchant deals, persisted with the seat.

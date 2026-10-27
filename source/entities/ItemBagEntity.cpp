@@ -14,13 +14,16 @@
 #include <istream>
 #include <ostream>
 
-//! \brief Creates an owned bag using the common two-material mesh.
+//! \brief Creates a crystal mesh or the common two-material bag for the owned instance.
 ItemBagEntity::ItemBagEntity(GameMap* map, std::unique_ptr<ItemInstance> item) :
     RenderedMovableEntity(map, "ItemBag_", "ItemBag", 0.0f, false),
     mItem(std::move(item)), mIdleTurns(0)
 {
     if(mItem.get() != nullptr)
+    {
+        if(mItem->mSoulCrystal) setMeshName("SoulCrystal");
         map->registerEpic(*mItem);
+    }
 }
 
 //! \brief Creates an empty bag for a complete saved or network record.
@@ -145,6 +148,7 @@ bool ItemBagEntity::importFromStream(std::istream& stream)
     }
     if(mItem.get() == nullptr)
         return false;
+    if(mItem->mSoulCrystal) setMeshName("SoulCrystal");
     getGameMap()->registerEpic(*mItem);
     return true;
 }
@@ -162,13 +166,16 @@ void ItemBagEntity::importFromPacket(ODPacket& packet)
     RenderedMovableEntity::importFromPacket(packet);
     std::unique_ptr<ItemInstance> item(new ItemInstance);
     if(item->importFromPacket(packet))
+    {
         mItem = std::move(item);
+        if(mItem->mSoulCrystal) setMeshName("SoulCrystal");
+    }
 }
 
-//! \brief Creates the usual bag and refreshes its tint and merchant seal.
+//! \brief Creates the contained item mesh and applies tint and seals only to ordinary bags.
 void ItemBagEntity::createMeshLocal(NodeType type)
 {
     RenderedMovableEntity::createMeshLocal(type);
-    if(!getIsOnServerMap())
+    if(!getIsOnServerMap() && mItem.get() != nullptr && !mItem->mSoulCrystal)
         RenderManager::getSingleton().rrRefreshItemBag(this);
 }

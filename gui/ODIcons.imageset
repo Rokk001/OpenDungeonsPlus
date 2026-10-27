@@ -117,4 +117,5 @@
     <Image height="256" name="TavernButton" width="256" xPos="1792" yPos="2816" />
     <Image height="256" name="BeerButton" width="256" xPos="0" yPos="3072" />
     <Image height="256" name="InfirmaryButton" width="256" xPos="256" yPos="3072" />
+    <Image height="128" name="GhostRoomButton" width="128" xPos="512" yPos="3072" />
 </Imageset>

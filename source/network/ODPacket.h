@@ -24,6 +24,12 @@
 #include <string>
 #include <cstdint>
 
+namespace NetworkProtocol
+{
+    //! Network record schema; checked by the existing hello before any level data.
+    static const std::string WIRE_SCHEMA_SUFFIX = " / wire-2";
+}
+
 /*! \brief This class is an utility class to transfer data through ODSocketClient.
  * It should also override operators << and >> for each standard types.
  * ODPacket should preserve integrity. That means that if an ODSocketClient

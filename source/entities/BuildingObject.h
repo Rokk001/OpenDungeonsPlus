@@ -46,7 +46,16 @@ public:
 
     virtual GameEntityType getObjectType() const override;
 
+    //! \brief Advances particle lifetimes and exact ghost-room presentation state.
     void doUpkeep() override;
+    //! \brief Updates the child fill and alarm lamps on clients.
+    void update(Ogre::Real seconds) override;
+    //! \brief Sets the shared fill fraction and the remaining bell/lamp interval.
+    void setGhostRoomState(double fill, double alarm);
+    //! \brief Appends ghost-room presentation to the ordinary object refresh.
+    void exportToPacketForUpdate(ODPacket& packet, Seat* seat) override;
+    //! \brief Applies refreshed fill and alarm state.
+    void updateFromPacket(ODPacket& packet) override;
 
     void addParticleEffect(const std::string& effectScript, uint32_t nbTurns);
 
@@ -68,10 +77,15 @@ public:
     static BuildingObject* getBuildingObjectFromPacket( GameMap* gameMap,   ODPacket& is);
 
 protected:
-    //! \brief Builds normal furniture, then styles any decorative merchant bag using the shared renderer.
+    //! \brief Builds furniture, its independent cauldron fill child and decorative merchant bag appearance.
     void createMeshLocal(NodeType type = NodeType::MTILES_NODE) override;
+    //! \brief Releases the independent fill child before ordinary furniture destruction.
+    void destroyMeshLocal(NodeType type = NodeType::MTILES_NODE) override;
 
 private:
+    double mGhostFill = -1.0;
+    double mGhostAlarm = 0.0;
+    Ogre::SceneNode* mGhostFillNode = nullptr;
     Ogre::Vector2 mFurnitureScale = Ogre::Vector2::ZERO;
     //! \brief Negative means ordinary furniture; otherwise this is a decorative bag quality.
     int32_t mItemBagQuality = -1;
