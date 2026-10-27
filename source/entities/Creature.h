@@ -223,7 +223,10 @@ public:
     virtual GameEntityType getObjectType() const override;
 
     virtual void addToGameMap(GameMap* gameMap = nullptr) override;
+    //! \brief Removes the creature and releases all crypt delivery reservations for its body.
     virtual void removeFromGameMap(GameMap* gameMap = nullptr) override;
+    //! \brief Restores the base visual state and the exact saved corpse decay progress.
+    void restoreEntityState() override;
 
     bool canDisplayStatsWindow(Seat* seat) override
     { return true; }
@@ -1040,9 +1043,11 @@ public:
     //! \brief Tells whether the creature can go through the given tile.
     bool canGoThroughTile(Tile* tile) const;
 
-    //! \brief Makes own knockouts carryable when a bed or infirmary can receive them.
+    //! \brief Keeps own knockout bed/infirmary eligibility and refuses workers, decaying or consumed bodies.
     virtual EntityCarryType getEntityCarryType(Creature* carrier) override;
+    //! \brief Pauses the body lie time while a worker carries it.
     virtual void notifyEntityCarryOn(Creature* carrier) override;
+    //! \brief Resumes body lie time at the delivery or interrupted carry position.
     virtual void notifyEntityCarryOff(const Ogre::Vector3& position) override;
 
     //! \brief Server side. True if the creature is hurt enough to be pulled to its bed by a worker:
@@ -1386,7 +1391,7 @@ public:
 
     bool isHungry() const;
 
-    //! \brief Clears knockout state and any pending lethal-shot credit after recovery.
+    //! \brief Clears knockout, lethal-shot credit and the prior fight item-drop guard after recovery or revival.
     void resetKoTurns();
 
     //! \brief Knocks the creature out so that it can be carried away (used when
@@ -1506,8 +1511,24 @@ public:
     Tile* getWalkDestinationTile() const;
 
     //! \brief Server side. Takes the dead body of this creature so it cannot be used again (Raise Dead).
-    //! Returns false if the creature is not a body that is still lying on the map or if it is a worker
+    //! Returns false before death handling, during decay, while carried, or for a worker or consumed body
     bool takeCorpse();
+
+    //! \brief Returns whether the body has entered its uncarryable decay phase.
+    bool isCorpseDecaying() const
+    { return mDecayTurns >= 0.0; }
+
+    //! \brief Returns elapsed decay turns, or -1 before decay; also used to restore the client look.
+    double getDecayTurns() const
+    { return mDecayTurns; }
+
+    //! \brief Returns whether a worker carries the body, pausing its lie countdown.
+    bool isCorpseCarried() const
+    { return mIsCarried; }
+
+    //! \brief Returns the saved or current worker name used to restore a corpse carry.
+    const std::string& getCorpseCarrierName() const
+    { return mCorpseCarrierName; }
     
     void showOutliner();
 
@@ -1674,6 +1695,13 @@ private:
 
     //! \brief Counter to let the creature stay some turns after its death
     unsigned int    mDeathCounter;
+    //! \brief Elapsed uncarried corpse turns and decay turns (-1 before decay starts).
+    double          mCorpseTurns;
+    double          mDecayTurns;
+    //! \brief Whether a worker currently carries this creature.
+    bool            mIsCarried;
+    //! \brief Worker name saved with a carried body and rebound by its reserved crypt after loading.
+    std::string     mCorpseCarrierName;
     //! \brief Current mana. Starts full, regenerates every turn, is saved and sent to the clients
     double          mMana;
     //! \brief True when the mana was read from a save, so the creature does not start with a full pool
