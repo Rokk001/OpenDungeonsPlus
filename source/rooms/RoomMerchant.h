@@ -81,7 +81,7 @@ public:
     bool useRoom(Creature& creature, bool forced) override;
     //! \brief Saves table goods and the merchant's current position.
     void exportToStream(std::ostream& stream) const override;
-    //! \brief Reads optional merchant position after the room's tile data.
+    //! \brief Reads optional merchant position and restores crystals to the first actual table.
     bool importFromStream(std::istream& stream) override;
     //! \brief Returns the first crystal table or an ordinary table with researched capacity.
     Tile* getFreeTable(const ItemInstance* item = nullptr) const;
@@ -89,7 +89,7 @@ public:
     const std::vector<Tile*>& getSalesTables() const { return mCentralActiveSpotTiles; }
     //! \brief Uses the existing furniture-aware work approach for a sales table.
     MerchantApproach approachTable(Creature& creature, Tile* table);
-    //! \brief Stores a bag's item; ownership leaves item only on success.
+    //! \brief Stores ordinary goods at the supplied table and crystals at the first actual table.
     bool addGoods(std::unique_ptr<ItemInstance>& item, Tile* table);
     //! \brief Removes the entry with a stable goods index and returns its item.
     std::unique_ptr<ItemInstance> takeGoods(uint32_t index);
@@ -140,7 +140,9 @@ protected:
 private:
     //! \brief Removes the transmitted decorative bags without changing the real stock.
     void clearDisplayedGoods();
-    //! \brief Places sealed quality bags in evenly spaced positions on each sales table.
+    //! \brief Moves only crystal stock to the first actual sales table, preserving ordinary goods.
+    void moveCrystalsToFirstTable();
+    //! \brief Places ordinary bags in their table slots and crystals at the first table centre.
     void refreshDisplayedGoods();
     std::vector<BuildingObject*> mDisplayedGoods;
     size_t mDisplayedCapacity = 0;
