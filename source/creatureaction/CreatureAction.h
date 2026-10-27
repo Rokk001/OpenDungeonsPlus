@@ -70,6 +70,7 @@ enum class CreatureActionType
     buyItem, // Visits a merchant table to buy a reserved wanted good.
     vomit, // (fighters only) A drunk creature vomits where it stands and leaves a pile of vomit
     searchDrink, // (fighters only) Looks for a tavern with a free spot to drink at
+    searchSpa, // (fighters only) Looks for a lava spa with a free bath place and lets that room handle the bath
     nb // Must be the last value of this enum
 };
 
