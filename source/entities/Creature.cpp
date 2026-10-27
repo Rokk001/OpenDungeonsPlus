@@ -9467,7 +9467,7 @@ void Creature::removeAnnoyance()
     mSpecialMood = 0;
     // What is left (hunger, tiredness, wounds, unpaid wage) is cancelled for a while, it builds up again
     double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
-    mSpecialMood = std::max(0, -points);
+    mSpecialMood = static_cast<int32_t>(std::max(0.0, -points));
     mMoodCooldownTurns = 0;
 }
 
