@@ -196,6 +196,9 @@ public:
     inline CreatureJob          getCreatureJob  () const    { return mCreatureJob; }
     inline CombatClass          getCombatClass  () const    { return mCombatClass; }
     inline int32_t              getStealGold    () const    { return mStealGold; }
+    //! \brief True for types that flee from visible ghosts.
+    bool isAfraidOfGhosts() const { return mAfraidOfGhosts; }
+
     //! \brief True for creatures that are never scared by a Fear trap.
     inline bool                 isFearless      () const    { return mFearless; }
     //! \brief True for the champion definition (the creature the Summon champion spell calls).
@@ -363,6 +366,8 @@ private:
     int32_t mStealGold;
     //! \brief True for creatures that are never scared by a Fear trap
     bool mFearless;
+    //! \brief True for non-worker types that flee from visible ghosts.
+    bool mAfraidOfGhosts;
     //! \brief True for the summoned champion: it cannot be hurt, possessed or turned, needs no fee and charges at enemies
     bool mChampion;
     //! \brief Mana taken per second while a player possesses a creature of this definition (after the free period)

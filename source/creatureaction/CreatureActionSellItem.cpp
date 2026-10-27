@@ -19,7 +19,8 @@ bool CreatureActionSellItem::handle(Creature& creature, const std::string& name,
     {
         if(base->getName() != name) continue;
         RoomMerchant* room = static_cast<RoomMerchant*>(base);
-        const MerchantApproach state = room->approachTable(creature, room->getFreeTable());
+        if(slot >= creature.getInventory().size() || creature.getInventory()[slot].get() == nullptr) break;
+        const MerchantApproach state = room->approachTable(creature, room->getFreeTable(creature.getInventory()[slot].get()));
         if(state == MerchantApproach::walking) return false;
         const bool traded = state == MerchantApproach::ready && room->buyFromCreature(creature, slot);
         room->releaseInteractionPosition(&creature);

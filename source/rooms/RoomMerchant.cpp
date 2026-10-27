@@ -139,11 +139,32 @@ void RoomMerchant::clearDisplayedGoods()
     mDisplayedGoods.clear();
 }
 
-//! \brief Fits all retained table goods to the 0.712-high cloth, including takeover overflow.
+//! \brief Rebinds loaded or transferred crystals to the first table without moving ordinary goods.
+void RoomMerchant::moveCrystalsToFirstTable()
+{
+    const ItemInstance crystal = *ItemInstance::createSoulCrystal();
+    Tile* firstTable = getFreeTable(&crystal);
+    if(firstTable == nullptr) return;
+    RoomMerchantTileData* first = static_cast<RoomMerchantTileData*>(mTileData.at(firstTable));
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(tile == firstTable) continue;
+        std::vector<MerchantGood>& goods = static_cast<RoomMerchantTileData*>(mTileData.at(tile))->mGoods;
+        for(std::vector<MerchantGood>::iterator it = goods.begin(); it != goods.end();)
+        {
+            if(!it->mItem.mSoulCrystal) { ++it; continue; }
+            first->mGoods.push_back(*it);
+            it = goods.erase(it);
+        }
+    }
+}
+
+//! \brief Fits ordinary goods to the existing cloth slots and keeps crystals at the first table centre.
 void RoomMerchant::refreshDisplayedGoods()
 {
     clearDisplayedGoods();
     if(!getIsOnServerMap()) return;
+    moveCrystalsToFirstTable();
     const size_t capacity = tableCapacity(getSeat());
     mDisplayedCapacity = capacity;
     for(Tile* tile : mCoveredTiles)
@@ -151,16 +172,23 @@ void RoomMerchant::refreshDisplayedGoods()
         const RoomMerchantTileData* data = static_cast<const RoomMerchantTileData*>(mTileData.at(tile));
         if(!data->mTable) continue;
         // Retained stock still fits when its new owner has researched fewer table places.
-        const size_t displayPlaces = std::max(capacity, data->mGoods.size());
+        size_t ordinary = 0;
+        for(const MerchantGood& good : data->mGoods)
+            if(!good.mItem.mSoulCrystal) ++ordinary;
+        const size_t displayPlaces = std::max(capacity, ordinary);
         const float spacing = 0.63f / static_cast<float>(displayPlaces);
         const float scale = std::min(0.6f, spacing / 0.36f);
+        size_t ordinaryIndex = 0;
         for(size_t index = 0; index < data->mGoods.size(); ++index)
         {
-            const float y = tile->getY() - 0.315f + spacing * (static_cast<float>(index) + 0.5f);
-            BuildingObject* bag = new BuildingObject(getGameMap(), *this, "ItemBag", tile,
+            const bool crystal = data->mGoods[index].mItem.mSoulCrystal;
+            const float y = crystal ? static_cast<float>(tile->getY()) :
+                tile->getY() - 0.315f + spacing * (static_cast<float>(ordinaryIndex++) + 0.5f);
+            BuildingObject* bag = new BuildingObject(getGameMap(), *this, data->mGoods[index].mItem.mSoulCrystal ? "SoulCrystal" : "ItemBag", tile,
                 tile->getX(), y, 0.712f, 0.0f, false);
             bag->setFurnitureScale(Ogre::Vector2(scale, scale));
-            bag->setItemBagAppearance(data->mGoods[index].mItem.mQuality, true);
+            if(!data->mGoods[index].mItem.mSoulCrystal)
+                bag->setItemBagAppearance(data->mGoods[index].mItem.mQuality, true);
             bag->addToGameMap();
             bag->setPosition(bag->getPosition());
             mDisplayedGoods.push_back(bag);
@@ -282,14 +310,19 @@ void RoomMerchant::absorbRoom(Room* other)
     mGoodsChanged = true;
 }
 
-//! \brief Returns the first table whose researched goods capacity is not full.
-Tile* RoomMerchant::getFreeTable() const
+//! \brief Returns the first real table for a crystal or one with ordinary goods capacity.
+Tile* RoomMerchant::getFreeTable(const ItemInstance* item) const
 {
     const size_t capacity = tableCapacity(getSeat());
     for(Tile* tile : mCoveredTiles)
     {
         const RoomMerchantTileData* data = static_cast<const RoomMerchantTileData*>(mTileData.at(tile));
-        if(data->mTable && data->mGoods.size() < capacity) return tile;
+        if(!data->mTable) continue;
+        if(item != nullptr && item->mSoulCrystal) return tile;
+        size_t ordinary = 0;
+        for(const MerchantGood& good : data->mGoods)
+            if(!good.mItem.mSoulCrystal) ++ordinary;
+        if(ordinary < capacity) return tile;
     }
     return nullptr;
 }
@@ -310,12 +343,18 @@ MerchantApproach RoomMerchant::approachTable(Creature& creature, Tile* table)
     return MerchantApproach::walking;
 }
 
-//! \brief Accepts one item into the specified table without losing ownership on failure.
+//! \brief Accepts ordinary goods at the specified table and crystals at the first actual table.
 bool RoomMerchant::addGoods(std::unique_ptr<ItemInstance>& item, Tile* table)
 {
-    if(item.get() == nullptr || table == nullptr || table->getCoveringRoom() != this) return false;
+    if(item.get() == nullptr) return false;
+    if(item->mSoulCrystal) table = getFreeTable(item.get());
+    if(table == nullptr || table->getCoveringRoom() != this) return false;
     RoomMerchantTileData* data = static_cast<RoomMerchantTileData*>(mTileData.at(table));
-    if(!data->mTable || data->mGoods.size() >= tableCapacity(getSeat())) return false;
+    if(!data->mTable) return false;
+    size_t ordinary = 0;
+    for(const MerchantGood& existing : data->mGoods)
+        if(!existing.mItem.mSoulCrystal) ++ordinary;
+    if(!item->mSoulCrystal && ordinary >= tableCapacity(getSeat())) return false;
     MerchantGood good;
     good.mIndex = nextGoodsIndex++;
     good.mItem = *item;
@@ -372,9 +411,20 @@ std::unique_ptr<ItemInstance> RoomMerchant::takeGoods(uint32_t index)
     return std::unique_ptr<ItemInstance>();
 }
 
-//! \brief Identifies desired equipment improvements and usable potions for empty potion slots.
+//! \brief Identifies desired equipment, usable potions and worthwhile crystals with inventory room.
 bool RoomMerchant::wantsItem(const Creature& creature, const ItemInstance& item)
 {
+    if(item.mSoulCrystal)
+    {
+        bool freeSlot = false;
+        for(const std::unique_ptr<ItemInstance>& held : creature.getInventory())
+        {
+            if(held.get() == nullptr) freeSlot = true;
+            else if(held->mSoulCrystal) return false;
+        }
+        const double price = item.getPrice(creature.getGameMap()) * (1.0 + margin(creature.getSeat())) * thrift(creature);
+        return freeSlot && creature.wantsSoulCrystal(price);
+    }
     if(item.getLevelMin(creature.getGameMap()) > creature.getLevel()) return false;
     if(!item.mPotionId.empty())
     {
@@ -395,7 +445,8 @@ int32_t RoomMerchant::findSaleSlot(const Creature& creature)
     const std::array<std::unique_ptr<ItemInstance>, 4>& inventory = creature.getInventory();
     for(size_t index = 0; index < inventory.size(); ++index)
         if(inventory[index].get() != nullptr && inventory[index]->getLevelMin(creature.getGameMap()) <= creature.getLevel()
-            && !wantsItem(creature, *inventory[index])) return static_cast<int32_t>(index);
+            && !(inventory[index]->mSoulCrystal ? creature.wantsSoulCrystal(inventory[index]->getPrice(creature.getGameMap()))
+                : wantsItem(creature, *inventory[index]))) return static_cast<int32_t>(index);
     return -1;
 }
 
@@ -445,9 +496,10 @@ bool RoomMerchant::buyFromCreature(Creature& creature, size_t slot)
 {
     if(creature.getSeat() != getSeat() || creature.isActionInList(CreatureActionType::fight)
         || slot >= creature.getInventory().size() || creature.getInventory()[slot].get() == nullptr) return false;
-    Tile* table = getFreeTable();
     const ItemInstance& offered = *creature.getInventory()[slot];
-    if(table == nullptr || wantsItem(creature, offered) || offered.getLevelMin(getGameMap()) > creature.getLevel()) return false;
+    Tile* table = getFreeTable(&offered);
+    if(table == nullptr || (offered.mSoulCrystal ? creature.wantsSoulCrystal(offered.getPrice(getGameMap()))
+        : wantsItem(creature, offered)) || offered.getLevelMin(getGameMap()) > creature.getLevel()) return false;
     const double price = offered.getPrice(getGameMap()) * setting("MerchantBuyShare");
     const ItemInstance copy = offered;
     std::unique_ptr<ItemInstance> item = creature.setInventorySlot(slot, std::unique_ptr<ItemInstance>());
@@ -510,12 +562,16 @@ bool RoomMerchant::sellToKeeper(Player& player, uint32_t index)
     return true;
 }
 
-//! \brief Wants carried item bags only when goods capacity is available.
+//! \brief Accepts carried crystals on the first table regardless of ordinary goods capacity.
 bool RoomMerchant::hasCarryEntitySpot(GameEntity* entity)
-{ return entity != nullptr && entity->getObjectType() == GameEntityType::itemBagEntity && getFreeTable() != nullptr; }
-//! \brief Directs the worker to a free table in this room.
+{
+    if(entity == nullptr || entity->getObjectType() != GameEntityType::itemBagEntity) return false;
+    const ItemInstance* item = static_cast<ItemBagEntity*>(entity)->getItem();
+    return item != nullptr && getFreeTable(item) != nullptr;
+}
+//! \brief Directs the worker to the crystal table or an ordinary free goods place.
 Tile* RoomMerchant::askSpotForCarriedEntity(GameEntity* entity)
-{ return hasCarryEntitySpot(entity) ? getFreeTable() : nullptr; }
+{ return hasCarryEntitySpot(entity) ? getFreeTable(static_cast<ItemBagEntity*>(entity)->getItem()) : nullptr; }
 
 //! \brief Restocks sealed goods or purchases the keeper's delivered item without margin.
 void RoomMerchant::notifyCarryingStateChanged(Creature* carrier, GameEntity* entity)
@@ -527,7 +583,7 @@ void RoomMerchant::notifyCarryingStateChanged(Creature* carrier, GameEntity* ent
     if(bag->getItem() == nullptr) return;
     const ItemInstance copy = *bag->getItem();
     std::unique_ptr<ItemInstance> item(new ItemInstance(copy));
-    if(!addGoods(item, getFreeTable())) return;
+    if(!addGoods(item, getFreeTable(&copy))) return;
     bag->takeItem();
     bag->removeFromGameMap(); bag->deleteYourself();
     if(!copy.mMerchantGoods)
@@ -630,10 +686,11 @@ void RoomMerchant::exportToStream(std::ostream& stream) const
         stream << "Merchant " << merchant->getPosition().x << ' ' << merchant->getPosition().y << '\n';
 }
 
-//! \brief Accepts legacy rooms without a saved merchant position.
+//! \brief Restores crystal table ownership and accepts legacy rooms without a merchant position.
 bool RoomMerchant::importFromStream(std::istream& stream)
 {
     if(!Room::importFromStream(stream)) return false;
+    moveCrystalsToFirstTable();
     const std::streampos position = stream.tellg();
     std::string marker;
     if(!(stream >> marker) || marker != "Merchant") { stream.clear(); stream.seekg(position); return true; }

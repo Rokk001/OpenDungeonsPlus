@@ -134,22 +134,35 @@ void ItemDrops::outfit(Creature& creature, const std::string& kind)
     }
     creature.setHP(creature.getMaxHp());
     creature.setCurrentMana(creature.getMaxMana());
-    if(Random::Double(0.0, 1.0) >= dropSetting("HeroPotionBase") + dropSetting("HeroPotionPerLevel") * level)
-        return;
-    std::string potionId;
-    const double special = Random::Double(0.0, 1.0);
-    const double share = dropSetting("HeroSpecialPotionShare");
-    if(level >= dropSetting("HeroSpecialPotionLevel") && special < share)
-        potionId = "lifespring";
-    else if(level >= dropSetting("HeroSpecialPotionLevel") && special < share * 2.0)
-        potionId = "thaw";
-    else
+    if(Random::Double(0.0, 1.0) < dropSetting("HeroPotionBase") + dropSetting("HeroPotionPerLevel") * level)
     {
-        static const std::vector<std::string> KINDS = {"healing", "mana", "strength", "dexterity", "guard", "vitality", "focus", "mending", "flow"};
-        potionId = KINDS[Random::Uint(0, static_cast<uint32_t>(KINDS.size() - 1))];
-        if(level > LARGE_HERO_LEVEL) potionId += "_large";
-        else if(level > MEDIUM_HERO_LEVEL) potionId += "_medium";
-        else potionId += "_small";
+        std::string potionId;
+        const double special = Random::Double(0.0, 1.0);
+        const double share = dropSetting("HeroSpecialPotionShare");
+        if(level >= dropSetting("HeroSpecialPotionLevel") && special < share)
+            potionId = "lifespring";
+        else if(level >= dropSetting("HeroSpecialPotionLevel") && special < share * 2.0)
+            potionId = "thaw";
+        else
+        {
+            static const std::vector<std::string> KINDS = {"healing", "mana", "strength", "dexterity", "guard", "vitality", "focus", "mending", "flow"};
+            potionId = KINDS[Random::Uint(0, static_cast<uint32_t>(KINDS.size() - 1))];
+            if(level > LARGE_HERO_LEVEL) potionId += "_large";
+            else if(level > MEDIUM_HERO_LEVEL) potionId += "_medium";
+            else potionId += "_small";
+        }
+        creature.acceptItem(ItemInstance::createPotion(potionId), false);
     }
-    creature.acceptItem(ItemInstance::createPotion(potionId), false);
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double rareChance = config.getSoulCrystalHeroRareStart() +
+        (config.getSoulCrystalHeroRareEnd() - config.getSoulCrystalHeroRareStart()) *
+        static_cast<double>(level - 1) / static_cast<double>(MAX_LEVEL - 1);
+    const double crystalChance = (dropSetting("HeroItemBase") + dropSetting("HeroItemPerLevel") * level) * rareChance;
+    if(kind == "hero" && Random::Double(0.0, 1.0) < crystalChance)
+        for(size_t slot = 0; slot < creature.getInventory().size(); ++slot)
+            if(creature.getInventory()[slot].get() == nullptr)
+            {
+                creature.setInventorySlot(slot, ItemInstance::createSoulCrystal());
+                break;
+            }
 }

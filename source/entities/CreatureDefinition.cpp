@@ -79,6 +79,7 @@ CreatureDefinition::CreatureDefinition(
         mCombatClass (CombatBlocker),
         mStealGold (0),
         mFearless (false),
+        mAfraidOfGhosts(false),
         mChampion (false),
         mPossessManaCost (0.0),
         mTortureTimeToConvert (120.0),
@@ -161,6 +162,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mCombatClass(def.mCombatClass),
         mStealGold(def.mStealGold),
         mFearless(def.mFearless),
+        mAfraidOfGhosts(def.mAfraidOfGhosts),
         mChampion(def.mChampion),
         mPossessManaCost(def.mPossessManaCost),
         mTortureTimeToConvert(def.mTortureTimeToConvert),
@@ -439,6 +441,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << CreatureDefinition::combatClassToString(c->mCombatClass);
     os << c->mStealGold;
     os << c->mFearless;
+    os << c->mAfraidOfGhosts;
     os << c->mChampion;
     os << c->mPossessManaCost;
     os << c->mTortureTimeToConvert;
@@ -509,6 +512,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     c->mCombatClass = CreatureDefinition::combatClassFromString(tempString);
     is >> c->mStealGold;
     is >> c->mFearless;
+    is >> c->mAfraidOfGhosts;
     is >> c->mChampion;
     is >> c->mPossessManaCost;
     is >> c->mTortureTimeToConvert;
@@ -671,6 +675,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mStealGold = Helper::toInt(nextParam);
+                continue;
+            }
+            else if(nextParam == "AfraidOfGhosts")
+            {
+                defFile >> nextParam;
+                creatureDef->mAfraidOfGhosts = Helper::toBool(nextParam);
                 continue;
             }
             else if (nextParam == "Fearless")
@@ -1129,6 +1139,8 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
     if(def1 == nullptr || (def1->mStealGold != def2->mStealGold))
         file << "    StealGold\t" << def2->mStealGold << std::endl;
 
+    if(def1 == nullptr || (def1->mAfraidOfGhosts != def2->mAfraidOfGhosts))
+        file << "    AfraidOfGhosts\t" << (def2->mAfraidOfGhosts ? 1 : 0) << std::endl;
     if(def1 == nullptr || (def1->mFearless != def2->mFearless))
         file << "    Fearless\t" << (def2->mFearless ? 1 : 0) << std::endl;
 

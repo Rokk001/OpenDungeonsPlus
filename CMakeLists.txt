@@ -359,6 +359,7 @@ set(OD_SOURCEFILES
     ${SRC}/entities/BuildingObject.cpp
     ${SRC}/rooms/RoomInfirmaryShaman.cpp
     ${SRC}/entities/InfirmaryShamanEntity.cpp
+    ${SRC}/entities/GhostEntity.cpp
     ${SRC}/entities/ChickenEntity.cpp
     ${SRC}/entities/MerchantEntity.cpp
     ${SRC}/entities/CraftedTrap.cpp
