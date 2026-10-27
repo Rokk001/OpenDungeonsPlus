@@ -32,6 +32,7 @@ EXPECTED = [
     ("Rooms", 3, "roomArena", "ArenaButton", ["roomTrainingHall"]),
     ("Rooms", 3, "roomPrison", "PrisonButton", ["roomGuardRoom"]),
     ("Rooms", 3, "roomCrypt", "CryptButton", ["roomLibrary"]),
+    ("Rooms", 3, "roomGhostRoom", "GhostRoomButton", ["roomLibrary"]),
     ("Rooms", 3, "roomBridgeStone", "StoneBridgeButton", ["roomBridgeWooden"]),
     ("Rooms", 3, "roomInfirmary", "InfirmaryButton", ["roomGuardRoom"]),
     ("Rooms", 4, "roomTorture", "TortureButton", ["roomPrison"]),
@@ -86,7 +87,7 @@ FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary"
 TAB_TOTALS = {tab: sum((0 if name in FREE_LEVEL_ONE else TIER_COST[tier]) + 6 * TIER_COST[tier]
     for entry_tab, tier, name, button, parents in EXPECTED if entry_tab == tab)
     for tab in ("Rooms", "Traps", "Spells")}
-assert TAB_TOTALS == {"Rooms": 75450, "Traps": 82250, "Spells": 84950}
+assert TAB_TOTALS == {"Rooms": 79650, "Traps": 82250, "Spells": 84950}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
@@ -96,7 +97,7 @@ KEEPERS = {
     "tavernBeer": ("BeerButton", "Tavern: Beer", "Rooms"),
 }
 
-assert len(EXPECTED) == 63, "the tree has 63 entries"
+assert len(EXPECTED) == 64, "the tree has 64 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree
@@ -135,7 +136,7 @@ for tab, tier, name, button, parent_list in EXPECTED:
     registered.append(name)
 
 # ---------------------------------------------------------------------------------------------
-# 2. skills.cfg: the 63 entries with the tier costs and the free level one block
+# 2. skills.cfg: the 64 entries with the tier costs and the free level one block
 cfg = read("config/skills.cfg")
 body = re.sub(r"#[^\r\n]*", "", cfg)
 skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
@@ -145,7 +146,7 @@ for index in range(0, len(skills_block), 2):
     assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
     costs[skills_block[index]] = int(skills_block[index + 1])
 assert "spellSummonChampion" not in costs, "the reward skill has no entry"
-assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 63 entries"
+assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 64 entries"
 for tab, tier, name, button, parent_list in EXPECTED:
     assert costs[name] == TIER_COST[tier], "%s costs the tier %d value" % (name, tier)
 free_block = body[body.index("[FreeLevelOne]") + len("[FreeLevelOne]"):body.index("[/FreeLevelOne]")].split()
