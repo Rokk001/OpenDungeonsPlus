@@ -1744,6 +1744,7 @@ assets-src/rooms/tavern/creature-clips/TentacleGreen.blend    Original model/rig
 
 sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg           kyles                    CC0 1.0                 "crowd int murmur bar pub comedy club roomy NYC.flac", https://freesound.org/people/kyles/sounds/455732/ ; real HQ recording preview, cut 0-20 s, 1-s loop crossfade, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
 sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg            EpicWizard               CC0 1.0                 "Drinking Glasses contact (Clink)", https://freesound.org/people/EpicWizard/sounds/325195/ ; real HQ recording preview, cut 0-1 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
+sounds/Spatial/Rooms/Tavern/Pour/Pour.ogg               zembacraftworks          CC0 1.0                 "Pouring a Beer from the Tap", https://freesound.org/people/zembacraftworks/sounds/428334/ ; real HQ recording preview, cut 0-3 s, high-pass 60 Hz, 20-ms fades, mono 22050 Hz Vorbis
 
 == Tavern hand and arm creature motions ==
 
