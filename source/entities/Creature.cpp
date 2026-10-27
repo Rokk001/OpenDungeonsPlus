@@ -239,6 +239,8 @@ void recordScriptEvent(const Creature& creature, const std::string& eventName);
 const uint32_t APPEARANCE_RETRY_TURNS = 200;
 //! Turns between two repeats of the bed status of a creature without a bed (cosmetic events)
 const int64_t BED_STATUS_REPEAT_TURNS = 200;
+//! Length in seconds of the Jump clip of the creature skeletons
+const double JUMP_CLIP_SECONDS = 1.4;
 
 //! \brief Server side registry of the whole-image catalogs used to assign the Dungeonbook appearance.
 //! Configured once from config/dungeonbook-appearance.cfg; messages are logged once.
@@ -2223,6 +2225,7 @@ void Creature::update(Ogre::Real timeSinceLastFrame)
             mJumpElapsed = std::min(static_cast<Ogre::Real>(mJumpTurns), mJumpElapsed +
                 static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
             setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+            showJumpClipPhase();
             if(mJumpElapsed >= static_cast<Ogre::Real>(mJumpTurns))
                 mJumpTurnsLeft = 0;
         }
@@ -8772,6 +8775,15 @@ void Creature::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector
     mJumpTurnsLeft = 1;
     setAnimationState(EntityAnimation::jump_anim, false, Ogre::Vector3::ZERO, false);
     setPosition(jumpPosition(from, to, elapsed / static_cast<Ogre::Real>(mJumpTurns)));
+    showJumpClipPhase();
+}
+
+//! \brief Puts the Jump clip at the phase of the arc, so a jump that is already running when the client learns of it
+//! (loaded game, seat that gains sight) goes on in the middle of the clip instead of starting it again.
+void Creature::showJumpClipPhase()
+{
+    if((getAnimationState() != nullptr) && (getAnimationState()->getAnimationName() == EntityAnimation::jump_anim))
+        getAnimationState()->setTimePosition(static_cast<Ogre::Real>(JUMP_CLIP_SECONDS) * mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns));
 }
 
 //! \brief Tells the human seats that see the creature about the jump that has just started (name, from, to, turns

@@ -1074,6 +1074,10 @@ public:
     //! \param elapsed The turns of the jump that have passed already.
     void startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to, uint32_t turns, Ogre::Real elapsed);
 
+    //! \brief Client side: puts the Jump clip of a running jump at the phase of the arc (loaded game, seat that gains sight,
+    //! every frame), so the clip does not start again in the middle of the arc.
+    void showJumpClipPhase();
+
     //! \brief Hook for a later bathing room: the creature is clean again (creature dirt 0).
     void washed();
 

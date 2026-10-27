@@ -81,6 +81,11 @@ assert attendant_restore.count('if(save.mHasClipTime') == 3, 'sitting, walk to t
 attendant_source = read('source/entities/PoolAttendantEntity.cpp')
 for jump_text in (extract(attendant_source, 'void PoolAttendantEntity::startJumpFromServer('), extract(attendant_source, 'void PoolAttendantEntity::update(')):
     assert 'getAnimationName() == EntityAnimation::jump_anim' in jump_text and 'setTimePosition(' in jump_text
+# The jump of a creature shows its clip at the phase of the arc too (loaded game, seat that gains sight, every frame)
+jump_clip_phase = extract(creature_cpp, 'void Creature::showJumpClipPhase(')
+assert 'getAnimationName() == EntityAnimation::jump_anim' in jump_clip_phase and 'setTimePosition(' in jump_clip_phase and 'mJumpElapsed' in jump_clip_phase
+assert 'showJumpClipPhase();' in extract(creature_cpp, 'void Creature::startJumpFromServer(')
+assert 'showJumpClipPhase();' in extract(creature_cpp, 'void Creature::update(')
 # The attendant whistles only for a guest who bathes in the mud, not for one that still jumps
 assert 'SpaBatherState::jumping' not in extract(read('source/rooms/RoomSpa.cpp'), 'bool RoomSpa::hasBatherInPool(')
 assert 'SpaBatherState::bathing' in extract(read('source/rooms/RoomSpa.cpp'), 'bool RoomSpa::hasBatherInPool(')
