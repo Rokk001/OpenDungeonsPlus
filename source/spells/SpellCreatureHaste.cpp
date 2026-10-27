@@ -174,7 +174,7 @@ bool SpellCreatureHaste::castSpell(GameMap* gameMap, Player* player, ODPacket& p
     if(!player->getSeat()->takeMana(pricePerTarget))
         return false;
 
-    uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureHasteDuration");
+    double duration = ConfigManager::getSingleton().getSpellConfigDouble("CreatureHasteDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureHaste,
         ConfigManager::getSingleton().getSpellConfigDouble("CreatureHasteValue"), ResearchEffect::Speed);
     CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(duration, value, "SpellCreatureHaste");

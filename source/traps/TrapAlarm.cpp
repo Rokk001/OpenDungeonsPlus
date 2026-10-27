@@ -28,6 +28,8 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
+#include <cmath>
+
 const std::string TrapAlarmName = "Alarm";
 const std::string TrapAlarmNameDisplay = "Alarm trap";
 const TrapType TrapAlarm::mTrapType = TrapType::alarm;
@@ -133,8 +135,8 @@ double TrapAlarm::getResearchedReloadTime() const
 //! \brief Warns the owner when an enemy is within the alarm radius.
 bool TrapAlarm::shoot(Tile* tile)
 {
-    uint32_t radius = ConfigManager::getSingleton().getTrapConfigUInt32("AlarmRadius");
-    std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(radius));
+    double radius = ConfigManager::getSingleton().getTrapConfigDouble("AlarmRadius");
+    std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::floor(radius)));
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(visibleTiles, getSeat(), true);
     if(enemyCreatures.empty() && !mForcedTrigger)
         return false;

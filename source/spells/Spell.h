@@ -37,7 +37,7 @@ class Spell : public RenderedMovableEntity
 {
 public:
     Spell(GameMap* gameMap, const std::string& baseName, const std::string& meshName, Ogre::Real rotationAngle,
-        int32_t nbTurns);
+        double nbTurns);
     virtual ~Spell()
     {}
 
@@ -75,7 +75,7 @@ public:
     static std::string getSpellStreamFormat();
 
 protected:
-    void setDuration(int32_t turns)
+    void setDuration(double turns)
     { mNbTurns = turns; }
 
     /*! \brief Exports the headers needed to recreate the Spell. It allows to extend Spells as much as wanted.
@@ -89,7 +89,7 @@ protected:
 private:
     //! \brief Number of turns the spell should be displayed before automatic deletion.
     //! If < 0, the Spell will not be removed automatically
-    int32_t mNbTurns;
+    double mNbTurns;
 };
 
 #endif // SPELL_H

@@ -118,7 +118,7 @@ private:
     //! \brief Blocks damage, passage and hand toggles until key delivery.
     bool mKeyLocked;
     //! \brief Turns left before a runed door can fire again
-    uint32_t mFireCooldownTurns;
+    double mFireCooldownTurns;
 
     void changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked);
 };

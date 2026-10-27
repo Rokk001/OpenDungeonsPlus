@@ -43,7 +43,7 @@ const std::string ConfigManager::DEFAULT_TILESET_NAME = "Default";
 const std::string ConfigManager::DEFAULT_KEEPER_VOICE = "Default";
 
 //! \brief Default extra mana per second for each claimed mana well tile; global.cfg can override it.
-static const double DEFAULT_MANA_WELL_BONUS_PER_TILE = 10.0;
+static const double DEFAULT_MANA_WELL_BONUS_PER_TILE = 27.05795669555664;
 
 //! \brief Defaults used when global.cfg does not set the gold keys; the values in global.cfg are the real ones.
 static const double DEFAULT_GOLD_PER_SEAM_TILE = 3000.0;
@@ -88,7 +88,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mNetworkPort(0),
     mClientConnectionTimeout(5000),
     mBaseSpawnPoint(10),
-    mCreatureDeathCounter(10),
+    mCreatureDeathCounter(30),
     mGhostLifetimeSeconds(0.0),
     mGhostFloatSpeed(0.0),
     mGhostWanderRadius(0.0),
@@ -99,19 +99,19 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mSoulCrystalNormalXpPerSecond(0.0),
     mSoulCrystalHeroRareStart(0.0),
     mSoulCrystalHeroRareEnd(0.0),
-    mCorpseLieSeconds(0.0),
-    mCorpseDecaySeconds(0.0),
+    mCorpseLieSeconds(120.0),
+    mCorpseDecaySeconds(240.0),
     mMaxCreaturesPerSeatAbsolute(30),
     mMaxCreaturesPerSeatDefault(10),
     mCreaturesPerPortal(5),
-    mCreatureBaseMood(1000),
+    mCreatureBaseMood(1500),
     mCreatureMoodHappy(1200),
     mCreatureMoodUpset(0),
     mCreatureMoodAngry(-1000),
     mCreatureMoodFurious(-2000),
     mSlapDamage(10),
     mLavaDamagePerSecond(50),
-    mSlapEffectDuration(15),
+    mSlapEffectDuration(20),
     mTiredWakefulness(20.0),
     mTiredWalkSpeedFactor(0.8),
     mLowHealthWalkSpeedFactor(0.7),
@@ -156,17 +156,28 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mShieldBlockBase(21.0),
     mShieldBlockPerLevel(0.0),
     mShieldBlockMax(25.0),
-    mTimePayDay(300),
+    mTimePayDay(600),
     mNbTurnsFuriousMax(120),
     mMaxManaPerSeat(200000.0),
     mManaWellBonusPerTile(DEFAULT_MANA_WELL_BONUS_PER_TILE),
+    mManaIncomeTilesCap(500.0),
+    mManaPerClaimedTilePerSecond(0.2705795669555664),
+    mWorkerManaUpkeepPerSecond(7.0),
+    mWorkerManaShortageSeconds(10.0),
+    mWorkerPopCountdownSeconds(10.0),
+    mAutoWorkerIntervalSeconds(5.0),
+    mGiftBoxMana(88588),
+    mGiftBoxGold(10000),
+    mGiftBoxLevels(1),
+    mGiftBoxWorkers(10),
+    mGiftBoxStunSeconds(5.0),
     mBedStepMaxHeight(0.09),
-    mClaimingWallPenalty(0.8),
+    mClaimingWallPenalty(0.7),
     mGoldPerSeamTile(DEFAULT_GOLD_PER_SEAM_TILE),
     mGoldPerDigStep(DEFAULT_GOLD_PER_DIG_STEP),
     mGemGoldPerDigStep(DEFAULT_GEM_GOLD_PER_DIG_STEP),
     mWorkerCheerGoldShare(DEFAULT_WORKER_CHEER_GOLD_SHARE),
-    mDigCoefClaimedWall(0.5),
+    mDigCoefClaimedWall(0.2),
     mNaturalFullHealSeconds(939.96),
     mUndeadHealFactor(0.6666666666666666),
     mLavaDamageScalesWithHp(true),
@@ -187,7 +198,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mClaimXpFactor(0.78),
     mClaimXpDivisorBase(0.35),
     mClaimXpDivisorPerLevel(0.05),
-    mNbTurnsKoCreatureAttacked(10),
+    mNbTurnsKoCreatureAttacked(120),
     mCreatureDefinitionDefaultWorker(nullptr),
     mNbWorkersDigSameFaceTile(3),
     mNbWorkersClaimSameTile(1)
@@ -1190,6 +1201,83 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mManaWellBonusPerTile = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ManaIncomeTilesCap")
+        {
+            configFile >> nextParam;
+            mManaIncomeTilesCap = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "ManaPerClaimedTilePerSecond")
+        {
+            configFile >> nextParam;
+            mManaPerClaimedTilePerSecond = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "WorkerManaUpkeepPerSecond")
+        {
+            configFile >> nextParam;
+            mWorkerManaUpkeepPerSecond = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "WorkerManaShortageSeconds")
+        {
+            configFile >> nextParam;
+            mWorkerManaShortageSeconds = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "WorkerPopCountdownSeconds")
+        {
+            configFile >> nextParam;
+            mWorkerPopCountdownSeconds = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "AutoWorkerIntervalSeconds")
+        {
+            configFile >> nextParam;
+            mAutoWorkerIntervalSeconds = Helper::toDouble(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "GiftBoxMana")
+        {
+            configFile >> nextParam;
+            mGiftBoxMana = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "GiftBoxGold")
+        {
+            configFile >> nextParam;
+            mGiftBoxGold = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "GiftBoxLevels")
+        {
+            configFile >> nextParam;
+            mGiftBoxLevels = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "GiftBoxWorkers")
+        {
+            configFile >> nextParam;
+            mGiftBoxWorkers = Helper::toUInt32(nextParam);
+            // Not mandatory
+        }
+
+        if(nextParam == "GiftBoxStunSeconds")
+        {
+            configFile >> nextParam;
+            mGiftBoxStunSeconds = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
@@ -2724,7 +2812,13 @@ double ConfigManager::getRoomConfigDoubleOrDefault(const std::string& param, dou
 {
     std::map<const std::string, std::string>::const_iterator it = mRoomsConfig.find(param);
     if(it == mRoomsConfig.end())
+    {
+        // The fallback equals the shipped value; a missing key is still a config error, logged once per key
+        static std::set<std::string> loggedMissing;
+        if(loggedMissing.insert(param).second)
+            OD_LOG_ERR("Missing room parameter param=" + param + ", using the built-in default");
         return defaultValue;
+    }
 
     return Helper::toDouble(it->second);
 }

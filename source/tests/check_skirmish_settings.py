@@ -145,7 +145,7 @@ entity = (root / "source/entities/GiftBoxEntity.cpp").read_text(encoding="utf-8"
 for entry in re.findall(r"GiftBoxType::(\w+)", pool):
     check("case GiftBoxType::" + entry + ":" in entity, "a level cannot load the special " + entry)
 check("removeAnnoyance" in bonus and "makeUnhappy()" in bonus and "claimTile(seat)" in bonus
-      and "unclaimTile()" in bonus and "stun(nbTurns)" in bonus and "setLevel(LEVEL_WORKERS_UPGRADED)" in bonus,
+      and "unclaimTile()" in bonus and "stun(nbTurns)" in bonus and "setLevel(ConfigManager::getSingleton().getSpellConfigUInt32(\"SummonWorkerUpgradedLevel\"))" in bonus,
       "the new special effects must call the creature and tile functions")
 mood = (root / "source/creaturemood/CreatureMoodManager.cpp").read_text(encoding="utf-8")
 check("getSpecialMood()" in mood, "the special mood must count in the mood points")

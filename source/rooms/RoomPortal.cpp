@@ -47,11 +47,11 @@ static const double DEFAULT_PORTAL_FIRST_SPAWN_SECONDS = 25.0;
 //! times the factor of the research level of the seat (both bounds get the same factor).
 //! \param seat The seat that owns the portal.
 //! \param key The room config key of the bound, PortalCooldownSpawnMin or PortalCooldownSpawnMax.
-//! \return The bound in turns, rounded.
-static uint32_t getResearchedCooldown(const Seat* seat, const std::string& key)
+//! \return The bound in turns, with its fraction.
+static double getResearchedCooldown(const Seat* seat, const std::string& key)
 {
-    const double base = static_cast<double>(ConfigManager::getSingleton().getRoomConfigUInt32(key));
-    return static_cast<uint32_t>(std::round(SkillManager::getResearchValue(seat, SkillType::tavernBeer, base, ResearchEffect::PortalCooldown)));
+    const double base = ConfigManager::getSingleton().getRoomConfigDouble(key);
+    return SkillManager::getResearchValue(seat, SkillType::tavernBeer, base, ResearchEffect::PortalCooldown);
 }
 
 const std::string RoomPortalName = "Portal";
@@ -164,9 +164,9 @@ void RoomPortal::changeOwner(Seat* seat)
     for(Tile* tile : mCoveredTiles)
         tile->claimTile(seat);
 
-    mSpawnCreatureCountdown = static_cast<int>(
+    mSpawnCreatureCountdown =
         ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PortalFirstSpawnSeconds", DEFAULT_PORTAL_FIRST_SPAWN_SECONDS)
-        * ODApplication::turnsPerSecond);
+        * ODApplication::turnsPerSecond;
 
     if((oldSeat != nullptr) && !oldSeat->isAlliedSeat(seat))
         seat->getStatistics().mRoomsCaptured++;
@@ -240,12 +240,12 @@ void RoomPortal::doUpkeep()
     // Other keepers who see the portal learn that the owner is rich (dust over the portal)
     announceKeeperWealth(getCentralTile());
 
-    if(mSpawnCreatureCountdown > 0)
+    if(mSpawnCreatureCountdown > 0.0)
     {
-        --mSpawnCreatureCountdown;
+        mSpawnCreatureCountdown -= 1.0;
         return;
     }
-    mSpawnCreatureCountdown = Random::Uint(getResearchedCooldown(getSeat(), "PortalCooldownSpawnMin"),
+    mSpawnCreatureCountdown = Random::Double(getResearchedCooldown(getSeat(), "PortalCooldownSpawnMin"),
         getResearchedCooldown(getSeat(), "PortalCooldownSpawnMax"));
 
     if (mCoveredTiles.empty())

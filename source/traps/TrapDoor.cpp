@@ -461,7 +461,7 @@ bool TrapDoor::shoot(Tile* tile)
     if(mDoorType != TrapType::doorRuned)
         return true;
 
-    if(mFireCooldownTurns > 0)
+    if(mFireCooldownTurns > 0.0)
         return true;
 
     std::vector<Tile*> doorTiles;
@@ -487,14 +487,14 @@ bool TrapDoor::shoot(Tile* tile)
         target->takeDamage(this, 0.0, 0.0, 0.0, damage, targetTile, false);
         target->notifyFightPlayer(targetTile);
     }
-    mFireCooldownTurns = ConfigManager::getSingleton().getTrapConfigUInt32("RunedDoorReloadTurns");
+    mFireCooldownTurns = ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorReloadTurns");
     return true;
 }
 
 void TrapDoor::doUpkeep()
 {
-    if(mFireCooldownTurns > 0)
-        --mFireCooldownTurns;
+    if(mFireCooldownTurns > 0.0)
+        mFireCooldownTurns = std::max(0.0, mFireCooldownTurns - 1.0);
 
     for(Tile* tile : mCoveredTiles)
     {

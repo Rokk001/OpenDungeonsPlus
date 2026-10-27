@@ -455,7 +455,7 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
             all.push_back(tile);if(!seat->hasSeenTile(tile)) unseen.push_back(tile);
         }
         const std::vector<Tile*>& candidates=unseen.empty()?all:unseen;
-        if(!candidates.empty()) SpellEyeEvil::spawnFree(getGameMap(),seat,candidates[Random::Uint(0,static_cast<uint32_t>(candidates.size()-1))],ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilNbTurns"));
+        if(!candidates.empty()) SpellEyeEvil::spawnFree(getGameMap(),seat,candidates[Random::Uint(0,static_cast<uint32_t>(candidates.size()-1))],ConfigManager::getSingleton().getSpellConfigDouble("EyeEvilNbTurns"));
     }
     seat->setEctoplasmLevels(seat->getEctoplasmLevels()+ghost.getLevel());
     ghost.removeFromGameMap();ghost.deleteYourself();

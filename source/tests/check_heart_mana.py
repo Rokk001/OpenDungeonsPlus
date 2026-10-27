@@ -55,6 +55,14 @@ struct ODPacket {std::vector<std::string> texts;std::vector<int32_t> ints;
  ODPacket& operator<<(uint32_t){return *this;}ODPacket& operator<<(bool){return *this;}};
 struct ODApplication {static double turnsPerSecond;};double ODApplication::turnsPerSecond=4.0;
 struct ConfigManager {double maxManaPerSeat=200000.0;double manaWellBonusPerTile=100.0;
+ // Probe values of the income, upkeep and worker timers (the shipped values are compared in check_rebalance_config.py)
+ double getManaIncomeTilesCap()const{return 500.0;}
+ double getManaPerClaimedTilePerSecond()const{return 1.0;}
+ double getWorkerManaUpkeepPerSecond()const{return 7.0;}
+ double getWorkerManaShortageSeconds()const{return 10.0;}
+ double getWorkerPopCountdownSeconds()const{return 10.0;}
+ double getAutoWorkerIntervalSeconds()const{return 5.0;}
+ int32_t getSpellConfigInt32(const std::string&)const{return 4;}
  static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}
  double getMaxManaPerSeat()const{return maxManaPerSeat;}
  double getManaWellBonusPerTile()const{return manaWellBonusPerTile;}
@@ -410,7 +418,7 @@ methods += '\n' + '\n'.join([
     function(player, 'void Player::notifyDefeat('),
     function(player, 'void Player::sendLevelStatistics('),
 ])
-mana_helpers = game_map[game_map.index('const double MANA_INCOME_TILES_CAP')
+mana_helpers = game_map[game_map.index('double manaIncomeTilesCap(')
     : game_map.index('double manaUpkeepPerSecond(') + len(function(game_map, 'double manaUpkeepPerSecond('))]
 probe = probe.replace('RECORD', function(player_header, 'inline void recordHeartDestroyed('))
 probe = probe.replace('MANA_HELPERS', 'namespace {\n' + mana_helpers + '\n}')
