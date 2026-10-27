@@ -90,13 +90,13 @@ EXPECTED = [
     ("spellHexenHen", "Duration", "mul", "1.0", "1.25", "1.5"),
     ("spellCreateGold", "Gold", "mul", "1.0", "1.25", "1.5"),
 ]
-assert len(EXPECTED) == 65, "the effect table has 65 lines (rows with several skill types count once per skill type)"
+assert len(EXPECTED) == 66, "the effect table has 66 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
 skills_cfg = read("config/skills.cfg")
 block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
 lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 65, "one line per effect: %d" % len(lines)
+assert len(lines) == 66, "one line per effect: %d" % len(lines)
 for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
