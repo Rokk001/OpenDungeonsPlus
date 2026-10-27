@@ -26,6 +26,7 @@
 
 #include <istream>
 #include <ostream>
+#include <cmath>
 
 namespace
 {
@@ -114,7 +115,7 @@ uint32_t SeatData::getNbStoredSpecials(uint32_t giftBoxType) const
     return mStoredSpecials[giftBoxType];
 }
 
-//! \brief Reads changing seat data and the three infirmary settings.
+//! \brief Reads changing seat data and the infirmary and ghost settings.
 //! \brief Receives changing seat data followed by shared room settings.
 bool SeatData::importFromPacketForUpdate(ODPacket& is)
 {
@@ -164,10 +165,19 @@ bool SeatData::importFromPacketForUpdate(ODPacket& is)
     setInfirmaryPayer(payer);
     setInfirmaryThreshold(threshold);
     setInfirmaryHealOn(healOn);
+    double levels = 0.0;
+    uint32_t product = 0;
+    bool revive = true;
+    if(!(is >> levels >> product >> revive) || !std::isfinite(levels) || levels < 0.0 ||
+        product > static_cast<uint32_t>(GhostProduct::crystal))
+        return false;
+    mEctoplasmLevels = levels;
+    mGhostProduct = static_cast<GhostProduct>(product);
+    mGhostRevive = revive;
     return true;
 }
 
-//! \brief Sends changing seat data followed by payer, discharge threshold and healing switch.
+//! \brief Sends owner-only changing seat data followed by infirmary and ghost room settings.
 void SeatData::exportToPacketForUpdate(ODPacket& os) const
 {
     os << mGold;
@@ -196,6 +206,7 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
         os << nbSpecial;
     exportItemSettingsToPacket(os);
     os << getInfirmaryPayer() << mInfirmaryThreshold << mInfirmaryHealOn;
+    os << mEctoplasmLevels << static_cast<uint32_t>(mGhostProduct) << mGhostRevive;
 }
 
 //! \brief Sends full seat data followed by shared room settings.

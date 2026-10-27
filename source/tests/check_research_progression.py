@@ -154,6 +154,7 @@ struct ODServer {
     void queueServerNotification(ServerNotification* n){sent.emplace_back(n);}
 };
 GIFTBOXENUM
+enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 //! \brief Supplies seat storage for actual research and optional shared-room save methods.
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
@@ -166,6 +167,8 @@ struct Seat {
     void setInfirmaryThreshold(int32_t threshold){if(threshold>=40&&threshold<=100&&(threshold-40)%10==0)mInfirmaryThreshold=threshold;}
     //! \brief Restores the optional treatment switch without affecting research state.
     void setInfirmaryHealOn(bool healOn){mInfirmaryHealOn=healOn;}
+    //! \brief Fixture storage for the ghost room block that the extracted seat load and save paths handle.
+    std::set<std::string> mGhostBellTargets;double mEctoplasmLevels=0.0;GhostProduct mGhostProduct=GhostProduct::research;bool mGhostRevive=false;
     bool mHadLibrary=false;
     int32_t mMerchantMargin=10,mLabMode=0;std::string mMerchantMode="fair";double mMerchantGoldRemainder=0.0;
     //! \brief Stores the shared room settings parsed by the actual optional save block.
@@ -230,7 +233,7 @@ int main(int argc,char** argv){try {
     std::vector<SkillType> all;
     for(uint32_t i=1;i<static_cast<uint32_t>(SkillType::countSkill);++i)
         if(!Skills::isRewardSkill(static_cast<SkillType>(i)))all.push_back(static_cast<SkillType>(i));
-    check(all.size()==63,"all 63 research entries");
+    check(all.size()==64,"all 64 research entries");
     check(ConfigManager::getSingleton().freeLevelOne.size()==6,"six free level one entries in skills.cfg");
     const std::vector<std::pair<SkillType,int> > none;
     // The research tree: tabs, tiers and parents of the production constructor
@@ -238,7 +241,7 @@ int main(int argc,char** argv){try {
     check(SkillManager::getSkillTab(SkillType::trapDoorWooden)==SkillTab::traps&&SkillManager::getSkillTab(SkillType::keeperHeartMending)==SkillTab::traps,"Heart Mending stands in the Traps tab");
     check(SkillManager::getSkillTab(SkillType::spellSummonWorker)==SkillTab::spells&&SkillManager::getSkillTab(SkillType::keeperManaFlow)==SkillTab::spells,"Mana Flow stands in the Spells tab");
     {std::vector<SkillType> rooms,traps,spells;SkillManager::listTabSkills(SkillTab::rooms,rooms);SkillManager::listTabSkills(SkillTab::traps,traps);SkillManager::listTabSkills(SkillTab::spells,spells);
-     check(rooms.size()==23&&traps.size()==21&&spells.size()==19,"23 + 21 + 19 entries in the three tabs");}
+     check(rooms.size()==24&&traps.size()==21&&spells.size()==19,"24 + 21 + 19 entries in the three tabs");}
     {const Skill* mending=SkillManager::getSkill(SkillType::keeperHeartMending);
      check(mending->getDependencies().size()==1&&mending->getDependencies()[0]->getType()==SkillType::keeperHeartFortitude,"Heart Mending needs only Heart Fortitude");
      const Skill* banner=SkillManager::getSkill(SkillType::trapWatchBanner);
@@ -291,11 +294,11 @@ int main(int argc,char** argv){try {
      check(SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,denied.mSkillNotAllowed)&&!SkillManager::getSkill(SkillType::roomArena)->canBeSkilled(startSkills,{}),"canBeSkilled honours the allowed list");}
     // Levels II and III: half (rounded up) and all of the allowed entries of the tab need level I
     {Seat g;g.setSkillsDone(startSkills);
-     check(!g.canResearchLevel(SkillType::roomTreasury,2,none),"level II waits for 12 of 23 rooms at level I (5 present)");
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,none),"level II waits for 12 of 24 rooms at level I (5 present)");
      std::vector<std::pair<SkillType,int> > four={{SkillType::roomTrainingHall,1},{SkillType::roomWorkshop,1},{SkillType::roomBridgeWooden,1},{SkillType::roomGuardRoom,1},{SkillType::roomToilet,1},{SkillType::roomMerchant,1},{SkillType::roomHerbGarden,1}};
-     check(g.canResearchLevel(SkillType::roomTreasury,2,four),"level II opens with 12 of 23 rooms (queued entries count)");
+     check(g.canResearchLevel(SkillType::roomTreasury,2,four),"level II opens with 12 of 24 rooms (queued entries count)");
      std::vector<std::pair<SkillType,int> > three(four.begin(),four.begin()+6);
-     check(!g.canResearchLevel(SkillType::roomTreasury,2,three),"11 of 23 rooms are not enough");
+     check(!g.canResearchLevel(SkillType::roomTreasury,2,three),"11 of 24 rooms are not enough");
      g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomTreasury});
      check(g.mSkillPending.size()==3,"the queue drops only the level II entry that has no gate yet");
      g.setSkillTree({SkillType::roomTrainingHall,SkillType::roomWorkshop,SkillType::roomBridgeWooden,SkillType::roomGuardRoom,SkillType::roomToilet,SkillType::roomMerchant,SkillType::roomHerbGarden,SkillType::roomTreasury});
@@ -358,7 +361,10 @@ int main(int argc,char** argv){try {
         {T::roomLibrary,"PointsPerWork",5,5,6,7},{T::roomTrainingHall,"XpPerHit",5,5,6,7},{T::roomWorkshop,"PointsPerWork",5,5,6,7},
         {T::roomGuardRoom,"WakefulnessPerDuty",0.5,0.5,0.4,0.3335},{T::roomCasino,"Fee",.1,.1,.12,.14},{T::roomCasino,"Mood",180,180,216,252},
         {T::roomArena,"LevelCap",20,20,25,30},{T::roomPrison,"Capacity",1,1,1.5,2},{T::roomPrison,"SkeletonLevel",1,1,2,3},
-        {T::roomCrypt,"RotTime",30,30,24,20.01},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
+        {T::roomCrypt,"LichCorpses",10,10,8,6},{T::roomCrypt,"LichLevel",0,0,1,2},
+        {T::roomGhostRoom,"EctoplasmLevels",10,10,8,6},{T::roomGhostRoom,"BoxCapacity",1,1,2,3},
+        {T::roomGhostRoom,"BeamRange",1,1,2,3},{T::roomGhostRoom,"CatchTime",5.5,5.5,4.4,3.6685},
+        {T::roomGhostRoom,"RevivePrice",14000,14000,12000,10000},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
         {T::roomTorture,"ConversionSpeed",1,1,1.2,1.4},{T::roomTemple,"PrayerMana",60,60,72,84},
         {T::keeperDominion,"CreatureLimit",10,12,14,16},{T::tavernBeer,"PortalCooldown",50,50,45,40},
         {T::trapCannon,"Damage",20.5,92.25,217.915,386.63},{T::trapSpike,"Damage",10,45,106.3,188.6},

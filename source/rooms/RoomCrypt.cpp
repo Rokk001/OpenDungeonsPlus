@@ -18,9 +18,11 @@
 #include "rooms/RoomCrypt.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
+#include "creatureaction/CreatureActionCarryEntity.h"
 
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/SmallSpiderEntity.h"
 #include "entities/Tile.h"
@@ -33,6 +35,9 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+#include "utils/MakeUnique.h"
+
+#include <cmath>
 
 const std::string RoomCryptName = "Crypt";
 const std::string RoomCryptNameDisplay = "Crypt room";
@@ -125,20 +130,21 @@ static RoomRegister reg(new RoomCryptFactory);
 static const int32_t OFFSET_TILE_X = 0;
 static const int32_t OFFSET_TILE_Y = -1;
 
+//! \brief Creates an empty crypt; corpse clocks remain on the creatures.
 RoomCrypt::RoomCrypt(GameMap* gameMap) :
-    Room(gameMap),
-    mRottenPoints(0)
+    Room(gameMap)
 {
     setMeshName("Crypt");
 }
 
+//! \brief Registers a central grave without replacing an existing corpse reservation.
 BuildingObject* RoomCrypt::notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile)
 {
     switch(place)
     {
         case ActiveSpotPlace::activeSpotCenter:
         {
-            mRottingCreatures[tile] = std::pair<Creature*,double>(nullptr, -1);
+            mRottingCreatures.emplace(tile, nullptr);
             int rnd = Random::Int(0, 100);
             if (rnd < 33)
                 return new BuildingObject(getGameMap(), *this, "KnightCoffin", *tile, 0.0, false);
@@ -169,27 +175,24 @@ BuildingObject* RoomCrypt::notifyActiveSpotCreated(ActiveSpotPlace place, Tile* 
     return nullptr;
 }
 
+//! \brief Releases a deleted grave without restarting its body's lie or decay phase.
 void RoomCrypt::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
 {
     Room::notifyActiveSpotRemoved(place, tile);
     if(place != ActiveSpotPlace::activeSpotCenter)
         return;
 
-    std::pair<Creature*,double> rottingCreature = mRottingCreatures[tile];
-    mRottingCreatures.erase(tile);
-    if(rottingCreature.first == nullptr)
+    std::map<Tile*, Creature*>::iterator it = mRottingCreatures.find(tile);
+    if(it == mRottingCreatures.end())
         return;
-
-    // If the dead creature is already rotting, we add it back to its tile so that it can continue
-    // its normal dead creature life ^^
-    if(rottingCreature.second == -1)
-        return;
-
-    rottingCreature.first->addEntityToPositionTile();
-    rottingCreature.first->clearDestinations(EntityAnimation::die_anim, false, false);
-    rottingCreature.first->setAnimationState(EntityAnimation::die_anim, false, Ogre::Vector3::ZERO, false);
+    Creature* corpse = it->second;
+    // If the dead creature is already delivered, add it back so its normal corpse life continues.
+    if(corpse != nullptr && !corpse->isCorpseCarried())
+        corpse->addEntityToPositionTile();
+    mRottingCreatures.erase(it);
 }
 
+//! \brief Combines the two crypts' grave occupants and FIFO corpse levels.
 void RoomCrypt::absorbRoom(Room *r)
 {
     if(r->getType() != getType())
@@ -200,12 +203,15 @@ void RoomCrypt::absorbRoom(Room *r)
     RoomCrypt* rc = static_cast<RoomCrypt*>(r);
     mRottingCreatures.insert(rc->mRottingCreatures.begin(), rc->mRottingCreatures.end());
     rc->mRottingCreatures.clear();
-    mRottenPoints += rc->mRottenPoints;
+    mCorpseLevels.insert(mCorpseLevels.end(), rc->mCorpseLevels.begin(), rc->mCorpseLevels.end());
+    rc->mCorpseLevels.clear();
+    mCorpseSpotNames.insert(rc->mCorpseSpotNames.begin(), rc->mCorpseSpotNames.end());
+    rc->mCorpseSpotNames.clear();
 
     Room::absorbRoom(r);
 }
 
-//! \brief Counts the turns the corpses rot, with the rot time of the crypt research, and turns the rotten ones into points.
+//! \brief Keeps the existing crypt ambience; every corpse advances its own lie and decay clocks.
 void RoomCrypt::doUpkeep()
 {
     Room::doUpkeep();
@@ -226,58 +232,80 @@ void RoomCrypt::doUpkeep()
         spider->setPosition(pos);
     }
 
-    // We increment rotting creatures counter
-    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
+}
+
+//! \brief Finds a delivered body's grave, excluding bodies still carried or merely reserved elsewhere.
+Tile* RoomCrypt::getCorpseSpot(const Creature& creature) const
+{
+    Tile* tile = creature.getPositionTile();
+    if(creature.isAlive() || creature.isCorpseCarried() || tile == nullptr || tile->getCoveringRoom() != this)
+        return nullptr;
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
     {
-        if((p.second.first == nullptr) || (p.second.second == -1))
-            continue;
+        if(spot.second == &creature)
+            return spot.first;
+    }
+    return nullptr;
+}
 
-        ConfigManager& configManager = ConfigManager::getSingleton();
-
-        ++p.second.second;
-        // The rot time keeps its fractions (the counter is a double that counts the turns)
-        if(p.second.second < std::max(1.0, SkillManager::getResearchValue(
-            getSeat(), SkillType::roomCrypt, configManager.getRoomConfigDouble("CryptRotNbTurns"), ResearchEffect::RotTime)))
-            continue;
-
-        // We add the rotten creature points to the room and release the active spot
-        double coef = 1.0 + static_cast<double>(mNumActiveSpots - mCentralActiveSpotTiles.size()) * configManager.getRoomConfigDouble("CryptBonusWallActiveSpot");
-        Creature* c = p.second.first;
-        mRottenPoints += static_cast<int32_t>(c->getMaxHp() * coef);
-
-        c->removeFromGameMap();
-        c->deleteYourself();
-        p.second.first = nullptr;
-        p.second.second = -1;
-
-        int32_t maxCreatures = configManager.getMaxCreaturesPerSeatAbsolute();
-        int32_t numCreatures = getGameMap()->getCreaturesBySeat(getSeat()).size();
-        int32_t cryptPointsForSpawn = configManager.getRoomConfigInt32("CryptPointsForSpawn");
-        if((numCreatures < maxCreatures) &&
-           (mRottenPoints >= cryptPointsForSpawn))
-        {
-            Tile* tileSpawn = p.first;
-            mRottenPoints -= cryptPointsForSpawn;
-            const std::string& className = configManager.getRoomConfigString("CryptSpawnClass");
-            const CreatureDefinition* classToSpawn = getGameMap()->getClassDescription(className);
-            if(classToSpawn == nullptr)
-            {
-                OD_LOG_ERR("className=" + className);
-                continue;
-            }
-
-            // Create a new creature and copy over the class-based creature parameters.
-            Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
-
-            // Add the creature to the gameMap and create meshes so it is visible.
-            newCreature->addToGameMap();
-            newCreature->setPosition(Ogre::Vector3(tileSpawn->getX(), tileSpawn->getY(), 0.0f));
-            newCreature->createMesh();
-            getSeat()->notifyCreatureArrival(className);
-        }
+//! \brief Releases delivery reservations or restores a delivered body to normal tile registration.
+void RoomCrypt::removeCorpse(Creature& creature)
+{
+    if(getCorpseSpot(creature) != nullptr)
+        creature.addEntityToPositionTile();
+    for(std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+    {
+        if(spot.second == &creature)
+            spot.second = nullptr;
     }
 }
 
+//! \brief Credits a completely decayed body, removes it, then consumes complete FIFO groups for liches.
+void RoomCrypt::notifyCorpseDecayed(Creature& creature)
+{
+    Tile* tileSpawn = getCorpseSpot(creature);
+    if(tileSpawn != nullptr)
+        mCorpseLevels.push_back(creature.getLevel());
+    // Remove before testing the creature limit, so the vanished body no longer occupies a slot.
+    creature.removeFromGameMap();
+    creature.deleteYourself();
+    if(tileSpawn == nullptr)
+        return;
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    const double corpsesPerLich = SkillManager::getResearchValue(getSeat(), SkillType::roomCrypt,
+        config.getRoomConfigDouble("CryptCorpsesPerLich"), "LichCorpses");
+    const double levelBonus = SkillManager::getResearchValue(getSeat(), SkillType::roomCrypt,
+        config.getRoomConfigDouble("CryptLichLevelBonus"), "LichLevel");
+    while(mCorpseLevels.size() >= corpsesPerLich &&
+          getGameMap()->getCreaturesBySeat(getSeat()).size() < config.getMaxCreaturesPerSeatAbsolute())
+    {
+        const std::string& className = config.getRoomConfigString("CryptSpawnClass");
+        const CreatureDefinition* definition = getGameMap()->getClassDescription(className);
+        if(definition == nullptr)
+        {
+            OD_LOG_ERR("className=" + className);
+            break;
+        }
+        const size_t count = static_cast<size_t>(std::ceil(corpsesPerLich));
+        double levels = 0.0;
+        for(size_t i = 0; i < count; ++i)
+            levels += mCorpseLevels[i];
+        const unsigned int level = static_cast<unsigned int>(std::min(static_cast<double>(MAX_LEVEL),
+            std::floor(levels / count) + levelBonus));
+        mCorpseLevels.erase(mCorpseLevels.begin(), mCorpseLevels.begin() + count);
+        // Create a new creature from the class parameters at the released grave.
+        Creature* lich = new Creature(getGameMap(), definition, getSeat());
+        lich->setLevel(level);
+        // Add it to the map and create its mesh so that the new arrival is visible.
+        lich->addToGameMap();
+        lich->setPosition(Ogre::Vector3(tileSpawn->getX(), tileSpawn->getY(), 0.0f));
+        lich->createMesh();
+        getSeat()->notifyCreatureArrival(className);
+    }
+}
+
+//! \brief Finds the first unfurnished crypt tile adjacent to the grave for worker delivery.
 Tile* RoomCrypt::getDeliveryTile(Tile* spot)
 {
     // Wall statues may occupy the old fixed delivery tile and prevent turning.
@@ -292,6 +320,7 @@ Tile* RoomCrypt::getDeliveryTile(Tile* spot)
     return nullptr;
 }
 
+//! \brief Accepts intact non-worker bodies only where a free grave has an unblocked approach.
 bool RoomCrypt::hasCarryEntitySpot(GameEntity* carriedEntity)
 {
     if(carriedEntity->getObjectType() != GameEntityType::creature)
@@ -299,17 +328,18 @@ bool RoomCrypt::hasCarryEntitySpot(GameEntity* carriedEntity)
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
     // Only dead creatures can be carried to the crypt. Seat doesn't matter
-    if(creature->isAlive())
+    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
         return false;
 
-    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
+    for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
     {
-        if(p.second.first == nullptr && getDeliveryTile(p.first) != nullptr)
+        if(p.second == nullptr && getDeliveryTile(p.first) != nullptr)
             return true;
     }
     return false;
 }
 
+//! \brief Reserves an available grave while preserving the carried body phase.
 Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
 {
     if(carriedEntity->getObjectType() != GameEntityType::creature)
@@ -319,34 +349,40 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
     }
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
-    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
+    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
+        return nullptr;
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
     {
-        if(p.second.first == nullptr)
+        if(spot.second == creature)
+            return getDeliveryTile(spot.first);
+    }
+    for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
+    {
+        if(p.second == nullptr)
         {
             Tile* tile = getDeliveryTile(p.first);
             if(tile == nullptr)
                 continue;
-            p.second.first = creature;
-            p.second.second = -1;
+            p.second = creature;
             return tile;
         }
     }
     return nullptr;
 }
 
+//! \brief Confirms delivery without an independent rot timer, or releases an interrupted delivery.
 void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
-    for(std::pair<Tile* const, std::pair<Creature*, double> >& p : mRottingCreatures)
+    for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
     {
-        if(p.second.first == carriedEntity)
+        if(p.second == carriedEntity)
         {
             // We check if the carrier is at the expected destination
             Tile* carrierTile = carrier->getPositionTile();
             if(carrierTile == nullptr)
             {
                 OD_LOG_ERR("carrier=" + carrier->getName());
-                p.second.first = nullptr;
-                p.second.second = -1;
+                p.second = nullptr;
                 return;
             }
 
@@ -354,8 +390,7 @@ void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carrie
             Tile* tileExpected = getDeliveryTile(spot);
             if(tileExpected != carrierTile)
             {
-                p.second.first = nullptr;
-                p.second.second = -1;
+                p.second = nullptr;
                 return;
             }
 
@@ -373,11 +408,8 @@ void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carrie
                 OD_LOG_ERR("deadCreature=" + deadCreature->getName());
                 return;
             }
-            // Start rotting
-            deadCreature->clearDestinations(EntityAnimation::rot_anim, false, false);
-            deadCreature->setAnimationState(EntityAnimation::rot_anim, false, Ogre::Vector3::ZERO, false);
+            // The delivered body keeps its remaining lie time; its own upkeep starts decay later.
             deadCreature->removeEntityFromPositionTile();
-            p.second.second = 0;
             return;
         }
     }
@@ -387,19 +419,93 @@ void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carrie
     // In any case, nothing to do
 }
 
+//! \brief Writes a legacy zero and optional tags for every FIFO level and grave reservation.
 void RoomCrypt::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
-    os << mRottenPoints << "\n";
-    // We do not save rotten creatures. They will automatically be carried again by workers
+    os << "0\n";
+    // Corpse occupants are saved by name and rebound after creatures have loaded.
+    os << "CorpseLevels " << mCorpseLevels.size();
+    for(unsigned int level : mCorpseLevels)
+        os << " " << level;
+    os << "\nCryptSpots " << mRottingCreatures.size() << "\n";
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+        os << spot.first->getX() << " " << spot.first->getY() << " "
+           << (spot.second == nullptr ? "none" : spot.second->getName()) << "\n";
 }
 
+//! \brief Reads optional crypt tags, rewinding before the next room or section in legacy files.
 bool RoomCrypt::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
         return false;
-    if(!(is >> mRottenPoints))
+    int32_t legacyPoints;
+    if(!(is >> legacyPoints))
         return false;
+    while(true)
+    {
+        const std::streampos pos = is.tellg();
+        std::string tag;
+        if(!(is >> tag) || (tag != "CorpseLevels" && tag != "CryptSpots"))
+        {
+            is.clear();
+            is.seekg(pos);
+            return true;
+        }
+        size_t count;
+        if(!(is >> count))
+            return false;
+        if(tag == "CorpseLevels")
+        {
+            for(size_t i = 0; i < count; ++i)
+            {
+                unsigned int level;
+                if(!(is >> level))
+                    return false;
+                mCorpseLevels.push_back(level);
+            }
+        }
+        else
+        {
+            for(size_t i = 0; i < count; ++i)
+            {
+                int x, y;
+                std::string name;
+                if(!(is >> x >> y >> name))
+                    return false;
+                mCorpseSpotNames[{x, y}] = name;
+            }
+        }
+    }
+}
 
-    return true;
+//! \brief Rebinds saved bodies after all creatures and central grave furniture are available.
+void RoomCrypt::restoreInitialEntityState()
+{
+    Room::restoreInitialEntityState();
+    for(const std::pair<const std::pair<int, int>, std::string>& saved : mCorpseSpotNames)
+    {
+        Tile* tile = getGameMap()->getTile(saved.first.first, saved.first.second);
+        std::map<Tile*, Creature*>::iterator spot = mRottingCreatures.find(tile);
+        if(spot == mRottingCreatures.end() || saved.second == "none")
+            continue;
+        Creature* creature = getGameMap()->getCreature(saved.second);
+        if(creature == nullptr || creature->isAlive() || creature->getDefinition()->isWorker())
+            continue;
+        spot->second = creature;
+        if(creature->getCorpseCarrierName().empty() && getCorpseSpot(*creature) != nullptr)
+            creature->removeEntityFromPositionTile();
+    }
+    mCorpseSpotNames.clear();
+    // All occupants are rebound before a restored carry asks for its existing reservation.
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+    {
+        Creature* creature = spot.second;
+        if(creature == nullptr || creature->getCorpseCarrierName().empty())
+            continue;
+        Creature* carrier = getGameMap()->getCreature(creature->getCorpseCarrierName());
+        if(carrier != nullptr && carrier->isAlive() && carrier->getDefinition()->isWorker() &&
+           carrier->getCarriedEntity() == nullptr)
+            carrier->pushAction(Utils::make_unique<CreatureActionCarryEntity>(*carrier, *creature, *this));
+    }
 }

@@ -211,6 +211,18 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Shows/hides/toggles the player settings window
     //! \brief Casino payout control, opened by clicking on one of the player's casinos
     void showCasinoPayoutWindow(Tile* tile);
+    //! \brief Opens this keeper's shared ghost controls from an owned room tile.
+    void showGhostRoomWindow(Tile* tile);
+    //! \brief Hides the ghost room controls.
+    bool hideGhostRoomWindow(const CEGUI::EventArgs& = {});
+    //! \brief Cycles the product and requests the server to apply it.
+    bool cycleGhostProduct(const CEGUI::EventArgs& = {});
+    //! \brief Toggles own-ghost revival and sends the current settings.
+    bool toggleGhostRevive(const CEGUI::EventArgs& = {});
+    //! \brief Shows authoritative settings for the currently selected room tile.
+    void setGhostRoomSettingsShown(int32_t x, int32_t y, uint32_t product, bool revive);
+    //! \brief Refreshes the exact one-decimal bar and keeper-wide switch captions.
+    void refreshGhostRoomWindow();
     //! \brief Opens the keeper-wide patient list from an owned infirmary tile or navigation control.
     void showInfirmaryWindow(Tile* tile = nullptr);
     //! \brief Toggles the keeper-wide infirmary controls.
@@ -651,6 +663,9 @@ private:
 
 
     //! \brief Tile of the casino whose payout window is open and the payout level shown
+    //! \brief Own room tile used to validate keeper-wide ghost control requests.
+    int32_t mGhostRoomX = -1;
+    int32_t mGhostRoomY = -1;
     int mCasinoX;
     int mCasinoY;
     uint32_t mCasinoPayout;

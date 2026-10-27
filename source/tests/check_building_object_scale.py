@@ -25,6 +25,7 @@ struct RenderedMovableEntity {
 struct BuildingObject:RenderedMovableEntity {
  Ogre::Vector2 mFurnitureScale=Ogre::Vector2::ZERO;
  int32_t mItemBagQuality=-1;bool mItemBagSealed=false;
+ double mGhostFill=-1.0;double mGhostAlarm=0.0;
  void exportToPacket(ODPacket&,const Seat*)const;
  void importFromPacket(ODPacket&);
 };

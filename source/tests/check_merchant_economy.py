@@ -136,7 +136,7 @@ struct RoomMerchant:Room {
     //! \brief Creates the standard room type for a known owner.
     RoomMerchant(GameMap* map,Seat* seat):Room(map,seat,RoomType::merchant){}
     //! \brief Uses the actual researched capacity and table scan.
-    Tile* getFreeTable() const;
+    Tile* getFreeTable(const ItemInstance* item=nullptr) const;
     //! \brief Uses actual sealed-stock ownership transfer.
     bool addGoods(std::unique_ptr<ItemInstance>& item,Tile* table);
     //! \brief Uses actual stable stock identity lookup.

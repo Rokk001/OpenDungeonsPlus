@@ -321,7 +321,9 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
     const std::function<void(const BuildingObject*)> append = [&](const BuildingObject* object)
     {
         // These walkable landmarks are not solid room furniture.
-        if(object == interaction || object->getMeshName() == "PortalObject" ||
+        if(object->getMeshName()=="GhostBell" || object->getMeshName()=="GhostHook" ||
+           object->getMeshName()=="GhostHookEmpty" || object->getMeshName()=="GhostWallGauges" || object->getMeshName()=="GhostRack" ||
+           object == interaction || object->getMeshName() == "PortalObject" ||
             RoomObjectPath::isDungeonHeartMesh(object->getMeshName()))
             return;
         for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)

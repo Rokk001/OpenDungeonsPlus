@@ -22,21 +22,25 @@
 
 class Tile;
 
+//! \brief Runs from enemies or fear, holding an optional ghost flinch before the flight.
 class CreatureActionFlee : public CreatureAction
 {
 public:
+    //! \brief Creates ordinary enemy flight without a fear pose.
     CreatureActionFlee(Creature& creature) :
         CreatureAction(creature),
         mFearTile(nullptr),
-        mFearTurns(0)
+        mFearTurns(0),
+        mScaredPose(false)
     {}
 
     //! \brief Flee from a scary tile (fear trap). The creature runs away from the tile
-    //! for nbTurns turns (a fraction is kept), even if no enemy is visible.
-    CreatureActionFlee(Creature& creature, Tile* fearTile, double nbTurns) :
+    //! for nbTurns turns (a fraction is kept), even if no enemy is visible; scaredPose holds the ghost flinch first.
+    CreatureActionFlee(Creature& creature, Tile* fearTile, double nbTurns, bool scaredPose = false) :
         CreatureAction(creature),
         mFearTile(fearTile),
-        mFearTurns(nbTurns)
+        mFearTurns(nbTurns),
+        mScaredPose(scaredPose)
     {}
 
     virtual ~CreatureActionFlee()
@@ -60,6 +64,9 @@ private:
     Tile* mFearTile;
     //! Turns the creature runs from the fear tile (a fraction of a turn is kept, not rounded)
     double mFearTurns;
+    bool mScaredPose;
+    //! \brief Holds the flinch pose before starting the normal fear flight.
+    bool waitForScaredPose();
 };
 
 #endif // CREATUREACTIONFLEE_H

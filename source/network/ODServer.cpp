@@ -1103,7 +1103,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             OD_ASSERT_TRUE(packetReceived >> version);
 
             // If the version is different, we refuse the client
-            if(version.compare(std::string("OpenDungeons V ") + ODApplication::VERSION) != 0)
+            if(version.compare(std::string("OpenDungeons V ") + ODApplication::VERSION + NetworkProtocol::WIRE_SCHEMA_SUFFIX) != 0)
             {
                 OD_LOG_INF("Server rejected client. Application version mismatch: required= "
                     + ODApplication::VERSION + ", received=" + version);
@@ -3382,6 +3382,34 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             queueServerNotification(notification);
             if(clientSocket->getInfirmaryWindowOpen())
                 notifyInfirmaryWindow(gameMap, player);
+            break;
+        }
+
+        case ClientNotificationType::askGhostRoomSettings:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr)
+                break;
+            int32_t xx = 0;
+            int32_t yy = 0;
+            uint32_t product = 0;
+            bool revive = true;
+            bool isSet = false;
+            if(!(packetReceived >> xx >> yy >> product >> revive >> isSet))
+                break;
+            Tile* tile = gameMap->getTile(xx, yy);
+            Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
+            if(room == nullptr || room->getType() != RoomType::ghostRoom || room->getSeat() != player->getSeat())
+                break;
+            Seat* seat = player->getSeat();
+            if(isSet && product <= static_cast<uint32_t>(GhostProduct::crystal))
+            {
+                seat->setGhostProduct(static_cast<GhostProduct>(product));
+                seat->setGhostRevive(revive);
+            }
+            ServerNotification notification(ServerNotificationType::ghostRoomSettings, player);
+            notification.mPacket << xx << yy << static_cast<uint32_t>(seat->getGhostProduct()) << seat->getGhostRevive();
+            sendAsyncMsg(notification);
             break;
         }
 

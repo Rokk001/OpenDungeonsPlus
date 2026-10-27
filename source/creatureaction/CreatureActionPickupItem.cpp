@@ -70,7 +70,7 @@ bool CreatureActionPickupItem::handle(Creature& creature, bool stealing)
                 continue;
             if(item->mMerchantGoods && !enemy)
                 continue;
-            const bool sellable = (item->mQuality != Quality::poor || !item->mPotionId.empty()) &&
+            const bool sellable = (item->mSoulCrystal || item->mQuality != Quality::poor || !item->mPotionId.empty()) &&
                 !creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::merchant, creature.getSeat()).empty();
             if(creature.rateItem(*item) <= 0.0 && !sellable && !stealing)
                 continue;

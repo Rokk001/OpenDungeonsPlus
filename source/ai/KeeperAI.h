@@ -25,24 +25,28 @@
 class Tile;
 enum class RoomType;
 
+//! \brief Controls a keeper using its selected difficulty and current dungeon resources.
 class KeeperAI : public BaseAI
 {
 
 public:
     //! \brief Creates a keeper AI. The cooldown pairs are the range of turns between two checks of the
     //! defense, of saving wounded creatures and of looking for rooms.
+    //! \param type Difficulty used for the keeper's ghost product choices.
     //! \param reactionPercent Reaction time in percent of the base cooldowns (lower is faster)
     //! \param minHpPercentToFight Creatures below this percentage of their max HP are not sent to fight
     //! \param minFightersToAttack The AI attacks with more healthy fighters than this (0 = never attacks)
     //! \param minCreatureLevel Fighters below this level are too weak for an attack
     //! \param maxTrapTiles Maximum number of trap tiles (without doors) the AI owns
     //! \param maxDoors Maximum number of doors the AI owns
-    KeeperAI(GameMap& gameMap, Player& player, int cooldownDefenseMin, int cooldownDefenseMax,
+    KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type, int cooldownDefenseMin, int cooldownDefenseMax,
              int cooldownSaveWoundedCreaturesMin, int cooldownSaveWoundedCreaturesMax,
              int cooldownLookingForRoomsMin, int cooldownLookingForRoomsMax,
              int reactionPercent, int minHpPercentToFight, int minFightersToAttack,
              int minCreatureLevel, int maxTrapTiles, int maxDoors);
     virtual bool doTurn(double timeSinceLastTurn);
+    //! \brief Chooses the AI keeper switches immediately before each ectoplasm product.
+    static void updateGhostRoomSettings(Seat& seat);
 
 protected:
     //! \brief Checks if the AI has a treasury. If not, we search for the first available tile
@@ -132,6 +136,8 @@ private:
 
     //! \brief Reaction time in percent of the base cooldowns (lower is faster)
     int mReactionPercent;
+    //! \brief The difficulty selected when the controller was created.
+    KeeperAIType mType;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)

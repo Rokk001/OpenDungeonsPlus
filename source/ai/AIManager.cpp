@@ -57,3 +57,12 @@ void AIManager::clearAIList()
     }
     mAiList.clear();
 }
+
+//! \brief Finds the controller in the manager-owned player list.
+BaseAI* AIManager::getAI(const Player& player) const
+{
+    for(BaseAI* ai : mAiList)
+        if(&ai->getPlayer() == &player)
+            return ai;
+    return nullptr;
+}

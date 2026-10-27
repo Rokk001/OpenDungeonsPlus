@@ -71,6 +71,7 @@ enum class CreatureActionType
     vomit, // (fighters only) A drunk creature vomits where it stands and leaves a pile of vomit
     searchDrink, // (fighters only) Looks for a tavern with a free spot to drink at
     infirmaryRest, // A patient lying on an infirmary cot.
+    huntGhost, // Captures ghosts and returns them for revival or ectoplasm.
     nb // Must be the last value of this enum
 };
 

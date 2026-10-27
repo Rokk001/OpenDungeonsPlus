@@ -12,14 +12,15 @@ from PIL import Image
 ICON_SIZE = 128
 ATLAS_COLUMNS = 16
 SOURCE_DIRECTORIES = ("items", "potions", "herbs")
-EXPECTED_ICON_COUNT = 768
+EXPECTED_ICON_COUNT = 769
 
 
 def build_imageset(root):
-    """Pack all required transparent icons and write their named atlas entries."""
+    """Pack transparent icons, appending the crystal after every existing atlas entry."""
     gui = root / "gui"
     sources = sorted(path for directory in SOURCE_DIRECTORIES
-                     for path in (gui / directory).glob("*.png"))
+                     for path in (gui / directory).glob("*.png") if path.stem != "soul_crystal")
+    sources.append(gui / "potions" / "soul_crystal.png")
     if len(sources) != EXPECTED_ICON_COUNT:
         raise ValueError("Expected {} icons, found {}".format(EXPECTED_ICON_COUNT, len(sources)))
     names = [path.stem for path in sources]

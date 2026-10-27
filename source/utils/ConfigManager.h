@@ -168,6 +168,36 @@ public:
     //! \brief Returns a configured item-drop, item-rating or potion rule value.
     double getItemSetting(const std::string& section, const std::string& key) const;
 
+    //! \brief Returns the configured GhostLifetimeSeconds value.
+    double getGhostLifetimeSeconds() const { return mGhostLifetimeSeconds; }
+
+    //! \brief Returns the configured GhostFloatSpeed value.
+    double getGhostFloatSpeed() const { return mGhostFloatSpeed; }
+
+    //! \brief Returns the configured GhostWanderRadius value.
+    double getGhostWanderRadius() const { return mGhostWanderRadius; }
+
+    //! \brief Returns the configured gold equivalent of research points.
+    double getGhostAiGoldPerResearchPoint() const { return mGhostAiGoldPerResearchPoint; }
+    //! \brief Returns the configured gold equivalent of training experience.
+    double getGhostAiGoldPerXp() const { return mGhostAiGoldPerXp; }
+    //! \brief Returns the configured soul crystal price.
+    double getSoulCrystalPrice() const { return mSoulCrystalPrice; }
+    //! \brief Returns the XP progress below which a carried crystal is broken.
+    double getSoulCrystalBreakBelow() const { return mSoulCrystalBreakBelow; }
+    //! \brief Returns the normal XP per second used to value a crystal.
+    double getSoulCrystalNormalXpPerSecond() const { return mSoulCrystalNormalXpPerSecond; }
+    //! \brief Returns the hero rare-item chance at the first level.
+    double getSoulCrystalHeroRareStart() const { return mSoulCrystalHeroRareStart; }
+    //! \brief Returns the hero rare-item chance at the maximum level.
+    double getSoulCrystalHeroRareEnd() const { return mSoulCrystalHeroRareEnd; }
+    //! \brief Returns the seconds a body lies before decay, excluding worker transport.
+    double getCorpseLieSeconds() const
+    { return mCorpseLieSeconds; }
+    //! \brief Returns the decay duration in seconds, the same inside and outside crypts.
+    double getCorpseDecaySeconds() const
+    { return mCorpseDecaySeconds; }
+
     inline uint32_t getCreatureDeathCounter() const
     { return mCreatureDeathCounter; }
 
@@ -626,6 +656,7 @@ private:
     //! \brief Loads every registered tile visual, including the infirmary floor masks.
     //! \brief Reads config/tilesets.cfg: the tile links and the floor and wall pieces of every tile visual, rooms included.
     //! \brief Loads tilesets by consuming every visual block in its configured sequence.
+    //! \brief Reads each registered tileset in its matching appended visual-block order.
     bool loadTilesets(const std::string& fileName);
     bool loadTilesetValues(std::istream& defFile, TileVisual tileVisual, std::vector<std::vector<TileSetValue>>& tileValues, std::map<TileVisual,std::map<int,float>>& highMap);
     bool loadEditorSettings(const std::string& fileName);
@@ -677,6 +708,18 @@ private:
     uint32_t mClientConnectionTimeout;
     uint32_t mBaseSpawnPoint;
     uint32_t mCreatureDeathCounter;
+    double mGhostLifetimeSeconds;
+    double mGhostFloatSpeed;
+    double mGhostWanderRadius;
+    double mGhostAiGoldPerResearchPoint;
+    double mGhostAiGoldPerXp;
+    double mSoulCrystalPrice;
+    double mSoulCrystalBreakBelow;
+    double mSoulCrystalNormalXpPerSecond;
+    double mSoulCrystalHeroRareStart;
+    double mSoulCrystalHeroRareEnd;
+    double mCorpseLieSeconds;
+    double mCorpseDecaySeconds;
     uint32_t mMaxCreaturesPerSeatAbsolute;
     uint32_t mMaxCreaturesPerSeatDefault;
     //! \brief Creatures more a seat can control for each of its portals

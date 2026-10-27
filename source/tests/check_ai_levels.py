@@ -19,11 +19,11 @@ for level, (reaction, retreat, attack, minLevel) in expected.items():
     m = re.search(r"case KeeperAIType::%s:\s*return new KeeperAI\(([^;]*)\);" % level, src)
     assert m, f"no KeeperAI for level {level}"
     args = [a.strip() for a in m.group(1).split(",")]
-    # gameMap, player, 6 cooldowns, reaction, retreat HP percent, attack threshold, min level, traps, doors
-    assert len(args) == 14, f"{level}: unexpected argument count {len(args)}"
+    # gameMap, player, difficulty type, 6 cooldowns, reaction, retreat HP percent, attack threshold, min level, traps, doors
+    assert len(args) == 15, f"{level}: unexpected argument count {len(args)}"
     args = [constants.get(a, a) for a in args]
-    assert args[8:12] == [reaction, retreat, attack, minLevel], \
-        f"{level}: reaction/retreat/attack is {args[8:12]}, expected {[reaction, retreat, attack, minLevel]}"
+    assert args[9:13] == [reaction, retreat, attack, minLevel], \
+        f"{level}: reaction/retreat/attack is {args[9:13]}, expected {[reaction, retreat, attack, minLevel]}"
 
 order = [expected[level] for level in ("easy", "normal", "hard")]
 for column, descending in ((0, True), (1, True), (2, True), (3, False)):

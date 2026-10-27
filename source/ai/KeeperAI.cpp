@@ -16,6 +16,7 @@
  */
 
 #include "ai/KeeperAI.h"
+#include "ai/KeeperAIType.h"
 
 #include "creatureaction/CreatureAction.h"
 #include "entities/Creature.h"
@@ -57,6 +58,7 @@ static const std::vector<RoomType> wantedBuildings = {
     RoomType::workshop,
     RoomType::arena,
     RoomType::crypt,
+    RoomType::ghostRoom,
     RoomType::guardRoom,
     RoomType::infirmary,
     RoomType::merchant,
@@ -89,15 +91,19 @@ static const int TRAPS_COOLDOWN_MAX = 80;
 static const int MAX_WAITING_FOR_CRAFT = 2;
 //! \brief Gold the AI keeps for rooms and repairs when it buys traps and doors
 static const int TRAPS_GOLD_RESERVE = 1500;
+//! \brief Converts the keeper's percentage margin and item discounts to shares.
+static const double GHOST_VALUE_PERCENT = 100.0;
 
 
-KeeperAI::KeeperAI(GameMap& gameMap, Player& player, int cooldownDefenseMin, int cooldownDefenseMax,
+//! \brief Creates the real keeper controller with its selected difficulty and existing behavior settings.
+KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type, int cooldownDefenseMin, int cooldownDefenseMax,
              int cooldownSaveWoundedCreaturesMin, int cooldownSaveWoundedCreaturesMax,
              int cooldownLookingForRoomsMin, int cooldownLookingForRoomsMax,
              int reactionPercent, int minHpPercentToFight, int minFightersToAttack,
              int minCreatureLevel, int maxTrapTiles, int maxDoors):
     BaseAI(gameMap, player),
     mReactionPercent(reactionPercent),
+    mType(type),
     mMinHpPercentToFight(minHpPercentToFight),
     mMinFightersToAttack(minFightersToAttack),
     mMinCreatureLevel(minCreatureLevel),
@@ -1306,4 +1312,59 @@ void KeeperAI::handleFirstTurn()
     std::vector<SkillType> skills = seat->getSkillPending();
     SkillManager::buildRandomPendingSkillsForSeat(skills, seat);
     seat->setSkillTree(skills);
+}
+
+//! \brief Re-evaluates real keeper resources and eligible buyers before every product.
+void KeeperAI::updateGhostRoomSettings(Seat& seat)
+{
+    Player* player = seat.getPlayer();
+    if(player == nullptr || player->getIsHuman())
+        return;
+    GameMap* map = seat.getGameMap();
+    if(map == nullptr)
+        return;
+    KeeperAI* ai = dynamic_cast<KeeperAI*>(map->getAI(*player));
+    if(ai == nullptr)
+        return;
+    seat.setGhostRevive(true);
+    const bool researchLeft = !SkillManager::isAllSkillsDoneForSeat(&seat);
+    if(ai->mType == KeeperAIType::easy)
+    {
+        seat.setGhostProduct(researchLeft ? GhostProduct::research : GhostProduct::mana);
+        return;
+    }
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double manaProduct = config.getRoomConfigDouble("GhostEctoplasmMana");
+    const double researchValue = researchLeft ? config.getRoomConfigDouble("GhostEctoplasmResearchPoints") *
+        config.getGhostAiGoldPerResearchPoint() : 0.0;
+    const double manaValue = seat.getMana() > config.getMaxManaPerSeat() - manaProduct ? 0.0 :
+        manaProduct / (config.getSpellConfigDouble("CreateGoldPrice") / config.getSpellConfigDouble("CreateGoldValue"));
+    double crystalValue = 0.0;
+    const Creature* buyer = nullptr;
+    if(!map->getRoomsByTypeAndSeat(RoomType::merchant, &seat).empty())
+    {
+        for(Creature* creature : map->getCreaturesBySeat(&seat))
+        {
+            if(!creature->isAlive())
+                continue;
+            const double price = config.getSoulCrystalPrice() * (1.0 + seat.getMerchantMargin() / GHOST_VALUE_PERCENT) *
+                std::max(0.0, 1.0 - creature->getItemEffect("Thrift") / GHOST_VALUE_PERCENT);
+            if(!creature->wantsSoulCrystal(price))
+                continue;
+            if(buyer == nullptr || creature->getLevel() > buyer->getLevel())
+                buyer = creature;
+        }
+    }
+    if(buyer != nullptr)
+        crystalValue = config.getSoulCrystalPrice() * config.getRoomConfigDouble("MerchantBuyShare") +
+            config.getSoulCrystalPrice() * seat.getMerchantMargin() / GHOST_VALUE_PERCENT +
+            buyer->getDefinition()->getXPNeededWhenLevel(buyer->getLevel()) * config.getGhostAiGoldPerXp();
+    // The other products are valued per ectoplasm, a crystal takes several of them.
+    crystalValue /= config.getRoomConfigDouble("GhostEctoplasmPerCrystal");
+    GhostProduct product = GhostProduct::crystal;
+    double bestValue = 0.0;
+    if(researchValue > bestValue) { bestValue = researchValue; product = GhostProduct::research; }
+    if(manaValue > bestValue) { bestValue = manaValue; product = GhostProduct::mana; }
+    if(crystalValue > bestValue) { product = GhostProduct::crystal; }
+    seat.setGhostProduct(product);
 }
