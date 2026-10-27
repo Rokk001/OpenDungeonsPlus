@@ -10,12 +10,14 @@
             <Property name="Area" value="{{0,20},{0,40},{1,-20},{0,300}}" />
         </Window>
         <Window type="OD/StaticText" name="MarginLabel">
+            <Property name="TooltipText" value="Creatures pay the keeper's margin on every merchant purchase and sale." />
             <Property name="Area" value="{{0,20},{0,310},{0,180},{0,340}}" />
             <Property name="Text" value="Margin: 10 %" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/SettingsSlider" name="MarginSlider">
+            <Property name="TooltipText" value="Creatures pay the keeper's margin on every merchant purchase and sale." />
             <Property name="Area" value="{{0,190},{0,315},{0,480},{0,340}}" />
             <Property name="MaxValue" value="50" />
             <Property name="ClickStepSize" value="5" />

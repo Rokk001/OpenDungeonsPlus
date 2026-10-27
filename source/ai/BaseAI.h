@@ -30,9 +30,13 @@ class Seat;
 
 enum class KeeperAIType;
 
+//! \brief Associates an active dungeon controller with its map and player.
 class BaseAI
 {
 public:
+    //! \brief Returns the player controlled by this instance.
+    const Player& getPlayer() const { return mPlayer; }
+
     virtual ~BaseAI()
     {}
 

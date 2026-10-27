@@ -67,6 +67,7 @@
 #include "social/SocialProfileCache.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomTavern.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
@@ -378,6 +379,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::hatcheryRoom;
         case RoomType::crypt:
             return tile.getTileVisual() == TileVisual::cryptRoom;
+        case RoomType::ghostRoom:
+            return tile.getTileVisual() == TileVisual::ghostRoom;
         case RoomType::portalWave:
             return tile.getTileVisual() == TileVisual::portalWaveRoom;
         case RoomType::prison:
@@ -564,6 +567,14 @@ GameMode::GameMode(ModeManager *modeManager):
     );
 
     initializeMerchantWindow();
+
+    // Ghost room keeper controls.
+    addEventConnection(guiSheet->getChild("GhostRoomWindow")->subscribeEvent(
+        CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::hideGhostRoomWindow, this)));
+    addEventConnection(guiSheet->getChild("GhostRoomWindow/GhostProductButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleGhostProduct, this)));
+    addEventConnection(guiSheet->getChild("GhostRoomWindow/GhostReviveButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleGhostRevive, this)));
 
     //Casino payout window
     addEventConnection(
@@ -980,6 +991,7 @@ void GameMode::activate()
     guiSheet->getChild(Gui::EXIT_CONFIRMATION_POPUP)->hide();
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
+    guiSheet->getChild("GhostRoomWindow")->hide();
     guiSheet->getChild("InfirmaryWindow")->hide();
     guiSheet->getChild("InfirmaryButton")->hide();
     guiSheet->getChild("TavernWindow")->hide();
@@ -1629,6 +1641,18 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
            room->getSeat() == localPlayer->getSeat())
         {
             showInfirmaryWindow(tileClicked);
+            return true;
+        }
+    }
+
+    // Clients identify ghost rooms through the tile visual sent by the server.
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+    {
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        if(localPlayer != nullptr && tileClicked->getSeat() == localPlayer->getSeat() &&
+            tileMatchesRoomType(*tileClicked, RoomType::ghostRoom))
+        {
+            showGhostRoomWindow(tileClicked);
             return true;
         }
     }
@@ -2475,6 +2499,8 @@ void GameMode::updateCreatureIndicatorAlt(OIS::KeyCode key, bool pressed)
 //! \brief Refreshes frame controls and the availability of room-specific panels.
 void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
 {
+    if(mRootWindow->getChild("GhostRoomWindow")->isVisible())
+        refreshGhostRoomWindow();
     const Player* merchantPlayer = mGameMap->getLocalPlayer();
     const bool hasMerchant = merchantPlayer != nullptr && merchantPlayer->getSeat() != nullptr &&
         merchantPlayer->getSeat()->getNbRooms(RoomType::merchant) > 0;
@@ -5929,4 +5955,93 @@ void GameMode::buildPlayerSettingsWindow()
     }
 
     getModeManager().getGui().registerWindowHierarchy(tmpWin);
+}
+
+//! \brief Opens the selected own ghost room and requests its authoritative switches.
+void GameMode::showGhostRoomWindow(Tile* tile)
+{
+    Player* player = mGameMap->getLocalPlayer();
+    if(tile == nullptr || player == nullptr || player->getSeat() == nullptr)
+        return;
+    mGhostRoomX = tile->getX();
+    mGhostRoomY = tile->getY();
+    mRootWindow->getChild("GhostRoomWindow")->show();
+    refreshGhostRoomWindow();
+    Seat* seat = player->getSeat();
+    ODClient::getSingleton().queueClientNotification(ClientNotificationType::askGhostRoomSettings,
+        mGhostRoomX, mGhostRoomY, static_cast<uint32_t>(seat->getGhostProduct()), seat->getGhostRevive(), false);
+}
+
+//! \brief Hides the shared ghost room controls.
+bool GameMode::hideGhostRoomWindow(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("GhostRoomWindow")->hide();
+    return true;
+}
+
+//! \brief Cycles research, mana and crystal for the selected keeper.
+bool GameMode::cycleGhostProduct(const CEGUI::EventArgs&)
+{
+    Player* player = mGameMap->getLocalPlayer();
+    if(player == nullptr || player->getSeat() == nullptr)
+        return true;
+    Seat* seat = player->getSeat();
+    const uint32_t next = (static_cast<uint32_t>(seat->getGhostProduct()) + 1) %
+        (static_cast<uint32_t>(GhostProduct::crystal) + 1);
+    seat->setGhostProduct(static_cast<GhostProduct>(next));
+    ODClient::getSingleton().queueClientNotification(ClientNotificationType::askGhostRoomSettings,
+        mGhostRoomX, mGhostRoomY, next, seat->getGhostRevive(), true);
+    refreshGhostRoomWindow();
+    return true;
+}
+
+//! \brief Changes the keeper-wide revival switch through the validated room request.
+bool GameMode::toggleGhostRevive(const CEGUI::EventArgs&)
+{
+    Player* player = mGameMap->getLocalPlayer();
+    if(player == nullptr || player->getSeat() == nullptr)
+        return true;
+    Seat* seat = player->getSeat();
+    seat->setGhostRevive(!seat->getGhostRevive());
+    ODClient::getSingleton().queueClientNotification(ClientNotificationType::askGhostRoomSettings,
+        mGhostRoomX, mGhostRoomY, static_cast<uint32_t>(seat->getGhostProduct()), seat->getGhostRevive(), true);
+    refreshGhostRoomWindow();
+    return true;
+}
+
+//! \brief Adopts the owner-only settings reply for the open room.
+void GameMode::setGhostRoomSettingsShown(int32_t x, int32_t y, uint32_t product, bool revive)
+{
+    if(x != mGhostRoomX || y != mGhostRoomY || product > static_cast<uint32_t>(GhostProduct::crystal))
+        return;
+    Player* player = mGameMap->getLocalPlayer();
+    if(player == nullptr || player->getSeat() == nullptr)
+        return;
+    Seat* seat = player->getSeat();
+    seat->setGhostProduct(static_cast<GhostProduct>(product));
+    seat->setGhostRevive(revive);
+    refreshGhostRoomWindow();
+}
+
+//! \brief Follows the private seat update and closes a sold or lost room's controls.
+void GameMode::refreshGhostRoomWindow()
+{
+    Player* player = mGameMap->getLocalPlayer();
+    Tile* tile = mGameMap->getTile(mGhostRoomX, mGhostRoomY);
+    if(player == nullptr || player->getSeat() == nullptr || tile == nullptr ||
+        tile->getSeat() != player->getSeat() || !tileMatchesRoomType(*tile, RoomType::ghostRoom))
+    {
+        hideGhostRoomWindow();
+        return;
+    }
+    Seat* seat = player->getSeat();
+    std::ostringstream text;
+    text << std::fixed << std::setprecision(1) << "Ectoplasm: " << seat->getEctoplasmLevels() << " / "
+        << RoomGhostRoom::getLevelsPerEctoplasm(*seat) << " ghost levels";
+    mRootWindow->getChild("GhostRoomWindow/GhostBarText")->setText(text.str());
+    std::string product = "Product: Research points";
+    if(seat->getGhostProduct() == GhostProduct::mana) product = "Product: Mana";
+    else if(seat->getGhostProduct() == GhostProduct::crystal) product = "Product: Soul crystal";
+    mRootWindow->getChild("GhostRoomWindow/GhostProductButton")->setText(product);
+    mRootWindow->getChild("GhostRoomWindow/GhostReviveButton")->setText(seat->getGhostRevive() ? "Revive own: On" : "Revive own: Off");
 }

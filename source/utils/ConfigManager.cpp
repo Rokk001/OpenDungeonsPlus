@@ -91,6 +91,8 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mGhostLifetimeSeconds(0.0),
     mGhostFloatSpeed(0.0),
     mGhostWanderRadius(0.0),
+    mGhostAiGoldPerResearchPoint(0.0),
+    mGhostAiGoldPerXp(0.0),
     mSoulCrystalPrice(0.0),
     mSoulCrystalBreakBelow(0.0),
     mSoulCrystalNormalXpPerSecond(0.0),
@@ -727,6 +729,18 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mGhostWanderRadius = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "GhostAiGoldPerResearchPoint")
+        {
+            configFile >> nextParam;
+            mGhostAiGoldPerResearchPoint = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "GhostAiGoldPerXp")
+        {
+            configFile >> nextParam;
+            mGhostAiGoldPerXp = Helper::toDouble(nextParam);
+            continue;
         }
         if(nextParam == "SoulCrystalPrice")
         {

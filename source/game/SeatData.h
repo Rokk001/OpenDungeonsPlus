@@ -30,11 +30,27 @@ class ODPacket;
 enum class SkillType;
 enum class RoomType;
 
+//! \brief Selects the product made by each finished ectoplasm.
+enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
+
 //! \brief Base class for Seat that only embeds the data for the seat used through the network. It allows to use unit tests without having
 //! to bring Seat dependencies (basically, the whole game)
 class SeatData
 {
 public:
+    //! \brief Returns the shared fractional ectoplasm bar of this keeper.
+    double getEctoplasmLevels() const { return mEctoplasmLevels; }
+    //! \brief Sets the exact shared bar after catching or consuming ghost levels.
+    void setEctoplasmLevels(double levels) { mEctoplasmLevels = levels; }
+    //! \brief Returns this keeper's selected ectoplasm product.
+    GhostProduct getGhostProduct() const { return mGhostProduct; }
+    //! \brief Sets this keeper's selected ectoplasm product.
+    void setGhostProduct(GhostProduct product) { mGhostProduct = product; }
+    //! \brief Returns whether hunters attempt to revive this keeper's own ghosts.
+    bool getGhostRevive() const { return mGhostRevive; }
+    //! \brief Enables or disables own-ghost revival for all rooms of this keeper.
+    void setGhostRevive(bool revive) { mGhostRevive = revive; }
+
     // Constructors
     //! \brief Creates seat data with the configured default discharge threshold.
     //! \brief Creates seat data with the default shared merchant and laboratory values.
@@ -158,14 +174,18 @@ public:
     bool importFromPacket(ODPacket& is);
     //! \brief Writes full seat data and its appended shared room settings.
     void exportToPacket(ODPacket& os) const;
-    //! \brief Reads changing seat state followed by equipment and infirmary settings.
+    //! \brief Reads owner-only changing state followed by equipment, infirmary and ghost settings.
     bool importFromPacketForUpdate(ODPacket& is);
-    //! \brief Sends changing seat state followed by equipment and infirmary settings.
+    //! \brief Sends owner-only changing state followed by equipment, infirmary and ghost settings.
     void exportToPacketForUpdate(ODPacket& os) const;
 
     static std::string displayAsString(const SeatData* seat);
 
 protected:
+    //! \brief Shared ghost-room state, also retained by Seat save records.
+    double mEctoplasmLevels = 0.0;
+    GhostProduct mGhostProduct = GhostProduct::research;
+    bool mGhostRevive = true;
     //! \brief Reads the shared room-settings data without adopting incomplete values.
     bool importItemSettingsFromPacket(ODPacket& packet);
     //! \brief Writes the merchant and laboratory values shared by full and update packets.
