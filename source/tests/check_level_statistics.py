@@ -195,6 +195,8 @@ struct Creature : public GameEntity
     const CreatureDefinition* getDefinition() { return &mDefinition; }
     //! \brief Leaves item loss outside the kill-counting fixture while preserving the real knockout hook.
     void dropItems(bool) {}
+    //! rief Leaves ghost hunting outside the kill-counting fixture.
+    void interruptGhostHunt() {}
     void dropCarriedEquipment() {}
     void computeCreatureOverlayHealthValue() {}
     void computeCreatureOverlayMoodValue() {}

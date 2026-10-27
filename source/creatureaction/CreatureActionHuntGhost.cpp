@@ -83,7 +83,7 @@ CreatureActionHuntGhost::CreatureActionHuntGhost(Creature& creature, const std::
 { mRegistered=!target.empty(); }
 CreatureActionHuntGhost::~CreatureActionHuntGhost()
 { interrupt(); }
-std::function<bool()> CreatureActionHuntGhost::action()
+std::function<bool()> CreatureActionHuntGhost::action() // allowed-lambda: signature required by CreatureAction
 { return std::bind(&CreatureActionHuntGhost::handleHunt,this); }
 
 void CreatureActionHuntGhost::playSound(GameMap& map, Tile& tile, const std::string& family)

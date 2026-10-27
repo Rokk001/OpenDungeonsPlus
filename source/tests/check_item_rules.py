@@ -103,9 +103,9 @@ struct RoomAlchemyLab:Room {
 std::pair<uint32_t,uint32_t> heldCounts(const Creature& creature) {
     uint32_t items=0,potions=0;
     for(const std::unique_ptr<ItemInstance>& item:creature.mEquipment) if(item.get()!=nullptr) ++items;
-    for(const std::unique_ptr<ItemInstance>& item:creature.mInventory) if(item.get()!=nullptr) { if(item->mPotionId.empty()) ++items; else ++potions; }
+    for(const std::unique_ptr<ItemInstance>& item:creature.mInventory) if(item.get()!=nullptr&&!item->mSoulCrystal) { if(item->mPotionId.empty()) ++items; else ++potions; }
     for(const std::unique_ptr<ItemInstance>& item:creature.mPotionSlots) if(item.get()!=nullptr) ++potions;
-    for(const std::unique_ptr<ItemInstance>& item:creature.dropped) if(item.get()!=nullptr) { if(item->mPotionId.empty()) ++items; else ++potions; }
+    for(const std::unique_ptr<ItemInstance>& item:creature.dropped) if(item.get()!=nullptr&&!item->mSoulCrystal) { if(item->mPotionId.empty()) ++items; else ++potions; }
     return std::make_pair(items,potions);
 }
 //! \brief Runs fixed-seed roll, ownership, affinity and the approved drop probabilities and armed arrival flow.

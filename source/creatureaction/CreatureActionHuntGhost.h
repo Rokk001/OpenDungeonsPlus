@@ -20,7 +20,7 @@ public:
     //! \brief Returns the appended hunting action type.
     CreatureActionType getType() const override { return CreatureActionType::huntGhost; }
     //! \brief Returns the safe action handler.
-    std::function<bool()> action() override;
+    std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
     //! \brief Interrupts equipment and target ownership, using the last world position when held.
     void interrupt();
     //! \brief Advances a hunt without popping itself inside a destructor.

@@ -289,10 +289,11 @@ BuildingObject* RoomGhostRoom::notifyActiveSpotCreated(ActiveSpotPlace place, Ti
 {
     if(place==activeSpotCenter) return nullptr;
     std::string mesh=mDecorationTiles.empty()?"GhostBell":mHookTiles.size()<getBackpackCount()?"GhostHook":"GhostWallGauges";
-    if(mesh=="GhostHook") mHookTiles.push_back(tile);
+    const bool isGauge=mesh.compare("GhostWallGauges")==0;
+    if(mesh.compare("GhostHook")==0) mHookTiles.push_back(tile);
     mDecorationTiles.push_back(tile);
     const double rotation=place==activeSpotLeft?90.0:place==activeSpotRight?270.0:place==activeSpotBottom?180.0:0.0;
-    return new BuildingObject(getGameMap(),*this,mesh,*tile,rotation,false,1.0f,mesh=="GhostWallGauges"?EntityAnimation::idle_anim:std::string(),true);
+    return new BuildingObject(getGameMap(),*this,mesh,*tile,rotation,false,1.0f,isGauge?EntityAnimation::idle_anim:std::string(),true);
 }
 
 void RoomGhostRoom::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
