@@ -125,7 +125,7 @@ MOOD_STATES = ['Hungry', 'Tired', 'GetFee', 'LeaveDungeon', 'KoTemp', 'InJail', 
                'Angry', 'Furious', 'Unknown']
 POST_CATEGORIES = ['eat', 'sleep', 'train', 'work', 'fight', 'hurt', 'levelup', 'payday', 'unhappy', 'ko', 'jail',
                    'pickedup', 'slapped', 'arrived', 'left', 'died', 'idle', 'friendship', 'hatred', 'nemesis', 'breakup', 'converted', 'couple', 'splitup', 'relieved', 'filthy', 'bought', 'bargain', 'fleeced', 'gift', 'epicfind',
-                   'drank', 'duelwon', 'duellost', 'drunk', 'hungover', 'relaxed']
+                   'drank', 'duelwon', 'duellost', 'drunk', 'hungover', 'ghostscared', 'ghosthunted', 'relaxed']
 MAX_LENGTH = {'Job': 40, 'Like': 40, 'Dislike': 40, 'Quirk': 40, 'Bio': 100, 'Relation': 40, 'ClassName': 24, 'MoodLine': 80,
               'Post': 110}
 valid_scopes = set(['*', 'worker', 'fighter']) | set(groups) | set(classes)

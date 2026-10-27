@@ -46,6 +46,7 @@ struct RelationshipCreatureState;
 class Building;
 class Creature;
 class CreatureAction;
+class CreatureActionHuntGhost;
 class CreatureEffectDigTile;
 class CreatureEffect;
 class CreatureDefinition;
@@ -78,6 +79,7 @@ struct CreatureSnapshot;
 namespace Ogre
 {
 class ParticleSystem;
+class BillboardChain;
 }
 
 //! \brief The kinds of drink a creature can take (see Creature::drinkTaken).
@@ -223,7 +225,10 @@ public:
     virtual GameEntityType getObjectType() const override;
 
     virtual void addToGameMap(GameMap* gameMap = nullptr) override;
+    //! \brief Removes the creature and releases all crypt delivery reservations for its body.
     virtual void removeFromGameMap(GameMap* gameMap = nullptr) override;
+    //! \brief Restores the base visual state and the exact saved corpse decay progress.
+    void restoreEntityState() override;
 
     bool canDisplayStatsWindow(Seat* seat) override
     { return true; }
@@ -564,7 +569,11 @@ public:
     int32_t getItemEquipmentSlot(const ItemInstance& item) const;
     //! \brief Tests slot compatibility and the item's minimum level.
     bool isItemEquippable(const ItemInstance& item) const;
-    //! \brief Rates rolled bonuses with configured weights and this creature's primary/family paths.
+    //! \brief Tests whether saving a full XP step is worth the supplied crystal price.
+    bool wantsSoulCrystal(double price) const;
+    //! \brief Consumes a crystal below the level cap and grants exactly one level.
+    bool breakSoulCrystal(std::unique_ptr<ItemInstance>& item);
+    //! \brief Rates rolled bonuses with configured weights and identifies worthwhile crystals.
     double rateItem(const ItemInstance& item) const;
     //! \brief Accepts an owned instance, equipping upgrades outside combat and retaining or dropping overflow.
     bool acceptItem(std::unique_ptr<ItemInstance> item, bool equip = true);
@@ -799,6 +808,7 @@ public:
     //! \brief Applies damage and records actual hostile creature hits for regional script observers. On the server it
     //! also counts the attacked, incapacitated and killed events for the conditions of the level script and the
     //! creatures lost in the statistics of the seat.
+    //! \brief Applies damage and drops hunting equipment immediately on knockout or death.
     double takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko) override;
 
@@ -821,7 +831,25 @@ public:
     //! \brief Returns whether an action is queued; room-use queries also include its specialized work actions.
     bool isActionInList(CreatureActionType action) const;
 
-    //! \brief Clears the action queue, except for the Idle action at the end.
+    //! \brief Drops a hunter's boxed ghosts and releases its equipment without removing queued actions.
+    void interruptGhostHunt();
+    //! \brief Rebinds a hunt when its equipment or occupied cauldron moves to another room.
+    void transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty);
+    //! \brief Returns whether the current hunt wears its equipment.
+    bool hasGhostBackpack() const { return mGhostBackpack; }
+    //! \brief Copies the current hunting presentation into the replicated creature state.
+    void refreshGhostHuntVisuals();
+    //! \brief Advances the backpack, box and dynamic connecting beam on a client.
+    void updateGhostHuntVisuals(double seconds);
+    //! \brief Destroys this hunter's cosmetic scene objects and looping sound.
+    void clearGhostHuntVisuals();
+    //! \brief Pins all saved occupied cauldrons before the global equipment rebind pass.
+    void restoreGhostHuntLayout();
+    //! \brief Rebinds saved hunt reservations after every entity and crypt has loaded.
+    void restoreGhostHunt();
+    //! \brief Restores a pending hunt and awards its exact training-hall XP each turn.
+    void upkeepGhostHunt();
+    //! \brief Clears queued actions after releasing hunt ownership without destructor reentrancy.
     void clearActionQueue();
 
     //! \brief Computes the tiles visible for the creature and sends a message to the clients to mark those tiles. This function
@@ -864,10 +892,12 @@ public:
     bool isSandboxHeroFor(const Seat* seat) const;
     //! \brief Picks up the creature, leaving any carried portal stone on its current ground tile. It also counts the
     //! pickup in the statistics of the seat and the pickedup event for the level script.
+    //! \brief Drops captured ghosts before the creature is lifted out of the world.
     void pickup() override;
     bool tryDrop(Seat* seat, Tile* tile) override;
     //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes. It also counts the
     //! drop in the statistics of the seat.
+    //! \brief Drops the creature without retaining interrupted hunting reservations.
     void drop(const Ogre::Vector3& v) override;
     bool resizeMeshAfterDrop() override;
 
@@ -1125,9 +1155,11 @@ public:
     //! \brief Tells whether the creature can go through the given tile.
     bool canGoThroughTile(Tile* tile) const;
 
-    //! \brief Makes own knockouts carryable when a bed or infirmary can receive them.
+    //! \brief Keeps own knockout bed/infirmary eligibility and refuses workers, decaying or consumed bodies.
     virtual EntityCarryType getEntityCarryType(Creature* carrier) override;
+    //! \brief Pauses the body lie time while a worker carries it.
     virtual void notifyEntityCarryOn(Creature* carrier) override;
+    //! \brief Resumes body lie time at the delivery or interrupted carry position.
     virtual void notifyEntityCarryOff(const Ogre::Vector3& position) override;
 
     //! \brief Server side. True if the creature is hurt enough to be pulled to its bed by a worker:
@@ -1379,6 +1411,7 @@ public:
     //! but is now split out since this is needed on the server, while the mesh isn't.
     //! This is normally called by the constructor, but creatures loaded from the map files
     //! use a different constructor, and this is then called by the gameMap when other details have been loaded.
+    //! \brief Resolves the definition and preserves explicitly saved revival needs.
     void setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWorkerCreatureDefinition);
 
     //! \brief Server side. Chooses the Dungeonbook appearance: random on the first spawn (no duplicate among
@@ -1471,7 +1504,7 @@ public:
 
     bool isHungry() const;
 
-    //! \brief Clears knockout state and any pending lethal-shot credit after recovery.
+    //! \brief Clears knockout, lethal-shot credit and the prior fight item-drop guard after recovery or revival.
     void resetKoTurns();
 
     //! \brief Knocks the creature out so that it can be carried away (used when
@@ -1546,8 +1579,8 @@ public:
 
     void flee();
 
-    //! \brief Makes the creature run away from fearTile for nbTurns turns (fear trap)
-    void fleeFromTile(Tile* fearTile, double nbTurns);
+    //! \brief Makes the creature flee for nbTurns, optionally showing the ghost flinch first.
+    void fleeFromTile(Tile* fearTile, double nbTurns, bool scaredPose = false);
 
     //! \brief Stuns the creature for nbTurns turns (lightning trap). A stunned creature does nothing,
     //! like a creature that was just dropped. Does nothing if the creature is dead or already KO.
@@ -1591,8 +1624,29 @@ public:
     Tile* getWalkDestinationTile() const;
 
     //! \brief Server side. Takes the dead body of this creature so it cannot be used again (Raise Dead).
-    //! Returns false if the creature is not a body that is still lying on the map or if it is a worker
+    //! Returns false before death handling, during decay, while carried, or for a worker or consumed body
     bool takeCorpse();
+
+    //! \brief Revives a delivered own crypt corpse without changing its level, experience or seat.
+    //! \param hpShare The configured fraction of maximum health restored.
+    //! \return False if this body is no longer a valid delivered corpse.
+    bool reviveFromCorpse(double hpShare);
+
+    //! \brief Returns whether the body has entered its uncarryable decay phase.
+    bool isCorpseDecaying() const
+    { return mDecayTurns >= 0.0; }
+
+    //! \brief Returns elapsed decay turns, or -1 before decay; also used to restore the client look.
+    double getDecayTurns() const
+    { return mDecayTurns; }
+
+    //! \brief Returns whether a worker carries the body, pausing its lie countdown.
+    bool isCorpseCarried() const
+    { return mIsCarried; }
+
+    //! \brief Returns the saved or current worker name used to restore a corpse carry.
+    const std::string& getCorpseCarrierName() const
+    { return mCorpseCarrierName; }
     
     void showOutliner();
 
@@ -1661,6 +1715,7 @@ protected:
     virtual bool importFromStream(std::istream& is) override;
 
     virtual void createMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
+    //! \brief Releases hunter visual children before the creature mesh is removed.
     virtual void destroyMeshLocal(NodeType nt = NodeType::MTILES_NODE) override;
     virtual void fireAddEntity(Seat* seat,  bool async, NodeType nt) override;
     virtual void fireRemoveEntity(Seat* seat,NodeType nt = NodeType::MTILES_NODE) override;
@@ -1759,6 +1814,13 @@ private:
 
     //! \brief Counter to let the creature stay some turns after its death
     unsigned int    mDeathCounter;
+    //! \brief Elapsed uncarried corpse turns and decay turns (-1 before decay starts).
+    double          mCorpseTurns;
+    double          mDecayTurns;
+    //! \brief Whether a worker currently carries this creature.
+    bool            mIsCarried;
+    //! \brief Worker name saved with a carried body and rebound by its reserved crypt after loading.
+    std::string     mCorpseCarrierName;
     //! \brief Current mana. Starts full, regenerates every turn, is saved and sent to the clients
     double          mMana;
     //! \brief True when the mana was read from a save, so the creature does not start with a full pool
@@ -1866,6 +1928,25 @@ private:
     std::vector<GameEntity*>        mVisibleEnemyObjects;
     std::vector<GameEntity*>        mVisibleAlliedObjects;
     std::vector<GameEntity*>        mReachableAlliedObjects;
+    bool mGhostRevived = false;
+    bool mRevivalThirstFromSave = false;
+    double mSavedRevivalThirst = 0.0;
+    bool mGhostHuntLoaded = false;
+    bool mGhostBackpack = false;
+    std::string mGhostBeamTarget;
+    uint32_t mGhostBoxMode = 0;
+    std::string mGhostThrowTarget;
+    std::string mGhostShrinkTarget;
+    double mGhostThrowTurns = 0.0;
+    double mGhostThrowClientTurns = 0.0;
+    Ogre::SceneNode* mGhostBoxNode = nullptr;
+    double mGhostBeamSample = 0.0;
+    uint32_t mGhostBeamSound = 0;
+    Ogre::SceneNode* mGhostBackpackNode = nullptr;
+    Ogre::SceneNode* mGhostBeamNode = nullptr;
+    Ogre::BillboardChain* mGhostBeamChain = nullptr;
+    Ogre::SceneNode* mGhostSparkNode = nullptr;
+    Ogre::ParticleSystem* mGhostBeamSparks = nullptr;
     std::vector<std::unique_ptr<CreatureAction>>    mActions;
     std::vector<Tile*>              mVisualDebugEntityTiles;
 

@@ -360,6 +360,8 @@ set(OD_SOURCEFILES
     ${SRC}/entities/BuildingObject.cpp
     ${SRC}/rooms/RoomInfirmaryShaman.cpp
     ${SRC}/entities/InfirmaryShamanEntity.cpp
+    ${SRC}/entities/GhostBoxEntity.cpp
+    ${SRC}/entities/GhostEntity.cpp
     ${SRC}/entities/ChickenEntity.cpp
     ${SRC}/entities/MerchantEntity.cpp
     ${SRC}/entities/CraftedTrap.cpp
@@ -563,6 +565,8 @@ set(OD_SOURCEFILES
     ${SRC}/rooms/RoomAlchemyLab.cpp
     ${SRC}/rooms/RoomCrypt.cpp
     ${SRC}/rooms/RoomDormitory.cpp
+    ${SRC}/rooms/RoomGhostRoom.cpp
+    ${SRC}/creatureaction/CreatureActionHuntGhost.cpp
     ${SRC}/rooms/RoomInfirmary.cpp
     ${SRC}/rooms/RoomInfirmaryEconomy.cpp
     ${SRC}/rooms/RoomInfirmaryStreams.cpp

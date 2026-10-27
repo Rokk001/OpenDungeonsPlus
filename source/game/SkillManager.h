@@ -76,7 +76,13 @@ namespace ResearchEffect
     static const std::string LevelCap = "LevelCap";
     static const std::string SkeletonLevel = "SkeletonLevel";
     static const std::string HealTime = "HealTime";
-    static const std::string RotTime = "RotTime";
+    static const std::string EctoplasmLevels = "EctoplasmLevels";
+    static const std::string BoxCapacity = "BoxCapacity";
+    static const std::string BeamRange = "BeamRange";
+    static const std::string CatchTime = "CatchTime";
+    static const std::string RevivePrice = "RevivePrice";
+    static const std::string LichCorpses = "LichCorpses";
+    static const std::string LichLevel = "LichLevel";
     static const std::string ClaimResistance = "ClaimResistance";
     static const std::string ConversionSpeed = "ConversionSpeed";
     static const std::string PrayerMana = "PrayerMana";

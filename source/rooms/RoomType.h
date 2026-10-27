@@ -49,6 +49,7 @@ enum class RoomType
     alchemyLab,
     tavern,
     infirmary,
+    ghostRoom,
     spa,
     nbRooms     // Must be the last in this enum
 };

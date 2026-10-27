@@ -46,6 +46,7 @@ def catalogue_fixture():
 #include "entities/ItemInstance.h"
 #include "entities/PotionDefinition.h"
 #include "rooms/RoomType.h"
+static const uint32_t MAX_LEVEL = 30;
 #include <algorithm>
 #include <cmath>
 #include <cctype>
@@ -126,6 +127,12 @@ struct ConfigManager {
     double getItemSetting(const std::string& section,const std::string& key) const { return settings.at(section).at(key); }
     //! \brief Returns a required numeric room configuration input.
     double getRoomConfigDouble(const std::string& key) const { return settings.at("Rooms").at(key); }
+    //! \brief Returns the configured soul crystal price of the global settings.
+    double getSoulCrystalPrice() const { return 800.0; }
+    //! \brief Returns the configured hero soul crystal chance at the first level.
+    double getSoulCrystalHeroRareStart() const { return 0.04; }
+    //! \brief Returns the configured hero soul crystal chance at the last level.
+    double getSoulCrystalHeroRareEnd() const { return 0.62; }
     //! \brief Returns the fixture path metadata used by production rating and outfit logic.
     const CreatureSkillTree::SkillTreeConfig& getCreatureSkillTree() const { return tree; }
 };
@@ -353,6 +360,8 @@ struct Creature {
     double rateItem(const ItemInstance& item) const;
     //! \brief Uses actual safe equip/store/overflow ownership.
     bool acceptItem(std::unique_ptr<ItemInstance> item,bool equip=true);
+    //! \brief Fixture stand-in: these probes never buy soul crystals, the crystal rules have their own check.
+    bool wantsSoulCrystal(double) const { return false; }
     //! \brief Uses the actual combat-gated inventory decision.
     void decideEquipment();
     //! \brief Uses the actual knockout/death loss rule.
@@ -365,6 +374,8 @@ struct Creature {
     std::unique_ptr<ItemInstance> setPotionSlot(size_t slot,std::unique_ptr<ItemInstance> item);
     //! \brief Uses actual level thresholds and never-shrink potion sizing.
     void resizePotionSlots();
+    //! \brief Fixture stand-in: consumes the crystal and raises the level, the crystal effects have their own check.
+    bool breakSoulCrystal(std::unique_ptr<ItemInstance>& item) { item.reset(); ++mLevel; return true; }
     //! \brief Uses actual gift use/slot/inventory/ownership priorities.
     bool receiveGiftedPotion(std::unique_ptr<ItemInstance>& item);
     //! \brief Runs the unchanged refill branch extracted from production decidePotion.

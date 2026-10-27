@@ -74,7 +74,7 @@ tileset_loader = config_manager[config_manager.index('bool ConfigManager::loadTi
 loaded_visuals = re.findall(r'loadTilesetValues\(defFile, TileVisual::(\w+),', tileset_loader)
 assert len(loaded_visuals) == len(set(loaded_visuals)), 'duplicate tileset loader visual'
 assert set(loaded_visuals) == set(visuals[:-1]), 'tileset loader must consume every TileVisual exactly once'
-assert loaded_visuals[-7:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom', 'infirmaryRoom', 'spaRoom']
+assert loaded_visuals[-8:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom', 'infirmaryRoom', 'ghostRoom', 'spaRoom']
 for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
     block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
     block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]

@@ -234,6 +234,8 @@ enum class ServerNotificationType
     infirmaryWindow,
     //! Current keeper preferences: int32_t payer, int32_t threshold, bool healOn.
     infirmarySettings,
+    //! Owner-only ghost controls: int32_t x, y, uint32_t product, bool revive.
+    ghostRoomSettings,
     //! \brief Answer to askSpaPayer, owner only: + int32_t tileX, int32_t tileY (a tile of the lava spa),
     //! uint32_t payer (SpaPayer), double bathPrice (gold per bath, the beer price).
     //! Appended after infirmarySettings so that no existing numeric value changes.

@@ -154,6 +154,7 @@ struct ODServer {
     void queueServerNotification(ServerNotification* n){sent.emplace_back(n);}
 };
 GIFTBOXENUM
+enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 //! \brief Supplies seat storage for actual research and optional shared-room save methods.
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
@@ -166,6 +167,8 @@ struct Seat {
     void setInfirmaryThreshold(int32_t threshold){if(threshold>=40&&threshold<=100&&(threshold-40)%10==0)mInfirmaryThreshold=threshold;}
     //! \brief Restores the optional treatment switch without affecting research state.
     void setInfirmaryHealOn(bool healOn){mInfirmaryHealOn=healOn;}
+    //! \brief Fixture storage for the ghost room block that the extracted seat load and save paths handle.
+    std::set<std::string> mGhostBellTargets;double mEctoplasmLevels=0.0;GhostProduct mGhostProduct=GhostProduct::research;bool mGhostRevive=false;
     bool mHadLibrary=false;
     int32_t mMerchantMargin=10,mLabMode=0;std::string mMerchantMode="fair";double mMerchantGoldRemainder=0.0;
     //! \brief Stores the shared room settings parsed by the actual optional save block.
@@ -358,7 +361,10 @@ int main(int argc,char** argv){try {
         {T::roomLibrary,"PointsPerWork",5,5,6,7},{T::roomTrainingHall,"XpPerHit",5,5,6,7},{T::roomWorkshop,"PointsPerWork",5,5,6,7},
         {T::roomGuardRoom,"WakefulnessPerDuty",0.5,0.5,0.4,0.3335},{T::roomCasino,"Fee",.1,.1,.12,.14},{T::roomCasino,"Mood",180,180,216,252},
         {T::roomArena,"LevelCap",20,20,25,30},{T::roomPrison,"Capacity",1,1,1.5,2},{T::roomPrison,"SkeletonLevel",1,1,2,3},
-        {T::roomCrypt,"RotTime",30,30,24,20.01},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
+        {T::roomCrypt,"LichCorpses",10,10,8,6},{T::roomCrypt,"LichLevel",0,0,1,2},
+        {T::roomGhostRoom,"EctoplasmLevels",10,10,8,6},{T::roomGhostRoom,"BoxCapacity",1,1,2,3},
+        {T::roomGhostRoom,"BeamRange",1,1,2,3},{T::roomGhostRoom,"CatchTime",5.5,5.5,4.4,3.6685},
+        {T::roomGhostRoom,"RevivePrice",14000,14000,12000,10000},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
         {T::roomTorture,"ConversionSpeed",1,1,1.2,1.4},{T::roomTemple,"PrayerMana",60,60,72,84},
         {T::keeperDominion,"CreatureLimit",10,12,14,16},{T::tavernBeer,"PortalCooldown",50,50,45,40},
         {T::trapCannon,"Damage",20.5,92.25,217.915,386.63},{T::trapSpike,"Damage",10,45,106.3,188.6},

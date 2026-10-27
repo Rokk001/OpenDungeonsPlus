@@ -85,6 +85,14 @@ namespace EntityAnimation
     static const std::string dice_anim = "Dice";
     //! The loser of a slap duel lies on the floor (a skeleton without the clip plays Dragged, then Idle)
     static const std::string knockedout_anim = "KnockedOut";
+    //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
+    static const std::string scared_anim = "Scared";
+    //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.
+    static const std::string beam_anim = "Beam";
+    //! A hunter throws its capture box underhand; the client falls back to Attack when absent.
+    static const std::string throw_anim = "Throw";
+    //! A hunter tips its box over the press rim; the client falls back to Attack when absent.
+    static const std::string empty_anim = "Empty";
 };
 
 //! \brief Moves and animates an entity while keeping deferred strikes synchronized with its displayed pose.

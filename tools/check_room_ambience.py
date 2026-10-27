@@ -241,6 +241,7 @@ def pile_levels(match):
 
 
 # Validates one effect against the engine contract, including default sound intervals and object sound loops.
+# Validate effect resources and the supported object clip and sound loop contracts.
 def check_effect(effect, where, problems, visuals, systems, mats, counts):
     """Validate effect data, including object sounds with an implemented spatial-loop lifecycle."""
     for key in effect:
@@ -290,6 +291,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             default_every = re.search(r"const double DEFAULT_EFFECT_EVERY\s*=\s*([0-9.]+)\s*;", runtime_defaults)
             if default_every is None or float(default_every.group(1)) <= 0.0 or "mEvery(DEFAULT_EFFECT_EVERY)" not in runtime_defaults:
                 problems.append("%s: a sound on an object needs Every or a positive runtime default" % where)
+        if target != "Object" and "Loop" in effect:
+            problems.append("%s: sound loops only work on objects" % where)
     elif "Family" in effect or "Delay" in effect:
         problems.append("%s: Family and Delay only belong to sounds" % where)
     if when in ("Locked", "Reloading", "Ready", "LowHealth", "Sleeping") and target != "Object":

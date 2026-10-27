@@ -113,6 +113,7 @@ enum class SkillType
     roomTavern,
     tavernBeer,
     roomInfirmary,
+    roomGhostRoom,
     roomSpa,
 
     // This should be the last

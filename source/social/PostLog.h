@@ -74,6 +74,8 @@ enum class PostCategory : uint8_t
     Drunk,
     //! A creature of the local player woke up with a hangover
     Hungover,
+    GhostScared,
+    GhostHunted,
     //! A creature of the local player finished a bath in a lava spa and is relaxed
     Relaxed,
     Nb

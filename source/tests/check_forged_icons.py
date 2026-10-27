@@ -48,8 +48,15 @@ for name, (x, y, w, h) in rects.items():
     tile = atlas[y:y + h, x:x + w]
     opaque = tile[..., 3] > 200
     assert opaque.sum() > w * h * 0.04, name + ' has no body'
-    source = np.array(Image.open(repo / 'assets-src/gui/icons/tiles' / (name + '.png')).convert('RGBA'))
-    assert np.array_equal(tile, source), name + ' does not contain its painted source motif'
+    source_image = Image.open(repo / 'assets-src/gui/icons/tiles' / (name + '.png')).convert('RGBA')
+    if source_image.size == (2 * w, 2 * h):
+        # A cell that shows its painted source at half size (the ghost room button) holds the downscaled motif;
+        # a wrong motif differs by tens of levels on average, the downscale by well under one.
+        reduced = np.array(source_image.resize((w, h), Image.LANCZOS), dtype=np.float32)
+        assert np.abs(reduced - tile).mean() < 2.0, name + ' does not contain its painted source motif'
+    else:
+        source = np.array(source_image)
+        assert np.array_equal(tile, source), name + ' does not contain its painted source motif'
     checked += 1
 # Large room/spell/trap slots retain square painted plates with visible central motifs. Small
 # status emblems are isolated transparent sprites. Chipped edges replace procedural corners.

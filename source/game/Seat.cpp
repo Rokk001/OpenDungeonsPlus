@@ -1243,8 +1243,23 @@ bool Seat::importSeatFromStream(std::istream& is)
     // Optional seat blocks may occur in any order, including in older saves.
     while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
-        str == "[Merchant]" || str == "[MerchantBalance]")
+        str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]")
     {
+    if(str == "[GhostBells]")
+    {
+        size_t count=0;
+        if(!(is >> count)) return false;
+        while(count-->0) { std::string name;if(!(is >> name)) return false;mGhostBellTargets.insert(name); }
+        if(!(is >> str) || str!="[/GhostBells]" || !(is >> str)) return false;
+    }
+    if(str == "[GhostRoom]")
+    {
+        uint32_t product = 0;
+        if(!(is >> mEctoplasmLevels >> product >> mGhostRevive >> str) ||
+            !std::isfinite(mEctoplasmLevels) || mEctoplasmLevels < 0.0 || product > 2 ||
+            str != "[/GhostRoom]" || !(is >> str)) return false;
+        mGhostProduct = static_cast<GhostProduct>(product);
+    }
     if(str == "[Infirmary]")
     {
         int32_t payer = 0;
@@ -1627,6 +1642,12 @@ bool Seat::exportSeatToStream(std::ostream& os) const
             os << className << "\n";
         os << "[/AnnouncedCreatureClasses]\n";
     }
+
+    os << "[GhostBells] " << mGhostBellTargets.size();
+    for(const std::string& name : mGhostBellTargets) os << ' ' << name;
+    os << " [/GhostBells]\n";
+    os << "[GhostRoom] " << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)
+       << ' ' << mGhostRevive << " [/GhostRoom]\n";
 
     os << "[Merchant]\t" << mMerchantMargin << '\t' << mMerchantMode << '\t' << mLabMode << "\t[/Merchant]\n";
     os << "[MerchantBalance] " << mMerchantGoldRemainder << " [/MerchantBalance]\n";

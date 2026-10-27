@@ -49,14 +49,14 @@ def extract(text, header):
 
 # 1. RoomType, TileVisual and SkillType: the tavern entries are appended, one each
 rooms = enum_names(read('source/rooms/RoomType.h'), 'enum class RoomType')
-assert rooms[-4:] == ['tavern', 'infirmary', 'spa', 'nbRooms'] and rooms.count('tavern') == 1, rooms[-5:]
+assert rooms[-5:] == ['tavern', 'infirmary', 'ghostRoom', 'spa', 'nbRooms'] and rooms.count('tavern') == 1, rooms[-5:]
 visuals = enum_names(read('source/entities/Tile.h'), 'enum class TileVisual')
-assert visuals[-4:] == ['tavernRoom', 'infirmaryRoom', 'spaRoom', 'countTileVisual'] and visuals.count('tavernRoom') == 1, visuals[-5:]
+assert visuals[-5:] == ['tavernRoom', 'infirmaryRoom', 'ghostRoom', 'spaRoom', 'countTileVisual'] and visuals.count('tavernRoom') == 1, visuals[-5:]
 tile_cpp = read('source/entities/Tile.cpp')
 assert tile_cpp.count('case TileVisual::tavernRoom:') >= 4, 'tavernRoom is missing in the Tile switches'
 assert 'return "tavernRoom";' in tile_cpp
 skills = enum_names(read('source/game/SkillType.h'), 'enum class SkillType')
-assert skills[-5:] == ['roomTavern', 'tavernBeer', 'roomInfirmary', 'roomSpa', 'countSkill'], skills[-6:]
+assert skills[-6:] == ['roomTavern', 'tavernBeer', 'roomInfirmary', 'roomGhostRoom', 'roomSpa', 'countSkill'], skills[-6:]
 skill_type_cpp = read('source/game/SkillType.cpp')
 for name in ('roomTavern', 'tavernBeer'):
     assert 'case SkillType::' + name + ':' in skill_type_cpp and '"' + name + '"' in skill_type_cpp, name + ' in SkillType.cpp'

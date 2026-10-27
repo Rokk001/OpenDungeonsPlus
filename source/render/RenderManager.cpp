@@ -20,6 +20,7 @@
  */
 
 #include "render/RenderManager.h"
+#include "ODApplication.h"
 #include "render/GroundShadowCameraSetup.h"
 
 #include "camera/CullingManager.h"
@@ -3646,9 +3647,14 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
 }
 
 //! \brief Builds movable visuals with explicit decorative scales and the existing furniture defaults.
+//! \brief Creates an object mesh, including untouchable translucent ghost shapes.
 void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* renderedMovableEntity, NodeType nt)
 {
     std::string meshName = renderedMovableEntity->getMeshName();
+    // Creature definitions include the resource extension; movable object definitions omit it.
+    if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity &&
+        meshName.size() >= 5 && meshName.compare(meshName.size() - 5, 5, ".mesh") == 0)
+        meshName.erase(meshName.size() - 5);
     // Level of the pile this entity shows (-1 when it is no pile) and the level its tile had before
     int pileLevel = -1;
     int previousPileLevel = -1;
@@ -3757,6 +3763,12 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
         ent = mSceneManager->createEntity(tempString, meshPtr);
         node->attachObject(ent); 
+        if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity)
+        {
+            ent->setMaterialName("GhostGlow");
+            ent->setCastShadows(false);
+            ent->setQueryFlags(0);
+        }
         if(meshName == "Cauldron" && ent->hasSkeleton() && ent->getSkeleton()->hasBone("FireAnchor"))
         {
             Ogre::ParticleSystem* fire = mSceneManager->createParticleSystem(tempString + "_CauldronFire", "RoomAmbAltarFlame");
@@ -4790,6 +4802,7 @@ void RenderManager::rrDestroySeatVisionVisualDebug(int seatId, Tile* tile)
 }
 
 //! \brief Selects the rendered clip and preserves a natural wake transition when gameplay returns to idle.
+//! \brief Selects object clips, including corpse decay everywhere and the ghost flinch fallback.
 void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObject, const std::string& animation, bool loop)
 {
     std::string objectName = curAnimatedObject->getOgreNamePrefix()
@@ -4828,6 +4841,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
                 loop = false;
         }
     }
+    if(anim == "Scared" && !objectEntity->hasAnimationState(anim))
+        anim = EntityAnimation::idle_anim;
     Creature* dropCreature = nullptr;
     if(curAnimatedObject->getObjectType() == GameEntityType::creature)
         dropCreature = static_cast<Creature*>(curAnimatedObject);
@@ -4851,7 +4866,7 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
             state->setLoop(false);
             state->setTimePosition(state->getLength());
             const Ogre::Real duration = std::max(1.0f,
-                static_cast<float>(ConfigManager::getSingleton().getRoomConfigInt32("CryptRotNbTurns")));
+                static_cast<float>(ConfigManager::getSingleton().getCorpseDecaySeconds() * ODApplication::turnsPerSecond));
             dropCreature->setAnimationState(setEntityAnimation(objectEntity,
                 createCreatureDecayAnimation(objectEntity, state->getAnimationName(), duration), false));
         }
@@ -5106,6 +5121,12 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         else if (anim == EntityAnimation::armwrestle_anim || anim == EntityAnimation::slap_anim)
         {
             // A skeleton without the tavern game clips plays its attack clip
+            anim = EntityAnimation::attack_anim;
+        }
+        else if (anim == EntityAnimation::beam_anim || anim == EntityAnimation::throw_anim ||
+                 anim == EntityAnimation::empty_anim)
+        {
+            // A hunter skeleton without the ghost hunting clips plays its attack clip
             anim = EntityAnimation::attack_anim;
         }
         else if (anim == EntityAnimation::knockedout_anim)

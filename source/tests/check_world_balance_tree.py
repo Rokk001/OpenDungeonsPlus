@@ -33,6 +33,7 @@ EXPECTED = [
     ("Rooms", 3, "roomArena", "ArenaButton", ["roomTrainingHall"]),
     ("Rooms", 3, "roomPrison", "PrisonButton", ["roomGuardRoom"]),
     ("Rooms", 3, "roomCrypt", "CryptButton", ["roomLibrary"]),
+    ("Rooms", 3, "roomGhostRoom", "GhostRoomButton", ["roomLibrary"]),
     ("Rooms", 3, "roomBridgeStone", "StoneBridgeButton", ["roomBridgeWooden"]),
     ("Rooms", 3, "roomInfirmary", "InfirmaryButton", ["roomGuardRoom"]),
     ("Rooms", 4, "roomTorture", "TortureButton", ["roomPrison"]),
@@ -87,7 +88,7 @@ FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary"
 TAB_TOTALS = {tab: sum((0 if name in FREE_LEVEL_ONE else TIER_COST[tier]) + 6 * TIER_COST[tier]
     for entry_tab, tier, name, button, parents in EXPECTED if entry_tab == tab)
     for tab in ("Rooms", "Traps", "Spells")}
-assert TAB_TOTALS == {"Rooms": 77200, "Traps": 82250, "Spells": 84950}
+assert TAB_TOTALS == {"Rooms": 81400, "Traps": 82250, "Spells": 84950}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),

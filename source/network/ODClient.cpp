@@ -2295,6 +2295,21 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::ghostRoomSettings:
+        {
+            int32_t xx = 0;
+            int32_t yy = 0;
+            uint32_t product = 0;
+            bool revive = true;
+            if(!(packetReceived >> xx >> yy >> product >> revive))
+                break;
+            if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::GAME)
+                break;
+            GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
+            gameMode->setGhostRoomSettingsShown(xx, yy, product, revive);
+            break;
+        }
+
         case ServerNotificationType::casinoPayout:
         {
             if(frameListener->getModeManager()->getCurrentModeType() != ModeManager::ModeType::GAME)
@@ -2551,7 +2566,7 @@ bool ODClient::connect(const std::string& host, const int port, uint32_t timeout
     // Send a hello request to start the conversation with the server
     ODPacket packSend;
     packSend << ClientNotificationType::hello
-        << std::string("OpenDungeons V ") + ODApplication::VERSION;
+        << std::string("OpenDungeons V ") + ODApplication::VERSION + NetworkProtocol::WIRE_SCHEMA_SUFFIX;
     send(packSend);
     loading.continueLoading();
 

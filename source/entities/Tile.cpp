@@ -168,6 +168,7 @@ bool Tile::isDiggable(const Seat* seat) const
         case TileVisual::merchantRoom:
         case TileVisual::tortureRoom:        
         case TileVisual::guardRoom:
+        case TileVisual::ghostRoom:
         case TileVisual::infirmaryRoom:
         case TileVisual::templeRoom:
         case TileVisual::herbGardenRoom:
@@ -528,6 +529,9 @@ std::string Tile::tileVisualToString(TileVisual tileVisual)
 
         case TileVisual::guardRoom:
             return "guardRoom";
+
+        case TileVisual::ghostRoom:
+            return "ghostRoom";
 
         case TileVisual::infirmaryRoom:
             return "infirmaryRoom";
@@ -962,6 +966,7 @@ bool Tile::isClaimed() const
             case TileVisual::merchantRoom:
             case TileVisual::tortureRoom:  
             case TileVisual::guardRoom:
+            case TileVisual::ghostRoom:
             case TileVisual::infirmaryRoom:
             case TileVisual::templeRoom:
             case TileVisual::herbGardenRoom:
@@ -1108,6 +1113,9 @@ void Tile::computeTileVisual()
                            case RoomType::torture: 
                                mTileVisual = TileVisual::tortureRoom;
                                return;
+                           case RoomType::ghostRoom:
+                               mTileVisual = TileVisual::ghostRoom;
+                               return;
                            case RoomType::infirmary:
                                mTileVisual = TileVisual::infirmaryRoom;
                                return;
@@ -1210,6 +1218,9 @@ void Tile::computeTileVisual()
                                return;
                            case RoomType::torture: 
                                mTileVisual = TileVisual::tortureRoom;
+                               return;
+                           case RoomType::ghostRoom:
+                               mTileVisual = TileVisual::ghostRoom;
                                return;
                            case RoomType::infirmary:
                                mTileVisual = TileVisual::infirmaryRoom;
@@ -2500,6 +2511,7 @@ double Tile::getCreatureSpeedDefault(const Creature* creature) const
         case TileVisual::merchantRoom:
         case TileVisual::tortureRoom:        
         case TileVisual::guardRoom:
+        case TileVisual::ghostRoom:
         case TileVisual::infirmaryRoom:
         case TileVisual::templeRoom:
         case TileVisual::herbGardenRoom:

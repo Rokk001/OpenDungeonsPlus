@@ -48,6 +48,8 @@ enum class GameEntityType
     herbBundleEntity,
     innkeeperEntity,
     infirmaryShamanEntity,
+    ghostEntity,
+    ghostBoxEntity,
     poolAttendantEntity
 };
 

@@ -224,7 +224,7 @@ assert 'if(getIsOnServerMap())' in start and 'mKoTurnCounter >= 0' not in start,
 assert 'mKoTurnCounter < 0' not in function_body(creature, 'void Creature::notifyDragStart(')
 assert 'getIsOnMap()' in drag and not re.search(r'mKoTurnCounter\s*=\s*0', carry)
 assert 'mIsBeingDragged && (mKoTurnCounter == 0) && isAlive()' in creature
-assert 'if(!getIsOnMap())\n        return;' in creature, 'only a carried creature (off the map) stops the counter'
+assert 'if(!getIsOnMap() && isAlive())\n        return;' in creature, 'only a living carried creature (off the map) stops the counter'
 # let go on the way: a creature knocked out to death keeps lying and does not stand up
 assert 'getKoTurnCounter() < 0' in stop and 'clearDestinations(EntityAnimation::die_anim, false, false)' in stop
 # (3) revive and sleep in the own bed as before: only at the bed, the counter is reset there
