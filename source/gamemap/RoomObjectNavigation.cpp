@@ -309,7 +309,8 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
     {
         // These walkable landmarks are not solid room furniture.
         if(object == interaction || object->getMeshName() == "PortalObject" ||
-            RoomObjectPath::isDungeonHeartMesh(object->getMeshName()))
+            RoomObjectPath::isDungeonHeartMesh(object->getMeshName()) ||
+            RoomObjectPath::isWalkableSpaMesh(object->getMeshName()))
             return;
         for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
         {

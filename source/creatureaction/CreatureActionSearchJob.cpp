@@ -19,6 +19,7 @@
 
 #include "creatureaction/CreatureActionGetFee.h"
 #include "creatureaction/CreatureActionSearchFood.h"
+#include "creatureaction/CreatureActionSearchSpa.h"
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionUseRoom.h"
 #include "creatureaction/CreatureActionCrackBox.h"
@@ -119,6 +120,15 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         {
             creature.popAction();
             creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
+            return true;
+        }
+
+        // If we are in a bad mood or have a hangover, we go to a lava spa unless we have been slapped (the mood check
+        // above lets only the upset creatures through; the others look for the spa when they are idle)
+        if(creature.wantsSpaBath() && !creature.hasActionBeenTried(CreatureActionType::searchSpa))
+        {
+            creature.popAction();
+            creature.pushAction(Utils::make_unique<CreatureActionSearchSpa>(creature));
             return true;
         }
     }
