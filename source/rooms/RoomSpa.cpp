@@ -22,6 +22,7 @@
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/PoolAttendantEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -88,6 +89,9 @@ const double ANGLE_EPSILON = 0.5;
 const std::string STREAM_TAG_PAYER = "SpaPayer";
 //! \brief Line of the room stream with the number of bathers; one line per bather follows.
 const std::string STREAM_TAG_BATHERS = "SpaBathers";
+//! \brief Line of the room stream with the pool attendant: x, y, state, turns left, turns until his next jump, whether
+//! he holds a pool tile and its x and y (everything after the turns left is optional).
+const std::string STREAM_TAG_ATTENDANT = "PoolAttendant";
 
 //! \brief Reads a value of the [Tavern] block of global.cfg.
 //! \param key The key of the value.
@@ -128,6 +132,16 @@ bool batherStateFromString(const std::string& token, SpaBatherState& state)
         return false;
 
     return true;
+}
+
+//! \brief Writes the line of the room stream with the pool attendant.
+//! \param os The stream.
+//! \param save The state of the attendant.
+void writeAttendantLine(std::ostream& os, const PoolAttendantSave& save)
+{
+    os << STREAM_TAG_ATTENDANT << " " << save.mX << " " << save.mY << " " << PoolAttendantStateNames::toString(save.mState)
+       << " " << save.mTurnsLeft << " " << save.mCannonballTurnsLeft << " " << (save.mHasPlace ? 1 : 0) << " "
+       << save.mPlaceX << " " << save.mPlaceY << std::endl;
 }
 
 //! \brief True when the block contains the tile position.
@@ -283,7 +297,9 @@ static RoomRegister reg(new RoomSpaFactory);
 
 RoomSpa::RoomSpa(GameMap* gameMap) :
     Room(gameMap),
-    mPayer(SpaPayer::keeper)
+    mPayer(SpaPayer::keeper),
+    mAttendant(nullptr),
+    mPendingAttendant()
 {
     setMeshName("Room");
 }
@@ -341,6 +357,12 @@ SpaTileSet RoomSpa::getTakenSet() const
                 taken.insert(std::make_pair(bather.mBlock.mX + dx, bather.mBlock.mY + dy));
         }
     }
+
+    // The pool tile the pool attendant holds for his jump is taken too
+    int32_t attendantX = 0;
+    int32_t attendantY = 0;
+    if((mAttendant != nullptr) && mAttendant->getPlace(attendantX, attendantY))
+        taken.insert(std::make_pair(attendantX, attendantY));
 
     // A place a saved room keeps for a creature is taken too
     for(std::map<std::string, RoomSpaPendingBather>::const_iterator it = mPendingBathers.begin(); it != mPendingBathers.end(); ++it)
@@ -532,6 +554,59 @@ Tile* RoomSpa::getSpringboardTile() const
         return nullptr;
 
     return getCoveredTileAt(position);
+}
+
+Tile* RoomSpa::getChairTile() const
+{
+    std::pair<int32_t, int32_t> position;
+    if(!SpaLayout::chairTile(getPoolSet(), position))
+        return nullptr;
+
+    return getCoveredTileAt(position);
+}
+
+bool RoomSpa::hasBatherInPool() const
+{
+    for(const RoomSpaBather& bather : mBathers)
+    {
+        if(!bather.mDone && ((bather.mState == SpaBatherState::bathing) || (bather.mState == SpaBatherState::jumping)))
+            return true;
+    }
+
+    return false;
+}
+
+bool RoomSpa::findAttendantPlace(int32_t& x, int32_t& y) const
+{
+    SpaBlock block;
+    if(!SpaLayout::findFreeBlock(getPoolSet(), getTakenSet(), 1, 1, block))
+        return false;
+
+    x = block.mX;
+    y = block.mY;
+    return true;
+}
+
+bool RoomSpa::isPoolPosition(int32_t x, int32_t y) const
+{
+    const SpaTileSet pool = getPoolSet();
+    return pool.find(std::make_pair(x, y)) != pool.end();
+}
+
+void RoomSpa::playSplashAt(int32_t x, int32_t y)
+{
+    Tile* tile = getCoveredTileAt(std::make_pair(x, y));
+    if(tile == nullptr)
+        return;
+
+    // The splash is an effect of the mud piece of the tile, like the steam
+    std::map<Tile*, BuildingObject*>::iterator it = mBuildingObjects.find(tile);
+    if((it != mBuildingObjects.end()) && (it->second->getMeshName() == SPA_POOL_MESH))
+    {
+        it->second->addParticleEffect(SPA_SPLASH_EFFECT, SPA_SPLASH_TURNS);
+        it->second->fireRefresh();
+    }
+    playSoundAt(tile, SOUND_SPLASH);
 }
 
 bool RoomSpa::isInBlock(const Creature& creature, const SpaBlock& block)
@@ -875,6 +950,19 @@ void RoomSpa::absorbRoom(Room* r)
     mSteamTurnsLeft.insert(other->mSteamTurnsLeft.begin(), other->mSteamTurnsLeft.end());
     other->mSteamTurnsLeft.clear();
 
+    // The room without an attendant takes the one of the other; two attendants are one too many, so the other's goes.
+    // updateActiveSpots puts the attendant on the chair of the merged pool.
+    if((mAttendant == nullptr) && (other->mAttendant != nullptr))
+    {
+        mAttendant = other->mAttendant;
+        other->mAttendant = nullptr;
+        mAttendant->setRoom(this, mAttendant->getChairTile());
+    }
+    else
+    {
+        other->removeAttendant();
+    }
+
     Room::absorbRoom(r);
 }
 
@@ -886,6 +974,14 @@ void RoomSpa::splitRoom(Room& newRoom, const std::vector<Tile*>& tiles)
     // The room that gets the tiles keeps the payer setting of this one, also when the seat changes
     RoomSpa& newSpa = static_cast<RoomSpa&>(newRoom);
     newSpa.mPayer = mPayer;
+
+    // The pool attendant goes with the chair: when its tile changes rooms, he changes owner with it
+    if((mAttendant != nullptr) && (std::find(tiles.begin(), tiles.end(), mAttendant->getChairTile()) != tiles.end()))
+    {
+        newSpa.mAttendant = mAttendant;
+        mAttendant = nullptr;
+        newSpa.mAttendant->setRoom(&newSpa, newSpa.mAttendant->getChairTile());
+    }
 }
 
 bool RoomSpa::removeCoveredTile(Tile* t)
@@ -909,6 +1005,7 @@ bool RoomSpa::removeCoveredTile(Tile* t)
 
 void RoomSpa::removeFromGameMap(GameMap* gameMap)
 {
+    removeAttendant();
     removeRimObjects();
     mSteamTurnsLeft.clear();
     Room::removeFromGameMap(gameMap);
@@ -922,6 +1019,38 @@ void RoomSpa::removeRimObjects()
         rim.mObject->deleteYourself();
     }
     mRimObjects.clear();
+}
+
+void RoomSpa::removeAttendant()
+{
+    if(mAttendant == nullptr)
+        return;
+
+    mAttendant->removeFromRoom();
+    mAttendant = nullptr;
+}
+
+void RoomSpa::placeAttendant()
+{
+    // A room without a chair has no attendant; when the chair moved, he is spawned again on the new one
+    Tile* chair = getChairTile();
+    if(chair == nullptr)
+    {
+        removeAttendant();
+        return;
+    }
+
+    if((mAttendant != nullptr) && (mAttendant->getChairTile() != chair))
+        removeAttendant();
+
+    if(mAttendant != nullptr)
+        return;
+
+    mAttendant = PoolAttendantEntity::spawnOnChair(getGameMap(), this, chair, static_cast<Ogre::Real>(CHAIR_ANGLE));
+    if((mAttendant != nullptr) && mPendingAttendant.mPresent)
+        mAttendant->restoreFromSave(mPendingAttendant.mSave);
+
+    mPendingAttendant = RoomSpaPendingAttendant();
 }
 
 void RoomSpa::addPoolObject(Tile* tile, GameMap* gameMap)
@@ -1039,6 +1168,7 @@ void RoomSpa::updateActiveSpots(GameMap* gameMap)
     // A room without tiles has no pool
     if(mCoveredTiles.empty())
     {
+        removeAttendant();
         removeRimObjects();
         return;
     }
@@ -1074,12 +1204,26 @@ void RoomSpa::updateActiveSpots(GameMap* gameMap)
     }
 
     updateRimObjects(pool, gameMap);
+    placeAttendant();
 }
 
 void RoomSpa::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
     os << STREAM_TAG_PAYER << " " << static_cast<uint32_t>(mPayer) << std::endl;
+
+    // <x> <y> <state> <turnsLeft> <cannonballTurnsLeft> <hasPlace> <placeX> <placeY>: the pool attendant. A loaded room
+    // that has not spawned him yet writes the line it read.
+    if(mAttendant != nullptr)
+    {
+        PoolAttendantSave save;
+        mAttendant->exportSaveData(save);
+        writeAttendantLine(os, save);
+    }
+    else if(mPendingAttendant.mPresent)
+    {
+        writeAttendantLine(os, mPendingAttendant.mSave);
+    }
 
     // <creature> <x> <y> <width> <height> <state> <turnsDone> <jump>: one line for every bather, the places a loaded
     // room still waits for included. A bath that is over is not written.
@@ -1137,6 +1281,27 @@ bool RoomSpa::importFromStream(std::istream& is)
                 return false;
 
             mPayer = static_cast<SpaPayer>(payer);
+        }
+        else if(tag == STREAM_TAG_ATTENDANT)
+        {
+            // The first four values are required, the rest is optional: a line without them gets new jump timers
+            // and no pool tile for a jump
+            std::string rest;
+            std::getline(is, rest);
+            std::istringstream line(rest);
+            std::string stateToken;
+            PoolAttendantSave saved;
+            if(!(line >> saved.mX >> saved.mY >> stateToken >> saved.mTurnsLeft) ||
+               !PoolAttendantStateNames::fromString(stateToken, saved.mState))
+                return false;
+
+            saved.mHasCannonball = static_cast<bool>(line >> saved.mCannonballTurnsLeft);
+            int32_t hasPlace = 0;
+            if(saved.mHasCannonball && (line >> hasPlace >> saved.mPlaceX >> saved.mPlaceY))
+                saved.mHasPlace = (hasPlace != 0);
+
+            mPendingAttendant.mPresent = true;
+            mPendingAttendant.mSave = saved;
         }
         else if(tag == STREAM_TAG_BATHERS)
         {
