@@ -18,6 +18,7 @@
 #include "creatureaction/CreatureActionEatChicken.h"
 
 #include "creatureaction/CreatureActionWalkToTile.h"
+#include "creatureaction/CreatureActionSearchToilet.h"
 #include "entities/ChickenEntity.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -68,8 +69,16 @@ std::function<bool()> CreatureActionEatChicken::action()
         std::ref(mCreature), mChicken);
 }
 
+//! \brief Handles chicken eating, including urgent toilet needs and healing.
 bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntity* chicken)
 {
+    if(creature.needInterrupt(true))
+    {
+        creature.popAction();
+        creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
+        return true;
+    }
+
     if(!creature.decreaseJobCooldown())
         return false;
 
@@ -169,7 +178,8 @@ bool CreatureActionEatChicken::handleEatChicken(Creature& creature, ChickenEntit
     creature.reportEatingWithFriends();
     creature.setJobCooldown(Random::Int(ConfigManager::getSingleton().getRoomConfigUInt32("HatcheryCooldownChickenMin"),
         ConfigManager::getSingleton().getRoomConfigUInt32("HatcheryCooldownChickenMax")));
-    creature.setHP(creature.getHP() + ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHpRecoveredPerChicken"));
+    creature.setHP(creature.getHP() + creature.getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("HatcheryChickenHealSeconds") /
+        ConfigManager::getSingleton().getNaturalFullHealSeconds());
     creature.computeCreatureOverlayHealthValue();
     Ogre::Vector3 walkDirection = chicken->getPosition() - creature.getPosition();
     walkDirection.z = 0;

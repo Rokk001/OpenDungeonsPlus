@@ -378,6 +378,7 @@ void RoomPrison::doUpkeep()
     }
 }
 
+//! \brief Feeds prisoners and heals them according to their maximum health.
 void RoomPrison::feedPrisoners()
 {
     std::vector<Creature*> prisoners;
@@ -439,7 +440,8 @@ void RoomPrison::feedPrisoners()
             continue;
 
         nearest->foodEaten(ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHungerPerChicken"));
-        nearest->setHP(nearest->getHP() + ConfigManager::getSingleton().getRoomConfigDouble("HatcheryHpRecoveredPerChicken"));
+        nearest->setHP(nearest->getHP() + nearest->getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("HatcheryChickenHealSeconds") /
+            ConfigManager::getSingleton().getNaturalFullHealSeconds());
         nearest->computeCreatureOverlayHealthValue();
     }
 }

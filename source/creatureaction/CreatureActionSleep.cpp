@@ -21,6 +21,9 @@
 #include "ODApplication.h"
 
 #include "creatureaction/CreatureActionFindHome.h"
+#include "creatureaction/CreatureActionSearchDrink.h"
+#include "creatureaction/CreatureActionSearchFood.h"
+#include "creatureaction/CreatureActionSearchToilet.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
@@ -37,7 +40,7 @@ std::function<bool()> CreatureActionSleep::action()
         std::ref(mCreature), getNbTurnsActive());
 }
 
-//! \brief Lets the creature sleep; wakefulness and health per turn follow the research of the dormitory it sleeps in.
+//! \brief Lets the creature sleep, heal and wake for urgent needs.
 bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
 {
     if (creature.getHomeTile() == nullptr)
@@ -85,6 +88,19 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
         // A friend in a bed close by makes the sleep more pleasant (checked now and then)
         if((nbTurnsActive % 20) == 0)
             creature.reportSleepingNextToFriends();
+
+        if(creature.needInterrupt(false))
+        {
+            creature.sleepEnded();
+            creature.popAction();
+            if(creature.getUrge() >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
+                creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
+            else if(creature.isHungry())
+                creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
+            else
+                creature.pushAction(Utils::make_unique<CreatureActionSearchDrink>(creature, false));
+            return true;
+        }
 
         // Improve wakefulness
         Room* sleepingRoom = creature.getHomeTile()->getCoveringRoom();
