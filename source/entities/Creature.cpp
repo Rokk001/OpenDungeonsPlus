@@ -695,6 +695,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mSpaMood                 (0.0),
     mRelaxTurns              (0.0),
     mSpaMudTilesLeft         (0),
+    mSpaBathing              (false),
     mJumpFrom                (Ogre::Vector3::ZERO),
     mJumpTo                  (Ogre::Vector3::ZERO),
     mJumpTurns               (0),
@@ -833,6 +834,7 @@ Creature::Creature(GameMap* gameMap) :
     mSpaMood                 (0.0),
     mRelaxTurns              (0.0),
     mSpaMudTilesLeft         (0),
+    mSpaBathing              (false),
     mJumpFrom                (Ogre::Vector3::ZERO),
     mJumpTo                  (Ogre::Vector3::ZERO),
     mJumpTurns               (0),
@@ -8551,13 +8553,14 @@ bool Creature::wantsSpaBath() const
     return (mood == CreatureMoodLevel::Upset) || (mood == CreatureMoodLevel::Angry) || (mood == CreatureMoodLevel::Furious);
 }
 
-//! \brief Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down by 1 per turn.
+//! \brief Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down by 1 per turn. The mood does not fade
+//! while the creature sits in a bath (the bath lifts it exactly to SpaMoodMax).
 void Creature::upkeepSpaState()
 {
     if((mSpaMood <= 0.0) && (mRelaxTurns <= 0.0))
         return;
 
-    if(mSpaMood > 0.0)
+    if((mSpaMood > 0.0) && !mSpaBathing)
         mSpaMood = std::max(0.0, mSpaMood - ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodDecayPerTurn"));
 
     if(mRelaxTurns > 0.0)
@@ -9604,6 +9607,7 @@ void Creature::changeSeat(Seat* newSeat)
     mSpaMood = 0.0;
     mRelaxTurns = 0.0;
     mSpaMudTilesLeft = 0;
+    mSpaBathing = false;
     mUrge = 0.0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;

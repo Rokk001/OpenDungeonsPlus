@@ -468,7 +468,10 @@ bool RoomSpa::addCreatureUsingRoom(Creature* creature)
 
     mBathers.push_back(bather);
     if(fromSave && (bather.mState == SpaBatherState::bathing))
+    {
+        creature->setSpaBathing(true);
         creature->setAnimationState(EntityAnimation::bathe_anim, true, Ogre::Vector3::ZERO, false);
+    }
 
     return true;
 }
@@ -487,6 +490,7 @@ void RoomSpa::removeCreatureUsingRoom(Creature* creature)
     if(it->mState == SpaBatherState::jumping)
         creature->cancelJump();
 
+    creature->setSpaBathing(false);
     mBathers.erase(it);
 }
 
@@ -658,6 +662,7 @@ void RoomSpa::startBath(RoomSpaBather& bather)
 {
     bather.mState = SpaBatherState::bathing;
     bather.mTurnsDone = 0.0;
+    bather.mCreature->setSpaBathing(true);
     bather.mCreature->setAnimationState(EntityAnimation::bathe_anim, true, Ogre::Vector3::ZERO, false);
 }
 
@@ -682,6 +687,7 @@ void RoomSpa::finishBath(RoomSpaBather& bather)
     creature->setSpaMudTilesLeft(static_cast<int32_t>(config.getRoomConfigUInt32("SpaMudTrailTiles")));
     sendBathFinished(*creature);
     bather.mDone = true;
+    creature->setSpaBathing(false);
     creature->setAnimationState(EntityAnimation::idle_anim, true);
 }
 
@@ -761,6 +767,7 @@ void RoomSpa::abortDisturbedBathers()
             if(it->mState == SpaBatherState::jumping)
                 it->mCreature->cancelJump();
 
+            it->mCreature->setSpaBathing(false);
             it = mBathers.erase(it);
             continue;
         }

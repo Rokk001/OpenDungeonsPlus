@@ -1046,6 +1046,12 @@ public:
     inline void cancelJump()
     { mJumpTurnsLeft = 0; }
 
+    //! \brief Server side. Marks whether the creature sits in a lava spa bath. While it does, the spa mood does not
+    //! fade (the bath lifts it exactly to SpaMoodMax); it fades again as soon as the bath is over or broken off.
+    //! \param bathing True while the bath runs.
+    inline void setSpaBathing(bool bathing)
+    { mSpaBathing = bathing; }
+
     //! \brief Client side. Starts the arc that the server told: the clip Jump and the interpolated position.
     //! \param from The start of the jump.
     //! \param to The landing point.
@@ -1798,6 +1804,8 @@ private:
     double          mRelaxTurns;
     //! \brief Number of tiles outside a pool that still get mud after a bath.
     int32_t         mSpaMudTilesLeft;
+    //! \brief Runtime only (not saved): true while the creature sits in a lava spa bath, the spa mood does not fade then.
+    bool            mSpaBathing;
     //! \brief Runtime only (not saved): start of the running jump.
     Ogre::Vector3   mJumpFrom;
     //! \brief Runtime only (not saved): landing point of the running jump.
