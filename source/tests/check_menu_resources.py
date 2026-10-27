@@ -361,15 +361,15 @@ def check_menu_lighting(root):
         assert values[9] > 0 and values[10] == values[11] == 0 and values[12] > 0, name + " must follow the authored inverse-square falloff"
     # Original warm bowl, gate and green spire samples cover both colour families and distinct ranges.
     authored = {
-        "LeftFire": ((1.7, 0.48, 0.065), (0.51, 0.144, 0.0195), 19, 0.045, 0.028),
-        "GateFire": ((1, 0.19, 0.018), (0.30, 0.057, 0.0054), 14, 0.065, 0.055),
-        "SpireLight": ((0.025, 0.95, 0.07), (0.0075, 0.285, 0.021), 35, 0.035, 0.012),
+        "LeftFire": ((1.7, 0.48, 0.065), (0.51, 0.144, 0.0195), 19, 0.045, 0.028, 26),
+        "GateFire": ((1, 0.19, 0.018), (0.30, 0.057, 0.0054), 14, 0.065, 0.055, 18),
+        "SpireLight": ((0.025, 0.95, 0.07), (0.0075, 0.285, 0.021), 35, 0.035, 0.012, 28),
     }
-    for name, (diffuse, specular, light_range, linear, quadratic) in authored.items():
+    for name, (diffuse, specular, light_range, linear, quadratic, cutoff) in authored.items():
         actual = lights[name]
         reference = light_range / 2
         attenuation = 1 + linear * reference + quadratic * reference ** 2
-        assert actual[9] == light_range, name + " changed its authored range"
+        assert actual[9] == cutoff, name + " changed its tuned range"
         assert all(math.isclose(value, original * gain, rel_tol=1e-10)
                    for value, original in zip(actual[3:9], diffuse + specular)), name + " changed its authored colour or exposure"
         for distance in (reference / 4, reference, reference * 1.5):

@@ -391,8 +391,8 @@ material MenuPuddle : MenuWetStone
 material MenuMoss : MenuStone
 {
     technique { pass lighting {
-        ambient 0.045 0.055 0.028 1
-        diffuse 0.045 0.055 0.028 1
+        ambient 0.052 0.052 0.032 1
+        diffuse 0.052 0.052 0.032 1
         specular 0.012 0.012 0.008 1 5
     } }
 }
@@ -401,8 +401,8 @@ material MenuMoss : MenuStone
 material MenuLichen : MenuStone
 {
     technique { pass lighting {
-        ambient 0.075 0.071 0.041 1
-        diffuse 0.075 0.071 0.041 1
+        ambient 0.08 0.07 0.05 1
+        diffuse 0.08 0.07 0.05 1
         specular 0.012 0.012 0.010 1 5
     } }
 }
@@ -499,7 +499,7 @@ material MenuEmberCrack
 {
     technique { pass { ambient 0 0 0 1
         diffuse 0 0 0 1
-        emissive 0.8 0.06 0.003
+        emissive 0.8 0.2 0.01
     } }
 }
 
