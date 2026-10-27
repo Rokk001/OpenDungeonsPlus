@@ -44,12 +44,16 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 - Never cite another game, its publisher or any outside source for rules, values or names
   in code, comments, docs, commits, branch names or PR texts.
 - Data from commercial games used for local testing stays outside the repository
-  (`..\OpenDungeonsPlus-private`) and is never committed.
+  (`G:\Moreya-Internal\medien\`) and is never committed.
 - Every new asset needs a `CREDITS` entry with source and licence in the same commit;
   AI-generated assets are marked as such.
 - `scripts/check-protected-content.py` checks pushes against these rules. Install it once
   per clone as the `pre-push` hook (a small wrapper in the shared hooks directory that
   calls the script); it needs a local term list and blocks the push if that list is missing.
+
+## Binary and large archive files
+
+- Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset of the OpenDungeonsPlus repo) are never stored in a Git repository or kept locally. After integration they are moved to G:\Moreya-Internal\medien\<plan folder>\ (Unraid share, mapped as G: on laptop and VM). Blender agents open and save .blend files directly there. Text files (plans, state files, scripts, configs) live in the private repo C:\Users\mario\GitHub\Moreya-Internal.
 
 ## Load tests
 
