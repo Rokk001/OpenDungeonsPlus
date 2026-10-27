@@ -18,6 +18,7 @@
 #ifndef ROOMSPA_H
 #define ROOMSPA_H
 
+#include "entities/PoolAttendantState.h"
 #include "rooms/Room.h"
 #include "rooms/RoomSpaLayout.h"
 #include "rooms/RoomType.h"
@@ -30,6 +31,7 @@
 
 class BuildingObject;
 class Creature;
+class PoolAttendantEntity;
 class Tile;
 enum class TileVisual;
 
@@ -101,6 +103,21 @@ struct RoomSpaPendingBather
     double mTurnsDone;
     //! True when the bather was to jump before the bath.
     bool mJump;
+};
+
+//! \brief The pool attendant read from a saved room; it is spawned again in the first update of the room.
+struct RoomSpaPendingAttendant
+{
+    //! \brief Creates an empty record: the saved room had no attendant line.
+    RoomSpaPendingAttendant() :
+        mPresent(false),
+        mSave()
+    {}
+
+    //! True when the room stream had a PoolAttendant line.
+    bool mPresent;
+    //! The saved state of the attendant.
+    PoolAttendantSave mSave;
 };
 
 //! \brief A piece of the pool rim: a stone edge on a pool tile, turned to the side where the pool ends. Several can
@@ -223,6 +240,41 @@ public:
     //! \param creature The creature that has bathed.
     static void sendBathFinished(Creature& creature);
 
+    //! \brief The tile of the pool attendant's chair, nullptr when the room has no pool or does not cover that tile.
+    Tile* getChairTile() const;
+
+    //! \brief The tile of the springboard, nullptr when the room has no pool or does not cover that tile.
+    Tile* getSpringboardTile() const;
+
+    //! \brief True while somebody is in the air or in the mud of the pool (the attendant whistles only then).
+    bool hasBatherInPool() const;
+
+    //! \brief Finds a free pool tile for a jump of the pool attendant: the first pool tile in the order of smaller
+    //! y, then smaller x that no bather has or has reserved.
+    //! \param x Set to the x of the tile.
+    //! \param y Set to the y of the tile.
+    //! \return False when no pool tile is free.
+    bool findAttendantPlace(int32_t& x, int32_t& y) const;
+
+    //! \brief True when the position is a pool tile of this room.
+    //! \param x The x of the tile.
+    //! \param y The y of the tile.
+    bool isPoolPosition(int32_t x, int32_t y) const;
+
+    //! \brief Shows the splash of a landing on a pool tile (mud splash effect and sound) for the keepers that see it.
+    //! \param x The x of the pool tile.
+    //! \param y The y of the pool tile.
+    void playSplashAt(int32_t x, int32_t y);
+
+    //! \brief Returns the pool attendant (server side), nullptr while there is none.
+    inline PoolAttendantEntity* getAttendant() const
+    { return mAttendant; }
+
+    //! \brief Plays a sound on a tile for the keepers that see it.
+    //! \param tile The tile of the sound; nothing happens if it is null.
+    //! \param family The sound family.
+    static void playSoundAt(Tile* tile, const std::string& family);
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
 
@@ -258,9 +310,6 @@ private:
     //! \brief The covered tile at the position, nullptr when the room does not cover it.
     //! \param position The tile position.
     Tile* getCoveredTileAt(const std::pair<int32_t, int32_t>& position) const;
-
-    //! \brief The tile of the springboard, nullptr when the room has no pool or does not cover that tile.
-    Tile* getSpringboardTile() const;
 
     //! \brief True when the creature stands on one of the tiles of the block.
     //! \param creature The bather.
@@ -303,11 +352,6 @@ private:
     //! \brief Binds the bathers read from a saved room to their creatures again.
     void resumeLoadedBathers();
 
-    //! \brief Plays a sound on a tile for the keepers that see it.
-    //! \param tile The tile of the sound; nothing happens if it is null.
-    //! \param family The sound family.
-    static void playSoundAt(Tile* tile, const std::string& family);
-
     //! \brief Server side. Creates a pool piece on a tile and adds the steam to it.
     //! \param tile The tile of the piece.
     //! \param gameMap The map.
@@ -318,6 +362,13 @@ private:
 
     //! \brief Server side. Removes all the rim pieces.
     void removeRimObjects();
+
+    //! \brief Server side. Takes the pool attendant off the map; does nothing without one.
+    void removeAttendant();
+
+    //! \brief Server side. Makes sure there is a pool attendant on the chair: spawns one (the saved one of a loaded
+    //! room) or spawns it again when the chair moved; a room without a chair has none.
+    void placeAttendant();
 
     //! \brief Server side. Makes the rim pieces right: one on a pool tile for every side that borders a tile which is
     //! not part of the pool.
@@ -343,6 +394,10 @@ private:
     std::vector<RoomSpaRim> mRimObjects;
     //! \brief Turns until the steam of a pool piece has to be renewed, by pool tile (server side only, not saved).
     std::map<Tile*, uint32_t> mSteamTurnsLeft;
+    //! \brief The pool attendant on the chair (server side only); the entity is not saved, the room saves it.
+    PoolAttendantEntity* mAttendant;
+    //! \brief The attendant read from a saved room until the first update spawns it.
+    RoomSpaPendingAttendant mPendingAttendant;
 };
 
 #endif // ROOMSPA_H

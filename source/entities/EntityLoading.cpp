@@ -25,6 +25,7 @@
 #include "entities/DirtPileEntity.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/InnkeeperEntity.h"
+#include "entities/PoolAttendantEntity.h"
 #include "entities/HerbBundleEntity.h"
 #include "entities/MapLight.h"
 #include "entities/MissileObject.h"
@@ -258,6 +259,11 @@ GameEntity* getGameEntityFromPacket(GameMap* gameMap, ODPacket& is)
             entity = InnkeeperEntity::getInnkeeperEntityFromPacket(gameMap, is);
             break;
         }        
+        case GameEntityType::poolAttendantEntity:
+        {
+            entity = PoolAttendantEntity::getPoolAttendantEntityFromPacket(gameMap, is);
+            break;
+        }
         default:
         {
             OD_LOG_ERR("Unknown enum value : " + Helper::toString(static_cast<int>(type)));
