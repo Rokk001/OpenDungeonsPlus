@@ -100,6 +100,8 @@ std::string getPostCategoryName(PostCategory category)
             return "drunk";
         case PostCategory::Hungover:
             return "hungover";
+        case PostCategory::Relaxed:
+            return "relaxed";
         default:
             return "";
     }

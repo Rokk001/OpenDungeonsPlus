@@ -124,7 +124,7 @@ assert 'startDefeatSequence(conquerorSeatId, heartTileX, heartTileY)' in handler
 assert 'ModeManager::GAME' in handler
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert enum_body.rstrip().endswith('tavernPayer') and enum_body.index('tavernWindow') < enum_body.index('tavernPayer')
+assert enum_body.rstrip().endswith('creatureJump') and enum_body.index('tavernWindow') < enum_body.index('tavernPayer') < enum_body.index('spaPayer') < enum_body.index('creatureJump')
 enum_body = enum_body[:enum_body.index('Answer to askTavernWindow')].rsplit('//!', 1)[0].rstrip().rstrip(',')
 assert 'playerDefeated,' in enum_body and 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-5:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings']
 assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')

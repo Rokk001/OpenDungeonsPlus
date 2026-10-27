@@ -107,6 +107,13 @@
             <Property name="TooltipText" value="Build a casino" />
             <Property name="InheritsAlpha" value="False" />
         </Window>
+        <Window type="OD/GameTabButton" name="SpaButton" >
+            <Property name="Area" value="{{0,504},{0,94},{0,556},{0,146}}" />
+            <Property name="Visible" value="False" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/SpaButton" />
+            <Property name="TooltipText" value="Build a lava spa" />
+            <Property name="InheritsAlpha" value="False" />
+        </Window>
         <Window type="OD/GameTabButton" name="TortureButton" >
             <Property name="Area" value="{{0,244},{0,62},{0,296},{0,114}}" />
             <Property name="Visible" value="False" />

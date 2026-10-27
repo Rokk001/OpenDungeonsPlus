@@ -2112,8 +2112,8 @@ private:
     void upkeepSpaState();
 
     //! \brief Server side. Tells the clients that see the creature about the jump that has just started
-    //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed). The notification type is added
-    //! by the interface package; until then this does nothing.
+    //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed); seats without a human
+    //! player are skipped.
     void sendJumpNotification();
 
     //! \brief The position on the arc of a jump.

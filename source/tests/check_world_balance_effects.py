@@ -70,6 +70,7 @@ EXPECTED = [
     ("keeperHeartMending", "HeartHeal", "mul", "1.698", "2.474", "6.0"),
     ("keeperManaFlow", "HeartMana", "mul", "1.1", "1.2", "1.3"),
     ("tavernBeer", "PortalCooldown", "mul", "1.0", "0.9", "0.8"),
+    ("roomSpa", "RelaxTime", "mul", "1.0", "1.2", "1.4"),
     ("spellSummonWorker", "Price", "mul", "1.0", "0.9", "0.8"),
     ("spellCreatureHeal", "HealPerTurn", "mul") + DAMAGE,
     ("spellCreatureHaste", "Speed", "mul", "1.0", "1.1", "1.2"),
@@ -89,18 +90,18 @@ EXPECTED = [
     ("spellHexenHen", "Duration", "mul", "1.0", "1.25", "1.5"),
     ("spellCreateGold", "Gold", "mul", "1.0", "1.25", "1.5"),
 ]
-assert len(EXPECTED) == 65, "the plan table has 65 lines (rows with several skill types count once per skill type)"
+assert len(EXPECTED) == 66, "the plan table has 66 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
 skills_cfg = read("config/skills.cfg")
 block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
 lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 65, "one line per effect: %d" % len(lines)
+assert len(lines) == 66, "one line per effect: %d" % len(lines)
 for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
 skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
-assert len(skill_names) == 62
+assert len(skill_names) == 63
 assert {line[0] for line in lines} <= skill_names, "every line names one of the 62 skills"
 header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
 assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
@@ -243,7 +244,7 @@ texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "
          "HeartHeal": "Heart healing per second", "HeartMana": "Heart mana per second", "Price": "Price",
          "HealPerTurn": "Healing per turn", "Speed": "Speed", "Bonus": "Defense bonus", "Factor": "Factor",
          "Lifetime": "Duration", "ManaPerSecond": "Mana per second", "Gold": "Gold",
-         "PortalCooldown": "Portal cooldown", "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort"}
+         "PortalCooldown": "Portal cooldown", "RelaxTime": "Relaxation time", "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort"}
 assert set(texts) == effect_names, "the plan names a text for every effect"
 for effect, text in texts.items():
     text_key = ('"' + effect + '"') if effect in {"GrowTime", "BrewTime", "CrackTime"} else ("ResearchEffect::" + effect)

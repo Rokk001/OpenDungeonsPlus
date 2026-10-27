@@ -29,6 +29,7 @@ EXPECTED = [
     ("Rooms", 2, "roomCasino", "CasinoButton", ["roomTreasury"]),
     ("Rooms", 2, "roomToilet", "ToiletButton", ["roomDormitory"]),
     ("Rooms", 2, "tavernBeer", "BeerButton", ["roomTavern"]),
+    ("Rooms", 2, "roomSpa", "SpaButton", ["roomTavern"]),
     ("Rooms", 3, "roomArena", "ArenaButton", ["roomTrainingHall"]),
     ("Rooms", 3, "roomPrison", "PrisonButton", ["roomGuardRoom"]),
     ("Rooms", 3, "roomCrypt", "CryptButton", ["roomLibrary"]),
@@ -82,7 +83,7 @@ EXPECTED = [
 ]
 TIER_COST = {1: 100, 2: 250, 3: 600, 4: 1500}
 FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary", "roomTavern", "spellSummonWorker"]
-TAB_TOTALS = {"Rooms": 71250, "Traps": 82250, "Spells": 84950}
+TAB_TOTALS = {"Rooms": 73000, "Traps": 82250, "Spells": 84950}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
@@ -92,7 +93,7 @@ KEEPERS = {
     "tavernBeer": ("BeerButton", "Tavern: Beer", "Rooms"),
 }
 
-assert len(EXPECTED) == 62, "the tree has 62 entries"
+assert len(EXPECTED) == 63, "the tree has 63 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree

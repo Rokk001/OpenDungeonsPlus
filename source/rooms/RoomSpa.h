@@ -218,8 +218,8 @@ public:
     //! \param tile The tile to test; null is no pool tile.
     static bool isPoolTile(const Tile* tile);
 
-    //! \brief Server side. The bath of a creature is over (relaxation, no hangover, mud). Tells the interface package
-    //! to write the post of the creature; until that package is there this does nothing.
+    //! \brief Server side. The bath of a creature is over (relaxation, no hangover, mud). Tells the keepers that see
+    //! it and the keeper of the creature through a cosmetic event, so that the post Relaxed of the creature is written.
     //! \param creature The creature that has bathed.
     static void sendBathFinished(Creature& creature);
 

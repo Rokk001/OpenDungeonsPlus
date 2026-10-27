@@ -118,7 +118,7 @@ assert ('createSkill(mSkills, SkillType::tavernBeer, std::vector<SkillType>{Skil
 constructor = manager[manager.index('SkillManager::SkillManager()'):manager.index('SkillManager::~SkillManager()')]
 registered = re.findall(r'createSkill\(mSkills, SkillType::(\w+),', constructor)
 assert registered.count('roomTavern') == 1 and registered.count('tavernBeer') == 1
-assert len(registered) == 62, 'the research tree has 62 entries, found ' + str(len(registered))
+assert len(registered) == 63, 'the research tree has 63 entries, found ' + str(len(registered))
 assert registered.index('roomCasino') < registered.index('tavernBeer'), 'Beer follows the casino in the tier II row'
 assert 'KEEPER_TITLE_BEER = "Beer"' in manager and 'Your taverns serve beer.' in manager
 assert 'ResearchEffect::PortalCooldown' in manager or '"PortalCooldown"' in manager

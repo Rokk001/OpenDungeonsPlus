@@ -67,6 +67,7 @@
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomTavern.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomSpa.h"
 #include "rooms/RoomType.h"
 #include "sound/MusicPlayer.h"
 #include "sound/SoundEffectsManager.h"
@@ -396,6 +397,8 @@ static bool tileMatchesRoomType(const Tile& tile, RoomType type)
             return tile.getTileVisual() == TileVisual::toiletRoom;
         case RoomType::tavern:
             return tile.getTileVisual() == TileVisual::tavernRoom;
+        case RoomType::spa:
+            return tile.getTileVisual() == TileVisual::spaRoom;
         default:
             return false;
     }
@@ -446,6 +449,9 @@ GameMode::GameMode(ModeManager *modeManager):
     mTavernX(-1),
     mTavernY(-1),
     mTavernPayer(0),
+    mSpaX(-1),
+    mSpaY(-1),
+    mSpaPayer(0),
     showTileDebugWindow(false),
     config(ConfigManager::getSingleton())
 {
@@ -587,6 +593,20 @@ GameMode::GameMode(ModeManager *modeManager):
         guiSheet->getChild("TavernWindow/PayerButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&GameMode::cycleTavernPayer, this)
+        )
+    );
+
+    //Spa window
+    addEventConnection(
+        guiSheet->getChild("SpaWindow")->subscribeEvent(
+            CEGUI::FrameWindow::EventCloseClicked,
+            CEGUI::Event::Subscriber(&GameMode::hideSpaWindow, this)
+        )
+    );
+    addEventConnection(
+        guiSheet->getChild("SpaWindow/SpaPayerButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked,
+            CEGUI::Event::Subscriber(&GameMode::cycleSpaPayer, this)
         )
     );
 
@@ -941,6 +961,7 @@ void GameMode::activate()
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
     guiSheet->getChild("TavernWindow")->hide();
+    guiSheet->getChild("SpaWindow")->hide();
     hideMerchantWindow();
     guiSheet->getChild("PlayerSettingsWindow")->hide();
     guiSheet->getChild("SkillTreeWindow")->hide();
@@ -1599,6 +1620,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
            (room->getSeat() == localPlayer->getSeat()))
         {
             showTavernWindow(tileClicked);
+            return true;
+        }
+    }
+
+    // Clicking on one of our lava spas opens its window
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
+    {
+        Room* room = tileClicked->getCoveringRoom();
+        Player* localPlayer = mGameMap->getLocalPlayer();
+        if((room != nullptr) && (localPlayer != nullptr) && (room->getType() == RoomType::spa) &&
+           (room->getSeat() == localPlayer->getSeat()))
+        {
+            showSpaWindow(tileClicked);
             return true;
         }
     }
@@ -2836,6 +2870,60 @@ void GameMode::setTavernPayerShown(int tileX, int tileY, uint32_t payer)
     if(payer == static_cast<uint32_t>(TavernPayer::creature))
         payerText = "Creatures pay";
     mRootWindow->getChild("TavernWindow/PayerButton")->setText(payerText);
+}
+
+//! \brief Opens the lava spa window for the clicked tile and asks the server who pays for a bath.
+void GameMode::showSpaWindow(Tile* tile)
+{
+    mSpaX = tile->getX();
+    mSpaY = tile->getY();
+    mRootWindow->getChild("SpaWindow")->show();
+
+    // The payer is kept by the server, so we ask it what it currently is (isSet false: nothing is changed)
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askSpaPayer);
+    clientNotification->mPacket << mSpaX << mSpaY << static_cast<uint32_t>(SpaPayer::keeper) << false;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+}
+
+//! \brief Closes the lava spa window.
+bool GameMode::hideSpaWindow(const CEGUI::EventArgs&)
+{
+    mRootWindow->getChild("SpaWindow")->hide();
+    mSpaX = -1;
+    mSpaY = -1;
+    return true;
+}
+
+//! \brief Asks the server for the other payer; the button shows the answer.
+bool GameMode::cycleSpaPayer(const CEGUI::EventArgs&)
+{
+    uint32_t nextPayer = static_cast<uint32_t>(SpaPayer::keeper);
+    if(mSpaPayer == static_cast<uint32_t>(SpaPayer::keeper))
+        nextPayer = static_cast<uint32_t>(SpaPayer::creature);
+    ClientNotification* clientNotification = new ClientNotification(
+        ClientNotificationType::askSpaPayer);
+    clientNotification->mPacket << mSpaX << mSpaY << nextPayer << true;
+    ODClient::getSingleton().queueClientNotification(clientNotification);
+    return true;
+}
+
+//! \brief Shows the answer of the server about the lava spa the window is open for: the price and who pays.
+void GameMode::setSpaWindowShown(int tileX, int tileY, uint32_t payer, double bathPrice)
+{
+    if((tileX != mSpaX) || (tileY != mSpaY))
+        return;
+
+    if(payer > static_cast<uint32_t>(SpaPayer::creature))
+        return;
+
+    mSpaPayer = payer;
+    std::string priceText = "Bath: " + Helper::toString(static_cast<int32_t>(bathPrice + 0.5)) + " gold";
+    mRootWindow->getChild("SpaWindow/SpaPriceText")->setText(priceText);
+    std::string payerText = "Keeper pays";
+    if(payer == static_cast<uint32_t>(SpaPayer::creature))
+        payerText = "Creatures pay";
+    mRootWindow->getChild("SpaWindow/SpaPayerButton")->setText(payerText);
 }
 
 bool GameMode::toggleSandboxWindow(const CEGUI::EventArgs&)
