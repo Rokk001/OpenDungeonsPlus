@@ -353,6 +353,9 @@ bool RoomAlchemyLab::useRoom(Creature& creature, bool forced)
     creature.setAnimationState(EntityAnimation::attack_anim, true);
     cauldron->setAnimationState("Triggered", true);
     data.mDone += 1.0/ODApplication::turnsPerSecond;
+    // One work turn gives experience on the training hall level
+    creature.receiveExp(ConfigManager::getSingleton().getRoomConfigDouble("JobXpPerTurn")
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit) * getDirtOutputFactor());
     if(data.mDone < brewSeconds(*potion))
         return false;
     ItemBagEntity* bag = new ItemBagEntity(getGameMap(), ItemInstance::createPotion(data.mPotion));

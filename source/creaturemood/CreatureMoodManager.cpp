@@ -103,6 +103,8 @@ double CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatur
     moodValue += ItemEffects::moodModifier(creature, dirtMood.computeMood(creature));
     // Creatures of the same keeper that it hates (only with relationships on)
     moodValue += ItemEffects::moodModifier(creature, creature.getRelationshipMood());
+    // The mood the prison and the torture chamber took from a captured creature
+    moodValue += creature.getPrisonMood() + creature.getTortureMood();
     moodValue += creature.getItemEffect("Charisma");
 
     return moodValue;

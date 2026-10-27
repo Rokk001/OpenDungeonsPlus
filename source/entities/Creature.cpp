@@ -96,6 +96,7 @@
 #include "game/Player.h"
 #include "game/ItemDrops.h"
 #include "game/Skill.h"
+#include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
@@ -380,6 +381,11 @@ static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
 static const std::string SPA_SAVE_OPEN = "[Spa]";
 //! \brief Tag that closes the block of the lava spa state.
 static const std::string SPA_SAVE_CLOSE = "[/Spa]";
+//! \brief Tag that opens the optional block of the captivity state (prison mood, torture mood, broken turns in the
+//! prison and in the torture chamber, arena knock-out flag) at the end of a saved creature. Missing means all 0.
+static const std::string CAPTIVITY_SAVE_OPEN = "[Captivity]";
+//! \brief Tag that closes the block of the captivity state.
+static const std::string CAPTIVITY_SAVE_CLOSE = "[/Captivity]";
 //! \brief Factor of the parabola that gives the height of a jump: 4 x p x (1 - p) is 1 at the apex.
 static const Ogre::Real JUMP_ARC_FACTOR = 4.0f;
 //! \brief The highest value of the thirst and of the drunkenness (both go from 0 to this value).
@@ -741,6 +747,11 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mSeatPrison              (nullptr),
     mNbTurnsTorture          (0),
     mNbTurnsPrison           (0),
+    mTortureMood             (0.0),
+    mPrisonMood              (0.0),
+    mTortureBrokenTurns      (0),
+    mPrisonBrokenTurns       (0),
+    mArenaKnockOut           (false),
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
@@ -887,6 +898,11 @@ Creature::Creature(GameMap* gameMap) :
     mSeatPrison              (nullptr),
     mNbTurnsTorture          (0),
     mNbTurnsPrison           (0),
+    mTortureMood             (0.0),
+    mPrisonMood              (0.0),
+    mTortureBrokenTurns      (0),
+    mPrisonBrokenTurns       (0),
+    mArenaKnockOut           (false),
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
@@ -1066,6 +1082,7 @@ std::string Creature::getCreatureStreamFormat()
             "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]\t[Wages missedWages /Wages]"
             "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]"
             "\t[Spa spaMood relaxTurns mudTilesLeft /Spa]"
+            "\t[Captivity prisonMood tortureMood prisonBrokenTurns tortureBrokenTurns arenaKnockOut /Captivity]"
             "\t[Corpse corpseTurns decayTurns /Corpse]";
 
     return format;
@@ -1154,6 +1171,14 @@ void Creature::exportToStream(std::ostream& os) const
     {
         os << "\t" << SPA_SAVE_OPEN << " " << mSpaMood << " " << mRelaxTurns << " " << mSpaMudTilesLeft << " "
            << SPA_SAVE_CLOSE;
+    }
+
+    // Optional captivity block; missing in old saves and when all its values are 0
+    if((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0) ||
+       mArenaKnockOut)
+    {
+        os << "	" << CAPTIVITY_SAVE_OPEN << " " << mPrisonMood << " " << mTortureMood << " " << mPrisonBrokenTurns
+           << " " << mTortureBrokenTurns << " " << (mArenaKnockOut ? 1 : 0) << " " << CAPTIVITY_SAVE_CLOSE;
     }
     if(!isAlive())
     {
@@ -1399,6 +1424,30 @@ bool Creature::importFromStream(std::istream& is)
             setSpaMood(loadedSpaMood);
             setRelaxTurns(loadedRelaxTurns);
             setSpaMudTilesLeft(loadedMudTilesLeft);
+            continue;
+        }
+
+        if(appearanceToken == CAPTIVITY_SAVE_OPEN)
+        {
+            std::string captivityClose;
+            double loadedPrisonMood = 0.0;
+            double loadedTortureMood = 0.0;
+            int32_t loadedPrisonBrokenTurns = 0;
+            int32_t loadedTortureBrokenTurns = 0;
+            int32_t loadedArenaKnockOut = 0;
+            if(!(is >> loadedPrisonMood >> loadedTortureMood >> loadedPrisonBrokenTurns >> loadedTortureBrokenTurns
+                >> loadedArenaKnockOut >> captivityClose) || (captivityClose != CAPTIVITY_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid captivity block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + captivityClose
+                    + "' instead of '" + CAPTIVITY_SAVE_CLOSE + "'"));
+                return false;
+            }
+            mPrisonMood = loadedPrisonMood;
+            mTortureMood = loadedTortureMood;
+            mPrisonBrokenTurns = loadedPrisonBrokenTurns;
+            mTortureBrokenTurns = loadedTortureBrokenTurns;
+            mArenaKnockOut = (loadedArenaKnockOut != 0);
             continue;
         }
 
@@ -2524,6 +2573,8 @@ void Creature::doUpkeep()
             // it is not standing on a jail. It is free
             mSeatPrison = nullptr;
             mNeedFireRefresh = true;
+            resetPrisonMood();
+            resetTortureMood();
         }
     }
 
@@ -2645,6 +2696,14 @@ void Creature::doUpkeep()
         if(mKoTurnCounter > 0)
             return;
 
+        // The loser of an arena fight gets up with ArenaGetUpHpShare of its max HP and looks after itself in its bed
+        if(mArenaKnockOut)
+        {
+            mArenaKnockOut = false;
+            setHP(getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("ArenaGetUpHpShare"));
+            sleep();
+        }
+
         if(!getGameMap()->isInEditorMode())
             setAnimationState(EntityAnimation::getup_anim, false,
                 Ogre::Vector3::ZERO, false);
@@ -2714,8 +2773,9 @@ void Creature::doUpkeep()
             deleteYourself();
             return;
         }
-        // The corpse dirties the tile it lies on, never the tile under a carrying worker.
-        if(getIsOnServerMap() && !mIsCarried)
+        // The corpse dirties the tile it lies on, never the tile under a carrying worker. An undead creature leaves
+        // no corpse.
+        if(getIsOnServerMap() && !mIsCarried && !getDefinition()->isUndead())
             dirtyTileByCorpse();
 
         if(mDeathCounter == 0)
@@ -2723,13 +2783,16 @@ void Creature::doUpkeep()
             OD_LOG_INF("Creature=" + getName() + " RIP");
             dropCarriedEquipment();
 
-            // The fight leaves blood on the tile where the creature fell.
-            if(getIsOnServerMap() && (getPositionTile() != nullptr))
+            // The fight leaves blood on the tile where the creature fell (an undead creature has no blood).
+            if(getIsOnServerMap() && (getPositionTile() != nullptr) && !getDefinition()->isUndead())
                 DirtPileEntity::createOnTile(getGameMap(), getPositionTile(), DirtPileKind::blood, getDefinition()->getClassName());
 
             if(getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
                 getSeat()->getPlayer()->notifyCreatureKilled(*this);
-            if(getIsOnServerMap() && !getDefinition()->isWorker())
+            // An undead creature leaves no ghost; some fall apart in an effect of their own (DeathVanishEffect)
+            if(getIsOnServerMap() && !getDefinition()->getDeathVanishEffect().empty() && (getPositionTile() != nullptr))
+                Spell::fireSpellEffect(*getPositionTile(), getDefinition()->getDeathVanishEffect(), "");
+            if(getIsOnServerMap() && !getDefinition()->isWorker() && !getDefinition()->isUndead())
             {
                 GhostEntity* ghost = new GhostEntity(getGameMap(), *this);
                 ghost->addToGameMap();
@@ -2750,6 +2813,16 @@ void Creature::doUpkeep()
         if(!mIsCarried)
         {
             mCorpseTurns += 1.0;
+            // The body of an undead creature vanishes after DeathVanishSeconds (a bone pile may stay behind)
+            if((getDefinition()->getDeathVanishSeconds() > 0.0) &&
+               (mCorpseTurns >= getDefinition()->getDeathVanishSeconds() * ODApplication::turnsPerSecond))
+            {
+                if(getIsOnServerMap() && getDefinition()->hasDeathVanishPile() && (getPositionTile() != nullptr))
+                    DirtPileEntity::createOnTile(getGameMap(), getPositionTile(), DirtPileKind::pile, getDefinition()->getClassName());
+                removeFromGameMap();
+                deleteYourself();
+                return;
+            }
             ConfigManager& config = ConfigManager::getSingleton();
             if(mDecayTurns < 0.0 && mCorpseTurns >= config.getCorpseLieSeconds() * ODApplication::turnsPerSecond)
             {
@@ -2794,6 +2867,32 @@ void Creature::doUpkeep()
         Room* roomPrison = myTile->getCoveringRoom();
         if((roomPrison != nullptr) && (decreaseJobCooldown()))
             roomPrison->useRoom(*this, true);
+
+        // A jailed creature gets hungry and thirsty like any other, and the prison slowly breaks its mood
+        if(!getSeat()->isRogueSeat())
+        {
+            increaseHunger(mDefinition->getHungerGrowthPerTurn());
+            increaseThirst(mDefinition->getThirstGrowthPerTurn());
+        }
+        if((roomPrison != nullptr) && (roomPrison->getType() == RoomType::prison))
+        {
+            addPrisonMood(ConfigManager::getSingleton().getRoomConfigDouble("PrisonMoodPerSecond")
+                * SkillManager::getResearchValue(mSeatPrison, SkillType::roomPrison, 1.0, ResearchEffect::MoodLoss)
+                / ODApplication::turnsPerSecond);
+        }
+
+        // The mood of a jailed creature sees its hunger, thirst, wounds, prison mood and torture mood. The Furious
+        // timer and the leave behaviour stay skipped in jail.
+        if(mMoodCooldownTurns > 0)
+        {
+            --mMoodCooldownTurns;
+        }
+        else if(!getSeat()->isRogueSeat())
+        {
+            computeMood();
+            computeCreatureOverlayMoodValue();
+            mMoodCooldownTurns = Random::Int(0, 5);
+        }
 
         return;
     }
@@ -6991,12 +7090,29 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         }
         // If the attacking entity is a creature and its seat is configured to KO creatures
         // instead of killing, we KO
-        else if(ko && !getDefinition()->isWorker())
+        else if(ko && !getDefinition()->isWorker() && !getDefinition()->isUndead())
         {
             mHp = 1.0;
             recordScriptEvent(*this, "incapacitated");
-            mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked() *
-                ItemEffects::remainingFactor(*this, "QuickRise");
+            // The loser of a friendly arena fight is only knocked out for ArenaKnockOutSeconds and gets up again
+            bool arenaFight = (creatureAttacking != nullptr) && (creatureAttacking->getSeat() != nullptr)
+               && creatureAttacking->getSeat()->isAlliedSeat(getSeat())
+               && (getPositionTile() != nullptr) && (creatureAttacking->getPositionTile() != nullptr)
+               && (getPositionTile()->getCoveringRoom() != nullptr)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom() != nullptr)
+               && (getPositionTile()->getCoveringRoom()->getType() == RoomType::arena)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom()->getType() == RoomType::arena);
+            if(arenaFight)
+            {
+                mKoTurnCounter = ConfigManager::getSingleton().getRoomConfigDouble("ArenaKnockOutSeconds")
+                    * ODApplication::turnsPerSecond;
+                mArenaKnockOut = true;
+            }
+            else
+            {
+                mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked() *
+                    ItemEffects::remainingFactor(*this, "QuickRise");
+            }
             OD_LOG_INF("creature=" + getName() + " has been KO by " + attacker->getName());
             dropItems(false);
             dropCarriedEquipment();
@@ -7180,13 +7296,16 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     mNeedFireRefresh = true;
 
     // Fighting is tiring
-    decreaseWakefulness(0.5);
-    // but gives experience; a dirty arena teaches less, and so does a hangover, while a relaxed creature learns more
+    decreaseWakefulness(ConfigManager::getSingleton().getFightWakefulnessPerAttack());
+    // but gives experience per fighting turn on the training hall level; a dirty arena teaches less, and so does a
+    // hangover, while a relaxed creature learns more
+    double fightExp = ConfigManager::getSingleton().getRoomConfigDouble("ArenaXpPerFightTurn") * mAttackRecoveryTurns
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit);
     Room* attackRoom = (myTile == nullptr) ? nullptr : myTile->getCoveringRoom();
     if((attackRoom != nullptr) && (attackRoom->getType() == RoomType::arena))
-        receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor());
+        receiveExp(fightExp * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor());
     else
-        receiveExp(1.5);
+        receiveExp(fightExp);
 }
 
 //! \brief Finds an exact queued action, with specialized room work included in ordinary room-use queries.
@@ -7771,8 +7890,8 @@ bool Creature::isAttackable(Tile* tile, Seat* seat) const
 //! \brief Preserves living patient priorities and refuses workers, decaying or consumed bodies.
 EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 {
-    // Workers cannot be carried to crypt/prison
-    if(getDefinition()->isWorker())
+    // Workers cannot be carried to crypt/prison, and an undead creature leaves nothing to carry
+    if(getDefinition()->isWorker() || getDefinition()->isUndead())
         return EntityCarryType::notCarryable;
 
     // A creature knocked out to death is carried to a prison when it is an enemy. A creature of the seat of the
@@ -8120,7 +8239,7 @@ void Creature::slap()
     // The friends that see the slap are upset
     reportSlapToFriends();
 
-    mHp -= mMaxHP * ConfigManager::getSingleton().getSlapDamagePercent() / 100.0;
+    mHp -= ConfigManager::getSingleton().getSlapDamage();
     computeCreatureOverlayHealthValue();
 }
 
@@ -10055,6 +10174,11 @@ void Creature::changeSeat(Seat* newSeat)
     mUrge = 0.0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;
+    mTortureMood = 0.0;
+    mPrisonMood = 0.0;
+    mTortureBrokenTurns = 0;
+    mPrisonBrokenTurns = 0;
+    mArenaKnockOut = false;
     mActiveSlapsCount = 0;
     mNbTurnsInHand = 0;
     mIsInHand = false;
@@ -10124,7 +10248,7 @@ Tile* Creature::getWalkDestinationTile() const
 //! \brief Reserves an intact dead body for Raise Dead and removes it on the next upkeep.
 bool Creature::takeCorpse()
 {
-    if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker())
+    if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker() || getDefinition()->isUndead())
         return false;
 
     // The counter is 0 until death drops and notices have run; consumption is deferred safely.
@@ -10140,7 +10264,7 @@ bool Creature::takeCorpse()
 //! \brief Restores a delivered crypt corpse's life and needs after freeing its grave reservation.
 bool Creature::reviveFromCorpse(double hpShare)
 {
-    if(!getIsOnServerMap() || isAlive() || getDefinition()->isWorker() || mIsCarried ||
+    if(!getIsOnServerMap() || isAlive() || getDefinition()->isWorker() || getDefinition()->isUndead() || mIsCarried ||
        mDeathCounter == 0 || mDeathCounter == std::numeric_limits<unsigned int>::max())
         return false;
     Tile* tile = getPositionTile();

@@ -205,8 +205,8 @@ public:
     inline bool                 isChampion      () const    { return mChampion; }
     //! \brief Mana taken per second while a player possesses a creature of this definition (after the free period).
     inline double               getPossessManaCost () const { return mPossessManaCost; }
-    //! \brief Seconds a captured enemy of this kind must be tortured at level 1 before it changes side
-    inline double               getTortureTimeToConvert () const    { return mTortureTimeToConvert; }
+    //! \brief True for undead creatures (Skeleton, Lich): they are never knocked out and leave no corpse or ghost.
+    inline bool                 isUndead        () const    { return mUndead; }
     //! \brief Own walk speed factor of a badly hurt creature of this type, negative when the global value applies
     inline double               getLowHealthWalkSpeedFactor () const    { return mLowHealthWalkSpeedFactor; }
     //! \brief Speed factor of the walk clips of this type on the client (1 = as authored), limited to 0.2 - 8.0
@@ -259,6 +259,8 @@ public:
     inline double getThirstGrowthPerTurn() const { return mThirstGrowthPerTurn; }
     //! \brief Returns true if the creature type can get thirsty (a type without hunger has no thirst either).
     inline bool hasThirst() const { return mThirstGrowthPerTurn > 0.0; }
+    //! \brief Returns the seconds after its death the body of this type is removed (0 = the normal corpse rule applies).
+    inline double getDeathVanishSeconds() const { return mDeathVanishSeconds; }
     inline const std::string&   getClassName    () const    { return mClassName; }
 
     inline const std::string&   getMeshName     () const    { return mMeshName; }
@@ -353,6 +355,12 @@ public:
     { return mSoundFamilyAttack; }
     inline const std::string& getSoundFamilyDie() const
     { return mSoundFamilyDie; }
+    //! \brief Returns true if a bone pile of its own class is created where the body vanishes (DeathVanishPile).
+    inline bool hasDeathVanishPile() const
+    { return mDeathVanishPile; }
+    //! \brief Returns the effect family fired when the creature dies (DeathVanishEffect), empty for none.
+    inline const std::string& getDeathVanishEffect() const
+    { return mDeathVanishEffect; }
     inline const std::string& getSoundFamilySlap() const
     { return mSoundFamilySlap; }
 
@@ -372,8 +380,8 @@ private:
     bool mChampion;
     //! \brief Mana taken per second while a player possesses a creature of this definition (after the free period)
     double mPossessManaCost;
-    //! \brief Seconds an enemy of this class has to be tortured at level 1 before it changes side
-    double mTortureTimeToConvert;
+    //! \brief True for undead creatures (Optional Undead, default 0): never knocked out, no corpse, no ghost
+    bool mUndead;
 
     //! \brief Optional (LowHealthWalkSpeedFactor): negative means the value of global.cfg is used
     double mLowHealthWalkSpeedFactor;
@@ -444,6 +452,9 @@ private:
 
     //! \brief Optional (ThirstGrowth/Turn): how fast the thirst grows per turn. Default 0.0 when not set
     double mThirstGrowthPerTurn;
+
+    //! \brief Optional (DeathVanishSeconds): seconds after its death the body is removed. Default 0.0 = normal corpse rule
+    double mDeathVanishSeconds;
 
     //! \brief The name of the creatures class
     std::string mClassName;
@@ -568,6 +579,10 @@ private:
     std::string mSoundFamilyDrop;
     std::string mSoundFamilyAttack;
     std::string mSoundFamilyDie;
+    //! \brief Optional (DeathVanishPile): true if a pile of its own class is created where the body vanishes
+    bool mDeathVanishPile;
+    //! \brief Optional (DeathVanishEffect): effect family fired at the death of the creature, empty for none
+    std::string mDeathVanishEffect;
     std::string mSoundFamilySlap;
 
     //! \brief Loads the creature XP values for the given definition.
