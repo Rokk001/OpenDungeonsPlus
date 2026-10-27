@@ -4206,6 +4206,10 @@ void RenderManager::startCreatureDeathVariant(Creature* creature, Ogre::Entity* 
        getCombatMotion(entity->getMesh()->getName()) == CombatMotion::tentacle)
         return;
 
+    // The undead keep the collapse of their own death clip
+    if(creature->getDefinition()->isUndead())
+        return;
+
     const int variant = static_cast<int>(std::hash<std::string>()(creature->getName()) % 3);
     if(variant == 0)
         return;

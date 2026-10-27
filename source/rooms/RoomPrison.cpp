@@ -37,6 +37,7 @@
 #include "network/ServerNotification.h"
 #include "ODApplication.h"
 #include "rooms/RoomManager.h"
+#include "rooms/RoomTorture.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -325,14 +326,36 @@ void RoomPrison::doUpkeep()
             }
 
             ++nbCreatures;
-            // We slightly damage the prisoner
-            // The dirtier the prison, the more the prisoners suffer
-            double dirtDamageFactor = getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3");
-            double damage = Random::Double(ConfigManager::getSingleton().getRoomConfigDouble("PrisonDamagePerTurnMin") * dirtDamageFactor,
-                ConfigManager::getSingleton().getRoomConfigDouble("PrisonDamagePerTurn") * dirtDamageFactor);
-            creature->takeDamage(this, damage, 0.0, 0.0, 0.0, creatureTile, false);
+            // A prisoner loses HP only while it is hungry or thirsty, as a share of its max HP (thirst faster)
+            double hpSharePerSecond = 0.0;
+            if(creature->isHungry())
+                hpSharePerSecond += ConfigManager::getSingleton().getRoomConfigDouble("PrisonHungerHpSharePerSecond");
+            if(creature->getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"))
+                hpSharePerSecond += ConfigManager::getSingleton().getRoomConfigDouble("PrisonThirstHpSharePerSecond");
+            if(hpSharePerSecond > 0.0)
+            {
+                creature->takeDamage(this, hpSharePerSecond * creature->getMaxHp() / ODApplication::turnsPerSecond,
+                    0.0, 0.0, 0.0, creatureTile, false);
+            }
             creature->increaseTurnsPrison();
             addUseDirt(*creature, creatureTile, "PrisonDirtPerPrisonerTurn");
+
+            // From research level 2 a prisoner whose mood is broken may betray an enemy room: one roll per second
+            double betrayChance = SkillManager::getResearchValue(getSeat(), SkillType::roomPrison, 0.0, ResearchEffect::BetrayChance);
+            if(creature->isAlive() && (betrayChance > 0.0) &&
+               (ConfigManager::getSingleton().getCreatureBaseMood() + creature->getMoodPoints()
+                <= ConfigManager::getSingleton().getCreatureMoodFurious()))
+            {
+                int32_t brokenTurns = creature->increasePrisonBrokenTurns();
+                bool secondPassed = std::floor(brokenTurns / ODApplication::turnsPerSecond)
+                    > std::floor((brokenTurns - 1) / ODApplication::turnsPerSecond);
+                if(secondPassed && (Random::Double(0.0, 1.0) < betrayChance))
+                    RoomTorture::revealEnemyInformation(*getSeat(), *creature);
+            }
+            else
+            {
+                creature->resetPrisonBrokenTurns();
+            }
 
             if(creature->isAlive())
                 continue;
@@ -351,6 +374,8 @@ void RoomPrison::doUpkeep()
                 ODServer::getSingleton().queueServerNotification(serverNotification);
             }
 
+            // The skeleton starts at the level of the dead prisoner plus the research bonus
+            uint32_t prisonerLevel = creature->getLevel();
             creature->clearActionQueue();
             creature->removeFromGameMap();
             creature->deleteYourself();
@@ -364,9 +389,9 @@ void RoomPrison::doUpkeep()
             }
             // Create a new creature and copy over the class-based creature parameters.
             Creature* newCreature = new Creature(getGameMap(), classToSpawn, getSeat());
-            newCreature->setLevel(static_cast<uint32_t>(SkillManager::getResearchValue(
-                getSeat(), SkillType::roomPrison, ConfigManager::getSingleton().getRoomConfigDouble("PrisonSkeletonBaseLevel"),
-                ResearchEffect::SkeletonLevel)));
+            newCreature->setLevel(std::min<uint32_t>(30, prisonerLevel + static_cast<uint32_t>(SkillManager::getResearchValue(
+                getSeat(), SkillType::roomPrison, ConfigManager::getSingleton().getRoomConfigDouble("PrisonSkeletonLevelBonus"),
+                ResearchEffect::SkeletonLevel))));
             newCreature->setHP(newCreature->getMaxHp());
 
             // Add the creature to the gameMap and create meshes so it is visible.
@@ -851,6 +876,9 @@ void RoomPrison::notifyCarryingStateChanged(Creature* carrier, GameEntity* carri
     prisonerCreature->clearActionQueue();
     prisonerCreature->pushAction(Utils::make_unique<CreatureActionUseRoom>(*prisonerCreature, *this, true));
     prisonerCreature->resetKoTurns();
+    // A delivered prisoner wakes up with at least PrisonWakeHpShare of its max HP
+    prisonerCreature->setHP(std::max(prisonerCreature->getHP(),
+        ConfigManager::getSingleton().getRoomConfigDouble("PrisonWakeHpShare") * prisonerCreature->getMaxHp()));
 }
 
 uint32_t RoomPrison::countPrisoners()

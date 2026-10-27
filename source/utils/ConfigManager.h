@@ -226,8 +226,9 @@ public:
     inline int32_t getCreatureMoodFurious() const
     { return mCreatureMoodFurious; }
 
-    inline double getSlapDamagePercent() const
-    { return mSlapDamagePercent; }
+    //! \brief HP a slap of the keeper hand takes from every creature (fixed amount, [GameConfig] SlapDamage)
+    inline double getSlapDamage() const
+    { return mSlapDamage; }
 
     //! \brief Damage per second a creature takes while standing on lava without a bridge
     inline double getLavaDamagePerSecond() const
@@ -456,6 +457,23 @@ public:
     inline double getUndeadHealFactor() const { return mUndeadHealFactor; }
     //! \brief Returns whether lava damage follows the health curve.
     inline bool getLavaDamageScalesWithHp() const { return mLavaDamageScalesWithHp; }
+
+    //! \brief Wakefulness a creature loses for every attack it makes (global.cfg FightWakefulnessPerAttack).
+    inline double getFightWakefulnessPerAttack() const { return mFightWakefulnessPerAttack; }
+    //! \brief Factor on the experience for digging (global.cfg DigXpFactor).
+    inline double getDigXpFactor() const { return mDigXpFactor; }
+    //! \brief Divisor of the work rate in the experience of digging, claiming and cleaning (global.cfg WorkXpRateDivisor).
+    inline double getWorkXpRateDivisor() const { return mWorkXpRateDivisor; }
+    //! \brief Factor on the experience for digging a gold tile (global.cfg GoldDigXpFactor).
+    inline double getGoldDigXpFactor() const { return mGoldDigXpFactor; }
+    //! \brief Experience for finishing a dug tile (global.cfg TileDugXp).
+    inline double getTileDugXp() const { return mTileDugXp; }
+    //! \brief Factor on the experience for claiming or repairing a tile (global.cfg ClaimXpFactor).
+    inline double getClaimXpFactor() const { return mClaimXpFactor; }
+    //! \brief Base of the level divisor of the claiming experience (global.cfg ClaimXpDivisorBase).
+    inline double getClaimXpDivisorBase() const { return mClaimXpDivisorBase; }
+    //! \brief Part of that divisor that grows with each creature level (global.cfg ClaimXpDivisorPerLevel).
+    inline double getClaimXpDivisorPerLevel() const { return mClaimXpDivisorPerLevel; }
 
     inline int32_t getNbTurnsKoCreatureAttacked() const
     { return mNbTurnsKoCreatureAttacked; }
@@ -736,7 +754,7 @@ private:
     int32_t mCreatureMoodUpset;
     int32_t mCreatureMoodAngry;
     int32_t mCreatureMoodFurious;
-    double mSlapDamagePercent;
+    double mSlapDamage;
     double mLavaDamagePerSecond;
     uint32_t mSlapEffectDuration;
     double mTiredWakefulness;
@@ -826,6 +844,14 @@ private:
     double mNaturalFullHealSeconds;
     double mUndeadHealFactor;
     bool mLavaDamageScalesWithHp;
+    double mFightWakefulnessPerAttack;
+    double mDigXpFactor;
+    double mWorkXpRateDivisor;
+    double mGoldDigXpFactor;
+    double mTileDugXp;
+    double mClaimXpFactor;
+    double mClaimXpDivisorBase;
+    double mClaimXpDivisorPerLevel;
     int32_t mNbTurnsKoCreatureAttacked;
     std::string mDefaultWorkerRogue;
     std::string mMainMenuMusic;

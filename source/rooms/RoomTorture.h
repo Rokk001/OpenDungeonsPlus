@@ -22,6 +22,7 @@
 #include "rooms/RoomType.h"
 
 class Creature;
+class Seat;
 class Tile;
 
 enum class TileVisual;
@@ -76,9 +77,15 @@ protected:
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
 
+    //! \brief A tortured or betraying enemy creature gives away one room of its owner that the keeper has not seen yet.
+    //! \param keeperSeat The seat that tortures or imprisons the creature and learns the room
+    //! \param creature The tortured or imprisoned creature
+    static void revealEnemyInformation(Seat& keeperSeat, Creature& creature);
+
 private:
-    //! \brief A tortured enemy creature that is about to die gives away one room of its owner that was not seen yet.
-    void revealEnemyInformation(Creature& creature);
+    //! \brief The broken enemy victim changes side: it joins the torturing seat and its captivity moods end.
+    //! \param creature The victim that is converted
+    void convertVictim(Creature& creature);
 
     std::map<Tile*,RoomTortureCreatureInfo> mCreaturesSpots;
     std::vector<std::string> mPrisonersLoad;

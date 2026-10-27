@@ -323,6 +323,11 @@ public:
     inline CreatureMoodLevel getMoodValue() const
     { return mMoodValue; }
 
+    //! \brief Returns the mood points of the last mood computation (CreatureBaseMood is not included). Prison and
+    //! torture use it to tell when a captured creature is broken.
+    inline int32_t getMoodPoints() const
+    { return mMoodPoints; }
+
     //! \brief What the creature is doing, for the creature panel. On the server it is derived from the
     //! creature actions, on a client it is the last value received from the server.
     CreatureActivity getActivity() const;
@@ -1558,6 +1563,58 @@ public:
     inline void increaseTurnsPrison()
     { ++mNbTurnsPrison; }
 
+    //! \brief Returns the mood points the torture chamber took from this creature (negative, 0 = none).
+    inline double getTortureMood() const
+    { return mTortureMood; }
+
+    //! \brief Adds mood points to the torture mood (the torture chamber adds a negative amount every turn).
+    //! \param points The mood points to add.
+    inline void addTortureMood(double points)
+    { mTortureMood += points; }
+
+    //! \brief Clears the torture mood and the counter of the turns the creature has been broken in the torture chamber.
+    inline void resetTortureMood()
+    {
+        mTortureMood = 0.0;
+        mTortureBrokenTurns = 0;
+    }
+
+    //! \brief Returns the mood points the prison took from this creature (negative, 0 = none).
+    inline double getPrisonMood() const
+    { return mPrisonMood; }
+
+    //! \brief Adds mood points to the prison mood (the prison adds a negative amount every turn).
+    //! \param points The mood points to add.
+    inline void addPrisonMood(double points)
+    { mPrisonMood += points; }
+
+    //! \brief Clears the prison mood and the counter of the turns the creature has been broken in the prison.
+    inline void resetPrisonMood()
+    {
+        mPrisonMood = 0.0;
+        mPrisonBrokenTurns = 0;
+    }
+
+    //! \brief Counts one more turn the creature is broken in the torture chamber and returns the new count.
+    inline int32_t increaseTortureBrokenTurns()
+    { return ++mTortureBrokenTurns; }
+
+    //! \brief Counts one more turn the creature is broken in the prison and returns the new count.
+    inline int32_t increasePrisonBrokenTurns()
+    { return ++mPrisonBrokenTurns; }
+
+    //! \brief Restarts the count of the turns the creature is broken in the prison (its mood is above the border again).
+    inline void resetPrisonBrokenTurns()
+    { mPrisonBrokenTurns = 0; }
+
+    //! \brief Restarts the count of the turns the creature is broken in the torture chamber.
+    inline void resetTortureBrokenTurns()
+    { mTortureBrokenTurns = 0; }
+
+    //! \brief True while the creature lies knocked out after an arena fight and gets up with ArenaGetUpHpShare.
+    inline bool isArenaKnockOut() const
+    { return mArenaKnockOut; }
+
     virtual bool isDangerous(const Creature* creature, int distance) const override;
 
     virtual void clientUpkeep() override;
@@ -2064,6 +2121,21 @@ private:
 
     //! \brief allows to know how many turns a creature has been in prison
     int32_t                         mNbTurnsPrison;
+
+    //! \brief Mood points the torture chamber took from the creature (negative); saved
+    double                          mTortureMood;
+
+    //! \brief Mood points the prison took from the creature (negative); saved
+    double                          mPrisonMood;
+
+    //! \brief Turns the creature has been broken (mood at or below Furious) in the torture chamber; saved
+    int32_t                         mTortureBrokenTurns;
+
+    //! \brief Turns the creature has been broken (mood at or below Furious) in the prison; saved
+    int32_t                         mPrisonBrokenTurns;
+
+    //! \brief True while the creature is knocked out after an arena fight (temporary KO); saved
+    bool                            mArenaKnockOut;
 
     //! \brief Counts the number of active slaps affecting the creature
     uint32_t                        mActiveSlapsCount;

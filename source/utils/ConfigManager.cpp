@@ -33,6 +33,7 @@
 #include <OgreRoot.h>
 
 #include <fstream>
+#include <set>
 
 const std::vector<std::string> EMPTY_SPAWNPOOL;
 const std::string EMPTY_STRING;
@@ -108,7 +109,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mCreatureMoodUpset(0),
     mCreatureMoodAngry(-1000),
     mCreatureMoodFurious(-2000),
-    mSlapDamagePercent(15),
+    mSlapDamage(10),
     mLavaDamagePerSecond(50),
     mSlapEffectDuration(15),
     mTiredWakefulness(20.0),
@@ -169,6 +170,14 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mNaturalFullHealSeconds(939.96),
     mUndeadHealFactor(0.6666666666666666),
     mLavaDamageScalesWithHp(true),
+    mFightWakefulnessPerAttack(0.04589248657226563),
+    mDigXpFactor(0.78),
+    mWorkXpRateDivisor(20.0),
+    mGoldDigXpFactor(0.52),
+    mTileDugXp(1.3),
+    mClaimXpFactor(0.78),
+    mClaimXpDivisorBase(0.35),
+    mClaimXpDivisorPerLevel(0.05),
     mNbTurnsKoCreatureAttacked(10),
     mCreatureDefinitionDefaultWorker(nullptr),
     mNbWorkersDigSameFaceTile(3),
@@ -697,6 +706,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
     bool foundNaturalHeal = false;
     bool foundUndeadHeal = false;
     bool foundLavaScaling = false;
+    std::set<std::string> foundKeys;
     while(configFile.good())
     {
         if(!(configFile >> nextParam))
@@ -817,10 +827,10 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
-        if(nextParam == "SlapDamagePercent")
+        if(nextParam == "SlapDamage")
         {
             configFile >> nextParam;
-            mSlapDamagePercent = Helper::toDouble(nextParam);
+            mSlapDamage = Helper::toDouble(nextParam);
             // Not mandatory
         }
 
@@ -1284,6 +1294,62 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             mUndeadHealFactor = Helper::toDouble(nextParam);
             foundUndeadHeal = true;
         }
+        if(nextParam == "FightWakefulnessPerAttack")
+        {
+            configFile >> nextParam;
+            mFightWakefulnessPerAttack = Helper::toDouble(nextParam);
+            foundKeys.insert("FightWakefulnessPerAttack");
+        }
+
+        if(nextParam == "DigXpFactor")
+        {
+            configFile >> nextParam;
+            mDigXpFactor = Helper::toDouble(nextParam);
+            foundKeys.insert("DigXpFactor");
+        }
+
+        if(nextParam == "WorkXpRateDivisor")
+        {
+            configFile >> nextParam;
+            mWorkXpRateDivisor = Helper::toDouble(nextParam);
+            foundKeys.insert("WorkXpRateDivisor");
+        }
+
+        if(nextParam == "GoldDigXpFactor")
+        {
+            configFile >> nextParam;
+            mGoldDigXpFactor = Helper::toDouble(nextParam);
+            foundKeys.insert("GoldDigXpFactor");
+        }
+
+        if(nextParam == "TileDugXp")
+        {
+            configFile >> nextParam;
+            mTileDugXp = Helper::toDouble(nextParam);
+            foundKeys.insert("TileDugXp");
+        }
+
+        if(nextParam == "ClaimXpFactor")
+        {
+            configFile >> nextParam;
+            mClaimXpFactor = Helper::toDouble(nextParam);
+            foundKeys.insert("ClaimXpFactor");
+        }
+
+        if(nextParam == "ClaimXpDivisorBase")
+        {
+            configFile >> nextParam;
+            mClaimXpDivisorBase = Helper::toDouble(nextParam);
+            foundKeys.insert("ClaimXpDivisorBase");
+        }
+
+        if(nextParam == "ClaimXpDivisorPerLevel")
+        {
+            configFile >> nextParam;
+            mClaimXpDivisorPerLevel = Helper::toDouble(nextParam);
+            foundKeys.insert("ClaimXpDivisorPerLevel");
+        }
+
         if(nextParam == "LavaDamageScalesWithHp")
         {
             configFile >> nextParam;
@@ -1325,6 +1391,12 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         OD_LOG_ERR("Missing UndeadHealFactor; using default");
     if(!foundLavaScaling)
         OD_LOG_ERR("Missing LavaDamageScalesWithHp; using default");
+    static const char* const experienceKeys[] = {"FightWakefulnessPerAttack", "DigXpFactor", "WorkXpRateDivisor", "GoldDigXpFactor", "TileDugXp", "ClaimXpFactor", "ClaimXpDivisorBase", "ClaimXpDivisorPerLevel"};
+    for(const char* key : experienceKeys)
+    {
+        if(foundKeys.count(key) == 0)
+            OD_LOG_ERR(std::string("Missing ") + key + "; using default");
+    }
 
     if(paramsOk != 0x01)
     {
