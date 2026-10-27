@@ -2602,7 +2602,7 @@ void Creature::doUpkeep()
         if(getDefinition()->isWorker())
         {
             if(getIsOnServerMap() && getPositionTile() != nullptr)
-                Spell::fireSpellEffect(getPositionTile(), "WorkerVanish", "");
+                Spell::fireSpellEffect(*getPositionTile(), "WorkerVanish", "");
             // Worker bodies never remain on the map, even for one extra upkeep.
             removeFromGameMap();
             deleteYourself();
