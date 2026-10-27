@@ -713,6 +713,7 @@ void RoomAmbience::restoreMotionNode(MotionNode& motionNode)
         node->setScale(motionNode.mBaseScale);
 }
 
+//! \brief Stops room effects and their looping sounds when the map, view or ambience mode changes.
 //! \brief Stops all room effects and releases their visual and sound resources.
 void RoomAmbience::stopAll()
 {
@@ -1917,7 +1918,7 @@ void RoomAmbience::playClips()
         if(isSound ? effect.mFamily.empty() : effect.mClips.empty())
             continue;
 
-        if(isSound && effect.mLoop)
+        if(effect.mLoop && isSound)
             continue;
 
         if(effect.mLoop && !isSound)
@@ -1974,6 +1975,7 @@ void RoomAmbience::playClips()
         timerIt->second = mClock + effect.mEvery * next(mRandom);
         ++nbPlayed;
     }
+
 }
 
 //! \brief Starts qualifying sound loops once and releases those no longer selected by the scan.
@@ -1985,7 +1987,7 @@ void RoomAmbience::updateSoundLoops()
         mSoundLoops.clear();
         return;
     }
-    std::set<std::string> active;
+    std::set<std::string> activeSoundLoops;
     const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
     for(const Candidate& candidate : mClipCandidates)
     {
@@ -1993,9 +1995,14 @@ void RoomAmbience::updateSoundLoops()
         if((effect.mKind != AmbienceKind::sound) || !effect.mLoop || effect.mFamily.empty())
             continue;
         const std::string key = candidate.mTarget + "|" + effect.mName;
-        active.insert(key);
-        if(mSoundLoops.find(key) != mSoundLoops.end())
+        activeSoundLoops.insert(key);
+        std::map<std::string, uint32_t>::const_iterator sound = mSoundLoops.find(key);
+        if(sound != mSoundLoops.end())
+        {
+            sounds->setSpatialLoopPosition(sound->second,
+                candidate.mPosition.x, candidate.mPosition.y, candidate.mPosition.z);
             continue;
+        }
         const uint32_t handle = sounds->startSpatialLoop(effect.mFamily,
             candidate.mPosition.x, candidate.mPosition.y, candidate.mPosition.z);
         if(handle != 0)
@@ -2003,7 +2010,7 @@ void RoomAmbience::updateSoundLoops()
     }
     for(std::map<std::string, uint32_t>::iterator it = mSoundLoops.begin(); it != mSoundLoops.end();)
     {
-        if(active.find(it->first) != active.end())
+        if(activeSoundLoops.find(it->first) != activeSoundLoops.end())
         {
             ++it;
             continue;

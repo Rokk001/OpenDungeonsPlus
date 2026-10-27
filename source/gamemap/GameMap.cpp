@@ -3018,10 +3018,15 @@ void GameMap::removeTrap(Trap *t)
     mTraps.erase(it);
 }
 
-bool GameMap::withdrawFromTreasuries(int gold, Seat* seat)
+//! \brief Withdraws exact gold from the keeper's storage or leaves it untouched if short.
+bool GameMap::withdrawFromTreasuries(double gold, Seat* seat)
 {
     // Check to see if there is enough gold available in all of the treasuries owned by the given seat.
-    if (seat->getGold() < gold)
+    double available = 0.0;
+    for(const Room* room : getRooms())
+        if(room->getSeat() == seat)
+            available += room->getTotalGoldStored();
+    if (available < gold)
     {
         if(seat->getPlayer() != nullptr)
             seat->getPlayer()->notifyNotEnoughGold();
@@ -3030,18 +3035,19 @@ bool GameMap::withdrawFromTreasuries(int gold, Seat* seat)
     }
 
     // Loop over the treasuries withdrawing gold until the full amount has been withdrawn.
-    int goldStillNeeded = gold;
+    double goldStillNeeded = gold;
     for (Room* room : getRooms())
     {
         if(room->getSeat() != seat)
             continue;
 
-        int goldTaken = room->withdrawGold(goldStillNeeded);
+        double goldTaken = room->withdrawGold(goldStillNeeded);
         goldStillNeeded -= goldTaken;
         if(goldStillNeeded <= 0)
             break;
     }
 
+    seat->mGold = available - gold;
     return true;
 }
 
@@ -3741,7 +3747,8 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
     return tempSS.str();
 }
 
-int GameMap::addGoldToSeat(int gold, int seatId)
+//! \brief Deposits exact gold into the keeper's rooms and returns any overflow.
+double GameMap::addGoldToSeat(double gold, int seatId)
 {
     Seat* seat = getSeatById(seatId);
     if(seat == nullptr)
@@ -3761,6 +3768,10 @@ int GameMap::addGoldToSeat(int gold, int seatId)
             break;
     }
 
+    seat->mGold = 0.0;
+    for(const Room* room : getRooms())
+        if(room->getSeat() == seat)
+            seat->mGold += room->getTotalGoldStored();
     return gold;
 }
 
@@ -3872,6 +3883,7 @@ std::string GameMap::nextUniqueNameMapLight()
     return ret;
 }
 
+//! \brief Looks up an entity by its synchronized type and unique name.
 //! \brief Resolves entity identities, including equipment bags, merchants and herb bundles.
 GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
     const std::string& entityName)
@@ -3892,6 +3904,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::skillEntity:
         case GameEntityType::giftBoxEntity:
         case GameEntityType::lavaRock:
+        case GameEntityType::infirmaryShamanEntity:
         case GameEntityType::itemBagEntity:
         case GameEntityType::merchantEntity:
         case GameEntityType::herbBundleEntity:

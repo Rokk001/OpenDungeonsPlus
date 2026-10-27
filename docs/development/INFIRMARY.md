@@ -1,0 +1,17 @@
+# Infirmary
+
+The infirmary is a tier-III room researched after the Guard Room for 600 points. A new room must contain a complete 4x4 square, including joined existing infirmary tiles. Selling tiles remains possible. Permanent small (1x1), medium (1x2) and large (2x2) cots follow the configured 12:17:6 shares and retain walking access; occupied or reserved cots do not move.
+
+Workers take their own creatures knocked out to death to a fitting reserved cot before trying the creature's bed. Workers, the Champion, prisoners, heroes and temporary knockouts are excluded. Ordinary wounded creatures still use their beds. A manually dropped hurt own creature may use a fitting cot below the discharge threshold; this admission always charges the keeper. A manual drop may take a reservation, in which case the arriving worker continues to the patient's own bed.
+
+Admission costs 0.3 times the current wage, paid once by the keeper's treasury or the creature's purse according to the keeper's switch. Fractions are retained. AI keepers always pay. Unaffordable admissions use the bed fallback. Admission gives the opposite sign of 0.3 times the type's Fee mood modifier when the keeper pays, and its original sign when the creature pays, for the type's Rested duration (30 turns if missing).
+
+A full recovery takes 60 seconds before research, at every level; infirmary HealTime multiplies that by 1.0, 0.8 or 0.667. Each actual HP gain consumes its share of twice the current wage in mana. Missing mana pauses treatment and the death counter stays stopped. One room notice reports a shortage, rearmed after a fully healed turn. Beds recover over 150 seconds before dormitory research; a legacy SleepHeal of zero still disables bed recovery.
+
+The keeper's window opens by I, the minimap button, a room tile or the Shaman. It lists patients, HP and remaining time; selecting a patient opens the existing stats window. The switches select the payer and enable healing. Discharge is 40-100 percent in steps of 10, initially 100. Below full health a discharged patient goes to its own bed if available. Disabled healing keeps patients lying, with no mana use or shortage notice. A lying creature below the configured wounded carry limit (35 percent) cannot rise to fight; above it the existing combat or retreat policy applies.
+
+Removal, takeover or keeper defeat ends treatment without refund and restores the stored death countdown; manually admitted patients receive the full countdown. Ordinary interruption frees the cot. Admissions add the configured dirt (15.6) to the cot tile, and workers can clean the room. Equipment, when present on the base, remains with the patient.
+
+The Shaman is a decorative movable room entity, never a creature, target, obstacle or hand object. It has no wage, HP or healing effect. The figure walks between cots and the instrument table and plays the delivered patient poses. Its chant is a visible room-ambience spatial loop. Room streams optionally store InfirmaryShaman, InfirmaryCots and InfirmaryPatients records. Seat and creature Infirmary blocks preserve settings and admission mood; records missing from older saves retain their defined defaults. Patient HP, fractional balances, admission information, reservations and stored countdowns survive saves.
+
+The generated skirmish map TestInfirmary.level supplies the room, a dormitory, eight level-5 patients, workers and a timed hero wave for the integrator's load check and keeper inspection.

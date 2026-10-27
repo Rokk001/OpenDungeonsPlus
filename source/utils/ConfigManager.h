@@ -623,6 +623,7 @@ private:
     bool loadSkills(const std::string& fileName);
     //! \brief Reads config/creatureSkills.cfg (skill trees, tier 4 skills and templates of the creatures).
     bool loadCreatureSkills(const std::string& fileName);
+    //! \brief Loads every registered tile visual, including the infirmary floor masks.
     //! \brief Reads config/tilesets.cfg: the tile links and the floor and wall pieces of every tile visual, rooms included.
     //! \brief Loads tilesets by consuming every visual block in its configured sequence.
     bool loadTilesets(const std::string& fileName);

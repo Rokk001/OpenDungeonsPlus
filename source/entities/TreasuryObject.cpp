@@ -16,6 +16,8 @@
  */
 
 #include "entities/TreasuryObject.h"
+#include <iomanip>
+#include <limits>
 
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
@@ -32,7 +34,8 @@
 #include <istream>
 #include <ostream>
 
-TreasuryObject::TreasuryObject(GameMap* gameMap, int goldValue) :
+//! \brief Creates a gold pile without truncating its value.
+TreasuryObject::TreasuryObject(GameMap* gameMap, double goldValue) :
     RenderedMovableEntity(gameMap, "Treasury_", getMeshNameForGold(goldValue), 0.0f, false),
     mGoldValue(goldValue),
     mHasGoldValueChanged(false),
@@ -134,7 +137,7 @@ void TreasuryObject::doUpkeep()
     if((mGoldValue > 0) &&
        (tile->getCoveringRoom() != nullptr))
     {
-        int goldDeposited = tile->getCoveringRoom()->depositGold(mGoldValue, tile);
+        double goldDeposited = tile->getCoveringRoom()->depositGold(mGoldValue, tile);
         if(goldDeposited > 0)
         {
             // We withdraw the amount we could deposit
@@ -292,7 +295,8 @@ void TreasuryObject::notifyEntityCarryOff(const Ogre::Vector3& position)
     addEntityToPositionTile();
 }
 
-int TreasuryObject::stealGold(Creature& creature, int value)
+//! \brief Gives the thief up to the requested exact gold amount.
+double TreasuryObject::stealGold(Creature& creature, double value)
 {
     if(value > mGoldValue)
         value = mGoldValue;
@@ -307,7 +311,8 @@ int TreasuryObject::stealGold(Creature& creature, int value)
     return value;
 }
 
-const char* TreasuryObject::getMeshNameForGold(int gold)
+//! \brief Chooses the existing pile mesh tier without changing the stored value.
+const char* TreasuryObject::getMeshNameForGold(double gold)
 {
     if (gold <= 0)
     {
@@ -356,7 +361,9 @@ void TreasuryObject::importFromPacket(ODPacket& is)
 void TreasuryObject::exportToStream(std::ostream& os) const
 {
     RenderedMovableEntity::exportToStream(os);
-    os << mGoldValue << "\t";
+    const std::streamsize precision = os.precision();
+    os << std::setprecision(std::numeric_limits<double>::max_digits10) << mGoldValue << "\t";
+    os.precision(precision);
 }
 
 bool TreasuryObject::importFromStream(std::istream& is)

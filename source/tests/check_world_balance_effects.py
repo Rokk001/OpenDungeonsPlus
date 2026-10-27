@@ -50,6 +50,7 @@ EXPECTED = [
     ("roomArena", "LevelCap", "mul", "1.0", "1.25", "1.5"),
     ("roomPrison", "Capacity", "mul", "1.0", "1.5", "2.0"),
     ("roomPrison", "SkeletonLevel", "add", "0", "1", "2"),
+    ("roomInfirmary", "HealTime", "mul", "1.0", "0.8", "0.667"),
     ("roomCrypt", "RotTime", "mul", "1.0", "0.8", "0.667"),
     ("roomBridgeWooden", "ClaimResistance", "mul", "1.0", "1.25", "1.5"),
     ("roomBridgeStone", "ClaimResistance", "mul", "1.0", "1.5", "2.0"),
@@ -89,19 +90,19 @@ EXPECTED = [
     ("spellHexenHen", "Duration", "mul", "1.0", "1.25", "1.5"),
     ("spellCreateGold", "Gold", "mul", "1.0", "1.25", "1.5"),
 ]
-assert len(EXPECTED) == 65, "the plan table has 65 lines (rows with several skill types count once per skill type)"
+assert len(EXPECTED) == 66, "the effect table has 66 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
 skills_cfg = read("config/skills.cfg")
 block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
 lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 65, "one line per effect: %d" % len(lines)
+assert len(lines) == 66, "one line per effect: %d" % len(lines)
 for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
 skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
-assert len(skill_names) == 62
-assert {line[0] for line in lines} <= skill_names, "every line names one of the 62 skills"
+assert len(skill_names) == 63
+assert {line[0] for line in lines} <= skill_names, "every line names one of the 63 skills"
 header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
 assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
 for effect in sorted({line[1] for line in lines}):
@@ -234,7 +235,7 @@ assert "double getHeartMaxHP() const;" in read("source/rooms/RoomDungeonTemple.h
 assert "mCapacityFactor" in read("source/rooms/HatcheryCycle.cpp")
 
 # --- tooltips --------------------------------------------------------------------------------------------------------
-texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "LayInterval": "Egg laying time", "Capacity": "Capacity",
+texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "HealTime": "Healing time", "LayInterval": "Egg laying time", "Capacity": "Capacity",
          "PointsPerWork": "Points per work", "XpPerHit": "Experience per hit", "WakefulnessPerDuty": "Tiredness per duty turn",
          "Fee": "Keeper fee", "Mood": "Mood gain", "LevelCap": "Level cap", "SkeletonLevel": "Skeleton level", "RotTime": "Rot time",
          "ClaimResistance": "Claim resistance", "ConversionSpeed": "Conversion speed", "PrayerMana": "Prayer mana",

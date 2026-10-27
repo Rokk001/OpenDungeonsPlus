@@ -39,6 +39,7 @@ public:
     virtual const std::string& getCreatureMoodName() const = 0;
 };
 
+//! \brief Combines the configured and temporary mood modifiers of a creature.
 class CreatureMoodManager
 {
 friend class CreatureMoodRegister;
@@ -52,6 +53,7 @@ public:
 
     static CreatureMoodLevel getCreatureMoodLevel(int32_t moodModifiersPoints);
 
+    //! \brief Sums type modifiers and temporary moods, including paid admission mood.
     //! \brief Sums moods after Iron Will reduces negative modifiers, then adds Charisma.
     static int32_t computeCreatureMoodModifiers(const Creature& creature);
 

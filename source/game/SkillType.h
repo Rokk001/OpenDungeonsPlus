@@ -114,6 +114,7 @@ enum class SkillType
     tavernBeer,
 
     // This should be the last
+    roomInfirmary,
     countSkill
 };
 

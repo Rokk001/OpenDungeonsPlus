@@ -473,8 +473,8 @@ void RoomCasino::doUpkeep()
             getFeeForPayout(mPayout), ResearchEffect::Fee), 1.0);
         double wakefullness = ConfigManager::getSingleton().getRoomConfigDouble("CasinoWakefulnessPerWork");
         int32_t creatureBet = ConfigManager::getSingleton().getRoomConfigInt32("CasinoBet");
-        creatureBet = std::min(creatureBet, p.second.mCreature1.mCreature->getGoldCarried());
-        creatureBet = std::min(creatureBet, p.second.mCreature2.mCreature->getGoldCarried());
+        creatureBet = std::min(creatureBet, static_cast<int32_t>(p.second.mCreature1.mCreature->getGoldCarried()));
+        creatureBet = std::min(creatureBet, static_cast<int32_t>(p.second.mCreature2.mCreature->getGoldCarried()));
         int32_t totalBet = 0;
         Creature* creature;
 

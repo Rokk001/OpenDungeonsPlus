@@ -34,6 +34,7 @@ class Player;
 
 enum class ServerNotificationType;
 
+//! \brief Tracks one connected player and its requested live data subscriptions.
 class ODSocketClient
 {
     public:
@@ -112,6 +113,10 @@ class ODSocketClient
         void setRelationshipsSynced(bool synced) { mRelationshipsSynced = synced; }
         bool getWallTorchesSynced() const { return mWallTorchesSynced; }
         void setWallTorchesSynced(bool synced) { mWallTorchesSynced = synced; }
+        //! \brief Whether this client has the infirmary patient window open.
+        bool getInfirmaryWindowOpen() const { return mInfirmaryWindowOpen; }
+        //! \brief Starts or stops patient window updates for this connection.
+        void setInfirmaryWindowOpen(bool open) { mInfirmaryWindowOpen = open; }
         bool getNestsSynced() const { return mNestsSynced; }
         void setNestsSynced(bool synced) { mNestsSynced = synced; }
         //! \brief Heart HP (whole points) of the last heartHealth message sent, negative if none
@@ -195,6 +200,7 @@ class ODSocketClient
         bool mWallTorchesSynced;
         //! True once the client got the nest places of the hatcheries
         bool mNestsSynced;
+        bool mInfirmaryWindowOpen = false;
         std::string mState;
 
 

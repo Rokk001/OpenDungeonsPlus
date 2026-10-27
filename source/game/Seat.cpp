@@ -54,6 +54,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <iomanip>
 #include <cmath>
 #include <istream>
 #include <ostream>
@@ -1239,6 +1240,25 @@ bool Seat::importSeatFromStream(std::istream& is)
     }
 
     OD_ASSERT_TRUE(is >> str);
+    // Optional seat blocks may occur in any order, including in older saves.
+    while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
+        str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
+        str == "[Merchant]" || str == "[MerchantBalance]")
+    {
+    if(str == "[Infirmary]")
+    {
+        int32_t payer = 0;
+        int32_t threshold = mInfirmaryThreshold;
+        bool healOn = true;
+        if(!(is >> payer >> threshold >> healOn >> str) || str != "[/Infirmary]")
+            return false;
+        setInfirmaryPayer(payer);
+        setInfirmaryThreshold(threshold);
+        setInfirmaryHealOn(healOn);
+        if(!(is >> str))
+            return false;
+        continue;
+    }
     if(str == "[ResearchProgress]")
     {
         uint32_t count;
@@ -1321,6 +1341,7 @@ bool Seat::importSeatFromStream(std::istream& is)
         if(!(is >> mMerchantGoldRemainder >> str) || !std::isfinite(mMerchantGoldRemainder)
             || mMerchantGoldRemainder < 0.0 || mMerchantGoldRemainder >= 1.0 || str != "[/MerchantBalance]"
             || !(is >> str)) return false;
+    }
     }
     if(str != "[SkillNotAllowed]")
     {
@@ -1559,7 +1580,9 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     os << std::endl;
 
     os << "gold\t";
-    os << mGold;
+    const std::streamsize goldPrecision = os.precision();
+    os << std::setprecision(std::numeric_limits<double>::max_digits10) << mGold;
+    os.precision(goldPrecision);
     os << std::endl;
 
     os << "goldMined\t";
@@ -1567,7 +1590,9 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     os << std::endl;
 
     os << "mana\t";
-    os << mMana;
+    const std::streamsize manaPrecision = os.precision();
+    os << std::setprecision(std::numeric_limits<double>::max_digits10) << mMana;
+    os.precision(manaPrecision);
     os << std::endl;
 
     os << "[SkillDone]" << std::endl;
@@ -1581,6 +1606,8 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     for(SkillType type : mSkillDone)
         os << Skills::toString(type) << "\t" << getSkillLevel(type) << "\n";
     os << "[/ResearchProgress]\n";
+    os << "[Infirmary]\t" << getInfirmaryPayer() << '\t' << mInfirmaryThreshold << '\t'
+        << mInfirmaryHealOn << "\t[/Infirmary]\n";
 
     if(mHadLibrary)
         os << "[HadLibrary]\t1\n";

@@ -2,6 +2,7 @@
 # Static checks of the server side chicken life cycle wiring (the rules themselves are covered by
 # the 00-HatcheryCycle unit test).
 from pathlib import Path
+import re
 
 root = Path(__file__).resolve().parents[2]
 chicken_h = (root / 'source/entities/ChickenEntity.h').read_text()
@@ -123,9 +124,7 @@ enum_body = notif[notif.index('enum class ServerNotificationType'):notif.index('
 enum_names = [line.split(',')[0].strip() for line in enum_body.splitlines()
               if line.strip() and not line.strip().startswith(('//', 'enum', '{'))]
 assert enum_names.index('chickenKindChanged') < enum_names.index('chickenFight') < enum_names.index('timeLimit')
-assert enum_body.rstrip().endswith('tavernPayer') and enum_body.index('tavernWindow') < enum_body.index('tavernPayer')
-enum_body = enum_body[:enum_body.index('Answer to askTavernWindow')].rsplit('//!', 1)[0].rstrip().rstrip(',')
-assert enum_body.rstrip().endswith('labSettings')
+assert re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-9:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings']
 assert 'ServerNotificationType::chickenFight' in chicken and 'ServerNotificationType::chickenFight' in client
 assert 'case ServerNotificationType::chickenFight' in (root / 'source/network/ServerNotification.cpp').read_text()
 print('hatchery rooster fight checks passed')
@@ -190,9 +189,7 @@ assert 'void RenderManager::rrEggTrampled' in render and '"ChickenEggTrample"' i
 particles = (root / 'particles/ChickenEggShell.particle').read_text()
 trample = particles[particles.index('particle_system ChickenEggTrample'):]
 assert trample.count('emitter Point') == 2, 'shell emitter and yolk emitter'
-notif_enum = notif[notif.index('enum class ServerNotificationType'):notif.index('};')]
-assert 'enum class ServerNotificationType' in notif and notif_enum.rstrip().endswith('tavernPayer')
-assert notif_enum[:notif_enum.index('Answer to askTavernWindow')].rsplit('//!', 1)[0].rstrip().rstrip(',').endswith('labSettings')
+assert 'enum class ServerNotificationType' in notif and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', notif[notif.index('enum class ServerNotificationType'):notif.index('};')], re.M)[-9:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings']
 print('hatchery nest egg and trample checks passed')
 
 # The numbers of the rooster and the flock are settings read from the config, not fixed numbers in the room code

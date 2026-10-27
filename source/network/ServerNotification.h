@@ -227,7 +227,13 @@ enum class ServerNotificationType
     tavernWindow,
     //! \brief Answer to askTavernPayer, owner only: + int32_t tileX, int32_t tileY, uint32_t payer (TavernPayer)
     //! Appended last so that no existing numeric value changes.
-    tavernPayer
+    tavernPayer,
+    //! Keeper preferences (int32_t payer, int32_t threshold, bool healOn), uint32_t patient count,
+    //! then patient rows: string creature, string class, bool worker, double HP, double maxHP,
+    //! double remaining seconds (negative while paused).
+    infirmaryWindow,
+    //! Current keeper preferences: int32_t payer, int32_t threshold, bool healOn.
+    infirmarySettings
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

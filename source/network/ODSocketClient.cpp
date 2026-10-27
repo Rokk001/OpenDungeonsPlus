@@ -77,8 +77,10 @@ bool ODSocketClient::replay(const std::string& filename)
     return true;
 }
 
+//! \brief Closes the connection or replay and clears negotiated and subscribed client state.
 void ODSocketClient::disconnect(bool keepReplay)
 {
+    mInfirmaryWindowOpen = false;
     mSupportsLiveNickname = false;
     mSupportsCreatureMood = false;
     mSupportsCreatureActivity = false;

@@ -18,6 +18,7 @@
 #include "creatureaction/CreatureActionSleep.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
+#include "ODApplication.h"
 
 #include "creatureaction/CreatureActionFindHome.h"
 #include "entities/Creature.h"
@@ -93,7 +94,9 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
         creature.increaseWakefulness(dirtOutputFactor * SkillManager::getResearchValue(sleepingSeat, SkillType::roomDormitory,
             ConfigManager::getSingleton().getRoomConfigDouble("DormitoryWakefulnessPerTurn"), ResearchEffect::SleepRecovery));
         creature.setHP(creature.getHP() + dirtOutputFactor * SkillManager::getResearchValue(
-            sleepingSeat, SkillType::roomDormitory, creature.getDefinition()->getSleepHeal(), ResearchEffect::SleepRecovery));
+            sleepingSeat, SkillType::roomDormitory, creature.getDefinition()->getSleepHeal() == 0.0 ? 0.0 :
+                creature.getMaxHp() / (ConfigManager::getSingleton().getRoomConfigDouble("DormitoryFullHealSeconds") *
+                    ODApplication::turnsPerSecond), ResearchEffect::SleepRecovery));
 
         creature.computeCreatureOverlayHealthValue();
 

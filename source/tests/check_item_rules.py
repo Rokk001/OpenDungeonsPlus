@@ -42,11 +42,11 @@ struct GameMap {
 };
 """
     lookup_checks = r"""
-//! \brief Verifies every new equipment entity resolves its registered identity and missing names stay missing.
+//! \brief Verifies equipment and infirmary figures resolve their registered identities and missing names stay missing.
 int main() {
-    GameMap map; GameEntity bag={"ItemBag__171"},merchant={"Merchant_1"},bundle={"HerbBundle_1"};
-    map.rendered={&bag,&merchant,&bundle};
-    const GameEntityType types[]={GameEntityType::itemBagEntity,GameEntityType::merchantEntity,GameEntityType::herbBundleEntity};
+    GameMap map; GameEntity bag={"ItemBag__171"},merchant={"Merchant_1"},bundle={"HerbBundle_1"},shaman={"InfirmaryShaman_1"};
+    map.rendered={&bag,&merchant,&bundle,&shaman};
+    const GameEntityType types[]={GameEntityType::itemBagEntity,GameEntityType::merchantEntity,GameEntityType::herbBundleEntity,GameEntityType::infirmaryShamanEntity};
     for(size_t index=0;index<map.rendered.size();++index) {
         if(map.getEntityFromTypeAndName(types[index],map.rendered[index]->name)!=map.rendered[index])
             throw std::runtime_error("registered equipment entity lookup failed");

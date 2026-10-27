@@ -26,10 +26,21 @@
 #include "entities/GiftBoxEntity.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
+#include <algorithm>
 #include "gamemap/GameMap.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+
+namespace
+{
+//! \brief Prioritizes infirmaries before other reachable delivery buildings.
+bool infirmaryFirst(Building* building)
+{
+    return building->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(building)->getType() == RoomType::infirmary;
+}
+}
 
 CreatureActionGrabEntity::CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry) :
     CreatureAction(creature),
@@ -106,6 +117,7 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
 
     // We try to find a building that wants the entity
     std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
+    std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
     std::vector<Tile*> tilesDest;
     bool hasPreferredRoom = false;
     RoomType preferredRoom = RoomType::nullRoomType;
@@ -130,6 +142,8 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
         {
             Tile* tile = building->getCoveredTile(0);
             tilesDest.push_back(tile);
+            if(building->getObjectType() == GameEntityType::room && static_cast<Room*>(building)->getType() == RoomType::infirmary)
+                break;
         }
     }
 

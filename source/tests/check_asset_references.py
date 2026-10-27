@@ -66,6 +66,50 @@ def script_names(path, kind):
     return names
 
 
+# Resolve flat sound families only when the loader both opens and registers them.
+def registered_flat_sound_families(root):
+    """Follow literal array registrations and require exact existing sound paths."""
+    source = root / 'source/sound/SoundEffectsManager.cpp'
+    if not source.is_file():
+        return set()
+    text = without_comments(read(source))
+    paths = set(re.findall(
+        r'const\s+std::string\s*&\s*(\w+)\s*=\s*'
+        r'ResourceManager::getSingleton\(\)\.getSoundPath\(\)\s*;', text))
+    files = {p.relative_to(root / 'sounds').as_posix()
+             for p in (root / 'sounds').rglob('*.ogg') if p.is_file()}
+    families = set()
+    arrays = re.finditer(r'(?:static\s+)?const\s+char\s*\*\s*(?:const\s+)?'
+                         r'(\w+)\s*\[\s*\]\s*=\s*\{([^{}]*)\}\s*;', text)
+    for array in arrays:
+        if not re.fullmatch(r'\s*' + STRING + r'(?:\s*,\s*' + STRING + r')*\s*,?\s*', array[2]):
+            continue
+        loop = re.compile(r'for\s*\(\s*const\s+char\s*\*\s*(\w+)\s*:\s*'
+                          + re.escape(array[1]) + r'\s*\)\s*\{([^{}]*)\}', re.S)
+        for match in loop.finditer(text, array.end()):
+            body = match[2]
+            family = re.search(r'const\s+std::string\s+(\w+)\s*=\s*std::string\(('
+                               + STRING + r')\)\s*\+\s*' + re.escape(match[1]) + r'\s*;', body)
+            if not family:
+                continue
+            load = re.search(r'GameSound\s*\*\s*(\w+)\s*=\s*getGameSound\(\s*(\w+)\s*\+\s*'
+                             + re.escape(family[1]) + r'\s*\+\s*"\.ogg"\s*,\s*true\s*\)\s*;',
+                             body[family.end():])
+            if not load or load[2] not in paths:
+                continue
+            registration = (r'mSpatialSounds\s*\[\s*' + re.escape(family[1])
+                            + r'\s*\]\s*\.push_back\(\s*' + re.escape(load[1]) + r'\s*\)\s*;')
+            if not re.search(registration, body[family.end() + load.end():]):
+                continue
+            prefix = ast.literal_eval(family[2])
+            for literal in re.findall(STRING, array[2]):
+                name = prefix + ast.literal_eval(literal)
+                if name + '.ogg' in files:
+                    families.add(name)
+    return families
+
+
+# Index the resources accepted by the production loaders.
 def inventory(root):
     """Index logical script names, exact mesh filenames and loaded sound families."""
     assets = {'particle': set(), 'material': set(), 'mesh': set(), 'sound': set(), 'relative_sound': set()}
@@ -76,6 +120,7 @@ def inventory(root):
     assets['mesh'].update(path.name for path in (root / 'models').rglob('*.mesh'))
     for path in (root / 'sounds/Spatial').rglob('*.ogg'):
         assets['sound'].add(path.parent.relative_to(root / 'sounds/Spatial').as_posix())
+    assets['sound'].update(registered_flat_sound_families(root))
     # Incomplete voices fall back to Default in SoundEffectsManager::playRelativeSound.
     config_source = root / 'source/utils/ConfigManager.cpp'
     default_voice = 'Default'
@@ -472,8 +517,9 @@ def audit(root):
 
 
 
+# Exercise supported registrations and reject missing or unregistered resources.
 def self_test():
-    """Exercise real parser paths with positive fixtures and missing-name mutations."""
+    """Exercise real parser paths, flat registrations and missing-name mutations."""
     with tempfile.TemporaryDirectory(prefix='odp-asset-refs-') as directory:
         root = Path(directory)
         files = {
@@ -489,6 +535,19 @@ def self_test():
             'particles/valid.particle': 'BaseParticle\n{\n}\nparticle_system ValidParticle : BaseParticle\n{\n material ValidMaterial\n}\n',
             'materials/scripts/valid.material': 'import Base from "external.material"\nmaterial ValidMaterial\n{\n}\n',
             'sounds/Spatial/Test/Valid/sound.ogg': '',
+            'sounds/Flat/Valid.ogg': '',
+            'sounds/Flat/Undeclared.ogg': '',
+            'config/roomAmbienceFlat.cfg': 'Family Flat/Valid\n',
+            'source/sound/SoundEffectsManager.cpp': (
+                '//! \\brief Registers the literal flat sound fixture.\n'
+                'SoundEffectsManager::SoundEffectsManager() {\n'
+                'const std::string& folder = ResourceManager::getSingleton().getSoundPath();\n'
+                'static const char* const names[] = {"Valid"};\n'
+                'for(const char* name : names) {\n'
+                'const std::string family = std::string("Flat/") + name;\n'
+                'GameSound* sound = getGameSound(folder + family + ".ogg", true);\n'
+                'if(sound != nullptr) mSpatialSounds[family].push_back(sound);\n}\n}\n'),
+
             'sounds/Relative/Default/Interface/Click/click.ogg': '',
             'music/Song.ogg': '',
             'config/roomAmbienceFixture.cfg': 'System ValidParticle\nMeshName Valid.mesh\nMaterial ValidMaterial\nFamily Test/Valid\nMusic Song.ogg\nBaseLine HailStorm 1 1 1 1 1 1 1 ValidParticle\nBaseLine GuidedBolt 1 1 1 1 1 Valid ValidParticle 1\n',
@@ -544,12 +603,33 @@ def self_test():
                              'source/render/CreatureOverlayStatus.cpp' if name == 'Mood_2048' else filename)
             assert any(r.path == expected_path and r.line == line and r.kind == kind and r.name == name for r in missing), (filename, kind, name, line, missing)
             path.write_text(original, encoding='utf-8')
+        # Flat files need an exact source registration as well as the actual recording.
+        assert 'Flat/Valid' in inventory(root)['sound'], 'registered flat sound was omitted'
+        flat_config = root / 'config/roomAmbienceFlat.cfg'
+        for name in ('Undeclared', 'valid'):
+            flat_config.write_text('Family Flat/' + name + '\n', encoding='utf-8')
+            _, missing = audit(root)
+            assert any(r.kind == 'sound' and r.name == 'Flat/' + name for r in missing), missing
+        flat_config.write_text(files['config/roomAmbienceFlat.cfg'], encoding='utf-8')
+        recording = root / 'sounds/Flat/Valid.ogg'
+        original_recording = recording.read_bytes()
+        recording.unlink()
+        _, missing = audit(root)
+        assert any(r.kind == 'sound' and r.name == 'Flat/Valid' for r in missing), missing
+        recording.write_bytes(original_recording)
+        loader = root / 'source/sound/SoundEffectsManager.cpp'
+        for old, new in (('getGameSound(', 'notAProducer('),
+                         ('mSpatialSounds[family].push_back(sound);', 'notARegistration(sound);')):
+            loader.write_text(files['source/sound/SoundEffectsManager.cpp'].replace(old, new, 1), encoding='utf-8')
+            _, missing = audit(root)
+            assert any(r.kind == 'sound' and r.name == 'Flat/Valid' for r in missing), missing
+            loader.write_text(files['source/sound/SoundEffectsManager.cpp'], encoding='utf-8')
         # A runtime mesh is accepted only while a real producer creates that same name.
         path = root / 'source/Fixture.cpp'
         path.write_text(files['source/Fixture.cpp'].replace('object->convertToMesh', 'object->notAProducer'), encoding='utf-8')
         _, missing = audit(root)
         assert any(r.name == 'Generated.mesh' for r in missing), 'unproven runtime mesh was accepted'
-    print(f'asset reference self-test: {len(cases) + 2} cases passed')
+    print(f'asset reference self-test: {len(cases) + 8} cases passed')
 
 
 def main():

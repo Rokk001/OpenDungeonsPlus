@@ -5797,6 +5797,7 @@ bool RenderManager::startCreatureWakeAnimation(Creature* creature, Ogre::Entity*
     return false;
 }
 
+//! \brief Fits a sleeping creature to its bed or infirmary cot using the furniture support geometry.
 void RenderManager::fitCreatureToBed(CreatureSleepAnimation& sleeping)
 {
     // Resolve after final walk positioning, which follows the sleep-entry event.
@@ -5805,12 +5806,18 @@ void RenderManager::fitCreatureToBed(CreatureSleepAnimation& sleeping)
     Ogre::AnimationState* animation = sleeping.mAnimation;
     const bool nativeEntry = sleeping.mNativeEntry;
     const std::string entry = animation->getAnimationName();
+    Tile* tile = creature->getPositionTile();
+    Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
+    const bool infirmary = room != nullptr && room->getType() == RoomType::infirmary;
     RenderedMovableEntity* bed = nullptr;
     Ogre::Real nearestSquaredDistance = SLEEP_BED_MAX_SQUARED_DISTANCE;
     for(RenderedMovableEntity* candidate : creature->getGameMap()->getRenderedMovableEntities())
     {
-        if(candidate->getObjectType() != GameEntityType::buildingObject || candidate->getEntityNode() == nullptr ||
-           candidate->getMeshName() != creature->getDefinition()->getBedMeshName())
+        if(candidate->getObjectType() != GameEntityType::buildingObject || candidate->getEntityNode() == nullptr)
+            continue;
+        const bool matchingFurniture = infirmary ? candidate->getMeshName().compare(0, 12, "InfirmaryCot") == 0 :
+            candidate->getMeshName() == creature->getDefinition()->getBedMeshName();
+        if(!matchingFurniture)
             continue;
         const Ogre::Real candidateDistance = candidate->getPosition().squaredDistance(creature->getPosition());
         if(candidateDistance < nearestSquaredDistance)
@@ -5823,7 +5830,8 @@ void RenderManager::fitCreatureToBed(CreatureSleepAnimation& sleeping)
     {
         Ogre::SceneNode* bedNode = bed->getEntityNode();
         Ogre::MeshPtr bedMesh = Ogre::MeshManager::getSingleton().getByName(bed->getMeshName() + ".mesh", "Graphics");
-        sleeping.mRestOrientation = bedNode->getOrientation();
+        if(!infirmary)
+            sleeping.mRestOrientation = bedNode->getOrientation();
         if(needsCreatureDropFallback(entity))
             sleeping.mRestOrientation = sleeping.mRestOrientation *
                 Ogre::Quaternion(Ogre::Degree(-90), Ogre::Vector3::UNIT_X);

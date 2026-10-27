@@ -315,7 +315,7 @@ bool RoomTreasury::removeCoveredTile(Tile* t)
 
     if(roomTreasuryTileData->mGoldInTile > 0)
     {
-        int value = roomTreasuryTileData->mGoldInTile;
+        double value = roomTreasuryTileData->mGoldInTile;
         if(value > 0)
         {
             OD_LOG_INF("Room " + getName()
@@ -369,9 +369,10 @@ int RoomTreasury::getGoldCapacityPerTile() const
         ConfigManager::getSingleton().getRoomConfigDouble("TreasuryGoldPerTile"), ResearchEffect::GoldPerTile));
 }
 
-int RoomTreasury::getTotalGoldStored() const
+//! \brief Sums the gold in every tile, retaining fractional payments.
+double RoomTreasury::getTotalGoldStored() const
 {
-    int totalGold = 0;
+    double totalGold = 0;
 
     for (const std::pair<Tile* const, TileData*>& p : mTileData)
     {
@@ -382,14 +383,15 @@ int RoomTreasury::getTotalGoldStored() const
     return totalGold;
 }
 
+//! \brief Deposits as much exact gold as the room can hold.
 //! \brief Deposits unchanged gold and reports its burst when the owner has one unambiguous heart.
-int RoomTreasury::depositGold(int gold, Tile *tile)
+double RoomTreasury::depositGold(double gold, Tile *tile)
 {
-    int goldDeposited, goldToDeposit = gold, emptySpace;
+    double goldDeposited = 0.0, goldToDeposit = gold, emptySpace = 0.0;
 
     // Start by trying to deposit the gold in the requested tile.
     RoomTreasuryTileData* roomTreasuryTileData = static_cast<RoomTreasuryTileData*>(mTileData[tile]);
-    emptySpace = std::max(0, getGoldCapacityPerTile() - roomTreasuryTileData->mGoldInTile);
+    emptySpace = std::max(0.0, getGoldCapacityPerTile() - roomTreasuryTileData->mGoldInTile);
     goldDeposited = std::min(emptySpace, goldToDeposit);
     roomTreasuryTileData->mGoldInTile += goldDeposited;
     goldToDeposit -= goldDeposited;
@@ -405,7 +407,7 @@ int RoomTreasury::depositGold(int gold, Tile *tile)
 
         // Store as much gold as we can in this tile.
         RoomTreasuryTileData* roomTreasuryTileData = static_cast<RoomTreasuryTileData*>(p.second);
-        emptySpace = std::max(0, getGoldCapacityPerTile() - roomTreasuryTileData->mGoldInTile);
+        emptySpace = std::max(0.0, getGoldCapacityPerTile() - roomTreasuryTileData->mGoldInTile);
         goldDeposited = std::min(emptySpace, goldToDeposit);
         roomTreasuryTileData->mGoldInTile += goldDeposited;
         goldToDeposit -= goldDeposited;
@@ -413,7 +415,7 @@ int RoomTreasury::depositGold(int gold, Tile *tile)
 
     // Return the amount we were actually able to deposit
     // (i.e. the amount we wanted to deposit minus the amount we were unable to deposit).
-    int wasDeposited = gold - goldToDeposit;
+    double wasDeposited = gold - goldToDeposit;
     // If we couldn't deposit anything, we do not notify
     if(wasDeposited == 0)
         return wasDeposited;
@@ -469,17 +471,18 @@ int RoomTreasury::depositGold(int gold, Tile *tile)
     return wasDeposited;
 }
 
-int RoomTreasury::withdrawGold(int gold)
+//! \brief Takes up to the requested exact amount from the room's tiles.
+double RoomTreasury::withdrawGold(double gold)
 {
     mGoldChanged = true;
     mFullAnnounced = false;
 
-    int withdrawlAmount = 0;
+    double withdrawlAmount = 0;
     for (std::pair<Tile* const, TileData*>& p : mTileData)
     {
         RoomTreasuryTileData* roomTreasuryTileData = static_cast<RoomTreasuryTileData*>(p.second);
         // Check to see if the current room tile has enough gold in it to fill the amount we still need to pick up.
-        int goldStillNeeded = gold - withdrawlAmount;
+        double goldStillNeeded = gold - withdrawlAmount;
         if (roomTreasuryTileData->mGoldInTile >= goldStillNeeded)
         {
             // There is enough to satisfy the request so we do so and exit the loop.
@@ -515,7 +518,7 @@ int RoomTreasury::getLevelOfTile(const std::map<Tile*, int>& levels, int x, int 
 void RoomTreasury::updateMeshesForTile(Tile* tile, RoomTreasuryTileData* roomTreasuryTileData,
     const std::map<Tile*, int>& levels)
 {
-    int gold = roomTreasuryTileData->mGoldInTile;
+    double gold = roomTreasuryTileData->mGoldInTile;
     // Capturing an upgraded treasury must preserve gold above the new owner's capacity.
     OD_ASSERT_TRUE_MSG(gold >= 0, "room=" + getName() + ", gold=" + Helper::toString(gold));
 

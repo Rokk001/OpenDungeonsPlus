@@ -24,6 +24,8 @@
 #include "entities/MissileStone.h"
 #include "entities/ItemBagEntity.h"
 #include "entities/Tile.h"
+#include "rooms/RoomInfirmary.h"
+#include "rooms/RoomDormitory.h"
 #include "rooms/Room.h"
 #include "rooms/RoomMerchant.h"
 #include "rooms/RoomTreasury.h"
@@ -93,7 +95,11 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
         mEntityToCarry->notifyEntityCarryOn(&mCreature);
         mCreature.carryEntity(mEntityToCarry);
     }
-    mTileDest = mBuildingDest->askSpotForCarriedEntity(mEntityToCarry);
+    if(mBuildingDest->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary)
+        mTileDest = static_cast<RoomInfirmary*>(mBuildingDest)->reserveCot(static_cast<Creature&>(*mEntityToCarry), mCreature);
+    else
+        mTileDest = mBuildingDest->askSpotForCarriedEntity(mEntityToCarry);
     OD_LOG_INF("creature=" + mCreature.getName() + (mIsDrag ? " is pulling " : " is carrying ") + mEntityToCarry->getName() + " to tile=" + Tile::displayAsString(mTileDest));
 }
 
@@ -142,6 +148,14 @@ CreatureActionCarryEntity::~CreatureActionCarryEntity()
         mBuildingDest->removeGameEntityListener(this);
         mBuildingDest->notifyCarryingStateChanged(&mCreature, mEntityToCarry);
     }
+}
+
+void CreatureActionCarryEntity::replaceDestination(Building& oldRoom, Building& newRoom)
+{
+    if(mBuildingDest != &oldRoom) return;
+    oldRoom.removeGameEntityListener(this);
+    mBuildingDest = &newRoom;
+    newRoom.addGameEntityListener(this);
 }
 
 std::function<bool()> CreatureActionCarryEntity::action()
@@ -273,7 +287,8 @@ void CreatureActionCarryEntity::startLaying(Creature& dragged)
     std::vector<Ogre::Vector2> path(queue.begin(), queue.end());
     appendTrailSection(mDragTrail, mDragTrailArc, mDragFollowArc, mDragTrailArc.back(), path);
     mDragFollowArc = mDragTrailArc.back();
-    Tile* homeTile = dragged.getHomeTile();
+    Tile* homeTile = (mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary) ? mTileDest : dragged.getHomeTile();
     if(homeTile != nullptr)
     {
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(homeTile->getX()),
@@ -315,6 +330,27 @@ bool CreatureActionCarryEntity::handleDragCreature()
 
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
     ConfigManager& config = ConfigManager::getSingleton();
+
+    // A cot taken by hand, or admission that can no longer be paid, sends this same carry to the own bed.
+    if(mBuildingDest->getObjectType() == GameEntityType::room && static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary)
+    {
+        RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(mBuildingDest);
+        if(infirmary->askSpotForCarriedEntity(dragged) != mTileDest || !infirmary->canPayAdmission(*dragged, false))
+        {
+            infirmary->cancelReservation(mCreature);
+            Tile* bed = dragged->getHomeTile();
+            if(bed == nullptr || bed->getCoveringRoom() == nullptr || bed->getCoveringRoom()->getType() != RoomType::dormitory ||
+                bed->getCoveringRoom()->getSeat() != dragged->getSeat())
+                return stopDragging(true);
+            mBuildingDest->removeGameEntityListener(this);
+            mBuildingDest = bed->getCoveringRoom();
+            mBuildingDest->addGameEntityListener(this);
+            mTileDest = mBuildingDest->askSpotForCarriedEntity(dragged);
+            mDragPhase = 0;
+            mDragLayTurns = 0;
+            mCreature.clearDestinations(EntityAnimation::idle_anim, true, true);
+        }
+    }
 
     // The bed is the own bed of the creature and nothing else: when it is gone, destroyed or given to someone
     // else on the way, the worker lets go and the creature lies where it is (its death is not held back)
@@ -386,6 +422,8 @@ void CreatureActionCarryEntity::releaseEntity(const std::string& reason)
     if(mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
         static_cast<Room*>(mBuildingDest)->getType() == RoomType::treasury)
         static_cast<RoomTreasury*>(mBuildingDest)->releaseItemDelivery(mEntityToCarry);
+    if(mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room && static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary)
+        static_cast<RoomInfirmary*>(mBuildingDest)->cancelReservation(mCreature);
     mEntityToCarry->setCarryLock(mCreature, false);
     const Ogre::Vector3& pos = mCreature.getPosition();
     OD_LOG_INF("creature=" + mCreature.getName() + " is releasing " + reason + " carried " + mEntityToCarry->getName() + ", pos=" + Helper::toString(pos));

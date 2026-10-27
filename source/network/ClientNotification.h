@@ -126,7 +126,11 @@ enum class ClientNotificationType
     askTavernWindow,
     //! Sets who pays for the beer of a tavern: + int32_t tileX, int32_t tileY, uint32_t payer (TavernPayer).
     //! Only the owner can set it; the server answers with tavernPayer.
-    askTavernPayer
+    askTavernPayer,
+    //! Subscribe to patient updates: bool open.
+    askInfirmaryWindow,
+    //! Set keeper preferences: int32_t payer, int32_t threshold, bool healOn.
+    askInfirmarySettings
 };
 
 //! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.

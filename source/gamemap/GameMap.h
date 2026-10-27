@@ -415,7 +415,8 @@ public:
     //! \brief Read-only access to the triggers and actions of the level, for code that does not change the script
     const LevelScript& getLevelScript() const;
 
-    bool withdrawFromTreasuries(int gold, Seat* seat);
+    //! \brief Withdraws the complete gold amount, including fractional admissions, or refuses it.
+    bool withdrawFromTreasuries(double gold, Seat* seat);
 
     inline const std::string& getLevelFileName() const
     { return mLevelFileName; }
@@ -589,7 +590,8 @@ public:
     std::vector<Tile*> getBuildableTilesForPlayerInArea(int x1, int y1, int x2, int y2,
         Player* player);
 
-    int addGoldToSeat(int gold, int seatId);
+    //! \brief Deposits gold without truncation and returns any amount that did not fit.
+    double addGoldToSeat(double gold, int seatId);
     int addManaToSeat(int mana, int seatId);
 
     //! \brief Searches for a worker owned by the seat for path finding
@@ -748,8 +750,9 @@ public:
     RenderedMovableEntity* getRenderedMovableEntity(const std::string& name);
     void clearRenderedMovableEntities(NodeType nt = NodeType::MTILES_NODE);
     //! \brief Looks an entity up by its type and unique name (rendered entities, creatures, rooms, traps, spells and lights).
-    //! Also resolves a typed entity identity for movement, hand and appearance notifications.
-    //! Includes equipment bags, merchant figures and carryable herb bundles.
+    //! \brief Looks up an entity by its synchronized type and unique name.
+    //! \brief Resolves a typed entity identity for movement, hand and appearance notifications.
+    //! \brief Includes equipment bags, merchant figures and carryable herb bundles.
     GameEntity* getEntityFromTypeAndName(GameEntityType entityType,
         const std::string& entityName);
 

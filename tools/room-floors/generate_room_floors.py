@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates the floor textures of the hatchery, library, dormitory, dungeon temple, treasury, crypt, training hall,
-casino, prison, arena, torture chamber, workshop, portal and portal wave, plus the UV atlas of the wooden bridge
+casino, prison, arena, torture chamber, workshop, portal, portal wave and infirmary, plus the UV atlas of the wooden bridge
 (materials/textures/).
 
 Original work of the project, licence CC0. Everything is procedural and seeded; running the script again gives
@@ -145,7 +145,7 @@ FLATTEN = {
     'dormitory': (48.0, 0.6), 'casino': (48.0, 0.5),
     'crypt': (40.0, 0.8), 'trainingHall': (48.0, 0.8), 'prison': (40.0, 0.8),
     'torture': (48.0, 0.7), 'workshop': (48.0, 0.7), 'portal': (48.0, 0.7),
-    'portalWave': (48.0, 0.7), 'toilet': (48.0, 0.7),
+    'portalWave': (48.0, 0.7), 'toilet': (48.0, 0.7), 'infirmary': (48.0, 0.7),
 }
 
 
@@ -1554,6 +1554,40 @@ def torture_field():
     return col, hgt
 
 
+INFIRMARY_SLAB = np.array([0.246, 0.214, 0.190])
+
+
+# Paint the prescribed periodic infirmary flagstones, stains and straw.
+def infirmary_field():
+    """Worn flagstones with old stains and straw wisps (the torture slab layout with own seeds, without drain
+    grooves and grates; straw as the prison). Every layer is periodic."""
+    pid, dist, count = row_layout(1801, 6, 90, 190, 4.0, 1802)
+    rng = np.random.RandomState(1803)
+    tone = rng.uniform(0.92, 1.08, count)[pid]
+    mottle = fbm(1804, 14.0, 14.0, 3)
+    grit = fbm(1805, 170.0, 170.0, 2)
+    col = INFIRMARY_SLAB[None, None, :] * tone[..., None]
+    col = col * (1.0 + 0.10 * mottle + 0.07 * grit)[..., None]
+    hgt = 0.5 * mottle + 0.4 * grit
+    # worn centres: slightly lighter and flatter where feet pass
+    worn = smoothstep(0.2, 1.2, fbm(1806, 10.0, 10.0, 3))
+    col = col * (1.0 + 0.06 * worn)[..., None]
+    hgt = hgt * (1.0 - 0.3 * worn)
+    # old brown stains
+    stain = smoothstep(1.1, 1.6, fbm(1807, 14.0, 14.0, 3))
+    col = mix(col, np.array([0.150, 0.090, 0.060])[None, None, :] * (0.85 + 0.3 * grit[..., None]), stain * 0.5)
+    # dark joints with a bevel
+    t = smoothstep(0.8, 3.2, dist)
+    col = mix(np.broadcast_to(np.array([0.050, 0.046, 0.044]), col.shape), col, t)
+    hgt = hgt * 0.7 + 2.6 * smoothstep(0.8, 5.0, dist)
+    # straw wisps
+    sp = Sprites(wrap=True)
+    draw_straws(sp, straw_segments(1808, 40, (0, 0, N, N), (20, 38)), (0.50, 0.40, 0.20))
+    sc, sa, _ = sp.result()
+    col = mix(col, sc, sa * 0.92)
+    return col, hgt
+
+
 WORKSHOP_PLANK = np.array([0.262, 0.205, 0.176])
 IRON = np.array([0.135, 0.13, 0.13])
 RUST_ORANGE = np.array([0.30, 0.15, 0.08])
@@ -2119,6 +2153,8 @@ ROOMS = {
         'field': flagstone_field, 'band': None, 'strength': 1.3, 'tone': 'treasury',
         'pieces': {'Arena': ('', 'ArenaNormal')},
     },
+    'infirmary': {'field': infirmary_field, 'band': None, 'strength': 1.3,
+                  'pieces': {'InfirmaryFloor': ('', 'InfirmaryFloorNormal')}},
     'torture': {
         'field': torture_field, 'band': None, 'strength': 1.3,
         'pieces': {'TortureFloor': ('', 'TortureFloorNormal')},
@@ -2286,7 +2322,7 @@ def seam_image(result):
 
 # Rooms whose floors are periodic and get the wrap seam ratio (--check) and the rolled preview (--seamcheck).
 SEAM_CHECK_ROOMS = ('hatchery', 'dormitory', 'dungeonTemple', 'treasury', 'trainingHall', 'casino', 'prison', 'arena',
-                    'torture', 'workshop', 'portal', 'portalWave', 'toilet', 'tavern')
+                    'torture', 'workshop', 'portal', 'portalWave', 'toilet', 'tavern', 'infirmary')
 
 
 def main():
