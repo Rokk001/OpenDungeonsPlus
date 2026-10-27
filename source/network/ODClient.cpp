@@ -25,6 +25,7 @@
 #include "entities/EntityLoading.h"
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
+#include "entities/PoolAttendantEntity.h"
 #include "entities/RenderedMovableEntity.h"
 #include "entities/Tile.h"
 #include "entities/Weapon.h"
@@ -1736,9 +1737,16 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             uint32_t turns = 0;
             Ogre::Real elapsed = 0.0f;
             OD_ASSERT_TRUE(packetReceived >> creatureName >> from >> to >> turns >> elapsed);
+            // The message carries the jump of a creature or of the pool attendant, told apart by the name
             Creature* creature = gameMap->getCreature(creatureName);
             if(creature != nullptr)
+            {
                 creature->startJumpFromServer(from, to, turns, elapsed);
+                break;
+            }
+            GameEntity* attendant = gameMap->getEntityFromTypeAndName(GameEntityType::poolAttendantEntity, creatureName);
+            if((attendant != nullptr) && (attendant->getObjectType() == GameEntityType::poolAttendantEntity))
+                static_cast<PoolAttendantEntity*>(attendant)->startJumpFromServer(from, to, turns, elapsed);
             break;
         }
         case ServerNotificationType::chickenKindChanged:
