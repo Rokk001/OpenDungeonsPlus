@@ -112,25 +112,50 @@ using namespace std;
 
 namespace
 {
-//! The tile part of the mana income is capped: one mana per second per claimed
-//! tile, up to this many tiles.
-const double MANA_INCOME_TILES_CAP = 500.0;
-//! Mana each worker above the free ones costs to keep, per second.
-const double MANA_WORKER_UPKEEP_PER_SECOND = 7.0;
+//! \brief The tile part of the mana income is capped: this many claimed tiles count at most
+//! (global.cfg ManaIncomeTilesCap).
+double manaIncomeTilesCap()
+{
+    return ConfigManager::getSingleton().getManaIncomeTilesCap();
+}
+//! \brief Mana each worker above the free ones costs to keep, per second (global.cfg WorkerManaUpkeepPerSecond).
+double manaWorkerUpkeepPerSecond()
+{
+    return ConfigManager::getSingleton().getWorkerManaUpkeepPerSecond();
+}
 
-//! Workers a seat holds before its living heart stops creating more. The heart sustains
-//! these workers on its own, only the ones above them are paid from the mana reserves.
-const int AUTO_WORKERS_TARGET = 4;
-//! Seconds the mana has to stay too low to pay the upkeep before the workers above the
-//! free ones are doomed.
-const double WORKER_MANA_EVALUATION_SECONDS = 10.0;
-//! Seconds the doomed workers have left, if the mana is still too low when it ends they pop.
-const double WORKER_POP_COUNTDOWN_SECONDS = 10.0;
-//! Seconds the living dungeon heart waits between two workers it creates.
-const double AUTO_WORKER_INTERVAL_SECONDS = 5.0;
+//! \brief Workers a seat holds before its living heart stops creating more. The heart sustains
+//! these workers on its own, only the ones above them are paid from the mana reserves
+//! (spells.cfg SummonWorkerNbHeart).
+int autoWorkersTarget()
+{
+    return ConfigManager::getSingleton().getSpellConfigInt32("SummonWorkerNbHeart");
+}
+//! \brief Seconds the mana has to stay too low to pay the upkeep before the workers above the
+//! free ones are doomed (global.cfg WorkerManaShortageSeconds).
+double workerManaEvaluationSeconds()
+{
+    return ConfigManager::getSingleton().getWorkerManaShortageSeconds();
+}
+//! \brief Seconds the doomed workers have left, if the mana is still too low when it ends they pop
+//! (global.cfg WorkerPopCountdownSeconds).
+double workerPopCountdownSeconds()
+{
+    return ConfigManager::getSingleton().getWorkerPopCountdownSeconds();
+}
+//! \brief Seconds the living dungeon heart waits between two workers it creates (global.cfg AutoWorkerIntervalSeconds).
+double autoWorkerIntervalSeconds()
+{
+    return ConfigManager::getSingleton().getAutoWorkerIntervalSeconds();
+}
 
-//! \brief Squared distance within which an enemy creature triggers the heart defence.
-const int HEART_DEFENCE_RANGE_SQUARED = 7 * 7;
+//! \brief Squared distance within which an enemy creature triggers the heart defence
+//! (rooms.cfg DungeonHeartDefenceRange, in tiles).
+int heartDefenceRangeSquared()
+{
+    const int range = static_cast<int>(ConfigManager::getSingleton().getRoomConfigDouble("DungeonHeartDefenceRange"));
+    return range * range;
+}
 
 //! \brief True if the seat has completed a goal that is more than keeping its dungeon temple. A seat
 //! whose only goal is to protect its temple does not win through its goals at once: the level script
@@ -156,19 +181,20 @@ double manaIncomePerSecond(unsigned int numClaimedTiles, unsigned int numHeartTi
         ? numClaimedTiles - numHeartTiles
         : 0;
     double tilesIncome = static_cast<double>(tiles);
-    if (tilesIncome > MANA_INCOME_TILES_CAP)
-        tilesIncome = MANA_INCOME_TILES_CAP;
+    if (tilesIncome > manaIncomeTilesCap())
+        tilesIncome = manaIncomeTilesCap();
+    tilesIncome *= ConfigManager::getSingleton().getManaPerClaimedTilePerSecond();
     return heartIncome + tilesIncome;
 }
 
 //! \brief Mana per second the workers of a seat cost together. The first four are free.
 double manaUpkeepPerSecond(unsigned int numWorkers)
 {
-    if(numWorkers <= static_cast<unsigned int>(AUTO_WORKERS_TARGET))
+    if(numWorkers <= static_cast<unsigned int>(autoWorkersTarget()))
         return 0.0;
 
-    return static_cast<double>(numWorkers - static_cast<unsigned int>(AUTO_WORKERS_TARGET))
-        * MANA_WORKER_UPKEEP_PER_SECOND;
+    return static_cast<double>(numWorkers - static_cast<unsigned int>(autoWorkersTarget()))
+        * manaWorkerUpkeepPerSecond();
 }
 }
 
@@ -2044,7 +2070,7 @@ void GameMap::updateSeatMana(Seat* seat, uint32_t nbManaWellTiles, double timeSi
 
 void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLastTurn)
 {
-    if (!shortage || seat->getNumCreaturesWorkers() <= AUTO_WORKERS_TARGET)
+    if (!shortage || seat->getNumCreaturesWorkers() <= autoWorkersTarget())
     {
         // The mana covers the upkeep again or there is nothing left to pop
         seat->mManaShortageSeconds = 0.0;
@@ -2055,8 +2081,8 @@ void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLas
     if (seat->mWorkerPopCountdown < 0.0)
     {
         seat->mManaShortageSeconds += timeSinceLastTurn;
-        if (seat->mManaShortageSeconds >= WORKER_MANA_EVALUATION_SECONDS)
-            seat->mWorkerPopCountdown = WORKER_POP_COUNTDOWN_SECONDS;
+        if (seat->mManaShortageSeconds >= workerManaEvaluationSeconds())
+            seat->mWorkerPopCountdown = workerPopCountdownSeconds();
         return;
     }
 
@@ -2065,7 +2091,7 @@ void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLas
         return;
 
     // Every worker above the free four is lost
-    int numToPop = seat->getNumCreaturesWorkers() - AUTO_WORKERS_TARGET;
+    int numToPop = seat->getNumCreaturesWorkers() - autoWorkersTarget();
     std::vector<Creature*> workers;
     for (Creature* creature : mCreatures)
     {
@@ -2102,7 +2128,7 @@ void GameMap::updateSeatWorkerPop(Seat* seat, bool shortage, double timeSinceLas
 
 void GameMap::updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn)
 {
-    if (seat->getNumCreaturesWorkers() >= AUTO_WORKERS_TARGET)
+    if (seat->getNumCreaturesWorkers() >= autoWorkersTarget())
     {
         // At the target the heart is done creating and the clock starts over
         seat->mAutoWorkerTimer = 0.0;
@@ -2137,10 +2163,10 @@ void GameMap::updateSeatAutoWorkers(Seat* seat, double timeSinceLastTurn)
     }
 
     seat->mAutoWorkerTimer += timeSinceLastTurn;
-    while (seat->mAutoWorkerTimer >= AUTO_WORKER_INTERVAL_SECONDS
-        && seat->getNumCreaturesWorkers() < AUTO_WORKERS_TARGET)
+    while (seat->mAutoWorkerTimer >= autoWorkerIntervalSeconds()
+        && seat->getNumCreaturesWorkers() < autoWorkersTarget())
     {
-        seat->mAutoWorkerTimer -= AUTO_WORKER_INTERVAL_SECONDS;
+        seat->mAutoWorkerTimer -= autoWorkerIntervalSeconds();
         Creature* newCreature = new Creature(this, classToSpawn, seat);
         newCreature->addToGameMap();
         Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(heartTile->getX()),
@@ -2183,7 +2209,7 @@ void GameMap::updateSeatHeartDefense(Seat* seat)
 
     // The nearest living enemy creature in range of the heart
     Tile* nearestEnemyTile = nullptr;
-    int nearestDistanceSquared = HEART_DEFENCE_RANGE_SQUARED + 1;
+    int nearestDistanceSquared = heartDefenceRangeSquared() + 1;
     for (Creature* creature : getCreatures())
     {
         if (creature == nullptr)

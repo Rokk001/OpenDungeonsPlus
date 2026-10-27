@@ -60,7 +60,7 @@ public:
 
 private:
     //! \brief Radius in tiles of the poison cloud
-    uint32_t mRadius;
+    double mRadius;
 };
 
 #endif // TRAPGAS_H

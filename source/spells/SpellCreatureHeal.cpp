@@ -241,7 +241,7 @@ bool SpellCreatureHeal::castSpellOnCreatures(GameMap* gameMap, Player* player, s
     if(!player->getSeat()->takeMana(priceTotal))
         return false;
 
-    uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureHealDuration");
+    double duration = ConfigManager::getSingleton().getSpellConfigDouble("CreatureHealDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureHeal,
         ConfigManager::getSingleton().getSpellConfigDouble("CreatureHealValue"), ResearchEffect::HealPerTurn);
     std::vector<Tile*> affectedTiles;

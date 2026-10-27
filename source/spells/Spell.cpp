@@ -35,8 +35,10 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
+
 Spell::Spell(GameMap* gameMap, const std::string& baseName, const std::string& meshName, Ogre::Real rotationAngle,
-        int32_t nbTurns) :
+        double nbTurns) :
     RenderedMovableEntity(gameMap, baseName, meshName, rotationAngle, false, 1.0f),
         mNbTurns(nbTurns)
 {
@@ -49,12 +51,12 @@ GameEntityType Spell::getObjectType() const
 
 void Spell::doUpkeep()
 {
-    if(mNbTurns < 0)
+    if(mNbTurns < 0.0)
         return;
 
-    if(mNbTurns > 0)
+    if(mNbTurns > 0.0)
     {
-        --mNbTurns;
+        mNbTurns = std::max(0.0, mNbTurns - 1.0);
         return;
     }
 

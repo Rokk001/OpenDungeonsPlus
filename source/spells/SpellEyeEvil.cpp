@@ -35,6 +35,8 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
+
 const std::string SpellEyeEvilName = "eyeEvil";
 const std::string SpellEyeEvilNameDisplay = "Eye of Evil";
 const std::string SpellEyeEvilCooldownKey = "EyeEvilCooldown";
@@ -75,7 +77,7 @@ static SpellRegister reg(new SpellEyeEvilFactory);
 
 SpellEyeEvil::SpellEyeEvil(GameMap* gameMap) :
     Spell(gameMap, SpellManager::getSpellNameFromSpellType(getSpellType()), "FlyingSkull", 0.0,
-        ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilNbTurns")),
+        ConfigManager::getSingleton().getSpellConfigDouble("EyeEvilNbTurns")),
     mFreeMode(false), mFreeRadius(0), mFreeTurns(0)
 {
     mPrevAnimationState = "Triggered";
@@ -107,12 +109,12 @@ void SpellEyeEvil::computeVisibleTiles()
 void SpellEyeEvil::doUpkeep()
 {
     Spell::doUpkeep();
-    if(mFreeMode && mFreeTurns > 0)
-        --mFreeTurns;
+    if(mFreeMode && mFreeTurns > 0.0)
+        mFreeTurns = std::max(0.0, mFreeTurns - 1.0);
 }
 
 //! \brief Spawns a free reveal with the base radius and no research or mana transaction.
-SpellEyeEvil* SpellEyeEvil::spawnFree(GameMap* map, Seat* seat, Tile* tile, int32_t turns)
+SpellEyeEvil* SpellEyeEvil::spawnFree(GameMap* map, Seat* seat, Tile* tile, double turns
 {
     if(map == nullptr || seat == nullptr || tile == nullptr)
         return nullptr;
@@ -234,9 +236,9 @@ bool SpellEyeEvil::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 
     SpellEyeEvil* spell = new SpellEyeEvil(gameMap);
     spell->setSeat(player->getSeat());
-    spell->setDuration(static_cast<int32_t>(std::round(SkillManager::getResearchValue(
+    spell->setDuration(SkillManager::getResearchValue(
         player->getSeat(), SkillType::spellEyeEvil,
-        ConfigManager::getSingleton().getSpellConfigInt32("EyeEvilNbTurns"), ResearchEffect::Duration))));
+        ConfigManager::getSingleton().getSpellConfigDouble("EyeEvilNbTurns"), ResearchEffect::Duration));
     spell->addToGameMap();
     fireSpellEffect(*tile, "EyeEvil", "EyeEvilCast");
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),

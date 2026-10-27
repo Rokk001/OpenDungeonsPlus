@@ -125,7 +125,7 @@ static TrapRegister reg(new TrapLightningFactory);
 TrapLightning::TrapLightning(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("LightningReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("LightningReloadTurns");
     mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("LightningDamagePerHitMin");
     mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("LightningDamagePerHitMax");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("LightningNbShootsBeforeDeactivation");

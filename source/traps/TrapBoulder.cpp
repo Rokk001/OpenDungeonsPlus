@@ -122,7 +122,7 @@ static TrapRegister reg(new TrapBoulderFactory);
 TrapBoulder::TrapBoulder(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("BoulderReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("BoulderReloadTurns");
     mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("BoulderDamagePerHitMin");
     mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("BoulderDamagePerHitMax");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("BoulderNbShootsBeforeDeactivation");

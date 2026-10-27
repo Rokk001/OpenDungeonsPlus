@@ -35,6 +35,8 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <cmath>
+
 const std::string SpellInfernoName = "inferno";
 const std::string SpellInfernoNameDisplay = "Inferno";
 const std::string SpellInfernoCooldownKey = "InfernoCooldown";
@@ -76,19 +78,20 @@ static SpellRegister reg(new SpellInfernoFactory);
 namespace
 {
 //! \brief Tells whether the given tile is inside the circle of the given radius around (x, y)
-bool isTileInRadius(const Tile* tile, int x, int y, int radius)
+bool isTileInRadius(const Tile* tile, int x, int y, double radius)
 {
     int dx = tile->getX() - x;
     int dy = tile->getY() - y;
-    return (dx * dx + dy * dy) <= (radius * radius);
+    return static_cast<double>(dx * dx + dy * dy) <= (radius * radius);
 }
 
-std::vector<Tile*> getTilesInRadius(GameMap* gameMap, int x, int y, int radius)
+std::vector<Tile*> getTilesInRadius(GameMap* gameMap, int x, int y, double radius)
 {
     std::vector<Tile*> tiles;
-    for(int xx = x - radius; xx <= x + radius; ++xx)
+    const int reach = static_cast<int>(std::floor(radius));
+    for(int xx = x - reach; xx <= x + reach; ++xx)
     {
-        for(int yy = y - radius; yy <= y + radius; ++yy)
+        for(int yy = y - reach; yy <= y + reach; ++yy)
         {
             Tile* tile = gameMap->getTile(xx, yy);
             if(tile == nullptr)
@@ -108,7 +111,7 @@ void SpellInferno::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
 {
     Player* player = gameMap->getLocalPlayer();
     int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("InfernoPrice");
-    int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoRadiusTiles"));
+    double radius = ConfigManager::getSingleton().getSpellConfigDouble("InfernoRadiusTiles");
     int32_t playerMana = static_cast<int32_t>(player->getSeat()->getMana());
 
     Tile* tileSelected = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
@@ -154,12 +157,12 @@ bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 
     fireSpellEffect(*tileTarget, "Inferno", "InfernoCast");
 
-    int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoRadiusTiles"));
+    double radius = ConfigManager::getSingleton().getSpellConfigDouble("InfernoRadiusTiles");
     double damagePerTurn = SkillManager::getResearchValue(player->getSeat(), SkillType::spellInferno,
         ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurn"), ResearchEffect::Damage);
     const double damagePerTurnMin = SkillManager::getResearchValue(player->getSeat(), SkillType::spellInferno,
         ConfigManager::getSingleton().getSpellConfigDouble("InfernoDamagePerTurnMin"), ResearchEffect::Damage);
-    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("InfernoNbTurns"));
+    double nbTurns = ConfigManager::getSingleton().getSpellConfigDouble("InfernoNbTurns");
 
     // Enemy creatures in the area catch fire. We copy the list to be safe if creatures are removed.
     std::vector<Creature*> creatures = gameMap->getCreatures();

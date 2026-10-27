@@ -36,6 +36,8 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <cmath>
+
 const std::string SpellTremorName = "tremor";
 const std::string SpellTremorNameDisplay = "Tremor";
 const std::string SpellTremorCooldownKey = "TremorCooldown";
@@ -77,19 +79,20 @@ static SpellRegister reg(new SpellTremorFactory);
 namespace
 {
 //! \brief Tells whether the given tile is inside the circle of the given radius around (x, y)
-bool isTileInRadius(const Tile* tile, int x, int y, int radius)
+bool isTileInRadius(const Tile* tile, int x, int y, double radius)
 {
     int dx = tile->getX() - x;
     int dy = tile->getY() - y;
-    return (dx * dx + dy * dy) <= (radius * radius);
+    return static_cast<double>(dx * dx + dy * dy) <= (radius * radius);
 }
 
-std::vector<Tile*> getTilesInRadius(GameMap* gameMap, int x, int y, int radius)
+std::vector<Tile*> getTilesInRadius(GameMap* gameMap, int x, int y, double radius)
 {
     std::vector<Tile*> tiles;
-    for(int xx = x - radius; xx <= x + radius; ++xx)
+    const int reach = static_cast<int>(std::floor(radius));
+    for(int xx = x - reach; xx <= x + reach; ++xx)
     {
-        for(int yy = y - radius; yy <= y + radius; ++yy)
+        for(int yy = y - reach; yy <= y + reach; ++yy)
         {
             Tile* tile = gameMap->getTile(xx, yy);
             if(tile == nullptr)
@@ -109,7 +112,7 @@ void SpellTremor::checkSpellCast(GameMap* gameMap, const InputManager& inputMana
 {
     Player* player = gameMap->getLocalPlayer();
     int32_t price = ConfigManager::getSingleton().getSpellConfigInt32("TremorPrice");
-    int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("TremorRadiusTiles"));
+    double radius = ConfigManager::getSingleton().getSpellConfigDouble("TremorRadiusTiles");
     int32_t playerMana = static_cast<int32_t>(player->getSeat()->getMana());
 
     Tile* tileSelected = gameMap->getTile(inputManager.mXPos, inputManager.mYPos);
@@ -155,12 +158,12 @@ bool SpellTremor::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 
     fireSpellEffect(*tileTarget, "Tremor", "TremorCast");
 
-    int radius = static_cast<int>(ConfigManager::getSingleton().getSpellConfigUInt32("TremorRadiusTiles"));
+    double radius = ConfigManager::getSingleton().getSpellConfigDouble("TremorRadiusTiles");
     double damage = SkillManager::getResearchValue(player->getSeat(), SkillType::spellTremor,
         ConfigManager::getSingleton().getSpellConfigDouble("TremorDamage"), ResearchEffect::Damage);
     const double damageMin = SkillManager::getResearchValue(player->getSeat(), SkillType::spellTremor,
         ConfigManager::getSingleton().getSpellConfigDouble("TremorDamageMin"), ResearchEffect::Damage);
-    int32_t nbTurns = static_cast<int32_t>(ConfigManager::getSingleton().getSpellConfigUInt32("TremorNbTurns"));
+    double nbTurns = ConfigManager::getSingleton().getSpellConfigDouble("TremorNbTurns");
 
     // Enemy creatures in the area are hurt and knocked down. We copy the list because
     // a creature killed by the damage is removed from the game map.
@@ -179,7 +182,7 @@ bool SpellTremor::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 
         creature->takeDamage(nullptr, Random::Double(damageMin, damage),
             0.0, 0.0, 0.0, pos, false);
-        creature->stun(nbTurns);
+        creature->stun(static_cast<int32_t>(std::ceil(nbTurns)));
     }
 
     // Claimed enemy ground and walls turn back to dirt. Rooms, traps, doors and bridges are not affected.

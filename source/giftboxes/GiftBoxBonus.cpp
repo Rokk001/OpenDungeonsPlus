@@ -25,6 +25,7 @@
 #include "game/Seat.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
@@ -32,17 +33,7 @@
 #include <cmath>
 #include <iostream>
 
-// Proposed values, they need to be approved
-static const uint32_t DEFAULT_AMOUNT_MANA = 50000;
-static const uint32_t DEFAULT_AMOUNT_GOLD = 10000;
-static const uint32_t DEFAULT_AMOUNT_LEVELS = 1;
-static const uint32_t DEFAULT_AMOUNT_WORKERS = 10;
-//! Workers received with the upgraded Summon Worker spell start at this level
-static const uint32_t LEVEL_WORKERS_UPGRADED = 4;
-//! Skill level of the Summon Worker spell from which it counts as upgraded
-static const uint32_t SKILL_LEVEL_UPGRADED = 2;
-//! Stun Workers: the enemy workers stay down for this many seconds
-static const double STUN_WORKERS_SECONDS = 5.0;
+// The amounts, levels and durations of the gift boxes are read from global.cfg (GiftBox...) and spells.cfg (SummonWorkerUpgraded...)
 
 //! \brief Creates a bonus box of the given type and amount with the mystery box mesh
 GiftBoxBonus::GiftBoxBonus(GameMap* gameMap, const std::string& baseName, GiftBoxType type, uint32_t amount) :
@@ -134,13 +125,13 @@ uint32_t GiftBoxBonus::getDefaultAmount(GiftBoxType type)
     switch(type)
     {
         case GiftBoxType::mana:
-            return DEFAULT_AMOUNT_MANA;
+            return ConfigManager::getSingleton().getGiftBoxMana();
         case GiftBoxType::gold:
-            return DEFAULT_AMOUNT_GOLD;
+            return ConfigManager::getSingleton().getGiftBoxGold();
         case GiftBoxType::levelUp:
-            return DEFAULT_AMOUNT_LEVELS;
+            return ConfigManager::getSingleton().getGiftBoxLevels();
         case GiftBoxType::receiveWorkers:
-            return DEFAULT_AMOUNT_WORKERS;
+            return ConfigManager::getSingleton().getGiftBoxWorkers();
         case GiftBoxType::revealMap:
         case GiftBoxType::healAll:
         case GiftBoxType::makeSafe:
@@ -284,7 +275,7 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
         }
         case GiftBoxType::stunWorkers:
         {
-            int32_t nbTurns = static_cast<int32_t>(std::ceil(STUN_WORKERS_SECONDS * ODApplication::turnsPerSecond));
+            int32_t nbTurns = static_cast<int32_t>(std::ceil(ConfigManager::getSingleton().getGiftBoxStunSeconds() * ODApplication::turnsPerSecond));
             std::vector<Creature*> creatures = gameMap->getCreatures();
             for(Creature* creature : creatures)
             {
@@ -308,13 +299,13 @@ void GiftBoxBonus::applyBonus(GameMap* gameMap, Seat* seat, GiftBoxType type, ui
                 break;
             }
 
-            bool upgraded = (seat->getSkillLevel(SkillType::spellSummonWorker) >= SKILL_LEVEL_UPGRADED);
+            bool upgraded = (seat->getSkillLevel(SkillType::spellSummonWorker) >= ConfigManager::getSingleton().getSpellConfigUInt32("SummonWorkerUpgradedResearchLevel"));
             for(uint32_t i = 0; i < amount; ++i)
             {
                 Creature* newCreature = new Creature(gameMap, workerClass, seat);
                 newCreature->addToGameMap();
                 if(upgraded)
-                    newCreature->setLevel(LEVEL_WORKERS_UPGRADED);
+                    newCreature->setLevel(ConfigManager::getSingleton().getSpellConfigUInt32("SummonWorkerUpgradedLevel"));
 
                 Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
                                             static_cast<Ogre::Real>(tile->getY()), 0.0f);

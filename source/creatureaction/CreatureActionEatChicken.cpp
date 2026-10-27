@@ -247,7 +247,7 @@ bool CreatureActionEatChicken::handleGiftChicken(Creature& creature, ChickenEnti
     // The meal happened: the creature was not hungry, so it gets less out of it and rests longer
     ConfigManager& config = ConfigManager::getSingleton();
     creature.setHunger(hungerBefore - config.getRoomConfigDoubleOrDefault("HatcheryGiftHungerPerChicken", 4.0));
-    creature.setHP(hpBefore + config.getRoomConfigDoubleOrDefault("HatcheryGiftHpRecoveredPerChicken", 2.0));
+    creature.setHP(hpBefore + config.getRoomConfigDoubleOrDefault("HatcheryGiftHpRecoveredPerChicken", 4.1));
     const uint32_t cooldownMin = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGiftCooldownMin", 12.0));
     const uint32_t cooldownMax = static_cast<uint32_t>(config.getRoomConfigDoubleOrDefault("HatcheryGiftCooldownMax", 20.0));
     creature.setJobCooldown(static_cast<int>(Random::Int(static_cast<int>(cooldownMin),

@@ -7033,7 +7033,7 @@ static void addHitDirt(Tile* tile)
 
     Room* room = tile->getCoveringRoom();
     if((room != nullptr) && (room->getType() == RoomType::arena))
-        tile->addDirt(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("ArenaDirtPerHit", 0.0));
+        tile->addDirt(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("ArenaDirtPerHit", 1.7722535834718596));
     else
         tile->addDirt(ConfigManager::getSingleton().getDirtConfigDouble("CombatDirtPerHit"));
 }

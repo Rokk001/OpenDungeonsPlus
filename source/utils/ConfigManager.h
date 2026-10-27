@@ -426,6 +426,50 @@ public:
     inline double getManaWellBonusPerTile() const
     { return mManaWellBonusPerTile; }
 
+    //! \brief Most claimed tiles that count for the mana income (global.cfg ManaIncomeTilesCap)
+    inline double getManaIncomeTilesCap() const
+    { return mManaIncomeTilesCap; }
+
+    //! \brief Mana per second every claimed tile gives (global.cfg ManaPerClaimedTilePerSecond)
+    inline double getManaPerClaimedTilePerSecond() const
+    { return mManaPerClaimedTilePerSecond; }
+
+    //! \brief Mana per second each worker above the free ones costs (global.cfg WorkerManaUpkeepPerSecond)
+    inline double getWorkerManaUpkeepPerSecond() const
+    { return mWorkerManaUpkeepPerSecond; }
+
+    //! \brief Seconds the mana must stay too low before the workers above the free ones are doomed (global.cfg WorkerManaShortageSeconds)
+    inline double getWorkerManaShortageSeconds() const
+    { return mWorkerManaShortageSeconds; }
+
+    //! \brief Seconds the doomed workers have left before they pop (global.cfg WorkerPopCountdownSeconds)
+    inline double getWorkerPopCountdownSeconds() const
+    { return mWorkerPopCountdownSeconds; }
+
+    //! \brief Seconds the living dungeon heart waits between two workers it creates (global.cfg AutoWorkerIntervalSeconds)
+    inline double getAutoWorkerIntervalSeconds() const
+    { return mAutoWorkerIntervalSeconds; }
+
+    //! \brief Mana a gift box of the kind mana gives (global.cfg GiftBoxMana)
+    inline uint32_t getGiftBoxMana() const
+    { return mGiftBoxMana; }
+
+    //! \brief Gold a gift box of the kind gold gives (global.cfg GiftBoxGold)
+    inline uint32_t getGiftBoxGold() const
+    { return mGiftBoxGold; }
+
+    //! \brief Levels a gift box of the kind level up gives (global.cfg GiftBoxLevels)
+    inline uint32_t getGiftBoxLevels() const
+    { return mGiftBoxLevels; }
+
+    //! \brief Workers a gift box of the kind workers gives (global.cfg GiftBoxWorkers)
+    inline uint32_t getGiftBoxWorkers() const
+    { return mGiftBoxWorkers; }
+
+    //! \brief Seconds the enemy workers stay down after the gift box Stun workers (global.cfg GiftBoxStunSeconds)
+    inline double getGiftBoxStunSeconds() const
+    { return mGiftBoxStunSeconds; }
+
     inline double getBedStepMaxHeight() const
     { return mBedStepMaxHeight; }
 
@@ -856,6 +900,17 @@ private:
     double mMaxManaPerSeat;
     //! \brief Extra mana per second for each claimed mana well tile
     double mManaWellBonusPerTile;
+    double mManaIncomeTilesCap;
+    double mManaPerClaimedTilePerSecond;
+    double mWorkerManaUpkeepPerSecond;
+    double mWorkerManaShortageSeconds;
+    double mWorkerPopCountdownSeconds;
+    double mAutoWorkerIntervalSeconds;
+    uint32_t mGiftBoxMana;
+    uint32_t mGiftBoxGold;
+    uint32_t mGiftBoxLevels;
+    uint32_t mGiftBoxWorkers;
+    double mGiftBoxStunSeconds;
     double mBedStepMaxHeight;
     double mClaimingWallPenalty;
     //! \brief Gold of one gold seam tile at density 100 percent (GoldPerSeamTile)
