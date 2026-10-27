@@ -109,6 +109,10 @@ enum class SkillType
     trapMasterTools,
     spellSunthornCultivation,
 
+    // Added later, appended so that existing saves stay valid
+    roomTavern,
+    tavernBeer,
+
     // This should be the last
     roomInfirmary,
     countSkill

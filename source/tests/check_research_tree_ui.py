@@ -47,7 +47,7 @@ for line in constructor.splitlines():
         if current != 'spellSummonChampion':  # the reward skill has no node in the tree
             model[current] = (prefixes[match[1]] + match[2], parents, int(match[3]), tab_of_prefix[prefixes[match[1]]])
             order.append(current)
-assert len(model) == 61
+assert len(model) == 63
 initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}, %d, %d};' %
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents), tier, tab)
     for key, (path, parents, tier, tab) in model.items())
@@ -80,9 +80,9 @@ struct Seat {bool gate=true;uint32_t level=0,queue=0;bool current=false;std::vec
 struct Player {Seat seat;Seat* getSeat(){return &seat;}};
 struct GameMap {Player player;Player* getLocalPlayer(){return &player;}};
 enum class SkillTab {rooms,traps,spells,nb};
-//! \brief Selects only the keeper-only entries, excluding later appended room research.
-//! \brief Identifies the original four keeper entries without absorbing appended research types.
-bool isKeeper(SkillType t){return t>=SkillType::keeperDominion&&t<=SkillType::keeperManaFlow;}
+//! \brief Selects the keeper-only entries, including Beer and excluding appended room research.
+//! \brief Identifies the original four keeper entries and the published Beer keeper entry.
+bool isKeeper(SkillType t){return (t>=SkillType::keeperDominion&&t<=SkillType::keeperManaFlow)||t==SkillType::tavernBeer;}
 //! \brief Keeps the appended research-only tool and cultivation entries out of the cast-button fixture.
 bool hasCastButton(SkillType t){return !isKeeper(t)&&t!=SkillType::trapFineTools&&t!=SkillType::trapMasterTools&&t!=SkillType::spellSunthornCultivation;}
 struct Skill {SkillType type;std::string path;std::vector<const Skill*> parents;int tier=1;int tab=0;

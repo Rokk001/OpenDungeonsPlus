@@ -561,7 +561,7 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
 
     const double work = creatureRoomAffinity.getEfficiency() * SkillManager::getResearchValue(
         getSeat(), SkillType::roomWorkshop, ConfigManager::getSingleton().getRoomConfigDouble("WorkshopPointsPerWork"),
-        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Craftsman") * getDirtOutputFactor();
+        ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Craftsman") * getDirtOutputFactor() * creature.getHangoverWorkFactor();
     if(mCrackBox != nullptr) mCrackPoints += work;
     else mPoints += work;
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));

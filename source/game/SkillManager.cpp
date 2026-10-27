@@ -91,6 +91,7 @@ static const std::string KEEPER_TITLE_DOMINION = "Dominion";
 static const std::string KEEPER_TITLE_HEART_FORTITUDE = "Heart Fortitude";
 static const std::string KEEPER_TITLE_HEART_MENDING = "Heart Mending";
 static const std::string KEEPER_TITLE_MANA_FLOW = "Mana Flow";
+static const std::string KEEPER_TITLE_BEER = "Beer";
 
 //! \brief Parent list of a skill without parents
 static const std::vector<SkillType> NO_PARENTS;
@@ -367,6 +368,8 @@ public:
                 return KEEPER_TITLE_HEART_FORTITUDE;
             case SkillType::keeperHeartMending:
                 return KEEPER_TITLE_HEART_MENDING;
+            case SkillType::tavernBeer:
+                return KEEPER_TITLE_BEER;
             default:
                 return KEEPER_TITLE_MANA_FLOW;
         }
@@ -524,6 +527,9 @@ SkillManager::SkillManager() :
     skill = createSkill(mSkills, SkillType::roomLibrary, NO_PARENTS);
     def = new SkillDefRoom(TREE_PREFIX_ROOMS, "LibraryButton", skill, 1, RoomType::library);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::roomTavern, NO_PARENTS);
+    def = new SkillDefRoom(TREE_PREFIX_ROOMS, "TavernButton", skill, 1, RoomType::tavern);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
     // Rooms tab, tier II
     skill = createSkill(mSkills, SkillType::roomTrainingHall, std::vector<SkillType>{SkillType::roomTreasury});
@@ -543,6 +549,9 @@ SkillManager::SkillManager() :
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
     skill = createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{SkillType::roomDormitory});
     def = new SkillDefRoom(TREE_PREFIX_ROOMS, "ToiletButton", skill, 2, RoomType::toilet);
+    registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
+    skill = createSkill(mSkills, SkillType::tavernBeer, std::vector<SkillType>{SkillType::roomTavern});
+    def = new SkillDefKeeper(TREE_PREFIX_ROOMS, "BeerButton", skill, 2);
     registerSkillDef(def, mSkills, mSkillsFamily, mTabSkills);
 
     // Rooms tab, tier III
@@ -1010,6 +1019,7 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::keeperHeartFortitude, "HeartHP", ResearchBaseSource::rooms, "DungeonHeartHP", ""},
     {SkillType::keeperHeartMending, "HeartHeal", ResearchBaseSource::rooms, "DungeonHeartHealPerSecond", ""},
     {SkillType::keeperManaFlow, "HeartMana", ResearchBaseSource::rooms, "DungeonHeartManaPerSecond", ""},
+    {SkillType::tavernBeer, "PortalCooldown", ResearchBaseSource::factor, "", ""},
     {SkillType::spellSummonWorker, "Price", ResearchBaseSource::spells, "SummonWorkerBasePrice", ""},
     {SkillType::spellCreatureHeal, "HealPerTurn", ResearchBaseSource::spells, "CreatureHealValue", ""},
     {SkillType::spellCreatureHaste, "Speed", ResearchBaseSource::spells, "CreatureHasteValue", ""},
@@ -1096,6 +1106,7 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::Lifetime] = "Duration";
         texts[ResearchEffect::ManaPerSecond] = "Mana per second";
         texts[ResearchEffect::Gold] = "Gold";
+        texts[ResearchEffect::PortalCooldown] = "Portal cooldown";
         texts["GrowTime"] = "Growth time";
         texts["BrewTime"] = "Brewing time";
         texts["CrackTime"] = "Cracking effort";
@@ -1119,6 +1130,8 @@ static std::string getKeeperDescription(SkillType type)
             return "Your dungeon heart heals faster.";
         case SkillType::keeperManaFlow:
             return "Your dungeon heart gives more mana.";
+        case SkillType::tavernBeer:
+            return "Your taverns serve beer.";
         default:
             return "";
     }

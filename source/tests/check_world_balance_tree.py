@@ -21,12 +21,14 @@ EXPECTED = [
     ("Rooms", 1, "roomDormitory", "DormitoryButton", []),
     ("Rooms", 1, "roomHatchery", "HatcheryButton", []),
     ("Rooms", 1, "roomLibrary", "LibraryButton", []),
+    ("Rooms", 1, "roomTavern", "TavernButton", []),
     ("Rooms", 2, "roomTrainingHall", "TrainingHallButton", ["roomTreasury"]),
     ("Rooms", 2, "roomWorkshop", "WorkshopButton", ["roomTreasury"]),
     ("Rooms", 2, "roomBridgeWooden", "WoodenBridgeButton", ["roomTreasury"]),
     ("Rooms", 2, "roomGuardRoom", "GuardRoomButton", ["roomDormitory"]),
     ("Rooms", 2, "roomCasino", "CasinoButton", ["roomTreasury"]),
     ("Rooms", 2, "roomToilet", "ToiletButton", ["roomDormitory"]),
+    ("Rooms", 2, "tavernBeer", "BeerButton", ["roomTavern"]),
     ("Rooms", 3, "roomArena", "ArenaButton", ["roomTrainingHall"]),
     ("Rooms", 3, "roomPrison", "PrisonButton", ["roomGuardRoom"]),
     ("Rooms", 3, "roomCrypt", "CryptButton", ["roomLibrary"]),
@@ -80,20 +82,21 @@ EXPECTED = [
     ("Spells", 3, "spellSunthornCultivation", "SunthornButton", ["roomAlchemyLab"]),
 ]
 TIER_COST = {1: 100, 2: 250, 3: 600, 4: 1500}
-FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary", "spellSummonWorker"]
+FREE_LEVEL_ONE = ["roomTreasury", "roomDormitory", "roomHatchery", "roomLibrary", "roomTavern", "spellSummonWorker"]
 TAB_TOTALS = {tab: sum((0 if name in FREE_LEVEL_ONE else TIER_COST[tier]) + 6 * TIER_COST[tier]
     for entry_tab, tier, name, button, parents in EXPECTED if entry_tab == tab)
     for tab in ("Rooms", "Traps", "Spells")}
-assert TAB_TOTALS == {"Rooms": 73100, "Traps": 82250, "Spells": 84950}
+assert TAB_TOTALS == {"Rooms": 75450, "Traps": 82250, "Spells": 84950}
 TAB_TITLES = {"Rooms": "Rooms", "Traps": "Traps and doors", "Spells": "Spells"}
 KEEPERS = {
     "keeperDominion": ("DominionButton", "Keeper: Dominion", "Rooms"),
     "keeperHeartFortitude": ("HeartFortitudeButton", "Keeper: Heart Fortitude", "Traps"),
     "keeperHeartMending": ("HeartMendingButton", "Keeper: Heart Mending", "Traps"),
     "keeperManaFlow": ("ManaFlowButton", "Keeper: Mana Flow", "Spells"),
+    "tavernBeer": ("BeerButton", "Tavern: Beer", "Rooms"),
 }
 
-assert len(EXPECTED) == 61, "the tree has 61 entries"
+assert len(EXPECTED) == 63, "the tree has 63 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree
@@ -115,7 +118,7 @@ for line in constructor.splitlines():
     if match and current != "spellSummonChampion":
         built.append((prefix_tab[match[2]], int(match[4]), current, match[3], parents))
         if match[1] == "Keeper":
-            assert current in KEEPERS, "only the four keeper skills use SkillDefKeeper"
+            assert current in KEEPERS, "only the five keeper skills use SkillDefKeeper"
         else:
             assert current not in KEEPERS, "a keeper skill uses SkillDefKeeper"
     if "new Skill(SkillType::spellSummonChampion" in line:
@@ -132,7 +135,7 @@ for tab, tier, name, button, parent_list in EXPECTED:
     registered.append(name)
 
 # ---------------------------------------------------------------------------------------------
-# 2. skills.cfg: the 60 entries with the tier costs and the free level one block
+# 2. skills.cfg: the 63 entries with the tier costs and the free level one block
 cfg = read("config/skills.cfg")
 body = re.sub(r"#[^\r\n]*", "", cfg)
 skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
@@ -142,7 +145,7 @@ for index in range(0, len(skills_block), 2):
     assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
     costs[skills_block[index]] = int(skills_block[index + 1])
 assert "spellSummonChampion" not in costs, "the reward skill has no entry"
-assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 60 entries"
+assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 63 entries"
 for tab, tier, name, button, parent_list in EXPECTED:
     assert costs[name] == TIER_COST[tier], "%s costs the tier %d value" % (name, tier)
 free_block = body[body.index("[FreeLevelOne]") + len("[FreeLevelOne]"):body.index("[/FreeLevelOne]")].split()

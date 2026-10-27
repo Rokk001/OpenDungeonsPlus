@@ -27,13 +27,15 @@ class GameMap;
 class ODPacket;
 class Tile;
 
-//! \brief The two kinds of dirt that lie on a tile as an entity of their own.
+//! \brief The kinds of dirt that lie on a tile as an entity of their own.
 enum class DirtPileKind
 {
     //! A creature relieved itself here. Stays until a worker cleans it.
     pile,
     //! A creature died here. Dries by itself after BloodDryTurns (global.cfg).
-    blood
+    blood,
+    //! A drunk creature vomited here. One mesh for every creature type; stays until a worker cleans it like a pile.
+    vomit
 };
 
 //! \brief A pile or blood stain on the floor of a tile. It is not pickable, not carryable, has no health and
@@ -46,11 +48,13 @@ public:
     static const std::string PILE_MESH_PREFIX;
     //! \brief Mesh name of a blood stain.
     static const std::string BLOOD_MESH_NAME;
+    //! \brief Mesh name of vomit.
+    static const std::string VOMIT_MESH_NAME;
     //! \brief The value of mDirtLeft a new or refreshed pile or stain starts with.
     static const double DIRT_LEFT_START;
 
     //! \brief Creates a pile or blood stain that is not on the map yet.
-    //! \param kind Pile or blood.
+    //! \param kind Pile, blood or vomit.
     //! \param creatureClass Class name of the creature that left it (selects the mesh of a pile).
     DirtPileEntity(GameMap* gameMap, DirtPileKind kind, const std::string& creatureClass);
     //! \brief Creates an empty entity that is filled from a packet or a stream.
@@ -115,7 +119,7 @@ protected:
     virtual void importFromPacket(ODPacket& is) override;
 
 private:
-    //! \brief Pile or blood.
+    //! \brief Pile, blood or vomit.
     DirtPileKind mKind;
     //! \brief Class name of the creature that left this entity.
     std::string mCreatureClass;

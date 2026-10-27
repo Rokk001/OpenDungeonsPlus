@@ -90,6 +90,16 @@ std::string getPostCategoryName(PostCategory category)
             return "relieved";
         case PostCategory::Filthy:
             return "filthy";
+        case PostCategory::Drank:
+            return "drank";
+        case PostCategory::DuelWon:
+            return "duelwon";
+        case PostCategory::DuelLost:
+            return "duellost";
+        case PostCategory::Drunk:
+            return "drunk";
+        case PostCategory::Hungover:
+            return "hungover";
         default:
             return "";
     }

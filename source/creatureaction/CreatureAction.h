@@ -68,6 +68,8 @@ enum class CreatureActionType
     brewPotion,
     sellItem, // Visits a merchant table to sell unwanted inventory goods.
     buyItem, // Visits a merchant table to buy a reserved wanted good.
+    vomit, // (fighters only) A drunk creature vomits where it stands and leaves a pile of vomit
+    searchDrink, // (fighters only) Looks for a tavern with a free spot to drink at
     infirmaryRest, // A patient lying on an infirmary cot.
     nb // Must be the last value of this enum
 };

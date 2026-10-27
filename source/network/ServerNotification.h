@@ -221,6 +221,13 @@ enum class ServerNotificationType
     labWindow,
     //! \brief Owner-only laboratory settings: int32_t production mode.
     labSettings,
+    //! \brief Answer to askTavernWindow, owner only: + int32_t tileX, int32_t tileY (a tile of the tavern),
+    //! uint32_t payer (TavernPayer), bool beerResearched, double beerPrice (gold per beer).
+    //! Appended last so that no existing numeric value changes.
+    tavernWindow,
+    //! \brief Answer to askTavernPayer, owner only: + int32_t tileX, int32_t tileY, uint32_t payer (TavernPayer)
+    //! Appended last so that no existing numeric value changes.
+    tavernPayer,
     //! Keeper preferences (int32_t payer, int32_t threshold, bool healOn), uint32_t patient count,
     //! then patient rows: string creature, string class, bool worker, double HP, double maxHP,
     //! double remaining seconds (negative while paused).

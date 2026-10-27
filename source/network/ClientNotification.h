@@ -121,6 +121,12 @@ enum class ClientNotificationType
     askLabWindow,
     //! \brief Requests a laboratory production mode: int32_t mode.
     askLabSetting,
+    //! Asks for the state shown in the window of a tavern (who pays, whether beer is researched): + int32_t tileX,
+    //! int32_t tileY (a tile of the tavern). The server answers with tavernWindow.
+    askTavernWindow,
+    //! Sets who pays for the beer of a tavern: + int32_t tileX, int32_t tileY, uint32_t payer (TavernPayer).
+    //! Only the owner can set it; the server answers with tavernPayer.
+    askTavernPayer,
     //! Subscribe to patient updates: bool open.
     askInfirmaryWindow,
     //! Set keeper preferences: int32_t payer, int32_t threshold, bool healOn.

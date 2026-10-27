@@ -77,6 +77,7 @@ ROOM_KEYS = {
     'LibraryDirtPerWork': '0.3980', 'TempleDirtPerPrayerTurn': '0.0724', 'PrisonDirtPerPrisonerTurn': '0.1615',
     'TortureDirtPerSession': '1.4475',
     'InfirmaryDirtPerTreatment': '15.6',
+    'TavernDirtPerDrink': '0.2605',
 }
 # Medium production 0.8077 divided by occupancy 0.62 and 7/84 treatments per turn (0.0833), rounded to one decimal.
 assert round(0.8077 / (0.62 * 0.0833), 1) == float(ROOM_KEYS['InfirmaryDirtPerTreatment'])

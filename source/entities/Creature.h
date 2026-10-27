@@ -80,6 +80,15 @@ namespace Ogre
 class ParticleSystem;
 }
 
+//! \brief The kinds of drink a creature can take (see Creature::drinkTaken).
+enum class DrinkKind
+{
+    //! Quenches the thirst, raises the urge a little, no mood and no drunkenness.
+    water,
+    //! Quenches the thirst, raises the mood and the urge, adds drunkenness.
+    beer
+};
+
 enum class CreatureSound
 {
     Pickup,
@@ -914,9 +923,75 @@ public:
     //! \param val The hunger the meal takes away.
     void foodEaten(double val);
 
-    //! \brief Hook for a later drinking room: raises the urge by UrgePerDrink (global.cfg [Dirt]). Nothing calls it yet.
-    //! \param val The value of the drink (reserved for the thirst of that room, the urge gain is the same for every drink).
-    void drinkTaken(double val);
+    //! \brief The creature took a drink (server side): the thirst is 0, the urge rises by UrgeFromBeer or UrgeFromWater
+    //! and a beer adds DrunkPerBeer to the drunkenness (global.cfg [Tavern]). The mood of a beer is the caller's job
+    //! (addTavernMood).
+    //! \param kind Water or beer.
+    void drinkTaken(DrinkKind kind);
+
+    //! \brief Returns the thirst (0 = not thirsty, 100 = parched).
+    inline double getThirst() const
+    { return mThirst; }
+
+    //! \brief Sets the thirst (0 - 100, limited), used when a creature is loaded or by the console.
+    void setThirst(double val);
+
+    //! \brief Returns the drunkenness (0 = sober, 100 = dead drunk).
+    inline double getDrunk() const
+    { return mDrunk; }
+
+    //! \brief Sets the drunkenness (0 - 100, limited), used when a creature is loaded.
+    void setDrunk(double val);
+
+    //! \brief Returns the turns a hangover still lasts (0 = none).
+    inline double getHangoverTurns() const
+    { return mHangoverTurns; }
+
+    //! \brief Sets the turns a hangover still lasts (not below 0), used when a creature is loaded.
+    void setHangoverTurns(double turns);
+
+    //! \brief Returns true once the creature vomited in the current drunk episode (it vomits once per episode).
+    inline bool getVomited() const
+    { return mVomited; }
+
+    //! \brief Sets whether the creature vomited in the current drunk episode, used when a creature is loaded.
+    inline void setVomited(bool vomited)
+    { mVomited = vomited; }
+
+    //! \brief Mood points the tavern gave to the creature (positive) or took from it (negative). Falls to 0 when its
+    //! timer runs out.
+    inline double getTavernMood() const
+    { return mTavernMood; }
+
+    //! \brief Returns the turns the tavern mood lasts.
+    inline double getTavernMoodTurns() const
+    { return mTavernMoodTurns; }
+
+    //! \brief Sets the tavern mood to points for the given number of turns; a new value replaces the old one and
+    //! starts the timer again.
+    //! \param points The mood (negative for a malus).
+    //! \param turns How long it lasts, in turns.
+    void addTavernMood(double points, double turns);
+
+    //! \brief True if the creature is drunk enough to stagger (StaggerAt). On a client only the own seat's creatures
+    //! know their drunkenness.
+    bool isStaggering() const;
+
+    //! \brief True while the creature has a hangover.
+    inline bool isHungover() const
+    { return mHangoverTurns > 0.0; }
+
+    //! \brief Returns the factor on the room points and the experience the creature earns: HangoverWorkFactor
+    //! during a hangover, else 1.
+    double getHangoverWorkFactor() const;
+
+    //! \brief Server side. The creature starts to sleep in its bed: with a drunkenness above HangoverAt it will
+    //! wake up with a hangover.
+    void sleepStarted();
+
+    //! \brief Server side. The creature has slept until it is rested: a pending hangover starts now
+    //! (HangoverTurns, mood HangoverMood once). A hangover that still runs is not shortened.
+    void sleepEnded();
 
     //! \brief Hook for a later bathing room: the creature is clean again (creature dirt 0).
     void washed();
@@ -1155,7 +1230,7 @@ public:
     void socialCreatureRemoved();
 
     //! \brief Adds a post of this category to the feed if the creature belongs to the local player.
-    void socialEvent(social::PostCategory category);
+    void socialEvent(social::PostCategory category, const std::string& other = std::string());
 
     //! \brief Client side. The creature of the local player entered a filthy room: posts about it unless it posted about
     //! the same room less than FilthyPostSeconds ago.
@@ -1662,6 +1737,21 @@ private:
     double          mInfirmaryMood;
     double          mInfirmaryMoodTurns;
 
+    //! \brief The thirst (0 - 100). Grows by ThirstGrowth/Turn of the type, a drink sets it to 0.
+    double          mThirst;
+    //! \brief Mood points of the tavern (a beer, a game, a hangover); 0 when mTavernMoodTurns has run out.
+    double          mTavernMood;
+    //! \brief Turns the tavern mood lasts; falls by 1 per turn.
+    double          mTavernMoodTurns;
+    //! \brief The drunkenness (0 - 100). A beer adds DrunkPerBeer, it falls by DrunkDecayPerTurn per turn.
+    double          mDrunk;
+    //! \brief True once the creature vomited in the current drunk episode; reset when mDrunk falls below VomitAt.
+    bool            mVomited;
+    //! \brief Turns a hangover still lasts; falls by 1 per turn.
+    double          mHangoverTurns;
+    //! \brief Runtime only (not saved): true when the creature fell asleep with a drunkenness above HangoverAt and has not woken up yet.
+    bool            mHangoverPending;
+
     //! \brief Every tiles within the creature sight radius, used for common actions.
     std::vector<Tile*>              mTilesWithinSightRadius;
 
@@ -1872,6 +1962,10 @@ private:
     void exportSkillBuildToPacket(ODPacket& os) const;
     //! \brief Reads the skill build sent by exportSkillBuildToPacket.
     void importSkillBuildFromPacket(ODPacket& is);
+    //! \brief Writes the thirst state for clients: thirst, tavern mood, drunkenness and hangover turns.
+    void exportThirstStateToPacket(ODPacket& os) const;
+    //! \brief Reads the thirst state sent by exportThirstStateToPacket.
+    void importThirstStateFromPacket(ODPacket& is);
     //! \brief Multiplies the three move speeds by the move% passives of the skills.
     void applyMovePassive();
     //! \brief Recomputes the strength modifier as the product of the factors of all running strength effects.
@@ -1947,6 +2041,13 @@ private:
     bool importItemsFromPacket(ODPacket& packet);
 
     void increaseHunger(double value);
+
+    //! \brief Server side. Raises the thirst (0 - 100) by value. Rogue creatures have none.
+    void increaseThirst(double value);
+
+    //! \brief Server side, once per turn. Lets the drunkenness fall by DrunkDecayPerTurn, resets the vomit mark when
+    //! the creature is sober enough again and counts down the tavern mood and the hangover.
+    void upkeepTavernState();
 
     //! \brief Server side, once per turn: sets the creature dirt to the maximum while the creature is in prison or
     //! tortured, then lets it decay by CreatureDirtDecayPerTurn.

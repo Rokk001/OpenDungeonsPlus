@@ -93,6 +93,7 @@ Player::Player(GameMap* gameMap, int32_t id) :
     mCreatureCannotFindFood(0.0f),
     mNotEnoughGoldTime(0.0f),
     mDirtNoticeTime(0.0f),
+    mTavernNoticeTime(0.0f),
     mCreatureKilledTime(0.0f),
     mHasLost(false),
     mConquerorSeatId(-1),
@@ -906,6 +907,27 @@ void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Cr
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Sends the thirst notice (creatures are thirsty and there is no tavern) when the last one is at least
+//! TavernNoticeSeconds ago; human keepers without a tavern only.
+void Player::notifyTavernEvent()
+{
+    if(mHasLost || !getIsHuman())
+        return;
+
+    if(mTavernNoticeTime > 0.0f)
+        return;
+
+    if(mGameMap->numRoomsByTypeAndSeat(RoomType::tavern, getSeat()) > 0)
+        return;
+
+    mTavernNoticeTime = static_cast<float>(ConfigManager::getSingleton().getTavernConfigDouble("TavernNoticeSeconds"));
+    std::string chatMsg = "Your creatures are thirsty and you have no tavern.";
+    ServerNotification *serverNotification = new ServerNotification(
+        ServerNotificationType::chatServer, this);
+    serverNotification->mPacket << chatMsg << EventShortNoticeType::aboutCreatures;
+    ODServer::getSingleton().queueServerNotification(serverNotification);
+}
+
 void Player::fireEvents()
 {
     // On server side, we update the client
@@ -1135,6 +1157,14 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
             mDirtNoticeTime -= timeSinceLastUpkeep;
         else
             mDirtNoticeTime = 0.0f;
+    }
+
+    if(mTavernNoticeTime > 0.0f)
+    {
+        if(mTavernNoticeTime > timeSinceLastUpkeep)
+            mTavernNoticeTime -= timeSinceLastUpkeep;
+        else
+            mTavernNoticeTime = 0.0f;
     }
 
     if(isEventListUpdated)

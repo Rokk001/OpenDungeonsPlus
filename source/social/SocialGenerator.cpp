@@ -33,6 +33,9 @@ const uint32_t AGE_JOKE_PERCENT = 30;
 const uint32_t SPECIFIC_LIKE_PERCENT = 60;
 //! How often pickDifferent draws again while the text equals the excluded one
 const uint32_t PICK_DIFFERENT_MAX_TRIES = 8;
+//! Names of the post categories of a slap duel; in their texts {name} is the opponent (see renderPost)
+const std::string DUEL_WON_CATEGORY = "duelwon";
+const std::string DUEL_LOST_CATEGORY = "duellost";
 
 const std::string& pickFrom(Rng& rng, const std::vector<std::string>& pool, const std::string& fallback)
 {
@@ -360,6 +363,9 @@ std::string SocialGenerator::renderPost(const SocialData& data, const CreaturePr
     }
     slots["room"] = room;
     slots["friend"] = friendName;
+    // The texts of a slap duel speak of the opponent as {name}, not of the poster itself
+    if((category == DUEL_WON_CATEGORY) || (category == DUEL_LOST_CATEGORY))
+        slots["name"] = friendName;
     slots["item"] = itemName;
     return renderText(text, slots);
 }

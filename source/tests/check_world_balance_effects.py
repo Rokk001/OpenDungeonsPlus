@@ -70,6 +70,7 @@ EXPECTED = [
     ("keeperHeartFortitude", "HeartHP", "mul", "1.698", "2.474", "6.0"),
     ("keeperHeartMending", "HeartHeal", "mul", "1.698", "2.474", "6.0"),
     ("keeperManaFlow", "HeartMana", "mul", "1.1", "1.2", "1.3"),
+    ("tavernBeer", "PortalCooldown", "mul", "1.0", "0.9", "0.8"),
     ("spellSummonWorker", "Price", "mul", "1.0", "0.9", "0.8"),
     ("spellCreatureHeal", "HealPerTurn", "mul") + DAMAGE,
     ("spellCreatureHaste", "Speed", "mul", "1.0", "1.1", "1.2"),
@@ -100,8 +101,8 @@ for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
 skill_names = set(re.findall(r"^\s+([A-Za-z]+)\t\d+\s*$", skills_cfg[:skills_cfg.index("\n[/Skills]\n")], re.M))
-assert len(skill_names) == 61
-assert {line[0] for line in lines} <= skill_names, "every line names one of the 61 skills"
+assert len(skill_names) == 63
+assert {line[0] for line in lines} <= skill_names, "every line names one of the 63 skills"
 header = skills_cfg[:skills_cfg.index("\n[Skills]\n")]
 assert "[ResearchEffects]" in header and "mul" in header and "add" in header and "dev" in header, "the modes are documented"
 for effect in sorted({line[1] for line in lines}):
@@ -243,7 +244,7 @@ texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "
          "HeartHeal": "Heart healing per second", "HeartMana": "Heart mana per second", "Price": "Price",
          "HealPerTurn": "Healing per turn", "Speed": "Speed", "Bonus": "Defense bonus", "Factor": "Factor",
          "Lifetime": "Duration", "ManaPerSecond": "Mana per second", "Gold": "Gold",
-         "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort"}
+         "PortalCooldown": "Portal cooldown", "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort"}
 assert set(texts) == effect_names, "the plan names a text for every effect"
 for effect, text in texts.items():
     text_key = ('"' + effect + '"') if effect in {"GrowTime", "BrewTime", "CrackTime"} else ("ResearchEffect::" + effect)

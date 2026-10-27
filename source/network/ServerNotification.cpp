@@ -187,6 +187,10 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "infirmarySettings";
         case ServerNotificationType::campaignVictory:
             return "campaignVictory";
+        case ServerNotificationType::tavernWindow:
+            return "tavernWindow";
+        case ServerNotificationType::tavernPayer:
+            return "tavernPayer";
         case ServerNotificationType::merchantWindow:
             return "merchantWindow";
         case ServerNotificationType::merchantSettings:

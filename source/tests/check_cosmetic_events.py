@@ -18,9 +18,11 @@ body = notification_h[notification_h.index('enum class ServerNotificationType'):
 body = body[:body.index('};')]
 names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.MULTILINE)
          if m.group(1) not in ('enum', 'class')]
+# The tavern notifications follow the equipment notifications; the complete combined tail is pinned below
+# Existing kinds retain their order before the appended campaign victory.
 # Existing kinds retain their order before the appended equipment and infirmary notifications.
-assert names[-17:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
-                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings'], names[-17:]
+assert names[-19:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
+                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings'], names[-19:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')

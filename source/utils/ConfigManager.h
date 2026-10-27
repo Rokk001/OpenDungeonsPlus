@@ -461,6 +461,9 @@ public:
     //! \brief Returns the value of a key of the [Dirt] block of global.cfg (stages, moods, urge, cleaning, blood);
     //! logs an error and returns 0 when the key is unknown.
     double getDirtConfigDouble(const std::string& param) const;
+    //! \brief Returns the value of a key of the [Tavern] block of global.cfg (thirst, drinks, drunkenness, hangover,
+    //! games); logs an error and returns 0 when the key is unknown.
+    double getTavernConfigDouble(const std::string& param) const;
     //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
     //! parameter is not in the configuration file (or has no value).
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
@@ -602,6 +605,8 @@ private:
     bool loadGlobalGameConfig(std::stringstream& configFile);
     //! \brief Reads the [Dirt] block of global.cfg into mDirtConfig.
     bool loadGlobalDirtConfig(std::stringstream& configFile);
+    //! \brief Reads the [Tavern] block of global.cfg into mTavernConfig.
+    bool loadGlobalTavernConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
     bool loadEquipements(const std::string& fileName);
     bool loadSpawnConditions(const std::string& fileName);
@@ -619,6 +624,7 @@ private:
     //! \brief Reads config/creatureSkills.cfg (skill trees, tier 4 skills and templates of the creatures).
     bool loadCreatureSkills(const std::string& fileName);
     //! \brief Loads every registered tile visual, including the infirmary floor masks.
+    //! \brief Reads config/tilesets.cfg: the tile links and the floor and wall pieces of every tile visual, rooms included.
     //! \brief Loads tilesets by consuming every visual block in its configured sequence.
     bool loadTilesets(const std::string& fileName);
     bool loadTilesetValues(std::istream& defFile, TileVisual tileVisual, std::vector<std::vector<TileSetValue>>& tileValues, std::map<TileVisual,std::map<int,float>>& highMap);
@@ -781,6 +787,8 @@ private:
     std::map<const std::string, std::string> mRoomsConfig;
     //! \brief The keys of the [Dirt] block of global.cfg
     std::map<std::string, double> mDirtConfig;
+    //! \brief The keys of the [Tavern] block of global.cfg
+    std::map<std::string, double> mTavernConfig;
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;

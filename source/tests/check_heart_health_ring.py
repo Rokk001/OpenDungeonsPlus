@@ -554,10 +554,12 @@ enum_body = enum_body[:enum_body.index('};')]
 enumerators = re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)
 enumerators = [name for name in enumerators if name not in ('relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect',
                                                  'creatureAppearance', 'cosmeticEvent')]
+# The tavern notifications follow the equipment notifications; the complete combined tail is pinned below
+# Campaign victory appends one value after the historical tail without changing existing ordinals.
 # Equipment and infirmary notifications follow campaign victory without changing existing ordinals.
-assert enumerators[-10:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings'], enumerators[-10:]
+assert enumerators[-12:] == ['editorRegionData', 'wallTorches', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings'], enumerators[-12:]
 assert enumerators.count('campaignVictory') == 1
-enumerators = enumerators[:-7]
+enumerators = enumerators[:-9]
 # wallTorches sits between editorRegionData and the values that are moved to the end (cosmeticEvent..timeLimit)
 assert enumerators[-1] == 'timeLimit' and enumerators[-2] == 'wallTorches' and enumerators[-3] == 'editorRegionData', enumerators[-4:]
 assert enumerators.count('wallTorches') == 1

@@ -247,6 +247,29 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Updates the mode label and client seat from an authoritative setting.
     void setLabModeShown(int32_t mode);
 
+    //! \brief Tavern window, opened by clicking on a tile of one of the player's taverns. It shows who pays for
+    //! the beer and whether beer is researched.
+    //! \param tile The clicked tavern tile.
+    void showTavernWindow(Tile* tile);
+    //! \brief Closes the tavern window.
+    bool hideTavernWindow(const CEGUI::EventArgs& = {});
+    //! \brief Asks the server to switch who pays for the beer of the tavern the window is open for.
+    bool cycleTavernPayer(const CEGUI::EventArgs& = {});
+    //! \brief Called when the server tells the state of a tavern. It is only shown if it is the tavern the window
+    //! is open for.
+    //! \param tileX The x coordinate of a tile of the tavern.
+    //! \param tileY The y coordinate of a tile of the tavern.
+    //! \param payer The payer (TavernPayer as a number).
+    //! \param beerResearched True when the tavern serves beer.
+    //! \param beerPrice The gold one beer costs.
+    void setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool beerResearched, double beerPrice);
+    //! \brief Called when the server tells who pays for the beer of a tavern. It is only shown if it is the tavern
+    //! the window is open for.
+    //! \param tileX The x coordinate of a tile of the tavern.
+    //! \param tileY The y coordinate of a tile of the tavern.
+    //! \param payer The payer (TavernPayer as a number).
+    void setTavernPayerShown(int tileX, int tileY, uint32_t payer);
+
     bool showPlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool togglePlayerSettingsWindow(const CEGUI::EventArgs& = {});
     bool cancelPlayerSettings(const CEGUI::EventArgs& = {});
@@ -645,6 +668,11 @@ private:
     std::string mMerchantModeShown = "fair";
     //! \brief Prevents applying a received slider value from sending a new setting request.
     bool mMerchantUpdating = false;
+
+    //! \brief Tile of the tavern whose window is open (-1: none) and who pays for its beer (TavernPayer as a number)
+    int mTavernX;
+    int mTavernY;
+    uint32_t mTavernPayer;
 
     //! \brief whether to allow showing the window with debug Tile info under middlemouse button click
     bool showTileDebugWindow;

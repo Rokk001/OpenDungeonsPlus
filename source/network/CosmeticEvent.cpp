@@ -30,7 +30,8 @@ bool CosmeticEvent::isKnownType() const
             (mType == static_cast<int32_t>(CosmeticEventType::digStroke)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::goldDelivery)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::boxCracked)) ||
-            (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)));
+            (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::tavernEvent)));
 }
 
 //! \brief Returns the diagnostic name of a supported cosmetic event.
@@ -86,6 +87,8 @@ std::string CosmeticEvent::typeString() const
             return "digStroke";
         case static_cast<int32_t>(CosmeticEventType::goldDelivery):
             return "goldDelivery";
+        case static_cast<int32_t>(CosmeticEventType::tavernEvent):
+            return "tavernEvent";
         default:
             break;
     }

@@ -57,9 +57,10 @@ assert 'ServerNotificationType::creatureAppearance' in retry
 
 # Notification: inserted before relationshipTier, named, handled by the client
 last = re.findall(r'^\s+([A-Za-z]+),?\s*$', notification_header.split('enum class ServerNotificationType')[1].split('};')[0], re.M)
-assert last[-16:] == ['creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests',
+# The tavern notifications follow the merchant and laboratory notifications; the complete combined tail is pinned below
+assert last[-18:] == ['creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight', 'hatcheryNests',
                      'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory',
-                     'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'infirmaryWindow', 'infirmarySettings'], last[-16:]
+                     'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings'], last[-18:]
 assert 'case ServerNotificationType::creatureAppearance:' in notification_source
 assert 'case ServerNotificationType::creatureAppearance:' in client
 assert 'setAppearanceFromServer(' in client

@@ -38,6 +38,7 @@
 #include "creatureaction/CreatureActionPossessed.h"
 #include "creatureaction/CreatureActionReloadTrap.h"
 #include "creatureaction/CreatureActionSearchDirtToClean.h"
+#include "creatureaction/CreatureActionSearchDrink.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -50,6 +51,7 @@
 #include "creatureaction/CreatureActionTunnel.h"
 #include "creatureaction/CreatureActionUseRoom.h"
 #include "creatureaction/CreatureActionUseToilet.h"
+#include "creatureaction/CreatureActionVomit.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturebehaviour/CreatureBehaviour.h"
 #include "creaturebehaviour/CreatureBehaviourAttackEnemy.h"
@@ -359,6 +361,13 @@ static const std::string GOLD_REMAINDER_SAVE_LABEL = "GoldRemainder=";
 static const std::string NEEDS_SAVE_OPEN = "[Needs]";
 //! \brief Tag that closes the block of the needs.
 static const std::string NEEDS_SAVE_CLOSE = "[/Needs]";
+//! \brief Tag that opens the optional block of the thirst state (thirst, tavern mood, drunkenness, hangover) at the
+//! end of a saved creature, after the needs block. The blocks are read in any order.
+static const std::string THIRST_SAVE_OPEN = "[Thirst]";
+//! \brief Tag that closes the block of the thirst state.
+static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
+//! \brief The highest value of the thirst and of the drunkenness (both go from 0 to this value).
+static const double THIRST_STATE_MAX = 100.0;
 //! \brief The highest value of the urge and of the creature dirt (both go from 0 to this value).
 static const double NEED_MAX = 100.0;
 //! \brief Divisor that turns the creature dirt (0 - NEED_MAX) into the share (0 - 1) of the trail dirt it leaves.
@@ -676,6 +685,13 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mCasinoMood              (0.0),
     mInfirmaryMood           (0.0),
     mInfirmaryMoodTurns      (0.0),
+    mThirst                  (0.0),
+    mTavernMood              (0.0),
+    mTavernMoodTurns         (0.0),
+    mDrunk                   (0.0),
+    mVomited                 (false),
+    mHangoverTurns           (0.0),
+    mHangoverPending         (false),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -801,6 +817,13 @@ Creature::Creature(GameMap* gameMap) :
     mCasinoMood              (0.0),
     mInfirmaryMood           (0.0),
     mInfirmaryMoodTurns      (0.0),
+    mThirst                  (0.0),
+    mTavernMood              (0.0),
+    mTavernMoodTurns         (0.0),
+    mDrunk                   (0.0),
+    mVomited                 (false),
+    mHangoverTurns           (0.0),
+    mHangoverPending         (false),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -977,7 +1000,8 @@ std::string Creature::getCreatureStreamFormat()
 
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
-            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]";
+            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]"
+            "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]";
 
     return format;
 }
@@ -1048,6 +1072,14 @@ void Creature::exportToStream(std::ostream& os) const
     // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
     if((mUrge > 0.0) || (mCreatureDirt > 0.0))
         os << "\t" << NEEDS_SAVE_OPEN << " " << mUrge << " " << mCreatureDirt << " " << NEEDS_SAVE_CLOSE;
+
+    // Optional thirst block, after the needs block; missing in old saves and when all its values are 0
+    if((mThirst > 0.0) || (mTavernMood != 0.0) || (mTavernMoodTurns > 0.0) || (mDrunk > 0.0) || mVomited ||
+       (mHangoverTurns > 0.0))
+    {
+        os << "\t" << THIRST_SAVE_OPEN << " " << mThirst << " " << mTavernMood << " " << mTavernMoodTurns << " "
+           << mDrunk << " " << (mVomited ? 1 : 0) << " " << mHangoverTurns << " " << THIRST_SAVE_CLOSE;
+    }
     os.precision(precision);
 }
 
@@ -1172,11 +1204,40 @@ bool Creature::importFromStream(std::istream& is)
             double loadedDirt = 0.0;
             if(!(is >> loadedUrge >> loadedDirt >> needsClose) || (needsClose != NEEDS_SAVE_CLOSE))
             {
-                OD_LOG_WRN("Invalid needs block for creature=" + getName());
+                OD_LOG_WRN("Invalid needs block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + needsClose
+                    + "' instead of '" + NEEDS_SAVE_CLOSE + "'"));
                 return false;
             }
             setUrge(loadedUrge);
             setCreatureDirt(loadedDirt);
+            continue;
+        }
+
+        if(appearanceToken == THIRST_SAVE_OPEN)
+        {
+            std::string thirstClose;
+            double loadedThirst = 0.0;
+            double loadedTavernMood = 0.0;
+            double loadedTavernMoodTurns = 0.0;
+            double loadedDrunk = 0.0;
+            int32_t loadedVomited = 0;
+            double loadedHangoverTurns = 0.0;
+            if(!(is >> loadedThirst >> loadedTavernMood >> loadedTavernMoodTurns >> loadedDrunk >> loadedVomited >>
+                 loadedHangoverTurns >> thirstClose) || (thirstClose != THIRST_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid thirst block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + thirstClose
+                    + "' instead of '" + THIRST_SAVE_CLOSE + "'"));
+                return false;
+            }
+            // The definition is not resolved yet (see the note at the top), so only the range is limited here;
+            // setupDefinition clears the thirst of a creature type that cannot get thirsty.
+            mThirst = std::min(THIRST_STATE_MAX, std::max(0.0, loadedThirst));
+            addTavernMood(loadedTavernMood, loadedTavernMoodTurns);
+            setDrunk(loadedDrunk);
+            setVomited(loadedVomited != 0);
+            setHangoverTurns(loadedHangoverTurns);
             continue;
         }
 
@@ -1899,13 +1960,16 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mMana;
     // Dungeonbook appearance: chosen by the server, sent once with the full creature data (empty: none)
     os << CreatureAppearanceLogic::toToken(mAppearance);
-    // The skill state and carried gold are followed by the visible item slots and active owner contributions.
+    // The skill state and carried gold are followed by the visible item slots and active owner contributions, then
+    // the needs (urge and creature dirt) for the stats window, then the thirst state (thirst, tavern mood,
+    // drunkenness, hangover) as the last fields
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
     os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     os << mUrge;
     os << mCreatureDirt;
+    exportThirstStateToPacket(os);
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -1978,6 +2042,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
+    importThirstStateFromPacket(is);
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2524,6 +2589,7 @@ void Creature::doUpkeep()
 
         increaseHunger(mDefinition->getHungerGrowthPerTurn());
         increaseUrge(mDefinition->getUrgeGrowthPerTurn());
+        increaseThirst(mDefinition->getThirstGrowthPerTurn());
     }
 
     mVisibleEnemyObjects         = getVisibleEnemyObjects();
@@ -2662,6 +2728,9 @@ void Creature::doUpkeep()
         else
             mCasinoMood = std::min(0.0, mCasinoMood + decay);
     }
+
+    // The drunkenness falls, the tavern mood and the hangover run out
+    upkeepTavernState();
 
     // The skill tree: reset window, reset and the active skills of changed ranks
     upkeepSkillTree();
@@ -3018,12 +3087,34 @@ bool Creature::handleIdleAction()
         return true;
     }
 
+    // If we are drunk enough, we vomit once per drunk episode (at the next idle turn)
+    if (!mDefinition->isWorker() &&
+        !mVomited &&
+        (mDrunk > 0.0) &&
+        (mDrunk >= ConfigManager::getSingleton().getTavernConfigDouble("VomitAt")))
+    {
+        mVomited = true;
+        pushAction(Utils::make_unique<CreatureActionVomit>(*this));
+        return true;
+    }
+
     // If we are hungry, we go to eat
     if (!mDefinition->isWorker() &&
         !hasActionBeenTried(CreatureActionType::searchFood) &&
         (Random::Double(70.0, 80.0) < mHunger))
     {
         pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    // If we are thirsty, we go to a tavern. Without a tavern nothing happens here: the thirst keeps rising and
+    // its mood malus acts
+    if (!mDefinition->isWorker() &&
+        mDefinition->hasThirst() &&
+        !hasActionBeenTried(CreatureActionType::searchDrink) &&
+        (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
         return true;
     }
 
@@ -3487,6 +3578,10 @@ double Creature::getMoveSpeed(Tile* tile) const
     // A badly hurt creature limps along: it moves slower too (tired and hurt add up, see getLowHealthWalkFactor)
     tiredFactor *= getLowHealthWalkFactor();
 
+    // A staggering (drunk) creature is slower too (see isStaggering)
+    if(isStaggering())
+        tiredFactor *= ConfigManager::getSingleton().getTavernConfigDouble("StaggerSpeedFactor");
+
     // A worker that pulls a hurt creature is slower (clip drag_anim). The pulled creature does not walk
     // by itself: it slides after the worker a bit faster than the worker pulls, so it never falls behind.
     // Server and clients know both by the clip name, so both move them at the same speed
@@ -3612,6 +3707,10 @@ double Creature::getClientPoseSpeedFactor() const
     // A tired creature also walks slower on the server (see getMoveSpeed): the walk clip keeps up
     if((mOverlayMoodValue & CreatureMoodValues::Tired) != 0)
         factor *= ConfigManager::getSingleton().getTiredWalkSpeedFactor();
+
+    // A staggering creature also walks slower (see getMoveSpeed): the walk clip keeps up
+    if(isStaggering())
+        factor *= ConfigManager::getSingleton().getTavernConfigDouble("StaggerSpeedFactor");
 
     // The worker that pulls a hurt creature walks slower too (see getMoveSpeed)
     if(getAnimationStateName() == EntityAnimation::drag_anim)
@@ -4712,7 +4811,9 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportProgressToPacket(os, seat);
     // Current mana, next to the health value (the maximum follows from type, level and equipment)
     os << mMana;
-    // The skill state and carried gold are followed by the visible item slots and active owner contributions.
+    // The skill state and carried gold are followed by the visible item slots and active owner contributions, then
+    // the needs (urge and creature dirt) as the last fields, followed by the thirst state: only the own seat sees
+    // them, every other seat gets 0 for all
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
     exportItemsToPacket(os, seat);
@@ -4721,15 +4822,40 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     {
         os << mUrge;
         os << mCreatureDirt;
+        exportThirstStateToPacket(os);
     }
     else
     {
         os << 0.0;
         os << 0.0;
+        // The thirst state of other seats is not sent: every value is 0
+        os << 0.0;
+        os << 0.0;
+        os << 0.0;
+        os << 0.0;
     }
 }
 
-//! \brief Reads changing creature data and refreshes equipment presentation.
+//! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
+void Creature::exportThirstStateToPacket(ODPacket& os) const
+{
+    os << mThirst;
+    os << mTavernMood;
+    os << mDrunk;
+    os << mHangoverTurns;
+}
+
+//! \brief Reads the thirst state written by exportThirstStateToPacket.
+void Creature::importThirstStateFromPacket(ODPacket& is)
+{
+    OD_ASSERT_TRUE(is >> mThirst);
+    OD_ASSERT_TRUE(is >> mTavernMood);
+    OD_ASSERT_TRUE(is >> mDrunk);
+    OD_ASSERT_TRUE(is >> mHangoverTurns);
+}
+
+//! \brief Reads the changing creature data sent by the server, the skill state last, and refreshes equipment
+//! presentation.
 void Creature::updateFromPacket(ODPacket& is)
 {
     // What changed in this update can become a post of the feed. The state is only copied
@@ -4738,6 +4864,8 @@ void Creature::updateFromPacket(ODPacket& is)
     social::CreatureSnapshot socialBefore;
     if(postSource)
         fillSocialSnapshot(socialBefore);
+    const bool wasStaggering = isStaggering();
+    const bool hadHangover = (mHangoverTurns > 0.0);
 
     MovableGameEntity::updateFromPacket(is);
 
@@ -4816,6 +4944,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
+    importThirstStateFromPacket(is);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -4827,6 +4956,20 @@ void Creature::updateFromPacket(ODPacket& is)
             getDefinition()->getClassName(), getDefinition()->isWorker(), socialBefore, socialAfter);
         if(!socialAfter.mFilthyRoom.empty() && (socialAfter.mFilthyRoom != socialBefore.mFilthyRoom))
             socialFilthyRoom(socialAfter.mFilthyRoom);
+
+        // The creature began to stagger (first time of a drunk episode) or woke up with a hangover
+        if(!wasStaggering && isStaggering())
+        {
+            socialEvent(social::PostCategory::Drunk);
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().trigger(this, "Drunk");
+        }
+        if(!hadHangover && (mHangoverTurns > 0.0))
+        {
+            socialEvent(social::PostCategory::Hungover);
+            if(CreatureReactions::getSingletonPtr() != nullptr)
+                CreatureReactions::getSingleton().trigger(this, "Hangover");
+        }
     }
 
     // Level up and payday are shown as cosmetic reactions of the creature
@@ -4899,13 +5042,16 @@ void Creature::addMerchantMood(double points)
 void Creature::setLastItemDeal(uint8_t deal, const std::string& name)
 { mLastItemDeal = deal; mLastItemName = name; mNeedFireRefresh = true; }
 
-void Creature::socialEvent(social::PostCategory category)
+//! \brief Adds a post of the given category for this creature to the feed. Only creatures of the local player post.
+//! \param category What the creature posts about.
+//! \param other Profile name of the second creature of the post (the opponent of a duel), empty for other posts.
+void Creature::socialEvent(social::PostCategory category, const std::string& other)
 {
     if(!isSocialFeedSource())
         return;
 
     social::PostLog::getSingleton().addPost(getGameMap()->getTurnNumber(), getName(),
-        getDefinition()->getClassName(), getDefinition()->isWorker(), category, 0);
+        getDefinition()->getClassName(), getDefinition()->isWorker(), category, 0, other);
 }
 
 //! \brief Posts "filthy room" for this creature, at most once per FilthyPostSeconds for the same room.
@@ -5749,6 +5895,9 @@ std::string Creature::getStatsText(const Seat* viewer)
     {
         tempSS << "Wakefulness: " << mWakefulness << std::endl;
         tempSS << "Hunger: " << mHunger << std::endl;
+        tempSS << "Thirst: " << mThirst << std::endl;
+        tempSS << "Drunk: " << mDrunk << std::endl;
+        tempSS << "Hangover: " << mHangoverTurns << std::endl;
         tempSS << "Urge: " << mUrge << std::endl;
         tempSS << "Dirt: " << mCreatureDirt << std::endl;
     }
@@ -6676,10 +6825,10 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
 
     // Fighting is tiring
     decreaseWakefulness(0.5);
-    // but gives experience; a dirty arena teaches less
+    // but gives experience; a dirty arena teaches less, and so does a hangover
     Room* attackRoom = (myTile == nullptr) ? nullptr : myTile->getCoveringRoom();
     if((attackRoom != nullptr) && (attackRoom->getType() == RoomType::arena))
-        receiveExp(1.5 * attackRoom->getDirtOutputFactor());
+        receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor());
     else
         receiveExp(1.5);
 }
@@ -7813,6 +7962,10 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             return;
         }
 
+        // A creature type that cannot get thirsty never keeps a thirst value read from a level or a save
+        if(!mDefinition->hasThirst())
+            mThirst = 0.0;
+
         if(getIsOnServerMap())
         {
             setHpToStrHp = true;
@@ -8238,10 +8391,129 @@ void Creature::foodEaten(double val)
     increaseUrge(ConfigManager::getSingleton().getDirtConfigDouble("UrgePerChicken"));
 }
 
-//! \brief Hook for a later drinking room: raises the urge by UrgePerDrink.
-void Creature::drinkTaken(double val)
+//! \brief The creature took a drink: the thirst is 0, the urge rises and a beer adds drunkenness.
+void Creature::drinkTaken(DrinkKind kind)
 {
-    increaseUrge(ConfigManager::getSingleton().getDirtConfigDouble("UrgePerDrink"));
+    ConfigManager& config = ConfigManager::getSingleton();
+    mThirst = 0.0;
+    if(kind == DrinkKind::beer)
+    {
+        increaseUrge(config.getTavernConfigDouble("UrgeFromBeer"));
+        mDrunk = std::min(THIRST_STATE_MAX, mDrunk + config.getTavernConfigDouble("DrunkPerBeer"));
+    }
+    else
+    {
+        increaseUrge(config.getTavernConfigDouble("UrgeFromWater"));
+    }
+}
+
+//! \brief Raises the thirst, limited to THIRST_STATE_MAX; rogue creatures have none. A creature of a human keeper that
+//! is at the limit lets the keeper know when there is no tavern (the keeper limits the notices itself).
+void Creature::increaseThirst(double value)
+{
+    if(getSeat()->isRogueSeat() || !mDefinition->hasThirst())
+        return;
+
+    mThirst = std::min(THIRST_STATE_MAX, mThirst + value);
+    if((mThirst >= THIRST_STATE_MAX) && getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
+        getSeat()->getPlayer()->notifyTavernEvent();
+}
+
+//! \brief Sets the thirst, limited to 0 - THIRST_STATE_MAX; a creature type that cannot get thirsty stays at 0.
+void Creature::setThirst(double val)
+{
+    if(!mDefinition->hasThirst())
+    {
+        mThirst = 0.0;
+        return;
+    }
+    mThirst = std::min(THIRST_STATE_MAX, std::max(0.0, val));
+}
+
+//! \brief Sets the drunkenness, limited to 0 - THIRST_STATE_MAX.
+void Creature::setDrunk(double val)
+{
+    mDrunk = std::min(THIRST_STATE_MAX, std::max(0.0, val));
+}
+
+//! \brief Sets the turns a hangover still lasts, not below 0.
+void Creature::setHangoverTurns(double turns)
+{
+    mHangoverTurns = std::max(0.0, turns);
+}
+
+//! \brief Sets the tavern mood and starts its timer again.
+void Creature::addTavernMood(double points, double turns)
+{
+    mTavernMood = points;
+    mTavernMoodTurns = std::max(0.0, turns);
+}
+
+//! \brief True if the drunkenness has reached StaggerAt.
+bool Creature::isStaggering() const
+{
+    // A sober creature (nearly always) needs no look into the configuration
+    if(mDrunk <= 0.0)
+        return false;
+
+    return mDrunk >= ConfigManager::getSingleton().getTavernConfigDouble("StaggerAt");
+}
+
+//! \brief Returns HangoverWorkFactor during a hangover, else 1.
+double Creature::getHangoverWorkFactor() const
+{
+    if(mHangoverTurns <= 0.0)
+        return 1.0;
+
+    return ConfigManager::getSingleton().getTavernConfigDouble("HangoverWorkFactor");
+}
+
+//! \brief Notes that the creature falls asleep drunk, so it wakes up with a hangover.
+void Creature::sleepStarted()
+{
+    mHangoverPending = (mDrunk > 0.0) &&
+        (mDrunk > ConfigManager::getSingleton().getTavernConfigDouble("HangoverAt"));
+}
+
+//! \brief Starts the hangover of a creature that slept drunk; a running hangover is not shortened.
+void Creature::sleepEnded()
+{
+    if(!mHangoverPending)
+        return;
+
+    mHangoverPending = false;
+    ConfigManager& config = ConfigManager::getSingleton();
+    double hangoverTurns = config.getTavernConfigDouble("HangoverTurns");
+    mHangoverTurns = std::max(mHangoverTurns, hangoverTurns);
+    addTavernMood(config.getTavernConfigDouble("HangoverMood"), hangoverTurns);
+}
+
+//! \brief Lets the drunkenness fall, resets the vomit mark when sober enough and counts down mood and hangover.
+void Creature::upkeepTavernState()
+{
+    // Nothing to count for a creature that never visited a tavern
+    if((mDrunk <= 0.0) && !mVomited && (mTavernMoodTurns <= 0.0) && (mTavernMood == 0.0) && (mHangoverTurns <= 0.0))
+        return;
+
+    ConfigManager& config = ConfigManager::getSingleton();
+    if(mDrunk > 0.0)
+        mDrunk = std::max(0.0, mDrunk - config.getTavernConfigDouble("DrunkDecayPerTurn"));
+
+    // The next drunk episode vomits again
+    if(mVomited && (mDrunk < config.getTavernConfigDouble("VomitAt")))
+        mVomited = false;
+
+    // The tavern mood lasts for its turns, then it is gone
+    if(mTavernMoodTurns > 0.0)
+        mTavernMoodTurns -= 1.0;
+    if(mTavernMoodTurns <= 0.0)
+    {
+        mTavernMoodTurns = 0.0;
+        mTavernMood = 0.0;
+    }
+
+    if(mHangoverTurns > 0.0)
+        mHangoverTurns = std::max(0.0, mHangoverTurns - 1.0);
 }
 
 //! \brief Hook for a later bathing room: the creature carries no dirt anymore.
@@ -9181,6 +9453,13 @@ void Creature::changeSeat(Seat* newSeat)
     mBrawlResumeOpponent.clear();
     mWakefulness = 100;
     mHunger = 0;
+    mThirst = 0.0;
+    mTavernMood = 0.0;
+    mTavernMoodTurns = 0.0;
+    mDrunk = 0.0;
+    mVomited = false;
+    mHangoverTurns = 0.0;
+    mHangoverPending = false;
     mUrge = 0.0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;
