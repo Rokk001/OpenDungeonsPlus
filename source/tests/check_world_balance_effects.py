@@ -179,6 +179,14 @@ applied = []
 for text_path, text in sources.items():
     for arguments in calls(text, "SkillManager::getResearchValue"):
         applied.append((text_path, arguments))
+    if text_path.name == "CreatureActionHuntGhost.cpp":
+        # Resolve the existing hunt-specific wrapper to its real skill and literal effect callers.
+        assert any("SkillType::roomGhostRoom" in arguments and "getRoomConfigDouble(key)" in arguments
+                   and arguments.rstrip().endswith(",effect")
+                   for arguments in calls(text, "SkillManager::getResearchValue")), "hunt wrapper must apply the requested key/effect"
+        for arguments in calls(text, "researched"):
+            if re.fullmatch(r'"[A-Za-z]+"\s*,\s*"[A-Za-z]+"', arguments):
+                applied.append((text_path, "SkillType::roomGhostRoom," + arguments))
 # the skill of a bridge and of a door is picked by a helper in the file of the call
 INDIRECT = {"roomBridgeWooden": "RoomBridge.cpp", "roomBridgeStone": "RoomBridge.cpp",
             "trapFineTools": "RoomWorkshop.cpp", "trapMasterTools": "RoomWorkshop.cpp",
@@ -228,7 +236,7 @@ assert "double mFearTurns;" in read("source/traps/TrapFear.h") and "double mFree
 # the research duration reaches the effect timers as a fraction (Defector level 2 = 43.75), nothing is rounded
 for rounded_file in ("source/traps/TrapFear.cpp", "source/traps/TrapFreeze.cpp", "source/spells/SpellDefector.cpp", "source/spells/SpellHexenHen.cpp"):
     assert "lround" not in read(rounded_file), rounded_file + " must not round the duration"
-assert "void fleeFromTile(Tile* fearTile, double nbTurns);" in read("source/entities/Creature.h")
+assert "void fleeFromTile(Tile* fearTile, double nbTurns, bool scaredPose = false);" in read("source/entities/Creature.h")
 assert "double mFearTurns;" in read("source/creatureaction/CreatureActionFlee.h")
 assert "double fearTurns" in read("source/creatureaction/CreatureActionFlee.h")
 assert "double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellDefector" in read("source/spells/SpellDefector.cpp")
