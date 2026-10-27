@@ -98,7 +98,7 @@ KEEPERS = {
     "tavernBeer": ("BeerButton", "Tavern: Beer", "Rooms"),
 }
 
-assert len(EXPECTED) == 64, "the tree has 64 entries"
+assert len(EXPECTED) == 65, "the tree has 65 entries"
 
 # ---------------------------------------------------------------------------------------------
 # 1. The constructor of the skill manager builds exactly this tree

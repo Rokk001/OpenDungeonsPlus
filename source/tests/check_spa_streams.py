@@ -53,13 +53,13 @@ room_h = read('source/rooms/RoomSpa.h')
 export_text = extract(creature_cpp, 'void Creature::exportToStream(')
 assert export_text.index('THIRST_SAVE_OPEN') < export_text.index('SPA_SAVE_OPEN'), 'the spa block follows the thirst block'
 assert creature_cpp.count('if(appearanceToken == SPA_SAVE_OPEN)') == 1
-# The full packet and the update packet end with the thirst state and the spa state; both send zeros to the seats that do
-# not own the creature (the same number of fields: four thirst fields, two spa fields; the update packet also urge and dirt)
+# The full packet and the update packet end with the thirst state and the spa state; the spa fields (and in the update packet
+# also urge, dirt and the thirst fields) are zeros for the seats that do not own the creature (the same number of fields)
 full_packet = extract(creature_cpp, 'void Creature::exportToPacket(')
-full_tail_start = full_packet.index('    // The thirst and lava spa state is only sent to the own seat')
-full_tail = full_packet[full_tail_start:full_packet.rindex('}')]
-assert re.search(r'if\(seat == getSeat\(\)\)\s*\{\s*exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);\s*\}', full_tail)
-assert 'field < 6' in full_tail and 'os << 0.0;' in full_tail
+full_tail_start = full_packet.index('    exportThirstStateToPacket(os);\n    // The lava spa state is only sent to the own seat')
+full_tail = full_packet[full_tail_start:full_packet.index('    os << mCorpseTurns')]
+assert re.search(r'exportThirstStateToPacket\(os\);\s*//[^\n]*\n\s*//[^\n]*\n\s*if\(seat == getSeat\(\)\)\s*exportSpaStateToPacket\(os\);\s*else', full_tail)
+assert full_tail.count('os << 0.0;') == 2
 update_start = creature_cpp.index('os << mGoldCarried;\n    exportItemsToPacket(os, seat);\n    os << (seat == getSeat() ? mInfirmaryMood : 0.0);\n    if(seat == getSeat())')
 update_packet = creature_cpp[update_start:creature_cpp.index('\n}\n', update_start)]
 assert re.search(r'exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);', update_packet)
@@ -389,7 +389,7 @@ static void checkRoomStream()
     }
 }
 
-// ---- The full creature packet: the thirst and spa state only for the own seat, the same number of fields for every seat
+// ---- The full creature packet: the spa state only for the own seat, the same number of fields for every seat
 static void checkFullPacketPrivacy()
 {
     Seat own = { nullptr }, ally = { nullptr }, enemy = { nullptr };
@@ -399,10 +399,13 @@ static void checkFullPacketPrivacy()
     ODPacket forAlly; c.writeFullTail(forAlly, &ally);
     ODPacket forEnemy; c.writeFullTail(forEnemy, &enemy);
     expect(forOwn.data.str() == "11 22 33 44 55 66 ", "the own seat gets the real values: " + forOwn.data.str());
-    expect(forAlly.data.str() == "0 0 0 0 0 0 ", "an allied foreign seat gets zeros: " + forAlly.data.str());
-    expect(forEnemy.data.str() == "0 0 0 0 0 0 ", "an enemy seat gets zeros: " + forEnemy.data.str());
-    // The client reads the same six fields from every packet
-    Creature reader("r"); reader.importSpaStateFromPacket(forAlly);
+    expect(forAlly.data.str() == "11 22 33 44 0 0 ", "an allied foreign seat gets the tavern fields and zeros for the spa: " + forAlly.data.str());
+    expect(forEnemy.data.str() == "11 22 33 44 0 0 ", "an enemy seat gets the tavern fields and zeros for the spa: " + forEnemy.data.str());
+    // The client reads the same six fields from every packet: the four tavern fields, then the two spa fields
+    Creature reader("r"); double tavernField = 0.0;
+    for(int field = 0; field < 4; ++field)
+        forAlly >> tavernField;
+    reader.importSpaStateFromPacket(forAlly);
     expectNear(reader.mSpaMood, 0.0, "zero spa mood arrives"); expectNear(reader.mRelaxTurns, 0.0, "zero relaxation arrives");
 }
 

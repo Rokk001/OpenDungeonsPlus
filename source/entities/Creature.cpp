@@ -2125,17 +2125,15 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     os << mUrge;
     os << mCreatureDirt;
-    // The thirst and lava spa state is only sent to the own seat (the same six fields as in the update packet, 0 for
-    // every other seat)
+    exportThirstStateToPacket(os);
+    // The lava spa state is only sent to the own seat (the same two fields as in the update packet, 0 for every other
+    // seat)
     if(seat == getSeat())
-    {
-        exportThirstStateToPacket(os);
         exportSpaStateToPacket(os);
-    }
     else
     {
-        for(int32_t field = 0; field < 6; ++field)
-            os << 0.0;
+        os << 0.0;
+        os << 0.0;
     }
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
