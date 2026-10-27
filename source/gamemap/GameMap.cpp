@@ -3895,6 +3895,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
 
         case GameEntityType::buildingObject:
         case GameEntityType::chickenEntity:
+        case GameEntityType::ghostEntity:
         case GameEntityType::craftedTrap:
         case GameEntityType::missileObject:
         case GameEntityType::persistentObject:

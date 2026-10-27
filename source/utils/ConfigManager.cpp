@@ -88,6 +88,9 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mClientConnectionTimeout(5000),
     mBaseSpawnPoint(10),
     mCreatureDeathCounter(10),
+    mGhostLifetimeSeconds(0.0),
+    mGhostFloatSpeed(0.0),
+    mGhostWanderRadius(0.0),
     mCorpseLieSeconds(0.0),
     mCorpseDecaySeconds(0.0),
     mMaxCreaturesPerSeatAbsolute(30),
@@ -705,6 +708,21 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "GhostLifetimeSeconds")
+        {
+            configFile >> nextParam;
+            mGhostLifetimeSeconds = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "GhostFloatSpeed")
+        {
+            configFile >> nextParam;
+            mGhostFloatSpeed = Helper::toDouble(nextParam);
+        }
+        if(nextParam == "GhostWanderRadius")
+        {
+            configFile >> nextParam;
+            mGhostWanderRadius = Helper::toDouble(nextParam);
+        }
         if(nextParam == "CorpseLieSeconds")
         {
             configFile >> nextParam;

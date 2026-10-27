@@ -168,6 +168,15 @@ public:
     //! \brief Returns a configured item-drop, item-rating or potion rule value.
     double getItemSetting(const std::string& section, const std::string& key) const;
 
+    //! \brief Returns the configured GhostLifetimeSeconds value.
+    double getGhostLifetimeSeconds() const { return mGhostLifetimeSeconds; }
+
+    //! \brief Returns the configured GhostFloatSpeed value.
+    double getGhostFloatSpeed() const { return mGhostFloatSpeed; }
+
+    //! \brief Returns the configured GhostWanderRadius value.
+    double getGhostWanderRadius() const { return mGhostWanderRadius; }
+
     //! \brief Returns the seconds a body lies before decay, excluding worker transport.
     double getCorpseLieSeconds() const
     { return mCorpseLieSeconds; }
@@ -684,6 +693,9 @@ private:
     uint32_t mClientConnectionTimeout;
     uint32_t mBaseSpawnPoint;
     uint32_t mCreatureDeathCounter;
+    double mGhostLifetimeSeconds;
+    double mGhostFloatSpeed;
+    double mGhostWanderRadius;
     double mCorpseLieSeconds;
     double mCorpseDecaySeconds;
     uint32_t mMaxCreaturesPerSeatAbsolute;
