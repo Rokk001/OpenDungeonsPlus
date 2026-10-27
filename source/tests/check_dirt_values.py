@@ -75,7 +75,7 @@ ROOM_KEYS = {
     'HatcheryDirtPerHenTurn': '0.0323', 'HatcheryDirtPerMeal': '8.0769', 'TrainHallDirtPerHit': '0.7961',
     'CasinoDirtPerWork': '0.7961', 'DormitoryDirtPerSleepTurn': '0.1448', 'GuardRoomDirtPerDuty': '1.2304',
     'LibraryDirtPerWork': '0.3980', 'TempleDirtPerPrayerTurn': '0.0724', 'PrisonDirtPerPrisonerTurn': '0.1615',
-    'TortureDirtPerSession': '1.4475', 'TavernDirtPerDrink': '0.2605',
+    'TortureDirtPerSession': '1.4475', 'TavernDirtPerDrink': '0.2605', 'SpaDirtPerBath': '20.9679',
 }
 room_values = block_values(rooms_cfg, 'Rooms')
 for key, value in ROOM_KEYS.items():

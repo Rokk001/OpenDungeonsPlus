@@ -60,8 +60,8 @@ update_packet = extract(creature_cpp, 'void Creature::exportToPacketForUpdate(')
 if update_packet is None:
     update_start = creature_cpp.index('os << mGoldCarried;\n    if(seat == getSeat())')
     update_packet = creature_cpp[update_start:creature_cpp.index('\n}\n', update_start)]
-assert 'exportThirstStateToPacket(os);' in update_packet and update_packet.count('os << 0.0;') == 6, \
-    'the update packet sends urge, dirt and the four thirst fields as zeros to other seats'
+assert 'exportThirstStateToPacket(os);' in update_packet and update_packet.count('os << 0.0;') == 8, \
+    'the update packet sends urge, dirt, the four thirst fields and the two spa fields as zeros to other seats'
 thirst_export = extract(creature_cpp, 'void Creature::exportThirstStateToPacket(')
 assert re.findall(r'os << (m\w+);', thirst_export) == ['mThirst', 'mTavernMood', 'mDrunk', 'mHangoverTurns']
 assert creature_cpp.count('importThirstStateFromPacket(is);') == 2, 'full and update packet read the thirst state'

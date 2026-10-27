@@ -2058,6 +2058,8 @@ bool ConfigManager::loadTilesets(const std::string& fileName)
             return false;
         if(!loadTilesetValues(defFile, TileVisual::tavernRoom, tileSet->configureTileValues(TileVisual::tavernRoom),*mHighMap))
             return false;
+        if(!loadTilesetValues(defFile, TileVisual::spaRoom, tileSet->configureTileValues(TileVisual::spaRoom),*mHighMap))
+            return false;
 
     }
 

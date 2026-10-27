@@ -30,7 +30,7 @@ room_type = read('source/rooms/RoomType.h')
 rooms = enum_names(room_type, 'enum class RoomType')
 assert rooms.index('toilet') == 19 and rooms[-1] == 'nbRooms', rooms
 assert rooms[19:24] == ['toilet', 'merchant', 'herbGarden', 'alchemyLab', 'tavern']
-assert rooms[-3:] == ['alchemyLab', 'tavern', 'nbRooms'], rooms[-4:]
+assert rooms[-4:] == ['alchemyLab', 'tavern', 'spa', 'nbRooms'], rooms[-5:]
 assert rooms.count('toilet') == 1
 
 # 2. The room class, factory, names and registration in the build
@@ -51,7 +51,7 @@ tile_h = read('source/entities/Tile.h')
 visuals = enum_names(tile_h, 'enum class TileVisual')
 assert visuals.index('toiletRoom') == 30 and visuals[-1] == 'countTileVisual', visuals
 assert visuals[30:35] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom']
-assert visuals[-3:] == ['alchemyLabRoom', 'tavernRoom', 'countTileVisual'], visuals[-4:]
+assert visuals[-4:] == ['alchemyLabRoom', 'tavernRoom', 'spaRoom', 'countTileVisual'], visuals[-5:]
 tile_cpp = read('source/entities/Tile.cpp')
 assert tile_cpp.count('case TileVisual::toiletRoom:') >= 4, 'toiletRoom is missing in the Tile switches'
 assert 'return "toiletRoom";' in tile_cpp
@@ -72,7 +72,7 @@ tileset_loader = config_manager[config_manager.index('bool ConfigManager::loadTi
 loaded_visuals = re.findall(r'loadTilesetValues\(defFile, TileVisual::(\w+),', tileset_loader)
 assert len(loaded_visuals) == len(set(loaded_visuals)), 'duplicate tileset loader visual'
 assert set(loaded_visuals) == set(visuals[:-1]), 'tileset loader must consume every TileVisual exactly once'
-assert loaded_visuals[-5:] == ['toiletRoom', 'merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom']
+assert loaded_visuals[-5:] == ['merchantRoom', 'herbGardenRoom', 'alchemyLabRoom', 'tavernRoom', 'spaRoom']
 for tileset in re.findall(r'\[Tileset\](.*?)\[/Tileset\]', tilesets, re.S):
     block_order = re.findall(r'^\s*\[(\w+)\]\s*$', tileset, re.M)
     block_order = [name for name in block_order if name not in {'TileLink', 'oneOf'}]
@@ -105,7 +105,7 @@ skills = enum_names(skill_type, 'enum class SkillType')
 assert skills.index('roomToilet') == 55 and skills[-1] == 'countSkill', skills
 assert skills[55:62] == ['roomToilet', 'roomMerchant', 'roomHerbGarden', 'roomAlchemyLab',
                          'trapFineTools', 'trapMasterTools', 'spellSunthornCultivation']
-assert skills[-3:] == ['roomTavern', 'tavernBeer', 'countSkill'], skills[-4:]
+assert skills[-4:] == ['roomTavern', 'tavernBeer', 'roomSpa', 'countSkill'], skills[-5:]
 assert 'case SkillType::roomToilet:' in read('source/game/SkillType.cpp') and '"roomToilet"' in read('source/game/SkillType.cpp')
 manager = read('source/game/SkillManager.cpp')
 assert ('createSkill(mSkills, SkillType::roomToilet, std::vector<SkillType>{SkillType::roomDormitory});\n'

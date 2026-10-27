@@ -83,7 +83,7 @@ for path, token in [('source/rooms/RoomLibrary.cpp', 'getDirtOutputFactor()'), (
                     ('source/rooms/RoomPrison.cpp', 'getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3")'),
                     ('source/rooms/RoomTorture.cpp', 'getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3")')]:
     assert token in read(path), path + ' must use ' + token
-assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor())' in creature_cpp, 'arena experience per hit'
+assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor())' in creature_cpp, 'arena experience per hit'
 # Piles in rooms workers never clean: the search and the seat check use the same rule
 assert 'isPileCleanable(*tile)' in extract(search_cpp, 'static Tile* findPileTile('), 'the pile search must use the shared rule'
 assert 'isPileCleanable(*tile)' in extract(seat_cpp, 'bool Seat::hasDirtToClean() const'), 'hasDirtToClean must use the shared rule'
@@ -113,6 +113,7 @@ def work_point_function(text, variable, name):
     statement = re.sub(r'ItemEffects::increaseFactor\(creature, "(?:Scholar|Craftsman)"\)', 'bonus', statement)
     statement = statement.replace('getDirtOutputFactor()', 'factor')
     statement = statement.replace('creature.getHangoverWorkFactor()', '1.0')
+    statement = statement.replace('creature.getRelaxWorkFactor()', '1.0')
     return ('static double ' + name + '(double base, double factor, double bonus = 1.0)\n{\n' +
             statement + '\n    return ' + variable + ';\n}')
 
@@ -155,6 +156,7 @@ struct ConfigManager
         return it->second;
     }
     double getDirtConfigDouble(const std::string& key) const { return lookup(key); }
+    double getRoomConfigDouble(const std::string& key) const { return lookup(key); }
     double getRoomConfigDoubleOrDefault(const std::string& key, double def) const
     {
         std::map<std::string, double>::const_iterator it = values.find(key);
@@ -292,17 +294,19 @@ const double DirtPileEntity::DIRT_LEFT_START = 100.0;
 // ---- Creature
 static const double NEED_MAX = 100.0;
 static const double CREATURE_DIRT_SHARE_DIVISOR = NEED_MAX;
+// The lava spa pool: no tile of this probe belongs to one
+struct RoomSpa { static bool isPoolTile(const Tile*) { return false; } };
 struct Creature
 {
     Seat* mSeat; CreatureDefinition* mDefinition; GameMap* mMap; Tile* mTile;
     double mUrge, mCreatureDirt, mHunger;
     double mDragDirtFactor; bool mFoughtSinceFightEnd;
     bool mDirtKoThisFight, mIsBeingDragged, mTorturedThisTurn, inPrison, inContainment, koTemp, koDeath;
-    int mNbTurnsWithoutBattle; GameEntity* mCarriedEntity;
+    int mNbTurnsWithoutBattle; GameEntity* mCarriedEntity; int32_t mSpaMudTilesLeft;
     Creature(Seat* seat, CreatureDefinition* definition, GameMap* map, Tile* tile)
       : mSeat(seat), mDefinition(definition), mMap(map), mTile(tile), mUrge(0.0), mCreatureDirt(0.0), mHunger(50.0), mDragDirtFactor(1.0), mFoughtSinceFightEnd(false),
         mDirtKoThisFight(false), mIsBeingDragged(false), mTorturedThisTurn(false), inPrison(false), inContainment(false),
-        koTemp(false), koDeath(false), mNbTurnsWithoutBattle(5), mCarriedEntity(nullptr) {}
+        koTemp(false), koDeath(false), mNbTurnsWithoutBattle(5), mCarriedEntity(nullptr), mSpaMudTilesLeft(0) {}
     Seat* getSeat() const { return mSeat; }
     const CreatureDefinition* getDefinition() const { return mDefinition; }
     GameMap* getGameMap() const { return mMap; }

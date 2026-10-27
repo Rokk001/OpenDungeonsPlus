@@ -37,6 +37,7 @@
 #include "creatureaction/CreatureActionReloadTrap.h"
 #include "creatureaction/CreatureActionSearchDirtToClean.h"
 #include "creatureaction/CreatureActionSearchDrink.h"
+#include "creatureaction/CreatureActionSearchSpa.h"
 #include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "creatureaction/CreatureActionSearchFood.h"
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
@@ -126,6 +127,7 @@
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
+#include "rooms/RoomSpa.h"
 #include "rooms/RoomToilet.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/Spell.h"
@@ -359,6 +361,13 @@ static const std::string NEEDS_SAVE_CLOSE = "[/Needs]";
 static const std::string THIRST_SAVE_OPEN = "[Thirst]";
 //! \brief Tag that closes the block of the thirst state.
 static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
+//! \brief Tag that opens the optional block of the lava spa state (spa mood, relaxation turns, tiles that still get
+//! mud) at the end of a saved creature, after the thirst block. The blocks are read in any order.
+static const std::string SPA_SAVE_OPEN = "[Spa]";
+//! \brief Tag that closes the block of the lava spa state.
+static const std::string SPA_SAVE_CLOSE = "[/Spa]";
+//! \brief Factor of the parabola that gives the height of a jump: 4 x p x (1 - p) is 1 at the apex.
+static const Ogre::Real JUMP_ARC_FACTOR = 4.0f;
 //! \brief The highest value of the thirst and of the drunkenness (both go from 0 to this value).
 static const double THIRST_STATE_MAX = 100.0;
 //! \brief The highest value of the urge and of the creature dirt (both go from 0 to this value).
@@ -683,6 +692,15 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mVomited                 (false),
     mHangoverTurns           (0.0),
     mHangoverPending         (false),
+    mSpaMood                 (0.0),
+    mRelaxTurns              (0.0),
+    mSpaMudTilesLeft         (0),
+    mSpaBathing              (false),
+    mJumpFrom                (Ogre::Vector3::ZERO),
+    mJumpTo                  (Ogre::Vector3::ZERO),
+    mJumpTurns               (0),
+    mJumpTurnsLeft           (0),
+    mJumpElapsed             (0.0f),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -813,6 +831,15 @@ Creature::Creature(GameMap* gameMap) :
     mVomited                 (false),
     mHangoverTurns           (0.0),
     mHangoverPending         (false),
+    mSpaMood                 (0.0),
+    mRelaxTurns              (0.0),
+    mSpaMudTilesLeft         (0),
+    mSpaBathing              (false),
+    mJumpFrom                (Ogre::Vector3::ZERO),
+    mJumpTo                  (Ogre::Vector3::ZERO),
+    mJumpTurns               (0),
+    mJumpTurnsLeft           (0),
+    mJumpElapsed             (0.0f),
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
@@ -990,7 +1017,8 @@ std::string Creature::getCreatureStreamFormat()
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
             "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]"
-            "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]";
+            "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]"
+            "\t[Spa spaMood relaxTurns mudTilesLeft /Spa]";
 
     return format;
 }
@@ -1065,6 +1093,13 @@ void Creature::exportToStream(std::ostream& os) const
     {
         os << "\t" << THIRST_SAVE_OPEN << " " << mThirst << " " << mTavernMood << " " << mTavernMoodTurns << " "
            << mDrunk << " " << (mVomited ? 1 : 0) << " " << mHangoverTurns << " " << THIRST_SAVE_CLOSE;
+    }
+
+    // Optional lava spa block, after the thirst block; missing in old saves and when all its values are 0
+    if((mSpaMood > 0.0) || (mRelaxTurns > 0.0) || (mSpaMudTilesLeft > 0))
+    {
+        os << "\t" << SPA_SAVE_OPEN << " " << mSpaMood << " " << mRelaxTurns << " " << mSpaMudTilesLeft << " "
+           << SPA_SAVE_CLOSE;
     }
 }
 
@@ -1216,6 +1251,25 @@ bool Creature::importFromStream(std::istream& is)
             setDrunk(loadedDrunk);
             setVomited(loadedVomited != 0);
             setHangoverTurns(loadedHangoverTurns);
+            continue;
+        }
+
+        if(appearanceToken == SPA_SAVE_OPEN)
+        {
+            std::string spaClose;
+            double loadedSpaMood = 0.0;
+            double loadedRelaxTurns = 0.0;
+            int32_t loadedMudTilesLeft = 0;
+            if(!(is >> loadedSpaMood >> loadedRelaxTurns >> loadedMudTilesLeft >> spaClose) || (spaClose != SPA_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid spa block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + spaClose
+                    + "' instead of '" + SPA_SAVE_CLOSE + "'"));
+                return false;
+            }
+            setSpaMood(loadedSpaMood);
+            setRelaxTurns(loadedRelaxTurns);
+            setSpaMudTilesLeft(loadedMudTilesLeft);
             continue;
         }
 
@@ -1947,6 +2001,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mUrge;
     os << mCreatureDirt;
     exportThirstStateToPacket(os);
+    exportSpaStateToPacket(os);
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2019,6 +2074,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
+    importSpaStateFromPacket(is);
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2117,6 +2173,16 @@ void Creature::update(Ogre::Real timeSinceLastFrame)
     Tile* previousPositionTile = getPositionTile();
     // Update movements, direction, ...
     MovableGameEntity::update(timeSinceLastFrame);
+
+    // A client moves a jumping creature along the arc the server told (the server steps it once per turn)
+    if(!getIsOnServerMap() && (mJumpTurnsLeft > 0))
+    {
+        mJumpElapsed = std::min(static_cast<Ogre::Real>(mJumpTurns), mJumpElapsed +
+            static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
+        setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+        if(mJumpElapsed >= static_cast<Ogre::Real>(mJumpTurns))
+            mJumpTurnsLeft = 0;
+    }
 
     // Update the visual debugging entities
     //if we are standing in a different tile than we were last turn
@@ -2701,6 +2767,9 @@ void Creature::doUpkeep()
     // The drunkenness falls, the tavern mood and the hangover run out
     upkeepTavernState();
 
+    // The spa mood fades and the relaxation runs out
+    upkeepSpaState();
+
     // The skill tree: reset window, reset and the active skills of changed ranks
     upkeepSkillTree();
 
@@ -3069,6 +3138,15 @@ bool Creature::handleIdleAction()
         (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
     {
         pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
+        return true;
+    }
+
+    // If we are in a bad mood or have a hangover, we go to a lava spa. Without a spa that can take us nothing
+    // happens here and we try again at the next search
+    if (wantsSpaBath() &&
+        !hasActionBeenTried(CreatureActionType::searchSpa))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchSpa>(*this));
         return true;
     }
 
@@ -4776,12 +4854,15 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         os << mUrge;
         os << mCreatureDirt;
         exportThirstStateToPacket(os);
+        exportSpaStateToPacket(os);
     }
     else
     {
         os << 0.0;
         os << 0.0;
-        // The thirst state of other seats is not sent: every value is 0
+        // The thirst state of other seats is not sent: every value is 0 (the lava spa state follows the tavern fields)
+        os << 0.0;
+        os << 0.0;
         os << 0.0;
         os << 0.0;
         os << 0.0;
@@ -4798,6 +4879,13 @@ void Creature::exportThirstStateToPacket(ODPacket& os) const
     os << mHangoverTurns;
 }
 
+//! \brief Writes the lava spa state to a packet: the spa mood and the turns of the relaxation.
+void Creature::exportSpaStateToPacket(ODPacket& os) const
+{
+    os << mSpaMood;
+    os << mRelaxTurns;
+}
+
 //! \brief Reads the thirst state written by exportThirstStateToPacket.
 void Creature::importThirstStateFromPacket(ODPacket& is)
 {
@@ -4805,6 +4893,13 @@ void Creature::importThirstStateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mTavernMood);
     OD_ASSERT_TRUE(is >> mDrunk);
     OD_ASSERT_TRUE(is >> mHangoverTurns);
+}
+
+//! \brief Reads the lava spa state written by exportSpaStateToPacket.
+void Creature::importSpaStateFromPacket(ODPacket& is)
+{
+    OD_ASSERT_TRUE(is >> mSpaMood);
+    OD_ASSERT_TRUE(is >> mRelaxTurns);
 }
 
 //! \brief Reads the changing creature data sent by the server, the skill state last, and refreshes equipment
@@ -4897,6 +4992,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mUrge);
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
+    importSpaStateFromPacket(is);
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -6765,10 +6861,10 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
 
     // Fighting is tiring
     decreaseWakefulness(0.5);
-    // but gives experience; a dirty arena teaches less, and so does a hangover
+    // but gives experience; a dirty arena teaches less, and so does a hangover, while a relaxed creature learns more
     Room* attackRoom = (myTile == nullptr) ? nullptr : myTile->getCoveringRoom();
     if((attackRoom != nullptr) && (attackRoom->getType() == RoomType::arena))
-        receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor());
+        receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor());
     else
         receiveExp(1.5);
 }
@@ -8405,6 +8501,127 @@ double Creature::getHangoverWorkFactor() const
     return ConfigManager::getSingleton().getTavernConfigDouble("HangoverWorkFactor");
 }
 
+//! \brief Raises the spa mood, limited to 0 .. SpaMoodMax.
+void Creature::addSpaMood(double points)
+{
+    setSpaMood(mSpaMood + points);
+}
+
+//! \brief Sets the spa mood, limited to 0 .. SpaMoodMax.
+void Creature::setSpaMood(double val)
+{
+    const double maxPoints = ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodMax");
+    mSpaMood = std::max(0.0, std::min(maxPoints, val));
+}
+
+//! \brief Sets the turns the relaxation still lasts, not below 0.
+void Creature::setRelaxTurns(double turns)
+{
+    mRelaxTurns = std::max(0.0, turns);
+}
+
+//! \brief Returns SpaRelaxWorkFactor while the creature is relaxed, else 1.
+double Creature::getRelaxWorkFactor() const
+{
+    if(mRelaxTurns <= 0.0)
+        return 1.0;
+
+    return ConfigManager::getSingleton().getRoomConfigDouble("SpaRelaxWorkFactor");
+}
+
+//! \brief Sets the number of tiles that still get mud, not below 0.
+void Creature::setSpaMudTilesLeft(int32_t tiles)
+{
+    mSpaMudTilesLeft = std::max(0, tiles);
+}
+
+//! \brief True for a creature that is no worker, not in prison and not in the hand and either has a hangover or is
+//! in a bad mood (Upset, Angry, Furious) with its relaxation run out.
+bool Creature::wantsSpaBath() const
+{
+    if((mDefinition == nullptr) || mDefinition->isWorker() || mIsInHand || isInPrison() ||
+       (getSeat() == nullptr) || getSeat()->isRogueSeat())
+        return false;
+
+    if(mHangoverTurns > 0.0)
+        return true;
+
+    if(mRelaxTurns > 0.0)
+        return false;
+
+    const CreatureMoodLevel mood = getMoodValue();
+    return (mood == CreatureMoodLevel::Upset) || (mood == CreatureMoodLevel::Angry) || (mood == CreatureMoodLevel::Furious);
+}
+
+//! \brief Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down by 1 per turn. The mood does not fade
+//! while the creature sits in a bath (the bath lifts it exactly to SpaMoodMax).
+void Creature::upkeepSpaState()
+{
+    if((mSpaMood <= 0.0) && (mRelaxTurns <= 0.0))
+        return;
+
+    if((mSpaMood > 0.0) && !mSpaBathing)
+        mSpaMood = std::max(0.0, mSpaMood - ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodDecayPerTurn"));
+
+    if(mRelaxTurns > 0.0)
+        mRelaxTurns = std::max(0.0, mRelaxTurns - 1.0);
+}
+
+//! \brief The point on the arc: a straight line from the start to the landing point with a parabola on the height
+//! that reaches SpaJumpHeight half way.
+Ogre::Vector3 Creature::jumpPosition(const Ogre::Vector3& from, const Ogre::Vector3& to, Ogre::Real progress)
+{
+    const Ogre::Real clamped = std::min(1.0f, std::max(0.0f, progress));
+    Ogre::Vector3 position = from + (to - from) * clamped;
+    const Ogre::Real height = static_cast<Ogre::Real>(ConfigManager::getSingleton().getRoomConfigDouble("SpaJumpHeight"));
+    position.z += height * JUMP_ARC_FACTOR * clamped * (1.0f - clamped);
+    return position;
+}
+
+//! \brief Starts the jump (the pattern of the hop of a rooster): remembers start and landing point, plays the Jump
+//! clip and tells the clients.
+void Creature::startJump(const Ogre::Vector3& target)
+{
+    const uint32_t turns = static_cast<uint32_t>(std::max(1.0,
+        ConfigManager::getSingleton().getRoomConfigDouble("SpaJumpTurns")));
+    mJumpFrom = getPosition();
+    mJumpTo = target;
+    mJumpTurns = turns;
+    mJumpTurnsLeft = turns;
+    mJumpElapsed = 0.0f;
+    clearDestinations(EntityAnimation::jump_anim, false, false);
+    sendJumpNotification();
+}
+
+//! \brief One step of the jump: the position on the arc after the turns that have passed.
+void Creature::continueJump()
+{
+    if(mJumpTurnsLeft == 0)
+        return;
+
+    --mJumpTurnsLeft;
+    mJumpElapsed = static_cast<Ogre::Real>(mJumpTurns - mJumpTurnsLeft);
+    setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+}
+
+//! \brief Takes over the arc that the server told and shows the Jump clip.
+void Creature::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector3& to, uint32_t turns, Ogre::Real elapsed)
+{
+    mJumpFrom = from;
+    mJumpTo = to;
+    mJumpTurns = std::max<uint32_t>(1, turns);
+    mJumpElapsed = elapsed;
+    mJumpTurnsLeft = 1;
+    setAnimationState(EntityAnimation::jump_anim, false, Ogre::Vector3::ZERO, false);
+    setPosition(jumpPosition(from, to, elapsed / static_cast<Ogre::Real>(mJumpTurns)));
+}
+
+//! \brief Stub: the notification type ServerNotificationType::creatureJump belongs to the interface package, which
+//! sends name, from, to, turns and elapsed to the seats with vision here (the pattern of the rooster hop).
+void Creature::sendJumpNotification()
+{
+}
+
 //! \brief Notes that the creature falls asleep drunk, so it wakes up with a hangover.
 void Creature::sleepStarted()
 {
@@ -8550,10 +8767,21 @@ void Creature::upkeepCreatureDirt()
 
 //! \brief Adds the trail dirt of this creature to the tile it entered: TrailDirtPerTile times DirtFactor for a load
 //! carried or a pulled wounded creature (the DirtFactor of the worker that pulls it), plus the share of it that the creature dirt makes.
+//! A creature that just left a mud bath also leaves its share of the mud on each of the next tiles outside a pool.
 void Creature::dirtyEnteredTile(Tile* tile)
 {
     if((tile == nullptr) || (mDefinition == nullptr))
         return;
+
+    // A creature that left a mud bath carries mud out: each of the next SpaMudTrailTiles tiles outside a pool gets an
+    // equal share of SpaDirtPerBath times the DirtFactor; the creature dirt itself does not change
+    if((mSpaMudTilesLeft > 0) && !RoomSpa::isPoolTile(tile))
+    {
+        const ConfigManager& config = ConfigManager::getSingleton();
+        tile->addDirt(config.getRoomConfigDouble("SpaDirtPerBath") / config.getRoomConfigDouble("SpaMudTrailTiles") *
+            mDefinition->getDirtFactor());
+        --mSpaMudTilesLeft;
+    }
 
     if((mCarriedEntity == nullptr) && !mIsBeingDragged && (mCreatureDirt <= 0.0))
         return;
@@ -9376,6 +9604,10 @@ void Creature::changeSeat(Seat* newSeat)
     mVomited = false;
     mHangoverTurns = 0.0;
     mHangoverPending = false;
+    mSpaMood = 0.0;
+    mRelaxTurns = 0.0;
+    mSpaMudTilesLeft = 0;
+    mSpaBathing = false;
     mUrge = 0.0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;

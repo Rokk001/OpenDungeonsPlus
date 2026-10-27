@@ -123,6 +123,7 @@ enum class TileVisual
     herbGardenRoom,
     alchemyLabRoom,
     tavernRoom,
+    spaRoom,
     countTileVisual
 };
 

@@ -2214,6 +2214,7 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
         case TileVisual::templeRoom:
         case TileVisual::toiletRoom:
         case TileVisual::tavernRoom:
+        case TileVisual::spaRoom:
             if(tile->getSeat() == nullptr)
             {
                 OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
@@ -2336,6 +2337,7 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
             case TileVisual::templeRoom:
             case TileVisual::toiletRoom:
             case TileVisual::tavernRoom:
+            case TileVisual::spaRoom:
                 
                 tileSeatId = tileState.mSeatIdOwner;
                 break;
@@ -2498,6 +2500,7 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
         case TileVisual::templeRoom:
         case TileVisual::toiletRoom:
         case TileVisual::tavernRoom:
+        case TileVisual::spaRoom:
         case TileVisual::claimedGround:
         case TileVisual::dirtGround:
         case TileVisual::goldGround:

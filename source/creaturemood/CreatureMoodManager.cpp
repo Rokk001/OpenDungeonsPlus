@@ -92,6 +92,8 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += ItemEffects::moodModifier(creature, creature.getSpecialMood());
     // Fights in the arena
     moodValue += ItemEffects::moodModifier(creature, creature.getPitMood());
+    // A bath in the lava spa lifts the mood (rounded to whole points)
+    moodValue += ItemEffects::moodModifier(creature, Helper::round(creature.getSpaMood()));
     // A drink, a game won or lost and a hangover at the tavern
     moodValue += ItemEffects::moodModifier(creature, creature.getTavernMood());
     // Dirty rooms and dirt piles nearby (no line in the creature configuration, the global dirt values apply to all)

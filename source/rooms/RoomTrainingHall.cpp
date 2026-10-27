@@ -580,8 +580,8 @@ bool RoomTrainingHall::useRoom(Creature& creature, bool forced)
     expReceived *= coef;
     // A dirty hall teaches less
     expReceived *= getDirtOutputFactor();
-    // A creature with a hangover learns less
-    expReceived *= creature.getHangoverWorkFactor();
+    // A creature with a hangover learns less, a relaxed creature (after a lava spa bath) learns more
+    expReceived *= creature.getHangoverWorkFactor() * creature.getRelaxWorkFactor();
 
     // A higher level friend training in the same room teaches the creature
     if(getGameMap()->isRelationshipsEnabled() && creature.canHaveRelationships())
