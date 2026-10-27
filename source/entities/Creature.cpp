@@ -2808,7 +2808,10 @@ void Creature::doUpkeep()
 
 
     // Heal.
-    mHp += mDefinition->getHpHealPerTurn();
+    double naturalHeal = getMaxHp() / (ConfigManager::getSingleton().getNaturalFullHealSeconds() * ODApplication::turnsPerSecond);
+    if(getDefinition()->isUndead())
+        naturalHeal *= ConfigManager::getSingleton().getUndeadHealFactor();
+    mHp += naturalHeal;
     if (mHp > getMaxHp())
         mHp = getMaxHp();
 
@@ -7666,6 +7669,7 @@ void Creature::checkWalkPathIsStillValid()
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
 }
 
+//! \brief Applies lava damage using the configured level scaling.
 void Creature::applyLavaDamage()
 {
     Tile* myTile = getPositionTile();
@@ -7682,6 +7686,8 @@ void Creature::applyLavaDamage()
         return;
 
     double lavaDamagePerSecond = ConfigManager::getSingleton().getLavaDamagePerSecond();
+    if(ConfigManager::getSingleton().getLavaDamageScalesWithHp())
+        lavaDamagePerSecond *= CreatureProgression::hpMultiplier(getLevel());
     takeDamage(nullptr, lavaDamagePerSecond / ODApplication::turnsPerSecond, 0.0, 0.0, 0.0, myTile, false);
 }
 

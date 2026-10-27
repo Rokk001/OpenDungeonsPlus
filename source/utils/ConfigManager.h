@@ -450,6 +450,13 @@ public:
     inline double getDigCoefClaimedWall() const
     { return mDigCoefClaimedWall; }
 
+    //! \brief Returns the seconds for natural healing from zero to full health.
+    inline double getNaturalFullHealSeconds() const { return mNaturalFullHealSeconds; }
+    //! \brief Returns the natural healing factor for undead creatures.
+    inline double getUndeadHealFactor() const { return mUndeadHealFactor; }
+    //! \brief Returns whether lava damage follows the health curve.
+    inline bool getLavaDamageScalesWithHp() const { return mLavaDamageScalesWithHp; }
+
     inline int32_t getNbTurnsKoCreatureAttacked() const
     { return mNbTurnsKoCreatureAttacked; }
 
@@ -816,6 +823,9 @@ private:
     //! \brief Share of the carry capacity a dig step must reach to make a worker cheer (WorkerCheerGoldShare)
     double mWorkerCheerGoldShare;
     double mDigCoefClaimedWall;
+    double mNaturalFullHealSeconds;
+    double mUndeadHealFactor;
+    bool mLavaDamageScalesWithHp;
     int32_t mNbTurnsKoCreatureAttacked;
     std::string mDefaultWorkerRogue;
     std::string mMainMenuMusic;

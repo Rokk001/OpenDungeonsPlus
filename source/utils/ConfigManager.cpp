@@ -166,6 +166,9 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mGemGoldPerDigStep(DEFAULT_GEM_GOLD_PER_DIG_STEP),
     mWorkerCheerGoldShare(DEFAULT_WORKER_CHEER_GOLD_SHARE),
     mDigCoefClaimedWall(0.5),
+    mNaturalFullHealSeconds(939.96),
+    mUndeadHealFactor(0.6666666666666666),
+    mLavaDamageScalesWithHp(true),
     mNbTurnsKoCreatureAttacked(10),
     mCreatureDefinitionDefaultWorker(nullptr),
     mNbWorkersDigSameFaceTile(3),
@@ -691,6 +694,9 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
 {
     std::string nextParam;
     uint32_t paramsOk = 0;
+    bool foundNaturalHeal = false;
+    bool foundUndeadHeal = false;
+    bool foundLavaScaling = false;
     while(configFile.good())
     {
         if(!(configFile >> nextParam))
@@ -1266,6 +1272,25 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "NaturalFullHealSeconds")
+        {
+            configFile >> nextParam;
+            mNaturalFullHealSeconds = Helper::toDouble(nextParam);
+            foundNaturalHeal = true;
+        }
+        if(nextParam == "UndeadHealFactor")
+        {
+            configFile >> nextParam;
+            mUndeadHealFactor = Helper::toDouble(nextParam);
+            foundUndeadHeal = true;
+        }
+        if(nextParam == "LavaDamageScalesWithHp")
+        {
+            configFile >> nextParam;
+            mLavaDamageScalesWithHp = Helper::toInt(nextParam) != 0;
+            foundLavaScaling = true;
+        }
+
         if(nextParam == "NbTurnsKoCreatureAttacked")
         {
             configFile >> nextParam;
@@ -1293,6 +1318,13 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
     }
+
+    if(!foundNaturalHeal)
+        OD_LOG_ERR("Missing NaturalFullHealSeconds; using default");
+    if(!foundUndeadHeal)
+        OD_LOG_ERR("Missing UndeadHealFactor; using default");
+    if(!foundLavaScaling)
+        OD_LOG_ERR("Missing LavaDamageScalesWithHp; using default");
 
     if(paramsOk != 0x01)
     {
