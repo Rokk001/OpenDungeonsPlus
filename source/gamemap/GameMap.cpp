@@ -3897,6 +3897,7 @@ GameEntity* GameMap::getEntityFromTypeAndName(GameEntityType entityType,
         case GameEntityType::herbBundleEntity:
         case GameEntityType::dirtPileEntity:
         case GameEntityType::innkeeperEntity:
+        case GameEntityType::poolAttendantEntity:
             return getRenderedMovableEntity(entityName);
 
         case GameEntityType::spell:
