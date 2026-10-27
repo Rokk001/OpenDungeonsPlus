@@ -88,6 +88,11 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mClientConnectionTimeout(5000),
     mBaseSpawnPoint(10),
     mCreatureDeathCounter(10),
+    mSoulCrystalPrice(0.0),
+    mSoulCrystalBreakBelow(0.0),
+    mSoulCrystalNormalXpPerSecond(0.0),
+    mSoulCrystalHeroRareStart(0.0),
+    mSoulCrystalHeroRareEnd(0.0),
     mCorpseLieSeconds(0.0),
     mCorpseDecaySeconds(0.0),
     mMaxCreaturesPerSeatAbsolute(30),
@@ -705,6 +710,36 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "SoulCrystalPrice")
+        {
+            configFile >> nextParam;
+            mSoulCrystalPrice = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalBreakBelow")
+        {
+            configFile >> nextParam;
+            mSoulCrystalBreakBelow = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalNormalXpPerSecond")
+        {
+            configFile >> nextParam;
+            mSoulCrystalNormalXpPerSecond = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalHeroRareStart")
+        {
+            configFile >> nextParam;
+            mSoulCrystalHeroRareStart = Helper::toDouble(nextParam);
+            continue;
+        }
+        if(nextParam == "SoulCrystalHeroRareEnd")
+        {
+            configFile >> nextParam;
+            mSoulCrystalHeroRareEnd = Helper::toDouble(nextParam);
+            continue;
+        }
         if(nextParam == "CorpseLieSeconds")
         {
             configFile >> nextParam;

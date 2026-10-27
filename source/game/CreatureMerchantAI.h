@@ -11,6 +11,8 @@ namespace CreatureMerchantAI
 //! \brief Tries a sale then a purchase, each with the prescribed thirty-percent idle chance.
 //! \return True when a trade action was pushed.
 bool decideTrade(Creature& creature);
+//! \brief Breaks a carried crystal or tries a separate affordable crystal purchase after ordinary item work.
+bool decideSoulCrystal(Creature& creature);
 //! \brief Delivers a keeper gift, or leaves it waiting when its arena fight is running.
 //! \return True if the bag was consumed by the recipient.
 bool offerGift(ItemBagEntity& bag, Tile& tile);

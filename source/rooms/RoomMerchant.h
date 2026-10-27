@@ -83,8 +83,8 @@ public:
     void exportToStream(std::ostream& stream) const override;
     //! \brief Reads optional merchant position after the room's tile data.
     bool importFromStream(std::istream& stream) override;
-    //! \brief Returns a table with capacity available after research factors.
-    Tile* getFreeTable() const;
+    //! \brief Returns the first crystal table or an ordinary table with researched capacity.
+    Tile* getFreeTable(const ItemInstance* item = nullptr) const;
     //! \brief Returns the current sales table tiles for the merchant's room-only wandering.
     const std::vector<Tile*>& getSalesTables() const { return mCentralActiveSpotTiles; }
     //! \brief Uses the existing furniture-aware work approach for a sales table.

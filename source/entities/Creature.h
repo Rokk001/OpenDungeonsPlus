@@ -567,7 +567,11 @@ public:
     int32_t getItemEquipmentSlot(const ItemInstance& item) const;
     //! \brief Tests slot compatibility and the item's minimum level.
     bool isItemEquippable(const ItemInstance& item) const;
-    //! \brief Rates rolled bonuses with configured weights and this creature's primary/family paths.
+    //! \brief Tests whether saving a full XP step is worth the supplied crystal price.
+    bool wantsSoulCrystal(double price) const;
+    //! \brief Consumes a crystal below the level cap and grants exactly one level.
+    bool breakSoulCrystal(std::unique_ptr<ItemInstance>& item);
+    //! \brief Rates rolled bonuses with configured weights and identifies worthwhile crystals.
     double rateItem(const ItemInstance& item) const;
     //! \brief Accepts an owned instance, equipping upgrades outside combat and retaining or dropping overflow.
     bool acceptItem(std::unique_ptr<ItemInstance> item, bool equip = true);

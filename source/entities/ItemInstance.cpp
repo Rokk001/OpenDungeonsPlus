@@ -117,6 +117,15 @@ std::unique_ptr<ItemInstance> ItemInstance::createPotion(const std::string& id)
     return item;
 }
 
+//! \brief Creates the nonempty inventory identity used by every crystal holder codec.
+std::unique_ptr<ItemInstance> ItemInstance::createSoulCrystal()
+{
+    std::unique_ptr<ItemInstance> item(new ItemInstance);
+    item->mDefinitionId = "SoulCrystal";
+    item->mSoulCrystal = true;
+    return item;
+}
+
 //! \brief Writes the prescribed instance line using none for empty string fields.
 void ItemInstance::exportToStream(std::ostream& stream) const
 {
@@ -128,7 +137,7 @@ void ItemInstance::exportToStream(std::ostream& stream) const
     for(const std::pair<std::string, double>& effect : mEffects)
         stream << ' ' << effect.first << ' ' << effect.second;
     stream << ' ' << mEpicSerial << ' ' << mMerchantGoods << ' ' << mGifted << ' '
-        << (mPotionId.empty() ? "none" : mPotionId);
+        << (mPotionId.empty() ? "none" : mPotionId) << " SoulCrystal " << mSoulCrystal;
 }
 
 //! \brief Reads the full instance; firstId is the id already consumed by a nullable holder slot.
@@ -162,6 +171,20 @@ bool ItemInstance::importFromStream(std::istream& stream, const std::string& fir
     }
     if(!(stream >> item.mEpicSerial >> item.mMerchantGoods >> item.mGifted >> item.mPotionId))
         return false;
+    if(!stream.eof())
+    {
+        const std::streampos optionalPosition = stream.tellg();
+        std::string marker;
+        if(stream >> marker && marker == "SoulCrystal")
+        {
+            if(!(stream >> item.mSoulCrystal)) return false;
+        }
+        else
+        {
+            stream.clear();
+            stream.seekg(optionalPosition);
+        }
+    }
     if(item.mDefinitionId == "none") item.mDefinitionId.clear();
     if(item.mPotionId == "none") item.mPotionId.clear();
     *this = item;
@@ -177,7 +200,7 @@ void ItemInstance::exportToPacket(ODPacket& packet) const
     packet << static_cast<uint32_t>(mEffects.size());
     for(const std::pair<std::string, double>& effect : mEffects)
         packet << effect.first << effect.second;
-    packet << mEpicSerial << mMerchantGoods << mGifted << mPotionId;
+    packet << mEpicSerial << mMerchantGoods << mGifted << mPotionId << std::string("SoulCrystal") << mSoulCrystal;
 }
 
 //! \brief Rejects short packet instances without adopting any partially received fields.
@@ -206,6 +229,13 @@ bool ItemInstance::importFromPacket(ODPacket& packet)
     }
     if(!(packet >> item.mEpicSerial >> item.mMerchantGoods >> item.mGifted >> item.mPotionId))
         return false;
+    ODPacket optional = packet;
+    std::string marker;
+    if(optional >> marker && marker == "SoulCrystal")
+    {
+        if(!(optional >> item.mSoulCrystal)) return false;
+        packet = optional;
+    }
     *this = item;
     return true;
 }
@@ -218,6 +248,7 @@ double ItemInstance::getEffect(const std::string& id) const { return sumValues(m
 //! \brief Resolves catalogue display names and the equipment name of Poor spawn weapons.
 std::string ItemInstance::getDisplayName(const GameMap* map) const
 {
+    if(mSoulCrystal) return "Soul crystal";
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
@@ -233,6 +264,7 @@ std::string ItemInstance::getDisplayName(const GameMap* map) const
 //! \brief Resolves the base price and adds per-bonus pricing for the rolled instance.
 double ItemInstance::getPrice(const GameMap* map) const
 {
+    if(mSoulCrystal) return ConfigManager::getSingleton().getSoulCrystalPrice();
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
@@ -267,6 +299,7 @@ uint32_t ItemInstance::getLevelMin(const GameMap* map) const
 //! \brief Uses a matching weapon-class base image for Poor spawn gear, otherwise the catalogue image.
 std::string ItemInstance::getImageName() const
 {
+    if(mSoulCrystal) return "soul_crystal";
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
