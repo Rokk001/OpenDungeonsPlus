@@ -118,6 +118,13 @@ public:
     //! \param save The saved state.
     void restoreFromSave(const PoolAttendantSave& save);
 
+    //! \brief Server side. Sends the entity data to a seat that gains sight and, when the attendant is in the air, the
+    //! jump that is running, so the seat sees the rest of the arc.
+    //! \param seat The seat that gains sight of the attendant.
+    //! \param async True when the message is sent at once and not queued.
+    //! \param nt The node type the entity is added to.
+    virtual void fireAddEntity(Seat* seat, bool async, NodeType nt = NodeType::MTILES_NODE) override;
+
     //! \brief Client side. Starts the arc that the server told: the clip Jump and the interpolated position.
     //! \param from The start of the jump.
     //! \param to The landing point of the jump.
@@ -185,6 +192,12 @@ private:
     //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed, the same message as for a
     //! creature); seats without a human player are skipped.
     void sendJumpNotification();
+
+    //! \brief Server side. Tells one seat about the jump that is running (the same message as sendJumpNotification, with
+    //! the turns that have passed so far), so a seat that gains sight in the middle of a jump continues the arc. A seat
+    //! without a human player gets nothing.
+    //! \param seat The seat that gains sight of the attendant.
+    void sendJumpNotificationTo(Seat* seat);
 
     //! \brief The position on the arc of a jump.
     //! \param from The start of the jump.

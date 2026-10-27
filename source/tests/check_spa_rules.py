@@ -106,10 +106,11 @@ for function in ('void RoomSpa::abortDisturbedBathers(', 'void RoomSpa::removeCr
 finish = extract(room_cpp, 'void RoomSpa::finishBath(')
 assert 'washed(' not in finish and 'setCreatureDirt' not in finish and 'mCreatureDirt' not in finish, 'the bath does not clean the creature'
 assert 'washed()' not in room_cpp, 'the spa never washes a creature'
-# The fee is paid when the bath starts, at the springboard before a jump
-assert room_cpp.count('payForBath(creature)') == 2
+# The fee is paid when the bath starts: at the landing after a jump, in the middle of the place after a walk; never at the board
+assert room_cpp.count('payForBath(creature)') == 1 and room_cpp.count('payForBath(*creature)') == 1
+assert 'payForBath' in extract(room_cpp, 'bool RoomSpa::landJump(') and 'payForBath' not in extract(room_cpp, 'void RoomSpa::startBath(')
 # The jump: the arc, the notification and the landing with splash and sound
-assert 'creature.startJump(getBlockCentre(bather));' in room_cpp and 'SPA_SPLASH_EFFECT' in extract(room_cpp, 'void RoomSpa::landJump(')
+assert 'creature.startJump(getBlockCentre(bather));' in room_cpp and 'SPA_SPLASH_EFFECT' in extract(room_cpp, 'bool RoomSpa::landJump(')
 assert 'Rooms/Spa/Splash' in room_cpp
 
 # ---- Probe -------------------------------------------------------------------------------------------------------
@@ -240,12 +241,12 @@ struct Creature
     CreatureDefinition* mDefinition; Seat* mSeat; std::string mName; Tile* mTile;
     double mHangoverTurns, mTavernMood, mTavernMoodTurns, mSpaMood, mRelaxTurns, mCreatureDirt; int32_t mSpaMudTilesLeft; bool mSpaBathing;
     bool mIsInHand, mPrison, mOnMap, mAlive, mKo, mDragged, mFighting, mFriendlyFight, mFleeing, mJumping;
-    CreatureMoodLevel mMood; int32_t mGold; int cancelJumpCalls;
+    CreatureMoodLevel mMood; int32_t mGold; int cancelJumpCalls; int splashes; int clearCalls;
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat)
       : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mHangoverTurns(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mSpaMood(0.0), mRelaxTurns(0.0),
         mCreatureDirt(7.0), mSpaMudTilesLeft(0), mSpaBathing(false), mIsInHand(false), mPrison(false), mOnMap(true), mAlive(true),
         mKo(false), mDragged(false), mFighting(false), mFriendlyFight(false), mFleeing(false), mJumping(false),
-        mMood(CreatureMoodLevel::Neutral), mGold(0), cancelJumpCalls(0) {}
+        mMood(CreatureMoodLevel::Neutral), mGold(0), cancelJumpCalls(0), splashes(0), clearCalls(0) {}
     Seat* getSeat() const { return mSeat; }
     CreatureDefinition* getDefinition() const { return mDefinition; }
     const std::string& getName() const { return mName; }
@@ -263,6 +264,8 @@ struct Creature
     Tile* getPositionTile() const { return mTile; }
     void setAnimationState(const std::string& state, bool loop = true, const Ogre::Vector3& direction = Ogre::Vector3::ZERO, bool idle = true) {}
     void continueJump() {}
+    void addParticleEffect(const std::string& effect, int32_t turns) { ++splashes; }
+    void clearActionQueue() { ++clearCalls; }
     bool isJumping() const { return mJumping; }
     void cancelJump() { ++cancelJumpCalls; mJumping = false; }
     void setSpaBathing(bool bathing) { mSpaBathing = bathing; }
@@ -296,6 +299,9 @@ struct GameMap
     void addGoldToSeat(int gold, int seatId) { seatGold += gold; }
 };
 
+static const std::string SPA_SPLASH_EFFECT = "SpaMudSplash";
+static const int32_t SPA_SPLASH_TURNS = 1;
+static const std::string SOUND_SPLASH = "Rooms/Spa/Splash";
 struct PoolAttendantEntity { bool getPlace(int32_t& x, int32_t& y) const { return false; } };
 
 struct Room
@@ -315,7 +321,7 @@ public:
     SpaPayer mPayer; PoolAttendantEntity* mAttendant; std::vector<RoomSpaBather> mBathers;
     std::map<std::string, RoomSpaPendingBather> mPendingBathers; int posts;
     void sendBathFinished(Creature& creature) { ++posts; }
-    void landJump(RoomSpaBather& bather) { startBath(bather); }
+    void playSoundAt(Tile* tile, const std::string& family) {}
     SpaTileSet getCoveredSet() const;
     SpaTileSet getPoolSet() const;
     SpaTileSet getTakenSet() const;
@@ -324,6 +330,7 @@ public:
     bool payForBath(Creature& creature);
     bool canAccept(const Creature& creature) const;
     void startBath(RoomSpaBather& bather);
+    bool landJump(RoomSpaBather& bather);
     void finishBath(RoomSpaBather& bather);
     void upkeepBathers();
     static bool isBatherDisturbed(const Creature& creature);
@@ -543,6 +550,25 @@ static void checkBrokenOff()
     g.room->mBathers.push_back(jb); k.mJumping = false;
     g.room->upkeepBathers();
     expect(g.room->mBathers.back().mState == SpaBatherState::bathing && k.mSpaBathing, "the landing starts the bath");
+    expect(g.seat.gold == 95 && k.splashes == 1 && k.clearCalls == 0, "the landing pays the bath once");
+    for(int i = 0; i < 5; ++i) g.room->upkeepBathers();
+    expect(g.seat.gold == 95, "a running bath is never paid again");
+    // A jump that is broken off before the landing was never paid: nothing is lost
+    Fixture h; Creature m("m", &h.small, &h.seat); RoomSpaBather mb(&m); mb.mState = SpaBatherState::jumping; mb.mBlock.mX = 1; mb.mBlock.mY = 1;
+    h.room->mBathers.push_back(mb); m.mJumping = true; m.mFighting = true;
+    h.room->abortDisturbedBathers();
+    expect(h.room->mBathers.empty() && h.seat.gold == 100 && h.map.seatGold == 0, "a jump broken off before the landing costs nothing");
+    // A payment that fails at the landing releases the place and ends the visit without a bath
+    Fixture n; Creature o("o", &n.small, &n.seat); RoomSpaBather ob(&o); ob.mState = SpaBatherState::jumping; ob.mBlock.mX = 1; ob.mBlock.mY = 1;
+    n.room->mBathers.push_back(ob); o.mJumping = false; n.seat.gold = 4;
+    n.room->upkeepBathers();
+    expect(n.room->mBathers.back().mState == SpaBatherState::jumping && !o.mSpaBathing && o.clearCalls == 1 && n.seat.gold == 4,
+           "a failed payment at the landing starts no bath and releases the place");
+    // The creature pays itself: a purse that was emptied during the jump fails at the landing
+    Fixture q; q.room->mPayer = SpaPayer::creature; Creature r("r", &q.small, &q.seat); r.mGold = 50; RoomSpaBather rb(&r);
+    rb.mState = SpaBatherState::jumping; rb.mBlock.mX = 1; rb.mBlock.mY = 1; q.room->mBathers.push_back(rb); r.mJumping = true;
+    r.mGold = 0; r.mJumping = false; q.room->upkeepBathers();
+    expect(!r.mSpaBathing && r.clearCalls == 1 && q.map.seatGold == 0, "a purse emptied in the air fails at the landing");
 }
 
 int main()
@@ -580,7 +606,7 @@ helpers = extract(room_cpp, 'double getTavernValue(')
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'SpaTileSet RoomSpa::getCoveredSet(', 'SpaTileSet RoomSpa::getPoolSet(', 'SpaTileSet RoomSpa::getTakenSet(',
     'std::vector<RoomSpaBather>::iterator RoomSpa::findBatherOf(', 'bool RoomSpa::canPay(', 'bool RoomSpa::payForBath(',
-    'bool RoomSpa::canAccept(', 'void RoomSpa::startBath(', 'void RoomSpa::finishBath(', 'void RoomSpa::upkeepBathers(',
+    'bool RoomSpa::canAccept(', 'void RoomSpa::startBath(', 'bool RoomSpa::landJump(', 'void RoomSpa::finishBath(', 'void RoomSpa::upkeepBathers(',
     'bool RoomSpa::isBatherDisturbed(', 'void RoomSpa::abortDisturbedBathers('])
 assert 'mCreatureDirt' not in room_functions and 'washed' not in room_functions, 'the cut-out room code never touches the creature dirt'
 

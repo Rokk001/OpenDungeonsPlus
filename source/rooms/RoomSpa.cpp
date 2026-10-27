@@ -699,13 +699,7 @@ bool RoomSpa::walkToPlace(Creature& creature, RoomSpaBather& bather)
             return false;
         }
 
-        // On the springboard the bath is paid, then the creature jumps into the middle of its place
-        if(!payForBath(creature))
-        {
-            creature.popAction();
-            return true;
-        }
-
+        // On the springboard the creature jumps into the middle of its place; the bath is paid at the landing
         bather.mState = SpaBatherState::jumping;
         bather.mTurnsDone = 0.0;
         creature.setPosition(Ogre::Vector3(static_cast<Ogre::Real>(springboard->getX()),
@@ -762,12 +756,18 @@ void RoomSpa::startBath(RoomSpaBather& bather)
     bather.mCreature->setAnimationState(EntityAnimation::bathe_anim, true, Ogre::Vector3::ZERO, false);
 }
 
-void RoomSpa::landJump(RoomSpaBather& bather)
+bool RoomSpa::landJump(RoomSpaBather& bather)
 {
     Creature* creature = bather.mCreature;
     creature->addParticleEffect(SPA_SPLASH_EFFECT, SPA_SPLASH_TURNS);
     playSoundAt(creature->getPositionTile(), SOUND_SPLASH);
+
+    // A jumper pays when it lands. A bather in the state bathing was paid before, so a saved bath is never paid twice.
+    if(!payForBath(*creature))
+        return false;
+
     startBath(bather);
+    return true;
 }
 
 void RoomSpa::finishBath(RoomSpaBather& bather)
@@ -824,6 +824,7 @@ void RoomSpa::upkeepBathers()
 {
     const double moodPerTurn = ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodPerTurn");
     const double bathTurns = ConfigManager::getSingleton().getRoomConfigDouble("SpaBathTurns");
+    std::vector<Creature*> unpaid;
     for(RoomSpaBather& bather : mBathers)
     {
         switch(bather.mState)
@@ -831,8 +832,8 @@ void RoomSpa::upkeepBathers()
             case SpaBatherState::jumping:
             {
                 bather.mCreature->continueJump();
-                if(!bather.mCreature->isJumping())
-                    landJump(bather);
+                if(!bather.mCreature->isJumping() && !landJump(bather))
+                    unpaid.push_back(bather.mCreature);
                 break;
             }
             case SpaBatherState::bathing:
@@ -851,6 +852,11 @@ void RoomSpa::upkeepBathers()
                 break;
         }
     }
+
+    // A jumper that cannot pay at the landing gives its place back and ends the visit without a bath. Clearing the
+    // actions releases the places, so it is done after the loop.
+    for(Creature* creature : unpaid)
+        creature->clearActionQueue();
 }
 
 void RoomSpa::abortDisturbedBathers()

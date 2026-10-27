@@ -53,10 +53,13 @@ room_h = read('source/rooms/RoomSpa.h')
 export_text = extract(creature_cpp, 'void Creature::exportToStream(')
 assert export_text.index('THIRST_SAVE_OPEN') < export_text.index('SPA_SAVE_OPEN'), 'the spa block follows the thirst block'
 assert creature_cpp.count('if(appearanceToken == SPA_SAVE_OPEN)') == 1
-# The full packet and the update packet end with the thirst state and the spa state; the update packet sends zeros to
-# the seats that do not own the creature (the same number of fields: urge, dirt, four thirst fields, two spa fields)
+# The full packet and the update packet end with the thirst state and the spa state; both send zeros to the seats that do
+# not own the creature (the same number of fields: four thirst fields, two spa fields; the update packet also urge and dirt)
 full_packet = extract(creature_cpp, 'void Creature::exportToPacket(')
-assert re.search(r'exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);\s*\}', full_packet)
+full_tail_start = full_packet.index('    // The thirst and lava spa state is only sent to the own seat')
+full_tail = full_packet[full_tail_start:full_packet.rindex('}')]
+assert re.search(r'if\(seat == getSeat\(\)\)\s*\{\s*exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);\s*\}', full_tail)
+assert 'field < 6' in full_tail and 'os << 0.0;' in full_tail
 update_start = creature_cpp.index('os << mGoldCarried;\n    exportItemsToPacket(os, seat);\n    os << (seat == getSeat() ? mInfirmaryMood : 0.0);\n    if(seat == getSeat())')
 update_packet = creature_cpp[update_start:creature_cpp.index('\n}\n', update_start)]
 assert re.search(r'exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);', update_packet)
@@ -66,6 +69,29 @@ assert re.findall(r'os << (m\w+);', spa_export) == ['mSpaMood', 'mRelaxTurns']
 assert creature_cpp.count('importSpaStateFromPacket(is);') == 2, 'full and update packet read the spa state'
 for text in (extract(creature_cpp, 'void Creature::importFromPacket('), extract(creature_cpp, 'void Creature::updateFromPacket(')):
     assert re.search(r'importThirstStateFromPacket\(is\);\s*importSpaStateFromPacket\(is\);', text)
+# The effect line of the creature page (relaxation, hangover) is bound to the own seat, not to the allies
+profile_page = extract(creature_cpp, 'float Creature::fillProfilePage(')
+assert 'const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);' in profile_page
+assert 'effectsText->setVisible(isOwn && !effects.empty());' in profile_page
+# The restored acts and climbs go on at the reached turn of their clip instead of starting it again
+attendant_restore = extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::restoreFromSave(')
+assert attendant_restore.count('setAnimationTime(getClipTurns() - mTurnsLeft);') == 4
+assert 'void MovableGameEntity::setAnimationTime(' in read('source/entities/MovableGameEntity.cpp')
+# A seat that gains sight in the middle of a jump gets the running arc after the entity data, for creature and attendant
+# (the notification of the jump goes to the seats that already see the entity, so the new seat needs its own message)
+attendant_cpp = read('source/entities/PoolAttendantEntity.cpp')
+for text, name in ((extract(creature_cpp, 'void Creature::fireAddEntity('), 'creature'), (extract(attendant_cpp, 'void PoolAttendantEntity::fireAddEntity('), 'attendant')):
+    assert 'if(isJumping())' in text and 'sendJumpNotificationTo(seat);' in text, 'the ' + name + ' sends the running jump to a new seat'
+creature_add = extract(creature_cpp, 'void Creature::fireAddEntity(')
+assert creature_add.count('sendJumpNotificationTo(seat);') == 2, 'queued and async path of the creature'
+assert creature_add.index('exportToPacket(serverNotification.mPacket, seat);') < creature_add.index('sendJumpNotificationTo(seat);')
+assert creature_add.rindex('exportToPacket(serverNotification->mPacket, seat);') < creature_add.rindex('sendJumpNotificationTo(seat);')
+assert 'RenderedMovableEntity::fireAddEntity(seat, async, nt);' in extract(attendant_cpp, 'void PoolAttendantEntity::fireAddEntity(').split('sendJumpNotificationTo')[0]
+for text in (extract(creature_cpp, 'void Creature::sendJumpNotificationTo('), extract(attendant_cpp, 'void PoolAttendantEntity::sendJumpNotificationTo(')):
+    assert 'getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;' in text and 'ServerNotificationType::creatureJump' in text
+    assert 'getIsHuman()' in text
+for text in (extract(creature_cpp, 'void Creature::sendJumpNotification('), extract(attendant_cpp, 'void PoolAttendantEntity::sendJumpNotification(')):
+    assert 'sendJumpNotificationTo(seat);' in text and 'mSeatsWithVisionNotified' in text, 'the seats that see the jump begin still get it'
 # The attendant is a saved entity of the room: loaded like the chickens, found by name
 assert 'poolAttendantEntity' in read('source/entities/EntityLoading.cpp') or 'PoolAttendantEntity' in read('source/entities/EntityLoading.cpp')
 assert 'poolAttendantEntity' in read('source/entities/GameEntityType.h')
@@ -121,12 +147,18 @@ struct ConfigManager
 };
 @@STRINGS@@
 
+struct Seat;
 struct Creature
 {
     std::string mName;
     double mSpaMood, mRelaxTurns; int32_t mSpaMudTilesLeft; uint32_t mJumpTurnsLeft;
+    double mThirst, mTavernMood, mDrunk, mHangoverTurns; Seat* mSeat;
     std::string mOtherBlock;
-    explicit Creature(const std::string& name) : mName(name), mSpaMood(0.0), mRelaxTurns(0.0), mSpaMudTilesLeft(0), mJumpTurnsLeft(0) {}
+    explicit Creature(const std::string& name) : mName(name), mSpaMood(0.0), mRelaxTurns(0.0), mSpaMudTilesLeft(0), mJumpTurnsLeft(0),
+        mThirst(0.0), mTavernMood(0.0), mDrunk(0.0), mHangoverTurns(0.0), mSeat(nullptr) {}
+    Seat* getSeat() const { return mSeat; }
+    void exportThirstStateToPacket(ODPacket& os) const;
+    void writeFullTail(ODPacket& os, const Seat* seat) const;
     const std::string& getName() const { return mName; }
     uint32_t getJumpTurnsLeft() const { return mJumpTurnsLeft; }
     void setSpaMood(double val);
@@ -162,6 +194,11 @@ struct Creature
     }
 };
 @@CREATURE_FUNCTIONS@@
+// The end of Creature::exportToPacket, cut from the source
+void Creature::writeFullTail(ODPacket& os, const Seat* seat) const
+{
+@@FULL_TAIL@@
+}
 
 // ---- Creature: block and packet
 static void checkSpaBlock()
@@ -332,9 +369,98 @@ static void checkRoomStream()
     }
 }
 
+// ---- The full creature packet: the thirst and spa state only for the own seat, the same number of fields for every seat
+static void checkFullPacketPrivacy()
+{
+    Seat own = { nullptr }, ally = { nullptr }, enemy = { nullptr };
+    Creature c("c"); c.mSeat = &own; c.mThirst = 11.0; c.mTavernMood = 22.0; c.mDrunk = 33.0; c.mHangoverTurns = 44.0;
+    c.setSpaMood(55.0); c.setRelaxTurns(66.0);
+    ODPacket forOwn; c.writeFullTail(forOwn, &own);
+    ODPacket forAlly; c.writeFullTail(forAlly, &ally);
+    ODPacket forEnemy; c.writeFullTail(forEnemy, &enemy);
+    expect(forOwn.data.str() == "11 22 33 44 55 66 ", "the own seat gets the real values: " + forOwn.data.str());
+    expect(forAlly.data.str() == "0 0 0 0 0 0 ", "an allied foreign seat gets zeros: " + forAlly.data.str());
+    expect(forEnemy.data.str() == "0 0 0 0 0 0 ", "an enemy seat gets zeros: " + forEnemy.data.str());
+    // The client reads the same six fields from every packet
+    Creature reader("r"); reader.importSpaStateFromPacket(forAlly);
+    expectNear(reader.mSpaMood, 0.0, "zero spa mood arrives"); expectNear(reader.mRelaxTurns, 0.0, "zero relaxation arrives");
+}
+
+// ---- The attendant after loading: the real restoreFromSave against a stub of the attendant and its room. A clip that was
+// saved in the middle goes on from the reached turn; the stub resets the clip time in setAnimationState like the entity.
+namespace Ogre { typedef float Real; struct Vector3 { Real x, y, z; Vector3(Real a = 0, Real b = 0, Real c = 0) : x(a), y(b), z(c) {} }; }
+namespace PoolAttendantPose
+{
+    static const std::string sit = "Sit"; static const std::string whistle = "Whistle"; static const std::string towelWave = "TowelWave";
+    static const std::string doze = "Doze"; static const std::string climb = "Climb";
+}
+static const Ogre::Vector3 AWAY_FROM_POOL(0.0f, -1.0f, 0.0f);
+struct Tile { };
+static double getClipTurns() { return 40.0; }
+struct RenderedMovableEntity { static void setPosition(const Ogre::Vector3& position) { } };
+struct ProbeRoom
+{
+    Tile board; bool hasBoard, poolOk;
+    ProbeRoom() : hasBoard(true), poolOk(true) {}
+    bool isPoolPosition(int32_t x, int32_t y) const { return poolOk; }
+    Tile* getSpringboardTile() { return hasBoard ? &board : nullptr; }
+};
+struct AttendantProbe
+{
+    ProbeRoom* mRoom; Tile* mChairTile; PoolAttendantState mState; double mActTurnsLeft, mTurnsLeft, mCannonballTurnsLeft;
+    bool mHasPlace; int32_t mPlaceX, mPlaceY; uint32_t mJumpTurns, mJumpTurnsLeft; Ogre::Real mJumpElapsed; Ogre::Vector3 mJumpFrom, mJumpTo;
+    std::string clip; double clipTime; int aborts; double ladderProgress;
+    AttendantProbe(ProbeRoom* room, Tile* chair) : mRoom(room), mChairTile(chair), mState(PoolAttendantState::sitting), mActTurnsLeft(0.0), mTurnsLeft(0.0),
+        mCannonballTurnsLeft(0.0), mHasPlace(false), mPlaceX(0), mPlaceY(0), mJumpTurns(0), mJumpTurnsLeft(0), mJumpElapsed(0.0f), clipTime(-1.0), aborts(0), ladderProgress(-1.0) {}
+    void setAnimationState(const std::string& state, bool loop, const Ogre::Vector3& direction, bool idle) { clip = state; clipTime = 0.0; }
+    void setAnimationTime(double time) { clipTime = (time < 0.0) ? 0.0 : time; }
+    void moveTo(const Ogre::Vector3& position) { }
+    void placeOnLadder(double progress) { ladderProgress = progress; }
+    void abortToChair() { ++aborts; mState = PoolAttendantState::sitting; }
+    void startWalkToBoard() { mState = PoolAttendantState::walkingToBoard; }
+    void startWalkBack() { mState = PoolAttendantState::walkingBack; }
+    void startJump() { mState = PoolAttendantState::jumping; mJumpTurns = 20; mJumpTurnsLeft = 20; mJumpElapsed = 0.0f; clip = "Jump"; clipTime = 0.0; }
+    void sendJumpNotification() { }
+    static Ogre::Vector3 jumpPosition(const Ogre::Vector3& from, const Ogre::Vector3& to, Ogre::Real progress) { return from; }
+    void restoreFromSave(const PoolAttendantSave& save);
+};
+#define PoolAttendantEntity AttendantProbe
+@@RESTORE@@
+#undef PoolAttendantEntity
+
+static void checkAttendantRestore()
+{
+    Tile chair; ProbeRoom room;
+    const PoolAttendantState acts[] = { PoolAttendantState::whistling, PoolAttendantState::towelWaving, PoolAttendantState::dozing };
+    const char* clips[] = { "Whistle", "TowelWave", "Doze" };
+    for(int i = 0; i < 3; ++i)
+    {
+        // An act of 2 seconds (40 turns) with 30 turns left was played for 10 turns: the clip goes on there, not from 0
+        AttendantProbe a(&room, &chair); PoolAttendantSave save; save.mState = acts[i]; save.mTurnsLeft = 30.0;
+        a.restoreFromSave(save);
+        expect(a.mState == acts[i] && a.clip == clips[i], std::string("the act is restored: ") + clips[i]);
+        expectNear(a.clipTime, 10.0, std::string("the act clip goes on at the reached turn: ") + clips[i]);
+        AttendantProbe b(&room, &chair); save.mTurnsLeft = 40.0; b.restoreFromSave(save);
+        expectNear(b.clipTime, 0.0, std::string("an act that had just begun starts at 0: ") + clips[i]);
+    }
+    // The climb: the clip and the height are set from the same reached turn
+    AttendantProbe down(&room, &chair); PoolAttendantSave climb; climb.mState = PoolAttendantState::climbingDown; climb.mTurnsLeft = 10.0;
+    climb.mHasPlace = true; down.restoreFromSave(climb);
+    expect(down.mState == PoolAttendantState::climbingDown && down.clip == "Climb", "the climb down is restored");
+    expectNear(down.clipTime, 30.0, "the climb clip goes on at the reached turn"); expectNear(down.ladderProgress, 0.75, "the height follows the same turn");
+    AttendantProbe up(&room, &chair); climb.mState = PoolAttendantState::climbingUp; up.restoreFromSave(climb);
+    expectNear(up.clipTime, 30.0, "the climb up goes on at the reached turn"); expectNear(up.ladderProgress, 0.25, "the height of the climb up");
+    // A climb down without its place only goes back to the chair
+    AttendantProbe lost(&room, &chair); PoolAttendantSave noPlace = climb; noPlace.mState = PoolAttendantState::climbingDown; noPlace.mHasPlace = false;
+    lost.restoreFromSave(noPlace);
+    expect(lost.aborts == 1 && lost.mState == PoolAttendantState::sitting, "a climb down without a place ends on the chair");
+}
+
 int main()
 {
+    checkAttendantRestore();
     checkSpaBlock();
+    checkFullPacketPrivacy();
     checkRoomStream();
     if(failures == 0) std::cout << "spa streams ok" << std::endl;
     return failures == 0 ? 0 : 1;
@@ -350,7 +476,8 @@ spa_write_start = creature_cpp.index('    if((mSpaMood > 0.0) || (mRelaxTurns > 
 spa_write = creature_cpp[spa_write_start:creature_cpp.index('\n    }\n', spa_write_start) + len('\n    }')]
 creature_functions = '\n'.join(extract(creature_cpp, h) for h in [
     'void Creature::setSpaMood(', 'void Creature::setRelaxTurns(', 'void Creature::setSpaMudTilesLeft(',
-    'void Creature::exportSpaStateToPacket(', 'void Creature::importSpaStateFromPacket('])
+    'void Creature::exportThirstStateToPacket(', 'void Creature::exportSpaStateToPacket(',
+    'void Creature::importSpaStateFromPacket('])
 
 types_start = room_h.index('//! \\brief Who pays for the bath a lava spa gives.')
 types_end = room_h.index('//! \\brief A piece of the pool rim')
@@ -366,6 +493,8 @@ replacements = {
     '@@CREATURE_FUNCTIONS@@': creature_functions,
     '@@SPA_WRITE@@': spa_write,
     '@@SPA_READ@@': spa_read,
+    '@@FULL_TAIL@@': full_tail,
+    '@@RESTORE@@': extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::restoreFromSave('),
     '@@ROOM_TYPES@@': room_types,
     '@@ROOM_HELPERS@@': helpers,
     '@@ROOM_FUNCTIONS@@': room_functions,

@@ -2161,6 +2161,12 @@ private:
     //! player are skipped.
     void sendJumpNotification();
 
+    //! \brief Server side. Tells one seat about the jump that is running (the same message as sendJumpNotification, with
+    //! the turns that have passed so far), so a seat that gains sight in the middle of a jump continues the arc. A seat
+    //! without a human player gets nothing.
+    //! \param seat The seat that gains sight of the creature.
+    void sendJumpNotificationTo(Seat* seat);
+
     //! \brief The position on the arc of a jump.
     //! \param from The start of the jump.
     //! \param to The landing point.

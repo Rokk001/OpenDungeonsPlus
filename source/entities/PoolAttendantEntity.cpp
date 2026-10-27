@@ -216,14 +216,26 @@ void PoolAttendantEntity::moveTo(const Ogre::Vector3& position)
 void PoolAttendantEntity::sendJumpNotification()
 {
     for(Seat* seat : mSeatsWithVisionNotified)
-    {
-        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
-            continue;
+        sendJumpNotificationTo(seat);
+}
 
-        ServerNotification* notification = new ServerNotification(ServerNotificationType::creatureJump, seat->getPlayer());
-        notification->mPacket << getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;
-        ODServer::getSingleton().queueServerNotification(notification);
-    }
+void PoolAttendantEntity::sendJumpNotificationTo(Seat* seat)
+{
+    if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+        return;
+
+    ServerNotification* notification = new ServerNotification(ServerNotificationType::creatureJump, seat->getPlayer());
+    notification->mPacket << getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;
+    ODServer::getSingleton().queueServerNotification(notification);
+}
+
+void PoolAttendantEntity::fireAddEntity(Seat* seat, bool async, NodeType nt)
+{
+    RenderedMovableEntity::fireAddEntity(seat, async, nt);
+
+    // The jump that is running is sent after the entity data (queued: the attendant is on the client by then)
+    if(isJumping())
+        sendJumpNotificationTo(seat);
 }
 
 void PoolAttendantEntity::doUpkeep()
@@ -553,16 +565,19 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::whistle, false, Ogre::Vector3::ZERO, false);
+            setAnimationTime(getClipTurns() - mTurnsLeft);
             break;
         case PoolAttendantState::towelWaving:
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::towelWave, false, Ogre::Vector3::ZERO, false);
+            setAnimationTime(getClipTurns() - mTurnsLeft);
             break;
         case PoolAttendantState::dozing:
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::doze, false, Ogre::Vector3::ZERO, false);
+            setAnimationTime(getClipTurns() - mTurnsLeft);
             break;
         case PoolAttendantState::climbingDown:
         case PoolAttendantState::climbingUp:
@@ -577,6 +592,8 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::climb, true, AWAY_FROM_POOL, false);
+            // The clip goes on at the turn of the climb that was reached, it does not start again
+            setAnimationTime(getClipTurns() - mTurnsLeft);
             const double done = 1.0 - mTurnsLeft / getClipTurns();
             placeOnLadder(down ? done : 1.0 - done);
             break;

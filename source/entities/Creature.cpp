@@ -2023,8 +2023,18 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     os << mUrge;
     os << mCreatureDirt;
-    exportThirstStateToPacket(os);
-    exportSpaStateToPacket(os);
+    // The thirst and lava spa state is only sent to the own seat (the same six fields as in the update packet, 0 for
+    // every other seat)
+    if(seat == getSeat())
+    {
+        exportThirstStateToPacket(os);
+        exportSpaStateToPacket(os);
+    }
+    else
+    {
+        for(int32_t field = 0; field < 6; ++field)
+            os << 0.0;
+    }
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -5726,6 +5736,8 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         localSeat = getGameMap()->getLocalPlayer()->getSeat();
     bool isAllied = (localSeat != nullptr) &&
         (getSeat()->isAlliedSeat(localSeat) || ((mSeatPrison != nullptr) && mSeatPrison->isAlliedSeat(localSeat)));
+    // The relaxation and hangover effects are only shown for the creatures of the own seat
+    const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);
 
     // The composed picture of the creature's appearance; without one (no appearance yet, missing or invalid
     // manifest) the tinted preview portrait is the fallback and no remarks are shown. Asked on every fill, since
@@ -5857,7 +5869,7 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     CEGUI::Window* effectsText = page->getChild("EffectsText");
     const std::string effects = getProfileEffectsText(mRelaxTurns, mHangoverTurns);
     effectsText->setText(effects);
-    effectsText->setVisible(isAllied && !effects.empty());
+    effectsText->setVisible(isOwn && !effects.empty());
     if(!isAllied)
         return gui.layoutCreatureProfilePage(page);
 
@@ -7913,6 +7925,10 @@ void Creature::fireAddEntity(Seat* seat, bool async, NodeType nt )
         {
             OD_LOG_ERR("Trying to fire add creature in async mode name=" + getName() + " while carrying " + mCarriedEntity->getName());
         }
+
+        // The jump that is running is sent after the entity data (queued: the creature is on the client by then)
+        if(isJumping())
+            sendJumpNotificationTo(seat);
         return;
     }
 
@@ -7922,6 +7938,10 @@ void Creature::fireAddEntity(Seat* seat, bool async, NodeType nt )
     exportHeadersToPacket(serverNotification->mPacket);
     exportToPacket(serverNotification->mPacket, seat);
     ODServer::getSingleton().queueServerNotification(serverNotification);
+
+    // A seat that gains sight in the middle of a jump gets the running arc after the entity data
+    if(isJumping())
+        sendJumpNotificationTo(seat);
 
     if(mCarriedEntity != nullptr)
     {
@@ -8759,15 +8779,19 @@ void Creature::startJumpFromServer(const Ogre::Vector3& from, const Ogre::Vector
 void Creature::sendJumpNotification()
 {
     for(Seat* seat : mSeatsWithVisionNotified)
-    {
-        if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
-            continue;
+        sendJumpNotificationTo(seat);
+}
 
-        ServerNotification* notification = new ServerNotification(
-            ServerNotificationType::creatureJump, seat->getPlayer());
-        notification->mPacket << getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;
-        ODServer::getSingleton().queueServerNotification(notification);
-    }
+//! \brief Tells one human seat about the jump that is running: name, from, to, turns and the turns passed so far.
+void Creature::sendJumpNotificationTo(Seat* seat)
+{
+    if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+        return;
+
+    ServerNotification* notification = new ServerNotification(
+        ServerNotificationType::creatureJump, seat->getPlayer());
+    notification->mPacket << getName() << mJumpFrom << mJumpTo << mJumpTurns << mJumpElapsed;
+    ODServer::getSingleton().queueServerNotification(notification);
 }
 
 //! \brief Notes that the creature falls asleep drunk, so it wakes up with a hangover.

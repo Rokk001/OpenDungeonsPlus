@@ -323,7 +323,7 @@ private:
     static bool isBatherDisturbed(const Creature& creature);
 
     //! \brief Walks a bather with a reserved place to the springboard or to the middle of its block; when it is there,
-    //! pays and starts the jump or the bath.
+    //! starts the jump (paid at the landing) or pays and starts the bath.
     //! \param creature The bather.
     //! \param bather Its place.
     //! \return True when the bather's action ended.
@@ -333,9 +333,10 @@ private:
     //! \param bather The place of the bather.
     void startBath(RoomSpaBather& bather);
 
-    //! \brief The jump of a bather is over: the splash, then the bath starts.
+    //! \brief The jump of a bather is over: the splash, then the bath is paid and starts.
     //! \param bather The place of the bather.
-    void landJump(RoomSpaBather& bather);
+    //! \return False when the bath cannot be paid at the landing; the bath does not start then.
+    bool landJump(RoomSpaBather& bather);
 
     //! \brief The bath of a bather is over: relaxation by research level, no hangover, the mud for the next tiles and
     //! the post. The bather leaves at its next action turn.

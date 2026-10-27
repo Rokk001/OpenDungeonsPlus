@@ -199,6 +199,11 @@ protected:
     virtual void exportToPacket(ODPacket& os, const Seat* seat) const override;
     virtual void importFromPacket(ODPacket& is) override;
 
+    //! \brief Server: sets the time the current clip has already run (in turns, like the server counts it). The time is
+    //! sent to a client with the full entity data, so a clip that was restored in the middle goes on from there.
+    //! \param time The turns the clip has run; negative values count as 0.
+    void setAnimationTime(double time);
+
     std::deque<Ogre::Vector2> mWalkQueue;
     std::string mPrevAnimationState;
     bool mPrevAnimationStateLoop;
