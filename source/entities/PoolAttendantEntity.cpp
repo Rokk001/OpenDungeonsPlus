@@ -500,6 +500,9 @@ void PoolAttendantEntity::startJumpFromServer(const Ogre::Vector3& from, const O
     mJumpTurnsLeft = 1;
     setAnimationState(EntityAnimation::jump_anim, false, Ogre::Vector3::ZERO, false);
     RenderedMovableEntity::setPosition(jumpPosition(from, to, elapsed / static_cast<Ogre::Real>(mJumpTurns)));
+    // A jump that is already running (loaded game, seat that gains sight) shows the clip at the phase of the arc
+    if((getAnimationState() != nullptr) && (getAnimationState()->getAnimationName() == EntityAnimation::jump_anim))
+        getAnimationState()->setTimePosition(static_cast<Ogre::Real>(CLIP_SECONDS) * elapsed / static_cast<Ogre::Real>(mJumpTurns));
 }
 
 void PoolAttendantEntity::update(Ogre::Real timeSinceLastFrame)
@@ -511,6 +514,8 @@ void PoolAttendantEntity::update(Ogre::Real timeSinceLastFrame)
     mJumpElapsed = std::min(static_cast<Ogre::Real>(mJumpTurns), mJumpElapsed +
         static_cast<Ogre::Real>(ODApplication::turnsPerSecond * timeSinceLastFrame * getGameMap()->getGameSpeedFactor()));
     RenderedMovableEntity::setPosition(jumpPosition(mJumpFrom, mJumpTo, mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns)));
+    if((getAnimationState() != nullptr) && (getAnimationState()->getAnimationName() == EntityAnimation::jump_anim))
+        getAnimationState()->setTimePosition(static_cast<Ogre::Real>(CLIP_SECONDS) * mJumpElapsed / static_cast<Ogre::Real>(mJumpTurns));
     if(mJumpElapsed >= static_cast<Ogre::Real>(mJumpTurns))
         mJumpTurnsLeft = 0;
 }
@@ -563,6 +568,9 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
     {
         case PoolAttendantState::sitting:
             mActTurnsLeft = save.mTurnsLeft;
+            // The sit loop goes on at the time that was reached, it does not start again
+            if(save.mHasClipTime)
+                setAnimationTime(save.mClipTime);
             break;
         case PoolAttendantState::whistling:
             mState = save.mState;
@@ -610,6 +618,9 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             }
             moveTo(savedPosition);
             startWalkToBoard();
+            // The walk clip goes on at the time that was reached
+            if(save.mHasClipTime && (mState == PoolAttendantState::walkingToBoard))
+                setAnimationTime(save.mClipTime);
             break;
         case PoolAttendantState::jumping:
         {
@@ -635,6 +646,9 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
         case PoolAttendantState::walkingBack:
             moveTo(savedPosition);
             startWalkBack();
+            // The walk clip goes on at the time that was reached
+            if(save.mHasClipTime)
+                setAnimationTime(save.mClipTime);
             break;
     }
 }

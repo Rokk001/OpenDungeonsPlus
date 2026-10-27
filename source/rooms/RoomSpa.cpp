@@ -593,7 +593,8 @@ bool RoomSpa::hasBatherInPool() const
 {
     for(const RoomSpaBather& bather : mBathers)
     {
-        if(!bather.mDone && ((bather.mState == SpaBatherState::bathing) || (bather.mState == SpaBatherState::jumping)))
+        // Only a guest who is bathing in the pool counts; one that still jumps has not arrived in the mud yet
+        if(!bather.mDone && (bather.mState == SpaBatherState::bathing))
             return true;
     }
 

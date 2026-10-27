@@ -76,6 +76,14 @@ assert 'effectsText->setVisible(isOwn && !effects.empty());' in profile_page
 # The restored acts and climbs go on at the reached turn of their clip instead of starting it again
 attendant_restore = extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::restoreFromSave(')
 assert attendant_restore.count('setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);') == 4
+assert attendant_restore.count('if(save.mHasClipTime') == 3, 'sitting, walk to the board and walk back also use the saved clip time'
+# The jump of the attendant shows its clip at the phase of the arc, when it starts and in every frame
+attendant_source = read('source/entities/PoolAttendantEntity.cpp')
+for jump_text in (extract(attendant_source, 'void PoolAttendantEntity::startJumpFromServer('), extract(attendant_source, 'void PoolAttendantEntity::update(')):
+    assert 'getAnimationName() == EntityAnimation::jump_anim' in jump_text and 'setTimePosition(' in jump_text
+# The attendant whistles only for a guest who bathes in the mud, not for one that still jumps
+assert 'SpaBatherState::jumping' not in extract(read('source/rooms/RoomSpa.cpp'), 'bool RoomSpa::hasBatherInPool(')
+assert 'SpaBatherState::bathing' in extract(read('source/rooms/RoomSpa.cpp'), 'bool RoomSpa::hasBatherInPool(')
 assert 'save.mClipTime = getAnimationTime();' in extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::exportSaveData(')
 assert 'double MovableGameEntity::getAnimationTime() const' in read('source/entities/MovableGameEntity.cpp')
 assert 'void MovableGameEntity::setAnimationTime(' in read('source/entities/MovableGameEntity.cpp')
@@ -395,7 +403,7 @@ static void checkFullPacketPrivacy()
 
 // ---- The attendant after loading: the real restoreFromSave against a stub of the attendant and its room. A clip that was
 // saved in the middle goes on from the reached turn; the stub resets the clip time in setAnimationState like the entity.
-namespace Ogre { typedef float Real; struct Vector3 { Real x, y, z; Vector3(Real a = 0, Real b = 0, Real c = 0) : x(a), y(b), z(c) {} }; }
+namespace Ogre { typedef float Real; struct Vector3 { Real x, y, z; Vector3(Real a = 0, Real b = 0, Real c = 0) : x(a), y(b), z(c) {} static const Vector3 ZERO; }; const Vector3 Vector3::ZERO(0.0f, 0.0f, 0.0f); }
 namespace PoolAttendantPose
 {
     static const std::string sit = "Sit"; static const std::string whistle = "Whistle"; static const std::string towelWave = "TowelWave";
@@ -425,8 +433,8 @@ struct AttendantProbe
     void moveTo(const Ogre::Vector3& position) { }
     void placeOnLadder(double progress) { ladderProgress = progress; }
     void abortToChair() { ++aborts; mState = PoolAttendantState::sitting; }
-    void startWalkToBoard() { mState = PoolAttendantState::walkingToBoard; }
-    void startWalkBack() { mState = PoolAttendantState::walkingBack; }
+    void startWalkToBoard() { mState = PoolAttendantState::walkingToBoard; clip = "Walk"; clipTime = 0.0; }
+    void startWalkBack() { mState = PoolAttendantState::walkingBack; clip = "Walk"; clipTime = 0.0; }
     void startJump() { mState = PoolAttendantState::jumping; mJumpTurns = 20; mJumpTurnsLeft = 20; mJumpElapsed = 0.0f; clip = "Jump"; clipTime = 0.0; }
     void sendJumpNotification() { }
     static Ogre::Vector3 jumpPosition(const Ogre::Vector3& from, const Ogre::Vector3& to, Ogre::Real progress) { return from; }
@@ -469,6 +477,17 @@ static void checkAttendantRestore()
     expectNear(down.clipTime, 30.0, "the climb clip goes on at the reached turn"); expectNear(down.ladderProgress, 0.75, "the height follows the same turn");
     AttendantProbe up(&room, &chair); climb.mState = PoolAttendantState::climbingUp; up.restoreFromSave(climb);
     expectNear(up.clipTime, 30.0, "the climb up goes on at the reached turn"); expectNear(up.ladderProgress, 0.25, "the height of the climb up");
+    // Sitting and both walks go on at the saved clip time; an old save without it starts at 0
+    const PoolAttendantState others[] = { PoolAttendantState::sitting, PoolAttendantState::walkingToBoard, PoolAttendantState::walkingBack };
+    for(int i = 0; i < 3; ++i)
+    {
+        AttendantProbe a(&room, &chair); PoolAttendantSave save; save.mState = others[i]; save.mTurnsLeft = 5.0; save.mHasPlace = true;
+        save.mHasClipTime = true; save.mClipTime = 17.5; a.restoreFromSave(save);
+        expect(a.mState == others[i], "the state is restored");
+        expectNear(a.clipTime, 17.5, "the saved clip time of sitting and walking is used");
+        AttendantProbe b(&room, &chair); save.mHasClipTime = false; b.restoreFromSave(save);
+        expect(b.clipTime < 0.5, "a save without the clip time starts the clip at 0");
+    }
     // A climb down without its place only goes back to the chair
     AttendantProbe lost(&room, &chair); PoolAttendantSave noPlace = climb; noPlace.mState = PoolAttendantState::climbingDown; noPlace.mHasPlace = false;
     lost.restoreFromSave(noPlace);

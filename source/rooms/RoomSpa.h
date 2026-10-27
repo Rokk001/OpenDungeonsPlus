@@ -248,7 +248,7 @@ public:
     //! \brief The tile of the springboard, nullptr when the room has no pool or does not cover that tile.
     Tile* getSpringboardTile() const;
 
-    //! \brief True while somebody is in the air or in the mud of the pool (the attendant whistles only then).
+    //! \brief True while somebody bathes in the mud of the pool; a guest still in the air does not count (the attendant whistles only then).
     bool hasBatherInPool() const;
 
     //! \brief Finds a free pool tile for a jump of the pool attendant: the first pool tile in the order of smaller
