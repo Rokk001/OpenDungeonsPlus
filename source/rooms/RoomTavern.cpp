@@ -290,6 +290,11 @@ bool RoomTavern::hasOpenCreatureSpot(Creature* c)
     if((c != nullptr) && (mPendingSpots.find(c->getName()) != mPendingSpots.end()))
         return true;
 
+    // A leisure visit (the creature is not thirsty) waits until the cooldown since its last tavern visit is over
+    if((c != nullptr) && (c->getTavernCooldownTurns() > 0) &&
+       (c->getThirst() < getTavernValue("ThirstSeek")))
+        return false;
+
     for(Tile* tile : mCoveredTiles)
     {
         if(isFreeSpotTile(tile))
@@ -407,8 +412,10 @@ void RoomTavern::removeCreatureUsingRoom(Creature* creature)
     if(it == mSpots.end())
         return;
 
-    // The place goes first: the creature may be on its way out of the game (dead, removed), so it is not touched here.
-    // Whatever clip it still shows is replaced by the next thing it does.
+    // The place goes first: the creature may be on its way out of the game (dead, removed), so its clips are not touched here.
+    // Whatever clip it still shows is replaced by the next thing it does. Its leisure cooldown starts, so that the job search
+    // does not send it back in at once while it still stands on a tavern tile.
+    it->second.mCreature->startTavernCooldown();
     mSpots.erase(it);
 
     // A game of the guest ends without effects; its partner is done
