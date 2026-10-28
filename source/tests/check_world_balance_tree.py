@@ -143,9 +143,17 @@ body = re.sub(r"#[^\r\n]*", "", cfg)
 skills_block = body[body.index("[Skills]") + len("[Skills]"):body.index("[/Skills]")].split()
 assert len(skills_block) % 2 == 0
 costs = {}
+# The research cost factors and tab shares of the levels II and III live in the same block (they are no skill entries)
+TUNING = {"ResearchCostFactorLevel2": 2.0, "ResearchCostFactorLevel3": 4.0,
+          "ResearchLevel2TabShare": 0.5, "ResearchLevel3TabShare": 1.0}
+tuning = {}
 for index in range(0, len(skills_block), 2):
+    if skills_block[index] in TUNING:
+        tuning[skills_block[index]] = float(skills_block[index + 1])
+        continue
     assert skills_block[index] not in costs, "duplicate entry " + skills_block[index]
     costs[skills_block[index]] = int(skills_block[index + 1])
+assert tuning == TUNING, "the research cost factors and tab shares: %s" % tuning
 assert "spellSummonChampion" not in costs, "the reward skill has no entry"
 assert sorted(costs) == sorted(entry[2] for entry in EXPECTED), "[Skills] lists exactly the 64 entries"
 for tab, tier, name, button, parent_list in EXPECTED:
