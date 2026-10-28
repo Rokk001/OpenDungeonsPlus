@@ -4,7 +4,7 @@ thirst values that follow from its hunger values, and everything is documented i
 
 What is checked
   global.cfg [Tavern]      all keys with their values, no key without a design value, every key documented
-  derived values           BeerPrice = cheapest FeeBase / 10, GameWinnerXp = TrainHallXpPerAttack,
+  derived values           BeerPrice = cheapest FeeBase / 10, GameWinnerXp = 5,
                            TavernCostPerTile = HatcheryCostPerTile, TavernHP = HatcheryHP,
                            TavernDirtPerDrink = 0.8077 / (0.557 x 25 / (DrinkTurns + 1)) rounded to 4 places
   creatures.cfg            every type has a Casino, an Arena and a Tavern affinity line and a Hunger mood line is
@@ -101,7 +101,7 @@ assert hp_values.get('TavernHP') == hp_values.get('HatcheryHP') == '30', 'Tavern
 fee_bases = [float(v) for v in re.findall(r'^\s*FeeBase\s+(\S+)', creatures_cfg, re.M) if float(v) > 0]
 assert len(fee_bases) >= 30, 'FeeBase lines missing'
 assert float(tavern['BeerPrice']) == min(fee_bases) / 10, 'BeerPrice must be the smallest FeeBase / 10'
-assert tavern['GameWinnerXp'] == str(int(float(rooms['TrainHallXpPerAttack']))), 'GameWinnerXp must equal TrainHallXpPerAttack'
+assert tavern['GameWinnerXp'] == '5', 'GameWinnerXp stays 5 (TrainHallXpPerAttack is 2.86 since the rebalance)'
 expected_dirt = round(0.8077 / (0.557 * 25 / (float(tavern['DrinkTurns']) + 1)), 4)
 assert float(rooms['TavernDirtPerDrink']) == expected_dirt, 'TavernDirtPerDrink is ' + rooms['TavernDirtPerDrink'] + ', expected ' + str(expected_dirt)
 for key in ('TavernCostPerTile', 'TavernDirtPerDrink'):

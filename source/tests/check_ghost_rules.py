@@ -141,7 +141,9 @@ struct ConfigManager{
  //! \brief Returns the fixture configuration.
  static ConfigManager& getSingleton(){static ConfigManager config;return config;}
  //! \brief Returns named room values required by these bodies.
- double getRoomConfigDouble(const std::string& key)const{const std::map<std::string,double> values={{"GhostRiseSeconds",1.5},{"GhostDissolveSeconds",1.5},{"GhostHowlMinSeconds",10},{"GhostHowlMaxSeconds",20},{"GhostBoxOpenSeconds",120},{"GhostRoomMinSide",4},{"GhostHuntersPerCauldron",3},{"GhostLevelsPerEctoplasm",10},{"GhostEctoplasmMana",10000},{"GhostEctoplasmResearchPoints",2000},{"GhostEctoplasmPerCrystal",2},{"CryptCorpsesPerLich",10},{"CryptLichLevelBonus",0},{"GhostBeamRange",1},{"GhostReviveMana",14000},{"TrainHallXpPerAttack",5},{"TrainHallCooldownHitMin",3},{"TrainHallCooldownHitMax",6}};return values.at(key);}
+ //! \brief Spell value read by the ghost room (EyeEvilNbTurns, config/spells.cfg).
+ double getSpellConfigDouble(const std::string& key)const{return key=="EyeEvilNbTurns"?10.0:0.0;}
+ double getRoomConfigDouble(const std::string& key)const{const std::map<std::string,double> values={{"GhostRiseSeconds",1.5},{"GhostDissolveSeconds",1.5},{"GhostHowlMinSeconds",10},{"GhostHowlMaxSeconds",20},{"GhostBoxOpenSeconds",120},{"GhostRoomMinSide",4},{"GhostHuntersPerCauldron",3},{"GhostLevelsPerEctoplasm",10},{"GhostEctoplasmMana",1580},{"GhostEctoplasmResearchPoints",319.8663176854666},{"GhostEctoplasmPerCrystal",6},{"CryptCorpsesPerLich",10},{"CryptLichLevelBonus",0},{"GhostBeamRange",1},{"GhostReviveMana",14000},{"TrainHallXpPerAttack",5},{"TrainHallCooldownHitMin",3},{"TrainHallCooldownHitMax",6}};return values.at(key);}
  //! \brief Reads an integer room setting.
  int getRoomConfigInt32(const std::string& key)const{return int(getRoomConfigDouble(key));}
  //! \brief Reads an unsigned room setting.
@@ -448,7 +450,7 @@ def hunt_fixture():
  //! \brief Takes exact revival mana only when available.
  bool takeMana(double amount){if(mana<amount)return false;mana-=amount;return true;}
  Player* getPlayer()''')
-    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamTurns",5.5},{"GhostEmptyTurns",5.5},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",.5},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
+    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamTurns",5.5},{"GhostBellSeconds",3},{"GhostEmptyTurns",5.5},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",.5},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
     code = r'''
 //! \brief Supplies declared hunter efficiency independently of timing code.
 struct CreatureRoomAffinity{double efficiency=3;
@@ -648,7 +650,7 @@ struct ItemBagEntity{static int crystals;static Ogre::Vector3 position;
 //! \brief Records free reveal candidates and exact unresearched duration.
 struct SpellEyeEvil{static std::vector<Tile*> reveals;
  //! \brief Observes free reveals chosen by the original product body.
- static void spawnFree(GameMap*,Seat*,Tile* tile,int turns){check(turns==10,"base free reveal duration");reveals.push_back(tile);}
+ static void spawnFree(GameMap*,Seat*,Tile* tile,double turns){check(turns==10,"base free reveal duration");reveals.push_back(tile);}
 };std::vector<Tile*> SpellEyeEvil::reveals;
 //! \brief Observes ectoplasm feedback calls.
 struct Spell{

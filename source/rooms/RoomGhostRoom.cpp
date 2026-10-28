@@ -473,7 +473,7 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
         Spell::fireSpellEffect(*cauldron,"EctoplasmBurst","");
         CreatureActionHuntGhost::playSound(*getGameMap(),*cauldron,"Rooms/GhostRoom/PressHiss");
         if(seat->getGhostProduct()==GhostProduct::mana) seat->addMana(config.getRoomConfigDouble("GhostEctoplasmMana"));
-        else if(seat->getGhostProduct()==GhostProduct::research) seat->addSkillPoints(config.getRoomConfigInt32("GhostEctoplasmResearchPoints"));
+        else if(seat->getGhostProduct()==GhostProduct::research) seat->addSkillPoints(config.getRoomConfigDouble("GhostEctoplasmResearchPoints"));
         else
         {
             // The finished crystal falls as a bag onto a free floor tile of the room.

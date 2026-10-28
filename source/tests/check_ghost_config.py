@@ -29,14 +29,14 @@ def main():
     room = numbers("config/rooms.cfg")
     expected = {"GhostLifetimeSeconds":344.4444,"GhostFloatSpeed":.36,"GhostWanderRadius":8,
         "CorpseLieSeconds":120,"CorpseDecaySeconds":240,"SoulCrystalPrice":800,
-        "SoulCrystalBreakBelow":.4,"SoulCrystalNormalXpPerSecond":.3277,
+        "SoulCrystalBreakBelow":.4,"SoulCrystalNormalXpPerSecond":0.49322750960632944,
         "SoulCrystalHeroRareStart":.04,"SoulCrystalHeroRareEnd":.62,
-        "GhostAiGoldPerResearchPoint":.3661,"GhostAiGoldPerXp":1.2179}
+        "GhostAiGoldPerResearchPoint":.4144,"GhostAiGoldPerXp":0.8536668706148699}
     for key, value in expected.items():
         assert global_values[key] == value, (key, global_values.get(key), value)
     expected = {"GhostBeamTurns":5.5,"GhostEmptyTurns":5.5,"GhostBoxCapacity":1,"GhostBeamRange":1,
         "GhostBoxOpenSeconds":120,"GhostHuntersPerCauldron":3,"GhostLevelsPerEctoplasm":10,
-        "GhostEctoplasmMana":10000,"GhostEctoplasmResearchPoints":2000,"GhostEctoplasmPerCrystal":2,"GhostReviveMana":14000,
+        "GhostEctoplasmMana":1580,"GhostEctoplasmResearchPoints":319.8663176854666,"GhostEctoplasmPerCrystal":6,"GhostReviveMana":14000,
         "GhostReviveHpShare":.35,"CryptCorpsesPerLich":10,"CryptLichLevelBonus":0,
         "GhostRoomCostPerTile":620,"GhostRoomHP":50,"GhostRoomMinSide":4,
         "GhostRiseSeconds":1.5,"GhostDissolveSeconds":1.5,"GhostHowlMinSeconds":10,

@@ -245,7 +245,7 @@ void RoomPortal::doUpkeep()
         mSpawnCreatureCountdown -= 1.0;
         return;
     }
-    mSpawnCreatureCountdown = Random::Double(getResearchedCooldown(getSeat(), "PortalCooldownSpawnMin"),
+    mSpawnCreatureCountdown += Random::Double(getResearchedCooldown(getSeat(), "PortalCooldownSpawnMin"),
         getResearchedCooldown(getSeat(), "PortalCooldownSpawnMax"));
 
     if (mCoveredTiles.empty())
