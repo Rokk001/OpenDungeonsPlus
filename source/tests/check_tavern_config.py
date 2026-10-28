@@ -166,4 +166,9 @@ assert not [l for l in effect_lines if l[0] == 'roomTavern'], 'roomTavern has no
 for key in ('roomTavern', 'tavernBeer'):
     assert_documented(skills_cfg, key, 'skills.cfg')
 
+# Furniture density follows the room area: one table per four tiles and one keg per six.
+room_cpp = read('source/rooms/RoomTavern.cpp')
+assert 'const size_t tableLimit = orderedTiles.size() / 4;' in room_cpp
+assert 'const size_t kegLimit = orderedTiles.size() / 6;' in room_cpp
+
 print('tavern config ok')

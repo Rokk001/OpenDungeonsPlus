@@ -68,6 +68,14 @@ def find_line(text, pattern):
 
 creature_cpp = read('source/entities/Creature.cpp')
 room_cpp = read('source/rooms/RoomTavern.cpp')
+
+# Furniture occupies distinct tiles, kegs require a full neighbouring wall, and ordering is stable across saves.
+placement = extract(room_cpp, 'void RoomTavern::updateActiveSpots(')
+assert 'std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile)' in placement
+assert 'orderedTiles.size() / 4' in placement and 'orderedTiles.size() / 6' in placement
+assert 'neighbour->isFullTile()' in placement and 'wantedObjects.count(tile) != 0' in placement
+assert 'wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH' in placement
+
 portal_cpp = read('source/rooms/RoomPortal.cpp')
 mood_thirst_cpp = read('source/creaturemood/CreatureMoodThirst.cpp')
 mood_hunger_cpp = read('source/creaturemood/CreatureMoodHunger.cpp')

@@ -1264,6 +1264,7 @@ void RoomTavern::placeInnkeeper()
         mInnkeeper = InnkeeperEntity::spawnOnTile(getGameMap(), getName(), mCounterTile, angle);
 }
 
+//! \brief Updates tavern furniture and the innkeeper for the current room tiles.
 void RoomTavern::updateActiveSpots(GameMap* gameMap)
 {
     Room::updateActiveSpots(gameMap);
@@ -1297,28 +1298,62 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     if((mCounterTile == nullptr) || (std::find(mCoveredTiles.begin(), mCoveredTiles.end(), mCounterTile) == mCoveredTiles.end()))
         mCounterTile = mCoveredTiles.front();
 
-    // The counter on the counter tile, a keg on the tiles next to a wall, a table on the tiles inside the room. The
-    // object of a tile that has the wrong kind (a room that grew, the counter that moved) is replaced.
-    for(Tile* tile : mCoveredTiles)
+    // Select furniture in coordinate order so the same room restores the same placement after loading.
+    std::vector<Tile*> orderedTiles = mCoveredTiles;
+    std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile);
+    std::map<Tile*, std::string> wantedObjects;
+    std::map<Tile*, double> kegAngles;
+    wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH;
+    const size_t kegLimit = orderedTiles.size() / 6;
+    const size_t tableLimit = orderedTiles.size() / 4;
+    size_t kegs = 0;
+    for(Tile* tile : orderedTiles)
     {
-        bool isNextToWall = false;
-        const double angle = getBackToWallAngle(tile, isNextToWall);
-        std::string wantedMesh = TAVERN_TABLE_MESH;
-        if(tile == mCounterTile)
-            wantedMesh = TAVERN_COUNTER_MESH;
-        else if(isNextToWall)
-            wantedMesh = TAVERN_KEG_MESH;
-
-        std::map<Tile*, BuildingObject*>::iterator it = mBuildingObjects.find(tile);
-        if(it != mBuildingObjects.end())
+        if((tile == mCounterTile) || (kegs >= kegLimit))
+            continue;
+        const int x = tile->getX();
+        const int y = tile->getY();
+        Tile* neighbours[] = {gameMap->getTile(x, y + 1), gameMap->getTile(x, y - 1),
+                              gameMap->getTile(x - 1, y), gameMap->getTile(x + 1, y)};
+        const double angles[] = {OBJECT_ANGLE_WALL_TOP, OBJECT_ANGLE_WALL_BOTTOM,
+                                 OBJECT_ANGLE_WALL_LEFT, OBJECT_ANGLE_WALL_RIGHT};
+        for(size_t i = 0; i < 4; ++i)
         {
-            if(it->second->getMeshName() == wantedMesh)
-                continue;
+            Tile* neighbour = neighbours[i];
+            if((neighbour != nullptr) && neighbour->isFullTile())
+            {
+                wantedObjects[tile] = TAVERN_KEG_MESH;
+                kegAngles[tile] = angles[i];
+                ++kegs;
+                break;
+            }
+        }
+    }
+    size_t tables = 0;
+    for(Tile* tile : orderedTiles)
+    {
+        if((tables >= tableLimit) || (wantedObjects.count(tile) != 0))
+            continue;
+        wantedObjects[tile] = TAVERN_TABLE_MESH;
+        ++tables;
+    }
 
+    // Replace obsolete furniture and leave every unselected tile as free floor.
+    for(Tile* tile : orderedTiles)
+    {
+        std::map<Tile*, std::string>::const_iterator wanted = wantedObjects.find(tile);
+        std::map<Tile*, BuildingObject*>::iterator existing = mBuildingObjects.find(tile);
+        if(existing != mBuildingObjects.end())
+        {
+            if((wanted != wantedObjects.end()) && (existing->second->getMeshName() == wanted->second))
+                continue;
             removeBuildingObject(tile);
         }
-
-        BuildingObject* object = new BuildingObject(gameMap, *this, wantedMesh, *tile, angle, false);
+        if(wanted == wantedObjects.end())
+            continue;
+        bool isNextToWall = false;
+        const double angle = (wanted->second == TAVERN_KEG_MESH) ? kegAngles[tile] : getBackToWallAngle(tile, isNextToWall);
+        BuildingObject* object = new BuildingObject(gameMap, *this, wanted->second, *tile, angle, false);
         addBuildingObject(tile, object, gameMap);
         object->createMesh();
     }
