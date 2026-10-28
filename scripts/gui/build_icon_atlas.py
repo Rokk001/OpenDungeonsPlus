@@ -97,7 +97,7 @@ def write_imageset(path, imagefile, name, entries):
     ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
 
 
-# Rebuild original grid slots and explicit painted sources, retaining the existing navigation atlas.
+# Rebuild original grid slots and painted sources, retaining the integrated navigation ring and states.
 def main():
     slots = json.loads((SOURCE / "slots.json").read_text(encoding="utf-8"))
     sheets = [Image.open(SOURCE / f"icons-{i}.png").convert("RGBA") for i in range(1, 8)]
@@ -136,7 +136,9 @@ def main():
     navigation = Image.new("RGBA", (2048, 2048))
     ring = Image.open(SKIN / "glyph-3-3.png").convert("RGBA")
     ring = ring.crop(ring.getbbox())
-    sprites = {"MiniMapRim": ring.resize((768, 768), Image.Resampling.LANCZOS)}
+    # Preserve the integrated ring painting and its matching interaction patches.
+    painted_navigation = Image.open(ROOT / "gui/ODNavigation.png").convert("RGBA")
+    sprites = {"MiniMapRim": painted_navigation.crop((0, 0, 768, 768))}
     source_names = ("ManaBadge", "GoldBadge", "NavHelp", "NavSell", "NavOptions", "MapZoom", "MiniMapNorth")
     for index, name in enumerate(source_names):
         source = source_cell(sheets[6], index + 3)
@@ -153,8 +155,9 @@ def main():
     for corner in range(4):
         for state, suffix in enumerate(("", "Hover", "Pressed")):
             name = f"MiniMapCorner{corner}{suffix}"
-            NAVIGATION_RECTS[name] = (1024 + corner * 256, state * 256, 256, 256)
-            sprites[name] = corner_plate(corner, state)
+            NAVIGATION_RECTS[name] = (1024 + corner * 192, state * 192, 192, 192)
+            x, y, width, height = NAVIGATION_RECTS[name]
+            sprites[name] = painted_navigation.crop((x, y, x + width, y + height))
     nav_entries = []
     for name, sprite in sprites.items():
         x, y, width, height = NAVIGATION_RECTS[name]

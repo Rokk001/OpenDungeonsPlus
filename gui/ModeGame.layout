@@ -288,28 +288,30 @@
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner2" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner2Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner2Pressed" />
-            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
+            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
             <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,8},{1,-52},{0,52},{1,-8}}" />
+            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/NavOptions" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Options" />
             <UserString name="ContextHelp" value="Options (F10)" />
             <Property name="ClippedByParent" value="False" />
             <Property name="Visible" value="True" />
+            <UserString name="MiniMapArea" value="{{0.053385417,0},{0.696614583,0},{0.303385417,0},{0.946614583,0}}" />
         </Window>
         <Window type="OD/MiniMapCornerButton" name="SellButton" >
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner1" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner1Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner1Pressed" />
-            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
+            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,140},{1,-184},{0,184},{1,-140}}" />
+            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/NavSell" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Sell" />
             <UserString name="ContextHelp" value="Sell: select, then click a room tile, trap or door" />
+            <UserString name="MiniMapArea" value="{{0.696614583,0},{0.053385417,0},{0.946614583,0},{0.303385417,0}}" />
         </Window>
         <Window type="OD/GameTabButton" name="GoalsButton">
             <Property name="Area" value="{{0,4},{1,-224},{0,44},{1,-184}}" />
@@ -425,27 +427,29 @@
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner0" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner0Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner0Pressed" />
-            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
+            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,8},{1,-184},{0,52},{1,-140}}" />
+            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/NavHelp" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Query" />
             <UserString name="ContextHelp" value="Query: select, then click a creature to view its information" />
+            <UserString name="MiniMapArea" value="{{0.053385417,0},{0.053385417,0},{0.303385417,0},{0.303385417,0}}" />
         </Window>
         <Window type="OD/MiniMapCornerButton" name="MiniMapZoomButton">
             <Property name="CornerBackground" value="OpenDungeonsIcons/MiniMapCorner3" />
             <Property name="CornerHoverBackground" value="OpenDungeonsIcons/MiniMapCorner3Hover" />
             <Property name="CornerPushedBackground" value="OpenDungeonsIcons/MiniMapCorner3Pressed" />
-            <Property name="CornerIconArea" value="{{0.285,0},{0.285,0},{0.715,0},{0.715,0}}" />
+            <Property name="CornerIconArea" value="{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}" />
             <Property name="NavigationFrame" value="True" />
             <UserString name="AllowEdgeScrolling" value="true" />
-            <Property name="Area" value="{{0,140},{1,-52},{0,184},{1,-8}}" />
+            <Property name="Area" value="{{0,0},{0,0},{0.25,0},{0.25,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/MapZoom" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Minimap" />
             <UserString name="ContextHelp" value="Minimap: left-click to zoom in, right-click to zoom out; M opens the map" />
+            <UserString name="MiniMapArea" value="{{0.696614583,0},{0.696614583,0},{0.946614583,0},{0.946614583,0}}" />
         </Window>
         <LayoutImport type="DefaultWindow" filename="WindowMap.layout" name="MapImport" />
         <LayoutImport type="DefaultWindow" filename="WindowUserCameras.layout" name="UserCamerasImport" />
