@@ -1892,46 +1892,21 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     CEGUI::Window* equipment = page->getChild("EquipmentRow");
     const float equipmentWidth = std::max(1.0f, page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN);
     const float headerHeight = PROFILE_FLOW_TOP - 34.0f - 2.0f * PROFILE_ROW_GAP;
-    const std::size_t slotCount = 13;
-    std::size_t columns = 1;
-    float edge = 0.0f;
-    // Fit the largest square slots beside the portrait, preserving the existing gaps between item groups.
-    for(std::size_t count = 1; count <= slotCount; ++count)
+    const float edge = std::max(1.0f, std::min(equipmentWidth / 4.0f, headerHeight / 5.0f));
+    // Fit square slots beside the portrait, arranging worn items above the potion and inventory rows.
+    const float columns[] = {0.5f, 2.5f, 1.5f, 1.5f, 1.5f, 2.5f,
+        0.5f, 1.5f, 2.5f, 0.0f, 1.0f, 2.0f, 3.0f};
+    const float rows[] = {1.0f, 1.0f, 0.0f, 1.0f, 2.0f, 2.0f,
+        3.0f, 3.0f, 3.0f, 4.0f, 4.0f, 4.0f, 4.0f};
+    for(std::size_t slot = 0; slot < 13; ++slot)
     {
-        const std::size_t rows = (slotCount + count - 1) / count;
-        float candidate = std::min(56.0f, (headerHeight - static_cast<float>(rows - 1) * PROFILE_ROW_GAP) /
-            static_cast<float>(rows));
-        for(std::size_t first = 0; first < slotCount; first += count)
-        {
-            const std::size_t last = std::min(slotCount, first + count);
-            float gaps = 0.0f;
-            for(std::size_t slot = first + 1; slot < last; ++slot)
-                gaps += (slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP;
-            candidate = std::min(candidate, (equipmentWidth - gaps) / static_cast<float>(last - first));
-        }
-        if(candidate > edge)
-        {
-            edge = candidate;
-            columns = count;
-        }
-    }
-    float x = 0.0f;
-    float rowY = 0.0f;
-    for(std::size_t slot = 0; slot < slotCount; ++slot)
-    {
-        if(slot % columns == 0)
-        {
-            x = 0.0f;
-            rowY = static_cast<float>(slot / columns) * (edge + PROFILE_ROW_GAP);
-        }
-        else
-            x += (slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP;
+        const float x = columns[slot] * edge;
+        const float rowY = rows[slot] * edge;
         setScaledArea(equipment->getChild("Slot" + Helper::toString(slot)),
             CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, rowY),
                 CEGUI::UDim(0, x + edge), CEGUI::UDim(0, rowY + edge)));
-        x += edge;
     }
-    const float equipmentHeight = rowY + edge;
+    const float equipmentHeight = 5.0f * edge;
     setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),
         CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, 34 + equipmentHeight)));
     float y = std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);

@@ -2072,3 +2072,5 @@ models/Defender.skeleton    AI-generated animation with Codex    GPLv3+    Origi
 assets-src/creatures/ghosts/create_clips.py    AI-generated with Codex    GPLv3+    Original native-rig animation authoring source; anatomically matched gestures and exact native rest-scale translation conversion, 2026-10-26
 
 gui/Items.png (soul_crystal)    AI-generated with Codex    GPLv3+    Atlas entry from the original gui/potions/soul_crystal.png painting credited above; existing icon pixels preserved.
+
+gui/SlotTypes.png    AI-generated with Codex    GPLv3+    Original painted equipment slot symbols.

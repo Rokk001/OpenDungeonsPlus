@@ -5973,6 +5973,11 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
         image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
             name : "OpenDungeonsIcons/ItemSlotEmpty");
+        const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
+            "Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"};
+        CEGUI::Window* slotType = image->getChild("SlotType");
+        slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
+        slotType->setVisible(item == nullptr);
         image->setTooltipText(item == nullptr ? "" : item->describe(getGameMap()));
         CEGUI::Window* frame = image->getChild("QualityFrame");
         frame->setVisible(item != nullptr);
