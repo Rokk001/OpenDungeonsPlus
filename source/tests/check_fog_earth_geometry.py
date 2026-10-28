@@ -134,8 +134,18 @@ def function(source, signature):
     return source[first + 1:end - 1]
 
 
-# Require one shared mesh/material/height/marking pipeline, with type-neutral client-only selection.
+# Require every client tile and one shared, type-neutral mesh/material/height/marking pipeline.
 def verify(sources):
+    create_all = function(sources["map"], "void GameMap::createAllEntities(")
+    assert compact("""for (int jj = 0; jj < getMapSizeY(); ++jj) {
+        for (int ii = 0; ii < getMapSizeX(); ++ii) {
+            getTile(ii,jj)->createMesh(mNodeType);
+        }
+    }""") in compact(create_all)
+    create_tile = function(sources["tile"], "void Tile::createMeshLocal(")
+    assert 'rrCreateTile(*this, *getGameMap(), *getGameMap()->getLocalPlayer(),nt)' in create_tile
+    create_render = function(sources["render"], "void RenderManager::rrCreateTile(")
+    assert 'rrRefreshTile(tile, dtc, localPlayer,nt);' in create_render
     mesh = function(sources["map"], "const TileSetValue& GameMap::getMeshForTile(")
     assert compact(mesh) == compact("""
         const TileVisual visual = !isServerGameMap() && !tile->getEverVisible() ?
@@ -219,7 +229,7 @@ def verify(sources):
 
 sources = {key: (ROOT / path).read_text(encoding='utf-8') for key, path in {
     'map': 'source/gamemap/GameMap.cpp', 'links': 'source/gamemap/TileSet.cpp',
-    'render': 'source/render/RenderManager.cpp', 'picker': 'source/render/ODFrameListener.cpp',
+    'render': 'source/render/RenderManager.cpp', 'tile': 'source/entities/Tile.cpp', 'picker': 'source/render/ODFrameListener.cpp',
     'tileset': 'config/tilesets.cfg'}.items()}
 verify(sources)
 edges = earth_edges(sources['tileset'])
@@ -231,6 +241,7 @@ else:
     raise AssertionError('raised marked-earth edge mutation accepted')
 # Each former visual mismatch and each client/server secrecy regression must fail independently.
 mutations = [
+    ('map', 'getTile(ii,jj)->createMesh(mNodeType);', 'if(getTile(ii,jj)->getEverVisible()) getTile(ii,jj)->createMesh(mNodeType);'),
     ('map', 'TileVisual::dirtFull : tile->getTileVisual()', 'TileVisual::goldFull : tile->getTileVisual()'),
     ('map', '!isServerGameMap() && ', ''),
     ('links', '!tile1->getIsOnServerMap() && ', ''),
