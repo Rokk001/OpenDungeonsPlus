@@ -365,6 +365,7 @@ std::map<Tile*, RoomTavernSpot>::iterator RoomTavern::findSpotOf(const Creature*
     return mSpots.end();
 }
 
+//! \brief Assigns a guest a tavern spot and restores its saved state.
 bool RoomTavern::addCreatureUsingRoom(Creature* creature)
 {
     if(creature == nullptr)
@@ -397,6 +398,7 @@ bool RoomTavern::addCreatureUsingRoom(Creature* creature)
         it->second.mTurnsLeft = pending->second.mTurnsLeft;
         it->second.mDrinks = pending->second.mDrinks;
         it->second.mSleepAfter = pending->second.mSleepAfter;
+        it->second.mWantsGame = pending->second.mWantsGame;
         mPendingSpots.erase(pending);
         showSpotState(tile, it->second);
     }
@@ -1326,6 +1328,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     placeInnkeeper();
 }
 
+//! \brief Writes the tavern and its guest and game states to the stream.
 void RoomTavern::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
@@ -1338,7 +1341,7 @@ void RoomTavern::exportToStream(std::ostream& os) const
 
     os << STREAM_TAG_COUNTER << " " << mCounterTile->getX() << " " << mCounterTile->getY() << std::endl;
 
-    // Spot <x> <y> <creature> <state> <turnsLeft> <drinks> <sleepAfter>: one line for every guest
+    // Spot <x> <y> <creature> <state> <turnsLeft> <drinks> <sleepAfter> <wantsGame>: one line for every guest
     for(std::map<Tile*, RoomTavernSpot>::const_iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         const RoomTavernSpot& spot = it->second;
@@ -1347,7 +1350,7 @@ void RoomTavern::exportToStream(std::ostream& os) const
 
         os << STREAM_TAG_SPOT << " " << it->first->getX() << " " << it->first->getY() << " " << spot.mCreature->getName()
            << " " << guestStateToString(spot.mState) << " " << spot.mTurnsLeft << " " << spot.mDrinks << " "
-           << (spot.mSleepAfter ? 1 : 0) << std::endl;
+           << (spot.mSleepAfter ? 1 : 0) << " " << (spot.mWantsGame ? 1 : 0) << std::endl;
     }
 
     // Game <kind> <xA> <yA> <xB> <yB> <creatureA> <creatureB> <turnsLeft> <slapsA> <slapsB> <turn>: one line for every
@@ -1362,6 +1365,7 @@ void RoomTavern::exportToStream(std::ostream& os) const
     }
 }
 
+//! \brief Reads the tavern and its saved guest and game states from the stream.
 bool RoomTavern::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
@@ -1402,7 +1406,7 @@ bool RoomTavern::importFromStream(std::istream& is)
         }
         else if(tag == STREAM_TAG_SPOT)
         {
-            // The rest of the line: x y creature state turnsLeft [drinks sleepAfter]
+            // The rest of the line: x y creature state turnsLeft [drinks sleepAfter wantsGame]
             std::string rest;
             std::getline(is, rest);
             std::istringstream line(rest);
@@ -1415,8 +1419,10 @@ bool RoomTavern::importFromStream(std::istream& is)
                 return false;
 
             int32_t sleepAfter = 0;
-            line >> saved.mDrinks >> sleepAfter;
+            int32_t wantsGame = 0;
+            line >> saved.mDrinks >> sleepAfter >> wantsGame;
             saved.mSleepAfter = (sleepAfter != 0);
+            saved.mWantsGame = (wantsGame != 0);
             saved.mTile = getGameMap()->getTile(x, y);
             if(saved.mTile != nullptr)
                 mPendingSpots[name] = saved;
