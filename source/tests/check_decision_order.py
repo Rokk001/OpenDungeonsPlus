@@ -21,7 +21,8 @@ for block in re.findall(r'^\[Creature\]\s*$(.*?)^\[/Creature\]', config, re.M | 
         words = line.split()
         if len(words) >= 3 and not words[0].startswith('#'):
             affinity[words[0]] = words[1:]
-    if 'Casino' in affinity:
+    # A Casino line with likeness 0 (workers, Champion) never sends the creature to a pleasure room
+    if 'Casino' in affinity and float(affinity['Casino'][0]) > 0:
         assert 'Temple' in affinity and affinity['Casino'][0] == affinity['Temple'][0]
 print('decision order ok')
 

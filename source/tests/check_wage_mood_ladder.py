@@ -22,7 +22,8 @@ def threshold(key):
 assert threshold('UnpaidWagesStopWork') < threshold('UnpaidWagesLeave')
 for block in re.findall(r'^\[Creature\]\s*$(.*?)^\[/Creature\]', read('config/creatures.cfg'), re.M | re.S):
     mood = re.search(r'^\s*\[MoodModifiers\]\s*$(.*?)^\s*\[/MoodModifiers\]', block, re.M | re.S)
-    if mood:
+    # A type with an empty mood block (comments only, e.g. the Skeleton) has no moods at all
+    if mood and any(line.split() and not line.split()[0].startswith('#') for line in mood.group(1).splitlines()):
         for key, value in (('Fee', -1000), ('HpLoss', -500)):
             match = re.search(r'^\s*' + key + r'\s+(\S+)', mood.group(1), re.M)
             assert match and float(match.group(1)) == value, key
