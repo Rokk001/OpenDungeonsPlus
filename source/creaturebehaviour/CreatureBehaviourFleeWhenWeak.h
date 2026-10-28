@@ -36,6 +36,7 @@ public:
 
     virtual CreatureBehaviour* clone() const override;
 
+    //! \brief Chooses flight for a weak creature using its configured chance.
     virtual bool processBehaviour(Creature& creature) const override;
 
     virtual void getFormatString(std::string& format) const override;

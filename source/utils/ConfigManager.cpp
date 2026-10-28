@@ -198,6 +198,32 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mClaimXpFactor(0.78),
     mClaimXpDivisorBase(0.35),
     mClaimXpDivisorPerLevel(0.05),
+    mAngryFleeChancePercent(20),
+    mFleeTiles(5),
+    mHitChanceMax(95),
+    mHitChanceMin(5),
+    mHitChanceScale(200),
+    mNaturalEnemyEngageChance(0.2079207920792079),
+    mSkillDeviationPoints(20),
+    mSkillResetMinFollowers(3),
+    mSkillUnfollowedWeight(3),
+    mSkillTier2UnlockRanks(1),
+    mSkillTier3UnlockRanks(2),
+    mSkillTier4MinSpent(20),
+    mSlapJobCooldownFactor(0.8),
+    mSlapMemoryMax(10),
+    mSupportTargetDistanceFactor(0.5),
+    mTargetThreatFactorMax(2),
+    mTargetThreatFactorMin(0.5),
+    mWeakFleeChancePercent(20),
+    mWorkerCarryFirstMaxShare(0.2),
+    mWorkerClaimWallFirstMinShare(0.8),
+    mSandboxHeroLevelMax(10),
+    mSandboxHeroLevelMin(1),
+    mSandboxHeroesPerWave(8),
+    mSandboxWaves(10),
+    mBuildingDamageCurve({1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 4, 6}),
+    mThreatPercentByLevel({100, 125, 150, 175, 200, 225, 250, 300, 400, 500}),
     mNbTurnsKoCreatureAttacked(120),
     mCreatureDefinitionDefaultWorker(nullptr),
     mNbWorkersDigSameFaceTile(3),
@@ -351,6 +377,7 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 
     std::string nextParam;
     uint32_t paramsOk = 0;
+    bool foundSandbox = false;
     while(configFile.good())
     {
         if(!(configFile >> nextParam))
@@ -389,6 +416,44 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
                 return false;
         }
 
+        if(nextParam == "[Sandbox]")
+        {
+            foundSandbox = true;
+            std::set<std::string> foundSandboxKeys;
+            while(configFile >> nextParam && nextParam != "[/Sandbox]")
+            {
+                if(nextParam == "SandboxHeroLevelMax")
+                {
+                    configFile >> mSandboxHeroLevelMax;
+                    foundSandboxKeys.insert("SandboxHeroLevelMax");
+                }
+                if(nextParam == "SandboxHeroLevelMin")
+                {
+                    configFile >> mSandboxHeroLevelMin;
+                    foundSandboxKeys.insert("SandboxHeroLevelMin");
+                }
+                if(nextParam == "SandboxHeroesPerWave")
+                {
+                    configFile >> mSandboxHeroesPerWave;
+                    foundSandboxKeys.insert("SandboxHeroesPerWave");
+                }
+                if(nextParam == "SandboxWaves")
+                {
+                    configFile >> mSandboxWaves;
+                    foundSandboxKeys.insert("SandboxWaves");
+                }
+            }
+            if(foundSandboxKeys.count("SandboxHeroLevelMax") == 0)
+                OD_LOG_ERR("Missing Sandbox key=SandboxHeroLevelMax; using shipped default");
+            if(foundSandboxKeys.count("SandboxHeroLevelMin") == 0)
+                OD_LOG_ERR("Missing Sandbox key=SandboxHeroLevelMin; using shipped default");
+            if(foundSandboxKeys.count("SandboxHeroesPerWave") == 0)
+                OD_LOG_ERR("Missing Sandbox key=SandboxHeroesPerWave; using shipped default");
+            if(foundSandboxKeys.count("SandboxWaves") == 0)
+                OD_LOG_ERR("Missing Sandbox key=SandboxWaves; using shipped default");
+            continue;
+        }
+
         if(nextParam == "[Dirt]")
         {
             // The dirt block is optional: without it every dirt key reads as 0
@@ -407,6 +472,9 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
             continue;
         }
     }
+
+    if(!foundSandbox)
+        OD_LOG_ERR("Missing Sandbox block; using shipped defaults");
 
     if(paramsOk != 0x07)
     {
@@ -736,6 +804,159 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             break;
 
         nextParam = NameAliases::resolve(nextParam);
+
+        if(nextParam == "AngryFleeChancePercent")
+        {
+            configFile >> mAngryFleeChancePercent;
+            foundKeys.insert("AngryFleeChancePercent");
+            continue;
+        }
+        if(nextParam == "FleeTiles")
+        {
+            configFile >> mFleeTiles;
+            foundKeys.insert("FleeTiles");
+            continue;
+        }
+        if(nextParam == "HitChanceMax")
+        {
+            configFile >> mHitChanceMax;
+            foundKeys.insert("HitChanceMax");
+            continue;
+        }
+        if(nextParam == "HitChanceMin")
+        {
+            configFile >> mHitChanceMin;
+            foundKeys.insert("HitChanceMin");
+            continue;
+        }
+        if(nextParam == "HitChanceScale")
+        {
+            configFile >> mHitChanceScale;
+            foundKeys.insert("HitChanceScale");
+            continue;
+        }
+        if(nextParam == "NaturalEnemyEngageChance")
+        {
+            configFile >> mNaturalEnemyEngageChance;
+            foundKeys.insert("NaturalEnemyEngageChance");
+            continue;
+        }
+        if(nextParam == "SkillDeviationPoints")
+        {
+            configFile >> mSkillDeviationPoints;
+            foundKeys.insert("SkillDeviationPoints");
+            continue;
+        }
+        if(nextParam == "SkillResetMinFollowers")
+        {
+            configFile >> mSkillResetMinFollowers;
+            foundKeys.insert("SkillResetMinFollowers");
+            continue;
+        }
+        if(nextParam == "SkillUnfollowedWeight")
+        {
+            configFile >> mSkillUnfollowedWeight;
+            foundKeys.insert("SkillUnfollowedWeight");
+            continue;
+        }
+        if(nextParam == "SkillTier2UnlockRanks")
+        {
+            configFile >> mSkillTier2UnlockRanks;
+            foundKeys.insert("SkillTier2UnlockRanks");
+            continue;
+        }
+        if(nextParam == "SkillTier3UnlockRanks")
+        {
+            configFile >> mSkillTier3UnlockRanks;
+            foundKeys.insert("SkillTier3UnlockRanks");
+            continue;
+        }
+        if(nextParam == "SkillTier4MinSpent")
+        {
+            configFile >> mSkillTier4MinSpent;
+            foundKeys.insert("SkillTier4MinSpent");
+            continue;
+        }
+        if(nextParam == "SlapJobCooldownFactor")
+        {
+            configFile >> mSlapJobCooldownFactor;
+            foundKeys.insert("SlapJobCooldownFactor");
+            continue;
+        }
+        if(nextParam == "SlapMemoryMax")
+        {
+            configFile >> mSlapMemoryMax;
+            foundKeys.insert("SlapMemoryMax");
+            continue;
+        }
+        if(nextParam == "SupportTargetDistanceFactor")
+        {
+            configFile >> mSupportTargetDistanceFactor;
+            foundKeys.insert("SupportTargetDistanceFactor");
+            continue;
+        }
+        if(nextParam == "TargetThreatFactorMax")
+        {
+            configFile >> mTargetThreatFactorMax;
+            foundKeys.insert("TargetThreatFactorMax");
+            continue;
+        }
+        if(nextParam == "TargetThreatFactorMin")
+        {
+            configFile >> mTargetThreatFactorMin;
+            foundKeys.insert("TargetThreatFactorMin");
+            continue;
+        }
+        if(nextParam == "WeakFleeChancePercent")
+        {
+            configFile >> mWeakFleeChancePercent;
+            foundKeys.insert("WeakFleeChancePercent");
+            continue;
+        }
+        if(nextParam == "WorkerCarryFirstMaxShare")
+        {
+            configFile >> mWorkerCarryFirstMaxShare;
+            foundKeys.insert("WorkerCarryFirstMaxShare");
+            continue;
+        }
+        if(nextParam == "WorkerClaimWallFirstMinShare")
+        {
+            configFile >> mWorkerClaimWallFirstMinShare;
+            foundKeys.insert("WorkerClaimWallFirstMinShare");
+            continue;
+        }
+        if(nextParam == "BuildingDamageCurve")
+        {
+            std::string line;
+            std::getline(configFile, line);
+            std::istringstream values(line);
+            std::vector<double> anchors;
+            double value;
+            while(values >> value)
+                anchors.push_back(value);
+            if(anchors.size() >= 2)
+                mBuildingDamageCurve = anchors;
+            else
+                OD_LOG_ERR("Invalid BuildingDamageCurve; using shipped defaults");
+            foundKeys.insert("BuildingDamageCurve");
+            continue;
+        }
+        if(nextParam == "ThreatPercentByLevel")
+        {
+            std::string line;
+            std::getline(configFile, line);
+            std::istringstream values(line);
+            std::vector<double> anchors;
+            double value;
+            while(values >> value)
+                anchors.push_back(value);
+            if(anchors.size() >= 2)
+                mThreatPercentByLevel = anchors;
+            else
+                OD_LOG_ERR("Invalid ThreatPercentByLevel; using shipped defaults");
+            foundKeys.insert("ThreatPercentByLevel");
+            continue;
+        }
 
         if(nextParam == "NetworkPort")
         {
@@ -1555,6 +1776,50 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         return false;
     }
 
+    if(foundKeys.count("AngryFleeChancePercent") == 0)
+        OD_LOG_ERR("Missing GameConfig key=AngryFleeChancePercent; using shipped default");
+    if(foundKeys.count("FleeTiles") == 0)
+        OD_LOG_ERR("Missing GameConfig key=FleeTiles; using shipped default");
+    if(foundKeys.count("HitChanceMax") == 0)
+        OD_LOG_ERR("Missing GameConfig key=HitChanceMax; using shipped default");
+    if(foundKeys.count("HitChanceMin") == 0)
+        OD_LOG_ERR("Missing GameConfig key=HitChanceMin; using shipped default");
+    if(foundKeys.count("HitChanceScale") == 0)
+        OD_LOG_ERR("Missing GameConfig key=HitChanceScale; using shipped default");
+    if(foundKeys.count("NaturalEnemyEngageChance") == 0)
+        OD_LOG_ERR("Missing GameConfig key=NaturalEnemyEngageChance; using shipped default");
+    if(foundKeys.count("SkillDeviationPoints") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SkillDeviationPoints; using shipped default");
+    if(foundKeys.count("SkillResetMinFollowers") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SkillResetMinFollowers; using shipped default");
+    if(foundKeys.count("SkillUnfollowedWeight") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SkillUnfollowedWeight; using shipped default");
+    if(foundKeys.count("SkillTier2UnlockRanks") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SkillTier2UnlockRanks; using shipped default");
+    if(foundKeys.count("SkillTier3UnlockRanks") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SkillTier3UnlockRanks; using shipped default");
+    if(foundKeys.count("SkillTier4MinSpent") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SkillTier4MinSpent; using shipped default");
+    if(foundKeys.count("SlapJobCooldownFactor") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SlapJobCooldownFactor; using shipped default");
+    if(foundKeys.count("SlapMemoryMax") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SlapMemoryMax; using shipped default");
+    if(foundKeys.count("SupportTargetDistanceFactor") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SupportTargetDistanceFactor; using shipped default");
+    if(foundKeys.count("TargetThreatFactorMax") == 0)
+        OD_LOG_ERR("Missing GameConfig key=TargetThreatFactorMax; using shipped default");
+    if(foundKeys.count("TargetThreatFactorMin") == 0)
+        OD_LOG_ERR("Missing GameConfig key=TargetThreatFactorMin; using shipped default");
+    if(foundKeys.count("WeakFleeChancePercent") == 0)
+        OD_LOG_ERR("Missing GameConfig key=WeakFleeChancePercent; using shipped default");
+    if(foundKeys.count("WorkerCarryFirstMaxShare") == 0)
+        OD_LOG_ERR("Missing GameConfig key=WorkerCarryFirstMaxShare; using shipped default");
+    if(foundKeys.count("WorkerClaimWallFirstMinShare") == 0)
+        OD_LOG_ERR("Missing GameConfig key=WorkerClaimWallFirstMinShare; using shipped default");
+    if(foundKeys.count("BuildingDamageCurve") == 0)
+        OD_LOG_ERR("Missing GameConfig key=BuildingDamageCurve; using shipped default");
+    if(foundKeys.count("ThreatPercentByLevel") == 0)
+        OD_LOG_ERR("Missing GameConfig key=ThreatPercentByLevel; using shipped default");
     return true;
 }
 
@@ -1608,6 +1873,7 @@ bool ConfigManager::loadCreatureDefinitions(const std::string& fileName)
     return true;
 }
 
+//! \brief Loads equipment definitions and their numeric balance settings.
 bool ConfigManager::loadEquipements(const std::string& fileName)
 {
     OD_LOG_INF("Load weapon definition file: " + fileName);
@@ -1637,6 +1903,36 @@ bool ConfigManager::loadEquipements(const std::string& fileName)
 
         if (nextParam == "[/Equipment]")
             continue;
+
+        if(nextParam == "BleedTurns" ||
+            nextParam == "BulwarkRadius" ||
+            nextParam == "ChillFactor" ||
+            nextParam == "DexterityPotionCritLarge" ||
+            nextParam == "DexterityPotionCritMedium" ||
+            nextParam == "DexterityPotionCritSmall" ||
+            nextParam == "EquipUpgradeMargin" ||
+            nextParam == "HeroDropLargeLevel" ||
+            nextParam == "HeroDropMediumLevel" ||
+            nextParam == "ItemAuraRadius" ||
+            nextParam == "LastStandHealthShare" ||
+            nextParam == "LifespringHpShare" ||
+            nextParam == "LifespringLowHpShare" ||
+            nextParam == "LifespringManaShare" ||
+            nextParam == "MaxItemEffects" ||
+            nextParam == "MendingSeconds" ||
+            nextParam == "PotionManaDrinkShare" ||
+            nextParam == "PotionRegenSeconds" ||
+            nextParam == "PotionSlotLevel2" ||
+            nextParam == "PotionSlotLevel3" ||
+            nextParam == "SecondWindHealthShare" ||
+            nextParam == "WeakenFactor")
+        {
+            double value;
+            if(!(defFile >> value))
+                return false;
+            mEquipmentConfig[nextParam] = value;
+            continue;
+        }
 
         if (nextParam != "[Equipment]")
         {
@@ -2155,6 +2451,7 @@ bool ConfigManager::loadCreatureSkills(const std::string& fileName)
     return true;
 }
 
+//! \brief Loads research costs, tab shares and research effects.
 bool ConfigManager::loadSkills(const std::string& fileName)
 {
     OD_LOG_INF("Load Skills file: " + fileName);
@@ -2182,6 +2479,12 @@ bool ConfigManager::loadSkills(const std::string& fileName)
         if (nextParam == "[/Skills]")
             break;
 
+        if(nextParam == "ResearchCostFactorLevel2" || nextParam == "ResearchCostFactorLevel3" ||
+            nextParam == "ResearchLevel2TabShare" || nextParam == "ResearchLevel3TabShare")
+        {
+            defFile >> mResearchConfig[nextParam];
+            continue;
+        }
         defFile >> mSkillPoints[NameAliases::resolve(nextParam)];
     }
 
@@ -2760,6 +3063,26 @@ bool ConfigManager::hasRoomConfig(const std::string& param) const
     return mRoomsConfig.find(param) != mRoomsConfig.end();
 }
 
+//! \brief Reads an equipment setting and reports a missing key before using its shipped default.
+double ConfigManager::getEquipmentConfigDoubleOrDefault(const std::string& param, double defaultValue) const
+{
+    std::map<std::string, double>::const_iterator it = mEquipmentConfig.find(param);
+    if(it != mEquipmentConfig.end())
+        return it->second;
+    OD_LOG_ERR("Missing equipment config key=" + param);
+    return defaultValue;
+}
+
+//! \brief Reads a research setting and reports a missing key before using its shipped default.
+double ConfigManager::getResearchConfigDoubleOrDefault(const std::string& param, double defaultValue) const
+{
+    std::map<std::string, double>::const_iterator it = mResearchConfig.find(param);
+    if(it != mResearchConfig.end())
+        return it->second;
+    OD_LOG_ERR("Missing research config key=" + param);
+    return defaultValue;
+}
+
 const std::string& ConfigManager::getRoomConfigString(const std::string& param) const
 {
     std::map<const std::string, std::string>::const_iterator it = mRoomsConfig.find(param);
@@ -2935,6 +3258,16 @@ double ConfigManager::getSpellConfigDouble(const std::string& param) const
     }
 
     return Helper::toDouble(it->second);
+}
+
+//! \brief Reads a spell setting and reports a missing key before using its shipped default.
+double ConfigManager::getSpellConfigDoubleOrDefault(const std::string& param, double defaultValue) const
+{
+    std::map<const std::string, std::string>::const_iterator it = mSpellConfig.find(param);
+    if(it != mSpellConfig.end())
+        return Helper::toDouble(it->second);
+    OD_LOG_ERR("Missing spell config key=" + param);
+    return defaultValue;
 }
 
 int32_t ConfigManager::getSkillPoints(const std::string& res) const

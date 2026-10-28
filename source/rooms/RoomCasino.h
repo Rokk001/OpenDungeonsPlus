@@ -76,6 +76,7 @@ public:
     bool addCreatureUsingRoom(Creature* creature) override;
     void removeCreatureUsingRoom(Creature* creature) override;
     void absorbRoom(Room* room) override;
+    //! \brief Runs a creature's casino activity.
     bool useRoom(Creature& creature, bool forced) override;
     void splitRoom(Room& newRoom, const std::vector<Tile*>& tiles) override;
     void exportToStream(std::ostream& os) const override;

@@ -24,10 +24,6 @@
 namespace
 {
 static const double PERCENT = 100.0;
-static const double MANA_DRINK_SHARE = 0.30;
-static const double LIFESPRING_LOW_HP = 0.25;
-static const double LIFESPRING_HP = 0.50;
-static const double LIFESPRING_MANA = 0.25;
 static const std::string POTION_SOURCE = "potion:";
 static const std::string DRINK_SOUND = "Creatures/Default/Drink";
 
@@ -191,11 +187,11 @@ void Creature::decidePotion()
         const double hpShare = getMaxHp() > 0.0 ? getHP() / getMaxHp() : 1.0;
         const double manaShare = getMaxMana() > 0.0 ? getCurrentMana() / getMaxMana() : 1.0;
         bool useful = (kind == "HealPercent" && fighting && hpShare < healBelow) ||
-            (kind == "FullRestore" && fighting && (hpShare < LIFESPRING_LOW_HP ||
-                (hpShare < LIFESPRING_HP && manaShare < LIFESPRING_MANA))) ||
+            (kind == "FullRestore" && fighting && (hpShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LifespringLowHpShare", 0.25) ||
+                (hpShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LifespringHpShare", 0.5) && manaShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LifespringManaShare", 0.25)))) ||
             (kind == "EndFreeze" && isFrozen()) ||
             (isPotionBuff(kind) && combatStart && !hasPotionEffect(kind));
-        if(kind == "ManaPercent" && fighting && manaShare < MANA_DRINK_SHARE)
+        if(kind == "ManaPercent" && fighting && manaShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionManaDrinkShare", 0.3))
         {
             const double after = std::min(getMaxMana(), getCurrentMana()+getMaxMana()*potion->getValue()/PERCENT);
             for(const CreatureSkillData& data : mSkillData)

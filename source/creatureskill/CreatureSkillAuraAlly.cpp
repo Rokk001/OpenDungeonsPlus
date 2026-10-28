@@ -17,6 +17,8 @@
 
 #include "creatureskill/CreatureSkillAuraAlly.h"
 
+#include "utils/LogManager.h"
+
 #include "creatureaction/CreatureAction.h"
 #include "creatureeffect/CreatureEffectStrengthChange.h"
 #include "creatureskill/CreatureSkillManager.h"
@@ -72,7 +74,7 @@ bool CreatureSkillAuraAlly::tryUseSupport(GameMap& gameMap, Creature* creature) 
         return false;
 
     const std::vector<Creature*> allies = creature->getOwnCreaturesWithin(mRadius);
-    if(allies.size() < 2)
+    if(allies.size() < mMinAllies)
         return false;
 
     for(Creature* ally : allies)
@@ -104,7 +106,7 @@ void CreatureSkillAuraAlly::getFormatString(std::string& format) const
     if(!format.empty())
         format += "\t";
 
-    format += "LevelMin\tRadius\tEffectDuration\tEffectValue";
+    format += "LevelMin\tRadius\tEffectDuration\tEffectValue\tMinAllies";
 }
 
 //! \brief Writes the columns of the skill line.
@@ -115,6 +117,7 @@ void CreatureSkillAuraAlly::exportToStream(std::ostream& os) const
     os << "\t" << mRadius;
     os << "\t" << mEffectDuration;
     os << "\t" << mEffectValue;
+    os << "\t" << mMinAllies;
 }
 
 //! \brief Reads the columns of the skill line; returns false when one is missing or malformed.
@@ -131,6 +134,12 @@ bool CreatureSkillAuraAlly::importFromStream(std::istream& is)
         return false;
     if(!(is >> mEffectValue))
         return false;
+    if(!(is >> mMinAllies))
+    {
+        mMinAllies = 2;
+        is.clear();
+        OD_LOG_ERR("Missing aura MinAllies; using shipped default 2");
+    }
 
     return true;
 }
@@ -150,6 +159,8 @@ bool CreatureSkillAuraAlly::isEqual(const CreatureSkill& creatureSkill) const
     if(mRadius != skill->mRadius)
         return false;
     if(mEffectDuration != skill->mEffectDuration)
+        return false;
+    if(mMinAllies != skill->mMinAllies)
         return false;
     if(mEffectValue != skill->mEffectValue)
         return false;

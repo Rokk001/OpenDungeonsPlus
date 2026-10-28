@@ -17,6 +17,8 @@
 
 #include "creaturebehaviour/CreatureBehaviourFleeWhenWeak.h"
 
+#include "utils/ConfigManager.h"
+
 #include "creatureaction/CreatureAction.h"
 #include "creaturebehaviour/CreatureBehaviourManager.h"
 #include "entities/Creature.h"
@@ -53,6 +55,7 @@ CreatureBehaviour* CreatureBehaviourFleeWhenWeak::clone() const
     return new CreatureBehaviourFleeWhenWeak(*this);
 }
 
+//! \brief Chooses flight for a weak creature using its configured chance.
 bool CreatureBehaviourFleeWhenWeak::processBehaviour(Creature& creature) const
 {
     if(creature.getHP() > creature.getMaxHp() * mWeakCoef)
@@ -87,7 +90,7 @@ bool CreatureBehaviourFleeWhenWeak::processBehaviour(Creature& creature) const
     }
 
     // We randomly choose to flee
-    if(Random::Uint(0, 100) < 20)
+    if(Random::Uint(0, 100) < ConfigManager::getSingleton().getWeakFleeChancePercent())
     {
         if(creature.isActionInList(CreatureActionType::flee))
             return true;
