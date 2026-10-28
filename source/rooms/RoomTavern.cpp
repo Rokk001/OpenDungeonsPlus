@@ -82,9 +82,8 @@ const std::string SOUND_SLAP = "Creatures/Default/Slap";
 const std::string SOUND_CHEER = "Creatures/Default/Cheer";
 //! \brief Turns the loser of a slap duel needs to get up from the floor (plan: 2 turns).
 const int32_t GET_UP_TURNS = 2;
-//! \brief Turns a guest stays in the state done after its last drink, so that a guest finishing its drink in the
-//! same or the next turn can still pick it as the partner of a game.
-const int32_t DONE_WAIT_TURNS = 2;
+//! \brief Turns a guest stays done after its last drink while a game partner may be found.
+const int32_t DONE_WAIT_TURNS = 1;
 //! \brief A slap duel without decision ends after this many times GameTurns turns.
 const int32_t DUEL_MAX_TURNS_FACTOR = 4;
 //! \brief Scale of the percent values of the [Tavern] block.
@@ -721,6 +720,7 @@ bool RoomTavern::payForBeer(Creature& creature, bool& noCoin)
     return false;
 }
 
+//! \brief Finishes a drink and chooses the guest's next tavern activity.
 void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
 {
     Creature* creature = spot.mCreature;
@@ -756,12 +756,11 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
         }
     }
 
-    // The visit is over. With GameChancePercent the guest wants a game and waits up to DrinkTurns turns for a neighbour
+    // The guest can find a game partner during this turn before the visit ends
     setSpotDone(spot, DONE_WAIT_TURNS);
     if(Random::Double(0.0, PERCENT_SCALE) < getTavernValue("GameChancePercent"))
     {
         spot.mWantsGame = true;
-        spot.mTurnsLeft = std::max(DONE_WAIT_TURNS, static_cast<int32_t>(getTavernValue("DrinkTurns")));
         tryStartGame(tile);
     }
 }
