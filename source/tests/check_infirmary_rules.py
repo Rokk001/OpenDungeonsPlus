@@ -103,6 +103,8 @@ struct ConfigManager {
  uint32_t getRoomConfigUInt32(const std::string& name){return uint32_t(getRoomConfigDouble(name));}
  //! \brief Returns the full death countdown used for manually admitted patients.
  int getNbTurnsKoCreatureAttacked(){return 120;}
+ //! \brief Returns the chance in percent that an angry creature flees a fight (global.cfg AngryFleeChancePercent).
+ double getAngryFleeChancePercent(){return 20;}
 };
 //! \brief Captures room shortage messages while preserving human-player routing.
 struct Player{bool human=true;int notices=0;
