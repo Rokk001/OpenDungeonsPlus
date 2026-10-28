@@ -47,7 +47,7 @@ def main():
         assert match and match.group(1) == value, 'LichBeetlesSwarm ' + key + ' must be ' + value
 
     particles = read('particles/RoomAmbienceSpellsExtra.particle')
-    assert re.search(r'^\s*particle_system\s+LichBeetles\s*(\{|$)', particles, re.M), \
+    assert re.search(r'^\s*(?:particle_system\s+)?LichBeetles\s*(\{|$)', particles, re.M), \
         'RoomAmbienceSpellsExtra.particle has no particle system LichBeetles'
 
     texture = ROOT / 'materials/textures/LichBeetle.png'
@@ -60,6 +60,9 @@ def main():
                  'particles/RoomAmbienceSpellsExtra.particle'):
         rows = [row for row in credits.splitlines() if name in row and ('LichBeetle' in row or name.endswith('.png'))]
         assert rows, 'CREDITS has no row for ' + name + ' (LichBeetle)'
+    for entry in ('materials/textures/LichBeetle.png', 'materials/scripts/RoomAmbience.material (LichBeetle',
+                  'particles/RoomAmbienceSpellsExtra.particle (LichBeetles)'):
+        assert entry in credits, 'CREDITS has no entry ' + entry
 
     pile = (ROOT / 'models/Pile_Skeleton.mesh').read_bytes()
     assert b'Pile_Skeleton' in pile, 'models/Pile_Skeleton.mesh no longer names its material Pile_Skeleton'
