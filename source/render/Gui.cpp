@@ -1891,7 +1891,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     // social activity follow them in the same scrollable document rather than displacing the essentials.
     CEGUI::Window* equipment = page->getChild("EquipmentRow");
     const float equipmentWidth = std::max(1.0f, page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN);
-    const float headerHeight = PROFILE_FLOW_TOP - 34.0f - 2.0f * PROFILE_ROW_GAP;
+    const float headerHeight = page->getPixelSize().d_height / scale * 0.2f;
     const float edge = std::max(1.0f, std::min(equipmentWidth / 4.0f, headerHeight / 5.0f));
     // Fit square slots beside the portrait, arranging worn items above the potion and inventory rows.
     const float columns[] = {0.5f, 2.5f, 1.5f, 1.5f, 1.5f, 2.5f,

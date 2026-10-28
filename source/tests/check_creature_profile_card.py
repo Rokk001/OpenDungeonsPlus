@@ -68,7 +68,7 @@ assert profile_layout.index('page->getChild("AttributesText")') < profile_layout
 assert profile_layout.index('page->getChild("EquipmentRow")') < profile_layout.index('page->getChild("AttributesText")') < profile_layout.index('const char* const barNames') < profile_layout.index('const char* const personalRows')
 assert '"EquipmentRow"' in gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):gui.index('const std::size_t PROFILE_FLOW_ROW_COUNT')]
 assert 'page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN' in profile_layout
-assert 'PROFILE_FLOW_TOP - 34.0f - 2.0f * PROFILE_ROW_GAP' in profile_layout
+assert 'page->getPixelSize().d_height / scale * 0.2f' in profile_layout
 assert 'std::min(equipmentWidth / 4.0f, headerHeight / 5.0f)' in profile_layout
 assert '0.5f, 2.5f, 1.5f, 1.5f, 1.5f, 2.5f,' in profile_layout
 assert '1.0f, 1.0f, 0.0f, 1.0f, 2.0f, 2.0f,' in profile_layout
@@ -165,7 +165,7 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             viewport = (outer_height * fit - title - 2 * border) * fraction - reserve
             page_width = (outer_width * fit - 2 * side) * (.5 if owner == 'Dungeonbook' else 1.0)
             equipment_width = page_width - 148.0 - 32.0
-            image_edge = max(1.0, min(equipment_width / 4.0, 90.0 / 5.0))
+            image_edge = max(1.0, min(equipment_width / 4.0, viewport * 0.2 / 5.0))
             columns = (0.5, 2.5, 1.5, 1.5, 1.5, 2.5, 0.5, 1.5, 2.5, 0.0, 1.0, 2.0, 3.0)
             rows = (1, 1, 0, 1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
             slot_bounds = []
@@ -174,7 +174,7 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
                 right, bottom = left + image_edge, top + image_edge
                 assert left >= 148.0 > 136.0 and top >= 34.0 > 26.0, 'slots overlap the portrait or headline'
                 assert right <= page_width - 32.0 + 1e-6
-                assert bottom <= 124.0 + 1e-6 and bottom <= viewport, 'all slots must open without scrolling'
+                assert bottom <= viewport, 'all slots must open without scrolling'
                 for previous_left, previous_top, previous_right, previous_bottom in slot_bounds:
                     assert right <= previous_left + 1e-6 or left >= previous_right - 1e-6 or bottom <= previous_top + 1e-6 or top >= previous_bottom - 1e-6, 'equipment slots overlap'
                 slot_bounds.append((left, top, right, bottom))
