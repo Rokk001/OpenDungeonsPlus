@@ -96,6 +96,8 @@ public:
     static ConfigManager& getSingleton(){static ConfigManager c;return c;}
     //! \brief Supplies the existing merchant margin bound used by optional seat parsing.
     int getRoomConfigInt32(const std::string&) const {return 50;}
+    //! \brief Supplies the research tuning defaults, which equal the shipped research config values.
+    double getResearchConfigDoubleOrDefault(const std::string&,double defaultValue) const {return defaultValue;}
     int getSkillPoints(const std::string& key) const {return points.at(key);}
     bool isSkillFreeLevelOne(const std::string& key) const {return freeLevelOne.count(key)>0;}
     const ResearchEffectLine* getResearchEffect(const std::string& skill,const std::string& effect) const {
