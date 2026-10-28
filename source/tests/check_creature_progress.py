@@ -31,6 +31,12 @@ for sig in ('void Creature::exportToPacket(', 'void Creature::exportToPacketForU
 for sig in ('void Creature::importFromPacket(', 'void Creature::updateFromPacket('):
     assert 'importProgressFromPacket(is);' in function(creature, sig)
 assert 'mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);' in source
+overlay_source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text().replace('\r\n', '\n')
+# Mana ring layers: backing disc and frame from the health picture set, arc from the plain progress atlas, no spokes
+assert 'MANA_RING_BACKING_MATERIAL = "CreatureOverlay7"' in overlay_source
+assert 'MANA_RING_BASE_MATERIAL = "CreatureExperience"' in overlay_source
+assert 'rrBuildTintedMaterial(\n        MANA_RING_BACKING_MATERIAL, mSeat->getColorValue())' in overlay_source
+assert '"CreatureOverlay0"' not in overlay_source.split('CreatureOverlayStatus::CreatureOverlayStatus(')[1]
 assert 'mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)' in source
 server = (root / 'source/network/ODServer.cpp').read_text()
 assert server.count('packetSend << clientSocket->supportsCreatureProgress();') == 1

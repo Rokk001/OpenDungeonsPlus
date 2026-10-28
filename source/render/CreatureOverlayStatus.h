@@ -75,6 +75,8 @@ private:
     Ogre::Real mTimeDisplayStatus;
     uint32_t mStatus;
     std::vector<uint32_t> mOverlayIds;
+    //! Overlay of the mana ring backing disc and frame
+    uint32_t mManaBackingId = 0;
     //! Overlay of the emote. It is only created when the first emote is shown
     bool mEmoteCreated;
     uint32_t mEmoteId;
