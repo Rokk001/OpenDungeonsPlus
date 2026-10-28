@@ -93,7 +93,7 @@ struct RoomTavernSpot
     uint32_t mDrinks;
     //! True when the guest goes to its bed after the visit (the loser of a slap duel).
     bool mSleepAfter;
-    //! True while the guest, done with its drinks, waits for a neighbour to play a game with (not saved).
+    //! True while the guest, done with its drinks, waits for a neighbour to play a game with.
     bool mWantsGame;
 };
 
@@ -142,7 +142,8 @@ struct RoomTavernPendingSpot
         mState(TavernGuestState::arriving),
         mTurnsLeft(0),
         mDrinks(0),
-        mSleepAfter(false)
+        mSleepAfter(false),
+        mWantsGame(false)
     {}
 
     //! The tile of the place.
@@ -155,6 +156,8 @@ struct RoomTavernPendingSpot
     uint32_t mDrinks;
     //! True when the guest was on its way to bed after the visit.
     bool mSleepAfter;
+    //! True when the guest was waiting for a game.
+    bool mWantsGame;
 };
 
 //! \brief A running game that was read from a saved room and waits for its two guests (see RoomTavern::doUpkeep).
