@@ -358,9 +358,12 @@ def check_menu_lighting(root):
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
     assert len(lights) == 48, "the existing menu lights must remain, without substitute lights"
+    # The five fire lights add a constant attenuation of 1 so their near field does not clip per colour channel.
+    near_field_fires = {"LeftFire", "RightFire", "GateFire", "LeftGateFire", "RightGateFire"}
     for name, values in lights.items():
         assert len(values) == 13 and all(math.isfinite(value) for value in values), name + " has invalid light values"
-        assert values[9] > 0 and values[10] == values[11] == 0 and values[12] > 0, name + " must follow the authored inverse-square falloff"
+        constant = 1 if name in near_field_fires else 0
+        assert values[9] > 0 and values[10] == constant and values[11] == 0 and values[12] > 0, name + " must follow the authored inverse-square falloff"
     # Original warm bowl, gate and green spire samples cover both colour families and distinct ranges.
     authored = {
         "LeftFire": ((1.7, 0.48, 0.065), (0.51, 0.144, 0.0195), 19, 0.045, 0.028, 26),
