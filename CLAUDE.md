@@ -101,3 +101,17 @@ Diese Pfade direkt verwenden, nie danach suchen.
      coordinator applies the same rule when planning.
 - Check scripts in source/tests that compile small C++ probes with cl are not a game build. Feature windows run them before marking a branch ready for every source file the branch changes; skipping them is not allowed.
 - Every integrator release build that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on Mario's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every integrator build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
+
+## Working rules
+
+- Pull requests are opened only on Mario's explicit order. A pull request contains nothing personal: no personal paths, no work rules, no agent files (`.claude/`, `AGENTS.md`), no internal planning documents. `CLAUDE.md` in a pull request branch equals the base version plus only the section "Protected content"; check the diff before opening.
+- Never use `git commit --amend`, `git reset`, `git update-ref` or any other ref rewrite, also not for unpushed commits. A wrong commit message stays; corrections are new commits. If a guard or hook blocks a git command, stop and report instead of working around it. No force push.
+- Never remove an existing comment; update it when its code changes. Every new or changed Boost test case gets a short comment saying what it checks.
+- The result of a build is decided only by the real exit code of `cmake --build` (written to a file right after the call), never by reading the log.
+- Check scripts use fixed expected values that match the state of the branch, counted once and named in the commit; they never derive the expected value at run time from the code under test. A check that is red on the branch and green on `origin/integration/all` is a regression of the branch and is fixed on the branch, never in the check.
+- Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless Mario orders it separately.
+- Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are Mario's decisions. One integration run has exactly one release build.
+- Before removing a worktree: back up uncommitted and untracked files, verify the backup byte for byte, then run `git worktree remove` without `--force`. If the backup fails or HEAD is not contained in `origin/integration/all`, remove nothing. Branches stay.
+- Sounds are real recordings under CC0 or CC-BY, with author, licence and source URL in the CREDITS entry of the same commit; never synthesized or generated files.
+- Internal planning documents, design reference images and notes are never stored in this repository and never referenced from tracked files.
+- No absolute personal paths in tracked files: use the file name, a neutral word or an environment variable.
