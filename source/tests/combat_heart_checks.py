@@ -24,7 +24,10 @@ def check_heart_configuration(repo):
     assert 'attacker == nullptr || !canAttackHeart(' in source
     assert 'HeartHealthShare' in source and 'HeartHealth10000' in source and 'getHeartMaxHP()' in source
     building = (repo / 'source/entities/Building.cpp').read_text()
-    assert re.search(r'Building::DEFAULT_TILE_HP\s*=\s*10\.0', building)
+    # The tile hit points of portals, bridges and traps are config keys of 10, no literal is left in Building.cpp
+    assert 'DEFAULT_TILE_HP' not in building
+    rooms = (repo / 'config/rooms.cfg').read_text()
+    assert re.search(r'^\s*PortalHP\s+10(?:\.0)?\s*$', rooms, re.M)
 
 
 def configure_heart_probe(probe):

@@ -160,7 +160,12 @@ def check_buildings(roster):
     rooms = read("config/rooms.cfg")
     assert re.search(r"^\s*DungeonHeartHP\s+15100\s*$", rooms, re.M)
     assert 'ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in read("source/rooms/RoomDungeonTemple.cpp")
-    assert re.search(r"DEFAULT_TILE_HP\s*=\s*10(?:\.0)?\s*;", read("source/entities/Building.cpp"))
+    # The hit points per tile of portals, bridges and traps are config keys of 10 (no literal in Building.cpp)
+    assert "DEFAULT_TILE_HP" not in read("source/entities/Building.cpp")
+    traps = read("config/traps.cfg")
+    for text, key in ((rooms, "PortalHP"), (rooms, "PortalWaveHP"), (rooms, "StoneBridgeHP"), (rooms, "WoodenBridgeHP"),
+                      (traps, "SpikeHP"), (traps, "CannonHP"), (traps, "BoulderHP")):
+        assert re.search(r"^\s*" + key + r"\s+10(?:\.0)?\s*$", text, re.M), key
 
 
 # Tie numerical checks to actual hit, avoidance, damage, item and serialization paths.
@@ -174,11 +179,12 @@ def check_sources():
     assert hit.index("if(possessed)") < hit.index("Random::Double(0.0, 100.0)")
     assert "DefenceChance::hitChance(attackRating, getDefenseRating()," in hit
     hit_formula = function(read("source/entities/DefenceChance.h"), "inline double hitChance(")
-    assert "HIT_SCALE * attackRating / (attackRating + defenseRating)" in hit_formula
+    assert "getHitChanceScale() * attackRating / (attackRating + defenseRating)" in hit_formula
     assert "attackerLevel / static_cast<double>(attackerLevel + defenderLevel)" in hit_formula
-    assert "std::max(MIN_HIT_PERCENT, std::min(MAX_HIT_PERCENT, chance))" in hit_formula
-    for key, value in (("HIT_SCALE", "200.0"), ("MIN_HIT_PERCENT", "5.0"), ("MAX_HIT_PERCENT", "95.0")):
-        assert key + " = " + value in read("source/entities/DefenceChance.h")
+    assert "std::max(ConfigManager::getSingleton().getHitChanceMin(), std::min(ConfigManager::getSingleton().getHitChanceMax(), chance))" in hit_formula
+    # The scale and the bounds of the hit chance are global.cfg keys
+    for key, value in (("HitChanceScale", "200"), ("HitChanceMin", "5"), ("HitChanceMax", "95")):
+        assert re.search(r"^\s*" + key + r"\s+" + value + r"\s*$", read("config/global.cfg"), re.M), key
     defence = function(creature, "DefenceChance::Outcome Creature::rollMeleeDefence(")
     for needle in ("getMeleeDodgeParry()", "getIsOnServerMap()", "isKo()", "mIsInHand", "mIsBeingDragged", "isPossessed()",
                    "CreatureDefinition::Avoidance::dodge", "CreatureDefinition::Avoidance::parry", "CreatureDefinition::Avoidance::block && hasShield",
