@@ -366,6 +366,11 @@ public:
     void rrToggleHandSelectorVisibility() {mHandVisible = !mHandVisible;}
     //! \brief Leaves hand mesh animation outside the isolated camera/navigation checks.
     void rrSetHandPose(bool, bool) {}
+    Ogre::ColourValue mWorldAmbient = Ogre::ColourValue::Black;
+    //! \brief Saves the world ambient and applies the menu ambient, as the production renderer does.
+    void beginMenuAmbient(const Ogre::ColourValue& menuAmbient) {mWorldAmbient = mSceneManager->getAmbientLight(); mSceneManager->setAmbientLight(menuAmbient);}
+    //! \brief Restores the saved world ambient, as the production renderer does.
+    void endMenuAmbient() {mSceneManager->setAmbientLight(mWorldAmbient);}
 };
 
 //! \brief The existing asset loader owns render commands; these adapters delimit their parsed groups.

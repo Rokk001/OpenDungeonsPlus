@@ -259,6 +259,8 @@ def check_sky_programs(root, folders):
     shader = (root / "shaders/MenuSky.frag").read_text(encoding="utf-8")
     assert "cloudDensity(point)" in shader and "skyPosition.z - 12.0" in shader, "atmosphere needs cloud structure and horizon height fade"
     assert "1.0 / 2.2" in shader, "linear atmosphere colours need their display transfer"
+    # The overview camera sees the dome only between heights 65 and 95, so the sky gradient must lie in that band.
+    assert "smoothstep(82.0, 93.0, skyPosition.z)" in shader and "smoothstep(64.0, 80.0, skyPosition.z)" in shader, "sky gradient must cover the visible dome band"
 
 
 # Read named script blocks while retaining nested emitter, affector and material settings.
@@ -363,7 +365,7 @@ def check_menu_lighting(root):
     authored = {
         "LeftFire": ((1.7, 0.48, 0.065), (0.51, 0.144, 0.0195), 19, 0.045, 0.028, 26),
         "GateFire": ((1, 0.19, 0.018), (0.30, 0.057, 0.0054), 14, 0.065, 0.055, 18),
-        "SpireLight": ((0.025, 0.95, 0.07), (0.0075, 0.285, 0.021), 35, 0.035, 0.012, 28),
+        "SpireLight": ((0.025, 0.95, 0.07), (0.0075, 0.285, 0.021), 35, 0.035, 0.012, 20),
     }
     for name, (diffuse, specular, light_range, linear, quadratic, cutoff) in authored.items():
         actual = lights[name]
@@ -382,9 +384,13 @@ def check_menu_lighting(root):
     assert '"[MenuLighting]"' in scene and '"[/MenuLighting]"' in scene and "if(lightingSection)" in parser, "menu ambient section must be parsed outside native groups"
     assert "command >> kind >> ambient.r >> ambient.g >> ambient.b" in parser and "mMenuAmbient = ambient;" in parser, "configured ambient must reach the menu scene"
     reset = scene.split("void RenderSceneMenu::resetMenu", 1)[1].split("void RenderSceneMenu::freeMenu", 1)[0]
-    assert "mSavedAmbient = renderManager.getSceneManager()->getAmbientLight();" in reset and "setAmbientLight(mMenuAmbient)" in reset, "menu must save world ambient and apply its configured fill"
+    assert "renderManager.beginMenuAmbient(mMenuAmbient);" in reset, "menu must save world ambient and apply its configured fill"
     release = scene.split("void RenderSceneMenu::freeMenu", 1)[1].split("void RenderSceneMenu::updateMenu", 1)[0]
-    assert "setAmbientLight(mSavedAmbient)" in release, "leaving the menu must restore game ambient"
+    assert "renderManager.endMenuAmbient();" in release, "leaving the menu must restore game ambient"
+    manager = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
+    factor = manager.split("void RenderManager::setWorldAmbientLightingFactor", 1)[1].split("void RenderManager::beginMenuAmbient", 1)[0]
+    # Opening the settings in the main menu must not replace the menu ambient with the game ambient.
+    assert "if(mMenuAmbientActive)" in factor and "mWorldAmbient = factoredLighting;" in factor, "settings must not overwrite the menu ambient"
     print("OK: 48 authored menu lights retain calibrated falloff/exposure; menu ambient loads, applies and restores")
 
 
