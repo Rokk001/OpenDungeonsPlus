@@ -122,6 +122,16 @@ assert 'creature.popAction();' in extract(room_cpp, 'bool RoomTavern::useRoom(')
 assert re.search(r'const int32_t DONE_WAIT_TURNS = 1;', room_cpp), 'completed visits wait at most one turn'
 finish_drink = extract(room_cpp, 'void RoomTavern::finishDrink(')
 assert 'setSpotDone(spot, DONE_WAIT_TURNS);' in finish_drink and 'spot.mTurnsLeft =' not in finish_drink, 'a game request must not extend the completed visit'
+# The room consumes the one-turn wait and the done action then ends; conscious game players have no extra wait.
+upkeep = extract(room_cpp, 'void RoomTavern::doUpkeep(')
+assert re.search(r'if\(\(it->second.mState == TavernGuestState::done\) && \(it->second.mTurnsLeft > 0\)\)\s*--it->second.mTurnsLeft;', upkeep), 'each upkeep must consume the completed visit wait'
+use_room = extract(room_cpp, 'bool RoomTavern::useRoom(')
+done_action = use_room[use_room.index('case TavernGuestState::done:'):use_room.index('default:')]
+assert re.search(r'if\(spot.mTurnsLeft > 0\)\s*return false;', done_action), 'only a positive completed visit wait may delay exit'
+assert re.search(r'creature.popAction\(\);\s*if\(goToBed\)\s*creature.pushAction\([^;]+;\s*return true;', done_action), 'the completed visit must pop its action and resume the action queue'
+conclude = extract(room_cpp, 'void RoomTavern::concludeGame(')
+assert 'setSpotDone(winnerSpot->second, 0);' in conclude and 'setSpotDone(loserSpot->second, 0);' in conclude, 'conscious game players must finish without a wait'
+assert 'knockOut(loserSpot->second);' in conclude, 'the slap duel loser keeps the decided knock-out exception'
 assert 'startTavernCooldown()' in extract(room_cpp, 'void RoomTavern::removeCreatureUsingRoom(')
 open_spot = extract(room_cpp, 'bool RoomTavern::hasOpenCreatureSpot(')
 assert 'getTavernCooldownTurns() > 0' in open_spot and 'getThirst() < getTavernValue("ThirstSeek")' in open_spot, 'leisure visit blocked during the cooldown, thirst not'
