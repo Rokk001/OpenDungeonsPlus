@@ -49,24 +49,30 @@ class ReportCountTest(unittest.TestCase):
     def test_reports_note_with_expected_arguments(self):
         """The stub receives note --project ODP --text with the gap count."""
         log = write_stub(self.folder, 0)
-        self.assertTrue(check_pr_coverage.report_count(7))
+        self.assertTrue(check_pr_coverage.report_count(7, True))
         with open(log) as handle:
             recorded = handle.read()
         self.assertIn("note", recorded)
         self.assertIn("--project ODP", recorded)
         self.assertIn("PR coverage gaps (last run): 7", recorded)
 
+    def test_red_run_reports_nothing(self):
+        """In a red run orch is not called at all, so the last note stays the count of the last green run."""
+        log = write_stub(self.folder, 0)
+        self.assertFalse(check_pr_coverage.report_count(7, False))
+        self.assertFalse(os.path.exists(log))
+
     def test_failing_orch_only_warns(self):
         """A failing orch call returns False and does not raise."""
         write_stub(self.folder, 3)
-        self.assertFalse(check_pr_coverage.report_count(1))
+        self.assertFalse(check_pr_coverage.report_count(1, True))
 
     def test_missing_orch_only_warns(self):
         """When orch cannot be found, report_count returns False and does not raise."""
         original = check_pr_coverage.find_orch
         check_pr_coverage.find_orch = lambda: None
         try:
-            self.assertFalse(check_pr_coverage.report_count(1))
+            self.assertFalse(check_pr_coverage.report_count(1, True))
         finally:
             check_pr_coverage.find_orch = original
 

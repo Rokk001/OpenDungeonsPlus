@@ -14,13 +14,15 @@ listed in source/tests/pr-coverage-not-upstream.txt are skipped; all other lines
 
 Usage: python -I source/tests/check_pr_coverage.py [--target <ref>] [--base <ref>]
            [--repo <owner/name>] [--author <login>] [--max-lines <n>] [--strict]
-           [--note]
+           [--note [--run-red]]
 Output: one line "file: <path>" per uncovered file and "lines: <path>: <count> uncovered"
 (with the first lines shown) per partly covered file, then a summary.
-With --note the number of gaps of every run is reported to the orchestrator with
-`orch note --project ODP --text "PR coverage gaps (last run): <n>"`; the orch console script is
-looked up with shutil.which, then in the scripts folder next to the Python interpreter. If orch cannot
-be found or the call fails, only a warning is printed and the result of the check does not change.
+With --note the number of gaps of a green integration run is reported to the orchestrator with
+`orch note --project ODP --text "PR coverage gaps (last run): <n>"`; the last such note is the count of
+the last green run. With --run-red (the integration run is red) nothing is reported and orch is not called.
+The orch console script is looked up with shutil.which, then in the scripts folder next to the Python
+interpreter. If orch cannot be found or the call fails, only a warning is printed and the result of the
+check does not change.
 With --note the target defaults to HEAD, so an integration run measures the
 merged state of its worktree and not the remote ref. The gap count is informational only and never
 blocks an integration.
@@ -190,8 +192,11 @@ def find_orch():
     return None
 
 
-def report_count(gaps):
-    """Report the gap count with `orch note`; print a warning and return False if orch is missing or the call fails."""
+def report_count(gaps, run_green):
+    """Report the gap count with `orch note` in a green run; return False without calling orch in a red run,
+    and print a warning and return False if orch is missing or the call fails."""
+    if not run_green:
+        return False
     orch = find_orch()
     if orch is None:
         sys.stderr.write("check_pr_coverage: warning: orch not found, gap count not reported\n")
@@ -218,6 +223,7 @@ def main():
     parser.add_argument("--author", default=DEFAULT_AUTHOR)
     parser.add_argument("--max-lines", type=int, default=5, help="uncovered lines shown per file")
     parser.add_argument("--note", action="store_true", help="report the gap count with `orch note --project ODP`")
+    parser.add_argument("--run-red", action="store_true", help="the integration run is red: with --note nothing is reported")
     parser.add_argument("--strict", action="store_true", help="exit 1 when gaps are found")
     options = parser.parse_args()
     if options.target is None:
@@ -256,7 +262,9 @@ def main():
             for text in missing[:options.max_lines]:
                 print("    %s" % text[:160])
     print("%d open pull requests, %d files changed on %s, %d gaps" % (len(heads), len(target_files), options.target, gaps))
-    if options.note and report_count(gaps):
+    if options.note and options.run_red:
+        print("red run: gap count %d not reported" % gaps)
+    elif options.note and report_count(gaps, True):
         print("gap count %d reported with orch note" % gaps)
     return 1 if (gaps and options.strict) else 0
 
