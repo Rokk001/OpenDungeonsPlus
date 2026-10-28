@@ -2,6 +2,7 @@
 """Add the three right-hand weapon mounts and verify unchanged skeleton data."""
 import copy
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -10,8 +11,11 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PRIVATE = Path(r"C:\Users\mario\GitHub\OpenDungeonsPlus-Private\anim-work\armament")
-CONVERTER = Path(r"C:\Users\mario\od-deps\build\ogre\bin\release\OgreXMLConverter.exe")
+# Work folder below MEDIA_ROOT (default G:\Moreya-Internal\medien) and the converter from BUILD_DEPS_ROOT (default build-deps in the home folder).
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", r"G:\Moreya-Internal\medien"))
+BUILD_DEPS_ROOT = Path(os.environ.get("BUILD_DEPS_ROOT", str(Path.home() / "build-deps")))
+PRIVATE = MEDIA_ROOT / "anim-work" / "armament"
+CONVERTER = BUILD_DEPS_ROOT / "install" / "bin" / "OgreXMLConverter.exe"
 TARGETS = {"skeleton": "itemRightHand", "lich": "itemRightHand", "PitDemon": "Hand_R"}
 
 

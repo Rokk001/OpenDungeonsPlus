@@ -43,7 +43,7 @@ if args.loading_screens and args.menu_scene:
     parser.error('--loading-screens and --menu-scene render in separate runs; pass only one of them')
 
 repo = Path(__file__).resolve().parents[2]
-deps = Path(os.environ.get('OD_DEPS_ROOT', str(Path.home() / 'od-deps')))
+deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 gui = (repo / 'source/render/Gui.cpp').read_text()
 rules = repo / 'source/game/HeartHealthRing.h'
 

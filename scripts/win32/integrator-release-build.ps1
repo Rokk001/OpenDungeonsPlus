@@ -9,6 +9,7 @@ param(
     [string]$Base = 'origin/integration/all'
 )
 $wt = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+. (Join-Path $PSScriptRoot 'windows-paths.ps1')
 $log = "$wt\out\out-build-run$Run.txt"
 New-Item -ItemType Directory -Force "$wt\out" | Out-Null
 . (Join-Path $wt '..\wait-for-build-slot.ps1') -MaxMinutes 20
@@ -24,7 +25,7 @@ $cfg = $LASTEXITCODE
 if ($cfg -ne 0) { "CONFIGURE_EXIT=$cfg" | Out-File $log; "EXIT=$cfg" | Out-File -Append -Encoding ascii $log; exit $cfg }
 # Epoch time right before the build; run-checks.py needs it as --build-start
 [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() | Out-File -Encoding ascii "$wt\out\build-start-$Run.txt"
-& "C:\Users\mario\od-deps-next\tools\cmake-4.4.1-windows-x86_64\bin\cmake.exe" --build "$wt\build\windows" --config Release --target opendungeons-plus --parallel 1 *> $log
+& $taskCmakeExe --build "$wt\build\windows" --config Release --target opendungeons-plus --parallel 1 *> $log
 $code = $LASTEXITCODE
 "EXIT=$code" | Out-File -Append -Encoding ascii $log
 exit $code
