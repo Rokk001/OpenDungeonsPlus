@@ -33,9 +33,9 @@ header = read('source/game/WorkerShare.h')
 player = read('source/game/Player.cpp')
 traps_cfg = read('config/traps.cfg')
 
-# The header is pure: no game includes, only the integer types
+# The header has no game state: only the integer types and the config for the two limits
 includes = re.findall(r'^#include\s+(.+)$', header, re.M)
-assert includes == ['<cstdint>'], includes
+assert includes == ['<cstdint>', '"utils/ConfigManager.h"'], includes
 for name in ('totalWorkers', 'isCarryFirst', 'isClaimWallFirst', 'isReloadShareOpen'):
     assert re.search(r'inline \w+ ' + name + r'\(', header), name + ' missing in the header'
 
@@ -52,11 +52,12 @@ assert 'TrapReloadWorkerSharePercent' in share and 'DEFAULT_RELOAD_WORKER_SHARE_
 assert re.search(r'DEFAULT_RELOAD_WORKER_SHARE_PERCENT = 20\.0;', player)
 assert re.search(r'^    TrapReloadWorkerSharePercent\t\d+', traps_cfg, re.M)
 
-# The limits of the header are the old ones
-assert re.search(r'percent <= CARRY_FIRST_MAX_SHARE;', function_body(header, 'inline bool isCarryFirst('))
-assert re.search(r'percent > CLAIM_WALL_FIRST_MIN_SHARE;', function_body(header, 'inline bool isClaimWallFirst('))
-assert re.search(r'CARRY_FIRST_MAX_SHARE = 0\.2;', header)
-assert re.search(r'CLAIM_WALL_FIRST_MIN_SHARE = 0\.8;', header)
+# The limits come from the config and keep the old values
+assert 'percent <= ConfigManager::getSingleton().getWorkerCarryFirstMaxShare();' in function_body(header, 'inline bool isCarryFirst(')
+assert 'percent > ConfigManager::getSingleton().getWorkerClaimWallFirstMinShare();' in function_body(header, 'inline bool isClaimWallFirst(')
+global_cfg = read('config/global.cfg')
+assert re.search(r'^    WorkerCarryFirstMaxShare\t0\.2\s*$', global_cfg, re.M)
+assert re.search(r'^    WorkerClaimWallFirstMinShare\t0\.8\s*$', global_cfg, re.M)
 assert re.search(r'PERCENT_DIVISOR = 100\.0;', header)
 
 # Cleaning: its own share rule with the same arithmetic as the reload share (the first worker always, then at most the
@@ -75,7 +76,7 @@ first_clean = prefs.index('ret.push_back(CreatureActionType::searchDirtToClean);
 assert first_clean < prefs.index('ret.push_back(CreatureActionType::searchEntityToCarry);'), 'searchDirtToClean must come first'
 assert first_clean < prefs.index('ret.push_back(CreatureActionType::searchWallTileToClaim);')
 assert first_clean < prefs.index('ret.push_back(CreatureActionType::searchTileToDig);')
-assert re.search(r'^    CleaningWorkerSharePercent\t20\s*$', read('config/global.cfg'), re.M)
+assert re.search(r'^    CleaningWorkerSharePercent\t20\s*$', global_cfg, re.M)
 
 if '--probe' in sys.argv:
     probe = r'''
@@ -143,7 +144,18 @@ int main()
     with tempfile.TemporaryDirectory(prefix='odp-worker-share-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(probe)
-        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
+        # A small config stand-in, found before the real header, supplies the two limits with the shipped values
+        (work / 'utils').mkdir()
+        (work / 'utils' / 'ConfigManager.h').write_text(r'''#pragma once
+//! \brief Supplies the worker share limits of config/global.cfg to the probe.
+struct ConfigManager
+{
+    static ConfigManager& getSingleton() { static ConfigManager config; return config; }
+    double getWorkerCarryFirstMaxShare() const { return 0.2; }
+    double getWorkerClaimWallFirstMinShare() const { return 0.8; }
+};
+''')
+        subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(work), '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         result = subprocess.run([str(work / 'check.exe')], cwd=work, capture_output=True, text=True)
         sys.stdout.write(result.stdout)

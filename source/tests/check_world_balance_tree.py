@@ -172,7 +172,8 @@ assert totals == TAB_TOTALS, "all levels together: %s" % totals
 skill_cpp = read("source/game/Skill.cpp")
 assert "150" not in skill_cpp and ": 100" not in skill_cpp, "the 100/150 fallbacks are gone"
 assert "mFreeLevelOne ? 0 : mNeededSkillPoints" in skill_cpp
-assert "mNeededSkillPoints * (level == 2 ? 2 : 4)" in skill_cpp
+assert re.search(r'mNeededSkillPoints \* \(level == 2 \?\s*ConfigManager::getSingleton\(\)\.getResearchConfigDoubleOrDefault\("ResearchCostFactorLevel2", 2\.0\) :'
+                 r'\s*ConfigManager::getSingleton\(\)\.getResearchConfigDoubleOrDefault\("ResearchCostFactorLevel3", 4\.0\)\)', skill_cpp)
 config = read("source/utils/ConfigManager.cpp")
 assert "return SKILL_POINTS_MISSING_ENTRY;" in config and "SKILL_POINTS_MISSING_ENTRY = 1500" in read("source/utils/ConfigManager.h")
 
@@ -286,7 +287,9 @@ assert "bool Seat::canResearchLevel(SkillType type, int level, const std::vector
 gate = seat[seat.index("const char* Seat::getResearchGateFailure("):seat.index("bool Seat::canResearchLevel(")]
 for reason in ("not allowed by the level", "parent missing", "tab needs more entries at level 1"):
     assert reason in gate
-assert "(nbAllowed + 1) / 2" in gate, "half of the allowed entries, rounded up"
+assert re.search(r'std::ceil\(nbAllowed \*\s*\(level == RESEARCH_LEVEL_SECOND \? ConfigManager::getSingleton\(\)\.getResearchConfigDoubleOrDefault\("ResearchLevel2TabShare", 0\.5\) :'
+                 r'\s*ConfigManager::getSingleton\(\)\.getResearchConfigDoubleOrDefault\("ResearchLevel3TabShare", 1\.0\)\)\)', gate), \
+    "the configured share of the allowed entries, rounded up"
 set_tree = seat[seat.index("void Seat::setSkillTree("):seat.index("TileStateNotified* Seat::getTileStateNotified(")]
 assert "OD_LOG_WRN(" in set_tree and "continue;" in set_tree, "an invalid entry is dropped with a warning, not the whole queue"
 assert "canResearchLevel" in manager and "canResearchLevel" in game, "client buttons and AI use the same function"
