@@ -24,7 +24,9 @@ def main():
     assert 'LichBeetle.png' in materials
     credits = (ROOT / 'CREDITS').read_text(encoding='utf-8')
     for entry in (texture, 'materials/scripts/RoomAmbience.material (LichBeetle',
-                  'particles/RoomAmbienceSpellsExtra.particle (LichBeetles)'):
+                  'particles/RoomAmbienceSpellsExtra.particle (LichBeetles)',
+                  'models/skeleton.skeleton (new Die clip)', 'models/lich.skeleton (new Die clip)',
+                  'models/Pile_Skeleton.mesh (bone heap)', 'materials/textures/Pile_Skeleton.png'):
         assert entry in credits, entry
     assert b'Pile_Skeleton' in (ROOT / 'models/Pile_Skeleton.mesh').read_bytes()
     spec = importlib.util.spec_from_file_location('skeleton_chunks', ROOT / 'tools/blender-assets/splice_animation_chunks.py')
