@@ -569,6 +569,7 @@ void RoomManager::checkSellRoomTiles(GameMap* gameMap, const InputManager& input
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Sells selected room tiles for their configured refund share.
 void RoomManager::sellRoomTiles(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     uint32_t nbTiles;
@@ -598,7 +599,7 @@ void RoomManager::sellRoomTiles(GameMap* gameMap, Player* player, ODPacket& pack
             continue;
         }
 
-        price += costPerTile(room->getType()) / 2;
+        price += static_cast<int32_t>(costPerTile(room->getType()) * ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("RoomSellRefundShare", 0.5));
         tiles.push_back(tile);
         rooms.insert(room);
     }

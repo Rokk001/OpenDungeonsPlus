@@ -212,7 +212,6 @@ static const Ogre::Real POSSESSION_AIM_MIN_DISTANCE = 0.5;
 
 // Target selection by combat class: the distance to an enemy support creature is multiplied by this
 // factor for blitzers and flankers, so they prefer it over closer enemies
-static const double COMBAT_CLASS_SUPPORT_TARGET_FACTOR = 0.5;
 
 //! \brief Returns the factor applied to the squared distance of a potential target. Lower means preferred.
 //! Blockers and support creatures attack the nearest enemy. Blitzers and flankers prefer enemy support creatures.
@@ -230,7 +229,7 @@ static double getTargetDistanceFactor(const Creature& attacker, const GameEntity
         return 1.0;
 
     if(targetCreature.getDefinition()->getCombatClass() == CreatureDefinition::CombatSupport)
-        return COMBAT_CLASS_SUPPORT_TARGET_FACTOR;
+        return ConfigManager::getSingleton().getSupportTargetDistanceFactor();
 
     return 1.0;
 }
@@ -1905,15 +1904,13 @@ std::unique_ptr<ItemInstance> Creature::setPotionSlot(size_t slot, std::unique_p
     return previous;
 }
 
-//! \brief Adds the second potion slot at level ten and the third at level twenty.
+//! \brief Adds potion slots at their configured creature levels.
 void Creature::resizePotionSlots()
 {
-    static const uint32_t SECOND_SLOT_LEVEL = 10;
-    static const uint32_t THIRD_SLOT_LEVEL = 20;
     size_t count = 1;
-    if(mLevel >= THIRD_SLOT_LEVEL)
+    if(mLevel >= ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionSlotLevel3", 20.0))
         count = 3;
-    else if(mLevel >= SECOND_SLOT_LEVEL)
+    else if(mLevel >= ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionSlotLevel2", 10.0))
         count = 2;
     if(mPotionSlots.size() < count)
     {
@@ -1943,7 +1940,7 @@ double Creature::getPotionFactor(const std::string& kind) const
     return factor;
 }
 
-//! \brief Gives dexterity potions their two, four or six critical chance points.
+//! \brief Gives dexterity potions their configured critical chance points.
 double Creature::getPotionCritChance() const
 {
     static const double DEXTERITY_SMALL = 1.10;
@@ -1953,9 +1950,9 @@ double Creature::getPotionCritChance() const
     if(!getIsOnServerMap())
     {
         const double factor = getPotionFactor("DexterityChange");
-        if(factor >= DEXTERITY_LARGE) return 6.0;
-        if(factor >= DEXTERITY_MEDIUM) return 4.0;
-        if(factor >= DEXTERITY_SMALL) return 2.0;
+        if(factor >= DEXTERITY_LARGE) return ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritLarge", 6.0);
+        if(factor >= DEXTERITY_MEDIUM) return ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritMedium", 4.0);
+        if(factor >= DEXTERITY_SMALL) return ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritSmall", 2.0);
         return 0.0;
     }
     for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
@@ -1963,11 +1960,11 @@ double Creature::getPotionCritChance() const
         if(entry.second.first != "DexterityChange")
             continue;
         if(entry.second.second >= DEXTERITY_LARGE)
-            points += 6.0;
+            points += ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritLarge", 6.0);
         else if(entry.second.second >= DEXTERITY_MEDIUM)
-            points += 4.0;
+            points += ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritMedium", 4.0);
         else if(entry.second.second >= DEXTERITY_SMALL)
-            points += 2.0;
+            points += ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritSmall", 2.0);
     }
     return points;
 }
@@ -2006,14 +2003,12 @@ void Creature::removePotionContribution(const CreatureEffect* source)
 //! \brief Adds conditional item defense after the natural defense curve.
 double Creature::getItemDefenseFactor() const
 {
-    static const double LAST_STAND_HEALTH_SHARE = 0.25;
-    static const double BULWARK_RADIUS = 2.0;
     double bonus = getItemBonus("Defense%") + getItemEffect("ThickPlates");
-    if(mMaxHP > 0.0 && mHp < mMaxHP * LAST_STAND_HEALTH_SHARE)
+    if(mMaxHP > 0.0 && mHp < mMaxHP * ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LastStandHealthShare", 0.25))
         bonus += getItemEffect("LastStand");
     if(getItemEffect("Bulwark") != 0.0)
     {
-        for(const Creature* mate : getOwnCreaturesWithin(BULWARK_RADIUS))
+        for(const Creature* mate : getOwnCreaturesWithin(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("BulwarkRadius", 2.0)))
         {
             if(mate != this)
             {
@@ -2536,8 +2531,7 @@ void Creature::doUpkeep()
     }
     if(isAlive() && !isActionInList(CreatureActionType::fight))
     {
-        static const double MENDING_SECONDS = 10.0;
-        const double healing = getItemEffect("Mending") / 100.0 * mMaxHP / (MENDING_SECONDS * ODApplication::turnsPerSecond);
+        const double healing = getItemEffect("Mending") / 100.0 * mMaxHP / (ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("MendingSeconds", 10.0) * ODApplication::turnsPerSecond);
         if(healing > 0.0)
             heal(healing);
     }
@@ -3732,7 +3726,7 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
         if((entity->getObjectType() == GameEntityType::creature) && (ownThreat > 0.0))
         {
             threatFactor = static_cast<Creature*>(entity)->getThreat() / ownThreat;
-            threatFactor = std::max(0.5, std::min(2.0, threatFactor));
+            threatFactor = std::max(ConfigManager::getSingleton().getTargetThreatFactorMin(), std::min(ConfigManager::getSingleton().getTargetThreatFactorMax(), threatFactor));
         }
 
         GameEntity* entityAttackCheck = nullptr;
@@ -4160,11 +4154,10 @@ double Creature::getClientPoseSpeedFactor() const
     return factor;
 }
 
-//! \brief Adds Second Wind to the movement percentage sum only while below half health.
+//! \brief Adds Second Wind to movement below its configured health share.
 double Creature::getConditionalItemMoveFactor() const
 {
-    static const double SECOND_WIND_HEALTH_SHARE = 0.5;
-    if(mMaxHP <= 0.0 || mHp >= mMaxHP * SECOND_WIND_HEALTH_SHARE)
+    if(mMaxHP <= 0.0 || mHp >= mMaxHP * ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("SecondWindHealthShare", 0.5))
         return 1.0;
     return 1.0 + getItemEffect("SecondWind") / (100.0 + getSkillPassive("move%"));
 }
@@ -4795,7 +4788,7 @@ CreatureSkill* Creature::createTreeSkill(const std::string& skillId, uint32_t ra
     {
         const size_t index = std::min(static_cast<size_t>(rank), def->mValues.size()) - 1;
         line = CreatureSkillTree::buildSkillLine(def->mKind, def->mValues[index], def->mCooldown, def->mDuration,
-            def->mRadius, def->mRange, def->mBaseLine);
+            def->mRadius, def->mRange, def->mBaseLine, def->mMinAllies);
         if(index < def->mMana.size())
             manaCost = def->mMana[index];
     }
@@ -8229,6 +8222,7 @@ bool Creature::canSlap(Seat* seat)
     return true;
 }
 
+//! \brief Applies a keeper slap and keeps the configured number of remembered slaps.
 void Creature::slap()
 {
     if(!getIsOnServerMap())
@@ -8267,7 +8261,7 @@ void Creature::slap()
 
     // We remember the slap to compute the mood. Only the latest ones are kept
     mSlapTurns.push_back(getGameMap()->getTurnNumber());
-    if(mSlapTurns.size() > 10)
+    if(mSlapTurns.size() > ConfigManager::getSingleton().getSlapMemoryMax())
         mSlapTurns.erase(mSlapTurns.begin());
 
     // The friends that see the slap are upset
@@ -9900,11 +9894,12 @@ void Creature::recordWorkerStepRecovery()
     mNeedFireRefresh = true;
 }
 
+//! \brief Sets the job cooldown with the configured slap adjustment.
 void Creature::setJobCooldown(int val)
 {
     // If the creature has been slapped, its cooldown is decreased
     if(hasSlapEffect())
-        val = Helper::round(static_cast<float>(val) * 0.8f);
+        val = Helper::round(static_cast<float>(val * ConfigManager::getSingleton().getSlapJobCooldownFactor()));
 
     mJobCooldown = val;
     mJobCooldownDuration = static_cast<uint32_t>(std::max(0, val));
@@ -9999,17 +9994,20 @@ void Creature::setInJail(Room* prison)
     mNeedFireRefresh = true;
 }
 
+//! \brief Returns current health weighted by the configured level threat curve.
 double Creature::getThreat() const
 {
-    // Threat multiplier in percent for the levels 1 to 10. Above level 10 the last
-    // step of the table (100 percent per level) is continued.
-    static const double THREAT_PERCENT_BY_LEVEL[10] = {100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0, 300.0, 400.0, 500.0};
+    // Threat multiplier in percent from the configured level table. Above its last
+    // level, continue the difference between its last two entries.
+    const std::vector<double>& threatPercentByLevel = ConfigManager::getSingleton().getThreatPercentByLevel();
     unsigned int level = (mLevel < 1) ? 1 : mLevel;
     double percent;
-    if(level <= 10)
-        percent = THREAT_PERCENT_BY_LEVEL[level - 1];
+    if(level <= threatPercentByLevel.size())
+        percent = threatPercentByLevel[level - 1];
     else
-        percent = THREAT_PERCENT_BY_LEVEL[9] + 100.0 * static_cast<double>(level - 10);
+        percent = threatPercentByLevel.back() +
+            (threatPercentByLevel.back() - threatPercentByLevel[threatPercentByLevel.size() - 2]) *
+            static_cast<double>(level - threatPercentByLevel.size());
 
     return mHp * percent / 100.0;
 }

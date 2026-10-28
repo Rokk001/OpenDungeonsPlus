@@ -933,3 +933,10 @@ bool Trap::importTrapFromStream(Trap& trap, std::istream& is)
 {
     return trap.importFromStream(is);
 }
+
+//! \brief Reads the trap type's configured health for each new tile.
+double Trap::getDefaultTileHP() const
+{
+    return ConfigManager::getSingleton().getTrapConfigDoubleOrDefault(
+        TrapManager::getTrapNameFromTrapType(getType()) + "HP", 10.0);
+}

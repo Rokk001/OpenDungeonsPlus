@@ -95,10 +95,6 @@ static RoomRegister registration(new RoomAlchemyLabFactory);
 
 namespace
 {
-static const double BANG_MIN_SECONDS = 60.0;
-static const double BANG_MAX_SECONDS = 120.0;
-static const uint32_t LARGE_LEVEL = 20;
-static const uint32_t MEDIUM_LEVEL = 10;
 
 //! \brief Chooses only the recipe sizes allowed by at least one creature of this seat.
 bool usableSize(const PotionDefinition& potion, uint32_t highestLevel)
@@ -107,9 +103,9 @@ bool usableSize(const PotionDefinition& potion, uint32_t highestLevel)
         return false;
     if(potion.getSize() == "Single")
         return true;
-    if(highestLevel >= LARGE_LEVEL)
+    if(highestLevel >= ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("AlchemyLabLargeLevel", 20.0))
         return potion.getSize() == "Large";
-    if(highestLevel >= MEDIUM_LEVEL)
+    if(highestLevel >= ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("AlchemyLabMediumLevel", 10.0))
         return potion.getSize() == "Medium";
     return potion.getSize() == "Small";
 }
@@ -117,7 +113,7 @@ bool usableSize(const PotionDefinition& potion, uint32_t highestLevel)
 
 //! \brief Creates the empty laboratory without introducing any ingredient or recipe defaults.
 RoomAlchemyLab::RoomAlchemyLab(GameMap* map) : Room(map),
-    mBangSeconds(Random::Double(BANG_MIN_SECONDS, BANG_MAX_SECONDS))
+    mBangSeconds(Random::Double(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("AlchemyLabBangMinSeconds", 60.0), ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("AlchemyLabBangMaxSeconds", 120.0)))
 { setMeshName("AlchemyLab"); }
 
 //! \brief Creates a fresh cauldron's persisted fields.
@@ -425,7 +421,7 @@ void RoomAlchemyLab::doUpkeep()
     if(mBangSeconds <= 0.0)
     {
         showBang();
-        mBangSeconds = Random::Double(BANG_MIN_SECONDS, BANG_MAX_SECONDS);
+        mBangSeconds = Random::Double(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("AlchemyLabBangMinSeconds", 60.0), ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("AlchemyLabBangMaxSeconds", 120.0));
     }
     Player* player = getSeat()->getPlayer();
     const std::vector<Room*> rooms = getGameMap()->getRoomsByTypeAndSeat(getType(), getSeat());

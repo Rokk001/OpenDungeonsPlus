@@ -39,7 +39,7 @@ public:
     {}
 
     //! \brief Research points needed to reach the given level: level 1 is the tier cost (0 for a free level-one skill),
-    //! level 2 is twice and level 3 four times the tier cost.
+    //! levels 2 and 3 use the configured research cost factors.
     int32_t getNeededSkillPoints(uint32_t level = 1) const;
 
     //! \brief True if every seat starts with level 1 of this skill

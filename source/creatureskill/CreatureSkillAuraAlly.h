@@ -36,7 +36,8 @@ public:
         mCreatureLevelMin(0),
         mRadius(0.0),
         mEffectDuration(0),
-        mEffectValue(1.0)
+        mEffectValue(1.0),
+        mMinAllies(2)
     {}
 
     //! \brief Destroys the skill.
@@ -79,6 +80,8 @@ private:
     double mEffectDuration;
     //! \brief Damage factor of the effect
     double mEffectValue;
+    //! \brief Fewest allies inside the aura radius.
+    uint32_t mMinAllies;
 };
 
 #endif // CREATURESKILLAURAALLY_H

@@ -445,7 +445,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mDigSetBool(false),
     mIndexEvent(0),
     mSettings(mRootWindow, modeManager->getGui(), false, true),
-    mSandboxHeroLevel(SandboxMode::MIN_HERO_LEVEL),
+    mSandboxHeroLevel(SandboxMode::getSandboxHeroLevelMin()),
     mIsSkillWindowOpen(false),
     mIsLibraryLostShown(false),
     mCurrentSkillType(SkillType::nullSkillType),
@@ -3186,12 +3186,13 @@ bool GameMode::hideSandboxWindow(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Cycles the toolbox hero level between the configured sandbox bounds.
 bool GameMode::onSandboxHeroLevelClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(e);
-    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < SandboxMode::MAX_HERO_LEVEL))
+    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < SandboxMode::getSandboxHeroLevelMax()))
         ++mSandboxHeroLevel;
-    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > SandboxMode::MIN_HERO_LEVEL))
+    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > SandboxMode::getSandboxHeroLevelMin()))
         --mSandboxHeroLevel;
 
     mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));

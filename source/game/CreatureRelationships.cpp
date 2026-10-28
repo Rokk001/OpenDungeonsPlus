@@ -33,7 +33,7 @@ const size_t RelationshipCreatureState::MAX_CAPTORS;
 namespace
 {
     //! A creature only starts a brawl if its health is this many percent above the health that stops the brawl
-    static const int32_t BRAWL_START_HEALTH_MARGIN_PERCENT = 25;
+    // The start-health margin is read through RelationshipSettings.
     //! Factor between a fraction and percent, used to compare health with the percent settings of the brawl
     static const double BRAWL_PERCENT_FACTOR = 100.0;
 
@@ -119,6 +119,7 @@ namespace
     }
 }
 
+//! \brief Initializes relationship settings with the shipped fallback values.
 RelationshipSettings::RelationshipSettings() :
     mThresholdFriends(DEFAULT_THRESHOLD_FRIENDS),
     mThresholdBestFriends(DEFAULT_THRESHOLD_BEST_FRIENDS),
@@ -150,6 +151,7 @@ RelationshipSettings::RelationshipSettings() :
     mBrawlChancePercent(6),
     mBrawlMaxDistanceTiles(6),
     mBrawlStopHealthPercent(25),
+    mBrawlStartHealthMarginPercent(25),
     mBrawlMaxTurns(150),
     mBrawlValueChange(-6),
     mMentorMinLevelDiff(2),
@@ -187,6 +189,7 @@ int32_t RelationshipSettings::getRacialStart(const std::string& classA, const st
     return it->second;
 }
 
+//! \brief Loads relationship settings, including the brawl start-health margin.
 RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string, std::string>& config)
 {
     RelationshipSettings settings;
@@ -224,6 +227,7 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"BrawlChancePercent", &settings.mBrawlChancePercent},
         {"BrawlMaxDistanceTiles", &settings.mBrawlMaxDistanceTiles},
         {"BrawlStopHealthPercent", &settings.mBrawlStopHealthPercent},
+        {"BrawlStartHealthMarginPercent", &settings.mBrawlStartHealthMarginPercent},
         {"BrawlValueChange", &settings.mBrawlValueChange},
         {"MentorMinLevelDiff", &settings.mMentorMinLevelDiff},
         {"MentorXpBonusPercent", &settings.mMentorXpBonusPercent},
@@ -1234,6 +1238,7 @@ bool useDislikedRoomAsFallback(bool haveDislikedRoom, size_t nbOtherSuitableRoom
     return haveDislikedRoom && (nbOtherSuitableRooms == 0);
 }
 
+//! \brief Checks the configured health margin and other conditions for starting a brawl.
 bool canStartBrawl(const BrawlCandidateState& state, const RelationshipSettings& settings)
 {
     if(!state.mAllowed || !state.mOnMap || !state.mAlive || state.mKo || state.mPossessed || state.mBrawling)
@@ -1247,7 +1252,7 @@ bool canStartBrawl(const BrawlCandidateState& state, const RelationshipSettings&
         return false;
 
     return (state.mHp * BRAWL_PERCENT_FACTOR) >
-        (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + BRAWL_START_HEALTH_MARGIN_PERCENT));
+        (state.mMaxHp * static_cast<double>(settings.mBrawlStopHealthPercent + settings.mBrawlStartHealthMarginPercent));
 }
 
 bool shouldStopBrawl(const BrawlFighterState& first, const BrawlFighterState& second, int64_t turnsSinceStart,
