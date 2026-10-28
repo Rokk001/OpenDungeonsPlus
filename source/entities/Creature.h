@@ -966,6 +966,16 @@ public:
     //! \brief Sets the thirst (0 - 100, limited), used when a creature is loaded or by the console.
     void setThirst(double val);
 
+    //! \brief Returns the turns that must still pass before the creature may start a leisure visit to a tavern (0 = may).
+    inline int32_t getTavernCooldownTurns() const
+    { return mTavernCooldownTurns; }
+
+    //! \brief Sets the turns until the next leisure visit to a tavern (not below 0), used when a creature is loaded.
+    void setTavernCooldownTurns(int32_t turns);
+
+    //! \brief Server side. The creature just left a tavern: the cooldown of TavernLeisureCooldownTurns (rooms.cfg) starts.
+    void startTavernCooldown();
+
     //! \brief Returns the drunkenness (0 = sober, 100 = dead drunk).
     inline double getDrunk() const
     { return mDrunk; }
@@ -1896,6 +1906,8 @@ private:
     bool            mVomited;
     //! \brief Turns a hangover still lasts; falls by 1 per turn.
     double          mHangoverTurns;
+    //! \brief Turns until the creature may start a leisure visit to a tavern again; falls by 1 per turn (server side, saved).
+    int32_t         mTavernCooldownTurns;
     //! \brief Runtime only (not saved): true when the creature fell asleep with a drunkenness above HangoverAt and has not woken up yet.
     bool            mHangoverPending;
 
@@ -2235,7 +2247,7 @@ private:
     void increaseThirst(double value);
 
     //! \brief Server side, once per turn. Lets the drunkenness fall by DrunkDecayPerTurn, resets the vomit mark when
-    //! the creature is sober enough again and counts down the tavern mood and the hangover.
+    //! the creature is sober enough again and counts down the tavern mood, the hangover and the leisure cooldown.
     void upkeepTavernState();
 
     //! \brief Server side, once per turn. Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down.

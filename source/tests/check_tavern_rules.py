@@ -116,6 +116,18 @@ for token in ('isKo()', 'isBeingDragged()', 'CreatureActionType::fight', 'Creatu
 # The loser of a slap duel goes to its bed after the visit, whatever its wakefulness
 assert 'CreatureActionSleep' in extract(room_cpp, 'bool RoomTavern::useRoom(') and 'goToBed' in room_cpp
 
+# A guest leaves the tavern: the visit pops the action, the leaving starts the leisure cooldown, the job search does not
+# send the guest back in during the cooldown, and the cooldown counts down every turn and is saved
+assert 'creature.popAction();' in extract(room_cpp, 'bool RoomTavern::useRoom(')
+assert 'startTavernCooldown()' in extract(room_cpp, 'void RoomTavern::removeCreatureUsingRoom(')
+open_spot = extract(room_cpp, 'bool RoomTavern::hasOpenCreatureSpot(')
+assert 'getTavernCooldownTurns() > 0' in open_spot and 'getThirst() < getTavernValue("ThirstSeek")' in open_spot, 'leisure visit blocked during the cooldown, thirst not'
+assert 'hasOpenCreatureSpot(&creature)' in read('source/creatureaction/CreatureActionSearchJob.cpp')
+assert 'TavernLeisureCooldownTurns' in extract(creature_cpp, 'void Creature::startTavernCooldown(')
+assert '--mTavernCooldownTurns' in extract(creature_cpp, 'void Creature::upkeepTavernState(')
+assert 'TAVERN_COOLDOWN_SAVE_OPEN << " " << mTavernCooldownTurns' in creature_cpp and 'setTavernCooldownTurns(loadedCooldown)' in creature_cpp, 'cooldown saved and loaded'
+assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 'TavernLeisureCooldownTurns is 600 in rooms.cfg'
+
 # ---- Probe -------------------------------------------------------------------------------------------------------
 tavern = block_values(global_cfg, 'Tavern')
 rooms = block_values(rooms_cfg, 'Rooms')
@@ -246,7 +258,7 @@ struct Creature
     CreatureDefinition* mDefinition; Seat* mSeat; std::string mName; Tile* mTile; Ogre::Vector3 mPos;
     double mUrge, mThirst, mTavernMood, mTavernMoodTurns, mDrunk, mHangoverTurns, mHp, mExp;
     bool mVomited, mHangoverPending, mOnMap, mAlive, mKo, mDragged, mPossessed, mFighting, mFleeing, mHit;
-    uint32_t mLevel; double mGold; int takeDamageCalls;
+    uint32_t mLevel; double mGold; int takeDamageCalls; int32_t mTavernCooldownTurns = 0;
     //! \brief Initializes the tavern creature with the production fractional gold balance.
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat, uint32_t level)
       : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mUrge(0.0), mThirst(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mDrunk(0.0),
@@ -460,6 +472,12 @@ static void checkThirst()
     expectNear(h.mHangoverTurns, 300.0, "sleeping again does not shorten the hangover");
     for(int i = 0; i < 300; ++i) h.upkeepTavernState();
     expectNear(h.mHangoverTurns, 0.0, "the hangover runs out one turn at a time");
+    // The leisure cooldown after leaving a tavern counts down one turn at a time and stops at 0
+    h.mTavernCooldownTurns = 600;
+    for(int i = 0; i < 599; ++i) h.upkeepTavernState();
+    expectNear(h.mTavernCooldownTurns, 1.0, "the leisure cooldown has one turn left after 599 turns");
+    h.upkeepTavernState(); h.upkeepTavernState();
+    expectNear(h.mTavernCooldownTurns, 0.0, "the leisure cooldown ends at 0 and does not go below");
 }
 
 // ---- Drinks, payment, the chain
