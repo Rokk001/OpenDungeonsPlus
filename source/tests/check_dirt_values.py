@@ -79,8 +79,8 @@ ROOM_KEYS = {
     'InfirmaryDirtPerTreatment': '15.6',
     'TavernDirtPerDrink': '0.2605', 'SpaDirtPerBath': '4.4252',
 }
-# Medium production 0.8077 divided by occupancy 0.62 and 7/84 treatments per turn (0.0833), rounded to one decimal.
-assert round(0.8077 / (0.62 * 0.0833), 1) == float(ROOM_KEYS['InfirmaryDirtPerTreatment'])
+# Medium production 0.8077 divided by occupancy 0.557 and 7/84 treatments per turn (0.0833), rounded to one decimal.
+assert round(0.8077 / (0.557 * 0.0833), 1) == float(ROOM_KEYS['InfirmaryDirtPerTreatment'])
 room_values = block_values(rooms_cfg, 'Rooms')
 for key, value in ROOM_KEYS.items():
     assert room_values.get(key) == value, 'rooms.cfg ' + key + ' is ' + str(room_values.get(key)) + ', expected ' + value

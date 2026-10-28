@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # Share of one worker's time that keeps the reference dungeon in balance
 REFERENCE_CLEANING_SHARE = 0.25
 # Working share of a occupied spot in the reference dungeon
-OCCUPANCY = 0.62
+OCCUPANCY = 0.557
 # Occupancy used for animals, meals and prisoners (always present)
 FULL_OCCUPANCY = 1.0
 # Centre spots of a 25-tile room

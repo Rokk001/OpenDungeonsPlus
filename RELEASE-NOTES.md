@@ -8,6 +8,8 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Rebalance of the whole game: creatures work more and gain experience in every job and in the arena, healing follows the level, mana is a real resource, unpaid wages and needs affect every creature alike, prisoners starve instead of bleeding, and many prices and durations were matched to each other.
+
 * Ghosts: every fallen creature leaves a ghost that floats through the dungeon and scares the timid. The new ghost room sends hunters with capture beams; the caught ghosts are pressed into ectoplasm, which becomes mana, research or a soul crystal that lifts a creature one level. Own ghosts can revive their creature in the crypt. Corpses now lie for two minutes and decay for four; the crypt raises a lich from decayed corpses. Workers vanish when killed. Merchant deals always pay the keeper's tax.
 
 * New room: the infirmary. Workers bring knocked-out creatures there; healing takes one minute (bed: two and a half minutes) for every level, costs the keeper mana, admission is paid by the keeper or the creature; a slider sets the discharge health. Lying creatures below 35 % health no longer get up to fight.
