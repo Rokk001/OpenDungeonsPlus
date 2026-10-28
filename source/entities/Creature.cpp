@@ -4349,12 +4349,12 @@ std::string Creature::getSkillListText() const
     return result;
 }
 
-//! \brief Returns the attribute line of the displays: "Strength s - Dexterity d - Life l - Mana m -
-//! Critical x.x %".
+//! \brief Returns the attribute text of the displays as two lines so no value is split by a word wrap:
+//! "Strength s - Dexterity d - Life l" and "Mana m - Critical x.x %".
 std::string Creature::getAttributeSummaryText() const
 {
     return "Strength " + formatDisplayNumber(getStrength()) + " - Dexterity " + formatDisplayNumber(getDexterity())
-        + " - Life " + formatDisplayNumber(getLife()) + " - Mana " + formatDisplayNumber(getMana())
+        + " - Life " + formatDisplayNumber(getLife()) + "\nMana " + formatDisplayNumber(getMana())
         + " - Critical " + formatFixedNumber(getCritChance()) + " %";
 }
 

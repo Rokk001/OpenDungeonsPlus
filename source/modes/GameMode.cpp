@@ -4494,7 +4494,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     }
     skillButton->setText("");
-    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF333333" : (level == 0 ? "FF666666" : "FFFFFFFF"));
+    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF808080" : (level == 0 ? "FF666666" : "FFFFFFFF"));
     skillButton->setProperty("ResearchLevelColour", getResearchFrameColour(level));
     CEGUI::Window* levelBadge;
     if(skillButton->isChild("ResearchLevel"))
@@ -4910,7 +4910,7 @@ void GameMode::refreshSkillConnections()
                     line = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", name);
                     line->setProperty("FrameEnabled", "False");
                     line->setProperty("BackgroundEnabled", "False");
-                    line->setProperty("Image", "OpenDungeonsSkin/SelectionBrush");
+                    line->setProperty("Image", "OpenDungeonsSkin/LineFill");
                     line->setMousePassThroughEnabled(true);
                     line->setRiseOnClickEnabled(false);
                     parent->addChild(line);

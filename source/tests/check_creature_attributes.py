@@ -823,7 +823,7 @@ def check_part_g():
     assert 'it->second == 0' in skills and 'result += skillName + " " + Helper::toString(it->second);' in skills
     assert 'result += ", "' in skills and 'findTierFourById' in skills and 'DISPLAY_NONE_TEXT' in skills
     attributes = function(creature, 'std::string Creature::getAttributeSummaryText() const')
-    parts = ['"Strength "', '" - Dexterity "', '" - Life "', '" - Mana "', '" - Critical "', '" %"']
+    parts = ['"Strength "', '" - Dexterity "', '" - Life "', '"\\nMana "', '" - Critical "', '" %"']
     positions = [attributes.index(part) for part in parts]
     assert positions == sorted(positions)
     equipment = function(creature, 'std::string Creature::getEquipmentText() const')
