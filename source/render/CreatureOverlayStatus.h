@@ -77,6 +77,8 @@ private:
     std::vector<uint32_t> mOverlayIds;
     //! Overlay of the mana ring backing disc and frame
     uint32_t mManaBackingId = 0;
+    //! Number of mana ring segments (0 to MANA_RING_SEGMENTS) the mana ring arc shows; above the maximum until the first update
+    uint32_t mManaSegments = 99;
     //! Overlay of the emote. It is only created when the first emote is shown
     bool mEmoteCreated;
     uint32_t mEmoteId;
