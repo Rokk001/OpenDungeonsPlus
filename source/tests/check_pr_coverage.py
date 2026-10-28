@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that every change on the integration line is also carried by an open pull request.
 
-Compares the target ref (default origin/integration/all, or HEAD when --count-file is given) with the union of the heads of all
+Compares the target ref (default origin/integration/all, or HEAD when --note is given) with the union of the heads of all
 open pull requests of one author (default Rokk001, listed through the GitHub CLI against the
 upstream repository). Both sides are diffed against the merge base with the upstream base
 branch. Reported are
@@ -14,15 +14,16 @@ listed in source/tests/pr-coverage-not-upstream.txt are skipped; all other lines
 
 Usage: python -I source/tests/check_pr_coverage.py [--target <ref>] [--base <ref>]
            [--repo <owner/name>] [--author <login>] [--max-lines <n>] [--strict]
-           [--count-file <path>]
+           [--note]
 Output: one line "file: <path>" per uncovered file and "lines: <path>: <count> uncovered"
 (with the first lines shown) per partly covered file, then a summary.
-With --count-file the number of gaps of every run is stored in that file as one line
-"PR coverage gaps (last run): <n>" (the line is replaced, or appended if the file or the
-line is missing); with --count-file the target defaults to HEAD, so an integration run measures the
-merged state of its worktree and not the remote ref; a number higher than the stored value of the
-previous run (the first run only stores it) is reported but is informational only and never blocks an
-integration. When the number rose, the stored value is left unchanged.
+With --note the number of gaps of every run is reported to the orchestrator with
+`orch note --project ODP --text "PR coverage gaps (last run): <n>"`; the orch console script is
+looked up with shutil.which, then in the scripts folder next to the Python interpreter. If orch cannot
+be found or the call fails, only a warning is printed and the result of the check does not change.
+With --note the target defaults to HEAD, so an integration run measures the
+merged state of its worktree and not the remote ref. The gap count is informational only and never
+blocks an integration.
 Exit codes: 0 = finished (gaps are only listed unless --strict is given), 1 = gaps found
 with --strict, 2 = the check could not run (GitHub CLI missing or not logged in, no network,
 a pull request head is not available locally); this is never reported as green.
@@ -31,8 +32,10 @@ Nothing is compiled.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
+import sysconfig
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_TARGET = "origin/integration/all"
@@ -48,6 +51,8 @@ EXCLUDED_FILES = frozenset([
     "docs/development/INTEGRATION-ORDER.md",
     # This check is a tool of the integration line and is not submitted upstream.
     "source/tests/check_pr_coverage.py",
+    # The test of this check is a tool of the integration line as well.
+    "source/tests/check_pr_coverage_note.py",
     # The list of commits below is read by this check and not submitted upstream either.
     "source/tests/pr-coverage-not-upstream.txt",
     # Not submitted, replaced by feature/dungeonbook-whole-portraits (decision of 2026-10-20): the part-based
@@ -169,60 +174,55 @@ def lines_from_commits(ref, path, commits):
     return found
 
 
-def read_count(path):
-    """Return the gap count stored in the counter file, or None if the file or the line is missing."""
-    if not os.path.exists(path):
-        return None
-    with open(path, encoding="utf-8", errors="replace", newline="") as handle:
-        text = handle.read()
-    for line in text.replace("\r\n", "\n").split("\n"):
-        if line.startswith(COUNT_MARKER):
-            try:
-                return int(line[len(COUNT_MARKER):].strip())
-            except ValueError:
-                return None
+def find_orch():
+    """Return the path of the orch console script (PATH, then the Python scripts folder), or None if it is not found."""
+    found = shutil.which("orch")
+    if found:
+        return found
+    folders = [os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "Scripts"),
+               os.path.dirname(os.path.abspath(sys.executable)),
+               sysconfig.get_path("scripts")]
+    for folder in folders:
+        if folder and os.path.isdir(folder):
+            found = shutil.which("orch", path=folder)
+            if found:
+                return found
     return None
 
 
-def write_count(path, gaps):
-    """Store the gap count in the counter file: replace the marker line, or append it; keep the line ending style."""
-    lines = []
-    eol = "\n"
-    if os.path.exists(path):
-        with open(path, encoding="utf-8", errors="replace", newline="") as handle:
-            text = handle.read()
-        if "\r\n" in text:
-            eol = "\r\n"
-        lines = text.split(eol)
-    found = False
-    for index, line in enumerate(lines):
-        if line.startswith(COUNT_MARKER):
-            lines[index] = "%s %d" % (COUNT_MARKER, gaps)
-            found = True
-            break
-    if not found:
-        while lines and lines[-1] == "":
-            lines.pop()
-        lines.append("%s %d" % (COUNT_MARKER, gaps))
-        lines.append("")
-    with open(path, "w", encoding="utf-8", newline="") as handle:
-        handle.write(eol.join(lines))
+def report_count(gaps):
+    """Report the gap count with `orch note`; print a warning and return False if orch is missing or the call fails."""
+    orch = find_orch()
+    if orch is None:
+        sys.stderr.write("check_pr_coverage: warning: orch not found, gap count not reported\n")
+        return False
+    text = "%s %d" % (COUNT_MARKER, gaps)
+    try:
+        proc = subprocess.run([orch, "note", "--project", "ODP", "--text", text], cwd=ROOT,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError as err:
+        sys.stderr.write("check_pr_coverage: warning: cannot start orch (%s), gap count not reported\n" % err)
+        return False
+    if proc.returncode != 0:
+        sys.stderr.write("check_pr_coverage: warning: orch note failed (exit %d), gap count not reported\n" % proc.returncode)
+        return False
+    return True
 
 
 def main():
     """Parse the arguments, compute the gaps and print them; return the exit code."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--target", default=None, help="ref to measure (default: HEAD with --count-file, else %s)" % DEFAULT_TARGET)
+    parser.add_argument("--target", default=None, help="ref to measure (default: HEAD with --note, else %s)" % DEFAULT_TARGET)
     parser.add_argument("--base", default=DEFAULT_BASE)
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--author", default=DEFAULT_AUTHOR)
     parser.add_argument("--max-lines", type=int, default=5, help="uncovered lines shown per file")
-    parser.add_argument("--count-file", default=None, help="file that keeps the gap count of the last run")
+    parser.add_argument("--note", action="store_true", help="report the gap count with `orch note --project ODP`")
     parser.add_argument("--strict", action="store_true", help="exit 1 when gaps are found")
     options = parser.parse_args()
     if options.target is None:
-        # An integration run measures the merged HEAD of its worktree; without a count file the remote ref is measured.
-        options.target = "HEAD" if options.count_file else DEFAULT_TARGET
+        # An integration run measures the merged HEAD of its worktree; without --note the remote ref is measured.
+        options.target = "HEAD" if options.note else DEFAULT_TARGET
     try:
         heads = list_open_pr_heads(options.repo, options.author)
         if not heads:
@@ -256,17 +256,8 @@ def main():
             for text in missing[:options.max_lines]:
                 print("    %s" % text[:160])
     print("%d open pull requests, %d files changed on %s, %d gaps" % (len(heads), len(target_files), options.target, gaps))
-    rose = False
-    if options.count_file:
-        previous = read_count(options.count_file)
-        if previous is not None and gaps > previous:
-            rose = True
-            print("gap count rose from %d to %d; stored value stays %d" % (previous, gaps, previous))
-        else:
-            write_count(options.count_file, gaps)
-            print("gap count %d stored (previous %s)" % (gaps, "none" if previous is None else previous))
-    if rose:
-        print("informational only: a rise of the gap count never blocks an integration")
+    if options.note and report_count(gaps):
+        print("gap count %d reported with orch note" % gaps)
     return 1 if (gaps and options.strict) else 0
 
 
