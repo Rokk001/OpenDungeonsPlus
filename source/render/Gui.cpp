@@ -1894,7 +1894,7 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     const float headerHeight = page->getPixelSize().d_height / scale * 0.2f;
     const float edge = std::max(1.0f, std::min(equipmentWidth / 4.0f, headerHeight / 5.0f));
     // Fit square slots beside the portrait, arranging worn items above the potion and inventory rows.
-    const float columns[] = {0.5f, 2.5f, 1.5f, 1.5f, 1.5f, 2.5f,
+    const float columns[] = {2.5f, 0.5f, 1.5f, 1.5f, 1.5f, 2.5f,
         0.5f, 1.5f, 2.5f, 0.0f, 1.0f, 2.0f, 3.0f};
     const float rows[] = {1.0f, 1.0f, 0.0f, 1.0f, 2.0f, 2.0f,
         3.0f, 3.0f, 3.0f, 4.0f, 4.0f, 4.0f, 4.0f};

@@ -166,7 +166,7 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             page_width = (outer_width * fit - 2 * side) * (.5 if owner == 'Dungeonbook' else 1.0)
             equipment_width = page_width - 148.0 - 32.0
             image_edge = max(1.0, min(equipment_width / 4.0, viewport * 0.2 / 5.0))
-            columns = (0.5, 2.5, 1.5, 1.5, 1.5, 2.5, 0.5, 1.5, 2.5, 0.0, 1.0, 2.0, 3.0)
+            columns = (2.5, 0.5, 1.5, 1.5, 1.5, 2.5, 0.5, 1.5, 2.5, 0.0, 1.0, 2.0, 3.0)
             rows = (1, 1, 0, 1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
             slot_bounds = []
             for slot in range(13):
