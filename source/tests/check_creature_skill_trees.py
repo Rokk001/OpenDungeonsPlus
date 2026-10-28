@@ -658,6 +658,37 @@ def check_real_probe(output):
         sum(1 for row in EXPECTED_TIER_FOUR if not row[2].startswith('PASSIVE_')), built
 
 
+# The skill tree reads its tuning values from the configuration and logs a missing key; the probe replaces both
+# singletons (their include guards are taken first) with the values of global.cfg and a log to the error stream
+SHIM = r"""#define CONFIGMANAGER_H
+#define LOGMANAGER_H
+#include <iostream>
+#include <string>
+//! \brief Stands in for the configuration: the skill tree values of global.cfg.
+class ConfigManager
+{
+public:
+    //! \brief Returns the one configuration of the probe.
+    static ConfigManager& getSingleton() { static ConfigManager config; return config; }
+@GETTERS@
+};
+#define OD_LOG_ERR(_message) (std::cerr << (std::string("") + _message) << std::endl)
+"""
+SHIM_KEYS = ('SkillDeviationPoints', 'SkillResetMinFollowers', 'SkillTier2UnlockRanks', 'SkillTier3UnlockRanks',
+             'SkillTier4MinSpent', 'SkillUnfollowedWeight')
+
+
+# Returns the probe shim with the skill tree values of global.cfg.
+def probe_shim():
+    global_cfg = text('config/global.cfg')
+    getters = []
+    for key in SHIM_KEYS:
+        found = re.findall(r'^\s*' + key + r'\s+(\S+)', global_cfg, re.M)
+        assert len(found) == 1, key
+        getters.append('    double get%s() const { return %s; }' % (key, found[0]))
+    return SHIM.replace('@GETTERS@', '\n'.join(getters))
+
+
 def run_probe(require, source=PROBE, config=FIXTURE):
     compiler = shutil.which('cl')
     if compiler is None:
@@ -667,7 +698,8 @@ def run_probe(require, source=PROBE, config=FIXTURE):
     with tempfile.TemporaryDirectory() as work_name:
         work = Path(work_name)
         (work / 'probe.cpp').write_text(source, encoding='utf-8')
-        subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', f'/I{root / "source"}', 'probe.cpp',
+        (work / 'probe_shim.h').write_text(probe_shim(), encoding='utf-8')
+        subprocess.run(['cl', '/nologo', '/EHsc', '/std:c++17', f'/I{root / "source"}', f'/FI{work / "probe_shim.h"}', 'probe.cpp',
                         str(root / 'source/creatureskill/CreatureSkillTree.cpp'), '/Fe:probe.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         result = subprocess.run([str(work / 'probe.exe'), str(config)], cwd=work, check=True,
@@ -742,7 +774,7 @@ def check_probe(output):
         'line roar1': 'StrengthSelf 55 2 0 20 1.01',
         'line roar5': 'StrengthSelf 55 2 0 20 1.05',
         'line spin': 'Whirlwind 14 1 2 0 1 1',
-        'line rally': 'AuraAlly 60 0 0 4 20 1.007',
+        'line rally': 'AuraAlly 60 0 0 4 20 1.007 2',
         'line strike': 'Strike 30 0 0 1.188',
         'line defense': 'DefenseSelf 45 0 0 25 0.298 0.298 0.298',
         'line heal': 'HealSelf 35 0 0 5 0 2.758',
