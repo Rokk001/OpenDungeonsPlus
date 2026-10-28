@@ -47,7 +47,15 @@ void main()
 {
     vec3 linearColour = surfaceEmission.rgb;
     float alpha = 1.0;
-    if(atmosphereKind == 1)
+    if(atmosphereKind == 0)
+    {
+        // Dark grey-blue gradient with a faint warm haze that rises from the horizon.
+        float height = clamp(skyPosition.z / 38.0, 0.0, 1.0);
+        vec3 horizon = vec3(0.012, 0.015, 0.022);
+        vec3 haze = vec3(0.03, 0.013, 0.006) * (1.0 - smoothstep(0.0, 0.45, height));
+        linearColour = mix(horizon, linearColour, smoothstep(0.0, 0.8, height)) + haze;
+    }
+    else if(atmosphereKind == 1)
     {
         vec3 point = skyPosition * 0.055;
         // The same world-space distortion and height fade keep the layered horizon continuous.
