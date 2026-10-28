@@ -1,5 +1,7 @@
 #include "creatureeffect/CreatureEffectPotion.h"
 
+#include "utils/ConfigManager.h"
+
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
 #include "ODApplication.h"
@@ -10,7 +12,6 @@ namespace
 {
 static const std::string POTION_NAME = "Potion";
 static const double PERCENT = 100.0;
-static const double REGEN_SECONDS = 10.0;
 
 //! \brief Restores potion effects through the regular effect factory.
 class CreatureEffectPotionFactory : public CreatureEffectFactory
@@ -69,7 +70,7 @@ void CreatureEffectPotion::applyEffect(Creature& creature)
     creature.setPotionContribution(this, mKind, mValue);
     if(mKind == "HealPerTenSeconds")
         creature.heal(mValue / PERCENT * creature.getMaxHp() * getTurnFraction()
-            / (REGEN_SECONDS * ODApplication::turnsPerSecond));
+            / (ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionRegenSeconds", 10.0) * ODApplication::turnsPerSecond));
 }
 
 //! \brief Saves the reversible potion contribution after the common effect fields.

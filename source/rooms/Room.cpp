@@ -323,11 +323,11 @@ bool Room::isDestructible() const
 }
 
 //! \brief Hit points of one tile of this room, read from the room configuration
-//! key <RoomName>HP; falls back to Building::DEFAULT_TILE_HP when the key is missing.
+//! key <RoomName>HP; logs a missing key and uses the shipped fallback of 10 HP.
 double Room::getTileHP() const
 {
     return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(
-        RoomManager::getRoomNameFromRoomType(getType()) + "HP", Building::DEFAULT_TILE_HP);
+        RoomManager::getRoomNameFromRoomType(getType()) + "HP", 10.0);
 }
 
 //! \brief Adds the dirt of one room use (config key times the DirtFactor of the creature type) to the tile.

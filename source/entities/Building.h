@@ -85,7 +85,6 @@ public:
 
     virtual ~Building();
 
-    const static double DEFAULT_TILE_HP;
 
     virtual void doUpkeep() override;
 

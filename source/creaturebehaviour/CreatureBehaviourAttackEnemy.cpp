@@ -49,6 +49,7 @@ CreatureBehaviour* CreatureBehaviourAttackEnemy::clone() const
     return new CreatureBehaviourAttackEnemy;
 }
 
+//! \brief Chooses fighting or flight using the configured angry-flight chance.
 bool CreatureBehaviourAttackEnemy::processBehaviour(Creature& creature) const
 {
     // Check if we are already fighting or fleeing
@@ -70,7 +71,7 @@ bool CreatureBehaviourAttackEnemy::processBehaviour(Creature& creature) const
         case CreatureMoodLevel::Angry:
         case CreatureMoodLevel::Furious:
         {
-            if(Random::Int(0,100) > 80)
+            if(Random::Int(0,100) > 100.0 - ConfigManager::getSingleton().getAngryFleeChancePercent())
             {
                 creature.flee();
                 return false;

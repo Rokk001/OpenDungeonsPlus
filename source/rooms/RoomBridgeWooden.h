@@ -35,6 +35,7 @@ public:
     static const TileVisual mRoomVisual;
     
     //! \brief Tiles over lava burn down over time, see WoodenBridgeLavaBurnSeconds
+    //! \brief Burns lava-covered wood using its configured tile health and burn duration.
     virtual void doUpkeep() override;
 
 protected:

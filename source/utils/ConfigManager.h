@@ -545,6 +545,84 @@ public:
     //! \brief Part of that divisor that grows with each creature level (global.cfg ClaimXpDivisorPerLevel).
     inline double getClaimXpDivisorPerLevel() const { return mClaimXpDivisorPerLevel; }
 
+    //! \brief Returns the configured AngryFleeChancePercent value.
+    double getAngryFleeChancePercent() const { return mAngryFleeChancePercent; }
+
+    //! \brief Returns the configured FleeTiles value.
+    double getFleeTiles() const { return mFleeTiles; }
+
+    //! \brief Returns the configured HitChanceMax value.
+    double getHitChanceMax() const { return mHitChanceMax; }
+
+    //! \brief Returns the configured HitChanceMin value.
+    double getHitChanceMin() const { return mHitChanceMin; }
+
+    //! \brief Returns the configured HitChanceScale value.
+    double getHitChanceScale() const { return mHitChanceScale; }
+
+    //! \brief Returns the configured NaturalEnemyEngageChance value.
+    double getNaturalEnemyEngageChance() const { return mNaturalEnemyEngageChance; }
+
+    //! \brief Returns the configured SkillDeviationPoints value.
+    double getSkillDeviationPoints() const { return mSkillDeviationPoints; }
+
+    //! \brief Returns the configured SkillResetMinFollowers value.
+    double getSkillResetMinFollowers() const { return mSkillResetMinFollowers; }
+
+    //! \brief Returns the configured SkillUnfollowedWeight value.
+    double getSkillUnfollowedWeight() const { return mSkillUnfollowedWeight; }
+
+    //! \brief Returns the configured SkillTier2UnlockRanks value.
+    double getSkillTier2UnlockRanks() const { return mSkillTier2UnlockRanks; }
+
+    //! \brief Returns the configured SkillTier3UnlockRanks value.
+    double getSkillTier3UnlockRanks() const { return mSkillTier3UnlockRanks; }
+
+    //! \brief Returns the configured SkillTier4MinSpent value.
+    double getSkillTier4MinSpent() const { return mSkillTier4MinSpent; }
+
+    //! \brief Returns the configured SlapJobCooldownFactor value.
+    double getSlapJobCooldownFactor() const { return mSlapJobCooldownFactor; }
+
+    //! \brief Returns the configured SlapMemoryMax value.
+    double getSlapMemoryMax() const { return mSlapMemoryMax; }
+
+    //! \brief Returns the configured SupportTargetDistanceFactor value.
+    double getSupportTargetDistanceFactor() const { return mSupportTargetDistanceFactor; }
+
+    //! \brief Returns the configured TargetThreatFactorMax value.
+    double getTargetThreatFactorMax() const { return mTargetThreatFactorMax; }
+
+    //! \brief Returns the configured TargetThreatFactorMin value.
+    double getTargetThreatFactorMin() const { return mTargetThreatFactorMin; }
+
+    //! \brief Returns the configured WeakFleeChancePercent value.
+    double getWeakFleeChancePercent() const { return mWeakFleeChancePercent; }
+
+    //! \brief Returns the configured WorkerCarryFirstMaxShare value.
+    double getWorkerCarryFirstMaxShare() const { return mWorkerCarryFirstMaxShare; }
+
+    //! \brief Returns the configured WorkerClaimWallFirstMinShare value.
+    double getWorkerClaimWallFirstMinShare() const { return mWorkerClaimWallFirstMinShare; }
+
+    //! \brief Returns the configured SandboxHeroLevelMax value.
+    double getSandboxHeroLevelMax() const { return mSandboxHeroLevelMax; }
+
+    //! \brief Returns the configured SandboxHeroLevelMin value.
+    double getSandboxHeroLevelMin() const { return mSandboxHeroLevelMin; }
+
+    //! \brief Returns the configured SandboxHeroesPerWave value.
+    double getSandboxHeroesPerWave() const { return mSandboxHeroesPerWave; }
+
+    //! \brief Returns the configured SandboxWaves value.
+    double getSandboxWaves() const { return mSandboxWaves; }
+
+    //! \brief Returns the configured BuildingDamageCurve anchors.
+    const std::vector<double>& getBuildingDamageCurve() const { return mBuildingDamageCurve; }
+
+    //! \brief Returns the configured ThreatPercentByLevel anchors.
+    const std::vector<double>& getThreatPercentByLevel() const { return mThreatPercentByLevel; }
+
     inline int32_t getNbTurnsKoCreatureAttacked() const
     { return mNbTurnsKoCreatureAttacked; }
 
@@ -571,6 +649,12 @@ public:
 
     inline const std::vector<std::string>& getFactions() const
     { return mFactions; }
+
+    //! \brief Reads an equipment setting, logging a missing key and using its shipped default.
+    double getEquipmentConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
+
+    //! \brief Reads a research setting, logging a missing key and using its shipped default.
+    double getResearchConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
 
     //! Rooms configuration
     const std::string& getRoomConfigString(const std::string& param) const;
@@ -612,6 +696,8 @@ public:
     uint32_t getSpellConfigUInt32(const std::string& param) const;
     int32_t getSpellConfigInt32(const std::string& param) const;
     double getSpellConfigDouble(const std::string& param) const;
+    //! \brief Reads a spell setting and logs a missing key before using its shipped default.
+    double getSpellConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
 
     //! \brief Level-1 research cost of the skill with the given name (tier cost, see skills.cfg).
     //! A missing entry is logged as an error and costs SKILL_POINTS_MISSING_ENTRY.
@@ -733,6 +819,7 @@ private:
     //! \brief Reads the [Tavern] block of global.cfg into mTavernConfig.
     bool loadGlobalTavernConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
+    //! \brief Loads equipment definitions and their numeric balance settings.
     bool loadEquipements(const std::string& fileName);
     bool loadSpawnConditions(const std::string& fileName);
     bool loadFactions(const std::string& fileName);
@@ -745,6 +832,7 @@ private:
     bool loadItemSettings(std::stringstream& stream, const std::string& section);
     bool loadTraps(const std::string& fileName);
     bool loadSpellConfig(const std::string& fileName);
+    //! \brief Loads research costs, tab shares and research effects.
     bool loadSkills(const std::string& fileName);
     //! \brief Reads config/creatureSkills.cfg (skill trees, tier 4 skills and templates of the creatures).
     bool loadCreatureSkills(const std::string& fileName);
@@ -942,6 +1030,34 @@ private:
     double mClaimXpFactor;
     double mClaimXpDivisorBase;
     double mClaimXpDivisorPerLevel;
+    double mAngryFleeChancePercent;
+    double mFleeTiles;
+    double mHitChanceMax;
+    double mHitChanceMin;
+    double mHitChanceScale;
+    double mNaturalEnemyEngageChance;
+    double mSkillDeviationPoints;
+    double mSkillResetMinFollowers;
+    double mSkillUnfollowedWeight;
+    double mSkillTier2UnlockRanks;
+    double mSkillTier3UnlockRanks;
+    double mSkillTier4MinSpent;
+    double mSlapJobCooldownFactor;
+    double mSlapMemoryMax;
+    double mSupportTargetDistanceFactor;
+    double mTargetThreatFactorMax;
+    double mTargetThreatFactorMin;
+    double mWeakFleeChancePercent;
+    double mWorkerCarryFirstMaxShare;
+    double mWorkerClaimWallFirstMinShare;
+    double mSandboxHeroLevelMax;
+    double mSandboxHeroLevelMin;
+    double mSandboxHeroesPerWave;
+    double mSandboxWaves;
+    std::vector<double> mBuildingDamageCurve;
+    std::vector<double> mThreatPercentByLevel;
+    std::map<std::string, double> mEquipmentConfig;
+    std::map<std::string, double> mResearchConfig;
     int32_t mNbTurnsKoCreatureAttacked;
     std::string mDefaultWorkerRogue;
     std::string mMainMenuMusic;

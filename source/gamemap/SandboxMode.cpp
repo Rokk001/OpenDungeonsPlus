@@ -43,10 +43,6 @@
 #include <iostream>
 #include <set>
 
-const uint32_t SandboxMode::NB_WAVES = 10;
-const uint32_t SandboxMode::NB_HEROES_PER_WAVE = 8;
-const uint32_t SandboxMode::MIN_HERO_LEVEL = 1;
-const uint32_t SandboxMode::MAX_HERO_LEVEL = 10;
 
 // The values of the sandbox score
 const int32_t SandboxMode::SCORE_HERO_KILLED = 60;
@@ -406,6 +402,7 @@ void SandboxMode::sendMessage(const std::string& message) const
     }
 }
 
+//! \brief Takes a hero at a level clamped to the configured sandbox bounds.
 void SandboxMode::takeHero(Player* player, const std::string& className, uint32_t level)
 {
     if(!mGameMap.isSandbox())
@@ -449,10 +446,10 @@ void SandboxMode::takeHero(Player* player, const std::string& className, uint32_
         mToolboxHeroes.erase(it);
     }
 
-    if(level < MIN_HERO_LEVEL)
-        level = MIN_HERO_LEVEL;
-    if(level > MAX_HERO_LEVEL)
-        level = MAX_HERO_LEVEL;
+    if(level < getSandboxHeroLevelMin())
+        level = getSandboxHeroLevelMin();
+    if(level > getSandboxHeroLevelMax())
+        level = getSandboxHeroLevelMax();
 
     Creature* hero = new Creature(&mGameMap, definition, heroSeat);
     hero->addToGameMap();
@@ -465,6 +462,7 @@ void SandboxMode::takeHero(Player* player, const std::string& className, uint32_
     player->pickUpEntity(hero);
 }
 
+//! \brief Launches the configured number of heroes for an invasion wave.
 bool SandboxMode::launchWave(uint32_t waveNumber)
 {
     // The hero portal of the map is the wave portal
@@ -506,7 +504,7 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
     }
 
     std::vector<std::pair<std::string, uint32_t> > creatures;
-    uint32_t nbToChoose = NB_HEROES_PER_WAVE;
+    uint32_t nbToChoose = getSandboxHeroesPerWave();
     if(!dwarfs.empty())
     {
         creatures.push_back(std::pair<std::string, uint32_t>(dwarfs[Random::Uint(0, static_cast<uint32_t>(dwarfs.size()) - 1)], waveNumber));
@@ -535,10 +533,11 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
         mNbWavesLaunched = waveNumber;
 
     sendMessage("Heroes are invading! Wave " + Helper::toString(waveNumber) + " of "
-        + Helper::toString(NB_WAVES) + ".");
+        + Helper::toString(getSandboxWaves()) + ".");
     return true;
 }
 
+//! \brief Starts invasion waves using the configured wave limit.
 void SandboxMode::startInvasion(Player* player, bool continual)
 {
     if(!mGameMap.isSandbox())
@@ -553,7 +552,7 @@ void SandboxMode::startInvasion(Player* player, bool continual)
     if(continual)
     {
         // A continual invasion that already went through all the waves starts again
-        if(mNbWavesLaunched >= NB_WAVES)
+        if(mNbWavesLaunched >= getSandboxWaves())
             mNbWavesLaunched = 0;
 
         if(launchWave(mNbWavesLaunched + 1))
@@ -564,8 +563,8 @@ void SandboxMode::startInvasion(Player* player, bool continual)
 
     // A single wave. When the last one was beaten, the next ones are as hard as the last
     uint32_t waveNumber = mNbWavesLaunched + 1;
-    if(waveNumber > NB_WAVES)
-        waveNumber = NB_WAVES;
+    if(waveNumber > getSandboxWaves())
+        waveNumber = getSandboxWaves();
 
     launchWave(waveNumber);
 }
@@ -936,6 +935,7 @@ void SandboxMode::sendStatus()
     }
 }
 
+//! \brief Advances sandbox goals and invasion waves using the configured limit.
 void SandboxMode::doTurn()
 {
     ++mTurnsElapsed;
@@ -978,10 +978,10 @@ void SandboxMode::doTurn()
             beaten += " Reward: " + Helper::toString(mWaveHeroPoints) + " points.";
 
         sendMessage(beaten);
-        if(mNbWavesLaunched >= NB_WAVES)
+        if(mNbWavesLaunched >= getSandboxWaves())
         {
             if(mIsContinual)
-                sendMessage("You survived all " + Helper::toString(NB_WAVES) + " waves!");
+                sendMessage("You survived all " + Helper::toString(getSandboxWaves()) + " waves!");
 
             mIsContinual = false;
             return;

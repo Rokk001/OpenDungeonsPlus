@@ -1848,6 +1848,7 @@ std::vector<std::pair<SkillType, int> > Seat::getQueuedLevels(const std::vector<
     return levels;
 }
 
+//! \brief Returns the reason research is blocked, using the configured tab shares.
 const char* Seat::getResearchGateFailure(SkillType type, int level, const std::vector<std::pair<SkillType, int> >& queuedBefore) const
 {
     static const char* const REASON_NOT_ALLOWED = "not allowed by the level";
@@ -1888,7 +1889,9 @@ const char* Seat::getResearchGateFailure(SkillType type, int level, const std::v
         if(getQueuedSkillLevel(tabSkill, queuedBefore) >= 1)
             ++nbAtLevelOne;
     }
-    const uint32_t nbNeeded = (level == RESEARCH_LEVEL_SECOND) ? (nbAllowed + 1) / 2 : nbAllowed;
+    const uint32_t nbNeeded = static_cast<uint32_t>(std::ceil(nbAllowed *
+        (level == RESEARCH_LEVEL_SECOND ? ConfigManager::getSingleton().getResearchConfigDoubleOrDefault("ResearchLevel2TabShare", 0.5) :
+        ConfigManager::getSingleton().getResearchConfigDoubleOrDefault("ResearchLevel3TabShare", 1.0))));
     if(nbAtLevelOne < nbNeeded)
         return REASON_TAB_NEEDS_MORE;
 

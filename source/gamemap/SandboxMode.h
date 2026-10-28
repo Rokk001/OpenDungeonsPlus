@@ -19,6 +19,8 @@
 #define SANDBOXMODE_H
 
 #include <cstdint>
+
+#include "utils/ConfigManager.h"
 #include <iosfwd>
 #include <map>
 #include <string>
@@ -98,13 +100,13 @@ class SandboxMode
 {
 public:
     //! \brief Number of waves of a hero invasion
-    static const uint32_t NB_WAVES;
+    static uint32_t getSandboxWaves() { return static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves()); }
     //! \brief Number of heroes in a wave
-    static const uint32_t NB_HEROES_PER_WAVE;
+    static uint32_t getSandboxHeroesPerWave() { return static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroesPerWave()); }
     //! \brief Lowest level of a hero (the level selector of the toolbox starts here)
-    static const uint32_t MIN_HERO_LEVEL;
+    static uint32_t getSandboxHeroLevelMin() { return static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin()); }
     //! \brief Highest level of a hero (the level selector of the toolbox goes up to this)
-    static const uint32_t MAX_HERO_LEVEL;
+    static uint32_t getSandboxHeroLevelMax() { return static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMax()); }
 
     //! \brief Score values of the sandbox: a hero killed, a tile of land owned (also lost
     //! again when the tile is lost), a gold tile mined, an item made in a workshop, a creature

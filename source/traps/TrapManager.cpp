@@ -532,6 +532,7 @@ void TrapManager::checkSellTrapTiles(GameMap* gameMap, const InputManager& input
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Sells selected trap tiles for their configured refund share.
 void TrapManager::sellTrapTiles(GameMap* gameMap, Seat* seatSell, ODPacket& packet)
 {
     uint32_t nbTiles;
@@ -561,7 +562,7 @@ void TrapManager::sellTrapTiles(GameMap* gameMap, Seat* seatSell, ODPacket& pack
             continue;
         }
 
-        price += costPerTile(trap->getType()) / 2;
+        price += static_cast<int32_t>(costPerTile(trap->getType()) * ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapSellRefundShare", 0.5));
         tiles.push_back(tile);
         traps.insert(trap);
     }
