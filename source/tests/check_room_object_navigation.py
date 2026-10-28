@@ -155,6 +155,10 @@ struct Creature {
  bool decreaseJobCooldown(){if(cooldown>0){--cooldown;return false;}return true;}
  void popAction(){++popped;}void foodEaten(double value){food+=value;}void registerChickenEaten(){}
  void setJobCooldown(int value){cooldown=value;}double getHP()const{return hp;}void setHP(double value){hp=value;}
+ //! \brief Supplies the max HP the chicken heal is a share of (one chicken heals 10 of 100 here).
+ double getMaxHp()const{return 100;}
+ //! \brief The fixture creature has no urgent need that interrupts eating or work.
+ bool needInterrupt(bool)const{return false;}
  void computeCreatureOverlayHealthValue(){}void fireChickenFeeding(const std::string&,const Ogre::Vector3&){++feeding;}
  void clearDestinations(const std::string& state,bool,bool){walk.clear();animation=state;}
  void setAnimationState(const std::string& state,bool,const Ogre::Vector3&,bool){animation=state;}
@@ -179,6 +183,8 @@ struct ConfigManager {
  static ConfigManager& getSingleton(){static ConfigManager config;return config;}
  double getBedStepMaxHeight()const{return STEP_MAX;}
  double getRoomConfigDouble(const char*){return 10;}unsigned getRoomConfigUInt32(const char*){return 1;}
+ //! \brief Supplies the natural full heal time the chicken heal seconds are a share of.
+ double getNaturalFullHealSeconds()const{return 100;}
 };
 SOURCE
 //! \brief Mirrors server refinement and spacing without changing exact work routes.
@@ -194,6 +200,8 @@ struct ChickenEntity {
  const std::string& getSnatchedFrom()const{static const std::string none;return none;}
 };
 struct CreatureActionWalkToTile {CreatureActionWalkToTile(Creature&){}};
+//! \brief Stands in for the toilet search an urgent need would start.
+struct CreatureActionSearchToilet {CreatureActionSearchToilet(Creature&){}};
 struct CreatureActionEatChicken {static bool handleEatChicken(Creature&,ChickenEntity*);};
 namespace Random {int Int(int first,int){return first;}}
 namespace Utils {using std::make_unique;}

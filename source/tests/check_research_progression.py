@@ -177,7 +177,7 @@ struct Seat {
     void setLabMode(int32_t mode){mLabMode=mode;}
     std::vector<std::pair<int32_t,uint32_t>> mStoredSpecialBoxes;
     void addStoredSpecial(GiftBoxType type,uint32_t amount){mStoredSpecialBoxes.push_back(std::pair<int32_t,uint32_t>(static_cast<int32_t>(type),amount));}
-    int32_t mSkillPoints=0;const Skill* mCurrentSkill=nullptr;
+    int32_t mSkillPoints=0;double mSkillPointsRemainder=0.0;const Skill* mCurrentSkill=nullptr;
     SkillType mCurrentSkillType=SkillType::nullSkillType;float mCurrentSkillProgress=0;
     bool mGuiSkillNeedsRefresh=false;
     std::vector<SkillType> mSkillDone,mSkillPending,mSkillNotAllowed;
@@ -358,17 +358,17 @@ int main(int argc,char** argv){try {
         {T::roomTreasury,"GoldPerTile",1000,1000,1250,1500},{T::roomDormitory,"SleepRecovery",1.5,1.5,1.8,2.1},
         {T::roomInfirmary,"HealTime",60,60,48,40.02},
         {T::roomHatchery,"LayInterval",15,15,12,12},{T::roomHatchery,"Capacity",1,1,1,1.5},
-        {T::roomLibrary,"PointsPerWork",5,5,6,7},{T::roomTrainingHall,"XpPerHit",5,5,6,7},{T::roomWorkshop,"PointsPerWork",5,5,6,7},
+        {T::roomLibrary,"PointsPerWork",5,5,6,7},{T::roomTrainingHall,"XpPerHit",5,5,6,6},{T::roomWorkshop,"PointsPerWork",5,5,6,7},
         {T::roomGuardRoom,"WakefulnessPerDuty",0.5,0.5,0.4,0.3335},{T::roomCasino,"Fee",.1,.1,.12,.14},{T::roomCasino,"Mood",180,180,216,252},
-        {T::roomArena,"LevelCap",20,20,25,30},{T::roomPrison,"Capacity",1,1,1.5,2},{T::roomPrison,"SkeletonLevel",1,1,2,3},
+        {T::roomArena,"LevelCap",20,20,26.66666,40},{T::roomPrison,"Capacity",1,1,1.5,2},{T::roomPrison,"SkeletonLevel",1,1,2,3},
         {T::roomCrypt,"LichCorpses",10,10,8,6},{T::roomCrypt,"LichLevel",0,0,1,2},
         {T::roomGhostRoom,"EctoplasmLevels",10,10,8,6},{T::roomGhostRoom,"BoxCapacity",1,1,2,3},
         {T::roomGhostRoom,"BeamRange",1,1,2,3},{T::roomGhostRoom,"CatchTime",5.5,5.5,4.4,3.6685},
         {T::roomGhostRoom,"RevivePrice",14000,14000,12000,10000},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
-        {T::roomTorture,"ConversionSpeed",1,1,1.2,1.4},{T::roomTemple,"PrayerMana",60,60,72,84},
+        {T::roomTorture,"ConversionSpeed",1,1,1.218,1.436},{T::roomTemple,"PrayerMana",60,60,72,84},
         {T::keeperDominion,"CreatureLimit",10,12,14,16},{T::tavernBeer,"PortalCooldown",50,50,45,40},
         {T::trapCannon,"Damage",20.5,92.25,217.915,386.63},{T::trapSpike,"Damage",10,45,106.3,188.6},
-        {T::trapAlarm,"Reload",100,100,80,66.7},{T::trapFear,"Duration",20,20,25,30},{T::trapFreeze,"Duration",28,28,35,42},
+        {T::trapAlarm,"Reload",100,100,80,66.7},{T::trapFear,"Duration",20,20,23.462,26.74},{T::trapFreeze,"Duration",28,28,32.8468,37.436},
         {T::trapWatchBanner,"AuraRadius",7,7,8.75,10.5},{T::trapTrigger,"Radius",1,1,2,3},
         {T::trapDoorWooden,"HP",200,368,576.4,1808.8},{T::trapDoorRuned,"HP",1200,2208,3458.4,10852.8},{T::trapDoorRuned,"Damage",30.75,138.375,326.8725,579.945},
         {T::keeperHeartFortitude,"HeartHP",10000,16980,24740,60000},{T::keeperHeartMending,"HeartHeal",2.5,4.245,6.185,15},{T::keeperManaFlow,"HeartMana",30,33,36,39},
@@ -377,7 +377,7 @@ int main(int argc,char** argv){try {
         {T::spellCreatureDefense,"Bonus",5,20.8,44.55,79.2},{T::spellCreatureStrength,"Factor",1.1,1.1,1.15,1.2},{T::spellCreatureWeak,"Factor",.9,.9,.85,.8},
         {T::spellCreatureSlow,"Factor",.5,.5,.45,.4},{T::spellCallToWar,"Lifetime",50,50,65,80},
         {T::spellCreatureExplosion,"Damage",14,63,148.82,264.04},{T::spellPossess,"ManaPerSecond",40,40,32,26.68},
-        {T::spellDefector,"Duration",35,35,43.75,52.5},{T::spellCreateGold,"Gold",1000,1000,1250,1500}};
+        {T::spellDefector,"Duration",35,35,41.0585,46.795},{T::spellCreateGold,"Gold",1000,1000,1250,1500}};
     for(const auto& effect:effects){
         const std::string name=Skills::toString(effect.type)+" "+effect.effect;
         near(SkillManager::getResearchValue(effect.type,0,effect.base,effect.effect),effect.base,name+": not researched leaves the base");
