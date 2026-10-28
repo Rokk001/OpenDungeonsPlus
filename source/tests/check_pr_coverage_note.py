@@ -6,12 +6,15 @@ Nothing is compiled and the real orchestrator database is never touched: orch is
 program in a temporary folder that only records its arguments.
 Exit codes: 0 = all checks passed, 1 = a check failed.
 """
+import contextlib
+import io
 import os
 import shutil
 import stat
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_pr_coverage  # noqa: E402
@@ -82,6 +85,61 @@ class ReportCountTest(unittest.TestCase):
             text = handle.read()
         self.assertNotIn('"--count-file"', text)
         self.assertIn('"--note"', text)
+
+
+class MainTest(unittest.TestCase):
+    """Tests of main() with the GitHub CLI layer and the git diffs replaced and a dummy orch program put first on PATH."""
+
+    def setUp(self):
+        """Create the temporary folder with the dummy orch program and put it on PATH."""
+        self.folder = tempfile.mkdtemp(prefix="pr-coverage-main-")
+        self.log = write_stub(self.folder, 0)
+        self.old_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = self.folder + os.pathsep + self.old_path
+
+    def tearDown(self):
+        """Restore PATH and remove the temporary folder."""
+        os.environ["PATH"] = self.old_path
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    def run_main(self, arguments):
+        """Run main() with the arguments; one file of the target is covered by no open pull request (one gap). Returns (exit code, output)."""
+        def fake_diff(base, ref):
+            """Return the target (ref HEAD) with one changed file and a pull request head without changes."""
+            if ref == "HEAD":
+                return {"a.txt"}, {"a.txt": {"line"}}
+            return set(), {}
+
+        output = io.StringIO()
+        with mock.patch.object(check_pr_coverage, "list_open_pr_heads", return_value=[(1, "branch", "abc")]), \
+                mock.patch.object(check_pr_coverage, "resolve_head", return_value="abc"), \
+                mock.patch.object(check_pr_coverage, "diff_added", side_effect=fake_diff), \
+                mock.patch.object(sys, "argv", ["check_pr_coverage.py"] + arguments), \
+                contextlib.redirect_stdout(output):
+            code = check_pr_coverage.main()
+        return code, output.getvalue()
+
+    def test_green_run_calls_orch_note_with_the_count(self):
+        """With --note the stub receives the note with the gap count of the run."""
+        code, text = self.run_main(["--note"])
+        self.assertEqual(code, 0)
+        self.assertIn("1 gaps", text)
+        with open(self.log) as handle:
+            recorded = handle.read()
+        self.assertIn("note", recorded)
+        self.assertIn("PR coverage gaps (last run): 1", recorded)
+
+    def test_run_red_does_not_call_orch(self):
+        """With --note --run-red orch is not called and the output says so."""
+        code, text = self.run_main(["--note", "--run-red"])
+        self.assertEqual(code, 0)
+        self.assertIn("not reported", text)
+        self.assertFalse(os.path.exists(self.log))
+
+    def test_without_note_does_not_call_orch(self):
+        """Without --note orch is not called either."""
+        self.run_main([])
+        self.assertFalse(os.path.exists(self.log))
 
 
 if __name__ == "__main__":
