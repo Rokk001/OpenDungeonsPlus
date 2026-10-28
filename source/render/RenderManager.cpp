@@ -246,6 +246,14 @@ const std::string GROUND_UNDERLAY_ENTITY_NAME = "DungeonGroundUnderlay";
 const std::string GROUND_UNDERLAY_NODE_NAME = "DungeonGroundUnderlayNode";
 //! Z position of the ground underlay plane, below the deepest tile geometry.
 const Ogre::Real GROUND_UNDERLAY_HEIGHT = -4.0f;
+//! Name of the scene node that holds the rock border around the map.
+const std::string WORLD_BORDER_NODE_NAME = "DungeonWorldBorderNode";
+//! Width of the rock border around the map in tiles. With the view target on the map edge, the highest default
+//! zoom (16), the default tilt (25 degrees) and a 16:9 screen, the farthest screen corner lies 19.0 tiles from the
+//! target; the outermost border tile reaches 19.5 tiles.
+const int WORLD_BORDER_TILES = 19;
+//! Edge length in tiles of one border chunk node; chunks outside the view are skipped as a whole.
+const int WORLD_BORDER_CHUNK_TILES = 8;
 //! Number of instances per batch of the instance manager that draws the tiles marked for digging in the fog of war.
 const size_t MARKED_FOG_INSTANCES_PER_BATCH = 128;
 
@@ -1770,7 +1778,99 @@ RenderManager::~RenderManager()
     // mSceneManager->destroyInstanceManager(mInstanceManagerCloud);
 }
 
-//! \brief Initializes game visuals with a seam-covering ground plane bounded by the map edges.
+//! \brief Builds the rock border around the map from shared earth wall meshes, grouped in chunk nodes so
+//! that chunks outside the view are skipped as a whole.
+void RenderManager::createWorldBorder(GameMap* gameMap)
+{
+    const std::vector<TileSetValue>& borderMeshes = gameMap->getMeshesForEnclosedEarth();
+    if(borderMeshes.empty())
+        return;
+
+    for(const TileSetValue& value : borderMeshes)
+    {
+        if(!Ogre::MeshManager::getSingleton().resourceExists(value.getMeshName(), "Graphics"))
+            Ogre::MeshManager::getSingleton().load(value.getMeshName(), "Graphics");
+        Ogre::MeshPtr meshPtr = Ogre::MeshManager::getSingleton().getByName(value.getMeshName(), "Graphics");
+        unsigned short src;
+        if(!meshPtr->suggestTangentVectorBuildParams(src))
+            meshPtr->buildTangentVectors(src);
+    }
+
+    Ogre::SceneNode* borderNode = mSceneManager->getRootSceneNode()->createChildSceneNode(WORLD_BORDER_NODE_NAME);
+    std::map<std::pair<int, int>, Ogre::SceneNode*> chunks;
+    const int count = static_cast<int>(borderMeshes.size());
+    const int sizeX = gameMap->getMapSizeX();
+    const int sizeY = gameMap->getMapSizeY();
+    for(int yy = -WORLD_BORDER_TILES; yy < sizeY + WORLD_BORDER_TILES; ++yy)
+    {
+        for(int xx = -WORLD_BORDER_TILES; xx < sizeX + WORLD_BORDER_TILES; ++xx)
+        {
+            if(xx >= 0 && xx < sizeX && yy >= 0 && yy < sizeY)
+                continue;
+
+            // Shift by the border width so that the chunk index never divides a negative number
+            std::pair<int, int> chunkKey((xx + WORLD_BORDER_TILES) / WORLD_BORDER_CHUNK_TILES,
+                (yy + WORLD_BORDER_TILES) / WORLD_BORDER_CHUNK_TILES);
+            std::map<std::pair<int, int>, Ogre::SceneNode*>::iterator chunk = chunks.find(chunkKey);
+            if(chunk == chunks.end())
+                chunk = chunks.insert(std::make_pair(chunkKey, borderNode->createChildSceneNode())).first;
+
+            // Fixed variant per position, so the border looks the same in every game
+            const TileSetValue& value = borderMeshes[((xx * 7 + yy * 13) % count + count) % count];
+            Ogre::Quaternion orientation;
+            if(value.getRotationX() != 0.0f)
+                orientation = orientation * Ogre::Quaternion(Ogre::Degree(value.getRotationX()), Ogre::Vector3::UNIT_X);
+            if(value.getRotationY() != 0.0f)
+                orientation = orientation * Ogre::Quaternion(Ogre::Degree(value.getRotationY()), Ogre::Vector3::UNIT_Y);
+            if(value.getRotationZ() != 0.0f)
+                orientation = orientation * Ogre::Quaternion(Ogre::Degree(value.getRotationZ()), Ogre::Vector3::UNIT_Z);
+
+            // The material of a never-seen earth tile inside the map: no seat colour, no mark, no vision
+            Ogre::Entity* entity = mSceneManager->createEntity(
+                WORLD_BORDER_NODE_NAME + "_" + Helper::toString(xx) + "_" + Helper::toString(yy),
+                Ogre::MeshManager::getSingleton().getByName(value.getMeshName(), "Graphics"));
+            if(!value.getMaterialName().empty())
+                entity->setMaterialName(value.getMaterialName());
+            colourizeEntity(entity, nullptr, false, false);
+            entity->setCastShadows(false);
+            entity->setLightMask(ALL_LIGHTS_MASK);
+            entity->setQueryFlags(0);
+            entity->setVisibilityFlags(CullingType::SHOW_MAIN_WINDOW);
+            Ogre::SceneNode* tileNode = chunk->second->createChildSceneNode(
+                Ogre::Vector3(static_cast<Ogre::Real>(xx), static_cast<Ogre::Real>(yy), 0.0f), orientation);
+            tileNode->attachObject(entity);
+        }
+    }
+}
+
+//! \brief Destroys the rock border built by createWorldBorder with all its entities.
+void RenderManager::destroyWorldBorder()
+{
+    if(!mSceneManager->hasSceneNode(WORLD_BORDER_NODE_NAME))
+        return;
+
+    Ogre::SceneNode* borderNode = mSceneManager->getSceneNode(WORLD_BORDER_NODE_NAME);
+    while(borderNode->numChildren() > 0)
+    {
+        Ogre::SceneNode* chunkNode = static_cast<Ogre::SceneNode*>(borderNode->getChild(0));
+        while(chunkNode->numChildren() > 0)
+        {
+            Ogre::SceneNode* tileNode = static_cast<Ogre::SceneNode*>(chunkNode->getChild(0));
+            while(tileNode->numAttachedObjects() > 0)
+            {
+                Ogre::MovableObject* object = tileNode->getAttachedObject(static_cast<unsigned short>(0));
+                tileNode->detachObject(object);
+                mSceneManager->destroyMovableObject(object);
+            }
+            mSceneManager->destroySceneNode(tileNode);
+        }
+        mSceneManager->destroySceneNode(chunkNode);
+    }
+    mSceneManager->destroySceneNode(borderNode);
+}
+
+//! \brief Initializes game visuals with a seam-covering ground plane bounded by the map edges and the
+//! rock border outside of them.
 void RenderManager::initGameRenderer(GameMap* gameMap)
 {
     OD_ASSERT_TRUE(gameMap);
@@ -1796,6 +1896,7 @@ void RenderManager::initGameRenderer(GameMap* gameMap)
         Ogre::Vector3((gameMap->getMapSizeX() - 1) * 0.5f, (gameMap->getMapSizeY() - 1) * 0.5f, 0.0f));
     groundNode->attachObject(ground);
 
+    createWorldBorder(gameMap);
 
     // Create the light which follows the single tile selection mesh
     if(mHandLight == nullptr)
@@ -2054,6 +2155,7 @@ void RenderManager::stopGameRenderer(GameMap* gameMap)
         mSceneManager->destroySceneNode(GROUND_UNDERLAY_NODE_NAME);
         Ogre::MeshManager::getSingleton().remove(GROUND_UNDERLAY_MESH_NAME, "Graphics");
     }
+    destroyWorldBorder();
     while(!mCreatureDecayMaterials.empty())
         clearCreatureDecay(mCreatureDecayMaterials.begin()->first);
     rrCancelIdleHandAnimation();

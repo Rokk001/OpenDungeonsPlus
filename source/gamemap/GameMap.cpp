@@ -4140,6 +4140,12 @@ const std::string& GameMap::getMeshForDefaultTile() const
     return mTileSet->getTileValues(TileVisual::dirtFull).at(0).at(0).getMeshName();
 }
 
+const std::vector<TileSetValue>& GameMap::getMeshesForEnclosedEarth() const
+{
+    // 15 (binary 1111) means linked to the neighbours on all four sides
+    return mTileSet->getTileValues(TileVisual::dirtFull).at(15);
+}
+
 
 int GameMap::computeTileSetIndex(const Tile* tile) const
 {

@@ -797,6 +797,10 @@ public:
     //! is used as a workaround to avoid lightning issues
     const std::string& getMeshForDefaultTile() const;
 
+    //! \brief Returns the earth wall variants linked to earth on all four sides, used for the rock
+    //! border drawn around the map.
+    const std::vector<TileSetValue>& getMeshesForEnclosedEarth() const;
+
     //! \brief compute the integer number, which in binary decoding -e.g. 1100 -- denoted as one binary digit
     //! as whether each neighbour  - West, North, East , South , contains the same TileVisual enum type
     int computeTileSetIndex(const Tile* tile) const;
