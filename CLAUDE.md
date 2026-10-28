@@ -106,7 +106,8 @@ Diese Pfade direkt verwenden, nie danach suchen.
 
 - Pull requests are opened only on Mario's explicit order. A pull request contains nothing personal: no personal paths, no work rules, no agent files (`.claude/`, `AGENTS.md`), no internal planning documents. `CLAUDE.md` in a pull request branch equals the base version plus only the section "Protected content"; check the diff before opening.
 - Never use `git commit --amend`, `git reset`, `git update-ref` or any other ref rewrite, also not for unpushed commits. A wrong commit message stays; corrections are new commits. If a guard or hook blocks a git command, stop and report instead of working around it. No force push.
-- Never remove an existing comment; update it when its code changes. Every new or changed Boost test case gets a short comment saying what it checks.
+- Never remove an existing comment; update it when its code changes. Every new or changed function, method and class gets a short Doxygen-style comment, and every new or changed Boost test case gets a short comment saying what it checks.
+- Commit messages are English and plain, say what changed and why, and carry no AI attribution.
 - The result of a build is decided only by the real exit code of `cmake --build` (written to a file right after the call), never by reading the log.
 - Check scripts use fixed expected values that match the state of the branch, counted once and named in the commit; they never derive the expected value at run time from the code under test. A check that is red on the branch and green on `origin/integration/all` is a regression of the branch and is fixed on the branch, never in the check.
 - Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless Mario orders it separately.
@@ -114,4 +115,6 @@ Diese Pfade direkt verwenden, nie danach suchen.
 - Before removing a worktree: back up uncommitted and untracked files, verify the backup byte for byte, then run `git worktree remove` without `--force`. If the backup fails or HEAD is not contained in `origin/integration/all`, remove nothing. Branches stay.
 - Sounds are real recordings under CC0 or CC-BY, with author, licence and source URL in the CREDITS entry of the same commit; never synthesized or generated files.
 - Internal planning documents, design reference images and notes are never stored in this repository and never referenced from tracked files.
+- Only one integrator runs at a time. Every run takes all rows with status `ready` in the integration queue; the run prompt names no branch list.
+- A branch that is blocked only because it conflicts with another branch of the same run, and that other branch fails, is integrated alone in the same run or the next.
 - No absolute personal paths in tracked files: use the file name, a neutral word or an environment variable.
