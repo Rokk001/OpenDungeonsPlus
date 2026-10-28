@@ -112,8 +112,9 @@ assert attribute_values
 number_texts = [format(value, '.1f').removesuffix('.0') for value in attribute_values]
 longest_number = max(number_texts, key=font.getlength)
 critical_text = max([format(value, '.1f') for value in attribute_values], key=font.getlength)
-attribute_text = 'Strength {0} - Dexterity {0} - Life {0} - Mana {0} - Critical {1} %'.format(longest_number, critical_text)
-for label in ('Strength ', ' - Dexterity ', ' - Life ', ' - Mana ', ' - Critical '):
+attribute_lines = ['Strength {0} - Dexterity {0} - Life {0}'.format(longest_number),
+                   'Mana {0} - Critical {1} %'.format(longest_number, critical_text)]
+for label in ('Strength ', ' - Dexterity ', ' - Life ', '\\nMana ', ' - Critical '):
     assert '"' + label + '"' in creature
 
 
@@ -192,7 +193,7 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             assert len(slot_bounds) == 13
             equipment_bottom = max(bounds[3] for bounds in slot_bounds)
             attribute_top = max(132.0, equipment_bottom + 4)
-            attribute_bottom = attribute_top + wrapped_lines(attribute_text, page_width - 48) * line_height + 4
+            attribute_bottom = attribute_top + sum(wrapped_lines(line, page_width - 48) for line in attribute_lines) * line_height + 4
             core_bottom = attribute_bottom + 4 + 20
             assert core_bottom <= viewport, (owner, screen_width, screen_height, percent, core_bottom, viewport)
             assert 124 <= attribute_top and 26 <= 34, 'portrait/header overlaps the following essential rows'

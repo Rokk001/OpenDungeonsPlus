@@ -1351,6 +1351,7 @@
             </Area>
             <Property name="AlwaysOnTop" value="False" />
             <Property name="WantsMultiClickEvents" value="False" />
+            <Property name="NonClient" value="true" />
         </Child>
         <Child nameSuffix="__auto_closebutton__" type="OD/SystemButton">
             <Area>
@@ -1359,6 +1360,7 @@
                 <Dim type="Width"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
                 <Dim type="Height"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
             </Area>
+            <Property name="NonClient" value="true" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="NormalImage" value="OpenDungeonsSkin/CloseButtonNormal" />
             <Property name="HoverImage" value="OpenDungeonsSkin/CloseButtonHover" />
@@ -1368,10 +1370,7 @@
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge">
-                        <WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" />
-                        <UnifiedDim offset="0" type="Height" />
-                    </Dim>
+                    <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
@@ -2804,9 +2803,9 @@
     </WidgetLook>
 
     <WidgetLook name="OD/Listbox">
-        <PropertyDefinition name="LeftPadding" initialValue="0" redrawOnWrite="true" />
-        <PropertyDefinition name="TopPadding" initialValue="0" redrawOnWrite="true" />
-        <PropertyDefinition name="RightPadding" initialValue="0" redrawOnWrite="true" />
+        <PropertyDefinition name="LeftPadding" initialValue="8" redrawOnWrite="true" />
+        <PropertyDefinition name="TopPadding" initialValue="8" redrawOnWrite="true" />
+        <PropertyDefinition name="RightPadding" initialValue="8" redrawOnWrite="true" />
         <NamedArea name="ItemRenderingArea">
             <Area>
                 <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/WindowLeftEdge" /><PropertyDim name="LeftPadding" /></OperatorDim>
