@@ -4080,11 +4080,65 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     updateEventMessageIndicator(0.0f);
 }
 
+//! rief Design pixels of the event panel above and below the message text (top margin, button row with labels).
+static const float EVENT_PANEL_FIXED_HEIGHT = 160.0f;
+//! rief Design pixels of the event panel bottom edge above the screen bottom (matches WindowGameEvent.layout).
+static const float EVENT_PANEL_BOTTOM_OFFSET = 193.0f;
+//! rief Design pixels of frame inset and scrollbar subtracted from the message width when wrapping.
+static const float EVENT_PANEL_TEXT_INSET = 44.0f;
+
+//! rief Sets the height of the event panel so that it fits the wrapped message text plus the button row.
+//! \param gui The gui, used for the layout scale and to store the design area.
+//! \param panel The GameEventText window.
+//! \param message The text of the message, empty for no message.
+//! The text block is limited to a third of the screen height; longer texts scroll.
+static void fitEventPanelToText(Gui& gui, CEGUI::Window* panel, const std::string& message)
+{
+    CEGUI::Window* text = panel->getChild("Message");
+    const float scale = gui.getLayoutScale();
+    const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float availableWidth = std::max(1.0f, panel->getPixelSize().d_width * 0.86f - EVENT_PANEL_TEXT_INSET * scale);
+    const CEGUI::Font* font = text->getFont();
+    const float lineHeight = font->getLineSpacing();
+
+    // Greedy word wrap with the real font extents, one line at least
+    size_t lines = 1;
+    std::istringstream paragraphs(message);
+    std::string paragraph;
+    bool first = true;
+    while(std::getline(paragraphs, paragraph))
+    {
+        if(!first)
+            ++lines;
+        first = false;
+        std::istringstream words(paragraph);
+        std::string word;
+        std::string current;
+        while(words >> word)
+        {
+            const std::string candidate = current.empty() ? word : current + " " + word;
+            if(!current.empty() && font->getTextExtent(reinterpret_cast<const CEGUI::utf8*>(candidate.c_str())) > availableWidth)
+            {
+                ++lines;
+                current = word;
+            }
+            else
+                current = candidate;
+        }
+    }
+
+    const float textHeight = std::min(static_cast<float>(lines) * lineHeight, display.d_height / 3.0f);
+    const float height = textHeight / scale + EVENT_PANEL_FIXED_HEIGHT;
+    gui.setScaledArea(panel, CEGUI::URect(CEGUI::UDim(0.6f, 0.0f), CEGUI::UDim(1.0f, -EVENT_PANEL_BOTTOM_OFFSET - height),
+        CEGUI::UDim(1.0f, -20.0f), CEGUI::UDim(1.0f, -EVENT_PANEL_BOTTOM_OFFSET)));
+}
+
 void GameMode::showEventMessages()
 {
     CEGUI::Window* events = mRootWindow->getChild("GameEventText");
     mSelectedEventMessage = nullptr;
     events->getChild("Message")->setText("");
+    fitEventPanelToText(mModeManager->getGui(), events, "");
     events->getChild("Dismiss")->disable();
     events->show();
     events->moveToFront();
@@ -4101,6 +4155,7 @@ void GameMode::showEventMessage(EventMessage* message, bool raiseWindow)
     CEGUI::Window* events = mRootWindow->getChild("GameEventText");
     CEGUI::Window* text = events->getChild("Message");
     text->setText(reinterpret_cast<const CEGUI::utf8*>(message->getMessageAsString().c_str()));
+    fitEventPanelToText(mModeManager->getGui(), events, message->getMessageAsString());
     static_cast<CEGUI::Scrollbar*>(text->getChild("__auto_vscrollbar__"))->setScrollPosition(0);
     events->getChild("Dismiss")->enable();
     events->show();

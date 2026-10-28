@@ -155,11 +155,25 @@ notice = ET.parse(repo / 'gui/WindowGameEvent.layout').getroot().find('Window')
 message = udims(notice.find("Window[@name='Message']/Property[@name='Area']").get('value'))
 assert abs(message[0][0] - (1 - message[2][0])) < 1e-9, 'message margins are equal'
 notice_extent = window_extent(notice)
-notice_height = notice_extent[1][1]
+# The panel height follows the message text (GameMode.cpp fitEventPanelToText): no fixed pixel height in the
+# layout beyond the default, the width stays at most 60 percent of the screen, and no fixed pixel heights inside.
+assert notice_extent[0][0] <= 0.6 + 1e-9 and notice_extent[0][1] <= 0, 'event panel is at most 60 percent wide'
+game_text = (repo / 'source/modes/GameMode.cpp').read_text(encoding='utf-8', errors='replace')
+assert 'fitEventPanelToText' in game_text and 'display.d_height / 3.0f' in game_text, 'event panel height follows the text'
 atlas = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
 border_height = float(atlas.find("Image[@name='WindowTopEdge']").get('height')) / 4
-for name in ('Message', 'Dismiss', 'Close'):
+labels = {'Dismiss': 'DismissLabel', 'Close': 'CloseLabel'}
+for name in ('Message', 'Dismiss', 'Close', 'DismissLabel', 'CloseLabel'):
     area = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))
-    # Derive the content bounds from the existing scaled atlas border and actual panel height.
-    assert area[1][0] * notice_height >= border_height and area[3][0] * notice_height <= notice_height - border_height, name
+    # Top and bottom are offsets from the panel top (scale 0) or bottom (scale 1) and keep the atlas border free.
+    assert area[1][0] in (0, 1) and area[3][0] in (0, 1), name
+    if area[1][0] == 0:
+        assert area[1][1] >= border_height, name
+    if area[3][0] == 1:
+        assert area[3][1] <= -border_height, name
+for button, label in labels.items():
+    b = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % button).get('value'))
+    l = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % label).get('value'))
+    assert l[1][1] >= b[3][1], label + ' sits under its symbol button'
+    assert notice.find("Window[@name='%s']/Property[@name='Text']" % label).get('value') == button, label
 print('shared title, close button, list insets, event field and single goals entry verified')
