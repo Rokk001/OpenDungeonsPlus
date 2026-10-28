@@ -5,10 +5,10 @@
         <Property name="Area" value="{{0.5,-270},{0.5,-320},{0.5,270},{0.5,320}}" />
         <Property name="SizingEnabled" value="False" />
         <Window type="DefaultWindow" name="ProfilePage" >
-            <Property name="Area" value="{{0.0,0},{0.0,0},{1.0,0},{0.88,0}}" />
+            <Property name="Area" value="{{0.0,0},{0.06,0},{1.0,0},{0.88,0}}" />
         </Window>
         <Window type="OD/StaticText" name="StatsText" >
-            <Property name="Area" value="{{0.02,0},{0.02,0},{0.98,0},{0.88,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.06,0},{0.98,0},{0.88,0}}" />
             <Property name="Visible" value="False" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />

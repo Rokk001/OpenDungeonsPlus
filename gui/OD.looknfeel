@@ -3922,7 +3922,7 @@
             <Area>
                 <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                <Dim type="Width"><AbsoluteDim value="12" /></Dim>
+                <Dim type="Width"><ImageDim dimension="Width" name="OpenDungeonsSkin/MiniVertScrollUpNormal" /></Dim>
                 <Dim type="Height"><UnifiedDim offset="-12" scale="1" type="Height" /></Dim>
             </Area>
             <HorzAlignment type="RightAligned" />
