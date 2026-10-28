@@ -49,11 +49,11 @@ void main()
     float alpha = 1.0;
     if(atmosphereKind == 0)
     {
-        // Dark grey-blue gradient with a faint warm haze that rises from the horizon.
-        float height = clamp(skyPosition.z / 38.0, 0.0, 1.0);
-        vec3 horizon = vec3(0.012, 0.015, 0.022);
-        vec3 haze = vec3(0.03, 0.013, 0.006) * (1.0 - smoothstep(0.0, 0.45, height));
-        linearColour = mix(horizon, linearColour, smoothstep(0.0, 0.8, height)) + haze;
+        // The overview camera sees the dome between heights 65 and 95: dark zenith, grey band, warm horizon haze.
+        vec3 grey = vec3(0.007, 0.007, 0.006);
+        vec3 haze = vec3(0.06, 0.013, 0.006);
+        linearColour = mix(grey, linearColour, smoothstep(82.0, 93.0, skyPosition.z));
+        linearColour = mix(haze, linearColour, smoothstep(64.0, 80.0, skyPosition.z));
     }
     else if(atmosphereKind == 1)
     {
