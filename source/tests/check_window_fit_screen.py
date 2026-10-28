@@ -177,3 +177,12 @@ for button, label in labels.items():
     assert l[1][1] >= b[3][1], label + ' sits under its symbol button'
     assert notice.find("Window[@name='%s']/Property[@name='Text']" % label).get('value') == button, label
 print('shared title, close button, list insets, event field and single goals entry verified')
+
+# The options page fits its two existing button groups into a screen-limited window.
+options_layout = ET.parse(repo / 'gui/WindowGameOptions.layout').getroot().find('Window')
+assert window_extent(options_layout)[1] == (0.95, 0.0)
+assert 'const float height = std::min(0.95f, (84.0f + 46.0f * entries.size())' in game_text
+assert 'const float step = 0.78f / entries.size()' in game_text
+for count in (5, 11):
+    step = 0.78 / count
+    assert 0.12 + (count - 1) * step + step * 38 / 46 < 0.9
