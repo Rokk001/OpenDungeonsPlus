@@ -5,6 +5,7 @@ FileSystem=materials/scripts/Creatures
 FileSystem=materials/textures
 FileSystem=materials/textures/loading
 FileSystem=materials/textures/menu
+FileSystem=materials/textures/tavern
 FileSystem=models
 FileSystem=particles
 FileSystem=shaders
