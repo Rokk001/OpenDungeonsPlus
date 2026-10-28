@@ -14,14 +14,14 @@ import subprocess
 import sys
 
 
-# Put the dependency DLL folders (OD_DEPS_ROOT, default od-deps-next) on PATH and disable modal loader errors.
+# Put the dependency DLL folder (BUILD_DEPS_ROOT, default build-deps in the home folder) on PATH and disable modal loader errors.
 def probe_environment():
     if os.name != 'nt':
         raise RuntimeError('Campaign load probes require the Windows integration host')
     ctypes.windll.kernel32.SetErrorMode(0x0001 | 0x0002 | 0x8000)
     environment = dict(os.environ)
-    dependency_root = Path(os.environ.get('OD_DEPS_ROOT') or Path.home() / 'od-deps-next')
-    dll_paths = [dependency_root / 'install/bin', dependency_root / 'build/ogre/bin/release']
+    dependency_root = Path(os.environ.get('BUILD_DEPS_ROOT') or Path.home() / 'build-deps')
+    dll_paths = [dependency_root / 'install/bin']
     environment['PATH'] = os.pathsep.join([str(path) for path in dll_paths]
                                           + [environment.get('PATH', '')])
     return environment

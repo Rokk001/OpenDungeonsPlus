@@ -53,7 +53,7 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 
 ## Binary and large archive files
 
-- Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset of the OpenDungeonsPlus repo) are never stored in a Git repository or kept locally. After integration they are moved to G:\Moreya-Internal\medien\<plan folder>\ (Unraid share, mapped as G: on laptop and VM). Blender agents open and save .blend files directly there. Text files (plans, state files, scripts, configs) live in the private repo C:\Users\mario\GitHub\Moreya-Internal.
+- Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset of the OpenDungeonsPlus repo) are never stored in a Git repository or kept locally. After integration they are moved to G:\Moreya-Internal\medien\<plan folder>\ (Unraid share, mapped as G: on laptop and VM). Blender agents open and save .blend files directly there. Text files (plans, state files, scripts, configs) live in the private repo %USERPROFILE%\GitHub\Moreya-Internal.
 
 ## Load tests
 
@@ -70,12 +70,12 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 
 ## Tool-Pfade
 
-- Dependency root: `C:\Users\mario\od-deps-next` (default in `scripts/win32/windows-paths.ps1`, overridable with `OD_DEPS_ROOT`); Python 3.14 at `C:\Users\mario\AppData\Local\Programs\Python\Python314`
-- OgreXMLConverter.exe: `C:\Users\mario\od-deps-next\install\bin\OgreXMLConverter.exe`
-- blender.exe: `C:\Users\mario\AppData\Local\Microsoft\WindowsApps\blender-launcher.exe` (Store-App, `blender.exe` selbst ist nicht direkt ausfuehrbar; Aufruf `--background <blend> --python <script>`)
+- Dependency root: `%USERPROFILE%\build-deps` (default in `scripts/win32/windows-paths.ps1`, overridable with `BUILD_DEPS_ROOT`); Python 3.14 at `%LOCALAPPDATA%\Programs\Python\Python314`
+- OgreXMLConverter.exe: `%USERPROFILE%\build-deps\install\bin\OgreXMLConverter.exe`
+- blender.exe: `%LOCALAPPDATA%\Microsoft\WindowsApps\blender-launcher.exe` if present, else `C:\Program Files\Blender Foundation\Blender <version>\blender.exe` (winget install); with the Store app `blender.exe` itself is not directly executable; call `--background <blend> --python <script>`
 - cl.exe (VS 2026 Build Tools): `C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\bin\Hostx64\x64\cl.exe`
 - vcvars64.bat: `C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat`
-- cmake.exe (4.4.1; CMake generator `Visual Studio 18 2026`): `C:\Users\mario\od-deps-next\tools\cmake-4.4.1-windows-x86_64\bin\cmake.exe`
+- cmake.exe (4.4.1; CMake generator `Visual Studio 18 2026`): `%USERPROFILE%\build-deps\tools\cmake-4.4.1-windows-x86_64\bin\cmake.exe`
 
 Diese Pfade direkt verwenden, nie danach suchen.
 

@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Create uniformly scaled weapon copies while retaining materials and animation."""
 from pathlib import Path
+import os
 import subprocess
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-PRIVATE = Path(r'C:\Users\mario\GitHub\OpenDungeonsPlus-Private')
+# Work folder below MEDIA_ROOT (default G:\Moreya-Internal\medien) and the converter from BUILD_DEPS_ROOT (default build-deps in the home folder).
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', r'G:\Moreya-Internal\medien'))
+BUILD_DEPS_ROOT = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
+PRIVATE = MEDIA_ROOT
 WORK = PRIVATE/'anim-work/armament'
-CONVERTER = Path(r'C:\Users\mario\od-deps\build\ogre\bin\release\OgreXMLConverter.exe')
+CONVERTER = BUILD_DEPS_ROOT/'install/bin/OgreXMLConverter.exe'
 
 # Convert one asset with closed input, bounded execution and a private log.
 def convert(source, target, skeleton=False):

@@ -23,7 +23,7 @@ import time
 import xml.etree.ElementTree as ElementTree
 
 repo = Path(__file__).resolve().parents[2]
-deps = Path(os.environ.get('OD_DEPS_ROOT', str(Path.home() / 'od-deps')))
+deps = Path(os.environ.get('BUILD_DEPS_ROOT', str(Path.home() / 'build-deps')))
 cegui_include = deps / 'install/include/cegui-0'
 cegui_lib = deps / 'install/lib'
 null_source = deps / 'src/cegui/cegui/src/RendererModules/Null'

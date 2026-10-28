@@ -64,7 +64,7 @@ $taskOptions = @('-S', "$taskRoot\src\cegui", '-B', "$taskRoot\build\cegui",
     "-DFREETYPE_LIB_DBG=$taskRoot/install/lib/freetyped.lib",
     "-DEXPAT_LIB_DBG=$taskRoot/install/lib/libexpatd.lib",
     "-DBOOST_ROOT=$taskRoot/install", "-DBOOST_INCLUDEDIR=$taskRoot/install/include/boost-1_92",
-    "-DPYTHON_EXECUTABLE=C:/Users/mario/AppData/Local/Programs/Python/Python314/python.exe",
+    "-DPYTHON_EXECUTABLE=$($taskPythonRoot -replace '\\', '/')/python.exe",
     '-DCMAKE_DISABLE_FIND_PACKAGE_SFML=ON', '-DCEGUI_HAS_PCRE_REGEX=OFF','-DCEGUI_HAS_STD11_REGEX=ON', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5')
 Write-Output 'Configuring CEGUI'
 $ErrorActionPreference = 'Continue'
