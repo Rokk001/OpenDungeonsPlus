@@ -138,6 +138,13 @@ frame = skin.find("WidgetLook[@name='OD/FrameWindow']")
 assert frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-10'
 client = frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
 assert len(client.findall('Dim')) == 4, 'frame contents need a clipped inner rectangle'
+# The title bar is the top of the single frame: no second top edge below it, contents start right under it.
+client_top = client.find("Dim[@type='TopEdge']")
+assert len(client_top) == 1 and client_top[0].tag == 'WidgetDim' and client_top[0].get('widget') == '__auto_titlebar__',     'frame contents must start directly below the title bar'
+for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
+    section = frame.find(".//ImagerySection[@name='%s']/FrameComponent" % section_name)
+    parts = {image.get('component') for image in section.findall('Image')}
+    assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
 close = frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
 for dimension in ('Width', 'Height'):
     node = close.find("Dim[@type='%s']/WidgetDim" % dimension)

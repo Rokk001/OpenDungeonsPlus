@@ -134,7 +134,8 @@ def wrapped_lines(text, available):
 
 skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
 side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4.0
-border = float(skin.find("Image[@name='WindowTopEdge']").get('height')) / 4.0
+# Below the title bar the frame has no top edge; only the bottom edge reduces the client height.
+border = float(skin.find("Image[@name='WindowBottomEdge']").get('height')) / 4.0
 title = 18.0 * 10.0 / 8.0 + 12.0
 social_layout = (repo / 'gui/WindowSocial.layout').read_text()
 social_size = re.search(r'Area" value="\{\{0.5,(-?\d+)\},\{0.5,(-?\d+)\},\{0.5,(\d+)\},\{0.5,(\d+)\}\}"', social_layout)
@@ -159,7 +160,7 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
                 ('card', width, height, .88, 0.0),
                 ('Dungeonbook', social_width, social_height, .9, 0.0)):
             fit = min(1.0, screen_width / (outer_width * scale), screen_height / (outer_height * scale))
-            viewport = (outer_height * fit - title - 2 * border) * fraction - reserve
+            viewport = (outer_height * fit - title - border) * fraction - reserve
             page_width = (outer_width * fit - 2 * side) * (.5 if owner == 'Dungeonbook' else 1.0)
             equipment_width = page_width - 148.0 - 32.0
             image_edge, columns = 0.0, 1

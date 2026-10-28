@@ -1301,7 +1301,7 @@
         <NamedArea name="ClientWithTitleWithFrame">
             <Area>
                 <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsSkin/WindowLeftEdge" /></Dim>
-                <Dim type="TopEdge"><OperatorDim op="Add"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /><ImageDim dimension="Height" name="OpenDungeonsSkin/WindowTopEdge" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
                 <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImageDim dimension="Width" name="OpenDungeonsSkin/WindowRightEdge" /></OperatorDim></Dim>
                 <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImageDim dimension="Height" name="OpenDungeonsSkin/WindowBottomEdge" /></OperatorDim></Dim>
             </Area>
@@ -1374,9 +1374,6 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
-                <Image component="TopEdge" name="OpenDungeonsSkin/WindowTopEdge__Edge2" />
-                <Image component="TopLeftCorner" name="OpenDungeonsSkin/WindowTopLeft" />
-                <Image component="TopRightCorner" name="OpenDungeonsSkin/WindowTopRight" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/WindowBottomLeft" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/WindowBottomRight" />
                 <Image component="LeftEdge" name="OpenDungeonsSkin/WindowLeftEdge__Edge2" />
@@ -1508,16 +1505,10 @@
             <FrameComponent>
                 <Area>
                     <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="TopEdge">
-                        <WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" />
-                        <UnifiedDim offset="0" type="Height" />
-                    </Dim>
+                    <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
-                <Image component="TopEdge" name="OpenDungeonsSkin/WindowTopEdge__Edge2__Disabled" />
-                <Image component="TopLeftCorner" name="OpenDungeonsSkin/WindowTopLeft__Disabled" />
-                <Image component="TopRightCorner" name="OpenDungeonsSkin/WindowTopRight__Disabled" />
                 <Image component="BottomLeftCorner" name="OpenDungeonsSkin/WindowBottomLeft__Disabled" />
                 <Image component="BottomRightCorner" name="OpenDungeonsSkin/WindowBottomRight__Disabled" />
                 <Image component="LeftEdge" name="OpenDungeonsSkin/WindowLeftEdge__Edge2__Disabled" />
