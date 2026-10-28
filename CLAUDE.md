@@ -32,7 +32,7 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 
 ## Agent model
 
-- Agent model: Claude Code agents use Sonnet 5.5 medium, Codex agents use GPT-6.1-Sol medium. Both are equivalent; a plan's model line is fulfilled by either. Never ask Mario about the model.
+- Agent model: Model classes, effort always medium: light = Claude Haiku 5.5 / GPT-6 Luna, medium = Claude Sonnet 5.5 / GPT-6.1 Terra, heavy = Claude Opus 5.5 / GPT-6.1 Sol. Both providers of a class are equivalent; a plan's model line is fulfilled by either. Never ask Mario about the model.
 
 ## Protected content
 
