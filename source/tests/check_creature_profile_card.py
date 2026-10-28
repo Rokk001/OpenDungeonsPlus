@@ -70,7 +70,7 @@ assert '"EquipmentRow"' in gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'
 assert 'page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN' in profile_layout
 assert 'page->getPixelSize().d_height / scale * 0.2f' in profile_layout
 assert 'std::min(equipmentWidth / 4.0f, headerHeight / 5.0f)' in profile_layout
-assert '0.5f, 2.5f, 1.5f, 1.5f, 1.5f, 2.5f,' in profile_layout
+assert '2.5f, 0.5f, 1.5f, 1.5f, 1.5f, 2.5f,' in profile_layout
 assert '1.0f, 1.0f, 0.0f, 1.0f, 2.0f, 2.0f,' in profile_layout
 assert 'slot < 13' in profile_layout and '5.0f * edge' in profile_layout
 assert 'setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),' in profile_layout
