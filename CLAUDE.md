@@ -71,6 +71,7 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 ## Tool-Pfade
 
 - Dependency root: `%USERPROFILE%\build-deps` (default in `scripts/win32/windows-paths.ps1`, overridable with `BUILD_DEPS_ROOT`); Python 3.14 at `%LOCALAPPDATA%\Programs\Python\Python314`
+- `BUILD_MP_JOBS` (environment variable, default off) enables MSVC `/MP<N>` for the `opendungeons-plus` target; set it per machine and plan for about 0.8 GB RAM per job.
 - OgreXMLConverter.exe: `%USERPROFILE%\build-deps\install\bin\OgreXMLConverter.exe`
 - blender.exe: `%LOCALAPPDATA%\Microsoft\WindowsApps\blender-launcher.exe` if present, else `C:\Program Files\Blender Foundation\Blender <version>\blender.exe` (winget install); with the Store app `blender.exe` itself is not directly executable; call `--background <blend> --python <script>`
 - cl.exe (VS 2026 Build Tools): `C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.51.36231\bin\Hostx64\x64\cl.exe`
