@@ -17,6 +17,8 @@ enum class TrapType;
 
 namespace ACTS
 {
+//! \brief Registers the saved-action handlers before the mind resumes.
+void bind(KeeperAI& ai);
 //! \brief Schedules marking tiles for digging.
 void markDig(KeeperAI& ai, const std::vector<Tile*>& tiles, bool marked);
 //! \brief Schedules building a room on the selected tiles.

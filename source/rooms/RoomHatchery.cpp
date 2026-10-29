@@ -2159,6 +2159,8 @@ bool RoomHatchery::useRoom(Creature& creature, bool forced)
         if(creature.isHungry() && (getSeat()->getPlayer() != nullptr) &&
            getSeat()->getPlayer()->getIsHuman())
             getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
+        else if(creature.isHungry() && getSeat()->getPlayer() != nullptr)
+            getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
         return false;
     }
 

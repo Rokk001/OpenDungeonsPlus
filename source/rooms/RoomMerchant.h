@@ -119,6 +119,8 @@ public:
     static void sendWindow(GameMap& map, Player& player);
     //! \brief Handles the owner-only merchant window, settings and keeper purchase requests.
     static bool handleRequest(GameMap& map, Player& player, ClientNotificationType type, ODPacket& packet);
+    //! \brief Applies validated owner settings and releases reservations for either kind of keeper.
+    static bool applySettings(GameMap& map, Seat& seat, int32_t margin, const std::string& mode);
     //! \brief Records an item deal for posts and keeper Epic notices.
     static void announceDeal(Creature& creature, const ItemInstance& item, uint8_t deal);
     //! \brief Returns the configured base cost of the merchant room.

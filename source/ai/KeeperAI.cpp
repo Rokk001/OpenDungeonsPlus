@@ -17,6 +17,7 @@
 
 #include "ai/KeeperAI.h"
 #include "ai/KeeperAIType.h"
+#include "ai/AiActions.h"
 
 #include "creatureaction/CreatureAction.h"
 #include "entities/Creature.h"
@@ -105,6 +106,7 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mType(type),
     mSettings(ConfigManager::getSingleton().getAiLevel(type)),
     mMind(gameMap, player, mSettings),
+    mEvents(*this),
     mMinHpPercentToFight(NORMAL_MIN_HP_PERCENT_TO_FIGHT),
     mMinFightersToAttack(NORMAL_MIN_FIGHTERS_TO_ATTACK),
     mMinCreatureLevel(NORMAL_MIN_CREATURE_LEVEL),
@@ -124,12 +126,13 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mCooldownDefenseMin(NORMAL_COOLDOWN_DEFENSE_MIN),
     mCooldownDefenseMax(NORMAL_COOLDOWN_DEFENSE_MAX),
     mCooldownWorkers(0),
-    mCooldownRepairRooms(0),
     mCooldownSaveWoundedCreatures(0),
     mCooldownSaveWoundedCreaturesMin(NORMAL_COOLDOWN_SAVE_WOUNDED_MIN),
     mCooldownSaveWoundedCreaturesMax(NORMAL_COOLDOWN_SAVE_WOUNDED_MAX),
     mIsFirstUpkeepDone(false)
 {
+    ACTS::bind(*this);
+    mEvents.bind();
     // The war rows react to their events after the shared reaction delay
     std::function<void(const AiEvent&)> warHandler = std::bind(&KeeperAI::handleWarEvent, this, std::placeholders::_1);
     mMind.onEvent("J01", std::vector<AiEventType>(1, AiEventType::Fight), warHandler);
@@ -161,6 +164,13 @@ bool KeeperAI::doTurn(double timeSinceLastTurn)
 Mind& KeeperAI::getMind()
 {
     return mMind;
+}
+
+//! \brief Retains raw symptom timing and forwards each game notice to the shared reaction queue.
+void KeeperAI::notifyEvent(const AiEvent& event)
+{
+    mEvents.notify(event);
+    mMind.enqueue(event);
 }
 
 //! \brief Returns the configured level values used by the decision functions.
@@ -748,39 +758,6 @@ bool KeeperAI::handleWorkers()
             return false;
 
         return true;
-    }
-
-    return false;
-}
-
-bool KeeperAI::repairRooms()
-{
-    if(mCooldownRepairRooms > 0)
-    {
-        --mCooldownRepairRooms;
-        return false;
-    }
-
-    mCooldownRepairRooms = scaledCooldown(20, 60);
-
-    Seat* seat = mPlayer.getSeat();
-    for(Room* room : mGameMap.getRooms())
-    {
-        if(room->getSeat() != seat)
-            continue;
-
-        if(!room->canBeRepaired())
-            continue;
-
-        int goldRequired = room->getCostRepair();
-
-        if(!mGameMap.withdrawFromTreasuries(goldRequired, mPlayer.getSeat()))
-            return false;
-
-        room->repairRoom();
-        // We only repair one room at a time. Note that if we want to repair more than one room at a time, we should pay
-        // attention to not modify the room list (if room absorbed in RoomManager::buildRoom) while iterating it
-        break;
     }
 
     return false;

@@ -116,6 +116,9 @@ public:
     //! kind is drawn here, once per event.
     void enqueue(const AiEvent& event);
 
+    //! \brief Delivers tunnel news during the originating Fight reaction, sharing its single alert delay.
+    void dispatchRelated(const AiEvent& event);
+
     //! \brief Schedules count actions of one kind of the [Actions] table on the hand under the click
     //! budget, starting not before from. perform is called once per action when its end time is reached.
     //! \param actionKey The action name of the [Actions] table.

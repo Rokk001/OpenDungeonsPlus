@@ -20,6 +20,7 @@
 
 #include "ai/BaseAI.h"
 #include "ai/AiMind.h"
+#include "ai/AiEvents.h"
 #include "ai/AiWar.h"
 
 #include <cstdint>
@@ -46,6 +47,10 @@ public:
     Player& getControlledPlayer() { return mPlayer; }
     //! \brief The mind that draws mistakes and schedules this keeper's actions.
     Mind& getMind();
+    //! \brief Gives the shared event source access to this keeper's current tunnel and combat state.
+    WAR::WarState& getWarState() { return mWar; }
+    //! \brief Observes shared symptoms and queues the game's notice in the mind.
+    void notifyEvent(const AiEvent& event) override;
     //! \brief The values of the selected AI level.
     const AiSettings& getSettings() const;
     //! \brief Writes the keeper's mind as the contents of its AIState block.
@@ -79,10 +84,6 @@ protected:
     //! \brief Checks if a new worker should be summoned
     //! Returns true if the action has been done and false if nothing has been done
     bool handleWorkers();
-
-    //! \brief Checks if a room needs to be repaired and repairs if so
-    //! Returns true if the action has been done and false if nothing has been done
-    bool repairRooms();
 
     //! \brief Try to help tired creatures to reach dormitory
     //! Returns true if the action has been done and false if nothing has been done
@@ -127,6 +128,8 @@ private:
     AiSettings mSettings;
     //! \brief The common mind uses the selected level independently of the interim legacy paths.
     Mind mMind;
+    //! \brief Keeper-visible poll history, owned by this game and saved with its mind.
+    AiEvents mEvents;
     //! \brief The war state of this keeper (tunnel, assault, defence, sightings).
     WAR::WarState mWar;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
@@ -153,7 +156,6 @@ private:
     int mCooldownDefenseMin;
     int mCooldownDefenseMax;
     int mCooldownWorkers;
-    int mCooldownRepairRooms;
     int mCooldownSaveWoundedCreatures;
     int mCooldownSaveWoundedCreaturesMin;
     int mCooldownSaveWoundedCreaturesMax;

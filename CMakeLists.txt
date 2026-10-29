@@ -235,6 +235,9 @@ set(OD_SOURCEFILES
     ${SRC}/ai/AiMath.cpp
     ${SRC}/ai/AiMind.cpp
     ${SRC}/ai/AiMath.h
+    ${SRC}/ai/AiEvents.h
+    ${SRC}/ai/AiEvents.cpp
+    ${SRC}/ai/AiActions.cpp
     ${SRC}/ai/AiActions.h
     ${SRC}/ai/AiMind.h
     ${SRC}/ai/AiSpells.cpp

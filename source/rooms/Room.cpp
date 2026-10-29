@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ai/AiMind.h"
 #include "rooms/Room.h"
 
 #include "creatureaction/CreatureActionSearchJob.h"
@@ -282,6 +283,7 @@ void Room::fireTakeoverEvent(Seat* oldSeat, Seat* newSeat, const std::vector<Til
     }
 }
 
+//! \brief Reports a captured room to its new human owner and its former keeper.
 void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
 {
     if(!getGameMap()->isServerGameMap())
@@ -309,6 +311,12 @@ void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
             ServerNotificationType::chatServer, oldPlayer);
         serverNotification->mPacket << "A room has been lost" << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+    else if(oldPlayer != nullptr && !oldPlayer->getHasLost())
+    {
+        AiEvent event = {AiEventType::RoomLost, numCoveredTiles() > 0 ? getCoveredTile(0) : nullptr, nullptr, newSeat->getId(), static_cast<double>(getType()),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*oldPlayer, event);
     }
 }
 
