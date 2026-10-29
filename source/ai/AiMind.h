@@ -24,6 +24,8 @@
 #include <array>
 #include <functional>
 #include <iosfwd>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -150,11 +152,103 @@ public:
     //! \return false on an unknown tag or a wrong token count; the mind then starts fresh.
     bool importState(const std::vector<std::string>& lines);
 
+    //! \brief Returns the mind clock in game seconds, for scheduling an action from a row.
+    double now() const;
+
+    //! \brief Registers a row's reaction to events; rows run in catalogue order after the shared delay.
+    void onEvent(const std::string& rowId, const std::vector<AiEventType>& events,
+                 const std::function<void(const AiEvent&)>& handler);
+
+    //! \brief Registers one periodic topic; its owner invokes the other rows sharing that look.
+    void onLook(const std::string& rowId, double factor, const std::function<void()>& handler);
+
+    //! \brief Registers a polled symptom; only its false-to-true edge queues a reaction.
+    void onPoll(const std::string& rowId, AiEventType type, const std::function<bool()>& predicate);
+
+    //! \brief Registers how an action's saved tile and target restore its server call after loading.
+    //! The wrapper encodes its arguments without whitespace in target and rechecks legality at execution.
+    void onAction(const std::string& actionKey, const std::string& rowId,
+                  const std::function<void(Tile*, const std::string&)>& handler);
+
+    //! \brief Returns the age of the last visible enemy cast, or -1 when none has been seen.
+    double enemySpellAge(int seatId) const;
+
+    //! \brief Gives row owners their saved war, sighting and persistent-draw lines after loading.
+    const std::vector<AiMath::AiStateLine>& savedRows() const;
+
+    //! \brief Registers a row owner's export of war, sighting and persistent-draw lines.
+    void onSave(const std::function<void(std::vector<AiMath::AiStateLine>&)>& handler);
+
 private:
+    //! \brief A queued reaction stores entity names rather than pointers that may expire.
+    struct Reaction
+    {
+        AiEventType type;
+        double due;
+        AiMath::ReactionKind kind;
+        int x, y;
+        std::string creature;
+        int seatId;
+        double amount;
+        bool noticed;
+        std::string rowId;
+        //! \brief Orders reactions by their scheduled time, preserving input order on ties.
+        bool operator<(const Reaction& other) const { return due < other.due; }
+    };
+
+    //! \brief A queued hand action retains the fields needed by the saved-action resolver.
+    struct Action
+    {
+        std::string key;
+        double due;
+        std::string rowId;
+        int x, y;
+        std::string target;
+        std::function<void()> perform;
+    };
+
+    //! \brief One periodic topic and its last polled-event value.
+    struct Look { double due; bool flag; };
+
+    //! \brief One row's event subscription and reaction function.
+    struct EventHandler
+    {
+        std::vector<AiEventType> types;
+        std::function<void(const AiEvent&)> perform;
+    };
+
+    //! \brief The interval factor and callback of a periodic topic.
+    struct LookHandler { double factor; std::function<void()> perform; };
+
+    //! \brief A polled condition and the event raised by its rising edge.
+    struct PollHandler { AiEventType type; std::function<bool()> predicate; };
+
+    //! \brief Returns the configured reaction-delay parameters for this level.
+    AiMath::DelayParams delayParams() const;
+
+    //! \brief Clears transient state and restarts registered looks from the current game time.
+    void resetState();
+
     GameMap& mGameMap;
     Player& mPlayer;
     AiSettings mSettings;
     AiMath::HandState mHand;
+    double mNow;
+    double mSavedAt;
+    std::map<int, double> mEnemySpells;
+    bool mLoaded;
+    std::vector<Reaction> mEvents;
+    std::vector<Action> mActions;
+    std::map<std::string, Look> mLooks;
+    std::map<std::string, EventHandler> mEventHandlers;
+    std::map<std::string, LookHandler> mLookHandlers;
+    std::map<std::string, PollHandler> mPollHandlers;
+    std::map<std::pair<std::string, std::string>, std::function<void(Tile*, const std::string&)>> mActionHandlers;
+    std::vector<std::function<void(std::vector<AiMath::AiStateLine>&)>> mSaveHandlers;
+    std::vector<AiMath::AiStateLine> mSavedRows;
+    std::set<std::string> mDrawnRows;
+    std::map<std::string, bool> mTriggerSlips;
+    bool mInTrigger;
 };
 
 #endif // AIMIND_H
