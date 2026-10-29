@@ -70,18 +70,6 @@ protected:
     //! It will also return false once it's done.
     bool lookForGold();
 
-    //! \brief Picks up wounded creatures and drops then in the dungeon temple
-    void saveWoundedCreatures();
-
-    //! \brief Checks if we are under attack and does the needed if it is the case
-    void handleDefense();
-
-    //! \brief Offensive state machine: once enough healthy fighters are available, digs toward the
-    //! closest enemy dungeon temple and rallies the fighters there with a call to war banner.
-    //! Retreats (removes the banner) when too many fighters were lost. It only starts with more healthy fighters
-    //! than the attack threshold and while not too many of them are below the minimum creature level.
-    void handleAttack();
-
     //! \brief Places researched traps and wooden doors at the entrances of the AI rooms and in the
     //! corridors in front of them. Limited by gold, workshop production and the AI level
     void handleTraps();
@@ -120,15 +108,6 @@ private:
 
     //! \brief Returns true if the given room is needed and false otherwise
     bool checkNeedRoom(RoomType roomType);
-
-    //! \brief Returns the number of non-worker creatures with enough HP to be sent to fight
-    int countHealthyFighters() const;
-
-    //! \brief Returns the number of healthy non-worker creatures below the minimum attack level
-    int countWeakFighters() const;
-
-    //! \brief Returns the central tile of the closest enemy dungeon temple or nullptr if there is none
-    Tile* findEnemyTempleTile();
 
     //! \brief Fills the tiles where a door can be built (entrances of the rooms) and the tiles in the
     //! corridor right in front of them (trap places)
