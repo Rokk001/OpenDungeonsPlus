@@ -2,6 +2,7 @@
 
 #include "ai/AiActions.h"
 #include "ai/AiMind.h"
+#include "ai/AiSettings.h"
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
@@ -11,6 +12,7 @@
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
+#include "utils/Random.h"
 #include "ODApplication.h"
 
 #include <algorithm>
@@ -70,7 +72,15 @@ void PRIS::tortureStep(KeeperAI& ai, State& state)
         if(destination == nullptr)
             continue;
         state.triedPrisoners.insert(prisoner->getName());
-        if(!ai.getMind().slip("G02"))
+        const ConfigManager& config = ConfigManager::getSingleton();
+        const ConfigManager::AiRowClass* row = config.getAiRowClass("G02");
+        if(row == nullptr)
+            continue;
+        // Each prisoner gets an independent one-time draw; Mind::slip caches one draw per whole event.
+        const double probability = AiMath::mistakeProbability(config.getAiConfigDouble("MistakeBaseUnfamiliar"),
+            row->mMultiplier, ai.getSettings().mistakeMultiplier, config.getAiConfigDouble("MistakeMin"),
+            config.getAiConfigDouble("MistakeMax"));
+        if(Random::Double(0.0, 1.0) >= probability)
             ACTS::moveCreature(ai, prisoner, destination);
     }
 }
