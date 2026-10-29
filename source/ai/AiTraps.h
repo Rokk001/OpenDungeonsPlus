@@ -107,8 +107,10 @@ double reloadMargin(KeeperAI& ai);
 //! at the treasury entrance and the runed door at the entrance nearest to the heart. The rule mistake forgets the
 //! upgrade: existing doors stay, an entrance without a door gets a wooden one, and the doors are looked at again after
 //! a symptom delay.
+//! \param resumed True for the delayed look of a forgotten upgrade: it carries out the upgrade already decided at the
+//! look that drew the mistake, without a new draw and without the special doors of that look.
 //! \return true when a door was scheduled.
-bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances);
+bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed = false);
 
 //! \brief Fortifies the new tunnel entrance after the reaction time: three more trap tiles, a door and a barricade.
 //! The rule mistake adds a symptom delay before the fortification.

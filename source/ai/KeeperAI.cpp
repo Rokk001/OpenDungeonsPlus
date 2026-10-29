@@ -281,8 +281,8 @@ bool KeeperAI::checkTreasury()
 
     // The treasury is too small, we try to increase it
     // A treasury can be built if we have none (in this case, it is free). Otherwise,
-    // we check if we have enough gold
-    if((totalStorage > 0) && (totalGold < RoomManager::costPerTile(RoomType::treasury)))
+    // we check if we have enough gold, keeping the reload reserve of exhausted traps free (row F12)
+    if((totalStorage > 0) && (totalGold < RoomManager::costPerTile(RoomType::treasury) + TRAP::reloadMargin(*this)))
         return false;
 
     Tile* central = getDungeonTemple()->getCentralTile();
@@ -675,6 +675,14 @@ bool KeeperAI::buildRoom(RoomType roomType, int x, int y, int roomSize)
         y + roomSize - 1, &mPlayer);
     if (tiles.size() < static_cast<uint32_t>(roomSize * roomSize))
         return false;
+
+    // While own traps are exhausted, the purchase keeps their reload reserve free (row F12)
+    double margin = TRAP::reloadMargin(*this);
+    if((margin > 0.0) &&
+       (mPlayer.getSeat()->getGold() < RoomManager::costPerTile(roomType) * static_cast<double>(tiles.size()) + margin))
+    {
+        return false;
+    }
 
     if(!RoomManager::buildRoomOnTiles(&mGameMap, roomType, &mPlayer, tiles))
         return false;

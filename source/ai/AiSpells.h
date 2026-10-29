@@ -65,8 +65,8 @@ void bindRows(KeeperAI& ai);
 
 //! \brief One pass of the in-fight casting loop: picks the spell with the best damage per mana, or a heal for a
 //! hurt own creature, and casts it at a target chosen with the focus fire of the level.
-//! Only the creatures of the fight count: own fighters and enemies in sight that are fighting; without such an enemy
-//! nothing is cast.
+//! Only the creatures of the current fight count: the fighting own fighters and enemies in sight linked to the tile of
+//! the session's last Fight event; without such an enemy nothing is cast.
 //! \param ai The keeper AI that casts.
 //! \param enemyGround True while the casting group stands on ground not claimed for the AI's seat (an assault): then only
 //! Inferno and Tremor are offered.
@@ -110,24 +110,23 @@ bool castCallToWar(KeeperAI& ai, Tile* tile, int creaturesToGather, bool assault
 //! groups is picked up and dropped at the tunnel end before the banners are cast.
 bool drawLaunchGathering(KeeperAI& ai);
 
-//! \brief Casts Slow on the strongest fighting enemy melee creature in sight that stands on ground claimed for the AI.
+//! \brief Casts Slow on the strongest enemy melee creature of the current fight that stands on ground claimed for the AI.
 //! \return true when the spell was cast.
 bool castSlow(KeeperAI& ai);
 
-//! \brief Casts Weak on the fighting enemy in sight with the highest damage that stands on ground claimed for the AI.
+//! \brief Casts Weak on the enemy of the current fight with the highest damage that stands on ground claimed for the AI.
 //! \return true when the spell was cast.
 bool castWeak(KeeperAI& ai);
 
-//! \brief Casts Defector on the strongest fighting enemy in sight whose mood is Upset or worse (the creature window
+//! \brief Casts Defector on the strongest enemy of the current fight whose mood is Upset or worse (the creature window
 //! shows the mood of any creature) while the AI has room for another fighter.
 //! \return true when the spell was cast.
 bool castDefector(KeeperAI& ai);
 
-//! \brief Casts Hexen Hen on the enemy that attacks a room or the heart: the Fight event came from a tile of an own
-//! room and the enemy fights on or next to it.
-//! \param fightTile The tile of the Fight event.
+//! \brief Casts Hexen Hen on an enemy of the current fight that attacks a room or the heart of the AI: it fights, sees
+//! no living creature to fight and sees an own room, so the fight code attacks the building.
 //! \return true when the spell was cast.
-bool castHexenHen(KeeperAI& ai, Tile* fightTile);
+bool castHexenHen(KeeperAI& ai);
 
 //! \brief Casts Summon Champion at the start of an assault or when the heart is attacked.
 //! \param tile A claimed tile next to the heart (defence) or the drop tile of the main group (assault).

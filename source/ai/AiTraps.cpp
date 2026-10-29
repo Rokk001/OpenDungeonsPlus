@@ -737,7 +737,7 @@ double TRAP::reloadMargin(KeeperAI& ai)
     return state.mExhausted ? aiKey("TrapGoldMargin") : 0.0;
 }
 
-bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
+bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed)
 {
     // AI row F13
     // AI row F14
@@ -745,9 +745,10 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
     Seat* seat = ai.getControlledPlayer().getSeat();
 
     // The door of the best researched kind on every entrance; the mistake forgets the upgrade: a door that stands
-    // stays, an entrance without a door gets a wooden one, and the doors are looked at again after a symptom delay
+    // stays, an entrance without a door gets a wooden one, and the doors are looked at again after a symptom delay.
+    // That delayed look carries out the upgrade decided at the look that drew the mistake: no new draw
     TrapType best = bestDoor(seat);
-    bool slipped = ai.getMind().slip("F13");
+    bool slipped = !resumed && ai.getMind().slip("F13");
     bool forgotten = false;
     bool scheduled = false;
     bool stopped = false;
@@ -793,7 +794,7 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
     TRAP::State& state = ai.getTrapState();
     if(forgotten && (state.mDoorDue < 0.0))
         state.mDoorDue = ai.getMind().now() + symptomDelay(ai);
-    if(scheduled || stopped)
+    if(scheduled || stopped || resumed)
         return scheduled;
 
     // The special doors; the mistake does not use them at this look
@@ -868,7 +869,7 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     }
 }
 
-//! \brief Runs the steps whose mistake delay is over: watching the empty traps (F12), the next look at the doors (F13)
+//! \brief Runs the steps whose mistake delay is over: watching the empty traps (F12), the forgotten door upgrade (F13)
 //! and the delayed tunnel fortifications (F15). Run by the mind every AiPollSeconds; it never raises an event, and the
 //! hand is used only by the actions of the steps themselves.
 //! \return Always false.
@@ -885,7 +886,7 @@ bool pendingStep(KeeperAI& ai)
     if((state.mDoorDue >= 0.0) && (now >= state.mDoorDue))
     {
         state.mDoorDue = -1.0;
-        TRAP::placeDoor(ai, TRAP::findEntrances(ai));
+        TRAP::placeDoor(ai, TRAP::findEntrances(ai), true);
     }
     std::vector<TRAP::State::PendingFortify> due;
     std::vector<TRAP::State::PendingFortify> waiting;

@@ -28,6 +28,7 @@
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -164,18 +165,6 @@ bool inFight(const Creature* creature)
     return creature->isActionInList(CreatureActionType::fight) || creature->isActionInList(CreatureActionType::flee);
 }
 
-//! \brief Returns the enemy fighters in sight that take part in a fight: the enemies of the current fight.
-std::vector<Creature*> fightEnemies(KeeperAI& ai)
-{
-    std::vector<Creature*> enemies;
-    for(Creature* creature : visibleEnemies(ai))
-    {
-        if(inFight(creature))
-            enemies.push_back(creature);
-    }
-    return enemies;
-}
-
 //! \brief Tells whether the first attack line of the creature's kind is a melee attack.
 bool isMelee(const Creature* creature)
 {
@@ -205,16 +194,108 @@ std::vector<Creature*> ownFighters(KeeperAI& ai)
     return fighters;
 }
 
-//! \brief Returns the own fighters that take part in a fight now: the own group of the current fight.
-std::vector<Creature*> fightingOwn(KeeperAI& ai)
+//! \brief Tells whether one of the two creatures is among the enemies the other one sees, so they can fight each other.
+bool engaged(const Creature* a, const Creature* b)
 {
-    std::vector<Creature*> fighters;
+    const std::vector<GameEntity*>& seenByA = a->getVisibleEnemyObjects();
+    if(std::find(seenByA.begin(), seenByA.end(), b) != seenByA.end())
+        return true;
+
+    const std::vector<GameEntity*>& seenByB = b->getVisibleEnemyObjects();
+    return std::find(seenByB.begin(), seenByB.end(), a) != seenByB.end();
+}
+
+//! \brief Collects the creatures of the current fight: starting with the fighting creature nearest to the tile of the
+//! session's last Fight event, every fighting own fighter and fighting enemy in sight that is linked to it by a chain of
+//! creatures seeing each other as enemies. A parallel fight elsewhere on the map stays out of the decisions.
+//! \param own Out: the own fighters of the fight.
+//! \param enemies Out: the enemy fighters in sight of the fight.
+void fightGroup(KeeperAI& ai, std::vector<Creature*>& own, std::vector<Creature*>& enemies)
+{
+    own.clear();
+    enemies.clear();
+    const SPELL::State& state = ai.getSpellState();
+    Tile* fightTile = ai.getGameMap().getTile(state.mFightX, state.mFightY);
+    if(fightTile == nullptr)
+        return;
+
+    std::vector<Creature*> ownLeft;
     for(Creature* creature : ownFighters(ai))
     {
         if(inFight(creature))
-            fighters.push_back(creature);
+            ownLeft.push_back(creature);
     }
-    return fighters;
+    std::vector<Creature*> enemyLeft;
+    for(Creature* creature : visibleEnemies(ai))
+    {
+        if(inFight(creature))
+            enemyLeft.push_back(creature);
+    }
+
+    // The seed: the fighting creature nearest to the tile of the Fight event
+    Creature* seed = nullptr;
+    bool seedOwn = false;
+    int seedDistance = 0;
+    for(int side = 0; side < 2; ++side)
+    {
+        for(Creature* creature : (side == 0) ? ownLeft : enemyLeft)
+        {
+            Tile* tile = creature->getPositionTile();
+            int dx = tile->getX() - fightTile->getX();
+            int dy = tile->getY() - fightTile->getY();
+            int distance = dx * dx + dy * dy;
+            if((seed == nullptr) || (distance < seedDistance))
+            {
+                seed = creature;
+                seedOwn = (side == 0);
+                seedDistance = distance;
+            }
+        }
+    }
+    if(seed == nullptr)
+        return;
+
+    std::vector<Creature*>& seedLeft = seedOwn ? ownLeft : enemyLeft;
+    seedLeft.erase(std::find(seedLeft.begin(), seedLeft.end(), seed));
+    (seedOwn ? own : enemies).push_back(seed);
+
+    // Each side grows by the creatures of the other side that are engaged with one of its members
+    size_t ownDone = 0;
+    size_t enemyDone = 0;
+    while((ownDone < own.size()) || (enemyDone < enemies.size()))
+    {
+        bool fromOwn = (ownDone < own.size());
+        Creature* member = fromOwn ? own[ownDone++] : enemies[enemyDone++];
+        std::vector<Creature*>& other = fromOwn ? enemyLeft : ownLeft;
+        std::vector<Creature*>& joined = fromOwn ? enemies : own;
+        std::vector<Creature*> kept;
+        for(Creature* creature : other)
+        {
+            if(engaged(member, creature))
+                joined.push_back(creature);
+            else
+                kept.push_back(creature);
+        }
+        other.swap(kept);
+    }
+}
+
+//! \brief Returns the enemy fighters in sight that take part in the current fight (fightGroup).
+std::vector<Creature*> fightEnemies(KeeperAI& ai)
+{
+    std::vector<Creature*> own;
+    std::vector<Creature*> enemies;
+    fightGroup(ai, own, enemies);
+    return enemies;
+}
+
+//! \brief Returns the own fighters that take part in the current fight (fightGroup).
+std::vector<Creature*> fightingOwn(KeeperAI& ai)
+{
+    std::vector<Creature*> own;
+    std::vector<Creature*> enemies;
+    fightGroup(ai, own, enemies);
+    return own;
 }
 
 //! \brief Returns the own fighters that stand on the tile (the drop tile of a launched group).
@@ -319,7 +400,7 @@ std::vector<Creature*> onOwnGroundOnly(KeeperAI& ai, const std::vector<Creature*
     return result;
 }
 
-//! \brief Returns the fighting enemies in sight that stand on ground claimed for the AI's seat.
+//! \brief Returns the enemies of the current fight that stand on ground claimed for the AI's seat.
 std::vector<Creature*> enemiesOnOwnGround(KeeperAI& ai)
 {
     return onOwnGroundOnly(ai, fightEnemies(ai));
@@ -530,7 +611,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
     SPELL::castSlow(ai);
     SPELL::castWeak(ai);
     SPELL::castDefector(ai);
-    SPELL::castHexenHen(ai, event.tile);
+    SPELL::castHexenHen(ai);
 
     // A fight on a heart tile is an attack on the heart
     bool heart = isHeartTile(event.tile, seat);
@@ -1010,33 +1091,40 @@ bool SPELL::castDefector(KeeperAI& ai)
     return true;
 }
 
-bool SPELL::castHexenHen(KeeperAI& ai, Tile* fightTile)
+bool SPELL::castHexenHen(KeeperAI& ai)
 {
     // AI row E18
     if(!canCast(ai, SpellType::hexenHen, "SpellManaReserve"))
         return false;
 
     Seat* seat = ai.getControlledPlayer().getSeat();
-    // An attack on a room or the heart: the Fight event came from a tile of an own room, and the attacker fights on or
-    // next to that tile
-    Room* room = (fightTile == nullptr) ? nullptr : fightTile->getCoveringRoom();
-    bool roomAttacked = (room != nullptr) && (room->getSeat() == seat);
+    // An enemy of the fight attacks a building when it fights and sees no living creature to fight: the fight code
+    // attacks creatures first and buildings only without one (CreatureActionFight::handleFight). It attacks a room or the
+    // heart of the AI when such a room is among the buildings it sees
     bool slipped = ai.getMind().slip("E18");
     std::vector<Creature*> candidates;
     for(Creature* creature : fightEnemies(ai))
     {
-        Tile* tile = creature->getPositionTile();
-        bool atRoom = false;
-        if(roomAttacked)
+        bool seesCreature = false;
+        bool seesBuilding = false;
+        bool seesOwnRoom = false;
+        const Creature* watcher = creature;
+        for(GameEntity* entity : watcher->getVisibleEnemyObjects())
         {
-            int dx = std::abs(tile->getX() - fightTile->getX());
-            int dy = std::abs(tile->getY() - fightTile->getY());
-            atRoom = (dx <= 1) && (dy <= 1);
+            if(entity->getObjectType() == GameEntityType::creature)
+            {
+                seesCreature = seesCreature || static_cast<Creature*>(entity)->isAlive();
+                continue;
+            }
+            seesBuilding = true;
+            if((entity->getObjectType() == GameEntityType::room) && (entity->getSeat() == seat))
+                seesOwnRoom = true;
         }
-        Room* standing = tile->getCoveringRoom();
-        bool attacksBuilding = atRoom || ((standing != nullptr) && (standing->getSeat() == seat));
+        bool fighting = creature->isActionInList(CreatureActionType::fight) && !seesCreature;
+        bool attacksRoom = fighting && seesOwnRoom;
+        bool attacksBuilding = fighting && seesBuilding;
         // The mistake: a random enemy that attacks no building
-        if(slipped ? !attacksBuilding : atRoom)
+        if(slipped ? !attacksBuilding : attacksRoom)
             candidates.push_back(creature);
     }
     Creature* target = anyOf(candidates);
