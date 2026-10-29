@@ -19,6 +19,7 @@
 
 #include "ai/AiActions.h"
 #include "ai/AiMind.h"
+#include "ai/AiSpells.h"
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -164,18 +165,16 @@ Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
     return best;
 }
 
-bool AiKnowledge::planRoute(KeeperAI& ai, Mind& mind, const AiSettings& settings, Tile* start, Tile* target, double& detour) const
+bool AiKnowledge::planRoute(KeeperAI& ai, const AiSettings& settings, Tile* start, Tile* target, double& detour, Tile*& firstDig) const
 {
     // AI row I02: the detour represents "only the explored map is known"
+    firstDig = nullptr;
     if((start == nullptr) || (target == nullptr))
         return false;
 
+    // One detour draw per tunnel plan; the simulated tunnel start has no other mistake than the diggers of row I01
     AiMath::Uniform01 u = uniform01;
-    double sigma = aiKey("DetourSigma");
-    detour = AiMath::lognormalMedian(settings.tunnelDetour, sigma, u);
-    // Mistake: a winding route (the longer of two draws)
-    if(mind.slip("I02"))
-        detour = std::max(detour, AiMath::lognormalMedian(settings.tunnelDetour, sigma, u));
+    detour = AiMath::lognormalMedian(settings.tunnelDetour, aiKey("DetourSigma"), u);
 
     double dx = target->getX() - start->getX();
     double dy = target->getY() - start->getY();
@@ -210,6 +209,7 @@ bool AiKnowledge::planRoute(KeeperAI& ai, Mind& mind, const AiSettings& settings
     if(toDig.empty())
         return false;
 
+    firstDig = toDig.front();
     // At most DigActions drags
     size_t drags = static_cast<size_t>(std::max(1.0, aiKey("DigActions")));
     size_t perDrag = (toDig.size() + drags - 1) / drags;
@@ -247,12 +247,15 @@ std::vector<Creature*> AiKnowledge::visibleEnemyFighters() const
     return seen;
 }
 
-void AiKnowledge::scout(KeeperAI& ai, Mind& mind, const AiSettings& settings, SightingState& sighting, double now,
+void AiKnowledge::scout(KeeperAI& ai, Mind& mind, const AiSettings& settings, SightingState& sighting, double now, Tile* eyeTile,
                         double trapPotential, bool trapReady, bool ownTraps) const
 {
     // AI row I03: unless the mistake is drawn the AI looks at the enemy before the decision
     if(mind.slip("I03"))
         return;
+
+    // The Eye of Evil cast is row E04's decision (its own draw and interval)
+    SPELL::castEye(ai, eyeTile);
 
     std::vector<Creature*> seen = visibleEnemyFighters();
     for(Seat* seat : mGameMap.getSeats())
@@ -384,6 +387,7 @@ bool AiKnowledge::exploreTunnels(KeeperAI& ai, Mind& mind, bool& marked) const
                 y += directionY[direction];
                 tile = mGameMap.getTile(x, y);
             }
+            std::vector<Tile*> seams;
             while(tile != nullptr)
             {
                 bool known = isKnown(tile);
@@ -394,9 +398,27 @@ bool AiKnowledge::exploreTunnels(KeeperAI& ai, Mind& mind, bool& marked) const
                     break;
                 if(!known || (tile->getFullness() > 0.0))
                     tunnel.push_back(tile);
+                if(known && (tile->getType() == TileType::gold) && (tile->getFullness() > 0.0))
+                    seams.push_back(tile);
                 x += directionX[direction];
                 y += directionY[direction];
                 tile = mGameMap.getTile(x, y);
+            }
+            // A known seam found on the way gets Leveltilesdig rings of known diggable tiles (as row A01), in the same drag
+            int rings = static_cast<int>(aiKey("Leveltilesdig"));
+            for(Tile* seam : seams)
+            {
+                for(int dx = -rings; dx <= rings; ++dx)
+                {
+                    for(int dy = -rings; dy <= rings; ++dy)
+                    {
+                        Tile* ring = mGameMap.getTile(seam->getX() + dx, seam->getY() + dy);
+                        if(!isKnown(ring) || !ring->isDiggable(mSeat) || (ring->getFullness() == 0.0))
+                            continue;
+                        if(std::find(tunnel.begin(), tunnel.end(), ring) == tunnel.end())
+                            tunnel.push_back(ring);
+                    }
+                }
             }
             if(tunnel.empty())
                 continue;

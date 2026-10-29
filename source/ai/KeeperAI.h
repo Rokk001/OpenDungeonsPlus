@@ -110,6 +110,8 @@ private:
     void runWar();
     //! \brief Hands an event of the war rows to the war module after its reaction delay.
     void handleWarEvent(const AiEvent& event);
+    //! \brief Runs the explore look of row I05 of the war module.
+    void handleExploreLook();
     //! \brief Appends the war and sighting lines to the saved AI state of the mind.
     void saveWarRows(std::vector<AiMath::AiStateLine>& lines);
 

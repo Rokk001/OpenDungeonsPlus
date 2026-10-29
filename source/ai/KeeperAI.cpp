@@ -140,6 +140,9 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mMind.onEvent("J07", std::vector<AiEventType>(1, AiEventType::EnemyOut), warHandler);
     mMind.onEvent("J08", std::vector<AiEventType>(1, AiEventType::FightOver), warHandler);
     mMind.onEvent("K08", std::vector<AiEventType>(1, AiEventType::EnemyTrapEmpty), warHandler);
+    // The explore look of row I05 has its own period of one payday cycle
+    mMind.onLook("I05", ConfigManager::getSingleton().getAiConfigDouble("LookPeriod600") /
+        ConfigManager::getSingleton().getAiConfigDouble("ReferenceScanPeriod"), std::bind(&KeeperAI::handleExploreLook, this));
     std::function<void(std::vector<AiMath::AiStateLine>&)> warSaver = std::bind(&KeeperAI::saveWarRows, this, std::placeholders::_1);
     mMind.onSave(warSaver);
     // The spell, trap and door rows react to their events and looks through the mind
@@ -216,6 +219,13 @@ void KeeperAI::handleWarEvent(const AiEvent& event)
 {
     WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
     WAR::onEvent(env, event);
+}
+
+//! \brief Runs the explore look of row I05 when its periodic timer in the Mind is due.
+void KeeperAI::handleExploreLook()
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::exploreLook(env);
 }
 
 //! \brief Preserves the first-turn setup and economy chain, excluding the removed repair action.
