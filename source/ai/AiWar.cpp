@@ -1021,6 +1021,23 @@ void defend(Env& env, const AiEvent& event)
     if(st.defenceRallying)
         return;
 
+    // The intruders in sight
+    std::vector<Creature*> intruders;
+    for(Seat* other : env.gameMap.getSeats())
+    {
+        if((other == seat) || other->isAlliedSeat(seat))
+            continue;
+        for(Creature* creature : env.gameMap.getCreaturesBySeat(other))
+        {
+            Tile* tile = creature->getPositionTile();
+            if(isFreeFighter(creature) && isOwnGround(env, tile))
+                intruders.push_back(creature);
+        }
+    }
+    // Only an enemy in the own territory is a contact to defend; a fight of the own attackers on enemy ground is not
+    if(intruders.empty() && !isOwnGround(env, event.tile))
+        return;
+
     // The first contact tells a seat that did not dig about the open tunnel
     if(!st.tunnelKnown && (st.tunnel != WarState::tunnelNone))
         st.tunnelKnown = true;
@@ -1044,19 +1061,6 @@ void defend(Env& env, const AiEvent& event)
             std::swap(home[i - 1], home[static_cast<size_t>(Random::Int(0, static_cast<int32_t>(i) - 1))]);
     }
 
-    // The intruders in sight
-    std::vector<Creature*> intruders;
-    for(Seat* other : env.gameMap.getSeats())
-    {
-        if((other == seat) || other->isAlliedSeat(seat))
-            continue;
-        for(Creature* creature : env.gameMap.getCreaturesBySeat(other))
-        {
-            Tile* tile = creature->getPositionTile();
-            if(isFreeFighter(creature) && isOwnGround(env, tile))
-                intruders.push_back(creature);
-        }
-    }
     Tile* fightTile = event.tile;
     if(!intruders.empty())
     {
