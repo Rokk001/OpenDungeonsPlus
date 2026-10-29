@@ -92,8 +92,8 @@ public:
     //! \return nullptr when no enemy tile is known.
     Tile* nearestKnownEnemyTile(const SightingState& sighting) const;
 
-    //! \brief Plans the tunnel to the target and marks it for digging: draws the detour of the route once per tunnel
-    //! plan, builds the polyline start - waypoint - target of length (1 + detour) x distance and marks it in at most
+    //! \brief Plans the tunnel to the target and marks it for digging: draws one detour, or takes the longer of two on
+    //! an I02 mistake, builds the polyline start - waypoint - target of length (1 + detour) x distance and marks it in at most
     //! DigActions drags.
     //! \param detour Receives the detour that was drawn.
     //! \param firstDig Receives the first tile of the route that is marked, nullptr when none.
