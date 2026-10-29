@@ -328,6 +328,23 @@ bool castBanner(Env& env, Group& group, Tile* tile)
     return true;
 }
 
+//! \brief Casts Strength (row E06) and the march Haste (row E03) on the main group of a launch, after its hand moves and
+//! before its banner. The banners come first: each spell is cast only with the mana left above the price of every banner
+//! of the launch and the spell reserve.
+//! \param group The main group of the launch.
+//! \param banners How many banners the launch casts.
+void castLaunchSpells(Env& env, Group& group, size_t banners)
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    double spare = env.player.getSeat()->getMana() - static_cast<double>(banners) * callToWarPrice() -
+                   key("SpellManaReserve") * config.getMaxManaPerSeat();
+    double strengthPrice = config.getSpellConfigDouble("CreatureStrengthPrice");
+    if((spare >= strengthPrice) && SPELL::castStrength(env.ai, group.members))
+        spare -= strengthPrice;
+    if(spare >= config.getSpellConfigDouble("CreatureHastePrice"))
+        SPELL::castHaste(env.ai, group.members, true, 0.0);
+}
+
 //! \brief True when a tile is claimed for the own seat.
 bool isOwnGround(Env& env, Tile* tile)
 {
@@ -746,7 +763,7 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
     if((groups.size() > 1) && !groups[0].raid && groups[1].raid)
         std::swap(groups[0], groups[1]);
 
-    // The groups are chosen: Launch carries the drop tile of the main group and the tactic (rows E06, E20, H03)
+    // The groups are chosen: Launch carries the drop tile of the main group and the tactic (rows E20, H03)
     Tile* mainDrop = groups.back().dropTile;
     AiEvent launched = {AiEventType::Launch, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
                         static_cast<double>(tactic), env.now};
@@ -754,8 +771,9 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
 
     // Gathering decision: the complex draw of row E07; a mistake skips the hand moves
     bool walkFromHome = SPELL::drawLaunchGathering(env.ai);
-    for(Group& g : groups)
+    for(size_t i = 0; i < groups.size(); ++i)
     {
+        Group& g = groups[i];
         if(!walkFromHome)
         {
             std::vector<Creature*> moved;
@@ -773,12 +791,16 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
             g.finished = true;
             continue;
         }
+        // The main group gets Strength after its drops and Haste for the march before its banner, while it still
+        // stands on its drop tile (rows E06, E03); the hand casts them in this order
+        if(i + 1 == groups.size())
+            castLaunchSpells(env, g, groups.size());
         // A group whose banner cannot be cast does not march
         if(!castBanner(env, g, g.targets.front()))
             g.finished = true;
     }
 
-    // The last banner of the launch is cast: the march starts from the main group's drop tile (row E03)
+    // The last banner of the launch is cast: the march starts from the main group's drop tile
     AiEvent march = {AiEventType::March, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(), 0.0, env.now};
     env.mind.enqueue(march);
 

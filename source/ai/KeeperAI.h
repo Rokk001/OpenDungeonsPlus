@@ -73,8 +73,8 @@ public:
 protected:
     //! \brief Checks if the AI has a treasury. If not, we search for the first available tile
     //! to add it
-    //! Returns true if the action has been done and false if nothing has been done. A paid treasury keeps the
-    //! trap reload reserve free while own traps are exhausted.
+    //! Returns true if the action has been done and false if nothing has been done. While own traps are exhausted, a
+    //! paid treasury also keeps the room margin, the wage bill and the trap reload reserve free.
     bool checkTreasury();
 
     //! \brief Checks if a room is needed. If yes, it will check if place is available
@@ -120,7 +120,8 @@ private:
     bool buildMostNeededRoom();
 
     //! \brief Try to build the given room on the given position. Returns true if the room was built and
-    //! false otherwise. While own traps are exhausted, the room is bought only when the trap reload reserve stays free.
+    //! false otherwise. While own traps are exhausted, the room is bought only when the room margin, the wage bill and the
+    //! trap reload reserve stay free.
     bool buildRoom(RoomType roomType, int x, int y, int roomSize);
 
     //! \brief Returns true if the given room is needed and false otherwise

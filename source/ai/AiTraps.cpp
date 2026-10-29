@@ -498,9 +498,10 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
     // The basic mix first: spike, cannon and gas up to the planned number of tiles
     if(trapTiles < want)
     {
-        // Every n-th tile is gas, the others alternate cannon and spike
+        // Every n-th tile is gas once it is researched, the others alternate cannon and spike
         int nth = static_cast<int>(aiKey("GasEveryNthTile"));
-        TrapType kind = ((trapTiles % nth) == (nth - 1)) ? TrapType::gas : ((trapTiles % 2) ? TrapType::cannon : TrapType::spike);
+        bool gas = ((trapTiles % nth) == (nth - 1)) && SkillManager::isTrapAvailable(TrapType::gas, seat);
+        TrapType kind = gas ? TrapType::gas : ((trapTiles % 2) ? TrapType::cannon : TrapType::spike);
         if(!SkillManager::isTrapAvailable(kind, seat))
             return false;
 
@@ -737,6 +738,11 @@ double TRAP::reloadMargin(KeeperAI& ai)
     return state.mExhausted ? aiKey("TrapGoldMargin") : 0.0;
 }
 
+bool TRAP::reloadAllows(KeeperAI& ai, double cost)
+{
+    return (reloadMargin(ai) <= 0.0) || affordable(ai, cost);
+}
+
 bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed)
 {
     // AI row F13
@@ -795,7 +801,7 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool 
     if(forgotten && (state.mDoorDue < 0.0))
         state.mDoorDue = ai.getMind().now() + symptomDelay(ai);
     if(scheduled || stopped || resumed)
-        return scheduled;
+        return scheduled || stopped;
 
     // The special doors; the mistake does not use them at this look
     if(entrances.empty() || ai.getMind().slip("F14"))

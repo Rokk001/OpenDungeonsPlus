@@ -103,13 +103,19 @@ bool reloadGate(KeeperAI& ai);
 //! \brief The gold every purchase keeps free while the AI watches its exhausted traps; 0 otherwise.
 double reloadMargin(KeeperAI& ai);
 
+//! \brief Tells whether a purchase of the given cost is allowed while the AI watches its exhausted traps (row F12): the
+//! gold must cover the cost, RoomGoldMargin, the wage bill and TrapGoldMargin. Always true while it does not watch them;
+//! then only the purchase rule of the caller applies.
+//! \param cost The gold the purchase costs.
+bool reloadAllows(KeeperAI& ai, double cost);
+
 //! \brief Builds the door of the best researched kind on an entrance without it, or the special doors: the secret door
 //! at the treasury entrance and the runed door at the entrance nearest to the heart. The rule mistake forgets the
 //! upgrade: existing doors stay, an entrance without a door gets a wooden one, and the doors are looked at again after
 //! a symptom delay.
 //! \param resumed True for the delayed look of a forgotten upgrade: it carries out the upgrade already decided at the
 //! look that drew the mistake, without a new draw and without the special doors of that look.
-//! \return true when a door was scheduled.
+//! \return true when a door was scheduled or a door waits for its gold: then the look buys no trap.
 bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed = false);
 
 //! \brief Fortifies the new tunnel entrance after the reaction time: three more trap tiles, a door and a barricade.
