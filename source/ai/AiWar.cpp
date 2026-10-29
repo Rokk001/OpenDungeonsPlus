@@ -1042,7 +1042,8 @@ void restWounded(Env& env, Creature* creature)
     {
         for(Room* infirmary : env.gameMap.getRoomsByTypeAndSeat(RoomType::infirmary, seat))
         {
-            if(!infirmary->hasOpenCreatureSpot(creature))
+            // The infirmary has no open-spot override; a free cot of the fitting size is its admission test
+            if(!infirmary->hasCarryEntitySpot(creature))
                 continue;
             for(Tile* covered : infirmary->getCoveredTiles())
             {
