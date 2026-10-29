@@ -70,6 +70,8 @@ struct WarState
     int tactic = -1;
     //! \brief Game seconds of the first contact of the assault, -1 before it.
     double contactTime = -1.0;
+    //! \brief True once an own assault has reached contact; from then on the estimate uses the revealed enemy traps.
+    bool contacted = false;
     double lastAssaultEnd = -1.0e18;
     double nextRetreatCheck = 0.0;
     std::vector<Group> groups;

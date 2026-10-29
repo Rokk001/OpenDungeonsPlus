@@ -603,7 +603,7 @@ void planAttack(Env& env)
     if(temple == nullptr)
         return;
 
-    bool ownContact = (st.contactTime >= 0.0) || (st.lastAssaultEnd > -1.0e17);
+    bool ownContact = st.contacted;
     bool trapReady = true;
     Seat* enemy = enemySeat(env);
     std::vector<AiMath::TrapKindSet> ownSet = trapSet(env, seat, st.breakthrough, nullptr, trapReady);
@@ -915,6 +915,7 @@ void assaultStep(Env& env)
     if((st.contactTime < 0.0) && (st.lastFight > env.now - key("FightOverSeconds")) && !out.empty())
     {
         st.contactTime = env.now;
+        st.contacted = true;
         st.assault = WarState::assaultRunning;
         AiEvent contact = {AiEventType::Contact, nullptr, nullptr, -1, 0.0, env.now};
         env.mind.enqueue(contact);
@@ -1338,7 +1339,8 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if(line.tag == "sighting")
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
-        return (line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"));
+        return (line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile") ||
+                                             (line.tokens[1] == "contacted"));
     return false;
 }
 }
@@ -1369,6 +1371,12 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     a.push_back(st.contactTime < 0.0 ? "-1" : num(env.now - st.contactTime));
     a.push_back(num(std::max(0.0, key("RestSecondsAfterAssault") - (env.now - st.lastAssaultEnd))));
     addLine(lines, "war", a);
+    // Whether an own assault ever reached contact (the trap set of the estimate, row I04)
+    std::vector<std::string> c;
+    c.push_back("I04");
+    c.push_back("contacted");
+    c.push_back(st.contacted ? "1" : "0");
+    addLine(lines, "draw", c);
 
     for(size_t i = 0; i < st.groups.size(); ++i)
     {
@@ -1552,6 +1560,10 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
                 s.trapBase = std::atof(parts[1].c_str());
                 s.ownTraps = (parts[2] == "1");
             }
+        }
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "contacted"))
+        {
+            st.contacted = (k[2] == "1");
         }
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "recordTile"))
         {
