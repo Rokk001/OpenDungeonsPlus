@@ -232,6 +232,7 @@ set(OD_SOURCEFILES
     ${SRC}/ai/AIFactory.cpp
     ${SRC}/ai/AiKnowledge.cpp
     ${SRC}/ai/AiMath.h
+    ${SRC}/ai/AiActions.h
     ${SRC}/ai/AiMind.h
     ${SRC}/ai/AIManager.cpp
     ${SRC}/ai/BaseAI.cpp

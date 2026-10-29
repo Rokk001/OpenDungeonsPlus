@@ -263,6 +263,9 @@ public:
     //! \return false (the range is not set) when the tile is not a tile of this trap
     bool getTileDamageRange(Tile* tile, double& minDamage, double& maxDamage) const;
 
+    //! \brief Returns whether a tile of this trap has used up its shots.
+    bool isTileExhausted(Tile* tile) const;
+
     //! \brief Tells the human seats that see the tile about a trap effect (cosmetic only).
     //! fraction is the health left of a door (0 to 1), 1 for everything else.
     void fireTrapEffect(TrapEffectKind kind, Tile* tile, double fraction);
