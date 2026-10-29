@@ -31,7 +31,6 @@
 #include <iomanip>
 #include <limits>
 #include <map>
-#include <set>
 #include <sstream>
 #include <vector>
 
@@ -264,14 +263,16 @@ void CARE::Controller::itemsLook()
     ITEMS::buyForStrongest(mAi);
 }
 
-//! \brief Calls D07's real target row immediately, retaining its own mistake and the parent's reaction.
+//! \brief Calls D07's real target row immediately as a new firing with its own mistake draw,
+//! retaining the parent's reaction.
 void CARE::Controller::need(const std::string& row, Creature* creature)
 {
+    mAi.getMind().refire(row);
     if(row == "B03") ROOMS::hatcheryWatch(mAi);
     else if(row == "B02") ROOMS::bedWatch(mAi);
     else if(row == "A05") ECON::castCreateGold(mAi);
     else if(row == "B10") ROOMS::toiletWatch(mAi);
-    else if(row == "D06") idle();
+    else if(row == "D06") idleToHall(mAi);
     else if(row == "J08")
     {
         WAR::Env env = {mAi, mAi.getMind(), mAi.getGameMap(), mAi.getControlledPlayer(),
@@ -280,7 +281,7 @@ void CARE::Controller::need(const std::string& row, Creature* creature)
     }
 }
 
-//! \brief Runs D06's idle placement at most once per mind time, so its look and D07's remedy share one pass.
+//! \brief Runs D06's idle placement at most once per mind time, so its look and its events share one pass.
 void CARE::Controller::idle()
 {
     load();
@@ -547,8 +548,7 @@ void CARE::moodRelief(KeeperAI& ai)
 void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&, Creature*)>& trigger)
 {
     // AI row D07
-    // The remedy rows act on the whole keeper, so each one is raised at most once per firing.
-    std::set<std::string> raised;
+    // Each affected creature raises its target row again, as a firing of that row with its own draw.
     for(Creature* creature : ownCreatures(ai))
     {
         if(creature->getMoodValue() < CreatureMoodLevel::Upset)
@@ -574,8 +574,7 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
             else if(idle(*creature))
                 row = "D06";
         }
-        // J08 rests the named creature, so it is raised for each hurt creature.
-        if(!row.empty() && (row == "J08" || raised.insert(row).second))
+        if(!row.empty())
             trigger(row, creature);
     }
 }

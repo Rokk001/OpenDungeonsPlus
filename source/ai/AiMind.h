@@ -139,6 +139,10 @@ public:
     //! \return true when the mistake is taken.
     bool slip(const std::string& rowId, double rowMultiplier);
 
+    //! \brief Starts a new firing of one row inside the running trigger, so its next slip draws again.
+    //! \param rowId The row raised once more by another row (D07 raises its target row per creature).
+    void refire(const std::string& rowId);
+
     //! \brief Draws a tactic against "wait" from the priors, the scores and the temperature.
     //! \return The tactic index (allin 0, single 1, split 2, raid 3, counter 4), or -1 for wait.
     int drawTactic(const std::array<double, 5>& priors, const AiMath::TacticScores& scores, double tau);

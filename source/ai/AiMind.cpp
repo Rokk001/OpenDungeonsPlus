@@ -292,6 +292,12 @@ bool Mind::slip(const std::string& rowId, double rowMultiplier)
     return mistake;
 }
 
+//! \brief Forgets the row's cached draw of the running trigger, because the row fires again.
+void Mind::refire(const std::string& rowId)
+{
+    mTriggerSlips.erase(rowId);
+}
+
 //! \brief Draws the five tactics and wait in their fixed order with clipped exponential weights.
 int Mind::drawTactic(const std::array<double, 5>& priors, const AiMath::TacticScores& scores, double tau)
 {

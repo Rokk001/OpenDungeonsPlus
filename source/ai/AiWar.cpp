@@ -1025,7 +1025,8 @@ void restAfterFight(Env& env)
 //! \param creature The hurt creature named by the mood patrol.
 void restWounded(Env& env, Creature* creature)
 {
-    // AI row J08: each hurt creature is its own firing; the rule mistake leaves this creature where it is
+    // Each hurt creature is its own firing with its own rule draw; the mistake leaves this creature where it is.
+    // Already in its bed or in an infirmary, the creature stays.
     if((creature == nullptr) || !creature->isHurt() || (creature->getPositionTile() == nullptr) ||
        CARE::slipFor(env.ai, "J08"))
         return;
