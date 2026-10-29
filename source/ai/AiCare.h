@@ -1,8 +1,13 @@
 #ifndef AICARE_H
 #define AICARE_H
 
+#include "ai/AiMath.h"
+#include "ai/AiPrison.h"
+
+#include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 
 class Creature;
 class KeeperAI;
@@ -17,6 +22,45 @@ struct SlapState
     double interval = 0.0;
     double nextSlap = 0.0;
     double nextCheck = 0.0;
+};
+//! \brief Owns one keeper's care callbacks and persistent decisions for the shared mind.
+class Controller
+{
+public:
+    //! \brief Registers care, prison and item rows after this keeper's mind has been constructed.
+    explicit Controller(KeeperAI& ai);
+
+private:
+    //! \brief Restores this controller's relative times and one-time prisoner decisions before use.
+    void load();
+    //! \brief Advances active slapping and possession through the mind's regular poll.
+    bool poll();
+    //! \brief Runs the two creature-list rows sharing the plan look.
+    void planLook();
+    //! \brief Runs idle placement and immediate mood remedies at the scan look.
+    void scanLook();
+    //! \brief Runs the joint prisoner-age and torture-priority decision.
+    void prisonLook();
+    //! \brief Reconsiders stored specials and merchant buying at the long look.
+    void itemsLook();
+    //! \brief Runs D06's idle placement once per mind time for its look, its events and D07's remedy.
+    void idle();
+    //! \brief Dispatches the named remedy directly inside D07's current trigger.
+    void need(const std::string& row, Creature* creature);
+    //! \brief Runs care rows for an already delayed game or internal event.
+    void event(const AiEvent& event);
+    //! \brief Replaces this owner's draw lines with full-precision state relative to the mind clock.
+    void save(std::vector<AiMath::AiStateLine>& lines);
+
+    KeeperAI& mAi;
+    SlapState mSlap;
+    PRIS::State mPrison;
+    double mNextControl;
+    //! \brief Mind time of the last idle placement, so one firing never moves the same fighters twice.
+    double mIdleAt;
+    //! \brief Own spell cooldowns at the last poll; a rise marks an own cast for the held mana box.
+    std::vector<uint32_t> mCooldowns;
+    bool mLoaded;
 };
 //! \brief Checks the production-slap mistake at a creature-list look and stops own brawls.
 void slapWatch(KeeperAI& ai, SlapState& state);

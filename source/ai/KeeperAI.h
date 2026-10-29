@@ -25,6 +25,7 @@
 #include "ai/AiRooms.h"
 #include "ai/AiEconomy.h"
 #include "ai/AiResearch.h"
+#include "ai/AiCare.h"
 
 #include <cstdint>
 #include <utility>
@@ -103,6 +104,8 @@ private:
     ROOMS::State mRoomsState;
     ECON::EconomyState mEconomyState;
     RES::ResearchState mResearchState;
+    //! \brief Registers and retains this keeper's creature-care, prisoner and item decisions.
+    CARE::Controller mCare{*this};
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)

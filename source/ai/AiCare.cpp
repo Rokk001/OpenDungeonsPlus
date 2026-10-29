@@ -3,10 +3,15 @@
 #include "ai/AiActions.h"
 #include "ai/AiMind.h"
 #include "ai/AiSettings.h"
+#include "ai/AiEconomy.h"
+#include "ai/AiItems.h"
+#include "ai/AiRooms.h"
+#include "ai/AiWar.h"
 #include "ai/KeeperAI.h"
 #include "creatureaction/CreatureAction.h"
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
+#include "entities/GiftBoxEntity.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -23,6 +28,10 @@
 #include <OgreVector3.h>
 
 #include <algorithm>
+#include <iomanip>
+#include <limits>
+#include <set>
+#include <sstream>
 #include <vector>
 
 namespace
@@ -80,6 +89,216 @@ void moveToRoom(KeeperAI& ai, Creature* creature, Room* room)
             return;
         }
 }
+
+//! \brief Writes persistent relative times without rounding their game-second values.
+std::string careNumber(double value)
+{
+    std::ostringstream out;
+    out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
+    return out.str();
+}
+
+//! \brief Resolves current targets and vision again when a live or restored possession input executes.
+void possessionInput(KeeperAI& ai, Tile*, const std::string& input)
+{
+    const std::size_t first = input.find(':');
+    if(first == std::string::npos)
+        return;
+    const std::size_t second = input.find(':', first + 1);
+    const std::string name = input.substr(first + 1, second == std::string::npos ? second : second - first - 1);
+    Creature* controlled = ai.getGameMap().getCreature(name);
+    if(controlled == nullptr || controlled->getPossessor() != &ai.getControlledPlayer())
+        return;
+    if(input.substr(0, first) == "exit")
+    {
+        controlled->endPossession();
+        return;
+    }
+    Creature* enemy = second == std::string::npos ? nullptr : ai.getGameMap().getCreature(input.substr(second + 1));
+    if(enemy == nullptr || !enemy->isAlive() || enemy->getPositionTile() == nullptr ||
+       enemy->getSeat() == nullptr || ai.getControlledPlayer().getSeat()->isAlliedSeat(enemy->getSeat()))
+        return;
+    const std::vector<Seat*>& vision = enemy->getPositionTile()->getSeatsWithVision();
+    if(std::find(vision.begin(), vision.end(), ai.getControlledPlayer().getSeat()) == vision.end())
+        return;
+    const Ogre::Vector3 offset = enemy->getPosition() - controlled->getPosition();
+    const Ogre::Vector2 aim(offset.x, offset.y);
+    controlled->possessedMove(aim);
+    controlled->possessedAttack(aim);
+}
+}
+
+//! \brief Binds only this owner's callbacks, leaving shared scheduler and action handlers intact.
+CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mIdleAt(-1.0), mLoaded(false)
+{
+    Mind& mind = ai.getMind();
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double reference = config.getAiConfigDouble("ReferenceScanPeriod");
+    mind.onLook("D04", config.getAiConfigDouble("LookFactorPlan"), std::bind(&Controller::planLook, this));
+    mind.onLook("D06", config.getAiConfigDouble("LookFactorScan"), std::bind(&Controller::scanLook, this));
+    mind.onLook("G02", config.getAiConfigDouble("LookPeriod60") / reference, std::bind(&Controller::prisonLook, this));
+    mind.onLook("H04", config.getAiConfigDouble("LookPeriod600") / reference, std::bind(&Controller::itemsLook, this));
+    mind.onEvent("D05", {AiEventType::Fight, AiEventType::HeartCritical},
+        std::bind(possessDefender, std::ref(ai), std::placeholders::_1));
+    mind.onEvent("D06", {AiEventType::Fight, AiEventType::NoBed, AiEventType::NoFood},
+        std::bind(&Controller::idle, this));
+    const std::function<void(const std::string&, Creature*)> remedy =
+        std::bind(&Controller::need, this, std::placeholders::_1, std::placeholders::_2);
+    mind.onEvent("D07", {AiEventType::CreatureMood}, std::bind(moodPatrol, std::ref(ai), remedy));
+    mind.onEvent("D09", {AiEventType::CreatureMood}, std::bind(moodRelief, std::ref(ai)));
+    mind.onEvent("G02", {AiEventType::PrisonerAge}, std::bind(&Controller::prisonLook, this));
+    mind.onEvent("H03", {AiEventType::SpecialStored, AiEventType::Fight, AiEventType::CreatureMood,
+        AiEventType::Start, AiEventType::Launch}, std::bind(&Controller::event, this, std::placeholders::_1));
+    mind.onPoll("L7Care", AiEventType::PrisonerAge, std::bind(&Controller::poll, this));
+    mind.onAction("possess", "D05", std::bind(possessionInput, std::ref(ai),
+        std::placeholders::_1, std::placeholders::_2));
+    mind.onSave(std::bind(&Controller::save, this, std::placeholders::_1));
+}
+
+//! \brief Imports saved episode times and prisoner draws once, before a callback can change them.
+void CARE::Controller::load()
+{
+    if(mLoaded)
+        return;
+    mLoaded = true;
+    const double now = mAi.getMind().now();
+    for(const AiMath::AiStateLine& line : mAi.getMind().savedRows())
+    {
+        if(line.tag != "draw" || line.tokens.size() != 3)
+            continue;
+        const std::vector<std::string>& tokens = line.tokens;
+        if(tokens[0] == "G02")
+            PRIS::importDraw(mPrison, tokens[1], tokens[2]);
+        else if(tokens[0] == "D04" || tokens[0] == "D05")
+        {
+            double value = 0.0;
+            std::istringstream input(tokens[2]);
+            if(!(input >> value))
+                continue;
+            if(tokens[0] == "D05" && tokens[1] == "nextControl") mNextControl = now + value;
+            else if(tokens[0] == "D04" && tokens[1] == "episodeUntil") mSlap.episodeUntil = now + value;
+            else if(tokens[0] == "D04" && tokens[1] == "interval") mSlap.interval = value;
+            else if(tokens[0] == "D04" && tokens[1] == "nextSlap") mSlap.nextSlap = now + value;
+            else if(tokens[0] == "D04" && tokens[1] == "nextCheck") mSlap.nextCheck = now + value;
+        }
+    }
+}
+
+//! \brief Advances existing episodes at the shared poll rate without drawing another reaction or mistake.
+bool CARE::Controller::poll()
+{
+    load();
+    slapEpisodeStep(mAi, mSlap);
+    possessionStep(mAi, mNextControl);
+    // A raised cooldown is the own spell cast after which a held mana box fits again.
+    Player& player = mAi.getControlledPlayer();
+    const std::size_t count = static_cast<std::size_t>(SpellType::nbSpells);
+    bool cast = false;
+    if(mCooldowns.size() != count)
+        mCooldowns.assign(count, 0);
+    for(std::size_t i = 0; i < count; ++i)
+    {
+        const uint32_t cooldown = player.getSpellCooldownTurns(static_cast<SpellType>(i));
+        cast = cast || cooldown > mCooldowns[i];
+        mCooldowns[i] = cooldown;
+    }
+    if(cast && player.getSeat()->getNbStoredSpecials(static_cast<uint32_t>(GiftBoxType::mana)) > 0)
+    {
+        const AiEvent spell = {AiEventType::SpecialStored, nullptr, nullptr, -1, 0.0, mAi.getMind().now()};
+        ITEMS::useStoredSpecial(mAi, spell, !mAi.getWarState().fightOverRaised, false, true);
+    }
+    return false;
+}
+
+//! \brief Runs D04 and D08 once each for their shared creature-list look.
+void CARE::Controller::planLook()
+{
+    load();
+    slapWatch(mAi, mSlap);
+    levelWatch(mAi);
+}
+
+//! \brief Runs D06 and D07 once each inside the same periodic mistake scope.
+void CARE::Controller::scanLook()
+{
+    load();
+    idle();
+    const std::function<void(const std::string&, Creature*)> remedy =
+        std::bind(&Controller::need, this, std::placeholders::_1, std::placeholders::_2);
+    moodPatrol(mAi, remedy);
+}
+
+//! \brief Shares one torture decision between the prison look and its age symptom.
+void CARE::Controller::prisonLook()
+{
+    load();
+    PRIS::tortureStep(mAi, mPrison);
+}
+
+//! \brief Evaluates the held-special and merchant rows at the configured long-look interval.
+void CARE::Controller::itemsLook()
+{
+    load();
+    const AiEvent look = {AiEventType::SpecialStored, nullptr, nullptr, -1, 0.0, mAi.getMind().now()};
+    ITEMS::useStoredSpecial(mAi, look, !mAi.getWarState().fightOverRaised, true, false);
+    ITEMS::buyForStrongest(mAi);
+}
+
+//! \brief Calls D07's real target row immediately, retaining its own mistake and the parent's reaction.
+void CARE::Controller::need(const std::string& row, Creature*)
+{
+    if(row == "B03") ROOMS::hatcheryWatch(mAi);
+    else if(row == "B02") ROOMS::bedWatch(mAi);
+    else if(row == "A05") ECON::castCreateGold(mAi);
+    else if(row == "B10") ROOMS::toiletWatch(mAi);
+    else if(row == "D06") idle();
+    else if(row == "J08")
+    {
+        WAR::Env env = {mAi, mAi.getMind(), mAi.getGameMap(), mAi.getControlledPlayer(),
+            mAi.getSettings(), mAi.getWarState(), mAi.getMind().now()};
+        WAR::restAfterFight(env);
+    }
+}
+
+//! \brief Runs D06's idle placement at most once per mind time, so its look and D07's remedy share one pass.
+void CARE::Controller::idle()
+{
+    load();
+    const double now = mAi.getMind().now();
+    if(now == mIdleAt)
+        return;
+    mIdleAt = now;
+    idleToHall(mAi);
+}
+
+//! \brief Uses already perceived combat, mood and assault events without adding a second delay.
+void CARE::Controller::event(const AiEvent& event)
+{
+    load();
+    ITEMS::useStoredSpecial(mAi, event,
+        event.type == AiEventType::Fight || !mAi.getWarState().fightOverRaised, false, false);
+}
+
+//! \brief Replaces only L7-owned records and writes timers relative to the current mind clock.
+void CARE::Controller::save(std::vector<AiMath::AiStateLine>& lines)
+{
+    load();
+    for(std::vector<AiMath::AiStateLine>::iterator it = lines.begin(); it != lines.end();)
+    {
+        if(it->tag == "draw" && !it->tokens.empty() &&
+           (it->tokens[0] == "D04" || it->tokens[0] == "D05" || it->tokens[0] == "G02"))
+            it = lines.erase(it);
+        else
+            ++it;
+    }
+    const double now = mAi.getMind().now();
+    lines.push_back({"draw", {"D04", "episodeUntil", careNumber(mSlap.episodeUntil - now)}});
+    lines.push_back({"draw", {"D04", "interval", careNumber(mSlap.interval)}});
+    lines.push_back({"draw", {"D04", "nextSlap", careNumber(mSlap.nextSlap - now)}});
+    lines.push_back({"draw", {"D04", "nextCheck", careNumber(mSlap.nextCheck - now)}});
+    lines.push_back({"draw", {"D05", "nextControl", careNumber(mNextControl - now)}});
+    for(const std::string& prisoner : mPrison.triedPrisoners)
+        lines.push_back({"draw", {"G02", "tried", prisoner}});
 }
 
 //! \brief Starts a finite mistake episode using the same interval and symptom-delay distribution as the care model.
@@ -302,26 +521,31 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
     // AI row D07
     if(ai.getMind().slip("D07"))
         return;
+    // The remedy rows act on the whole keeper, so each one is raised at most once per firing.
+    std::set<std::string> raised;
     for(Creature* creature : ownFighters(ai))
     {
         if(creature->getMoodValue() < CreatureMoodLevel::Upset)
             continue;
+        std::string row;
         if(creature->isHungry())
-            trigger("B03", creature);
+            row = "B03";
         else if(creature->getHomeTile() == nullptr)
-            trigger("B02", creature);
+            row = "B02";
         else if(creature->getGoldFee() > 0.0)
-            trigger("A05", creature);
+            row = "A05";
         else
         {
             Tile* tile = creature->getPositionTile();
             Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
             if(room != nullptr && room->getDirtStage() == 3)
-                trigger("B10", creature);
+                row = "B10";
             else if(creature->isHurt())
-                trigger("J08", creature);
+                row = "J08";
             else if(idle(*creature))
-                trigger("D06", creature);
+                row = "D06";
         }
+        if(!row.empty() && raised.insert(row).second)
+            trigger(row, creature);
     }
 }

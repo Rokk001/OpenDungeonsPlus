@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <set>
+#include <vector>
 
 namespace
 {
@@ -83,15 +84,6 @@ void PRIS::tortureStep(KeeperAI& ai, State& state)
         if(Random::Double(0.0, 1.0) >= probability)
             ACTS::moveCreature(ai, prisoner, destination);
     }
-}
-
-//! \brief Exports the one-time prisoner decisions without choosing conversion or skeleton outcomes.
-std::vector<std::string> PRIS::exportDraws(const State& state)
-{
-    std::vector<std::string> lines;
-    for(const std::string& prisoner : state.triedPrisoners)
-        lines.push_back("G02 tried " + prisoner);
-    return lines;
 }
 
 //! \brief Restores one prisoner decision for a loaded seat.

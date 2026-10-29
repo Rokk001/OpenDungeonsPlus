@@ -3,7 +3,6 @@
 
 #include <string>
 #include <set>
-#include <vector>
 
 class KeeperAI;
 
@@ -16,8 +15,6 @@ struct State
 };
 //! \brief Moves old enough prisoners to torture, drawing conversion neglect only once per prisoner.
 void tortureStep(KeeperAI& ai, State& state);
-//! \brief Returns the persistent prisoner decisions as tokens for the Mind's draw lines.
-std::vector<std::string> exportDraws(const State& state);
 //! \brief Restores the name of a prisoner whose one-time decision has already been drawn.
 void importDraw(State& state, const std::string& name, const std::string& value);
 }
