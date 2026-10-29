@@ -44,6 +44,7 @@
 #include <cstdlib>
 #include <functional>
 #include <set>
+#include <sstream>
 #include <string>
 
 namespace
@@ -70,15 +71,18 @@ double symptomDelay(KeeperAI& ai)
     return AiMath::reactionDelay(AiMath::ReactionKind::symptom, params, uniform);
 }
 
-//! \brief Schedules a step of a row on the hand after a delay, as a mental step without clicks. A loaded game resumes
-//! the step through the handler bound in bindRows for the same row.
-void afterDelay(KeeperAI& ai, const std::string& rowId, double delay, Tile* tile, const std::function<void()>& step)
+//! \brief Writes a number with full double precision for a draw line.
+std::string numberToken(double value)
 {
-    Mind& mind = ai.getMind();
-    mind.exec("think", 1, mind.now() + delay, rowId, tile, "", step);
+    std::ostringstream os;
+    os.precision(17);
+    os << value;
+    return os.str();
 }
 
-//! \brief Reads the trap draws of a loaded game from the mind once: F01 halved plan, F12 watching, F15 tunnels.
+//! \brief Reads the trap draws of a loaded game from the mind once: F01 halved plan, F12 watching, F15 tunnels and
+//! the steps that wait for the symptom delay of a mistake (F12, F13, F15). The mind imports its state at its first
+//! turn, at mind time 0, so a saved remaining time is the mind time of the step.
 void restoreDraws(KeeperAI& ai)
 {
     TRAP::State& state = ai.getTrapState();
@@ -98,6 +102,24 @@ void restoreDraws(KeeperAI& ai)
             state.mWantDivided = std::atoi(value.c_str());
         else if((row == "F12") && (name == "watching"))
             state.mWatching = (value == "1");
+        else if((row == "F12") && (name == "watchDue"))
+            state.mWatchDue = std::atof(value.c_str());
+        else if((row == "F13") && (name == "doorDue"))
+            state.mDoorDue = std::atof(value.c_str());
+        else if((row == "F15") && (name == "fortifyDue"))
+        {
+            // x,y,remaining
+            std::string::size_type first = value.find(',');
+            std::string::size_type second = (first == std::string::npos) ? std::string::npos : value.find(',', first + 1);
+            if(second != std::string::npos)
+            {
+                TRAP::State::PendingFortify pending;
+                pending.mX = std::atoi(value.substr(0, first).c_str());
+                pending.mY = std::atoi(value.substr(first + 1, second - first - 1).c_str());
+                pending.mDue = std::atof(value.substr(second + 1).c_str());
+                state.mFortifyDue.push_back(pending);
+            }
+        }
         else if((row == "F15") && (name == "tunnel"))
         {
             std::string::size_type comma = value.find(',');
@@ -134,7 +156,8 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
     for(const AiMath::AiStateLine& line : lines)
     {
         bool own = (line.tag == "draw") && !line.tokens.empty() &&
-                   ((line.tokens[0] == "F01") || (line.tokens[0] == "F12") || (line.tokens[0] == "F15"));
+                   ((line.tokens[0] == "F01") || (line.tokens[0] == "F12") || (line.tokens[0] == "F13") ||
+                    (line.tokens[0] == "F15"));
         if(!own)
             kept.push_back(line);
     }
@@ -147,6 +170,18 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
         addDraw(lines, "F12", "watching", "1");
     for(const std::pair<int, int>& tunnel : state.mTunnels)
         addDraw(lines, "F15", "tunnel", std::to_string(tunnel.first) + "," + std::to_string(tunnel.second));
+
+    // The waiting steps as the seconds that remain
+    double now = ai.getMind().now();
+    if(state.mWatchDue >= 0.0)
+        addDraw(lines, "F12", "watchDue", numberToken(std::max(0.0, state.mWatchDue - now)));
+    if(state.mDoorDue >= 0.0)
+        addDraw(lines, "F13", "doorDue", numberToken(std::max(0.0, state.mDoorDue - now)));
+    for(const TRAP::State::PendingFortify& pending : state.mFortifyDue)
+    {
+        addDraw(lines, "F15", "fortifyDue", std::to_string(pending.mX) + "," + std::to_string(pending.mY) + "," +
+                numberToken(std::max(0.0, pending.mDue - now)));
+    }
 }
 
 //! \brief Returns the squared distance of two tiles.
@@ -666,9 +701,7 @@ bool TRAP::reloadGate(KeeperAI& ai)
     // The mistake: the AI thinks of the empty traps only after another symptom delay
     if(ai.getMind().slip("F12"))
     {
-        KeeperAI* self = &ai;
-        std::function<void()> watch = [self]() { startWatching(*self); };
-        afterDelay(ai, "F12", symptomDelay(ai), nullptr, watch);
+        ai.getTrapState().mWatchDue = ai.getMind().now() + symptomDelay(ai);
         return false;
     }
     startWatching(ai);
@@ -757,12 +790,9 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
         scheduled = buildOne(ai, kind, entrance.mDoor);
         break;
     }
-    if(forgotten)
-    {
-        KeeperAI* self = &ai;
-        std::function<void()> again = [self]() { TRAP::placeDoor(*self, TRAP::findEntrances(*self)); };
-        afterDelay(ai, "F13", symptomDelay(ai), nullptr, again);
-    }
+    TRAP::State& state = ai.getTrapState();
+    if(forgotten && (state.mDoorDue < 0.0))
+        state.mDoorDue = ai.getMind().now() + symptomDelay(ai);
     if(scheduled || stopped)
         return scheduled;
 
@@ -838,6 +868,40 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     }
 }
 
+//! \brief Runs the steps whose mistake delay is over: watching the empty traps (F12), the next look at the doors (F13)
+//! and the delayed tunnel fortifications (F15). Run by the mind every AiPollSeconds; it never raises an event, and the
+//! hand is used only by the actions of the steps themselves.
+//! \return Always false.
+bool pendingStep(KeeperAI& ai)
+{
+    restoreDraws(ai);
+    TRAP::State& state = ai.getTrapState();
+    double now = ai.getMind().now();
+    if((state.mWatchDue >= 0.0) && (now >= state.mWatchDue))
+    {
+        state.mWatchDue = -1.0;
+        startWatching(ai);
+    }
+    if((state.mDoorDue >= 0.0) && (now >= state.mDoorDue))
+    {
+        state.mDoorDue = -1.0;
+        TRAP::placeDoor(ai, TRAP::findEntrances(ai));
+    }
+    std::vector<TRAP::State::PendingFortify> due;
+    std::vector<TRAP::State::PendingFortify> waiting;
+    for(const TRAP::State::PendingFortify& pending : state.mFortifyDue)
+    {
+        if(now >= pending.mDue)
+            due.push_back(pending);
+        else
+            waiting.push_back(pending);
+    }
+    state.mFortifyDue.swap(waiting);
+    for(const TRAP::State::PendingFortify& pending : due)
+        fortifyNow(ai, ai.getGameMap().getTile(pending.mX, pending.mY));
+    return false;
+}
+
 //! \brief The reaction to a destroyed building: a broken door of an entrance is rebuilt at once (row F13).
 void onBuildingDestroyed(KeeperAI& ai, const AiEvent& event)
 {
@@ -861,6 +925,8 @@ TRAP::State::State() :
     mWatching(false),
     mLastTestSeconds(-1.0e18),
     mExhausted(false),
+    mWatchDue(-1.0),
+    mDoorDue(-1.0),
     mRestored(false)
 {
 }
@@ -873,9 +939,7 @@ void TRAP::bindRows(KeeperAI& ai)
     std::function<void(const AiEvent&)> fightOver = [self](const AiEvent&) { TRAP::reloadGate(*self); };
     std::function<void(const AiEvent&)> broken = [self](const AiEvent& event) { onBuildingDestroyed(*self, event); };
     std::function<void(const AiEvent&)> tunnel = [self](const AiEvent& event) { TRAP::fortifyTunnel(*self, event.tile); };
-    std::function<void(Tile*, const std::string&)> resumeWatch = [self](Tile*, const std::string&) { startWatching(*self); };
-    std::function<void(Tile*, const std::string&)> resumeDoor = [self](Tile*, const std::string&) { TRAP::placeDoor(*self, TRAP::findEntrances(*self)); };
-    std::function<void(Tile*, const std::string&)> resumeFortify = [self](Tile* tile, const std::string&) { fortifyNow(*self, tile); };
+    std::function<bool()> pending = [self]() { return pendingStep(*self); };
     std::function<void(std::vector<AiMath::AiStateLine>&)> save = [self](std::vector<AiMath::AiStateLine>& lines) { saveDraws(*self, lines); };
 
     // One trap look for all F rows (specification 3.2 item 1)
@@ -883,9 +947,7 @@ void TRAP::bindRows(KeeperAI& ai)
     mind.onEvent("F12", std::vector<AiEventType>(1, AiEventType::FightOver), fightOver);
     mind.onEvent("F13", std::vector<AiEventType>(1, AiEventType::BuildingDestroyed), broken);
     mind.onEvent("F15", std::vector<AiEventType>(1, AiEventType::TunnelOpen), tunnel);
-    mind.onAction("think", "F12", resumeWatch);
-    mind.onAction("think", "F13", resumeDoor);
-    mind.onAction("think", "F15", resumeFortify);
+    mind.onPoll("F12", AiEventType::FightOver, pending);
     mind.onSave(save);
 }
 
@@ -899,13 +961,29 @@ bool TRAP::fortifyTunnel(KeeperAI& ai, Tile* breakthrough)
     // The mistake: the AI notices the open tunnel only after another symptom delay
     if(ai.getMind().slip("F15"))
     {
-        KeeperAI* self = &ai;
-        std::function<void()> fortify = [self, breakthrough]() { fortifyNow(*self, breakthrough); };
-        afterDelay(ai, "F15", symptomDelay(ai), breakthrough, fortify);
+        TRAP::State::PendingFortify pending;
+        pending.mX = breakthrough->getX();
+        pending.mY = breakthrough->getY();
+        pending.mDue = ai.getMind().now() + symptomDelay(ai);
+        ai.getTrapState().mFortifyDue.push_back(pending);
         return false;
     }
 
     // The tunnel is an entrance from now on, so the trap look builds its door and the trap tiles per entrance
     fortifyNow(ai, breakthrough);
     return true;
+}
+
+double TRAP::fortifyRemaining(KeeperAI& ai)
+{
+    restoreDraws(ai);
+    double remaining = -1.0;
+    double now = ai.getMind().now();
+    for(const TRAP::State::PendingFortify& pending : ai.getTrapState().mFortifyDue)
+    {
+        double left = std::max(0.0, pending.mDue - now);
+        if((remaining < 0.0) || (left < remaining))
+            remaining = left;
+    }
+    return remaining;
 }

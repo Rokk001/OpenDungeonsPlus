@@ -30,7 +30,7 @@ class Tile;
 namespace SPELL
 {
 //! \brief What the spell rows remember for one keeper AI. It lives as long as the AI; the decisions that last longer
-//! than one trigger are saved as "draw" lines of the AI state.
+//! than one trigger and a running fight session are saved as "draw" lines of the AI state.
 struct State
 {
     //! \brief Starts without a cast, without a fight session and without restored lines.

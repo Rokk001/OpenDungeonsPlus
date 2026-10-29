@@ -55,6 +55,20 @@ struct State
     bool mExhausted;
     //! \brief Every fortified tunnel breakthrough tile (x, y) of the AI's land (row F15).
     std::vector<std::pair<int, int>> mTunnels;
+    //! \brief Mind time at which the AI starts watching its empty traps after the F12 mistake, -1 when none is pending.
+    double mWatchDue;
+    //! \brief Mind time at which the doors are looked at again after the F13 mistake, -1 when none is pending.
+    double mDoorDue;
+    //! \brief A tunnel fortification that waits for the symptom delay of the F15 mistake.
+    struct PendingFortify
+    {
+        int mX;
+        int mY;
+        //! \brief Mind time at which the tunnel is fortified.
+        double mDue;
+    };
+    //! \brief The tunnel fortifications delayed by the F15 mistake.
+    std::vector<PendingFortify> mFortifyDue;
     //! \brief True once the saved draw lines of the mind were read.
     bool mRestored;
 };
@@ -101,6 +115,11 @@ bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances);
 //! \param breakthrough The tile where the tunnel breaks into the AI's land.
 //! \return false when the mistake delayed it.
 bool fortifyTunnel(KeeperAI& ai, Tile* breakthrough);
+
+//! \brief The seconds until the earliest tunnel fortification delayed by the F15 mistake, for the fortifyRemaining
+//! token of the saved tunnel line.
+//! \return -1 when no fortification is pending.
+double fortifyRemaining(KeeperAI& ai);
 }
 
 #endif // AITRAPS_H

@@ -45,6 +45,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <sstream>
 #include <string>
 
 namespace
@@ -358,8 +359,33 @@ Tile* tileNextToHeart(KeeperAI& ai)
     return nullptr;
 }
 
-//! \brief Reads the spell draws of a loaded game from the mind once: the turn of the last Eye of Evil cast (E04) and
-//! the pending late Defense (E05).
+//! \brief Writes a number with full double precision for a draw line.
+std::string numberToken(double value)
+{
+    std::ostringstream os;
+    os.precision(17);
+    os << value;
+    return os.str();
+}
+
+//! \brief Splits a comma separated draw value into its parts.
+std::vector<std::string> splitValue(const std::string& value)
+{
+    std::vector<std::string> parts;
+    std::string::size_type start = 0;
+    while(true)
+    {
+        std::string::size_type comma = value.find(',', start);
+        parts.push_back(value.substr(start, (comma == std::string::npos) ? std::string::npos : comma - start));
+        if(comma == std::string::npos)
+            return parts;
+        start = comma + 1;
+    }
+}
+
+//! \brief Reads the spell draws of a loaded game from the mind once: the turn of the last Eye of Evil cast (E04), the
+//! pending late Defense (E05) and a running fight session (E19). The mind imports its state at its first turn, at mind
+//! time 0, so a saved time relative to the save is the mind time itself.
 void restoreDraws(KeeperAI& ai)
 {
     SPELL::State& state = ai.getSpellState();
@@ -376,6 +402,21 @@ void restoreDraws(KeeperAI& ai)
             state.mLastEyeTurn = std::atoll(line.tokens[2].c_str());
         else if((line.tokens[0] == "E05") && (line.tokens[1] == "lateDefense"))
             state.mLateDefense = (line.tokens[2] == "1");
+        else if((line.tokens[0] == "E19") && (line.tokens[1] == "session"))
+        {
+            // start,lastFight,x,y,nextCast,haste
+            std::vector<std::string> parts = splitValue(line.tokens[2]);
+            if(parts.size() != 6)
+                continue;
+
+            state.mInSession = true;
+            state.mSessionStart = std::atof(parts[0].c_str());
+            state.mLastFight = std::atof(parts[1].c_str());
+            state.mFightX = std::atoi(parts[2].c_str());
+            state.mFightY = std::atoi(parts[3].c_str());
+            state.mNextCast = std::atof(parts[4].c_str());
+            state.mSessionHaste = (parts[5] == "1");
+        }
     }
 }
 
@@ -386,7 +427,8 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
     std::vector<AiMath::AiStateLine> kept;
     for(const AiMath::AiStateLine& line : lines)
     {
-        bool own = (line.tag == "draw") && !line.tokens.empty() && ((line.tokens[0] == "E04") || (line.tokens[0] == "E05"));
+        bool own = (line.tag == "draw") && !line.tokens.empty() &&
+                   ((line.tokens[0] == "E04") || (line.tokens[0] == "E05") || (line.tokens[0] == "E19"));
         if(!own)
             kept.push_back(line);
     }
@@ -409,6 +451,19 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
         line.tokens.push_back("E05");
         line.tokens.push_back("lateDefense");
         line.tokens.push_back("1");
+        lines.push_back(line);
+    }
+    if(state.mInSession)
+    {
+        // The times relative to the save
+        double now = ai.getMind().now();
+        AiMath::AiStateLine line;
+        line.tag = "draw";
+        line.tokens.push_back("E19");
+        line.tokens.push_back("session");
+        line.tokens.push_back(numberToken(state.mSessionStart - now) + "," + numberToken(state.mLastFight - now) + "," +
+                              std::to_string(state.mFightX) + "," + std::to_string(state.mFightY) + "," +
+                              numberToken(state.mNextCast - now) + "," + (state.mSessionHaste ? "1" : "0"));
         lines.push_back(line);
     }
 }
