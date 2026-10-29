@@ -236,6 +236,10 @@ set(OD_SOURCEFILES
     ${SRC}/ai/AiMath.h
     ${SRC}/ai/AiActions.h
     ${SRC}/ai/AiMind.h
+    ${SRC}/ai/AiSpells.cpp
+    ${SRC}/ai/AiSpells.h
+    ${SRC}/ai/AiTraps.cpp
+    ${SRC}/ai/AiTraps.h
     ${SRC}/ai/AIManager.cpp
     ${SRC}/ai/BaseAI.cpp
     ${SRC}/ai/AiSaveFormat.h
