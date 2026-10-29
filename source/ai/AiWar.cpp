@@ -1085,6 +1085,20 @@ void heartGuard(Env& env)
         ACTS::castSpell(env.ai, SpellType::possess, strongest);
 }
 
+void heartEvent(Env& env, const AiEvent& event)
+{
+    // Row J05 fires on HeartCritical and on a fight on a heart tile (a tile of an own dungeon temple)
+    if(event.type == AiEventType::Fight)
+    {
+        Room* room = (event.tile == nullptr) ? nullptr : event.tile->getCoveringRoom();
+        if((room == nullptr) || (room->getType() != RoomType::dungeonTemple) || (room->getSeat() != env.player.getSeat()))
+            return;
+    }
+    else if(event.type != AiEventType::HeartCritical)
+        return;
+    heartGuard(env);
+}
+
 void restAfterFight(Env& env)
 {
     // AI row J08: fleeing creatures are carried to the dungeon temple; the rule mistake leaves them
@@ -1168,9 +1182,6 @@ void onEvent(Env& env, const AiEvent& event)
             st.lastFight = event.time;
             st.fightOverRaised = false;
             defend(env, event);
-            break;
-        case AiEventType::HeartCritical:
-            heartGuard(env);
             break;
         case AiEventType::FightOver:
             restAfterFight(env);

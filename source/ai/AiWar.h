@@ -102,7 +102,7 @@ struct Env
 //! Tunnel and combat symptom events are polled by the shared event source at AiPollSeconds.
 void doTurn(Env& env);
 
-//! \brief Handles an event of the war (Fight, HeartCritical, TunnelOpen, EnemyOut, EnemyTrapEmpty, FightOver, Start,
+//! \brief Handles an event of the war (Fight, TunnelOpen, EnemyOut, EnemyTrapEmpty, FightOver, Start,
 //! Plan, Launch, Contact, AssaultOver, EnemySpellSeen) after its reaction delay.
 void onEvent(Env& env, const AiEvent& event);
 
@@ -141,6 +141,10 @@ void defend(Env& env, const AiEvent& event);
 
 //! \brief Protects the heart when it is critical (row J05).
 void heartGuard(Env& env);
+
+//! \brief Hands the triggers of row J05 to heartGuard: HeartCritical, and a Fight on a tile of an own dungeon temple.
+//! \param event The HeartCritical or Fight event after its reaction delay; a fight elsewhere is ignored.
+void heartEvent(Env& env, const AiEvent& event);
 
 //! \brief Picks up fleeing creatures after a fight (row J08).
 void restAfterFight(Env& env);
