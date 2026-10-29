@@ -146,7 +146,8 @@ void heartGuard(Env& env);
 //! \param event The HeartCritical or Fight event after its reaction delay; a fight elsewhere is ignored.
 void heartEvent(Env& env, const AiEvent& event);
 
-//! \brief Picks up fleeing creatures after a fight (row J08).
+//! \brief Carries wounded creatures to their bed or an infirmary and other fleeing creatures to the temple after a fight
+//! (row J08).
 void restAfterFight(Env& env);
 
 //! \brief Appends the war and sighting lines of the saved AI state (the lines of the war and sighting tags).

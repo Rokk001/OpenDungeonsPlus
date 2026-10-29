@@ -1099,9 +1099,39 @@ void heartEvent(Env& env, const AiEvent& event)
     heartGuard(env);
 }
 
+namespace
+{
+//! \brief The place where a hurt own creature rests: its bed, or a free tile of an own infirmary that would admit it
+//! (free cot, payable admission; the same test the infirmary uses for carried patients) when it has no bed.
+//! \return The rest tile, or nullptr when the creature already lies in its bed or in an infirmary, or no place exists.
+Tile* restTileFor(Env& env, Creature* creature)
+{
+    Seat* seat = env.player.getSeat();
+    Tile* tile = creature->getPositionTile();
+    Room* room = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
+    if((tile == nullptr) || (tile == creature->getHomeTile()) || ((room != nullptr) && (room->getType() == RoomType::infirmary)))
+        return nullptr;
+    if(creature->getHomeTile() != nullptr)
+        return creature->getHomeTile();
+
+    for(Room* infirmary : env.gameMap.getRoomsByTypeAndSeat(RoomType::infirmary, seat))
+    {
+        if(!infirmary->hasCarryEntitySpot(creature))
+            continue;
+        for(Tile* covered : infirmary->getCoveredTiles())
+        {
+            if(covered->isClaimedForSeat(seat) && !covered->isFullTile())
+                return covered;
+        }
+    }
+    return nullptr;
+}
+}
+
 void restAfterFight(Env& env)
 {
-    // AI row J08: fleeing creatures are carried to the dungeon temple; the rule mistake leaves them
+    // AI row J08: wounded creatures are carried to their bed or an infirmary, other fleeing creatures to the dungeon
+    // temple; the rule mistake leaves them where they are (one draw per FightOver)
     WarState& st = env.state;
     st.defenceRallying = false;
     if(st.defenceBanner != nullptr)
@@ -1121,10 +1151,17 @@ void restAfterFight(Env& env)
     int area = static_cast<int>(key("HeartDefenceAreaTiles"));
     for(Creature* creature : env.gameMap.getCreaturesBySeat(seat))
     {
-        if(!creature->isActionInList(CreatureActionType::flee))
-            continue;
         Tile* tile = creature->getPositionTile();
         if(tile == nullptr)
+            continue;
+        Tile* rest = creature->isHurt() ? restTileFor(env, creature) : nullptr;
+        if(rest != nullptr)
+        {
+            if(creature->tryPickup(seat) && creature->tryDrop(seat, rest))
+                ACTS::moveCreature(env.ai, creature, rest);
+            continue;
+        }
+        if(!creature->isActionInList(CreatureActionType::flee))
             continue;
         if((std::abs(center->getX() - tile->getX()) <= area) && (std::abs(center->getY() - tile->getY()) <= area))
             continue;
