@@ -24,7 +24,9 @@
 #include <utility>
 #include <vector>
 
+class Mind;
 class Tile;
+struct AiSettings;
 enum class RoomType;
 
 //! \brief Controls a keeper using its selected difficulty and current dungeon resources.
@@ -47,6 +49,14 @@ public:
              int reactionPercent, int minHpPercentToFight, int minFightersToAttack,
              int minCreatureLevel, int maxTrapTiles, int maxDoors);
     virtual bool doTurn(double timeSinceLastTurn);
+    //! \brief The map this AI plays on, for the decision functions of the SPELL and TRAP namespaces.
+    GameMap& getGameMap() { return mGameMap; }
+    //! \brief The player this AI controls, for the decision functions of the SPELL and TRAP namespaces.
+    Player& getControlledPlayer() { return mPlayer; }
+    //! \brief The mind that draws the mistakes of this AI and schedules its actions (defined with the mind).
+    Mind& getMind();
+    //! \brief The values of the AI level of this AI (defined with the mind).
+    const AiSettings& getSettings() const;
     //! \brief Chooses the AI keeper switches immediately before each ectoplasm product.
     static void updateGhostRoomSettings(Seat& seat);
     //! \brief The room plan of the keeper AI in build order: the [RoomPlan] section of ai.cfg, or the compiled
@@ -70,13 +80,6 @@ protected:
     //! It will also return false once it's done.
     bool lookForGold();
 
-    //! \brief Places researched traps and wooden doors at the entrances of the AI rooms and in the
-    //! corridors in front of them. Limited by gold, workshop production and the AI level
-    void handleTraps();
-
-    //! \brief Casts heal on hurt fighting creatures and a call to war banner on a fight in the dungeon
-    //! when the mana allows it
-    void handleSpells();
 
     //! \brief Checks if a new worker should be summoned
     //! Returns true if the action has been done and false if nothing has been done
@@ -109,13 +112,6 @@ private:
     //! \brief Returns true if the given room is needed and false otherwise
     bool checkNeedRoom(RoomType roomType);
 
-    //! \brief Fills the tiles where a door can be built (entrances of the rooms) and the tiles in the
-    //! corridor right in front of them (trap places)
-    void findChokePoints(std::vector<Tile*>& doorTiles, std::vector<Tile*>& trapTiles);
-
-    //! \brief Removes every call to war banner owned by this AI
-    void removeBanners();
-
     //! \brief Returns a random cooldown between min and max, scaled by the AI reaction time
     int scaledCooldown(int min, int max) const;
 
@@ -129,14 +125,6 @@ private:
     int mMinFightersToAttack;
     //! \brief Fighters below this level are too weak for an attack; the AI waits while more of them exist than this value
     int mMinCreatureLevel;
-    //! \brief Maximum number of trap tiles (without doors) the AI owns
-    int mMaxTrapTiles;
-    //! \brief Maximum number of doors the AI owns
-    int mMaxDoors;
-    int mCooldownTraps;
-    int mCooldownSpells;
-    //! \brief True while a call to war banner placed to defend the dungeon is out
-    bool mIsDefenseBannerOut;
     //! \brief True while the AI is sending its fighters against an enemy dungeon
     bool mIsAttacking;
     //! \brief Number of healthy fighters when the attack started. Used to decide when to retreat
