@@ -165,6 +165,7 @@ Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
     return best;
 }
 
+//! \brief Plans and marks a tunnel route, choosing the longer detour on an I02 mistake.
 bool AiKnowledge::planRoute(KeeperAI& ai, const AiSettings& settings, Tile* start, Tile* target, double& detour, Tile*& firstDig) const
 {
     // AI row I02: the detour represents "only the explored map is known"
@@ -172,9 +173,11 @@ bool AiKnowledge::planRoute(KeeperAI& ai, const AiSettings& settings, Tile* star
     if((start == nullptr) || (target == nullptr))
         return false;
 
-    // One detour draw per tunnel plan; the simulated tunnel start has no other mistake than the diggers of row I01
+    // Draw a detour once, or take the longer of two draws on an I02 mistake.
     AiMath::Uniform01 u = uniform01;
     detour = AiMath::lognormalMedian(settings.tunnelDetour, aiKey("DetourSigma"), u);
+    if(ai.getMind().slip("I02"))
+        detour = std::max(detour, AiMath::lognormalMedian(settings.tunnelDetour, aiKey("DetourSigma"), u));
 
     double dx = target->getX() - start->getX();
     double dy = target->getY() - start->getY();
