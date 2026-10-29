@@ -99,7 +99,7 @@ static const int NORMAL_MIN_CREATURE_LEVEL = 4;
 static const double GHOST_VALUE_PERCENT = 100.0;
 
 
-//! \brief Creates a keeper whose mind reads the selected level's configured values.
+//! \brief Creates a keeper whose mind reads the selected level's configured values and binds the spell and trap rows to it.
 KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     BaseAI(gameMap, player),
     mReactionPercent(NORMAL_REACTION_PERCENT),
@@ -145,6 +145,9 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
         ConfigManager::getSingleton().getAiConfigDouble("ReferenceScanPeriod"), std::bind(&KeeperAI::handleExploreLook, this));
     std::function<void(std::vector<AiMath::AiStateLine>&)> warSaver = std::bind(&KeeperAI::saveWarRows, this, std::placeholders::_1);
     mMind.onSave(warSaver);
+    // The spell, trap and door rows react to their events and looks through the mind
+    SPELL::bindRows(*this);
+    TRAP::bindRows(*this);
 }
 
 int KeeperAI::scaledCooldown(int min, int max) const
