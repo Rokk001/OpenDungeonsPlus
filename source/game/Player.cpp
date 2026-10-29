@@ -997,11 +997,12 @@ void Player::markTilesForDigging(bool marked, const std::vector<Tile*>& tiles, b
 
             // Like a human, an AI may mark a tile it has not explored yet, whatever its type; the mark
             // never reveals the tile. A known tile must be diggable.
-            const bool unexplored = !getSeat()->hasVisionOnTile(tile) &&
-                !mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][getSeat()->getId()];
+            // hasVisionOnTile() answers true for a tile the seat has no record of, so only the visited flag counts here
+            const bool unexplored = !mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][getSeat()->getId()];
             if(!unexplored && !tile->isDiggable(getSeat()))
                 continue;
 
+            getSeat()->tileMarkedDiggingNotifiedToPlayer(tile, marked);
             tile->setMarkedForDigging(marked, this);
         }
         return;
