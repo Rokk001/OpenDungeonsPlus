@@ -40,6 +40,7 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <functional>
 #include <vector>
 
 // Contains the rooms the AI will try to build. It will try to build them in the given order
@@ -94,17 +95,6 @@ static const int NORMAL_MIN_HP_PERCENT_TO_FIGHT = 20;
 static const int NORMAL_MIN_FIGHTERS_TO_ATTACK = 11;
 static const int NORMAL_MIN_CREATURE_LEVEL = 4;
 
-//! \brief Range of turns between two checks of the attack state (before the reaction scaling)
-static const int ATTACK_COOLDOWN_MIN = 20;
-static const int ATTACK_COOLDOWN_MAX = 40;
-//! \brief Range of turns the AI waits after retreating before it considers a new attack
-static const int ATTACK_RETREAT_COOLDOWN_MIN = 200;
-static const int ATTACK_RETREAT_COOLDOWN_MAX = 300;
-//! \brief Range of turns the AI waits after ordering a way to the enemy dungeon to be dug
-static const int ATTACK_DIG_COOLDOWN_MIN = 100;
-static const int ATTACK_DIG_COOLDOWN_MAX = 200;
-//! \brief The AI retreats when its fighters fall below 1 / this value of the number it started with
-static const int ATTACK_RETREAT_DIVISOR = 2;
 //! \brief Converts the keeper's percentage margin and item discounts to shares.
 static const double GHOST_VALUE_PERCENT = 100.0;
 
@@ -143,6 +133,15 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
 {
     ACTS::bind(*this);
     mEvents.bind();
+    // The war rows react to their events after the shared reaction delay
+    std::function<void(const AiEvent&)> warHandler = std::bind(&KeeperAI::handleWarEvent, this, std::placeholders::_1);
+    mMind.onEvent("J01", std::vector<AiEventType>(1, AiEventType::Fight), warHandler);
+    mMind.onEvent("J05", std::vector<AiEventType>(1, AiEventType::HeartCritical), warHandler);
+    mMind.onEvent("J07", std::vector<AiEventType>(1, AiEventType::EnemyOut), warHandler);
+    mMind.onEvent("J08", std::vector<AiEventType>(1, AiEventType::FightOver), warHandler);
+    mMind.onEvent("K08", std::vector<AiEventType>(1, AiEventType::EnemyTrapEmpty), warHandler);
+    std::function<void(std::vector<AiMath::AiStateLine>&)> warSaver = std::bind(&KeeperAI::saveWarRows, this, std::placeholders::_1);
+    mMind.onSave(warSaver);
 }
 
 int KeeperAI::scaledCooldown(int min, int max) const
@@ -157,7 +156,7 @@ bool KeeperAI::doTurn(double timeSinceLastTurn)
     if(getDungeonTemple() == nullptr)
         return false;
     mMind.doTurn(timeSinceLastTurn);
-    legacyWarTurn();
+    runWar();
     return legacyEconomyTurn();
 }
 
@@ -189,15 +188,31 @@ void KeeperAI::exportState(std::ostream& os) const
 //! \brief Restores the complete shared mind from the saved block contents.
 bool KeeperAI::importState(const std::vector<std::string>& lines)
 {
-    return mMind.importState(lines);
+    bool restored = mMind.importState(lines);
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::importRows(env, mMind.savedRows());
+    return restored;
 }
 
-//! \brief Preserves the original war paths until their owner supplies the new decisions.
-void KeeperAI::legacyWarTurn()
+//! \brief Appends the war and sighting lines to the saved AI state of the mind.
+void KeeperAI::saveWarRows(std::vector<AiMath::AiStateLine>& lines)
 {
-    saveWoundedCreatures();
-    handleDefense();
-    handleAttack();
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::exportRows(env, lines);
+}
+
+//! \brief Runs the polled parts of the war (plan step, tunnel probe, assault steps, enemy edges) once per turn.
+void KeeperAI::runWar()
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::doTurn(env);
+}
+
+//! \brief Hands an event of the war rows to the war module after the reaction delay of the Mind.
+void KeeperAI::handleWarEvent(const AiEvent& event)
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::onEvent(env, event);
 }
 
 //! \brief Preserves the first-turn setup and economy chain, excluding the removed repair action.
@@ -208,6 +223,8 @@ bool KeeperAI::legacyEconomyTurn()
         mIsFirstUpkeepDone = true;
         handleFirstTurn();
     }
+
+
     if (handleWorkers())
         return true;
     if (checkTreasury())
@@ -710,246 +727,6 @@ bool KeeperAI::checkNeedRoom(RoomType roomType)
     }
 }
 
-void KeeperAI::saveWoundedCreatures()
-{
-    if(mCooldownSaveWoundedCreatures > 0)
-    {
-        --mCooldownSaveWoundedCreatures;
-        return;
-    }
-    mCooldownSaveWoundedCreatures = Random::Int(mCooldownSaveWoundedCreaturesMin, mCooldownSaveWoundedCreaturesMax);
-
-    Tile* dungeonTempleTile = getDungeonTemple()->getCentralTile();
-    if(dungeonTempleTile == nullptr)
-    {
-        OD_LOG_ERR("keeperAi=" + mPlayer.getNick());
-        return;
-    }
-
-    Seat* seat = mPlayer.getSeat();
-    std::vector<Creature*> creatures = mGameMap.getCreaturesBySeat(seat);
-    for(Creature* creature : creatures)
-    {
-        // We take away fleeing creatures not too near our dungeon heart
-        if(!creature->isActionInList(CreatureActionType::flee))
-            continue;
-        Tile* tile = creature->getPositionTile();
-        if(tile == nullptr)
-            continue;
-
-        if((std::abs(dungeonTempleTile->getX() - tile->getX()) <= 5) &&
-           (std::abs(dungeonTempleTile->getY() - tile->getY()) <= 5))
-        {
-            // We are too close from our dungeon heart to be picked up
-            continue;
-        }
-
-        if(!creature->tryPickup(seat))
-            continue;
-
-        mPlayer.pickUpEntity(creature);
-
-        mPlayer.dropHand(dungeonTempleTile);
-    }
-}
-
-void KeeperAI::handleDefense()
-{
-    if(mCooldownDefense > 0)
-    {
-        --mCooldownDefense;
-        return;
-    }
-    mCooldownDefense = Random::Int(mCooldownDefenseMin, mCooldownDefenseMax);
-
-    Seat* seat = mPlayer.getSeat();
-    // We drop creatures nearby owned or allied attacked creatures
-    std::vector<Creature*> creatures = mGameMap.getCreaturesByAlliedSeat(seat);
-    for(Creature* creature : creatures)
-    {
-        // We check if a creature is fighting near a claimed tile. If yes, we drop a creature nearby
-        if(!creature->isActionInList(CreatureActionType::fight))
-            continue;
-
-        Tile* tile = creature->getPositionTile();
-        if(tile == nullptr)
-            continue;
-
-        // We look for a healthy creature not already fighting
-        Creature* creatureToDrop = nullptr;
-        for(Creature* creature2 : mGameMap.getCreaturesBySeat(seat))
-        {
-            if(creature2->getDefinition()->isWorker())
-                continue;
-            if(creature2->getHP() < (creature2->getMaxHp() * mMinHpPercentToFight / 100.0))
-                continue;
-            if(creature2->isActionInList(CreatureActionType::fight))
-                continue;
-            if((creatureToDrop != nullptr) && (creatureToDrop->getLevel() >= creature2->getLevel()))
-                continue;
-
-            creatureToDrop = creature2;
-        }
-        if(creatureToDrop == nullptr)
-            continue;
-
-        if(!creatureToDrop->tryPickup(seat))
-            continue;
-
-        for(Tile* neigh : tile->getAllNeighbors())
-        {
-            if(creatureToDrop->tryDrop(seat, neigh))
-            {
-                mPlayer.pickUpEntity(creatureToDrop);
-                mPlayer.dropHand(neigh);
-                return;
-            }
-        }
-    }
-}
-
-int KeeperAI::countHealthyFighters() const
-{
-    int nbFighters = 0;
-    for(Creature* creature : mGameMap.getCreaturesBySeat(mPlayer.getSeat()))
-    {
-        if(creature->getDefinition()->isWorker())
-            continue;
-        if(creature->isKo())
-            continue;
-        if(creature->getHP() < (creature->getMaxHp() * mMinHpPercentToFight / 100.0))
-            continue;
-
-        ++nbFighters;
-    }
-    return nbFighters;
-}
-
-int KeeperAI::countWeakFighters() const
-{
-    int nbWeakFighters = 0;
-    for(Creature* creature : mGameMap.getCreaturesBySeat(mPlayer.getSeat()))
-    {
-        if(creature->getDefinition()->isWorker())
-            continue;
-        if(creature->isKo())
-            continue;
-        if(creature->getHP() < (creature->getMaxHp() * mMinHpPercentToFight / 100.0))
-            continue;
-        if(static_cast<int>(creature->getLevel()) < mMinCreatureLevel)
-            ++nbWeakFighters;
-    }
-    return nbWeakFighters;
-}
-
-Tile* KeeperAI::findEnemyTempleTile()
-{
-    Tile* central = getDungeonTemple()->getCentralTile();
-    Tile* best = nullptr;
-    int bestDistance = 0;
-    for(Seat* seat : mGameMap.getSeats())
-    {
-        if(seat->isAlliedSeat(mPlayer.getSeat()))
-            continue;
-
-        for(Room* temple : mGameMap.getRoomsByTypeAndSeat(RoomType::dungeonTemple, seat))
-        {
-            Tile* tile = temple->getCentralTile();
-            if(tile == nullptr)
-                continue;
-
-            int distance = std::abs(tile->getX() - central->getX()) + std::abs(tile->getY() - central->getY());
-            if((best == nullptr) || (distance < bestDistance))
-            {
-                best = tile;
-                bestDistance = distance;
-            }
-        }
-    }
-    return best;
-}
-
-void KeeperAI::removeBanners()
-{
-    for(Spell* banner : mGameMap.getSpellsBySeatAndType(mPlayer.getSeat(), SpellType::callToWar))
-        banner->slap();
-}
-
-void KeeperAI::handleAttack()
-{
-    if(mMinFightersToAttack <= 0)
-        return;
-
-    if(mCooldownAttack > 0)
-    {
-        --mCooldownAttack;
-        return;
-    }
-    mCooldownAttack = scaledCooldown(ATTACK_COOLDOWN_MIN, ATTACK_COOLDOWN_MAX);
-
-    Seat* seat = mPlayer.getSeat();
-    if(!SkillManager::isSpellAvailable(SpellType::callToWar, seat))
-        return;
-
-    int nbFighters = countHealthyFighters();
-    Tile* enemyTile = findEnemyTempleTile();
-
-    if(mIsAttacking)
-    {
-        // We retreat if the enemy is gone or we lost half of the fighters we started with
-        if((enemyTile == nullptr) || ((nbFighters * ATTACK_RETREAT_DIVISOR) < mNbFightersAtAttackStart))
-        {
-            OD_LOG_INF("AI seatId=" + Helper::toString(seat->getId()) + " retreats, fighters=" + Helper::toString(nbFighters));
-            removeBanners();
-            mIsAttacking = false;
-            mCooldownAttack = scaledCooldown(ATTACK_RETREAT_COOLDOWN_MIN, ATTACK_RETREAT_COOLDOWN_MAX);
-            return;
-        }
-
-        // The banner expires after some time. We renew it if needed
-        if(mGameMap.getSpellsBySeatAndType(seat, SpellType::callToWar).empty())
-            SpellCallToWar::castSpellOnTile(&mGameMap, &mPlayer, enemyTile);
-
-        return;
-    }
-
-    // The AI attacks with more creatures than the threshold, and waits while more
-    // creatures than the minimum level number are below that level
-    if((nbFighters <= mMinFightersToAttack) || (enemyTile == nullptr))
-        return;
-
-    int nbWeakFighters = countWeakFighters();
-    if(nbWeakFighters > mMinCreatureLevel)
-        return;
-
-    // We need a walkable way to the enemy temple. If there is none, workers dig it first
-    Tile* central = getDungeonTemple()->getCentralTile();
-    Creature* fighter = nullptr;
-    for(Creature* creature : mGameMap.getCreaturesBySeat(seat))
-    {
-        if(creature->getDefinition()->isWorker() || (creature->getPositionTile() == nullptr))
-            continue;
-
-        fighter = creature;
-        break;
-    }
-    if(fighter == nullptr)
-        return;
-
-    if(!mGameMap.pathExists(fighter, fighter->getPositionTile(), enemyTile))
-    {
-        digWayToTile(central, enemyTile);
-        mCooldownAttack = scaledCooldown(ATTACK_DIG_COOLDOWN_MIN, ATTACK_DIG_COOLDOWN_MAX);
-        return;
-    }
-
-    if(!SpellCallToWar::castSpellOnTile(&mGameMap, &mPlayer, enemyTile))
-        return;
-
-    OD_LOG_INF("AI seatId=" + Helper::toString(seat->getId()) + " attacks with fighters=" + Helper::toString(nbFighters));
-    mIsAttacking = true;
-    mNbFightersAtAttackStart = nbFighters;
-}
 
 bool KeeperAI::handleWorkers()
 {
