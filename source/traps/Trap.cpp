@@ -313,6 +313,13 @@ bool Trap::getTileDamageRange(Tile* tile, double& minDamage, double& maxDamage) 
     return true;
 }
 
+//! \brief Returns whether a tile of this trap has used up its shots.
+bool Trap::isTileExhausted(Tile* tile) const
+{
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    return it != mTileData.end() && static_cast<const TrapTileData*>(it->second)->isExhausted();
+}
+
 int32_t Trap::getNbNeededCraftedTrap() const
 {
     int32_t nbNeededCraftedTrap = 0;
