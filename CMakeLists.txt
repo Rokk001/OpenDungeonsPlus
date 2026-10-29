@@ -828,6 +828,11 @@ if(MSVC AND Python_LIBRARY_DEBUG AND NOT PYTHON_IS_DEBUG)
     target_compile_definitions(${PROJECT_BINARY_NAME} PRIVATE "$<$<CONFIG:Debug>:Py_DEBUG=>")
 endif()
 
+# BUILD_MP_JOBS > 1 lets MSVC compile that many source files in parallel (/MP); unset keeps the default single-process compile.
+if(MSVC AND BUILD_MP_JOBS GREATER 1)
+    target_compile_options(${PROJECT_BINARY_NAME} PRIVATE "/MP${BUILD_MP_JOBS}")
+endif()
+
 # Set linker options in MSVC
 if(WIN32 AND MSVC)
     # We need to force output because of the boost lib used, defining two times the

@@ -2548,10 +2548,9 @@ void Seat::tileMarkedDiggingNotifiedToPlayer(Tile* tile, bool isDigSet)
 {
     if(getPlayer() == nullptr)
         return;
-    if(!getPlayer()->getIsHuman())
-        return;
-
-    TileStateNotified* tileState = getTileStateNotified(tile);
+    // AI seats keep the flag too (no client message), so the vision check can drop marks on tiles
+    // that stopped being diggable; their state entry for a never seen tile is created here
+    TileStateNotified* tileState = getPlayer()->getIsHuman() ? getTileStateNotified(tile) : &mTilesStates[tile];
     if(tileState == nullptr)
     {
         OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
