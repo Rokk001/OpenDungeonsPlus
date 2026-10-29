@@ -64,6 +64,28 @@ double key(const std::string& name)
     return ConfigManager::getSingleton().getAiConfigDouble(name);
 }
 
+//! \brief Draws the configured mistake of a row afresh for one creature, without the one-draw-per-trigger cache of
+//! Mind::slip, so that every creature of a list gets its own draw (the per-fighter J08 draw of row K01).
+//! \return True when the creature's draw is a mistake.
+bool slipForCreature(Env& env, const std::string& rowId)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const ConfigManager::AiRowClass* row = config.getAiRowClass(rowId);
+    if(row == nullptr)
+        return false;
+    std::string base;
+    if(row->mClass == "routine") base = "MistakeBaseRoutine";
+    else if(row->mClass == "rule") base = "MistakeBaseRule";
+    else if(row->mClass == "complex") base = "MistakeBaseComplex";
+    else if(row->mClass == "unfamiliar") base = "MistakeBaseUnfamiliar";
+    else if(row->mClass == "rare") base = "MistakeBaseRare";
+    else
+        return false;
+    const double probability = AiMath::mistakeProbability(config.getAiConfigDouble(base), row->mMultiplier,
+        env.settings.mistakeMultiplier, config.getAiConfigDouble("MistakeMin"), config.getAiConfigDouble("MistakeMax"));
+    return uniform01() < probability;
+}
+
 //! \brief The own dungeon temple of the AI, or nullptr when it has none.
 RoomDungeonTemple* ownTemple(Env& env)
 {
@@ -563,8 +585,9 @@ void planAttack(Env& env)
         if(tile == nullptr)
             continue;
         double share = creature->getHP() / std::max(1.0, creature->getMaxHp());
-        // The rule mistake (row J08 class) is drawn for each fighter: only RestHpShareSlip is needed
-        double needed = env.mind.slip("J08") ? key("RestHpShareSlip") : key("RestHpShare");
+        // The rule mistake (row J08 class) is drawn separately for each fighter, also inside an event trigger:
+        // only RestHpShareSlip is needed
+        double needed = slipForCreature(env, "J08") ? key("RestHpShareSlip") : key("RestHpShare");
         if(share >= needed)
             ready.push_back(creature);
     }
