@@ -64,6 +64,12 @@ struct WarState
     double nextProbe = 0.0;
     double nextPlan = -1.0;
     bool exploreMarked = false;
+    //! \brief The first tile of the own tunnel route, where a tunnel the seat dug leaves its land (nullptr when none).
+    Tile* tunnelEntrance = nullptr;
+    //! \brief Game seconds when the F15 fortify of the open tunnel is due, -1 when none is pending.
+    double fortifyDue = -1.0;
+    //! \brief True once the fortify of the open tunnel was handed to row F15.
+    bool fortifyDone = false;
 
     AssaultPhase assault = assaultNone;
     int tactic = -1;
@@ -105,8 +111,12 @@ void doTurn(Env& env);
 //! Plan, Launch, Contact, AssaultOver, EnemySpellSeen) after its reaction delay.
 void onEvent(Env& env, const AiEvent& event);
 
-//! \brief Digs the tunnel toward the nearest known enemy tile (row I01) or explores until an enemy tile is known.
+//! \brief Digs the tunnel toward the nearest known enemy tile (row I01); without a known enemy tile it does nothing.
 void planDig(Env& env);
+
+//! \brief The explore look of row I05 (period LookPeriod600): while no enemy tile is known and the tunnel is not open,
+//! marks the exploration tunnels once.
+void exploreLook(Env& env);
 
 //! \brief The plan step of the attack (rows J07, K01, K02): eligibility, ready list, estimate, tactic draw.
 void planAttack(Env& env);

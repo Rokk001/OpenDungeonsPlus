@@ -320,6 +320,20 @@ bool Trap::isTileExhausted(Tile* tile) const
     return it != mTileData.end() && static_cast<const TrapTileData*>(it->second)->isExhausted();
 }
 
+//! \brief The shots an armed tile of this trap has left; 0 for a tile that is not armed, exhausted or not one of its tiles.
+int32_t Trap::getTileShotsLeft(Tile* tile) const
+{
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return 0;
+
+    const TrapTileData* trapTileData = static_cast<const TrapTileData*>(it->second);
+    if(!trapTileData->isActivated() || trapTileData->isExhausted())
+        return 0;
+
+    return std::max(0, trapTileData->getNbShootsBeforeDeactivation());
+}
+
 int32_t Trap::getNbNeededCraftedTrap() const
 {
     int32_t nbNeededCraftedTrap = 0;
