@@ -90,10 +90,6 @@ protected:
     //! Returns true if the action has been done and false if nothing has been done
     bool handleWorkers();
 
-    //! \brief Checks if a room needs to be repaired and repairs if so
-    //! Returns true if the action has been done and false if nothing has been done
-    bool repairRooms();
-
     //! \brief Try to help tired creatures to reach dormitory
     //! Returns true if the action has been done and false if nothing has been done
     bool handleTiredCreatures();
@@ -169,7 +165,6 @@ private:
     int mCooldownDefenseMin;
     int mCooldownDefenseMax;
     int mCooldownWorkers;
-    int mCooldownRepairRooms;
     int mCooldownSaveWoundedCreatures;
     int mCooldownSaveWoundedCreaturesMin;
     int mCooldownSaveWoundedCreaturesMax;

@@ -134,7 +134,6 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mCooldownDefenseMin(NORMAL_COOLDOWN_DEFENSE_MIN),
     mCooldownDefenseMax(NORMAL_COOLDOWN_DEFENSE_MAX),
     mCooldownWorkers(0),
-    mCooldownRepairRooms(0),
     mCooldownSaveWoundedCreatures(0),
     mCooldownSaveWoundedCreaturesMin(NORMAL_COOLDOWN_SAVE_WOUNDED_MIN),
     mCooldownSaveWoundedCreaturesMax(NORMAL_COOLDOWN_SAVE_WOUNDED_MAX),
@@ -971,39 +970,6 @@ bool KeeperAI::handleWorkers()
             return false;
 
         return true;
-    }
-
-    return false;
-}
-
-bool KeeperAI::repairRooms()
-{
-    if(mCooldownRepairRooms > 0)
-    {
-        --mCooldownRepairRooms;
-        return false;
-    }
-
-    mCooldownRepairRooms = scaledCooldown(20, 60);
-
-    Seat* seat = mPlayer.getSeat();
-    for(Room* room : mGameMap.getRooms())
-    {
-        if(room->getSeat() != seat)
-            continue;
-
-        if(!room->canBeRepaired())
-            continue;
-
-        int goldRequired = room->getCostRepair();
-
-        if(!mGameMap.withdrawFromTreasuries(goldRequired, mPlayer.getSeat()))
-            return false;
-
-        room->repairRoom();
-        // We only repair one room at a time. Note that if we want to repair more than one room at a time, we should pay
-        // attention to not modify the room list (if room absorbed in RoomManager::buildRoom) while iterating it
-        break;
     }
 
     return false;
