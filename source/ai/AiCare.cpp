@@ -50,6 +50,19 @@ std::vector<Creature*> ownFighters(KeeperAI& ai)
     return fighters;
 }
 
+//! \brief Returns all living own creatures, workers and champions included, that the keeper can reach with the hand.
+std::vector<Creature*> ownCreatures(KeeperAI& ai)
+{
+    std::vector<Creature*> creatures;
+    for(Creature* creature : ai.getGameMap().getCreaturesBySeat(ai.getControlledPlayer().getSeat()))
+    {
+        if(creature->isAlive() && !creature->isKo() && creature->getIsOnMap() &&
+           !creature->isInContainment() && !creature->isPossessed())
+            creatures.push_back(creature);
+    }
+    return creatures;
+}
+
 //! \brief Tests the idle action list specified for hand placement into the training hall.
 bool idle(const Creature& creature)
 {
@@ -138,7 +151,8 @@ CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mIdleAt
     mind.onLook("D06", config.getAiConfigDouble("LookFactorScan"), std::bind(&Controller::scanLook, this));
     mind.onLook("G02", config.getAiConfigDouble("LookPeriod60") / reference, std::bind(&Controller::prisonLook, this));
     mind.onLook("H04", config.getAiConfigDouble("LookPeriod600") / reference, std::bind(&Controller::itemsLook, this));
-    mind.onEvent("D05", {AiEventType::Fight, AiEventType::HeartCritical},
+    // HeartCritical reaches D05 through WAR::heartGuard (J05), so one firing draws D05 once.
+    mind.onEvent("D05", {AiEventType::Fight},
         std::bind(possessDefender, std::ref(ai), std::placeholders::_1));
     mind.onEvent("D06", {AiEventType::Fight, AiEventType::NoBed, AiEventType::NoFood},
         std::bind(&Controller::idle, this));
@@ -245,7 +259,7 @@ void CARE::Controller::itemsLook()
 }
 
 //! \brief Calls D07's real target row immediately, retaining its own mistake and the parent's reaction.
-void CARE::Controller::need(const std::string& row, Creature*)
+void CARE::Controller::need(const std::string& row, Creature* creature)
 {
     if(row == "B03") ROOMS::hatcheryWatch(mAi);
     else if(row == "B02") ROOMS::bedWatch(mAi);
@@ -256,7 +270,7 @@ void CARE::Controller::need(const std::string& row, Creature*)
     {
         WAR::Env env = {mAi, mAi.getMind(), mAi.getGameMap(), mAi.getControlledPlayer(),
             mAi.getSettings(), mAi.getWarState(), mAi.getMind().now()};
-        WAR::restAfterFight(env);
+        WAR::restWounded(env, creature);
     }
 }
 
@@ -312,14 +326,16 @@ void CARE::slapWatch(KeeperAI& ai, SlapState& state)
     if(now < state.nextCheck || now < state.episodeUntil)
         return;
     ConfigManager& config = ConfigManager::getSingleton();
-    state.nextCheck = now + config.getAiConfigDouble("SlapMistakePauseSeconds");
-    if(ownFighters(ai).empty() || !ai.getMind().slip("D04"))
-        return;
     const AiSettings& settings = ai.getSettings();
     const AiMath::DelayParams params = {settings.rho, settings.pi, settings.scanPeriod,
         config.getAiConfigDouble("SymptomScanFactor"), config.getAiConfigDouble("PeriodicMinDelay"),
         config.getAiConfigDouble("ActionLatencyMean"), config.getAiConfigDouble("ActionLatencySd")};
     const AiMath::Uniform01 uniform = std::bind(&Random::Double, 0.0, 1.0);
+    // The pause is added to one more creature-list look interval, as in the care model.
+    state.nextCheck = now + AiMath::lookInterval(config.getAiConfigDouble("LookFactorPlan"), params, uniform) +
+        config.getAiConfigDouble("SlapMistakePauseSeconds");
+    if(ownCreatures(ai).empty() || !ai.getMind().slip("D04"))
+        return;
     const double delay = AiMath::reactionDelay(AiMath::ReactionKind::symptom, params, uniform);
     state.interval = config.getAiConfigDouble("SlapMistakeInterval" + std::to_string(Random::Int(1, 5)));
     state.episodeUntil = now + config.getAiConfigDouble("SlapMistakeDelayFactor") * delay +
@@ -334,7 +350,7 @@ void CARE::slapEpisodeStep(KeeperAI& ai, SlapState& state)
     if(now >= state.episodeUntil || now < state.nextSlap || state.interval <= 0.0)
         return;
     state.nextSlap = now + state.interval;
-    for(Creature* creature : ownFighters(ai))
+    for(Creature* creature : ownCreatures(ai))
         ACTS::slap(ai, creature);
 }
 
@@ -468,13 +484,13 @@ void CARE::levelWatch(KeeperAI& ai)
     // AI row D08
     if(ai.getMind().slip("D08"))
         return;
+    // Only the hall's level cap counts; an empty treasury or a full hall also closes its spots.
+    const bool hasHall = !ai.getGameMap().getRoomsByTypeAndSeat(RoomType::trainingHall,
+        ai.getControlledPlayer().getSeat()).empty();
+    const uint32_t cap = ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallMaxTrainingLevel");
     for(Creature* creature : ownFighters(ai))
     {
-        bool capped = false;
-        for(Room* hall : ai.getGameMap().getRoomsByTypeAndSeat(RoomType::trainingHall,
-                ai.getControlledPlayer().getSeat()))
-            if(!hall->hasOpenCreatureSpot(creature))
-                capped = true;
+        const bool capped = hasHall && creature->getLevel() >= cap;
         Room* destination = capped ? availableRoom(ai, creature, RoomType::arena) : nullptr;
         if(destination == nullptr && idle(*creature))
         {
@@ -493,7 +509,7 @@ void CARE::moodRelief(KeeperAI& ai)
     if(ai.getMind().slip("D09"))
         return;
     const RoomType types[] = {RoomType::casino, RoomType::tavern, RoomType::spa, RoomType::temple};
-    for(Creature* creature : ownFighters(ai))
+    for(Creature* creature : ownCreatures(ai))
     {
         if(creature->getMoodValue() < CreatureMoodLevel::Upset)
             continue;
@@ -519,13 +535,14 @@ void CARE::moodRelief(KeeperAI& ai)
 void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&, Creature*)>& trigger)
 {
     // AI row D07
-    if(ai.getMind().slip("D07"))
-        return;
     // The remedy rows act on the whole keeper, so each one is raised at most once per firing.
     std::set<std::string> raised;
-    for(Creature* creature : ownFighters(ai))
+    for(Creature* creature : ownCreatures(ai))
     {
         if(creature->getMoodValue() < CreatureMoodLevel::Upset)
+            continue;
+        // The mistake leaves only this creature unhandled at this firing.
+        if(ai.getMind().slip("D07"))
             continue;
         std::string row;
         if(creature->isHungry())
@@ -545,7 +562,8 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
             else if(idle(*creature))
                 row = "D06";
         }
-        if(!row.empty() && raised.insert(row).second)
+        // J08 rests the named creature, so it is raised for each hurt creature.
+        if(!row.empty() && (row == "J08" || raised.insert(row).second))
             trigger(row, creature);
     }
 }

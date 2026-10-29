@@ -2,7 +2,6 @@
 
 #include "ai/AiActions.h"
 #include "ai/AiMind.h"
-#include "ai/AiTraps.h"
 #include "ai/KeeperAI.h"
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
@@ -118,7 +117,7 @@ void buyForStrongest(KeeperAI& ai)
         return;
     const bool mistaken = ai.getMind().slip("H04");
     const double budget = seat->getGold() - bill -
-        ConfigManager::getSingleton().getAiConfigDouble("RoomGoldMargin") - TRAP::reloadMargin(ai);
+        ConfigManager::getSingleton().getAiConfigDouble("RoomGoldMargin");
     const std::vector<MerchantStockEntry> stock = RoomMerchant::getStock(ai.getGameMap(), seat);
     const MerchantStockEntry* best = nullptr;
     double bestPrice = 0.0;

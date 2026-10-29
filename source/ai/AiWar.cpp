@@ -19,6 +19,7 @@
 
 #include "ODApplication.h"
 #include "ai/AiActions.h"
+#include "ai/AiCare.h"
 #include "ai/AiKnowledge.h"
 #include "ai/AiMath.h"
 #include "ai/KeeperAI.h"
@@ -486,6 +487,8 @@ void planDig(Env& env)
     st.tunnelTarget = target;
     st.tunnelKnown = true;
     st.nextProbe = env.now + key("TunnelProbeSeconds");
+    // The tunnel start is announced to the rows that react to it (H03 hostile specials)
+    env.mind.enqueue({AiEventType::Start, target, nullptr, -1, 0.0, env.now});
     (void)workers;
 }
 
@@ -726,6 +729,9 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
     st.tactic = tactic;
     st.contactTime = -1.0;
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
+    // The chosen and dropped groups are announced to the rows that react to the launch (H03 hostile specials)
+    env.mind.enqueue({AiEventType::Launch, groups.front().dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
+                      0.0, env.now});
 }
 
 void assaultStep(Env& env)
@@ -968,21 +974,16 @@ void defend(Env& env, const AiEvent& event)
 
 void heartGuard(Env& env)
 {
-    // AI row J05: possess the strongest creature when the heart is low; the complex mistake leaves the heart unprotected
+    // AI row J05: hand the low heart to the defender possession of row D05; the complex mistake leaves the heart unprotected
     RoomDungeonTemple* temple = ownTemple(env);
     if((temple == nullptr) || (temple->getHeartHealthFraction() >= key("HeartPossessBelow")))
         return;
     if(env.mind.slip("J05"))
         return;
 
-    Creature* strongest = nullptr;
-    for(Creature* creature : env.gameMap.getCreaturesBySeat(env.player.getSeat()))
-    {
-        if(isFreeFighter(creature) && ((strongest == nullptr) || strongerFirst(creature, strongest)))
-            strongest = creature;
-    }
-    if(strongest != nullptr)
-        ACTS::castSpell(env.ai, SpellType::possess, strongest);
+    // The possession itself is row D05's decision and draw
+    const AiEvent critical = {AiEventType::HeartCritical, temple->getHeartTile(), nullptr, -1, 0.0, env.now};
+    CARE::possessDefender(env.ai, critical);
 }
 
 void restAfterFight(Env& env)
@@ -1017,6 +1018,29 @@ void restAfterFight(Env& env)
         if(creature->tryPickup(seat) && creature->tryDrop(seat, center))
             ACTS::moveCreature(env.ai, creature, center);
     }
+}
+
+//! \brief Carries one hurt own creature to the dungeon temple, as after a fight (row J08 as the mood remedy of D07).
+//! \param creature The hurt creature named by the mood patrol.
+void restWounded(Env& env, Creature* creature)
+{
+    // AI row J08: the rule mistake leaves the hurt creature where it is
+    if((creature == nullptr) || !creature->isHurt() || env.mind.slip("J08"))
+        return;
+
+    RoomDungeonTemple* temple = ownTemple(env);
+    if((temple == nullptr) || (temple->getCentralTile() == nullptr))
+        return;
+
+    Seat* seat = env.player.getSeat();
+    Tile* center = temple->getCentralTile();
+    Tile* tile = creature->getPositionTile();
+    int area = static_cast<int>(key("HeartDefenceAreaTiles"));
+    if((tile == nullptr) ||
+       ((std::abs(center->getX() - tile->getX()) <= area) && (std::abs(center->getY() - tile->getY()) <= area)))
+        return;
+    if(creature->tryPickup(seat) && creature->tryDrop(seat, center))
+        ACTS::moveCreature(env.ai, creature, center);
 }
 
 //! \brief Advances war planning and assault actions; the shared event source polls symptoms.
