@@ -1019,6 +1019,7 @@ void restAfterFight(Env& env)
     }
 }
 
+//! \brief Advances war planning and assault actions; the shared event source polls symptoms.
 void doTurn(Env& env)
 {
     WarState& st = env.state;
@@ -1052,91 +1053,10 @@ void doTurn(Env& env)
             st.sighting.seats[other->getId()].lastSpellTime = env.now - age;
     }
 
-    // The tunnel probe of a seat that dug
-    if((st.tunnel == WarState::tunnelDigging) && (env.now >= st.nextProbe) && (st.tunnelTarget != nullptr))
-    {
-        st.nextProbe = env.now + key("TunnelProbeSeconds");
-        RoomDungeonTemple* temple = ownTemple(env);
-        Creature* worker = env.gameMap.getWorkerForPathFinding(seat);
-        if((temple != nullptr) && (worker != nullptr) && (temple->getHeartTile() != nullptr) &&
-           env.gameMap.pathExists(worker, temple->getHeartTile(), st.tunnelTarget))
-        {
-            st.tunnel = WarState::tunnelOpen;
-            st.breakthrough = st.tunnelTarget;
-            AiEvent e;
-            e.type = AiEventType::TunnelOpen;
-            e.tile = st.breakthrough;
-            e.creature = nullptr;
-            e.otherSeatId = -1;
-            e.amount = 0.0;
-            e.time = env.now;
-            env.mind.enqueue(e);
-        }
-    }
-
+    // Tunnel and combat symptom polling is owned by the shared event source (AiEvents).
     if(st.assault != WarState::assaultNone)
         assaultStep(env);
 
-    // The enemy is out when enough of its fighters stand on the own claimed tiles
-    AiKnowledge knowledge(env.gameMap, seat);
-    int inside = 0;
-    for(Creature* creature : knowledge.visibleEnemyFighters())
-    {
-        if(isOwnGround(env, creature->getPositionTile()))
-            ++inside;
-    }
-    bool out = inside >= static_cast<int>(key("EnemyOutMinCreatures"));
-    if(out && !st.enemyOut)
-    {
-        AiEvent e;
-        e.type = AiEventType::EnemyOut;
-        e.tile = nullptr;
-        e.creature = nullptr;
-        e.otherSeatId = -1;
-        e.amount = 0.0;
-        e.time = env.now;
-        env.mind.enqueue(e);
-    }
-    st.enemyOut = out;
-
-    // The fight is over when no Fight event arrived for FightOverSeconds
-    if(!st.fightOverRaised && (env.now - st.lastFight >= key("FightOverSeconds")))
-    {
-        st.fightOverRaised = true;
-        AiEvent e;
-        e.type = AiEventType::FightOver;
-        e.tile = nullptr;
-        e.creature = nullptr;
-        e.otherSeatId = -1;
-        e.amount = 0.0;
-        e.time = env.now;
-        env.mind.enqueue(e);
-    }
-
-    // Every revealed enemy trap near the breakthrough is exhausted
-    if((st.tunnel == WarState::tunnelOpen) && (st.breakthrough != nullptr))
-    {
-        Seat* enemy = enemySeat(env);
-        bool ready = true;
-        bool empty = false;
-        if(enemy != nullptr)
-        {
-            std::vector<AiMath::TrapKindSet> set = trapSet(env, enemy, st.breakthrough, seat, ready);
-            empty = !set.empty() && !ready;
-        }
-        if(empty && !st.enemyTrapsEmpty)
-        {
-            AiEvent e;
-            e.type = AiEventType::EnemyTrapEmpty;
-            e.tile = nullptr;
-            e.creature = nullptr;
-            e.otherSeatId = -1;
-            e.amount = 0.0;
-            e.time = env.now;
-            env.mind.enqueue(e);
-        }
-        st.enemyTrapsEmpty = empty;
-    }
 }
 
 void onEvent(Env& env, const AiEvent& event)

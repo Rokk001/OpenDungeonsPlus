@@ -22,6 +22,10 @@ public:
 private:
     //! \brief Restores the event source's own persistent counters once the mind has loaded.
     void load();
+    //! \brief Publishes a defending keeper's first tunnel contact inside its already delayed Fight reaction.
+    void contact(const AiEvent& event);
+    //! \brief Polls war symptoms through the same clock as all other symptoms.
+    void pollWar();
     //! \brief Polls visible symptoms once per AiPollSeconds through the mind's poll timer.
     bool poll();
     //! \brief Queues only a rising edge, retaining the event's visible location.
@@ -36,6 +40,8 @@ private:
     bool mPayday;
     bool mArrival;
     bool mPendingArrival;
+    bool mFightActive;
+    double mFightAt;
     double mBuildDue;
     uint32_t mPotions;
     std::map<std::string, bool> mEdges;

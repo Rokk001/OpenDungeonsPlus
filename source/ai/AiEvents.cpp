@@ -43,7 +43,7 @@ Tile* heartTile(KeeperAI& ai)
 
 //! \brief Starts a keeper's symptom history with no previous fight or portal arrival.
 AiEvents::AiEvents(KeeperAI& ai) : mAi(ai), mLoaded(false), mPayday(false), mArrival(false),
-    mPendingArrival(false), mBuildDue(-1.0), mPotions(0)
+    mPendingArrival(false), mFightActive(false), mFightAt(0.0), mBuildDue(-1.0), mPotions(0)
 {
 }
 
@@ -52,6 +52,16 @@ void AiEvents::bind()
 {
     mAi.getMind().onPoll("I06Events", AiEventType::NoMarkedTile, [this]() { return poll(); });
     mAi.getMind().onSave([this](std::vector<AiMath::AiStateLine>& lines) { save(lines); });
+    mAi.getMind().onEvent("I06Contact", {AiEventType::Fight},
+        [this](const AiEvent& event) { contact(event); });
+}
+
+//! \brief Dispatches derived information during the parent event's existing reaction and mistake scope.
+void Mind::dispatchRelated(const AiEvent& event)
+{
+    for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
+        if(std::find(entry.second.types.begin(), entry.second.types.end(), event.type) != entry.second.types.end())
+            entry.second.perform(event);
 }
 
 //! \brief Imports only this source's I06 records, leaving other row owners' data untouched.
@@ -60,6 +70,14 @@ void AiEvents::load()
     if(mLoaded)
         return;
     mLoaded = true;
+    const bool pendingFight = mFightActive;
+    const double pendingFightAt = mFightAt;
+    WAR::Env war = {mAi, mAi.getMind(), mAi.getGameMap(), mAi.getControlledPlayer(),
+        mAi.getSettings(), mAi.getWarState(), mAi.getMind().now()};
+    if(war.state.groups.empty())
+        WAR::importRows(war, mAi.getMind().savedRows());
+    mFightActive = !war.state.fightOverRaised;
+    mFightAt = war.state.lastFight;
     for(const AiMath::AiStateLine& line : mAi.getMind().savedRows())
     {
         if(line.tag != "draw" || line.tokens.size() != 3 || line.tokens[0] != "I06")
@@ -73,8 +91,16 @@ void AiEvents::load()
         else if(name == "pollPayday") mPayday = mPayday || value != 0.0;
         else if(name == "pollBuild") mBuildDue = mAi.getMind().now() + value;
         else if(name == "pollPotions") mPotions = static_cast<uint32_t>(value);
+        else if(name == "pollFightActive") mFightActive = value != 0.0;
+        else if(name == "pollFightAge") mFightAt = mAi.getMind().now() - value;
+        else if(name == "pollTunnelProbe") war.state.nextProbe = mAi.getMind().now() + value;
         else if(name == "pollPendingArrival") mPendingArrival = mPendingArrival || value != 0.0;
         else if(name.compare(0, 4, "edge") == 0) mEdges[name.substr(4)] = value != 0.0;
+    }
+    if(pendingFight)
+    {
+        mFightActive = true;
+        mFightAt = pendingFightAt;
     }
 }
 
@@ -86,6 +112,102 @@ void AiEvents::notify(const AiEvent& event)
         mPayday = true;
     if(event.type == AiEventType::CreatureArrived && event.amount == 0.0)
         mPendingArrival = true;
+    if(event.type == AiEventType::Fight)
+    {
+        mFightActive = true;
+        mFightAt = mAi.getMind().now();
+    }
+}
+
+//! \brief Learns a defender's open tunnel at first contact, without another perception delay.
+void AiEvents::contact(const AiEvent& event)
+{
+    load();
+    WAR::WarState& war = mAi.getWarState();
+    if(war.tunnel != WAR::WarState::tunnelNone || event.tile == nullptr ||
+        !event.tile->isClaimedForSeat(mAi.getControlledPlayer().getSeat())) return;
+    war.tunnel = WAR::WarState::tunnelOpen;
+    war.tunnelKnown = true;
+    war.breakthrough = event.tile;
+    const AiEvent tunnel = {AiEventType::TunnelOpen, event.tile, event.creature,
+        event.otherSeatId, 0.0, mAi.getMind().now()};
+    mAi.getMind().dispatchRelated(tunnel);
+}
+
+//! \brief Raises tunnel, enemy-force, trap-exhaustion and fight-end edges from the war owner's state.
+void AiEvents::pollWar()
+{
+    GameMap& map = mAi.getGameMap();
+    Seat* seat = mAi.getControlledPlayer().getSeat();
+    WAR::WarState& war = mAi.getWarState();
+    Mind& mind = mAi.getMind();
+    const ConfigManager& cfg = ConfigManager::getSingleton();
+    Tile* heart = heartTile(mAi);
+    AiKnowledge knowledge(map, seat);
+    if(war.tunnel == WAR::WarState::tunnelDigging && mind.now() >= war.nextProbe)
+    {
+        war.nextProbe = mind.now() + cfg.getAiConfigDouble("TunnelProbeSeconds");
+        Creature* worker = map.getWorkerForPathFinding(seat);
+        Tile* enemyTile = nullptr;
+        double distance = std::numeric_limits<double>::max();
+        for(int x = 0; x < map.getMapSizeX(); ++x)
+            for(int y = 0; y < map.getMapSizeY(); ++y)
+            {
+                Tile* tile = map.getTile(x, y);
+                if(!seat->hasVisionOnTile(tile) || war.tunnelTarget == nullptr) continue;
+                Seat* owner = tile->getSeat();
+                if(owner == nullptr || seat->isAlliedSeat(owner)) continue;
+                const double dx = x - war.tunnelTarget->getX(), dy = y - war.tunnelTarget->getY();
+                if(dx * dx + dy * dy < distance)
+                {
+                    distance = dx * dx + dy * dy;
+                    enemyTile = tile;
+                }
+            }
+        if(worker != nullptr && heart != nullptr && enemyTile != nullptr &&
+            knowledge.isKnown(war.tunnelTarget) && map.pathExists(worker, heart, enemyTile))
+        {
+            war.tunnel = WAR::WarState::tunnelOpen;
+            war.tunnelKnown = true;
+            war.breakthrough = war.tunnelTarget;
+            const AiEvent tunnel = {AiEventType::TunnelOpen, war.breakthrough, nullptr, -1, 0.0, mind.now()};
+            mind.enqueue(tunnel);
+        }
+    }
+    std::size_t inside = 0;
+    for(Creature* creature : knowledge.visibleEnemyFighters())
+    {
+        Tile* tile = creature->getPositionTile();
+        if(tile != nullptr && tile->isClaimedForSeat(seat)) ++inside;
+    }
+    war.enemyOut = inside >= cfg.getAiConfigDouble("EnemyOutMinCreatures");
+    edge("EnemyOut", AiEventType::EnemyOut, war.enemyOut);
+    if(mFightActive && mind.now() - mFightAt >= cfg.getAiConfigDouble("FightOverSeconds"))
+    {
+        mFightActive = false;
+        war.fightOverRaised = true;
+        const AiEvent over = {AiEventType::FightOver, nullptr, nullptr, -1, 0.0, mind.now()};
+        mind.enqueue(over);
+    }
+    bool found = false, empty = true;
+    if(war.breakthrough != nullptr)
+    {
+        const double radius = cfg.getAiConfigDouble("CannonMaxDoorDistance");
+        for(Trap* trap : map.getTraps())
+        {
+            if(trap->getSeat() == nullptr || seat->isAlliedSeat(trap->getSeat())) continue;
+            for(Tile* tile : trap->getCoveredTiles())
+            {
+                const double dx = tile->getX() - war.breakthrough->getX();
+                const double dy = tile->getY() - war.breakthrough->getY();
+                if(dx * dx + dy * dy > radius * radius || !trap->isTileVisibleForSeat(tile, seat)) continue;
+                found = true;
+                if(!trap->isTileExhausted(tile)) empty = false;
+            }
+        }
+    }
+    war.enemyTrapsEmpty = found && empty;
+    edge("EnemyTrapEmpty", AiEventType::EnemyTrapEmpty, war.enemyTrapsEmpty, war.breakthrough);
 }
 
 //! \brief Emits a symptom only when it changes from absent to present.
@@ -128,6 +250,7 @@ bool AiEvents::poll()
         mAi.getMind().enqueue(first);
     }
     mPendingArrival = false;
+    pollWar();
     GameMap& map = mAi.getGameMap();
     Seat* seat = mAi.getControlledPlayer().getSeat();
     const ConfigManager& cfg = ConfigManager::getSingleton();
@@ -219,8 +342,7 @@ bool AiEvents::poll()
         }
         edge("RouteBlocked", AiEventType::RouteBlocked, blocked, blockedTile);
     }
-    // TunnelOpen, EnemyOut, EnemyTrapEmpty and FightOver are polled by L9 with its war state.
-    // Loot and LabIdle have no condition or keeper command (class N); internal war events also belong to L9.
+    // Loot and LabIdle have no condition or keeper command (class N); internal war events belong to L9.
     return false;
 }
 
@@ -238,6 +360,9 @@ void AiEvents::save(std::vector<AiMath::AiStateLine>& lines)
     lines.push_back({"draw", {"I06", "pollPayday", eventNumber(mPayday)}});
     lines.push_back({"draw", {"I06", "pollBuild", eventNumber(mBuildDue - now)}});
     lines.push_back({"draw", {"I06", "pollPotions", eventNumber(mPotions)}});
+    lines.push_back({"draw", {"I06", "pollFightActive", eventNumber(mFightActive)}});
+    lines.push_back({"draw", {"I06", "pollFightAge", eventNumber(now - mFightAt)}});
+    lines.push_back({"draw", {"I06", "pollTunnelProbe", eventNumber(mAi.getWarState().nextProbe - now)}});
     lines.push_back({"draw", {"I06", "pollPendingArrival", eventNumber(mPendingArrival)}});
     for(const std::pair<const std::string, bool>& entry : mEdges)
         lines.push_back({"draw", {"I06", "edge" + entry.first, eventNumber(entry.second)}});

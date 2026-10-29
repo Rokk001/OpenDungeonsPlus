@@ -97,8 +97,8 @@ struct Env
     double now;
 };
 
-//! \brief Runs the polled parts of the war every turn: the plan step timer, the tunnel probe, the assault steps,
-//! the enemy-out and enemy-traps-empty edges and the end of a fight.
+//! \brief Advances the war plan timer, visible spell observations and assault steps each turn.
+//! Tunnel and combat symptom events are polled by the shared event source at AiPollSeconds.
 void doTurn(Env& env);
 
 //! \brief Handles an event of the war (Fight, HeartCritical, TunnelOpen, EnemyOut, EnemyTrapEmpty, FightOver, Start,

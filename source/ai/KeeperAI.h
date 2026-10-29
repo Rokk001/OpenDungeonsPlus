@@ -47,6 +47,8 @@ public:
     Player& getControlledPlayer() { return mPlayer; }
     //! \brief The mind that draws mistakes and schedules this keeper's actions.
     Mind& getMind();
+    //! \brief Gives the shared event source access to this keeper's current tunnel and combat state.
+    WAR::WarState& getWarState() { return mWar; }
     //! \brief Observes shared symptoms and queues the game's notice in the mind.
     void notifyEvent(const AiEvent& event) override;
     //! \brief The values of the selected AI level.
