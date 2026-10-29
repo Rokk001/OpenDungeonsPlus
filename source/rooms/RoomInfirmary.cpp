@@ -322,6 +322,13 @@ bool RoomInfirmary::hasCarryEntitySpot(GameEntity* entity)
         !creature.isInPrison() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" && findCot(creature,false)!=noCot && canPayAdmission(creature,false);
 }
 
+//! \brief Reports whether a living creature of this seat could be admitted here; unlike hasCarryEntitySpot it does not require a knockout.
+bool RoomInfirmary::canAdmitWounded(Creature& creature)
+{
+    return creature.getSeat()==getSeat() && creature.isAlive() && !creature.getDefinition()->isWorker() && !creature.getDefinition()->isChampion() &&
+        !creature.isInPrison() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" && findCot(creature,false)!=noCot && canPayAdmission(creature,false);
+}
+
 Tile* RoomInfirmary::askSpotForCarriedEntity(GameEntity* entity)
 {
     if(entity==nullptr || entity->getObjectType()!=GameEntityType::creature) return nullptr;

@@ -61,6 +61,9 @@ public:
     static bool wouldAccept(const Creature& creature);
     //! \brief Reports whether an eligible creature can be delivered here.
     bool hasCarryEntitySpot(GameEntity* entity) override;
+    //! \brief Reports whether a living creature of this seat could be admitted here; no knockout needed.
+    //! \param creature The wounded creature.
+    bool canAdmitWounded(Creature& creature);
     //! \brief Finds or reserves the fitting cot for a carried creature.
     Tile* askSpotForCarriedEntity(GameEntity* entity) override;
     //! \brief Reserves a cot or reuses this worker's existing carry reservation.

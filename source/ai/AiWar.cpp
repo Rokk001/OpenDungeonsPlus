@@ -33,6 +33,7 @@
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomDungeonTemple.h"
+#include "rooms/RoomInfirmary.h"
 #include "rooms/RoomType.h"
 #include "spells/Spell.h"
 #include "spells/SpellType.h"
@@ -1043,7 +1044,7 @@ void restWounded(Env& env, Creature* creature)
         for(Room* infirmary : env.gameMap.getRoomsByTypeAndSeat(RoomType::infirmary, seat))
         {
             // The infirmary has no open-spot override; a free cot of the fitting size is its admission test
-            if(!infirmary->hasCarryEntitySpot(creature))
+            if(!static_cast<RoomInfirmary*>(infirmary)->canAdmitWounded(*creature))
                 continue;
             for(Tile* covered : infirmary->getCoveredTiles())
             {
