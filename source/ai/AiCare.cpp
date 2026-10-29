@@ -268,8 +268,14 @@ void CARE::Controller::itemsLook()
 void CARE::Controller::need(const std::string& row, Creature* creature)
 {
     mAi.getMind().refire(row);
-    if(row == "B03") ROOMS::hatcheryWatch(mAi);
-    else if(row == "B02") ROOMS::bedWatch(mAi);
+    if(row == "B03" || row == "B02")
+    {
+        ROOMS::State& state = mAi.getRoomsState();
+        state.needFired = true;
+        if(row == "B03") ROOMS::hatcheryWatch(mAi);
+        else ROOMS::bedWatch(mAi);
+        state.needFired = false;
+    }
     else if(row == "A05") ECON::castCreateGold(mAi);
     else if(row == "B10") ROOMS::toiletWatch(mAi);
     else if(row == "D06") idleToHall(mAi);
