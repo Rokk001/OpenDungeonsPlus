@@ -322,11 +322,13 @@ bool RoomInfirmary::hasCarryEntitySpot(GameEntity* entity)
         !creature.isInPrison() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" && findCot(creature,false)!=noCot && canPayAdmission(creature,false);
 }
 
-//! \brief Reports whether a living creature of this seat could be admitted here; unlike hasCarryEntitySpot it does not require a knockout.
+//! \brief Reports whether a wounded creature of this seat would be admitted by a manual drop here; creatureDropped uses the same test.
+//! \param creature The wounded creature.
 bool RoomInfirmary::canAdmitWounded(Creature& creature)
 {
-    return creature.getSeat()==getSeat() && creature.isAlive() && !creature.getDefinition()->isWorker() && !creature.getDefinition()->isChampion() &&
-        !creature.isInPrison() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" && findCot(creature,false)!=noCot && canPayAdmission(creature,false);
+    return creature.getSeat()==getSeat() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" && creature.isAlive() && !creature.getDefinition()->isWorker() &&
+        !creature.getDefinition()->isChampion() && !creature.isInPrison() && creature.getHP()*100.0<creature.getMaxHp()*getDischargeThreshold() &&
+        findCot(creature,true)!=noCot && canPayAdmission(creature,true);
 }
 
 Tile* RoomInfirmary::askSpotForCarriedEntity(GameEntity* entity)
@@ -404,9 +406,7 @@ void RoomInfirmary::notifyCarryingStateChanged(Creature* carrier, GameEntity* en
 
 void RoomInfirmary::creatureDropped(Creature& creature)
 {
-    bool eligible=creature.getSeat()==getSeat() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" && creature.isAlive() && !creature.getDefinition()->isWorker() &&
-        !creature.getDefinition()->isChampion() && !creature.isInPrison() && creature.getHP()*100.0<creature.getMaxHp()*getDischargeThreshold();
-    size_t id=eligible ? findCot(creature,true) : noCot;
+    size_t id=canAdmitWounded(creature) ? findCot(creature,true) : noCot;
     if(id!=noCot && admit(id,creature,true)) return;
     if(creature.getSeat()==getSeat() && creature.getHomeTile()!=nullptr) creature.pushAction(Utils::make_unique<CreatureActionSleep>(creature));
 }

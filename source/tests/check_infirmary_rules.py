@@ -416,6 +416,8 @@ def room_declaration():
  void cancelReservation(Creature&);
  //! \brief Executes production admission handling when a carrier reaches its destination.
  void notifyCarryingStateChanged(Creature*,GameEntity*);
+ //! \brief Executes the shared wounded-admission test used by the AI pre-check and the manual drop.
+ bool canAdmitWounded(Creature&);
  //! \brief Executes the actual manual-drop eligibility and keeper-payment rule.
  void creatureDropped(Creature&);
  //! \brief Records a cot's tile without creating a rendered building object.
@@ -447,7 +449,7 @@ def main():
             "void RoomInfirmary::releasePatient(", "bool RoomInfirmary::restPatient(",
             "void RoomInfirmary::abandon(", "void RoomInfirmary::abandonAll(",
             "int RoomInfirmary::cotSize(", "size_t RoomInfirmary::findCot(",
-            "bool RoomInfirmary::hasCarryEntitySpot(", "Tile* RoomInfirmary::reserveCot(",
+            "bool RoomInfirmary::hasCarryEntitySpot(", "bool RoomInfirmary::canAdmitWounded(", "Tile* RoomInfirmary::reserveCot(",
             "Tile* RoomInfirmary::askSpotForCarriedEntity(", "void RoomInfirmary::cancelReservation(",
             "void RoomInfirmary::notifyCarryingStateChanged(", "void RoomInfirmary::creatureDropped("):
         code += function(core, signature) + "\n"
