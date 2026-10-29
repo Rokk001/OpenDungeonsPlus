@@ -599,8 +599,7 @@ void Tile::setMarkedForDigging(bool ss, const Player *pp)
     // local player has seen; the human check applies on the server only.
     bool unexplored = false;
     if(getGameMap()->isServerGameMap())
-        unexplored = pp->getIsHuman() &&
-            !getGameMap()->everVisitedFlagPool[getX()][getY()][pp->getSeat()->getId()];
+        unexplored = !getGameMap()->everVisitedFlagPool[getX()][getY()][pp->getSeat()->getId()];
     else
         unexplored = !getEverVisible() || getHasFogOfWar();
     if (ss && !unexplored && !isDiggable(pp->getSeat()))

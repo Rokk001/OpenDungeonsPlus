@@ -268,9 +268,8 @@ void Seat::addAlliedSeat(Seat* seat)
 
 void Seat::clearTilesWithVision()
 {
+    // AI seats keep the same vision bookkeeping as human ones (no client notification is sent for them)
     if(mPlayer == nullptr)
-        return;
-    if(!mPlayer->getIsHuman())
         return;
 
     for(std::pair<Tile* const ,TileStateNotified>& p: mTilesStates)
@@ -330,16 +329,15 @@ bool Seat::hasSeenTile(Tile* tile)
 //! \brief Resets the own-creature sight age, excluding map reveals and allied sight.
 void Seat::notifyOwnCreatureVision(Tile* tile)
 {
-    if(tile == nullptr || mPlayer == nullptr || !mPlayer->getIsHuman())
+    if(tile == nullptr || mPlayer == nullptr)
         return;
     mTilesStates[tile].mOwnCreatureSightAgeTurns = 0;
 }
 
 void Seat::notifyVisionOnTile(Tile* tile, NodeType nt)
 {
+    // AI seats record what they have seen too, so their knowledge of the map is limited to it
     if(mPlayer == nullptr)
-        return;
-    if(!mPlayer->getIsHuman())
         return;
 
     if(nt == NodeType::MTILES_NODE && !mTilesStates[tile].mVisionTurnCurrent &&
@@ -462,10 +460,8 @@ bool Seat::hasVisionOnTile(Tile* tile)
         return tile->getLocalPlayerHasVision();
     }
 
-    // AI players have vision on every tile
+    // Seats without a player have vision on every tile; AI seats see what their vision records say
     if(mPlayer == nullptr)
-        return true;
-    if(!mPlayer->getIsHuman())
         return true;
 
     std::map<Tile*,TileStateNotified>::iterator ii =  mTilesStates.find(tile);
