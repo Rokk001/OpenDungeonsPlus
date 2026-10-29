@@ -131,6 +131,12 @@ void heartGuard(Env& env);
 
 //! \brief Picks up fleeing creatures after a fight (row J08).
 void restAfterFight(Env& env);
+
+//! \brief Appends the war and sighting lines of the saved AI state (the lines of the war and sighting tags).
+void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines);
+
+//! \brief Restores the war and sighting lines of a loaded AI state; lines of other tags are ignored.
+void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines);
 }
 
 #endif // AIWAR_H

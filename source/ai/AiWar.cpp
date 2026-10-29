@@ -43,6 +43,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <sstream>
 
 namespace WAR
 {
@@ -1166,6 +1168,236 @@ void onEvent(Env& env, const AiEvent& event)
             break;
         default:
             break;
+    }
+}
+
+namespace
+{
+//! \brief Appends a line with the given tag and tokens.
+void addLine(std::vector<AiMath::AiStateLine>& lines, const std::string& tag, const std::vector<std::string>& tokens)
+{
+    AiMath::AiStateLine line;
+    line.tag = tag;
+    line.tokens = tokens;
+    lines.push_back(line);
+}
+
+//! \brief A number as the text of a saved token.
+std::string num(double value)
+{
+    std::ostringstream os;
+    os << value;
+    return os.str();
+}
+
+//! \brief The tile x coordinate token, -1 when there is no tile.
+std::string tileX(Tile* tile)
+{
+    return num(tile == nullptr ? -1 : tile->getX());
+}
+
+//! \brief The tile y coordinate token, -1 when there is no tile.
+std::string tileY(Tile* tile)
+{
+    return num(tile == nullptr ? -1 : tile->getY());
+}
+
+//! \brief The tile at saved coordinates, nullptr for -1.
+Tile* tileAt(GameMap& gameMap, const std::string& x, const std::string& y)
+{
+    int xx = std::atoi(x.c_str());
+    int yy = std::atoi(y.c_str());
+    if((xx < 0) || (yy < 0))
+        return nullptr;
+    return gameMap.getTile(xx, yy);
+}
+}
+
+void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
+{
+    const WarState& st = env.state;
+    const char* tunnelNames[3] = {"none", "digging", "open"};
+    const char* assaultNames[4] = {"none", "moving", "running", "ending"};
+    std::vector<std::string> t;
+    t.push_back("tunnel");
+    t.push_back(tunnelNames[st.tunnel]);
+    t.push_back(num(st.detour));
+    t.push_back(tileX(st.tunnelTarget));
+    t.push_back(tileY(st.tunnelTarget));
+    t.push_back(tileX(st.breakthrough));
+    t.push_back(tileY(st.breakthrough));
+    // The fortify of the tunnel is row F15 of another package: no fortify is pending here
+    t.push_back("-1");
+    addLine(lines, "war", t);
+
+    std::vector<std::string> a;
+    a.push_back("assault");
+    a.push_back(assaultNames[st.assault]);
+    a.push_back(st.tactic < 0 ? "-" : num(st.tactic));
+    a.push_back(st.contactTime < 0.0 ? "-1" : num(env.now - st.contactTime));
+    a.push_back(num(std::max(0.0, key("RestSecondsAfterAssault") - (env.now - st.lastAssaultEnd))));
+    addLine(lines, "war", a);
+
+    for(size_t i = 0; i < st.groups.size(); ++i)
+    {
+        const Group& g = st.groups[i];
+        std::vector<std::string> gl;
+        gl.push_back("group");
+        gl.push_back(num(static_cast<double>(i)));
+        gl.push_back(g.raid ? "raid" : "main");
+        gl.push_back(num(static_cast<double>(g.targetIndex)));
+        gl.push_back(tileX(g.bannerTile));
+        gl.push_back(tileY(g.bannerTile));
+        gl.push_back(g.bannerTile == nullptr ? "-1" : num(std::max(0.0, g.bannerUntil - env.now)));
+        gl.push_back(tileX(g.dropTile));
+        gl.push_back(tileY(g.dropTile));
+        gl.push_back(num(static_cast<double>(g.members.size())));
+        for(Creature* creature : g.members)
+            gl.push_back(creature->getName());
+        addLine(lines, "war", gl);
+        for(size_t j = 0; j < g.targets.size(); ++j)
+        {
+            std::vector<std::string> tl;
+            tl.push_back("target");
+            tl.push_back(num(static_cast<double>(i)));
+            tl.push_back(num(static_cast<double>(j)));
+            tl.push_back(tileX(g.targets[j]));
+            tl.push_back(tileY(g.targets[j]));
+            addLine(lines, "war", tl);
+        }
+    }
+
+    std::vector<std::string> d;
+    d.push_back("defence");
+    d.push_back(st.defenceRallying ? "rallying" : "none");
+    d.push_back(tileX(st.defenceBanner));
+    d.push_back(tileY(st.defenceBanner));
+    addLine(lines, "war", d);
+
+    for(const std::pair<const int, SeatSighting>& entry : st.sighting.seats)
+    {
+        const SeatSighting& s = entry.second;
+        if(s.valid)
+        {
+            std::vector<std::string> sl;
+            sl.push_back("seat");
+            sl.push_back(num(entry.first));
+            sl.push_back(num(env.now - s.time));
+            sl.push_back(num(s.fHp));
+            sl.push_back(num(s.fDps));
+            sl.push_back(num(s.fGold));
+            sl.push_back(num(s.fMana));
+            sl.push_back(num(s.fTrap));
+            sl.push_back(s.ready ? "1" : "0");
+            addLine(lines, "sighting", sl);
+            for(const std::pair<const std::string, EnemyRecord>& record : s.records)
+            {
+                std::vector<std::string> cl;
+                cl.push_back("creature");
+                cl.push_back(num(entry.first));
+                cl.push_back(record.first);
+                cl.push_back(num(record.second.hp));
+                cl.push_back(num(record.second.rawDps));
+                addLine(lines, "sighting", cl);
+            }
+        }
+        if(s.lastSpellTime >= 0.0)
+        {
+            std::vector<std::string> pl;
+            pl.push_back("spell");
+            pl.push_back(num(entry.first));
+            pl.push_back(num(env.now - s.lastSpellTime));
+            addLine(lines, "sighting", pl);
+        }
+    }
+}
+
+void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
+{
+    WarState& st = env.state;
+    std::vector<Creature*> own = env.gameMap.getCreaturesBySeat(env.player.getSeat());
+    for(const AiMath::AiStateLine& line : lines)
+    {
+        const std::vector<std::string>& k = line.tokens;
+        if(k.empty())
+            continue;
+        if((line.tag == "war") && (k[0] == "tunnel"))
+        {
+            st.tunnel = (k[1] == "open") ? WarState::tunnelOpen : ((k[1] == "digging") ? WarState::tunnelDigging : WarState::tunnelNone);
+            st.detour = std::atof(k[2].c_str());
+            st.tunnelTarget = tileAt(env.gameMap, k[3], k[4]);
+            st.breakthrough = tileAt(env.gameMap, k[5], k[6]);
+            st.tunnelKnown = (st.tunnel != WarState::tunnelNone);
+        }
+        else if((line.tag == "war") && (k[0] == "assault"))
+        {
+            st.assault = (k[1] == "moving") ? WarState::assaultMoving : ((k[1] == "running") ? WarState::assaultRunning :
+                         ((k[1] == "ending") ? WarState::assaultEnding : WarState::assaultNone));
+            st.tactic = (k[2] == "-") ? -1 : std::atoi(k[2].c_str());
+            double age = std::atof(k[3].c_str());
+            st.contactTime = (age < 0.0) ? -1.0 : env.now - age;
+            st.lastAssaultEnd = env.now + std::atof(k[4].c_str()) - key("RestSecondsAfterAssault");
+        }
+        else if((line.tag == "war") && (k[0] == "group"))
+        {
+            Group g;
+            g.raid = (k[2] == "raid");
+            g.targetIndex = static_cast<size_t>(std::atoi(k[3].c_str()));
+            g.bannerTile = tileAt(env.gameMap, k[4], k[5]);
+            g.bannerUntil = (g.bannerTile == nullptr) ? -1.0 : env.now + std::atof(k[6].c_str());
+            g.dropTile = tileAt(env.gameMap, k[7], k[8]);
+            for(size_t i = 10; i < k.size(); ++i)
+            {
+                for(Creature* creature : own)
+                {
+                    if(creature->getName() == k[i])
+                        g.members.push_back(creature);
+                }
+            }
+            size_t index = static_cast<size_t>(std::atoi(k[1].c_str()));
+            if(st.groups.size() <= index)
+                st.groups.resize(index + 1);
+            st.groups[index] = g;
+        }
+        else if((line.tag == "war") && (k[0] == "target"))
+        {
+            size_t index = static_cast<size_t>(std::atoi(k[1].c_str()));
+            if(index < st.groups.size())
+            {
+                Tile* tile = tileAt(env.gameMap, k[3], k[4]);
+                if(tile != nullptr)
+                    st.groups[index].targets.push_back(tile);
+            }
+        }
+        else if((line.tag == "war") && (k[0] == "defence"))
+        {
+            st.defenceRallying = (k[1] == "rallying");
+            st.defenceBanner = tileAt(env.gameMap, k[2], k[3]);
+        }
+        else if((line.tag == "sighting") && (k[0] == "seat"))
+        {
+            SeatSighting& s = st.sighting.seats[std::atoi(k[1].c_str())];
+            s.time = env.now - std::atof(k[2].c_str());
+            s.fHp = std::atof(k[3].c_str());
+            s.fDps = std::atof(k[4].c_str());
+            s.fGold = std::atof(k[5].c_str());
+            s.fMana = std::atof(k[6].c_str());
+            s.fTrap = std::atof(k[7].c_str());
+            s.ready = (k[8] == "1");
+            s.valid = true;
+        }
+        else if((line.tag == "sighting") && (k[0] == "creature"))
+        {
+            EnemyRecord record;
+            record.hp = std::atof(k[3].c_str());
+            record.rawDps = std::atof(k[4].c_str());
+            record.tile = nullptr;
+            st.sighting.seats[std::atoi(k[1].c_str())].records[k[2]] = record;
+        }
+        else if((line.tag == "sighting") && (k[0] == "spell"))
+        {
+            st.sighting.seats[std::atoi(k[1].c_str())].lastSpellTime = env.now - std::atof(k[2].c_str());
+        }
     }
 }
 }

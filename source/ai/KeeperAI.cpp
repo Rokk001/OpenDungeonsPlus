@@ -137,6 +137,8 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mMind.onEvent("J07", std::vector<AiEventType>(1, AiEventType::EnemyOut), warHandler);
     mMind.onEvent("J08", std::vector<AiEventType>(1, AiEventType::FightOver), warHandler);
     mMind.onEvent("K08", std::vector<AiEventType>(1, AiEventType::EnemyTrapEmpty), warHandler);
+    std::function<void(std::vector<AiMath::AiStateLine>&)> warSaver = std::bind(&KeeperAI::saveWarRows, this, std::placeholders::_1);
+    mMind.onSave(warSaver);
 }
 
 int KeeperAI::scaledCooldown(int min, int max) const
@@ -176,7 +178,17 @@ void KeeperAI::exportState(std::ostream& os) const
 //! \brief Restores the complete shared mind from the saved block contents.
 bool KeeperAI::importState(const std::vector<std::string>& lines)
 {
-    return mMind.importState(lines);
+    bool restored = mMind.importState(lines);
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::importRows(env, mMind.savedRows());
+    return restored;
+}
+
+//! \brief Appends the war and sighting lines to the saved AI state of the mind.
+void KeeperAI::saveWarRows(std::vector<AiMath::AiStateLine>& lines)
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::exportRows(env, lines);
 }
 
 //! \brief Runs the polled parts of the war (plan step, tunnel probe, assault steps, enemy edges) once per turn.
