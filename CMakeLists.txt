@@ -238,6 +238,12 @@ set(OD_SOURCEFILES
     ${SRC}/ai/AiEvents.h
     ${SRC}/ai/AiEvents.cpp
     ${SRC}/ai/AiActions.cpp
+    ${SRC}/ai/AiItems.cpp
+    ${SRC}/ai/AiItems.h
+    ${SRC}/ai/AiCare.cpp
+    ${SRC}/ai/AiCare.h
+    ${SRC}/ai/AiPrison.cpp
+    ${SRC}/ai/AiPrison.h
     ${SRC}/ai/AiActions.h
     ${SRC}/ai/AiMind.h
     ${SRC}/ai/AiSpells.cpp

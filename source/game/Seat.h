@@ -290,6 +290,9 @@ public:
     //! uses it later with the button of the special. The boxes are saved with the seat.
     void addStoredSpecial(GiftBoxType type, uint32_t amount);
 
+    //! \brief Returns the amount of the first stored box of this type, which useStoredSpecial consumes next.
+    uint32_t getStoredSpecialAmount(GiftBoxType type) const;
+
     //! \brief Server side. Applies one stored special of the given type and removes it.
     //! Returns false if the seat has none of that type.
     bool useStoredSpecial(GiftBoxType type);
