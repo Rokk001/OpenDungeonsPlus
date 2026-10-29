@@ -132,7 +132,7 @@ void heartGuard(Env& env);
 //! \brief Picks up fleeing creatures after a fight (row J08).
 void restAfterFight(Env& env);
 
-//! \brief Carries one hurt creature to the dungeon temple (row J08 as the mood remedy of D07).
+//! \brief Carries one hurt creature to its bed, or to an own infirmary when it has no bed (row J08 as the mood remedy of D07).
 void restWounded(Env& env, Creature* creature);
 
 //! \brief Appends the war and sighting lines of the saved AI state (the lines of the war and sighting tags).

@@ -1020,27 +1020,43 @@ void restAfterFight(Env& env)
     }
 }
 
-//! \brief Carries one hurt own creature to the dungeon temple, as after a fight (row J08 as the mood remedy of D07).
+//! \brief Carries one hurt own creature to its bed, or to an own infirmary with a free place when it has no bed
+//! (row J08 "wounded creatures to bed or infirmary" as the mood remedy of D07).
 //! \param creature The hurt creature named by the mood patrol.
 void restWounded(Env& env, Creature* creature)
 {
-    // AI row J08: the rule mistake leaves the hurt creature where it is
-    if((creature == nullptr) || !creature->isHurt() || env.mind.slip("J08"))
-        return;
-
-    RoomDungeonTemple* temple = ownTemple(env);
-    if((temple == nullptr) || (temple->getCentralTile() == nullptr))
+    // AI row J08: each hurt creature is its own firing; the rule mistake leaves this creature where it is
+    if((creature == nullptr) || !creature->isHurt() || (creature->getPositionTile() == nullptr) ||
+       CARE::slipFor(env.ai, "J08"))
         return;
 
     Seat* seat = env.player.getSeat();
-    Tile* center = temple->getCentralTile();
     Tile* tile = creature->getPositionTile();
-    int area = static_cast<int>(key("HeartDefenceAreaTiles"));
-    if((tile == nullptr) ||
-       ((std::abs(center->getX() - tile->getX()) <= area) && (std::abs(center->getY() - tile->getY()) <= area)))
+    Room* room = tile->getCoveringRoom();
+    if((tile == creature->getHomeTile()) || ((room != nullptr) && (room->getType() == RoomType::infirmary)))
         return;
-    if(creature->tryPickup(seat) && creature->tryDrop(seat, center))
-        ACTS::moveCreature(env.ai, creature, center);
+
+    Tile* rest = creature->getHomeTile();
+    if(rest == nullptr)
+    {
+        for(Room* infirmary : env.gameMap.getRoomsByTypeAndSeat(RoomType::infirmary, seat))
+        {
+            if(!infirmary->hasOpenCreatureSpot(creature))
+                continue;
+            for(Tile* covered : infirmary->getCoveredTiles())
+            {
+                if(covered->isClaimedForSeat(seat) && !covered->isFullTile())
+                {
+                    rest = covered;
+                    break;
+                }
+            }
+            if(rest != nullptr)
+                break;
+        }
+    }
+    if((rest != nullptr) && creature->tryPickup(seat) && creature->tryDrop(seat, rest))
+        ACTS::moveCreature(env.ai, creature, rest);
 }
 
 //! \brief Advances war planning and assault actions; the shared event source polls symptoms.

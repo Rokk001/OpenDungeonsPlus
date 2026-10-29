@@ -79,6 +79,10 @@ void moodRelief(KeeperAI& ai);
 //! \brief Immediately triggers the row that removes each upset creature's first applicable cause.
 //! \param trigger Invokes the named row now with its own draw, without queuing another reaction delay.
 void moodPatrol(KeeperAI& ai, const std::function<void(const std::string&, Creature*)>& trigger);
+//! \brief Draws a row's mistake for one creature, independent of the other draws of the same trigger.
+//! \param rowId The catalogue row whose class and multiplier from [RowClasses] are used.
+//! \return true when the mistake is taken for this creature.
+bool slipFor(KeeperAI& ai, const std::string& rowId);
 }
 
 #endif // AICARE_H

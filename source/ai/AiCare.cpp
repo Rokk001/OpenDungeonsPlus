@@ -30,12 +30,17 @@
 #include <algorithm>
 #include <iomanip>
 #include <limits>
+#include <map>
 #include <set>
 #include <sstream>
 #include <vector>
 
 namespace
 {
+//! \brief Mind time of each seat's last scheduled defender possession; D05 and J05 answer the same
+//! HeartCritical firing, so the second call of that firing must not cast again before the first is executed.
+std::map<int, double> possessCastAt;
+
 //! \brief Returns living own fighters the keeper can move without interrupting possession or captivity.
 std::vector<Creature*> ownFighters(KeeperAI& ai)
 {
@@ -151,8 +156,9 @@ CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mIdleAt
     mind.onLook("D06", config.getAiConfigDouble("LookFactorScan"), std::bind(&Controller::scanLook, this));
     mind.onLook("G02", config.getAiConfigDouble("LookPeriod60") / reference, std::bind(&Controller::prisonLook, this));
     mind.onLook("H04", config.getAiConfigDouble("LookPeriod600") / reference, std::bind(&Controller::itemsLook, this));
-    // HeartCritical reaches D05 through WAR::heartGuard (J05), so one firing draws D05 once.
-    mind.onEvent("D05", {AiEventType::Fight},
+    // D05 answers HeartCritical itself; WAR::heartGuard (J05) calls the same decision in the same firing,
+    // which shares the one D05 draw and casts at most once.
+    mind.onEvent("D05", {AiEventType::Fight, AiEventType::HeartCritical},
         std::bind(possessDefender, std::ref(ai), std::placeholders::_1));
     mind.onEvent("D06", {AiEventType::Fight, AiEventType::NoBed, AiEventType::NoFood},
         std::bind(&Controller::idle, this));
@@ -354,12 +360,15 @@ void CARE::slapEpisodeStep(KeeperAI& ai, SlapState& state)
         ACTS::slap(ai, creature);
 }
 
-//! \brief Selects a defender only for a fight threatening the heart or treasury; D05 and E12 share one decision.
+//! \brief Selects a defender only for a fight threatening the heart or treasury; D05 and E12 share one decision,
+//! and a firing that reaches it twice (D05 and J05 at HeartCritical) casts at most once.
 void CARE::possessDefender(KeeperAI& ai, const AiEvent& event)
 {
     // AI row D05
     // AI row E12
-    if(ai.getControlledPlayer().isPossessing())
+    const int seatId = ai.getControlledPlayer().getSeat()->getId();
+    if(ai.getControlledPlayer().isPossessing() ||
+       (possessCastAt.count(seatId) > 0 && possessCastAt[seatId] == ai.getMind().now()))
         return;
     Room* room = event.tile == nullptr ? nullptr : event.tile->getCoveringRoom();
     if(event.type != AiEventType::HeartCritical &&
@@ -387,7 +396,10 @@ void CARE::possessDefender(KeeperAI& ai, const AiEvent& event)
             }
         }
     if(target != nullptr)
+    {
+        possessCastAt[seatId] = ai.getMind().now();
         ACTS::castSpell(ai, SpellType::possess, target);
+    }
 }
 
 //! \brief Uses the possessed creature's existing movement and attack checks and ends at the configured HP share.
@@ -541,8 +553,8 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
     {
         if(creature->getMoodValue() < CreatureMoodLevel::Upset)
             continue;
-        // The mistake leaves only this creature unhandled at this firing.
-        if(ai.getMind().slip("D07"))
+        // The mistake leaves only this creature unhandled at this firing, so each creature draws on its own.
+        if(slipFor(ai, "D07"))
             continue;
         std::string row;
         if(creature->isHungry())
@@ -566,4 +578,24 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
         if(!row.empty() && (row == "J08" || raised.insert(row).second))
             trigger(row, creature);
     }
+}
+
+//! \brief Draws a fresh mistake from the row's class, because Mind::slip keeps one draw per row for the whole trigger.
+bool CARE::slipFor(KeeperAI& ai, const std::string& rowId)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const ConfigManager::AiRowClass* row = config.getAiRowClass(rowId);
+    if(row == nullptr)
+        return false;
+    std::string base;
+    if(row->mClass == "routine") base = "MistakeBaseRoutine";
+    else if(row->mClass == "rule") base = "MistakeBaseRule";
+    else if(row->mClass == "complex") base = "MistakeBaseComplex";
+    else if(row->mClass == "unfamiliar") base = "MistakeBaseUnfamiliar";
+    else if(row->mClass == "rare") base = "MistakeBaseRare";
+    else
+        return false;
+    const double probability = AiMath::mistakeProbability(config.getAiConfigDouble(base), row->mMultiplier,
+        ai.getSettings().mistakeMultiplier, config.getAiConfigDouble("MistakeMin"), config.getAiConfigDouble("MistakeMax"));
+    return Random::Double(0.0, 1.0) < probability;
 }
