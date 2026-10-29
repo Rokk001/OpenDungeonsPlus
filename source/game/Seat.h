@@ -314,6 +314,9 @@ public:
     //! \brief Returns true if this seat can see the given tile and false otherwise
     bool hasVisionOnTile(Tile* tile);
 
+    //! \brief Returns remembered terrain and ownership without revealing a tile's current hidden state.
+    const TileStateNotified* getKnownTileState(Tile* tile) const;
+
     //! \brief Returns true if this seat has been notified about the given tile at least once (server side)
     bool hasSeenTile(Tile* tile);
 

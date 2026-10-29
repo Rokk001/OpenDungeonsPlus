@@ -28,6 +28,7 @@ class Player;
 class Room;
 class Tile;
 class Seat;
+struct AiEvent;
 
 enum class KeeperAIType;
 
@@ -40,6 +41,9 @@ public:
 
     //! \brief Writes AI state when the implementation has state to save.
     virtual void exportState(std::ostream&) const {}
+
+    //! \brief Accepts a game notice; controllers without a mind ignore it.
+    virtual void notifyEvent(const AiEvent&) {}
 
     virtual ~BaseAI()
     {}

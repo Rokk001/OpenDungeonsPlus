@@ -180,7 +180,7 @@ bool SpellCreatureHaste::castSpell(GameMap* gameMap, Player* player, ODPacket& p
     CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(duration, value, "SpellCreatureHaste");
     creature->addCreatureEffect(effect);
 
-    fireSpellEffect(*pos, "Haste", "HasteCast");
+    fireSpellEffect(*pos, "Haste", "HasteCast", gameMap, player->getSeat());
 
     return true;
 }

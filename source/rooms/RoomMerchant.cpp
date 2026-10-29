@@ -731,6 +731,20 @@ void RoomMerchant::sendWindow(GameMap& map, Player& player)
     ODServer::getSingleton().queueServerNotification(notification);
 }
 
+//! \brief Applies the server's merchant setting gates and clears the old reservations.
+bool RoomMerchant::applySettings(GameMap& map, Seat& seat, int32_t margin, const std::string& mode)
+{
+    if(getForSeat(map, &seat) == nullptr || margin < 0 || margin > setting("MerchantMarginMax") ||
+        (mode != "fair" && mode != "profit")) return false;
+    seat.setMerchantSettings(margin, mode);
+    for(const MerchantStockEntry& entry : getStock(map, &seat))
+    {
+        RoomMerchantTileData* data = static_cast<RoomMerchantTileData*>(entry.mRoom->mTileData.at(entry.mTile));
+        for(MerchantGood& good : data->mGoods) good.mReservedUntil = 0;
+    }
+    return true;
+}
+
 //! \brief Validates owner requests without exposing or purchasing another seat's goods.
 bool RoomMerchant::handleRequest(GameMap& map, Player& player, ClientNotificationType type, ODPacket& packet)
 {
@@ -749,14 +763,7 @@ bool RoomMerchant::handleRequest(GameMap& map, Player& player, ClientNotificatio
     {
         int32_t value = 0;
         std::string mode;
-        if(!(packet >> value >> mode) || value < 0 || value > setting("MerchantMarginMax")
-            || (mode != "fair" && mode != "profit")) return false;
-        seat->setMerchantSettings(value, mode);
-        for(const MerchantStockEntry& entry : getStock(map, seat))
-        {
-            RoomMerchantTileData* data = static_cast<RoomMerchantTileData*>(entry.mRoom->mTileData.at(entry.mTile));
-            for(MerchantGood& good : data->mGoods) good.mReservedUntil = 0;
-        }
+        if(!(packet >> value >> mode) || !applySettings(map, *seat, value, mode)) return false;
         ServerNotification* reply = new ServerNotification(ServerNotificationType::merchantSettings, &player);
         reply->mPacket << value << mode;
         ODServer::getSingleton().queueServerNotification(reply);

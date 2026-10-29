@@ -17,6 +17,7 @@
 
 #include "ai/KeeperAI.h"
 #include "ai/KeeperAIType.h"
+#include "ai/AiActions.h"
 
 #include "creatureaction/CreatureAction.h"
 #include "entities/Creature.h"
@@ -115,6 +116,7 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mType(type),
     mSettings(ConfigManager::getSingleton().getAiLevel(type)),
     mMind(gameMap, player, mSettings),
+    mEvents(*this),
     mMinHpPercentToFight(NORMAL_MIN_HP_PERCENT_TO_FIGHT),
     mMinFightersToAttack(NORMAL_MIN_FIGHTERS_TO_ATTACK),
     mMinCreatureLevel(NORMAL_MIN_CREATURE_LEVEL),
@@ -139,6 +141,8 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mCooldownSaveWoundedCreaturesMax(NORMAL_COOLDOWN_SAVE_WOUNDED_MAX),
     mIsFirstUpkeepDone(false)
 {
+    ACTS::bind(*this);
+    mEvents.bind();
 }
 
 int KeeperAI::scaledCooldown(int min, int max) const
@@ -161,6 +165,13 @@ bool KeeperAI::doTurn(double timeSinceLastTurn)
 Mind& KeeperAI::getMind()
 {
     return mMind;
+}
+
+//! \brief Retains raw symptom timing and forwards each game notice to the shared reaction queue.
+void KeeperAI::notifyEvent(const AiEvent& event)
+{
+    mEvents.notify(event);
+    mMind.enqueue(event);
 }
 
 //! \brief Returns the configured level values used by the decision functions.

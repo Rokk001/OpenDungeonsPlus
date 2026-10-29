@@ -37,6 +37,7 @@ std::function<bool()> CreatureActionFindHome::action()
         std::ref(mCreature), mForced);
 }
 
+//! \brief Searches for a reachable bed and reports supply failures to the keeper.
 bool CreatureActionFindHome::handleFindHome(Creature& creature, bool forced)
 {
     // Check to see if we are standing in an open dormitory tile that we can claim as our home.
@@ -130,6 +131,10 @@ bool CreatureActionFindHome::handleFindHome(Creature& creature, bool forced)
         {
             creature.getSeat()->getPlayer()->notifyCreatureCannotFindBed(creature);
         }
+        else if(creature.getSeat()->getPlayer() != nullptr)
+        {
+            creature.getSeat()->getPlayer()->notifyCreatureCannotFindBed(creature);
+        }
         creature.popAction();
         return true;
     }
@@ -140,6 +145,10 @@ bool CreatureActionFindHome::handleFindHome(Creature& creature, bool forced)
     {
         if((creature.getSeat()->getPlayer() != nullptr) &&
             creature.getSeat()->getPlayer()->getIsHuman())
+        {
+            creature.getSeat()->getPlayer()->notifyCreatureCannotFindBed(creature);
+        }
+        else if(creature.getSeat()->getPlayer() != nullptr)
         {
             creature.getSeat()->getPlayer()->notifyCreatureCannotFindBed(creature);
         }

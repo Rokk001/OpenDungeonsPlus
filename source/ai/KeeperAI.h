@@ -20,6 +20,7 @@
 
 #include "ai/BaseAI.h"
 #include "ai/AiMind.h"
+#include "ai/AiEvents.h"
 
 #include <cstdint>
 #include <utility>
@@ -45,6 +46,8 @@ public:
     Player& getControlledPlayer() { return mPlayer; }
     //! \brief The mind that draws mistakes and schedules this keeper's actions.
     Mind& getMind();
+    //! \brief Observes shared symptoms and queues the game's notice in the mind.
+    void notifyEvent(const AiEvent& event) override;
     //! \brief The values of the selected AI level.
     const AiSettings& getSettings() const;
     //! \brief Writes the keeper's mind as the contents of its AIState block.
@@ -141,6 +144,8 @@ private:
     AiSettings mSettings;
     //! \brief The common mind uses the selected level independently of the interim legacy paths.
     Mind mMind;
+    //! \brief Keeper-visible poll history, owned by this game and saved with its mind.
+    AiEvents mEvents;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)

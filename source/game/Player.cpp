@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ai/AiMind.h"
 #include "game/Player.h"
 
 #include "creatureaction/CreatureAction.h"
@@ -672,6 +673,7 @@ void Player::sendLevelStatistics(bool levelWon)
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Notifies a keeper of a fight after applying the shared distance and time suppression.
 void Player::notifyTeamFighting(Player* player, Tile* tile)
 {
     // A defeated player has nothing left to defend: no "we are under attack"
@@ -697,6 +699,15 @@ void Player::notifyTeamFighting(Player* player, Tile* tile)
         }
     }
 
+    if(!getIsHuman())
+    {
+        AiEvent event = {AiEventType::Fight, tile, nullptr, player->getSeat()->getId(), 0.0,
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*this, event);
+        mEvents.push_back(new PlayerEvent(PlayerEventType::fight, tile, BATTLE_TIME_COUNT));
+        return;
+    }
+
     if(isFirstFight)
     {
         ServerNotification *serverNotification = new ServerNotification(
@@ -714,6 +725,7 @@ void Player::notifyTeamFighting(Player* player, Tile* tile)
     fireEvents();
 }
 
+//! \brief Reports an empty research queue after the existing notice interval.
 void Player::notifyNoSkillInQueue()
 {
     // The advisory messages below (and their voice lines) are meaningless once
@@ -726,6 +738,14 @@ void Player::notifyNoSkillInQueue()
     {
         mNoSkillInQueueTime = NO_RESEARCH_TIME_COUNT;
 
+        if(!getIsHuman())
+        {
+            AiEvent event = {AiEventType::NoSkillInQueue, nullptr, nullptr, -1, 0.0,
+                mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            mGameMap->notifyAi(*this, event);
+            return;
+        }
+
         std::string chatMsg = "Warning: your library has nothing to research. Choose the next research in the research tree.";
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, this);
@@ -734,6 +754,7 @@ void Player::notifyNoSkillInQueue()
     }
 }
 
+//! \brief Reports missing workers after the existing notice interval.
 void Player::notifyNoWorker()
 {
     if(mHasLost)
@@ -744,6 +765,14 @@ void Player::notifyNoWorker()
 
     mNoWorkerTime = NO_WORKER_TIME_COUNT;
 
+    if(!getIsHuman())
+    {
+        AiEvent event = {AiEventType::NoWorker, nullptr, nullptr, -1, 0.0,
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*this, event);
+        return;
+    }
+
     std::string chatMsg = "You have no worker to fulfill your dark wishes.";
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
@@ -751,6 +780,7 @@ void Player::notifyNoWorker()
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Reports missing treasury capacity after the existing notice interval.
 void Player::notifyNoTreasuryAvailable()
 {
     if(mHasLost)
@@ -760,6 +790,14 @@ void Player::notifyNoTreasuryAvailable()
     {
         mNoTreasuryAvailableTime = NO_TREASURY_TIME_COUNT;
 
+        if(!getIsHuman())
+        {
+            AiEvent event = {AiEventType::NoTreasury, nullptr, nullptr, -1, 0.0,
+                mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            mGameMap->notifyAi(*this, event);
+            return;
+        }
+
         std::string chatMsg = "No treasury available. You should build a bigger one.";
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, this);
@@ -768,6 +806,7 @@ void Player::notifyNoTreasuryAvailable()
     }
 }
 
+//! \brief Reports a failed bed search after the existing notice interval.
 void Player::notifyCreatureCannotFindBed(Creature& creature)
 {
     if(mHasLost)
@@ -777,6 +816,14 @@ void Player::notifyCreatureCannotFindBed(Creature& creature)
     {
         mCreatureCannotFindBed = CREATURE_CANNOT_FIND_BED_TIME_COUNT;
 
+        if(!getIsHuman())
+        {
+            AiEvent event = {AiEventType::NoBed, creature.getPositionTile(), &creature, -1, 0.0,
+                mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            mGameMap->notifyAi(*this, event);
+            return;
+        }
+
         notifyCreatureEvent(creature, " cannot find room for a bed. Build or enlarge a Dormitory.", EventShortNoticeType::genericGameInfo);
 
         std::vector<Seat*> seats;
@@ -785,6 +832,7 @@ void Player::notifyCreatureCannotFindBed(Creature& creature)
     }
 }
 
+//! \brief Reports a failed food search after the existing notice interval.
 void Player::notifyCreatureCannotFindFood(Creature& creature)
 {
     if(mHasLost)
@@ -794,6 +842,14 @@ void Player::notifyCreatureCannotFindFood(Creature& creature)
     {
         mCreatureCannotFindFood = CREATURE_CANNOT_FIND_FOOD_TIME_COUNT;
 
+        if(!getIsHuman())
+        {
+            AiEvent event = {AiEventType::NoFood, creature.getPositionTile(), &creature, -1, 0.0,
+                mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            mGameMap->notifyAi(*this, event);
+            return;
+        }
+
         notifyCreatureEvent(creature, " cannot find food. Build a Hatchery.", EventShortNoticeType::genericGameInfo);
 
         std::vector<Seat*> seats;
@@ -802,18 +858,24 @@ void Player::notifyCreatureCannotFindFood(Creature& creature)
     }
 }
 
+//! \brief Reports an unaffordable purchase after the existing notice interval.
 void Player::notifyNotEnoughGold()
 {
     if(mHasLost)
-        return;
-
-    if(!getIsHuman())
         return;
 
     if(mNotEnoughGoldTime > 0.0f)
         return;
 
     mNotEnoughGoldTime = NOT_ENOUGH_GOLD_TIME_COUNT;
+
+    if(!getIsHuman())
+    {
+        AiEvent event = {AiEventType::NotEnoughGold, nullptr, nullptr, -1, 0.0,
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*this, event);
+        return;
+    }
 
     std::string chatMsg = "You do not have enough gold for that.";
     ServerNotification *serverNotification = new ServerNotification(
@@ -822,18 +884,24 @@ void Player::notifyNotEnoughGold()
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Reports a killed creature after the existing notice interval.
 void Player::notifyCreatureKilled(Creature& creature)
 {
     if(mHasLost)
-        return;
-
-    if(!getIsHuman())
         return;
 
     if(mCreatureKilledTime > 0.0f)
         return;
 
     mCreatureKilledTime = CREATURE_KILLED_TIME_COUNT;
+
+    if(!getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureKilled, creature.getPositionTile(), &creature, -1, 0.0,
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*this, event);
+        return;
+    }
 
     notifyCreatureEvent(creature, " has been killed");
 }
@@ -854,11 +922,19 @@ void Player::notifyCreatureEvent(Creature& creature, const std::string& suffix, 
     ODServer::getSingleton().queueServerNotification(notification);
 }
 
-//! \brief Sends the collected no-mana notice for a room to its human keeper.
+//! \brief Sends the collected no-mana notice to the human keeper or its AI.
 void Player::notifyInfirmaryEvent()
 {
-    if(mHasLost || !getIsHuman())
+    if(mHasLost)
         return;
+    if(!getIsHuman())
+    {
+        AiEvent event = {AiEventType::InfirmaryNoMana, nullptr, nullptr, -1, 0.0,
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*this, event);
+        return;
+    }
+
     ServerNotification* notification = new ServerNotification(ServerNotificationType::chatServer, this);
     notification->mPacket << std::string("Your infirmary has no mana to heal.") << EventShortNoticeType::aboutCreatures;
     ODServer::getSingleton().queueServerNotification(notification);
@@ -880,10 +956,10 @@ void Player::notifyNewCreatureType(const std::string& creatureClassName)
 }
 
 //! \brief Sends the dirt notice (creature that relieved itself, filthy room) when the last one is at least
-//! DirtNoticeSeconds ago; human keepers only.
+//! DirtNoticeSeconds ago; AI keepers receive the same suppressed event.
 void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Creature* creature)
 {
-    if(mHasLost || !getIsHuman())
+    if(mHasLost)
         return;
 
     if(mDirtNoticeTime > 0.0f)
@@ -895,11 +971,27 @@ void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Cr
             return;
 
         mDirtNoticeTime = static_cast<float>(ConfigManager::getSingleton().getDirtConfigDouble("DirtNoticeSeconds"));
+        if(!getIsHuman())
+        {
+            AiEvent event = {AiEventType::Dirt, creature->getPositionTile(), creature, -1, 0.0,
+                mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            mGameMap->notifyAi(*this, event);
+            return;
+        }
+
         notifyCreatureEvent(*creature, " found no toilet and relieved itself.", EventShortNoticeType::aboutCreatures);
         return;
     }
 
     mDirtNoticeTime = static_cast<float>(ConfigManager::getSingleton().getDirtConfigDouble("DirtNoticeSeconds"));
+    if(!getIsHuman())
+    {
+        AiEvent event = {AiEventType::Dirt, nullptr, nullptr, -1, 0.0,
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*this, event);
+        return;
+    }
+
     std::string chatMsg = "Your " + roomName + " is filthy.";
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
@@ -908,10 +1000,10 @@ void Player::notifyDirtEvent(DirtEventKind kind, const std::string& roomName, Cr
 }
 
 //! \brief Sends the thirst notice (creatures are thirsty and there is no tavern) when the last one is at least
-//! TavernNoticeSeconds ago; human keepers without a tavern only.
+//! TavernNoticeSeconds ago; keepers without a tavern only.
 void Player::notifyTavernEvent()
 {
-    if(mHasLost || !getIsHuman())
+    if(mHasLost)
         return;
 
     if(mTavernNoticeTime > 0.0f)
@@ -921,6 +1013,15 @@ void Player::notifyTavernEvent()
         return;
 
     mTavernNoticeTime = static_cast<float>(ConfigManager::getSingleton().getTavernConfigDouble("TavernNoticeSeconds"));
+
+    if(!getIsHuman())
+    {
+        AiEvent event = {AiEventType::TavernThirst, nullptr, nullptr, -1, 0.0,
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*this, event);
+        return;
+    }
+
     std::string chatMsg = "Your creatures are thirsty and you have no tavern.";
     ServerNotification *serverNotification = new ServerNotification(
         ServerNotificationType::chatServer, this);
@@ -928,10 +1029,11 @@ void Player::notifyTavernEvent()
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
+//! \brief Sends the current event list only to a human client.
 void Player::fireEvents()
 {
     // On server side, we update the client
-    if(!mGameMap->isServerGameMap())
+    if(!mGameMap->isServerGameMap() || !getIsHuman())
         return;
 
     ServerNotification *serverNotification = new ServerNotification(
@@ -1039,13 +1141,12 @@ void Player::markTilesForDigging(bool marked, const std::vector<Tile*>& tiles, b
     }
 }
 
+//! \brief Updates cooldowns and shared keeper notice throttles.
 void Player::upkeepPlayer(double timeSinceLastUpkeep)
 {
     decreaseSpellCooldowns();
 
-    // Specific stuff for human players
-    if(!getIsHuman())
-        return;
+    // Shared stuff for human and AI players
 
     // Handle fighting time
     bool wasFightHappening = false;
@@ -1078,7 +1179,7 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
         it = mEvents.erase(it);
     }
 
-    if(wasFightHappening && !isFightHappening)
+    if(getIsHuman() && wasFightHappening && !isFightHappening)
     {
         // Notify the player he is no longer under attack.
         ServerNotification *serverNotification = new ServerNotification(
@@ -1087,8 +1188,7 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
     }
 
     // Do not notify skill queue empty if no library
-    if(getIsHuman() &&
-       (getSeat()->getNbRooms(RoomType::library) > 0))
+    if(getSeat()->getNbRooms(RoomType::library) > 0)
     {
         if(mNoSkillInQueueTime > timeSinceLastUpkeep)
             mNoSkillInQueueTime -= timeSinceLastUpkeep;
@@ -1102,7 +1202,6 @@ void Player::upkeepPlayer(double timeSinceLastUpkeep)
         }
     }
 
-    if(getIsHuman())
     {
         if(mNoWorkerTime > timeSinceLastUpkeep)
             mNoWorkerTime -= timeSinceLastUpkeep;

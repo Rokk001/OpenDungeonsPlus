@@ -249,7 +249,7 @@ bool SpellSummonWorker::summonWorkersOnTiles(GameMap* gameMap, Player* player, c
         newCreature->createMesh();
         newCreature->setPosition(spawnPosition);
         player->getSeat()->notifyCreatureArrival(classToSpawn->getClassName());
-        fireSpellEffect(*tile, "Summon", "SummonWorkerCast");
+        fireSpellEffect(*tile, "Summon", "SummonWorkerCast", gameMap, player->getSeat());
     }
 
     return true;
