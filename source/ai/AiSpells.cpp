@@ -419,13 +419,6 @@ int creaturesAround(const std::vector<Creature*>& list, const Creature* center)
     return count;
 }
 
-//! \brief Returns the seconds the hand is busy with a spell cast.
-double spellActionSeconds()
-{
-    const ConfigManager::AiAction* action = ConfigManager::getSingleton().getAiAction("spell");
-    return (action == nullptr) ? 0.0 : action->mSeconds;
-}
-
 //! \brief Returns the creatures of the list that stand on ground claimed for the AI's seat.
 std::vector<Creature*> onOwnGroundOnly(KeeperAI& ai, const std::vector<Creature*>& list)
 {
@@ -445,10 +438,15 @@ std::vector<Creature*> enemiesOnOwnGround(KeeperAI& ai)
     return onOwnGroundOnly(ai, fightEnemies(ai));
 }
 
-//! \brief Casts a spell on the tile of the creature.
-void castOnTileOf(KeeperAI& ai, SpellType type, Creature* creature)
+//! \brief Casts a spell on the creature: the area spells Inferno and Tremor on its tile, every other spell on the
+//! creature itself, which the hand looks up by name when it reaches it (not at the time of the decision).
+//! \return The mind time at which the hand has finished the cast.
+double castOnTileOf(KeeperAI& ai, SpellType type, Creature* creature)
 {
-    ACTS::castSpell(ai, type, creature->getPositionTile());
+    if((type == SpellType::inferno) || (type == SpellType::tremor))
+        return ACTS::castSpell(ai, type, creature->getPositionTile());
+
+    return ACTS::castSpell(ai, type, creature);
 }
 
 //! \brief Tells whether the tile is covered by the heart room of the seat.
@@ -513,6 +511,7 @@ void restoreDraws(KeeperAI& ai)
         return;
 
     state.mRestored = true;
+    bool legacyLate = false;
     for(const AiMath::AiStateLine& line : ai.getMind().savedRows())
     {
         if((line.tag != "draw") || (line.tokens.size() != 3))
@@ -521,12 +520,12 @@ void restoreDraws(KeeperAI& ai)
         if((line.tokens[0] == "E04") && (line.tokens[1] == "eyeTurn"))
             state.mLastEyeTurn = std::atoll(line.tokens[2].c_str());
         else if((line.tokens[0] == "E05") && (line.tokens[1] == "lateDefense"))
-            state.mLateDefense = (line.tokens[2] == "1");
+            legacyLate = (line.tokens[2] == "1");
         else if((line.tokens[0] == "E19") && (line.tokens[1] == "session"))
         {
-            // start,lastFight,x,y,nextCast,haste
+            // start,lastFight,x,y,nextCast,haste,lateDefense (saves of the single late Defense flag have six parts)
             std::vector<std::string> parts = splitValue(line.tokens[2]);
-            if(parts.size() != 6)
+            if((parts.size() != 6) && (parts.size() != 7))
                 continue;
 
             SPELL::State::Session session;
@@ -536,8 +535,15 @@ void restoreDraws(KeeperAI& ai)
             session.mFightY = std::atoi(parts[3].c_str());
             session.mNextCast = std::atof(parts[4].c_str());
             session.mHaste = (parts[5] == "1");
+            session.mLateDefense = (parts.size() == 7) && (parts[6] == "1");
             state.mSessions.push_back(session);
         }
+    }
+    // A save that kept one late Defense flag for the whole AI: the fights that were running owe it
+    if(legacyLate)
+    {
+        for(SPELL::State::Session& session : state.mSessions)
+            session.mLateDefense = true;
     }
 }
 
@@ -565,15 +571,6 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
         line.tokens.push_back(std::to_string(state.mLastEyeTurn));
         lines.push_back(line);
     }
-    if(state.mLateDefense)
-    {
-        AiMath::AiStateLine line;
-        line.tag = "draw";
-        line.tokens.push_back("E05");
-        line.tokens.push_back("lateDefense");
-        line.tokens.push_back("1");
-        lines.push_back(line);
-    }
     // The times relative to the save, one line per running session
     double now = ai.getMind().now();
     for(const SPELL::State::Session& session : state.mSessions)
@@ -584,14 +581,16 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
         line.tokens.push_back("session");
         line.tokens.push_back(numberToken(session.mStart - now) + "," + numberToken(session.mLastFight - now) + "," +
                               std::to_string(session.mFightX) + "," + std::to_string(session.mFightY) + "," +
-                              numberToken(session.mNextCast - now) + "," + (session.mHaste ? "1" : "0"));
+                              numberToken(session.mNextCast - now) + "," + (session.mHaste ? "1" : "0") + "," +
+                              (session.mLateDefense ? "1" : "0"));
         lines.push_back(line);
     }
 }
 
-//! \brief Tells whether the seat still shows the fight marker of the game at the tile: the game raises one Fight event
-//! per fight place and only refreshes its marker while the fight goes on, so the marker shows that the fight lasts.
-bool fightMarkerAt(KeeperAI& ai, int x, int y)
+//! \brief Returns the seconds the fight marker of the game at the tile still lasts, or a negative number when the seat
+//! shows none: the game raises one Fight event per fight place and refreshes its marker (FightOverSeconds) while the
+//! fight goes on, so the marker shows that the fight lasts and its end is the end of the fight.
+double fightMarkerRemain(KeeperAI& ai, int x, int y)
 {
     const Player& player = ai.getControlledPlayer();
     uint32_t index = std::numeric_limits<uint32_t>::max();
@@ -601,13 +600,13 @@ bool fightMarkerAt(KeeperAI& ai, int x, int y)
     {
         Tile* tile = event->getTile();
         if((event->getType() == PlayerEventType::fight) && (tile != nullptr) && (tile->getX() == x) && (tile->getY() == y))
-            return true;
+            return event->getTimeRemain();
 
         event = player.getNextEvent(index);
         if(index == first)
             break;
     }
-    return false;
+    return -1.0;
 }
 
 //! \brief Makes the session the one whose decisions run now: the fight spells look at the creatures of its fight.
@@ -635,9 +634,10 @@ void stepSession(KeeperAI& ai, SPELL::State::Session& session, double now)
 }
 
 //! \brief The casting loops of the fight sessions: a cast as soon as the previous one of the same session allows it.
-//! A session lasts while the game shows its fight marker and ends once no Fight event and no marker was seen for
-//! FightOverSeconds. Run by the mind every AiPollSeconds; it never raises an event, so the loop needs no hand time of
-//! its own.
+//! A session lasts while the game shows its fight marker; the marker lives FightOverSeconds after the last Fight event,
+//! so the session ends the moment the fight is over (and, when no marker is seen, FightOverSeconds after its last
+//! Fight reaction). The late Defense of the E05 mistake is cast when its own session ends. Run by the mind every
+//! AiPollSeconds; it never raises an event, so the loop needs no hand time of its own.
 //! \return Always false.
 bool sessionStep(KeeperAI& ai)
 {
@@ -645,15 +645,22 @@ bool sessionStep(KeeperAI& ai)
     SPELL::State& state = ai.getSpellState();
     double now = ai.getMind().now();
     std::vector<SPELL::State::Session> running;
+    std::vector<SPELL::State::Session> ended;
     for(const SPELL::State::Session& session : state.mSessions)
     {
         SPELL::State::Session current = session;
-        if(fightMarkerAt(ai, current.mFightX, current.mFightY))
-            current.mLastFight = now;
+        double remain = fightMarkerRemain(ai, current.mFightX, current.mFightY);
+        if(remain >= 0.0)
+            current.mLastFight = std::max(current.mLastFight, now - (aiKey("FightOverSeconds") - remain));
         if((now - current.mLastFight) < aiKey("FightOverSeconds"))
             running.push_back(current);
+        else
+            ended.push_back(current);
     }
     state.mSessions.swap(running);
+    // AI row E05: the late Defense of a fight drawn as a mistake follows when that fight is over
+    for(SPELL::State::Session& session : ended)
+        SPELL::castDefense(ai, onOwnGroundOnly(ai, ownFighters(ai)), true, session.mLateDefense);
     for(SPELL::State::Session& session : state.mSessions)
         stepSession(ai, session, now);
     return false;
@@ -715,6 +722,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
         merged.mLastFight = std::max(merged.mLastFight, session.mLastFight);
         merged.mNextCast = std::max(merged.mNextCast, session.mNextCast);
         merged.mHaste = merged.mHaste || session.mHaste;
+        merged.mLateDefense = merged.mLateDefense || session.mLateDefense;
     }
     state.mSessions.swap(kept);
 
@@ -728,6 +736,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
         session.mFightY = -1;
         session.mNextCast = now;
         session.mHaste = false;
+        session.mLateDefense = false;
         match = static_cast<int>(state.mSessions.size());
         state.mSessions.push_back(session);
     }
@@ -742,7 +751,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
 
     // Defense on the group that holds the entrance, at the first Fight of the session
     if(first)
-        SPELL::castDefense(ai, onOwnGroundOnly(ai, fightingOwn(ai)), false);
+        SPELL::castDefense(ai, onOwnGroundOnly(ai, fightingOwn(ai)), false, session.mLateDefense);
 
     SPELL::castSlow(ai);
     SPELL::castWeak(ai);
@@ -755,13 +764,6 @@ void onFight(KeeperAI& ai, const AiEvent& event)
 
     // The first cast of the session follows this same alert delay; Haste once the fight lasts long enough
     stepSession(ai, session, now);
-}
-
-//! \brief The late Defense cast of the E05 mistake when the fight is over.
-void onFightOver(KeeperAI& ai, const AiEvent& event)
-{
-    restoreDraws(ai);
-    SPELL::castDefense(ai, onOwnGroundOnly(ai, ownFighters(ai)), true);
 }
 
 //! \brief The champion of an assault. The Launch event carries the drop tile of the main group and the tactic index as
@@ -781,7 +783,6 @@ void onHeartCritical(KeeperAI& ai, const AiEvent& event)
 
 SPELL::State::State() :
     mLastEyeTurn(-1),
-    mLateDefense(false),
     mFightX(-1),
     mFightY(-1),
     mRestored(false)
@@ -793,7 +794,6 @@ void SPELL::bindRows(KeeperAI& ai)
     Mind& mind = ai.getMind();
     KeeperAI* self = &ai;
     std::function<void(const AiEvent&)> fight = [self](const AiEvent& event) { onFight(*self, event); };
-    std::function<void(const AiEvent&)> fightOver = [self](const AiEvent& event) { onFightOver(*self, event); };
     std::function<void(const AiEvent&)> champion = [self](const AiEvent& event)
     {
         if(event.type == AiEventType::Launch)
@@ -805,7 +805,6 @@ void SPELL::bindRows(KeeperAI& ai)
     std::function<void(std::vector<AiMath::AiStateLine>&)> save = [self](std::vector<AiMath::AiStateLine>& lines) { saveDraws(*self, lines); };
 
     mind.onEvent("E19", std::vector<AiEventType>(1, AiEventType::Fight), fight);
-    mind.onEvent("E05", std::vector<AiEventType>(1, AiEventType::FightOver), fightOver);
     std::vector<AiEventType> championEvents;
     championEvents.push_back(AiEventType::Launch);
     championEvents.push_back(AiEventType::HeartCritical);
@@ -943,6 +942,7 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         return false;
     }
 
+    double handEnd = now;
     // The target: a wasted cast goes to an own creature, which no attack spell of the AI harms
     if(chosen == SpellType::creatureHeal)
     {
@@ -952,7 +952,7 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
             nextCast = now + aiKey("CastRecheckSeconds");
             return false;
         }
-        ACTS::castSpell(ai, chosen, target);
+        handEnd = ACTS::castSpell(ai, chosen, target);
     }
     else
     {
@@ -987,12 +987,13 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         }
 
         if(chosen == SpellType::creatureExplosion)
-            ACTS::castSpell(ai, chosen, target);
+            handEnd = ACTS::castSpell(ai, chosen, target);
         else
-            castOnTileOf(ai, chosen, target);
+            handEnd = castOnTileOf(ai, chosen, target);
     }
 
-    nextCast = now + std::max(spellActionSeconds(), aiKey("MinRecastSeconds"));
+    // AI row E19: the next cast is no earlier than the later of the end of the hand action and MinRecastSeconds
+    nextCast = std::max(handEnd, now + aiKey("MinRecastSeconds"));
     return true;
 }
 
@@ -1050,23 +1051,22 @@ bool SPELL::castEye(KeeperAI& ai, Tile* tile)
     return true;
 }
 
-bool SPELL::castDefense(KeeperAI& ai, const std::vector<Creature*>& holders, bool fightOver)
+bool SPELL::castDefense(KeeperAI& ai, const std::vector<Creature*>& holders, bool fightOver, bool& lateDefense)
 {
     // AI row E05
     restoreDraws(ai);
-    State& state = ai.getSpellState();
     Seat* seat = ai.getControlledPlayer().getSeat();
     if(fightOver)
     {
         // The late cast of the mistake: after the fight
-        if(!state.mLateDefense)
+        if(!lateDefense)
             return false;
 
-        state.mLateDefense = false;
+        lateDefense = false;
     }
     else if(ai.getMind().slip("E05"))
     {
-        state.mLateDefense = true;
+        lateDefense = true;
         return false;
     }
 

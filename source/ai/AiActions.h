@@ -30,9 +30,11 @@ void buildTrap(KeeperAI& ai, TrapType type, const std::vector<Tile*>& tiles);
 //! \brief Schedules selling trap tiles.
 void sellTrapTiles(KeeperAI& ai, const std::vector<Tile*>& tiles);
 //! \brief Schedules casting a spell on a tile.
-void castSpell(KeeperAI& ai, SpellType type, Tile* tile);
-//! \brief Schedules casting a spell on a creature.
-void castSpell(KeeperAI& ai, SpellType type, Creature* creature);
+//! \return The mind time at which the hand has finished the cast.
+double castSpell(KeeperAI& ai, SpellType type, Tile* tile);
+//! \brief Schedules casting a spell on a creature; the creature is looked up by name when the hand reaches it.
+//! \return The mind time at which the hand has finished the cast.
+double castSpell(KeeperAI& ai, SpellType type, Creature* creature);
 //! \brief Schedules picking up a creature.
 void pickUp(KeeperAI& ai, Creature* creature);
 //! \brief Schedules dropping the held creature on a tile.

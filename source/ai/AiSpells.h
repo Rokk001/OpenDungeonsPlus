@@ -37,8 +37,6 @@ struct State
     State();
     //! \brief The game turn of the last Eye of Evil cast, -1 when none (row E04).
     int64_t mLastEyeTurn;
-    //! \brief True when the Defense cast of a fight was drawn as a mistake and follows at FightOver (row E05).
-    bool mLateDefense;
     //! \brief One fight session: from the first Fight reaction of a fight until the fight is over. Parallel fights at
     //! different places have their own sessions, casting loops and first reactions.
     struct Session
@@ -55,6 +53,9 @@ struct State
         double mNextCast;
         //! \brief True once Haste was tried for the length of this session (row E03).
         bool mHaste;
+        //! \brief True when the Defense cast of this fight was drawn as a mistake and follows when the fight is over
+        //! (row E05).
+        bool mLateDefense;
     };
     //! \brief The running fight sessions.
     std::vector<Session> mSessions;
@@ -67,7 +68,7 @@ struct State
 };
 
 //! \brief Connects the spell rows to the mind of the AI: the Fight sessions (E02, E03, E05, E08-E11, E15-E20, J04, K06),
-//! FightOver (the late Defense of E05), Launch (E20), HeartCritical (E20) and the saved draw lines.
+//! the end of a session (the late Defense of E05), Launch (E20), HeartCritical (E20) and the saved draw lines.
 //! Rows E04 and E07 are cast by the war rows that own the decision to scout and to rally (castEye, castCallToWar,
 //! drawLaunchGathering); Strength (E06) and the march Haste (E03) are reserved by the launch between the drops of the
 //! main group and its banner (castStrength, castHaste).
@@ -101,8 +102,10 @@ bool castEye(KeeperAI& ai, Tile* tile);
 //! \brief Casts Defense on the group that holds the entrance, before the first contact.
 //! \param holders The own creatures that hold the entrance.
 //! \param fightOver True when the call is made at the end of the fight (the late cast of the mistake).
+//! \param lateDefense The flag of the fight (Session::mLateDefense): set when the mistake delays the cast, cleared by
+//! the late cast.
 //! \return true when the spell was cast.
-bool castDefense(KeeperAI& ai, const std::vector<Creature*>& holders, bool fightOver);
+bool castDefense(KeeperAI& ai, const std::vector<Creature*>& holders, bool fightOver, bool& lateDefense);
 
 //! \brief Casts Strength on the main attack group while it stands on its drop tile. The launch calls it after the hand
 //! moves of the main group and before its banner, so the hand casts it after the drops.

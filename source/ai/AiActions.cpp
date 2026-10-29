@@ -327,10 +327,11 @@ void perform(KeeperAI& ai, const std::string& target)
 }
 
 //! \brief Schedules encoded arguments without keeping target entity or tile pointers alive.
-void schedule(KeeperAI& ai, const std::string& key, const std::string& arguments)
+//! \return The mind time at which the hand has finished the action.
+double schedule(KeeperAI& ai, const std::string& key, const std::string& arguments)
 {
     const std::string target = encode(arguments);
-    ai.getMind().exec(key, 1, ai.getMind().now(), "-", nullptr, target, [&ai, target]() { perform(ai, target); });
+    return ai.getMind().exec(key, 1, ai.getMind().now(), "-", nullptr, target, [&ai, target]() { perform(ai, target); });
 }
 
 //! \brief Schedules one rectangular selection as one hand action.
@@ -371,20 +372,20 @@ void ACTS::buildTrap(KeeperAI& ai, TrapType type, const std::vector<Tile*>& tile
 void ACTS::sellTrapTiles(KeeperAI& ai, const std::vector<Tile*>& tiles)
 { scheduleTiles(ai, "sell", "sellTrap", 0, tiles); }
 //! \brief Schedules the tile-target spell packet through the normal cast handler.
-void ACTS::castSpell(KeeperAI& ai, SpellType type, Tile* tile)
+double ACTS::castSpell(KeeperAI& ai, SpellType type, Tile* tile)
 {
-    if(tile == nullptr) return;
+    if(tile == nullptr) return ai.getMind().now();
     std::ostringstream args;
     args << "spell " << static_cast<int>(type) << ' ' << tile->getX() << ' ' << tile->getY() << " -";
-    schedule(ai, type == SpellType::possess ? "possess" : "spell", args.str());
+    return schedule(ai, type == SpellType::possess ? "possess" : "spell", args.str());
 }
 //! \brief Schedules the named-creature spell packet through the normal cast handler.
-void ACTS::castSpell(KeeperAI& ai, SpellType type, Creature* creature)
+double ACTS::castSpell(KeeperAI& ai, SpellType type, Creature* creature)
 {
-    if(creature == nullptr) return;
+    if(creature == nullptr) return ai.getMind().now();
     std::ostringstream args;
     args << "spell " << static_cast<int>(type) << " -1 -1 " << encode(creature->getName());
-    schedule(ai, type == SpellType::possess ? "possess" : "spell", args.str());
+    return schedule(ai, type == SpellType::possess ? "possess" : "spell", args.str());
 }
 //! \brief Schedules pickup with the creature's current pickup permission.
 void ACTS::pickUp(KeeperAI& ai, Creature* creature)
