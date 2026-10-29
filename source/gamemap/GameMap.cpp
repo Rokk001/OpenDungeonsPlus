@@ -3762,6 +3762,18 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
     return tempSS.str();
 }
 
+//! \brief The cap of the claimed tiles that count for the mana income (see manaIncomePerSecond).
+double GameMap::getManaIncomeTilesCap() const
+{
+    return MANA_INCOME_TILES_CAP;
+}
+
+//! \brief Seconds left until the next payday: the payday period minus the time since the last payday.
+double GameMap::getTimeToPayDay() const
+{
+    return std::max(0.0, static_cast<double>(ConfigManager::getSingleton().getTimePayDay()) - mTimePayDay);
+}
+
 //! \brief Deposits exact gold into the keeper's rooms and returns any overflow.
 double GameMap::addGoldToSeat(double gold, int seatId)
 {

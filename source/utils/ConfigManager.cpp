@@ -71,6 +71,384 @@ static const double DEFAULT_ATTACK_TURN_MAX_DELAY = 0.25;
 static const double DEFAULT_HIT_GLANCE_SHARE = 0.34;
 //! Default share of the maximum health of the target from which a hit counts as strong
 static const double DEFAULT_HIT_STRONG_SHARE = 0.15;
+
+//! rief Compiled defaults of the [KeeperAILevels] section of ai.cfg: key and the values of the levels easy, medium,
+//! normal, hard and hell. They equal the file and are used when it is missing.
+static const char* const AI_LEVEL_DEFAULTS[][6] = {
+    {"Rho", "12", "15", "20", "25.433", "30"},
+    {"Pi", "0.4", "0.55", "0.75", "0.909", "0.99"},
+    {"ScanPeriod", "120", "80", "45", "24.834", "10"},
+    {"ClickShare", "0.3", "0.42", "0.6", "0.806", "1.0"},
+    {"MistakeMultiplier", "4.555556", "3.444444", "2.333333", "1.944444", "0.555556"},
+    {"EstimateNoise", "0.206", "0.164", "0.132", "0.106", "0.049"},
+    {"TacticTemperature", "2.0", "0.7", "0.45", "0.4", "0.35"},
+    {"AttackAdvantage", "-1.2", "-1.15", "-1.1", "-1.05", "-1.0"},
+    {"FocusFire", "0.62", "0.698", "0.758", "0.807", "0.914"},
+    {"RetreatThreshold", "0.603", "0.661", "0.706", "0.743", "0.823"},
+    {"TunnelDetour", "0.215", "0.176", "0.146", "0.122", "0.068"},
+    {"TacticPriorAllin", "0.34", "0.33", "0.32", "0.31", "0.3"},
+    {"TacticPriorSingle", "0.58", "0.465", "0.35", "0.23", "0.12"},
+    {"TacticPriorSplit", "0.04", "0.12", "0.2", "0.25", "0.3"},
+    {"TacticPriorRaid", "0.01", "0.015", "0.02", "0.025", "0.03"},
+    {"TacticPriorCounter", "0.03", "0.07", "0.11", "0.185", "0.25"},
+    {"EnemyManaEstimate", "own", "own", "own", "own", "observed"},
+};
+
+//! rief Compiled defaults of the [KeeperAI] section of ai.cfg: key and value. They equal the file.
+static const char* const AI_CONFIG_DEFAULTS[][2] = {
+    {"AiPollSeconds", "1"},
+    {"LookPeriod600", "600"},
+    {"ClickBudgetPerMinute", "202.5"},
+    {"ClickMinGap", "0.296"},
+    {"ClickWindowSeconds", "60"},
+    {"ActionLatencyMean", "0.72"},
+    {"ActionLatencySd", "0.217"},
+    {"PeriodicMinDelay", "5"},
+    {"SymptomScanFactor", "0.5"},
+    {"ReferenceScanPeriod", "60"},
+    {"LookPeriod60", "60"},
+    {"LookPeriod120", "120"},
+    {"LookFactorBuild", "0.35"},
+    {"LookFactorDormitory", "0.25"},
+    {"LookFactorTrap", "0.5"},
+    {"LookFactorSummon", "0.7"},
+    {"LookFactorPlan", "2"},
+    {"LookFactorScan", "1"},
+    {"FirstPlanSeconds", "600"},
+    {"FirstPlanJitterSeconds", "120"},
+    {"FightOverSeconds", "10"},
+    {"MistakeBaseRoutine", "0.02"},
+    {"MistakeBaseRule", "0.09"},
+    {"MistakeBaseComplex", "0.16"},
+    {"MistakeBaseUnfamiliar", "0.26"},
+    {"MistakeBaseRare", "0.55"},
+    {"MistakeMin", "0.004"},
+    {"MistakeMax", "0.85"},
+    {"MistakeTilesDormitory", "9"},
+    {"MistakeTilesHatchery", "9"},
+    {"MistakeTrapWantDivisor", "2"},
+    {"ReserveSlipStartMin", "0.2"},
+    {"ReserveSlipStartMax", "0.9"},
+    {"RestHpShareSlip", "0.3"},
+    {"DigWorkersSlip", "1"},
+    {"EarlyDigMultiplier", "0.3"},
+    {"SlapMistakePauseSeconds", "120"},
+    {"SlapMistakeBaseSeconds", "60"},
+    {"SlapMistakeDelayFactor", "2"},
+    {"SlapMistakeInterval1", "60"},
+    {"SlapMistakeInterval2", "90"},
+    {"SlapMistakeInterval3", "120"},
+    {"SlapMistakeInterval4", "180"},
+    {"SlapMistakeInterval5", "300"},
+    {"MinerShareEarly", "0.6"},
+    {"MinerShareLate", "0.35"},
+    {"MinerShareSwitchMinute", "10"},
+    {"MarkedTilesPerWorker", "1"},
+    {"SummonManaFactor", "2"},
+    {"SummonIncomeMin", "40"},
+    {"SummonWorkersMax", "10"},
+    {"WalletReserveWindow", "60"},
+    {"CreateGoldManaReserve", "0.25"},
+    {"GoldShareBuild", "0.85"},
+    {"ManaShareSpend", "0.9"},
+    {"GoldShareTreasury2", "0.7"},
+    {"RoomGoldMargin", "300"},
+    {"BedsSpare", "1"},
+    {"DormitoryExtensionTiles", "25"},
+    {"HatcheryExtensionMinTiles", "9"},
+    {"HatcheryExtensionMaxTiles", "25"},
+    {"HatcheryTilesPerCreature", "1"},
+    {"TavernKeeperPaysFactor", "2"},
+    {"MerchantMarginMin", "10"},
+    {"MerchantMarginMax", "20"},
+    {"LabModeDefault", "1"},
+    {"InfirmaryDischargePercent", "100"},
+    {"GhostResearchShare", "0.7"},
+    {"GhostManaShare", "0.2"},
+    {"ReviveManaFactor", "2"},
+    {"BridgeMinShortcutTiles", "10"},
+    {"PlacementPointsPerWallSpot", "50"},
+    {"PlacementHandicapPerTileOffset", "20"},
+    {"PlacementFirstSpotTiles", "3"},
+    {"PlacementNextSpotTiles", "2"},
+    {"ResearchQueueEntries", "2"},
+    {"PossessLeaveHpShare", "0.3"},
+    {"HealBelow", "0.5"},
+    {"HealNeverAbove", "0.7"},
+    {"HealCastChance", "0.4"},
+    {"HasteFightSeconds", "20"},
+    {"EyeCastIntervalMinutes", "5"},
+    {"TremorMinTargets", "4"},
+    {"InfernoReserveCasts", "2"},
+    {"LightningManaReserve", "0.05"},
+    {"SpellManaReserve", "0.05"},
+    {"CastRecheckSeconds", "5"},
+    {"MinRecastSeconds", "3"},
+    {"CallToWarMinCreatures", "3"},
+    {"TrapTilesPerEntrance", "3"},
+    {"GasEveryNthTile", "3"},
+    {"TrapGoldMargin", "300"},
+    {"CannonManaPerTile", "2500"},
+    {"SpikeBehindDoorMinTiles", "3"},
+    {"SpikeBehindDoorMaxTiles", "6"},
+    {"CannonMaxDoorDistance", "15"},
+    {"BoulderCorridorMinTiles", "8"},
+    {"AlarmDistanceTiles", "6"},
+    {"MaxWaitingForCraft", "2"},
+    {"TrapPlanMinRooms", "9"},
+    {"PrisonWaitMinutes", "5"},
+    {"ExploreTunnelsPerDirection", "1"},
+    {"Leveltilesdig", "2"},
+    {"HeartDefenceAreaTiles", "5"},
+    {"AttackMinMinute", "20"},
+    {"AttackMinFighters", "5"},
+    {"AttackMinTrapTiles", "2"},
+    {"AttackDiggers", "3"},
+    {"EarlyDigMinute", "12"},
+    {"EarlyDigMinFighters", "3"},
+    {"DiggerCapShare", "0.5"},
+    {"DigActions", "4"},
+    {"DetourSigma", "0.5"},
+    {"TunnelProbeSeconds", "5"},
+    {"EnemyOutMinCreatures", "3"},
+    {"SecondWaveMinutes", "1"},
+    {"HeartPossessBelow", "0.6"},
+    {"RestHpShare", "0.8"},
+    {"AttackMinReady", "3"},
+    {"RestSecondsAfterAssault", "45"},
+    {"RaidGoldThreshold", "8000"},
+    {"RetreatCheckSeconds", "5"},
+    {"ContactTimeoutSeconds", "1800"},
+    {"ScoutCameraActions", "2"},
+    {"ReloadRetrySeconds", "30"},
+    {"PoorDefenceShuffleChance", "0.5"},
+    {"ChampionExtraSeconds", "30"},
+    {"GroupShareMain", "0.55"},
+    {"GroupShareRaid", "0.3"},
+    {"GroupShareSingle", "0.7"},
+    {"GroupShareRaidTactic", "0.4"},
+    {"CounterArmyShare", "0.85"},
+    {"RaidTargetsSplit", "2"},
+    {"RaidTargetsRaid", "3"},
+    {"RawHitFactor", "0.9"},
+    {"StrengthRatioCap", "3"},
+    {"ScorePenaltyBase", "0.6"},
+    {"ScorePenaltyAllin", "1.0"},
+    {"ScorePenaltySingle", "0.49"},
+    {"ScorePenaltySplit", "0.72"},
+    {"ScorePenaltyRaid", "0.16"},
+    {"ScorePenaltyCounter", "0.72"},
+    {"ScorePenaltyCounterFactor", "0.3"},
+    {"BonusSplit", "0.2"},
+    {"BonusRaidBase", "1.0"},
+    {"BonusRaidGold", "0.4"},
+    {"BonusRaidGoldDivisor", "3000"},
+    {"BonusCounter", "0.7"},
+    {"WaitWeight", "1.0"},
+    {"TacticExponentClamp", "30"},
+    {"AdvFloor", "-4"},
+    {"AdvHpFloorShare", "0.1"},
+    {"EnemyHpFloorShare", "0.05"},
+    {"FightEstimateDamageShare", "0.88"},
+    {"EstimateSetupSeconds", "5"},
+    {"EstimateRoomTiles", "16"},
+    {"EstimateTileHp", "10"},
+    {"HeartHealMargin", "1.0"},
+    {"HeartBreakFallbackSeconds", "600"},
+    {"DoorTimeCap", "60"},
+    {"PotentialCastsMax", "40"},
+    {"PotentialCastPeriod", "4.5"},
+    {"PotentialCastsBase", "1"},
+    {"SpellPotentialEff", "0.7"},
+    {"TrapEff", "0.45"},
+    {"TrapPassSeconds", "4"},
+    {"TrapTargetsSpike", "1"},
+    {"TrapTargetsCannon", "1"},
+    {"TrapTargetsBoulder", "2"},
+    {"TrapTargetsGas", "2"},
+    {"TrapTargetsLightning", "1"},
+    {"TrapTargetsFireburst", "2"},
+    {"SpellTargetsLightning", "1"},
+    {"SpellTargetsExplosion", "1"},
+    {"SpellTargetsTremor", "4"},
+    {"SpellTargetsInferno", "2"},
+    {"EstimateNoSightingNoise", "0.6"},
+    {"EstimateGoldDefault", "5000"},
+    {"EstimateReadyFlipRate", "0.08"},
+};
+
+//! rief Compiled defaults of the [Actions] section of ai.cfg: action, clicks and seconds. They equal the file.
+static const char* const AI_ACTION_DEFAULTS[][3] = {
+    {"slap", "1", "1.30"},
+    {"pickup", "1", "1.30"},
+    {"drop", "1", "1.30"},
+    {"dig", "1", "2.40"},
+    {"build", "3", "5.00"},
+    {"spell", "3", "3.90"},
+    {"trap", "3", "3.90"},
+    {"setting", "3", "3.90"},
+    {"research", "5", "6.50"},
+    {"research_auto", "2", "2.60"},
+    {"camera", "1", "0.60"},
+    {"minimap", "1", "1.30"},
+    {"sell", "2", "2.60"},
+    {"possess", "3", "3.90"},
+    {"think", "0", "1.35"},
+};
+
+//! rief Compiled defaults of the [RowClasses] section of ai.cfg: decision id, mistake class and multiplier. They equal the file.
+static const char* const AI_ROW_CLASS_DEFAULTS[][3] = {
+    {"A01", "rule", "1"},
+    {"A02", "rule", "1"},
+    {"A03", "routine", "1"},
+    {"A04", "rule", "1"},
+    {"A05", "rule", "1"},
+    {"A06", "routine", "1"},
+    {"A07", "routine", "1"},
+    {"A08", "complex", "1"},
+    {"A09", "rule", "1"},
+    {"B01", "rule", "1"},
+    {"B02", "rule", "1"},
+    {"B03", "rule", "1"},
+    {"B04", "rule", "1"},
+    {"B05", "rule", "1"},
+    {"B06", "rule", "1"},
+    {"B07", "rule", "1"},
+    {"B08", "unfamiliar", "1"},
+    {"B09", "unfamiliar", "1"},
+    {"B10", "rule", "1"},
+    {"B11", "unfamiliar", "1"},
+    {"B12", "rule", "1"},
+    {"B13", "rule", "1"},
+    {"B14", "rule", "1"},
+    {"B15", "unfamiliar", "1"},
+    {"B16", "rule", "1"},
+    {"B17", "unfamiliar", "1"},
+    {"B18", "unfamiliar", "1"},
+    {"B19", "rule", "1"},
+    {"B20", "rare", "1"},
+    {"B21", "rule", "1"},
+    {"B22", "rule", "1"},
+    {"B23", "complex", "1"},
+    {"B24", "unfamiliar", "0.8"},
+    {"C01", "rule", "1"},
+    {"C02", "routine", "1.5"},
+    {"C03", "complex", "1"},
+    {"C04", "complex", "1"},
+    {"C05", "rule", "1"},
+    {"C06", "complex", "1"},
+    {"D01", "rule", "1"},
+    {"D02", "rule", "1"},
+    {"D03", "rule", "1"},
+    {"D04", "rule", "0.8"},
+    {"D05", "complex", "1"},
+    {"D06", "rule", "1"},
+    {"D07", "rule", "1"},
+    {"D08", "rule", "1"},
+    {"D09", "rule", "1"},
+    {"D10", "rule", "1"},
+    {"D11", "rule", "1"},
+    {"E01", "routine", "1"},
+    {"E02", "complex", "1"},
+    {"E03", "complex", "1"},
+    {"E04", "rule", "1"},
+    {"E05", "complex", "1"},
+    {"E06", "complex", "1"},
+    {"E07", "complex", "1"},
+    {"E08", "complex", "1"},
+    {"E09", "complex", "1"},
+    {"E10", "complex", "1"},
+    {"E11", "complex", "1"},
+    {"E12", "complex", "1"},
+    {"E13", "rule", "1"},
+    {"E14", "rare", "1"},
+    {"E15", "complex", "1"},
+    {"E16", "complex", "1"},
+    {"E17", "rare", "1"},
+    {"E18", "rare", "1"},
+    {"E19", "complex", "1"},
+    {"F01", "rule", "1"},
+    {"F02", "rule", "1"},
+    {"F03", "rule", "1"},
+    {"F04", "rule", "1"},
+    {"F05", "complex", "1"},
+    {"F06", "complex", "1"},
+    {"F07", "complex", "1"},
+    {"F08", "complex", "1"},
+    {"F09", "rule", "1"},
+    {"F10", "complex", "1"},
+    {"F11", "complex", "1"},
+    {"F12", "rule", "1"},
+    {"F13", "rule", "1"},
+    {"F14", "complex", "1"},
+    {"F15", "rule", "1"},
+    {"G01", "rule", "1"},
+    {"G02", "unfamiliar", "1"},
+    {"G03", "rule", "1"},
+    {"G04", "rule", "1"},
+    {"H01", "rule", "1"},
+    {"H02", "rule", "1"},
+    {"H03", "rule", "1"},
+    {"I01", "rule", "1"},
+    {"I02", "complex", "1"},
+    {"I03", "rule", "1"},
+    {"I04", "complex", "1"},
+    {"I05", "rule", "1"},
+    {"I06", "routine", "1"},
+    {"J01", "routine", "1"},
+    {"J02", "rule", "1"},
+    {"J03", "complex", "1"},
+    {"J04", "complex", "1"},
+    {"J05", "complex", "1"},
+    {"J06", "complex", "1"},
+    {"J07", "complex", "1"},
+    {"J08", "rule", "1"},
+    {"K01", "complex", "1"},
+    {"K02", "complex", "1"},
+    {"K03", "complex", "1"},
+    {"K04", "complex", "1"},
+    {"K05", "rule", "1"},
+    {"K06", "complex", "1"},
+    {"K07", "complex", "1"},
+    {"K08", "complex", "1"},
+    {"K09", "rule", "1"},
+    {"K10", "rule", "1"},
+    {"L01", "routine", "0"},
+    {"L02", "routine", "0"},
+    {"L03", "routine", "0"},
+    {"L04", "routine", "0"},
+    {"E20", "rule", "1"},
+    {"H04", "rule", "1"},
+};
+
+//! \brief The field of a keeper AI level that a key of the [KeeperAILevels] section of ai.cfg sets.
+//! \return The field, or nullptr when the key is not a number key of the section (EnemyManaEstimate is a word)
+double* aiLevelField(AiSettings& settings, const std::string& key)
+{
+    if(key == "Rho") return &settings.rho;
+    if(key == "Pi") return &settings.pi;
+    if(key == "ScanPeriod") return &settings.scanPeriod;
+    if(key == "ClickShare") return &settings.clickShare;
+    if(key == "MistakeMultiplier") return &settings.mistakeMultiplier;
+    if(key == "EstimateNoise") return &settings.estimateNoise;
+    if(key == "TacticTemperature") return &settings.tacticTemperature;
+    if(key == "AttackAdvantage") return &settings.attackAdvantage;
+    if(key == "FocusFire") return &settings.focusFire;
+    if(key == "RetreatThreshold") return &settings.retreatThreshold;
+    if(key == "TunnelDetour") return &settings.tunnelDetour;
+    if(key == "TacticPriorAllin") return &settings.tacticPriors[0];
+    if(key == "TacticPriorSingle") return &settings.tacticPriors[1];
+    if(key == "TacticPriorSplit") return &settings.tacticPriors[2];
+    if(key == "TacticPriorRaid") return &settings.tacticPriors[3];
+    if(key == "TacticPriorCounter") return &settings.tacticPriors[4];
+    return nullptr;
+}
+
+//! \brief Tells whether a word is one of the mistake classes of the [RowClasses] section of ai.cfg.
+bool isAiMistakeClass(const std::string& word)
+{
+    return (word == "routine") || (word == "rule") || (word == "complex") || (word == "unfamiliar") || (word == "rare");
+}
 }
 
 const std::string ConfigManager::DefaultWorkerCreatureDefinition = "DefaultWorker";
@@ -253,6 +631,11 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
 
     loadRelationships(configPath + "relationships.cfg");
     loadTreasury(configPath + "treasury.cfg");
+    if(!loadAiConfig(configPath + "ai.cfg"))
+    {
+        OD_LOG_ERR("Couldn't read loadAiConfig");
+        exit(1);
+    }
 
     // Reserve space in any case.
     mUserConfig.resize(Config::Ctg::TOTAL);
@@ -1813,6 +2196,173 @@ void ConfigManager::loadTreasury(const std::string& fileName)
     TreasurySettings::current() = TreasurySettings::fromConfig(values);
 }
 
+//! \brief Reads config/ai.cfg over the compiled defaults; a missing file keeps the defaults.
+bool ConfigManager::loadAiConfig(const std::string& fileName)
+{
+    OD_LOG_INF("Load AI file: " + fileName);
+    setAiConfigDefaults();
+    std::stringstream defFile;
+    if(!Helper::readFile(fileName, defFile, true))
+    {
+        OD_LOG_WRN("Couldn't read " + fileName + ", using the default AI values");
+        return true;
+    }
+
+    std::string section;
+    std::string line;
+    while(std::getline(defFile, line))
+    {
+        std::stringstream lineStream(line);
+        std::vector<std::string> words;
+        std::string word;
+        while(lineStream >> word)
+            words.push_back(word);
+
+        if(words.empty())
+            continue;
+
+        if(section.empty())
+        {
+            if((words.size() != 1) || ((words[0] != "[KeeperAILevels]") && (words[0] != "[KeeperAI]") &&
+                (words[0] != "[RoomPlan]") && (words[0] != "[Actions]") && (words[0] != "[RowClasses]")))
+            {
+                OD_LOG_ERR("Invalid AI section in " + fileName + ". Line was " + line);
+                return false;
+            }
+            section = words[0];
+            // A table section of the file replaces the compiled table
+            if(section == "[RoomPlan]")
+                mAiRoomPlan.clear();
+            else if(section == "[Actions]")
+                mAiActions.clear();
+            else if(section == "[RowClasses]")
+                mAiRowClasses.clear();
+            continue;
+        }
+
+        if((words.size() == 1) && (words[0] == "[/" + section.substr(1)))
+        {
+            section.clear();
+            continue;
+        }
+
+        if(!readAiConfigLine(section, words))
+        {
+            OD_LOG_ERR("Invalid AI line in section " + section + " of " + fileName + ". Line was " + line);
+            return false;
+        }
+    }
+
+    if(!section.empty())
+    {
+        OD_LOG_ERR("Missing end of section " + section + " in " + fileName);
+        return false;
+    }
+    return true;
+}
+
+//! \brief Sets every keeper AI value to its compiled default; the room plan stays empty (compiled in KeeperAI).
+void ConfigManager::setAiConfigDefaults()
+{
+    mAiConfig.clear();
+    for(const char* const* row : AI_CONFIG_DEFAULTS)
+        mAiConfig[row[0]] = row[1];
+
+    for(const char* const* row : AI_LEVEL_DEFAULTS)
+        readAiConfigLine("[KeeperAILevels]", std::vector<std::string>(row, row + 6));
+
+    mAiRoomPlan.clear();
+    mAiActions.clear();
+    for(const char* const* row : AI_ACTION_DEFAULTS)
+        readAiConfigLine("[Actions]", std::vector<std::string>(row, row + 3));
+
+    mAiRowClasses.clear();
+    for(const char* const* row : AI_ROW_CLASS_DEFAULTS)
+        readAiConfigLine("[RowClasses]", std::vector<std::string>(row, row + 3));
+}
+
+//! \brief Reads one line of a section of ai.cfg; false for an unknown key or word or a wrong number of words.
+bool ConfigManager::readAiConfigLine(const std::string& section, const std::vector<std::string>& words)
+{
+    if(section == "[KeeperAILevels]")
+    {
+        if(words.size() != 1 + mAiLevels.size())
+            return false;
+
+        if(words[0] == "EnemyManaEstimate")
+        {
+            for(uint32_t i = 0; i < mAiLevels.size(); ++i)
+            {
+                if(words[i + 1] == "own")
+                    mAiLevels[i].enemyManaEstimate = EnemyManaEstimateMode::own;
+                else if(words[i + 1] == "observed")
+                    mAiLevels[i].enemyManaEstimate = EnemyManaEstimateMode::observed;
+                else
+                    return false;
+            }
+            return true;
+        }
+
+        for(uint32_t i = 0; i < mAiLevels.size(); ++i)
+        {
+            double* field = aiLevelField(mAiLevels[i], words[0]);
+            if(field == nullptr)
+                return false;
+
+            *field = Helper::toDouble(words[i + 1]);
+        }
+        return true;
+    }
+
+    if(section == "[KeeperAI]")
+    {
+        // Every key has a compiled default, so a key without one is unknown
+        std::map<std::string, std::string>::iterator it = mAiConfig.find(words[0]);
+        if((words.size() != 2) || (it == mAiConfig.end()))
+            return false;
+
+        it->second = words[1];
+        return true;
+    }
+
+    if(section == "[RoomPlan]")
+    {
+        if(words.size() != 2)
+            return false;
+
+        mAiRoomPlan.push_back(std::make_pair(words[0], Helper::toUInt32(words[1])));
+        return true;
+    }
+
+    if(section == "[Actions]")
+    {
+        if(words.size() != 3)
+            return false;
+
+        AiAction action;
+        action.mName = words[0];
+        action.mClicks = Helper::toUInt32(words[1]);
+        action.mSeconds = Helper::toDouble(words[2]);
+        mAiActions.push_back(action);
+        return true;
+    }
+
+    if(section == "[RowClasses]")
+    {
+        if((words.size() != 3) || !isAiMistakeClass(words[1]))
+            return false;
+
+        AiRowClass rowClass;
+        rowClass.mId = words[0];
+        rowClass.mClass = words[1];
+        rowClass.mMultiplier = Helper::toDouble(words[2]);
+        mAiRowClasses.push_back(rowClass);
+        return true;
+    }
+
+    return false;
+}
+
 bool ConfigManager::loadTraps(const std::string& fileName)
 {
     OD_LOG_INF("Load traps file: " + fileName);
@@ -2674,6 +3224,71 @@ double ConfigManager::getSpellConfigDouble(const std::string& param) const
     }
 
     return Helper::toDouble(it->second);
+}
+
+//! \brief The values of a keeper AI level; the column follows the display order of the levels.
+AiSettings ConfigManager::getAiLevel(KeeperAIType type) const
+{
+    for(uint32_t i = 0; i < KeeperAITypes::displayOrder.size(); ++i)
+    {
+        if(KeeperAITypes::displayOrder[i] == type)
+            return mAiLevels[i];
+    }
+
+    OD_LOG_ERR("Unknown AI level=" + Helper::toString(static_cast<uint32_t>(type)));
+    return getAiLevel(KeeperAIType::normal);
+}
+
+//! \brief A whole-number value of the [KeeperAI] section of ai.cfg; an unknown key logs an error and gives 0.
+int32_t ConfigManager::getAiConfigInt32(const std::string& param) const
+{
+    std::map<std::string, std::string>::const_iterator it = mAiConfig.find(param);
+    if(it == mAiConfig.end())
+    {
+        OD_LOG_ERR("Unknown parameter param=" + param);
+        return 0;
+    }
+
+    return Helper::toInt(it->second);
+}
+
+//! \brief A value of the [KeeperAI] section of ai.cfg; an unknown key logs an error and gives 0.
+double ConfigManager::getAiConfigDouble(const std::string& param) const
+{
+    std::map<std::string, std::string>::const_iterator it = mAiConfig.find(param);
+    if(it == mAiConfig.end())
+    {
+        OD_LOG_ERR("Unknown parameter param=" + param);
+        return 0.0;
+    }
+
+    return Helper::toDouble(it->second);
+}
+
+//! \brief The action of the [Actions] section of ai.cfg with the given name, or nullptr.
+const ConfigManager::AiAction* ConfigManager::getAiAction(const std::string& name) const
+{
+    for(const AiAction& action : mAiActions)
+    {
+        if(action.mName == name)
+            return &action;
+    }
+
+    OD_LOG_ERR("Unknown AI action=" + name);
+    return nullptr;
+}
+
+//! \brief The line of the [RowClasses] section of ai.cfg with the given decision id, or nullptr.
+const ConfigManager::AiRowClass* ConfigManager::getAiRowClass(const std::string& id) const
+{
+    for(const AiRowClass& rowClass : mAiRowClasses)
+    {
+        if(rowClass.mId == id)
+            return &rowClass;
+    }
+
+    OD_LOG_ERR("Unknown AI row=" + id);
+    return nullptr;
 }
 
 int32_t ConfigManager::getSkillPoints(const std::string& res) const

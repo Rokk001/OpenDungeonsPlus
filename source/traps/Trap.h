@@ -258,6 +258,11 @@ public:
     //! \brief Number of tiles of this trap that are armed.
     uint32_t getNbActivatedTiles() const;
 
+    //! \brief The configured damage range of one hit of the trap on the given tile (without research). The caller
+    //! only asks for tiles its seat has seen.
+    //! \return false (the range is not set) when the tile is not a tile of this trap
+    bool getTileDamageRange(Tile* tile, double& minDamage, double& maxDamage) const;
+
     //! \brief Tells the human seats that see the tile about a trap effect (cosmetic only).
     //! fraction is the health left of a door (0 to 1), 1 for everything else.
     void fireTrapEffect(TrapEffectKind kind, Tile* tile, double fraction);

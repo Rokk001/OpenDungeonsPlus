@@ -444,6 +444,13 @@ double RoomDungeonTemple::getHeartMaxHP() const
     return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0) * getHeartHPFactor();
 }
 
+//! \brief The heart healing per second with the heart healing research of the owner, as the upkeep heals it.
+double RoomDungeonTemple::getHeartHealPerSecond() const
+{
+    return SkillManager::getResearchValue(getSeat(), SkillType::keeperHeartMending,
+        ConfigManager::getSingleton().getRoomConfigDouble("DungeonHeartHealPerSecond"), ResearchEffect::HeartHeal);
+}
+
 double RoomDungeonTemple::getHeartHealthFraction() const
 {
     const double maxHP = getHeartMaxHP();

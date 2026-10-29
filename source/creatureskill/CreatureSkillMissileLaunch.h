@@ -66,6 +66,13 @@ public:
     virtual bool tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const override;
 
+    //! \brief The damage range of one shot of the creature against a creature, scaled as tryUseFight scales it
+    //! (skill damage factor, damage level, dmg% or spell% passives and weapon ranges), without the hit roll, the
+    //! avoidance, items of the target and critical hits.
+    //! \param minSum Receives the sum of the physical, magical and element minimum damage
+    //! \param maxSum Receives the sum of the physical, magical and element maximum damage
+    void getCreatureDamageRange(const Creature& creature, double& minSum, double& maxSum) const;
+
     virtual CreatureSkillMissileLaunch* clone() const override;
 
     //! \brief Compares the complete skill definition, including its creature damage range.

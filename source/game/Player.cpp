@@ -1238,6 +1238,22 @@ uint32_t Player::getNbWorkersDoing(CreatureActionType actionType) const
     return mWorkersActions.at(index);
 }
 
+//! \brief Counts the tiles of the map that this player has marked for digging.
+uint32_t Player::getNbMarkedTiles() const
+{
+    uint32_t nbMarked = 0;
+    for(int xx = 0; xx < mGameMap->getMapSizeX(); ++xx)
+    {
+        for(int yy = 0; yy < mGameMap->getMapSizeY(); ++yy)
+        {
+            Tile* tile = mGameMap->getTile(xx, yy);
+            if((tile != nullptr) && tile->getMarkedForDigging(this))
+                ++nbMarked;
+        }
+    }
+    return nbMarked;
+}
+
 std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& worker) const
 {
     std::vector<CreatureActionType> ret;

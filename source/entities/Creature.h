@@ -824,6 +824,13 @@ public:
     //! \return The cooldown in turns (may be a fraction) that is applied and shown on the recovery clock.
     double getAppliedCooldownNbTurns(const CreatureSkill& skill) const;
 
+    //! \brief The mean damage per second of the creature against an undefended target (heart, rooms): its main attack
+    //! line (the melee attack, or for a creature without one its first ranged attack), scaled as the fight scales it,
+    //! times RawHitFactor of ai.cfg, divided by the applied cooldown and times the turns per second. No hit roll,
+    //! avoidance, critical hit, item or strike factor.
+    //! \return The damage per second, 0 for a creature without an attack line
+    double getRawDamagePerSecond() const;
+
     //! \brief performs the given attack on the given target
     void useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit);

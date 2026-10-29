@@ -72,6 +72,7 @@
 #include "creatureskill/CreatureSkill.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "creatureskill/CreatureSkillMeleeFight.h"
+#include "creatureskill/CreatureSkillMissileLaunch.h"
 
 
 #include "entities/ChickenEntity.h"
@@ -7101,6 +7102,55 @@ double Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
     if(cooldownPassive > 0.0 && cooldown > 0.0)
         cooldown = std::max(1.0, cooldown * (1.0 - cooldownPassive / 100.0));
     return cooldown;
+}
+
+//! \brief Mean damage per second of the main attack line against an undefended target, without any roll.
+double Creature::getRawDamagePerSecond() const
+{
+    // The main attack line: the melee attack, or for a creature without one its first ranged attack
+    const CreatureSkillMeleeFight* melee = nullptr;
+    const CreatureSkillMissileLaunch* ranged = nullptr;
+    for(const CreatureSkillData& skillData : mSkillData)
+    {
+        if(!skillData.mSkill->canBeUsedBy(this))
+            continue;
+
+        melee = dynamic_cast<const CreatureSkillMeleeFight*>(skillData.mSkill);
+        if(melee != nullptr)
+            break;
+    }
+    if(melee == nullptr)
+    {
+        for(const CreatureSkillData& skillData : mSkillData)
+        {
+            if(!skillData.mSkill->canBeUsedBy(this) || !isLevelScaledAttack(*skillData.mSkill))
+                continue;
+
+            ranged = dynamic_cast<const CreatureSkillMissileLaunch*>(skillData.mSkill);
+            if(ranged != nullptr)
+                break;
+        }
+    }
+
+    double minSum = 0.0;
+    double maxSum = 0.0;
+    const CreatureSkill* attack = nullptr;
+    if(melee != nullptr)
+    {
+        melee->getCreatureDamageRange(*this, minSum, maxSum);
+        attack = melee;
+    }
+    else if(ranged != nullptr)
+    {
+        ranged->getCreatureDamageRange(*this, minSum, maxSum);
+        attack = ranged;
+    }
+    else
+        return 0.0;
+
+    const double hitFactor = ConfigManager::getSingleton().getAiConfigDouble("RawHitFactor");
+    return hitFactor * 0.5 * (minSum + maxSum) / std::max(1.0, getAppliedCooldownNbTurns(*attack))
+        * ODApplication::turnsPerSecond;
 }
 
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,

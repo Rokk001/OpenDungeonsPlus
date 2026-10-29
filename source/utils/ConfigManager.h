@@ -18,6 +18,8 @@
 #ifndef CONFIGMANAGER_H
 #define CONFIGMANAGER_H
 
+#include "ai/AiSettings.h"
+#include "ai/KeeperAIType.h"
 #include "creatureskill/CreatureSkillTree.h"
 #include "entities/PotionDefinition.h"
 
@@ -28,6 +30,7 @@
 #include <boost/circular_buffer.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <map>
 #include <set>
@@ -518,6 +521,49 @@ public:
     int32_t getSpellConfigInt32(const std::string& param) const;
     double getSpellConfigDouble(const std::string& param) const;
 
+    //! rief One line of the [Actions] section of ai.cfg: a hand action of the keeper AI.
+    struct AiAction
+    {
+        std::string mName;
+        //! rief Clicks the action takes from the click budget
+        uint32_t mClicks;
+        //! rief Seconds the hand is busy with the action
+        double mSeconds;
+    };
+
+    //! rief One line of the [RowClasses] section of ai.cfg: the mistake class of one keeper AI decision.
+    struct AiRowClass
+    {
+        std::string mId;
+        //! rief One of routine, rule, complex, unfamiliar, rare
+        std::string mClass;
+        //! rief Factor on the base mistake rate of the class; 0 marks a hard limit without a mistake roll
+        double mMultiplier;
+    };
+
+    //! rief The values of a keeper AI level: its column of the [KeeperAILevels] section of ai.cfg.
+    //! An unknown level logs an error and gives the values of the normal level.
+    AiSettings getAiLevel(KeeperAIType type) const;
+    //! Keeper AI configuration: the [KeeperAI] section of ai.cfg
+    int32_t getAiConfigInt32(const std::string& param) const;
+    double getAiConfigDouble(const std::string& param) const;
+    //! rief The [RoomPlan] section of ai.cfg: room name and tiles in build order. Empty when ai.cfg is missing;
+    //! the keeper AI then uses its compiled room plan (KeeperAI::getRoomPlan).
+    inline const std::vector<std::pair<std::string, uint32_t>>& getAiRoomPlan() const
+    { return mAiRoomPlan; }
+    //! rief The [Actions] section of ai.cfg in file order.
+    inline const std::vector<AiAction>& getAiActions() const
+    { return mAiActions; }
+    //! rief The action of the [Actions] section of ai.cfg with the given name.
+    //! \return The action, or nullptr (logged as an error) when ai.cfg has none of that name
+    const AiAction* getAiAction(const std::string& name) const;
+    //! rief The [RowClasses] section of ai.cfg in file order.
+    inline const std::vector<AiRowClass>& getAiRowClasses() const
+    { return mAiRowClasses; }
+    //! rief The line of the [RowClasses] section of ai.cfg with the given decision id.
+    //! \return The line, or nullptr (logged as an error) when ai.cfg has none for that id
+    const AiRowClass* getAiRowClass(const std::string& id) const;
+
     //! \brief Level-1 research cost of the skill with the given name (tier cost, see skills.cfg).
     //! A missing entry is logged as an error and costs SKILL_POINTS_MISSING_ENTRY.
     int32_t getSkillPoints(const std::string& res) const;
@@ -666,6 +712,17 @@ private:
     //! \brief Reads config/treasury.cfg into the treasury settings. A missing file is not an error:
     //! the treasury then uses the defaults from the code (see rooms/TreasurySettings.h).
     void loadTreasury(const std::string& fileName);
+    //! rief Reads config/ai.cfg (the keeper AI levels and values). A missing file is not an error: the keeper
+    //! AI then uses the compiled defaults, which equal the file.
+    //! \return false when the file has an unknown section, key or word or a line with a wrong number of values
+    bool loadAiConfig(const std::string& fileName);
+    //! rief Sets every keeper AI value to its compiled default.
+    void setAiConfigDefaults();
+    //! rief Reads one line of a section of ai.cfg into the keeper AI values.
+    //! \param section The section tag of the line, e.g. "[KeeperAI]"
+    //! \param words The words of the line
+    //! \return false when the key or a word is unknown or the number of words does not fit the section
+    bool readAiConfigLine(const std::string& section, const std::vector<std::string>& words);
     //! \brief Loads the user configuration values, and use default ones if it cannot do it.
     void loadUserConfig(const std::string& fileName);
 
@@ -835,6 +892,17 @@ private:
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;
+    //! rief The [KeeperAI] section of ai.cfg
+    std::map<std::string, std::string> mAiConfig;
+    //! rief The [KeeperAILevels] section of ai.cfg, one entry per level in the display order easy, medium,
+    //! normal, hard, hell
+    std::array<AiSettings, 5> mAiLevels;
+    //! rief The [RoomPlan] section of ai.cfg
+    std::vector<std::pair<std::string, uint32_t>> mAiRoomPlan;
+    //! rief The [Actions] section of ai.cfg
+    std::vector<AiAction> mAiActions;
+    //! rief The [RowClasses] section of ai.cfg
+    std::vector<AiRowClass> mAiRowClasses;
     std::map<const std::string, int32_t> mSkillPoints;
     //! \brief Names of the skills of the [FreeLevelOne] block of skills.cfg
     std::set<std::string> mSkillsFreeLevelOne;
