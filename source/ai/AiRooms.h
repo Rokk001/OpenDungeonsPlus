@@ -22,7 +22,7 @@ struct State
     int bedPopulation = -1;
     double bedDue = -1.0;
     double foodDue = -1.0;
-    //! brief True while D07 fires B02 or B03, so the row takes a fresh mistake draw even if its state is unchanged.
+    //! \brief True while D07 fires B02 or B03, so the row takes a fresh mistake draw even if its state is unchanged.
     bool needFired = false;
     bool restored = false;
 };
