@@ -39,6 +39,7 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <functional>
 #include <vector>
 
 // Contains the rooms the AI will try to build. It will try to build them in the given order
@@ -80,44 +81,62 @@ static const std::vector<uint32_t> wantedBuildingTiles = {
     9, 25, 25, 16, 25, 25, 25, 16, 9, 25, 16, 9, 9, 25, 16, 9, 16, 16, 16, 16, 25, 16
 };
 
+// LEGACY-AI
+//! Interim normal settings for the legacy paths while their replacements are being implemented.
+static const int NORMAL_COOLDOWN_DEFENSE_MIN = 0;
+static const int NORMAL_COOLDOWN_DEFENSE_MAX = 5;
+static const int NORMAL_COOLDOWN_SAVE_WOUNDED_MIN = 0;
+static const int NORMAL_COOLDOWN_SAVE_WOUNDED_MAX = 5;
+static const int NORMAL_COOLDOWN_LOOKING_FOR_ROOMS_MIN = 30;
+static const int NORMAL_COOLDOWN_LOOKING_FOR_ROOMS_MAX = 50;
+static const int NORMAL_REACTION_PERCENT = 100;
+static const int NORMAL_MIN_HP_PERCENT_TO_FIGHT = 20;
+static const int NORMAL_MIN_FIGHTERS_TO_ATTACK = 11;
+static const int NORMAL_MIN_CREATURE_LEVEL = 4;
+
 //! \brief Converts the keeper's percentage margin and item discounts to shares.
 static const double GHOST_VALUE_PERCENT = 100.0;
 
 
-//! \brief Creates the real keeper controller with its selected difficulty and existing behavior settings.
-KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type, int cooldownDefenseMin, int cooldownDefenseMax,
-             int cooldownSaveWoundedCreaturesMin, int cooldownSaveWoundedCreaturesMax,
-             int cooldownLookingForRoomsMin, int cooldownLookingForRoomsMax,
-             int reactionPercent, int minHpPercentToFight, int minFightersToAttack,
-             int minCreatureLevel, int maxTrapTiles, int maxDoors):
+//! \brief Creates a keeper whose mind reads the selected level's configured values.
+KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     BaseAI(gameMap, player),
-    mReactionPercent(reactionPercent),
+    mReactionPercent(NORMAL_REACTION_PERCENT),
     mType(type),
-    mMinHpPercentToFight(minHpPercentToFight),
-    mMinFightersToAttack(minFightersToAttack),
-    mMinCreatureLevel(minCreatureLevel),
+    mSettings(ConfigManager::getSingleton().getAiLevel(type)),
+    mMind(gameMap, player, mSettings),
+    mMinHpPercentToFight(NORMAL_MIN_HP_PERCENT_TO_FIGHT),
+    mMinFightersToAttack(NORMAL_MIN_FIGHTERS_TO_ATTACK),
+    mMinCreatureLevel(NORMAL_MIN_CREATURE_LEVEL),
     mIsAttacking(false),
     mNbFightersAtAttackStart(0),
     mCooldownAttack(0),
     mCooldownCheckTreasury(0),
     mCooldownLookingForRooms(0),
-    mCooldownLookingForRoomsMin(cooldownLookingForRoomsMin),
-    mCooldownLookingForRoomsMax(cooldownLookingForRoomsMax),
+    mCooldownLookingForRoomsMin(NORMAL_COOLDOWN_LOOKING_FOR_ROOMS_MIN),
+    mCooldownLookingForRoomsMax(NORMAL_COOLDOWN_LOOKING_FOR_ROOMS_MAX),
     mRoomPosX(-1),
     mRoomPosY(-1),
     mRoomSize(-1),
     mNoMoreReachableGold(false),
     mCooldownLookingForGold(0),
     mCooldownDefense(0),
-    mCooldownDefenseMin(cooldownDefenseMin),
-    mCooldownDefenseMax(cooldownDefenseMax),
+    mCooldownDefenseMin(NORMAL_COOLDOWN_DEFENSE_MIN),
+    mCooldownDefenseMax(NORMAL_COOLDOWN_DEFENSE_MAX),
     mCooldownWorkers(0),
     mCooldownRepairRooms(0),
     mCooldownSaveWoundedCreatures(0),
-    mCooldownSaveWoundedCreaturesMin(cooldownSaveWoundedCreaturesMin),
-    mCooldownSaveWoundedCreaturesMax(cooldownSaveWoundedCreaturesMax),
+    mCooldownSaveWoundedCreaturesMin(NORMAL_COOLDOWN_SAVE_WOUNDED_MIN),
+    mCooldownSaveWoundedCreaturesMax(NORMAL_COOLDOWN_SAVE_WOUNDED_MAX),
     mIsFirstUpkeepDone(false)
 {
+    // The war rows react to their events after the shared reaction delay
+    std::function<void(const AiEvent&)> warHandler = std::bind(&KeeperAI::handleWarEvent, this, std::placeholders::_1);
+    mMind.onEvent("J01", std::vector<AiEventType>(1, AiEventType::Fight), warHandler);
+    mMind.onEvent("J05", std::vector<AiEventType>(1, AiEventType::HeartCritical), warHandler);
+    mMind.onEvent("J07", std::vector<AiEventType>(1, AiEventType::EnemyOut), warHandler);
+    mMind.onEvent("J08", std::vector<AiEventType>(1, AiEventType::FightOver), warHandler);
+    mMind.onEvent("K08", std::vector<AiEventType>(1, AiEventType::EnemyTrapEmpty), warHandler);
 }
 
 int KeeperAI::scaledCooldown(int min, int max) const
@@ -125,12 +144,58 @@ int KeeperAI::scaledCooldown(int min, int max) const
     return Random::Int((min * mReactionPercent) / 100, (max * mReactionPercent) / 100);
 }
 
+//! \brief Advances the shared mind and the paths still waiting for their owner packages.
 bool KeeperAI::doTurn(double timeSinceLastTurn)
 {
     // If we have no dungeon temple, we are dead
     if(getDungeonTemple() == nullptr)
         return false;
+    mMind.doTurn(timeSinceLastTurn);
+    runWar();
+    return legacyEconomyTurn();
+}
 
+//! \brief Returns the common scheduler to the action and decision owners.
+Mind& KeeperAI::getMind()
+{
+    return mMind;
+}
+
+//! \brief Returns the configured level values used by the decision functions.
+const AiSettings& KeeperAI::getSettings() const
+{
+    return mSettings;
+}
+
+//! \brief Saves the complete shared mind inside the seat's AIState block.
+void KeeperAI::exportState(std::ostream& os) const
+{
+    mMind.exportState(os);
+}
+
+//! \brief Restores the complete shared mind from the saved block contents.
+bool KeeperAI::importState(const std::vector<std::string>& lines)
+{
+    return mMind.importState(lines);
+}
+
+//! \brief Runs the polled parts of the war (plan step, tunnel probe, assault steps, enemy edges) once per turn.
+void KeeperAI::runWar()
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::doTurn(env);
+}
+
+//! \brief Hands an event of the war rows to the war module after the reaction delay of the Mind.
+void KeeperAI::handleWarEvent(const AiEvent& event)
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::onEvent(env, event);
+}
+
+//! \brief Preserves the first-turn setup and economy chain, excluding the removed repair action.
+bool KeeperAI::legacyEconomyTurn()
+{
     if(!mIsFirstUpkeepDone)
     {
         mIsFirstUpkeepDone = true;
@@ -140,25 +205,16 @@ bool KeeperAI::doTurn(double timeSinceLastTurn)
 
     if (handleWorkers())
         return true;
-
     if (checkTreasury())
         return true;
-
     if (handleRooms())
         return true;
-
     if (lookForGold())
         return true;
-
-    if (repairRooms())
-        return true;
-
     if(handleTiredCreatures())
         return true;
-
     if(handleHungryCreatures())
         return true;
-
     return true;
 }
 

@@ -1042,6 +1042,14 @@ void doTurn(Env& env)
             planAttack(env);
     }
 
+    // The game time of the last enemy cast the Mind saw, kept per enemy seat for the mana estimate
+    for(Seat* other : env.gameMap.getSeats())
+    {
+        double age = env.mind.enemySpellAge(other->getId());
+        if(age >= 0.0)
+            st.sighting.seats[other->getId()].lastSpellTime = env.now - age;
+    }
+
     // The tunnel probe of a seat that dug
     if((st.tunnel == WarState::tunnelDigging) && (env.now >= st.nextProbe) && (st.tunnelTarget != nullptr))
     {
