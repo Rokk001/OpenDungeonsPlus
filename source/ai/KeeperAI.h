@@ -19,6 +19,7 @@
 #define KEEPERAI_H
 
 #include "ai/BaseAI.h"
+#include "ai/AiMind.h"
 
 #include <cstdint>
 #include <utility>
@@ -32,21 +33,16 @@ class KeeperAI : public BaseAI
 {
 
 public:
-    //! \brief Creates a keeper AI. The cooldown pairs are the range of turns between two checks of the
-    //! defense, of saving wounded creatures and of looking for rooms.
-    //! \param type Difficulty used for the keeper's ghost product choices.
-    //! \param reactionPercent Reaction time in percent of the base cooldowns (lower is faster)
-    //! \param minHpPercentToFight Creatures below this percentage of their max HP are not sent to fight
-    //! \param minFightersToAttack The AI attacks with more healthy fighters than this (0 = never attacks)
-    //! \param minCreatureLevel Fighters below this level are too weak for an attack
-    //! \param maxTrapTiles Maximum number of trap tiles (without doors) the AI owns
-    //! \param maxDoors Maximum number of doors the AI owns
-    KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type, int cooldownDefenseMin, int cooldownDefenseMax,
-             int cooldownSaveWoundedCreaturesMin, int cooldownSaveWoundedCreaturesMax,
-             int cooldownLookingForRoomsMin, int cooldownLookingForRoomsMax,
-             int reactionPercent, int minHpPercentToFight, int minFightersToAttack,
-             int minCreatureLevel, int maxTrapTiles, int maxDoors);
+    //! \brief Creates a keeper with the selected level's configured mind and interim legacy defaults.
+    KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type);
+    //! \brief Advances the mind and the legacy paths until their owners replace them.
     virtual bool doTurn(double timeSinceLastTurn);
+    //! \brief Gives the row owners the shared scheduler, mistakes and saved-state interface.
+    Mind& getMind();
+    //! \brief Writes the keeper's mind as the contents of its AIState block.
+    virtual void exportState(std::ostream& os) const;
+    //! \brief Restores the contents of an AIState block, or starts fresh when invalid.
+    bool importState(const std::vector<std::string>& lines);
     //! \brief Chooses the AI keeper switches immediately before each ectoplasm product.
     static void updateGhostRoomSettings(Seat& seat);
     //! \brief The room plan of the keeper AI in build order: the [RoomPlan] section of ai.cfg, or the compiled
@@ -111,6 +107,13 @@ protected:
     void handleFirstTurn();
 
 private:
+    //! \brief Runs the original economy chain until the economy package replaces it.
+    bool legacyEconomyTurn();
+    //! \brief Runs the original spell and trap paths until their owner replaces them.
+    void legacySpellTrapTurn();
+    //! \brief Runs the original wounded-creature, defence and attack paths until their owner replaces them.
+    void legacyWarTurn();
+
     //! \brief try to build the most needed available room
     bool buildMostNeededRoom();
 
@@ -144,6 +147,8 @@ private:
     int mReactionPercent;
     //! \brief The difficulty selected when the controller was created.
     KeeperAIType mType;
+    //! \brief The common mind uses the selected level independently of the interim legacy paths.
+    Mind mMind;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)
