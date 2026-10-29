@@ -147,7 +147,6 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type, int cool
     mCooldownDefenseMin(cooldownDefenseMin),
     mCooldownDefenseMax(cooldownDefenseMax),
     mCooldownWorkers(0),
-    mCooldownRepairRooms(0),
     mCooldownSaveWoundedCreatures(0),
     mCooldownSaveWoundedCreaturesMin(cooldownSaveWoundedCreaturesMin),
     mCooldownSaveWoundedCreaturesMax(cooldownSaveWoundedCreaturesMax),
@@ -160,6 +159,7 @@ int KeeperAI::scaledCooldown(int min, int max) const
     return Random::Int((min * mReactionPercent) / 100, (max * mReactionPercent) / 100);
 }
 
+//! \brief Runs one keeper AI turn.
 bool KeeperAI::doTurn(double timeSinceLastTurn)
 {
     // If we have no dungeon temple, we are dead
@@ -192,9 +192,6 @@ bool KeeperAI::doTurn(double timeSinceLastTurn)
         return true;
 
     if (lookForGold())
-        return true;
-
-    if (repairRooms())
         return true;
 
     if(handleTiredCreatures())
@@ -1172,39 +1169,6 @@ bool KeeperAI::handleWorkers()
             return false;
 
         return true;
-    }
-
-    return false;
-}
-
-bool KeeperAI::repairRooms()
-{
-    if(mCooldownRepairRooms > 0)
-    {
-        --mCooldownRepairRooms;
-        return false;
-    }
-
-    mCooldownRepairRooms = scaledCooldown(20, 60);
-
-    Seat* seat = mPlayer.getSeat();
-    for(Room* room : mGameMap.getRooms())
-    {
-        if(room->getSeat() != seat)
-            continue;
-
-        if(!room->canBeRepaired())
-            continue;
-
-        int goldRequired = room->getCostRepair();
-
-        if(!mGameMap.withdrawFromTreasuries(goldRequired, mPlayer.getSeat()))
-            return false;
-
-        room->repairRoom();
-        // We only repair one room at a time. Note that if we want to repair more than one room at a time, we should pay
-        // attention to not modify the room list (if room absorbed in RoomManager::buildRoom) while iterating it
-        break;
     }
 
     return false;
