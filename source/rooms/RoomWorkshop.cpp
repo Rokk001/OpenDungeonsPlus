@@ -118,9 +118,10 @@ class RoomWorkshopFactory : public RoomFactory
         return room;
     }
 
+    //! \brief Builds a workshop and charges its configured price per tile.
     bool buildRoomOnTiles(GameMap* gameMap, Player* player, const std::vector<Tile*>& tiles, bool noFee =false) const override
     {
-        int32_t pricePerTarget = RoomManager::costPerTile(RoomType::crypt);
+        int32_t pricePerTarget = RoomManager::costPerTile(RoomType::workshop);
         int32_t price = static_cast<int32_t>(tiles.size()) * pricePerTarget;
         if(!noFee)
             if(!gameMap->withdrawFromTreasuries(price, player->getSeat()))

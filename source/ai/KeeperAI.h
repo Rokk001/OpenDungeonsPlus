@@ -20,6 +20,8 @@
 
 #include "ai/BaseAI.h"
 #include "ai/AiMind.h"
+#include "ai/AiEvents.h"
+#include "ai/AiWar.h"
 #include "ai/AiSpells.h"
 #include "ai/AiTraps.h"
 
@@ -47,6 +49,10 @@ public:
     Player& getControlledPlayer() { return mPlayer; }
     //! \brief The mind that draws mistakes and schedules this keeper's actions.
     Mind& getMind();
+    //! \brief Gives the shared event source access to this keeper's current tunnel and combat state.
+    WAR::WarState& getWarState() { return mWar; }
+    //! \brief Observes shared symptoms and queues the game's notice in the mind.
+    void notifyEvent(const AiEvent& event) override;
     //! \brief The values of the selected AI level.
     const AiSettings& getSettings() const;
     //! \brief What the spell rows remember for this keeper (lives as long as the keeper).
@@ -80,25 +86,10 @@ protected:
     //! It will also return false once it's done.
     bool lookForGold();
 
-    //! \brief Picks up wounded creatures and drops then in the dungeon temple
-    void saveWoundedCreatures();
-
-    //! \brief Checks if we are under attack and does the needed if it is the case
-    void handleDefense();
-
-    //! \brief Offensive state machine: once enough healthy fighters are available, digs toward the
-    //! closest enemy dungeon temple and rallies the fighters there with a call to war banner.
-    //! Retreats (removes the banner) when too many fighters were lost. It only starts with more healthy fighters
-    //! than the attack threshold and while not too many of them are below the minimum creature level.
-    void handleAttack();
 
     //! \brief Checks if a new worker should be summoned
     //! Returns true if the action has been done and false if nothing has been done
     bool handleWorkers();
-
-    //! \brief Checks if a room needs to be repaired and repairs if so
-    //! Returns true if the action has been done and false if nothing has been done
-    bool repairRooms();
 
     //! \brief Try to help tired creatures to reach dormitory
     //! Returns true if the action has been done and false if nothing has been done
@@ -115,8 +106,12 @@ protected:
 private:
     //! \brief Runs the original economy chain until the economy package replaces it.
     bool legacyEconomyTurn();
-    //! \brief Runs the original wounded-creature, defence and attack paths until their owner replaces them.
-    void legacyWarTurn();
+    //! \brief Runs the polled parts of the war once per turn.
+    void runWar();
+    //! \brief Hands an event of the war rows to the war module after its reaction delay.
+    void handleWarEvent(const AiEvent& event);
+    //! \brief Appends the war and sighting lines to the saved AI state of the mind.
+    void saveWarRows(std::vector<AiMath::AiStateLine>& lines);
 
     //! \brief try to build the most needed available room
     bool buildMostNeededRoom();
@@ -127,18 +122,6 @@ private:
 
     //! \brief Returns true if the given room is needed and false otherwise
     bool checkNeedRoom(RoomType roomType);
-
-    //! \brief Returns the number of non-worker creatures with enough HP to be sent to fight
-    int countHealthyFighters() const;
-
-    //! \brief Returns the number of healthy non-worker creatures below the minimum attack level
-    int countWeakFighters() const;
-
-    //! \brief Returns the central tile of the closest enemy dungeon temple or nullptr if there is none
-    Tile* findEnemyTempleTile();
-
-    //! \brief Removes every call to war banner owned by this AI
-    void removeBanners();
 
     //! \brief Returns a random cooldown between min and max, scaled by the AI reaction time
     int scaledCooldown(int min, int max) const;
@@ -151,6 +134,10 @@ private:
     AiSettings mSettings;
     //! \brief The common mind uses the selected level independently of the interim legacy paths.
     Mind mMind;
+    //! \brief Keeper-visible poll history, owned by this game and saved with its mind.
+    AiEvents mEvents;
+    //! \brief The war state of this keeper (tunnel, assault, defence, sightings).
+    WAR::WarState mWar;
     //! \brief The state of the spell rows (E04, E05 and the fight session).
     SPELL::State mSpellState;
     //! \brief The state of the trap and door rows (F01, F12, F13, F15).
@@ -179,7 +166,6 @@ private:
     int mCooldownDefenseMin;
     int mCooldownDefenseMax;
     int mCooldownWorkers;
-    int mCooldownRepairRooms;
     int mCooldownSaveWoundedCreatures;
     int mCooldownSaveWoundedCreaturesMin;
     int mCooldownSaveWoundedCreaturesMax;

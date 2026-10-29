@@ -51,6 +51,7 @@ class Creature;
 class CreatureRelationships;
 class GameEntity;
 class Player;
+struct AiEvent;
 class Trap;
 class Seat;
 class Goal;
@@ -368,6 +369,9 @@ public:
     bool assignAI(Player& player, KeeperAIType aiType);
     //! \brief Returns the manager-owned controller for the given player.
     BaseAI* getAI(const Player& player) const { return mAiManager.getAI(player); }
+
+    //! \brief Forwards a server event to the player's AI, if any.
+    void notifyAi(Player& player, const AiEvent& event);
 
     //! \brief The most claimed tiles (heart tiles not counted) that give mana income to a seat.
     double getManaIncomeTilesCap() const;

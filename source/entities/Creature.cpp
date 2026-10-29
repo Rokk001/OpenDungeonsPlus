@@ -1,3 +1,4 @@
+#include "ai/AiMind.h"
 #include "creatureaction/CreatureActionHuntGhost.h"
 #include <OgreBillboardChain.h>
 #include <OgreParticleSystem.h>
@@ -8241,14 +8242,20 @@ void Creature::fireCreatureRefreshIfNeeded()
     }
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgTookFee(int goldTaken)
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, static_cast<double>(goldTaken),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     std::string suffix;
     // We don't display the same message if we have taken all our fee or only a part of it
@@ -8260,62 +8267,92 @@ void Creature::fireChatMsgTookFee(int goldTaken)
     getSeat()->getPlayer()->notifyCreatureEvent(*this, suffix);
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgLeftDungeon()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, 0.0,
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " left your dungeon");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgLeavingDungeon()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, 0.0,
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is leaving your dungeon");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgBecameRogue()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, 0.0,
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is not under your control anymore !");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgUnhappy()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureMood, getPositionTile(), this, -1, static_cast<double>(getMoodValue()),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is unhappy !");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgFurious()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureMood, getPositionTile(), this, -1, static_cast<double>(getMoodValue()),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
 }
