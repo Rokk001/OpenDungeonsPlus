@@ -28,6 +28,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomDungeonTemple.h"
@@ -258,6 +259,23 @@ bool isFreeFighter(Creature* creature)
 bool strongerFirst(Creature* a, Creature* b)
 {
     return (a->getHP() * a->getRawDamagePerSecond()) > (b->getHP() * b->getRawDamagePerSecond());
+}
+
+//! \brief The tile that nearerToCenter measures distances to.
+Tile* gSortCenter = nullptr;
+
+//! \brief True when tile a is nearer to gSortCenter than tile b.
+bool nearerToCenter(Tile* a, Tile* b)
+{
+    double da = std::pow(a->getX() - gSortCenter->getX(), 2) + std::pow(a->getY() - gSortCenter->getY(), 2);
+    double db = std::pow(b->getX() - gSortCenter->getX(), 2) + std::pow(b->getY() - gSortCenter->getY(), 2);
+    return da < db;
+}
+
+//! \brief True when creature a has fewer hit points than creature b.
+bool lowerHpFirst(Creature* a, Creature* b)
+{
+    return a->getHP() < b->getHP();
 }
 
 //! \brief The legal drop tile among the neighbours of a tile that is nearest to it, skipping the first skip candidates.
