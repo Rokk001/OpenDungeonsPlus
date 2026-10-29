@@ -114,8 +114,8 @@ void planDig(Env& env);
 //! marks the exploration tunnels once.
 void exploreLook(Env& env);
 
-//! \brief The plan step of the attack (rows J07, K01, K02): raises Plan, then eligibility, ready list, estimate, tactic draw.
-void planAttack(Env& env);
+//! \brief Plans an attack; bypassRest skips the post-assault rest for a second-wave attempt.
+void planAttack(Env& env, bool bypassRest = false);
 
 //! \brief Moves the groups by hand and casts the banners of all but the last group (rows K03, K04, K05); a mental step
 //! after the last drop raises Launch (launchDropsDone).
