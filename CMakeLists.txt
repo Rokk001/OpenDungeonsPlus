@@ -254,6 +254,9 @@ set(OD_SOURCEFILES
     ${SRC}/ai/BaseAI.cpp
     ${SRC}/ai/AiSaveFormat.h
     ${SRC}/ai/AiSaveFormat.cpp
+    ${SRC}/ai/AiEconomy.cpp
+    ${SRC}/ai/AiRooms.cpp
+    ${SRC}/ai/AiResearch.cpp
     ${SRC}/ai/KeeperAI.cpp
     ${SRC}/ai/KeeperAIType.cpp
 

@@ -69,6 +69,7 @@ protected:
         int32_t& bestX, int32_t& bestY);
 
     bool digWayToTile(Tile* tileStart, Tile* tileEnd);
+    //! \brief Scores a known room footprint and its usable wall spots.
     bool computePointsForRoom(Tile* tile, Seat* playerSeat, int32_t wantedSize,
         bool bottomLeft2TopRight, bool useWalls, int32_t& points);
 
@@ -76,7 +77,9 @@ protected:
     Player& mPlayer;
 
 private:
+    //! \brief Checks whether a known tile can be considered for a room floor.
     bool shouldGroundTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* playerSeat);
+    //! \brief Checks whether a known tile can be considered for a room wall.
     bool shouldWallTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* playerSeat);
 };
 
