@@ -2028,6 +2028,15 @@ void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
     ++mStoredSpecials[index];
 }
 
+//! \brief Reads the amount of the next stored special without consuming it.
+uint32_t Seat::getStoredSpecialAmount(GiftBoxType type) const
+{
+    for(const std::pair<int32_t, uint32_t>& box : mStoredSpecialBoxes)
+        if(box.first == static_cast<int32_t>(type))
+            return box.second;
+    return 0;
+}
+
 //! \brief Uses only stored special bonuses, never workshop-only item boxes.
 bool Seat::useStoredSpecial(GiftBoxType type)
 {
