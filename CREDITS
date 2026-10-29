@@ -228,6 +228,7 @@ textures/
 -> ClaimedWall*.png                    Nobiax, Danimal         CC-BY-SA 3.0            http://opengameart.org/users/danimal
 -> ConcreteDirty*.png                  Sindwiller              CC-BY-SA 3.0            http://opengameart.org/content/dirty-concrete-floor-00
 -> CreatureOverlay*.png                hwoarangmy              CC-BY-SA 3.0
+-> ManaRing*.png                       hwoarangmy              CC-BY-SA 3.0            Derived from the segments of CreatureOverlay*.png (ManaRing4 built from CreatureOverlay3 without its last segment)
 -> CreatureStunned.png                 AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> CreatureRallyTroops.png             AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> Crossbow.png                        Lamoot                  CC-BY 3.0               http://opengameart.org/content/low-poly-crossbow
