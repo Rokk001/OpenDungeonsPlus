@@ -108,7 +108,7 @@ static const int ATTACK_RETREAT_DIVISOR = 2;
 static const double GHOST_VALUE_PERCENT = 100.0;
 
 
-//! \brief Creates a keeper whose mind reads the selected level's configured values.
+//! \brief Creates a keeper whose mind reads the selected level's configured values and binds the spell and trap rows to it.
 KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     BaseAI(gameMap, player),
     mReactionPercent(NORMAL_REACTION_PERCENT),
@@ -140,6 +140,9 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mCooldownSaveWoundedCreaturesMax(NORMAL_COOLDOWN_SAVE_WOUNDED_MAX),
     mIsFirstUpkeepDone(false)
 {
+    // The spell, trap and door rows react to their events and looks through the mind
+    SPELL::bindRows(*this);
+    TRAP::bindRows(*this);
 }
 
 int KeeperAI::scaledCooldown(int min, int max) const
