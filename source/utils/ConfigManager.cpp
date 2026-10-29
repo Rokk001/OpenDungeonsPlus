@@ -72,7 +72,7 @@ static const double DEFAULT_HIT_GLANCE_SHARE = 0.34;
 //! Default share of the maximum health of the target from which a hit counts as strong
 static const double DEFAULT_HIT_STRONG_SHARE = 0.15;
 
-//! rief Compiled defaults of the [KeeperAILevels] section of ai.cfg: key and the values of the levels easy, medium,
+//! \brief Compiled defaults of the [KeeperAILevels] section of ai.cfg: key and the values of the levels easy, medium,
 //! normal, hard and hell. They equal the file and are used when it is missing.
 static const char* const AI_LEVEL_DEFAULTS[][6] = {
     {"Rho", "12", "15", "20", "25.433", "30"},
@@ -94,7 +94,7 @@ static const char* const AI_LEVEL_DEFAULTS[][6] = {
     {"EnemyManaEstimate", "own", "own", "own", "own", "observed"},
 };
 
-//! rief Compiled defaults of the [KeeperAI] section of ai.cfg: key and value. They equal the file.
+//! \brief Compiled defaults of the [KeeperAI] section of ai.cfg: key and value. They equal the file.
 static const char* const AI_CONFIG_DEFAULTS[][2] = {
     {"AiPollSeconds", "1"},
     {"LookPeriod600", "600"},
@@ -277,7 +277,7 @@ static const char* const AI_CONFIG_DEFAULTS[][2] = {
     {"EstimateReadyFlipRate", "0.08"},
 };
 
-//! rief Compiled defaults of the [Actions] section of ai.cfg: action, clicks and seconds. They equal the file.
+//! \brief Compiled defaults of the [Actions] section of ai.cfg: action, clicks and seconds. They equal the file.
 static const char* const AI_ACTION_DEFAULTS[][3] = {
     {"slap", "1", "1.30"},
     {"pickup", "1", "1.30"},
@@ -296,7 +296,7 @@ static const char* const AI_ACTION_DEFAULTS[][3] = {
     {"think", "0", "1.35"},
 };
 
-//! rief Compiled defaults of the [RowClasses] section of ai.cfg: decision id, mistake class and multiplier. They equal the file.
+//! \brief Compiled defaults of the [RowClasses] section of ai.cfg: decision id, mistake class and multiplier. They equal the file.
 static const char* const AI_ROW_CLASS_DEFAULTS[][3] = {
     {"A01", "rule", "1"},
     {"A02", "rule", "1"},
