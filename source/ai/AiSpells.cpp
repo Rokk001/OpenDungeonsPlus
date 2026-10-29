@@ -658,7 +658,7 @@ bool sessionStep(KeeperAI& ai)
             ended.push_back(current);
     }
     state.mSessions.swap(running);
-    // AI row E05: the late Defense of a fight drawn as a mistake follows when that fight is over
+    // The late Defense of a fight drawn as a mistake follows when that fight is over
     for(SPELL::State::Session& session : ended)
         SPELL::castDefense(ai, onOwnGroundOnly(ai, ownFighters(ai)), true, session.mLateDefense);
     for(SPELL::State::Session& session : state.mSessions)
@@ -731,7 +731,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
     {
         SPELL::State::Session session;
         session.mStart = now;
-        session.mLastFight = now;
+        session.mLastFight = event.time;
         session.mFightX = -1;
         session.mFightY = -1;
         session.mNextCast = now;
@@ -741,7 +741,8 @@ void onFight(KeeperAI& ai, const AiEvent& event)
         state.mSessions.push_back(session);
     }
     SPELL::State::Session& session = state.mSessions[static_cast<size_t>(match)];
-    session.mLastFight = now;
+    // The fight ends FightOverSeconds after the time the game raised the Fight event, not after this delayed reaction
+    session.mLastFight = std::max(session.mLastFight, event.time);
     if(event.tile != nullptr)
     {
         session.mFightX = event.tile->getX();
@@ -992,7 +993,7 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
             handEnd = castOnTileOf(ai, chosen, target);
     }
 
-    // AI row E19: the next cast is no earlier than the later of the end of the hand action and MinRecastSeconds
+    // The next cast is no earlier than the later of the end of the hand action and MinRecastSeconds
     nextCast = std::max(handEnd, now + aiKey("MinRecastSeconds"));
     return true;
 }
