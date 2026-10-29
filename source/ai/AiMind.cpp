@@ -227,6 +227,7 @@ void Mind::enqueue(const AiEvent& event)
     Reaction reaction;
     reaction.type = event.type;
     reaction.due = mNow + AiMath::reactionDelay(kind, delayParams(), uniformDraw);
+    reaction.time = event.time;
     reaction.kind = kind;
     reaction.x = event.tile == nullptr ? -1 : event.tile->getX();
     reaction.y = event.tile == nullptr ? -1 : event.tile->getY();
@@ -398,7 +399,7 @@ void Mind::doTurn(double timeSinceLastTurn)
     {
         const AiEvent event = {reaction.type, mGameMap.getTile(reaction.x, reaction.y),
             reaction.creature == "-" ? nullptr : mGameMap.getCreature(reaction.creature),
-            reaction.seatId, reaction.amount, reaction.due};
+            reaction.seatId, reaction.amount, reaction.time};
         mTriggerSlips.clear();
         mInTrigger = true;
         for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
@@ -482,7 +483,7 @@ void Mind::exportState(std::ostream& os) const
         lines.push_back({"look", {look.first, token(look.second.due - mNow), token(look.second.flag ? 1 : 0)}});
     for(const Reaction& e : mEvents)
         lines.push_back({"event", {eventNames[static_cast<int>(e.type)], token(e.due - mNow), kindName(e.kind),
-            token(e.x), token(e.y), e.creature, token(e.seatId), token(e.amount), token(e.noticed ? 1 : 0), e.rowId}});
+            token(e.x), token(e.y), e.creature, token(e.seatId), token(e.amount), token(e.noticed ? 1 : 0), e.rowId, token(mNow - e.time)}});
     for(const Action& a : mActions)
         lines.push_back({"action", {a.key, token(a.due - mNow), a.rowId, token(a.x), token(a.y), a.target}});
     for(const std::pair<double, int>& click : mHand.clickGroups)
@@ -527,6 +528,15 @@ bool Mind::importState(const std::vector<std::string>& input)
             e.creature = t[5];
             e.noticed = noticed != 0;
             e.rowId = t[9];
+            // A save without the event age keeps the scheduled time as the event time
+            e.time = e.due;
+            if(t.size() > 10)
+            {
+                double age;
+                valid = number(t[10], age);
+                if(!valid) break;
+                e.time = mNow - age;
+            }
             events.push_back(e);
         }
         else if(line.tag == "action")

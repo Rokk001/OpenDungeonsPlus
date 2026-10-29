@@ -188,6 +188,8 @@ private:
     {
         AiEventType type;
         double due;
+        //! rief Game time when the event was raised, before the reaction delay.
+        double time;
         AiMath::ReactionKind kind;
         int x, y;
         std::string creature;
