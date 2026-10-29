@@ -746,16 +746,11 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
     if((groups.size() > 1) && !groups[0].raid && groups[1].raid)
         std::swap(groups[0], groups[1]);
 
-    // The groups are chosen: Launch carries the drop tile of the main group and the tactic (rows E06, E20, H03)
-    Tile* mainDrop = groups.back().dropTile;
-    AiEvent launched = {AiEventType::Launch, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
-                        static_cast<double>(tactic), env.now};
-    env.mind.enqueue(launched);
-
     // Gathering decision: the complex draw of row E07; a mistake skips the hand moves
     bool walkFromHome = SPELL::drawLaunchGathering(env.ai);
-    for(Group& g : groups)
+    for(size_t i = 0; i < groups.size(); ++i)
     {
+        Group& g = groups[i];
         if(!walkFromHome)
         {
             std::vector<Creature*> moved;
@@ -773,19 +768,51 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
             g.finished = true;
             continue;
         }
+        // The last group's banner waits for the Launch reaction, so that Strength (row E06) comes first
+        if(i + 1 == groups.size())
+            continue;
         // A group whose banner cannot be cast does not march
         if(!castBanner(env, g, g.targets.front()))
             g.finished = true;
     }
 
-    // The last banner of the launch is cast: the march starts from the main group's drop tile (row E03)
-    AiEvent march = {AiEventType::March, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(), 0.0, env.now};
-    env.mind.enqueue(march);
+    // A mental step after the last drop raises Launch; its saved hand action is restored by the K05 handler
+    env.mind.exec("think", 1, env.now, "K05", nullptr, "", std::function<void()>());
 
     st.groups = groups;
-    st.assault = WarState::assaultMoving;
+    st.assault = WarState::assaultLaunching;
     st.tactic = tactic;
     st.contactTime = -1.0;
+    st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
+}
+
+void launchDropsDone(Env& env)
+{
+    // Row K05: the groups are on their drop tiles; Launch carries the main group's drop tile and the tactic (rows E06,
+    // E20, H03)
+    WarState& st = env.state;
+    if((st.assault != WarState::assaultLaunching) || st.groups.empty())
+        return;
+    Seat* enemy = enemySeat(env);
+    AiEvent launched = {AiEventType::Launch, st.groups.back().dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
+                        static_cast<double>(st.tactic), env.now};
+    env.mind.enqueue(launched);
+}
+
+void marchOff(Env& env)
+{
+    // Row K05: after Strength of the Launch reaction the last banner is cast, then the march starts (row E03)
+    WarState& st = env.state;
+    if((st.assault != WarState::assaultLaunching) || st.groups.empty())
+        return;
+    Group& g = st.groups.back();
+    if(!g.finished && !g.targets.empty() && !castBanner(env, g, g.targets.front()))
+        g.finished = true;
+
+    Seat* enemy = enemySeat(env);
+    AiEvent march = {AiEventType::March, g.dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(), 0.0, env.now};
+    env.mind.enqueue(march);
+    st.assault = WarState::assaultMoving;
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
 }
 
@@ -794,7 +821,8 @@ void assaultStep(Env& env)
     // AI row K09: banners are renewed and moved to the next target
     // AI row K07: the retreat test
     WarState& st = env.state;
-    if(st.assault == WarState::assaultNone)
+    // A launch still moving its groups by hand is not a running assault yet
+    if((st.assault == WarState::assaultNone) || (st.assault == WarState::assaultLaunching))
         return;
 
     Seat* seat = env.player.getSeat();
@@ -1153,6 +1181,9 @@ void onEvent(Env& env, const AiEvent& event)
         case AiEventType::EnemyTrapEmpty:
             secondWave(env);
             break;
+        case AiEventType::Launch:
+            marchOff(env);
+            break;
         case AiEventType::AssaultOver:
             break;
         case AiEventType::EnemySpellSeen:
@@ -1242,7 +1273,7 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     const WarState& st = env.state;
     lines.erase(std::remove_if(lines.begin(), lines.end(), isOwnWarLine), lines.end());
     const char* tunnelNames[3] = {"none", "digging", "open"};
-    const char* assaultNames[4] = {"none", "moving", "running", "ending"};
+    const char* assaultNames[5] = {"none", "moving", "running", "ending", "launching"};
     std::vector<std::string> t;
     t.push_back("tunnel");
     t.push_back(tunnelNames[st.tunnel]);
@@ -1374,7 +1405,8 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         else if((line.tag == "war") && (k[0] == "assault"))
         {
             st.assault = (k[1] == "moving") ? WarState::assaultMoving : ((k[1] == "running") ? WarState::assaultRunning :
-                         ((k[1] == "ending") ? WarState::assaultEnding : WarState::assaultNone));
+                         ((k[1] == "ending") ? WarState::assaultEnding :
+                         ((k[1] == "launching") ? WarState::assaultLaunching : WarState::assaultNone)));
             st.tactic = (k[2] == "-") ? -1 : std::atoi(k[2].c_str());
             double age = std::atof(k[3].c_str());
             st.contactTime = (age < 0.0) ? -1.0 : env.now - age;

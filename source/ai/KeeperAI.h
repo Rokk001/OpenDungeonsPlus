@@ -112,6 +112,8 @@ private:
     void handleWarEvent(const AiEvent& event);
     //! \brief Runs the explore look of row I05 of the war module.
     void handleExploreLook();
+    //! \brief Performs the mental step of row K05 after the launch drops (also when restored after loading).
+    void handleLaunchStep(Tile* tile, const std::string& target);
     //! \brief Appends the war and sighting lines to the saved AI state of the mind.
     void saveWarRows(std::vector<AiMath::AiStateLine>& lines);
 
