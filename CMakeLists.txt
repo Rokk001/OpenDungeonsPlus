@@ -230,6 +230,7 @@ set(OD_SOURCEFILES
 
     #OpenDungeons sources
     ${SRC}/ai/AIFactory.cpp
+    ${SRC}/ai/AiKnowledge.cpp
     ${SRC}/ai/AIManager.cpp
     ${SRC}/ai/BaseAI.cpp
     ${SRC}/ai/KeeperAI.cpp
