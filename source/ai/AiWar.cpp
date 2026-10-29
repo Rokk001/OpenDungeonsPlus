@@ -64,10 +64,10 @@ double key(const std::string& name)
     return ConfigManager::getSingleton().getAiConfigDouble(name);
 }
 
-//! \brief Draws the configured mistake of a row afresh for one creature, without the one-draw-per-trigger cache of
-//! Mind::slip, so that every creature of a list gets its own draw (the per-fighter J08 draw of row K01).
-//! \return True when the creature's draw is a mistake.
-bool slipForCreature(Env& env, const std::string& rowId)
+//! \brief Draws the configured mistake of a row afresh, without the one-draw-per-trigger cache of Mind::slip, for
+//! draws the specification makes separate within one firing (the per-fighter J08 draw of row K01, the second K04 draw).
+//! \return True when the draw is a mistake.
+bool freshSlip(Env& env, const std::string& rowId)
 {
     const ConfigManager& config = ConfigManager::getSingleton();
     const ConfigManager::AiRowClass* row = config.getAiRowClass(rowId);
@@ -587,7 +587,7 @@ void planAttack(Env& env)
         double share = creature->getHP() / std::max(1.0, creature->getMaxHp());
         // The rule mistake (row J08 class) is drawn separately for each fighter, also inside an event trigger:
         // only RestHpShareSlip is needed
-        double needed = slipForCreature(env, "J08") ? key("RestHpShareSlip") : key("RestHpShare");
+        double needed = freshSlip(env, "J08") ? key("RestHpShareSlip") : key("RestHpShare");
         if(share >= needed)
             ready.push_back(creature);
     }
@@ -702,7 +702,8 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
         order.push_back(RoomType::hatchery);
         order.push_back(RoomType::dormitory);
     }
-    if(env.mind.slip("K04"))
+    // The second complex mistake is independent of the first, also when the launch runs inside an event trigger
+    if(freshSlip(env, "K04"))
     {
         order.clear();
         order.push_back(RoomType::treasury);
