@@ -47,24 +47,42 @@
 #include <vector>
 
 // Contains the rooms the AI will try to build. It will try to build them in the given order
+// (the compiled room plan, equal to the [RoomPlan] section of ai.cfg; the treasury is planned twice)
 static const std::vector<RoomType> wantedBuildings = {
-    RoomType::dormitory,
-    RoomType::toilet,
     RoomType::treasury,
+    RoomType::dormitory,
     RoomType::hatchery,
     RoomType::tavern,
-    RoomType::spa,
     RoomType::library,
     RoomType::trainingHall,
     RoomType::workshop,
-    RoomType::arena,
-    RoomType::crypt,
-    RoomType::ghostRoom,
-    RoomType::guardRoom,
-    RoomType::infirmary,
+    RoomType::casino,
+    RoomType::toilet,
+    RoomType::treasury,
     RoomType::merchant,
+    RoomType::guardRoom,
     RoomType::herbGarden,
-    RoomType::alchemyLab
+    RoomType::arena,
+    RoomType::prison,
+    RoomType::alchemyLab,
+    RoomType::infirmary,
+    RoomType::ghostRoom,
+    RoomType::spa,
+    RoomType::crypt,
+    RoomType::temple,
+    RoomType::torture
+};
+
+//! \brief The names of the entries of wantedBuildings in the [RoomPlan] section of ai.cfg (the name-to-room map)
+static const std::vector<std::string> wantedBuildingKeys = {
+    "treasury", "dormitory", "hatchery", "tavern", "library", "training", "workshop", "casino", "toilet", "treasury2",
+    "merchant", "guard", "herbgarden", "arena", "prison", "alchemy", "infirmary", "ghostroom", "spa", "crypt",
+    "temple", "torture"
+};
+
+//! \brief The tiles of each entry of wantedBuildings (the compiled tiles of the [RoomPlan] section of ai.cfg)
+static const std::vector<uint32_t> wantedBuildingTiles = {
+    9, 25, 25, 16, 25, 25, 25, 16, 9, 25, 16, 9, 9, 25, 16, 9, 16, 16, 16, 16, 25, 16
 };
 
 //! \brief Range of turns between two checks of the attack state (before the reaction scaling)
@@ -1313,6 +1331,31 @@ void KeeperAI::handleFirstTurn()
     std::vector<SkillType> skills = seat->getSkillPending();
     SkillManager::buildRandomPendingSkillsForSeat(skills, seat);
     seat->setSkillTree(skills);
+}
+
+//! \brief The room plan from ai.cfg mapped to room types, or the compiled plan when ai.cfg has none.
+std::vector<std::pair<RoomType, uint32_t>> KeeperAI::getRoomPlan()
+{
+    std::vector<std::pair<RoomType, uint32_t>> plan;
+    const std::vector<std::pair<std::string, uint32_t>>& configPlan = ConfigManager::getSingleton().getAiRoomPlan();
+    if(configPlan.empty())
+    {
+        for(uint32_t i = 0; i < wantedBuildings.size(); ++i)
+            plan.push_back(std::make_pair(wantedBuildings[i], wantedBuildingTiles[i]));
+        return plan;
+    }
+
+    for(const std::pair<std::string, uint32_t>& entry : configPlan)
+    {
+        std::vector<std::string>::const_iterator it = std::find(wantedBuildingKeys.begin(), wantedBuildingKeys.end(), entry.first);
+        if(it == wantedBuildingKeys.end())
+        {
+            OD_LOG_ERR("Unknown room in the AI room plan=" + entry.first);
+            continue;
+        }
+        plan.push_back(std::make_pair(wantedBuildings[it - wantedBuildingKeys.begin()], entry.second));
+    }
+    return plan;
 }
 
 //! \brief Re-evaluates real keeper resources and eligible buyers before every product.

@@ -369,6 +369,11 @@ public:
     //! \brief Returns the manager-owned controller for the given player.
     BaseAI* getAI(const Player& player) const { return mAiManager.getAI(player); }
 
+    //! \brief The most claimed tiles (heart tiles not counted) that give mana income to a seat.
+    double getManaIncomeTilesCap() const;
+    //! \brief Seconds left until the next payday.
+    double getTimeToPayDay() const;
+
     //! \brief Returns a pointer to the player structure stored by this GameMap whose name matches pName.
     Player* getPlayer(const std::string& cName) const;
 

@@ -34,33 +34,15 @@ KeeperAIType fromString(const std::string& type)
     return KeeperAIType::nbAI;
 }
 
+//! \brief Returns the stable name of an AI level and logs invalid values.
 const std::string& toString(KeeperAIType type)
 {
-    switch(type)
-    {
-        case KeeperAIType::easy:
-        {
-            static const std::string str = "easy";
-            return str;
-        }
-        case KeeperAIType::normal:
-        {
-            static const std::string str = "normal";
-            return str;
-        }
-        case KeeperAIType::hard:
-        {
-            static const std::string str = "hard";
-            return str;
-        }
-        default:
-            break;
-    }
-    OD_LOG_ERR("Wrong enum value=" + Helper::toString(static_cast<uint32_t>(type)));
-    static const std::string str = "Wrong value";
-    return str;
+    if(type >= KeeperAIType::nbAI)
+        OD_LOG_ERR("Wrong enum value=" + Helper::toString(static_cast<uint32_t>(type)));
+    return nameOf(type);
 }
 
+//! \brief Returns the name displayed for an AI level.
 const std::string& toDisplayableString(KeeperAIType type)
 {
     switch(type)
@@ -68,6 +50,16 @@ const std::string& toDisplayableString(KeeperAIType type)
         case KeeperAIType::easy:
         {
             static const std::string str = "AI Easy";
+            return str;
+        }
+        case KeeperAIType::medium:
+        {
+            static const std::string str = "AI Medium";
+            return str;
+        }
+        case KeeperAIType::hell:
+        {
+            static const std::string str = "AI Hell";
             return str;
         }
         case KeeperAIType::normal:

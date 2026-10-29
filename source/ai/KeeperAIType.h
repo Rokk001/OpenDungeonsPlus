@@ -19,17 +19,31 @@
 #define KEEPERAITYPE_H
 
 #include <string>
+#include <array>
 
 enum class KeeperAIType
 {
    easy,
    normal,
    hard,
+   medium,
+   hell,
    nbAI              // Must be the last in this enum
 };
 
 namespace KeeperAITypes
 {
+    //! \brief Returns the levels in the order shown to players.
+    static const std::array<KeeperAIType, 5> displayOrder = {{ KeeperAIType::easy, KeeperAIType::medium, KeeperAIType::normal, KeeperAIType::hard, KeeperAIType::hell }};
+
+    //! \brief Returns the stable name for an AI level without logging.
+    inline const std::string& nameOf(KeeperAIType type)
+    {
+        static const std::string names[] = {"easy", "normal", "hard", "medium", "hell", "Wrong value"};
+        const unsigned int index = static_cast<unsigned int>(type);
+        return names[index < 5 ? index : 5];
+    }
+
     KeeperAIType fromString(const std::string& type);
     const std::string& toString(KeeperAIType type);
     const std::string& toDisplayableString(KeeperAIType type);

@@ -355,6 +355,22 @@ static SkillType getDoorSkill(TrapType doorType)
     }
 }
 
+//! \brief The door tile health of the best researched door type of the seat (steel, ironbound, wooden), or 0.
+double TrapDoor::getEstimatedDoorHp(const Seat* seat)
+{
+    const TrapType doorTypes[] = {TrapType::doorSteel, TrapType::doorIronbound, TrapType::doorWooden};
+    const char* const hpKeys[] = {"SteelDoorHP", "IronboundDoorHP", "WoodenDoorHP"};
+    for(uint32_t i = 0; i < 3; ++i)
+    {
+        if(!SkillManager::isTrapAvailable(doorTypes[i], seat))
+            continue;
+
+        return SkillManager::getResearchValue(seat, getDoorSkill(doorTypes[i]),
+            ConfigManager::getSingleton().getTrapConfigDouble(hpKeys[i]), ResearchEffect::HP);
+    }
+    return 0.0;
+}
+
 //! \brief The health of the door tile with the health research of its own door type.
 double TrapDoor::getHP(Tile* tile) const
 {

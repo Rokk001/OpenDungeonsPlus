@@ -59,6 +59,9 @@ public:
     //! \brief Configured health of an undamaged heart, independent of the number of tiles of the
     //! room and of the floor tiles' own durability.
     double getHeartMaxHP() const;
+    //! \brief Health the living heart heals per second: the configured DungeonHeartHealPerSecond with the heart
+    //! healing research of the owner.
+    double getHeartHealPerSecond() const;
     //! \brief The factor of the heart health research of the owner (1 without the research)
     double getHeartHPFactor() const;
     //! \brief Remaining heart health divided by getHeartMaxHP(), from 0 to 1.

@@ -302,6 +302,17 @@ uint32_t Trap::getNbActivatedTiles() const
     return nbActivated;
 }
 
+//! \brief The configured damage range of one hit on a tile of this trap; false when the tile is not one of its tiles.
+bool Trap::getTileDamageRange(Tile* tile, double& minDamage, double& maxDamage) const
+{
+    if(mTileData.find(tile) == mTileData.end())
+        return false;
+
+    minDamage = mMinDamage;
+    maxDamage = mMaxDamage;
+    return true;
+}
+
 int32_t Trap::getNbNeededCraftedTrap() const
 {
     int32_t nbNeededCraftedTrap = 0;

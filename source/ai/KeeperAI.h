@@ -20,6 +20,8 @@
 
 #include "ai/BaseAI.h"
 
+#include <cstdint>
+#include <utility>
 #include <vector>
 
 class Tile;
@@ -47,6 +49,10 @@ public:
     virtual bool doTurn(double timeSinceLastTurn);
     //! \brief Chooses the AI keeper switches immediately before each ectoplasm product.
     static void updateGhostRoomSettings(Seat& seat);
+    //! \brief The room plan of the keeper AI in build order: the [RoomPlan] section of ai.cfg, or the compiled
+    //! plan when ai.cfg has none. An unknown room name of ai.cfg is logged as an error and skipped.
+    //! \return Pairs of the room type and the tiles of the room
+    static std::vector<std::pair<RoomType, uint32_t>> getRoomPlan();
 
 protected:
     //! \brief Checks if the AI has a treasury. If not, we search for the first available tile

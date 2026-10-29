@@ -233,6 +233,8 @@ set(OD_SOURCEFILES
     ${SRC}/ai/AiKnowledge.cpp
     ${SRC}/ai/AIManager.cpp
     ${SRC}/ai/BaseAI.cpp
+    ${SRC}/ai/AiSaveFormat.h
+    ${SRC}/ai/AiSaveFormat.cpp
     ${SRC}/ai/KeeperAI.cpp
     ${SRC}/ai/KeeperAIType.cpp
 

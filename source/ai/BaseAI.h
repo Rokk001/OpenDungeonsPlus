@@ -18,6 +18,7 @@
 #ifndef BASEAI_H
 #define BASEAI_H
 
+#include <iosfwd>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -36,6 +37,9 @@ class BaseAI
 public:
     //! \brief Returns the player controlled by this instance.
     const Player& getPlayer() const { return mPlayer; }
+
+    //! \brief Writes AI state when the implementation has state to save.
+    virtual void exportState(std::ostream&) const {}
 
     virtual ~BaseAI()
     {}

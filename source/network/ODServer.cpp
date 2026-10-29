@@ -519,7 +519,9 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         {
             // In the campaign the AI level is the difficulty chosen for the campaign
             KeeperAIType aiType = KeeperAIType::normal;
-            if(Campaign::getSingleton().isActive())
+            if(seat->getAiLevel() != KeeperAIType::nbAI)
+                aiType = seat->getAiLevel();
+            else if(Campaign::getSingleton().isActive())
                 aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getDifficulty());
             seat->setConfigPlayerId(Seat::aITypeToPlayerId(aiType));
         }
@@ -1666,6 +1668,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     aiPlayer->setNick("Keeper AI " + KeeperAITypes::toString(aiType) + " " + Helper::toString(seatId));
                     gameMap->addPlayer(aiPlayer);
                     seat->setPlayer(aiPlayer);
+                    seat->setAiLevel(aiType);
                     gameMap->assignAI(*aiPlayer, aiType);
                 }
                 else
