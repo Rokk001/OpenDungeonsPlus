@@ -42,7 +42,8 @@ const std::string& toString(KeeperAIType type)
     return nameOf(type);
 }
 
-//! \brief Returns the name displayed for an AI level.const std::string& toDisplayableString(KeeperAIType type)
+//! \brief Returns the name displayed for an AI level.
+const std::string& toDisplayableString(KeeperAIType type)
 {
     switch(type)
     {
