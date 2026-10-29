@@ -53,7 +53,8 @@ struct Group
 struct WarState
 {
     enum TunnelPhase { tunnelNone, tunnelDigging, tunnelOpen };
-    enum AssaultPhase { assaultNone, assaultMoving, assaultRunning, assaultEnding };
+    //! assaultLaunching: the groups are being moved by hand, the last banner waits for the Launch reaction
+    enum AssaultPhase { assaultNone, assaultMoving, assaultRunning, assaultEnding, assaultLaunching };
 
     TunnelPhase tunnel = tunnelNone;
     double detour = 0.0;
@@ -116,9 +117,15 @@ void exploreLook(Env& env);
 //! \brief The plan step of the attack (rows J07, K01, K02): raises Plan, then eligibility, ready list, estimate, tactic draw.
 void planAttack(Env& env);
 
-//! \brief Moves the groups by hand and casts their banners (rows K03, K04, K05); raises Launch when the groups are chosen
-//! and March when the last banner is cast.
+//! \brief Moves the groups by hand and casts the banners of all but the last group (rows K03, K04, K05); a mental step
+//! after the last drop raises Launch (launchDropsDone).
 void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const EnemyEstimate& estimate);
+
+//! \brief Raises Launch once the hand has dropped the groups (row K05); called by the mental step of launch.
+void launchDropsDone(Env& env);
+
+//! \brief The Launch reaction of row K05, after Strength of row E06: casts the last group's banner and raises March.
+void marchOff(Env& env);
 
 //! \brief One step of a running assault (rows K07, K09): banner renewal, next target, Contact, retreat test.
 void assaultStep(Env& env);
