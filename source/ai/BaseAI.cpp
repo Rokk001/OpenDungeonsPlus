@@ -16,6 +16,7 @@
  */
 
 #include "ai/BaseAI.h"
+#include "ai/AiKnowledge.h"
 
 #include "ai/KeeperAI.h"
 #include "ai/KeeperAIType.h"
@@ -30,11 +31,9 @@
 
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
-
-const int32_t pointsPerWallSpot = 50;
-const int32_t handicapPerTileOffset = 20;
 
 BaseAI::BaseAI(GameMap& gameMap, Player& player):
     mGameMap(gameMap),
@@ -51,8 +50,12 @@ Room* BaseAI::getDungeonTemple()
         return nullptr;
 }
 
+//! \brief Checks whether a known tile can be considered for a room floor.
 bool BaseAI::shouldGroundTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat)
 {
+    if(!AiKnowledge(mGameMap, mPlayerSeat).isKnown(tile))
+        return false;
+
     switch(tile->getType())
     {
         case TileType::dirt:
@@ -71,7 +74,7 @@ bool BaseAI::shouldGroundTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* m
             // We don't want to break a wall where there are activespots from another one
             for(Tile* t : tile->getAllNeighbors())
             {
-                if(t->isClaimedForSeat(mPlayerSeat) &&
+                if(AiKnowledge(mGameMap, mPlayerSeat).isKnown(t) && t->isClaimedForSeat(mPlayerSeat) &&
                     (t->getCoveringRoom() != nullptr))
                 {
                     return false;
@@ -86,8 +89,12 @@ bool BaseAI::shouldGroundTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* m
     return false;
 }
 
+//! \brief Checks whether a known tile can be considered for a room wall.
 bool BaseAI::shouldWallTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat)
 {
+    if(!AiKnowledge(mGameMap, mPlayerSeat).isKnown(tile))
+        return false;
+
     // We only consider wall claimed for the correct seat or dirt (that can be claimed)
     if(tile->getFullness() <= 0.0)
         return false;
@@ -101,10 +108,16 @@ bool BaseAI::shouldWallTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* mPl
     return false;
 }
 
+//! \brief Finds the best room position by scoring squares around the given tile.
 //! To find the position, we try every square of the wantedSize width around the given tile for each possible distance
 bool BaseAI::findBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedSize, bool useWalls,
     int32_t& bestX, int32_t& bestY)
 {
+    const int32_t pointsPerWallSpot = ConfigManager::getSingleton().getAiConfigInt32("PlacementPointsPerWallSpot");
+    const int32_t handicapPerTileOffset = ConfigManager::getSingleton().getAiConfigInt32("PlacementHandicapPerTileOffset");
+    const int32_t firstSpotTiles = ConfigManager::getSingleton().getAiConfigInt32("PlacementFirstSpotTiles");
+    const int32_t nextSpotTiles = ConfigManager::getSingleton().getAiConfigInt32("PlacementNextSpotTiles");
+
     // We use a point system to find the best position. Once we find a valid position, we will set a handicap
     // that will increase as we go away from the given tile. Once the handicap is > to the max points we can get minus
     // the points the room we found got, we can stop searching.
@@ -112,10 +125,10 @@ bool BaseAI::findBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
 
     // We search for the maximum points a room can get
     int32_t maxPointsPossible = 0;
-    if(wantedSize >= 3)
+    if(wantedSize >= firstSpotTiles)
     {
         // Maximum central active spots
-        int32_t nbCentralActiveSpots = ((wantedSize - 3) / 2) + 1;
+        int32_t nbCentralActiveSpots = ((wantedSize - firstSpotTiles) / nextSpotTiles) + 1;
         // Wall active spots
         if(useWalls)
             maxPointsPossible += nbCentralActiveSpots * 4 * pointsPerWallSpot;
@@ -144,7 +157,7 @@ bool BaseAI::findBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
                 int32_t centerY = t->getY() + (wantedSize / 2);
                 int32_t distance = (tile->getX() - centerX) * (tile->getX() - centerX);
                 distance += (tile->getY() - centerY) * (tile->getY() - centerY);
-                if((points > bestPoints) ||
+                if(!isFound || (points > bestPoints) ||
                    (points == bestPoints && distance < bestDistance))
                 {
                     bestDistance = distance;
@@ -164,7 +177,7 @@ bool BaseAI::findBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
                 int32_t centerY = t->getY() + (wantedSize / 2);
                 int32_t distance = (tile->getX() - centerX) * (tile->getX() - centerX);
                 distance += (tile->getY() - centerY) * (tile->getY() - centerY);
-                if((points > bestPoints) ||
+                if(!isFound || (points > bestPoints) ||
                    (points == bestPoints && distance < bestDistance))
                 {
                     bestDistance = distance;
@@ -184,7 +197,7 @@ bool BaseAI::findBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
                 int32_t centerY = t->getY() - (wantedSize / 2);
                 int32_t distance = (tile->getX() - centerX) * (tile->getX() - centerX);
                 distance += (tile->getY() - centerY) * (tile->getY() - centerY);
-                if((points > bestPoints) ||
+                if(!isFound || (points > bestPoints) ||
                    (points == bestPoints && distance < bestDistance))
                 {
                     bestDistance = distance;
@@ -204,7 +217,7 @@ bool BaseAI::findBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
                 int32_t centerY = t->getY() - (wantedSize / 2);
                 int32_t distance = (tile->getX() - centerX) * (tile->getX() - centerX);
                 distance += (tile->getY() - centerY) * (tile->getY() - centerY);
-                if((points > bestPoints) ||
+                if(!isFound || (points > bestPoints) ||
                    (points == bestPoints && distance < bestDistance))
                 {
                     bestDistance = distance;
@@ -227,9 +240,13 @@ bool BaseAI::findBestPlaceForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
     return isFound;
 }
 
+//! \brief Scores a known room footprint and its usable wall spots.
 bool BaseAI::computePointsForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedSize,
     bool bottomLeft2TopRight, bool useWalls, int32_t& points)
 {
+    const int32_t pointsPerWallSpot = ConfigManager::getSingleton().getAiConfigInt32("PlacementPointsPerWallSpot");
+    const int32_t firstSpotTiles = ConfigManager::getSingleton().getAiConfigInt32("PlacementFirstSpotTiles");
+    const int32_t nextSpotTiles = ConfigManager::getSingleton().getAiConfigInt32("PlacementNextSpotTiles");
     int tileX = tile->getX();
     int tileY = tile->getY();
     bool isOk = true;
@@ -297,13 +314,13 @@ bool BaseAI::computePointsForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
 
         if(nbActiveWallSpots == 0)
         {
-            if(nbConsecutiveTiles >= 3)
+            if(nbConsecutiveTiles >= firstSpotTiles)
             {
                 nbConsecutiveTiles = 0;
                 ++nbActiveWallSpots;
             }
         }
-        else if(nbConsecutiveTiles >= 2)
+        else if(nbConsecutiveTiles >= nextSpotTiles)
         {
             nbConsecutiveTiles = 0;
             ++nbActiveWallSpots;
@@ -330,13 +347,13 @@ bool BaseAI::computePointsForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
 
         if(nbActiveWallSpots == 0)
         {
-            if(nbConsecutiveTiles >= 3)
+            if(nbConsecutiveTiles >= firstSpotTiles)
             {
                 nbConsecutiveTiles = 0;
                 ++nbActiveWallSpots;
             }
         }
-        else if(nbConsecutiveTiles >= 2)
+        else if(nbConsecutiveTiles >= nextSpotTiles)
         {
             nbConsecutiveTiles = 0;
             ++nbActiveWallSpots;
@@ -363,13 +380,13 @@ bool BaseAI::computePointsForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
 
         if(nbActiveWallSpots == 0)
         {
-            if(nbConsecutiveTiles >= 3)
+            if(nbConsecutiveTiles >= firstSpotTiles)
             {
                 nbConsecutiveTiles = 0;
                 ++nbActiveWallSpots;
             }
         }
-        else if(nbConsecutiveTiles >= 2)
+        else if(nbConsecutiveTiles >= nextSpotTiles)
         {
             nbConsecutiveTiles = 0;
             ++nbActiveWallSpots;
@@ -396,13 +413,13 @@ bool BaseAI::computePointsForRoom(Tile* tile, Seat* mPlayerSeat, int32_t wantedS
 
         if(nbActiveWallSpots == 0)
         {
-            if(nbConsecutiveTiles >= 3)
+            if(nbConsecutiveTiles >= firstSpotTiles)
             {
                 nbConsecutiveTiles = 0;
                 ++nbActiveWallSpots;
             }
         }
-        else if(nbConsecutiveTiles >= 2)
+        else if(nbConsecutiveTiles >= nextSpotTiles)
         {
             nbConsecutiveTiles = 0;
             ++nbActiveWallSpots;

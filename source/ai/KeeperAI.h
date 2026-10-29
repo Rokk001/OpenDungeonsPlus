@@ -20,6 +20,9 @@
 
 #include "ai/BaseAI.h"
 #include "ai/AiMind.h"
+#include "ai/AiRooms.h"
+#include "ai/AiEconomy.h"
+#include "ai/AiResearch.h"
 
 #include <cstdint>
 #include <utility>
@@ -47,6 +50,14 @@ public:
     Mind& getMind();
     //! \brief The values of the selected AI level.
     const AiSettings& getSettings() const;
+    //! \brief Returns the room decisions and pending placement owned by this keeper.
+    ROOMS::State& getRoomsState() { return mRoomsState; }
+    //! \brief Returns the payday reserve decisions owned by this keeper.
+    ECON::EconomyState& getEconomyState() { return mEconomyState; }
+    //! \brief Returns the research queue decisions owned by this keeper.
+    RES::ResearchState& getResearchState() { return mResearchState; }
+    //! \brief Scores known room squares around the selected placement origin.
+    bool findRoomPosition(Tile* start, int32_t size, bool walls, int32_t& x, int32_t& y);
     //! \brief Writes the keeper's mind as the contents of its AIState block.
     virtual void exportState(std::ostream& os) const;
     //! \brief Restores the contents of an AIState block, or starts fresh when invalid.
@@ -59,21 +70,6 @@ public:
     static std::vector<std::pair<RoomType, uint32_t>> getRoomPlan();
 
 protected:
-    //! \brief Checks if the AI has a treasury. If not, we search for the first available tile
-    //! to add it
-    //! Returns true if the action has been done and false if nothing has been done
-    bool checkTreasury();
-
-    //! \brief Checks if a room is needed. If yes, it will check if place is available
-    //! and start digging for it.
-    //! Returns true if the action has been done and false if nothing has been done
-    bool handleRooms();
-
-    //! \brief Look for gold and make way up to it.
-    //! \brief Returns whether the action could succeed.
-    //! It will also return false once it's done.
-    bool lookForGold();
-
     //! \brief Picks up wounded creatures and drops then in the dungeon temple
     void saveWoundedCreatures();
 
@@ -86,41 +82,13 @@ protected:
     //! than the attack threshold and while not too many of them are below the minimum creature level.
     void handleAttack();
 
-    //! \brief Checks if a new worker should be summoned
-    //! Returns true if the action has been done and false if nothing has been done
-    bool handleWorkers();
-
     //! \brief Checks if a room needs to be repaired and repairs if so
     //! Returns true if the action has been done and false if nothing has been done
     bool repairRooms();
 
-    //! \brief Try to help tired creatures to reach dormitory
-    //! Returns true if the action has been done and false if nothing has been done
-    bool handleTiredCreatures();
-
-    //! \brief Try to help hungry creatures to reach hatchery
-    //! Returns true if the action has been done and false if nothing has been done
-    bool handleHungryCreatures();
-
-    //! \brief This function will be called once only during this player's first upkeep
-    //! It should setup what is needed for the AI
-    void handleFirstTurn();
-
 private:
-    //! \brief Runs the original economy chain until the economy package replaces it.
-    bool legacyEconomyTurn();
     //! \brief Runs the original wounded-creature, defence and attack paths until their owner replaces them.
     void legacyWarTurn();
-
-    //! \brief try to build the most needed available room
-    bool buildMostNeededRoom();
-
-    //! \brief Try to build the given room on the given position. Returns true if the room was built and
-    //! false otherwise
-    bool buildRoom(RoomType roomType, int x, int y, int roomSize);
-
-    //! \brief Returns true if the given room is needed and false otherwise
-    bool checkNeedRoom(RoomType roomType);
 
     //! \brief Returns the number of non-worker creatures with enough HP to be sent to fight
     int countHealthyFighters() const;
@@ -145,6 +113,9 @@ private:
     AiSettings mSettings;
     //! \brief The common mind uses the selected level independently of the interim legacy paths.
     Mind mMind;
+    ROOMS::State mRoomsState;
+    ECON::EconomyState mEconomyState;
+    RES::ResearchState mResearchState;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)
@@ -156,24 +127,13 @@ private:
     //! \brief Number of healthy fighters when the attack started. Used to decide when to retreat
     int mNbFightersAtAttackStart;
     int mCooldownAttack;
-    int mCooldownCheckTreasury;
-    int mCooldownLookingForRooms;
-    int mCooldownLookingForRoomsMin;
-    int mCooldownLookingForRoomsMax;
-    int mRoomPosX;
-    int mRoomPosY;
-    int mRoomSize;
-    bool mNoMoreReachableGold;
-    int mCooldownLookingForGold;
     int mCooldownDefense;
     int mCooldownDefenseMin;
     int mCooldownDefenseMax;
-    int mCooldownWorkers;
     int mCooldownRepairRooms;
     int mCooldownSaveWoundedCreatures;
     int mCooldownSaveWoundedCreaturesMin;
     int mCooldownSaveWoundedCreaturesMax;
-    bool mIsFirstUpkeepDone;
 };
 
 #endif // KEEPERAI_H
