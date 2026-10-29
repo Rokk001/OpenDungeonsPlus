@@ -72,7 +72,7 @@ static const int HARD_MAX_DOORS = 5;
 //! \brief Creates the keeper AI of the given level for a player.
 //! \param gameMap The map the AI plays on.
 //! \param player The player the AI controls.
-//! \param type The AI level: easy, normal or hard.
+//! \param type The AI level.
 //! \return The new AI, or nullptr (with an error in the log) for any other AI type.
 BaseAI* createAI(GameMap& gameMap, Player& player, KeeperAIType type)
 {
@@ -89,6 +89,8 @@ BaseAI* createAI(GameMap& gameMap, Player& player, KeeperAIType type)
                 EASY_COOLDOWN_LOOKING_FOR_ROOMS_MIN, EASY_COOLDOWN_LOOKING_FOR_ROOMS_MAX,
                 EASY_REACTION_PERCENT, EASY_MIN_HP_PERCENT_TO_FIGHT, EASY_MIN_FIGHTERS_TO_ATTACK,
                 EASY_MIN_CREATURE_LEVEL, EASY_MAX_TRAP_TILES, EASY_MAX_DOORS);
+        case KeeperAIType::medium:
+        case KeeperAIType::hell:
         case KeeperAIType::normal:
             return new KeeperAI(gameMap, player, type, NORMAL_COOLDOWN_DEFENSE_MIN, NORMAL_COOLDOWN_DEFENSE_MAX,
                 NORMAL_COOLDOWN_SAVE_WOUNDED_MIN, NORMAL_COOLDOWN_SAVE_WOUNDED_MAX,

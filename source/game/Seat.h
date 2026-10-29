@@ -20,6 +20,8 @@
 
 #include "entities/NodeType.h"
 #include "game/SeatData.h"
+#include "ai/KeeperAIType.h"
+#include "spells/SpellType.h"
 #include "game/SeatStatistics.h"
 
 
@@ -467,8 +469,18 @@ public:
     static KeeperAIType playerIdToAIType(int32_t playerId);
     static int32_t aITypeToPlayerId(KeeperAIType type);
 
+    //! \brief Returns the AI level loaded or selected for this seat.
+    KeeperAIType getAiLevel() const { return mAiLevel; }
+    //! \brief Records the selected AI level.
+    void setAiLevel(KeeperAIType level) { mAiLevel = level; }
+    //! \brief Takes the saved AI state for its first turn.
+    std::vector<std::string> takeAiStateLoaded();
+
 private:
     //! \brief The game map this seat belongs to
+    KeeperAIType mAiLevel = KeeperAIType::nbAI;
+    std::vector<std::pair<SpellType, uint32_t>> mSpellCooldownsLoaded;
+    std::vector<std::string> mAiStateLoaded;
     GameMap* mGameMap;
 
     //! \brief The player sitting on this seat
