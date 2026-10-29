@@ -22,6 +22,8 @@
 #include "ai/AiMind.h"
 #include "ai/AiEvents.h"
 #include "ai/AiWar.h"
+#include "ai/AiSpells.h"
+#include "ai/AiTraps.h"
 
 #include <cstdint>
 #include <utility>
@@ -53,6 +55,10 @@ public:
     void notifyEvent(const AiEvent& event) override;
     //! \brief The values of the selected AI level.
     const AiSettings& getSettings() const;
+    //! \brief What the spell rows remember for this keeper (lives as long as the keeper).
+    SPELL::State& getSpellState() { return mSpellState; }
+    //! \brief What the trap and door rows remember for this keeper (lives as long as the keeper).
+    TRAP::State& getTrapState() { return mTrapState; }
     //! \brief Writes the keeper's mind as the contents of its AIState block.
     virtual void exportState(std::ostream& os) const;
     //! \brief Restores the contents of an AIState block, or starts fresh when invalid.
@@ -132,6 +138,10 @@ private:
     AiEvents mEvents;
     //! \brief The war state of this keeper (tunnel, assault, defence, sightings).
     WAR::WarState mWar;
+    //! \brief The state of the spell rows (E04, E05 and the fight session).
+    SPELL::State mSpellState;
+    //! \brief The state of the trap and door rows (F01, F12, F13, F15).
+    TRAP::State mTrapState;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)
