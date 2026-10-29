@@ -995,8 +995,11 @@ void Player::markTilesForDigging(bool marked, const std::vector<Tile*>& tiles, b
                 continue;
             }
 
-            // If the tile can be marked on server side, we mark it
-            if(!tile->isDiggable(getSeat()))
+            // Like a human, an AI may mark a tile it has not explored yet, whatever its type; the mark
+            // never reveals the tile. A known tile must be diggable.
+            const bool unexplored = !getSeat()->hasVisionOnTile(tile) &&
+                !mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][getSeat()->getId()];
+            if(!unexplored && !tile->isDiggable(getSeat()))
                 continue;
 
             tile->setMarkedForDigging(marked, this);

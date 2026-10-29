@@ -29,6 +29,7 @@ AiKnowledge::AiKnowledge(GameMap& gameMap, Seat* seat) :
 
 bool AiKnowledge::isKnown(Tile* tile) const
 {
+    // AI row L03: hard limit, an AI seat reads only tiles it has seen
     if(tile == nullptr)
         return false;
 
