@@ -535,7 +535,8 @@ void exploreLook(Env& env)
     knowledge.exploreTunnels(env.ai, env.mind, st.exploreMarked);
 }
 
-void planAttack(Env& env)
+//! \brief Plans an attack, optionally bypassing the post-assault rest for one second-wave attempt.
+void planAttack(Env& env, bool bypassRest)
 {
     // AI row K01: eligibility and the ready list
     // AI row K02: the estimate, the scores and the draw of the tactic
@@ -546,7 +547,7 @@ void planAttack(Env& env)
         return;
     AiEvent plan = {AiEventType::Plan, st.breakthrough, nullptr, -1, 0.0, env.now};
     env.mind.enqueue(plan);
-    if(env.now - st.lastAssaultEnd < key("RestSecondsAfterAssault"))
+    if(!bypassRest && env.now - st.lastAssaultEnd < key("RestSecondsAfterAssault"))
         return;
     if(!callToWarReady(env) || (seat->getMana() < callToWarPrice()))
         return;
@@ -933,6 +934,7 @@ void assaultStep(Env& env)
     }
 }
 
+//! \brief Plans immediately or records the window for a second wave after the current assault.
 void secondWave(Env& env)
 {
     // AI row K08: the enemy traps are empty, attack again at once; the mistake waits (no second wave now)
@@ -941,11 +943,15 @@ void secondWave(Env& env)
         return;
 
     st.secondWaveUntil = env.now + key("SecondWaveMinutes") * 60.0;
-    // The rest after the last assault does not hold the second wave back
-    st.lastAssaultEnd = -1.0e18;
-    planAttack(env);
+    // The rest after the last assault does not hold the immediate second-wave attempt back
+    if(st.assault == WarState::assaultNone)
+    {
+        st.secondWaveUntil = -1.0;
+        planAttack(env, true);
+    }
 }
 
+//! \brief Ends an assault and makes a pending second-wave attempt within its window.
 void endAssault(Env& env)
 {
     // AI row K10: banners removed, survivors on enemy ground carried home by hand, the rest started, AssaultOver raised
@@ -985,6 +991,10 @@ void endAssault(Env& env)
 
     AiEvent over = {AiEventType::AssaultOver, nullptr, nullptr, -1, 0.0, env.now};
     env.mind.enqueue(over);
+    bool secondWavePending = st.secondWaveUntil >= 0.0 && env.now <= st.secondWaveUntil;
+    st.secondWaveUntil = -1.0;
+    if(secondWavePending)
+        planAttack(env, true);
 }
 
 void defend(Env& env, const AiEvent& event)
@@ -1263,11 +1273,13 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if(line.tag == "sighting")
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
-        return (line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"));
+        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"))) ||
+               ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
     return false;
 }
 }
 
+//! \brief Saves war observations and the remaining second-wave window.
 void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
 {
     const WarState& st = env.state;
@@ -1294,6 +1306,8 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     a.push_back(st.contactTime < 0.0 ? "-1" : num(env.now - st.contactTime));
     a.push_back(num(std::max(0.0, key("RestSecondsAfterAssault") - (env.now - st.lastAssaultEnd))));
     addLine(lines, "war", a);
+    if(st.secondWaveUntil >= env.now)
+        addLine(lines, "draw", {"K08", "secondWave", num(st.secondWaveUntil - env.now)});
 
     for(size_t i = 0; i < st.groups.size(); ++i)
     {
@@ -1384,6 +1398,7 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     }
 }
 
+//! \brief Restores war observations and the saved second-wave window.
 void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
 {
     WarState& st = env.state;
@@ -1394,7 +1409,9 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         const std::vector<std::string>& k = line.tokens;
         if(k.empty())
             continue;
-        if((line.tag == "war") && (k[0] == "tunnel"))
+        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
+            st.secondWaveUntil = env.now + std::atof(k[2].c_str());
+        else if((line.tag == "war") && (k[0] == "tunnel"))
         {
             st.tunnel = (k[1] == "open") ? WarState::tunnelOpen : ((k[1] == "digging") ? WarState::tunnelDigging : WarState::tunnelNone);
             st.detour = std::atof(k[2].c_str());
