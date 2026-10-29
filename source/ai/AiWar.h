@@ -64,12 +64,6 @@ struct WarState
     double nextProbe = 0.0;
     double nextPlan = -1.0;
     bool exploreMarked = false;
-    //! \brief The first tile of the own tunnel route, where a tunnel the seat dug leaves its land (nullptr when none).
-    Tile* tunnelEntrance = nullptr;
-    //! \brief Game seconds when the F15 fortify of the open tunnel is due, -1 when none is pending.
-    double fortifyDue = -1.0;
-    //! \brief True once the fortify of the open tunnel was handed to row F15.
-    bool fortifyDone = false;
 
     AssaultPhase assault = assaultNone;
     int tactic = -1;
@@ -111,26 +105,28 @@ void doTurn(Env& env);
 //! Plan, Launch, Contact, AssaultOver, EnemySpellSeen) after its reaction delay.
 void onEvent(Env& env, const AiEvent& event);
 
-//! \brief Digs the tunnel toward the nearest known enemy tile (row I01); without a known enemy tile it does nothing.
+//! \brief Digs the tunnel toward the nearest known enemy tile (row I01) and raises Start; without a known enemy tile it
+//! does nothing.
 void planDig(Env& env);
 
 //! \brief The explore look of row I05 (period LookPeriod600): while no enemy tile is known and the tunnel is not open,
 //! marks the exploration tunnels once.
 void exploreLook(Env& env);
 
-//! \brief The plan step of the attack (rows J07, K01, K02): eligibility, ready list, estimate, tactic draw.
+//! \brief The plan step of the attack (rows J07, K01, K02): raises Plan, then eligibility, ready list, estimate, tactic draw.
 void planAttack(Env& env);
 
-//! \brief Moves the groups by hand and casts their banners (rows K03, K04, K05).
+//! \brief Moves the groups by hand and casts their banners (rows K03, K04, K05); raises Launch when the groups are chosen
+//! and March when the last banner is cast.
 void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const EnemyEstimate& estimate);
 
-//! \brief One step of a running assault (rows K07, K09): banner renewal, next target, retreat test.
+//! \brief One step of a running assault (rows K07, K09): banner renewal, next target, Contact, retreat test.
 void assaultStep(Env& env);
 
 //! \brief Attacks again when the enemy traps are empty (row K08).
 void secondWave(Env& env);
 
-//! \brief Ends the assault (row K10): banners removed, survivors on enemy ground carried home.
+//! \brief Ends the assault (row K10): banners removed, survivors on enemy ground carried home, AssaultOver raised.
 void endAssault(Env& env);
 
 //! \brief Defends at the first contact of an enemy group (rows J01, J02, J03, J06).

@@ -498,7 +498,6 @@ void planDig(Env& env)
     st.tunnel = WarState::tunnelDigging;
     st.detour = detour;
     st.tunnelTarget = target;
-    st.tunnelEntrance = firstDig;
     st.tunnelKnown = true;
     st.nextProbe = env.now + key("TunnelProbeSeconds");
 
@@ -518,6 +517,9 @@ void planDig(Env& env)
         ACTS::moveCreature(env.ai, worker, drop);
         --diggers;
     }
+
+    AiEvent started = {AiEventType::Start, target, nullptr, -1, 0.0, env.now};
+    env.mind.enqueue(started);
 }
 
 void exploreLook(Env& env)
@@ -542,6 +544,8 @@ void planAttack(Env& env)
     Seat* seat = env.player.getSeat();
     if((st.tunnel != WarState::tunnelOpen) || !st.tunnelKnown || (st.assault != WarState::assaultNone))
         return;
+    AiEvent plan = {AiEventType::Plan, st.breakthrough, nullptr, -1, 0.0, env.now};
+    env.mind.enqueue(plan);
     if(env.now - st.lastAssaultEnd < key("RestSecondsAfterAssault"))
         return;
     if(!callToWarReady(env) || (seat->getMana() < callToWarPrice()))
@@ -742,8 +746,14 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
     if((groups.size() > 1) && !groups[0].raid && groups[1].raid)
         std::swap(groups[0], groups[1]);
 
-    // Gathering decision: the complex draw belongs to row E07 (its class and multiplier); a mistake skips the hand moves
-    bool walkFromHome = env.mind.slip("E07");
+    // The groups are chosen: Launch carries the drop tile of the main group and the tactic (rows E06, E20, H03)
+    Tile* mainDrop = groups.back().dropTile;
+    AiEvent launched = {AiEventType::Launch, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
+                        static_cast<double>(tactic), env.now};
+    env.mind.enqueue(launched);
+
+    // Gathering decision: the complex draw of row E07; a mistake skips the hand moves
+    bool walkFromHome = SPELL::drawLaunchGathering(env.ai);
     for(Group& g : groups)
     {
         if(!walkFromHome)
@@ -767,6 +777,10 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
         if(!castBanner(env, g, g.targets.front()))
             g.finished = true;
     }
+
+    // The last banner of the launch is cast: the march starts from the main group's drop tile (row E03)
+    AiEvent march = {AiEventType::March, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(), 0.0, env.now};
+    env.mind.enqueue(march);
 
     st.groups = groups;
     st.assault = WarState::assaultMoving;
@@ -851,6 +865,8 @@ void assaultStep(Env& env)
     {
         st.contactTime = env.now;
         st.assault = WarState::assaultRunning;
+        AiEvent contact = {AiEventType::Contact, nullptr, nullptr, -1, 0.0, env.now};
+        env.mind.enqueue(contact);
     }
     if(st.contactTime < 0.0)
         return;
@@ -1003,8 +1019,8 @@ void defend(Env& env, const AiEvent& event)
     if(fightTile == nullptr)
         return;
 
+    // The cast decision is row E07's: more than CallToWarMinCreatures at home and no complex mistake
     bool banner = callToWarReady(env) && (seat->getMana() >= callToWarPrice()) &&
-                  (static_cast<int>(home.size()) > static_cast<int>(key("CallToWarMinCreatures"))) && !env.mind.slip("E07") &&
                   SPELL::castCallToWar(env.ai, fightTile, static_cast<int>(home.size()), false);
     if(banner)
     {
@@ -1081,21 +1097,20 @@ void doTurn(Env& env)
     WarState& st = env.state;
     Seat* seat = env.player.getSeat();
 
-    AiMath::DelayParams p;
-    p.rho = env.settings.rho;
-    p.pi = env.settings.pi;
-    p.scanPeriod = env.settings.scanPeriod;
-    p.symptomScanFactor = key("LookFactorSymptom");
-    p.periodicMinDelay = key("PeriodicMinDelay");
-    p.latencyMean = key("LatencyMean");
-    p.latencySd = key("LatencySd");
-    AiMath::Uniform01 u = uniform01;
-
     // The plan step: the first one at FirstPlanSeconds + U(0, jitter), then every ScanPeriod x LookFactorPlan on average
     if(st.nextPlan < 0.0)
         st.nextPlan = key("FirstPlanSeconds") + Random::Double(0.0, key("FirstPlanJitterSeconds"));
     if(env.now >= st.nextPlan)
     {
+        AiMath::DelayParams p;
+        p.rho = env.settings.rho;
+        p.pi = env.settings.pi;
+        p.scanPeriod = env.settings.scanPeriod;
+        p.symptomScanFactor = key("LookFactorSymptom");
+        p.periodicMinDelay = key("PeriodicMinDelay");
+        p.latencyMean = key("LatencyMean");
+        p.latencySd = key("LatencySd");
+        AiMath::Uniform01 u = uniform01;
         st.nextPlan = env.now + AiMath::lookInterval(key("LookFactorPlan"), p, u);
         planDig(env);
         if(st.tunnel == WarState::tunnelOpen)
@@ -1108,23 +1123,6 @@ void doTurn(Env& env)
         double age = env.mind.enemySpellAge(other->getId());
         if(age >= 0.0)
             st.sighting.seats[other->getId()].lastSpellTime = env.now - age;
-    }
-
-    // The fortify of row F15 once the tunnel is open: a seat that dug waits one alert delay from its TunnelOpen; a seat
-    // that did not dig learnt of the tunnel at its first contact, whose alert delay has already passed
-    if((st.tunnel == WarState::tunnelOpen) && st.tunnelKnown && !st.fortifyDone && (st.fortifyDue < 0.0))
-    {
-        if(st.tunnelTarget != nullptr)
-            st.fortifyDue = env.now + AiMath::reactionDelay(AiMath::ReactionKind::alert, p, u);
-        else
-            st.fortifyDue = env.now;
-    }
-    if((st.fortifyDue >= 0.0) && (env.now >= st.fortifyDue))
-    {
-        st.fortifyDue = -1.0;
-        st.fortifyDone = true;
-        Tile* entrance = (st.tunnelEntrance != nullptr) ? st.tunnelEntrance : st.breakthrough;
-        TRAP::fortifyTunnel(env.ai, entrance);
     }
 
     // Tunnel and combat symptom polling is owned by the shared event source (AiEvents).
@@ -1234,8 +1232,7 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if(line.tag == "sighting")
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
-        return ((line.tokens[0] == "I01") && (line.tokens[1] == "tunnelEntrance")) ||
-               ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile")));
+        return (line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"));
     return false;
 }
 }
@@ -1254,17 +1251,10 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     t.push_back(tileY(st.tunnelTarget));
     t.push_back(tileX(st.breakthrough));
     t.push_back(tileY(st.breakthrough));
-    t.push_back(st.fortifyDue < 0.0 ? "-1" : num(std::max(0.0, st.fortifyDue - env.now)));
+    // The fortify of the open tunnel is row F15's (triggered by TunnelOpen); it restores its pending fortify itself
+    double fortifyRemaining = TRAP::fortifyRemaining(env.ai);
+    t.push_back(fortifyRemaining < 0.0 ? "-1" : num(fortifyRemaining));
     addLine(lines, "war", t);
-    // The entrance of an own tunnel, needed by the fortify after loading
-    if(st.tunnelEntrance != nullptr)
-    {
-        std::vector<std::string> e;
-        e.push_back("I01");
-        e.push_back("tunnelEntrance");
-        e.push_back(num(st.tunnelEntrance->getX()) + ":" + num(st.tunnelEntrance->getY()));
-        addLine(lines, "draw", e);
-    }
 
     std::vector<std::string> a;
     a.push_back("assault");
@@ -1380,16 +1370,6 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
             st.tunnelTarget = tileAt(env.gameMap, k[3], k[4]);
             st.breakthrough = tileAt(env.gameMap, k[5], k[6]);
             st.tunnelKnown = (st.tunnel != WarState::tunnelNone);
-            double fortifyRemaining = std::atof(k[7].c_str());
-            st.fortifyDue = (fortifyRemaining < 0.0) ? -1.0 : env.now + fortifyRemaining;
-            // An open tunnel without a pending fortify was already fortified (or forgotten) before the save
-            st.fortifyDone = (st.tunnel == WarState::tunnelOpen) && (fortifyRemaining < 0.0);
-        }
-        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I01") && (k[1] == "tunnelEntrance"))
-        {
-            size_t colon = k[2].find(':');
-            if(colon != std::string::npos)
-                st.tunnelEntrance = tileAt(env.gameMap, k[2].substr(0, colon), k[2].substr(colon + 1));
         }
         else if((line.tag == "war") && (k[0] == "assault"))
         {
