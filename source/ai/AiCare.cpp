@@ -143,7 +143,7 @@ void possessionInput(KeeperAI& ai, Tile*, const std::string& input)
         return;
     }
     Creature* enemy = second == std::string::npos ? nullptr : ai.getGameMap().getCreature(input.substr(second + 1));
-    if(enemy == nullptr || !enemy->isAlive() || enemy->getPositionTile() == nullptr ||
+    if(enemy == nullptr || !enemy->isAlive() || !enemy->getIsOnMap() || enemy->getPositionTile() == nullptr ||
        enemy->getSeat() == nullptr || ai.getControlledPlayer().getSeat()->isAlliedSeat(enemy->getSeat()))
         return;
     const std::vector<Seat*>& vision = enemy->getPositionTile()->getSeatsWithVision();
@@ -454,7 +454,7 @@ void CARE::possessionStep(KeeperAI& ai, double& nextControl)
     for(Creature* enemy : ai.getGameMap().getCreatures())
     {
         Tile* tile = enemy->getPositionTile();
-        if(!enemy->isAlive() || enemy->getSeat() == nullptr || enemy->getSeat() == player.getSeat() ||
+        if(!enemy->isAlive() || !enemy->getIsOnMap() || enemy->getSeat() == nullptr || enemy->getSeat() == player.getSeat() ||
            player.getSeat()->isAlliedSeat(enemy->getSeat()) || tile == nullptr)
             continue;
         const std::vector<Seat*>& vision = tile->getSeatsWithVision();
@@ -480,7 +480,8 @@ void CARE::possessionStep(KeeperAI& ai, double& nextControl)
         Creature* controlled = ai.getGameMap().getCreature(name);
         Creature* enemy = ai.getGameMap().getCreature(enemyName);
         if(controlled == nullptr || controlled->getPossessor() != &ai.getControlledPlayer() ||
-           enemy == nullptr || !enemy->isAlive() || enemy->getPositionTile() == nullptr)
+           enemy == nullptr || !enemy->isAlive() || !enemy->getIsOnMap() || enemy->getPositionTile() == nullptr ||
+           enemy->getSeat() == nullptr || ai.getControlledPlayer().getSeat()->isAlliedSeat(enemy->getSeat()))
             return;
         const std::vector<Seat*>& vision = enemy->getPositionTile()->getSeatsWithVision();
         if(std::find(vision.begin(), vision.end(), ai.getControlledPlayer().getSeat()) == vision.end())
