@@ -286,6 +286,10 @@ bool AiEvents::poll()
             continue;
         const std::string key = "PrisonerAge:" + creature->getName();
         currentPrisonerEdges.insert(key);
+        Tile* tile = creature->getIsOnMap() ? creature->getPositionTile() : nullptr;
+        Room* prison = tile == nullptr ? nullptr : tile->getCoveringRoom();
+        if(prison == nullptr || prison->getType() != RoomType::prison || prison->getSeat() != seat)
+            continue;
         const bool mature = creature->getNbTurnsPrison() >=
             cfg.getAiConfigDouble("PrisonWaitMinutes") * 60.0 * ODApplication::turnsPerSecond;
         if(legacyPrisonerEdge && mEdges.find(key) == mEdges.end() && mature)

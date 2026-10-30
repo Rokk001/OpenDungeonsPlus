@@ -17,6 +17,7 @@
 #include "rooms/RoomType.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomArena.h"
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomTavern.h"
 #include "rooms/RoomSpa.h"
@@ -212,7 +213,19 @@ void perform(KeeperAI& ai, const std::string& target)
                 if(tile->isBuildableUpon(seat)) legal.push_back(tile);
             if(legal.empty()) return;
             if(action == "room" && SkillManager::isRoomAvailable(static_cast<RoomType>(value), seat))
-                RoomManager::buildRoomOnTiles(&map, static_cast<RoomType>(value), &player, legal, false);
+            {
+                if(RoomManager::buildRoomOnTiles(&map, roomType, &player, legal, false))
+                {
+                    std::vector<Tile*> built;
+                    for(Tile* tile : legal)
+                    {
+                        Room* room = tile->getCoveringRoom();
+                        if(room != nullptr && room->getSeat() == seat && room->getType() == roomType)
+                            built.push_back(tile);
+                    }
+                    ECON::recordRoomBlock(ai, roomType, static_cast<uint32_t>(tiles.size()), built);
+                }
+            }
             else if(action == "trap" && SkillManager::isTrapAvailable(static_cast<TrapType>(value), seat))
                 TrapManager::buildTrapOnTiles(&map, static_cast<TrapType>(value), &player, legal, false);
         }
@@ -278,7 +291,7 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!(input >> mistaken)) return;
         Creature* fighter = map.getCreature(decode(recipient));
         Tile* destination = fighter == nullptr ? nullptr : fighter->getPositionTile();
-        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || destination == nullptr ||
+        if(fighter == nullptr || !fighter->isAlive() || !fighter->getIsOnMap() || fighter->getSeat() != seat || destination == nullptr ||
            !destination->isClaimedForSeat(seat)) return;
         bool freeSlot = false;
         for(const std::unique_ptr<ItemInstance>& item : fighter->getInventory())
@@ -291,6 +304,10 @@ void perform(KeeperAI& ai, const std::string& target)
             const MerchantGood* good = merchant->findGood(index, table);
             if(good != nullptr)
             {
+                Room* room = destination->getCoveringRoom();
+                if(!mistaken && !good->mItem.mSoulCrystal && room != nullptr && room->getType() == RoomType::arena &&
+                   static_cast<RoomArena*>(room)->hasRunningFight())
+                    return;
                 if(ECON::walletGate(ai, good->mItem.getPrice(&map)) && (mistaken || RoomMerchant::wantsItem(*fighter, good->mItem)) &&
                    merchant->sellToKeeper(player, index) && player.numObjectsInHand() != 0)
                 {
@@ -309,7 +326,7 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!(input >> recipient >> name)) return;
         Creature* fighter = map.getCreature(decode(recipient));
         Tile* tile = fighter == nullptr ? nullptr : fighter->getPositionTile();
-        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || tile == nullptr) return;
+        if(fighter == nullptr || !fighter->isAlive() || !fighter->getIsOnMap() || fighter->getSeat() != seat || tile == nullptr) return;
         const unsigned int index = player.getHandIndex(GameEntityType::itemBagEntity, decode(name));
         if(index < player.numObjectsInHand() && player.isDropHandPossible(tile, index)) player.dropHand(tile, index);
         return;
