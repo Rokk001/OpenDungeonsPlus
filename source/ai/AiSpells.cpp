@@ -974,17 +974,17 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         }
         else if(chosen == SpellType::inferno)
         {
-            // Inferno burns an area: the strongest intruder
-            target = strongest(pool);
+            // Focus on the lowest-HP intruder, or choose randomly, as for the other damage spells.
+            target = focusTarget(ai, pool);
         }
         else if(chosen == SpellType::tremor)
         {
-            // Tremor shakes an area: the intruder with the most others around
+            // Choose only a target with enough nearby intruders, then apply the normal focus decision.
+            std::vector<Creature*> grouped;
             for(Creature* creature : pool)
-            {
-                if((target == nullptr) || (creaturesAround(pool, creature) > creaturesAround(pool, target)))
-                    target = creature;
-            }
+                if(creaturesAround(pool, creature) >= static_cast<int>(aiKey("TremorMinTargets")))
+                    grouped.push_back(creature);
+            target = focusTarget(ai, grouped);
         }
         else
         {
