@@ -1025,12 +1025,14 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mGhostAiGoldPerResearchPoint = Helper::toDouble(nextParam);
+            foundKeys.insert("GhostAiGoldPerResearchPoint");
             continue;
         }
         if(nextParam == "GhostAiGoldPerXp")
         {
             configFile >> nextParam;
             mGhostAiGoldPerXp = Helper::toDouble(nextParam);
+            foundKeys.insert("GhostAiGoldPerXp");
             continue;
         }
         if(nextParam == "SoulCrystalPrice")
@@ -1049,6 +1051,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mSoulCrystalNormalXpPerSecond = Helper::toDouble(nextParam);
+            foundKeys.insert("SoulCrystalNormalXpPerSecond");
             continue;
         }
         if(nextParam == "SoulCrystalHeroRareStart")
@@ -1067,17 +1070,20 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCorpseLieSeconds = Helper::toDouble(nextParam);
+            foundKeys.insert("CorpseLieSeconds");
         }
         if(nextParam == "CorpseDecaySeconds")
         {
             configFile >> nextParam;
             mCorpseDecaySeconds = Helper::toDouble(nextParam);
+            foundKeys.insert("CorpseDecaySeconds");
         }
 
         if(nextParam == "CreatureDeathCounter")
         {
             configFile >> nextParam;
             mCreatureDeathCounter = Helper::toUInt32(nextParam);
+            foundKeys.insert("CreatureDeathCounter");
             // Not mandatory
         }
 
@@ -1106,6 +1112,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mSlapDamage = Helper::toDouble(nextParam);
+            foundKeys.insert("SlapDamage");
             // Not mandatory
         }
 
@@ -1120,6 +1127,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mSlapEffectDuration = Helper::toDouble(nextParam);
+            foundKeys.insert("SlapEffectDuration");
             // Not mandatory
         }
 
@@ -1435,6 +1443,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mTimePayDay = Helper::toInt(nextParam);
+            foundKeys.insert("TimePayDay");
             // Not mandatory
         }
 
@@ -1442,6 +1451,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mNbTurnsFuriousMax = Helper::toInt(nextParam);
+            foundKeys.insert("NbTurnsFuriousMax");
             // Not mandatory
         }
 
@@ -1456,6 +1466,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mManaWellBonusPerTile = Helper::toDouble(nextParam);
+            foundKeys.insert("ManaWellBonusPerTile");
             // Not mandatory
         }
 
@@ -1463,6 +1474,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mManaIncomeTilesCap = Helper::toDouble(nextParam);
+            foundKeys.insert("ManaIncomeTilesCap");
             // Not mandatory
         }
 
@@ -1470,6 +1482,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mManaPerClaimedTilePerSecond = Helper::toDouble(nextParam);
+            foundKeys.insert("ManaPerClaimedTilePerSecond");
             // Not mandatory
         }
 
@@ -1477,6 +1490,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mWorkerManaUpkeepPerSecond = Helper::toDouble(nextParam);
+            foundKeys.insert("WorkerManaUpkeepPerSecond");
             // Not mandatory
         }
 
@@ -1484,6 +1498,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mWorkerManaShortageSeconds = Helper::toDouble(nextParam);
+            foundKeys.insert("WorkerManaShortageSeconds");
             // Not mandatory
         }
 
@@ -1491,6 +1506,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mWorkerPopCountdownSeconds = Helper::toDouble(nextParam);
+            foundKeys.insert("WorkerPopCountdownSeconds");
             // Not mandatory
         }
 
@@ -1498,6 +1514,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mAutoWorkerIntervalSeconds = Helper::toDouble(nextParam);
+            foundKeys.insert("AutoWorkerIntervalSeconds");
             // Not mandatory
         }
 
@@ -1505,6 +1522,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mGiftBoxMana = Helper::toUInt32(nextParam);
+            foundKeys.insert("GiftBoxMana");
             // Not mandatory
         }
 
@@ -1512,6 +1530,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mGiftBoxGold = Helper::toUInt32(nextParam);
+            foundKeys.insert("GiftBoxGold");
             // Not mandatory
         }
 
@@ -1519,6 +1538,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mGiftBoxLevels = Helper::toUInt32(nextParam);
+            foundKeys.insert("GiftBoxLevels");
             // Not mandatory
         }
 
@@ -1526,6 +1546,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mGiftBoxWorkers = Helper::toUInt32(nextParam);
+            foundKeys.insert("GiftBoxWorkers");
             // Not mandatory
         }
 
@@ -1533,6 +1554,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mGiftBoxStunSeconds = Helper::toDouble(nextParam);
+            foundKeys.insert("GiftBoxStunSeconds");
             // Not mandatory
         }
 
@@ -1547,6 +1569,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mClaimingWallPenalty = Helper::toDouble(nextParam);
+            foundKeys.insert("ClaimingWallPenalty");
             // Not mandatory
         }
 
@@ -1582,6 +1605,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mDigCoefClaimedWall = Helper::toDouble(nextParam);
+            foundKeys.insert("DigCoefClaimedWall");
             // Not mandatory
         }
 
@@ -1589,6 +1613,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCreatureBaseMood = Helper::toInt(nextParam);
+            foundKeys.insert("CreatureBaseMood");
             // Not mandatory
         }
 
@@ -1603,6 +1628,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCreatureMoodUpset = Helper::toInt(nextParam);
+            foundKeys.insert("CreatureMoodUpset");
             // Not mandatory
         }
 
@@ -1610,6 +1636,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCreatureMoodAngry = Helper::toInt(nextParam);
+            foundKeys.insert("CreatureMoodAngry");
             // Not mandatory
         }
 
@@ -1617,6 +1644,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mCreatureMoodFurious = Helper::toInt(nextParam);
+            foundKeys.insert("CreatureMoodFurious");
             // Not mandatory
         }
 
@@ -1713,60 +1741,70 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> nextParam;
             mUnpaidWagesLeave = Helper::toUInt32(nextParam);
+            foundKeys.insert("UnpaidWagesLeave");
         }
 
         if(nextParam == "UnpaidWagesStopWork")
         {
             configFile >> nextParam;
             mUnpaidWagesStopWork = Helper::toUInt32(nextParam);
+            foundKeys.insert("UnpaidWagesStopWork");
         }
 
         if(nextParam == "FindHomeChance")
         {
             configFile >> nextParam;
             mFindHomeChance = Helper::toDouble(nextParam);
+            foundKeys.insert("FindHomeChance");
         }
 
         if(nextParam == "SleepSeekWakefulnessMin")
         {
             configFile >> nextParam;
             mSleepSeekWakefulnessMin = Helper::toDouble(nextParam);
+            foundKeys.insert("SleepSeekWakefulnessMin");
         }
 
         if(nextParam == "SleepSeekWakefulnessMax")
         {
             configFile >> nextParam;
             mSleepSeekWakefulnessMax = Helper::toDouble(nextParam);
+            foundKeys.insert("SleepSeekWakefulnessMax");
         }
 
         if(nextParam == "StealGoldTryChance")
         {
             configFile >> nextParam;
             mStealGoldTryChance = Helper::toDouble(nextParam);
+            foundKeys.insert("StealGoldTryChance");
         }
 
         if(nextParam == "TunnelTryChance")
         {
             configFile >> nextParam;
             mTunnelTryChance = Helper::toDouble(nextParam);
+            foundKeys.insert("TunnelTryChance");
         }
 
         if(nextParam == "StealItemChancePerIdle")
         {
             configFile >> nextParam;
             mStealItemChancePerIdle = Helper::toDouble(nextParam);
+            foundKeys.insert("StealItemChancePerIdle");
         }
 
         if(nextParam == "HungerSeek")
         {
             configFile >> nextParam;
             mHungerSeek = Helper::toDouble(nextParam);
+            foundKeys.insert("HungerSeek");
         }
 
         if(nextParam == "NbTurnsKoCreatureAttacked")
         {
             configFile >> nextParam;
             mNbTurnsKoCreatureAttacked = Helper::toInt(nextParam);
+            foundKeys.insert("NbTurnsKoCreatureAttacked");
             // Not mandatory
         }
 
@@ -1810,6 +1848,51 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         return false;
     }
 
+    static const char* const fallbackKeys[] = {
+        "AutoWorkerIntervalSeconds",
+        "ClaimingWallPenalty",
+        "CorpseDecaySeconds",
+        "CorpseLieSeconds",
+        "CreatureBaseMood",
+        "CreatureDeathCounter",
+        "CreatureMoodAngry",
+        "CreatureMoodFurious",
+        "CreatureMoodUpset",
+        "DigCoefClaimedWall",
+        "FindHomeChance",
+        "GhostAiGoldPerResearchPoint",
+        "GhostAiGoldPerXp",
+        "GiftBoxGold",
+        "GiftBoxLevels",
+        "GiftBoxMana",
+        "GiftBoxStunSeconds",
+        "GiftBoxWorkers",
+        "HungerSeek",
+        "ManaIncomeTilesCap",
+        "ManaPerClaimedTilePerSecond",
+        "ManaWellBonusPerTile",
+        "NbTurnsFuriousMax",
+        "NbTurnsKoCreatureAttacked",
+        "SlapDamage",
+        "SlapEffectDuration",
+        "SleepSeekWakefulnessMax",
+        "SleepSeekWakefulnessMin",
+        "SoulCrystalNormalXpPerSecond",
+        "StealGoldTryChance",
+        "StealItemChancePerIdle",
+        "TimePayDay",
+        "TunnelTryChance",
+        "UnpaidWagesLeave",
+        "UnpaidWagesStopWork",
+        "WorkerManaShortageSeconds",
+        "WorkerManaUpkeepPerSecond",
+        "WorkerPopCountdownSeconds",
+    };
+    for(const char* key : fallbackKeys)
+    {
+        if(foundKeys.count(key) == 0)
+            OD_LOG_ERR("Missing GameConfig key=" + std::string(key) + "; using shipped default");
+    }
     if(foundKeys.count("AngryFleeChancePercent") == 0)
         OD_LOG_ERR("Missing GameConfig key=AngryFleeChancePercent; using shipped default");
     if(foundKeys.count("SandboxWaves") == 0)
@@ -3208,11 +3291,21 @@ double ConfigManager::getTrapConfigDouble(const std::string& param) const
     return Helper::toDouble(it->second);
 }
 
+//! \brief Reads a trap value and reports missing rebalance keys before using their fallback.
 double ConfigManager::getTrapConfigDoubleOrDefault(const std::string& param, double defaultValue) const
 {
     std::map<const std::string, std::string>::const_iterator it = mTrapsConfig.find(param);
     if(it == mTrapsConfig.end())
+    {
+        static const std::set<std::string> rebalanceKeys = {
+            "BoulderMaxHits", "BoulderWallBreakPercent", "GasReloadCost", "LightningWaterDamageFactor",
+            "TrapReloadExperience", "TrapSellRefundShare"
+        };
+        static std::set<std::string> loggedMissing;
+        if(rebalanceKeys.count(param) != 0 && loggedMissing.insert(param).second)
+            OD_LOG_ERR("Missing trap parameter param=" + param + ", using the built-in default");
         return defaultValue;
+    }
 
     return Helper::toDouble(it->second);
 }
