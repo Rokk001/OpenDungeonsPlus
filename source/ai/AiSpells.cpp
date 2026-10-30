@@ -1181,6 +1181,7 @@ bool SPELL::castSlow(KeeperAI& ai)
     return true;
 }
 
+//! \brief Selects an enemy for Weak according to its damage or remaining HP.
 bool SPELL::castWeak(KeeperAI& ai)
 {
     // AI row E10
@@ -1192,7 +1193,9 @@ bool SPELL::castWeak(KeeperAI& ai)
     if(ai.getMind().slip("E10"))
     {
         // The mistake: a nearly dead enemy
-        target = weakest(enemies);
+        for(Creature* creature : enemies)
+            if(target == nullptr || creature->getHP() < target->getHP())
+                target = creature;
     }
     else
     {
