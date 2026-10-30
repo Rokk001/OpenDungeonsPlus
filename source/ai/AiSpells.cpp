@@ -773,6 +773,8 @@ void onLaunch(KeeperAI& ai, const AiEvent& event)
 {
     if(static_cast<int>(event.amount) != 3)
         SPELL::castChampion(ai, event.tile, true);
+    else
+        ai.getMind().slip("E20");
 }
 
 //! \brief The champion when the heart is critical.
@@ -1258,9 +1260,11 @@ bool SPELL::castHexenHen(KeeperAI& ai)
     return true;
 }
 
+//! \brief Decides whether to summon a champion at the heart, on launch, or in a trivial fight.
 bool SPELL::castChampion(KeeperAI& ai, Tile* tile, bool heartOrLaunch)
 {
     // AI row E20
+    const bool mistaken = ai.getMind().slip("E20");
     if((tile == nullptr) || !SkillManager::isSpellAvailable(SpellType::summonChampion, ai.getControlledPlayer().getSeat()))
         return false;
 
@@ -1279,7 +1283,7 @@ bool SPELL::castChampion(KeeperAI& ai, Tile* tile, bool heartOrLaunch)
         return false;
 
     // The mistake: the champion is summoned at any fight, also a trivial one
-    if(!heartOrLaunch && !ai.getMind().slip("E20"))
+    if(!heartOrLaunch && !mistaken)
         return false;
 
     ACTS::castSpell(ai, SpellType::summonChampion, tile);
