@@ -459,6 +459,7 @@ const TileStateNotified* Seat::getKnownTileState(Tile* tile) const
     return found == mTilesStates.end() ? nullptr : &found->second;
 }
 
+//! \brief Returns whether this seat currently has vision on the tile.
 bool Seat::hasVisionOnTile(Tile* tile)
 {
     
@@ -493,11 +494,15 @@ bool Seat::hasVisionOnTile(Tile* tile)
         
     }   
 
+    // An AI seat has not seen an unrecorded tile when fog is enabled.
+    if(!mPlayer->getIsHuman() && mGameMap->getIsFOWActivated())
+        return false;
+
     // by default return true
     return true;
 }
 
-//! \brief Initializes a seat and restores its spell cooldowns.
+//! \brief Initializes a seat and restores cooldowns and its saved tile knowledge.
 void Seat::initSeat()
 {
     if(getPlayer() == nullptr)
@@ -596,6 +601,8 @@ void Seat::initSeat()
 
             mTilesStates[tile].mOwnCreatureSightAgeTurns = p.second.mOwnCreatureSightAgeTurns;
             mTilesStates[tile].mSeatIdOwner = p.second.mSeatIdOwner;
+            if(!getPlayer()->getIsHuman())
+                mTilesStates[tile].mTileVisual = p.second.mTileVisual;
 
             // We check if the tile is marked
             if(p.second.mMarkedForDigging)
@@ -615,7 +622,7 @@ void Seat::initSeat()
             }
         }
 
-        if(!tilesRefresh.empty())
+        if(!tilesRefresh.empty() && getPlayer()->getIsHuman())
         {
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::refreshTiles, getPlayer());
@@ -756,12 +763,21 @@ unsigned int Seat::checkAllGoals()
     return numUncompleteGoals();
 }
 
+//! \brief Updates visible tile knowledge and sends tile changes only to human players.
 void Seat::notifyChangedVisibleTiles()
 {
     if(mPlayer == nullptr)
         return;
     if(!mPlayer->getIsHuman())
+    {
+        for(const std::pair<Tile* const, TileStateNotified>& entry : mTilesStates)
+            if(entry.second.mVisionTurnCurrent)
+                updateTileStateForSeat(entry.first, true);
+        for(const std::pair<Tile* const, TileStateNotified>& entry : mDraggableTilesStates)
+            if(entry.second.mVisionTurnCurrent)
+                updateTileStateForSeat(entry.first, true);
         return;
+    }
 
     std::vector<Tile*> tilesToNotify;
     for(std::pair<Tile*, TileStateNotified> p : mTilesStates)
@@ -1116,7 +1132,7 @@ Seat* Seat::createRogueSeat(GameMap* gameMap)
 }
 
 
-//! \brief Loads seat state, including optional first-arrival history and shared room settings.
+//! \brief Loads seat state, including tile knowledge, arrival history and shared room settings.
 bool Seat::importSeatFromStream(std::istream& is)
 {
     std::string str;
@@ -1461,14 +1477,10 @@ bool Seat::importSeatFromStream(std::istream& is)
     for(uint32_t k = 0; k < nb; ++k)
     {
         TileVisual tileVisual = static_cast<TileVisual>(k);
-        // Full dirt tiles, full gold tiles and full rock tiles are automatically
-        // set so we don't have to bother about them
+        // Older saves may omit full terrain visuals; the reader accepts absent blocks.
         switch(tileVisual)
         {
             case TileVisual::nullTileVisual:
-            case TileVisual::goldFull:
-            case TileVisual::dirtFull:
-            case TileVisual::rockFull:
                 continue;
 
             default:
@@ -1564,7 +1576,7 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
-//! \brief Saves seat state, shared room settings and the classes whose first arrival was announced.
+//! \brief Saves seat state, tile knowledge, shared room settings and announced creature classes.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1727,15 +1739,17 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     for(uint32_t k = 0; k < nb; ++k)
     {
         TileVisual tileVisual = static_cast<TileVisual>(k);
-        // Full dirt tiles, full gold tiles and full rock tiles are automatically
-        // set so we don't have to bother about them
+        // AI seats save full terrain visuals as seen, since their tile states have no map-derived defaults.
         switch(tileVisual)
         {
         case TileVisual::nullTileVisual:
+            continue;
         case TileVisual::goldFull:
         case TileVisual::dirtFull:
         case TileVisual::rockFull:
-            continue;
+            if(getPlayer()->getIsHuman())
+                continue;
+            break;
 
         default:
             break;
@@ -2268,6 +2282,7 @@ TileStateNotified* Seat::getTileStateNotified(Tile* tile)
     return nullptr;
 }
 
+//! \brief Records a tile's visible appearance and owner for this seat.
 void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
 {
     // Looking the tile up with operator[] used to create a default state for it in the game
@@ -2337,6 +2352,14 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
                     jj->second.mSeatIdOwner = tile->getSeat()->getId();
                 }
             }
+            break;
+        case TileVisual::merchantRoom:
+        case TileVisual::herbGardenRoom:
+        case TileVisual::alchemyLabRoom:
+        case TileVisual::infirmaryRoom:
+        case TileVisual::ghostRoom:
+            jj->second.mSeatIdOwner = (mPlayer != nullptr && !mPlayer->getIsHuman() && tile->getSeat() != nullptr)
+                ? tile->getSeat()->getId() : -1;
             break;
         default:
             jj->second.mSeatIdOwner = -1;

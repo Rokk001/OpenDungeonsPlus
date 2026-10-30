@@ -332,7 +332,7 @@ public:
     //! \brief Returns how many workers are doing the given action
     uint32_t getNbWorkersDoing(CreatureActionType actionType) const;
 
-    //! \brief Returns how many tiles of the map this player has marked for digging
+    //! \brief Returns how many known tiles this player has marked for digging
     uint32_t getNbMarkedTiles() const;
 
     //! \brief Returns a list of the actions the worker should do based on what the other workers
