@@ -160,8 +160,8 @@ def check_buildings(roster):
     rooms = read("config/rooms.cfg")
     assert re.search(r"^\s*DungeonHeartHP\s+15100\s*$", rooms, re.M)
     assert 'ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in read("source/rooms/RoomDungeonTemple.cpp")
-    # The hit points per tile of portals, bridges and traps are config keys of 10 (no literal in Building.cpp)
-    assert "DEFAULT_TILE_HP" not in read("source/entities/Building.cpp")
+    # The hit points per tile are configured, with the original building fallback retained.
+    assert "Building::DEFAULT_TILE_HP = 10.0" in read("source/entities/Building.cpp")
     traps = read("config/traps.cfg")
     for text, key in ((rooms, "PortalHP"), (rooms, "PortalWaveHP"), (rooms, "StoneBridgeHP"), (rooms, "WoodenBridgeHP"),
                       (traps, "SpikeHP"), (traps, "CannonHP"), (traps, "BoulderHP")):

@@ -251,8 +251,8 @@ def main():
             source = source.split('double Creature::getPotionCritChance() const', 1)[1].split('\n}', 1)[0]
         if expression and re.search(expression, source):
             problems.append(f"M{item}: original hard-coded expression remains in {source_file}")
-    if 'Building::DEFAULT_TILE_HP = 10.0' in read("source/entities/Building.cpp"):
-        problems.append("M29: fixed building health still defines the gameplay value")
+    if 'Building::DEFAULT_TILE_HP = 10.0' not in read("source/entities/Building.cpp"):
+        problems.append("M29: building tile HP fallback is missing")
     if 'getTileHP() / burnTurns' not in read("source/rooms/RoomBridgeWooden.cpp"):
         problems.append("M29: wooden bridge burning ignores configured tile health")
     # M35 replaces only the wall-break draw; the independent direction draw stays unchanged.
