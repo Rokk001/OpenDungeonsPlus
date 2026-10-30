@@ -693,6 +693,13 @@ void onFight(KeeperAI& ai, const AiEvent& event)
     Seat* seat = ai.getControlledPlayer().getSeat();
     double now = ai.getMind().now();
 
+    // E20 reacts to the Fight event itself; the other fight spells need a still-active session.
+    if((now - event.time) >= aiKey("FightOverSeconds"))
+    {
+        SPELL::castChampion(ai, tileNextToHeart(ai), isHeartTile(event.tile, seat));
+        return;
+    }
+
     // The creatures of this fight; sessions that hold one of them are the same fight and are merged into one
     std::vector<Creature*> own;
     std::vector<Creature*> enemies;
