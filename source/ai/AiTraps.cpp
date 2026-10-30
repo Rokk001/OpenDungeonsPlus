@@ -80,7 +80,7 @@ std::string numberToken(double value)
     return os.str();
 }
 
-//! \brief Reads the trap draws of a loaded game from the mind once: F01 halved plan, F12 watching, F15 tunnels and
+//! \brief Reads the trap draws of a loaded game from the mind once: F01 halved plan, F12 watching and its last test, F15 tunnels and
 //! the steps that wait for the symptom delay of a mistake (F12, F13, F15). The mind imports its state at its first
 //! turn, at mind time 0, so a saved remaining time is the mind time of the step.
 void restoreDraws(KeeperAI& ai)
@@ -102,6 +102,10 @@ void restoreDraws(KeeperAI& ai)
             state.mWantDivided = std::atoi(value.c_str());
         else if((row == "F12") && (name == "watching"))
             state.mWatching = (value == "1");
+        else if((row == "F12") && (name == "lastTestSeconds"))
+            state.mLastTestSeconds = std::atof(value.c_str());
+        else if((row == "F12") && (name == "exhausted"))
+            state.mExhausted = (value == "1");
         else if((row == "F12") && (name == "watchDue"))
             state.mWatchDue = std::atof(value.c_str());
         else if((row == "F13") && (name == "doorDue"))
@@ -148,7 +152,7 @@ void addDraw(std::vector<AiMath::AiStateLine>& lines, const std::string& row, co
     lines.push_back(line);
 }
 
-//! \brief Replaces the trap draw lines of the saved AI state with the current ones.
+//! \brief Replaces the saved trap draws, including the F12 watch result and test time.
 void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
     restoreDraws(ai);
@@ -167,7 +171,11 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
     if(state.mWantDivided >= 0)
         addDraw(lines, "F01", "trapWantDivided", std::to_string(state.mWantDivided));
     if(state.mWatching)
+    {
         addDraw(lines, "F12", "watching", "1");
+        addDraw(lines, "F12", "lastTestSeconds", numberToken(state.mLastTestSeconds));
+        addDraw(lines, "F12", "exhausted", state.mExhausted ? "1" : "0");
+    }
     for(const std::pair<int, int>& tunnel : state.mTunnels)
         addDraw(lines, "F15", "tunnel", std::to_string(tunnel.first) + "," + std::to_string(tunnel.second));
 
