@@ -1418,7 +1418,8 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if(line.tag == "sighting")
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
-        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile") || (line.tokens[1] == "contacted"))) ||
+        return ((line.tokens[0] == "I05") && (line.tokens[1] == "exploreMarked")) ||
+               ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile") || (line.tokens[1] == "contacted"))) ||
                ((line.tokens[0] == "K07") && (line.tokens[1] == "retreatCheck")) ||
                ((line.tokens[0] == "K10") && ((line.tokens[1] == "returning") || (line.tokens[1] == "returnPending"))) ||
                ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
@@ -1426,7 +1427,7 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
 }
 }
 
-//! \brief Saves war observations, returners, the retreat timer and the second-wave window.
+//! \brief Saves exploration progress, war observations, returners and assault timers.
 void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
 {
     const WarState& st = env.state;
@@ -1445,6 +1446,7 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     double fortifyRemaining = TRAP::fortifyRemaining(env.ai);
     t.push_back(fortifyRemaining < 0.0 ? "-1" : num(fortifyRemaining));
     addLine(lines, "war", t);
+    addLine(lines, "draw", {"I05", "exploreMarked", st.exploreMarked ? "1" : "0"});
 
     std::vector<std::string> a;
     a.push_back("assault");
@@ -1557,7 +1559,7 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     }
 }
 
-//! \brief Restores war observations, returners, the retreat timer and the second-wave window.
+//! \brief Restores exploration progress, war observations, returners and assault timers.
 void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
 {
     WarState& st = env.state;
@@ -1568,7 +1570,9 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         const std::vector<std::string>& k = line.tokens;
         if(k.empty())
             continue;
-        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K07") && (k[1] == "retreatCheck"))
+        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I05") && (k[1] == "exploreMarked"))
+            st.exploreMarked = (k[2] == "1");
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K07") && (k[1] == "retreatCheck"))
             st.nextRetreatCheck = env.now + std::atof(k[2].c_str());
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K10") && (k[1] == "returning"))
             st.returning.insert(k[2]);
