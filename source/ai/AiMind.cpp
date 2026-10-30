@@ -275,6 +275,8 @@ void Mind::enqueue(const AiEvent& event)
     reaction.creature = event.creature == nullptr ? "-" : event.creature->getName();
     reaction.seatId = event.otherSeatId;
     reaction.amount = event.amount;
+    reaction.roomType = event.roomType;
+    reaction.buildingClass = event.buildingClass;
     reaction.noticed = false;
     reaction.rowId = "-";
     mEvents.push_back(reaction);
@@ -451,7 +453,7 @@ void Mind::doTurn(double timeSinceLastTurn)
     {
         const AiEvent event = {reaction.type, mGameMap.getTile(reaction.x, reaction.y),
             reaction.creature == "-" ? nullptr : mGameMap.getCreature(reaction.creature),
-            reaction.seatId, reaction.amount, reaction.time, reaction.fightStart};
+            reaction.seatId, reaction.amount, reaction.time, reaction.fightStart, reaction.roomType, reaction.buildingClass};
         mTriggerSlips.clear();
         mInTrigger = true;
         TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
@@ -537,7 +539,7 @@ void Mind::exportState(std::ostream& os) const
     for(const Reaction& e : mEvents)
         lines.push_back({"event", {eventNames[static_cast<int>(e.type)], token(e.due - mNow), kindName(e.kind),
             token(e.x), token(e.y), e.creature, token(e.seatId), token(e.amount), token(e.noticed ? 1 : 0), e.rowId,
-            token(mNow - e.time), token(mNow - e.fightStart)}});
+            token(mNow - e.time), token(mNow - e.fightStart), token(e.roomType), token(e.buildingClass)}});
     for(const Action& a : mActions)
         lines.push_back({"action", {a.key, token(a.due - mNow), a.rowId, token(a.x), token(a.y), a.target}});
     for(const std::pair<double, int>& click : mHand.clickGroups)
@@ -591,12 +593,24 @@ bool Mind::importState(const std::vector<std::string>& input)
                 e.time = mNow - age;
             }
             e.fightStart = e.time;
-            if(t.size() == 12)
+            if(t.size() >= 12)
             {
                 double age;
                 valid = number(t[11], age);
                 if(!valid) break;
                 e.fightStart = mNow - age;
+            }
+            e.roomType = 0;
+            if(t.size() >= 13 && !number(t[12], e.roomType))
+            {
+                valid = false;
+                break;
+            }
+            e.buildingClass = 0;
+            if(t.size() >= 14 && (!number(t[13], e.buildingClass) || e.buildingClass < 0 || e.buildingClass > 2))
+            {
+                valid = false;
+                break;
             }
             e.creature = t[5];
             e.noticed = noticed != 0;
