@@ -52,6 +52,20 @@ if "static double getResearchedCooldown" not in portal:
     problems.append("getResearchedCooldown must return a double")
 if "double mSpawnCreatureCountdown;" not in read("source", "rooms", "RoomPortal.h"):
     problems.append("the portal spawn countdown must be a double")
+if 'SpawnCountdown ' not in portal or 'max_digits10' not in portal:
+    problems.append("the portal must save its fractional spawn countdown")
+
+tremor = read("source", "spells", "SpellTremor.cpp")
+if 'creature->stun(nbTurns)' not in tremor or 'void stun(double nbTurns)' not in read("source", "entities", "Creature.h"):
+    problems.append("tremor stun must retain fractional turns")
+door = read("source", "traps", "TrapDoor.cpp")
+if 'mFireCooldownTurns +=' not in door or 'FireCooldown ' not in door or 'max_digits10' not in door:
+    problems.append("runed door must carry and save its fractional cooldown")
+for name in ("TrapFear.cpp", "TrapFireburst.cpp", "TrapGas.cpp", "TrapAlarm.cpp"):
+    trap_source = read("source", "traps", name)
+    radius = 'radius' if name == 'TrapAlarm.cpp' else 'mRadius'
+    if 'std::ceil(' + radius + ')' not in trap_source or radius + ' * ' + radius not in trap_source:
+        problems.append(name + " must check the configured fractional radius")
 
 # The counters that hold the values keep the fraction
 for path, token in (("source/spells/Spell.h", "double mNbTurns;"), ("source/spells/SpellEyeEvil.h", "double mFreeTurns;"),

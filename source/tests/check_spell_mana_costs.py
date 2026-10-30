@@ -40,6 +40,7 @@ expected = {
 for key, value in values.items():
     if key.endswith("Price") or key == "SummonWorkerBasePrice":
         assert value.isdigit(), f"{key} is not a whole mana price"
+        assert int(value) % 50 == 0, f"{key} is not a multiple of 50"
 for key, value in expected.items():
     assert values.get(key) == value, f"{key} is {values.get(key)}, expected {value}"
 assert "SummonWorkerNbFree" not in config, "the free-worker key is gone"
