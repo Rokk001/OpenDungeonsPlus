@@ -245,7 +245,7 @@ void ECON::digQueueWatch(KeeperAI& ai)
         for(int y = 0; y < map.getMapSizeY(); ++y)
         {
             Tile* tile = map.getTile(x, y);
-            if(!knowledge.isKnown(tile) || tile->getType() != TileType::gold || !tile->isDiggable(player.getSeat()) || tile->getMarkedForDigging(&player))
+            if(!knowledge.isKnown(tile) || tile->getType() != TileType::gold || !tile->isDiggable(player.getSeat()))
                 continue;
             for(Tile* treasury : treasuries)
             {
