@@ -9,6 +9,7 @@ $taskOptions = @('-S', $taskRepo, '-B', "$taskRepo\build\windows",
     "-DOD_BUILD_NUMBER=$BuildNumber",
     "-DCMAKE_INSTALL_PREFIX=$taskRepo/build/windows/install",
     "-DPython_ROOT_DIR=$taskPythonCmakeRoot")
+if ($taskMpJobs -gt 1) { $taskOptions += "-DBUILD_MP_JOBS=$taskMpJobs" }
 Write-Output 'Checking the original project configuration with the installed prerequisites'
 $ErrorActionPreference = 'Continue'
 & cmake @taskOptions *> "$taskRoot\logs\opendungeons-configure.log"
