@@ -22,6 +22,7 @@
 #include "ai/AiSettings.h"
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <iosfwd>
 #include <map>
@@ -115,6 +116,9 @@ public:
     //! \brief Queues a game, polled or internal event once for this seat; the reaction delay of its
     //! kind is drawn here, once per event.
     void enqueue(const AiEvent& event);
+
+    //! \brief Returns the current firing identity, or zero outside a firing.
+    uint64_t triggerId() const;
 
     //! \brief Delivers tunnel news during the originating Fight reaction, sharing its single alert delay.
     void dispatchRelated(const AiEvent& event);
@@ -252,6 +256,8 @@ private:
     std::set<std::string> mDrawnRows;
     std::map<std::string, bool> mTriggerSlips;
     bool mInTrigger;
+    uint64_t mTriggerSerial;
+    uint64_t mCurrentTrigger;
 };
 
 #endif // AIMIND_H

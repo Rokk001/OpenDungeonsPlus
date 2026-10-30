@@ -21,6 +21,26 @@
 
 namespace
 {
+//! \brief Gives a firing a unique identity and restores its enclosing firing afterward.
+class TriggerScope
+{
+public:
+    //! \brief Starts a firing while retaining the enclosing identity.
+    TriggerScope(uint64_t& serial, uint64_t& current) : mCurrent(current), mPrevious(current)
+    {
+        ++serial;
+        if(serial == 0) ++serial;
+        mCurrent = serial;
+    }
+
+    //! \brief Restores the identity of the enclosing firing.
+    ~TriggerScope() { mCurrent = mPrevious; }
+
+private:
+    uint64_t& mCurrent;
+    uint64_t mPrevious;
+};
+
 const char* const eventNames[] = {
     "Fight", "HeartCritical", "Payday", "NotEnoughGold", "NoSkillInQueue", "NoWorker", "NoTreasury",
     "NoBed", "NoFood", "CreatureKilled", "CreatureMood", "CreatureLeft", "CreatureArrived", "RoomLost",
@@ -129,7 +149,7 @@ void rebase(std::string& value, double delta, bool sentinel)
 //! \brief Starts a keeper mind with its level's settings and no pending actions.
 Mind::Mind(GameMap& gameMap, Player& player, const AiSettings& settings) :
     mGameMap(gameMap), mPlayer(player), mSettings(settings), mNow(0.0), mSavedAt(0.0),
-    mLoaded(false), mInTrigger(false)
+    mLoaded(false), mInTrigger(false), mTriggerSerial(0), mCurrentTrigger(0)
 {
     mLooks["I06"] = {0.0, false};
 }
@@ -138,6 +158,12 @@ Mind::Mind(GameMap& gameMap, Player& player, const AiSettings& settings) :
 double Mind::now() const
 {
     return mNow;
+}
+
+//! \brief Returns the identity of the active firing, or zero outside one.
+uint64_t Mind::triggerId() const
+{
+    return mCurrentTrigger;
 }
 
 //! \brief Collects the configured timing keys for pure delay calculations.
@@ -205,6 +231,7 @@ void Mind::enqueue(const AiEvent& event)
     // AI row I06
     if(event.type == AiEventType::EnemySpellSeen)
     {
+        TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
         mEnemySpells[event.otherSeatId] = mNow;
         // A visible cast is information, so its observers receive it immediately without a mistake roll.
         for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
@@ -379,6 +406,7 @@ void Mind::doTurn(double timeSinceLastTurn)
         look.due = mNow + AiMath::lookInterval(entry.second.factor, delayParams(), uniformDraw);
         mTriggerSlips.clear();
         mInTrigger = true;
+        TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
         entry.second.perform();
         mInTrigger = false;
     }
@@ -402,6 +430,7 @@ void Mind::doTurn(double timeSinceLastTurn)
             reaction.seatId, reaction.amount, reaction.due};
         mTriggerSlips.clear();
         mInTrigger = true;
+        TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
         for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
         {
             if((reaction.rowId == "-" || reaction.rowId == entry.first) &&
