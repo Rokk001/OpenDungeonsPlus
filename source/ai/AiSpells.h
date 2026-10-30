@@ -103,7 +103,7 @@ bool chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& nextCast);
 bool castHaste(KeeperAI& ai, const std::vector<Creature*>& group, bool march, double fightSeconds);
 
 //! \brief Casts Eye of Evil on the given tile to scout the enemy, at most once per EyeCastIntervalMinutes.
-//! \return true when the spell was cast.
+//! \return true when the spell action was scheduled.
 bool castEye(KeeperAI& ai, Tile* tile);
 
 //! \brief Clears the pending Eye cast and records its game turn only when it succeeded.
