@@ -92,6 +92,9 @@ AiMath::ReactionKind reactionKind(AiEventType type)
 {
     if(type >= AiEventType::Plan)
         return AiMath::ReactionKind::internal;
+    if((type >= AiEventType::GoldBelowBill && type <= AiEventType::EnemyTrapEmpty) ||
+       type == AiEventType::FirstPortalArrival || type == AiEventType::Loot || type == AiEventType::LabIdle)
+        return AiMath::ReactionKind::alert;
     if(type >= AiEventType::NoMarkedTile || type == AiEventType::NoSkillInQueue ||
         type == AiEventType::Dirt || type == AiEventType::NoBed || type == AiEventType::NoFood)
         return AiMath::ReactionKind::symptom;
@@ -414,8 +417,8 @@ void Mind::doTurn(double timeSinceLastTurn)
     {
         mLoaded = true;
         const std::vector<std::string> lines = mPlayer.getSeat()->takeAiStateLoaded();
-        if(!lines.empty() && !importState(lines))
-            OD_LOG_WRN("Invalid AI state; starting a fresh keeper mind");
+        if(lines.empty() || !importState(lines))
+            OD_LOG_WRN("Missing or invalid AI state; starting a fresh keeper mind");
         if(!rowClassAudit())
             OD_LOG_ERR("Invalid AI row-class table");
     }
