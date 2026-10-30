@@ -509,16 +509,18 @@ void ROOMS::hatcheryWatch(KeeperAI& ai)
     if(have == 0)
         return;
     const int creatures = ai.getControlledPlayer().getSeat()->getNumCreaturesFighters();
-    if(creatures <= 0 || have >= static_cast<uint32_t>(creatures))
-        return;
-    const double need = creatures - have * roomKey("HatcheryTilesPerCreature");
     State& state = ai.getRoomsState();
     if(state.foodDue < 0.0)
+    {
+        if(creatures <= 0 || have >= static_cast<uint32_t>(creatures))
+            return;
         state.foodDue = ai.getMind().now() + roomDelay(ai, true) +
             (ai.getMind().slip("B03") ? roomDelay(ai, true) : 0.0);
+    }
     if(ai.getMind().now() < state.foodDue ||
         (!state.pendingTiles.empty() && state.pendingType != RoomType::hatchery))
         return;
+    const double need = creatures - have * roomKey("HatcheryTilesPerCreature");
     if(placeRoom(ai, RoomType::hatchery, static_cast<uint32_t>(std::min(roomKey("HatcheryExtensionMaxTiles"),
         std::max(roomKey("HatcheryExtensionMinTiles"), need)))))
         state.foodDue = -1.0;
@@ -611,6 +613,16 @@ void ROOMS::bridgeWatch(KeeperAI& ai)
 
 namespace
 {
+//! \brief Executes a pending hatchery extension when its symptom delay has elapsed.
+bool pendingHatchery(KeeperAI& ai)
+{
+    restoreRooms(ai);
+    const double due = ai.getRoomsState().foodDue;
+    if(due >= 0.0 && ai.getMind().now() >= due)
+        ROOMS::hatcheryWatch(ai);
+    return false;
+}
+
 //! \brief Registers one room event without adding a second reaction delay.
 void roomEvent(KeeperAI& ai, void (*perform)(KeeperAI&), const AiEvent&)
 {
@@ -686,6 +698,7 @@ void ROOMS::bind(KeeperAI& ai)
     mind.onEvent("B02", {AiEventType::CreatureArrived, AiEventType::NoBed}, std::bind(needRoomEvent, std::ref(ai), RoomType::dormitory, std::placeholders::_1));
     mind.onEvent("B03", {AiEventType::FirstPortalArrival, AiEventType::NoFood},
         std::bind(needRoomEvent, std::ref(ai), RoomType::hatchery, std::placeholders::_1));
+    mind.onPoll("B03", AiEventType::NoFood, std::bind(pendingHatchery, std::ref(ai)));
     mind.onEvent("B09", {AiEventType::CreatureMood}, std::bind(roomMoodEvent, std::ref(ai), auditCasino, std::placeholders::_1));
     mind.onEvent("B10", {AiEventType::Dirt}, std::bind(roomEvent, std::ref(ai), toiletWatch, std::placeholders::_1));
     mind.onEvent("B13", {AiEventType::PotionReady}, std::bind(roomEvent, std::ref(ai), auditLab, std::placeholders::_1));
