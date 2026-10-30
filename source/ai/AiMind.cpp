@@ -417,8 +417,8 @@ void Mind::doTurn(double timeSinceLastTurn)
     {
         mLoaded = true;
         const std::vector<std::string> lines = mPlayer.getSeat()->takeAiStateLoaded();
-        if(!lines.empty() && !importState(lines))
-            OD_LOG_WRN("Invalid AI state; starting a fresh keeper mind");
+        if(lines.empty() || !importState(lines))
+            OD_LOG_WRN("Missing or invalid AI state; starting a fresh keeper mind");
         if(!rowClassAudit())
             OD_LOG_ERR("Invalid AI row-class table");
     }
