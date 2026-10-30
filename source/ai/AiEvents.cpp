@@ -298,7 +298,7 @@ bool AiEvents::poll()
         mEdges[key] = mature;
     }
     mEdges.erase("PrisonerAge");
-    for(auto it = mEdges.begin(); it != mEdges.end();)
+    for(std::map<std::string, bool>::iterator it = mEdges.begin(); it != mEdges.end();)
     {
         if(it->first.compare(0, 12, "PrisonerAge:") == 0 && currentPrisonerEdges.count(it->first) == 0)
             it = mEdges.erase(it);
