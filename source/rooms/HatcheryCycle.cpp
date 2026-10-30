@@ -17,13 +17,13 @@
 
 #include "rooms/HatcheryCycle.h"
 
+#include "utils/ConfigManager.h"
+
 #include <algorithm>
 #include <cmath>
 
 namespace
 {
-static const uint32_t STAGE_MIN_PERCENT = 80;
-static const uint32_t STAGE_MAX_PERCENT = 120;
 //! \brief Number of steps into which the fraction of a lay interval is divided when it is rounded up by chance.
 static const uint32_t ROUNDING_STEPS = 1000;
 static const uint32_t WHOLE_PERCENT = 100;
@@ -103,6 +103,7 @@ bool HatcheryCycle::walkFits(uint32_t walk, uint32_t remaining, const HatcheryCy
     return walk + settings.mLayShowTurns <= remaining;
 }
 
+//! \brief Returns hatchery care capped at the configured maximum.
 uint32_t HatcheryCycle::carePercent(const HatcheryCycleSettings& settings, const HatcheryCare& care)
 {
     if(!care.mClaimed)
@@ -113,7 +114,7 @@ uint32_t HatcheryCycle::carePercent(const HatcheryCycleSettings& settings, const
         percent += settings.mCareLightPercent;
     if(!care.mEnemies)
         percent += settings.mCareCalmPercent;
-    return std::min<uint32_t>(percent, 90);
+    return std::min<uint32_t>(percent, static_cast<uint32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryCareMaxPercent", 90.0)));
 }
 
 HatcheryCycleSettings HatcheryCycle::withCare(const HatcheryCycleSettings& settings, const HatcheryCare& care)
@@ -186,9 +187,9 @@ uint32_t HatcheryCycle::stageDuration(uint32_t nominalTurns, uint32_t random)
     if(nominalTurns == 0)
         return 0;
     const uint32_t minimum = static_cast<uint32_t>(std::ceil(nominalTurns *
-        static_cast<double>(STAGE_MIN_PERCENT) / WHOLE_PERCENT));
+        static_cast<double>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryStageJitterMinPercent", 80.0)) / WHOLE_PERCENT));
     const uint32_t maximum = static_cast<uint32_t>(std::floor(nominalTurns *
-        static_cast<double>(STAGE_MAX_PERCENT) / WHOLE_PERCENT));
+        static_cast<double>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryStageJitterMaxPercent", 120.0)) / WHOLE_PERCENT));
     return minimum + random % (maximum - minimum + 1);
 }
 

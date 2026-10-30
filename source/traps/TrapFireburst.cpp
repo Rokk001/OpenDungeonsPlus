@@ -30,6 +30,9 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
+#include <cmath>
+
 const std::string TrapFireburstName = "Fireburst";
 const std::string TrapFireburstNameDisplay = "Fireburst trap";
 const TrapType TrapFireburst::mTrapType = TrapType::fireburst;
@@ -122,11 +125,11 @@ static TrapRegister reg(new TrapFireburstFactory);
 TrapFireburst::TrapFireburst(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("FireburstReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("FireburstReloadTurns");
     mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("FireburstDamagePerHitMin");
     mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("FireburstDamagePerHitMax");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("FireburstNbShootsBeforeDeactivation");
-    mRadius = ConfigManager::getSingleton().getTrapConfigUInt32("FireburstRadius");
+    mRadius = ConfigManager::getSingleton().getTrapConfigDouble("FireburstRadius");
     setMeshName("");
 }
 
@@ -134,7 +137,14 @@ TrapFireburst::TrapFireburst(GameMap* gameMap) :
 bool TrapFireburst::shoot(Tile* tile)
 {
     // The trap is hidden and fires when an enemy creature comes within its radius
-    std::vector<Tile*> burstTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(mRadius));
+    std::vector<Tile*> burstTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::ceil(mRadius)));
+    // Keep only visible tile centres within the configured fractional radius.
+    burstTiles.erase(std::remove_if(burstTiles.begin(), burstTiles.end(), [tile, this](Tile* candidate)
+    {
+        const double dx = candidate->getX() - tile->getX();
+        const double dy = candidate->getY() - tile->getY();
+        return dx * dx + dy * dy > mRadius * mRadius;
+    }), burstTiles.end());
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(burstTiles, getSeat(), true);
     if(enemyCreatures.empty())
         return false;

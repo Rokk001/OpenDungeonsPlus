@@ -6,7 +6,7 @@ What is checked
   global.cfg [Tavern]      all keys with their values, no key without a design value, every key documented
   derived values           BeerPrice = cheapest FeeBase / 10, GameWinnerXp = TrainHallXpPerAttack,
                            TavernCostPerTile = HatcheryCostPerTile, TavernHP = HatcheryHP,
-                           TavernDirtPerDrink = 0.8077 / (0.62 x 25 / (DrinkTurns + 1)) rounded to 4 places
+                           TavernDirtPerDrink = 0.8077 / (0.557 x 25 / (DrinkTurns + 1)) rounded to 4 places
   creatures.cfg            every type has a Casino, an Arena and a Tavern affinity line and a Hunger mood line is
                            optional. A type WITH a Hunger mood line has the Thirst mood line with the same two numbers,
                            ThirstGrowth/Turn = HungerGrowth/Turn and the Tavern likeness of its Casino line (efficiency
@@ -67,15 +67,15 @@ skills_cfg = read('config/skills.cfg')
 
 # 1. Every key of the [Tavern] block with the value of the design (sections 4 and 5 of the design)
 TAVERN = {
-    'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '5', 'BeerPrice': '5', 'BeerMood': '15',
-    'BeerMoodTurns': '168', 'NoCoinMood': '-5', 'NoCoinMoodTurns': '168', 'DrinkTurns': '4', 'NextDrinkPercent': '50',
+    'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '5', 'BeerPrice': '5', 'BeerMood': '100',
+    'BeerMoodTurns': '168', 'NoCoinMood': '-33.3333', 'NoCoinMoodTurns': '168', 'DrinkTurns': '4', 'NextDrinkPercent': '50',
     'MaxDrinksPerVisit': '5', 'DrunkPerBeer': '25', 'DrunkDecayPerTurn': '0.5', 'StaggerAt': '50',
     'StaggerSpeedFactor': '0.5', 'VomitAt': '75', 'HangoverAt': '50', 'HangoverTurns': '252',
-    'HangoverWorkFactor': '0.5', 'HangoverMood': '-10', 'GameChancePercent': '50', 'GameTurns': '8',
-    'GameWinnerMood': '20', 'GameLoserMood': '-10', 'GameSpectatorMood': '10', 'GameSpectatorRadius': '2',
+    'HangoverWorkFactor': '0.5', 'HangoverMood': '-66.6667', 'GameChancePercent': '50', 'GameTurns': '8',
+    'GameWinnerMood': '133.3333', 'GameLoserMood': '-66.6667', 'GameSpectatorMood': '66.6667', 'GameSpectatorRadius': '2',
     'GameUnderdogBasePercent': '50', 'GameUnderdogPerLevel': '2.5', 'GameUnderdogMinPercent': '5',
-    'GameUnderdogMoodPerLevel': '5', 'GameUnderdogMoodMax': '50', 'SlapDamage': '10', 'SlapCritBasePercent': '10',
-    'SlapCritPerLevel': '0.25', 'SlapDuelLoseBelowHp': '30', 'DuelKoTurns': '42', 'GameWinnerXp': '5',
+    'GameUnderdogMoodPerLevel': '33.3333', 'GameUnderdogMoodMax': '333.3333', 'SlapDamage': '10', 'SlapCritBasePercent': '10',
+    'SlapCritPerLevel': '0.25', 'SlapDuelLoseBelowHp': '30', 'DuelKoTurns': '42', 'GameWinnerXp': '2.86',
     'TavernNoticeSeconds': '60',
 }
 tavern = block_values(global_cfg, 'Tavern')
@@ -101,8 +101,8 @@ assert hp_values.get('TavernHP') == hp_values.get('HatcheryHP') == '30', 'Tavern
 fee_bases = [float(v) for v in re.findall(r'^\s*FeeBase\s+(\S+)', creatures_cfg, re.M) if float(v) > 0]
 assert len(fee_bases) >= 30, 'FeeBase lines missing'
 assert float(tavern['BeerPrice']) == min(fee_bases) / 10, 'BeerPrice must be the smallest FeeBase / 10'
-assert tavern['GameWinnerXp'] == str(int(float(rooms['TrainHallXpPerAttack']))), 'GameWinnerXp must equal TrainHallXpPerAttack'
-expected_dirt = round(0.8077 / (0.62 * 25 / (float(tavern['DrinkTurns']) + 1)), 4)
+assert float(tavern['GameWinnerXp']) == float(rooms['TrainHallXpPerAttack']), 'GameWinnerXp must equal TrainHallXpPerAttack'
+expected_dirt = round(0.8077 / (0.557 * 25 / (float(tavern['DrinkTurns']) + 1)), 4)
 assert float(rooms['TavernDirtPerDrink']) == expected_dirt, 'TavernDirtPerDrink is ' + rooms['TavernDirtPerDrink'] + ', expected ' + str(expected_dirt)
 for key in ('TavernCostPerTile', 'TavernDirtPerDrink'):
     assert_documented(rooms_cfg, key, 'rooms.cfg')

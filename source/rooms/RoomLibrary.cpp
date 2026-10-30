@@ -394,8 +394,13 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
         getSeat(), SkillType::roomLibrary, ConfigManager::getSingleton().getRoomConfigDouble("LibraryPointsPerWork"),
         ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Scholar") * getDirtOutputFactor() * creature.getHangoverWorkFactor() * creature.getRelaxWorkFactor();
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("LibraryWakefulnessPerWork"));
-    creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
-        ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax")));
+    uint32_t workCooldown = Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
+        ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax"));
+    creature.setJobCooldown(workCooldown);
+    double workCycleTurns = 1.0 + static_cast<double>(creature.getJobCooldown());
+    // Work gives experience on the training hall level
+    creature.receiveExp(ConfigManager::getSingleton().getRoomConfigDouble("JobXpPerTurn") * workCycleTurns
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit) * getDirtOutputFactor());
     addUseDirt(creature, tileCreature, "LibraryDirtPerWork");
 
     // We check if we have enough points to create a skill entity

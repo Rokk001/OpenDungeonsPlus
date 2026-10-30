@@ -37,6 +37,7 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <cmath>
 #include <iomanip>
 #include <limits>
 #include <sstream>
@@ -417,7 +418,9 @@ void RoomTrainingHall::refreshCreaturesDummies()
 
 bool RoomTrainingHall::hasOpenCreatureSpot(Creature* c)
 {
-    if (c->getLevel() >= ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallMaxTrainingLevel"))
+    // The level cap of the hall grows with its research
+    if (c->getLevel() >= std::round(SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall,
+        ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallMaxTrainingLevel"), ResearchEffect::LevelCap)))
         return false;
 
     // Training costs gold, so nobody trains when the treasury is empty

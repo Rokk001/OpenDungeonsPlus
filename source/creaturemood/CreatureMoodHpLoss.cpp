@@ -45,14 +45,10 @@ const std::string& CreatureMoodHpLoss::getModifierName() const
     return CreatureMoodHpLossName;
 }
 
-int32_t CreatureMoodHpLoss::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodHpLoss::computeMood(const Creature& creature) const
 {
-    int32_t hpLost = creature.getMaxHp() - creature.getHP();
-    if(hpLost <= 0)
-        return 0;
-
-    hpLost = Helper::round(static_cast<float>(hpLost));
-    return hpLost * mMoodModifier;
+    return (creature.getMaxHp() - creature.getHP()) / creature.getMaxHp() * mMoodModifier;
 }
 
 CreatureMoodHpLoss* CreatureMoodHpLoss::clone() const

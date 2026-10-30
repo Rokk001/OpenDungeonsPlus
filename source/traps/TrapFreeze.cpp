@@ -123,7 +123,7 @@ static TrapRegister reg(new TrapFreezeFactory);
 TrapFreeze::TrapFreeze(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("FreezeReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("FreezeReloadTurns");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("FreezeNbShootsBeforeDeactivation");
     mFreezeTurns = ConfigManager::getSingleton().getTrapConfigDouble("FreezeDurationTurns");
     mShatterHpPercent = ConfigManager::getSingleton().getTrapConfigDouble("FreezeShatterHpPercent");

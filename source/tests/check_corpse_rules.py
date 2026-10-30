@@ -75,7 +75,7 @@ def corpse_fixture():
     world = world.replace(' Creature()=default;', additions+' Creature()=default;')
     declarations = r'''
 //! \brief Captures blood creation at first death only.
-namespace DirtPileKind{const int blood=0;}
+namespace DirtPileKind{const int blood=0,pile=1;}
 //! \brief Observes the blood side effect.
 struct DirtPileEntity{static int count;
  //! \brief Counts actual death blood calls.
@@ -106,7 +106,7 @@ struct RoomCrypt:Room{GameMap* map=nullptr;std::map<Tile*,Creature*> mRottingCre
     source = read('source/entities/Creature.cpp')
     death = function(function(source,'void Creature::doUpkeep('),'    if (!isAlive())')
     carry = function(source,'EntityCarryType Creature::getEntityCarryType(')
-    carry_body = carry[carry.index('    if(getDefinition()->isWorker())'):carry.index('    // A creature knocked')]
+    carry_body = carry[carry.index('    if(getDefinition()->isWorker() || getDefinition()->isUndead())'):carry.index('    // A creature knocked')]
     dead_guard = carry[carry.index('    if(getHP() <= 0.0)'):carry.index('    // A hurt creature')]
     carry_code = '\nEntityCarryType Creature::carryDead()const{'+carry_body+dead_guard+'return EntityCarryType::notCarryable;}\n'
     crypt = read('source/rooms/RoomCrypt.cpp')

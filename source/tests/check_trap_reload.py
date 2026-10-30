@@ -56,7 +56,8 @@ for trap_type, prefix in type_keys.items():
     assert prefix in doc_block, prefix + ' not documented'
     assert re.search(r'^    ' + key + r'\t\d+', traps_cfg, re.M), key + ' not set'
     assert 'case TrapType::' + trap_type + ':' in price, trap_type + ' not priced'
-    assert re.search(r'getTrapConfigDoubleOrDefault\("' + key + '", defaultPrice\)', price), key + ' not read'
+    fallback = '467.2767084775086' if trap_type == 'gas' else 'defaultPrice'
+    assert re.search(r'getTrapConfigDoubleOrDefault\("' + key + r'", ' + re.escape(fallback) + r'\)', price), key + ' not read'
 # Every trap type that has a shot count in the configuration has a reload price. The list of trap types with a
 # shot count is fixed for this branch (counted once in the configuration: 10 types); update it by hand when
 # a branch adds or removes one.

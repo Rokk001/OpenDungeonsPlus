@@ -151,7 +151,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             creature.fireCriticalOnStructure("dig", Ogre::Vector3(static_cast<Ogre::Real>(tileDig.getX()),
                 static_cast<Ogre::Real>(tileDig.getY()), 0.0f));
         }
-        creature.receiveExp(1.5 * creature.getDigRate() / 20.0);
+        creature.receiveExp(ConfigManager::getSingleton().getDigXpFactor() * creature.getDigRate()
+            / ConfigManager::getSingleton().getWorkXpRateDivisor());
 
         // If the tile is a gold tile accumulate gold for this creature.
         switch(tileDig.getType())
@@ -164,7 +165,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
                     ++creature.getSeat()->getStatistics().mGoldTilesMined;
 
                 // Receive experience for digging gold
-                creature.receiveExp(creature.getDigRate() / 20.0);
+                creature.receiveExp(ConfigManager::getSingleton().getGoldDigXpFactor() * creature.getDigRate()
+                    / ConfigManager::getSingleton().getWorkXpRateDivisor());
                 break;
             }
             case TileType::gem:
@@ -173,7 +175,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
                 static const double gemGoldPerDigStep = ConfigManager::getSingleton().getGemGoldPerDigStep();
                 payMinedGold(creature, tileDig, gemGoldPerDigStep * digFactor * criticalFactor);
                 // Receive experience for digging
-                creature.receiveExp(creature.getDigRate() / 20.0);
+                creature.receiveExp(ConfigManager::getSingleton().getGoldDigXpFactor() * creature.getDigRate()
+                    / ConfigManager::getSingleton().getWorkXpRateDivisor());
                 break;
             }
             default:
@@ -191,7 +194,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             creature.fireCosmeticEvent(event, false);
 
             creature.popAction();
-            creature.receiveExp(2.5);
+            creature.receiveExp(ConfigManager::getSingleton().getTileDugXp());
             creature.parkedBit = false;
             creature.setDestination(&tileDig);
         }

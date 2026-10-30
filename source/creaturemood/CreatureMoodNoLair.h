@@ -37,7 +37,8 @@ public:
     const std::string& getModifierName() const override;
 
     //! \brief Returns the mood change while the creature has no home tile, otherwise 0.
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
     inline CreatureMoodNoLair* clone() const override;
@@ -50,7 +51,7 @@ public:
     virtual void getFormatString(std::string& format) const override;
 
 private:
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODNOLAIR_H

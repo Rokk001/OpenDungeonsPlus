@@ -22,6 +22,7 @@
 #include "entities/Creature.h"
 #include "creaturemood/CreatureMood.h"
 #include "utils/LogManager.h"
+#include "utils/ConfigManager.h"
 
 const std::string CreatureBehaviourLeaveDungeonWhenFurious::mNameCreatureBehaviourLeaveDungeonWhenFurious = "LeaveDungeonWhenFurious";
 
@@ -47,10 +48,12 @@ CreatureBehaviour* CreatureBehaviourLeaveDungeonWhenFurious::clone() const
     return new CreatureBehaviourLeaveDungeonWhenFurious;
 }
 
+//! \brief Leaves when the creature is furious or too many wages are unpaid.
 bool CreatureBehaviourLeaveDungeonWhenFurious::processBehaviour(Creature& creature) const
 {
-    // The creature should try to leave if furious
-    if(creature.getMoodValue() < CreatureMoodLevel::Furious)
+    // The creature should try to leave if furious or repeatedly unpaid
+    if(creature.getMoodValue() < CreatureMoodLevel::Furious &&
+       creature.getMissedWages() < ConfigManager::getSingleton().getUnpaidWagesLeave())
         return true;
 
     if(!creature.isActionInList(CreatureActionType::leaveDungeon))
@@ -61,6 +64,6 @@ bool CreatureBehaviourLeaveDungeonWhenFurious::processBehaviour(Creature& creatu
         creature.reportLeavingToBestFriend();
     }
 
-    // If the creature is furious, it does nothing else
+    // A creature that wants to leave does nothing else
     return false;
 }

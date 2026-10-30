@@ -312,8 +312,8 @@ def check_part_h():
     champion = creatures['Champion']
     check_values('Champion', champion, 'blitzer', 'none', 'none', 'none', 'none')
     assert float(champion['CritChanceBonus']) == CHAMPION_CRIT_BONUS
-    # Worker hit points are not changed by this plan
-    assert creatures['Kobold']['MinHP'] == '62' and creatures['DwarfWorker']['MinHP'] == '62'
+    # Worker hit points follow the rebalance (70)
+    assert creatures['Kobold']['MinHP'] == '70' and creatures['DwarfWorker']['MinHP'] == '70'
 
     # Level-file creature definitions: the values of the type whose mesh they use
     found_classes = set()
@@ -657,12 +657,13 @@ def check_part_e():
     assert 'creature.rollCritical()' in area_body and area_body.index('rollCritical()') < area_body.index('takeDamage(')
 
     # ---- 8.4 digging: one roll per dig step; a critical step removes 2 x the fullness on dirt and walls and pays 2 x the
-    # step gold on gold and gem walls (on a gold wall at most what is left); experience stays as it is
+    # step gold on gold and gem walls (on a gold wall at most what is left); experience follows the configured dig factors
     handle = function(dig, 'bool CreatureActionDigTile::handleDigTile(')
     assert handle.count('creature.rollCritical()') == 1, 'one roll per dig step'
     assert handle.index('creature.rollCritical()') < handle.index('digOutGold(digFactor * criticalFactor)')
     assert 'getCritDamageMultiplier()' in handle
-    assert 'receiveExp(1.5 * creature.getDigRate() / 20.0)' in handle and 'receiveExp(creature.getDigRate() / 20.0)' in handle
+    assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getGoldDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', handle)
+    assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', handle)
     assert not re.search(r'receiveExp\([^;]*(digFactor|criticalFactor|getDigFactor)', handle), 'experience ignores dig% and crits'
     assert 'fireCriticalOnStructure("dig"' in handle
     tunnel_body = function(tunnel, 'bool CreatureActionTunnel::handleTunnel(') if 'bool CreatureActionTunnel::handleTunnel(' in tunnel else tunnel

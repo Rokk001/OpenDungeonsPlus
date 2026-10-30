@@ -19,6 +19,9 @@
 
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
+
+#include <cmath>
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -51,6 +54,7 @@ bool CreatureActionGetFee::handleGetFee(Creature& creature)
     // If we are broke, no need to look for gold
     if(creature.getSeat()->getGold() <= 0)
     {
+        creature.setMissedWages(static_cast<uint32_t>(std::ceil(creature.getGoldFee() / creature.getDefinition()->getFee(creature.getLevel()))));
         creature.popAction();
         return false;
     }
@@ -67,6 +71,7 @@ bool CreatureActionGetFee::handleGetFee(Creature& creature)
 
             if(creature.getGoldFee() <= 0)
             {
+                creature.setMissedWages(0);
                 // We were able to take all the gold. We can do something else
                 creature.popAction();
                 return true;

@@ -208,7 +208,7 @@ bool SpellCreatureExplosion::castSpell(GameMap* gameMap, Player* player, ODPacke
     if(!player->getSeat()->takeMana(priceTotal))
         return false;
 
-    uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureExplosionDuration");
+    double duration = ConfigManager::getSingleton().getSpellConfigDouble("CreatureExplosionDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureExplosion,
         ConfigManager::getSingleton().getSpellConfigDouble("CreatureExplosionValue"), ResearchEffect::Damage);
     for(Creature* creature : creatures)

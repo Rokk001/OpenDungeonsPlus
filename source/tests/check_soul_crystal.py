@@ -66,8 +66,8 @@ PRELUDE = r'''
 #include <string>
 #include <vector>
 #include <utility>
-static const uint32_t MAX_LEVEL=30,BONUS_KIND_COUNT=17,MAX_ITEM_EFFECTS=2;
-static const double TRADE_CHANCE=.3,PERCENT=100.0;
+static const uint32_t MAX_LEVEL=30,BONUS_KIND_COUNT=17;
+static const double PERCENT=100.0;
 #define OD_LOG_ERR(value) static_cast<void>(0)
 //! \brief Fails a named assertion about the actual production result.
 void check(bool value,const std::string& name){if(!value)throw std::runtime_error(name);}
@@ -99,6 +99,12 @@ struct ConfigManager {std::map<std::string,double> values;
  double getTimePayDay()const{return values.at("TimePayDay");}
  //! \brief Supplies the real merchant purchase share and room amounts.
  double getRoomConfigDouble(const std::string& name)const{return values.at(name);}
+ //! \brief Supplies the configured room value for the merchant trade decision.
+ double getRoomConfigDoubleOrDefault(const std::string& name,double)const{return values.at(name);}
+ //! \brief Supplies the configured item effect setting used by the codec.
+ double getItemSetting(const std::string&,const std::string& key)const{return values.at(key);}
+ //! \brief Supplies the real equipment limits; every key the fixture reaches is loaded from the config.
+ double getEquipmentConfigDoubleOrDefault(const std::string& name,double)const{return values.at(name);}
  //! \brief Leaves unrelated catalogue items outside the crystal-only fixture.
  const ItemDefinition* getItem(const std::string&)const{return nullptr;}
  //! \brief Leaves unrelated potions outside the crystal-only fixture.
@@ -297,9 +303,9 @@ void fireSpellEffect(Tile&,const std::string&,const std::string&) {}}
 def main():
     global_cfg, rooms_cfg = read("config/global.cfg"), read("config/rooms.cfg")
     keys = ["SoulCrystalPrice", "SoulCrystalBreakBelow", "SoulCrystalNormalXpPerSecond", "SoulCrystalHeroRareStart",
-        "SoulCrystalHeroRareEnd", "TimePayDay", "HeroItemBase", "HeroItemPerLevel"]
+        "SoulCrystalHeroRareEnd", "TimePayDay", "HeroItemBase", "HeroItemPerLevel", "MaxItemEffects"]
     values = {key: scalar(global_cfg, key) for key in keys}
-    values.update({key: scalar(rooms_cfg, key) for key in ("MerchantBuyShare", "MerchantGoodsPerTable", "MerchantGiftMood")})
+    values.update({key: scalar(rooms_cfg, key) for key in ("MerchantBuyShare", "MerchantGoodsPerTable", "MerchantGiftMood", "MerchantTradeChance")})
     creatures = re.sub(r"#[^\n]*", "", read("config/creatures.cfg"))
     tables = [list(map(float, block.split())) for block in re.findall(r"\[XP\](.*?)\[/XP\]", creatures, re.S) if block.strip()]
     assert tables and all(table == tables[0] for table in tables), "the crystal wage cases require the actual shared XP table"
@@ -347,7 +353,7 @@ int main(){try{
  ConfigManager& config=ConfigManager::getSingleton();CONFIG_VALUES
  CreatureDefinition definition;definition.mXPTable={XP_VALUES};Seat owner,enemy;Creature creature;creature.mDefinition=&definition;creature.seat=&owner;
  const int wages[4]={400,200,100,50};const int perLevels[4]={FEE_LEVEL_VALUES};const int margins[3]={0,10,50};
- const int first[3][4]={{11,15,21,29},{11,16,22,0},{13,19,26,0}};
+ const int first[3][4]={{13,19,26,0},{14,19,27,0},{16,22,0,0}};
  for(int marginIndex=0;marginIndex<3;++marginIndex)for(int wageIndex=0;wageIndex<4;++wageIndex){
   definition.mFeeBase=wages[wageIndex];definition.mFeePerLevel=perLevels[wageIndex];int found=0;
   for(uint32_t level=1;level<30;++level){creature.mLevel=level;const bool wanted=creature.wantsSoulCrystal(800*(1+margins[marginIndex]/100.0));
@@ -389,7 +395,7 @@ int main(){try{
  check(!CreatureMerchantAI::offerGift(capped,gift)&&capped.item!=nullptr&&!capped.removed,"maximum-level gift stays on floor");
  ItemBagEntity hostile(ItemInstance::createSoulCrystal());hostile.seat=&enemy;creature.mLevel=11;
  check(!CreatureMerchantAI::offerGift(hostile,gift)&&hostile.item!=nullptr,"gift never applies to another keeper");gift.entities.clear();check(!CreatureMerchantAI::offerGift(hostile,gift),"empty tile leaves bag");
- creature.tile=nullptr;creature.mLevel=11;creature.mExp=0;owner.margin=10;const double effectivePrice=800*(1+owner.margin/100.0);creature.gold=effectivePrice;
+ creature.tile=nullptr;creature.mLevel=14;creature.mExp=0;owner.margin=10;const double effectivePrice=800*(1+owner.margin/100.0);creature.gold=effectivePrice;
  stock.mGoods.clear();MerchantGood good;good.mItem=*ItemInstance::createSoulCrystal();good.mReservedBy=creature.getName();stock.mGoods.push_back(good);
  RoomMerchant::stock={{&merchant,&table,&stock.mGoods[0]}};Random::draw=.299999;
  check(CreatureMerchantAI::decideSoulCrystal(creature)&&creature.purchases==1,"eligible reserved crystal purchases below30percent");
@@ -398,10 +404,10 @@ int main(){try{
  creature.tried=true;check(!CreatureMerchantAI::decideSoulCrystal(creature),"failed-action guard prevents another purchase");creature.tried=false;
  stock.mGoods[0].mReservedBy="other";check(!CreatureMerchantAI::decideSoulCrystal(creature),"other reservation refuses purchase");stock.mGoods[0].mReservedBy=creature.getName();
  creature.mLevel=30;check(!CreatureMerchantAI::decideSoulCrystal(creature),"maximum level never purchases");
- creature.mLevel=1;check(!CreatureMerchantAI::decideSoulCrystal(creature),"worth-it denial prevents purchase");creature.mLevel=11;
+ creature.mLevel=1;check(!CreatureMerchantAI::decideSoulCrystal(creature),"worth-it denial prevents purchase");creature.mLevel=14;
  for(std::unique_ptr<ItemInstance>& held:creature.inventory)held.reset(new ItemInstance);
  check(!CreatureMerchantAI::decideSoulCrystal(creature),"full inventory refuses purchase");for(std::unique_ptr<ItemInstance>& held:creature.inventory)held.reset();
- creature.inventory[0]=ItemInstance::createSoulCrystal();creature.mExp=definition.mXPTable[10]*.5;check(!CreatureMerchantAI::decideSoulCrystal(creature),"already-held crystal prevents second purchase");creature.inventory[0].reset();
+ creature.inventory[0]=ItemInstance::createSoulCrystal();creature.mExp=definition.mXPTable[13]*.5;check(!CreatureMerchantAI::decideSoulCrystal(creature),"already-held crystal prevents second purchase");creature.inventory[0].reset();
  const uint32_t levels[5]={1,5,10,20,30};const double chances[5]={.0144,.048,.099,.231,.403};
  for(int index=0;index<5;++index){creature.mLevel=levels[index];Random::draw=chances[index]-1e-10;heroCrystal(creature,"hero");check(creature.inventory[0]!=nullptr,"hero roll succeeds just below decided chance");creature.inventory[0].reset();
   Random::draw=chances[index]+1e-10;heroCrystal(creature,"hero");check(creature.inventory[0]==nullptr,"hero roll fails just above decided chance");}

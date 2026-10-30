@@ -51,8 +51,10 @@ remove_covered_tile = function(temple, 'bool RoomDungeonTemple::removeCoveredTil
 do_upkeep = function(temple, 'void RoomDungeonTemple::doUpkeep(')
 mesh_name = function(treasury_object, 'const char* TreasuryObject::getMeshNameForGold(')
 
-# The ring is part of the heart: fixed capacity, no treasury skill involved.
-assert 'static const int treasuryTileCapacity = 1000;' in temple
+# The ring is part of the heart: the capacity per tile is the config key DungeonHeartGoldPerTile (1000), no treasury
+# skill involved.
+assert 'treasuryTileCapacity' not in temple and 'getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0)' in temple
+assert ['DungeonHeartGoldPerTile', '1000'] in [line.split() for line in (repo / 'config/rooms.cfg').read_text(encoding='utf-8').splitlines()]
 assert 'static const int HEART_CORE_RADIUS = 1;' in temple
 assert 'dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS' in temple
 assert 'center = getCentralTile();' in temple

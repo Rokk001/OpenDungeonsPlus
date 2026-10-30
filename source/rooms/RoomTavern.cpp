@@ -85,12 +85,8 @@ const int32_t GET_UP_TURNS = 2;
 //! \brief Turns a guest stays in the state done after its last drink, so that a guest finishing its drink in the
 //! same or the next turn can still pick it as the partner of a game.
 const int32_t DONE_WAIT_TURNS = 2;
-//! \brief A slap duel without decision ends after this many times GameTurns turns.
-const int32_t DUEL_MAX_TURNS_FACTOR = 4;
 //! \brief Scale of the percent values of the [Tavern] block.
 const double PERCENT_SCALE = 100.0;
-//! \brief Each further drink of the chain halves the chance of the previous one.
-const double DRINK_CHAIN_HALVING = 2.0;
 //! \brief A squared direction shorter than this has no usable direction.
 const double DIRECTION_EPSILON = 0.0001;
 //! \brief Number of games a guest can pick when no beer is served (arm wrestling and dice).
@@ -425,6 +421,14 @@ void RoomTavern::removeCreatureUsingRoom(Creature* creature)
     }
 }
 
+//! \brief Returns whether this guest is arriving for a drink or drinking.
+bool RoomTavern::isGuestDrinking(const Creature& creature)
+{
+    std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(&creature);
+    return it != mSpots.end() && (it->second.mState == TavernGuestState::arriving ||
+        it->second.mState == TavernGuestState::drinking);
+}
+
 bool RoomTavern::shouldStopUseIfHungrySleepy(Creature& creature, bool forced)
 {
     std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(&creature);
@@ -712,6 +716,7 @@ bool RoomTavern::payForBeer(Creature& creature, bool& noCoin)
     return false;
 }
 
+//! \brief Finishes a drink and draws another using the configured chain divisor.
 void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
 {
     Creature* creature = spot.mCreature;
@@ -738,7 +743,7 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
     if(spot.mDrinks < static_cast<uint32_t>(getTavernValue("MaxDrinksPerVisit")))
     {
         const double nextDrinkPercent = getTavernValue("NextDrinkPercent") /
-            std::pow(DRINK_CHAIN_HALVING, static_cast<double>(spot.mDrinks - 1));
+            std::pow(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("TavernDrinkChainHalving", 2.0), static_cast<double>(spot.mDrinks - 1));
         if(Random::Double(0.0, PERCENT_SCALE) < nextDrinkPercent)
         {
             setSpotState(spot, TavernGuestState::drinking, static_cast<int32_t>(getTavernValue("DrinkTurns")));
@@ -793,6 +798,7 @@ void RoomTavern::tryStartGame(Tile* tile)
     startGame(tile, partners[Random::Uint(0, static_cast<uint32_t>(partners.size()) - 1)]);
 }
 
+//! \brief Starts a tavern game using the available game kinds and configured duel limit.
 void RoomTavern::startGame(Tile* tileA, Tile* tileB)
 {
     std::map<Tile*, RoomTavernSpot>::iterator spotA = mSpots.find(tileA);
@@ -810,7 +816,7 @@ void RoomTavern::startGame(Tile* tileA, Tile* tileB)
     game.mCreatureB = spotB->second.mCreature;
     game.mTurnIsA = true;
     if(game.mKind == TavernGameKind::slapDuel)
-        game.mTurnsLeft = DUEL_MAX_TURNS_FACTOR * static_cast<int32_t>(getTavernValue("GameTurns"));
+        game.mTurnsLeft = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("TavernDuelMaxTurnsFactor", 4.0) * getTavernValue("GameTurns"));
     else
         game.mTurnsLeft = static_cast<int32_t>(getTavernValue("GameTurns"));
     mGames[tileA] = game;

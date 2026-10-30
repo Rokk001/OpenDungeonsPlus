@@ -328,7 +328,7 @@ bool RoomCrypt::hasCarryEntitySpot(GameEntity* carriedEntity)
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
     // Only dead creatures can be carried to the crypt. Seat doesn't matter
-    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
+    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->getDefinition()->isUndead() || creature->isCorpseDecaying())
         return false;
 
     for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
@@ -349,7 +349,7 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
     }
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
-    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
+    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->getDefinition()->isUndead() || creature->isCorpseDecaying())
         return nullptr;
     for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
     {
@@ -490,7 +490,7 @@ void RoomCrypt::restoreInitialEntityState()
         if(spot == mRottingCreatures.end() || saved.second == "none")
             continue;
         Creature* creature = getGameMap()->getCreature(saved.second);
-        if(creature == nullptr || creature->isAlive() || creature->getDefinition()->isWorker())
+        if(creature == nullptr || creature->isAlive() || creature->getDefinition()->isWorker() || creature->getDefinition()->isUndead())
             continue;
         spot->second = creature;
         if(creature->getCorpseCarrierName().empty() && getCorpseSpot(*creature) != nullptr)

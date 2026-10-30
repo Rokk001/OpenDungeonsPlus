@@ -46,9 +46,10 @@ const std::string& CreatureMoodWakefulness::getModifierName() const
     return CreatureMoodWakefulnessName;
 }
 
-int32_t CreatureMoodWakefulness::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodWakefulness::computeMood(const Creature& creature) const
 {
-    int32_t wakefulness = static_cast<int32_t>(creature.getWakefulness());
+    double wakefulness = creature.getWakefulness();
     if(wakefulness > mStartWakefulness)
         return 0;
 

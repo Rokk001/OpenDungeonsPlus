@@ -34,8 +34,6 @@ const std::string TrapLightningName = "Lightning";
 const std::string TrapLightningNameDisplay = "Lightning trap";
 const TrapType TrapLightning::mTrapType = TrapType::lightning;
 
-//! \brief Damage factor applied when the bolt hits a target standing in water
-static const double WATER_DAMAGE_FACTOR = 2.0;
 
 namespace
 {
@@ -125,7 +123,7 @@ static TrapRegister reg(new TrapLightningFactory);
 TrapLightning::TrapLightning(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("LightningReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("LightningReloadTurns");
     mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("LightningDamagePerHitMin");
     mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("LightningDamagePerHitMax");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("LightningNbShootsBeforeDeactivation");
@@ -151,7 +149,7 @@ bool TrapLightning::shoot(Tile* tile)
         SkillManager::getResearchValue(getSeat(), SkillType::trapLightning, mMinDamage, ResearchEffect::Damage),
         SkillManager::getResearchValue(getSeat(), SkillType::trapLightning, mMaxDamage, ResearchEffect::Damage));
     if((targetTile != nullptr) && (targetTile->getType() == TileType::water))
-        damage *= WATER_DAMAGE_FACTOR;
+        damage *= ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("LightningWaterDamageFactor", 2.0);
 
     target->takeDamage(this, 0.0, 0.0, 0.0, damage, targetTile, false);
     target->notifyFightPlayer(targetTile);

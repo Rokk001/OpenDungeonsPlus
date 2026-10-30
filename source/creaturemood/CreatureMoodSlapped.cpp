@@ -51,7 +51,8 @@ const std::string& CreatureMoodSlapped::getModifierName() const
 }
 
 //! \brief Returns the mood change per slap received during the last DurationTurns turns (at most MaxSlaps slaps).
-int32_t CreatureMoodSlapped::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodSlapped::computeMood(const Creature& creature) const
 {
     int32_t nbSlaps = creature.getNbRecentSlaps(mDurationTurns);
     nbSlaps = std::min(nbSlaps, mMaxSlaps);

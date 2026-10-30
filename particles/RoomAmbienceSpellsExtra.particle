@@ -859,3 +859,136 @@ particle_system WorkerVanish
         alpha -1.000000
     }
 }
+
+// Forty beetles emerge over half a second and crawl along the floor, at most 1.5 tiles.
+// Two-second lives end by 2.5 seconds, matching the Lich death clip and event lifetime.
+particle_system LichBeetles
+{
+    material LichBeetle
+    point_rendering false
+    particle_width 0.12
+    particle_height 0.16
+    quota 40
+    billboard_type perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+    texture_sheet_size 4 1
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction 1 0 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction 0.70710678 0.70710678 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction 0 1 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction -0.70710678 0.70710678 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction -1 0 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction -0.70710678 -0.70710678 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction 0 -1 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 10
+        duration 0.5
+        time_to_live 2.0
+        direction 0.70710678 -0.70710678 0
+        velocity_min 0.35
+        velocity_max 0.75
+        position 0 0 0.03
+    }
+
+    affector TextureAnimator
+    {
+        texcoord_start 0
+        texcoord_count 4
+        duration 0.32
+        random_offset true
+    }
+    affector ColourFader2
+    {
+        alpha1 0
+        alpha2 -2
+        state_change 0.5
+    }
+}

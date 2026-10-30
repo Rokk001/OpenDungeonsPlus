@@ -80,10 +80,12 @@ for path, token in [('source/rooms/RoomLibrary.cpp', 'getDirtOutputFactor()'), (
                     ('source/rooms/RoomTrainingHall.cpp', 'getDirtOutputFactor()'), ('source/rooms/RoomCasino.cpp', 'getDirtOutputFactor()'),
                     ('source/rooms/RoomTemple.cpp', 'getDirtOutputFactor()'), ('source/rooms/RoomHatchery.cpp', 'getDirtOutputFactor()'),
                     ('source/creatureaction/CreatureActionSleep.cpp', 'getDirtOutputFactor()'),
-                    ('source/rooms/RoomPrison.cpp', 'getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3")'),
                     ('source/rooms/RoomTorture.cpp', 'getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3")')]:
     assert token in read(path), path + ' must use ' + token
-assert 'receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor())' in creature_cpp, 'arena experience per hit'
+# The flat prison damage and its dirt factor are gone: a prisoner loses health only while hungry or thirsty
+assert 'PrisonDirtDamage' not in read('source/rooms/RoomPrison.cpp'), 'the prison dirt damage factor is removed'
+assert 'receiveExp(fightExp * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor())' in creature_cpp, 'arena experience per fight turn'
+assert 'getRoomConfigDouble("ArenaXpPerFightTurn")' in creature_cpp, 'arena experience follows ArenaXpPerFightTurn'
 # Piles in rooms workers never clean: the search and the seat check use the same rule
 assert 'isPileCleanable(*tile)' in extract(search_cpp, 'static Tile* findPileTile('), 'the pile search must use the shared rule'
 assert 'isPileCleanable(*tile)' in extract(seat_cpp, 'bool Seat::hasDirtToClean() const'), 'hasDirtToClean must use the shared rule'
@@ -344,7 +346,7 @@ void Creature::koBlock(bool wasKo)
 }
 
 // ---- Mood
-struct CreatureMoodDirt { int32_t computeMood(const Creature& creature) const; };
+struct CreatureMoodDirt { double computeMood(const Creature& creature) const; };
 namespace {
 @@MOOD_FUNCTIONS@@
 }
@@ -414,15 +416,12 @@ static void checkStages()
     // A mean over unequal tiles
     room->mCoveredTiles[0]->mDirt = 100.0; room->mCoveredTiles[1]->mDirt = 100.0; room->mCoveredTiles[2]->mDirt = 0.0; room->mCoveredTiles[3]->mDirt = 0.0;
     expectNear(room->getDirtMean(), 50.0, "mean of unequal tiles"); expect(room->getDirtStage() == 2, "stage 2 at mean 50");
-    // Prison and torture factors by stage
+    // Torture factor by stage
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 0.0;
-    expectNear(room->getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3"), 1.0, "prison factor at stage 1");
     expectNear(room->getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3"), 1.0, "torture factor at stage 1");
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 50.0;
-    expectNear(room->getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3"), 1.25, "prison factor at stage 2");
     expectNear(room->getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3"), 0.9, "torture factor at stage 2");
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 90.0;
-    expectNear(room->getDirtStageFactor("PrisonDirtDamageStage2", "PrisonDirtDamageStage3"), 1.5, "prison factor at stage 3");
     expectNear(room->getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3"), 0.8, "torture factor at stage 3");
 }
 
@@ -434,7 +433,7 @@ static void checkUseDirt()
     Tile* tile = map.getTile(1, 1);
     Creature creature(&seat, &definition, &map, tile);
     Room::addUseDirt(creature, tile, "WorkshopDirtPerWork");
-    expectNear(tile->getDirt(), 1.5922 * 1.75, "room use dirt = key x DirtFactor");
+    expectNear(tile->getDirt(), 1.7723 * 1.75, "room use dirt = key x DirtFactor");
     double before = tile->getDirt();
     Room::addUseDirt(creature, tile, "CryptDirtPerNothing");
     expectNear(tile->getDirt(), before, "a room without a key makes no dirt");
@@ -517,7 +516,7 @@ static void checkPiles()
     expect(DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile) == nullptr, "the cleaned pile is off the tile");
 }
 
-static int mood(Creature& creature) { CreatureMoodDirt m; return m.computeMood(creature); }
+static double mood(Creature& creature) { CreatureMoodDirt m; return m.computeMood(creature); }
 
 static void checkMood()
 {
@@ -527,10 +526,10 @@ static void checkMood()
     Seat seat; CreatureDefinition definition;
     Tile* tile = map.getTile(2, 2);
     Creature creature(&seat, &definition, &map, tile);
-    struct Case { double dirtValue; double cleanliness; int expected; };
+    struct Case { double dirtValue; double cleanliness; double expected; };
     static const Case cases[] = {
-        {0.0, 1.0, 0}, {50.0, 1.0, -30}, {90.0, 1.0, -60}, {50.0, 0.25, -8}, {90.0, 0.25, -15}, {50.0, 0.5, -15},
-        {90.0, 0.5, -30}, {50.0, 1.5, -45}, {90.0, 1.5, -90}, {50.0, 2.0, -60}, {90.0, 2.0, -120}};
+        {0.0, 1.0, 0}, {50.0, 1.0, -100}, {90.0, 1.0, -200}, {50.0, 0.25, -25}, {90.0, 0.25, -50}, {50.0, 0.5, -50},
+        {90.0, 0.5, -100}, {50.0, 1.5, -150}, {90.0, 1.5, -300}, {50.0, 2.0, -200}, {90.0, 2.0, -400}};
     for(unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
     {
         for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = cases[i].dirtValue;
@@ -542,15 +541,15 @@ static void checkMood()
     definition.cleanliness = 1.0;
     expect(mood(creature) == 0, "no dirt, no mood");
     DirtPileEntity::createOnTile(&map, map.getTile(4, 4), DirtPileKind::pile, "Orc");   // distance 2: inside
-    expect(mood(creature) == -30, "one pile at distance 2 gives DirtPileMood");
+    expect(mood(creature) == -100, "one pile at distance 2 gives DirtPileMood");
     DirtPileEntity::createOnTile(&map, map.getTile(5, 5), DirtPileKind::pile, "Orc");   // distance 3: outside
-    expect(mood(creature) == -30, "a pile at distance 3 gives nothing");
+    expect(mood(creature) == -100, "a pile at distance 3 gives nothing");
     DirtPileEntity::createOnTile(&map, map.getTile(2, 1), DirtPileKind::pile, "Rat");
-    expect(mood(creature) == -60, "every pile counts once");
+    expect(mood(creature) == -200, "every pile counts once");
     DirtPileEntity::createOnTile(&map, map.getTile(1, 2), DirtPileKind::blood, "Orc");
-    expect(mood(creature) == -60, "blood gives no mood");
+    expect(mood(creature) == -200, "blood gives no mood");
     definition.cleanliness = 2.0;
-    expect(mood(creature) == -120, "piles times Cleanliness");
+    expect(mood(creature) == -400, "piles times Cleanliness");
     definition.cleanliness = 1.0;
     // Crypt: no stage mood at stage 3
     Tile* cryptTile = map.getTile(8, 8);
@@ -558,7 +557,7 @@ static void checkMood()
     Creature inCrypt(&seat, &definition, &map, cryptTile);
     expect(mood(inCrypt) == 0, "a crypt gives no dirt mood");
     DirtPileEntity::createOnTile(&map, map.getTile(9, 9), DirtPileKind::vomit, "Orc");
-    expect(mood(inCrypt) == -30, "a vomit puddle counts like a pile");
+    expect(mood(inCrypt) == -100, "a vomit puddle counts like a pile");
     // No mood without a seat, none for a free hero or rogue creature, but a captured hero is a prisoner
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 90.0;
     Creature seatless(nullptr, &definition, &map, tile);
@@ -567,10 +566,10 @@ static void checkMood()
     Creature hero(&heroSeat, &definition, &map, tile);
     expect(mood(hero) == 0, "a free hero has no mood");
     hero.inPrison = true;
-    // The stage mood -60 plus the two piles that still lie within the radius (-30 each)
-    expect(mood(hero) == -120, "a hero in prison feels the dirt");
+    // The stage mood -200 plus the two piles that still lie within the radius (-100 each)
+    expect(mood(hero) == -400, "a hero in prison feels the dirt");
     hero.inPrison = false; hero.inContainment = true;
-    expect(mood(hero) == -120, "a hero in containment feels the dirt");
+    expect(mood(hero) == -400, "a hero in containment feels the dirt");
     Seat rogueSeat; rogueSeat.rogue = true;
     Creature rogue(&rogueSeat, &definition, &map, tile);
     expect(mood(rogue) == 0, "a rogue creature has no mood");
@@ -583,13 +582,22 @@ static void checkUrgeAndCreatureDirt()
     Seat seat; CreatureDefinition definition; definition.dirtFactor = 1.5;
     Tile* tile = map.getTile(2, 2);
     Creature creature(&seat, &definition, &map, tile);
-    // Urge: +20 per chicken, 80 after four (seek), 100 after five (relieve), clamped
-    for(int i = 0; i < 4; ++i) creature.foodEaten(10.0);
-    expectNear(creature.mUrge, ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"), "four chickens reach UrgeSeek");
-    expectNear(creature.mHunger, 10.0, "hunger fell by 4 x 10");
-    creature.foodEaten(10.0);
-    expectNear(creature.mUrge, ConfigManager::getSingleton().getDirtConfigDouble("UrgeRelieve"), "five chickens reach UrgeRelieve");
-    creature.foodEaten(10.0);
+    // Urge: +UrgePerChicken per chicken; UrgeSeek is reached after ceil(UrgeSeek / UrgePerChicken) = 14 chickens, UrgeRelieve after 17, clamped at 100
+    const double perChicken = ConfigManager::getSingleton().getDirtConfigDouble("UrgePerChicken");
+    const double seek = ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek");
+    const double relieve = ConfigManager::getSingleton().getDirtConfigDouble("UrgeRelieve");
+    const int seekChickens = static_cast<int>(std::ceil(seek / perChicken));
+    const int relieveChickens = static_cast<int>(std::ceil(relieve / perChicken));
+    for(int i = 0; i < seekChickens - 1; ++i) creature.foodEaten(1.0);
+    expect(creature.mUrge < seek, "one chicken fewer than ceil(UrgeSeek / UrgePerChicken) stays below UrgeSeek");
+    expectNear(creature.mHunger, 50.0 - (seekChickens - 1), "hunger fell by 1 per chicken");
+    creature.foodEaten(1.0);
+    expect(creature.mUrge >= seek, "ceil(UrgeSeek / UrgePerChicken) chickens reach UrgeSeek");
+    for(int i = seekChickens; i < relieveChickens - 1; ++i) creature.foodEaten(1.0);
+    expect(creature.mUrge < relieve, "one chicken fewer than ceil(UrgeRelieve / UrgePerChicken) stays below UrgeRelieve");
+    creature.foodEaten(1.0);
+    expect(creature.mUrge >= relieve, "ceil(UrgeRelieve / UrgePerChicken) chickens reach UrgeRelieve");
+    creature.foodEaten(100.0);
     expectNear(creature.mUrge, 100.0, "the urge is clamped at 100"); expectNear(creature.mHunger, 0.0, "hunger does not go below 0");
     creature.setUrge(-4.0); expectNear(creature.mUrge, 0.0, "setUrge clamps below"); creature.setUrge(400.0); expectNear(creature.mUrge, 100.0, "setUrge clamps above");
     creature.setUrge(0.0);
@@ -627,15 +635,15 @@ static void checkUrgeAndCreatureDirt()
     creature.setCreatureDirt(0.0); creature.dirtyEnteredTile(entered);
     expectNear(entered->getDirt(), 0.0, "a clean creature leaves no trail");
     creature.setCreatureDirt(50.0); creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.1448 * 0.5 * 1.5, "creature dirt trail");
+    expectNear(entered->getDirt(), 0.1611 * 0.5 * 1.5, "creature dirt trail");
     entered->setDirt(0.0); creature.setCreatureDirt(0.0); creature.mIsBeingDragged = true; creature.mDragDirtFactor = 1.5; creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.1448 * 1.0 * 1.5, "a pulled creature leaves a full trail");
+    expectNear(entered->getDirt(), 0.1611 * 1.0 * 1.5, "a pulled creature leaves a full trail");
     entered->setDirt(0.0); creature.mDragDirtFactor = 3.0; creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.1448 * 1.0 * 3.0, "a pulled creature leaves the trail with the DirtFactor of the pulling worker");
+    expectNear(entered->getDirt(), 0.1611 * 1.0 * 3.0, "a pulled creature leaves the trail with the DirtFactor of the pulling worker");
     entered->setDirt(0.0); creature.mIsBeingDragged = false; creature.mDragDirtFactor = 1.0;
     struct Load : GameEntity { GameEntityType getObjectType() const { return GameEntityType::other; } } load;
     creature.mCarriedEntity = &load; creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.1448 * 1.0 * 1.5, "a worker with a load leaves a full trail");
+    expectNear(entered->getDirt(), 0.1611 * 1.0 * 1.5, "a worker with a load leaves a full trail");
 }
 
 int main()
@@ -688,7 +696,7 @@ replacements = {
     '@@FIGHT_END_BLOCK@@': fight_block,
     '@@KO_BLOCK@@': ko_block,
     '@@MOOD_FUNCTIONS@@': mood_functions,
-    '@@MOOD_COMPUTE@@': extract(mood_cpp, 'int32_t CreatureMoodDirt::computeMood(const Creature& creature) const'),
+    '@@MOOD_COMPUTE@@': extract(mood_cpp, 'double CreatureMoodDirt::computeMood(const Creature& creature) const'),
 }
 for token, text in replacements.items():
     assert token in probe, token

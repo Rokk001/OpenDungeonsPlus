@@ -32,7 +32,8 @@ public:
 
     const std::string& getModifierName() const override;
 
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     inline CreatureMoodHpLoss* clone() const override;
 
@@ -41,7 +42,7 @@ public:
     virtual void getFormatString(std::string& format) const override;
 
 private:
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODHPLOSS_H

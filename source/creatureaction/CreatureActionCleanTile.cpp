@@ -17,6 +17,8 @@
 
 #include "creatureaction/CreatureActionCleanTile.h"
 
+#include "creatureaction/CreatureActionClaimGroundTile.h"
+
 #include "entities/Creature.h"
 #include "entities/DirtPileEntity.h"
 #include "entities/Tile.h"
@@ -122,6 +124,7 @@ bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClea
     // The cleaning work per turn: the claim rate of the worker as a share of the whole dirt range
     double cleanRate = creature.getClaimRate() * Tile::MAX_DIRT * config.getDirtConfigDouble("CleanRateFactor");
     cleanTileStep(tileClean, cleanRate);
+    creature.receiveExp(CreatureActionClaimGroundTile::getClaimExperience(creature));
 
     // Since we wiped a tile we are done for this turn
     return false;

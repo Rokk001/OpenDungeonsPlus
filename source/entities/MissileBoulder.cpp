@@ -17,6 +17,8 @@
 
 #include "entities/MissileBoulder.h"
 
+#include "utils/ConfigManager.h"
+
 #include "entities/Tile.h"
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
@@ -117,6 +119,7 @@ void MissileBoulder::updateDirection()
     setSpeed(speed);
 }
 
+//! \brief Applies boulder damage and the configured hit limit.
 bool MissileBoulder::hitCreature(Tile* tile, GameEntity* entity)
 {
     // A golf ball does not hurt
@@ -133,12 +136,14 @@ bool MissileBoulder::hitCreature(Tile* tile, GameEntity* entity)
         entity->notifyFightPlayer(tile);
 
     ++mNbHits;
-    if(Random::Uint(0, 10 - mNbHits) <= 0)
+    if(mNbHits >= static_cast<uint32_t>(ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("BoulderMaxHits", 10.0)) ||
+        Random::Uint(0, static_cast<uint32_t>(ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("BoulderMaxHits", 10.0)) - mNbHits) <= 0)
         return false;
 
     return true;
 }
 
+//! \brief Chooses wall breakage using the configured chance, then draws a direction.
 bool MissileBoulder::wallHitNextDirection(const Ogre::Vector3& actDirection, Tile* tile, Ogre::Vector3& nextDirection)
 {
     // A golf ball stops at the wall
@@ -146,7 +151,7 @@ bool MissileBoulder::wallHitNextDirection(const Ogre::Vector3& actDirection, Til
         return false;
 
     // When we hit a wall, we might break
-    if(Random::Uint(1, 2) == 1)
+    if(Random::Double(0.0, 100.0) < ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("BoulderWallBreakPercent", 50.0))
         return false;
 
     if(Random::Uint(1, 2) == 1)

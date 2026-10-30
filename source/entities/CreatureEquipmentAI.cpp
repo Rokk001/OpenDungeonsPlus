@@ -23,7 +23,6 @@
 
 namespace
 {
-static const double EQUIP_UPGRADE_MARGIN = 0.5;
 static const double DROP_JITTER = 0.3;
 
 //! \brief Compares skill path and family names using the skill tree's case-insensitive convention.
@@ -142,7 +141,7 @@ bool Creature::acceptItem(std::unique_ptr<ItemInstance> item, bool equip)
     {
         const size_t slot = static_cast<size_t>(getItemEquipmentSlot(*item));
         const double wornRating = mEquipment[slot].get() == nullptr ? 0.0 : rateItem(*mEquipment[slot]);
-        if(rateItem(*item) > wornRating + EQUIP_UPGRADE_MARGIN)
+        if(rateItem(*item) > wornRating + ConfigManager::getSingleton().getItemSetting("ItemEffects", "EquipUpgradeMargin"))
         {
             item = setEquipment(slot, std::move(item));
             equipped = true;
@@ -190,7 +189,7 @@ void Creature::decideEquipment()
             continue;
         const size_t slot = static_cast<size_t>(getItemEquipmentSlot(*item));
         const double wornRating = mEquipment[slot].get() == nullptr ? 0.0 : rateItem(*mEquipment[slot]);
-        if(rateItem(*item) > wornRating + EQUIP_UPGRADE_MARGIN)
+        if(rateItem(*item) > wornRating + ConfigManager::getSingleton().getItemSetting("ItemEffects", "EquipUpgradeMargin"))
             setInventorySlot(index, setEquipment(slot, setInventorySlot(index, std::unique_ptr<ItemInstance>())));
     }
     Tile* tile = getPositionTile();

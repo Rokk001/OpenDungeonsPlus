@@ -46,7 +46,8 @@ const std::string& CreatureMoodTurnsWithoutFight::getModifierName() const
     return CreatureMoodTurnsWithoutFightName;
 }
 
-int32_t CreatureMoodTurnsWithoutFight::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodTurnsWithoutFight::computeMood(const Creature& creature) const
 {
     int32_t turns = creature.getNbTurnsWithoutBattle();
     if(turns < mTurnsWithoutFightMin)

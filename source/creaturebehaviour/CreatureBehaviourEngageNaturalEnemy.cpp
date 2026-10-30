@@ -17,6 +17,8 @@
 
 #include "creaturebehaviour/CreatureBehaviourEngageNaturalEnemy.h"
 
+#include "utils/ConfigManager.h"
+
 #include "creatureaction/CreatureAction.h"
 #include "creaturebehaviour/CreatureBehaviourManager.h"
 #include "entities/Creature.h"
@@ -61,13 +63,14 @@ CreatureBehaviour* CreatureBehaviourEngageNaturalEnemy::clone() const
     return new CreatureBehaviourEngageNaturalEnemy(*this);
 }
 
+//! \brief Decides whether to engage a natural enemy using its configured chance.
 bool CreatureBehaviourEngageNaturalEnemy::processBehaviour(Creature& creature) const
 {
     // The creature should attack natural enemies if at least angry
     if(creature.getMoodValue() < CreatureMoodLevel::Upset)
         return true;
 
-    if(Random::Int(0, 100) < 80)
+    if(Random::Double(0.0, 1.0) >= ConfigManager::getSingleton().getNaturalEnemyEngageChance())
         return true;
 
     // If the creature is already fighting, it should not engage another creature

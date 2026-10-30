@@ -71,7 +71,7 @@ public:
     static Tile* findFreeToiletTile(Creature& creature);
 
     //! \brief Tells whether the creature has a toilet room it may use at all (free seats or not).
-    static bool hasToiletRoomFor(Creature& creature);
+    static bool hasToiletRoomFor(const Creature& creature);
 
     //! \brief Finds the tile where a creature waits when every seat is busy: a reachable tile within
     //! ToiletWaitRadius tiles of a toilet room, outside the room when possible.

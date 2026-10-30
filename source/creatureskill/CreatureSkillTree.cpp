@@ -17,6 +17,10 @@
 
 #include "creatureskill/CreatureSkillTree.h"
 
+#include "utils/LogManager.h"
+
+#include "utils/ConfigManager.h"
+
 #include <algorithm>
 #include <cstdlib>
 #include <iomanip>
@@ -28,12 +32,6 @@ namespace CreatureSkillTree
 {
 const std::string TIER_FOUR_PREFIX = "T4_";
 const uint32_t MAX_TIER = 3;
-const uint32_t TIER_TWO_UNLOCK_RANKS = 1;
-const uint32_t TIER_THREE_UNLOCK_RANKS = 2;
-const uint32_t TIER_FOUR_MIN_SPENT = 20;
-const uint32_t DEVIATION_POINTS = 20;
-const uint32_t RESET_MIN_FOLLOWERS = 3;
-const uint32_t UNFOLLOWED_WEIGHT = 3;
 
 namespace
 {
@@ -239,7 +237,7 @@ static bool getKindSpec(const std::string& kind, KindSpec& spec)
     else if(kind == "AURA_ALLY_StrengthChange")
     {
         spec.mClass = "AuraAlly";
-        spec.mCount = 6;
+        spec.mCount = 7;
         spec.mLevelMin = 2;
         spec.mRadius = 3;
         spec.mDuration = 4;
@@ -368,7 +366,8 @@ static bool getKindSpec(const std::string& kind, KindSpec& spec)
     else if(kind == "SKELARMY")
     {
         spec.mClass = "SkeletonArmy";
-        spec.mCount = 6;
+        spec.mCount = 7;
+        spec.mRadius = 6;
         spec.mLevelMin = 2;
         spec.mDuration = 4;
         spec.mReplace.push_back(3);
@@ -445,6 +444,7 @@ static std::vector<std::string> pathIds(const SkillTreeConfig& config, const std
 }
 }
 
+//! \brief Loads skill definitions including per-skill ally thresholds.
 bool SkillTreeConfig::load(std::istream& is, std::string& error)
 {
     mSkills.clear();
@@ -589,6 +589,8 @@ bool SkillTreeConfig::load(std::istream& is, std::string& error)
                 ok = parseSkillNumber(rest, skill.mDuration);
             else if(key == "Radius")
                 ok = parseSkillNumber(rest, skill.mRadius);
+            else if(key == "MinAllies")
+                ok = parseSkillNumber(rest, skill.mMinAllies);
             else if(key == "Range")
                 ok = parseSkillNumber(rest, skill.mRange);
             else if(key == "BaseLine")
@@ -774,6 +776,7 @@ uint32_t spentPoints(const SkillBuild& build, const TypeInfo& type)
     return spent;
 }
 
+//! \brief Checks configured tier unlock requirements for a skill rank.
 bool canRaise(const SkillTreeConfig& config, const TypeInfo& type, const SkillBuild& build, const std::string& id,
     uint32_t maxRank)
 {
@@ -783,7 +786,7 @@ bool canRaise(const SkillTreeConfig& config, const TypeInfo& type, const SkillBu
     if(isTierFourId(id))
     {
         return (id == type.mTierFour) && (rankOf(build, id) == 0) && (maxRank >= 1) &&
-            (spentInPaths(build, type) >= TIER_FOUR_MIN_SPENT);
+            (spentInPaths(build, type) >= static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier4MinSpent()));
     }
 
     const SkillDef* skill = config.findSkill(id);
@@ -797,10 +800,11 @@ bool canRaise(const SkillTreeConfig& config, const TypeInfo& type, const SkillBu
 
     const std::string owner = skill->mGroup.empty() ? skill->mFamily : skill->mGroup;
     const std::string previous = config.findPathSkill(owner, skill->mPath, skill->mTier - 1);
-    const uint32_t needed = (skill->mTier == 2) ? TIER_TWO_UNLOCK_RANKS : TIER_THREE_UNLOCK_RANKS;
+    const uint32_t needed = (skill->mTier == 2) ? static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier2UnlockRanks()) : static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier3UnlockRanks());
     return !previous.empty() && (rankOf(build, previous) >= needed);
 }
 
+//! \brief Builds template picks using the configured tier unlock ranks.
 std::vector<std::string> templatePicks(const SkillTreeConfig& config, const TypeInfo& type, int32_t templateIndex,
     uint32_t maxRank)
 {
@@ -810,14 +814,20 @@ std::vector<std::string> templatePicks(const SkillTreeConfig& config, const Type
         return picks;
 
     const std::vector<std::string> primary = pathIds(config, type.mGroup, templ->mPrimary);
-    // Tier 1, tier 2 twice, tier 3, then every tier up to the highest rank
-    picks.push_back(primary[0]);
-    picks.push_back(primary[1]);
-    picks.push_back(primary[1]);
-    picks.push_back(primary[2]);
-    for(uint32_t i = 1; i < maxRank; ++i)
+    // The order is derived from the configured unlock ranks: tier 1 up to the rank that unlocks tier 2, tier 2 up to
+    // the rank that unlocks tier 3, tier 3 once, then every tier up to the highest rank
+    const uint32_t tier2Ranks = std::min(maxRank,
+        static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier2UnlockRanks()));
+    const uint32_t tier3Ranks = std::min(maxRank,
+        static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier3UnlockRanks()));
+    for(uint32_t i = 0; i < tier2Ranks; ++i)
         picks.push_back(primary[0]);
-    for(uint32_t i = TIER_THREE_UNLOCK_RANKS; i < maxRank; ++i)
+    for(uint32_t i = 0; i < tier3Ranks; ++i)
+        picks.push_back(primary[1]);
+    picks.push_back(primary[2]);
+    for(uint32_t i = tier2Ranks; i < maxRank; ++i)
+        picks.push_back(primary[0]);
+    for(uint32_t i = tier3Ranks; i < maxRank; ++i)
         picks.push_back(primary[1]);
     for(uint32_t i = 1; i < maxRank; ++i)
         picks.push_back(primary[2]);
@@ -852,6 +862,7 @@ void startBuild(SkillBuild& build, const TypeInfo& type, uint32_t seed)
         build.mRanks[type.mPreSkill] = 1;
 }
 
+//! \brief Spends the next skill point using the configured deviation and tier limits.
 std::string spendNextPoint(const SkillTreeConfig& config, const TypeInfo& type, SkillBuild& build,
     double deviationPercent, uint32_t maxRank)
 {
@@ -859,7 +870,7 @@ std::string spendNextPoint(const SkillTreeConfig& config, const TypeInfo& type, 
         return std::string();
 
     const uint32_t spent = spentInPaths(build, type);
-    if(spent >= TIER_FOUR_MIN_SPENT)
+    if(spent >= static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier4MinSpent()))
     {
         std::vector<std::string> tierFour;
         tierFour.push_back(type.mTierFour);
@@ -871,7 +882,7 @@ std::string spendNextPoint(const SkillTreeConfig& config, const TypeInfo& type, 
         return std::string();
 
     // The points that deviate go to the alternative path (tier 1 to 5, then tier 2, then tier 3)
-    if(spent < DEVIATION_POINTS)
+    if(spent < static_cast<uint32_t>(ConfigManager::getSingleton().getSkillDeviationPoints()))
     {
         const uint32_t draw = nextDeviationDraw(build);
         if(static_cast<double>(draw) < deviationPercent)
@@ -926,6 +937,7 @@ void spendUpToLevel(const SkillTreeConfig& config, const TypeInfo& type, SkillBu
     }
 }
 
+//! \brief Chooses a template with the configured weight for unfollowed templates.
 int32_t chooseTemplate(const std::vector<uint32_t>& followers, double unit)
 {
     if(followers.empty())
@@ -933,12 +945,12 @@ int32_t chooseTemplate(const std::vector<uint32_t>& followers, double unit)
 
     uint32_t total = 0;
     for(size_t i = 0; i < followers.size(); ++i)
-        total += (followers[i] == 0) ? UNFOLLOWED_WEIGHT : 1;
+        total += (followers[i] == 0) ? static_cast<uint32_t>(ConfigManager::getSingleton().getSkillUnfollowedWeight()) : 1;
 
     double position = unit * static_cast<double>(total);
     for(size_t i = 0; i < followers.size(); ++i)
     {
-        position -= static_cast<double>((followers[i] == 0) ? UNFOLLOWED_WEIGHT : 1);
+        position -= static_cast<double>((followers[i] == 0) ? static_cast<uint32_t>(ConfigManager::getSingleton().getSkillUnfollowedWeight()) : 1);
         if(position < 0.0)
             return static_cast<int32_t>(i);
     }
@@ -957,11 +969,12 @@ void resetBuild(const SkillTreeConfig& config, const TypeInfo& type, SkillBuild&
     spendUpToLevel(config, type, build, level, firstLevel, deviationPercent, maxRank);
 }
 
+//! \brief Finds a reset template after the configured follower minimum.
 int32_t findResetTemplate(int32_t current, const std::vector<uint32_t>& followers)
 {
     if(current < 0 || static_cast<size_t>(current) >= followers.size())
         return -1;
-    if(followers[static_cast<size_t>(current)] < RESET_MIN_FOLLOWERS)
+    if(followers[static_cast<size_t>(current)] < static_cast<uint32_t>(ConfigManager::getSingleton().getSkillResetMinFollowers()))
         return -1;
 
     for(size_t i = 0; i < followers.size(); ++i)
@@ -1038,8 +1051,10 @@ std::string skillClassOfKind(const std::string& kind)
     return spec.mClass;
 }
 
+//! \brief Builds the runtime skill line with configured ally thresholds and radii.
 std::string buildSkillLine(const std::string& kind, const std::string& value, const SkillNumber& cooldown,
-    const SkillNumber& duration, const SkillNumber& radius, const SkillNumber& range, const std::string& baseLine)
+    const SkillNumber& duration, const SkillNumber& radius, const SkillNumber& range, const std::string& baseLine,
+    const SkillNumber& minAllies)
 {
     KindSpec spec;
     if(!getKindSpec(kind, spec))
@@ -1049,6 +1064,10 @@ std::string buildSkillLine(const std::string& kind, const std::string& value, co
     if(!baseLine.empty())
     {
         std::vector<std::string> base = splitTokens(baseLine);
+        // Older base lines omit the new aura threshold or summoning radius.
+        if(base.size() == spec.mCount && (spec.mClass == "SkeletonArmy" || spec.mClass == "AuraAlly"))
+            base.push_back(std::to_string(spec.mClass == "AuraAlly" ?
+                ConfigManager::getSingleton().getAuraAllyMinAllies() : ConfigManager::getSingleton().getSkeletonArmyRadius()));
         // The first token is the class name of the line
         if(base.size() != spec.mCount + 1 || base[0] != spec.mClass)
             return std::string();
@@ -1057,6 +1076,14 @@ std::string buildSkillLine(const std::string& kind, const std::string& value, co
     else if(spec.mNeedsBase)
         return std::string();
 
+    if(spec.mClass == "AuraAlly")
+    {
+        tokens[6] = formatNumber(ConfigManager::getSingleton().getAuraAllyMinAllies());
+    }
+    if(spec.mClass == "SkeletonArmy" && !radius.mSet)
+    {
+        tokens[6] = std::to_string(ConfigManager::getSingleton().getSkeletonArmyRadius());
+    }
     if(cooldown.mSet)
         tokens[0] = formatNumber(cooldown.mValue);
     // The rank 1 reached means the skill is usable: no level limit

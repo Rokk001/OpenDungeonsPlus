@@ -20,14 +20,13 @@
 
 #include <cstdint>
 
+
 //! \brief The counting rules for how a seat's workers are spread over their jobs, without any
 //! game state so that they can be checked on their own (see source/tests/check_worker_share.py).
 namespace WorkerShare
 {
     //! \brief Carrying is tried first as long as the carrying share of the counted workers is at most this
-    static const double CARRY_FIRST_MAX_SHARE = 0.2;
     //! \brief Claiming walls is tried first when the digging and ground claiming share is above this
-    static const double CLAIM_WALL_FIRST_MIN_SHARE = 0.8;
     //! \brief Divisor that turns a share given in percent into a fraction
     static const double PERCENT_DIVISOR = 100.0;
 
@@ -40,19 +39,18 @@ namespace WorkerShare
         return nbDigging + nbClaimingGround + nbClaimingWall + nbCarrying + nbReloading + 1;
     }
 
-    //! \brief Carrying is tried first as long as at most 20% of the counted workers carry.
-    inline bool isCarryFirst(uint32_t nbCarrying, uint32_t nbTotal)
+    //! \brief Tries carrying first up to the configured carrying share.
+    inline bool isCarryFirst(uint32_t nbCarrying, uint32_t nbTotal, double maxShare)
     {
         double percent = static_cast<double>(nbCarrying) / static_cast<double>(nbTotal);
-        return percent <= CARRY_FIRST_MAX_SHARE;
+        return percent <= maxShare;
     }
 
-    //! \brief Claiming walls is tried first when more than 80% of the counted workers dig or
-    //! claim ground.
-    inline bool isClaimWallFirst(uint32_t nbDigging, uint32_t nbClaimingGround, uint32_t nbTotal)
+    //! \brief Tries wall claiming above the configured digging and ground-claiming share.
+    inline bool isClaimWallFirst(uint32_t nbDigging, uint32_t nbClaimingGround, uint32_t nbTotal, double minShare)
     {
         double percent = static_cast<double>(nbDigging + nbClaimingGround) / static_cast<double>(nbTotal);
-        return percent > CLAIM_WALL_FIRST_MIN_SHARE;
+        return percent > minShare;
     }
 
     //! \brief Whether one more worker may reload a trap: the first one always may, then the
