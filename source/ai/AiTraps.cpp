@@ -719,7 +719,7 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
     {
         // The banner stands at the entrance, the trigger on the way to the trap field
         const TRAP::Entrance& entrance = entrances[0];
-        Tile* tile = lineTile(gameMap, entrance, needBanner ? -1 : 1);
+        Tile* tile = lineTile(gameMap, entrance, needBanner ? 1 : 2);
         return trapSpotFree(tile, seat) && buildOne(ai, needBanner ? TrapType::watchBanner : TrapType::trigger, tile);
     }
     return false;
