@@ -46,6 +46,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <map>
 #include <set>
 #include <sstream>
 #include <string>
@@ -751,24 +752,33 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         AiKnowledge knowledge(gameMap, seat);
         for(const TRAP::Entrance& candidate : entrances)
         {
-            for(int k = 1; k <= gameMap.getMapSizeX() + gameMap.getMapSizeY(); ++k)
+            std::map<Tile*, Tile*> previous;
+            std::vector<Tile*> pending;
+            previous[candidate.mDoor] = nullptr;
+            pending.push_back(candidate.mDoor);
+            for(std::size_t i = 0; i < pending.size(); ++i)
             {
-                Tile* triggerTile = lineTile(gameMap, candidate, k);
-                if(triggerTile == nullptr || !knowledge.isKnown(triggerTile) || triggerTile->isFullTile())
-                    break;
-                if(!trapSpotFree(triggerTile, seat))
-                    continue;
-                for(int offset = 1; offset <= radius; ++offset)
+                Tile* tile = pending[i];
+                Trap* target = trapAt(ai, tile);
+                if(target != nullptr && target->getType() != TrapType::watchBanner && target->getType() != TrapType::trigger &&
+                   (!target->isDoor() || target->getType() == TrapType::doorRuned))
                 {
-                    Tile* targetTile = lineTile(gameMap, candidate, k + offset);
-                    if(targetTile == nullptr || !knowledge.isKnown(targetTile) || targetTile->isFullTile())
-                        break;
-                    Trap* target = trapAt(ai, targetTile);
-                    if(target == nullptr || target->getType() == TrapType::watchBanner || target->getType() == TrapType::trigger ||
-                       (target->isDoor() && target->getType() != TrapType::doorRuned))
+                    for(Tile* triggerTile = previous[tile]; triggerTile != nullptr; triggerTile = previous[triggerTile])
+                    {
+                        int dx = std::abs(triggerTile->getX() - tile->getX());
+                        int dy = std::abs(triggerTile->getY() - tile->getY());
+                        if(std::max(dx, dy) <= radius && trapSpotFree(triggerTile, seat) &&
+                           buildOne(ai, TrapType::trigger, triggerTile))
+                            return true;
+                    }
+                }
+                for(Tile* neighbor : tile->getAllNeighbors())
+                {
+                    if(neighbor == nullptr || previous.find(neighbor) != previous.end() ||
+                       !knowledge.isKnown(neighbor) || neighbor->isFullTile())
                         continue;
-                    if(buildOne(ai, TrapType::trigger, triggerTile))
-                        return true;
+                    previous[neighbor] = tile;
+                    pending.push_back(neighbor);
                 }
             }
         }
