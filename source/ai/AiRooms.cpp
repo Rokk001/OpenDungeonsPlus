@@ -643,21 +643,24 @@ void roomMoodEvent(KeeperAI& ai, void (*perform)(KeeperAI&), const AiEvent& even
         perform(ai);
 }
 
-//! \brief Ignores destroyed traps and restarts room building only for a lost room.
+//! \brief Resets lost room decisions and restarts room building only for a lost room.
 void lostRoomEvent(KeeperAI& ai, const AiEvent& event)
 {
-    if(event.type == AiEventType::RoomLost)
+    const bool roomDestroyed = event.type == AiEventType::BuildingDestroyed &&
+        event.amount == static_cast<double>(GameEntityType::room);
+    if(event.type == AiEventType::RoomLost || roomDestroyed)
     {
         restoreRooms(ai);
         ROOMS::State& state = ai.getRoomsState();
-        if(state.pendingTiles.empty() && event.amount == static_cast<double>(RoomType::dormitory) &&
+        const int lostType = event.type == AiEventType::RoomLost ? static_cast<int>(event.amount) : event.roomType;
+        if(state.pendingTiles.empty() && lostType == static_cast<int>(RoomType::dormitory) &&
            roomTiles(ai, RoomType::dormitory) == 0)
             state.dormitoryFirst = -1;
-        if(state.pendingTiles.empty() && event.amount == static_cast<double>(RoomType::hatchery) &&
+        if(state.pendingTiles.empty() && lostType == static_cast<int>(RoomType::hatchery) &&
            roomTiles(ai, RoomType::hatchery) == 0)
             state.hatcheryFirst = -1;
     }
-    if(event.type == AiEventType::RoomLost || event.amount == static_cast<double>(GameEntityType::room))
+    if(event.type == AiEventType::RoomLost || roomDestroyed)
         ROOMS::rebuildLost(ai);
 }
 }
