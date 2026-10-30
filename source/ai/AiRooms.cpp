@@ -645,6 +645,17 @@ void roomMoodEvent(KeeperAI& ai, void (*perform)(KeeperAI&), const AiEvent& even
 //! \brief Ignores destroyed traps and restarts room building only for a lost room.
 void lostRoomEvent(KeeperAI& ai, const AiEvent& event)
 {
+    if(event.type == AiEventType::RoomLost)
+    {
+        restoreRooms(ai);
+        ROOMS::State& state = ai.getRoomsState();
+        if(state.pendingTiles.empty() && event.amount == static_cast<double>(RoomType::dormitory) &&
+           roomTiles(ai, RoomType::dormitory) == 0)
+            state.dormitoryFirst = -1;
+        if(state.pendingTiles.empty() && event.amount == static_cast<double>(RoomType::hatchery) &&
+           roomTiles(ai, RoomType::hatchery) == 0)
+            state.hatcheryFirst = -1;
+    }
     if(event.type == AiEventType::RoomLost || event.amount == static_cast<double>(GameEntityType::room))
         ROOMS::rebuildLost(ai);
 }
