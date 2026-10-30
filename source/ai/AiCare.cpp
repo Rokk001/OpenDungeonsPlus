@@ -592,7 +592,7 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
         {
             Tile* tile = creature->getPositionTile();
             Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
-            if(room != nullptr && room->getDirtStage() == 3)
+            if(room != nullptr && room->getType() != RoomType::crypt && room->getDirtStage() == 3)
                 row = "B10";
             else if(creature->isHurt())
                 row = "J08";
