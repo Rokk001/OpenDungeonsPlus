@@ -174,6 +174,9 @@ public:
     //! \brief Registers one periodic topic; its owner invokes the other rows sharing that look.
     void onLook(const std::string& rowId, double factor, const std::function<void()>& handler);
 
+    //! \brief Sets a registered look's next time on the mind clock; returns false if it is not registered.
+    bool setNextLook(const std::string& rowId, double due);
+
     //! \brief Registers a polled symptom; only its false-to-true edge queues a reaction.
     void onPoll(const std::string& rowId, AiEventType type, const std::function<bool()>& predicate);
 
