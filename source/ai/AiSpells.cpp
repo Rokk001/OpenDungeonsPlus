@@ -1202,6 +1202,7 @@ bool SPELL::castWeak(KeeperAI& ai)
     return true;
 }
 
+//! \brief Selects an eligible enemy for the Defector spell and schedules the cast.
 bool SPELL::castDefector(KeeperAI& ai)
 {
     // AI row E17
@@ -1219,6 +1220,8 @@ bool SPELL::castDefector(KeeperAI& ai)
     std::vector<Creature*> candidates;
     for(Creature* creature : enemiesOnOwnGround(ai))
     {
+        if(creature->isInPrison() || creature->getDefinition()->isChampion())
+            continue;
         CreatureMoodLevel mood = creature->getMoodValue();
         bool lowMood = (mood != CreatureMoodLevel::Unknown) && (static_cast<int>(mood) >= static_cast<int>(CreatureMoodLevel::Upset));
         if(slipped ? (hpShare(creature) >= 1.0) : lowMood)
