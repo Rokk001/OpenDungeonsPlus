@@ -125,8 +125,15 @@ check("getCoveringBuilding() != nullptr" in reward_code and "claimTile(winnerSea
 check("loserSeat->getMana()" in reward_code and "addManaToSeat(-mana, loserSeat->getId())" in reward_code,
       "the winner takes all mana of the loser")
 # The random pool holds only types the gift box code can apply
-pool = re.search(r"HEART_REWARD_SPECIALS\[\] =\s*\{(.*?)\n\};", temple, re.S).group(1)
-weights = [int(w) for w in re.findall(r"GiftBoxType::\w+, (\d+) \}", pool)]
+pool = re.search(r"HEART_REWARD_SPECIALS\[\] =\s*\{(.*?)\n\s*\};", temple, re.S).group(1)
+# The weights come from the room config; the code default of each key must match the shipped value
+rooms_cfg = (root / "config/rooms.cfg").read_text(encoding="utf-8")
+entries = re.findall(r'GiftBoxType::\w+, static_cast<int>\(ConfigManager::getSingleton\(\)\.getRoomConfigDoubleOrDefault\("(\w+)", ([\d.]+)\)\) \}', pool)
+weights = []
+for key, default in entries:
+    shipped = re.search(r"^\s*" + key + r"\s+([\d.]+)\s*$", rooms_cfg, re.M)
+    check(shipped is not None and float(shipped.group(1)) == float(default), key + " default must match rooms.cfg")
+    weights.append(int(float(shipped.group(1))) if shipped is not None else 0)
 check(len(weights) == 12 and sum(weights) == 100 and min(weights) >= 1, "the reward weights must add up to 100")
 check(all(w > 0 for w in weights), "every special of the reward pool needs a positive weight")
 # The reward is given when the heart dies, before the heart is announced as dead
@@ -145,7 +152,7 @@ entity = (root / "source/entities/GiftBoxEntity.cpp").read_text(encoding="utf-8"
 for entry in re.findall(r"GiftBoxType::(\w+)", pool):
     check("case GiftBoxType::" + entry + ":" in entity, "a level cannot load the special " + entry)
 check("removeAnnoyance" in bonus and "makeUnhappy()" in bonus and "claimTile(seat)" in bonus
-      and "unclaimTile()" in bonus and "stun(nbTurns)" in bonus and "setLevel(LEVEL_WORKERS_UPGRADED)" in bonus,
+      and "unclaimTile()" in bonus and "stun(nbTurns)" in bonus and "setLevel(ConfigManager::getSingleton().getSpellConfigUInt32(\"SummonWorkerUpgradedLevel\"))" in bonus,
       "the new special effects must call the creature and tile functions")
 mood = (root / "source/creaturemood/CreatureMoodManager.cpp").read_text(encoding="utf-8")
 check("getSpecialMood()" in mood, "the special mood must count in the mood points")

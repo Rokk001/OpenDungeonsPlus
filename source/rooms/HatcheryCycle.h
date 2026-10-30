@@ -27,8 +27,8 @@ struct HatcheryCycleSettings
     //! \brief Sets cycle defaults, including 5/30/60-second life stages at the normal turn rate.
     HatcheryCycleSettings() :
         mLayMin(3),
-        mLayMax(7),
-        mLayFactor(1.021),
+        mLayMax(9),
+        mLayFactor(0.6516666667),
         mHatchTurns(42),
         mGrowTurns(84),
         mCoopWait(15),

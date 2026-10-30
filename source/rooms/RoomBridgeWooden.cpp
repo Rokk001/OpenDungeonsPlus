@@ -140,6 +140,7 @@ RoomBridgeWooden::RoomBridgeWooden(GameMap* gameMap) :
     setMeshName("WoodBridge");
 }
 
+//! \brief Burns lava-covered wood using its configured tile health and burn duration.
 void RoomBridgeWooden::doUpkeep()
 {
     // Wood over lava burns: the hit points of such a tile run down on their own
@@ -148,7 +149,7 @@ void RoomBridgeWooden::doUpkeep()
     double burnTurns = ConfigManager::getSingleton().getRoomConfigDouble("WoodenBridgeLavaBurnSeconds") * ODApplication::turnsPerSecond;
     if(burnTurns >= 1.0)
     {
-        double burnPerTurn = DEFAULT_TILE_HP / burnTurns;
+        double burnPerTurn = getTileHP() / burnTurns;
         for(Tile* tile : mCoveredTiles)
         {
             if(tile->getType() != TileType::lava)

@@ -48,7 +48,8 @@ const std::string& CreatureMoodCreature::getModifierName() const
     return CreatureMoodCreatureName;
 }
 
-int32_t CreatureMoodCreature::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodCreature::computeMood(const Creature& creature) const
 {
     std::vector<GameEntity*> alliedCreatures = creature.getGameMap()->getVisibleCreatures(creature.getVisibleTiles(),
         creature.getSeat(), false);

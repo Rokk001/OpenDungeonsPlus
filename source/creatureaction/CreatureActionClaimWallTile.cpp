@@ -17,6 +17,8 @@
 
 #include "creatureaction/CreatureActionClaimWallTile.h"
 
+#include "creatureaction/CreatureActionClaimGroundTile.h"
+
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
@@ -102,7 +104,7 @@ bool CreatureActionClaimWallTile::handleClaimWallTile(Creature& creature, Tile& 
     walkDirection.normalise();
     creature.setAnimationState(EntityAnimation::claim_anim, true, walkDirection);
     tileClaim.claimForSeat(creature.getSeat(), creature.getClaimRate());
-    creature.receiveExp(1.5 * creature.getClaimRate() / 20.0);
+    creature.receiveExp(CreatureActionClaimGroundTile::getClaimExperience(creature));
     creature.recordWorkerStepRecovery();
 
     return false;

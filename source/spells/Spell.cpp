@@ -35,8 +35,14 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
+#include <iomanip>
+#include <istream>
+#include <limits>
+#include <ostream>
+
 Spell::Spell(GameMap* gameMap, const std::string& baseName, const std::string& meshName, Ogre::Real rotationAngle,
-        int32_t nbTurns) :
+        double nbTurns) :
     RenderedMovableEntity(gameMap, baseName, meshName, rotationAngle, false, 1.0f),
         mNbTurns(nbTurns)
 {
@@ -47,14 +53,57 @@ GameEntityType Spell::getObjectType() const
     return GameEntityType::spell;
 }
 
+//! \brief Writes the remaining duration of persistent call-to-war and eye spells.
+void Spell::exportToStream(std::ostream& os) const
+{
+    RenderedMovableEntity::exportToStream(os);
+    if(getSpellType() == SpellType::callToWar || getSpellType() == SpellType::eyeEvil)
+    {
+        const std::streamsize precision = os.precision();
+        const std::ios::fmtflags flags = os.flags();
+        os << " [SpellDuration] " << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10)
+           << mNbTurns << " [/SpellDuration]";
+        os.flags(flags);
+        os.precision(precision);
+    }
+}
+
+//! \brief Reads an optional spell duration without consuming a legacy or subclass field.
+bool Spell::importFromStream(std::istream& is)
+{
+    if(!RenderedMovableEntity::importFromStream(is))
+        return false;
+    if(getSpellType() != SpellType::callToWar && getSpellType() != SpellType::eyeEvil)
+        return true;
+
+    const std::streampos position = is.tellg();
+    std::string tag;
+    if(is >> tag)
+    {
+        if(tag == "[SpellDuration]")
+        {
+            if(!(is >> mNbTurns >> tag) || tag != "[/SpellDuration]")
+                return false;
+        }
+        else
+            is.seekg(position);
+    }
+    else
+    {
+        is.clear();
+        is.seekg(position);
+    }
+    return true;
+}
+
 void Spell::doUpkeep()
 {
-    if(mNbTurns < 0)
+    if(mNbTurns < 0.0)
         return;
 
-    if(mNbTurns > 0)
+    if(mNbTurns > 0.0)
     {
-        --mNbTurns;
+        mNbTurns = std::max(0.0, mNbTurns - 1.0);
         return;
     }
 

@@ -20,8 +20,6 @@
 namespace
 {
 static const double PERCENT = 100.0;
-static const double CHILL_FACTOR = 0.9;
-static const double WEAKEN_FACTOR = 0.95;
 static const double ADJACENT_DISTANCE = 1.0;
 
 //! \brief Effect names used by tooltips and definition validation.
@@ -131,7 +129,7 @@ void ItemEffects::onHit(Creature& attacker, Creature& target, double damage, boo
         const double chill = attacker.getItemEffect("Chill");
         if(chill > 0.0)
         {
-            CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(chill, CHILL_FACTOR, "");
+            CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(chill, ConfigManager::getSingleton().getItemSetting("ItemEffects", "ChillFactor"), "");
             effect->setSourceId("item:Chill");
             target.addCreatureEffect(effect);
         }
@@ -139,7 +137,7 @@ void ItemEffects::onHit(Creature& attacker, Creature& target, double damage, boo
         const double weaken = attacker.getItemEffect("Weaken");
         if(weaken > 0.0)
         {
-            CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(weaken, WEAKEN_FACTOR, "");
+            CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(weaken, ConfigManager::getSingleton().getItemSetting("ItemEffects", "WeakenFactor"), "");
             effect->setSourceId("item:Weaken");
             target.addCreatureEffect(effect);
         }

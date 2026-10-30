@@ -391,6 +391,10 @@ public:
     //! temple. When enough points are gathered, the corresponding skill will become available
     void addSkillPoints(int32_t points);
 
+    //! \brief Server side function. Adds fractional skill points: the whole part goes to
+    //! addSkillPoints(int32_t), the fraction is kept in mSkillPointsRemainder for the next call
+    void addSkillPoints(double points);
+
     //! \brief Used on both client and server side. On server side, the skill tree's validity
     //! will be checked. If ok, it will be sent to the client. If not, the skill tree will not
     //! be changed. Note that the order of the skill matters as the first skills in the
@@ -572,6 +576,9 @@ private:
 
     //! \brief Counter for skill points
     int32_t mSkillPoints;
+
+    //! \brief Fraction (0 <= value < 1) of skill points not yet added to mSkillPoints; saved with the seat
+    double mSkillPointsRemainder;
 
     //! \brief Currently researched Skill. This pointer is external and should not be deleted
     const Skill* mCurrentSkill;

@@ -36,6 +36,10 @@ public:
     //! \brief Claims or repairs the target with unchanged timing and reports the interval to the next step.
     static bool handleCreatureActionClaimGroundTile(Creature& creature, Tile& tileClaim);
 
+    //! \brief Returns the experience one claiming, repairing or cleaning step gives the creature (global.cfg ClaimXp keys).
+    //! \param creature The worker that makes the step.
+    static double getClaimExperience(const Creature& creature);
+
 private:
     Tile& mTileClaim;
 };

@@ -521,6 +521,7 @@ void RoomCasino::doUpkeep()
     }
 }
 
+//! \brief Runs casino activity using the configured chance of a broke guest fighting.
 bool RoomCasino::useRoom(Creature& creature, bool forced)
 {
     bool isGamblePossible = false;
@@ -576,7 +577,7 @@ bool RoomCasino::useRoom(Creature& creature, bool forced)
         Creature* opponent = opponentInfo->mCreature;
         creature.popAction();
         // We randomly engage the creature we are playing with if any
-        if((opponent != nullptr) && (Random::Uint(0,100) <= 50))
+        if((opponent != nullptr) && (Random::Uint(0,100) <= ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoBrokeFightPercent", 50.0)))
         {
             // We fight for KO
             // We notify the player that his own creatures are fighting

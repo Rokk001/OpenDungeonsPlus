@@ -49,7 +49,8 @@ const std::string& CreatureMoodHatedCompany::getModifierName() const
     return CreatureMoodHatedCompanyName;
 }
 
-int32_t CreatureMoodHatedCompany::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodHatedCompany::computeMood(const Creature& creature) const
 {
     int32_t turns = std::min(creature.getNbTurnsHatedCompany(), mTurnsMax);
     return turns * mMoodModifier;

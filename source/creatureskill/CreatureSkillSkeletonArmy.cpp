@@ -23,6 +23,7 @@
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "utils/LogManager.h"
+#include "utils/ConfigManager.h"
 #include "utils/Random.h"
 
 #include <istream>
@@ -48,7 +49,7 @@ class CreatureSkillSkeletonArmyFactory : public CreatureSkillFactory
 static CreatureSkillRegister reg(new CreatureSkillSkeletonArmyFactory);
 
 // The creatures rise from the ground within this number of tiles around the caster
-const int SKELETON_ARMY_RADIUS = 2;
+// The radius is read from each configured skill line.
 }
 
 const std::string& CreatureSkillSkeletonArmy::getSkillName() const
@@ -64,6 +65,7 @@ bool CreatureSkillSkeletonArmy::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief Summons temporary creatures within the configured radius.
 bool CreatureSkillSkeletonArmy::tryUseSupport(GameMap& gameMap, Creature* creature) const
 {
     if(!creature->isAlive() || creature->isFrozen())
@@ -80,9 +82,10 @@ bool CreatureSkillSkeletonArmy::tryUseSupport(GameMap& gameMap, Creature* creatu
 
     // We search the free tiles around the caster
     std::vector<Tile*> freeTiles;
-    for(int xx = myTile->getX() - SKELETON_ARMY_RADIUS; xx <= myTile->getX() + SKELETON_ARMY_RADIUS; ++xx)
+    const int32_t radius = ConfigManager::getSingleton().getSkeletonArmyRadius();
+    for(int xx = myTile->getX() - radius; xx <= myTile->getX() + radius; ++xx)
     {
-        for(int yy = myTile->getY() - SKELETON_ARMY_RADIUS; yy <= myTile->getY() + SKELETON_ARMY_RADIUS; ++yy)
+        for(int yy = myTile->getY() - radius; yy <= myTile->getY() + radius; ++yy)
         {
             Tile* tile = gameMap.getTile(xx, yy);
             if((tile == nullptr) || tile->isFullTile())
@@ -115,15 +118,17 @@ CreatureSkillSkeletonArmy* CreatureSkillSkeletonArmy::clone() const
     return new CreatureSkillSkeletonArmy(*this);
 }
 
+//! \brief Appends the names of the summoning skill parameters.
 void CreatureSkillSkeletonArmy::getFormatString(std::string& format) const
 {
     CreatureSkill::getFormatString(format);
     if(!format.empty())
         format += "\t";
 
-    format += "LevelMin\tNbCreatures\tEffectDuration\tCreatureClass";
+    format += "LevelMin\tNbCreatures\tEffectDuration\tCreatureClass\tRadius";
 }
 
+//! \brief Writes the summoning parameters including the radius.
 void CreatureSkillSkeletonArmy::exportToStream(std::ostream& os) const
 {
     CreatureSkill::exportToStream(os);
@@ -131,8 +136,10 @@ void CreatureSkillSkeletonArmy::exportToStream(std::ostream& os) const
     os << "\t" << mNbCreatures;
     os << "\t" << mEffectDuration;
     os << "\t" << mCreatureClass;
+    os << "\t" << mRadius;
 }
 
+//! \brief Reads summoning parameters and the optional radius for older lines.
 bool CreatureSkillSkeletonArmy::importFromStream(std::istream& is)
 {
     if(!CreatureSkill::importFromStream(is))
@@ -146,10 +153,17 @@ bool CreatureSkillSkeletonArmy::importFromStream(std::istream& is)
         return false;
     if(!(is >> mCreatureClass))
         return false;
+    if(!(is >> mRadius))
+    {
+        mRadius = 2;
+        is.clear();
+        OD_LOG_ERR("Missing SkeletonArmy Radius; using shipped default 2");
+    }
 
     return true;
 }
 
+//! \brief Compares all summoning parameters including the radius.
 bool CreatureSkillSkeletonArmy::isEqual(const CreatureSkill& creatureSkill) const
 {
     if(!CreatureSkill::isEqual(creatureSkill))
@@ -164,6 +178,8 @@ bool CreatureSkillSkeletonArmy::isEqual(const CreatureSkill& creatureSkill) cons
     if(mNbCreatures != skill->mNbCreatures)
         return false;
     if(mEffectDuration != skill->mEffectDuration)
+        return false;
+    if(mRadius != skill->mRadius)
         return false;
     if(mCreatureClass != skill->mCreatureClass)
         return false;

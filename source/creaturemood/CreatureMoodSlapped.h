@@ -39,7 +39,8 @@ public:
     const std::string& getModifierName() const override;
 
     //! \brief Returns the mood change per slap received during the last DurationTurns turns (at most MaxSlaps slaps).
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
     inline CreatureMoodSlapped* clone() const override;
@@ -54,7 +55,7 @@ public:
 private:
     int32_t mDurationTurns;
     int32_t mMaxSlaps;
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODSLAPPED_H

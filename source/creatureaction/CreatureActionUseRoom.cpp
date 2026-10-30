@@ -19,21 +19,30 @@
 
 #include "creatureaction/CreatureActionGetFee.h"
 #include "creatureaction/CreatureActionSearchFood.h"
+#include "creatureaction/CreatureActionSearchToilet.h"
+#include "creatureaction/CreatureActionSearchDrink.h"
+#include "creatureaction/CreatureActionSearchJob.h"
 #include "creatureaction/CreatureActionSleep.h"
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
 #include "game/Seat.h"
+#include "gamemap/GameMap.h"
 #include "rooms/Room.h"
+#include "rooms/RoomType.h"
 #include "utils/Helper.h"
+#include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 
-CreatureActionUseRoom::CreatureActionUseRoom(Creature& creature, Room& room, bool forced) :
+//! \brief Starts a room visit and records whether it is meant to improve mood.
+CreatureActionUseRoom::CreatureActionUseRoom(Creature& creature, Room& room, bool forced, bool moodRoom) :
     CreatureAction(creature),
     mRoom(&room),
-    mForced(forced)
+    mForced(forced),
+    mMoodRoom(moodRoom)
 {
     mRoom->addGameEntityListener(this);
     if(!mRoom->addCreatureUsingRoom(&mCreature))
@@ -65,17 +74,16 @@ void CreatureActionUseRoom::changeRoom(Room& room)
     mRoom->addGameEntityListener(this);
 }
 
+//! \brief Returns the room action with its mood-visit state.
 std::function<bool()> CreatureActionUseRoom::action()
 {
     return std::bind(&CreatureActionUseRoom::handleJob,
-        std::ref(mCreature), mRoom, mForced);
+        std::ref(mCreature), mRoom, mForced, mMoodRoom);
 }
 
-bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool forced)
+//! \brief Runs room use while responding to mood and urgent needs.
+bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool forced, bool moodRoom)
 {
-    if(!creature.decreaseJobCooldown())
-        return false;
-
     // Current creature tile position
     Tile* myTile = creature.getPositionTile();
     if (myTile == nullptr)
@@ -91,33 +99,60 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         return true;
     }
 
+    const bool servingNeed = (room->getType() == RoomType::hatchery && creature.isHungry()) ||
+        (room->getType() == RoomType::tavern &&
+         creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"));
+    if(creature.needInterrupt(servingNeed))
+    {
+        bool foodAvailable = false;
+        bool drinkAvailable = false;
+        if(!servingNeed && creature.isHungry() && !creature.hasActionBeenTried(CreatureActionType::searchFood))
+        {
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, creature.getSeat()))
+                foodAvailable |= candidate->numCoveredTiles() > 0;
+        }
+        if(!servingNeed && creature.getDefinition()->hasThirst() &&
+           creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           !creature.hasActionBeenTried(CreatureActionType::searchDrink))
+        {
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
+                drinkAvailable |= candidate->numCoveredTiles() > 0;
+        }
+        creature.popAction();
+        if(foodAvailable)
+            creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
+        else if(drinkAvailable)
+            creature.pushAction(Utils::make_unique<CreatureActionSearchDrink>(creature, false));
+        else
+            creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
+        return true;
+    }
+
+    const bool fighting = creature.isActionInList(CreatureActionType::fight) ||
+        creature.isActionInList(CreatureActionType::fightFriendly);
+    if(moodRoom && !fighting && creature.getMoodValue() <= CreatureMoodLevel::Neutral)
+    {
+        creature.popAction();
+        return true;
+    }
+
+    if(!creature.decreaseJobCooldown())
+        return false;
+
     // If we are working in the room, we check that our status (mood/hungry/sleepy)
     // allows us to work
-    if(room->shouldNotUseIfBadMood(creature, forced))
+    const RoomType roomType = room->getType();
+    const bool pleasure = roomType == RoomType::casino || roomType == RoomType::tavern ||
+        roomType == RoomType::spa || roomType == RoomType::temple;
+    if(!pleasure && !fighting &&
+       (roomType == RoomType::arena || room->shouldNotUseIfBadMood(creature, forced)))
     {
-        // If we are unhappy, we stop working
-        switch(creature.getMoodValue())
+        if(creature.getMoodValue() >= CreatureMoodLevel::Upset ||
+           creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork())
         {
-            case CreatureMoodLevel::Upset:
-            {
-                // 20% chances of not working
-                if(Random::Int(0, 100) < 20)
-                {
-                    creature.popAction();
-                    return true;
-                }
-                break;
-            }
-            case CreatureMoodLevel::Angry:
-            case CreatureMoodLevel::Furious:
-            {
-                // We don't work
-                creature.popAction();
-                return true;
-            }
-            default:
-                // We can work
-                break;
+            creature.popAction();
+            creature.pushAction(Utils::make_unique<CreatureActionSearchJob>(creature, false));
+            return true;
         }
     }
 

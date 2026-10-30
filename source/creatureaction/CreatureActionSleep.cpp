@@ -21,11 +21,16 @@
 #include "ODApplication.h"
 
 #include "creatureaction/CreatureActionFindHome.h"
+#include "creatureaction/CreatureActionSearchDrink.h"
+#include "creatureaction/CreatureActionSearchFood.h"
+#include "creatureaction/CreatureActionSearchToilet.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
+#include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomDormitory.h"
+#include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -37,7 +42,7 @@ std::function<bool()> CreatureActionSleep::action()
         std::ref(mCreature), getNbTurnsActive());
 }
 
-//! \brief Lets the creature sleep; wakefulness and health per turn follow the research of the dormitory it sleeps in.
+//! \brief Lets the creature sleep, heal and wake for urgent needs.
 bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
 {
     if (creature.getHomeTile() == nullptr)
@@ -85,6 +90,33 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
         // A friend in a bed close by makes the sleep more pleasant (checked now and then)
         if((nbTurnsActive % 20) == 0)
             creature.reportSleepingNextToFriends();
+
+        if(creature.needInterrupt(false))
+        {
+            bool foodAvailable = false;
+            bool drinkAvailable = false;
+            if(creature.isHungry() && !creature.hasActionBeenTried(CreatureActionType::searchFood))
+            {
+                for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, creature.getSeat()))
+                    foodAvailable |= candidate->numCoveredTiles() > 0;
+            }
+            if(creature.getDefinition()->hasThirst() &&
+               creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+               !creature.hasActionBeenTried(CreatureActionType::searchDrink))
+            {
+                for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
+                    drinkAvailable |= candidate->numCoveredTiles() > 0;
+            }
+            creature.sleepEnded();
+            creature.popAction();
+            if(foodAvailable)
+                creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
+            else if(drinkAvailable)
+                creature.pushAction(Utils::make_unique<CreatureActionSearchDrink>(creature, false));
+            else
+                creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
+            return true;
+        }
 
         // Improve wakefulness
         Room* sleepingRoom = creature.getHomeTile()->getCoveringRoom();

@@ -75,7 +75,8 @@ assert hit_chance(1.0, 100000.0, 1, 30) == 5.0
 assert hit_chance(100000.0, 1.0, 30, 1) == 95.0
 
 # ---------------------------------------------------------------------------------------------------------------
-# DefenceChance.h: pure (no game includes), the same formulas and one-kind resolution
+# DefenceChance.h: no game includes except the configuration that holds the hit chance keys, the same formulas and
+# one-kind resolution
 header = read('source/entities/DefenceChance.h')
 includes = re.findall(r'#include\s+[<"]([^>"]+)[>"]', header)
 assert sorted(includes) == ['algorithm', 'cstdint', 'string'], includes
@@ -88,11 +89,13 @@ assert 'hasShield' not in parry_body, 'shield block must not replace weapon parr
 decide_body = function_body(header, 'inline Outcome decide(')
 assert 'return roll < chance ? kind : none;' in decide_body
 hit = function_body(header, 'inline double hitChance(')
-assert 'HIT_SCALE * attackRating / (attackRating + defenseRating)' in hit
+assert 'scale * attackRating / (attackRating + defenseRating)' in hit
 assert 'attackerLevel / static_cast<double>(attackerLevel + defenderLevel)' in hit
-assert 'std::max(MIN_HIT_PERCENT, std::min(MAX_HIT_PERCENT, chance))' in hit
-for constant in ('HIT_SCALE = 200.0', 'MIN_HIT_PERCENT = 5.0', 'MAX_HIT_PERCENT = 95.0'):
-    assert constant in header, constant
+assert 'std::max(minChance, std::min(maxChance, chance))' in hit
+assert 'ConfigManager' not in hit
+# The scale and the bounds are global.cfg keys
+for key, value in (('HitChanceScale', '200'), ('HitChanceMin', '5'), ('HitChanceMax', '95')):
+    assert re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', read('config/global.cfg'), re.M), key
 
 # Client reactions and server avoidance both use the configured equipment type.
 client_kinds = function_body(read('source/render/CreatureCombatReactions.cpp'), 'std::string weaponKind(')
@@ -162,6 +165,8 @@ assert body.index('getObjectType() == GameEntityType::creature') < body.index('r
 accuracy = function_body(creature, 'bool Creature::rollAttackHit(')
 assert accuracy.index('if(possessed)') < accuracy.index('Random::Double(0.0, 100.0)')
 assert 'DefenceChance::hitChance(attackRating, getDefenseRating(),' in accuracy
+for key in ('HitChanceScale', 'HitChanceMin', 'HitChanceMax'):
+    assert 'get' + key + '()' in accuracy
 use_attack = function_body(creature, 'void Creature::useAttack(')
 assert 'skillData.mWarmup += skillData.mSkill->getWarmupNbTurns();' in use_attack
 assert 'skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);' in use_attack
@@ -304,9 +309,12 @@ int main()
     check(DefenceChance::decide(DefenceChance::parried, 10.0, 5.0) == DefenceChance::parried, "selected parry");
     check(DefenceChance::decide(DefenceChance::shieldBlocked, 10.0, 5.0) == DefenceChance::shieldBlocked, "selected block");
     check(DefenceChance::decide(DefenceChance::dodged, 10.0, 10.0) == DefenceChance::none, "boundary lands");
-    check(near(DefenceChance::hitChance(300.0, 100.0, 1, 1), 75.0), "same-level hit chance");
-    check(near(DefenceChance::hitChance(1.0, 100000.0, 1, 30), 5.0), "minimum hit chance");
-    check(near(DefenceChance::hitChance(100000.0, 1.0, 30, 1), 95.0), "maximum hit chance");
+    check(near(DefenceChance::hitChance(300.0, 100.0, 1, 1, 200.0, 5.0, 95.0), 75.0), "same-level hit chance");
+    check(near(DefenceChance::hitChance(1.0, 100000.0, 1, 30, 200.0, 5.0, 95.0), 5.0), "minimum hit chance");
+    check(near(DefenceChance::hitChance(100000.0, 1.0, 30, 1, 200.0, 5.0, 95.0), 95.0), "maximum hit chance");
+    check(near(DefenceChance::hitChance(300.0, 100.0, 1, 1, 100.0, 10.0, 90.0), 37.5), "supplied hit scale");
+    check(near(DefenceChance::hitChance(1.0, 100000.0, 1, 30, 200.0, 12.0, 90.0), 12.0), "supplied minimum hit chance");
+    check(near(DefenceChance::hitChance(100000.0, 1.0, 30, 1, 200.0, 5.0, 80.0), 80.0), "supplied maximum hit chance");
     check(DefenceChance::isShieldType("shield") && !DefenceChance::isParryWeaponType("shield"), "shield");
     check(!DefenceChance::isParryWeaponType("bow") && !DefenceChance::isParryWeaponType("staff"), "bow and staff");
     check(DefenceChance::isParryWeaponType("sword") && DefenceChance::isParryWeaponType("axe"), "sword and axe");

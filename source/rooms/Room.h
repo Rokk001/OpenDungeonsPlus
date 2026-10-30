@@ -70,7 +70,7 @@ public:
     virtual RoomType getType() const = 0;
 
     //! \brief Hit points of one tile of this room, read from the room configuration
-    //! key <RoomName>HP; falls back to Building::DEFAULT_TILE_HP when the key is missing.
+    //! key <RoomName>HP; logs a missing key and uses the shipped fallback of 10 HP.
     double getTileHP() const;
 
     //! \brief The mean dirt (0 - 100) of the floor of the tiles this room covers, 0 for a room without tiles.

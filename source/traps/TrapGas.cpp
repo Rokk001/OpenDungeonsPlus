@@ -30,6 +30,9 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
+#include <cmath>
+
 const std::string TrapGasName = "Gas";
 const std::string TrapGasNameDisplay = "Gas trap";
 const TrapType TrapGas::mTrapType = TrapType::gas;
@@ -122,11 +125,11 @@ static TrapRegister reg(new TrapGasFactory);
 TrapGas::TrapGas(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("GasReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("GasReloadTurns");
     mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("GasDamagePerHitMin");
     mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("GasDamagePerHitMax");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("GasNbShootsBeforeDeactivation");
-    mRadius = ConfigManager::getSingleton().getTrapConfigUInt32("GasRadius");
+    mRadius = ConfigManager::getSingleton().getTrapConfigDouble("GasRadius");
     setMeshName("");
 }
 
@@ -141,7 +144,14 @@ bool TrapGas::shoot(Tile* tile)
         return false;
 
     // The cloud hurts every creature in the area, enemies and allies
-    std::vector<Tile*> cloudTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(mRadius));
+    std::vector<Tile*> cloudTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::ceil(mRadius)));
+    // Keep only visible tile centres within the configured fractional radius.
+    cloudTiles.erase(std::remove_if(cloudTiles.begin(), cloudTiles.end(), [tile, this](Tile* candidate)
+    {
+        const double dx = candidate->getX() - tile->getX();
+        const double dy = candidate->getY() - tile->getY();
+        return dx * dx + dy * dy > mRadius * mRadius;
+    }), cloudTiles.end());
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(cloudTiles, getSeat(), true);
     std::vector<GameEntity*> alliedCreatures = getGameMap()->getVisibleCreatures(cloudTiles, getSeat(), false);
     std::vector<GameEntity*> victims;

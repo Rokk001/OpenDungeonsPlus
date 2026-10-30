@@ -26,7 +26,8 @@ class Room;
 class CreatureActionUseRoom : public CreatureAction, public GameEntityListener
 {
 public:
-    CreatureActionUseRoom(Creature& creature, Room& room, bool forced);
+    //! \brief Starts room use, optionally to improve a bad mood.
+    CreatureActionUseRoom(Creature& creature, Room& room, bool forced, bool moodRoom = false);
     virtual ~CreatureActionUseRoom();
 
     CreatureActionType getType() const override
@@ -48,11 +49,13 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
-    static bool handleJob(Creature& creature, Room* room, bool forced);
+    //! \brief Runs a room visit and its interruptions.
+    static bool handleJob(Creature& creature, Room* room, bool forced, bool moodRoom);
 
 private:
     Room* mRoom;
     bool mForced;
+    bool mMoodRoom;
 };
 
 #endif // CREATUREACTIONUSEROOM_H

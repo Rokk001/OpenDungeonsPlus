@@ -19,6 +19,7 @@
 #define SANDBOXMODE_H
 
 #include <cstdint>
+
 #include <iosfwd>
 #include <map>
 #include <string>
@@ -97,15 +98,6 @@ struct SandboxBonus
 class SandboxMode
 {
 public:
-    //! \brief Number of waves of a hero invasion
-    static const uint32_t NB_WAVES;
-    //! \brief Number of heroes in a wave
-    static const uint32_t NB_HEROES_PER_WAVE;
-    //! \brief Lowest level of a hero (the level selector of the toolbox starts here)
-    static const uint32_t MIN_HERO_LEVEL;
-    //! \brief Highest level of a hero (the level selector of the toolbox goes up to this)
-    static const uint32_t MAX_HERO_LEVEL;
-
     //! \brief Score values of the sandbox: a hero killed, a tile of land owned (also lost
     //! again when the tile is lost), a gold tile mined, an item made in a workshop, a creature
     //! coming through a portal and a creature converted in the torture chamber

@@ -56,9 +56,10 @@ void CreatureMoodManager::unregisterFactory(const CreatureMoodFactory* factory)
     factories.erase(it);
 }
 
-CreatureMoodLevel CreatureMoodManager::getCreatureMoodLevel(int32_t moodModifiersPoints)
+//! \brief Maps the mood points to a mood level.
+CreatureMoodLevel CreatureMoodManager::getCreatureMoodLevel(double moodModifiersPoints)
 {
-    int32_t mood = ConfigManager::getSingleton().getCreatureBaseMood() + moodModifiersPoints;
+    double mood = ConfigManager::getSingleton().getCreatureBaseMood() + moodModifiersPoints;
     if(mood >= ConfigManager::getSingleton().getCreatureMoodHappy())
         return CreatureMoodLevel::Happy;
 
@@ -75,7 +76,7 @@ CreatureMoodLevel CreatureMoodManager::getCreatureMoodLevel(int32_t moodModifier
 }
 
 //! \brief Adds mood modifiers after Iron Will reduces each negative one, then adds Charisma.
-int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creature)
+double CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creature)
 {
     double moodValue = 0.0;
     for(const CreatureMood* mood : creature.getDefinition()->getCreatureMoods())
@@ -93,8 +94,8 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     // Fights in the arena
     moodValue += ItemEffects::moodModifier(creature, creature.getPitMood());
     moodValue += ItemEffects::moodModifier(creature, creature.getInfirmaryMood());
-    // A bath in the lava spa lifts the mood (rounded to whole points)
-    moodValue += ItemEffects::moodModifier(creature, Helper::round(creature.getSpaMood()));
+    // A bath in the lava spa lifts the mood
+    moodValue += ItemEffects::moodModifier(creature, creature.getSpaMood());
     // A drink, a game won or lost and a hangover at the tavern
     moodValue += ItemEffects::moodModifier(creature, creature.getTavernMood());
     // Dirty rooms and dirt piles nearby (no line in the creature configuration, the global dirt values apply to all)
@@ -102,9 +103,11 @@ int32_t CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creatu
     moodValue += ItemEffects::moodModifier(creature, dirtMood.computeMood(creature));
     // Creatures of the same keeper that it hates (only with relationships on)
     moodValue += ItemEffects::moodModifier(creature, creature.getRelationshipMood());
+    // The mood the prison and the torture chamber took from a captured creature
+    moodValue += creature.getPrisonMood() + creature.getTortureMood();
     moodValue += creature.getItemEffect("Charisma");
 
-    return Helper::round(moodValue);
+    return moodValue;
 }
 
 CreatureMood* CreatureMoodManager::clone(const CreatureMood* mood)

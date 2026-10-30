@@ -72,7 +72,7 @@ static SpellRegister reg(new SpellCallToWarFactory);
 
 SpellCallToWar::SpellCallToWar(GameMap* gameMap) :
     Spell(gameMap, SpellManager::getSpellNameFromSpellType(SpellType::callToWar), "WarBanner", 0.0,
-        ConfigManager::getSingleton().getSpellConfigInt32("CallToWarNbTurnsMax"))
+        ConfigManager::getSingleton().getSpellConfigDouble("CallToWarNbTurnsMax"))
 {
     mPrevAnimationState = "Loop";
     mPrevAnimationStateLoop = true;
@@ -162,9 +162,9 @@ bool SpellCallToWar::castSpellOnTile(GameMap* gameMap, Player* player, Tile* til
 
     SpellCallToWar* spell = new SpellCallToWar(gameMap);
     spell->setSeat(player->getSeat());
-    spell->setDuration(static_cast<int32_t>(std::round(SkillManager::getResearchValue(
+    spell->setDuration(SkillManager::getResearchValue(
         player->getSeat(), SkillType::spellCallToWar,
-        ConfigManager::getSingleton().getSpellConfigInt32("CallToWarNbTurnsMax"), ResearchEffect::Lifetime))));
+        ConfigManager::getSingleton().getSpellConfigDouble("CallToWarNbTurnsMax"), ResearchEffect::Lifetime));
     spell->addToGameMap();
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(tile->getX()),
                                 static_cast<Ogre::Real>(tile->getY()),
