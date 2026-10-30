@@ -103,6 +103,15 @@ if gas is None or gas_shipped is None or abs(float(gas.group(1)) - gas_shipped) 
 if "Missing room parameter" not in manager:
     problems.append("getRoomConfigDoubleOrDefault must log a missing key")
 
+fallback_keys = manager.split('static const char* const fallbackKeys[]', 1)[-1].split('};', 1)[0]
+for key in ('ManaIncomeTilesCap', 'ManaPerClaimedTilePerSecond', 'WorkerManaUpkeepPerSecond',
+            'WorkerManaShortageSeconds', 'WorkerPopCountdownSeconds', 'AutoWorkerIntervalSeconds',
+            'GiftBoxMana', 'GiftBoxGold', 'GiftBoxLevels', 'GiftBoxWorkers', 'GiftBoxStunSeconds'):
+    if f'foundKeys.insert("{key}")' not in manager or f'"{key}"' not in fallback_keys:
+        problems.append("missing-key logging is not wired for " + key)
+if 'foundKeys.count(key) == 0' not in manager or 'Missing GameConfig key=' not in manager:
+    problems.append("missing GameConfig fallbacks must be logged")
+
 if problems:
     print("\n".join("FAIL: " + p for p in problems))
     sys.exit(1)
