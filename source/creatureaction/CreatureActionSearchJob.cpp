@@ -80,13 +80,34 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
 
     if(creature.needInterrupt(false))
     {
+        bool foodAvailable = false;
+        bool drinkAvailable = false;
+        if(creature.isHungry() && !creature.hasActionBeenTried(CreatureActionType::searchFood))
+        {
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, creature.getSeat()))
+                foodAvailable |= candidate->numCoveredTiles() > 0;
+        }
+        if(creature.getDefinition()->hasThirst() &&
+           creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           !creature.hasActionBeenTried(CreatureActionType::searchDrink))
+        {
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
+                drinkAvailable |= candidate->numCoveredTiles() > 0;
+        }
         creature.popAction();
-        if(creature.getUrge() >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
-            creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
-        else if(creature.isHungry())
+        if(foodAvailable)
             creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
-        else
+        else if(drinkAvailable)
             creature.pushAction(Utils::make_unique<CreatureActionSearchDrink>(creature, false));
+        else
+            creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
+        return true;
+    }
+
+    if(moodSearch && creature.wantsSpaBath() && !creature.hasActionBeenTried(CreatureActionType::searchSpa))
+    {
+        creature.popAction();
+        creature.pushAction(Utils::make_unique<CreatureActionSearchSpa>(creature));
         return true;
     }
 

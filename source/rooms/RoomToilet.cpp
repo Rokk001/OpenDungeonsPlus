@@ -125,7 +125,7 @@ static RoomRegister reg(new RoomToiletFactory);
 //! \brief Collects the toilet rooms the creature may use: the ones of its seat, or all of them when its seat has none.
 //! \param creature The creature that looks for a toilet.
 //! \param rooms Filled with the rooms.
-void collectToiletRooms(Creature& creature, std::vector<RoomToilet*>& rooms)
+void collectToiletRooms(const Creature& creature, std::vector<RoomToilet*>& rooms)
 {
     rooms.clear();
     std::vector<Room*> allRooms = creature.getGameMap()->getRoomsByType(RoomType::toilet);
@@ -310,7 +310,7 @@ Tile* RoomToilet::findFreeToiletTile(Creature& creature)
     return chosenTile;
 }
 
-bool RoomToilet::hasToiletRoomFor(Creature& creature)
+bool RoomToilet::hasToiletRoomFor(const Creature& creature)
 {
     std::vector<RoomToilet*> rooms;
     collectToiletRooms(creature, rooms);

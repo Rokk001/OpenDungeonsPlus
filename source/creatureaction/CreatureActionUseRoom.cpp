@@ -25,11 +25,12 @@
 #include "creatureaction/CreatureActionSleep.h"
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
 #include "game/Seat.h"
+#include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
-#include "rooms/RoomTavern.h"
 #include "utils/Helper.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -98,17 +99,32 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         return true;
     }
 
-    const bool servingNeed = room->getType() == RoomType::hatchery ||
-        (room->getType() == RoomType::tavern && static_cast<RoomTavern*>(room)->isGuestDrinking(creature));
+    const bool servingNeed = (room->getType() == RoomType::hatchery && creature.isHungry()) ||
+        (room->getType() == RoomType::tavern &&
+         creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"));
     if(creature.needInterrupt(servingNeed))
     {
+        bool foodAvailable = false;
+        bool drinkAvailable = false;
+        if(!servingNeed && creature.isHungry() && !creature.hasActionBeenTried(CreatureActionType::searchFood))
+        {
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, creature.getSeat()))
+                foodAvailable |= candidate->numCoveredTiles() > 0;
+        }
+        if(!servingNeed && creature.getDefinition()->hasThirst() &&
+           creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           !creature.hasActionBeenTried(CreatureActionType::searchDrink))
+        {
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
+                drinkAvailable |= candidate->numCoveredTiles() > 0;
+        }
         creature.popAction();
-        if(creature.getUrge() >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
-            creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
-        else if(creature.isHungry())
+        if(foodAvailable)
             creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
-        else
+        else if(drinkAvailable)
             creature.pushAction(Utils::make_unique<CreatureActionSearchDrink>(creature, false));
+        else
+            creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
         return true;
     }
 
