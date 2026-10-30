@@ -28,6 +28,7 @@ class Player;
 class Room;
 class Tile;
 class Seat;
+struct AiEvent;
 
 enum class KeeperAIType;
 
@@ -43,6 +44,9 @@ public:
 
     //! \brief Restores a saved controller state after the map entities exist.
     virtual bool importState(const std::vector<std::string>&) { return true; }
+
+    //! \brief Accepts a game notice; controllers without a mind ignore it.
+    virtual void notifyEvent(const AiEvent&) {}
 
     virtual ~BaseAI()
     {}

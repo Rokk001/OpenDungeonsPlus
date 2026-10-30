@@ -40,6 +40,7 @@ std::function<bool()> CreatureActionSearchFood::action()
         std::ref(mCreature), mForced);
 }
 
+//! \brief Searches for reachable food and reports supply failures to the keeper.
 bool CreatureActionSearchFood::handleSearchFood(Creature& creature, bool forced)
 {
     // Current creature tile position
@@ -105,6 +106,10 @@ bool CreatureActionSearchFood::handleSearchFood(Creature& creature, bool forced)
         {
             creature.getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
         }
+        else if(creature.getSeat()->getPlayer() != nullptr)
+        {
+            creature.getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
+        }
         creature.popAction();
         return true;
     }
@@ -139,6 +144,10 @@ bool CreatureActionSearchFood::handleSearchFood(Creature& creature, bool forced)
         {
             creature.getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
         }
+        else if(creature.getSeat()->getPlayer() != nullptr)
+        {
+            creature.getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
+        }
         creature.popAction();
         return true;
     }
@@ -151,6 +160,10 @@ bool CreatureActionSearchFood::handleSearchFood(Creature& creature, bool forced)
         OD_LOG_ERR("creature=" + creature.getName());
         if((creature.getSeat()->getPlayer() != nullptr) &&
             creature.getSeat()->getPlayer()->getIsHuman())
+        {
+            creature.getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
+        }
+        else if(creature.getSeat()->getPlayer() != nullptr)
         {
             creature.getSeat()->getPlayer()->notifyCreatureCannotFindFood(creature);
         }

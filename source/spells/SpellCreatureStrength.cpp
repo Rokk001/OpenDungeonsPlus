@@ -179,7 +179,7 @@ bool SpellCreatureStrength::castSpell(GameMap* gameMap, Player* player, ODPacket
         ConfigManager::getSingleton().getSpellConfigDouble("CreatureStrengthValue"), ResearchEffect::Factor);
     CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(duration, value, "SpellCreatureStrength");
     creature->addCreatureEffect(effect);
-    fireSpellEffect(*pos, "Strength", "StrengthCast");
+    fireSpellEffect(*pos, "Strength", "StrengthCast", gameMap, player->getSeat());
 
     return true;
 }

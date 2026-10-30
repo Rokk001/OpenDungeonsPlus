@@ -150,6 +150,7 @@ bool SpellCallToWar::castSpell(GameMap* gameMap, Player* player, ODPacket& packe
     return castSpellOnTile(gameMap, player, tile);
 }
 
+//! \brief Casts the keeper spell and reports its effect to seats with vision.
 bool SpellCallToWar::castSpellOnTile(GameMap* gameMap, Player* player, Tile* tile)
 {
     int32_t playerMana = static_cast<int32_t>(player->getSeat()->getMana());
@@ -171,7 +172,7 @@ bool SpellCallToWar::castSpellOnTile(GameMap* gameMap, Player* player, Tile* til
                                 static_cast<Ogre::Real>(0.0));
     spell->createMesh();
     spell->setPosition(spawnPosition);
-    fireSpellEffect(*tile, "CallToWar", "CallToWarCast");
+    fireSpellEffect(*tile, "CallToWar", "CallToWarCast", gameMap, player->getSeat());
 
     return true;
 }

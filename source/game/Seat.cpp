@@ -21,6 +21,7 @@
 #include "ai/KeeperAIType.h"
 #include "ai/AiSaveFormat.h"
 #include "ai/BaseAI.h"
+#include "ai/AiMind.h"
 #include "spells/SpellManager.h"
 #include "entities/Building.h"
 #include "entities/Creature.h"
@@ -449,6 +450,13 @@ void Seat::setPlayer(Player* player)
 
     mPlayer = player;
     player->mSeat = this;
+}
+
+//! \brief Returns this seat's last notified tile state without reading hidden current terrain.
+const TileStateNotified* Seat::getKnownTileState(Tile* tile) const
+{
+    const std::map<Tile*, TileStateNotified>::const_iterator found = mTilesStates.find(tile);
+    return found == mTilesStates.end() ? nullptr : &found->second;
 }
 
 bool Seat::hasVisionOnTile(Tile* tile)
@@ -2026,6 +2034,12 @@ void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
         mStoredSpecials.resize(static_cast<uint32_t>(GiftBoxType::nbTypes), 0);
 
     ++mStoredSpecials[index];
+    if(getPlayer() != nullptr && !getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::SpecialStored, nullptr, nullptr, -1,
+            static_cast<double>(amount), mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*getPlayer(), event);
+    }
 }
 
 //! \brief Uses only stored special bonuses, never workshop-only item boxes.
@@ -2091,6 +2105,7 @@ bool Seat::getCurrentSkillProgress(SkillType& type, float& progress) const
     return true;
 }
 
+//! \brief Selects the next research and reports an empty available research queue.
 void Seat::setNextSkill(SkillType skilledType)
 {
     if(!mGameMap->isServerGameMap())
@@ -2106,8 +2121,6 @@ void Seat::setNextSkill(SkillType skilledType)
             return;
 
         if(getPlayer() == nullptr)
-            return;
-        if(!getPlayer()->getIsHuman())
             return;
         if(getNbRooms(RoomType::library) <= 0)
             return;
@@ -2620,9 +2633,20 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
     return false;
 }
 
-//! \brief Announces a class only after its first successful arrival; the history survives saves.
+//! \brief Queues every AI arrival and announces a human class only once; the history survives saves.
 void Seat::notifyCreatureArrival(const std::string& creatureClassName)
 {
+    if(getPlayer() != nullptr && !getPlayer()->getIsHuman())
+    {
+        int fightersBefore = 0;
+        for(Creature* creature : mGameMap->getCreaturesBySeat(this))
+            if(creature->isAlive() && !creature->getDefinition()->isWorker()) ++fightersBefore;
+        const CreatureDefinition* arrived = mGameMap->getClassDescription(creatureClassName);
+        if(arrived != nullptr && !arrived->isWorker()) --fightersBefore;
+        AiEvent event = {AiEventType::CreatureArrived, nullptr, nullptr, -1, static_cast<double>(fightersBefore),
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*getPlayer(), event);
+    }
     if((getPlayer() == nullptr) || !getPlayer()->getIsHuman() || getPlayer()->getHasLost())
         return;
     if(std::find(mAnnouncedCreatureClasses.begin(), mAnnouncedCreatureClasses.end(), creatureClassName) !=

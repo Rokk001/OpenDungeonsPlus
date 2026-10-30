@@ -258,6 +258,10 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         {
             creature.getSeat()->getPlayer()->notifyNoTreasuryAvailable();
         }
+        else if(creature.getSeat()->getPlayer() != nullptr)
+        {
+            creature.getSeat()->getPlayer()->notifyNoTreasuryAvailable();
+        }
     }
     if(amountDug > 0.0 && tileDig.getFullness() > 0.0)
         creature.recordWorkerStepRecovery();

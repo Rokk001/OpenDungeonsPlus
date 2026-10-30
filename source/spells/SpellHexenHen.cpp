@@ -191,7 +191,7 @@ bool SpellHexenHen::castSpell(GameMap* gameMap, Player* player, ODPacket& packet
     double nbTurns = SkillManager::getResearchValue(player->getSeat(), SkillType::spellHexenHen,
         ConfigManager::getSingleton().getSpellConfigDouble("HexenHenNbTurns"), ResearchEffect::Duration);
     creature->addCreatureEffect(new CreatureEffectHexenHen(nbTurns));
-    fireSpellEffect(*pos, "Hen", "HexenHenCast");
+    fireSpellEffect(*pos, "Hen", "HexenHenCast", gameMap, player->getSeat());
 
     return true;
 }

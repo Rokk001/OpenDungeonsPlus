@@ -18,7 +18,7 @@
 #ifndef AITRAPS_H
 #define AITRAPS_H
 
-#include <string>
+#include <utility>
 #include <vector>
 
 class KeeperAI;
@@ -39,8 +39,46 @@ struct Entrance
     int mDy;
 };
 
+//! \brief What the trap and door rows remember for one keeper AI. It lives as long as the AI; the decisions that last
+//! longer than one trigger are saved as "draw" lines of the AI state.
+struct State
+{
+    //! \brief Starts with nothing drawn, watched or fortified.
+    State();
+    //! \brief The draw of row F01 (once per game): -1 not drawn yet, 1 half the trap tiles, 0 the full number.
+    int mWantDivided;
+    //! \brief True while the AI thinks of its empty traps after a fight (row F12).
+    bool mWatching;
+    //! \brief Game time of the last test for an exhausted own trap tile (row F12).
+    double mLastTestSeconds;
+    //! \brief The result of that test.
+    bool mExhausted;
+    //! \brief Every fortified tunnel breakthrough tile (x, y) of the AI's land (row F15).
+    std::vector<std::pair<int, int>> mTunnels;
+    //! \brief Mind time at which the AI starts watching its empty traps after the F12 mistake, -1 when none is pending.
+    double mWatchDue;
+    //! \brief Mind time at which the doors are looked at again after the F13 mistake, -1 when none is pending.
+    double mDoorDue;
+    //! \brief A tunnel fortification that waits for the symptom delay of the F15 mistake.
+    struct PendingFortify
+    {
+        int mX;
+        int mY;
+        //! \brief Mind time at which the tunnel is fortified.
+        double mDue;
+    };
+    //! \brief The tunnel fortifications delayed by the F15 mistake.
+    std::vector<PendingFortify> mFortifyDue;
+    //! \brief True once the saved draw lines of the mind were read.
+    bool mRestored;
+};
+
+//! \brief Connects the trap and door rows to the mind of the AI: the trap look (F01-F11, F13, F14), FightOver (F12),
+//! BuildingDestroyed (F13, a broken door), TunnelOpen (F15), the delayed steps of their mistakes and the saved draw lines.
+void bindRows(KeeperAI& ai);
+
 //! \brief Finds the entrances of the AI's land: own claimed tiles where a door can stand and that touch a known open
-//! tile not claimed for the AI, plus the tunnel entrance once the tunnel was fortified.
+//! tile not claimed for the AI, plus every tunnel entrance that was fortified.
 std::vector<Entrance> findEntrances(KeeperAI& ai);
 
 //! \brief The trap look: plans the traps and doors of the entrances and builds at most one door or one trap tile.
@@ -48,37 +86,40 @@ std::vector<Entrance> findEntrances(KeeperAI& ai);
 void trapLook(KeeperAI& ai);
 
 //! \brief Builds the next trap tile: the basic mix (spike, cannon, gas) up to the planned number of tiles, then one of
-//! the special traps (boulder, lightning, fireburst, freeze, alarm, fear trap, watch banner and trigger) per look.
+//! the special traps (boulder, lightning, fireburst, freeze, alarm, fear trap, watch banner and trigger) per look. A
+//! special trap that cannot be built at this look does not stop the next one.
 //! \param trapTiles How many trap tiles the AI owns now.
 //! \param want The number of trap tiles the plan asks for.
 //! \param entrances The entrances of the AI.
 //! \return true when a trap was scheduled.
 bool placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<Entrance>& entrances);
 
-//! \brief Called once after a fight: the AI decides whether it thinks of the empty traps. While it does and an own trap
-//! tile is exhausted, every purchase keeps TrapGoldMargin free (reloadMargin).
-//! \return true when the AI watches the traps now, false when it forgot them.
+//! \brief Called once after a fight, after the symptom delay of FightOver: from then, while an own trap tile is
+//! exhausted, every purchase keeps TrapGoldMargin free (reloadMargin). The rule mistake adds another symptom delay
+//! before the AI thinks of the empty traps.
+//! \return true when the AI watches the traps now, false when the mistake delayed it.
 bool reloadGate(KeeperAI& ai);
 
 //! \brief The gold every purchase keeps free while the AI watches its exhausted traps; 0 otherwise.
 double reloadMargin(KeeperAI& ai);
 
 //! \brief Builds the door of the best researched kind on an entrance without it, or the special doors: the secret door
-//! at the treasury entrance and the runed door at the entrance nearest to the heart.
+//! at the treasury entrance and the runed door at the entrance nearest to the heart. The rule mistake forgets the
+//! upgrade: existing doors stay, an entrance without a door gets a wooden one, and the doors are looked at again after
+//! a symptom delay.
 //! \return true when a door was scheduled.
 bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances);
 
 //! \brief Fortifies the new tunnel entrance after the reaction time: three more trap tiles, a door and a barricade.
+//! The rule mistake adds a symptom delay before the fortification.
 //! \param breakthrough The tile where the tunnel breaks into the AI's land.
-//! \return false when the AI forgot it.
+//! \return false when the mistake delayed it.
 bool fortifyTunnel(KeeperAI& ai, Tile* breakthrough);
 
-//! \brief Returns the decisions of this seat that last longer than one trigger as the tokens "rowId name value" of the
-//! lines "draw" of the AI state.
-std::vector<std::string> exportDraws(int seatId);
-
-//! \brief Restores one decision of the lines "draw" of the AI state; unknown names are ignored.
-void importDraw(int seatId, const std::string& rowId, const std::string& name, const std::string& value);
+//! \brief The seconds until the earliest tunnel fortification delayed by the F15 mistake, for the fortifyRemaining
+//! token of the saved tunnel line.
+//! \return -1 when no fortification is pending.
+double fortifyRemaining(KeeperAI& ai);
 }
 
 #endif // AITRAPS_H
