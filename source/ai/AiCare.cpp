@@ -142,6 +142,11 @@ void possessionInput(KeeperAI& ai, Tile*, const std::string& input)
         controlled->endPossession();
         return;
     }
+    if(input.substr(0, first) == "stop")
+    {
+        controlled->possessedMove(Ogre::Vector2::ZERO);
+        return;
+    }
     Creature* enemy = second == std::string::npos ? nullptr : ai.getGameMap().getCreature(input.substr(second + 1));
     if(enemy == nullptr || !enemy->isAlive() || !enemy->getIsOnMap() || enemy->getPositionTile() == nullptr ||
        enemy->getSeat() == nullptr || ai.getControlledPlayer().getSeat()->isAlliedSeat(enemy->getSeat()))
@@ -469,7 +474,11 @@ void CARE::possessionStep(KeeperAI& ai, double& nextControl)
     }
     if(nearest == nullptr)
     {
-        creature->possessedMove(Ogre::Vector2::ZERO);
+        if(!creature->isMoving())
+            return;
+        const std::string name = creature->getName();
+        nextControl = ai.getMind().exec("possess", 1, ai.getMind().now(), "D05", nullptr, "stop:" + name,
+            std::bind(possessionInput, std::ref(ai), static_cast<Tile*>(nullptr), "stop:" + name));
         return;
     }
     const std::string name = creature->getName();
