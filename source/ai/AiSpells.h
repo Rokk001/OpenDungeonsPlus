@@ -41,7 +41,7 @@ struct State
     //! different places have their own sessions, casting loops and first reactions.
     struct Session
     {
-        //! \brief Mind time of the first Fight reaction of the session.
+        //! \brief Mind time when the first fight of the session began.
         double mStart;
         //! \brief Mind time of the last Fight reaction of the session, or of the last poll that still saw the fight.
         double mLastFight;

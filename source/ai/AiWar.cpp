@@ -552,7 +552,8 @@ void exploreLook(Env& env)
     knowledge.exploreTunnels(env.ai, env.mind, st.exploreMarked);
 }
 
-void planAttack(Env& env)
+//! \brief Plans an attack, optionally bypassing the post-assault rest for one second-wave attempt.
+void planAttack(Env& env, bool bypassRest)
 {
     // AI row K01: eligibility and the ready list
     // AI row K02: the estimate, the scores and the draw of the tactic
@@ -563,7 +564,7 @@ void planAttack(Env& env)
         return;
     AiEvent plan = {AiEventType::Plan, st.breakthrough, nullptr, -1, 0.0, env.now};
     env.mind.enqueue(plan);
-    if(env.now - st.lastAssaultEnd < key("RestSecondsAfterAssault"))
+    if(!bypassRest && env.now - st.lastAssaultEnd < key("RestSecondsAfterAssault"))
         return;
     if(!callToWarReady(env) || (seat->getMana() < callToWarPrice()))
         return;
@@ -763,12 +764,6 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
     if((groups.size() > 1) && !groups[0].raid && groups[1].raid)
         std::swap(groups[0], groups[1]);
 
-    // The groups are chosen: Launch carries the drop tile of the main group and the tactic (rows E20, H03)
-    Tile* mainDrop = groups.back().dropTile;
-    AiEvent launched = {AiEventType::Launch, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
-                        static_cast<double>(tactic), env.now};
-    env.mind.enqueue(launched);
-
     // Gathering decision: the complex draw of row E07; a mistake skips the hand moves
     bool walkFromHome = SPELL::drawLaunchGathering(env.ai);
     for(size_t i = 0; i < groups.size(); ++i)
@@ -791,23 +786,54 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
             g.finished = true;
             continue;
         }
-        // The main group gets Strength after its drops and Haste for the march before its banner, while it still
-        // stands on its drop tile (rows E06, E03); the hand casts them in this order
+        // The last group's banner waits for the Launch reaction, so that Strength (row E06) comes first
         if(i + 1 == groups.size())
-            castLaunchSpells(env, g, groups.size());
+            continue;
         // A group whose banner cannot be cast does not march
         if(!castBanner(env, g, g.targets.front()))
             g.finished = true;
     }
 
-    // The last banner of the launch is cast: the march starts from the main group's drop tile
-    AiEvent march = {AiEventType::March, mainDrop, nullptr, (enemy == nullptr) ? -1 : enemy->getId(), 0.0, env.now};
-    env.mind.enqueue(march);
+    // A mental step after the last drop raises Launch; its saved hand action is restored by the K05 handler
+    env.mind.exec("think", 1, env.now, "K05", nullptr, "", std::function<void()>());
 
     st.groups = groups;
-    st.assault = WarState::assaultMoving;
+    st.assault = WarState::assaultLaunching;
     st.tactic = tactic;
     st.contactTime = -1.0;
+    st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
+}
+
+void launchDropsDone(Env& env)
+{
+    // Row K05: the groups are on their drop tiles; Launch carries the main group's drop tile and the tactic (rows E06,
+    // E20, H03)
+    WarState& st = env.state;
+    if((st.assault != WarState::assaultLaunching) || st.groups.empty())
+        return;
+    Seat* enemy = enemySeat(env);
+    AiEvent launched = {AiEventType::Launch, st.groups.back().dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
+                        static_cast<double>(st.tactic), env.now};
+    env.mind.enqueue(launched);
+}
+
+//! \brief Schedules the main group's launch spells and banner after its drops finish.
+void marchOff(Env& env)
+{
+    // Row K05: after the drops, Strength and Haste precede the last banner and the march.
+    WarState& st = env.state;
+    if((st.assault != WarState::assaultLaunching) || st.groups.empty())
+        return;
+    Group& g = st.groups.back();
+    if(!g.finished && !g.targets.empty())
+        castLaunchSpells(env, g, 1);
+    if(!g.finished && !g.targets.empty() && !castBanner(env, g, g.targets.front()))
+        g.finished = true;
+
+    Seat* enemy = enemySeat(env);
+    AiEvent march = {AiEventType::March, g.dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(), 0.0, env.now};
+    env.mind.enqueue(march);
+    st.assault = WarState::assaultMoving;
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
 }
 
@@ -816,7 +842,8 @@ void assaultStep(Env& env)
     // AI row K09: banners are renewed and moved to the next target
     // AI row K07: the retreat test
     WarState& st = env.state;
-    if(st.assault == WarState::assaultNone)
+    // A launch still moving its groups by hand is not a running assault yet
+    if((st.assault == WarState::assaultNone) || (st.assault == WarState::assaultLaunching))
         return;
 
     Seat* seat = env.player.getSeat();
@@ -927,6 +954,7 @@ void assaultStep(Env& env)
     }
 }
 
+//! \brief Plans immediately or records the window for a second wave after the current assault.
 void secondWave(Env& env)
 {
     // AI row K08: the enemy traps are empty, attack again at once; the mistake waits (no second wave now)
@@ -935,11 +963,15 @@ void secondWave(Env& env)
         return;
 
     st.secondWaveUntil = env.now + key("SecondWaveMinutes") * 60.0;
-    // The rest after the last assault does not hold the second wave back
-    st.lastAssaultEnd = -1.0e18;
-    planAttack(env);
+    // The rest after the last assault does not hold the immediate second-wave attempt back
+    if(st.assault == WarState::assaultNone)
+    {
+        st.secondWaveUntil = -1.0;
+        planAttack(env, true);
+    }
 }
 
+//! \brief Ends an assault and makes a pending second-wave attempt within its window.
 void endAssault(Env& env)
 {
     // AI row K10: banners removed, survivors on enemy ground carried home by hand, the rest started, AssaultOver raised
@@ -979,6 +1011,10 @@ void endAssault(Env& env)
 
     AiEvent over = {AiEventType::AssaultOver, nullptr, nullptr, -1, 0.0, env.now};
     env.mind.enqueue(over);
+    bool secondWavePending = st.secondWaveUntil >= 0.0 && env.now <= st.secondWaveUntil;
+    st.secondWaveUntil = -1.0;
+    if(secondWavePending)
+        planAttack(env, true);
 }
 
 void defend(Env& env, const AiEvent& event)
@@ -1175,6 +1211,9 @@ void onEvent(Env& env, const AiEvent& event)
         case AiEventType::EnemyTrapEmpty:
             secondWave(env);
             break;
+        case AiEventType::Launch:
+            marchOff(env);
+            break;
         case AiEventType::AssaultOver:
             break;
         case AiEventType::EnemySpellSeen:
@@ -1254,17 +1293,19 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if(line.tag == "sighting")
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
-        return (line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"));
+        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"))) ||
+               ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
     return false;
 }
 }
 
+//! \brief Saves war observations and the remaining second-wave window.
 void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
 {
     const WarState& st = env.state;
     lines.erase(std::remove_if(lines.begin(), lines.end(), isOwnWarLine), lines.end());
     const char* tunnelNames[3] = {"none", "digging", "open"};
-    const char* assaultNames[4] = {"none", "moving", "running", "ending"};
+    const char* assaultNames[5] = {"none", "moving", "running", "ending", "launching"};
     std::vector<std::string> t;
     t.push_back("tunnel");
     t.push_back(tunnelNames[st.tunnel]);
@@ -1285,6 +1326,8 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     a.push_back(st.contactTime < 0.0 ? "-1" : num(env.now - st.contactTime));
     a.push_back(num(std::max(0.0, key("RestSecondsAfterAssault") - (env.now - st.lastAssaultEnd))));
     addLine(lines, "war", a);
+    if(st.secondWaveUntil >= env.now)
+        addLine(lines, "draw", {"K08", "secondWave", num(st.secondWaveUntil - env.now)});
 
     for(size_t i = 0; i < st.groups.size(); ++i)
     {
@@ -1375,6 +1418,7 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     }
 }
 
+//! \brief Restores war observations and the saved second-wave window.
 void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
 {
     WarState& st = env.state;
@@ -1385,7 +1429,9 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         const std::vector<std::string>& k = line.tokens;
         if(k.empty())
             continue;
-        if((line.tag == "war") && (k[0] == "tunnel"))
+        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
+            st.secondWaveUntil = env.now + std::atof(k[2].c_str());
+        else if((line.tag == "war") && (k[0] == "tunnel"))
         {
             st.tunnel = (k[1] == "open") ? WarState::tunnelOpen : ((k[1] == "digging") ? WarState::tunnelDigging : WarState::tunnelNone);
             st.detour = std::atof(k[2].c_str());
@@ -1396,7 +1442,8 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         else if((line.tag == "war") && (k[0] == "assault"))
         {
             st.assault = (k[1] == "moving") ? WarState::assaultMoving : ((k[1] == "running") ? WarState::assaultRunning :
-                         ((k[1] == "ending") ? WarState::assaultEnding : WarState::assaultNone));
+                         ((k[1] == "ending") ? WarState::assaultEnding :
+                         ((k[1] == "launching") ? WarState::assaultLaunching : WarState::assaultNone)));
             st.tactic = (k[2] == "-") ? -1 : std::atoi(k[2].c_str());
             double age = std::atof(k[3].c_str());
             st.contactTime = (age < 0.0) ? -1.0 : env.now - age;

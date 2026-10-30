@@ -5,6 +5,7 @@
 #include "ai/AiMind.h"
 #include "ODApplication.h"
 #include "entities/Creature.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -21,6 +22,26 @@
 
 namespace
 {
+//! \brief Gives a firing a unique identity and restores its enclosing firing afterward.
+class TriggerScope
+{
+public:
+    //! \brief Starts a firing while retaining the enclosing identity.
+    TriggerScope(uint64_t& serial, uint64_t& current) : mCurrent(current), mPrevious(current)
+    {
+        ++serial;
+        if(serial == 0) ++serial;
+        mCurrent = serial;
+    }
+
+    //! \brief Restores the identity of the enclosing firing.
+    ~TriggerScope() { mCurrent = mPrevious; }
+
+private:
+    uint64_t& mCurrent;
+    uint64_t mPrevious;
+};
+
 const char* const eventNames[] = {
     "Fight", "HeartCritical", "Payday", "NotEnoughGold", "NoSkillInQueue", "NoWorker", "NoTreasury",
     "NoBed", "NoFood", "CreatureKilled", "CreatureMood", "CreatureLeft", "CreatureArrived", "RoomLost",
@@ -129,7 +150,7 @@ void rebase(std::string& value, double delta, bool sentinel)
 //! \brief Starts a keeper mind with its level's settings and no pending actions.
 Mind::Mind(GameMap& gameMap, Player& player, const AiSettings& settings) :
     mGameMap(gameMap), mPlayer(player), mSettings(settings), mNow(0.0), mSavedAt(0.0),
-    mLoaded(false), mInTrigger(false)
+    mLoaded(false), mInTrigger(false), mTriggerSerial(0), mCurrentTrigger(0)
 {
     mLooks["I06"] = {0.0, false};
 }
@@ -138,6 +159,12 @@ Mind::Mind(GameMap& gameMap, Player& player, const AiSettings& settings) :
 double Mind::now() const
 {
     return mNow;
+}
+
+//! \brief Returns the identity of the active firing, or zero outside one.
+uint64_t Mind::triggerId() const
+{
+    return mCurrentTrigger;
 }
 
 //! \brief Collects the configured timing keys for pure delay calculations.
@@ -205,6 +232,7 @@ void Mind::enqueue(const AiEvent& event)
     // AI row I06
     if(event.type == AiEventType::EnemySpellSeen)
     {
+        TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
         mEnemySpells[event.otherSeatId] = mNow;
         // A visible cast is information, so its observers receive it immediately without a mistake roll.
         for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
@@ -230,7 +258,8 @@ void Mind::enqueue(const AiEvent& event)
     reaction.due = mNow + AiMath::reactionDelay(kind, delayParams(), uniformDraw);
     reaction.time = event.type == AiEventType::Fight
         ? mNow - (mGameMap.getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond) - event.time)
-        : event.time;
+        : reaction.due;
+    reaction.fightStart = reaction.time;
     reaction.kind = kind;
     reaction.x = event.tile == nullptr ? -1 : event.tile->getX();
     reaction.y = event.tile == nullptr ? -1 : event.tile->getY();
@@ -240,6 +269,16 @@ void Mind::enqueue(const AiEvent& event)
     reaction.noticed = false;
     reaction.rowId = "-";
     mEvents.push_back(reaction);
+}
+
+//! \brief Updates the last fight time without changing the original start of a pending reaction.
+void Mind::refreshFight(Tile* tile)
+{
+    if(tile == nullptr)
+        return;
+    for(Reaction& reaction : mEvents)
+        if(reaction.type == AiEventType::Fight && reaction.x == tile->getX() && reaction.y == tile->getY())
+            reaction.time = mNow;
 }
 
 //! \brief Reserves the single hand and queues each server call at its scheduled finish time.
@@ -271,18 +310,6 @@ bool Mind::slip(const std::string& rowId)
         return false;
     const ConfigManager::AiRowClass* row = ConfigManager::getSingleton().getAiRowClass(rowId);
     return row != nullptr && slip(rowId, row->mMultiplier);
-}
-
-//! \brief Updates queued fight reactions when their existing game marker is refreshed.
-void Mind::refreshFight(Tile* tile)
-{
-    if(tile == nullptr)
-        return;
-    for(Reaction& reaction : mEvents)
-    {
-        if(reaction.type == AiEventType::Fight && reaction.x == tile->getX() && reaction.y == tile->getY())
-            reaction.time = mNow;
-    }
 }
 
 //! \brief Draws a mistake using the supplied multiplier and the row's configured class.
@@ -394,6 +421,7 @@ void Mind::doTurn(double timeSinceLastTurn)
         look.due = mNow + AiMath::lookInterval(entry.second.factor, delayParams(), uniformDraw);
         mTriggerSlips.clear();
         mInTrigger = true;
+        TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
         entry.second.perform();
         mInTrigger = false;
     }
@@ -414,9 +442,10 @@ void Mind::doTurn(double timeSinceLastTurn)
     {
         const AiEvent event = {reaction.type, mGameMap.getTile(reaction.x, reaction.y),
             reaction.creature == "-" ? nullptr : mGameMap.getCreature(reaction.creature),
-            reaction.seatId, reaction.amount, reaction.time};
+            reaction.seatId, reaction.amount, reaction.time, reaction.fightStart};
         mTriggerSlips.clear();
         mInTrigger = true;
+        TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
         for(const std::pair<const std::string, EventHandler>& entry : mEventHandlers)
         {
             if((reaction.rowId == "-" || reaction.rowId == entry.first) &&
@@ -467,7 +496,7 @@ void Mind::resetState()
         mLooks[entry.first].flag = false;
 }
 
-//! \brief Writes relative times and all scheduler, action, row and observation state at full precision.
+//! \brief Writes the ordered hand and scheduler, action, row and observation state at full precision.
 void Mind::exportState(std::ostream& os) const
 {
     std::vector<AiMath::AiStateLine> lines = mSavedRows;
@@ -498,7 +527,8 @@ void Mind::exportState(std::ostream& os) const
         lines.push_back({"look", {look.first, token(look.second.due - mNow), token(look.second.flag ? 1 : 0)}});
     for(const Reaction& e : mEvents)
         lines.push_back({"event", {eventNames[static_cast<int>(e.type)], token(e.due - mNow), kindName(e.kind),
-            token(e.x), token(e.y), e.creature, token(e.seatId), token(e.amount), token(e.noticed ? 1 : 0), e.rowId, token(mNow - e.time)}});
+            token(e.x), token(e.y), e.creature, token(e.seatId), token(e.amount), token(e.noticed ? 1 : 0), e.rowId,
+            token(mNow - e.time), token(mNow - e.fightStart)}});
     for(const Action& a : mActions)
         lines.push_back({"action", {a.key, token(a.due - mNow), a.rowId, token(a.x), token(a.y), a.target}});
     for(const std::pair<double, int>& click : mHand.clickGroups)
@@ -507,11 +537,13 @@ void Mind::exportState(std::ostream& os) const
             lines.push_back({"click", {token(mNow - click.first), token(click.second)}});
     }
     lines.push_back({"hand", {token(mHand.busyUntil - mNow), token(mNow - mHand.lastClickEnd)}});
+    for(GameEntity* entity : mPlayer.getObjectsInHand())
+        lines.push_back({"held", {token(static_cast<int>(entity->getObjectType())), entity->getName()}});
     for(const std::string& line : AiMath::formatAiState(lines))
         os << line << '\n';
 }
 
-//! \brief Restores scheduler entries atomically; malformed entries restart a fresh mind.
+//! \brief Restores the hand and scheduler entries atomically; malformed entries restart a fresh mind.
 bool Mind::importState(const std::vector<std::string>& input)
 {
     std::vector<AiMath::AiStateLine> lines;
@@ -526,6 +558,7 @@ bool Mind::importState(const std::vector<std::string>& input)
     AiMath::HandState hand;
     std::vector<AiMath::AiStateLine> rows;
     std::map<int, double> enemySpells;
+    std::vector<GameEntity*> held;
     bool valid = true;
     for(const AiMath::AiStateLine& line : lines)
     {
@@ -540,18 +573,25 @@ bool Mind::importState(const std::vector<std::string>& input)
                 number(t[7], e.amount) && number(t[8], noticed) && (noticed == 0 || noticed == 1);
             if(!valid) break;
             e.due = mNow + remaining;
-            e.creature = t[5];
-            e.noticed = noticed != 0;
-            e.rowId = t[9];
-            // A save without the event age keeps the scheduled time as the event time
             e.time = e.due;
-            if(t.size() > 10)
+            if(t.size() >= 11)
             {
                 double age;
                 valid = number(t[10], age);
                 if(!valid) break;
                 e.time = mNow - age;
             }
+            e.fightStart = e.time;
+            if(t.size() == 12)
+            {
+                double age;
+                valid = number(t[11], age);
+                if(!valid) break;
+                e.fightStart = mNow - age;
+            }
+            e.creature = t[5];
+            e.noticed = noticed != 0;
+            e.rowId = t[9];
             events.push_back(e);
         }
         else if(line.tag == "action")
@@ -591,6 +631,16 @@ bool Mind::importState(const std::vector<std::string>& input)
             hand.busyUntil = mNow + busy;
             hand.lastClickEnd = mNow - age;
         }
+        else if(line.tag == "held")
+        {
+            int type;
+            valid = number(t[0], type);
+            GameEntity* entity = valid ? mGameMap.getEntityFromTypeAndName(static_cast<GameEntityType>(type), t[1]) : nullptr;
+            valid = entity != nullptr && entity->getObjectType() == static_cast<GameEntityType>(type) &&
+                    std::find(held.begin(), held.end(), entity) == held.end();
+            if(!valid) break;
+            held.push_back(entity);
+        }
         else if(line.tag == "sighting" && t[0] == "spell")
         {
             int seat;
@@ -619,6 +669,7 @@ bool Mind::importState(const std::vector<std::string>& input)
     mHand = hand;
     mSavedRows.swap(rows);
     mEnemySpells.swap(enemySpells);
+    mPlayer.restoreObjectsInHand(held);
     mSavedAt = mNow;
     return true;
 }

@@ -731,7 +731,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
     if(first)
     {
         SPELL::State::Session session;
-        session.mStart = now;
+        session.mStart = event.fightStart;
         session.mLastFight = event.time;
         session.mFightX = -1;
         session.mFightY = -1;

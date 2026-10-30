@@ -65,7 +65,7 @@ public:
     //! \brief Writes the keeper's mind as the contents of its AIState block.
     virtual void exportState(std::ostream& os) const;
     //! \brief Restores the contents of an AIState block, or starts fresh when invalid.
-    bool importState(const std::vector<std::string>& lines);
+    bool importState(const std::vector<std::string>& lines) override;
     //! \brief Chooses the AI keeper switches immediately before each ectoplasm product.
     static void updateGhostRoomSettings(Seat& seat);
     //! \brief The room plan of the keeper AI in build order: the [RoomPlan] section of ai.cfg, or the compiled
@@ -116,6 +116,8 @@ private:
     void handleWarEvent(const AiEvent& event);
     //! \brief Runs the explore look of row I05 of the war module.
     void handleExploreLook();
+    //! \brief Performs the mental step of row K05 after the launch drops (also when restored after loading).
+    void handleLaunchStep(Tile* tile, const std::string& target);
     //! \brief Appends the war and sighting lines to the saved AI state of the mind.
     void saveWarRows(std::vector<AiMath::AiStateLine>& lines);
 
