@@ -10,8 +10,17 @@ assert 'getHungerSeek()' in hungry
 need = source.split('bool Creature::needInterrupt(bool servingNeed) const', 1)[1].split('\n}', 1)[0]
 for key in ('UrgeSeek', 'ThirstSeek', 'isHungry()', 'servingNeed', 'CreatureActionType::fight', 'CreatureActionType::fightFriendly'):
     assert key in need, key
+for key in ('RoomType::hatchery', 'RoomType::tavern', 'numCoveredTiles()', 'RoomToilet::hasToiletRoomFor(*this)',
+            'CreatureActionType::searchFood', 'CreatureActionType::searchDrink', 'CreatureActionType::searchToilet'):
+    assert key in need, key
 room = (ROOT / 'source/creatureaction/CreatureActionUseRoom.cpp').read_text(encoding='utf-8')
 assert 'needInterrupt(' in room
+assert room.index('if(room == nullptr)') < room.index('if(creature.needInterrupt(servingNeed))')
+assert room.index('if(creature.needInterrupt(servingNeed))') < room.index('shouldNotUseIfBadMood')
+assert room.index('if(creature.needInterrupt(servingNeed))') < room.index('shouldStopUseIfHungrySleepy')
+assert room.index('if(creature.needInterrupt(servingNeed))') < room.index('hasSlapEffect()')
+assert 'room->getType() == RoomType::hatchery && creature.isHungry()' in room
+assert 'room->getType() == RoomType::tavern' in room and 'getTavernConfigDouble("ThirstSeek")' in room
 assert not re.search(r'Random::Int\(\s*0\s*,\s*100\s*\)\s*<\s*20', room)
 sleep = (ROOT / 'source/creatureaction/CreatureActionSleep.cpp').read_text(encoding='utf-8')
 assert 'needInterrupt(' in sleep

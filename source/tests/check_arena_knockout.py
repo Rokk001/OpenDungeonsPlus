@@ -17,6 +17,8 @@ assert re.search(r'if\s*\(mArenaKnockOut\).*?KO_SAVE_OPEN.*?mKoTurnCounter.*?KO_
 loaded = source.split('Creature::importFromStream', 1)[1]
 assert 'KO_SAVE_OPEN' in loaded and 'KO_SAVE_CLOSE' in loaded
 assert 'mKoTurnCounter' in loaded and 'mArenaKnockOut' in loaded
+assert len(re.findall(r'\bmKoTurnCounter\s*\(0\)', source)) == 2
+assert len(re.findall(r'\bmArenaKnockOut\s*\(false\)', source)) == 2
 rooms = (ROOT / 'config/rooms.cfg').read_text(encoding='utf-8')
 for key, value in (('ArenaKnockOutSeconds', 30), ('ArenaGetUpHpShare', 0.35)):
     match = re.search(r'^\s*' + key + r'\s+(\S+)', rooms, re.M)
