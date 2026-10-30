@@ -22,6 +22,7 @@
 #include "gamemap/LevelScriptRunner.h"
 
 #include "ai/KeeperAIType.h"
+#include "ai/BaseAI.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
@@ -832,6 +833,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
     }
 }
 
+//! \brief Starts the game, restores controller state and advances synchronized turns.
 void ODServer::serverThread()
 {
     GameMap* gameMap = mGameMap;
@@ -922,6 +924,18 @@ void ODServer::serverThread()
                 }
 
                 gameMap->createAllEntities();
+
+                // Restore AI hands after entity placement and before the first game upkeep.
+                for(Seat* seat : seats)
+                {
+                    Player* player = seat->getPlayer();
+                    BaseAI* ai = player == nullptr ? nullptr : gameMap->getAI(*player);
+                    if(ai == nullptr)
+                        continue;
+                    const std::vector<std::string> lines = seat->takeAiStateLoaded();
+                    if(!lines.empty() && !ai->importState(lines))
+                        OD_LOG_WRN("Invalid AI state; starting a fresh keeper mind");
+                }
                 
                 // Fill starting gold
                 for(Seat* seat : gameMap->getSeats())

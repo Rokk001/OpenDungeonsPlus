@@ -292,6 +292,19 @@ void PlayerEvent::importFromPacket(GameMap* gameMap, ODPacket& is)
     mTile = gameMap->tileFromPacket(is);
 }
 
+//! \brief Restores the saved hand order and removes its entities from their loaded tiles.
+void Player::restoreObjectsInHand(const std::vector<GameEntity*>& entities)
+{
+    mObjectsInHand = entities;
+    for(GameEntity* entity : mObjectsInHand)
+    {
+        if(entity->getObjectType() == GameEntityType::creature)
+            static_cast<Creature*>(entity)->restoreInHand();
+        else
+            entity->removeEntityFromPositionTile();
+    }
+}
+
 void Player::pickUpEntity(GameEntity *entity)
 {
     if(!entity->tryPickup(getSeat()))
