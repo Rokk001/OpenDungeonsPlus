@@ -30,6 +30,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "ODApplication.h"
 #include "rooms/Room.h"
@@ -42,6 +43,7 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <functional>
 #include <set>
@@ -742,8 +744,35 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         Tile* bannerTile = lineTile(gameMap, entrance, 1);
         if(needBanner && trapSpotFree(bannerTile, seat) && buildOne(ai, TrapType::watchBanner, bannerTile))
             return true;
-        Tile* triggerTile = lineTile(gameMap, entrance, 2);
-        return needTrigger && trapSpotFree(triggerTile, seat) && buildOne(ai, TrapType::trigger, triggerTile);
+        if(!needTrigger)
+            return false;
+        const int radius = static_cast<int>(std::lround(SkillManager::getResearchValue(seat, SkillType::trapTrigger,
+            ConfigManager::getSingleton().getTrapConfigDouble("TriggerRadius"), ResearchEffect::Radius)));
+        AiKnowledge knowledge(gameMap, seat);
+        for(const TRAP::Entrance& candidate : entrances)
+        {
+            for(int k = 1; k <= gameMap.getMapSizeX() + gameMap.getMapSizeY(); ++k)
+            {
+                Tile* triggerTile = lineTile(gameMap, candidate, k);
+                if(triggerTile == nullptr || !knowledge.isKnown(triggerTile) || triggerTile->isFullTile())
+                    break;
+                if(!trapSpotFree(triggerTile, seat))
+                    continue;
+                for(int offset = 1; offset <= radius; ++offset)
+                {
+                    Tile* targetTile = lineTile(gameMap, candidate, k + offset);
+                    if(targetTile == nullptr || !knowledge.isKnown(targetTile) || targetTile->isFullTile())
+                        break;
+                    Trap* target = trapAt(ai, targetTile);
+                    if(target == nullptr || target->getType() == TrapType::watchBanner || target->getType() == TrapType::trigger ||
+                       (target->isDoor() && target->getType() != TrapType::doorRuned))
+                        continue;
+                    if(buildOne(ai, TrapType::trigger, triggerTile))
+                        return true;
+                }
+            }
+        }
+        return false;
     }
     return false;
 }
