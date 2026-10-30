@@ -110,6 +110,7 @@ bool AiKnowledge::isKnown(Tile* tile) const
     return mGameMap.everVisitedFlagPool[tile->getX()][tile->getY()][mSeat->getId()];
 }
 
+//! \brief Finds the nearest enemy tile using remembered ownership and sightings.
 Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
 {
     Tile* heart = ownHeartTile(mGameMap, mSeat);
