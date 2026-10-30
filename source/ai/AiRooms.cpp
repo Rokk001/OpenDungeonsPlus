@@ -446,17 +446,21 @@ void ROOMS::buildNext(KeeperAI& ai)
         uint32_t count = entry.second;
         if(entry.first == RoomType::dormitory)
         {
-            if(state.dormitoryFirst < 0)
+            if(state.dormitoryFirst < 0 && roomTiles(ai, entry.first) < entry.second &&
+               SkillManager::isRoomAvailable(entry.first, seat))
                 state.dormitoryFirst = ai.getMind().slip("B02") ?
                     static_cast<int>(roomKey("MistakeTilesDormitory")) : static_cast<int>(entry.second);
-            count = static_cast<uint32_t>(state.dormitoryFirst);
+            if(state.dormitoryFirst >= 0)
+                count = static_cast<uint32_t>(state.dormitoryFirst);
         }
         if(entry.first == RoomType::hatchery)
         {
-            if(state.hatcheryFirst < 0)
+            if(state.hatcheryFirst < 0 && roomTiles(ai, entry.first) < entry.second &&
+               SkillManager::isRoomAvailable(entry.first, seat))
                 state.hatcheryFirst = ai.getMind().slip("B03") ?
                     static_cast<int>(roomKey("MistakeTilesHatchery")) : static_cast<int>(entry.second);
-            count = static_cast<uint32_t>(state.hatcheryFirst);
+            if(state.hatcheryFirst >= 0)
+                count = static_cast<uint32_t>(state.hatcheryFirst);
         }
         expected[entry.first] += count;
         if(roomTiles(ai, entry.first) >= expected[entry.first])
