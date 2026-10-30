@@ -89,8 +89,8 @@ assert 'if(tileDig.getType() == TileType::gold)' in handle and 'amountDug = tile
 assert 'amountDug = tileDig.digOut(creature.getDigRate() * digFactor * criticalFactor);' in handle
 gold_case = handle[handle.index('case TileType::gold:'):handle.index('case TileType::gem:')]
 assert 'payMinedGold(creature, tileDig, amountDug);' in gold_case
-assert 'receiveExp(ConfigManager::getSingleton().getGoldDigXpFactor() * creature.getDigRate()' in gold_case   # XP per step from config
-assert 'receiveExp(ConfigManager::getSingleton().getDigXpFactor() * creature.getDigRate()' in handle
+assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getGoldDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', gold_case)
+assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', handle)
 gem_case = handle[handle.index('case TileType::gem:'):handle.index('default:')]
 assert 'getGemGoldPerDigStep()' in gem_case and 'payMinedGold(creature, tileDig, gemGoldPerDigStep * digFactor * criticalFactor);' in gem_case
 assert 'amountDug' not in gem_case and 'getGoldDensityPercent' not in gem_case   # fixed per step, not scaled

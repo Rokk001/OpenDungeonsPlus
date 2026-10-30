@@ -662,8 +662,8 @@ def check_part_e():
     assert handle.count('creature.rollCritical()') == 1, 'one roll per dig step'
     assert handle.index('creature.rollCritical()') < handle.index('digOutGold(digFactor * criticalFactor)')
     assert 'getCritDamageMultiplier()' in handle
-    assert 'receiveExp(ConfigManager::getSingleton().getGoldDigXpFactor() * creature.getDigRate()' in handle
-    assert 'receiveExp(ConfigManager::getSingleton().getDigXpFactor() * creature.getDigRate()' in handle
+    assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getGoldDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', handle)
+    assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', handle)
     assert not re.search(r'receiveExp\([^;]*(digFactor|criticalFactor|getDigFactor)', handle), 'experience ignores dig% and crits'
     assert 'fireCriticalOnStructure("dig"' in handle
     tunnel_body = function(tunnel, 'bool CreatureActionTunnel::handleTunnel(') if 'bool CreatureActionTunnel::handleTunnel(' in tunnel else tunnel
