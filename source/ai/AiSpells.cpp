@@ -823,6 +823,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
         state.mSessions.push_back(session);
     }
     SPELL::State::Session& session = state.mSessions[static_cast<size_t>(match)];
+    session.mStart = std::min(session.mStart, event.fightStart);
     // The fight ends FightOverSeconds after the time the game raised the Fight event, not after this delayed reaction
     session.mLastFight = std::max(session.mLastFight, event.time);
     if(event.tile != nullptr)
