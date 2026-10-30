@@ -745,7 +745,9 @@ void TrapDoor::exportToStream(std::ostream& os) const
     if(mDoorType == TrapType::doorRuned)
     {
         const std::streamsize precision = os.precision();
-        os << " FireCooldown " << std::setprecision(std::numeric_limits<double>::max_digits10) << mFireCooldownTurns;
+        const std::ios::fmtflags flags = os.flags();
+        os << " FireCooldown " << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10) << mFireCooldownTurns;
+        os.flags(flags);
         os.precision(precision);
     }
     os << "\n";

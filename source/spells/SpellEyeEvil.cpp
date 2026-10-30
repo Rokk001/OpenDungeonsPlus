@@ -36,6 +36,8 @@
 #include "utils/LogManager.h"
 
 #include <algorithm>
+#include <iomanip>
+#include <limits>
 
 const std::string SpellEyeEvilName = "eyeEvil";
 const std::string SpellEyeEvilNameDisplay = "Eye of Evil";
@@ -114,7 +116,7 @@ void SpellEyeEvil::doUpkeep()
 }
 
 //! \brief Spawns a free reveal with the base radius and no research or mana transaction.
-SpellEyeEvil* SpellEyeEvil::spawnFree(GameMap* map, Seat* seat, Tile* tile, double turns
+SpellEyeEvil* SpellEyeEvil::spawnFree(GameMap* map, Seat* seat, Tile* tile, double turns)
 {
     if(map == nullptr || seat == nullptr || tile == nullptr)
         return nullptr;
@@ -136,7 +138,14 @@ void SpellEyeEvil::exportToStream(std::ostream& stream) const
 {
     Spell::exportToStream(stream);
     if(mFreeMode)
-        stream << " [FreeEye] " << mFreeRadius << ' ' << mFreeTurns << " [/FreeEye]";
+    {
+        const std::streamsize precision = stream.precision();
+        const std::ios::fmtflags flags = stream.flags();
+        stream << " [FreeEye] " << mFreeRadius << ' '
+               << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10) << mFreeTurns << " [/FreeEye]";
+        stream.flags(flags);
+        stream.precision(precision);
+    }
 }
 
 //! \brief Restores free reveals while preserving legacy ordinary eye records.

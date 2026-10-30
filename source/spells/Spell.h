@@ -74,6 +74,11 @@ public:
 
     static std::string getSpellStreamFormat();
 
+    //! \brief Saves a remaining lifetime for call-to-war and eye spells.
+    void exportToStream(std::ostream& os) const override;
+    //! \brief Restores an optional remaining lifetime while accepting older spell records.
+    bool importFromStream(std::istream& is) override;
+
 protected:
     void setDuration(double turns)
     { mNbTurns = turns; }
