@@ -1164,6 +1164,8 @@ void Creature::exportToStream(std::ostream& os) const
     }
     if(mGhostRevived)
         os << " [GhostRevival] " << mSpecialMood << ' ' << mThirst << " [/GhostRevival]";
+    if(mNbTurnsPrison != 0 || mNbTurnsTorture != 0)
+        os << " [Captivity] " << mNbTurnsPrison << ' ' << mNbTurnsTorture << " [/Captivity]";
     for(const std::unique_ptr<CreatureAction>& action : mActions)
         if(action->getType()==CreatureActionType::huntGhost)
             static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
@@ -1246,6 +1248,17 @@ bool Creature::importFromStream(std::istream& is)
     bool corpseDeathPending = false;
     while(is >> appearanceToken)
     {
+        if(appearanceToken == "[Captivity]")
+        {
+            int32_t prisonTurns, tortureTurns;
+            std::string close;
+            if(!(is >> prisonTurns >> tortureTurns >> close) || close != "[/Captivity]" ||
+               prisonTurns < 0 || tortureTurns < 0)
+                return false;
+            mNbTurnsPrison = prisonTurns;
+            mNbTurnsTorture = tortureTurns;
+            continue;
+        }
         if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size(), CORPSE_CARRIER_SAVE_LABEL) == 0)
         {
             mCorpseCarrierName = appearanceToken.substr(CORPSE_CARRIER_SAVE_LABEL.size());
