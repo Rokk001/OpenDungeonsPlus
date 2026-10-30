@@ -54,6 +54,9 @@ if "double mSpawnCreatureCountdown;" not in read("source", "rooms", "RoomPortal.
     problems.append("the portal spawn countdown must be a double")
 if 'SpawnCountdown ' not in portal or 'max_digits10' not in portal:
     problems.append("the portal must save its fractional spawn countdown")
+spell = read("source", "spells", "Spell.cpp")
+if '[SpellDuration]' not in spell or '[/SpellDuration]' not in spell or 'max_digits10' not in spell or 'std::defaultfloat' not in spell:
+    problems.append("persistent spells must save their fractional remaining duration")
 
 tremor = read("source", "spells", "SpellTremor.cpp")
 if 'creature->stun(nbTurns)' not in tremor or 'void stun(double nbTurns)' not in read("source", "entities", "Creature.h"):
