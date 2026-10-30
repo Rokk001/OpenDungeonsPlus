@@ -3,6 +3,7 @@
  * This program is free software under the GNU General Public License, version 3 or later.
  */
 #include "ai/AiMind.h"
+#include "ODApplication.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -227,7 +228,9 @@ void Mind::enqueue(const AiEvent& event)
     Reaction reaction;
     reaction.type = event.type;
     reaction.due = mNow + AiMath::reactionDelay(kind, delayParams(), uniformDraw);
-    reaction.time = event.time;
+    reaction.time = event.type == AiEventType::Fight
+        ? mNow - (mGameMap.getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond) - event.time)
+        : event.time;
     reaction.kind = kind;
     reaction.x = event.tile == nullptr ? -1 : event.tile->getX();
     reaction.y = event.tile == nullptr ? -1 : event.tile->getY();
@@ -268,6 +271,18 @@ bool Mind::slip(const std::string& rowId)
         return false;
     const ConfigManager::AiRowClass* row = ConfigManager::getSingleton().getAiRowClass(rowId);
     return row != nullptr && slip(rowId, row->mMultiplier);
+}
+
+//! \brief Updates queued fight reactions when their existing game marker is refreshed.
+void Mind::refreshFight(Tile* tile)
+{
+    if(tile == nullptr)
+        return;
+    for(Reaction& reaction : mEvents)
+    {
+        if(reaction.type == AiEventType::Fight && reaction.x == tile->getX() && reaction.y == tile->getY())
+            reaction.time = mNow;
+    }
 }
 
 //! \brief Draws a mistake using the supplied multiplier and the row's configured class.

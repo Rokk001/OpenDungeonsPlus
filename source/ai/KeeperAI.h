@@ -53,6 +53,9 @@ public:
     WAR::WarState& getWarState() { return mWar; }
     //! \brief Observes shared symptoms and queues the game's notice in the mind.
     void notifyEvent(const AiEvent& event) override;
+
+    //! \brief Updates a pending fight notice when the game refreshes its marker.
+    void refreshFight(Tile* tile) override;
     //! \brief The values of the selected AI level.
     const AiSettings& getSettings() const;
     //! \brief What the spell rows remember for this keeper (lives as long as the keeper).

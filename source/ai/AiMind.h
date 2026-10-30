@@ -129,6 +129,9 @@ public:
     double exec(const std::string& actionKey, int count, double from, const std::string& rowId,
                 Tile* tile, const std::string& target, const std::function<void()>& perform);
 
+    //! \brief Updates the last fight time in a pending reaction at the marker tile.
+    void refreshFight(Tile* tile);
+
     //! \brief Draws the mistake of a row with its class and multiplier from [RowClasses] and the
     //! mistake multiplier of the level.
     //! \return true when the mistake is taken.

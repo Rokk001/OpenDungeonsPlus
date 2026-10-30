@@ -426,8 +426,8 @@ std::vector<TRAP::Entrance> TRAP::findEntrances(KeeperAI& ai)
     return entrances;
 }
 
-//! \brief Plans trap and door work for the current trap look.
-void TRAP::trapLook(KeeperAI& ai)
+//! \brief Plans trap and door work, sharing an optional F14 mistake with the triggering fortification.
+void TRAP::trapLook(KeeperAI& ai, int* specialDoorMistake)
 {
     // AI row F01
     GameMap& gameMap = ai.getGameMap();
@@ -475,7 +475,7 @@ void TRAP::trapLook(KeeperAI& ai)
     if(state.mWantDivided == 1)
         want = std::max(1, want / static_cast<int>(aiKey("MistakeTrapWantDivisor")));
 
-    if(placeDoor(ai, entrances))
+    if(placeDoor(ai, entrances, false, specialDoorMistake))
         return;
 
     placeTrap(ai, trapTiles, want, entrances);
@@ -755,7 +755,8 @@ bool TRAP::reloadAllows(KeeperAI& ai, double cost)
     return (reloadMargin(ai) <= 0.0) || affordable(ai, cost);
 }
 
-bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed)
+//! \brief Plans a door using the shared F14 mistake when supplied.
+bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed, int* specialDoorMistake)
 {
     // AI row F13
     // AI row F14
@@ -816,7 +817,11 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool 
         return scheduled || stopped;
 
     // The special doors; the mistake does not use them at this look
-    if(entrances.empty() || ai.getMind().slip("F14"))
+    if(entrances.empty())
+        return false;
+    if(specialDoorMistake != nullptr && *specialDoorMistake < 0)
+        *specialDoorMistake = ai.getMind().slip("F14") ? 1 : 0;
+    if(specialDoorMistake != nullptr ? *specialDoorMistake != 0 : ai.getMind().slip("F14"))
         return false;
 
     Tile* heart = heartTile(ai);
@@ -871,15 +876,19 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     std::pair<int, int> tile(breakthrough->getX(), breakthrough->getY());
     if(std::find(state.mTunnels.begin(), state.mTunnels.end(), tile) == state.mTunnels.end())
         state.mTunnels.push_back(tile);
-    TRAP::trapLook(ai);
+    int specialDoorMistake = -1;
+    TRAP::trapLook(ai, &specialDoorMistake);
 
     std::vector<TRAP::Entrance> entrances = TRAP::findEntrances(ai);
     Seat* seat = ai.getControlledPlayer().getSeat();
     for(const TRAP::Entrance& entrance : entrances)
     {
-        if((entrance.mDoor == breakthrough) && SkillManager::isTrapAvailable(TrapType::doorBarricade, seat) &&
-           !ai.getMind().slip("F14"))
+        if((entrance.mDoor == breakthrough) && SkillManager::isTrapAvailable(TrapType::doorBarricade, seat))
         {
+            if(specialDoorMistake < 0)
+                specialDoorMistake = ai.getMind().slip("F14") ? 1 : 0;
+            if(specialDoorMistake != 0)
+                continue;
             Tile* inside = lineTile(ai.getGameMap(), entrance, 1);
             if(trapSpotFree(inside, seat))
                 buildOne(ai, TrapType::doorBarricade, inside);

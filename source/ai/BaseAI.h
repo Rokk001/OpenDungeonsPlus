@@ -45,6 +45,9 @@ public:
     //! \brief Accepts a game notice; controllers without a mind ignore it.
     virtual void notifyEvent(const AiEvent&) {}
 
+    //! \brief Updates the timestamp of a pending fight notice when its marker is refreshed.
+    virtual void refreshFight(Tile*) {}
+
     virtual ~BaseAI()
     {}
 

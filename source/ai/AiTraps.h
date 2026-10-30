@@ -83,7 +83,8 @@ std::vector<Entrance> findEntrances(KeeperAI& ai);
 
 //! \brief The trap look: plans the traps and doors of the entrances and builds at most one door or one trap tile.
 //! Does nothing without a workshop and the minimum number of room types.
-void trapLook(KeeperAI& ai);
+//! \param specialDoorMistake Optional shared F14 draw, initially -1.
+void trapLook(KeeperAI& ai, int* specialDoorMistake = nullptr);
 
 //! \brief Builds the next trap tile: the basic mix (spike, cannon, gas) up to the planned number of tiles, then one of
 //! the special traps (boulder, lightning, fireburst, freeze, alarm, fear trap, watch banner and trigger) per look. A
@@ -115,8 +116,9 @@ bool reloadAllows(KeeperAI& ai, double cost);
 //! a symptom delay.
 //! \param resumed True for the delayed look of a forgotten upgrade: it carries out the upgrade already decided at the
 //! look that drew the mistake, without a new draw and without the special doors of that look.
+//! \param specialDoorMistake Optional shared F14 draw, initially -1.
 //! \return true when a door was scheduled or a door waits for its gold: then the look buys no trap.
-bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed = false);
+bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed = false, int* specialDoorMistake = nullptr);
 
 //! \brief Fortifies the new tunnel entrance after the reaction time: three more trap tiles, a door and a barricade.
 //! The rule mistake adds a symptom delay before the fortification.
