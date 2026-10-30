@@ -340,14 +340,27 @@ bool buildOne(KeeperAI& ai, TrapType type, Tile* tile)
     return true;
 }
 
-//! \brief Returns the length of the straight run of corridor tiles inward from the door of the entrance.
-int corridorRun(GameMap& gameMap, const TRAP::Entrance& entrance)
+//! \brief Returns the known straight corridor length, or -1 if unseen tiles prevent the test.
+int corridorRun(GameMap& gameMap, Seat* seat, const TRAP::Entrance& entrance)
 {
+    AiKnowledge knowledge(gameMap, seat);
     int run = 0;
     for(int k = 1; k <= static_cast<int>(aiKey("BoulderCorridorMinTiles")); ++k)
     {
         Tile* tile = lineTile(gameMap, entrance, k);
-        if((tile == nullptr) || !TrapDoor::canDoorBeOnTile(&gameMap, tile))
+        if(tile == nullptr)
+            break;
+        if(!knowledge.isKnown(tile))
+            return -1;
+        if(tile->isFullTile())
+            break;
+        Tile* left = gameMap.getTile(tile->getX() - entrance.mDy, tile->getY() + entrance.mDx);
+        Tile* right = gameMap.getTile(tile->getX() + entrance.mDy, tile->getY() - entrance.mDx);
+        if(left == nullptr || right == nullptr)
+            break;
+        if(!knowledge.isKnown(left) || !knowledge.isKnown(right))
+            return -1;
+        if(!left->isFullTile() || !right->isFullTile())
             break;
         ++run;
     }
@@ -562,7 +575,10 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         for(const TRAP::Entrance& entrance : entrances)
         {
             // A straight corridor of the minimum length; the mistake takes a bend instead
-            bool straight = corridorRun(gameMap, entrance) >= static_cast<int>(aiKey("BoulderCorridorMinTiles"));
+            int run = corridorRun(gameMap, seat, entrance);
+            if(run < 0)
+                continue;
+            bool straight = run >= static_cast<int>(aiKey("BoulderCorridorMinTiles"));
             if(straight == slipped)
                 continue;
 
