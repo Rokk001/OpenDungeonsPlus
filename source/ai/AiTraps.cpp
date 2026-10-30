@@ -953,10 +953,10 @@ bool pendingStep(KeeperAI& ai)
     return false;
 }
 
-//! \brief The reaction to a destroyed building: a broken door of an entrance is rebuilt at once (row F13).
+//! \brief Rebuilds a broken entrance door; old events with unknown class keep their previous behavior (row F13).
 void onBuildingDestroyed(KeeperAI& ai, const AiEvent& event)
 {
-    if(event.tile == nullptr)
+    if(event.tile == nullptr || event.buildingClass == 2)
         return;
 
     std::vector<TRAP::Entrance> entrances = TRAP::findEntrances(ai);
