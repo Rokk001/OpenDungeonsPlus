@@ -17,6 +17,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/LevelScript.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "utils/Random.h"
@@ -115,6 +116,16 @@ std::string careNumber(double value)
     return out.str();
 }
 
+//! \brief Slaps a still-brawling creature using the same legality checks as a keeper.
+void stopBrawl(KeeperAI& ai, Tile*, const std::string& name)
+{
+    Creature* creature = ai.getGameMap().getCreature(name);
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    if(creature != nullptr && creature->isBrawling() && creature->canSlap(seat) &&
+       ai.getGameMap().getLevelScript().registerSlap(seat->getId()))
+        creature->slap();
+}
+
 //! \brief Resolves current targets and vision again when a live or restored possession input executes.
 void possessionInput(KeeperAI& ai, Tile*, const std::string& input)
 {
@@ -170,6 +181,8 @@ CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mLoaded
     mind.onAction("pickup", "G02", std::bind(&Controller::prisonPickup, this,
         std::placeholders::_1, std::placeholders::_2));
     mind.onAction("drop", "G02", std::bind(&Controller::prisonDrop, this,
+        std::placeholders::_1, std::placeholders::_2));
+    mind.onAction("slap", "D04", std::bind(stopBrawl, std::ref(ai),
         std::placeholders::_1, std::placeholders::_2));
     mind.onEvent("H03", {AiEventType::SpecialStored, AiEventType::Fight, AiEventType::CreatureMood,
         AiEventType::Start, AiEventType::Launch}, std::bind(&Controller::event, this, std::placeholders::_1));
@@ -337,7 +350,8 @@ void CARE::slapWatch(KeeperAI& ai, SlapState& state)
     const double now = ai.getMind().now();
     for(Creature* creature : ownFighters(ai))
         if(creature->isBrawling())
-            ACTS::slap(ai, creature);
+            ai.getMind().exec("slap", 1, now, "D04", nullptr, creature->getName(),
+                std::bind(stopBrawl, std::ref(ai), static_cast<Tile*>(nullptr), creature->getName()));
     if(now < state.nextCheck)
         return;
     ConfigManager& config = ConfigManager::getSingleton();
