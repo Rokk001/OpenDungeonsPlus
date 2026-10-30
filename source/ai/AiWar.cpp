@@ -817,6 +817,7 @@ void marchOff(Env& env)
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
 }
 
+//! \brief Advances the assault and checks whether its attackers should retreat.
 void assaultStep(Env& env)
 {
     // AI row K09: banners are renewed and moved to the next target
@@ -927,11 +928,9 @@ void assaultStep(Env& env)
         endAssault(env);
         return;
     }
-    if(powerOf(out) < env.settings.retreatThreshold * powerOf(defenders))
-    {
-        if(!env.mind.slip("K07"))
-            endAssault(env);
-    }
+    const bool mistake = env.mind.slip("K07");
+    if(powerOf(out) < env.settings.retreatThreshold * powerOf(defenders) && !mistake)
+        endAssault(env);
 }
 
 //! \brief Plans immediately or records the window for a second wave after the current assault.
@@ -1274,12 +1273,13 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
         return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"))) ||
+               ((line.tokens[0] == "K07") && (line.tokens[1] == "retreatCheck")) ||
                ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
     return false;
 }
 }
 
-//! \brief Saves war observations and the remaining second-wave window.
+//! \brief Saves war observations, the retreat timer and the remaining second-wave window.
 void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
 {
     const WarState& st = env.state;
@@ -1306,6 +1306,8 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     a.push_back(st.contactTime < 0.0 ? "-1" : num(env.now - st.contactTime));
     a.push_back(num(std::max(0.0, key("RestSecondsAfterAssault") - (env.now - st.lastAssaultEnd))));
     addLine(lines, "war", a);
+    if(st.assault != WarState::assaultNone)
+        addLine(lines, "draw", {"K07", "retreatCheck", num(std::max(0.0, st.nextRetreatCheck - env.now))});
     if(st.secondWaveUntil >= env.now)
         addLine(lines, "draw", {"K08", "secondWave", num(st.secondWaveUntil - env.now)});
 
@@ -1398,7 +1400,7 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     }
 }
 
-//! \brief Restores war observations and the saved second-wave window.
+//! \brief Restores war observations, the retreat timer and the saved second-wave window.
 void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
 {
     WarState& st = env.state;
@@ -1409,7 +1411,9 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         const std::vector<std::string>& k = line.tokens;
         if(k.empty())
             continue;
-        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
+        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K07") && (k[1] == "retreatCheck"))
+            st.nextRetreatCheck = env.now + std::atof(k[2].c_str());
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
             st.secondWaveUntil = env.now + std::atof(k[2].c_str());
         else if((line.tag == "war") && (k[0] == "tunnel"))
         {
