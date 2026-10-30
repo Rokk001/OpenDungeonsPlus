@@ -494,6 +494,7 @@ void TRAP::trapLook(KeeperAI& ai)
     placeTrap(ai, trapTiles, want, entrances);
 }
 
+//! \brief Plans one basic or special trap at an eligible entrance.
 bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<Entrance>& entrances)
 {
     // AI row F02
@@ -605,6 +606,21 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         }
         if((spot == nullptr) && (innermost >= 0))
             spot = lineTile(gameMap, entrances[innermost], 1);
+        if(slipped && spot != nullptr && (spot->getType() == TileType::water || spot->getType() == TileType::lava))
+            spot = nullptr;
+        if(slipped && !trapSpotFree(spot, seat))
+        {
+            spot = nullptr;
+            for(const TRAP::Entrance& entrance : entrances)
+            {
+                for(int k = 1; spot == nullptr && k <= static_cast<int>(aiKey("CannonMaxDoorDistance")); ++k)
+                {
+                    Tile* tile = lineTile(gameMap, entrance, k);
+                    if(trapSpotFree(tile, seat) && tile->getType() != TileType::water && tile->getType() != TileType::lava)
+                        spot = tile;
+                }
+            }
+        }
         if(trapSpotFree(spot, seat) && buildOne(ai, TrapType::lightning, spot))
             return true;
     }
