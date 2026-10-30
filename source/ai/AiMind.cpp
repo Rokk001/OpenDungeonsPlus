@@ -92,6 +92,9 @@ AiMath::ReactionKind reactionKind(AiEventType type)
 {
     if(type >= AiEventType::Plan)
         return AiMath::ReactionKind::internal;
+    if((type >= AiEventType::GoldBelowBill && type <= AiEventType::EnemyTrapEmpty) ||
+       type == AiEventType::FirstPortalArrival || type == AiEventType::Loot || type == AiEventType::LabIdle)
+        return AiMath::ReactionKind::alert;
     if(type >= AiEventType::NoMarkedTile || type == AiEventType::NoSkillInQueue ||
         type == AiEventType::Dirt || type == AiEventType::NoBed || type == AiEventType::NoFood)
         return AiMath::ReactionKind::symptom;
