@@ -99,6 +99,8 @@ struct ConfigManager {std::map<std::string,double> values;
  double getTimePayDay()const{return values.at("TimePayDay");}
  //! \brief Supplies the real merchant purchase share and room amounts.
  double getRoomConfigDouble(const std::string& name)const{return values.at(name);}
+ //! \brief Supplies the configured room value for the merchant trade decision.
+ double getRoomConfigDoubleOrDefault(const std::string& name,double)const{return values.at(name);}
  //! \brief Supplies the configured item effect setting used by the codec.
  double getItemSetting(const std::string&,const std::string& key)const{return values.at(key);}
  //! \brief Supplies the real equipment limits; every key the fixture reaches is loaded from the config.
