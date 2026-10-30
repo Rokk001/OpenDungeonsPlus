@@ -368,6 +368,7 @@ int corridorRun(GameMap& gameMap, Seat* seat, const TRAP::Entrance& entrance)
 }
 }
 
+//! \brief Finds owned entrances and fortified tunnels using the keeper's known tiles.
 std::vector<TRAP::Entrance> TRAP::findEntrances(KeeperAI& ai)
 {
     GameMap& gameMap = ai.getGameMap();
@@ -421,19 +422,20 @@ std::vector<TRAP::Entrance> TRAP::findEntrances(KeeperAI& ai)
         {
             Entrance entrance;
             entrance.mDoor = tunnel;
-            entrance.mDx = 1;
-            entrance.mDy = 0;
+            bool foundOutside = false;
             for(int i = 0; i < 4; ++i)
             {
                 Tile* outside = gameMap.getTile(tunnel->getX() + dx[i], tunnel->getY() + dy[i]);
-                if((outside != nullptr) && !outside->isFullTile() && !outside->isClaimedForSeat(seat))
+                if((outside != nullptr) && knowledge.isKnown(outside) && !outside->isFullTile() && !outside->isClaimedForSeat(seat))
                 {
                     entrance.mDx = -dx[i];
                     entrance.mDy = -dy[i];
+                    foundOutside = true;
                     break;
                 }
             }
-            entrances.push_back(entrance);
+            if(foundOutside)
+                entrances.push_back(entrance);
         }
     }
     return entrances;
