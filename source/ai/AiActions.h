@@ -23,6 +23,8 @@ void bind(KeeperAI& ai);
 void markDig(KeeperAI& ai, const std::vector<Tile*>& tiles, bool marked);
 //! \brief Schedules building a room on the selected tiles.
 void buildRoom(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tiles);
+//! \brief Returns whether the same room build is already queued.
+bool isRoomBuildPending(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tiles);
 //! \brief Schedules selling room tiles.
 void sellRoomTiles(KeeperAI& ai, const std::vector<Tile*>& tiles);
 //! \brief Schedules building a trap on the selected tiles.
@@ -49,8 +51,8 @@ void setRoomSetting(KeeperAI& ai, Room* room, ODPacket& packet);
 void setResearch(KeeperAI& ai, const std::vector<SkillType>& skills);
 //! \brief Schedules using a stored special.
 void useSpecial(KeeperAI& ai, GiftBoxType type);
-//! \brief Schedules a merchant purchase using its server request.
-void merchantBuy(KeeperAI& ai, ODPacket& packet);
+//! \brief Schedules a merchant purchase for the selected fighter.
+void merchantBuy(KeeperAI& ai, ODPacket& packet, Creature* creature, bool mistaken);
 }
 
 #endif // AIACTIONS_H
