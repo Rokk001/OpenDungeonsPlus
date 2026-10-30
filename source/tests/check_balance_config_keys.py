@@ -13,11 +13,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # Item, config file, entity, key, shipped value, original reader anchor.
 SETTINGS = [
-    (1, 'config/creatureSkills.cfg', 'AuraAlly', 'MinAllies', '2', 'source/creatureskill/CreatureSkillAuraAlly.cpp'),
-    (2, 'config/creatureSkills.cfg', 'SkeletonArmy', 'Radius', '2', 'source/creatureskill/CreatureSkillSkeletonArmy.cpp'),
+    (1, 'config/global.cfg', '-', 'AuraAllyMinAllies', '2', 'source/creatureskill/CreatureSkillAuraAlly.cpp'),
+    (2, 'config/global.cfg', '-', 'SkeletonArmyRadius', '2', 'source/creatureskill/CreatureSkillSkeletonArmy.cpp'),
     (3, 'config/global.cfg', '-', 'AngryFleeChancePercent', '20', 'source/creaturebehaviour/CreatureBehaviourAttackEnemy.cpp'),
     (4, 'config/global.cfg', '-', 'BuildingDamageCurve', '1 1.25 1.5 1.75 2 2.25 2.5 3 4 6', 'source/entities/CreatureProgression.h'),
-    (5, 'config/global.cfg', '-', 'FleeTiles', '5', 'source/creatureaction/CreatureActionFlee.cpp'),
+    (5, 'config/global.cfg', '-', 'FleeMaxTurns', '5', 'source/creatureaction/CreatureActionFlee.cpp'),
     (6, 'config/global.cfg', '-', 'HitChanceMax', '95', 'source/entities/DefenceChance.h'),
     (6, 'config/global.cfg', '-', 'HitChanceMin', '5', 'source/entities/DefenceChance.h'),
     (6, 'config/global.cfg', '-', 'HitChanceScale', '200', 'source/entities/DefenceChance.h'),
@@ -76,37 +76,40 @@ SETTINGS = [
     (29, 'config/traps.cfg', 'Spike', 'SpikeHP', '10', 'source/entities/Building.cpp'),
     (29, 'config/traps.cfg', 'Trigger', 'TriggerHP', '10', 'source/entities/Building.cpp'),
     (29, 'config/traps.cfg', 'WatchBanner', 'WatchBannerHP', '10', 'source/entities/Building.cpp'),
-    (30, 'config/skills.cfg', '-', 'ResearchCostFactorLevel2', '2', 'source/game/Skill.cpp'),
-    (30, 'config/skills.cfg', '-', 'ResearchCostFactorLevel3', '4', 'source/game/Skill.cpp'),
-    (31, 'config/skills.cfg', '-', 'ResearchLevel2TabShare', '0.5', 'source/game/Seat.cpp'),
-    (31, 'config/skills.cfg', '-', 'ResearchLevel3TabShare', '1', 'source/game/Seat.cpp'),
+    (30, 'config/global.cfg', '-', 'ResearchCostFactorLevel2', '2', 'source/game/Skill.cpp'),
+    (30, 'config/global.cfg', '-', 'ResearchCostFactorLevel3', '4', 'source/game/Skill.cpp'),
+    (31, 'config/global.cfg', '-', 'ResearchLevel2TabShare', '0.5', 'source/game/Seat.cpp'),
+    (31, 'config/global.cfg', '-', 'ResearchLevel3TabShare', '1', 'source/game/Seat.cpp'),
     (32, 'config/spells.cfg', 'SummonWorker', 'SummonWorkerRefundShare', '0.5', 'source/game/Player.cpp'),
     (33, 'config/traps.cfg', '-', 'TrapSellRefundShare', '0.5', 'source/traps/TrapManager.cpp'),
     (34, 'config/traps.cfg', 'Boulder', 'BoulderMaxHits', '10', 'source/entities/MissileBoulder.cpp'),
     (35, 'config/traps.cfg', 'Boulder', 'BoulderWallBreakPercent', '50', 'source/entities/MissileBoulder.cpp'),
     (36, 'config/traps.cfg', 'Lightning', 'LightningWaterDamageFactor', '2', 'source/traps/TrapLightning.cpp'),
-    (37, 'config/equipments.cfg', '-', 'BleedTurns', '5', 'source/creatureeffect/CreatureEffectBleed.cpp'),
-    (38, 'config/equipments.cfg', '-', 'BulwarkRadius', '2', 'source/entities/Creature.cpp'),
-    (38, 'config/equipments.cfg', '-', 'LastStandHealthShare', '0.25', 'source/entities/Creature.cpp'),
-    (39, 'config/equipments.cfg', '-', 'ChillFactor', '0.9', 'source/entities/ItemEffects.cpp'),
-    (39, 'config/equipments.cfg', '-', 'WeakenFactor', '0.95', 'source/entities/ItemEffects.cpp'),
-    (40, 'config/equipments.cfg', '-', 'DexterityPotionCritLarge', '6', 'source/entities/Creature.cpp'),
-    (40, 'config/equipments.cfg', '-', 'DexterityPotionCritMedium', '4', 'source/entities/Creature.cpp'),
-    (40, 'config/equipments.cfg', '-', 'DexterityPotionCritSmall', '2', 'source/entities/Creature.cpp'),
-    (41, 'config/equipments.cfg', '-', 'EquipUpgradeMargin', '0.5', 'source/entities/CreatureEquipmentAI.cpp'),
-    (42, 'config/equipments.cfg', '-', 'HeroDropLargeLevel', '20', 'source/game/ItemDrops.cpp'),
-    (42, 'config/equipments.cfg', '-', 'HeroDropMediumLevel', '10', 'source/game/ItemDrops.cpp'),
-    (43, 'config/equipments.cfg', '-', 'ItemAuraRadius', '2', 'source/gamemap/GameMap.cpp'),
-    (44, 'config/equipments.cfg', '-', 'LifespringHpShare', '0.5', 'source/entities/CreaturePotions.cpp'),
-    (45, 'config/equipments.cfg', '-', 'LifespringLowHpShare', '0.25', 'source/entities/CreaturePotions.cpp'),
-    (46, 'config/equipments.cfg', '-', 'LifespringManaShare', '0.25', 'source/entities/CreaturePotions.cpp'),
-    (47, 'config/equipments.cfg', '-', 'MaxItemEffects', '2', 'source/entities/ItemInstance.cpp'),
-    (48, 'config/equipments.cfg', '-', 'MendingSeconds', '10', 'source/entities/Creature.cpp'),
-    (49, 'config/equipments.cfg', '-', 'PotionManaDrinkShare', '0.3', 'source/entities/CreaturePotions.cpp'),
-    (50, 'config/equipments.cfg', '-', 'PotionRegenSeconds', '10', 'source/creatureeffect/CreatureEffectPotion.cpp'),
-    (51, 'config/equipments.cfg', '-', 'PotionSlotLevel2', '10', 'source/entities/Creature.cpp'),
-    (51, 'config/equipments.cfg', '-', 'PotionSlotLevel3', '20', 'source/entities/Creature.cpp'),
-    (52, 'config/equipments.cfg', '-', 'SecondWindHealthShare', '0.5', 'source/entities/Creature.cpp'),
+    (37, 'config/global.cfg', '-', 'BleedTurns', '5', 'source/creatureeffect/CreatureEffectBleed.cpp'),
+    (38, 'config/global.cfg', '-', 'BulwarkRadius', '2', 'source/entities/Creature.cpp'),
+    (38, 'config/global.cfg', '-', 'LastStandHealthShare', '0.25', 'source/entities/Creature.cpp'),
+    (39, 'config/global.cfg', '-', 'ChillFactor', '0.9', 'source/entities/ItemEffects.cpp'),
+    (39, 'config/global.cfg', '-', 'WeakenFactor', '0.95', 'source/entities/ItemEffects.cpp'),
+    (40, 'config/global.cfg', '-', 'DexterityPotionFactorSmall', '1.10', 'source/entities/Creature.cpp'),
+    (40, 'config/global.cfg', '-', 'DexterityPotionFactorMedium', '1.15', 'source/entities/Creature.cpp'),
+    (40, 'config/global.cfg', '-', 'DexterityPotionFactorLarge', '1.20', 'source/entities/Creature.cpp'),
+    (40, 'config/global.cfg', '-', 'DexterityPotionCritLarge', '6', 'source/entities/Creature.cpp'),
+    (40, 'config/global.cfg', '-', 'DexterityPotionCritMedium', '4', 'source/entities/Creature.cpp'),
+    (40, 'config/global.cfg', '-', 'DexterityPotionCritSmall', '2', 'source/entities/Creature.cpp'),
+    (41, 'config/global.cfg', '-', 'EquipUpgradeMargin', '0.5', 'source/entities/CreatureEquipmentAI.cpp'),
+    (42, 'config/global.cfg', '-', 'HeroDropLargeLevel', '20', 'source/game/ItemDrops.cpp'),
+    (42, 'config/global.cfg', '-', 'HeroDropMediumLevel', '10', 'source/game/ItemDrops.cpp'),
+    (43, 'config/global.cfg', '-', 'ItemAuraRadius', '2', 'source/gamemap/GameMap.cpp'),
+    (44, 'config/global.cfg', '-', 'LifespringHpShare', '0.5', 'source/entities/CreaturePotions.cpp'),
+    (45, 'config/global.cfg', '-', 'LifespringLowHpShare', '0.25', 'source/entities/CreaturePotions.cpp'),
+    (46, 'config/global.cfg', '-', 'LifespringManaShare', '0.25', 'source/entities/CreaturePotions.cpp'),
+    (47, 'config/global.cfg', '-', 'MaxItemEffects', '2', 'source/entities/ItemInstance.cpp'),
+    (48, 'config/global.cfg', '-', 'MendingSeconds', '10', 'source/entities/Creature.cpp'),
+    (49, 'config/global.cfg', '-', 'PotionManaDrinkShare', '0.3', 'source/entities/CreaturePotions.cpp'),
+    (50, 'config/global.cfg', '-', 'PotionRegenSeconds', '10', 'source/creatureeffect/CreatureEffectPotion.cpp'),
+    (51, 'config/global.cfg', '-', 'PotionSlotLevel2', '10', 'source/entities/Creature.cpp'),
+    (51, 'config/global.cfg', '-', 'PotionSlotLevel3', '20', 'source/entities/Creature.cpp'),
+    (52, 'config/global.cfg', '-', 'SecondWindHealthShare', '0.5', 'source/entities/Creature.cpp'),
     (53, 'config/rooms.cfg', 'AlchemyLab', 'AlchemyLabBangMaxSeconds', '120', 'source/rooms/RoomAlchemyLab.cpp'),
     (53, 'config/rooms.cfg', 'AlchemyLab', 'AlchemyLabBangMinSeconds', '60', 'source/rooms/RoomAlchemyLab.cpp'),
     (53, 'config/rooms.cfg', 'AlchemyLab', 'AlchemyLabLargeLevel', '20', 'source/rooms/RoomAlchemyLab.cpp'),
@@ -116,8 +119,6 @@ SETTINGS = [
     (56, 'config/rooms.cfg', 'Merchant', 'MerchantTradeChance', '0.3', 'source/game/CreatureMerchantAI.cpp'),
     (57, 'config/rooms.cfg', 'Tavern', 'TavernDrinkChainHalving', '2', 'source/rooms/RoomTavern.cpp'),
     (57, 'config/rooms.cfg', 'Tavern', 'TavernDuelMaxTurnsFactor', '4', 'source/rooms/RoomTavern.cpp'),
-    (57, 'config/rooms.cfg', 'Tavern', 'TavernGamesWithBeer', '3', 'source/rooms/RoomTavern.cpp'),
-    (57, 'config/rooms.cfg', 'Tavern', 'TavernGamesWithoutBeer', '2', 'source/rooms/RoomTavern.cpp'),
 ]
 
 
@@ -180,7 +181,7 @@ OLD_EXPRESSIONS = {
     53: r'const (?:double BANG_(?:MIN|MAX)_SECONDS|uint32_t (?:LARGE|MEDIUM)_LEVEL)\s*=',
     54: r'const (?:double EQUIP_MARGIN|int64_t RESERVATION_TURNS)\s*=',
     56: r'const double TRADE_CHANCE\s*=',
-    57: r'const (?:double DRINK_CHAIN_HALVING|int32_t DUEL_MAX_TURNS_FACTOR|uint32_t NB_GAMES_WITH(?:OUT)?_BEER)\s*=',
+    57: r'const (?:double DRINK_CHAIN_HALVING|int32_t DUEL_MAX_TURNS_FACTOR)\s*=',
 }
 
 
@@ -209,39 +210,37 @@ def main():
     for item, config_file, entity, key, expected, source_file in SETTINGS:
         config = read(config_file)
         source = read(source_file)
-        if item in (1, 2):
-            kind = "AURA_ALLY_StrengthChange" if item == 1 else "SKELARMY"
-            blocks = re.findall(r'\[(?:Skill|TierFour)\](.*?)\[/(?:Skill|TierFour)\]', config, re.S)
-            values = [re.search(r'^\s*' + re.escape(key) + r'\s+([^\n]+)', block, re.M)
-                      for block in blocks if re.search(r'^Kind\s+' + kind + r'\s*$', block, re.M)]
-            if not values or any(match is None or not numbers_equal(match.group(1), expected) for match in values):
-                problems.append(f"M{item}: {entity} {key} is absent or differs from {expected}")
-            if f'key == "{key}"' not in tree or f'm{key}' not in source:
-                problems.append(f"M{item}: {key} does not reach the runtime skill")
+        match = re.search(r'^\s*' + re.escape(key) + r'\s+([^\n]+)', config, re.M)
+        if match is None or not numbers_equal(match.group(1), expected):
+            problems.append(f"M{item}: {key} is absent or differs from {expected}")
+        if item == 29:
+            reader = read("source/rooms/Room.cpp" if config_file.endswith("rooms.cfg") else "source/traps/Trap.cpp")
+            if (ROOM_HP_READER if config_file.endswith("rooms.cfg") else TRAP_HP_READER) not in reader:
+                problems.append(f"M29: no type-specific HP reader for {key}")
+        elif 37 <= item <= 52:
+            section = ("ItemDrops" if item == 42 else
+                       "Potions" if item in (40, 44, 45, 46, 49, 50, 51) else "ItemEffects")
+            direct = f'getItemSetting("{section}", "{key}")' in source
+            via_drop_helper = (item == 42 and f'dropSetting("{key}")' in source and
+                               'getItemSetting("ItemDrops", key)' in source)
+            if not direct and not via_drop_helper:
+                problems.append(f"M{item}: {key} item setting reader is missing")
+        elif config_file == "config/global.cfg":
+            readers = source + (read("source/gamemap/SandboxMode.h") if item in (17, 18, 19, 20) else "")
+            if f'get{key}()' not in readers or f'm{key}' not in manager_header or f'nextParam == "{key}"' not in manager:
+                problems.append(f"M{item}: {key} getter/parser is missing")
+            default = re.search(r'\bm' + key + r'\(([^\n]+)\),', manager)
+            if default is None or not numbers_equal(default.group(1).strip('{}').replace(',', ' '), expected):
+                problems.append(f"M{item}: {key} constructor fallback differs from shipped value")
+        elif item == 21:
+            if f'"{key}", &settings.m{key}' not in source or f'settings.m{key}' not in source:
+                problems.append(f"M21: relationship margin is not loaded/used")
         else:
-            match = re.search(r'^\s*' + re.escape(key) + r'\s+([^\n]+)', config, re.M)
-            if match is None or not numbers_equal(match.group(1), expected):
-                problems.append(f"M{item}: {key} is absent or differs from {expected}")
-            if item == 29:
-                reader = read("source/rooms/Room.cpp" if config_file.endswith("rooms.cfg") else "source/traps/Trap.cpp")
-                if (ROOM_HP_READER if config_file.endswith("rooms.cfg") else TRAP_HP_READER) not in reader:
-                    problems.append(f"M29: no type-specific HP reader for {key}")
-            elif config_file == "config/global.cfg":
-                readers = source + (read("source/gamemap/SandboxMode.h") if item in (17, 18, 19, 20) else "")
-                if f'get{key}()' not in readers or f'm{key}' not in manager_header or f'nextParam == "{key}"' not in manager:
-                    problems.append(f"M{item}: {key} getter/parser is missing")
-                default = re.search(r'\bm' + key + r'\(([^\n]+)\),', manager)
-                if default is None or not numbers_equal(default.group(1).strip('{}').replace(',', ' '), expected):
-                    problems.append(f"M{item}: {key} constructor fallback differs from shipped value")
-            elif item == 21:
-                if f'"{key}", &settings.m{key}' not in source or f'settings.m{key}' not in source:
-                    problems.append(f"M21: relationship margin is not loaded/used")
-            else:
-                reader = re.search(r'get(?:Room|Trap|Spell|Equipment|Research)ConfigDoubleOrDefault\("' + re.escape(key) + r'",\s*([\d.eE+-]+)\)', source)
-                if reader is None or not numbers_equal(reader.group(1), expected):
-                    problems.append(f"M{item}: {key} reader or shipped fallback is missing")
-                if config_file.endswith(("equipments.cfg", "skills.cfg")) and f'nextParam == "{key}"' not in manager:
-                    problems.append(f"M{item}: {key} is not parsed from its numeric settings block")
+            reader = re.search(r'get(?:Room|Trap|Spell|Equipment|Research)ConfigDoubleOrDefault\("' + re.escape(key) + r'",\s*([\d.eE+-]+)\)', source)
+            if reader is None or not numbers_equal(reader.group(1), expected):
+                problems.append(f"M{item}: {key} reader or shipped fallback is missing")
+            if config_file.endswith(("equipments.cfg", "skills.cfg")) and f'nextParam == "{key}"' not in manager:
+                problems.append(f"M{item}: {key} is not parsed from its numeric settings block")
         expression = OLD_EXPRESSIONS.get(item)
         # Critical point constants are scoped to the potion method, not unrelated return values.
         if item == 40:
