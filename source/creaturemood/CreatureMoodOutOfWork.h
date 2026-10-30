@@ -39,7 +39,8 @@ public:
     const std::string& getModifierName() const override;
 
     //! \brief Returns the mood change for the turns the creature found no job beyond TurnsMin (counted up to TurnsMax turns).
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     //! \brief Turns without a job from which the mood starts to drop
     inline int32_t getTurnsMin() const
@@ -62,7 +63,7 @@ public:
 private:
     int32_t mTurnsMin;
     int32_t mTurnsMax;
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODOUTOFWORK_H

@@ -127,6 +127,10 @@ struct ConfigManager {
     double getItemSetting(const std::string& section,const std::string& key) const { return settings.at(section).at(key); }
     //! \brief Returns a required numeric room configuration input.
     double getRoomConfigDouble(const std::string& key) const { return settings.at("Rooms").at(key); }
+    //! \brief Returns a room setting when the fixture read it, else the code fallback (equal to the shipped value).
+    double getRoomConfigDoubleOrDefault(const std::string& key, double fallback) const { std::map<std::string,std::map<std::string,double>>::const_iterator rooms=settings.find("Rooms"); if(rooms==settings.end()) return fallback; std::map<std::string,double>::const_iterator found=rooms->second.find(key); return found==rooms->second.end()?fallback:found->second; }
+    //! \brief Returns an equipment setting; the code fallback equals the shipped equipments.cfg value.
+    double getEquipmentConfigDoubleOrDefault(const std::string&, double fallback) const { return fallback; }
     //! \brief Returns the configured soul crystal price of the global settings.
     double getSoulCrystalPrice() const { return 800.0; }
     //! \brief Returns the configured hero soul crystal chance at the first level.
@@ -394,7 +398,7 @@ bool GameMap::withdrawFromTreasuries(int32_t amount,Seat* seat) { if(seat->treas
     definitions = source("source/entities/CreatureDefinition.cpp")
     fixture += function(definitions, "const CreatureRoomAffinity& CreatureDefinition::getRoomAffinity(")
     equipment = source("source/entities/CreatureEquipmentAI.cpp")
-    fixture += "\nstatic const double EQUIP_UPGRADE_MARGIN=0.5;\n" + function(equipment, "bool sameItemPath(")
+    fixture += "\n" + function(equipment, "bool sameItemPath(")
     for signature in ("int32_t Creature::getItemEquipmentSlot(", "bool Creature::isItemEquippable(",
                       "double Creature::rateItem(", "bool Creature::acceptItem(", "void Creature::decideEquipment(", "void Creature::dropItems("):
         fixture += "\n" + function(equipment, signature)

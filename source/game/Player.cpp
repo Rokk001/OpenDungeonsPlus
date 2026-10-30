@@ -438,6 +438,7 @@ void Player::removeEntityFromHand(GameEntity* entity)
     }
 }
 
+//! \brief Dismisses a worker in its heart and refunds the configured mana share.
 bool Player::redemWorkerInHeart(GameEntity* entity, Tile* tile)
 {
     // Only a human dropping an own worker on the tile of a living own heart redeems it.
@@ -473,9 +474,9 @@ bool Player::redemWorkerInHeart(GameEntity* entity, Tile* tile)
     if(heart == nullptr)
         return false;
 
-    // Half of what summoning this worker costs at the current worker count
+    // The configured share of the summoning cost at the current worker count
     int32_t refund = static_cast<int32_t>(
-        SpellSummonWorker::getNextWorkerPriceForPlayer(mGameMap, this) / 2);
+        SpellSummonWorker::getNextWorkerPriceForPlayer(mGameMap, this) * ConfigManager::getSingleton().getSpellConfigDoubleOrDefault("SummonWorkerRefundShare", 0.5));
     getSeat()->addMana(static_cast<double>(refund));
 
     ServerNotification* serverNotification = new ServerNotification(
@@ -1239,6 +1240,7 @@ uint32_t Player::getNbWorkersDoing(CreatureActionType actionType) const
     return mWorkersActions.at(index);
 }
 
+//! \brief Orders worker actions using the configured worker shares.
 std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& worker) const
 {
     std::vector<CreatureActionType> ret;
@@ -1269,14 +1271,14 @@ std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& work
     }
 
     bool isCarryAdded = false;
-    if(WorkerShare::isCarryFirst(nbWorkersCarrying, nbWorkersTotal))
+    if(WorkerShare::isCarryFirst(nbWorkersCarrying, nbWorkersTotal, ConfigManager::getSingleton().getWorkerCarryFirstMaxShare()))
     {
         isCarryAdded = true;
         ret.push_back(CreatureActionType::searchEntityToCarry);
     }
 
     bool isClaimWallAdded = false;
-    if(WorkerShare::isClaimWallFirst(nbWorkersDigging, nbWorkersClaimingGround, nbWorkersTotal))
+    if(WorkerShare::isClaimWallFirst(nbWorkersDigging, nbWorkersClaimingGround, nbWorkersTotal, ConfigManager::getSingleton().getWorkerClaimWallFirstMinShare()))
     {
         isClaimWallAdded = true;
         ret.push_back(CreatureActionType::searchWallTileToClaim);

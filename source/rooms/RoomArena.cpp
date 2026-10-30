@@ -308,7 +308,7 @@ void RoomArena::updatePitMood()
     // A creature alone in the pit is annoyed (negative mood points per second)
     if(mCreaturesFighting.size() == 1)
     {
-        double solitary = config.getRoomConfigDoubleOrDefault("PitMoodSolitary", 0.0);
+        double solitary = config.getRoomConfigDoubleOrDefault("PitMoodSolitary", -22.0);
         mCreaturesFighting[0]->addPitMood(solitary / ODApplication::turnsPerSecond);
     }
 
@@ -328,7 +328,7 @@ void RoomArena::updatePitMood()
         mFightOngoing = true;
 
         // Creatures of the owner watching the fight are cheered up
-        double spectator = config.getRoomConfigDoubleOrDefault("PitMoodSpectator", 0.0);
+        double spectator = config.getRoomConfigDoubleOrDefault("PitMoodSpectator", 28.0);
         double radius = config.getRoomConfigDoubleOrDefault("PitSpectatorRadius", DEFAULT_PIT_SPECTATOR_RADIUS);
         double squaredRadius = radius * radius;
         double moodPerTurn = spectator / ODApplication::turnsPerSecond;
@@ -364,7 +364,7 @@ void RoomArena::updatePitMood()
         mFightOngoing = false;
         if(lastActive != nullptr)
         {
-            lastActive->addPitMood(config.getRoomConfigDoubleOrDefault("PitMoodVictor", 0.0));
+            lastActive->addPitMood(config.getRoomConfigDoubleOrDefault("PitMoodVictor", 1000.0));
             CreatureMerchantAI::collectArenaGifts(*lastActive);
         }
     }

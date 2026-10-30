@@ -234,6 +234,9 @@ public:
     //! \brief A guest in a game, lying on the floor or getting up does not stop because it is hungry or tired.
     bool shouldStopUseIfHungrySleepy(Creature& creature, bool forced) override;
 
+    //! \brief Returns whether this guest is arriving for a drink or drinking.
+    bool isGuestDrinking(const Creature& creature);
+
     //! \brief A guest in a game, lying on the floor or getting up does not stop because of its mood.
     bool shouldNotUseIfBadMood(Creature& creature, bool forced) override;
 

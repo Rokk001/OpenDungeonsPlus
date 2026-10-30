@@ -28,8 +28,7 @@ def function(text, signature):
 
 defence = function(game_map, "void GameMap::updateSeatHeartDefense(")
 target = function(game_map, "Tile* GameMap::getHeartDefenceTargetTile(")
-constants = game_map[game_map.index("const int HEART_DEFENCE_RANGE_SQUARED")
-    : game_map.index("HEART_DEFENCE_RANGE_SQUARED = 7 * 7;") + len("HEART_DEFENCE_RANGE_SQUARED = 7 * 7;")]
+constants = function(game_map, "int heartDefenceRangeSquared(")
 
 probe = r"""
 #include <iostream>
@@ -46,6 +45,10 @@ namespace SoundRelativeKeeperStatements
 {
     const std::string WeAreUnderAttack = "Keeper/WeAreUnderAttack";
 }
+// Supplies the config value the production helper reads (the shipped value is compared in check_rebalance_config.py).
+struct ConfigManager {
+ static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}
+ double getRoomConfigDouble(const std::string&)const{return 7.0;}};
 struct CreatureDefinition {
  bool runner=false;
  bool isWorker()const{return false;}
@@ -215,7 +218,7 @@ probe = probe.replace("TARGET", target)
 assert "WeAreUnderAttack" in defence, "the defence start sounds the alarm call"
 assert "playerIsFighting" not in defence and "playerFighting" not in defence, \
     "the defence does not start the combat music"
-assert "HEART_DEFENCE_RANGE_SQUARED" in defence, "the seven tile reach is a named constant"
+assert "heartDefenceRangeSquared()" in defence, "the heart defence reach is read from the room config"
 assert "getHeartDefenceTargetTile" in target, "the runner target comes from the game map"
 assert "isHeartDefenceRunner()" in target, "the runners are not rallied as fighters"
 

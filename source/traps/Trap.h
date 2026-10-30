@@ -266,8 +266,7 @@ public:
     { return false; }
 
     //! \brief Health given to each tile of a newly built trap
-    virtual double getDefaultTileHP() const
-    { return DEFAULT_TILE_HP; }
+    virtual double getDefaultTileHP() const;
 
     //! \brief Tells whether the trap is activated.
     bool isActivated(Tile* tile) const;

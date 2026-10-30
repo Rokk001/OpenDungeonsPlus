@@ -36,7 +36,8 @@ public:
     //! \brief Returns the configured lifetime of rested and admission mood.
     int32_t getTurnsMax() const { return mTurnsMax; }
 
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     inline CreatureMoodRested* clone() const override;
 
@@ -46,7 +47,7 @@ public:
 
 private:
     int32_t mTurnsMax;
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODRESTED_H

@@ -17,7 +17,6 @@ namespace
 {
 static const double ROLL_PRECISION = 10.0;
 static const uint32_t BONUS_KIND_COUNT = 17;
-static const uint32_t MAX_ITEM_EFFECTS = 2;
 static const std::array<std::string, 4> QUALITY_COLOURS = {{"FF8A8A8A", "FFFFFFFF", "FF3E7BFF", "FFA64DFF"}};
 static const std::array<std::string, 4> QUALITY_SUFFIXES = {{"poor", "common", "rare", "epic"}};
 
@@ -160,7 +159,7 @@ bool ItemInstance::importFromStream(std::istream& stream, const std::string& fir
             return false;
         item.mBonuses.push_back(value);
     }
-    if(!(stream >> count) || count > MAX_ITEM_EFFECTS)
+    if(!(stream >> count) || count > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemEffects", "MaxItemEffects")))
         return false;
     for(uint32_t index = 0; index < count; ++index)
     {
@@ -218,7 +217,7 @@ bool ItemInstance::importFromPacket(ODPacket& packet)
             return false;
         item.mBonuses.push_back(value);
     }
-    if(!(packet >> count) || count > MAX_ITEM_EFFECTS)
+    if(!(packet >> count) || count > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemEffects", "MaxItemEffects")))
         return false;
     for(uint32_t index = 0; index < count; ++index)
     {

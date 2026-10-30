@@ -82,7 +82,7 @@ CreatureDefinition::CreatureDefinition(
         mAfraidOfGhosts(false),
         mChampion (false),
         mPossessManaCost (0.0),
-        mTortureTimeToConvert (120.0),
+        mUndead (false),
         mLowHealthWalkSpeedFactor (-1.0),
         mWalkClipRate (1.0),
         mWalkHurtClipRate (-1.0),
@@ -105,6 +105,7 @@ CreatureDefinition::CreatureDefinition(
         mCleanliness (1.0),
         mDirtFactor (1.0),
         mThirstGrowthPerTurn (0.0),
+        mDeathVanishSeconds (0.0),
         mClassName   (className),
         mMeshName    (meshName),
         mBedMeshName (bedMeshName),
@@ -151,6 +152,8 @@ CreatureDefinition::CreatureDefinition(
         mSoundFamilyDrop    ("Default/Drop"),
         mSoundFamilyAttack  ("Default/Attack"),
         mSoundFamilyDie     ("Default/Die"),
+        mDeathVanishPile    (false),
+        mDeathVanishEffect  (""),
         mSoundFamilySlap    ("Default/Slap")
 {
     mXPTable.assign(MAX_LEVEL - 1, 100.0);
@@ -165,7 +168,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mAfraidOfGhosts(def.mAfraidOfGhosts),
         mChampion(def.mChampion),
         mPossessManaCost(def.mPossessManaCost),
-        mTortureTimeToConvert(def.mTortureTimeToConvert),
+        mUndead(def.mUndead),
         mLowHealthWalkSpeedFactor(def.mLowHealthWalkSpeedFactor),
         mWalkClipRate(def.mWalkClipRate),
         mWalkHurtClipRate(def.mWalkHurtClipRate),
@@ -188,6 +191,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mCleanliness(def.mCleanliness),
         mDirtFactor(def.mDirtFactor),
         mThirstGrowthPerTurn(def.mThirstGrowthPerTurn),
+        mDeathVanishSeconds(def.mDeathVanishSeconds),
         mClassName(def.mClassName),
         mMeshName(def.mMeshName),
         mBedMeshName(def.mBedMeshName),
@@ -235,6 +239,8 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mSoundFamilyDrop(def.mSoundFamilyDrop),
         mSoundFamilyAttack(def.mSoundFamilyAttack),
         mSoundFamilyDie(def.mSoundFamilyDie),
+        mDeathVanishPile(def.mDeathVanishPile),
+        mDeathVanishEffect(def.mDeathVanishEffect),
         mSoundFamilySlap(def.mSoundFamilySlap)
 {
     for(const double& xp : def.mXPTable)
@@ -437,6 +443,8 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mSoundFamilyDrop;
     os << c->mSoundFamilyAttack;
     os << c->mSoundFamilyDie;
+    os << c->mDeathVanishPile;
+    os << c->mDeathVanishEffect;
     os << c->mSoundFamilySlap;
     os << CreatureDefinition::combatClassToString(c->mCombatClass);
     os << c->mStealGold;
@@ -444,7 +452,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mAfraidOfGhosts;
     os << c->mChampion;
     os << c->mPossessManaCost;
-    os << c->mTortureTimeToConvert;
+    os << c->mUndead;
     os << c->mLowHealthWalkSpeedFactor;
     os << c->mWalkClipRate;
     os << c->mWalkHurtClipRate;
@@ -467,6 +475,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mCleanliness;
     os << c->mDirtFactor;
     os << c->mThirstGrowthPerTurn;
+    os << c->mDeathVanishSeconds;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
         os << c->mXPTable[i];
@@ -507,6 +516,8 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mSoundFamilyDrop;
     is >> c->mSoundFamilyAttack;
     is >> c->mSoundFamilyDie;
+    is >> c->mDeathVanishPile;
+    is >> c->mDeathVanishEffect;
     is >> c->mSoundFamilySlap;
     is >> tempString;
     c->mCombatClass = CreatureDefinition::combatClassFromString(tempString);
@@ -515,7 +526,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mAfraidOfGhosts;
     is >> c->mChampion;
     is >> c->mPossessManaCost;
-    is >> c->mTortureTimeToConvert;
+    is >> c->mUndead;
     is >> c->mLowHealthWalkSpeedFactor;
     is >> c->mWalkClipRate;
     is >> c->mWalkHurtClipRate;
@@ -538,6 +549,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mCleanliness;
     is >> c->mDirtFactor;
     is >> c->mThirstGrowthPerTurn;
+    is >> c->mDeathVanishSeconds;
 
     for (unsigned int i = 0; i < c->mXPTable.size(); ++i)
     {
@@ -701,10 +713,10 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
                 creatureDef->mPossessManaCost = Helper::toDouble(nextParam);
                 continue;
             }
-            else if (nextParam == "TortureTimeToConvert")
+            else if (nextParam == "Undead")
             {
                 defFile >> nextParam;
-                creatureDef->mTortureTimeToConvert = Helper::toDouble(nextParam);
+                creatureDef->mUndead = Helper::toBool(nextParam);
                 continue;
             }
             else if (nextParam == "LowHealthWalkSpeedFactor")
@@ -877,6 +889,23 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
             {
                 defFile >> nextParam;
                 creatureDef->mUrgeGrowthPerTurn = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "DeathVanishSeconds")
+            {
+                defFile >> nextParam;
+                creatureDef->mDeathVanishSeconds = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "DeathVanishPile")
+            {
+                defFile >> nextParam;
+                creatureDef->mDeathVanishPile = Helper::toBool(nextParam);
+                continue;
+            }
+            else if (nextParam == "DeathVanishEffect")
+            {
+                defFile >> creatureDef->mDeathVanishEffect;
                 continue;
             }
             else if (nextParam == "ThirstGrowth/Turn")
@@ -1150,8 +1179,8 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
     if(def1 == nullptr || (def1->mPossessManaCost != def2->mPossessManaCost))
         file << "    PossessManaCost	" << def2->mPossessManaCost << std::endl;
 
-    if(def1 == nullptr || (def1->mTortureTimeToConvert != def2->mTortureTimeToConvert))
-        file << "    TortureTimeToConvert\t" << def2->mTortureTimeToConvert << std::endl;
+    if((def1 == nullptr) ? def2->mUndead : (def1->mUndead != def2->mUndead))
+        file << "    Undead\t" << (def2->mUndead ? 1 : 0) << std::endl;
 
     if((def1 == nullptr) ? (def2->mLowHealthWalkSpeedFactor >= 0.0) :
         (def1->mLowHealthWalkSpeedFactor != def2->mLowHealthWalkSpeedFactor))
@@ -1231,6 +1260,9 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
         file << "    UrgeGrowth/Turn\t" << def2->mUrgeGrowthPerTurn << std::endl;
     if((def1 == nullptr) ? (def2->mThirstGrowthPerTurn != 0.0) : (def1->mThirstGrowthPerTurn != def2->mThirstGrowthPerTurn))
         file << "    ThirstGrowth/Turn\t" << def2->mThirstGrowthPerTurn << std::endl;
+
+    if((def1 == nullptr) ? (def2->mDeathVanishSeconds != 0.0) : (def1->mDeathVanishSeconds != def2->mDeathVanishSeconds))
+        file << "    DeathVanishSeconds\t" << def2->mDeathVanishSeconds << std::endl;
     if((def1 == nullptr) ? (def2->mCleanliness != 1.0) : (def1->mCleanliness != def2->mCleanliness))
         file << "    Cleanliness\t" << def2->mCleanliness << std::endl;
     if((def1 == nullptr) ? (def2->mDirtFactor != 1.0) : (def1->mDirtFactor != def2->mDirtFactor))
@@ -1332,6 +1364,12 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
 
     if(def1 == nullptr || (def1->mSoundFamilyDie.compare(def2->mSoundFamilyDie) != 0))
         file << "    SoundFamilyDie\t" << def2->mSoundFamilyDie << std::endl;
+
+    if((def1 == nullptr) ? def2->mDeathVanishPile : (def1->mDeathVanishPile != def2->mDeathVanishPile))
+        file << "    DeathVanishPile\t" << (def2->mDeathVanishPile ? 1 : 0) << std::endl;
+
+    if((def1 == nullptr) ? !def2->mDeathVanishEffect.empty() : (def1->mDeathVanishEffect != def2->mDeathVanishEffect))
+        file << "    DeathVanishEffect\t" << def2->mDeathVanishEffect << std::endl;
 
     if(def1 == nullptr || (def1->mSoundFamilySlap.compare(def2->mSoundFamilySlap) != 0))
         file << "    SoundFamilySlap\t" << def2->mSoundFamilySlap << std::endl;

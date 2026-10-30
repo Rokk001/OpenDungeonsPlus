@@ -226,8 +226,9 @@ public:
     inline int32_t getCreatureMoodFurious() const
     { return mCreatureMoodFurious; }
 
-    inline double getSlapDamagePercent() const
-    { return mSlapDamagePercent; }
+    //! \brief HP a slap of the keeper hand takes from every creature (fixed amount, [GameConfig] SlapDamage)
+    inline double getSlapDamage() const
+    { return mSlapDamage; }
 
     //! \brief Damage per second a creature takes while standing on lava without a bridge
     inline double getLavaDamagePerSecond() const
@@ -425,6 +426,50 @@ public:
     inline double getManaWellBonusPerTile() const
     { return mManaWellBonusPerTile; }
 
+    //! \brief Most claimed tiles that count for the mana income (global.cfg ManaIncomeTilesCap)
+    inline double getManaIncomeTilesCap() const
+    { return mManaIncomeTilesCap; }
+
+    //! \brief Mana per second every claimed tile gives (global.cfg ManaPerClaimedTilePerSecond)
+    inline double getManaPerClaimedTilePerSecond() const
+    { return mManaPerClaimedTilePerSecond; }
+
+    //! \brief Mana per second each worker above the free ones costs (global.cfg WorkerManaUpkeepPerSecond)
+    inline double getWorkerManaUpkeepPerSecond() const
+    { return mWorkerManaUpkeepPerSecond; }
+
+    //! \brief Seconds the mana must stay too low before the workers above the free ones are doomed (global.cfg WorkerManaShortageSeconds)
+    inline double getWorkerManaShortageSeconds() const
+    { return mWorkerManaShortageSeconds; }
+
+    //! \brief Seconds the doomed workers have left before they pop (global.cfg WorkerPopCountdownSeconds)
+    inline double getWorkerPopCountdownSeconds() const
+    { return mWorkerPopCountdownSeconds; }
+
+    //! \brief Seconds the living dungeon heart waits between two workers it creates (global.cfg AutoWorkerIntervalSeconds)
+    inline double getAutoWorkerIntervalSeconds() const
+    { return mAutoWorkerIntervalSeconds; }
+
+    //! \brief Mana a gift box of the kind mana gives (global.cfg GiftBoxMana)
+    inline uint32_t getGiftBoxMana() const
+    { return mGiftBoxMana; }
+
+    //! \brief Gold a gift box of the kind gold gives (global.cfg GiftBoxGold)
+    inline uint32_t getGiftBoxGold() const
+    { return mGiftBoxGold; }
+
+    //! \brief Levels a gift box of the kind level up gives (global.cfg GiftBoxLevels)
+    inline uint32_t getGiftBoxLevels() const
+    { return mGiftBoxLevels; }
+
+    //! \brief Workers a gift box of the kind workers gives (global.cfg GiftBoxWorkers)
+    inline uint32_t getGiftBoxWorkers() const
+    { return mGiftBoxWorkers; }
+
+    //! \brief Seconds the enemy workers stay down after the gift box Stun workers (global.cfg GiftBoxStunSeconds)
+    inline double getGiftBoxStunSeconds() const
+    { return mGiftBoxStunSeconds; }
+
     inline double getBedStepMaxHeight() const
     { return mBedStepMaxHeight; }
 
@@ -449,6 +494,152 @@ public:
 
     inline double getDigCoefClaimedWall() const
     { return mDigCoefClaimedWall; }
+
+    //! \brief Returns the seconds for natural healing from zero to full health.
+    inline double getNaturalFullHealSeconds() const { return mNaturalFullHealSeconds; }
+    //! \brief Returns the natural healing factor for undead creatures.
+    inline double getUndeadHealFactor() const { return mUndeadHealFactor; }
+    //! \brief Returns whether lava damage follows the health curve.
+    inline bool getLavaDamageScalesWithHp() const { return mLavaDamageScalesWithHp; }
+    //! \brief Returns the configured UnpaidWagesLeave value.
+    uint32_t getUnpaidWagesLeave() const { return mUnpaidWagesLeave; }
+
+    //! \brief Returns the configured UnpaidWagesStopWork value.
+    uint32_t getUnpaidWagesStopWork() const { return mUnpaidWagesStopWork; }
+
+    //! \brief Returns the configured FindHomeChance value.
+    double getFindHomeChance() const { return mFindHomeChance; }
+
+    //! \brief Returns the configured SleepSeekWakefulnessMin value.
+    double getSleepSeekWakefulnessMin() const { return mSleepSeekWakefulnessMin; }
+
+    //! \brief Returns the configured SleepSeekWakefulnessMax value.
+    double getSleepSeekWakefulnessMax() const { return mSleepSeekWakefulnessMax; }
+
+    //! \brief Returns the configured StealGoldTryChance value.
+    double getStealGoldTryChance() const { return mStealGoldTryChance; }
+
+    //! \brief Returns the configured TunnelTryChance value.
+    double getTunnelTryChance() const { return mTunnelTryChance; }
+
+    //! \brief Returns the configured StealItemChancePerIdle value.
+    double getStealItemChancePerIdle() const { return mStealItemChancePerIdle; }
+
+    //! \brief Returns the configured HungerSeek value.
+    double getHungerSeek() const { return mHungerSeek; }
+
+    //! \brief Wakefulness a creature loses for every attack it makes (global.cfg FightWakefulnessPerAttack).
+    inline double getFightWakefulnessPerAttack() const { return mFightWakefulnessPerAttack; }
+    //! \brief Factor on the experience for digging (global.cfg DigXpFactor).
+    inline double getDigXpFactor() const { return mDigXpFactor; }
+    //! \brief Divisor of the work rate in the experience of digging, claiming and cleaning (global.cfg WorkXpRateDivisor).
+    inline double getWorkXpRateDivisor() const { return mWorkXpRateDivisor; }
+    //! \brief Factor on the experience for digging a gold tile (global.cfg GoldDigXpFactor).
+    inline double getGoldDigXpFactor() const { return mGoldDigXpFactor; }
+    //! \brief Experience for finishing a dug tile (global.cfg TileDugXp).
+    inline double getTileDugXp() const { return mTileDugXp; }
+    //! \brief Factor on the experience for claiming or repairing a tile (global.cfg ClaimXpFactor).
+    inline double getClaimXpFactor() const { return mClaimXpFactor; }
+    //! \brief Base of the level divisor of the claiming experience (global.cfg ClaimXpDivisorBase).
+    inline double getClaimXpDivisorBase() const { return mClaimXpDivisorBase; }
+    //! \brief Part of that divisor that grows with each creature level (global.cfg ClaimXpDivisorPerLevel).
+    inline double getClaimXpDivisorPerLevel() const { return mClaimXpDivisorPerLevel; }
+
+    //! \brief Returns the configured AngryFleeChancePercent value.
+    double getAngryFleeChancePercent() const { return mAngryFleeChancePercent; }
+
+    //! \brief Returns the configured ResearchCostFactorLevel2 value.
+    double getResearchCostFactorLevel2() const { return mResearchCostFactorLevel2; }
+
+    //! \brief Returns the configured ResearchCostFactorLevel3 value.
+    double getResearchCostFactorLevel3() const { return mResearchCostFactorLevel3; }
+
+    //! \brief Returns the configured ResearchLevel2TabShare value.
+    double getResearchLevel2TabShare() const { return mResearchLevel2TabShare; }
+
+    //! \brief Returns the configured ResearchLevel3TabShare value.
+    double getResearchLevel3TabShare() const { return mResearchLevel3TabShare; }
+
+    //! \brief Returns the configured AuraAllyMinAllies value.
+    int32_t getAuraAllyMinAllies() const { return mAuraAllyMinAllies; }
+
+    //! \brief Returns the configured SkeletonArmyRadius value.
+    int32_t getSkeletonArmyRadius() const { return mSkeletonArmyRadius; }
+
+    //! \brief Returns the configured FleeMaxTurns value.
+    int32_t getFleeMaxTurns() const { return mFleeMaxTurns; }
+
+    //! \brief Returns the configured HitChanceMax value.
+    double getHitChanceMax() const { return mHitChanceMax; }
+
+    //! \brief Returns the configured HitChanceMin value.
+    double getHitChanceMin() const { return mHitChanceMin; }
+
+    //! \brief Returns the configured HitChanceScale value.
+    double getHitChanceScale() const { return mHitChanceScale; }
+
+    //! \brief Returns the configured NaturalEnemyEngageChance value.
+    double getNaturalEnemyEngageChance() const { return mNaturalEnemyEngageChance; }
+
+    //! \brief Returns the configured SkillDeviationPoints value.
+    double getSkillDeviationPoints() const { return mSkillDeviationPoints; }
+
+    //! \brief Returns the configured SkillResetMinFollowers value.
+    double getSkillResetMinFollowers() const { return mSkillResetMinFollowers; }
+
+    //! \brief Returns the configured SkillUnfollowedWeight value.
+    double getSkillUnfollowedWeight() const { return mSkillUnfollowedWeight; }
+
+    //! \brief Returns the configured SkillTier2UnlockRanks value.
+    double getSkillTier2UnlockRanks() const { return mSkillTier2UnlockRanks; }
+
+    //! \brief Returns the configured SkillTier3UnlockRanks value.
+    double getSkillTier3UnlockRanks() const { return mSkillTier3UnlockRanks; }
+
+    //! \brief Returns the configured SkillTier4MinSpent value.
+    double getSkillTier4MinSpent() const { return mSkillTier4MinSpent; }
+
+    //! \brief Returns the configured SlapJobCooldownFactor value.
+    double getSlapJobCooldownFactor() const { return mSlapJobCooldownFactor; }
+
+    //! \brief Returns the configured SlapMemoryMax value.
+    double getSlapMemoryMax() const { return mSlapMemoryMax; }
+
+    //! \brief Returns the configured SupportTargetDistanceFactor value.
+    double getSupportTargetDistanceFactor() const { return mSupportTargetDistanceFactor; }
+
+    //! \brief Returns the configured TargetThreatFactorMax value.
+    double getTargetThreatFactorMax() const { return mTargetThreatFactorMax; }
+
+    //! \brief Returns the configured TargetThreatFactorMin value.
+    double getTargetThreatFactorMin() const { return mTargetThreatFactorMin; }
+
+    //! \brief Returns the configured WeakFleeChancePercent value.
+    double getWeakFleeChancePercent() const { return mWeakFleeChancePercent; }
+
+    //! \brief Returns the configured WorkerCarryFirstMaxShare value.
+    double getWorkerCarryFirstMaxShare() const { return mWorkerCarryFirstMaxShare; }
+
+    //! \brief Returns the configured WorkerClaimWallFirstMinShare value.
+    double getWorkerClaimWallFirstMinShare() const { return mWorkerClaimWallFirstMinShare; }
+
+    //! \brief Returns the configured SandboxHeroLevelMax value.
+    int32_t getSandboxHeroLevelMax() const { return mSandboxHeroLevelMax; }
+
+    //! \brief Returns the configured SandboxHeroLevelMin value.
+    int32_t getSandboxHeroLevelMin() const { return mSandboxHeroLevelMin; }
+
+    //! \brief Returns the configured SandboxHeroesPerWave value.
+    int32_t getSandboxHeroesPerWave() const { return mSandboxHeroesPerWave; }
+
+    //! \brief Returns the configured SandboxWaves value.
+    int32_t getSandboxWaves() const { return mSandboxWaves; }
+
+    //! \brief Returns the configured BuildingDamageCurve anchors.
+    const std::vector<double>& getBuildingDamageCurve() const { return mBuildingDamageCurve; }
+
+    //! \brief Returns the configured ThreatPercentByLevel anchors.
+    const std::vector<double>& getThreatPercentByLevel() const { return mThreatPercentByLevel; }
 
     inline int32_t getNbTurnsKoCreatureAttacked() const
     { return mNbTurnsKoCreatureAttacked; }
@@ -517,6 +708,8 @@ public:
     uint32_t getSpellConfigUInt32(const std::string& param) const;
     int32_t getSpellConfigInt32(const std::string& param) const;
     double getSpellConfigDouble(const std::string& param) const;
+    //! \brief Reads a spell setting and logs a missing key before using its shipped default.
+    double getSpellConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
 
     //! \brief Level-1 research cost of the skill with the given name (tier cost, see skills.cfg).
     //! A missing entry is logged as an error and costs SKILL_POINTS_MISSING_ENTRY.
@@ -638,6 +831,7 @@ private:
     //! \brief Reads the [Tavern] block of global.cfg into mTavernConfig.
     bool loadGlobalTavernConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
+    //! \brief Loads equipment definitions and their numeric balance settings.
     bool loadEquipements(const std::string& fileName);
     bool loadSpawnConditions(const std::string& fileName);
     bool loadFactions(const std::string& fileName);
@@ -650,6 +844,7 @@ private:
     bool loadItemSettings(std::stringstream& stream, const std::string& section);
     bool loadTraps(const std::string& fileName);
     bool loadSpellConfig(const std::string& fileName);
+    //! \brief Loads research costs, tab shares and research effects.
     bool loadSkills(const std::string& fileName);
     //! \brief Reads config/creatureSkills.cfg (skill trees, tier 4 skills and templates of the creatures).
     bool loadCreatureSkills(const std::string& fileName);
@@ -729,7 +924,7 @@ private:
     int32_t mCreatureMoodUpset;
     int32_t mCreatureMoodAngry;
     int32_t mCreatureMoodFurious;
-    double mSlapDamagePercent;
+    double mSlapDamage;
     double mLavaDamagePerSecond;
     uint32_t mSlapEffectDuration;
     double mTiredWakefulness;
@@ -805,6 +1000,17 @@ private:
     double mMaxManaPerSeat;
     //! \brief Extra mana per second for each claimed mana well tile
     double mManaWellBonusPerTile;
+    double mManaIncomeTilesCap;
+    double mManaPerClaimedTilePerSecond;
+    double mWorkerManaUpkeepPerSecond;
+    double mWorkerManaShortageSeconds;
+    double mWorkerPopCountdownSeconds;
+    double mAutoWorkerIntervalSeconds;
+    uint32_t mGiftBoxMana;
+    uint32_t mGiftBoxGold;
+    uint32_t mGiftBoxLevels;
+    uint32_t mGiftBoxWorkers;
+    double mGiftBoxStunSeconds;
     double mBedStepMaxHeight;
     double mClaimingWallPenalty;
     //! \brief Gold of one gold seam tile at density 100 percent (GoldPerSeamTile)
@@ -816,6 +1022,58 @@ private:
     //! \brief Share of the carry capacity a dig step must reach to make a worker cheer (WorkerCheerGoldShare)
     double mWorkerCheerGoldShare;
     double mDigCoefClaimedWall;
+    double mNaturalFullHealSeconds;
+    double mUndeadHealFactor;
+    bool mLavaDamageScalesWithHp;
+    uint32_t mUnpaidWagesLeave;
+    uint32_t mUnpaidWagesStopWork;
+    double mFindHomeChance;
+    double mSleepSeekWakefulnessMin;
+    double mSleepSeekWakefulnessMax;
+    double mStealGoldTryChance;
+    double mTunnelTryChance;
+    double mStealItemChancePerIdle;
+    double mHungerSeek;
+    double mFightWakefulnessPerAttack;
+    double mDigXpFactor;
+    double mWorkXpRateDivisor;
+    double mGoldDigXpFactor;
+    double mTileDugXp;
+    double mClaimXpFactor;
+    double mClaimXpDivisorBase;
+    double mClaimXpDivisorPerLevel;
+    double mAngryFleeChancePercent;
+    double mResearchCostFactorLevel2;
+    double mResearchCostFactorLevel3;
+    double mResearchLevel2TabShare;
+    double mResearchLevel3TabShare;
+    int32_t mAuraAllyMinAllies;
+    int32_t mSkeletonArmyRadius;
+    int32_t mFleeMaxTurns;
+    double mHitChanceMax;
+    double mHitChanceMin;
+    double mHitChanceScale;
+    double mNaturalEnemyEngageChance;
+    double mSkillDeviationPoints;
+    double mSkillResetMinFollowers;
+    double mSkillUnfollowedWeight;
+    double mSkillTier2UnlockRanks;
+    double mSkillTier3UnlockRanks;
+    double mSkillTier4MinSpent;
+    double mSlapJobCooldownFactor;
+    double mSlapMemoryMax;
+    double mSupportTargetDistanceFactor;
+    double mTargetThreatFactorMax;
+    double mTargetThreatFactorMin;
+    double mWeakFleeChancePercent;
+    double mWorkerCarryFirstMaxShare;
+    double mWorkerClaimWallFirstMinShare;
+    int32_t mSandboxHeroLevelMax;
+    int32_t mSandboxHeroLevelMin;
+    int32_t mSandboxHeroesPerWave;
+    int32_t mSandboxWaves;
+    std::vector<double> mBuildingDamageCurve;
+    std::vector<double> mThreatPercentByLevel;
     int32_t mNbTurnsKoCreatureAttacked;
     std::string mDefaultWorkerRogue;
     std::string mMainMenuMusic;

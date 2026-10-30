@@ -87,7 +87,7 @@ protected:
 
 private:
     //! \brief Stores the number of turns before spawning the next creature.
-    int mSpawnCreatureCountdown;
+    double mSpawnCreatureCountdown;
     BuildingObject* mPortalObject;
 
     uint32_t mNbCreatureMaxIncrease;
