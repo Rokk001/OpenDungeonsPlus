@@ -94,7 +94,7 @@ EXPECTED_SKILLS = [
     ('DWF_3', 'Family', 'dwarf', 'Dwarf', '3', 'Forge Fury', 'BUFF_SELF_StrengthChange', '1.011 1.022 1.033 1.044 1.055', '7 7 7 7 7', '55', '20', '-', '-', 'StrengthSelf 55 2 18 20 1.15'),
     ('UND_1', 'Family', 'undead', 'Undead', '1', 'Raise the Fallen', 'RAISEDEAD', '1 1 2 2 3', '6 7 8 9 10', '24', '-', '-', '-', 'RaiseDead 24 2 10 4 3 42 Skeleton'),
     ('UND_2', 'Family', 'undead', 'Undead', '2', 'Deathless', 'PASSIVE_hp%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
-    ('UND_3', 'Family', 'undead', 'Undead', '3', 'Bone Legion', 'SKELARMY', '1 1 2 2 3', '8 9 10 11 12', '21', '-', '2', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
+    ('UND_3', 'Family', 'undead', 'Undead', '3', 'Bone Legion', 'SKELARMY', '1 1 2 2 3', '8 9 10 11 12', '21', '-', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
     ('VRM_1', 'Family', 'vermin', 'Vermin', '1', 'Buzzing Spin', 'WHIRLWIND', '1/1 1/1 1/1 1/1 1/1', '12.5 13 13.5 14 14.5', '14', '-', '-', '2', 'Whirlwind 14 1 2 8 3 3'),
     ('VRM_2', 'Family', 'vermin', 'Vermin', '2', 'Chitin', 'PASSIVE_avoid', '0.368 0.735 1.103 1.471 1.838', '-', '-', '-', '-', '-', '-'),
     ('VRM_3', 'Family', 'vermin', 'Vermin', '3', 'Frenzy', 'PASSIVE_cd%', '0.552 1.103 1.655 2.206 2.758', '-', '-', '-', '-', '-', '-'),
@@ -152,8 +152,8 @@ EXPECTED_TIER_FOUR = [
     ('RunelordDwarf', 'Runic Bastion', 'BUFF_SELF_Defense', '20', '140', '20', '35', '-', '-', '-'),
     ('TentacleAlbine', 'Abyssal Shell', 'BUFF_SELF_Defense', '20', '140', '20', '35', '-', '-', '-'),
     ('TentacleGreen', 'Abyssal Shell', 'BUFF_SELF_Defense', '20', '140', '20', '35', '-', '-', '-'),
-    ('Skeleton', 'Bone Legion Call', 'SKELARMY', '4', '140', '42', '38', '2', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
-    ('Lich', 'Army of the Dead', 'SKELARMY', '4', '140', '42', '40', '2', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
+    ('Skeleton', 'Bone Legion Call', 'SKELARMY', '4', '140', '42', '38', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
+    ('Lich', 'Army of the Dead', 'SKELARMY', '4', '140', '42', '40', '-', '-', 'SkeletonArmy 21 2 10 3 42 Skeleton'),
     ('Elf', 'Arrow Rain', 'HAILSTORM', '0.673', '120', '11', '40', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05'),
     ('DarkElf', 'Shadow Volley', 'HAILSTORM', '0.723', '120', '11', '40', '-', '-', 'HailStorm 21 2 4 8 2 11 3.08 none 2.05'),
     ('CaveHornet', 'Hive Storm', 'WHIRLWIND', '4/4', '120', '1', '30', '-', '-', 'Whirlwind 14 1 2 8 3 3'),
@@ -675,7 +675,7 @@ public:
 #define OD_LOG_ERR(_message) (std::cerr << (std::string("") + _message) << std::endl)
 """
 SHIM_KEYS = ('SkillDeviationPoints', 'SkillResetMinFollowers', 'SkillTier2UnlockRanks', 'SkillTier3UnlockRanks',
-             'SkillTier4MinSpent', 'SkillUnfollowedWeight')
+             'SkillTier4MinSpent', 'SkillUnfollowedWeight', 'AuraAllyMinAllies', 'SkeletonArmyRadius')
 
 
 # Returns the probe shim with the skill tree values of global.cfg.
@@ -971,6 +971,10 @@ def creature_blocks(relative):
 
 def check_skill_rows(skills):
     """Every skill block equals its expected row of the catalog and follows the base line rules of the syntax."""
+    assert re.search(r'^\s*AuraAllyMinAllies\s+2\s*$', text('config/global.cfg'), re.M)
+    assert 'getAuraAllyMinAllies()' in text('source/creatureskill/CreatureSkillTree.cpp')
+    assert re.search(r'^\s*SkeletonArmyRadius\s+2\s*$', text('config/global.cfg'), re.M)
+    assert 'getSkeletonArmyRadius()' in text('source/creatureskill/CreatureSkillTree.cpp')
     assert len(skills) == len(EXPECTED_SKILLS) == 90, len(skills)
     for block, row in zip(skills, EXPECTED_SKILLS):
         (sid, owner_key, owner, path, tier, name, kind, values, mana, cooldown, duration, radius, range_, base) = row
@@ -979,11 +983,9 @@ def check_skill_rows(skills):
         got = (block['Id'], block['Path'], block['Tier'], block['Name'], block['Kind'], block['Values'], block['Mana'],
                block['Cooldown'], block['Duration'], block['Radius'], block['Range'], block['BaseLine'])
         assert got == (sid, path, tier, name, kind, values, mana, cooldown, duration, radius, range_, base), (sid, got)
-        # An ally aura names the fewest allies it needs (MinAllies 2); no other skill has the key
-        aura = kind.startswith('AURA_ALLY')
+        # Ally auras use the global configured minimum instead of a per-skill key.
         assert set(block) == {'Id', 'Name', 'Kind', owner_key, 'Path', 'Tier', 'Values', 'Mana', 'Cooldown',
-                              'Duration', 'Radius', 'Range', 'BaseLine'} | ({'MinAllies'} if aura else set()), sid
-        assert not aura or block['MinAllies'] == '2', sid
+                              'Duration', 'Radius', 'Range', 'BaseLine'}, sid
         assert len(values.split()) == 5 and (mana == '-' or len(mana.split()) == 5), sid
         # A line of the base line table exactly for the kinds that scale one, and it is the line of that kind
         if kind in KINDS_WITH_LINE:
@@ -1017,7 +1019,7 @@ def check_tier_four_rows(tiers):
                               'BaseLine'}, creature
         if kind in TIER_FOUR_LINES:
             # The skeleton army raises its skeletons within Radius 2 of the caster; the other lines have no radius
-            assert base.split()[0] == TIER_FOUR_LINES[kind] and range_ == '-' and radius == ('2' if kind == 'SKELARMY' else '-'), creature
+            assert base.split()[0] == TIER_FOUR_LINES[kind] and range_ == '-' and radius == '-', creature
         else:
             assert base == '-' and range_ == '-', creature
             assert (radius == '4') == (kind == 'HEAL_AREA'), creature
