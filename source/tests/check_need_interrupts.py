@@ -15,6 +15,16 @@ assert 'needInterrupt(' in room
 assert not re.search(r'Random::Int\(\s*0\s*,\s*100\s*\)\s*<\s*20', room)
 sleep = (ROOT / 'source/creatureaction/CreatureActionSleep.cpp').read_text(encoding='utf-8')
 assert 'needInterrupt(' in sleep
+job = (ROOT / 'source/creatureaction/CreatureActionSearchJob.cpp').read_text(encoding='utf-8')
+for action in (room, sleep, job):
+    interrupt = action.split('if(creature.needInterrupt(', 1)[1].split('return true;', 1)[0]
+    for token in ('CreatureActionType::searchFood', 'CreatureActionType::searchDrink',
+                  'RoomType::hatchery', 'RoomType::tavern', 'numCoveredTiles()',
+                  'if(foodAvailable)', 'else if(drinkAvailable)', 'CreatureActionSearchToilet'):
+        assert token in interrupt, token
+    assert interrupt.index('if(foodAvailable)') < interrupt.index('else if(drinkAvailable)') < interrupt.index('CreatureActionSearchToilet')
+assert '!servingNeed && creature.isHungry()' in room
+assert '!servingNeed && creature.getDefinition()->hasThirst()' in room
 for action in ('CreatureActionFight.cpp', 'CreatureActionFightFriendly.cpp'):
     assert 'needInterrupt(' not in (ROOT / 'source/creatureaction' / action).read_text(encoding='utf-8')
 print('need interrupts ok')
