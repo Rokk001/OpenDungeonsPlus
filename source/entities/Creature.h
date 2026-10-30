@@ -1528,7 +1528,7 @@ public:
 
     //! \brief Knocks the creature down for the given number of turns (server side). Does nothing if dead or KO.
     //! \param nbTurns How many turns the creature stays knocked down; values of zero or less are ignored.
-    void stun(int32_t nbTurns);
+    void stun(double nbTurns);
 
     //! \brief Called when the creature is set in jail by dropping or brought by
     //! a worker. if prison is nullptr, the creature is freed

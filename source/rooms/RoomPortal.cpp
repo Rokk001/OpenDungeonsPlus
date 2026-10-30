@@ -39,6 +39,9 @@
 #include "utils/Random.h"
 
 #include <cmath>
+#include <iomanip>
+#include <limits>
+#include <sstream>
 
 //! \brief Seconds before a taken over portal spawns its first creature when the room config has no PortalFirstSpawnSeconds
 static const double DEFAULT_PORTAL_FIRST_SPAWN_SECONDS = 187.72607879924954;
@@ -319,14 +322,20 @@ void RoomPortal::setupRoom(const std::string& name, Seat* seat, const std::vecto
     mNbCreatureMaxIncrease = ConfigManager::getSingleton().getCreaturesPerPortal();
 }
 
+//! \brief Saves the portal health, capacity and spawn countdown.
 void RoomPortal::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
 
     // The health is written as a number of tiles, as it always was
-    os << (mClaimHealth * static_cast<double>(numCoveredTiles())) << "\t" << mNbCreatureMaxIncrease << "\n";
+    os << (mClaimHealth * static_cast<double>(numCoveredTiles())) << "\t" << mNbCreatureMaxIncrease;
+    const std::streamsize precision = os.precision();
+    os << "\tSpawnCountdown " << std::setprecision(std::numeric_limits<double>::max_digits10) << mSpawnCreatureCountdown;
+    os.precision(precision);
+    os << "\n";
 }
 
+//! \brief Loads portal data and restores the optional spawn countdown from current saves.
 bool RoomPortal::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
@@ -337,6 +346,18 @@ bool RoomPortal::importFromStream(std::istream& is)
         return false;
     if(!(is >> mNbCreatureMaxIncrease))
         return false;
+
+    std::string remainder;
+    std::getline(is, remainder);
+    std::istringstream extra(remainder);
+    std::string marker;
+    mSpawnCreatureCountdown = 0.0;
+    if(extra >> marker)
+    {
+        std::string unexpected;
+        if(marker != "SpawnCountdown" || !(extra >> mSpawnCreatureCountdown) || (extra >> unexpected))
+            return false;
+    }
 
     if(numCoveredTiles() > 0)
         mClaimHealth = std::min(1.0, std::max(0.0, claimedValue / static_cast<double>(numCoveredTiles())));

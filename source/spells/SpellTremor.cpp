@@ -182,7 +182,7 @@ bool SpellTremor::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 
         creature->takeDamage(nullptr, Random::Double(damageMin, damage),
             0.0, 0.0, 0.0, pos, false);
-        creature->stun(static_cast<int32_t>(std::ceil(nbTurns)));
+        creature->stun(nbTurns);
     }
 
     // Claimed enemy ground and walls turn back to dirt. Rooms, traps, doors and bridges are not affected.

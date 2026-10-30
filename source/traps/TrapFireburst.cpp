@@ -30,6 +30,7 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
 #include <cmath>
 
 const std::string TrapFireburstName = "Fireburst";
@@ -136,7 +137,14 @@ TrapFireburst::TrapFireburst(GameMap* gameMap) :
 bool TrapFireburst::shoot(Tile* tile)
 {
     // The trap is hidden and fires when an enemy creature comes within its radius
-    std::vector<Tile*> burstTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::floor(mRadius)));
+    std::vector<Tile*> burstTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::ceil(mRadius)));
+    // Keep only visible tile centres within the configured fractional radius.
+    burstTiles.erase(std::remove_if(burstTiles.begin(), burstTiles.end(), [tile, this](Tile* candidate)
+    {
+        const double dx = candidate->getX() - tile->getX();
+        const double dy = candidate->getY() - tile->getY();
+        return dx * dx + dy * dy > mRadius * mRadius;
+    }), burstTiles.end());
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(burstTiles, getSeat(), true);
     if(enemyCreatures.empty())
         return false;
