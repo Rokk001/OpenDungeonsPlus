@@ -2277,6 +2277,7 @@ TileStateNotified* Seat::getTileStateNotified(Tile* tile)
     return nullptr;
 }
 
+//! \brief Records a tile's visible appearance and owner for this seat.
 void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
 {
     // Looking the tile up with operator[] used to create a default state for it in the game
@@ -2346,6 +2347,14 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
                     jj->second.mSeatIdOwner = tile->getSeat()->getId();
                 }
             }
+            break;
+        case TileVisual::merchantRoom:
+        case TileVisual::herbGardenRoom:
+        case TileVisual::alchemyLabRoom:
+        case TileVisual::infirmaryRoom:
+        case TileVisual::ghostRoom:
+            jj->second.mSeatIdOwner = (mPlayer != nullptr && !mPlayer->getIsHuman() && tile->getSeat() != nullptr)
+                ? tile->getSeat()->getId() : -1;
             break;
         default:
             jj->second.mSeatIdOwner = -1;
