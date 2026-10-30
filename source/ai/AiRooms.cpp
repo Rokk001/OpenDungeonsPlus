@@ -484,7 +484,7 @@ void ROOMS::bedWatch(KeeperAI& ai)
         return;
     State& state = ai.getRoomsState();
     const int population = seat->getNumCreaturesFighters();
-    if(state.bedPopulation != population)
+    if(state.bedPopulation != population || state.bedDue < 0.0)
     {
         state.bedPopulation = population;
         state.bedDue = ai.getMind().now() + roomDelay(ai, ai.getMind().slip("B02"));
