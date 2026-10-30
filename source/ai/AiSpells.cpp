@@ -1232,6 +1232,7 @@ bool SPELL::castDefector(KeeperAI& ai)
     return true;
 }
 
+//! \brief Selects a legal enemy target for Hexen Hen and schedules the cast.
 bool SPELL::castHexenHen(KeeperAI& ai)
 {
     // AI row E18
@@ -1243,8 +1244,10 @@ bool SPELL::castHexenHen(KeeperAI& ai)
     // (the heart is the dungeon temple room) makes it the attacker of a room or the heart
     bool slipped = ai.getMind().slip("E18");
     std::vector<Creature*> candidates;
-    for(Creature* creature : fightEnemies(ai))
+    for(Creature* creature : enemiesOnOwnGround(ai))
     {
+        if(creature->isHexenHen() || creature->isInPrison() || creature->getDefinition()->isChampion())
+            continue;
         GameEntity* building = attackedBuilding(creature);
         bool attacksRoom = (building != nullptr) && (building->getObjectType() == GameEntityType::room) &&
                            (building->getSeat() == seat);
