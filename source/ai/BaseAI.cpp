@@ -437,6 +437,7 @@ bool BaseAI::digWayToTile(Tile* tileStart, Tile* tileEnd)
 
     // Set a diggable path up to the first gold spot for the given team color, by the first available worker
     Seat* seat = mPlayer.getSeat();
+    AiKnowledge knowledge(mGameMap, seat);
     Creature* worker = mGameMap.getWorkerForPathFinding(seat);
     if (worker == nullptr)
         return false;
@@ -484,7 +485,8 @@ bool BaseAI::digWayToTile(Tile* tileStart, Tile* tileEnd)
 
     for(Tile* tile : pathToDig)
     {
-        if (tile && tile->isDiggable(seat))
+        // A tile the seat never saw may be marked like a human may (IMPL 2.3 item 5); a known one only when it is diggable
+        if (tile && (!knowledge.isKnown(tile) || tile->isDiggable(seat)))
             tile->setMarkedForDigging(true, &mPlayer);
     }
 

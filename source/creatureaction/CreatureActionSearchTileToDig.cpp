@@ -49,6 +49,7 @@ std::function<bool()> CreatureActionSearchTileToDig::action()
         std::ref(mCreature), getNbTurns(), mForced);
 }
 
+//! \brief Searches for a dig task and reports a lack of treasury capacity.
 bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, int32_t nbTurns, bool forced)
 {
     if(creature.getDigRate() <= 0.0)
@@ -189,6 +190,10 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
             return true;
         }
         else if(creature.getSeat()->getPlayer()->getIsHuman())
+        {
+            creature.getSeat()->getPlayer()->notifyNoTreasuryAvailable();
+        }
+        else if(creature.getSeat()->getPlayer() != nullptr)
         {
             creature.getSeat()->getPlayer()->notifyNoTreasuryAvailable();
         }

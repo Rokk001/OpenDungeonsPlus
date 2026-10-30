@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ODApplication.h"
+#include "ai/AiMind.h"
 #include "entities/Building.h"
 
 #include "entities/BuildingObject.h"
@@ -298,6 +300,7 @@ double Building::getHP(Tile *tile) const
     return total;
 }
 
+//! \brief Applies damage and reports destruction of the final living building tile.
 double Building::takeDamage(GameEntity* attacker, double absoluteDamage, double physicalDamage, double magicalDamage, double elementDamage,
         Tile *tileTakingDamage, bool ko)
 {
@@ -334,7 +337,15 @@ double Building::takeDamage(GameEntity* attacker, double absoluteDamage, double 
     }
 
     if(!isAlive)
+    {
+        if(getSeat()->getPlayer() != nullptr)
+        {
+            AiEvent event = {AiEventType::BuildingDestroyed, tileTakingDamage, nullptr, attacker != nullptr && attacker->getSeat() != nullptr ? attacker->getSeat()->getId() : -1, static_cast<double>(getObjectType()),
+                getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        }
         fireEntityDead();
+    }
 
     Player* player = getSeat()->getPlayer();
     if (player == nullptr)

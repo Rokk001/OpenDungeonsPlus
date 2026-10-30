@@ -15,8 +15,7 @@ bool RoomInfirmary::canPayAdmission(const Creature& creature, bool manual) const
 {
     const double admission = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryAdmissionWageShare") *
         creature.getDefinition()->getFee(creature.getLevel());
-    const Player* player = getSeat()->getPlayer();
-    if(manual || getSeat()->getInfirmaryPayer() == 0 || (player != nullptr && !player->getIsHuman()))
+    if(manual || getSeat()->getInfirmaryPayer() == 0)
     {
         double available = 0.0;
         for(const Room* room : getGameMap()->getRooms())
@@ -30,8 +29,7 @@ bool RoomInfirmary::canPayAdmission(const Creature& creature, bool manual) const
 //! \brief Charges one admission and applies its temporary mood only after payment succeeds.
 bool RoomInfirmary::payAdmission(Creature& creature, bool manual, double& amount, int& payer)
 {
-    const Player* player = getSeat()->getPlayer();
-    payer = (manual || (player != nullptr && !player->getIsHuman())) ? 0 : getSeat()->getInfirmaryPayer();
+    payer = manual ? 0 : getSeat()->getInfirmaryPayer();
     amount = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryAdmissionWageShare") *
         creature.getDefinition()->getFee(creature.getLevel());
     if(!canPayAdmission(creature, manual))
