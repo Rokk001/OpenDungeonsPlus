@@ -159,7 +159,7 @@ void roomSetting(KeeperAI& ai, std::istream& input)
     }
 }
 
-//! \brief Rechecks current legality and dispatches both live and restored actions to server paths.
+//! \brief Rechecks and dispatches live and restored actions, clearing returners after a successful drop.
 void perform(KeeperAI& ai, const std::string& target)
 {
     std::istringstream input(decode(target));
@@ -272,7 +272,12 @@ void perform(KeeperAI& ai, const std::string& target)
         if(action == "drop")
         {
             const unsigned int index = name == "-" ? 0 : player.getHandIndex(GameEntityType::creature, decode(name));
-            if(player.isDropHandPossible(tile, index)) player.dropHand(tile, index);
+            if(player.isDropHandPossible(tile, index))
+            {
+                player.dropHand(tile, index);
+                if(name != "-")
+                    ai.getWarState().returning.erase(decode(name));
+            }
         }
         else
             for(Spell* banner : map.getSpellsBySeatAndType(seat, SpellType::callToWar))

@@ -23,6 +23,7 @@
 #include "ai/AiSettings.h"
 
 #include <string>
+#include <set>
 #include <vector>
 
 class Creature;
@@ -73,6 +74,8 @@ struct WarState
     double lastAssaultEnd = -1.0e18;
     double nextRetreatCheck = 0.0;
     std::vector<Group> groups;
+    //! \brief Survivors awaiting a successful drop after an assault.
+    std::set<std::string> returning;
 
     bool defenceRallying = false;
     Tile* defenceBanner = nullptr;
