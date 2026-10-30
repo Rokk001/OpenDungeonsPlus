@@ -179,10 +179,21 @@ struct GameMap
     GameMap(int x, int y) : sizeX(x), sizeY(y) { for(int yy = 0; yy < y; ++yy) for(int xx = 0; xx < x; ++xx) tiles.push_back(Tile(xx, yy)); }
     Tile* getTile(int x, int y) { return ((x < 0) || (y < 0) || (x >= sizeX) || (y >= sizeY)) ? nullptr : &tiles[y * sizeX + x]; }
 };
+// A furniture object exposes the mesh and angle used by the real stream writer.
+struct BuildingObject
+{
+    std::string mesh; double angle;
+    // Creates an object with the saved mesh and rotation.
+    BuildingObject(const std::string& name, double rotation) : mesh(name), angle(rotation) {}
+    // Returns the object's mesh name.
+    const std::string& getMeshName() const { return mesh; }
+    // Returns the object's rotation.
+    double getRotationAngle() const { return angle; }
+};
 // The stream data of the base room is a single word here
 struct Room
 {
-    GameMap* mMap; std::vector<Tile*> mCoveredTiles;
+    GameMap* mMap; std::vector<Tile*> mCoveredTiles; std::map<Tile*, BuildingObject*> mBuildingObjects;
     Room(GameMap* map) : mMap(map) {}
     virtual ~Room() {}
     GameMap* getGameMap() const { return mMap; }
@@ -204,6 +215,7 @@ public:
     std::map<Tile*, RoomTavernGame> mGames;
     std::map<std::string, RoomTavernPendingSpot> mPendingSpots;
     std::vector<RoomTavernPendingGame> mPendingGames;
+    std::vector<RoomTavernSavedFurniture> mSavedFurniture;
 };
 @@ROOM_FUNCTIONS@@
 
@@ -279,6 +291,7 @@ static std::string exportRoom(const RoomTavern& room)
     std::stringstream out; room.exportToStream(out); return out.str();
 }
 
+// Checks room state and furniture round trips through the stream.
 static void checkRoomStream()
 {
     GameMap map(10, 10);
@@ -320,6 +333,21 @@ static void checkRoomStream()
     std::string next; in >> next; expect(next == "NextRoom", "the next token is put back, got " + next);
     expect(loaded.mPayer == TavernPayer::creature, "payer round trip");
     expect(loaded.mCounterTile == map2.getTile(1, 2), "counter round trip");
+    // Furniture retains its tile, mesh and rotation across the room stream.
+    BuildingObject keg(TAVERN_KEG_MESH, 90.0), table(TAVERN_TABLE_MESH, 180.0);
+    room.mBuildingObjects[map.getTile(2, 2)] = &keg;
+    room.mBuildingObjects[map.getTile(3, 2)] = &table;
+    RoomTavern furnitureLoaded(&map2);
+    std::stringstream furnitureIn(exportRoom(room));
+    expect(furnitureLoaded.importFromStream(furnitureIn), "furniture stream is read");
+    expect(furnitureLoaded.mSavedFurniture.size() == 2, "two furniture objects are saved");
+    if(furnitureLoaded.mSavedFurniture.size() == 2)
+    {
+        const RoomTavernSavedFurniture& first = furnitureLoaded.mSavedFurniture[0];
+        const RoomTavernSavedFurniture& second = furnitureLoaded.mSavedFurniture[1];
+        expect(first.mTile == map2.getTile(2, 2) && first.mMesh == TAVERN_KEG_MESH && first.mAngle == 90.0, "keg round trip");
+        expect(second.mTile == map2.getTile(3, 2) && second.mMesh == TAVERN_TABLE_MESH && second.mAngle == 180.0, "table round trip");
+    }
     expect(loaded.mPendingSpots.size() == 2, "two saved places");
     std::map<std::string, RoomTavernPendingSpot>::iterator spot = loaded.mPendingSpots.find("Bert");
     if(spot != loaded.mPendingSpots.end())
@@ -413,7 +441,9 @@ types_end = room_h.index('//! \\brief A room where creatures quench their thirst
 room_types = room_h[payer_start:types_end]
 # The helpers of the stream (anonymous namespace functions and tags of the room source)
 tags = '\n'.join(find_line(room_cpp, r'^const std::string STREAM_TAG_' + name + r' = "[^"]+";$')
-                 for name in ('PAYER', 'INNKEEPER', 'COUNTER', 'SPOT', 'GAME'))
+                 for name in ('PAYER', 'INNKEEPER', 'COUNTER', 'SPOT', 'GAME', 'FURNITURE'))
+tags += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string TAVERN_' + name + r'_MESH = "[^"]+";$')
+                           for name in ('KEG', 'TABLE'))
 helpers = tags + '\n' + '\n'.join(extract(room_cpp, h) for h in [
     'std::string guestStateToString(', 'bool guestStateFromString(', 'bool readTileFromStream('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in ['void RoomTavern::exportToStream(', 'bool RoomTavern::importFromStream('])
