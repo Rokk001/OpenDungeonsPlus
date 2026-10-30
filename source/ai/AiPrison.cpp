@@ -40,7 +40,9 @@ void PRIS::pickup(KeeperAI& ai, Tile*, const std::string& name)
 {
     Player& player = ai.getControlledPlayer();
     Creature* creature = ai.getGameMap().getCreature(name);
-    if(creature != nullptr && creature->isAlive() && creature->isInPrison() &&
+    Tile* tile = creature != nullptr && creature->getIsOnMap() ? creature->getPositionTile() : nullptr;
+    Room* room = tile == nullptr ? nullptr : tile->getCoveringRoom();
+    if(creature != nullptr && creature->isAlive() && room != nullptr && room->getType() == RoomType::prison &&
        creature->getSeatPrison() == player.getSeat() && creature->tryPickup(player.getSeat()))
         player.pickUpEntity(creature);
 }
@@ -75,13 +77,17 @@ void PRIS::tortureStep(KeeperAI& ai, State& state)
         60.0 * ODApplication::turnsPerSecond;
     std::vector<Creature*> prisoners;
     for(Creature* creature : ai.getGameMap().getCreatures())
+    {
+        Tile* tile = creature->getIsOnMap() ? creature->getPositionTile() : nullptr;
+        Room* currentRoom = tile == nullptr ? nullptr : tile->getCoveringRoom();
         if(creature->isAlive() && !creature->isKo() &&
-           ((creature->getSeatPrison() == seat && creature->isInPrison() && creature->getIsOnMap() &&
+           ((creature->getSeatPrison() == seat && currentRoom != nullptr && currentRoom->getType() == RoomType::prison &&
              (creature->getNbTurnsPrison() >= age || state.acceptedPrisoners.count(creature->getName()) != 0)) ||
             (state.acceptedPrisoners.count(creature->getName()) != 0 && ai.getControlledPlayer().getHandIndex(GameEntityType::creature, creature->getName()) <
                 ai.getControlledPlayer().numObjectsInHand())) &&
            state.triedPrisoners.count(creature->getName()) == 0 && state.pendingPrisoners.count(creature->getName()) == 0)
             prisoners.push_back(creature);
+    }
     std::sort(prisoners.begin(), prisoners.end(), wrongOrder ? older : higherLevel);
     for(Creature* prisoner : prisoners)
     {
