@@ -398,7 +398,7 @@ bool GameMap::withdrawFromTreasuries(int32_t amount,Seat* seat) { if(seat->treas
     definitions = source("source/entities/CreatureDefinition.cpp")
     fixture += function(definitions, "const CreatureRoomAffinity& CreatureDefinition::getRoomAffinity(")
     equipment = source("source/entities/CreatureEquipmentAI.cpp")
-    fixture += "\nstatic const double EQUIP_UPGRADE_MARGIN=0.5;\n" + function(equipment, "bool sameItemPath(")
+    fixture += "\n" + function(equipment, "bool sameItemPath(")
     for signature in ("int32_t Creature::getItemEquipmentSlot(", "bool Creature::isItemEquippable(",
                       "double Creature::rateItem(", "bool Creature::acceptItem(", "void Creature::decideEquipment(", "void Creature::dropItems("):
         fixture += "\n" + function(equipment, signature)

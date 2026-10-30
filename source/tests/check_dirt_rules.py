@@ -582,15 +582,22 @@ static void checkUrgeAndCreatureDirt()
     Seat seat; CreatureDefinition definition; definition.dirtFactor = 1.5;
     Tile* tile = map.getTile(2, 2);
     Creature creature(&seat, &definition, &map, tile);
-    // Urge: +UrgePerChicken per chicken, clamped at 100
+    // Urge: +UrgePerChicken per chicken; UrgeSeek is reached after ceil(UrgeSeek / UrgePerChicken) = 14 chickens, UrgeRelieve after 17, clamped at 100
     const double perChicken = ConfigManager::getSingleton().getDirtConfigDouble("UrgePerChicken");
-    for(int i = 0; i < 4; ++i) creature.foodEaten(10.0);
-    expectNear(creature.mUrge, 4.0 * perChicken, "four chickens give four times UrgePerChicken");
-    expectNear(creature.mHunger, 10.0, "hunger fell by 4 x 10");
-    creature.foodEaten(10.0);
-    expectNear(creature.mUrge, 5.0 * perChicken, "five chickens give five times UrgePerChicken");
-    creature.setUrge(100.0 - perChicken / 2.0);
-    creature.foodEaten(10.0);
+    const double seek = ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek");
+    const double relieve = ConfigManager::getSingleton().getDirtConfigDouble("UrgeRelieve");
+    const int seekChickens = static_cast<int>(std::ceil(seek / perChicken));
+    const int relieveChickens = static_cast<int>(std::ceil(relieve / perChicken));
+    for(int i = 0; i < seekChickens - 1; ++i) creature.foodEaten(1.0);
+    expect(creature.mUrge < seek, "one chicken fewer than ceil(UrgeSeek / UrgePerChicken) stays below UrgeSeek");
+    expectNear(creature.mHunger, 50.0 - (seekChickens - 1), "hunger fell by 1 per chicken");
+    creature.foodEaten(1.0);
+    expect(creature.mUrge >= seek, "ceil(UrgeSeek / UrgePerChicken) chickens reach UrgeSeek");
+    for(int i = seekChickens; i < relieveChickens - 1; ++i) creature.foodEaten(1.0);
+    expect(creature.mUrge < relieve, "one chicken fewer than ceil(UrgeRelieve / UrgePerChicken) stays below UrgeRelieve");
+    creature.foodEaten(1.0);
+    expect(creature.mUrge >= relieve, "ceil(UrgeRelieve / UrgePerChicken) chickens reach UrgeRelieve");
+    creature.foodEaten(100.0);
     expectNear(creature.mUrge, 100.0, "the urge is clamped at 100"); expectNear(creature.mHunger, 0.0, "hunger does not go below 0");
     creature.setUrge(-4.0); expectNear(creature.mUrge, 0.0, "setUrge clamps below"); creature.setUrge(400.0); expectNear(creature.mUrge, 100.0, "setUrge clamps above");
     creature.setUrge(0.0);

@@ -75,8 +75,8 @@ skills_cfg = read('config/skills.cfg')
 idle = creature_cpp[creature_cpp.index('// If we are in a bad mood or have a hangover, we go to a lava spa'):]
 idle = idle[:idle.index('return true;')]
 assert 'wantsSpaBath()' in idle and 'CreatureActionSearchSpa>' in idle
-assert creature_cpp.index('CreatureActionSearchDrink>(*this') < creature_cpp.index('CreatureActionSearchSpa>(*this'), 'the spa check follows the thirst check'
-assert creature_cpp.index('CreatureActionSearchToilet>(*this') < creature_cpp.index('CreatureActionSearchSpa>(*this'), 'the spa check follows the toilet check'
+assert creature_cpp.index('// If we are thirsty, we go to a tavern') < creature_cpp.index('// If we have to relieve ourselves'), 'the toilet check follows thirst'
+assert creature_cpp.index('// If we have to relieve ourselves') < creature_cpp.index('// If we are in a bad mood or have a hangover, we go to a lava spa'), 'the spa check follows the toilet check'
 assert '!hasActionBeenTried(CreatureActionType::searchSpa)' in idle, 'one try per search, no loop'
 job_spa = job_cpp[job_cpp.index('creature.wantsSpaBath()'):]
 job_spa = job_spa[:job_spa.index('return true;')]

@@ -66,8 +66,8 @@ PRELUDE = r'''
 #include <string>
 #include <vector>
 #include <utility>
-static const uint32_t MAX_LEVEL=30,BONUS_KIND_COUNT=17,MAX_ITEM_EFFECTS=2;
-static const double TRADE_CHANCE=.3,PERCENT=100.0;
+static const uint32_t MAX_LEVEL=30,BONUS_KIND_COUNT=17;
+static const double PERCENT=100.0;
 #define OD_LOG_ERR(value) static_cast<void>(0)
 //! \brief Fails a named assertion about the actual production result.
 void check(bool value,const std::string& name){if(!value)throw std::runtime_error(name);}
@@ -99,6 +99,8 @@ struct ConfigManager {std::map<std::string,double> values;
  double getTimePayDay()const{return values.at("TimePayDay");}
  //! \brief Supplies the real merchant purchase share and room amounts.
  double getRoomConfigDouble(const std::string& name)const{return values.at(name);}
+ //! \brief Supplies the configured item effect setting used by the codec.
+ double getItemSetting(const std::string&,const std::string& key)const{return values.at(key);}
  //! \brief Supplies the real equipment limits; every key the fixture reaches is loaded from the config.
  double getEquipmentConfigDoubleOrDefault(const std::string& name,double)const{return values.at(name);}
  //! \brief Leaves unrelated catalogue items outside the crystal-only fixture.
@@ -299,10 +301,9 @@ void fireSpellEffect(Tile&,const std::string&,const std::string&) {}}
 def main():
     global_cfg, rooms_cfg = read("config/global.cfg"), read("config/rooms.cfg")
     keys = ["SoulCrystalPrice", "SoulCrystalBreakBelow", "SoulCrystalNormalXpPerSecond", "SoulCrystalHeroRareStart",
-        "SoulCrystalHeroRareEnd", "TimePayDay", "HeroItemBase", "HeroItemPerLevel"]
+        "SoulCrystalHeroRareEnd", "TimePayDay", "HeroItemBase", "HeroItemPerLevel", "MaxItemEffects"]
     values = {key: scalar(global_cfg, key) for key in keys}
-    values.update({key: scalar(rooms_cfg, key) for key in ("MerchantBuyShare", "MerchantGoodsPerTable", "MerchantGiftMood")})
-    values["MaxItemEffects"] = scalar(read("config/equipments.cfg"), "MaxItemEffects")
+    values.update({key: scalar(rooms_cfg, key) for key in ("MerchantBuyShare", "MerchantGoodsPerTable", "MerchantGiftMood", "MerchantTradeChance")})
     creatures = re.sub(r"#[^\n]*", "", read("config/creatures.cfg"))
     tables = [list(map(float, block.split())) for block in re.findall(r"\[XP\](.*?)\[/XP\]", creatures, re.S) if block.strip()]
     assert tables and all(table == tables[0] for table in tables), "the crystal wage cases require the actual shared XP table"
