@@ -3956,6 +3956,7 @@ bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Switches the options page and fits its visible entries inside the window.
 void GameMode::setOptionsPage(bool endGame)
 {
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
@@ -3965,6 +3966,24 @@ void GameMode::setOptionsPage(bool endGame)
     for(const char* name : {"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton"})
         options->getChild(name)->setVisible(endGame);
     options->setText(endGame ? "End Game" : "Options");
+
+    const std::vector<const char*> entries = endGame ?
+        std::vector<const char*>{"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton", "ContinueButton"} :
+        std::vector<const char*>{"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
+            "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton",
+            "ProductionButton", "ContinueButton"};
+    Gui& gui = mModeManager->getGui();
+    const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float height = std::min(0.95f, (84.0f + 46.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
+    gui.setScaledArea(options, CEGUI::URect(CEGUI::UDim(0.5f, -160), CEGUI::UDim(0.5f - height / 2.0f, 0),
+        CEGUI::UDim(0.5f, 160), CEGUI::UDim(0.5f + height / 2.0f, 0)));
+    const float step = 0.78f / entries.size();
+    for(size_t i = 0; i < entries.size(); ++i)
+    {
+        const float top = 0.12f + step * i;
+        gui.setScaledArea(options->getChild(entries[i]), CEGUI::URect(CEGUI::UDim(0, 24), CEGUI::UDim(top, 0),
+            CEGUI::UDim(1, -24), CEGUI::UDim(top + step * 38.0f / 46.0f, 0)));
+    }
 }
 
 bool GameMode::showEndGameFromOptions(const CEGUI::EventArgs&)
