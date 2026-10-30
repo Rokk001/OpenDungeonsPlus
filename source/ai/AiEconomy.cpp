@@ -507,6 +507,7 @@ void ECON::sellObsolete(KeeperAI& ai)
     if(seat->getGold() >= wageBill(ai))
         return;
     std::vector<std::pair<RoomType, uint32_t>> plan = KeeperAI::getRoomPlan();
+    restoreRoomBlocks(ai);
     if(mistaken)
     {
         for(std::vector<std::pair<RoomType, uint32_t>>::reverse_iterator entry = plan.rbegin(); entry != plan.rend(); ++entry)
@@ -514,7 +515,23 @@ void ECON::sellObsolete(KeeperAI& ai)
             std::vector<Room*> rooms = ai.getGameMap().getRoomsByTypeAndSeat(entry->first, seat);
             if(!rooms.empty())
             {
-                ACTS::sellRoomTiles(ai, rooms.back()->getCoveredTiles());
+                const std::vector<RoomBlock>& blocks = ai.getEconomyState().roomBlocks;
+                for(Room* room : rooms)
+                    for(Tile* tile : room->getCoveredTiles())
+                    {
+                        bool recorded = false;
+                        for(const RoomBlock& block : blocks)
+                            if(block.type == entry->first && std::find(block.tiles.begin(), block.tiles.end(), tile) != block.tiles.end())
+                                recorded = true;
+                        if(!recorded)
+                            return;
+                    }
+                for(auto block = blocks.rbegin(); block != blocks.rend(); ++block)
+                    if(block->type == entry->first && !block->tiles.empty())
+                    {
+                        ACTS::sellRoomTiles(ai, block->tiles);
+                        break;
+                    }
                 return;
             }
         }
