@@ -174,22 +174,17 @@ notice_extent = window_extent(notice)
 assert notice_extent[0][0] <= 0.6 + 1e-9 and notice_extent[0][1] <= 0, 'event panel is at most 60 percent wide'
 game_text = (repo / 'source/modes/GameMode.cpp').read_text(encoding='utf-8', errors='replace')
 assert 'fitEventPanelToText' in game_text and 'display.d_height / 3.0f' in game_text, 'event panel height follows the text'
-atlas = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
-border_height = float(atlas.find("Image[@name='WindowTopEdge']").get('height')) / 4
 labels = {'Dismiss': 'DismissLabel', 'Close': 'CloseLabel'}
 for name in ('Message', 'Dismiss', 'Close', 'DismissLabel', 'CloseLabel'):
     area = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))
-    # Top and bottom are offsets from the panel top (scale 0) or bottom (scale 1) and keep the atlas border free.
-    assert area[1][0] in (0, 1) and area[3][0] in (0, 1), name
-    if area[1][0] == 0:
-        assert area[1][1] >= border_height, name
-    if area[3][0] == 1:
-        assert area[3][1] <= -border_height, name
+    assert area[1][1] == 0 and area[3][1] == 0, name + ' uses relative vertical dimensions'
 for button, label in labels.items():
     b = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % button).get('value'))
     l = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % label).get('value'))
-    assert l[1][1] >= b[3][1], label + ' sits under its symbol button'
+    assert l[1][0] >= b[3][0], label + ' sits under its symbol button'
     assert notice.find("Window[@name='%s']/Property[@name='Text']" % label).get('value') == button, label
+assert 'EVENT_PANEL_FIXED_HEIGHT' not in game_text, 'event panel height uses text and font size'
+assert 'textHeight + 8.0f * lineHeight' in game_text, 'button row follows font size'
 print('shared title, close button, list insets, event field and single goals entry verified')
 
 # The options page fits its two existing button groups into a screen-limited window.

@@ -4099,14 +4099,12 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     updateEventMessageIndicator(0.0f);
 }
 
-//! rief Design pixels of the event panel above and below the message text (top margin, button row with labels).
-static const float EVENT_PANEL_FIXED_HEIGHT = 160.0f;
-//! rief Design pixels of the event panel bottom edge above the screen bottom (matches WindowGameEvent.layout).
+//! \brief Design pixels of the event panel bottom edge above the screen bottom (matches WindowGameEvent.layout).
 static const float EVENT_PANEL_BOTTOM_OFFSET = 193.0f;
-//! rief Design pixels of frame inset and scrollbar subtracted from the message width when wrapping.
+//! \brief Design pixels of frame inset and scrollbar subtracted from the message width when wrapping.
 static const float EVENT_PANEL_TEXT_INSET = 44.0f;
 
-//! rief Sets the height of the event panel so that it fits the wrapped message text plus the button row.
+//! \brief Sets the height of the event panel so that it fits the wrapped message text plus the button row.
 //! \param gui The gui, used for the layout scale and to store the design area.
 //! \param panel The GameEventText window.
 //! \param message The text of the message, empty for no message.
@@ -4147,9 +4145,21 @@ static void fitEventPanelToText(Gui& gui, CEGUI::Window* panel, const std::strin
     }
 
     const float textHeight = std::min(static_cast<float>(lines) * lineHeight, display.d_height / 3.0f);
-    const float height = textHeight / scale + EVENT_PANEL_FIXED_HEIGHT;
-    gui.setScaledArea(panel, CEGUI::URect(CEGUI::UDim(0.6f, 0.0f), CEGUI::UDim(1.0f, -EVENT_PANEL_BOTTOM_OFFSET - height),
+    const float height = textHeight + 8.0f * lineHeight;
+    const float unit = lineHeight / height;
+    gui.setScaledArea(panel, CEGUI::URect(CEGUI::UDim(0.6f, 0.0f), CEGUI::UDim(1.0f - height / display.d_height, -EVENT_PANEL_BOTTOM_OFFSET),
         CEGUI::UDim(1.0f, -20.0f), CEGUI::UDim(1.0f, -EVENT_PANEL_BOTTOM_OFFSET)));
+    text->setArea(CEGUI::URect(CEGUI::UDim(0.07f, 0), CEGUI::UDim(2.0f * unit, 0),
+        CEGUI::UDim(0.93f, 0), CEGUI::UDim(1.0f - 6.0f * unit, 0)));
+    const char* names[] = {"Dismiss", "Close", "DismissLabel", "CloseLabel"};
+    for(size_t i = 0; i < 4; ++i)
+    {
+        const float x = (i % 2 == 0) ? 0.2f : 0.6f;
+        const bool label = i >= 2;
+        panel->getChild(names[i])->setArea(CEGUI::URect(CEGUI::UDim(x - (label ? 0.05f : 0.0f), 0),
+            CEGUI::UDim(1.0f - (label ? 3.0f : 5.0f) * unit, 0),
+            CEGUI::UDim(x + (label ? 0.1f : 0.05f), 0), CEGUI::UDim(1.0f - (label ? 2.0f : 3.0f) * unit, 0)));
+    }
 }
 
 void GameMode::showEventMessages()
