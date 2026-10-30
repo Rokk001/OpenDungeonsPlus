@@ -929,8 +929,15 @@ void assaultStep(Env& env)
 
         // The target is destroyed or no longer known: next target
         Tile* target = g.targets[g.targetIndex];
-        Room* room = target->getCoveringRoom();
-        bool gone = g.raid && ((room == nullptr) || (room->getSeat() == seat) || !knowledge.isKnown(target));
+        const TileStateNotified* knownState = seat->getKnownTileState(target);
+        const bool fogOff = !env.gameMap.getIsFOWActivated();
+        const TileVisual visual = fogOff ? target->getTileVisual() :
+            (knownState == nullptr ? TileVisual::nullTileVisual : knownState->mTileVisual);
+        const bool isRoom = (visual >= TileVisual::dungeonTempleRoom && visual <= TileVisual::guardRoom) ||
+            (visual >= TileVisual::templeRoom && visual < TileVisual::countTileVisual);
+        const bool owned = fogOff ? target->getSeat() == seat :
+            (knownState != nullptr && knownState->mSeatIdOwner == seat->getId());
+        bool gone = g.raid && (!isRoom || owned || !knowledge.isKnown(target));
         if(gone)
         {
             if(g.bannerTile != nullptr)
