@@ -17,6 +17,8 @@
 
 #include "ODApplication.h"
 #include "ai/AiMind.h"
+#include "ai/AiEconomy.h"
+#include "ai/KeeperAI.h"
 #include "entities/Building.h"
 
 #include "entities/BuildingObject.h"
@@ -238,6 +240,7 @@ Tile* Building::getCentralTile() const
     return getGameMap()->getTile((minX + maxX) / 2, (minY + maxY) / 2);
 }
 
+//! \brief Removes a covered tile and records its loss for the AI owner.
 bool Building::removeCoveredTile(Tile* t)
 {
     OD_LOG_INF(getGameMap()->serverStr() + "building=" + getName() + ", removing covered tile=" + Tile::displayAsString(t));
@@ -248,6 +251,13 @@ bool Building::removeCoveredTile(Tile* t)
         return false;
     }
 
+    if(getGameMap()->isServerGameMap() && getObjectType() == GameEntityType::room && getSeat() != nullptr &&
+       getSeat()->getPlayer() != nullptr && !getSeat()->getPlayer()->getIsHuman())
+    {
+        KeeperAI* ai = dynamic_cast<KeeperAI*>(getGameMap()->getAI(*getSeat()->getPlayer()));
+        if(ai != nullptr)
+            ECON::forgetRoomTiles(*ai, std::vector<Tile*>(1, t));
+    }
     mCoveredTiles.erase(it);
     mCoveredTilesDestroyed.push_back(t);
     mTileData[t]->mHP = 0.0;
