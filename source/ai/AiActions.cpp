@@ -17,6 +17,7 @@
 #include "rooms/RoomType.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomArena.h"
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomTavern.h"
 #include "rooms/RoomSpa.h"
@@ -291,6 +292,10 @@ void perform(KeeperAI& ai, const std::string& target)
             const MerchantGood* good = merchant->findGood(index, table);
             if(good != nullptr)
             {
+                Room* room = destination->getCoveringRoom();
+                if(!mistaken && !good->mItem.mSoulCrystal && room != nullptr && room->getType() == RoomType::arena &&
+                   static_cast<RoomArena*>(room)->hasRunningFight())
+                    return;
                 if(ECON::walletGate(ai, good->mItem.getPrice(&map)) && (mistaken || RoomMerchant::wantsItem(*fighter, good->mItem)) &&
                    merchant->sellToKeeper(player, index) && player.numObjectsInHand() != 0)
                 {
