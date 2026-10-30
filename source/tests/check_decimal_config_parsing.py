@@ -61,6 +61,10 @@ if 'creature->stun(nbTurns)' not in tremor or 'void stun(double nbTurns)' not in
 door = read("source", "traps", "TrapDoor.cpp")
 if 'mFireCooldownTurns +=' not in door or 'FireCooldown ' not in door or 'max_digits10' not in door:
     problems.append("runed door must carry and save its fractional cooldown")
+trap = read("source", "traps", "Trap.cpp")
+trap_export = trap.split('void Trap::exportTileDataToStream', 1)[1].split('\n}', 1)[0]
+if 'max_digits10' not in trap_export or 'getReloadTime()' not in trap_export or 'os.flags(flags)' not in trap_export:
+    problems.append("trap reload counters must be saved at double precision")
 for name in ("TrapFear.cpp", "TrapFireburst.cpp", "TrapGas.cpp", "TrapAlarm.cpp"):
     trap_source = read("source", "traps", name)
     radius = 'radius' if name == 'TrapAlarm.cpp' else 'mRadius'
