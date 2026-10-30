@@ -29,6 +29,7 @@
 #include "gamemap/GameMap.h"
 #include "network/ODServer.h"
 #include "render/RenderManager.h"
+#include "rooms/Room.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -342,6 +343,8 @@ double Building::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         {
             AiEvent event = {AiEventType::BuildingDestroyed, tileTakingDamage, nullptr, attacker != nullptr && attacker->getSeat() != nullptr ? attacker->getSeat()->getId() : -1, static_cast<double>(getObjectType()),
                 getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            if(getObjectType() == GameEntityType::room)
+                event.roomType = static_cast<int>(static_cast<Room*>(this)->getType());
             getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
         }
         fireEntityDead();

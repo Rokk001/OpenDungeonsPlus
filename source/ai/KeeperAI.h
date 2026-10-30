@@ -79,7 +79,7 @@ public:
     //! \brief Writes the keeper's mind as the contents of its AIState block.
     virtual void exportState(std::ostream& os) const;
     //! \brief Restores the contents of an AIState block, or starts fresh when invalid.
-    bool importState(const std::vector<std::string>& lines);
+    bool importState(const std::vector<std::string>& lines) override;
     //! \brief Chooses the AI keeper switches immediately before each ectoplasm product.
     static void updateGhostRoomSettings(Seat& seat);
     //! \brief The room plan of the keeper AI in build order: the [RoomPlan] section of ai.cfg, or the compiled

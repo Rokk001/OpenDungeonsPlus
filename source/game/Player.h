@@ -152,6 +152,9 @@ public:
      */
     void pickUpEntity(GameEntity *entity);
 
+    //! \brief Restores ordered held entities from a save without repeating pickup effects.
+    void restoreObjectsInHand(const std::vector<GameEntity*>& entities);
+
     //! \brief Check to see the first object in hand can be dropped on Tile t and do so if possible.
     bool isDropHandPossible(Tile *t, unsigned int index = 0);
 
