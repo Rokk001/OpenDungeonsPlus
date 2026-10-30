@@ -118,12 +118,6 @@ void tunnelOpenEvent(KeeperAI& ai, const AiEvent&)
     stateFor(ai).mTunnelOpen = true;
 }
 
-//! \brief Reports whether this keeper's library lacks a queued entry.
-bool queueEmpty(KeeperAI& ai)
-{
-    return ai.getControlledPlayer().getSeat()->getSkillPending().empty();
-}
-
 //! \brief Saves the known tunnel and the remaining retry delay for clock-relative restoration.
 void saveState(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
@@ -247,7 +241,6 @@ void bind(KeeperAI& ai)
         std::bind(refillQueue, std::ref(ai)));
     ai.getMind().onEvent("C01", {AiEventType::NoSkillInQueue},
         std::bind(queueEmptyEvent, std::ref(ai), std::placeholders::_1));
-    ai.getMind().onPoll("C02", AiEventType::NoSkillInQueue, std::bind(queueEmpty, std::ref(ai)));
     ai.getMind().onEvent("C03", {AiEventType::TunnelOpen},
         std::bind(tunnelOpenEvent, std::ref(ai), std::placeholders::_1));
     ai.getMind().onSave(std::bind(saveState, std::ref(ai), std::placeholders::_1));
