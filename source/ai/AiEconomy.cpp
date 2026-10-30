@@ -15,6 +15,7 @@
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomType.h"
 #include "spells/SpellSummonWorker.h"
 #include "spells/SpellType.h"
@@ -314,9 +315,13 @@ void ECON::claimWatch(KeeperAI& ai)
             }
         }
     }
-    const std::function<bool(Tile*, Tile*)> nearest = [&heart](Tile* first, Tile* second)
+    const std::vector<Room*> temples = map.getRoomsByTypeAndSeat(RoomType::dungeonTemple, seat);
+    Tile* heartTile = temples.empty() ? nullptr : static_cast<RoomDungeonTemple*>(temples.front())->getHeartTile();
+    if(heartTile == nullptr)
+        return;
+    const std::function<bool(Tile*, Tile*)> nearest = [heartTile](Tile* first, Tile* second)
     {
-        return distance(first, heart.front()) < distance(second, heart.front());
+        return distance(first, heartTile) < distance(second, heartTile);
     };
     std::sort(candidates.begin(), candidates.end(), nearest);
     size_t wanted = static_cast<size_t>(std::ceil(key("MarkedTilesPerWorker") * seat->getNumCreaturesWorkers()));
