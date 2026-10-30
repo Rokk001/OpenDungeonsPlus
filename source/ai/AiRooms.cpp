@@ -655,11 +655,9 @@ void ROOMS::bind(KeeperAI& ai)
     mind.onLook("B02", roomKey("LookFactorDormitory"), std::bind(bedWatch, std::ref(ai)));
     mind.onLook("B03", roomKey("LookFactorBuild"), std::bind(hatcheryWatch, std::ref(ai)));
     mind.onLook("B10", roomKey("LookFactorScan"), std::bind(toiletWatch, std::ref(ai)));
-    mind.onLook("B12", roomKey("LookFactorScan"), std::bind(buildNext, std::ref(ai)));
     mind.onLook("B13", roomKey("LookFactorScan"), std::bind(auditLab, std::ref(ai)));
     mind.onLook("B16", roomKey("LookFactorScan"), std::bind(auditInfirmary, std::ref(ai)));
     mind.onLook("B18", roomKey("LookFactorScan"), std::bind(auditSpa, std::ref(ai)));
-    mind.onLook("B19", roomKey("LookFactorScan"), std::bind(buildNext, std::ref(ai)));
     mind.onLook("B20", roomKey("LookFactorScan"), std::bind(templeSacrifice, std::ref(ai)));
     mind.onLook("B08", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(auditTavern, std::ref(ai)));
     mind.onLook("B09", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(auditCasino, std::ref(ai)));
