@@ -595,7 +595,8 @@ void ROOMS::bridgeWatch(KeeperAI& ai)
             }
         if(bridge.empty())
             continue;
-        const RoomType type = lava ? RoomType::bridgeStone : RoomType::bridgeWooden;
+        const RoomType type = lava && SkillManager::isRoomAvailable(RoomType::bridgeStone, seat)
+            ? RoomType::bridgeStone : RoomType::bridgeWooden;
         if(!SkillManager::isRoomAvailable(type, seat) ||
             !ECON::walletGate(ai, bridge.size() * RoomManager::costPerTile(type)))
             return;
