@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/balance"))
-from combat_sim import Roster, World, world_rule_one
+from combat_sim import Roster, World
 
 
 # Read a tracked file using the repository root rather than the caller's directory.
@@ -14,33 +14,48 @@ def read(path):
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-# The best Damage% bonus of the Common quality in every item slot, summed over the slots (the Common set).
-def common_set_damage_percent():
-    best = {}
-    for item in re.findall(r"\[Item\](.*?)\[/Item\]", read("config/items.cfg"), re.S):
-        slot = re.search(r"^\s*Slot\s+(\S+)", item, re.M).group(1)
-        for quality in re.findall(r"\[Quality\]\s*Name\s+Common\b(.*?)\[/Quality\]", item, re.S):
-            for match in re.finditer(r"^\s*Bonus\s+Damage%\s+\S+\s+(\S+)", quality, re.M):
-                best[slot] = max(best.get(slot, 0.0), float(match.group(1)))
-    return sum(best.values())
+# Return the largest Common damage bonus in items.cfg.
+def common_weapon_damage_percent():
+    values = []
+    for quality in re.findall(r"\[Quality\]\s*Name\s+Common\b(.*?)\[/Quality\]", read("config/items.cfg"), re.S):
+        values.extend(float(match.group(1)) for match in re.finditer(r"^\s*Bonus\s+Damage%\s+\S+\s+(\S+)", quality, re.M))
+    return max(values)
 
 
-# The worst level-1 critical blow of a wage 50-200 fighter, times the Common set, times the Strength research 3 factor,
-# times the small Strength potion, stays below the worker MinHP.
+# Check the worst critical blow of every eligible type and template against both workers.
 def main():
+    roster = Roster(ROOT)
+    world = World(roster)
+    worker = world.unit("Kobold", 1, -1)[0]
+    crit = world.glob["CritDamageMultiplier"]
+    bonus = common_weapon_damage_percent()
+    blows = []
+    for name in world.names:
+        if world.wage[name] > 200:
+            continue
+        weapons = 0
+        for hand in ("R", "L"):
+            item = world.field(name, "WeaponSpawn" + hand)
+            if item and roster.equipment[item][0].get("WeaponType", [""])[0] != "shield":
+                weapons += 1
+        factor = 1 + bonus / 100 * weapons
+        for template in (0, 1, 2):
+            maximum = world.unit(name, 1, template)[0].maximum
+            blow = sum(max(crit * value * factor - defense, 0) for value, defense in zip(maximum, worker.defense))
+            blows.append((blow, name, template))
+    blow, name, template = max(blows)
     spell = float(re.search(r"^\s*CreatureStrengthValue\s+(\S+)", read("config/spells.cfg"), re.M).group(1))
     research = float(re.search(r"^\s*spellCreatureStrength\s+Factor\s+dev\s+\S+\s+\S+\s+(\S+)", read("config/skills.cfg"), re.M).group(1))
     strength = 1 + (spell - 1) * research
-    potion = re.search(r"Id\s+strength_small\b.*?^\s*Value\s+(\S+)", read("config/potions.cfg"), re.S | re.M)
-    small_potion = float(potion.group(1))
-    items = 1 + common_set_damage_percent() / 100.0
-    min_hp = float(re.search(r"^\s*MinHP\s+(\S+)", read("config/creatures.cfg"), re.M).group(1))
-    worker_hp, blow, by = world_rule_one(World(Roster(ROOT)))
-    assert worker_hp == min_hp == 70, (worker_hp, min_hp)
-    assert math.isclose(strength, 1.2) and math.isclose(small_potion, 1.1), (strength, small_potion)
-    total = blow * items * strength * small_potion
-    assert total < worker_hp, (blow, items, strength, small_potion, total, worker_hp, by)
-    print("rule 1 worker ok: %.2f x %.2f x %.2f x %.2f = %.2f < %g (%s)" % (blow, items, strength, small_potion, total, worker_hp, by))
+    potion = float(re.search(r"Id\s+strength_small\b.*?^\s*Value\s+(\S+)", read("config/potions.cfg"), re.S | re.M).group(1))
+    assert math.isclose(blow, 52.56, abs_tol=1e-9) and (name, template) == ("Elf", 2), (blow, name, template)
+    assert math.isclose(strength, 1.2) and math.isclose(potion, 1.1), (strength, potion)
+    total = blow * strength * potion
+    assert math.isclose(total, 69.3792, abs_tol=1e-9), total
+    for worker_name in ("Kobold", "DwarfWorker"):
+        hp = roster.number(roster.creatures[worker_name][0], "MinHP")
+        assert hp > total, (worker_name, hp, total)
+    print("rule 1 worker ok: %.4f < both workers' MinHP" % total)
 
 
 if __name__ == "__main__":
