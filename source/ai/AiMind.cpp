@@ -572,10 +572,15 @@ void Mind::exportState(std::ostream& os) const
 //! \brief Restores the hand and scheduler entries atomically; malformed entries restart a fresh mind.
 bool Mind::importState(const std::vector<std::string>& input)
 {
+    // The first game turn can raise notices before the saved mind is restored.
+    const std::vector<Reaction> earlyEvents = mEvents;
+    const std::map<int, double> earlySpells = mEnemySpells;
     std::vector<AiMath::AiStateLine> lines;
     if(!AiMath::parseAiState(input, lines))
     {
         resetState();
+        mEvents = earlyEvents;
+        mEnemySpells = earlySpells;
         return false;
     }
     std::vector<Reaction> events;
@@ -693,6 +698,8 @@ bool Mind::importState(const std::vector<std::string>& input)
     if(!valid)
     {
         resetState();
+        mEvents = earlyEvents;
+        mEnemySpells = earlySpells;
         return false;
     }
     // Preserve bindings established by the package owners before the first turn.
@@ -701,6 +708,9 @@ bool Mind::importState(const std::vector<std::string>& input)
         if(looks.find(look.first) == looks.end())
             looks.insert(look);
     }
+    events.insert(events.end(), earlyEvents.begin(), earlyEvents.end());
+    for(const std::pair<const int, double>& spell : earlySpells)
+        enemySpells[spell.first] = spell.second;
     mEvents.swap(events);
     mActions.swap(actions);
     mLooks.swap(looks);
