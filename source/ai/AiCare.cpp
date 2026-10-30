@@ -570,7 +570,7 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
         std::string row;
         if(creature->isHungry())
             row = "B03";
-        else if(creature->getHomeTile() == nullptr)
+        else if(!creature->getDefinition()->isWorker() && creature->getHomeTile() == nullptr)
             row = "B02";
         else if(creature->getGoldFee() > 0.0)
             row = "A05";
