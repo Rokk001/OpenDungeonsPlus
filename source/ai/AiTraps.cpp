@@ -18,6 +18,7 @@
 #include "ai/AiTraps.h"
 
 #include "ai/AiActions.h"
+#include "ai/AiEconomy.h"
 #include "ai/AiKnowledge.h"
 #include "ai/AiMind.h"
 #include "ai/AiSettings.h"
@@ -212,24 +213,10 @@ bool trapSpotFree(const Tile* tile, Seat* seat)
     return (tile != nullptr) && !tile->isFullTile() && tile->isBuildableUpon(seat);
 }
 
-//! \brief Returns current and owed wages for the living fighters of the seat.
-double wageBill(KeeperAI& ai)
-{
-    double bill = 0.0;
-    for(Creature* creature : ai.getGameMap().getCreaturesBySeat(ai.getControlledPlayer().getSeat()))
-    {
-        if(creature->isAlive() && !creature->getDefinition()->isWorker())
-            bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
-    }
-    return bill;
-}
-
-//! \brief Tells whether a purchase of the given cost keeps the margins free: the room margin, the wage bill and the
-//! reload margin of the traps.
+//! \brief Applies the shared purchase gate, including its saved wage-reserve decision and trap margin.
 bool affordable(KeeperAI& ai, double cost)
 {
-    double gold = ai.getControlledPlayer().getSeat()->getGold();
-    return gold >= (cost + aiKey("RoomGoldMargin") + wageBill(ai) + TRAP::reloadMargin(ai));
+    return ECON::walletGate(ai, cost);
 }
 
 //! \brief Returns the rank of a door kind: the higher, the stronger. 0 for a type that is no plain door.
