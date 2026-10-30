@@ -121,7 +121,7 @@ bool reloadAllows(KeeperAI& ai, double cost);
 bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed = false, int* specialDoorMistake = nullptr);
 
 //! \brief Fortifies the new tunnel entrance after the reaction time: three more trap tiles, a door and a barricade.
-//! The rule mistake adds a symptom delay before the fortification.
+//! The rule mistake skips this fortification.
 //! \param breakthrough The tile where the tunnel breaks into the AI's land.
 //! \return false when the mistake delayed it.
 bool fortifyTunnel(KeeperAI& ai, Tile* breakthrough);

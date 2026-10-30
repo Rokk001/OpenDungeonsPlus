@@ -997,6 +997,7 @@ void TRAP::bindRows(KeeperAI& ai)
     mind.onSave(save);
 }
 
+//! \brief Fortifies a known tunnel unless this trigger's mistake skips the fortification.
 bool TRAP::fortifyTunnel(KeeperAI& ai, Tile* breakthrough)
 {
     // AI row F15
@@ -1004,16 +1005,9 @@ bool TRAP::fortifyTunnel(KeeperAI& ai, Tile* breakthrough)
         return false;
 
     restoreDraws(ai);
-    // The mistake: the AI notices the open tunnel only after another symptom delay
+    // The simulated mistake skips this fortification.
     if(ai.getMind().slip("F15"))
-    {
-        TRAP::State::PendingFortify pending;
-        pending.mX = breakthrough->getX();
-        pending.mY = breakthrough->getY();
-        pending.mDue = ai.getMind().now() + symptomDelay(ai);
-        ai.getTrapState().mFortifyDue.push_back(pending);
         return false;
-    }
 
     // The tunnel is an entrance from now on, so the trap look builds its door and the trap tiles per entrance
     fortifyNow(ai, breakthrough);
