@@ -125,7 +125,7 @@ bool CreatureMerchantAI::decideSoulCrystal(Creature& creature)
         }
     }
     if(hasCrystal || !freeSlot || creature.hasActionBeenTried(CreatureActionType::buyItem)
-        || Random::Double(0.0, 1.0) >= TRADE_CHANCE) return false;
+        || Random::Double(0.0, 1.0) >= ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("MerchantTradeChance", 0.3)) return false;
     const std::vector<MerchantStockEntry> stock = RoomMerchant::getStock(*creature.getGameMap(), creature.getSeat());
     for(const MerchantStockEntry& entry : stock)
     {
