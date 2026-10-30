@@ -218,7 +218,8 @@ double ECON::wageBill(KeeperAI& ai)
 {
     double bill = 0.0;
     for(Creature* creature : ai.getGameMap().getCreaturesBySeat(ai.getControlledPlayer().getSeat()))
-        bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
+        if(!creature->getDefinition()->isWorker())
+            bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
     return bill;
 }
 
