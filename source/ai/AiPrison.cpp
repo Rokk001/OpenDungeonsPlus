@@ -66,6 +66,7 @@ void PRIS::tortureStep(KeeperAI& ai, State& state)
     // AI row D10
     // AI row G02
     // AI row G04
+    const bool wrongOrder = ai.getMind().slip("G04");
     Seat* seat = ai.getControlledPlayer().getSeat();
     const std::vector<Room*> rooms = ai.getGameMap().getRoomsByTypeAndSeat(RoomType::torture, seat);
     if(rooms.empty())
@@ -81,7 +82,6 @@ void PRIS::tortureStep(KeeperAI& ai, State& state)
                 ai.getControlledPlayer().numObjectsInHand())) &&
            state.triedPrisoners.count(creature->getName()) == 0 && state.pendingPrisoners.count(creature->getName()) == 0)
             prisoners.push_back(creature);
-    const bool wrongOrder = ai.getMind().slip("G04");
     std::sort(prisoners.begin(), prisoners.end(), wrongOrder ? older : higherLevel);
     for(Creature* prisoner : prisoners)
     {
