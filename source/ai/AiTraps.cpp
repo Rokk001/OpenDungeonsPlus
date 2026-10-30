@@ -366,6 +366,30 @@ int corridorRun(GameMap& gameMap, Seat* seat, const TRAP::Entrance& entrance)
     }
     return run;
 }
+
+//! \brief Finds a known buildable bend reached along the entrance corridor.
+Tile* corridorBend(GameMap& gameMap, Seat* seat, const TRAP::Entrance& entrance)
+{
+    AiKnowledge knowledge(gameMap, seat);
+    for(int k = 1; k <= gameMap.getMapSizeX() + gameMap.getMapSizeY(); ++k)
+    {
+        Tile* tile = lineTile(gameMap, entrance, k);
+        Tile* forward = lineTile(gameMap, entrance, k + 1);
+        if(tile == nullptr || forward == nullptr || !knowledge.isKnown(tile) || !knowledge.isKnown(forward) || tile->isFullTile())
+            return nullptr;
+        Tile* left = gameMap.getTile(tile->getX() - entrance.mDy, tile->getY() + entrance.mDx);
+        Tile* right = gameMap.getTile(tile->getX() + entrance.mDy, tile->getY() - entrance.mDx);
+        if(left == nullptr || right == nullptr || !knowledge.isKnown(left) || !knowledge.isKnown(right))
+            return nullptr;
+        bool leftOpen = !left->isFullTile();
+        bool rightOpen = !right->isFullTile();
+        if(forward->isFullTile())
+            return (leftOpen != rightOpen && trapSpotFree(tile, seat)) ? tile : nullptr;
+        if(leftOpen || rightOpen)
+            return nullptr;
+    }
+    return nullptr;
+}
 }
 
 //! \brief Finds owned entrances and fortified tunnels using the keeper's known tiles.
@@ -577,14 +601,11 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         for(const TRAP::Entrance& entrance : entrances)
         {
             // A straight corridor of the minimum length; the mistake takes a bend instead
-            int run = corridorRun(gameMap, seat, entrance);
-            if(run < 0)
-                continue;
-            bool straight = run >= static_cast<int>(aiKey("BoulderCorridorMinTiles"));
-            if(straight == slipped)
-                continue;
-
-            Tile* tile = lineTile(gameMap, entrance, 1);
+            Tile* tile = nullptr;
+            if(slipped)
+                tile = corridorBend(gameMap, seat, entrance);
+            else if(corridorRun(gameMap, seat, entrance) >= static_cast<int>(aiKey("BoulderCorridorMinTiles")))
+                tile = lineTile(gameMap, entrance, 1);
             if(trapSpotFree(tile, seat) && buildOne(ai, TrapType::boulder, tile))
                 return true;
         }
