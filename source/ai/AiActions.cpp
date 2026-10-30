@@ -279,7 +279,7 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!(input >> mistaken)) return;
         Creature* fighter = map.getCreature(decode(recipient));
         Tile* destination = fighter == nullptr ? nullptr : fighter->getPositionTile();
-        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || destination == nullptr ||
+        if(fighter == nullptr || !fighter->isAlive() || !fighter->getIsOnMap() || fighter->getSeat() != seat || destination == nullptr ||
            !destination->isClaimedForSeat(seat)) return;
         bool freeSlot = false;
         for(const std::unique_ptr<ItemInstance>& item : fighter->getInventory())
@@ -314,7 +314,7 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!(input >> recipient >> name)) return;
         Creature* fighter = map.getCreature(decode(recipient));
         Tile* tile = fighter == nullptr ? nullptr : fighter->getPositionTile();
-        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || tile == nullptr) return;
+        if(fighter == nullptr || !fighter->isAlive() || !fighter->getIsOnMap() || fighter->getSeat() != seat || tile == nullptr) return;
         const unsigned int index = player.getHandIndex(GameEntityType::itemBagEntity, decode(name));
         if(index < player.numObjectsInHand() && player.isDropHandPossible(tile, index)) player.dropHand(tile, index);
         return;
