@@ -548,8 +548,26 @@ public:
     //! \brief Returns the configured AngryFleeChancePercent value.
     double getAngryFleeChancePercent() const { return mAngryFleeChancePercent; }
 
-    //! \brief Returns the configured FleeTiles value.
-    double getFleeTiles() const { return mFleeTiles; }
+    //! \brief Returns the configured ResearchCostFactorLevel2 value.
+    double getResearchCostFactorLevel2() const { return mResearchCostFactorLevel2; }
+
+    //! \brief Returns the configured ResearchCostFactorLevel3 value.
+    double getResearchCostFactorLevel3() const { return mResearchCostFactorLevel3; }
+
+    //! \brief Returns the configured ResearchLevel2TabShare value.
+    double getResearchLevel2TabShare() const { return mResearchLevel2TabShare; }
+
+    //! \brief Returns the configured ResearchLevel3TabShare value.
+    double getResearchLevel3TabShare() const { return mResearchLevel3TabShare; }
+
+    //! \brief Returns the configured AuraAllyMinAllies value.
+    int32_t getAuraAllyMinAllies() const { return mAuraAllyMinAllies; }
+
+    //! \brief Returns the configured SkeletonArmyRadius value.
+    int32_t getSkeletonArmyRadius() const { return mSkeletonArmyRadius; }
+
+    //! \brief Returns the configured FleeMaxTurns value.
+    int32_t getFleeMaxTurns() const { return mFleeMaxTurns; }
 
     //! \brief Returns the configured HitChanceMax value.
     double getHitChanceMax() const { return mHitChanceMax; }
@@ -606,16 +624,16 @@ public:
     double getWorkerClaimWallFirstMinShare() const { return mWorkerClaimWallFirstMinShare; }
 
     //! \brief Returns the configured SandboxHeroLevelMax value.
-    double getSandboxHeroLevelMax() const { return mSandboxHeroLevelMax; }
+    int32_t getSandboxHeroLevelMax() const { return mSandboxHeroLevelMax; }
 
     //! \brief Returns the configured SandboxHeroLevelMin value.
-    double getSandboxHeroLevelMin() const { return mSandboxHeroLevelMin; }
+    int32_t getSandboxHeroLevelMin() const { return mSandboxHeroLevelMin; }
 
     //! \brief Returns the configured SandboxHeroesPerWave value.
-    double getSandboxHeroesPerWave() const { return mSandboxHeroesPerWave; }
+    int32_t getSandboxHeroesPerWave() const { return mSandboxHeroesPerWave; }
 
     //! \brief Returns the configured SandboxWaves value.
-    double getSandboxWaves() const { return mSandboxWaves; }
+    int32_t getSandboxWaves() const { return mSandboxWaves; }
 
     //! \brief Returns the configured BuildingDamageCurve anchors.
     const std::vector<double>& getBuildingDamageCurve() const { return mBuildingDamageCurve; }
@@ -649,12 +667,6 @@ public:
 
     inline const std::vector<std::string>& getFactions() const
     { return mFactions; }
-
-    //! \brief Reads an equipment setting, logging a missing key and using its shipped default.
-    double getEquipmentConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
-
-    //! \brief Reads a research setting, logging a missing key and using its shipped default.
-    double getResearchConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
 
     //! Rooms configuration
     const std::string& getRoomConfigString(const std::string& param) const;
@@ -1031,7 +1043,13 @@ private:
     double mClaimXpDivisorBase;
     double mClaimXpDivisorPerLevel;
     double mAngryFleeChancePercent;
-    double mFleeTiles;
+    double mResearchCostFactorLevel2;
+    double mResearchCostFactorLevel3;
+    double mResearchLevel2TabShare;
+    double mResearchLevel3TabShare;
+    int32_t mAuraAllyMinAllies;
+    int32_t mSkeletonArmyRadius;
+    int32_t mFleeMaxTurns;
     double mHitChanceMax;
     double mHitChanceMin;
     double mHitChanceScale;
@@ -1050,14 +1068,12 @@ private:
     double mWeakFleeChancePercent;
     double mWorkerCarryFirstMaxShare;
     double mWorkerClaimWallFirstMinShare;
-    double mSandboxHeroLevelMax;
-    double mSandboxHeroLevelMin;
-    double mSandboxHeroesPerWave;
-    double mSandboxWaves;
+    int32_t mSandboxHeroLevelMax;
+    int32_t mSandboxHeroLevelMin;
+    int32_t mSandboxHeroesPerWave;
+    int32_t mSandboxWaves;
     std::vector<double> mBuildingDamageCurve;
     std::vector<double> mThreatPercentByLevel;
-    std::map<std::string, double> mEquipmentConfig;
-    std::map<std::string, double> mResearchConfig;
     int32_t mNbTurnsKoCreatureAttacked;
     std::string mDefaultWorkerRogue;
     std::string mMainMenuMusic;

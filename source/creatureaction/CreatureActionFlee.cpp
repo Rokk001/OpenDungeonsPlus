@@ -69,7 +69,7 @@ bool CreatureActionFlee::handleFlee(Creature& creature, int32_t nbTurns)
 
     // We try to go as far as possible from the enemies within visible tiles. We will quit flee mode when there will be no more
     // enemy objects nearby or if we have already flee for too much time
-    if ((creature.getVisibleEnemyObjects().empty()) || (nbTurns > ConfigManager::getSingleton().getFleeTiles()))
+    if ((creature.getVisibleEnemyObjects().empty()) || (nbTurns > ConfigManager::getSingleton().getFleeMaxTurns()))
     {
         creature.popAction();
         return true;

@@ -70,7 +70,7 @@ void CreatureEffectPotion::applyEffect(Creature& creature)
     creature.setPotionContribution(this, mKind, mValue);
     if(mKind == "HealPerTenSeconds")
         creature.heal(mValue / PERCENT * creature.getMaxHp() * getTurnFraction()
-            / (ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionRegenSeconds", 10.0) * ODApplication::turnsPerSecond));
+            / (ConfigManager::getSingleton().getItemSetting("Potions", "PotionRegenSeconds") * ODApplication::turnsPerSecond));
 }
 
 //! \brief Saves the reversible potion contribution after the common effect fields.

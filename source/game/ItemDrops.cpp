@@ -123,8 +123,8 @@ void ItemDrops::outfit(Creature& creature, const std::string& kind)
         return;
     }
     uint32_t count = 1;
-    if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("HeroDropLargeLevel", 20.0))) count = 3;
-    else if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("HeroDropMediumLevel", 10.0))) count = 2;
+    if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "HeroDropLargeLevel"))) count = 3;
+    else if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "HeroDropMediumLevel"))) count = 2;
     for(uint32_t index = 0; index < count; ++index)
     {
         if(Random::Double(0.0, 1.0) < dropSetting("HeroItemBase") + dropSetting("HeroItemPerLevel") * level)
@@ -145,8 +145,8 @@ void ItemDrops::outfit(Creature& creature, const std::string& kind)
         {
             static const std::vector<std::string> KINDS = {"healing", "mana", "strength", "dexterity", "guard", "vitality", "focus", "mending", "flow"};
             potionId = KINDS[Random::Uint(0, static_cast<uint32_t>(KINDS.size() - 1))];
-            if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("HeroDropLargeLevel", 20.0))) potionId += "_large";
-            else if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("HeroDropMediumLevel", 10.0))) potionId += "_medium";
+            if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "HeroDropLargeLevel"))) potionId += "_large";
+            else if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "HeroDropMediumLevel"))) potionId += "_medium";
             else potionId += "_small";
         }
         creature.acceptItem(ItemInstance::createPotion(potionId), false);

@@ -1066,7 +1066,8 @@ std::string buildSkillLine(const std::string& kind, const std::string& value, co
         std::vector<std::string> base = splitTokens(baseLine);
         // Older base lines omit the new aura threshold or summoning radius.
         if(base.size() == spec.mCount && (spec.mClass == "SkeletonArmy" || spec.mClass == "AuraAlly"))
-            base.push_back("2");
+            base.push_back(std::to_string(spec.mClass == "AuraAlly" ?
+                ConfigManager::getSingleton().getAuraAllyMinAllies() : ConfigManager::getSingleton().getSkeletonArmyRadius()));
         // The first token is the class name of the line
         if(base.size() != spec.mCount + 1 || base[0] != spec.mClass)
             return std::string();
@@ -1077,14 +1078,11 @@ std::string buildSkillLine(const std::string& kind, const std::string& value, co
 
     if(spec.mClass == "AuraAlly")
     {
-        if(!minAllies.mSet)
-            OD_LOG_ERR("Missing creature skill MinAllies; using shipped default 2");
-        tokens[6] = formatNumber(minAllies.mSet ? minAllies.mValue : 2.0);
+        tokens[6] = formatNumber(ConfigManager::getSingleton().getAuraAllyMinAllies());
     }
     if(spec.mClass == "SkeletonArmy" && !radius.mSet)
     {
-        OD_LOG_ERR("Missing creature skill Radius; using shipped default 2");
-        tokens[6] = "2";
+        tokens[6] = std::to_string(ConfigManager::getSingleton().getSkeletonArmyRadius());
     }
     if(cooldown.mSet)
         tokens[0] = formatNumber(cooldown.mValue);

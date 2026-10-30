@@ -20,7 +20,6 @@
 
 #include <cstdint>
 
-#include "utils/ConfigManager.h"
 
 //! \brief The counting rules for how a seat's workers are spread over their jobs, without any
 //! game state so that they can be checked on their own (see source/tests/check_worker_share.py).
@@ -41,17 +40,17 @@ namespace WorkerShare
     }
 
     //! \brief Tries carrying first up to the configured carrying share.
-    inline bool isCarryFirst(uint32_t nbCarrying, uint32_t nbTotal)
+    inline bool isCarryFirst(uint32_t nbCarrying, uint32_t nbTotal, double maxShare)
     {
         double percent = static_cast<double>(nbCarrying) / static_cast<double>(nbTotal);
-        return percent <= ConfigManager::getSingleton().getWorkerCarryFirstMaxShare();
+        return percent <= maxShare;
     }
 
     //! \brief Tries wall claiming above the configured digging and ground-claiming share.
-    inline bool isClaimWallFirst(uint32_t nbDigging, uint32_t nbClaimingGround, uint32_t nbTotal)
+    inline bool isClaimWallFirst(uint32_t nbDigging, uint32_t nbClaimingGround, uint32_t nbTotal, double minShare)
     {
         double percent = static_cast<double>(nbDigging + nbClaimingGround) / static_cast<double>(nbTotal);
-        return percent > ConfigManager::getSingleton().getWorkerClaimWallFirstMinShare();
+        return percent > minShare;
     }
 
     //! \brief Whether one more worker may reload a trap: the first one always may, then the

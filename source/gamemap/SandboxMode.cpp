@@ -446,10 +446,10 @@ void SandboxMode::takeHero(Player* player, const std::string& className, uint32_
         mToolboxHeroes.erase(it);
     }
 
-    if(level < getSandboxHeroLevelMin())
-        level = getSandboxHeroLevelMin();
-    if(level > getSandboxHeroLevelMax())
-        level = getSandboxHeroLevelMax();
+    if(level < static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin()))
+        level = static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin());
+    if(level > static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMax()))
+        level = static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMax());
 
     Creature* hero = new Creature(&mGameMap, definition, heroSeat);
     hero->addToGameMap();
@@ -504,7 +504,7 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
     }
 
     std::vector<std::pair<std::string, uint32_t> > creatures;
-    uint32_t nbToChoose = getSandboxHeroesPerWave();
+    uint32_t nbToChoose = static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroesPerWave());
     if(!dwarfs.empty())
     {
         creatures.push_back(std::pair<std::string, uint32_t>(dwarfs[Random::Uint(0, static_cast<uint32_t>(dwarfs.size()) - 1)], waveNumber));
@@ -533,7 +533,7 @@ bool SandboxMode::launchWave(uint32_t waveNumber)
         mNbWavesLaunched = waveNumber;
 
     sendMessage("Heroes are invading! Wave " + Helper::toString(waveNumber) + " of "
-        + Helper::toString(getSandboxWaves()) + ".");
+        + Helper::toString(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves())) + ".");
     return true;
 }
 
@@ -552,7 +552,7 @@ void SandboxMode::startInvasion(Player* player, bool continual)
     if(continual)
     {
         // A continual invasion that already went through all the waves starts again
-        if(mNbWavesLaunched >= getSandboxWaves())
+        if(mNbWavesLaunched >= static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves()))
             mNbWavesLaunched = 0;
 
         if(launchWave(mNbWavesLaunched + 1))
@@ -563,8 +563,8 @@ void SandboxMode::startInvasion(Player* player, bool continual)
 
     // A single wave. When the last one was beaten, the next ones are as hard as the last
     uint32_t waveNumber = mNbWavesLaunched + 1;
-    if(waveNumber > getSandboxWaves())
-        waveNumber = getSandboxWaves();
+    if(waveNumber > static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves()))
+        waveNumber = static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves());
 
     launchWave(waveNumber);
 }
@@ -978,10 +978,10 @@ void SandboxMode::doTurn()
             beaten += " Reward: " + Helper::toString(mWaveHeroPoints) + " points.";
 
         sendMessage(beaten);
-        if(mNbWavesLaunched >= getSandboxWaves())
+        if(mNbWavesLaunched >= static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves()))
         {
             if(mIsContinual)
-                sendMessage("You survived all " + Helper::toString(getSandboxWaves()) + " waves!");
+                sendMessage("You survived all " + Helper::toString(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxWaves())) + " waves!");
 
             mIsContinual = false;
             return;

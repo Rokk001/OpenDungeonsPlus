@@ -1240,6 +1240,7 @@ uint32_t Player::getNbWorkersDoing(CreatureActionType actionType) const
     return mWorkersActions.at(index);
 }
 
+//! \brief Orders worker actions using the configured worker shares.
 std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& worker) const
 {
     std::vector<CreatureActionType> ret;
@@ -1270,14 +1271,14 @@ std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& work
     }
 
     bool isCarryAdded = false;
-    if(WorkerShare::isCarryFirst(nbWorkersCarrying, nbWorkersTotal))
+    if(WorkerShare::isCarryFirst(nbWorkersCarrying, nbWorkersTotal, ConfigManager::getSingleton().getWorkerCarryFirstMaxShare()))
     {
         isCarryAdded = true;
         ret.push_back(CreatureActionType::searchEntityToCarry);
     }
 
     bool isClaimWallAdded = false;
-    if(WorkerShare::isClaimWallFirst(nbWorkersDigging, nbWorkersClaimingGround, nbWorkersTotal))
+    if(WorkerShare::isClaimWallFirst(nbWorkersDigging, nbWorkersClaimingGround, nbWorkersTotal, ConfigManager::getSingleton().getWorkerClaimWallFirstMinShare()))
     {
         isClaimWallAdded = true;
         ret.push_back(CreatureActionType::searchWallTileToClaim);

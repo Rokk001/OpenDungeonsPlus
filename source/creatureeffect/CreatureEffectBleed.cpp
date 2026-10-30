@@ -28,8 +28,8 @@ static CreatureEffectRegister reg(new CreatureEffectBleedFactory);
 
 //! \brief Spreads a landed blow's additional damage over the configured bleed duration.
 CreatureEffectBleed::CreatureEffectBleed(double damage, const std::string& attackerName) :
-    CreatureEffect(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("BleedTurns", 5.0), ""),
-    mDamagePerTurn(damage / ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("BleedTurns", 5.0)),
+    CreatureEffect(ConfigManager::getSingleton().getItemSetting("ItemEffects", "BleedTurns"), ""),
+    mDamagePerTurn(damage / ConfigManager::getSingleton().getItemSetting("ItemEffects", "BleedTurns")),
     mAttackerName(attackerName)
 {
     setSourceId("item:Bleed");

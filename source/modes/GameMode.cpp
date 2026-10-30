@@ -79,6 +79,7 @@
 #include "traps/Trap.h"
 #include "traps/TrapManager.h"
 #include "traps/TrapType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
@@ -445,7 +446,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mDigSetBool(false),
     mIndexEvent(0),
     mSettings(mRootWindow, modeManager->getGui(), false, true),
-    mSandboxHeroLevel(SandboxMode::getSandboxHeroLevelMin()),
+    mSandboxHeroLevel(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin())),
     mIsSkillWindowOpen(false),
     mIsLibraryLostShown(false),
     mCurrentSkillType(SkillType::nullSkillType),
@@ -3190,9 +3191,9 @@ bool GameMode::hideSandboxWindow(const CEGUI::EventArgs&)
 bool GameMode::onSandboxHeroLevelClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(e);
-    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < SandboxMode::getSandboxHeroLevelMax()))
+    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMax())))
         ++mSandboxHeroLevel;
-    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > SandboxMode::getSandboxHeroLevelMin()))
+    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin())))
         --mSandboxHeroLevel;
 
     mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));
