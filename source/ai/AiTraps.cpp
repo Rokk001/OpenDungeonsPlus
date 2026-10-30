@@ -212,14 +212,14 @@ bool trapSpotFree(const Tile* tile, Seat* seat)
     return (tile != nullptr) && !tile->isFullTile() && tile->isBuildableUpon(seat);
 }
 
-//! \brief Returns the wage bill: the sum of the fees of the fighters of the seat.
+//! \brief Returns current and owed wages for the living fighters of the seat.
 double wageBill(KeeperAI& ai)
 {
     double bill = 0.0;
     for(Creature* creature : ai.getGameMap().getCreaturesBySeat(ai.getControlledPlayer().getSeat()))
     {
-        if(!creature->getDefinition()->isWorker())
-            bill += creature->getGoldFee();
+        if(creature->isAlive() && !creature->getDefinition()->isWorker())
+            bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
     }
     return bill;
 }
