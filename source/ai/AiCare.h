@@ -11,6 +11,7 @@
 
 class Creature;
 class KeeperAI;
+class Tile;
 struct AiEvent;
 
 namespace CARE
@@ -41,6 +42,10 @@ private:
     void scanLook();
     //! \brief Runs the joint prisoner-age and torture-priority decision.
     void prisonLook();
+    //! \brief Restores prisoner decisions before a queued pickup.
+    void prisonPickup(Tile* tile, const std::string& name);
+    //! \brief Restores prisoner decisions before a queued drop.
+    void prisonDrop(Tile* tile, const std::string& name);
     //! \brief Reconsiders stored specials and merchant buying at the long look.
     void itemsLook();
     //! \brief Runs D06's idle placement once per mind time for its look, its events and D07's remedy.

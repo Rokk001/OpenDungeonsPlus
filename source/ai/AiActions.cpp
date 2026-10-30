@@ -2,6 +2,7 @@
 #include "ai/AiItems.h"
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
 #include "entities/GiftBoxEntity.h"
 #include "game/Player.h"
@@ -32,6 +33,8 @@
 
 namespace
 {
+//! \brief Schedules an encoded keeper action for later execution.
+void schedule(KeeperAI& ai, const std::string& key, const std::string& arguments);
 //! \brief Encodes arbitrary names and action arguments as a whitespace-free save token.
 std::string encode(const std::string& value)
 {
@@ -250,17 +253,50 @@ void perform(KeeperAI& ai, const std::string& target)
     if(action == "merchant")
     {
         uint32_t index;
-        if(!(input >> index) || map.isInEditorMode() || player.getHasLost()) return;
+        std::string recipient;
+        bool mistaken;
+        if(!(input >> index >> recipient >> mistaken) || map.isInEditorMode() || player.getHasLost() || player.numObjectsInHand() != 0) return;
+        Creature* fighter = map.getCreature(decode(recipient));
+        Tile* destination = fighter == nullptr ? nullptr : fighter->getPositionTile();
+        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || destination == nullptr ||
+           !destination->isClaimedForSeat(seat)) return;
+        bool freeSlot = false;
+        for(const std::unique_ptr<ItemInstance>& item : fighter->getInventory())
+            freeSlot = freeSlot || item.get() == nullptr;
+        if(!freeSlot) return;
+        double bill = 0.0;
+        for(Creature* creature : map.getCreaturesBySeat(seat))
+            if(creature->isAlive() && !creature->getDefinition()->isWorker())
+                bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
+        const double budget = seat->getGold() - bill - ConfigManager::getSingleton().getAiConfigDouble("RoomGoldMargin");
         for(Room* base : map.getRoomsByTypeAndSeat(RoomType::merchant, seat))
         {
             RoomMerchant* merchant = static_cast<RoomMerchant*>(base);
             Tile* table = nullptr;
-            if(merchant->findGood(index, table) != nullptr)
+            const MerchantGood* good = merchant->findGood(index, table);
+            if(good != nullptr)
             {
-                merchant->sellToKeeper(player, index);
+                if(good->mItem.getPrice(&map) <= budget && (mistaken || RoomMerchant::wantsItem(*fighter, good->mItem)) &&
+                   merchant->sellToKeeper(player, index) && player.numObjectsInHand() != 0)
+                {
+                    std::ostringstream args;
+                    args << "dropItem " << recipient << ' ' << encode(player.getObjectsInHand().back()->getName());
+                    schedule(ai, "drop", args.str());
+                }
                 break;
             }
         }
+        return;
+    }
+    if(action == "dropItem")
+    {
+        std::string recipient, name;
+        if(!(input >> recipient >> name)) return;
+        Creature* fighter = map.getCreature(decode(recipient));
+        Tile* tile = fighter == nullptr ? nullptr : fighter->getPositionTile();
+        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || tile == nullptr) return;
+        const unsigned int index = player.getHandIndex(GameEntityType::itemBagEntity, decode(name));
+        if(index < player.numObjectsInHand() && player.isDropHandPossible(tile, index)) player.dropHand(tile, index);
         return;
     }
     if(action == "drop" || action == "banner")
@@ -483,12 +519,12 @@ void ACTS::useSpecial(KeeperAI& ai, GiftBoxType type)
     args << "special " << static_cast<int>(type);
     schedule(ai, "spell", args.str());
 }
-//! \brief Saves the merchant stock identity and schedules the existing purchase handler.
-void ACTS::merchantBuy(KeeperAI& ai, ODPacket& packet)
+//! \brief Schedules a merchant purchase and its intended gift destination.
+void ACTS::merchantBuy(KeeperAI& ai, ODPacket& packet, Creature* creature, bool mistaken)
 {
     uint32_t index;
-    if(!(packet >> index)) return;
+    if(creature == nullptr || !(packet >> index)) return;
     std::ostringstream args;
-    args << "merchant " << index;
+    args << "merchant " << index << ' ' << encode(creature->getName()) << ' ' << mistaken;
     schedule(ai, "setting", args.str());
 }

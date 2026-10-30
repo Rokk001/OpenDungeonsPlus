@@ -136,7 +136,6 @@ void buyForStrongest(KeeperAI& ai)
         return;
     ODPacket packet;
     packet << best->mGood->mIndex;
-    ACTS::merchantBuy(ai, packet);
-    ACTS::drop(ai, tile);
+    ACTS::merchantBuy(ai, packet, strongest, mistaken);
 }
 }

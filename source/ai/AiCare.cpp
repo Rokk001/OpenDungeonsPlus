@@ -166,6 +166,10 @@ CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mIdleAt
     mind.onEvent("D07", {AiEventType::CreatureMood}, std::bind(moodPatrol, std::ref(ai), remedy));
     mind.onEvent("D09", {AiEventType::CreatureMood}, std::bind(moodRelief, std::ref(ai)));
     mind.onEvent("G02", {AiEventType::PrisonerAge}, std::bind(&Controller::prisonLook, this));
+    mind.onAction("pickup", "G02", std::bind(&Controller::prisonPickup, this,
+        std::placeholders::_1, std::placeholders::_2));
+    mind.onAction("drop", "G02", std::bind(&Controller::prisonDrop, this,
+        std::placeholders::_1, std::placeholders::_2));
     mind.onEvent("H03", {AiEventType::SpecialStored, AiEventType::Fight, AiEventType::CreatureMood,
         AiEventType::Start, AiEventType::Launch}, std::bind(&Controller::event, this, std::placeholders::_1));
     mind.onPoll("L7Care", AiEventType::PrisonerAge, std::bind(&Controller::poll, this));
@@ -235,6 +239,20 @@ void CARE::Controller::prisonLook()
 {
     load();
     PRIS::tortureStep(mAi, mPrison);
+}
+
+//! \brief Restores state before a saved pickup is performed.
+void CARE::Controller::prisonPickup(Tile* tile, const std::string& name)
+{
+    load();
+    PRIS::pickup(mAi, tile, name);
+}
+
+//! \brief Restores state before a saved drop is performed.
+void CARE::Controller::prisonDrop(Tile* tile, const std::string& name)
+{
+    load();
+    PRIS::drop(mAi, mPrison, tile, name);
 }
 
 //! \brief Evaluates the held-special and merchant rows at the configured long-look interval.
@@ -309,6 +327,10 @@ void CARE::Controller::save(std::vector<AiMath::AiStateLine>& lines)
     lines.push_back({"draw", {"D05", "nextControl", careNumber(mNextControl - now)}});
     for(const std::string& prisoner : mPrison.triedPrisoners)
         lines.push_back({"draw", {"G02", "tried", prisoner}});
+    for(const std::string& prisoner : mPrison.acceptedPrisoners)
+        lines.push_back({"draw", {"G02", "accepted", prisoner}});
+    for(const std::string& prisoner : mPrison.pendingPrisoners)
+        lines.push_back({"draw", {"G02", "pending", prisoner}});
 }
 
 //! \brief Starts a finite mistake episode using the same interval and symptom-delay distribution as the care model.

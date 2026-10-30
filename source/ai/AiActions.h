@@ -49,8 +49,8 @@ void setRoomSetting(KeeperAI& ai, Room* room, ODPacket& packet);
 void setResearch(KeeperAI& ai, const std::vector<SkillType>& skills);
 //! \brief Schedules using a stored special.
 void useSpecial(KeeperAI& ai, GiftBoxType type);
-//! \brief Schedules a merchant purchase using its server request.
-void merchantBuy(KeeperAI& ai, ODPacket& packet);
+//! \brief Schedules a merchant purchase for the selected fighter.
+void merchantBuy(KeeperAI& ai, ODPacket& packet, Creature* creature, bool mistaken);
 }
 
 #endif // AIACTIONS_H
