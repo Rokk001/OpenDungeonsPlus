@@ -3245,6 +3245,8 @@ void Creature::doUpkeep()
         }
     }
 
+    mActionTry.clear();
+
     // Urgent needs interrupt other activities, including travel, unless a need is already being served.
     bool servingNeed = isActionInList(CreatureActionType::searchFood) ||
         isActionInList(CreatureActionType::searchDrink) || isActionInList(CreatureActionType::eatChicken);
@@ -3253,28 +3255,42 @@ void Creature::doUpkeep()
         if(!CreatureAction::isRoomWorkAction(action->getType()))
             continue;
         const Room* room = static_cast<const CreatureActionUseRoom*>(action.get())->getRoom();
-        if(room != nullptr && (room->getType() == RoomType::hatchery || room->getType() == RoomType::tavern))
+        if(room != nullptr && ((room->getType() == RoomType::hatchery && isHungry()) ||
+           (room->getType() == RoomType::tavern &&
+            mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"))))
             servingNeed = true;
     }
     if(!mActions.empty() && !isActionInList(CreatureActionType::searchToilet) &&
        !isActionInList(CreatureActionType::useToilet) && needInterrupt(servingNeed))
     {
+        bool foodAvailable = false;
+        bool drinkAvailable = false;
+        if(!servingNeed && isHungry() && !hasActionBeenTried(CreatureActionType::searchFood))
+        {
+            for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, getSeat()))
+                foodAvailable |= room->numCoveredTiles() > 0;
+        }
+        if(!servingNeed && mDefinition->hasThirst() &&
+           mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           !hasActionBeenTried(CreatureActionType::searchDrink))
+        {
+            for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))
+                drinkAvailable |= room->numCoveredTiles() > 0;
+        }
         stopWalking();
         clearActionQueue();
-        if(mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
-            pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
-        else if(isHungry())
+        if(foodAvailable)
             pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
-        else
+        else if(drinkAvailable)
             pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
+        else
+            pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
     }
 
     // The loopback variable allows creatures to begin processing a new
     // action immediately after some other action happens.
     bool loopBack = false;
     unsigned int loops = 0;
-
-    mActionTry.clear();
 
     do
     {
