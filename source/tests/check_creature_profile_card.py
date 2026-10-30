@@ -40,6 +40,12 @@ assert 'WindowCreatureProfile.layout' in body and 'registerWindowHierarchy(windo
 
 creature = (repo / 'source/entities/Creature.cpp').read_text()
 assert 'createCreatureProfileWindow(' in creature
+slot_types = ET.parse(repo / 'gui/SlotTypes.imageset').getroot()
+assert {image.attrib['name'] for image in slot_types.findall('Image')} == {'Head', 'Hand', 'Armour', 'Boots', 'Ring', 'Potion', 'Bag'}
+assert page.count('name="SlotType"') == 13
+assert 'slotType->setVisible(item == nullptr)' in creature
+assert '"Hand", "Hand", "Head", "Armour", "Boots", "Ring"' in creature
+assert '"Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"' in creature
 assert 'CEGUI::UDim(0, 380)' not in creature, 'the card sets an own size'
 assert creature.count('ClientNotificationType::askCreatureInfos') >= 2, 'server info start/stop is missing'
 for handler in ('ProfileTabClicked', 'StatsTabClicked'):
@@ -62,13 +68,11 @@ assert profile_layout.index('page->getChild("AttributesText")') < profile_layout
 assert profile_layout.index('page->getChild("EquipmentRow")') < profile_layout.index('page->getChild("AttributesText")') < profile_layout.index('const char* const barNames') < profile_layout.index('const char* const personalRows')
 assert '"EquipmentRow"' in gui[gui.index('const char* const PROFILE_FLOW_ROWS[]'):gui.index('const std::size_t PROFILE_FLOW_ROW_COUNT')]
 assert 'page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN' in profile_layout
-assert 'PROFILE_FLOW_TOP - 34.0f - 2.0f * PROFILE_ROW_GAP' in profile_layout
-assert 'const std::size_t slotCount = 13;' in profile_layout
-assert 'count <= slotCount' in profile_layout and '(slotCount + count - 1) / count' in profile_layout
-assert '(equipmentWidth - gaps) / static_cast<float>(last - first)' in profile_layout
-assert 'if(candidate > edge)' in profile_layout and 'slot % columns == 0' in profile_layout
-assert 'static_cast<float>(slot / columns) * (edge + PROFILE_ROW_GAP)' in profile_layout
-assert '(slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP' in profile_layout
+assert 'page->getPixelSize().d_height / scale * 0.2f' in profile_layout
+assert 'std::min(equipmentWidth / 4.0f, headerHeight / 5.0f)' in profile_layout
+assert '2.5f, 0.5f, 1.5f, 1.5f, 1.5f, 2.5f,' in profile_layout
+assert '1.0f, 1.0f, 0.0f, 1.0f, 2.0f, 2.0f,' in profile_layout
+assert 'slot < 13' in profile_layout and '5.0f * edge' in profile_layout
 assert 'setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),' in profile_layout
 assert 'countWrappedLines(equipment' not in profile_layout, 'hidden equipment text must not displace the item slots'
 assert '34.0f + equipmentHeight + PROFILE_ROW_GAP' in profile_layout
@@ -163,34 +167,19 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             viewport = (outer_height * fit - title - border) * fraction - reserve
             page_width = (outer_width * fit - 2 * side) * (.5 if owner == 'Dungeonbook' else 1.0)
             equipment_width = page_width - 148.0 - 32.0
-            image_edge, columns = 0.0, 1
-            for count in range(1, 14):
-                row_count = (13 + count - 1) // count
-                candidate = min(56.0, (90.0 - (row_count - 1) * 4.0) / row_count)
-                for first in range(0, 13, count):
-                    last = min(13, first + count)
-                    gaps = sum(12.0 if slot in (6, 9) else 4.0 for slot in range(first + 1, last))
-                    candidate = min(candidate, (equipment_width - gaps) / (last - first))
-                if candidate > image_edge:
-                    image_edge, columns = candidate, count
-            assert 0 < image_edge <= 56.0
-            image_x = 0.0
+            image_edge = max(1.0, min(equipment_width / 4.0, viewport * 0.2 / 5.0))
+            columns = (2.5, 0.5, 1.5, 1.5, 1.5, 2.5, 0.5, 1.5, 2.5, 0.0, 1.0, 2.0, 3.0)
+            rows = (1, 1, 0, 1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
             slot_bounds = []
             for slot in range(13):
-                if slot % columns == 0:
-                    image_x = 0.0
-                    image_y = (slot // columns) * (image_edge + 4.0)
-                else:
-                    image_x += 12.0 if slot in (6, 9) else 4.0
-                left, top = 148.0 + image_x, 34.0 + image_y
+                left, top = 148.0 + columns[slot] * image_edge, 34.0 + rows[slot] * image_edge
                 right, bottom = left + image_edge, top + image_edge
                 assert left >= 148.0 > 136.0 and top >= 34.0 > 26.0, 'slots overlap the portrait or headline'
                 assert right <= page_width - 32.0 + 1e-6
-                assert bottom <= 124.0 + 1e-6 and bottom <= viewport, 'all slots must open without scrolling'
+                assert bottom <= viewport, 'all slots must open without scrolling'
                 for previous_left, previous_top, previous_right, previous_bottom in slot_bounds:
                     assert right <= previous_left + 1e-6 or left >= previous_right - 1e-6 or bottom <= previous_top + 1e-6 or top >= previous_bottom - 1e-6, 'equipment slots overlap'
                 slot_bounds.append((left, top, right, bottom))
-                image_x += image_edge
             assert len(slot_bounds) == 13
             equipment_bottom = max(bounds[3] for bounds in slot_bounds)
             attribute_top = max(132.0, equipment_bottom + 4)
