@@ -3416,13 +3416,12 @@ bool Creature::handleIdleAction()
     if(isInPossessionGroup() && followPossessionLeader())
         return false;
 
-    // If we have to relieve ourselves, we go to a toilet. Without a toilet room nothing happens here: the
-    // creature goes on until the urge is too strong
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::searchToilet) &&
-        (mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek")))
+    // We check if we are looking for our fee
+    if(!mDefinition->isWorker() &&
+       !hasActionBeenTried(CreatureActionType::getFee) &&
+       (mGoldFee > 0))
     {
-        pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
+        pushAction(Utils::make_unique<CreatureActionGetFee>(*this));
         return true;
     }
 
@@ -3446,6 +3445,27 @@ bool Creature::handleIdleAction()
         return true;
     }
 
+    // If we have to relieve ourselves, we go to a toilet. Without a toilet room nothing happens here: the
+    // creature goes on until the urge is too strong
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::searchToilet) &&
+        (mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
+        return true;
+    }
+
+    // Check to see if we have found a "home" tile where we can sleep. Even if we are not sleepy,
+    // we want to have a bed
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::findHome) &&
+        (mHomeTile == nullptr) &&
+        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getFindHomeChance()))
+    {
+        pushAction(Utils::make_unique<CreatureActionFindHome>(*this, false));
+        return true;
+    }
+
     // If we are sleepy, we go to sleep
     if (!mDefinition->isWorker() &&
         !hasActionBeenTried(CreatureActionType::sleep) &&
@@ -3456,12 +3476,12 @@ bool Creature::handleIdleAction()
         return true;
     }
 
-    // We check if we are looking for our fee
-    if(!mDefinition->isWorker() &&
-       !hasActionBeenTried(CreatureActionType::getFee) &&
-       (mGoldFee > 0))
+    // If we are in a bad mood or have a hangover, we go to a lava spa. Without a spa that can take us nothing
+    // happens here and we try again at the next search
+    if (wantsSpaBath() &&
+        !hasActionBeenTried(CreatureActionType::searchSpa))
     {
-        pushAction(Utils::make_unique<CreatureActionGetFee>(*this));
+        pushAction(Utils::make_unique<CreatureActionSearchSpa>(*this));
         return true;
     }
 
@@ -3516,17 +3536,6 @@ bool Creature::handleIdleAction()
         }
     }
 
-    // Check to see if we have found a "home" tile where we can sleep. Even if we are not sleepy,
-    // we want to have a bed
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::findHome) &&
-        (mHomeTile == nullptr) &&
-        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getFindHomeChance()))
-    {
-        pushAction(Utils::make_unique<CreatureActionFindHome>(*this, false));
-        return true;
-    }
-
     // If we are drunk enough, we vomit once per drunk episode (at the next idle turn)
     if (!mDefinition->isWorker() &&
         !mVomited &&
@@ -3535,15 +3544,6 @@ bool Creature::handleIdleAction()
     {
         mVomited = true;
         pushAction(Utils::make_unique<CreatureActionVomit>(*this));
-        return true;
-    }
-
-    // If we are in a bad mood or have a hangover, we go to a lava spa. Without a spa that can take us nothing
-    // happens here and we try again at the next search
-    if (wantsSpaBath() &&
-        !hasActionBeenTried(CreatureActionType::searchSpa))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchSpa>(*this));
         return true;
     }
 
@@ -9925,16 +9925,32 @@ bool Creature::isHungry() const
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
 }
 
-//! \brief Detects urgent needs unless fighting, held, knocked out, imprisoned or leaving.
+//! \brief Detects urgent needs unless fighting, fleeing, held, knocked out, imprisoned or leaving.
 bool Creature::needInterrupt(bool servingNeed) const
 {
     if(mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
-       isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly))
+       isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
+       isActionInList(CreatureActionType::flee))
         return false;
-    if(mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
+    if(mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek") &&
+       !hasActionBeenTried(CreatureActionType::searchToilet) && RoomToilet::hasToiletRoomFor(*this))
         return true;
-    return !servingNeed && (isHungry() || (mDefinition->hasThirst() &&
-        mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")));
+    if(servingNeed)
+        return false;
+    if(isHungry() && !hasActionBeenTried(CreatureActionType::searchFood))
+    {
+        for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, getSeat()))
+            if(room->numCoveredTiles() > 0)
+                return true;
+    }
+    if(mDefinition->hasThirst() && mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+       !hasActionBeenTried(CreatureActionType::searchDrink))
+    {
+        for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))
+            if(room->numCoveredTiles() > 0)
+                return true;
+    }
+    return false;
 }
 
 //! \brief Ends knockout state and permits one item drop in the next fight.
