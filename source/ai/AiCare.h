@@ -48,7 +48,7 @@ private:
     void prisonDrop(Tile* tile, const std::string& name);
     //! \brief Reconsiders stored specials and merchant buying at the long look.
     void itemsLook();
-    //! \brief Runs D06's idle placement once per mind time for its look, its events and D07's remedy.
+    //! \brief Runs D06's idle placement for each look or event.
     void idle();
     //! \brief Dispatches the named remedy directly inside D07's current trigger.
     void need(const std::string& row, Creature* creature);
@@ -61,8 +61,6 @@ private:
     SlapState mSlap;
     PRIS::State mPrison;
     double mNextControl;
-    //! \brief Mind time of the last idle placement, so one firing never moves the same fighters twice.
-    double mIdleAt;
     bool mLoaded;
 };
 //! \brief Checks the production-slap mistake at a creature-list look and stops own brawls.

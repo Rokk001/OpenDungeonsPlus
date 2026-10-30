@@ -146,7 +146,7 @@ void possessionInput(KeeperAI& ai, Tile*, const std::string& input)
 }
 
 //! \brief Binds only this owner's callbacks, leaving shared scheduler and action handlers intact.
-CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mIdleAt(-1.0), mLoaded(false)
+CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mLoaded(false)
 {
     possessCastAt.erase(ai.getControlledPlayer().getSeat()->getId());
     Mind& mind = ai.getMind();
@@ -289,14 +289,10 @@ void CARE::Controller::need(const std::string& row, Creature* creature)
     }
 }
 
-//! \brief Runs D06's idle placement at most once per mind time, so its look and its events share one pass.
+//! \brief Runs D06's idle placement for each look or event.
 void CARE::Controller::idle()
 {
     load();
-    const double now = mAi.getMind().now();
-    if(now == mIdleAt)
-        return;
-    mIdleAt = now;
     idleToHall(mAi);
 }
 
