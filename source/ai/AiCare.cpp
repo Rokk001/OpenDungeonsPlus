@@ -148,6 +148,7 @@ void possessionInput(KeeperAI& ai, Tile*, const std::string& input)
 //! \brief Binds only this owner's callbacks, leaving shared scheduler and action handlers intact.
 CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mIdleAt(-1.0), mLoaded(false)
 {
+    possessCastAt.erase(ai.getControlledPlayer().getSeat()->getId());
     Mind& mind = ai.getMind();
     const ConfigManager& config = ConfigManager::getSingleton();
     const double reference = config.getAiConfigDouble("ReferenceScanPeriod");
