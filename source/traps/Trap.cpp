@@ -39,7 +39,9 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <iomanip>
 #include <istream>
+#include <limits>
 #include <ostream>
 
 //! \brief Value of TrapReloadByWorkers when the trap config has no entry (1.0 means workers reload traps)
@@ -726,6 +728,7 @@ void Trap::exportHeadersToStream(std::ostream& os) const
     os << getType() << "\t";
 }
 
+//! \brief Saves trap tile data and preserves fractional reload time without changing stream formatting.
 void Trap::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileData) const
 {
     TrapTileData* trapTileData = static_cast<TrapTileData*>(tileData);
@@ -734,7 +737,12 @@ void Trap::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileDa
         return;
 
     os << "\t" << trapTileData->mHP;
-    os << "\t" << trapTileData->getReloadTime();
+    const std::streamsize precision = os.precision();
+    const std::ios_base::fmtflags flags = os.flags();
+    os << "\t" << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10)
+       << trapTileData->getReloadTime();
+    os.flags(flags);
+    os.precision(precision);
     os << "\t" << trapTileData->getNbShootsBeforeDeactivation();
     os << "\t" << trapTileData->mClaimedValue;
 
