@@ -508,9 +508,10 @@ void ROOMS::hatcheryWatch(KeeperAI& ai)
     const uint32_t have = roomTiles(ai, RoomType::hatchery);
     if(have == 0)
         return;
-    const double need = ai.getControlledPlayer().getSeat()->getNumCreaturesFighters() * roomKey("HatcheryTilesPerCreature") - have;
-    if(need <= 0)
+    const int creatures = ai.getControlledPlayer().getSeat()->getNumCreaturesFighters();
+    if(creatures <= 0 || have >= static_cast<uint32_t>(creatures))
         return;
+    const double need = creatures - have * roomKey("HatcheryTilesPerCreature");
     State& state = ai.getRoomsState();
     if(state.foodDue < 0.0)
         state.foodDue = ai.getMind().now() + roomDelay(ai, true) +
