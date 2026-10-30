@@ -19,6 +19,7 @@
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
 #include "utils/ConfigManager.h"
+#include "utils/Helper.h"
 #include "utils/Random.h"
 
 #include <algorithm>
@@ -116,7 +117,7 @@ void payday(KeeperAI& ai, const AiEvent&)
     state.reserveSlipAt = state.reserveUntil - period + start;
 }
 
-//! \brief Returns known own land where another walker can enter.
+//! \brief Returns known own entrances and the keeper's known tunnel breakthrough.
 std::vector<Tile*> entrances(KeeperAI& ai)
 {
     std::vector<Tile*> result;
@@ -140,6 +141,16 @@ std::vector<Tile*> entrances(KeeperAI& ai)
             }
         }
     }
+    Tile* breakthrough = ai.getRoomsState().breakthrough;
+    if(knowledge.isKnown(breakthrough) && std::find(result.begin(), result.end(), breakthrough) == result.end())
+        result.push_back(breakthrough);
+    for(const AiMath::AiStateLine& line : ai.getMind().savedRows())
+        if(line.tag == "war" && line.tokens.size() == 8 && line.tokens[0] == "tunnel")
+        {
+            Tile* tile = map.getTile(Helper::toInt(line.tokens[5]), Helper::toInt(line.tokens[6]));
+            if(knowledge.isKnown(tile) && std::find(result.begin(), result.end(), tile) == result.end())
+                result.push_back(tile);
+        }
     return result;
 }
 }
