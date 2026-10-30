@@ -180,18 +180,6 @@ void saveEconomy(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 
 }
 
-//! \brief Reports the empty mining queue only when a worker exists.
-bool noMarkedTiles(KeeperAI& ai)
-{
-    return ai.getControlledPlayer().getSeat()->getNumCreaturesWorkers() > 0 &&
-        ai.getControlledPlayer().getNbMarkedTiles() == 0;
-}
-
-//! \brief Reports whether the treasury cannot cover the next wage bill.
-bool belowBill(KeeperAI& ai)
-{
-    return ai.getControlledPlayer().getSeat()->getGold() < ECON::wageBill(ai);
-}
 }
 
 //! \brief Registers the economy triggers without drawing mistakes during registration.
@@ -199,13 +187,11 @@ void ECON::bind(KeeperAI& ai)
 {
     Mind& mind = ai.getMind();
     mind.onLook("A01", key("LookPeriod60") / key("ReferenceScanPeriod"), std::bind(digQueueWatch, std::ref(ai)));
-    mind.onPoll("A01", AiEventType::NoMarkedTile, std::bind(noMarkedTiles, std::ref(ai)));
     mind.onEvent("A01", {AiEventType::NoMarkedTile}, std::bind(digQueueWatch, std::ref(ai)));
     mind.onLook("A02", key("LookPeriod120") / key("ReferenceScanPeriod"), std::bind(claimWatch, std::ref(ai)));
     mind.onLook("A03", key("LookFactorSummon"), std::bind(summonWatch, std::ref(ai)));
     mind.onLook("A04", key("LookPeriod600") / key("ReferenceScanPeriod"), std::bind(walletGate, std::ref(ai), 0.0));
     mind.onEvent("A04", {AiEventType::Payday}, std::bind(payday, std::ref(ai), std::placeholders::_1));
-    mind.onPoll("A05", AiEventType::GoldBelowBill, std::bind(belowBill, std::ref(ai)));
     mind.onEvent("A05", {AiEventType::GoldBelowBill}, std::bind(castCreateGold, std::ref(ai), false));
     mind.onLook("A06", key("LookPeriod120") / key("ReferenceScanPeriod"), std::bind(goldCapacityWatch, std::ref(ai)));
     mind.onLook("A07", key("LookPeriod60") / key("ReferenceScanPeriod"), std::bind(manaCapWatch, std::ref(ai)));
