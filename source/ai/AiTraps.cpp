@@ -734,14 +734,16 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
 
     // AI row F11
     bool needBanner = SkillManager::isTrapAvailable(TrapType::watchBanner, seat) && (countTiles(ai, TrapType::watchBanner) == 0);
-    bool needTrigger = SkillManager::isTrapAvailable(TrapType::trigger, seat) && (countTiles(ai, TrapType::trigger) == 0) &&
-                       (countTiles(ai, TrapType::watchBanner) > 0);
+    bool needTrigger = SkillManager::isTrapAvailable(TrapType::trigger, seat) && (countTiles(ai, TrapType::trigger) == 0);
     if((needBanner || needTrigger) && !entrances.empty() && !ai.getMind().slip("F11"))
     {
         // The banner stands at the entrance, the trigger on the way to the trap field
         const TRAP::Entrance& entrance = entrances[0];
-        Tile* tile = lineTile(gameMap, entrance, needBanner ? 1 : 2);
-        return trapSpotFree(tile, seat) && buildOne(ai, needBanner ? TrapType::watchBanner : TrapType::trigger, tile);
+        Tile* bannerTile = lineTile(gameMap, entrance, 1);
+        if(needBanner && trapSpotFree(bannerTile, seat) && buildOne(ai, TrapType::watchBanner, bannerTile))
+            return true;
+        Tile* triggerTile = lineTile(gameMap, entrance, 2);
+        return needTrigger && trapSpotFree(triggerTile, seat) && buildOne(ai, TrapType::trigger, triggerTile);
     }
     return false;
 }
