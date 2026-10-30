@@ -403,6 +403,44 @@ Seat* enemySeat(Env& env)
 Tile* knownRoomTile(Env& env, AiKnowledge& knowledge, Seat* enemy, RoomType type, bool smallest, bool largest)
 {
     Tile* from = env.state.breakthrough;
+    if(type != RoomType::treasury)
+    {
+        TileVisual visual = TileVisual::nullTileVisual;
+        switch(type)
+        {
+            case RoomType::library: visual = TileVisual::libraryRoom; break;
+            case RoomType::hatchery: visual = TileVisual::hatcheryRoom; break;
+            case RoomType::dormitory: visual = TileVisual::dormitoryRoom; break;
+            case RoomType::trainingHall: visual = TileVisual::trainingHallRoom; break;
+            default: return nullptr;
+        }
+        if(enemy == nullptr)
+            return nullptr;
+        Tile* best = nullptr;
+        double bestDistance = 0.0;
+        Seat* seat = env.player.getSeat();
+        for(int x = 0; x < env.gameMap.getMapSizeX(); ++x)
+        {
+            for(int y = 0; y < env.gameMap.getMapSizeY(); ++y)
+            {
+                Tile* tile = env.gameMap.getTile(x, y);
+                const TileStateNotified* state = seat->getKnownTileState(tile);
+                const bool fogOff = !env.gameMap.getIsFOWActivated();
+                const bool matches = fogOff ? tile->getTileVisual() == visual && tile->getSeat() == enemy :
+                    state != nullptr && state->mTileVisual == visual && state->mSeatIdOwner == enemy->getId();
+                if(!matches)
+                    continue;
+                const double distance = from == nullptr ? 0.0 :
+                    std::pow(tile->getX() - from->getX(), 2) + std::pow(tile->getY() - from->getY(), 2);
+                if(best == nullptr || distance < bestDistance)
+                {
+                    best = tile;
+                    bestDistance = distance;
+                }
+            }
+        }
+        return best;
+    }
     Room* chosen = nullptr;
     for(Room* room : env.gameMap.getRoomsByTypeAndSeat(type, enemy))
     {
