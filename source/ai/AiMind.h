@@ -100,6 +100,8 @@ struct AiEvent
     double time;
     //! \brief Original Fight start on the mind clock; separate from the last refresh time.
     double fightStart;
+    //! \brief Destroyed room type, or zero if unknown or not a room.
+    int roomType;
 };
 
 //! \brief The keeper AI's mind: queues events, draws reaction delays and mistakes, schedules the
@@ -207,6 +209,7 @@ private:
         std::string creature;
         int seatId;
         double amount;
+        int roomType;
         bool noticed;
         std::string rowId;
         //! \brief Orders reactions by their scheduled time, preserving input order on ties.
