@@ -781,9 +781,8 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool 
     GameMap& gameMap = ai.getGameMap();
     Seat* seat = ai.getControlledPlayer().getSeat();
 
-    // The door of the best researched kind on every entrance; the mistake forgets the upgrade: a door that stands
-    // stays, an entrance without a door gets a wooden one, and the doors are looked at again after a symptom delay.
-    // That delayed look carries out the upgrade decided at the look that drew the mistake: no new draw
+    // The best researched door is built when affordable. The simulated mistake delays the next look only while
+    // an upgrade is still outstanding; the delayed look does not draw another mistake.
     TrapType best = bestDoor(seat);
     bool slipped = !resumed && ai.getMind().slip("F13");
     bool forgotten = false;
@@ -801,19 +800,13 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool 
             continue;
 
         TrapType kind = best;
-        if(slipped)
-        {
-            forgotten = true;
-            if(current != nullptr)
-                continue;
-            kind = TrapType::doorWooden;
-        }
         if(!SkillManager::isTrapAvailable(kind, seat))
             continue;
 
         // Without the gold the look ends here, as before the special doors
         if(!affordable(ai, TrapManager::costPerTile(kind)))
         {
+            forgotten = slipped;
             stopped = true;
             break;
         }
