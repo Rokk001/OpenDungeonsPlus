@@ -1,17 +1,35 @@
 #ifndef AIECONOMY_H
 #define AIECONOMY_H
 
+#include "rooms/RoomType.h"
+#include <cstdint>
+#include <vector>
+
 class KeeperAI;
+class Tile;
 
 namespace ECON
 {
+//! \brief Records a successful room action independently of merged room objects.
+struct RoomBlock
+{
+    RoomType type = RoomType::nullRoomType;
+    uint32_t plannedTiles = 0;
+    std::vector<Tile*> tiles;
+};
 //! \brief Keeps the single wage-reserve draw of the current payday cycle.
 struct EconomyState
 {
     double reserveSlipAt = -1.0;
     double reserveUntil = -1.0;
     bool restored = false;
+    bool blocksRestored = false;
+    std::vector<RoomBlock> roomBlocks;
 };
+//! \brief Records the tiles built by one successful room action in chronological order.
+void recordRoomBlock(KeeperAI& ai, RoomType type, uint32_t plannedTiles, const std::vector<Tile*>& tiles);
+//! \brief Forgets room tiles when they are removed or transferred to another keeper.
+void forgetRoomTiles(KeeperAI& ai, const std::vector<Tile*>& tiles);
 //! \brief Registers economy looks, symptoms and persistent reserve draws.
 void bind(KeeperAI& ai);
 //! \brief Returns next payday's wages plus wages still owed.

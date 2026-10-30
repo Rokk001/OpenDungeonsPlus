@@ -115,6 +115,38 @@ void restoreReserve(KeeperAI& ai)
     }
 }
 
+//! \brief Restores successful room actions in their original order.
+void restoreRoomBlocks(KeeperAI& ai)
+{
+    ECON::EconomyState& state = ai.getEconomyState();
+    if(state.blocksRestored)
+        return;
+    state.blocksRestored = true;
+    GameMap& map = ai.getGameMap();
+    for(const AiMath::AiStateLine& line : ai.getMind().savedRows())
+    {
+        if(line.tag != "draw" || line.tokens.size() != 3 || line.tokens[0] != "A08" || line.tokens[1] != "block")
+            continue;
+        std::string data = line.tokens[2];
+        std::replace(data.begin(), data.end(), ',', ' ');
+        std::istringstream input(data);
+        int type;
+        ECON::RoomBlock block;
+        if(!(input >> type >> block.plannedTiles))
+            continue;
+        block.type = static_cast<RoomType>(type);
+        int x, y;
+        while(input >> x >> y)
+        {
+            Tile* tile = map.getTile(x, y);
+            if(tile != nullptr)
+                block.tiles.push_back(tile);
+        }
+        if(!block.tiles.empty())
+            state.roomBlocks.push_back(block);
+    }
+}
+
 //! \brief Draws the next reserve-slip window once for the delivered payday.
 void payday(KeeperAI& ai, const AiEvent&)
 {
@@ -175,12 +207,22 @@ namespace
 void saveEconomy(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
     restoreReserve(ai);
+    restoreRoomBlocks(ai);
     const std::function<bool(const AiMath::AiStateLine&)> owned = [](const AiMath::AiStateLine& line)
     {
-        return line.tag == "draw" && !line.tokens.empty() && line.tokens[0] == "A04";
+        return line.tag == "draw" && !line.tokens.empty() &&
+            (line.tokens[0] == "A04" || (line.tokens[0] == "A08" && line.tokens.size() == 3 && line.tokens[1] == "block"));
     };
     lines.erase(std::remove_if(lines.begin(), lines.end(), owned), lines.end());
     const ECON::EconomyState& state = ai.getEconomyState();
+    for(const ECON::RoomBlock& block : state.roomBlocks)
+    {
+        std::ostringstream data;
+        data << static_cast<int>(block.type) << ',' << block.plannedTiles;
+        for(Tile* tile : block.tiles)
+            data << ',' << tile->getX() << ',' << tile->getY();
+        lines.push_back({"draw", {"A08", "block", data.str()}});
+    }
     if(state.reserveUntil > ai.getMind().now())
     {
         std::ostringstream from, until;
@@ -194,6 +236,28 @@ void saveEconomy(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 
 }
 
+}
+
+//! \brief Records the tiles built by one successful room action in chronological order.
+void ECON::recordRoomBlock(KeeperAI& ai, RoomType type, uint32_t plannedTiles, const std::vector<Tile*>& tiles)
+{
+    if(tiles.empty())
+        return;
+    forgetRoomTiles(ai, tiles);
+    RoomBlock block;
+    block.type = type;
+    block.plannedTiles = plannedTiles;
+    block.tiles = tiles;
+    ai.getEconomyState().roomBlocks.push_back(block);
+}
+
+//! \brief Forgets room tiles when they are removed or transferred to another keeper.
+void ECON::forgetRoomTiles(KeeperAI& ai, const std::vector<Tile*>& tiles)
+{
+    restoreRoomBlocks(ai);
+    for(RoomBlock& block : ai.getEconomyState().roomBlocks)
+        for(Tile* tile : tiles)
+            block.tiles.erase(std::remove(block.tiles.begin(), block.tiles.end(), tile), block.tiles.end());
 }
 
 //! \brief Registers the economy triggers without drawing mistakes during registration.
