@@ -499,6 +499,7 @@ void Trap::postponeReload(Tile* tile, int64_t untilTurn)
     static_cast<TrapTileData*>(it->second)->setReloadNextTurn(untilTurn);
 }
 
+//! \brief Returns the configured reload price for this trap type.
 int32_t Trap::getReloadPrice() const
 {
     // Price per trap type (<Trap>ReloadCost), a type without an entry pays TrapReloadCostDefault
@@ -520,7 +521,7 @@ int32_t Trap::getReloadPrice() const
             price = config.getTrapConfigDoubleOrDefault("FearReloadCost", defaultPrice);
             break;
         case TrapType::gas:
-            price = config.getTrapConfigDoubleOrDefault("GasReloadCost", defaultPrice);
+            price = config.getTrapConfigDoubleOrDefault("GasReloadCost", 467.2767084775086);
             break;
         case TrapType::lightning:
             price = config.getTrapConfigDoubleOrDefault("LightningReloadCost", defaultPrice);

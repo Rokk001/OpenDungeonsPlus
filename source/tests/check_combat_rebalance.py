@@ -179,9 +179,11 @@ def check_sources():
     assert hit.index("if(possessed)") < hit.index("Random::Double(0.0, 100.0)")
     assert "DefenceChance::hitChance(attackRating, getDefenseRating()," in hit
     hit_formula = function(read("source/entities/DefenceChance.h"), "inline double hitChance(")
-    assert "getHitChanceScale() * attackRating / (attackRating + defenseRating)" in hit_formula
+    assert "scale * attackRating / (attackRating + defenseRating)" in hit_formula
     assert "attackerLevel / static_cast<double>(attackerLevel + defenderLevel)" in hit_formula
-    assert "std::max(ConfigManager::getSingleton().getHitChanceMin(), std::min(ConfigManager::getSingleton().getHitChanceMax(), chance))" in hit_formula
+    assert "std::max(minChance, std::min(maxChance, chance))" in hit_formula
+    for key in ("HitChanceScale", "HitChanceMin", "HitChanceMax"):
+        assert "get" + key + "()" in hit
     # The scale and the bounds of the hit chance are global.cfg keys
     for key, value in (("HitChanceScale", "200"), ("HitChanceMin", "5"), ("HitChanceMax", "95")):
         assert re.search(r"^\s*" + key + r"\s+" + value + r"\s*$", read("config/global.cfg"), re.M), key

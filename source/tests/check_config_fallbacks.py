@@ -93,6 +93,12 @@ for member, key in (("mLayMax", "HatcheryLayMax"), ("mLayFactor", "HatcheryLayFa
     if match is None or abs(float(match.group(1)) - shipped) > 1e-9:
         problems.append("HatcheryCycle.h default " + member + " must equal rooms.cfg " + key)
 
+trap = read("source", "traps", "Trap.cpp")
+gas = re.search(r'getTrapConfigDoubleOrDefault\("GasReloadCost",\s*([-0-9.]+)\)', trap)
+gas_shipped = cfg_value(read("config", "traps.cfg"), "GasReloadCost")
+if gas is None or gas_shipped is None or abs(float(gas.group(1)) - gas_shipped) > 1e-9:
+    problems.append("GasReloadCost fallback must equal traps.cfg")
+
 # A missing room key is logged
 if "Missing room parameter" not in manager:
     problems.append("getRoomConfigDoubleOrDefault must log a missing key")
