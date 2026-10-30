@@ -228,6 +228,7 @@ textures/
 -> ClaimedWall*.png                    Nobiax, Danimal         CC-BY-SA 3.0            http://opengameart.org/users/danimal
 -> ConcreteDirty*.png                  Sindwiller              CC-BY-SA 3.0            http://opengameart.org/content/dirty-concrete-floor-00
 -> CreatureOverlay*.png                hwoarangmy              CC-BY-SA 3.0
+-> ManaRing*.png                       hwoarangmy              CC-BY-SA 3.0            Derived from the segments of CreatureOverlay*.png (ManaRing4 built from CreatureOverlay3 without its last segment)
 -> CreatureStunned.png                 AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> CreatureRallyTroops.png             AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> Crossbow.png                        Lamoot                  CC-BY 3.0               http://opengameart.org/content/low-poly-crossbow
@@ -2073,6 +2074,7 @@ assets-src/creatures/ghosts/create_clips.py    AI-generated with Codex    GPLv3+
 
 gui/Items.png (soul_crystal)    AI-generated with Codex    GPLv3+    Atlas entry from the original gui/potions/soul_crystal.png painting credited above; existing icon pixels preserved.
 
+gui/SlotTypes.png    AI-generated with Codex    GPLv3+    Original painted equipment slot symbols.
 materials/textures/LichBeetle.png    AI-generated with Codex    GPLv3+    Original painted dark beetle sprite sheet, four top-view walking frames.
 materials/scripts/RoomAmbience.material (LichBeetle)    AI-generated with Codex    GPLv3+    Original alpha-blended material for the credited beetle sprite sheet.
 particles/RoomAmbienceSpellsExtra.particle (LichBeetles)    AI-generated with Codex    GPLv3+    Original ground-level crawling beetle swarm, reusing the credited beetle sprite sheet.

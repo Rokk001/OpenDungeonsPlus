@@ -161,7 +161,7 @@ bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t
 }
 }
 
-//! \brief Creates the window and runs the client main loop (SFML 3 window and event handling).
+//! \brief Presents the loading picture before initialization and runs the native or SFML event loop.
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -217,67 +217,44 @@ void ODApplication::startClient()
 
 
     
-#ifdef OD_USE_SFML_WINDOW
-    
-    // Check if the config specifies fullscreen or windowed
-    const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes" && sf::VideoMode({w, h}).isValid();
-
-    // Create an SFML window
-    // we make sure to grab the right bit depth from the current desktop mode as otherwise full screen
-    // can end up not working properly.
-    // TODO: Check anti-aliasing settings here.
-    sf::ContextSettings contextSettings;
-    contextSettings.depthBits = 32;
-    contextSettings.stencilBits = 0;
-    contextSettings.antiAliasingLevel = 2;
-    contextSettings.majorVersion = 1;
-    contextSettings.minorVersion = 1;
-    sf::RenderWindow sfmlWindow(sf::VideoMode({w, h}, sf::VideoMode::getDesktopMode().bitsPerPixel)
-                                , windowTitle, sf::Style::Default, fullscreen ? sf::State::Fullscreen : sf::State::Windowed, contextSettings);
-
-    // sfmlWindow.setActive(true);
-    sfmlWindow.setMouseCursorVisible(false);
-    sfmlWindow.setVisible(false);
-
-
+    // Ogre owns the hidden native window in both event paths, including fullscreen.
     ogreRoot.initialise(false);
-
-    Ogre::RenderWindow* renderWindow = [&](){
-		Ogre::NameValuePairList misc;
-#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
-		size_t winHandle = reinterpret_cast<size_t>(sfmlWindow.getNativeHandle());
-		size_t winGlContext = reinterpret_cast<size_t>(wglGetCurrentContext());
-		misc["externalWindowHandle"] = Helper::toString(winHandle);
-		misc["externalGLContext"] = Helper::toString(winGlContext);
-		misc["externalGLControl"] = Ogre::String("True");
-#else
-                // misc["currentGLContext"] = Ogre::String("true");
-                misc["externalWindowHandle"] =
-    Helper::toString(reinterpret_cast<size_t>(sfmlWindow.getNativeHandle()));
-
-    
-#endif
-        return ogreRoot.createRenderWindow(windowTitle, w, h, fullscreen, &misc);
-    }();
-    renderWindow->setVisible(false);
-#else /* OD_USE_SFML_WINDOW */
-    
-    ogreRoot.initialise(false);
-
     Ogre::NameValuePairList misc = ogreRoot.getRenderSystem()->getRenderWindowDescription().miscParams;
     misc["hidden"] = "true";
-
+#ifdef OD_USE_SFML_WINDOW
+    // Keep the SFML path's existing multisampling and invalid-fullscreen fallback.
+    misc["FSAA"] = "2";
+    const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes" && sf::VideoMode({w, h}).isValid();
+#else
+    const bool fullscreen = configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes";
+#endif
     OD_LOG_INF("Creating window: with resolution " + Helper::toString(w) + " " + Helper::toString(h));
-    
-    Ogre::RenderWindow* renderWindow = ogreRoot.createRenderWindow("OpenDungeons " + VERSION, w, h, configManager.getVideoValue(Config::FULL_SCREEN, "No", false) == "Yes" , &misc);
-    
+    Ogre::RenderWindow* renderWindow = ogreRoot.createRenderWindow(windowTitle, w, h,
+        fullscreen, &misc);
     Ogre::WindowEventUtilities::_addRenderWindow(renderWindow);
-#endif /* OD_USE_SFML_WINDOW */
 
+    // Only the loading-picture directory and its inline shaders precede the first draw.
+    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
+        resMgr.getGameDataPath() + "materials/textures/loading", "FileSystem", "StartupLoading");
+    LoadingScreen startupLoading(*renderWindow);
+#ifdef OD_USE_SFML_WINDOW
+    // Attach event handling after the picture exists; SFML never creates a visible blank window.
+    sf::WindowHandle nativeHandle;
+    renderWindow->getCustomAttribute("WINDOW", &nativeHandle);
+    sf::WindowBase sfmlWindow(nativeHandle);
+    sfmlWindow.setMouseCursorVisible(false);
+#endif
+    // The window was created with "hidden"; Ogre's setVisible() does not undo that on Win32
+    // (it is a no-op there), only setHidden(false) shows the window.
+    renderWindow->setHidden(false);
+    renderWindow->setVisible(true);
+    LoadingScreen::presentStartup();
+    OD_LOG_INF("window shown");
 
     //NOTE: This is currently done here as it has to be done after initialising mRoot,
     // but before running initialiseAllResourceGroups()
     resMgr.setupOgreResources(ogreRoot.getRenderSystem()->getNativeShadingLanguageVersion());
+    LoadingScreen::presentStartup();
 
     // Setup Icon (On Windows)
     // NOTE: On linux at least, the icon is usually handled through desktop files.
@@ -306,27 +283,17 @@ void ODApplication::startClient()
     Ogre::MaterialManager::getSingleton().addListener(sgListener);
 #endif
     
-    // Keep the first visible frame on the loading picture while resources and the menu are created.
-    LoadingScreen startupLoading(*renderWindow);
-#ifdef OD_USE_SFML_WINDOW
-    sfmlWindow.display();
-    sfmlWindow.setVisible(true);
-#else
-    // The window was created with "hidden"; Ogre's setVisible() does not undo that on Win32
-    // (it is a no-op there), only setHidden(false) shows the window.
-    renderWindow->setHidden(false);
-    renderWindow->setVisible(true);
-#endif
-    OD_LOG_INF("window shown");
-
     Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
+    LoadingScreen::presentStartup();
 
     MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
     SoundEffectsManager soundEffectsManager;
+    LoadingScreen::presentStartup();
 
     // Keep Python alive across game-mode changes; consoles own only their game state.
     pybind11::scoped_interpreter pythonInterpreter;
     pybind11::gil_scoped_release pythonMainThreadRelease;
+    LoadingScreen::presentStartup();
 
     ODServer server;
     ODClient client;
@@ -335,6 +302,7 @@ void ODApplication::startClient()
 
     Ogre::MaterialManager::getSingleton().setActiveScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
     Gui gui(&soundEffectsManager, resMgr.getCeguiLogFile(), *renderWindow);
+    LoadingScreen::presentStartup();
     TextRenderer textRenderer;
     textRenderer.addTextBox("DebugMessages", ODApplication::MOTD.c_str(), 840,
                                 30, 50, 70, Ogre::ColourValue::Green);
@@ -380,11 +348,9 @@ void ODApplication::startClient()
             frameListener.requestExit();
         if(menuTestElapsed(menuTestStart, menuTestSeconds))
             frameListener.requestExit();
-        sfmlWindow.clear();
         // If renderOneFrame returns false, it indicates that an exit has been requested
         running = ogreRoot.renderOneFrame();
         ++menuTestFrames;
-        sfmlWindow.display();
         RunLevelTest::onFrameRendered(*renderWindow);
     }
 #else /* OD_USE_SFML_WINDOW */

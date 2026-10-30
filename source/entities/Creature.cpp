@@ -4559,12 +4559,12 @@ std::string Creature::getSkillListText() const
     return result;
 }
 
-//! \brief Returns the attribute line of the displays: "Strength s - Dexterity d - Life l - Mana m -
-//! Critical x.x %".
+//! \brief Returns the attribute text of the displays as two lines so no value is split by a word wrap:
+//! "Strength s - Dexterity d - Life l" and "Mana m - Critical x.x %".
 std::string Creature::getAttributeSummaryText() const
 {
     return "Strength " + formatDisplayNumber(getStrength()) + " - Dexterity " + formatDisplayNumber(getDexterity())
-        + " - Life " + formatDisplayNumber(getLife()) + " - Mana " + formatDisplayNumber(getMana())
+        + " - Life " + formatDisplayNumber(getLife()) + "\nMana " + formatDisplayNumber(getMana())
         + " - Critical " + formatFixedNumber(getCritChance()) + " %";
 }
 
@@ -6183,6 +6183,11 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
         image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
             name : "OpenDungeonsIcons/ItemSlotEmpty");
+        const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
+            "Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"};
+        CEGUI::Window* slotType = image->getChild("SlotType");
+        slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
+        slotType->setVisible(item == nullptr);
         image->setTooltipText(item == nullptr ? "" : item->describe(getGameMap()));
         CEGUI::Window* frame = image->getChild("QualityFrame");
         frame->setVisible(item != nullptr);

@@ -435,7 +435,7 @@ def cpp_references(root, assets):
                 add(refs, relative, line, kind, value)
         # Constants identify additional resources consumed through variable-valued wrappers.
         for key, expressions in local.items():
-            if re.search('PREFIX|GROUP|SUBPATH|SUFFIX', key, re.I):
+            if re.search('PREFIX|GROUP|SUBPATH|SUFFIX', key, re.I) or key == 'MANA_RING_BASE_MATERIAL':
                 continue
             kind = ('mesh' if re.search('mesh', key, re.I) else
                     'material' if re.search('material', key, re.I) else
@@ -480,6 +480,11 @@ def finite_name_references(root):
     mood = root / 'source/entities/CreatureMoodValues.h'
     if overlay.is_file() and mood.is_file():
         text = read(overlay)
+        mana_prefix = re.search(r'MANA_RING_BASE_MATERIAL\s*=\s*"([^"]+)"', text)
+        if mana_prefix:
+            line = text.count('\n', 0, mana_prefix.start()) + 1
+            for segment in range(1, 9):
+                add(refs, overlay.relative_to(root).as_posix(), line, 'material', mana_prefix[1] + str(segment))
         prefix = re.search(r'CREATURE_OVERLAY_STATUS_PREFIX\s*=\s*"([^"]+)"', text)
         assert prefix, 'cannot resolve the mood material prefix'
         line = text.count('\n', 0, text.index('CREATURE_OVERLAY_STATUS_PREFIX')) + 1
