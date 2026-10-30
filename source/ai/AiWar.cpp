@@ -989,10 +989,9 @@ void assaultStep(Env& env)
     std::vector<Creature*> defenders;
     for(Creature* creature : env.gameMap.getCreaturesBySeat(enemy))
     {
-        if(isFreeFighter(creature) && (creature->getPositionTile() != nullptr))
+        if(isFreeFighter(creature) && creature->getIsOnMap() && (creature->getPositionTile() != nullptr))
         {
-            const std::vector<Seat*>& viewers = creature->getPositionTile()->getSeatsWithVision();
-            if(std::find(viewers.begin(), viewers.end(), seat) != viewers.end())
+            if(seat->hasVisionOnTile(creature->getPositionTile()))
                 defenders.push_back(creature);
         }
     }
@@ -1088,6 +1087,7 @@ void endAssault(Env& env)
         planAttack(env, true);
 }
 
+//! \brief Rallies home fighters against a visible intrusion after a fight alert.
 void defend(Env& env, const AiEvent& event)
 {
     // AI row J01: the alert delay of the Fight event has passed
@@ -1108,7 +1108,8 @@ void defend(Env& env, const AiEvent& event)
         for(Creature* creature : env.gameMap.getCreaturesBySeat(other))
         {
             Tile* tile = creature->getPositionTile();
-            if(isFreeFighter(creature) && isOwnGround(env, tile))
+            if(isFreeFighter(creature) && creature->getIsOnMap() && (tile != nullptr) &&
+               seat->hasVisionOnTile(tile) && isOwnGround(env, tile))
                 intruders.push_back(creature);
         }
     }
