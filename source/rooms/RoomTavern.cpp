@@ -89,6 +89,10 @@ const int32_t DONE_WAIT_TURNS = 2;
 const double PERCENT_SCALE = 100.0;
 //! \brief A squared direction shorter than this has no usable direction.
 const double DIRECTION_EPSILON = 0.0001;
+//! \brief Number of games a guest can pick when no beer is served (arm wrestling and dice).
+const uint32_t NB_GAMES_WITHOUT_BEER = 2;
+//! \brief Number of games a guest can pick when beer is served (arm wrestling, dice and the slap duel).
+const uint32_t NB_GAMES_WITH_BEER = 3;
 
 //! \brief Reads a value of the [Tavern] block of global.cfg.
 //! \param key The key of the value.
@@ -794,7 +798,7 @@ void RoomTavern::tryStartGame(Tile* tile)
     startGame(tile, partners[Random::Uint(0, static_cast<uint32_t>(partners.size()) - 1)]);
 }
 
-//! \brief Starts a tavern game using the configured game count and duel limit.
+//! \brief Starts a tavern game using the available game kinds and configured duel limit.
 void RoomTavern::startGame(Tile* tileA, Tile* tileB)
 {
     std::map<Tile*, RoomTavernSpot>::iterator spotA = mSpots.find(tileA);
@@ -803,7 +807,7 @@ void RoomTavern::startGame(Tile* tileA, Tile* tileB)
         return;
 
     // Arm wrestling and dice with the same chance; the slap duel joins the draw when beer is served
-    const uint32_t nbGames = static_cast<uint32_t>(servesBeer() ? ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("TavernGamesWithBeer", 3.0) : ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("TavernGamesWithoutBeer", 2.0));
+    const uint32_t nbGames = servesBeer() ? NB_GAMES_WITH_BEER : NB_GAMES_WITHOUT_BEER;
     RoomTavernGame game;
     game.mKind = static_cast<TavernGameKind>(Random::Uint(0, nbGames - 1));
     game.mTileA = tileA;
