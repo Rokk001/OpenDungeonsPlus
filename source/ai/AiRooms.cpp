@@ -680,7 +680,7 @@ void ROOMS::bind(KeeperAI& ai)
     mind.onLook("B17", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(ghostProduct, std::ref(ai)));
     mind.onLook("B24", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(auditSettings, std::ref(ai)));
     mind.onEvent("B02", {AiEventType::CreatureArrived, AiEventType::NoBed}, std::bind(needRoomEvent, std::ref(ai), RoomType::dormitory, std::placeholders::_1));
-    mind.onEvent("B03", {AiEventType::CreatureArrived, AiEventType::FirstPortalArrival, AiEventType::NoFood},
+    mind.onEvent("B03", {AiEventType::FirstPortalArrival, AiEventType::NoFood},
         std::bind(needRoomEvent, std::ref(ai), RoomType::hatchery, std::placeholders::_1));
     mind.onEvent("B09", {AiEventType::CreatureMood}, std::bind(roomMoodEvent, std::ref(ai), auditCasino, std::placeholders::_1));
     mind.onEvent("B10", {AiEventType::Dirt}, std::bind(roomEvent, std::ref(ai), toiletWatch, std::placeholders::_1));
