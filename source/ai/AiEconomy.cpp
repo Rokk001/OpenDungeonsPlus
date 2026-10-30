@@ -1,4 +1,5 @@
 #include "ai/AiEconomy.h"
+#include "ODApplication.h"
 
 #include "ai/AiActions.h"
 #include "ai/AiKnowledge.h"
@@ -227,7 +228,8 @@ void ECON::digQueueWatch(KeeperAI& ai)
     if(ai.getMind().slip("A01"))
         return;
     Player& player = ai.getControlledPlayer();
-    double share = ai.getMind().now() / 60.0 < key("MinerShareSwitchMinute") ? key("MinerShareEarly") : key("MinerShareLate");
+    const double gameMinutes = ai.getGameMap().getTurnNumber() / (static_cast<double>(ODApplication::turnsPerSecond) * 60.0);
+    double share = gameMinutes < key("MinerShareSwitchMinute") ? key("MinerShareEarly") : key("MinerShareLate");
     int wanted = static_cast<int>(std::ceil(key("MarkedTilesPerWorker") * share * player.getSeat()->getNumCreaturesWorkers())) - player.getNbMarkedTiles();
     if(wanted <= 0)
         return;
