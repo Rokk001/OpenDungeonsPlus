@@ -129,7 +129,7 @@ void ItemEffects::onHit(Creature& attacker, Creature& target, double damage, boo
         const double chill = attacker.getItemEffect("Chill");
         if(chill > 0.0)
         {
-            CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(chill, ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("ChillFactor", 0.9), "");
+            CreatureEffectSpeedChange* effect = new CreatureEffectSpeedChange(chill, ConfigManager::getSingleton().getItemSetting("ItemEffects", "ChillFactor"), "");
             effect->setSourceId("item:Chill");
             target.addCreatureEffect(effect);
         }
@@ -137,7 +137,7 @@ void ItemEffects::onHit(Creature& attacker, Creature& target, double damage, boo
         const double weaken = attacker.getItemEffect("Weaken");
         if(weaken > 0.0)
         {
-            CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(weaken, ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("WeakenFactor", 0.95), "");
+            CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(weaken, ConfigManager::getSingleton().getItemSetting("ItemEffects", "WeakenFactor"), "");
             effect->setSourceId("item:Weaken");
             target.addCreatureEffect(effect);
         }

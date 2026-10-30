@@ -20,7 +20,6 @@
 
 #include <algorithm>
 
-#include "utils/ConfigManager.h"
 #include <cstdint>
 #include <string>
 
@@ -61,13 +60,14 @@ inline Outcome decide(Outcome kind, double chance, double roll)
 //! Hit formula coefficients and clamps, all expressed in percent.
 
 //! \brief Returns the level-ratio hit chance for a creature attacking another creature.
-inline double hitChance(double attackRating, double defenseRating, uint32_t attackerLevel, uint32_t defenderLevel)
+inline double hitChance(double attackRating, double defenseRating, uint32_t attackerLevel, uint32_t defenderLevel,
+    double scale, double minChance, double maxChance)
 {
     if(attackRating + defenseRating <= 0.0)
-        return ConfigManager::getSingleton().getHitChanceMin();
-    const double chance = ConfigManager::getSingleton().getHitChanceScale() * attackRating / (attackRating + defenseRating) *
+        return minChance;
+    const double chance = scale * attackRating / (attackRating + defenseRating) *
         attackerLevel / static_cast<double>(attackerLevel + defenderLevel);
-    return std::max(ConfigManager::getSingleton().getHitChanceMin(), std::min(ConfigManager::getSingleton().getHitChanceMax(), chance));
+    return std::max(minChance, std::min(maxChance, chance));
 }
 
 //! \brief Identifies held shields from the equipment type rather than its mesh.

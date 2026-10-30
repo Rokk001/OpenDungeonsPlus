@@ -159,7 +159,7 @@ bool ItemInstance::importFromStream(std::istream& stream, const std::string& fir
             return false;
         item.mBonuses.push_back(value);
     }
-    if(!(stream >> count) || count > static_cast<uint32_t>(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("MaxItemEffects", 2.0)))
+    if(!(stream >> count) || count > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemEffects", "MaxItemEffects")))
         return false;
     for(uint32_t index = 0; index < count; ++index)
     {
@@ -217,7 +217,7 @@ bool ItemInstance::importFromPacket(ODPacket& packet)
             return false;
         item.mBonuses.push_back(value);
     }
-    if(!(packet >> count) || count > static_cast<uint32_t>(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("MaxItemEffects", 2.0)))
+    if(!(packet >> count) || count > static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemEffects", "MaxItemEffects")))
         return false;
     for(uint32_t index = 0; index < count; ++index)
     {

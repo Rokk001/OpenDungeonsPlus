@@ -187,11 +187,11 @@ void Creature::decidePotion()
         const double hpShare = getMaxHp() > 0.0 ? getHP() / getMaxHp() : 1.0;
         const double manaShare = getMaxMana() > 0.0 ? getCurrentMana() / getMaxMana() : 1.0;
         bool useful = (kind == "HealPercent" && fighting && hpShare < healBelow) ||
-            (kind == "FullRestore" && fighting && (hpShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LifespringLowHpShare", 0.25) ||
-                (hpShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LifespringHpShare", 0.5) && manaShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LifespringManaShare", 0.25)))) ||
+            (kind == "FullRestore" && fighting && (hpShare < ConfigManager::getSingleton().getItemSetting("Potions", "LifespringLowHpShare") ||
+                (hpShare < ConfigManager::getSingleton().getItemSetting("Potions", "LifespringHpShare") && manaShare < ConfigManager::getSingleton().getItemSetting("Potions", "LifespringManaShare")))) ||
             (kind == "EndFreeze" && isFrozen()) ||
             (isPotionBuff(kind) && combatStart && !hasPotionEffect(kind));
-        if(kind == "ManaPercent" && fighting && manaShare < ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionManaDrinkShare", 0.3))
+        if(kind == "ManaPercent" && fighting && manaShare < ConfigManager::getSingleton().getItemSetting("Potions", "PotionManaDrinkShare"))
         {
             const double after = std::min(getMaxMana(), getCurrentMana()+getMaxMana()*potion->getValue()/PERCENT);
             for(const CreatureSkillData& data : mSkillData)

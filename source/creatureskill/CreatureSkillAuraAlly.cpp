@@ -18,6 +18,7 @@
 #include "creatureskill/CreatureSkillAuraAlly.h"
 
 #include "utils/LogManager.h"
+#include "utils/ConfigManager.h"
 
 #include "creatureaction/CreatureAction.h"
 #include "creatureeffect/CreatureEffectStrengthChange.h"
@@ -74,7 +75,7 @@ bool CreatureSkillAuraAlly::tryUseSupport(GameMap& gameMap, Creature* creature) 
         return false;
 
     const std::vector<Creature*> allies = creature->getOwnCreaturesWithin(mRadius);
-    if(allies.size() < mMinAllies)
+    if(allies.size() < static_cast<size_t>(ConfigManager::getSingleton().getAuraAllyMinAllies()))
         return false;
 
     for(Creature* ally : allies)

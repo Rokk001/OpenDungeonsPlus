@@ -23,6 +23,7 @@
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
 #include "utils/LogManager.h"
+#include "utils/ConfigManager.h"
 #include "utils/Random.h"
 
 #include <istream>
@@ -81,9 +82,10 @@ bool CreatureSkillSkeletonArmy::tryUseSupport(GameMap& gameMap, Creature* creatu
 
     // We search the free tiles around the caster
     std::vector<Tile*> freeTiles;
-    for(int xx = myTile->getX() - mRadius; xx <= myTile->getX() + mRadius; ++xx)
+    const int32_t radius = ConfigManager::getSingleton().getSkeletonArmyRadius();
+    for(int xx = myTile->getX() - radius; xx <= myTile->getX() + radius; ++xx)
     {
-        for(int yy = myTile->getY() - mRadius; yy <= myTile->getY() + mRadius; ++yy)
+        for(int yy = myTile->getY() - radius; yy <= myTile->getY() + radius; ++yy)
         {
             Tile* tile = gameMap.getTile(xx, yy);
             if((tile == nullptr) || tile->isFullTile())

@@ -1937,9 +1937,9 @@ std::unique_ptr<ItemInstance> Creature::setPotionSlot(size_t slot, std::unique_p
 void Creature::resizePotionSlots()
 {
     size_t count = 1;
-    if(mLevel >= ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionSlotLevel3", 20.0))
+    if(mLevel >= ConfigManager::getSingleton().getItemSetting("Potions", "PotionSlotLevel3"))
         count = 3;
-    else if(mLevel >= ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("PotionSlotLevel2", 10.0))
+    else if(mLevel >= ConfigManager::getSingleton().getItemSetting("Potions", "PotionSlotLevel2"))
         count = 2;
     if(mPotionSlots.size() < count)
     {
@@ -1972,16 +1972,16 @@ double Creature::getPotionFactor(const std::string& kind) const
 //! \brief Gives dexterity potions their configured critical chance points.
 double Creature::getPotionCritChance() const
 {
-    static const double DEXTERITY_SMALL = 1.10;
-    static const double DEXTERITY_MEDIUM = 1.15;
-    static const double DEXTERITY_LARGE = 1.20;
+    const double DEXTERITY_SMALL = ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionFactorSmall");
+    const double DEXTERITY_MEDIUM = ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionFactorMedium");
+    const double DEXTERITY_LARGE = ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionFactorLarge");
     double points = 0.0;
     if(!getIsOnServerMap())
     {
         const double factor = getPotionFactor("DexterityChange");
-        if(factor >= DEXTERITY_LARGE) return ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritLarge", 6.0);
-        if(factor >= DEXTERITY_MEDIUM) return ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritMedium", 4.0);
-        if(factor >= DEXTERITY_SMALL) return ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritSmall", 2.0);
+        if(factor >= DEXTERITY_LARGE) return ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritLarge");
+        if(factor >= DEXTERITY_MEDIUM) return ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritMedium");
+        if(factor >= DEXTERITY_SMALL) return ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritSmall");
         return 0.0;
     }
     for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
@@ -1989,11 +1989,11 @@ double Creature::getPotionCritChance() const
         if(entry.second.first != "DexterityChange")
             continue;
         if(entry.second.second >= DEXTERITY_LARGE)
-            points += ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritLarge", 6.0);
+            points += ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritLarge");
         else if(entry.second.second >= DEXTERITY_MEDIUM)
-            points += ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritMedium", 4.0);
+            points += ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritMedium");
         else if(entry.second.second >= DEXTERITY_SMALL)
-            points += ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("DexterityPotionCritSmall", 2.0);
+            points += ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritSmall");
     }
     return points;
 }
@@ -2033,11 +2033,11 @@ void Creature::removePotionContribution(const CreatureEffect* source)
 double Creature::getItemDefenseFactor() const
 {
     double bonus = getItemBonus("Defense%") + getItemEffect("ThickPlates");
-    if(mMaxHP > 0.0 && mHp < mMaxHP * ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("LastStandHealthShare", 0.25))
+    if(mMaxHP > 0.0 && mHp < mMaxHP * ConfigManager::getSingleton().getItemSetting("ItemEffects", "LastStandHealthShare"))
         bonus += getItemEffect("LastStand");
     if(getItemEffect("Bulwark") != 0.0)
     {
-        for(const Creature* mate : getOwnCreaturesWithin(ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("BulwarkRadius", 2.0)))
+        for(const Creature* mate : getOwnCreaturesWithin(ConfigManager::getSingleton().getItemSetting("ItemEffects", "BulwarkRadius")))
         {
             if(mate != this)
             {
@@ -2560,7 +2560,7 @@ void Creature::doUpkeep()
     }
     if(isAlive() && !isActionInList(CreatureActionType::fight))
     {
-        const double healing = getItemEffect("Mending") / 100.0 * mMaxHP / (ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("MendingSeconds", 10.0) * ODApplication::turnsPerSecond);
+        const double healing = getItemEffect("Mending") / 100.0 * mMaxHP / (ConfigManager::getSingleton().getItemSetting("ItemEffects", "MendingSeconds") * ODApplication::turnsPerSecond);
         if(healing > 0.0)
             heal(healing);
     }
@@ -4202,7 +4202,7 @@ double Creature::getClientPoseSpeedFactor() const
 //! \brief Adds Second Wind to movement below its configured health share.
 double Creature::getConditionalItemMoveFactor() const
 {
-    if(mMaxHP <= 0.0 || mHp >= mMaxHP * ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("SecondWindHealthShare", 0.5))
+    if(mMaxHP <= 0.0 || mHp >= mMaxHP * ConfigManager::getSingleton().getItemSetting("ItemEffects", "SecondWindHealthShare"))
         return 1.0;
     return 1.0 + getItemEffect("SecondWind") / (100.0 + getSkillPassive("move%"));
 }
@@ -8827,7 +8827,8 @@ bool Creature::rollAttackHit(double attackRating, uint32_t attackerLevel, bool p
     if(possessed)
         return true;
     return Random::Double(0.0, 100.0) < DefenceChance::hitChance(attackRating, getDefenseRating(),
-        attackerLevel, getLevel());
+        attackerLevel, getLevel(), ConfigManager::getSingleton().getHitChanceScale(),
+        ConfigManager::getSingleton().getHitChanceMin(), ConfigManager::getSingleton().getHitChanceMax());
 }
 
 //! \brief Rolls one configured avoidance kind; parry cannot stop missiles and block requires a shield. The avoid

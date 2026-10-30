@@ -1886,8 +1886,8 @@ const char* Seat::getResearchGateFailure(SkillType type, int level, const std::v
             ++nbAtLevelOne;
     }
     const uint32_t nbNeeded = static_cast<uint32_t>(std::ceil(nbAllowed *
-        (level == RESEARCH_LEVEL_SECOND ? ConfigManager::getSingleton().getResearchConfigDoubleOrDefault("ResearchLevel2TabShare", 0.5) :
-        ConfigManager::getSingleton().getResearchConfigDoubleOrDefault("ResearchLevel3TabShare", 1.0))));
+        (level == RESEARCH_LEVEL_SECOND ? ConfigManager::getSingleton().getResearchLevel2TabShare() :
+        ConfigManager::getSingleton().getResearchLevel3TabShare())));
     if(nbAtLevelOne < nbNeeded)
         return REASON_TAB_NEEDS_MORE;
 

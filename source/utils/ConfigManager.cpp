@@ -199,7 +199,13 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mClaimXpDivisorBase(0.35),
     mClaimXpDivisorPerLevel(0.05),
     mAngryFleeChancePercent(20),
-    mFleeTiles(5),
+    mResearchCostFactorLevel2(2),
+    mResearchCostFactorLevel3(4),
+    mResearchLevel2TabShare(0.5),
+    mResearchLevel3TabShare(1),
+    mAuraAllyMinAllies(2),
+    mSkeletonArmyRadius(2),
+    mFleeMaxTurns(5),
     mHitChanceMax(95),
     mHitChanceMin(5),
     mHitChanceScale(200),
@@ -377,7 +383,6 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 
     std::string nextParam;
     uint32_t paramsOk = 0;
-    bool foundSandbox = false;
     while(configFile.good())
     {
         if(!(configFile >> nextParam))
@@ -409,49 +414,11 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
             paramsOk |= 4;
             continue;
         }
-        if(nextParam == "[ItemDrops]" || nextParam == "[ItemRating]" || nextParam == "[Potions]")
+        if(nextParam == "[ItemDrops]" || nextParam == "[ItemRating]" || nextParam == "[Potions]" || nextParam == "[ItemEffects]")
         {
             const std::string section = nextParam.substr(1, nextParam.size() - 2);
             if(!loadItemSettings(configFile, section))
                 return false;
-        }
-
-        if(nextParam == "[Sandbox]")
-        {
-            foundSandbox = true;
-            std::set<std::string> foundSandboxKeys;
-            while(configFile >> nextParam && nextParam != "[/Sandbox]")
-            {
-                if(nextParam == "SandboxHeroLevelMax")
-                {
-                    configFile >> mSandboxHeroLevelMax;
-                    foundSandboxKeys.insert("SandboxHeroLevelMax");
-                }
-                if(nextParam == "SandboxHeroLevelMin")
-                {
-                    configFile >> mSandboxHeroLevelMin;
-                    foundSandboxKeys.insert("SandboxHeroLevelMin");
-                }
-                if(nextParam == "SandboxHeroesPerWave")
-                {
-                    configFile >> mSandboxHeroesPerWave;
-                    foundSandboxKeys.insert("SandboxHeroesPerWave");
-                }
-                if(nextParam == "SandboxWaves")
-                {
-                    configFile >> mSandboxWaves;
-                    foundSandboxKeys.insert("SandboxWaves");
-                }
-            }
-            if(foundSandboxKeys.count("SandboxHeroLevelMax") == 0)
-                OD_LOG_ERR("Missing Sandbox key=SandboxHeroLevelMax; using shipped default");
-            if(foundSandboxKeys.count("SandboxHeroLevelMin") == 0)
-                OD_LOG_ERR("Missing Sandbox key=SandboxHeroLevelMin; using shipped default");
-            if(foundSandboxKeys.count("SandboxHeroesPerWave") == 0)
-                OD_LOG_ERR("Missing Sandbox key=SandboxHeroesPerWave; using shipped default");
-            if(foundSandboxKeys.count("SandboxWaves") == 0)
-                OD_LOG_ERR("Missing Sandbox key=SandboxWaves; using shipped default");
-            continue;
         }
 
         if(nextParam == "[Dirt]")
@@ -472,9 +439,6 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
             continue;
         }
     }
-
-    if(!foundSandbox)
-        OD_LOG_ERR("Missing Sandbox block; using shipped defaults");
 
     if(paramsOk != 0x07)
     {
@@ -811,10 +775,81 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             foundKeys.insert("AngryFleeChancePercent");
             continue;
         }
-        if(nextParam == "FleeTiles")
+        if(nextParam == "SandboxWaves")
         {
-            configFile >> mFleeTiles;
-            foundKeys.insert("FleeTiles");
+            configFile >> nextParam;
+            mSandboxWaves = Helper::toInt(nextParam);
+            foundKeys.insert("SandboxWaves");
+            continue;
+        }
+        if(nextParam == "SandboxHeroesPerWave")
+        {
+            configFile >> nextParam;
+            mSandboxHeroesPerWave = Helper::toInt(nextParam);
+            foundKeys.insert("SandboxHeroesPerWave");
+            continue;
+        }
+        if(nextParam == "SandboxHeroLevelMin")
+        {
+            configFile >> nextParam;
+            mSandboxHeroLevelMin = Helper::toInt(nextParam);
+            foundKeys.insert("SandboxHeroLevelMin");
+            continue;
+        }
+        if(nextParam == "SandboxHeroLevelMax")
+        {
+            configFile >> nextParam;
+            mSandboxHeroLevelMax = Helper::toInt(nextParam);
+            foundKeys.insert("SandboxHeroLevelMax");
+            continue;
+        }
+        if(nextParam == "ResearchCostFactorLevel2")
+        {
+            configFile >> nextParam;
+            mResearchCostFactorLevel2 = Helper::toDouble(nextParam);
+            foundKeys.insert("ResearchCostFactorLevel2");
+            continue;
+        }
+        if(nextParam == "ResearchCostFactorLevel3")
+        {
+            configFile >> nextParam;
+            mResearchCostFactorLevel3 = Helper::toDouble(nextParam);
+            foundKeys.insert("ResearchCostFactorLevel3");
+            continue;
+        }
+        if(nextParam == "ResearchLevel2TabShare")
+        {
+            configFile >> nextParam;
+            mResearchLevel2TabShare = Helper::toDouble(nextParam);
+            foundKeys.insert("ResearchLevel2TabShare");
+            continue;
+        }
+        if(nextParam == "ResearchLevel3TabShare")
+        {
+            configFile >> nextParam;
+            mResearchLevel3TabShare = Helper::toDouble(nextParam);
+            foundKeys.insert("ResearchLevel3TabShare");
+            continue;
+        }
+        if(nextParam == "AuraAllyMinAllies")
+        {
+            configFile >> nextParam;
+            mAuraAllyMinAllies = Helper::toInt(nextParam);
+            foundKeys.insert("AuraAllyMinAllies");
+            continue;
+        }
+        if(nextParam == "SkeletonArmyRadius")
+        {
+            configFile >> nextParam;
+            mSkeletonArmyRadius = Helper::toInt(nextParam);
+            foundKeys.insert("SkeletonArmyRadius");
+            continue;
+        }
+        if(nextParam == "FleeMaxTurns")
+        {
+            configFile >> nextParam;
+            mFleeMaxTurns = Helper::toInt(nextParam);
+            foundKeys.insert("FleeMaxTurns");
             continue;
         }
         if(nextParam == "HitChanceMax")
@@ -929,11 +964,10 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             std::string line;
             std::getline(configFile, line);
-            std::istringstream values(line);
+            std::vector<std::string> elements = Helper::split(line, '\t', true);
             std::vector<double> anchors;
-            double value;
-            while(values >> value)
-                anchors.push_back(value);
+            for(const std::string& element : elements)
+                anchors.push_back(Helper::toDouble(element));
             if(anchors.size() >= 2)
                 mBuildingDamageCurve = anchors;
             else
@@ -945,11 +979,10 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             std::string line;
             std::getline(configFile, line);
-            std::istringstream values(line);
+            std::vector<std::string> elements = Helper::split(line, '\t', true);
             std::vector<double> anchors;
-            double value;
-            while(values >> value)
-                anchors.push_back(value);
+            for(const std::string& element : elements)
+                anchors.push_back(Helper::toDouble(element));
             if(anchors.size() >= 2)
                 mThreatPercentByLevel = anchors;
             else
@@ -1778,8 +1811,28 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
 
     if(foundKeys.count("AngryFleeChancePercent") == 0)
         OD_LOG_ERR("Missing GameConfig key=AngryFleeChancePercent; using shipped default");
-    if(foundKeys.count("FleeTiles") == 0)
-        OD_LOG_ERR("Missing GameConfig key=FleeTiles; using shipped default");
+    if(foundKeys.count("SandboxWaves") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SandboxWaves; using shipped default");
+    if(foundKeys.count("SandboxHeroesPerWave") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SandboxHeroesPerWave; using shipped default");
+    if(foundKeys.count("SandboxHeroLevelMin") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SandboxHeroLevelMin; using shipped default");
+    if(foundKeys.count("SandboxHeroLevelMax") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SandboxHeroLevelMax; using shipped default");
+    if(foundKeys.count("ResearchCostFactorLevel2") == 0)
+        OD_LOG_ERR("Missing GameConfig key=ResearchCostFactorLevel2; using shipped default");
+    if(foundKeys.count("ResearchCostFactorLevel3") == 0)
+        OD_LOG_ERR("Missing GameConfig key=ResearchCostFactorLevel3; using shipped default");
+    if(foundKeys.count("ResearchLevel2TabShare") == 0)
+        OD_LOG_ERR("Missing GameConfig key=ResearchLevel2TabShare; using shipped default");
+    if(foundKeys.count("ResearchLevel3TabShare") == 0)
+        OD_LOG_ERR("Missing GameConfig key=ResearchLevel3TabShare; using shipped default");
+    if(foundKeys.count("AuraAllyMinAllies") == 0)
+        OD_LOG_ERR("Missing GameConfig key=AuraAllyMinAllies; using shipped default");
+    if(foundKeys.count("SkeletonArmyRadius") == 0)
+        OD_LOG_ERR("Missing GameConfig key=SkeletonArmyRadius; using shipped default");
+    if(foundKeys.count("FleeMaxTurns") == 0)
+        OD_LOG_ERR("Missing GameConfig key=FleeMaxTurns; using shipped default");
     if(foundKeys.count("HitChanceMax") == 0)
         OD_LOG_ERR("Missing GameConfig key=HitChanceMax; using shipped default");
     if(foundKeys.count("HitChanceMin") == 0)
@@ -1873,7 +1926,7 @@ bool ConfigManager::loadCreatureDefinitions(const std::string& fileName)
     return true;
 }
 
-//! \brief Loads equipment definitions and their numeric balance settings.
+//! \brief Loads equipment definitions.
 bool ConfigManager::loadEquipements(const std::string& fileName)
 {
     OD_LOG_INF("Load weapon definition file: " + fileName);
@@ -1903,36 +1956,6 @@ bool ConfigManager::loadEquipements(const std::string& fileName)
 
         if (nextParam == "[/Equipment]")
             continue;
-
-        if(nextParam == "BleedTurns" ||
-            nextParam == "BulwarkRadius" ||
-            nextParam == "ChillFactor" ||
-            nextParam == "DexterityPotionCritLarge" ||
-            nextParam == "DexterityPotionCritMedium" ||
-            nextParam == "DexterityPotionCritSmall" ||
-            nextParam == "EquipUpgradeMargin" ||
-            nextParam == "HeroDropLargeLevel" ||
-            nextParam == "HeroDropMediumLevel" ||
-            nextParam == "ItemAuraRadius" ||
-            nextParam == "LastStandHealthShare" ||
-            nextParam == "LifespringHpShare" ||
-            nextParam == "LifespringLowHpShare" ||
-            nextParam == "LifespringManaShare" ||
-            nextParam == "MaxItemEffects" ||
-            nextParam == "MendingSeconds" ||
-            nextParam == "PotionManaDrinkShare" ||
-            nextParam == "PotionRegenSeconds" ||
-            nextParam == "PotionSlotLevel2" ||
-            nextParam == "PotionSlotLevel3" ||
-            nextParam == "SecondWindHealthShare" ||
-            nextParam == "WeakenFactor")
-        {
-            double value;
-            if(!(defFile >> value))
-                return false;
-            mEquipmentConfig[nextParam] = value;
-            continue;
-        }
 
         if (nextParam != "[Equipment]")
         {
@@ -2451,7 +2474,7 @@ bool ConfigManager::loadCreatureSkills(const std::string& fileName)
     return true;
 }
 
-//! \brief Loads research costs, tab shares and research effects.
+//! \brief Loads skill costs and research effects.
 bool ConfigManager::loadSkills(const std::string& fileName)
 {
     OD_LOG_INF("Load Skills file: " + fileName);
@@ -2479,12 +2502,6 @@ bool ConfigManager::loadSkills(const std::string& fileName)
         if (nextParam == "[/Skills]")
             break;
 
-        if(nextParam == "ResearchCostFactorLevel2" || nextParam == "ResearchCostFactorLevel3" ||
-            nextParam == "ResearchLevel2TabShare" || nextParam == "ResearchLevel3TabShare")
-        {
-            defFile >> mResearchConfig[nextParam];
-            continue;
-        }
         defFile >> mSkillPoints[NameAliases::resolve(nextParam)];
     }
 
@@ -3061,26 +3078,6 @@ const std::string ConfigManager::getUserValue(Config::Ctg category,
 bool ConfigManager::hasRoomConfig(const std::string& param) const
 {
     return mRoomsConfig.find(param) != mRoomsConfig.end();
-}
-
-//! \brief Reads an equipment setting and reports a missing key before using its shipped default.
-double ConfigManager::getEquipmentConfigDoubleOrDefault(const std::string& param, double defaultValue) const
-{
-    std::map<std::string, double>::const_iterator it = mEquipmentConfig.find(param);
-    if(it != mEquipmentConfig.end())
-        return it->second;
-    OD_LOG_ERR("Missing equipment config key=" + param);
-    return defaultValue;
-}
-
-//! \brief Reads a research setting and reports a missing key before using its shipped default.
-double ConfigManager::getResearchConfigDoubleOrDefault(const std::string& param, double defaultValue) const
-{
-    std::map<std::string, double>::const_iterator it = mResearchConfig.find(param);
-    if(it != mResearchConfig.end())
-        return it->second;
-    OD_LOG_ERR("Missing research config key=" + param);
-    return defaultValue;
 }
 
 const std::string& ConfigManager::getRoomConfigString(const std::string& param) const

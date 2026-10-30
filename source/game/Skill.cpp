@@ -41,8 +41,8 @@ int32_t Skill::getNeededSkillPoints(uint32_t level) const
     if(level <= 1)
         return mFreeLevelOne ? 0 : mNeededSkillPoints;
     return static_cast<int32_t>(mNeededSkillPoints * (level == 2 ?
-        ConfigManager::getSingleton().getResearchConfigDoubleOrDefault("ResearchCostFactorLevel2", 2.0) :
-        ConfigManager::getSingleton().getResearchConfigDoubleOrDefault("ResearchCostFactorLevel3", 4.0)));
+        ConfigManager::getSingleton().getResearchCostFactorLevel2() :
+        ConfigManager::getSingleton().getResearchCostFactorLevel3()));
 }
 
 bool Skill::canBeSkilled(const std::vector<SkillType>& skillsDone, const std::vector<SkillType>& skillsNotAllowed) const

@@ -691,7 +691,7 @@ void GameMap::updateItemAuraGivers()
 //! \brief Sums a cached aura within the configured radius, ignoring departed sources.
 double GameMap::getItemAura(const Creature& receiver, const std::string& effect) const
 {
-    const double auraRadius = ConfigManager::getSingleton().getEquipmentConfigDoubleOrDefault("ItemAuraRadius", 2.0);
+    const double auraRadius = ConfigManager::getSingleton().getItemSetting("ItemEffects", "ItemAuraRadius");
     const double auraRadiusSquared = auraRadius * auraRadius;
     std::map<const Seat*, std::vector<Creature*>>::const_iterator found = mItemAuraGivers.find(receiver.getSeat());
     if(found == mItemAuraGivers.end() || !receiver.getIsOnMap())
