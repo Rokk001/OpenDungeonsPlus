@@ -190,7 +190,8 @@ bool parseAiState(const std::vector<std::string>& lines, std::vector<AiStateLine
         const std::size_t n = line.tokens.size();
         bool valid = (line.tag == "look" && n == 3) || (line.tag == "event" && n == 10) ||
                      (line.tag == "action" && n == 6) || (line.tag == "click" && n == 2) ||
-                     (line.tag == "hand" && n == 2) || (line.tag == "draw" && n == 3);
+                     (line.tag == "hand" && n == 2) || (line.tag == "held" && n == 2) ||
+                     (line.tag == "draw" && n == 3);
         if(line.tag == "war" && n > 0)
         {
             valid = (line.tokens[0] == "tunnel" && n == 8) || (line.tokens[0] == "assault" && n == 5) ||

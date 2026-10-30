@@ -4,6 +4,7 @@
  */
 #include "ai/AiMind.h"
 #include "entities/Creature.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -451,7 +452,7 @@ void Mind::resetState()
         mLooks[entry.first].flag = false;
 }
 
-//! \brief Writes relative times and all scheduler, action, row and observation state at full precision.
+//! \brief Writes the ordered hand and scheduler, action, row and observation state at full precision.
 void Mind::exportState(std::ostream& os) const
 {
     std::vector<AiMath::AiStateLine> lines = mSavedRows;
@@ -491,11 +492,13 @@ void Mind::exportState(std::ostream& os) const
             lines.push_back({"click", {token(mNow - click.first), token(click.second)}});
     }
     lines.push_back({"hand", {token(mHand.busyUntil - mNow), token(mNow - mHand.lastClickEnd)}});
+    for(GameEntity* entity : mPlayer.getObjectsInHand())
+        lines.push_back({"held", {token(static_cast<int>(entity->getObjectType())), entity->getName()}});
     for(const std::string& line : AiMath::formatAiState(lines))
         os << line << '\n';
 }
 
-//! \brief Restores scheduler entries atomically; malformed entries restart a fresh mind.
+//! \brief Restores the hand and scheduler entries atomically; malformed entries restart a fresh mind.
 bool Mind::importState(const std::vector<std::string>& input)
 {
     std::vector<AiMath::AiStateLine> lines;
@@ -510,6 +513,7 @@ bool Mind::importState(const std::vector<std::string>& input)
     AiMath::HandState hand;
     std::vector<AiMath::AiStateLine> rows;
     std::map<int, double> enemySpells;
+    std::vector<GameEntity*> held;
     bool valid = true;
     for(const AiMath::AiStateLine& line : lines)
     {
@@ -566,6 +570,16 @@ bool Mind::importState(const std::vector<std::string>& input)
             hand.busyUntil = mNow + busy;
             hand.lastClickEnd = mNow - age;
         }
+        else if(line.tag == "held")
+        {
+            int type;
+            valid = number(t[0], type);
+            GameEntity* entity = valid ? mGameMap.getEntityFromTypeAndName(static_cast<GameEntityType>(type), t[1]) : nullptr;
+            valid = entity != nullptr && entity->getObjectType() == static_cast<GameEntityType>(type) &&
+                    std::find(held.begin(), held.end(), entity) == held.end();
+            if(!valid) break;
+            held.push_back(entity);
+        }
         else if(line.tag == "sighting" && t[0] == "spell")
         {
             int seat;
@@ -594,6 +608,7 @@ bool Mind::importState(const std::vector<std::string>& input)
     mHand = hand;
     mSavedRows.swap(rows);
     mEnemySpells.swap(enemySpells);
+    mPlayer.restoreObjectsInHand(held);
     mSavedAt = mNow;
     return true;
 }

@@ -41,6 +41,9 @@ public:
     //! \brief Writes AI state when the implementation has state to save.
     virtual void exportState(std::ostream&) const {}
 
+    //! \brief Restores a saved controller state after the map entities exist.
+    virtual bool importState(const std::vector<std::string>&) { return true; }
+
     virtual ~BaseAI()
     {}
 
