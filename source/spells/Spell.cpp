@@ -60,8 +60,10 @@ void Spell::exportToStream(std::ostream& os) const
     if(getSpellType() == SpellType::callToWar || getSpellType() == SpellType::eyeEvil)
     {
         const std::streamsize precision = os.precision();
-        os << " [SpellDuration] " << std::setprecision(std::numeric_limits<double>::max_digits10)
+        const std::ios::fmtflags flags = os.flags();
+        os << " [SpellDuration] " << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10)
            << mNbTurns << " [/SpellDuration]";
+        os.flags(flags);
         os.precision(precision);
     }
 }

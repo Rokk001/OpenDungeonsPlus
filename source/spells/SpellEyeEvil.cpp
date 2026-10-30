@@ -140,8 +140,10 @@ void SpellEyeEvil::exportToStream(std::ostream& stream) const
     if(mFreeMode)
     {
         const std::streamsize precision = stream.precision();
+        const std::ios::fmtflags flags = stream.flags();
         stream << " [FreeEye] " << mFreeRadius << ' '
-               << std::setprecision(std::numeric_limits<double>::max_digits10) << mFreeTurns << " [/FreeEye]";
+               << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10) << mFreeTurns << " [/FreeEye]";
+        stream.flags(flags);
         stream.precision(precision);
     }
 }

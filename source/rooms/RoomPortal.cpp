@@ -330,7 +330,9 @@ void RoomPortal::exportToStream(std::ostream& os) const
     // The health is written as a number of tiles, as it always was
     os << (mClaimHealth * static_cast<double>(numCoveredTiles())) << "\t" << mNbCreatureMaxIncrease;
     const std::streamsize precision = os.precision();
-    os << "\tSpawnCountdown " << std::setprecision(std::numeric_limits<double>::max_digits10) << mSpawnCreatureCountdown;
+    const std::ios::fmtflags flags = os.flags();
+    os << "\tSpawnCountdown " << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10) << mSpawnCreatureCountdown;
+    os.flags(flags);
     os.precision(precision);
     os << "\n";
 }
