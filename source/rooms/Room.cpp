@@ -53,9 +53,9 @@ static const double DEFAULT_ROOM_TAKEOVER_COST_PERCENT = 0.0;
 //! \brief Radius in tiles in which a defender keeps workers off a room when the room config has no RoomTakeoverGuardRadius
 static const double DEFAULT_ROOM_TAKEOVER_GUARD_RADIUS = 5.0;
 //! \brief Seconds per tile to take over a room nobody owns when the room config has no RoomConvertNeutralSecondsPerTile
-static const double DEFAULT_ROOM_CONVERT_NEUTRAL_SECONDS_PER_TILE = 0.5;
+static const double DEFAULT_ROOM_CONVERT_NEUTRAL_SECONDS_PER_TILE = 1.7007;
 //! \brief Seconds per tile to take over an enemy room when the room config has no RoomConvertSecondsPerTile
-static const double DEFAULT_ROOM_CONVERT_SECONDS_PER_TILE = 2.5;
+static const double DEFAULT_ROOM_CONVERT_SECONDS_PER_TILE = 3.4014;
 //! \brief Claim rate of the reference worker when the room config has no RoomConvertClaimRate
 static const double DEFAULT_ROOM_CONVERT_CLAIM_RATE = 0.42;
 //! \brief How much faster a room is repaired than taken over when the room config has no RoomRepairFactor

@@ -41,7 +41,7 @@
 #include <cmath>
 
 //! \brief Seconds before a taken over portal spawns its first creature when the room config has no PortalFirstSpawnSeconds
-static const double DEFAULT_PORTAL_FIRST_SPAWN_SECONDS = 25.0;
+static const double DEFAULT_PORTAL_FIRST_SPAWN_SECONDS = 187.72607879924954;
 
 //! \brief The turns of a portal cooldown bound after the research Beer of the tavern: the bound of the room config
 //! times the factor of the research level of the seat (both bounds get the same factor).
