@@ -433,7 +433,7 @@ static void checkUseDirt()
     Tile* tile = map.getTile(1, 1);
     Creature creature(&seat, &definition, &map, tile);
     Room::addUseDirt(creature, tile, "WorkshopDirtPerWork");
-    expectNear(tile->getDirt(), 1.7722535834718596 * 1.75, "room use dirt = key x DirtFactor");
+    expectNear(tile->getDirt(), 1.7723 * 1.75, "room use dirt = key x DirtFactor");
     double before = tile->getDirt();
     Room::addUseDirt(creature, tile, "CryptDirtPerNothing");
     expectNear(tile->getDirt(), before, "a room without a key makes no dirt");
@@ -628,15 +628,15 @@ static void checkUrgeAndCreatureDirt()
     creature.setCreatureDirt(0.0); creature.dirtyEnteredTile(entered);
     expectNear(entered->getDirt(), 0.0, "a clean creature leaves no trail");
     creature.setCreatureDirt(50.0); creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.16117467584896703 * 0.5 * 1.5, "creature dirt trail");
+    expectNear(entered->getDirt(), 0.1611 * 0.5 * 1.5, "creature dirt trail");
     entered->setDirt(0.0); creature.setCreatureDirt(0.0); creature.mIsBeingDragged = true; creature.mDragDirtFactor = 1.5; creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.16117467584896703 * 1.0 * 1.5, "a pulled creature leaves a full trail");
+    expectNear(entered->getDirt(), 0.1611 * 1.0 * 1.5, "a pulled creature leaves a full trail");
     entered->setDirt(0.0); creature.mDragDirtFactor = 3.0; creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.16117467584896703 * 1.0 * 3.0, "a pulled creature leaves the trail with the DirtFactor of the pulling worker");
+    expectNear(entered->getDirt(), 0.1611 * 1.0 * 3.0, "a pulled creature leaves the trail with the DirtFactor of the pulling worker");
     entered->setDirt(0.0); creature.mIsBeingDragged = false; creature.mDragDirtFactor = 1.0;
     struct Load : GameEntity { GameEntityType getObjectType() const { return GameEntityType::other; } } load;
     creature.mCarriedEntity = &load; creature.dirtyEnteredTile(entered);
-    expectNear(entered->getDirt(), 0.16117467584896703 * 1.0 * 1.5, "a worker with a load leaves a full trail");
+    expectNear(entered->getDirt(), 0.1611 * 1.0 * 1.5, "a worker with a load leaves a full trail");
 }
 
 int main()

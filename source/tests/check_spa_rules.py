@@ -506,11 +506,11 @@ static void checkMudTrail()
     path[0].pool = true; path[1].pool = true; // two pool tiles first: nothing happens, the counter stays
     for(int i = 0; i < 6; ++i) c.testMudTrail(&path[i]);
     expectNear(path[0].dirt, 0.0, "no mud on a pool tile"); expectNear(path[1].dirt, 0.0, "no mud on the second pool tile");
-    for(int i = 2; i < 5; ++i) expectNear(path[i].dirt, 4.925697143427089 / 3.0 * 1.5, "mud on the tile " + std::to_string(i), 1e-9);
+    for(int i = 2; i < 5; ++i) expectNear(path[i].dirt, 4.9257 / 3.0 * 1.5, "mud on the tile " + std::to_string(i), 1e-9);
     expectNear(path[5].dirt, 0.0, "the fourth tile outside the pool stays clean");
     expect(c.mSpaMudTilesLeft == 0, "counter used up");
     expectNear(c.mCreatureDirt, 7.0, "creature dirt unchanged");
-    expectNear(path[2].dirt + path[3].dirt + path[4].dirt, 4.925697143427089 * 1.5, "the three tiles hold SpaDirtPerBath times the DirtFactor", 1e-9);
+    expectNear(path[2].dirt + path[3].dirt + path[4].dirt, 4.9257 * 1.5, "the three tiles hold SpaDirtPerBath times the DirtFactor", 1e-9);
 }
 
 // ---- A bath that is broken off

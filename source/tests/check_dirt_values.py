@@ -51,7 +51,7 @@ DIRT = {
     'ToiletUseTurns': '4', 'ToiletWaitRadius': '1', 'ToiletReserveFactor': '3',
     'CleaningWorkerSharePercent': '20', 'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
     'CleaningMaxTurnsPerTile': '20',
-    'CombatDirtPerHit': '1.7722535834718596', 'TrailDirtPerTile': '0.16117467584896703',
+    'CombatDirtPerHit': '1.7723', 'TrailDirtPerTile': '0.1611',
     'CreatureDirtPerFightWon': '5', 'CreatureDirtPerKo': '25', 'CreatureDirtDecayPerTurn': '0.1',
     'BloodDryTurns': '168', 'DirtNoticeSeconds': '60', 'FilthyPostSeconds': '600',
     'DirtSyncTurns': '2', 'DirtResyncTurns': '60',
@@ -70,19 +70,19 @@ for key in DIRT:
 
 # 3. The computed existing room table, the fixed infirmary treatment value and the toilet room keys
 ROOM_KEYS = {
-    'WorkshopDirtPerWork': '1.7722535834718596', 'ArenaDirtPerHit': '1.7722535834718596',
-    'ToiletDirtPerUse': '0.580028477796248',
-    'HatcheryDirtPerHenTurn': '0.0323', 'HatcheryDirtPerMeal': '8.0769', 'TrainHallDirtPerHit': '0.8861267917359298',
-    'CasinoDirtPerWork': '0.8861267917359298', 'DormitoryDirtPerSleepTurn': '0.16117467584896703',
-    'GuardRoomDirtPerDuty': '1.3695395108050346',
-    'LibraryDirtPerWork': '0.4430077416290668', 'TempleDirtPerPrayerTurn': '0.08058733792448351',
+    'WorkshopDirtPerWork': '1.7723', 'ArenaDirtPerHit': '1.7723',
+    'ToiletDirtPerUse': '0.5800',
+    'HatcheryDirtPerHenTurn': '0.0323', 'HatcheryDirtPerMeal': '8.0769', 'TrainHallDirtPerHit': '0.8862',
+    'CasinoDirtPerWork': '0.8862', 'DormitoryDirtPerSleepTurn': '0.1611',
+    'GuardRoomDirtPerDuty': '1.3695',
+    'LibraryDirtPerWork': '0.4430', 'TempleDirtPerPrayerTurn': '0.0806',
     'PrisonDirtPerPrisonerTurn': '0.1615',
-    'TortureDirtPerSession': '1.6111902161006888',
-    'InfirmaryDirtPerTreatment': '17.408040415448045',
-    'TavernDirtPerDrink': '0.29', 'SpaDirtPerBath': '4.925697143427089',
+    'TortureDirtPerSession': '1.6112',
+    'InfirmaryDirtPerTreatment': '17.4',
+    'TavernDirtPerDrink': '0.29', 'SpaDirtPerBath': '4.9257',
 }
-# Medium production 0.8077 divided by occupancy 0.557 and 7/84 treatments per turn (0.0833), not rounded.
-assert abs(0.8077 / (0.557 * 0.0833) - float(ROOM_KEYS['InfirmaryDirtPerTreatment'])) < 1e-9
+# Medium production 0.8077 divided by occupancy 0.557 and 7/84 treatments per turn (0.0833), rounded to one decimal.
+assert round(0.8077 / (0.557 * 0.0833), 1) == float(ROOM_KEYS['InfirmaryDirtPerTreatment'])
 room_values = block_values(rooms_cfg, 'Rooms')
 for key, value in ROOM_KEYS.items():
     assert room_values.get(key) == value, 'rooms.cfg ' + key + ' is ' + str(room_values.get(key)) + ', expected ' + value

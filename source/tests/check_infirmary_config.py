@@ -26,7 +26,7 @@ def main():
         "InfirmaryShamanWalkMaxSeconds": 15, "InfirmaryShamanPoseMinSeconds": 10,
         "InfirmaryShamanPoseMaxSeconds": 20, "InfirmaryShamanAnimationSeconds": 2}
     if "void Tile::addDirt(" in (repo / "source/entities/Tile.cpp").read_text(encoding="utf-8"):
-        expected["InfirmaryDirtPerTreatment"] = 17.408040415448045
+        expected["InfirmaryDirtPerTreatment"] = 17.4
     for key, number in expected.items():
         assert value(rooms, key) == number, key
     assert value(rooms, "InfirmaryCostPerTile") == value(rooms, "PrisonCostPerTile")

@@ -60,7 +60,7 @@ tavern = block_values(global_cfg, 'Tavern')
 SPA = {
     'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodMax': '300', 'SpaMoodPerTurn': '21',
     'SpaMoodDecayPerTurn': '0.4', 'SpaBathTurns': '14.2857', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
-    'SpaDirtPerBath': '4.925697143427089', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
+    'SpaDirtPerBath': '4.9257', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
     'SpaAttendantActMaxSeconds': '20', 'SpaAttendantCannonballMinSeconds': '120',
     'SpaAttendantCannonballMaxSeconds': '180', 'SpaCannonballChance': '0.25', 'SpaJumpTurns': '2',
     'SpaJumpHeight': '1.0',
