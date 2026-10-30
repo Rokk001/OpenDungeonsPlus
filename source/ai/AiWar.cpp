@@ -967,8 +967,6 @@ void endAssault(Env& env)
 
     RoomDungeonTemple* temple = ownTemple(env);
     std::vector<Creature*> survivors = attackers(env);
-    for(Creature* creature : survivors)
-        st.returning.insert(creature->getName());
     std::sort(survivors.begin(), survivors.end(), strongerFirst);
     if(temple != nullptr)
     {
@@ -979,6 +977,7 @@ void endAssault(Env& env)
             {
                 if(creature->tryPickup(seat) && creature->tryDrop(seat, tile))
                 {
+                    st.returning.insert(creature->getName());
                     ACTS::moveCreature(env.ai, creature, tile);
                     break;
                 }
