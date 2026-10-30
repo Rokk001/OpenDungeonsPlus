@@ -34,6 +34,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "ODApplication.h"
 #include "rooms/Room.h"
@@ -816,6 +817,7 @@ void SPELL::bindRows(KeeperAI& ai)
     mind.onSave(save);
 }
 
+//! \brief Chooses and schedules the most effective eligible fight spell for this session.
 bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& nextCast)
 {
     // AI row E02
@@ -854,18 +856,23 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         {
             case SpellType::lightning:
                 amount = (config.getSpellConfigDouble("LightningDamageMin") + config.getSpellConfigDouble("LightningDamage")) / 2.0;
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellLightning, 1.0, ResearchEffect::Damage);
                 targets = aiKey("SpellTargetsLightning");
                 break;
             case SpellType::creatureExplosion:
                 amount = config.getSpellConfigDouble("CreatureExplosionValue") * config.getSpellConfigDouble("CreatureExplosionDuration");
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellCreatureExplosion, 1.0, ResearchEffect::Damage);
+                targets = aiKey("SpellTargetsExplosion");
                 break;
             case SpellType::inferno:
                 amount = (config.getSpellConfigDouble("InfernoDamagePerTurnMin") + config.getSpellConfigDouble("InfernoDamagePerTurn")) / 2.0
                          * config.getSpellConfigDouble("InfernoNbTurns");
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellInferno, 1.0, ResearchEffect::Damage);
                 targets = aiKey("SpellTargetsInferno");
                 break;
             default:
                 amount = (config.getSpellConfigDouble("TremorDamageMin") + config.getSpellConfigDouble("TremorDamage")) / 2.0;
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellTremor, 1.0, ResearchEffect::Damage);
                 targets = aiKey("SpellTargetsTremor");
                 break;
         }
