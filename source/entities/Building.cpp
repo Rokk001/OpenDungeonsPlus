@@ -30,6 +30,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+const double Building::DEFAULT_TILE_HP = 10.0;
 
 Building::~Building()
 {
