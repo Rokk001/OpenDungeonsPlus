@@ -138,6 +138,20 @@ frame = skin.find("WidgetLook[@name='OD/FrameWindow']")
 assert frame.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-10'
 client = frame.find("NamedArea[@name='ClientWithTitleWithFrame']/Area")
 assert len(client.findall('Dim')) == 4, 'frame contents need a clipped inner rectangle'
+# Profile contents inherit the titlebar offset from the frame's client rectangle at every scale.
+client_top = client.find("Dim[@type='TopEdge']/OperatorDim")
+assert client_top.get('op') == 'Add'
+assert client_top.find('WidgetDim').attrib == {'dimension': 'BottomEdge', 'widget': '__auto_titlebar__'}
+assert client_top.find('ImageDim').attrib == {'dimension': 'Height', 'name': 'OpenDungeonsSkin/WindowTopEdge'}
+profile = ET.parse(repo / 'gui/WindowCreatureProfile.layout').getroot().find('Window')
+tab_top = min(udims(profile.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))[1][0]
+              for name in ('ProfileTab', 'StatsTab', 'BookTab'))
+for name in ('ProfilePage', 'StatsText'):
+    content = profile.find("Window[@name='%s']" % name)
+    assert content.find("Property[@name='NonClient']").get('value') == 'False', name
+    area = udims(content.find("Property[@name='Area']").get('value'))
+    assert area[1] == (0, 0), name + ' must start at the looknfeel client origin'
+    assert area[3][0] < tab_top and area[3][1] == 0, name + ' must end above the tabs'
 close = frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
 for dimension in ('Width', 'Height'):
     node = close.find("Dim[@type='%s']/WidgetDim" % dimension)
