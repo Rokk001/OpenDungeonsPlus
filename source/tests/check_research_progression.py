@@ -96,8 +96,14 @@ public:
     static ConfigManager& getSingleton(){static ConfigManager c;return c;}
     //! \brief Supplies the existing merchant margin bound used by optional seat parsing.
     int getRoomConfigInt32(const std::string&) const {return 50;}
-    //! \brief Supplies the research tuning defaults, which equal the shipped research config values.
-    double getResearchConfigDoubleOrDefault(const std::string&,double defaultValue) const {return defaultValue;}
+    //! \brief Supplies the shipped level-two research cost factor.
+    double getResearchCostFactorLevel2() const {return 2.0;}
+    //! \brief Supplies the shipped level-three research cost factor.
+    double getResearchCostFactorLevel3() const {return 4.0;}
+    //! \brief Supplies the shipped level-two research tab share.
+    double getResearchLevel2TabShare() const {return 0.5;}
+    //! \brief Supplies the shipped level-three research tab share.
+    double getResearchLevel3TabShare() const {return 1.0;}
     int getSkillPoints(const std::string& key) const {return points.at(key);}
     bool isSkillFreeLevelOne(const std::string& key) const {return freeLevelOne.count(key)>0;}
     const ResearchEffectLine* getResearchEffect(const std::string& skill,const std::string& effect) const {

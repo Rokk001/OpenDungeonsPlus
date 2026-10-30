@@ -33,9 +33,9 @@ header = read('source/game/WorkerShare.h')
 player = read('source/game/Player.cpp')
 traps_cfg = read('config/traps.cfg')
 
-# The header has no game state: only the integer types and the config for the two limits
+# The header has no game state: callers supply the two limits.
 includes = re.findall(r'^#include\s+(.+)$', header, re.M)
-assert includes == ['<cstdint>', '"utils/ConfigManager.h"'], includes
+assert includes == ['<cstdint>'], includes
 for name in ('totalWorkers', 'isCarryFirst', 'isClaimWallFirst', 'isReloadShareOpen'):
     assert re.search(r'inline \w+ ' + name + r'\(', header), name + ' missing in the header'
 
@@ -53,8 +53,10 @@ assert re.search(r'DEFAULT_RELOAD_WORKER_SHARE_PERCENT = 20\.0;', player)
 assert re.search(r'^    TrapReloadWorkerSharePercent\t\d+', traps_cfg, re.M)
 
 # The limits come from the config and keep the old values
-assert 'percent <= ConfigManager::getSingleton().getWorkerCarryFirstMaxShare();' in function_body(header, 'inline bool isCarryFirst(')
-assert 'percent > ConfigManager::getSingleton().getWorkerClaimWallFirstMinShare();' in function_body(header, 'inline bool isClaimWallFirst(')
+assert 'percent <= maxShare;' in function_body(header, 'inline bool isCarryFirst(')
+assert 'getWorkerCarryFirstMaxShare()' in prefs
+assert 'percent > minShare;' in function_body(header, 'inline bool isClaimWallFirst(')
+assert 'getWorkerClaimWallFirstMinShare()' in prefs
 global_cfg = read('config/global.cfg')
 assert re.search(r'^    WorkerCarryFirstMaxShare\t0\.2\s*$', global_cfg, re.M)
 assert re.search(r'^    WorkerClaimWallFirstMinShare\t0\.8\s*$', global_cfg, re.M)
@@ -99,15 +101,17 @@ int main()
     check(WorkerShare::totalWorkers(0, 0, 0, 0, 3) == 4, "reloading workers are part of the total");
 
     // The old limits stay: carry first up to 20 percent, claim walls first above 80 percent
-    check(WorkerShare::isCarryFirst(0, 1), "carry: nobody carries");
-    check(WorkerShare::isCarryFirst(1, 5), "carry: exactly 20 percent still carries first");
-    check(!WorkerShare::isCarryFirst(2, 5), "carry: 40 percent does not");
-    check(!WorkerShare::isClaimWallFirst(4, 0, 5), "wall: exactly 80 percent does not");
-    check(WorkerShare::isClaimWallFirst(3, 2, 6), "wall: 5 of 6 digging or claiming ground does");
-    check(!WorkerShare::isClaimWallFirst(0, 0, 1), "wall: nobody digging or claiming");
+    check(WorkerShare::isCarryFirst(0, 1, 0.2), "carry: nobody carries");
+    check(WorkerShare::isCarryFirst(1, 5, 0.2), "carry: exactly 20 percent still carries first");
+    check(!WorkerShare::isCarryFirst(2, 5, 0.2), "carry: 40 percent does not");
+    check(!WorkerShare::isClaimWallFirst(4, 0, 5, 0.8), "wall: exactly 80 percent does not");
+    check(WorkerShare::isClaimWallFirst(3, 2, 6, 0.8), "wall: 5 of 6 digging or claiming ground does");
+    check(!WorkerShare::isClaimWallFirst(0, 0, 1, 0.8), "wall: nobody digging or claiming");
+    check(WorkerShare::isCarryFirst(1, 4, 0.3), "carry: supplied limit is used");
+    check(!WorkerShare::isClaimWallFirst(3, 2, 6, 0.9), "wall: supplied limit is used");
     // Reloading workers make the others a smaller part, without touching the limits themselves
-    check(WorkerShare::isClaimWallFirst(5, 0, WorkerShare::totalWorkers(5, 0, 0, 0, 0)), "wall: 5 of 6 without reloaders");
-    check(!WorkerShare::isClaimWallFirst(5, 0, WorkerShare::totalWorkers(5, 0, 0, 0, 2)), "wall: 5 of 8 with two reloaders");
+    check(WorkerShare::isClaimWallFirst(5, 0, WorkerShare::totalWorkers(5, 0, 0, 0, 0), 0.8), "wall: 5 of 6 without reloaders");
+    check(!WorkerShare::isClaimWallFirst(5, 0, WorkerShare::totalWorkers(5, 0, 0, 0, 2), 0.8), "wall: 5 of 8 with two reloaders");
 
     // Reload share: the first worker is always allowed
     check(WorkerShare::isReloadShareOpen(0, 1, 20.0), "first worker, no other workers");
@@ -144,17 +148,6 @@ int main()
     with tempfile.TemporaryDirectory(prefix='odp-worker-share-') as directory:
         work = Path(directory)
         (work / 'check.cpp').write_text(probe)
-        # A small config stand-in, found before the real header, supplies the two limits with the shipped values
-        (work / 'utils').mkdir()
-        (work / 'utils' / 'ConfigManager.h').write_text(r'''#pragma once
-//! \brief Supplies the worker share limits of config/global.cfg to the probe.
-struct ConfigManager
-{
-    static ConfigManager& getSingleton() { static ConfigManager config; return config; }
-    double getWorkerCarryFirstMaxShare() const { return 0.2; }
-    double getWorkerClaimWallFirstMinShare() const { return 0.8; }
-};
-''')
         subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/I', str(work), '/I', str(root / 'source'), 'check.cpp', '/Fecheck.exe'],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
         result = subprocess.run([str(work / 'check.exe')], cwd=work, capture_output=True, text=True)
