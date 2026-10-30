@@ -10024,7 +10024,7 @@ void Creature::knockOutToDeath()
 }
 
 //! \brief Stuns a living creature for the resisted duration without replacing a longer stun.
-void Creature::stun(int32_t nbTurns)
+void Creature::stun(double nbTurns)
 {
     if(!isAlive() || (nbTurns <= 0) || (mKoTurnCounter < 0))
         return;

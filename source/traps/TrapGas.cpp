@@ -30,6 +30,7 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
 #include <cmath>
 
 const std::string TrapGasName = "Gas";
@@ -143,7 +144,14 @@ bool TrapGas::shoot(Tile* tile)
         return false;
 
     // The cloud hurts every creature in the area, enemies and allies
-    std::vector<Tile*> cloudTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::floor(mRadius)));
+    std::vector<Tile*> cloudTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::ceil(mRadius)));
+    // Keep only visible tile centres within the configured fractional radius.
+    cloudTiles.erase(std::remove_if(cloudTiles.begin(), cloudTiles.end(), [tile, this](Tile* candidate)
+    {
+        const double dx = candidate->getX() - tile->getX();
+        const double dy = candidate->getY() - tile->getY();
+        return dx * dx + dy * dy > mRadius * mRadius;
+    }), cloudTiles.end());
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(cloudTiles, getSeat(), true);
     std::vector<GameEntity*> alliedCreatures = getGameMap()->getVisibleCreatures(cloudTiles, getSeat(), false);
     std::vector<GameEntity*> victims;
