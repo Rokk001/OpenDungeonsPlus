@@ -71,8 +71,7 @@ global_cfg = read('config/global.cfg')
 skills_cfg = read('config/skills.cfg')
 
 # ---- Source wiring -----------------------------------------------------------------------------------------------
-# The idle decision follows the thirst check and goes before the toilet check; the job search asks again after the hunger check
-# (since the rebalance the needs come first: toilet, hunger, thirst, sleep; the spa check follows all of them)
+# The idle spa decision follows thirst, toilet and sleep; the job search asks again after the hunger check.
 idle = creature_cpp[creature_cpp.index('// If we are in a bad mood or have a hangover, we go to a lava spa'):]
 idle = idle[:idle.index('return true;')]
 assert 'wantsSpaBath()' in idle and 'CreatureActionSearchSpa>' in idle
