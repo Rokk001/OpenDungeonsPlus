@@ -932,6 +932,7 @@ void templeSacrifice(KeeperAI& ai)
             for(Creature* creature : fighters)
             {
                 if(creature->getDefinition()->getClassName() != className ||
+                    !creature->tryPickup(seat) ||
                     std::find(chosen.begin(), chosen.end(), creature) != chosen.end() ||
                     (!mistake && creature->getLevel() >= median))
                     continue;
