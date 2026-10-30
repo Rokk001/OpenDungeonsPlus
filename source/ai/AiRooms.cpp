@@ -487,7 +487,7 @@ void ROOMS::bedWatch(KeeperAI& ai)
     if(state.bedPopulation != population)
     {
         state.bedPopulation = population;
-        state.bedDue = ai.getMind().now() + (ai.getMind().slip("B02") ? roomDelay(ai, true) : 0.0);
+        state.bedDue = ai.getMind().now() + roomDelay(ai, ai.getMind().slip("B02"));
     }
     if(state.bedDue < 0.0 || ai.getMind().now() < state.bedDue ||
         (!state.pendingTiles.empty() && state.pendingType != RoomType::dormitory))
