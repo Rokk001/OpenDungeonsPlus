@@ -51,7 +51,7 @@ void useStoredSpecial(KeeperAI& ai, const AiEvent& event, bool fightSession, boo
             continue;
         }
         Tile* tile = creature->getPositionTile();
-        if(creature->getSeat() == nullptr || seat->isAlliedSeat(creature->getSeat()) || tile == nullptr)
+        if(!creature->getIsOnMap() || creature->getSeat() == nullptr || seat->isAlliedSeat(creature->getSeat()) || tile == nullptr)
             continue;
         const std::vector<Seat*>& vision = tile->getSeatsWithVision();
         enemyVisible = enemyVisible || std::find(vision.begin(), vision.end(), seat) != vision.end();
