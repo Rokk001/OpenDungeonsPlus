@@ -177,6 +177,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return true;
     }
 
+    Room* currentRoom = myTile->getCoveringRoom();
     std::vector<Room*> workRooms;
     std::vector<Room*> pleasureRooms;
     int32_t workLikeness = 0;
@@ -190,13 +191,14 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
             continue;
         for(Room* room : creature.getGameMap()->getRooms())
         {
-            if(room->getSeat() != creature.getSeat() || room->getType() != type ||
-               room->numCoveredTiles() <= 0 || !room->hasOpenCreatureSpot(&creature))
+            if((room->getSeat() != creature.getSeat() &&
+                (room != currentRoom || !creature.getSeat()->canOwnedCreatureUseRoomFrom(room->getSeat()))) ||
+               room->getType() != type || room->numCoveredTiles() <= 0 || !room->hasOpenCreatureSpot(&creature))
                 continue;
             if(type == RoomType::casino && static_cast<RoomCasino*>(room)->getPayout() == CasinoPayout::money)
                 continue;
             Tile* tile = room->getCoveredTile(0);
-            if(tile == nullptr || !creature.getGameMap()->pathExists(&creature, myTile, tile))
+            if(tile == nullptr || (room != currentRoom && !creature.getGameMap()->pathExists(&creature, myTile, tile)))
                 continue;
             std::vector<Room*>& candidates = pleasure ? pleasureRooms : workRooms;
             int32_t& best = pleasure ? pleasureLikeness : workLikeness;
@@ -213,20 +215,14 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
     std::vector<Room*>& candidates = workRooms.empty() ? pleasureRooms : workRooms;
     if(!candidates.empty())
     {
-        std::vector<Room*> preferred;
-        for(Room* room : candidates)
-        {
-            if(!room->hasHatedCoworker(&creature))
-                preferred.push_back(room);
-        }
-        std::vector<Room*>& choices = preferred.empty() ? candidates : preferred;
-        Room* room = choices[Random::Uint(0, choices.size() - 1)];
+        Room* room = candidates[Random::Uint(0, candidates.size() - 1)];
+        if(moodSearch)
+            creature.popAction();
         creature.pushAction(createRoomWorkAction(creature, *room, forced, moodSearch));
         return true;
     }
 
     // Keep the existing room wandering behaviour when no work or pleasure room is available.
-    Room* currentRoom = myTile->getCoveringRoom();
     if(!moodSearch && currentRoom != nullptr &&
        creature.getSeat()->canOwnedCreatureUseRoomFrom(currentRoom->getSeat()))
     {
