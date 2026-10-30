@@ -96,8 +96,10 @@ struct AiEvent
     int otherSeatId;
     //! \brief An amount that belongs to the event (gold, damage ...), 0 when none.
     double amount;
-    //! \brief Game time in seconds when the event was raised.
+    //! \brief Source time; delivered fights use the mind clock and other events use their reaction time.
     double time;
+    //! \brief Original Fight start on the mind clock; separate from the last refresh time.
+    double fightStart;
 };
 
 //! \brief The keeper AI's mind: queues events, draws reaction delays and mistakes, schedules the
@@ -119,6 +121,9 @@ public:
 
     //! \brief Returns the current firing identity, or zero outside a firing.
     uint64_t triggerId() const;
+
+    //! \brief Updates the last fight time in a pending reaction at the marker tile.
+    void refreshFight(Tile* tile);
 
     //! \brief Delivers tunnel news during the originating Fight reaction, sharing its single alert delay.
     void dispatchRelated(const AiEvent& event);
@@ -192,6 +197,8 @@ private:
     {
         AiEventType type;
         double due;
+        double time;
+        double fightStart;
         AiMath::ReactionKind kind;
         int x, y;
         std::string creature;

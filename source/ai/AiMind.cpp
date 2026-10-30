@@ -3,6 +3,7 @@
  * This program is free software under the GNU General Public License, version 3 or later.
  */
 #include "ai/AiMind.h"
+#include "ODApplication.h"
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
@@ -255,6 +256,10 @@ void Mind::enqueue(const AiEvent& event)
     Reaction reaction;
     reaction.type = event.type;
     reaction.due = mNow + AiMath::reactionDelay(kind, delayParams(), uniformDraw);
+    reaction.time = event.type == AiEventType::Fight
+        ? mNow - (mGameMap.getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond) - event.time)
+        : reaction.due;
+    reaction.fightStart = reaction.time;
     reaction.kind = kind;
     reaction.x = event.tile == nullptr ? -1 : event.tile->getX();
     reaction.y = event.tile == nullptr ? -1 : event.tile->getY();
@@ -264,6 +269,16 @@ void Mind::enqueue(const AiEvent& event)
     reaction.noticed = false;
     reaction.rowId = "-";
     mEvents.push_back(reaction);
+}
+
+//! \brief Updates the last fight time without changing the original start of a pending reaction.
+void Mind::refreshFight(Tile* tile)
+{
+    if(tile == nullptr)
+        return;
+    for(Reaction& reaction : mEvents)
+        if(reaction.type == AiEventType::Fight && reaction.x == tile->getX() && reaction.y == tile->getY())
+            reaction.time = mNow;
 }
 
 //! \brief Reserves the single hand and queues each server call at its scheduled finish time.
@@ -427,7 +442,7 @@ void Mind::doTurn(double timeSinceLastTurn)
     {
         const AiEvent event = {reaction.type, mGameMap.getTile(reaction.x, reaction.y),
             reaction.creature == "-" ? nullptr : mGameMap.getCreature(reaction.creature),
-            reaction.seatId, reaction.amount, reaction.due};
+            reaction.seatId, reaction.amount, reaction.time, reaction.fightStart};
         mTriggerSlips.clear();
         mInTrigger = true;
         TriggerScope trigger(mTriggerSerial, mCurrentTrigger);
@@ -512,7 +527,8 @@ void Mind::exportState(std::ostream& os) const
         lines.push_back({"look", {look.first, token(look.second.due - mNow), token(look.second.flag ? 1 : 0)}});
     for(const Reaction& e : mEvents)
         lines.push_back({"event", {eventNames[static_cast<int>(e.type)], token(e.due - mNow), kindName(e.kind),
-            token(e.x), token(e.y), e.creature, token(e.seatId), token(e.amount), token(e.noticed ? 1 : 0), e.rowId}});
+            token(e.x), token(e.y), e.creature, token(e.seatId), token(e.amount), token(e.noticed ? 1 : 0), e.rowId,
+            token(mNow - e.time), token(mNow - e.fightStart)}});
     for(const Action& a : mActions)
         lines.push_back({"action", {a.key, token(a.due - mNow), a.rowId, token(a.x), token(a.y), a.target}});
     for(const std::pair<double, int>& click : mHand.clickGroups)
@@ -557,6 +573,22 @@ bool Mind::importState(const std::vector<std::string>& input)
                 number(t[7], e.amount) && number(t[8], noticed) && (noticed == 0 || noticed == 1);
             if(!valid) break;
             e.due = mNow + remaining;
+            e.time = e.due;
+            if(t.size() >= 11)
+            {
+                double age;
+                valid = number(t[10], age);
+                if(!valid) break;
+                e.time = mNow - age;
+            }
+            e.fightStart = e.time;
+            if(t.size() == 12)
+            {
+                double age;
+                valid = number(t[11], age);
+                if(!valid) break;
+                e.fightStart = mNow - age;
+            }
             e.creature = t[5];
             e.noticed = noticed != 0;
             e.rowId = t[9];
