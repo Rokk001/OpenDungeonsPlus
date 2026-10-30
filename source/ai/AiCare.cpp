@@ -503,13 +503,17 @@ void CARE::levelWatch(KeeperAI& ai)
     // AI row D08
     if(ai.getMind().slip("D08"))
         return;
-    // Only the hall's level cap counts; an empty treasury or a full hall also closes its spots.
-    const bool hasHall = !ai.getGameMap().getRoomsByTypeAndSeat(RoomType::trainingHall,
-        ai.getControlledPlayer().getSeat()).empty();
-    const uint32_t cap = ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallMaxTrainingLevel");
-    for(Creature* creature : ownFighters(ai))
+    // A hall also closes its spots when its treasury is empty or no training place is free.
+    const std::vector<Room*> halls = ai.getGameMap().getRoomsByTypeAndSeat(RoomType::trainingHall,
+        ai.getControlledPlayer().getSeat());
+    const std::vector<Creature*> fighters = ownFighters(ai);
+    for(Creature* creature : ownCreatures(ai))
     {
-        const bool capped = hasHall && creature->getLevel() >= cap;
+        bool capped = false;
+        for(Room* hall : halls)
+            if(std::find(fighters.begin(), fighters.end(), creature) != fighters.end() &&
+               !hall->hasOpenCreatureSpot(creature))
+                capped = true;
         Room* destination = capped ? availableRoom(ai, creature, RoomType::arena) : nullptr;
         if(destination == nullptr && idle(*creature))
         {
@@ -555,12 +559,12 @@ void CARE::moodPatrol(KeeperAI& ai, const std::function<void(const std::string&,
 {
     // AI row D07
     // Each affected creature raises its target row again, as a firing of that row with its own draw.
+    // One mistake leaves all affected creatures unhandled at this firing.
+    if(ai.getMind().slip("D07"))
+        return;
     for(Creature* creature : ownCreatures(ai))
     {
         if(creature->getMoodValue() < CreatureMoodLevel::Upset)
-            continue;
-        // The mistake leaves only this creature unhandled at this firing, so each creature draws on its own.
-        if(slipFor(ai, "D07"))
             continue;
         std::string row;
         if(creature->isHungry())
