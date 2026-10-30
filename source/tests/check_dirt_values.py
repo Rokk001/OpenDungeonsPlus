@@ -45,17 +45,16 @@ assert result.returncode == 0, 'dirt_values.py --check failed:\n' + result.stdou
 
 # 2. Every key of the [Dirt] block with the value of the design
 DIRT = {
-    'DirtVisibleFrom': '10', 'DirtStage2At': '33.3333', 'DirtStage3At': '66.6667', 'DirtMoodStage2': '-30', 'DirtMoodStage3': '-60',
-    'DirtPileMood': '-30', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
-    'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '20', 'UrgePerDrink': '15',
+    'DirtVisibleFrom': '10', 'DirtStage2At': '33.3333', 'DirtStage3At': '66.6667', 'DirtMoodStage2': '-100', 'DirtMoodStage3': '-200',
+    'DirtPileMood': '-100', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
+    'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '5.962', 'UrgePerDrink': '15',
     'ToiletUseTurns': '4', 'ToiletWaitRadius': '1', 'ToiletReserveFactor': '3',
     'CleaningWorkerSharePercent': '20', 'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
     'CleaningMaxTurnsPerTile': '20',
-    'CombatDirtPerHit': '1.5922', 'TrailDirtPerTile': '0.1448',
+    'CombatDirtPerHit': '1.7722535834718596', 'TrailDirtPerTile': '0.16117467584896703',
     'CreatureDirtPerFightWon': '5', 'CreatureDirtPerKo': '25', 'CreatureDirtDecayPerTurn': '0.1',
     'BloodDryTurns': '168', 'DirtNoticeSeconds': '60', 'FilthyPostSeconds': '600',
     'DirtSyncTurns': '2', 'DirtResyncTurns': '60',
-    'PrisonDirtDamageStage2': '1.25', 'PrisonDirtDamageStage3': '1.5',
     'TortureDirtConvertStage2': '0.9', 'TortureDirtConvertStage3': '0.8',
 }
 dirt = block_values(global_cfg, 'Dirt')
@@ -71,16 +70,19 @@ for key in DIRT:
 
 # 3. The computed existing room table, the fixed infirmary treatment value and the toilet room keys
 ROOM_KEYS = {
-    'WorkshopDirtPerWork': '1.5922', 'ArenaDirtPerHit': '1.5922', 'ToiletDirtPerUse': '0.5211',
-    'HatcheryDirtPerHenTurn': '0.0323', 'HatcheryDirtPerMeal': '8.0769', 'TrainHallDirtPerHit': '0.7961',
-    'CasinoDirtPerWork': '0.7961', 'DormitoryDirtPerSleepTurn': '0.1448', 'GuardRoomDirtPerDuty': '1.2304',
-    'LibraryDirtPerWork': '0.3980', 'TempleDirtPerPrayerTurn': '0.0724', 'PrisonDirtPerPrisonerTurn': '0.1615',
-    'TortureDirtPerSession': '1.4475',
-    'InfirmaryDirtPerTreatment': '15.6',
-    'TavernDirtPerDrink': '0.2605', 'SpaDirtPerBath': '4.4252',
+    'WorkshopDirtPerWork': '1.7722535834718596', 'ArenaDirtPerHit': '1.7722535834718596',
+    'ToiletDirtPerUse': '0.580028477796248',
+    'HatcheryDirtPerHenTurn': '0.0323', 'HatcheryDirtPerMeal': '8.0769', 'TrainHallDirtPerHit': '0.8861267917359298',
+    'CasinoDirtPerWork': '0.8861267917359298', 'DormitoryDirtPerSleepTurn': '0.16117467584896703',
+    'GuardRoomDirtPerDuty': '1.3695395108050346',
+    'LibraryDirtPerWork': '0.4430077416290668', 'TempleDirtPerPrayerTurn': '0.08058733792448351',
+    'PrisonDirtPerPrisonerTurn': '0.1615',
+    'TortureDirtPerSession': '1.6111902161006888',
+    'InfirmaryDirtPerTreatment': '17.408040415448045',
+    'TavernDirtPerDrink': '0.29', 'SpaDirtPerBath': '4.925697143427089',
 }
-# Medium production 0.8077 divided by occupancy 0.62 and 7/84 treatments per turn (0.0833), rounded to one decimal.
-assert round(0.8077 / (0.62 * 0.0833), 1) == float(ROOM_KEYS['InfirmaryDirtPerTreatment'])
+# Medium production 0.8077 divided by occupancy 0.557 and 7/84 treatments per turn (0.0833), not rounded.
+assert abs(0.8077 / (0.557 * 0.0833) - float(ROOM_KEYS['InfirmaryDirtPerTreatment'])) < 1e-9
 room_values = block_values(rooms_cfg, 'Rooms')
 for key, value in ROOM_KEYS.items():
     assert room_values.get(key) == value, 'rooms.cfg ' + key + ' is ' + str(room_values.get(key)) + ', expected ' + value
@@ -95,7 +97,7 @@ assert_documented(rooms_cfg, 'ToiletCostPerTile', 'rooms.cfg')
 assert dirt['CombatDirtPerHit'] == room_values['ArenaDirtPerHit']
 assert dirt['TrailDirtPerTile'] == room_values['DormitoryDirtPerSleepTurn']
 
-# 4. Per type: UrgeGrowth/Turn = HungerGrowth/Turn, Cleanliness and DirtFactor of the table
+# 4. Per type: UrgeGrowth/Turn = 0.2 x HungerGrowth/Turn, Cleanliness and DirtFactor of the table
 FACTORS = {}
 for names, cleanliness, dirt_factor in [
         ('Rat Roach Spider Slime CaveHornet Scarab', '0.25', '1.75'),
@@ -119,7 +121,7 @@ for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', creatures_cfg, re.S):
         continue
     assert name in FACTORS, 'creature type without a dirt row: ' + name
     seen.add(name)
-    assert fields.get('UrgeGrowth/Turn') == fields['HungerGrowth/Turn'], name + ': UrgeGrowth/Turn must equal HungerGrowth/Turn'
+    assert abs(float(fields.get('UrgeGrowth/Turn')) - 0.2 * float(fields['HungerGrowth/Turn'])) < 1e-9,         name + ': UrgeGrowth/Turn must be 0.2 x HungerGrowth/Turn'
     assert (fields.get('Cleanliness'), fields.get('DirtFactor')) == FACTORS[name], \
         name + ': Cleanliness / DirtFactor ' + str((fields.get('Cleanliness'), fields.get('DirtFactor'))) + ' differ from the table'
 assert seen == set(FACTORS), 'types missing in creatures.cfg: ' + ', '.join(sorted(set(FACTORS) - seen))

@@ -119,7 +119,8 @@ assert 'CreatureActionSleep' in extract(room_cpp, 'bool RoomTavern::useRoom(') a
 # ---- Probe -------------------------------------------------------------------------------------------------------
 tavern = block_values(global_cfg, 'Tavern')
 rooms = block_values(rooms_cfg, 'Rooms')
-config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax')]
+config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
+    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving', 'TavernGamesWithBeer', 'TavernGamesWithoutBeer')]
 config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
 effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
 assert effect_line is not None, 'the portal cooldown effect line is missing'
@@ -183,6 +184,8 @@ struct ConfigManager
     double getTavernConfigDouble(const std::string& key) const { return lookup(key); }
     double getRoomConfigDouble(const std::string& key) const { return lookup("Room" + key); }
     uint32_t getRoomConfigUInt32(const std::string& key) const { return static_cast<uint32_t>(lookup("Room" + key)); }
+    //! \brief Returns the shipped room value; the probe needs every key in the config, so the default is not used.
+    double getRoomConfigDoubleOrDefault(const std::string& key, double) const { return lookup("Room" + key); }
     double getDirtConfigDouble(const std::string& key) const { return lookup(key); }
 };
 static void loadConfig()
@@ -776,8 +779,7 @@ types_start = tavern_h.index('//! \\brief Who pays for the beer a tavern serves.
 types_end = tavern_h.index('//! \\brief A room where creatures quench their thirst.')
 room_types = tavern_h[types_start:types_end]
 constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) ' + name + r' = [^;]+;$') for name in (
-    'GET_UP_TURNS', 'DONE_WAIT_TURNS', 'DUEL_MAX_TURNS_FACTOR', 'PERCENT_SCALE', 'DRINK_CHAIN_HALVING', 'DIRECTION_EPSILON',
-    'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
+    'GET_UP_TURNS', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON'))
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'Ogre::Vector3 directionTo('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [

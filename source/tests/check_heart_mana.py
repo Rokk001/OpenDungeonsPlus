@@ -63,6 +63,8 @@ struct ConfigManager {double maxManaPerSeat=200000.0;double manaWellBonusPerTile
  double getWorkerPopCountdownSeconds()const{return 10.0;}
  double getAutoWorkerIntervalSeconds()const{return 5.0;}
  int32_t getSpellConfigInt32(const std::string&)const{return 4;}
+ //! \brief Returns the shipped fallback (the worker refund share 0.5 equals spells.cfg).
+ double getSpellConfigDoubleOrDefault(const std::string&,double fallback)const{return fallback;}
  static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}
  double getMaxManaPerSeat()const{return maxManaPerSeat;}
  double getManaWellBonusPerTile()const{return manaWellBonusPerTile;}

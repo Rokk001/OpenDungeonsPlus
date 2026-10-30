@@ -1,11 +1,11 @@
 """Check the spell mana costs, cooldowns and the worker price rule.
 
-The costs use one own scale (mana cap 200,000, prices in 50 mana steps, see docs/development/VALUE-SCALES.md):
-Summon worker 1,400 per step, Call to war 9,200, Heal 5,400, Eye of evil 4,600, Lightning 6,600,
-Tremor 27,600, Defector 21,600, Hexen hen 10,600, Inferno 46,400, Create gold
-14,000, Possess 450, Summon champion 108,000 plus 2,250 per second. The worker price grows by one base price per worker above
-the four the heart supplies. The creature spells use the same own scale (prices in 50 mana steps): Explosion 4,600,
-Haste 2,200, Defense 2,650, Slow 1,800, Strength 2,300 and Weak 2,150, each with its own recharge turns."""
+The costs use one own scale (mana cap 200,000, whole mana prices of the rebalance, see docs/development/VALUE-SCALES.md):
+Summon worker 1,400 per step, Call to war 14,201, Heal 13,196, Eye of evil 4,600, Lightning 6,600,
+Tremor 27,600, Defector 12,874, Hexen hen 2,632, Inferno 138,749, Create gold
+8,859, Possess 450, Summon champion 108,000 plus 2,250 per second. The worker price grows by one base price per worker above
+the four the heart supplies. The creature spells use the same own scale: Explosion 10,818,
+Haste 8,261, Defense 3,685, Slow 6,759, Strength 3,199 and Weak 2,990, each with its own recharge turns."""
 from pathlib import Path
 import re
 import subprocess
@@ -19,27 +19,27 @@ values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", section, re.M))
 
 expected = {
     "SummonWorkerNbHeart": "4", "SummonWorkerBasePrice": "1400", "SummonWorkerCooldown": "0",
-    "CallToWarPrice": "9200", "CallToWarCooldown": "0",
-    "CreatureHealPrice": "5400", "CreatureHealCooldown": "0",
+    "CallToWarPrice": "14201", "CallToWarCooldown": "0",
+    "CreatureHealPrice": "13196", "CreatureHealCooldown": "0",
     "EyeEvilPrice": "4600", "EyeEvilCooldown": "0",
     "LightningPrice": "6600", "LightningCooldown": "0",
     "TremorPrice": "27600", "TremorCooldown": "0",
-    "DefectorPrice": "21600", "DefectorCooldown": "76",
-    "HexenHenPrice": "10600", "HexenHenCooldown": "92",
-    "InfernoPrice": "46400", "InfernoCooldown": "78",
-    "CreateGoldPrice": "14000", "CreateGoldCooldown": "0",
+    "DefectorPrice": "12874", "DefectorCooldown": "76",
+    "HexenHenPrice": "2632", "HexenHenCooldown": "92",
+    "InfernoPrice": "138749", "InfernoCooldown": "78",
+    "CreateGoldPrice": "8859", "CreateGoldCooldown": "0",
     "PossessPrice": "450", "PossessFreeSeconds": "20",
-    "SummonChampionPrice": "108000", "SummonChampionDrainPerSecond": "2250", "SummonChampionCooldown": "884",
-    "CreatureHastePrice": "2200", "CreatureHasteCooldown": "13",
-    "CreatureSlowPrice": "1800", "CreatureSlowCooldown": "11",
-    "CreatureDefensePrice": "2650", "CreatureDefenseCooldown": "17",
-    "CreatureStrengthPrice": "2300", "CreatureStrengthCooldown": "22",
-    "CreatureWeakPrice": "2150", "CreatureWeakCooldown": "18",
-    "CreatureExplosionPrice": "4600", "CreatureExplosionCooldown": "15",
+    "SummonChampionPrice": "108000", "SummonChampionDrainPerSecond": "2250", "SummonChampionCooldown": "840",
+    "CreatureHastePrice": "8261", "CreatureHasteCooldown": "13",
+    "CreatureSlowPrice": "6759", "CreatureSlowCooldown": "11",
+    "CreatureDefensePrice": "3685", "CreatureDefenseCooldown": "17",
+    "CreatureStrengthPrice": "3199", "CreatureStrengthCooldown": "22",
+    "CreatureWeakPrice": "2990", "CreatureWeakCooldown": "18",
+    "CreatureExplosionPrice": "10818", "CreatureExplosionCooldown": "15",
 }
 for key, value in values.items():
     if key.endswith("Price") or key == "SummonWorkerBasePrice":
-        assert int(value) % 50 == 0, f"{key} is not a multiple of the 50 mana step"
+        assert value.isdigit(), f"{key} is not a whole mana price"
 for key, value in expected.items():
     assert values.get(key) == value, f"{key} is {values.get(key)}, expected {value}"
 assert "SummonWorkerNbFree" not in config, "the free-worker key is gone"
@@ -57,8 +57,8 @@ for block in blocks:
     costs[name] = int(match.group(1))
 for name in ("Kobold", "DwarfWorker"):
     assert costs[name] == 0, f"{name} (worker) possesses for free"
-for name, value in {"Skeleton": 40, "Dwarf1": 40, "Dwarf2": 40, "Goblin": 120, "Troll": 120, "Monk": 120,
-                    "Wizard": 120, "DarkElf": 120, "Elf": 120, "Orc": 240, "Knight": 400, "Dragon": 600}.items():
+for name, value in {"Skeleton": 160, "Dwarf1": 40, "Dwarf2": 80, "Goblin": 80, "Troll": 320, "Monk": 80,
+                    "Wizard": 160, "DarkElf": 160, "Elf": 160, "Orc": 320, "Knight": 80, "Dragon": 320}.items():
     assert costs[name] == value, f"{name} is {costs[name]}, expected {value}"
 action = (repo / "source/creatureaction/CreatureActionPossessed.cpp").read_text()
 assert "PossessFreeSeconds" in action and "getPossessManaCost" in action,     "the possession action uses the free period and the creature drain"

@@ -209,9 +209,17 @@ struct Tile{int x=0,y=0;bool full=false;Seat* owner=nullptr;Room* room=nullptr;d
  void addDirt(double value){dirt=std::min(MAX_DIRT,dirt+value);}
 };
 //! \brief Supplies creature-definition facts used by fear and creation.
-struct CreatureDefinition{bool worker=false,afraid=false;std::string name="Rat";
+struct CreatureDefinition{bool worker=false,afraid=false,undead=false,vanishPile=false;double vanishSeconds=0;std::string name="Rat",vanishEffect;
  //! \brief Reports worker identity.
  bool isWorker()const{return worker;}
+ //! \brief Reports the undead flag (never knocked out, no corpse, blood or ghost).
+ bool isUndead()const{return undead;}
+ //! \brief Returns the seconds after which an undead body vanishes (0 = normal corpse rule).
+ double getDeathVanishSeconds()const{return vanishSeconds;}
+ //! \brief Reports whether a pile of the creature class stays where the body vanishes.
+ bool hasDeathVanishPile()const{return vanishPile;}
+ //! \brief Returns the effect family fired at death, empty for none.
+ const std::string& getDeathVanishEffect()const{return vanishEffect;}
  //! \brief Reports the optional fear flag.
  bool isAfraidOfGhosts()const{return afraid;}
  //! \brief Returns the declared creature class.

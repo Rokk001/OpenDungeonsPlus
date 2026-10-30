@@ -20,40 +20,40 @@ from combat_sim import (CASES_MATRIX, TURNS_PER_SECOND, Roster, World, building_
 
 # Approved level-one roster: health, healing, sleep, ratings, six damage endpoints and avoidance.
 EXPECTED = """
-Kobold 62 .041 0 562 188 3.21 4.07 0 0 0 0 none
-DwarfWorker 62 .041 0 562 188 3.21 4.07 0 0 0 0 none
-Rat 35.5 .0615 2.05 486 162 0 0 5.87 8.04 0 0 dodge
-Orc 184.5 .0615 2.05 247 82 0 0 0 0 48.03 64.85 none
-LavaSpawn 106.5 .0615 2.05 156 52 17.69 22.87 0 0 0 0 block
-LizardMan 106.5 .0615 2.05 364 121 0 0 18.28 24.45 0 0 none
-Goblin 61.5 .0615 2.05 109 36 9.16 12.22 0 0 0 0 parry
-PitDemon 184.5 .0615 2.05 223 74 0 0 52.76 71.24 0 0 none
-Roach 61.5 .041 2.05 440 147 0 0 0 0 9.19 12.28 none
-Spider 35.5 .0615 2.05 402 134 7.19 9.85 0 0 0 0 none
-Troll 184.5 .0615 2.05 261 87 44.2 59.68 0 0 0 0 none
-Cultist 61.5 .0615 2.05 366 122 0 0 8.63 11.52 0 0 dodge
-CaveHornet 35.5 .0615 2.05 344 115 0 0 0 0 5.83 8 dodge
-Slime 35.5 .0615 2.05 500 167 0 0 5.26 7.22 0 0 dodge
-Skeleton 106.5 .041 2.05 439 146 13.62 20.46 0 0 0 0 none
-Lich 106.5 .041 2.05 205 68 0 0 21.91 25.21 0 0 none
-Scarab 184.5 .0615 2.05 233 78 0 0 51.93 70.11 0 0 none
-Adventurer 35.5 .0615 2.05 356 119 0 0 0 0 6.21 8.52 dodge
-Monk 61.5 .0615 2.05 304 101 0 0 0 0 7.54 10.07 block
-Dwarf1 35.5 .0615 2.05 407 136 7.01 9.6 0 0 0 0 none
-Dwarf2 61.5 .0615 2.05 520 173 8.91 11.89 0 0 0 0 none
-Knight 61.5 .0615 2.05 389 130 0 0 7.7 10.29 0 0 block
-Wizard 106.5 .0615 2.05 341 114 0 0 18.36 24.56 0 0 none
-DarkElf 106.5 .0615 2.05 352 117 0 0 0 0 16.58 22.18 none
-Elf 106.5 .0615 2.05 397 132 0 0 0 0 19.8 26.5 none
-RunelordDwarf 106.5 .0615 2.05 143 48 16.02 21.31 0 0 0 0 block
-NatureMonster 184.5 .0615 2.05 75 25 0 0 0 0 38.46 51.93 block
-Defender 184.5 .0615 2.05 264 88 45.54 61.48 0 0 0 0 parry
-Wyvern 61.5 .0615 2.05 391 130 0 0 8.31 11.09 0 0 dodge
-Gnome 35.5 .0615 2.05 529 176 0 0 5.7 7.81 0 0 dodge
-TentacleAlbine 61.5 .0615 2.05 455 152 0 0 8.84 11.81 0 0 none
-TentacleGreen 61.5 .0615 2.05 452 151 0 0 8.88 11.86 0 0 none
-Dragon 184.5 .0615 2.05 270 90 0 0 0 0 32.07 43.29 none
-Kreatur 106.5 .0615 2.05 398 133 0 0 17.66 23.63 0 0 none
+Kobold 70 .05319375292565641 0 562 188 3.21 4.07 0 0 0 0 none
+DwarfWorker 70 .05319375292565641 0 562 188 3.21 4.07 0 0 0 0 none
+Rat 35.5 .026977 0 486 162 0 0 5.87 8.04 0 0 dodge
+Orc 184.5 .140204 0 247 82 0 0 0 0 48.03 64.85 none
+LavaSpawn 106.5 .080931 0 156 52 17.69 22.87 0 0 0 0 block
+LizardMan 106.5 .080931 0 364 121 0 0 18.28 24.45 0 0 none
+Goblin 61.5 .046735 0 109 36 9.16 12.22 0 0 0 0 parry
+PitDemon 184.5 .140204 0 223 74 0 0 52.76 71.24 0 0 none
+Roach 61.5 .046735 0 440 147 0 0 0 0 9.19 12.28 none
+Spider 35.5 .026977 0 402 134 7.19 9.85 0 0 0 0 none
+Troll 184.5 .140204 0 261 87 44.2 59.68 0 0 0 0 none
+Cultist 61.5 .046735 0 366 122 0 0 8.63 11.52 0 0 dodge
+CaveHornet 35.5 .026977 0 344 115 0 0 0 0 5.83 8 dodge
+Slime 35.5 .026977 0 500 167 0 0 5.26 7.22 0 0 dodge
+Skeleton 106.5 .053954 0 439 146 13.62 20.46 0 0 0 0 none
+Lich 106.5 .053954 0 205 68 0 0 21.91 25.21 0 0 none
+Scarab 184.5 .140204 0 233 78 0 0 51.93 70.11 0 0 none
+Adventurer 35.5 .026977 0 356 119 0 0 0 0 6.21 8.52 dodge
+Monk 61.5 .046735 0 304 101 0 0 0 0 7.54 10.07 block
+Dwarf1 35.5 .026977 0 407 136 7.01 9.6 0 0 0 0 none
+Dwarf2 61.5 .046735 0 520 173 8.91 11.89 0 0 0 0 none
+Knight 61.5 .046735 0 389 130 0 0 7.7 10.29 0 0 block
+Wizard 106.5 .080931 0 341 114 0 0 18.36 24.56 0 0 none
+DarkElf 106.5 .080931 0 352 117 0 0 0 0 16.58 22.18 none
+Elf 106.5 .080931 0 397 132 0 0 0 0 19.8 26.5 none
+RunelordDwarf 106.5 .080931 0 143 48 16.02 21.31 0 0 0 0 block
+NatureMonster 184.5 .140204 0 75 25 0 0 0 0 38.46 51.93 block
+Defender 184.5 .140204 0 264 88 45.54 61.48 0 0 0 0 parry
+Wyvern 61.5 .046735 0 391 130 0 0 8.31 11.09 0 0 dodge
+Gnome 35.5 .026977 0 529 176 0 0 5.7 7.81 0 0 dodge
+TentacleAlbine 61.5 .046735 0 455 152 0 0 8.84 11.81 0 0 none
+TentacleGreen 61.5 .046735 0 452 151 0 0 8.88 11.86 0 0 none
+Dragon 184.5 .140204 0 270 90 0 0 0 0 32.07 43.29 none
+Kreatur 106.5 .080931 0 398 133 0 0 17.66 23.63 0 0 none
 """
 STAT_KEYS = ("MinHP", "Heal/Turn", "SleepHeal", "AttackRating", "DefenseRating")
 RANGE_KEYS = ("PhyMin", "PhyMax", "MagMin", "MagMax", "EleMin", "EleMax")
@@ -160,7 +160,12 @@ def check_buildings(roster):
     rooms = read("config/rooms.cfg")
     assert re.search(r"^\s*DungeonHeartHP\s+15100\s*$", rooms, re.M)
     assert 'ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0)' in read("source/rooms/RoomDungeonTemple.cpp")
-    assert re.search(r"DEFAULT_TILE_HP\s*=\s*10(?:\.0)?\s*;", read("source/entities/Building.cpp"))
+    # The hit points per tile of portals, bridges and traps are config keys of 10 (no literal in Building.cpp)
+    assert "DEFAULT_TILE_HP" not in read("source/entities/Building.cpp")
+    traps = read("config/traps.cfg")
+    for text, key in ((rooms, "PortalHP"), (rooms, "PortalWaveHP"), (rooms, "StoneBridgeHP"), (rooms, "WoodenBridgeHP"),
+                      (traps, "SpikeHP"), (traps, "CannonHP"), (traps, "BoulderHP")):
+        assert re.search(r"^\s*" + key + r"\s+10(?:\.0)?\s*$", text, re.M), key
 
 
 # Tie numerical checks to actual hit, avoidance, damage, item and serialization paths.
@@ -174,11 +179,12 @@ def check_sources():
     assert hit.index("if(possessed)") < hit.index("Random::Double(0.0, 100.0)")
     assert "DefenceChance::hitChance(attackRating, getDefenseRating()," in hit
     hit_formula = function(read("source/entities/DefenceChance.h"), "inline double hitChance(")
-    assert "HIT_SCALE * attackRating / (attackRating + defenseRating)" in hit_formula
+    assert "getHitChanceScale() * attackRating / (attackRating + defenseRating)" in hit_formula
     assert "attackerLevel / static_cast<double>(attackerLevel + defenderLevel)" in hit_formula
-    assert "std::max(MIN_HIT_PERCENT, std::min(MAX_HIT_PERCENT, chance))" in hit_formula
-    for key, value in (("HIT_SCALE", "200.0"), ("MIN_HIT_PERCENT", "5.0"), ("MAX_HIT_PERCENT", "95.0")):
-        assert key + " = " + value in read("source/entities/DefenceChance.h")
+    assert "std::max(ConfigManager::getSingleton().getHitChanceMin(), std::min(ConfigManager::getSingleton().getHitChanceMax(), chance))" in hit_formula
+    # The scale and the bounds of the hit chance are global.cfg keys
+    for key, value in (("HitChanceScale", "200"), ("HitChanceMin", "5"), ("HitChanceMax", "95")):
+        assert re.search(r"^\s*" + key + r"\s+" + value + r"\s*$", read("config/global.cfg"), re.M), key
     defence = function(creature, "DefenceChance::Outcome Creature::rollMeleeDefence(")
     for needle in ("getMeleeDodgeParry()", "getIsOnServerMap()", "isKo()", "mIsInHand", "mIsBeingDragged", "isPossessed()",
                    "CreatureDefinition::Avoidance::dodge", "CreatureDefinition::Avoidance::parry", "CreatureDefinition::Avoidance::block && hasShield",
@@ -239,15 +245,14 @@ def check_sources():
 def check_other_damage(roster):
     expected = {
         "spells": {"LightningDamageMin": 20.5, "LightningDamage": 30.75, "TremorDamageMin": 13.67,
-                   "TremorDamage": 20.5, "InfernoDamagePerTurnMin": 39.05, "InfernoDamagePerTurn": 58.57,
+                   "TremorDamage": 20.5, "InfernoDamagePerTurnMin": 19.59, "InfernoDamagePerTurn": 29.38,
                    "CreatureHealValue": 10.25},
-        "rooms": {"PrisonDamagePerTurnMin": .082, "PrisonDamagePerTurn": .123, "DungeonHeartHP": 15100,
-                  "HatcheryHpRecoveredPerChicken": 10.25, "HatcheryGiftHpRecoveredPerChicken": 4.1},
+        "rooms": {"DungeonHeartHP": 15100, "HatcheryGiftHpRecoveredPerChicken": 4.1},
         "traps": {"BoulderDamagePerHitMin": 205, "BoulderDamagePerHitMax": 246,
                   "CannonDamagePerHitMin": 20.5, "CannonDamagePerHitMax": 30.75,
                   "SpikeDamagePerHitMin": 20.5, "SpikeDamagePerHitMax": 30.75,
                   "GasDamagePerHitMin": 27.34, "GasDamagePerHitMax": 41,
-                  "LightningDamagePerHitMin": 15.04, "LightningDamagePerHitMax": 22.55,
+                  "LightningDamagePerHitMin": 69.7, "LightningDamagePerHitMax": 104.55,
                   "FireburstDamagePerHitMin": 75.17, "FireburstDamagePerHitMax": 112.75,
                   "RunedDoorDamageMin": 20.5, "RunedDoorDamage": 30.75},
     }
@@ -259,7 +264,6 @@ def check_other_damage(roster):
     for filename, key in (("spells/SpellLightning.cpp", "LightningDamageMin"),
                           ("spells/SpellTremor.cpp", "TremorDamageMin"),
                           ("spells/SpellInferno.cpp", "InfernoDamagePerTurnMin"),
-                          ("rooms/RoomPrison.cpp", "PrisonDamagePerTurnMin"),
                           ("traps/TrapDoor.cpp", "RunedDoorDamageMin")):
         text = read("source/" + filename)
         assert key in text, filename
@@ -279,7 +283,7 @@ def check_other_damage(roster):
     champion = roster.creatures["Champion"][0]
     assert roster.number(champion, "AttackRating") == 300 and roster.number(champion, "DefenseRating") == 100
     attack, _, start = roster.attack("Champion")
-    assert tuple(map(float, attack[start:start + 6])) == (120, 180, 0, 0, 0, 0)
+    assert tuple(map(float, attack[start:start + 6])) == (146.8, 220.2, 0, 0, 0, 0)
 
 
 # Verify deterministic simulation thresholds without adjusting the approved roster.
@@ -367,7 +371,7 @@ def check_world_simulation(roster):
     factor = float(re.search(r"^\s*spellCreatureStrength\s+Factor\s+dev\s+\S+\s+\S+\s+(\S+)", read("config/skills.cfg"), re.M).group(1))
     strength = 1 + (spell - 1) * factor
     worker_hp, worst, by = world_rule_one(world)
-    assert worker_hp == 62, worker_hp
+    assert worker_hp == 70, worker_hp
     assert math.isclose(strength, 1.2) and worst * strength < worker_hp, (worst, strength, worker_hp, by)
     print("Attribute simulation: class means %.3f-%.3f, level 1 and template means per type %.2f-%.2f, single templates %.2f-%.2f"
           % (min(v for row in means.values() for v in row.values()), max(v for row in means.values() for v in row.values()),

@@ -109,9 +109,11 @@ for key in ('HatcheryReturnPathTiles', 'HatcheryReturnSearchTiles', 'HatcheryRet
     assert re.search(r'getRoomConfigDoubleOrDefault\(\s*"' + key + '"', chicken), key + ' not read'
 assert 'const bool henMayReturn = (mKind == ChickenKind::hen) && (mGiftTurns == 0) && !mLockedEat;' in upkeep
 assert 'henMayReturn) && (currentHatchery == nullptr) && !mIsSlapped && runBackToHatchery(tile)' in upkeep
-# the walk back comes before the death rule, so only a chicken without a way dies (30 turn rule unchanged)
-assert upkeep.index('runBackToHatchery(tile)') < upkeep.index('NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE))')
-assert 'const int32_t NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE = 30;' in chicken
+# the walk back comes before the death rule, so only a chicken without a way dies (30 turn rule, now the config key
+# HatcheryAdultLostTurns)
+assert upkeep.index('runBackToHatchery(tile)') < upkeep.index('getRoomConfigDoubleOrDefault("HatcheryAdultLostTurns", 30.0)')
+assert 'NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE' not in chicken
+assert ['HatcheryAdultLostTurns', '30'] in [line.split() for line in (root / 'config/rooms.cfg').read_text(encoding='utf-8').splitlines()]
 # the gift window and a chicken somebody is after are not interrupted; the offer goes first
 assert upkeep.index('runBackToHatchery(tile)') < upkeep.index('offerGift(*tile)')
 back = function_body(chicken, 'bool ChickenEntity::runBackToHatchery(')

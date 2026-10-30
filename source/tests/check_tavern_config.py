@@ -4,9 +4,9 @@ thirst values that follow from its hunger values, and everything is documented i
 
 What is checked
   global.cfg [Tavern]      all keys with their values, no key without a design value, every key documented
-  derived values           BeerPrice = cheapest FeeBase / 10, GameWinnerXp = TrainHallXpPerAttack,
+  derived values           BeerPrice = cheapest FeeBase / 10, GameWinnerXp = 5,
                            TavernCostPerTile = HatcheryCostPerTile, TavernHP = HatcheryHP,
-                           TavernDirtPerDrink = 0.8077 / (0.62 x 25 / (DrinkTurns + 1)) rounded to 4 places
+                           TavernDirtPerDrink = 0.8077 / (0.557 x 25 / (DrinkTurns + 1)) rounded to 4 places
   creatures.cfg            every type has a Casino, an Arena and a Tavern affinity line and a Hunger mood line is
                            optional. A type WITH a Hunger mood line has the Thirst mood line with the same two numbers,
                            ThirstGrowth/Turn = HungerGrowth/Turn and the Tavern likeness of its Casino line (efficiency

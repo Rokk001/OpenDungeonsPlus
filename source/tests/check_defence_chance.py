@@ -75,10 +75,11 @@ assert hit_chance(1.0, 100000.0, 1, 30) == 5.0
 assert hit_chance(100000.0, 1.0, 30, 1) == 95.0
 
 # ---------------------------------------------------------------------------------------------------------------
-# DefenceChance.h: pure (no game includes), the same formulas and one-kind resolution
+# DefenceChance.h: no game includes except the configuration that holds the hit chance keys, the same formulas and
+# one-kind resolution
 header = read('source/entities/DefenceChance.h')
 includes = re.findall(r'#include\s+[<"]([^>"]+)[>"]', header)
-assert sorted(includes) == ['algorithm', 'cstdint', 'string'], includes
+assert sorted(includes) == ['algorithm', 'cstdint', 'string', 'utils/ConfigManager.h'], includes
 assert 'inline double dodgeChance(uint32_t level, double base, double perLevel, double max)' in header
 assert 'std::max(0.0, std::min(max, base + perLevel * static_cast<double>(level)))' in header
 assert 'std::max(0.0, std::min(max, base + perLevel * static_cast<double>(level)))' in header
@@ -88,11 +89,12 @@ assert 'hasShield' not in parry_body, 'shield block must not replace weapon parr
 decide_body = function_body(header, 'inline Outcome decide(')
 assert 'return roll < chance ? kind : none;' in decide_body
 hit = function_body(header, 'inline double hitChance(')
-assert 'HIT_SCALE * attackRating / (attackRating + defenseRating)' in hit
+assert 'getHitChanceScale() * attackRating / (attackRating + defenseRating)' in hit
 assert 'attackerLevel / static_cast<double>(attackerLevel + defenderLevel)' in hit
-assert 'std::max(MIN_HIT_PERCENT, std::min(MAX_HIT_PERCENT, chance))' in hit
-for constant in ('HIT_SCALE = 200.0', 'MIN_HIT_PERCENT = 5.0', 'MAX_HIT_PERCENT = 95.0'):
-    assert constant in header, constant
+assert 'std::max(ConfigManager::getSingleton().getHitChanceMin(), std::min(ConfigManager::getSingleton().getHitChanceMax(), chance))' in hit
+# The scale and the bounds are global.cfg keys
+for key, value in (('HitChanceScale', '200'), ('HitChanceMin', '5'), ('HitChanceMax', '95')):
+    assert re.search(r'^\s*' + key + r'\s+' + value + r'\s*$', read('config/global.cfg'), re.M), key
 
 # Client reactions and server avoidance both use the configured equipment type.
 client_kinds = function_body(read('source/render/CreatureCombatReactions.cpp'), 'std::string weaponKind(')

@@ -127,6 +127,10 @@ struct ConfigManager {
     double getItemSetting(const std::string& section,const std::string& key) const { return settings.at(section).at(key); }
     //! \brief Returns a required numeric room configuration input.
     double getRoomConfigDouble(const std::string& key) const { return settings.at("Rooms").at(key); }
+    //! \brief Returns a room setting when the fixture read it, else the code fallback (equal to the shipped value).
+    double getRoomConfigDoubleOrDefault(const std::string& key, double fallback) const { std::map<std::string,std::map<std::string,double>>::const_iterator rooms=settings.find("Rooms"); if(rooms==settings.end()) return fallback; std::map<std::string,double>::const_iterator found=rooms->second.find(key); return found==rooms->second.end()?fallback:found->second; }
+    //! \brief Returns an equipment setting; the code fallback equals the shipped equipments.cfg value.
+    double getEquipmentConfigDoubleOrDefault(const std::string&, double fallback) const { return fallback; }
     //! \brief Returns the configured soul crystal price of the global settings.
     double getSoulCrystalPrice() const { return 800.0; }
     //! \brief Returns the configured hero soul crystal chance at the first level.

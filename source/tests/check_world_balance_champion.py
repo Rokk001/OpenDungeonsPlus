@@ -37,14 +37,14 @@ def function_body(source, signature):
     raise AssertionError("unterminated function " + signature)
 
 
-# Spell: one payday of cooldown, price and drain unchanged
+# Spell: the cooldown of the rebalance (840 s), price and drain unchanged
 spells = read("config/spells.cfg")
 section = spells[spells.rindex("[Spells]"):spells.rindex("[/Spells]")]
 values = dict(re.findall(r"^\s+(\w+)\s+([\d.]+)\s*$", section, re.M))
-assert values["SummonChampionCooldown"] == "884", "SummonChampionCooldown is one payday"
+assert values["SummonChampionCooldown"] == "840", "SummonChampionCooldown is 840"
 assert (values["SummonChampionPrice"], values["SummonChampionDrainPerSecond"]) == ("108000", "2250")
 
-# Champion definition: melee damage 120 to 180 physical, other columns 0, MinHP 600
+# Champion definition: melee damage 146.8 to 220.2 physical, other columns 0, MinHP 600
 creatures = read("config/creatures.cfg")
 blocks = re.findall(r"^\[Creature\]\n(.*?)^\[/Creature\]", creatures, re.M | re.S)
 champions = [b for b in blocks if re.search(r"^\s+Champion\s+1\s*$", b, re.M)]
@@ -56,7 +56,7 @@ assert melee is not None, "the champion has a Melee line"
 columns = melee.group(1).split("\t")
 # Columns after the name: cooldown, warmup, level min, then the damage fields; the six damage columns are the last six
 assert [float(c) for c in columns[0:2]] == [6.0, 1.0], "melee cooldown and warmup unchanged"
-assert [float(c) for c in columns[-6:]] == [120, 180, 0, 0, 0, 0], "melee damage 120 to 180 physical"
+assert [float(c) for c in columns[-6:]] == [146.8, 220.2, 0, 0, 0, 0], "melee damage 146.8 to 220.2 physical"
 
 # Spawn order: level 30 and full hit points before the champion enters the map
 cast = function_body(read("source/spells/SpellSummonChampion.cpp"), "bool SpellSummonChampion::castSpell")

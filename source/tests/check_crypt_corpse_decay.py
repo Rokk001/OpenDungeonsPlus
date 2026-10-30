@@ -54,9 +54,11 @@ struct GameEntity {GameEntityType type=GameEntityType::creature;GameEntityType g
 //! \brief Supplies the corpse properties read by crypt delivery.
 struct Creature:GameEntity {
  //! \brief Provides the worker flag used by the real admission gates.
- struct Definition {bool worker=false;
+ struct Definition {bool worker=false,undead=false;
   //! \brief Reports the fixture type's worker flag.
-  bool isWorker()const{return worker;}} definition;
+  bool isWorker()const{return worker;}
+  //! \brief Reports the fixture type's undead flag (an undead leaves no crypt corpse).
+  bool isUndead()const{return undead;}} definition;
  bool carried=false,decaying=false;double corpseTurns=83.25,decayTurns=-1;
  //! \brief Supplies the type for the production worker exclusion.
  Definition* getDefinition(){return &definition;}
