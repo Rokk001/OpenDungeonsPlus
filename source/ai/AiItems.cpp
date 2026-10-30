@@ -12,7 +12,9 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
+#include "rooms/RoomArena.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 
 #include <algorithm>
@@ -121,9 +123,13 @@ void buyForStrongest(KeeperAI& ai)
     const std::vector<MerchantStockEntry> stock = RoomMerchant::getStock(ai.getGameMap(), seat);
     const MerchantStockEntry* best = nullptr;
     double bestPrice = 0.0;
+    Room* room = tile->getCoveringRoom();
     for(const MerchantStockEntry& entry : stock)
     {
         const double price = entry.mGood->mItem.getPrice(&ai.getGameMap());
+        if(!mistaken && room != nullptr && room->getType() == RoomType::arena &&
+           static_cast<RoomArena*>(room)->hasRunningFight() && !entry.mGood->mItem.mSoulCrystal)
+            continue;
         if(price > budget || (!mistaken && !RoomMerchant::wantsItem(*strongest, entry.mGood->mItem)))
             continue;
         if(best == nullptr || price > bestPrice)
