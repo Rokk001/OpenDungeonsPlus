@@ -339,7 +339,7 @@ bool ECON::walletGate(KeeperAI& ai, double cost)
     restoreReserve(ai);
     const EconomyState& state = ai.getEconomyState();
     double now = ai.getMind().now();
-    bool ignore = state.reserveSlipAt >= 0.0 && now >= state.reserveSlipAt && now < state.reserveUntil;
+    bool ignore = now >= state.reserveSlipAt && now < state.reserveUntil;
     return ai.getControlledPlayer().getSeat()->getGold() >= cost + key("RoomGoldMargin") + (ignore ? 0.0 : wageBill(ai)) + TRAP::reloadMargin(ai);
 }
 
