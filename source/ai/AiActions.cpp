@@ -425,6 +425,15 @@ void ACTS::buildRoom(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tile
     // AI row L04: ordinary prices and normal scheduling; no bonus gold, mana or speed.
     scheduleTiles(ai, "build", "room", static_cast<int>(type), tiles);
 }
+//! \brief Matches a room build against live or restored hand actions.
+bool ACTS::isRoomBuildPending(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tiles)
+{
+    if(tiles.empty()) return false;
+    std::ostringstream arguments;
+    arguments << "room " << static_cast<int>(type) << ' ';
+    writeTiles(arguments, tiles);
+    return ai.getMind().hasPendingAction("build", "-", encode(arguments.str()));
+}
 //! \brief Schedules selling only room tiles the seat may sell.
 void ACTS::sellRoomTiles(KeeperAI& ai, const std::vector<Tile*>& tiles)
 { scheduleTiles(ai, "sell", "sellRoom", 0, tiles); }
