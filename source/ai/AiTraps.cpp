@@ -431,6 +431,7 @@ std::vector<TRAP::Entrance> TRAP::findEntrances(KeeperAI& ai)
     return entrances;
 }
 
+//! \brief Plans trap and door work for the current trap look.
 void TRAP::trapLook(KeeperAI& ai)
 {
     // AI row F01
@@ -472,15 +473,15 @@ void TRAP::trapLook(KeeperAI& ai)
     if(waiting >= static_cast<int>(aiKey("MaxWaitingForCraft")))
         return;
 
-    if(placeDoor(ai, entrances))
-        return;
-
     // The plan: the trap tiles per entrance; the mistake of the first plan of the game halves them for good
     int want = static_cast<int>(entrances.size()) * static_cast<int>(aiKey("TrapTilesPerEntrance"));
     if(state.mWantDivided < 0)
         state.mWantDivided = ai.getMind().slip("F01") ? 1 : 0;
     if(state.mWantDivided == 1)
         want = std::max(1, want / static_cast<int>(aiKey("MistakeTrapWantDivisor")));
+
+    if(placeDoor(ai, entrances))
+        return;
 
     placeTrap(ai, trapTiles, want, entrances);
 }
