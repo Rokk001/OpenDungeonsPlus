@@ -558,7 +558,8 @@ void CARE::moodRelief(KeeperAI& ai, const AiEvent& event)
         return;
     Creature* creature = event.creature;
     if(creature == nullptr || creature->getSeat() != ai.getControlledPlayer().getSeat() ||
-       !creature->isAlive() || creature->getMoodValue() < CreatureMoodLevel::Upset)
+       !creature->isAlive() || creature->isKo() || !creature->getIsOnMap() ||
+       creature->isInContainment() || creature->isPossessed() || creature->getMoodValue() < CreatureMoodLevel::Upset)
         return;
     const RoomType types[] = {RoomType::casino, RoomType::tavern, RoomType::spa, RoomType::temple};
     Room* best = nullptr;
