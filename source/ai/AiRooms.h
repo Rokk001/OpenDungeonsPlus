@@ -57,7 +57,8 @@ int knownPathLength(const AiKnowledge& knowledge, Tile* from, Tile* to, bool wat
 //! \brief Restarts the strict room order after a room is lost.
 void rebuildLost(KeeperAI& ai);
 //! \brief Selects and prepares one room block, returning whether work is pending.
-bool placeRoom(KeeperAI& ai, RoomType type, uint32_t tiles);
+//! \param onlyMatchingPending Leave a pending block of another type to its own caller.
+bool placeRoom(KeeperAI& ai, RoomType type, uint32_t tiles, bool onlyMatchingPending = false);
 //! \brief Audits every room setting at the configured long look.
 void auditSettings(KeeperAI& ai);
 }

@@ -17,6 +17,7 @@
 
 #include "ai/AiResearch.h"
 
+#include "ODApplication.h"
 #include "ai/AiActions.h"
 #include "ai/AiMath.h"
 #include "ai/AiMind.h"
@@ -26,6 +27,7 @@
 #include "game/Skill.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
+#include "gamemap/GameMap.h"
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 
@@ -175,7 +177,8 @@ SkillType chooseResearch(KeeperAI& ai)
         return cheaper(seat, left, right);
     };
     std::sort(candidates.begin(), candidates.end(), order);
-    if(ai.getMind().now() / 60.0 < cfg.getAiConfigDouble("AttackMinMinute") && !state.mTunnelOpen)
+    if(ai.getGameMap().getTurnNumber() / (static_cast<double>(ODApplication::turnsPerSecond) * 60.0) <
+        cfg.getAiConfigDouble("AttackMinMinute") && !state.mTunnelOpen)
     {
         const std::vector<SkillType> defence = {SkillType::roomWorkshop, SkillType::trapSpike,
             SkillType::trapCannon, SkillType::trapGas, SkillType::trapDoorIronbound,

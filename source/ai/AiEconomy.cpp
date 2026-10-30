@@ -391,7 +391,7 @@ void ECON::goldCapacityWatch(KeeperAI& ai)
         }
     }
     if(first > 0 && roomTiles(ai, RoomType::treasury).size() >= required)
-        ROOMS::placeRoom(ai, RoomType::treasury, first);
+        ROOMS::placeRoom(ai, RoomType::treasury, first, true);
 }
 
 //! \brief Tries gold, then the most wounded own-ground creature, then a worker.

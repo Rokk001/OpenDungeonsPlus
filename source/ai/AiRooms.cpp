@@ -318,7 +318,8 @@ void prepareRoom(KeeperAI& ai, const std::vector<Tile*>& tiles)
 }
 
 //! \brief Chooses a known room position once and retains it while workers prepare the ground.
-bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
+//! \param onlyMatchingPending Leave a pending block of another type to its own caller.
+bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count, bool onlyMatchingPending)
 {
     // AI row B23
     restoreRooms(ai);
@@ -328,6 +329,8 @@ bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
     const AiKnowledge known(map, seat);
     if(!state.pendingTiles.empty())
     {
+        if(onlyMatchingPending && state.pendingType != type)
+            return true;
         bool completed = true;
         bool buildable = true;
         for(Tile* tile : state.pendingTiles)
