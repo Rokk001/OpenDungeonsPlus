@@ -27,8 +27,10 @@
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
+#include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomDormitory.h"
+#include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
@@ -91,14 +93,28 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
 
         if(creature.needInterrupt(false))
         {
+            bool foodAvailable = false;
+            bool drinkAvailable = false;
+            if(creature.isHungry() && !creature.hasActionBeenTried(CreatureActionType::searchFood))
+            {
+                for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, creature.getSeat()))
+                    foodAvailable |= candidate->numCoveredTiles() > 0;
+            }
+            if(creature.getDefinition()->hasThirst() &&
+               creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+               !creature.hasActionBeenTried(CreatureActionType::searchDrink))
+            {
+                for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
+                    drinkAvailable |= candidate->numCoveredTiles() > 0;
+            }
             creature.sleepEnded();
             creature.popAction();
-            if(creature.getUrge() >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek"))
-                creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
-            else if(creature.isHungry())
+            if(foodAvailable)
                 creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
-            else
+            else if(drinkAvailable)
                 creature.pushAction(Utils::make_unique<CreatureActionSearchDrink>(creature, false));
+            else
+                creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
             return true;
         }
 
