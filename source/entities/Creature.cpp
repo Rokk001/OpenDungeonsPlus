@@ -202,7 +202,7 @@ static const Ogre::Real POSSESSION_MIN_AIM_SQUARED_LENGTH = 0.0001f;
 //! \brief Pit mood points lost per second when the room config has no PitMoodDecay
 static const double DEFAULT_PIT_MOOD_DECAY_PER_SECOND = 3.0;
 //! \brief Largest pit mood (positive or negative) when the room config has no PitMoodMax
-static const double DEFAULT_PIT_MOOD_MAX = 1500.0;
+static const double DEFAULT_PIT_MOOD_MAX = 1000.0;
 //! \brief Radius in tiles of the hated company check when the room config has no HatedCompanyRadius
 static const double DEFAULT_HATED_COMPANY_RADIUS = 5.0;
 //! \brief Squared distance in tiles (3 tiles) up to which a creature in a possession group stays where it is instead of walking to the leader
@@ -7071,7 +7071,7 @@ static void addHitDirt(Tile* tile)
 
     Room* room = tile->getCoveringRoom();
     if((room != nullptr) && (room->getType() == RoomType::arena))
-        tile->addDirt(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("ArenaDirtPerHit", 1.7722535834718596));
+        tile->addDirt(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("ArenaDirtPerHit", 1.7723));
     else
         tile->addDirt(ConfigManager::getSingleton().getDirtConfigDouble("CombatDirtPerHit"));
 }
@@ -9435,9 +9435,10 @@ void Creature::setInfirmaryAdmissionMood(bool creaturePaid)
     }
 }
 
+//! \brief Adds casino mood points, bounded by the configured maximum.
 void Creature::addCasinoMood(double points)
 {
-    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodMax", 1500.0);
+    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodMax", 1000.0);
     mCasinoMood = std::max(-maxPoints, std::min(maxPoints, mCasinoMood + points));
 }
 
