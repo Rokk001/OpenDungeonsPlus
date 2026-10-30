@@ -459,6 +459,7 @@ Tile* heartTarget(Env& env, AiKnowledge& knowledge, Seat* enemy)
 }
 }
 
+//! \brief Plans tunnel digging using the current game time and known enemy positions.
 void planDig(Env& env)
 {
     // AI row I01: dig toward the nearest known enemy tile once ready; while none is known the explore look of row I05 runs
@@ -472,7 +473,7 @@ void planDig(Env& env)
     if(target == nullptr)
         return;
 
-    double minute = env.now / 60.0;
+    double minute = static_cast<double>(env.gameMap.getTurnNumber()) / ODApplication::turnsPerSecond / 60.0;
     int fighters = 0;
     for(Creature* creature : env.gameMap.getCreaturesBySeat(seat))
     {
