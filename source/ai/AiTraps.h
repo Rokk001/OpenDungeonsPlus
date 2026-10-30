@@ -59,7 +59,7 @@ struct State
     double mWatchDue;
     //! \brief Mind time at which the doors are looked at again after the F13 mistake, -1 when none is pending.
     double mDoorDue;
-    //! \brief A tunnel fortification that waits for the symptom delay of the F15 mistake.
+    //! \brief A tunnel fortification waiting from an older saved F15 mistake.
     struct PendingFortify
     {
         int mX;
@@ -67,7 +67,7 @@ struct State
         //! \brief Mind time at which the tunnel is fortified.
         double mDue;
     };
-    //! \brief The tunnel fortifications delayed by the F15 mistake.
+    //! \brief Tunnel fortifications restored from older saves.
     std::vector<PendingFortify> mFortifyDue;
     //! \brief True once the saved draw lines of the mind were read.
     bool mRestored;
@@ -123,7 +123,7 @@ bool placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resume
 //! \brief Fortifies the new tunnel entrance after the reaction time: three more trap tiles, a door and a barricade.
 //! The rule mistake skips this fortification.
 //! \param breakthrough The tile where the tunnel breaks into the AI's land.
-//! \return false when the mistake delayed it.
+//! \return false when the mistake skips it or no tunnel tile is provided.
 bool fortifyTunnel(KeeperAI& ai, Tile* breakthrough);
 
 //! \brief The seconds until the earliest tunnel fortification delayed by the F15 mistake, for the fortifyRemaining
