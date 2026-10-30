@@ -55,8 +55,7 @@ void useStoredSpecial(KeeperAI& ai, const AiEvent& event, bool fightSession, boo
         Tile* tile = creature->getPositionTile();
         if(!creature->getIsOnMap() || creature->getSeat() == nullptr || seat->isAlliedSeat(creature->getSeat()) || tile == nullptr)
             continue;
-        const std::vector<Seat*>& vision = tile->getSeatsWithVision();
-        enemyVisible = enemyVisible || std::find(vision.begin(), vision.end(), seat) != vision.end();
+        enemyVisible = enemyVisible || seat->hasVisionOnTile(tile);
     }
     const GiftBoxType types[] = {GiftBoxType::mana, GiftBoxType::gold, GiftBoxType::revealMap,
         GiftBoxType::levelUp, GiftBoxType::healAll, GiftBoxType::makeSafe, GiftBoxType::makeHappy,
