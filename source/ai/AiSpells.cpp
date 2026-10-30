@@ -487,6 +487,36 @@ std::string numberToken(double value)
     return os.str();
 }
 
+//! \brief Encodes a creature name into one comma-free saved token.
+std::string encodeName(const std::string& value)
+{
+    static const char digits[] = "0123456789abcdef";
+    std::string result;
+    for(unsigned char ch : value)
+    {
+        result += digits[ch >> 4];
+        result += digits[ch & 15];
+    }
+    return result;
+}
+
+//! \brief Decodes one saved creature name, returning empty for an invalid token.
+std::string decodeName(const std::string& value)
+{
+    if(value.size() % 2 != 0)
+        return "";
+    std::string result;
+    for(std::size_t i = 0; i < value.size(); i += 2)
+    {
+        unsigned int ch = 0;
+        std::istringstream input(value.substr(i, 2));
+        if(!(input >> std::hex >> ch))
+            return "";
+        result += static_cast<char>(ch);
+    }
+    return result;
+}
+
 //! \brief Splits a comma separated draw value into its parts.
 std::vector<std::string> splitValue(const std::string& value)
 {
@@ -526,9 +556,9 @@ void restoreDraws(KeeperAI& ai)
             legacyLate = (line.tokens[2] == "1");
         else if((line.tokens[0] == "E19") && (line.tokens[1] == "session"))
         {
-            // start,lastFight,x,y,nextCast,haste,lateDefense (saves of the single late Defense flag have six parts)
+            // start,lastFight,x,y,nextCast,haste,lateDefense,holderCount,encoded holder names
             std::vector<std::string> parts = splitValue(line.tokens[2]);
-            if((parts.size() != 6) && (parts.size() != 7))
+            if(parts.size() < 6)
                 continue;
 
             SPELL::State::Session session;
@@ -538,7 +568,21 @@ void restoreDraws(KeeperAI& ai)
             session.mFightY = std::atoi(parts[3].c_str());
             session.mNextCast = std::atof(parts[4].c_str());
             session.mHaste = (parts[5] == "1");
-            session.mLateDefense = (parts.size() == 7) && (parts[6] == "1");
+            session.mLateDefense = (parts.size() >= 7) && (parts[6] == "1");
+            session.mLegacyHolders = parts.size() < 8;
+            if(!session.mLegacyHolders)
+            {
+                char* end = nullptr;
+                unsigned long count = std::strtoul(parts[7].c_str(), &end, 10);
+                if(end == parts[7].c_str() || *end != '\0' || count != parts.size() - 8)
+                    continue;
+                for(std::size_t i = 8; i < parts.size(); ++i)
+                {
+                    const std::string name = decodeName(parts[i]);
+                    if(!name.empty())
+                        session.mDefenseHolders.push_back(name);
+                }
+            }
             state.mSessions.push_back(session);
         }
     }
@@ -550,7 +594,7 @@ void restoreDraws(KeeperAI& ai)
     }
 }
 
-//! \brief Saves the spell draws, including the pending Eye cast and its last successful turn.
+//! \brief Saves spell draws, the Eye cast state and each session's delayed Defense holders.
 void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
     restoreDraws(ai);
@@ -584,10 +628,17 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
         line.tag = "draw";
         line.tokens.push_back("E19");
         line.tokens.push_back("session");
-        line.tokens.push_back(numberToken(session.mStart - now) + "," + numberToken(session.mLastFight - now) + "," +
+        std::string value = numberToken(session.mStart - now) + "," + numberToken(session.mLastFight - now) + "," +
                               std::to_string(session.mFightX) + "," + std::to_string(session.mFightY) + "," +
                               numberToken(session.mNextCast - now) + "," + (session.mHaste ? "1" : "0") + "," +
-                              (session.mLateDefense ? "1" : "0"));
+                              (session.mLateDefense ? "1" : "0");
+        if(!session.mLegacyHolders)
+        {
+            value += "," + std::to_string(session.mDefenseHolders.size());
+            for(const std::string& name : session.mDefenseHolders)
+                value += "," + encodeName(name);
+        }
+        line.tokens.push_back(value);
         lines.push_back(line);
     }
 }
@@ -666,7 +717,19 @@ bool sessionStep(KeeperAI& ai)
     state.mSessions.swap(running);
     // The late Defense of a fight drawn as a mistake follows when that fight is over
     for(SPELL::State::Session& session : ended)
-        SPELL::castDefense(ai, onOwnGroundOnly(ai, ownFighters(ai)), true, session.mLateDefense);
+    {
+        std::vector<Creature*> holders;
+        if(session.mLegacyHolders)
+            holders = ownFighters(ai);
+        else
+            for(const std::string& name : session.mDefenseHolders)
+            {
+                Creature* creature = ai.getGameMap().getCreature(name);
+                if(creature != nullptr && creature->isAlive() && creature->getSeat() == ai.getControlledPlayer().getSeat())
+                    holders.push_back(creature);
+            }
+        SPELL::castDefense(ai, onOwnGroundOnly(ai, holders), true, session.mLateDefense);
+    }
     for(SPELL::State::Session& session : state.mSessions)
         stepSession(ai, session, now);
     return false;
@@ -685,7 +748,7 @@ bool shareCreature(const std::vector<Creature*>& a, const std::vector<Creature*>
 
 //! \brief The reaction to a Fight event after its alert delay: starts the session of a new fight, or extends the session
 //! of the same fight (same tile or creatures of the same fight), and makes the decisions of the single-target and
-//! support spells of this fight.
+//! support spells of this fight, retaining its holders for a delayed Defense cast.
 void onFight(KeeperAI& ai, const AiEvent& event)
 {
     restoreDraws(ai);
@@ -735,7 +798,12 @@ void onFight(KeeperAI& ai, const AiEvent& event)
         merged.mLastFight = std::max(merged.mLastFight, session.mLastFight);
         merged.mNextCast = std::max(merged.mNextCast, session.mNextCast);
         merged.mHaste = merged.mHaste || session.mHaste;
+        merged.mLegacyHolders = (merged.mLateDefense && merged.mLegacyHolders) ||
+                                (session.mLateDefense && session.mLegacyHolders);
         merged.mLateDefense = merged.mLateDefense || session.mLateDefense;
+        for(const std::string& name : session.mDefenseHolders)
+            if(std::find(merged.mDefenseHolders.begin(), merged.mDefenseHolders.end(), name) == merged.mDefenseHolders.end())
+                merged.mDefenseHolders.push_back(name);
     }
     state.mSessions.swap(kept);
 
@@ -750,6 +818,7 @@ void onFight(KeeperAI& ai, const AiEvent& event)
         session.mNextCast = now;
         session.mHaste = false;
         session.mLateDefense = false;
+        session.mLegacyHolders = false;
         match = static_cast<int>(state.mSessions.size());
         state.mSessions.push_back(session);
     }
@@ -765,7 +834,13 @@ void onFight(KeeperAI& ai, const AiEvent& event)
 
     // Defense on the group that holds the entrance, at the first Fight of the session
     if(first)
-        SPELL::castDefense(ai, onOwnGroundOnly(ai, fightingOwn(ai)), false, session.mLateDefense);
+    {
+        const std::vector<Creature*> holders = onOwnGroundOnly(ai, fightingOwn(ai));
+        SPELL::castDefense(ai, holders, false, session.mLateDefense);
+        if(session.mLateDefense)
+            for(Creature* holder : holders)
+                session.mDefenseHolders.push_back(holder->getName());
+    }
 
     SPELL::castSlow(ai);
     SPELL::castWeak(ai);

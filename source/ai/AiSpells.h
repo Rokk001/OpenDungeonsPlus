@@ -19,6 +19,7 @@
 #define AISPELLS_H
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 class Creature;
@@ -58,6 +59,10 @@ struct State
         //! \brief True when the Defense cast of this fight was drawn as a mistake and follows when the fight is over
         //! (row E05).
         bool mLateDefense;
+        //! \brief Names of the original defenders for a delayed Defense cast.
+        std::vector<std::string> mDefenseHolders;
+        //! \brief True for old sessions saved without the original defender names.
+        bool mLegacyHolders;
     };
     //! \brief The running fight sessions.
     std::vector<Session> mSessions;
