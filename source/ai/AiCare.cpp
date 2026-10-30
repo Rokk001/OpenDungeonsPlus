@@ -338,7 +338,7 @@ void CARE::slapWatch(KeeperAI& ai, SlapState& state)
     for(Creature* creature : ownFighters(ai))
         if(creature->isBrawling())
             ACTS::slap(ai, creature);
-    if(now < state.nextCheck || now < state.episodeUntil)
+    if(now < state.nextCheck)
         return;
     ConfigManager& config = ConfigManager::getSingleton();
     const AiSettings& settings = ai.getSettings();
@@ -349,7 +349,7 @@ void CARE::slapWatch(KeeperAI& ai, SlapState& state)
     // The pause is added to one more creature-list look interval, as in the care model.
     state.nextCheck = now + AiMath::lookInterval(config.getAiConfigDouble("LookFactorPlan"), params, uniform) +
         config.getAiConfigDouble("SlapMistakePauseSeconds");
-    if(ownCreatures(ai).empty() || !ai.getMind().slip("D04"))
+    if(now < state.episodeUntil || ownCreatures(ai).empty() || !ai.getMind().slip("D04"))
         return;
     const double delay = AiMath::reactionDelay(AiMath::ReactionKind::symptom, params, uniform);
     state.interval = config.getAiConfigDouble("SlapMistakeInterval" + std::to_string(Random::Int(1, 5)));
