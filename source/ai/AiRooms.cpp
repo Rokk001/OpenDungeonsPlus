@@ -346,7 +346,8 @@ bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
         }
         else
         {
-            if(buildable && ECON::walletGate(ai, roomCost(ai, state.pendingType, static_cast<uint32_t>(state.pendingTiles.size()))))
+            if(buildable && !ACTS::isRoomBuildPending(ai, state.pendingType, state.pendingTiles) &&
+               ECON::walletGate(ai, roomCost(ai, state.pendingType, static_cast<uint32_t>(state.pendingTiles.size()))))
                 ACTS::buildRoom(ai, state.pendingType, state.pendingTiles);
             return true;
         }
@@ -394,7 +395,7 @@ bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
     bool ready = true;
     for(Tile* tile : state.pendingTiles)
         ready = ready && tile->isBuildableUpon(seat);
-    if(ready)
+    if(ready && !ACTS::isRoomBuildPending(ai, type, state.pendingTiles))
         ACTS::buildRoom(ai, type, state.pendingTiles);
     return true;
 }
