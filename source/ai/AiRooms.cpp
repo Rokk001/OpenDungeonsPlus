@@ -416,13 +416,13 @@ void ROOMS::buildNext(KeeperAI& ai)
     // AI row G01
     restoreRooms(ai);
     State& state = ai.getRoomsState();
+    if(ai.getMind().slip("B01"))
+        return;
     if(!state.pendingTiles.empty())
     {
         if(placeRoom(ai, state.pendingType, static_cast<uint32_t>(state.pendingTiles.size())))
             return;
     }
-    if(ai.getMind().slip("B01"))
-        return;
     const std::vector<std::pair<RoomType, uint32_t>> plan = KeeperAI::getRoomPlan();
     Seat* seat = ai.getControlledPlayer().getSeat();
     std::map<RoomType, uint32_t> expected;
