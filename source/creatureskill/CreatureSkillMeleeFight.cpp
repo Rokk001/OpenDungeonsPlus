@@ -237,6 +237,28 @@ bool CreatureSkillMeleeFight::tryUseFight(GameMap& gameMap, Creature* creature, 
     return true;
 }
 
+//! \brief The blow damage range against a creature before rolls, defence, target items, strikes and critical hits.
+void CreatureSkillMeleeFight::getCreatureDamageRange(const Creature& creature, double& minSum, double& maxSum) const
+{
+    double phyMin = mPhyMin, phyMax = mPhyMax;
+    double magMin = mMagMin, magMax = mMagMax;
+    double eleMin = mEleMin, eleMax = mEleMax;
+    // The same scaling as a blow of tryUseFight against a creature
+    CombatDamage::scale(creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
+        creature.getStrengthLevel(), "dmg%");
+    uint32_t weaponCooldown = 0;
+    const Weapon* weapons[] = {creature.getWeaponL(), creature.getWeaponR()};
+    for(const Weapon* weapon : weapons)
+    {
+        if(weapon != nullptr)
+            weaponCooldown = std::max(weaponCooldown, weapon->getCooldownNbTurns());
+    }
+    const double timingFactor = weaponCooldown > getCooldownNbTurns() && getCooldownNbTurns() > 0
+        ? static_cast<double>(weaponCooldown) / getCooldownNbTurns() : 1.0;
+    minSum = (phyMin + magMin + eleMin) * timingFactor;
+    maxSum = (phyMax + magMax + eleMax) * timingFactor;
+}
+
 CreatureSkillMeleeFight* CreatureSkillMeleeFight::clone() const
 {
     return new CreatureSkillMeleeFight(*this);

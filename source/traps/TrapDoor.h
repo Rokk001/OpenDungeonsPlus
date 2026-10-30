@@ -102,6 +102,11 @@ public:
 
     static bool buildTrapOnTile(GameMap* gameMap, Player* player, Tile* tile);
 
+    //! \brief The health of a door tile of the best door type the seat has researched (steel over ironbound over
+    //! wooden), with the health research of that door type.
+    //! \return The health, 0 when the seat has none of these doors
+    static double getEstimatedDoorHp(const Seat* seat);
+
 protected:
     //! \brief Saves ordinary and optional mission lock state on the door data line.
     void exportToStream(std::ostream& os) const override;

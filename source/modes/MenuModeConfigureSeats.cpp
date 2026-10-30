@@ -600,7 +600,7 @@ void MenuModeConfigureSeats::activate()
         combo->setArea(CEGUI::UDim(0.7,-90), CEGUI::UDim(0,70 + offset), CEGUI::UDim(0.3,0), CEGUI::UDim(0,150));
         combo->setReadOnly(true);
         combo->setEnabled(enabled);
-        combo->setSortingEnabled(true);
+        combo->setSortingEnabled(false);
         if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_INACTIVE) == 0)
         {
             CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(Seat::PLAYER_TYPE_INACTIVE, Seat::PLAYER_TYPE_INACTIVE_ID);
@@ -613,7 +613,7 @@ void MenuModeConfigureSeats::activate()
         {
             for(uint32_t i = 0; i < static_cast<uint32_t>(KeeperAIType::nbAI); ++i)
             {
-                KeeperAIType type = static_cast<KeeperAIType>(i);
+                KeeperAIType type = KeeperAITypes::displayOrder[i];
                 int32_t id = Seat::aITypeToPlayerId(type);
                 CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(KeeperAITypes::toDisplayableString(type), id);
                 item->setSelectionBrushImage(selImg);
@@ -624,7 +624,7 @@ void MenuModeConfigureSeats::activate()
         {
             for(uint32_t i = 0; i < static_cast<uint32_t>(KeeperAIType::nbAI); ++i)
             {
-                KeeperAIType type = static_cast<KeeperAIType>(i);
+                KeeperAIType type = KeeperAITypes::displayOrder[i];
                 int32_t id = Seat::aITypeToPlayerId(type);
                 CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(KeeperAITypes::toDisplayableString(type), id);
                 item->setSelectionBrushImage(selImg);

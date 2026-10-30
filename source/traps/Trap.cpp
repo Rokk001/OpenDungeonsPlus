@@ -302,6 +302,38 @@ uint32_t Trap::getNbActivatedTiles() const
     return nbActivated;
 }
 
+//! \brief The configured damage range of one hit on a tile of this trap; false when the tile is not one of its tiles.
+bool Trap::getTileDamageRange(Tile* tile, double& minDamage, double& maxDamage) const
+{
+    if(mTileData.find(tile) == mTileData.end())
+        return false;
+
+    minDamage = mMinDamage;
+    maxDamage = mMaxDamage;
+    return true;
+}
+
+//! \brief Returns whether a tile of this trap has used up its shots.
+bool Trap::isTileExhausted(Tile* tile) const
+{
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    return it != mTileData.end() && static_cast<const TrapTileData*>(it->second)->isExhausted();
+}
+
+//! \brief The shots an armed tile of this trap has left; 0 for a tile that is not armed, exhausted or not one of its tiles.
+int32_t Trap::getTileShotsLeft(Tile* tile) const
+{
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return 0;
+
+    const TrapTileData* trapTileData = static_cast<const TrapTileData*>(it->second);
+    if(!trapTileData->isActivated() || trapTileData->isExhausted())
+        return 0;
+
+    return std::max(0, trapTileData->getNbShootsBeforeDeactivation());
+}
+
 int32_t Trap::getNbNeededCraftedTrap() const
 {
     int32_t nbNeededCraftedTrap = 0;

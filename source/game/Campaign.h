@@ -24,6 +24,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <set>
 
 //! \brief One level of the campaign sequence.
 //! The level file name is relative to the "levels" directory.
@@ -150,8 +151,11 @@ public:
     bool takeKeptMinion(std::string& className, uint32_t& level);
     //! \brief True if any level was completed (a campaign can be continued).
     bool hasProgress() const;
-    //! \brief Forgets all progress (New Campaign).
+    //! \brief Starts a new campaign while retaining completed difficulties.
     void resetProgress();
+
+    //! \brief Returns whether completing Hard unlocked Hell.
+    bool isHellUnlocked() const;
 
     //! \brief AI difficulty of the whole campaign, chosen when a new campaign
     //! is begun. The value is an index into KeeperAIType.
@@ -203,6 +207,7 @@ private:
     bool mPlayedLevelWon;
     std::string mLevelSummary;
     uint32_t mDifficulty;
+    std::set<std::string> mFinishedDifficulties;
     //! The creature chosen by the kept minion special in the level that is played, and the one that came
     //! from the last level won (saved)
     std::string mKeptPendingClass;

@@ -18,6 +18,7 @@
 #ifndef BASEAI_H
 #define BASEAI_H
 
+#include <iosfwd>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -27,6 +28,7 @@ class Player;
 class Room;
 class Tile;
 class Seat;
+struct AiEvent;
 
 enum class KeeperAIType;
 
@@ -36,6 +38,12 @@ class BaseAI
 public:
     //! \brief Returns the player controlled by this instance.
     const Player& getPlayer() const { return mPlayer; }
+
+    //! \brief Writes AI state when the implementation has state to save.
+    virtual void exportState(std::ostream&) const {}
+
+    //! \brief Accepts a game notice; controllers without a mind ignore it.
+    virtual void notifyEvent(const AiEvent&) {}
 
     virtual ~BaseAI()
     {}

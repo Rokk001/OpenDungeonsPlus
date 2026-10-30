@@ -19,10 +19,19 @@
 #define KEEPERAI_H
 
 #include "ai/BaseAI.h"
+#include "ai/AiMind.h"
+#include "ai/AiEvents.h"
+#include "ai/AiWar.h"
+#include "ai/AiSpells.h"
+#include "ai/AiTraps.h"
 
+#include <cstdint>
+#include <utility>
 #include <vector>
 
+class Mind;
 class Tile;
+struct AiSettings;
 enum class RoomType;
 
 //! \brief Controls a keeper using its selected difficulty and current dungeon resources.
@@ -30,23 +39,36 @@ class KeeperAI : public BaseAI
 {
 
 public:
-    //! \brief Creates a keeper AI. The cooldown pairs are the range of turns between two checks of the
-    //! defense, of saving wounded creatures and of looking for rooms.
-    //! \param type Difficulty used for the keeper's ghost product choices.
-    //! \param reactionPercent Reaction time in percent of the base cooldowns (lower is faster)
-    //! \param minHpPercentToFight Creatures below this percentage of their max HP are not sent to fight
-    //! \param minFightersToAttack The AI attacks with more healthy fighters than this (0 = never attacks)
-    //! \param minCreatureLevel Fighters below this level are too weak for an attack
-    //! \param maxTrapTiles Maximum number of trap tiles (without doors) the AI owns
-    //! \param maxDoors Maximum number of doors the AI owns
-    KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type, int cooldownDefenseMin, int cooldownDefenseMax,
-             int cooldownSaveWoundedCreaturesMin, int cooldownSaveWoundedCreaturesMax,
-             int cooldownLookingForRoomsMin, int cooldownLookingForRoomsMax,
-             int reactionPercent, int minHpPercentToFight, int minFightersToAttack,
-             int minCreatureLevel, int maxTrapTiles, int maxDoors);
+    //! \brief Creates a keeper with the selected level's configured mind and interim legacy defaults.
+    KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type);
+    //! \brief Advances the mind and the legacy paths until their owners replace them.
     virtual bool doTurn(double timeSinceLastTurn);
+    //! \brief The map this AI plays on, for the decision functions of the SPELL and TRAP namespaces.
+    GameMap& getGameMap() { return mGameMap; }
+    //! \brief The player this AI controls, for the decision functions of the SPELL and TRAP namespaces.
+    Player& getControlledPlayer() { return mPlayer; }
+    //! \brief The mind that draws mistakes and schedules this keeper's actions.
+    Mind& getMind();
+    //! \brief Gives the shared event source access to this keeper's current tunnel and combat state.
+    WAR::WarState& getWarState() { return mWar; }
+    //! \brief Observes shared symptoms and queues the game's notice in the mind.
+    void notifyEvent(const AiEvent& event) override;
+    //! \brief The values of the selected AI level.
+    const AiSettings& getSettings() const;
+    //! \brief What the spell rows remember for this keeper (lives as long as the keeper).
+    SPELL::State& getSpellState() { return mSpellState; }
+    //! \brief What the trap and door rows remember for this keeper (lives as long as the keeper).
+    TRAP::State& getTrapState() { return mTrapState; }
+    //! \brief Writes the keeper's mind as the contents of its AIState block.
+    virtual void exportState(std::ostream& os) const;
+    //! \brief Restores the contents of an AIState block, or starts fresh when invalid.
+    bool importState(const std::vector<std::string>& lines);
     //! \brief Chooses the AI keeper switches immediately before each ectoplasm product.
     static void updateGhostRoomSettings(Seat& seat);
+    //! \brief The room plan of the keeper AI in build order: the [RoomPlan] section of ai.cfg, or the compiled
+    //! plan when ai.cfg has none. An unknown room name of ai.cfg is logged as an error and skipped.
+    //! \return Pairs of the room type and the tiles of the room
+    static std::vector<std::pair<RoomType, uint32_t>> getRoomPlan();
 
 protected:
     //! \brief Checks if the AI has a treasury. If not, we search for the first available tile
@@ -64,33 +86,10 @@ protected:
     //! It will also return false once it's done.
     bool lookForGold();
 
-    //! \brief Picks up wounded creatures and drops then in the dungeon temple
-    void saveWoundedCreatures();
-
-    //! \brief Checks if we are under attack and does the needed if it is the case
-    void handleDefense();
-
-    //! \brief Offensive state machine: once enough healthy fighters are available, digs toward the
-    //! closest enemy dungeon temple and rallies the fighters there with a call to war banner.
-    //! Retreats (removes the banner) when too many fighters were lost. It only starts with more healthy fighters
-    //! than the attack threshold and while not too many of them are below the minimum creature level.
-    void handleAttack();
-
-    //! \brief Places researched traps and wooden doors at the entrances of the AI rooms and in the
-    //! corridors in front of them. Limited by gold, workshop production and the AI level
-    void handleTraps();
-
-    //! \brief Casts heal on hurt fighting creatures and a call to war banner on a fight in the dungeon
-    //! when the mana allows it
-    void handleSpells();
 
     //! \brief Checks if a new worker should be summoned
     //! Returns true if the action has been done and false if nothing has been done
     bool handleWorkers();
-
-    //! \brief Checks if a room needs to be repaired and repairs if so
-    //! Returns true if the action has been done and false if nothing has been done
-    bool repairRooms();
 
     //! \brief Try to help tired creatures to reach dormitory
     //! Returns true if the action has been done and false if nothing has been done
@@ -105,6 +104,19 @@ protected:
     void handleFirstTurn();
 
 private:
+    //! \brief Runs the original economy chain until the economy package replaces it.
+    bool legacyEconomyTurn();
+    //! \brief Runs the polled parts of the war once per turn.
+    void runWar();
+    //! \brief Hands an event of the war rows to the war module after its reaction delay.
+    void handleWarEvent(const AiEvent& event);
+    //! \brief Runs the explore look of row I05 of the war module.
+    void handleExploreLook();
+    //! \brief Performs the mental step of row K05 after the launch drops (also when restored after loading).
+    void handleLaunchStep(Tile* tile, const std::string& target);
+    //! \brief Appends the war and sighting lines to the saved AI state of the mind.
+    void saveWarRows(std::vector<AiMath::AiStateLine>& lines);
+
     //! \brief try to build the most needed available room
     bool buildMostNeededRoom();
 
@@ -115,22 +127,6 @@ private:
     //! \brief Returns true if the given room is needed and false otherwise
     bool checkNeedRoom(RoomType roomType);
 
-    //! \brief Returns the number of non-worker creatures with enough HP to be sent to fight
-    int countHealthyFighters() const;
-
-    //! \brief Returns the number of healthy non-worker creatures below the minimum attack level
-    int countWeakFighters() const;
-
-    //! \brief Returns the central tile of the closest enemy dungeon temple or nullptr if there is none
-    Tile* findEnemyTempleTile();
-
-    //! \brief Fills the tiles where a door can be built (entrances of the rooms) and the tiles in the
-    //! corridor right in front of them (trap places)
-    void findChokePoints(std::vector<Tile*>& doorTiles, std::vector<Tile*>& trapTiles);
-
-    //! \brief Removes every call to war banner owned by this AI
-    void removeBanners();
-
     //! \brief Returns a random cooldown between min and max, scaled by the AI reaction time
     int scaledCooldown(int min, int max) const;
 
@@ -138,20 +134,24 @@ private:
     int mReactionPercent;
     //! \brief The difficulty selected when the controller was created.
     KeeperAIType mType;
+    //! \brief The selected level settings shared with the row functions.
+    AiSettings mSettings;
+    //! \brief The common mind uses the selected level independently of the interim legacy paths.
+    Mind mMind;
+    //! \brief Keeper-visible poll history, owned by this game and saved with its mind.
+    AiEvents mEvents;
+    //! \brief The war state of this keeper (tunnel, assault, defence, sightings).
+    WAR::WarState mWar;
+    //! \brief The state of the spell rows (E04, E05 and the fight session).
+    SPELL::State mSpellState;
+    //! \brief The state of the trap and door rows (F01, F12, F13, F15).
+    TRAP::State mTrapState;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)
     int mMinFightersToAttack;
     //! \brief Fighters below this level are too weak for an attack; the AI waits while more of them exist than this value
     int mMinCreatureLevel;
-    //! \brief Maximum number of trap tiles (without doors) the AI owns
-    int mMaxTrapTiles;
-    //! \brief Maximum number of doors the AI owns
-    int mMaxDoors;
-    int mCooldownTraps;
-    int mCooldownSpells;
-    //! \brief True while a call to war banner placed to defend the dungeon is out
-    bool mIsDefenseBannerOut;
     //! \brief True while the AI is sending its fighters against an enemy dungeon
     bool mIsAttacking;
     //! \brief Number of healthy fighters when the attack started. Used to decide when to retreat
@@ -170,7 +170,6 @@ private:
     int mCooldownDefenseMin;
     int mCooldownDefenseMax;
     int mCooldownWorkers;
-    int mCooldownRepairRooms;
     int mCooldownSaveWoundedCreatures;
     int mCooldownSaveWoundedCreaturesMin;
     int mCooldownSaveWoundedCreaturesMax;

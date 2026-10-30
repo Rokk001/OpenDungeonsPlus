@@ -100,7 +100,8 @@ set_mark = set_mark[:set_mark.index('bool Tile::getMarkedForDigging')]
 assert 'setIsHuman' not in read('source/network/ODClient.cpp'), 'client sets human flags: re-check the client branch'
 server_branch = set_mark[set_mark.index('if(getGameMap()->isServerGameMap())'):set_mark.index('else')]
 client_branch = set_mark[set_mark.index('else'):set_mark.index('if (ss && !unexplored')]
-assert 'getIsHuman' in server_branch and 'everVisitedFlagPool' in server_branch
+assert 'unexplored = !getGameMap()->everVisitedFlagPool[getX()][getY()][pp->getSeat()->getId()];' in server_branch
+assert 'getIsHuman' not in server_branch
 assert 'getIsHuman' not in client_branch, 'client fog marks must not depend on the human flag the client never has'
 assert '!getEverVisible() || getHasFogOfWar()' in client_branch
 assert 'if (ss && !unexplored && !isDiggable(pp->getSeat()))' in set_mark

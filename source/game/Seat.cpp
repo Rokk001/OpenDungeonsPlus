@@ -19,6 +19,10 @@
 #include "ODApplication.h"
 
 #include "ai/KeeperAIType.h"
+#include "ai/AiSaveFormat.h"
+#include "ai/BaseAI.h"
+#include "ai/AiMind.h"
+#include "spells/SpellManager.h"
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -448,6 +452,13 @@ void Seat::setPlayer(Player* player)
     player->mSeat = this;
 }
 
+//! \brief Returns this seat's last notified tile state without reading hidden current terrain.
+const TileStateNotified* Seat::getKnownTileState(Tile* tile) const
+{
+    const std::map<Tile*, TileStateNotified>::const_iterator found = mTilesStates.find(tile);
+    return found == mTilesStates.end() ? nullptr : &found->second;
+}
+
 bool Seat::hasVisionOnTile(Tile* tile)
 {
     
@@ -486,10 +497,15 @@ bool Seat::hasVisionOnTile(Tile* tile)
     return true;
 }
 
+//! \brief Initializes a seat and restores its spell cooldowns.
 void Seat::initSeat()
 {
     if(getPlayer() == nullptr)
         return;
+
+    for(const std::pair<SpellType, uint32_t>& entry : mSpellCooldownsLoaded)
+        getPlayer()->setSpellCooldownTurns(entry.first, entry.second);
+    mSpellCooldownsLoaded.clear();
 
     ConfigManager& config = ConfigManager::getSingleton();
 
@@ -1146,7 +1162,8 @@ bool Seat::importSeatFromStream(std::istream& is)
     }
     OD_ASSERT_TRUE(is >> mPlayerType);
 
-    OD_ASSERT_TRUE(is >> str);
+    mAiLevel = KeeperAITypes::readOptionalAiLevel(is, str);
+    OD_ASSERT_TRUE(is);
     if(str != "faction")
     {
         OD_LOG_INF("WARNING: expected faction and read " + str);
@@ -1239,8 +1256,22 @@ bool Seat::importSeatFromStream(std::istream& is)
     // Optional seat blocks may occur in any order, including in older saves.
     while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
-        str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]")
+        str == "[SpellCooldowns]" || str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]")
     {
+    if(str == "[SpellCooldowns]")
+    {
+        std::vector<std::pair<std::string, uint32_t>> entries;
+        if(!SaveFormat::readSpellCooldowns(is, entries)) return false;
+        for(const std::pair<std::string, uint32_t>& entry : entries)
+        {
+            SpellType type = SpellManager::getSpellTypeFromSpellName(entry.first);
+            if(type == SpellType::nullSpellType)
+                OD_LOG_WRN("Unknown saved spell cooldown: " + entry.first);
+            else
+                mSpellCooldownsLoaded.push_back(std::make_pair(type, entry.second));
+        }
+        if(!(is >> str)) return false;
+    }
     if(str == "[GhostBells]")
     {
         size_t count=0;
@@ -1518,6 +1549,11 @@ bool Seat::importSeatFromStream(std::istream& is)
         OD_ASSERT_TRUE(is >> str);
     }
 
+    if(str == "[AIState]")
+    {
+        if(!SaveFormat::readBlockLines(is, "[/AIState]", mAiStateLoaded) || !(is >> str)) return false;
+    }
+
     if(str != "[/Seat]")
     {
         OD_LOG_INF("WARNING: expected [/Seat] and read " + str);
@@ -1572,6 +1608,8 @@ bool Seat::exportSeatToStream(std::ostream& os) const
             os << PLAYER_TYPE_AI;
 
         os << std::endl;
+        if(!getPlayer()->getIsHuman())
+            os << "aiLevel\t" << KeeperAITypes::toString(mAiLevel) << "\n";
     }
 
     os << "faction\t";
@@ -1648,6 +1686,18 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     os << "[Merchant]\t" << mMerchantMargin << '\t' << mMerchantMode << '\t' << mLabMode << "\t[/Merchant]\n";
     os << "[MerchantBalance] " << mMerchantGoldRemainder << " [/MerchantBalance]\n";
 
+    if(!mGameMap->isInEditorMode() && getPlayer() != nullptr)
+    {
+        std::vector<std::pair<std::string, uint32_t>> cooldowns;
+        for(uint32_t i = 1; i < static_cast<uint32_t>(SpellType::nbSpells); ++i)
+        {
+            SpellType type = static_cast<SpellType>(i);
+            uint32_t turns = getPlayer()->getSpellCooldownTurns(type);
+            if(turns > 0) cooldowns.push_back(std::make_pair(SpellManager::getSpellNameFromSpellType(type), turns));
+        }
+        SaveFormat::writeSpellCooldowns(os, cooldowns);
+    }
+
     os << "[SkillNotAllowed]" << std::endl;
     for(SkillType type : mSkillNotAllowed)
     {
@@ -1666,9 +1716,8 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     if(mGameMap->isInEditorMode())
         return true;
 
-    // Tile states are only saved for human players
-    if((getPlayer() == nullptr) ||
-       (!getPlayer()->getIsHuman()))
+    // Tile states are saved for every player.
+    if(getPlayer() == nullptr)
     {
         return true;
     }
@@ -1729,6 +1778,8 @@ bool Seat::exportSeatToStream(std::ostream& os) const
                << entry.second.mOwnCreatureSightAgeTurns << "\n";
     }
     os << "[/OwnCreatureSightAges]\n";
+    if(!getPlayer()->getIsHuman() && mGameMap->getAI(*getPlayer()) != nullptr)
+        mGameMap->getAI(*getPlayer())->exportState(os);
 
     
     return true;
@@ -1983,6 +2034,12 @@ void Seat::addStoredSpecial(GiftBoxType type, uint32_t amount)
         mStoredSpecials.resize(static_cast<uint32_t>(GiftBoxType::nbTypes), 0);
 
     ++mStoredSpecials[index];
+    if(getPlayer() != nullptr && !getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::SpecialStored, nullptr, nullptr, -1,
+            static_cast<double>(amount), mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*getPlayer(), event);
+    }
 }
 
 //! \brief Uses only stored special bonuses, never workshop-only item boxes.
@@ -2048,6 +2105,7 @@ bool Seat::getCurrentSkillProgress(SkillType& type, float& progress) const
     return true;
 }
 
+//! \brief Selects the next research and reports an empty available research queue.
 void Seat::setNextSkill(SkillType skilledType)
 {
     if(!mGameMap->isServerGameMap())
@@ -2063,8 +2121,6 @@ void Seat::setNextSkill(SkillType skilledType)
             return;
 
         if(getPlayer() == nullptr)
-            return;
-        if(!getPlayer()->getIsHuman())
             return;
         if(getNbRooms(RoomType::library) <= 0)
             return;
@@ -2505,10 +2561,9 @@ void Seat::tileMarkedDiggingNotifiedToPlayer(Tile* tile, bool isDigSet)
 {
     if(getPlayer() == nullptr)
         return;
-    if(!getPlayer()->getIsHuman())
-        return;
-
-    TileStateNotified* tileState = getTileStateNotified(tile);
+    // AI seats keep the flag too (no client message), so the vision check can drop marks on tiles
+    // that stopped being diggable; their state entry for a never seen tile is created here
+    TileStateNotified* tileState = getPlayer()->getIsHuman() ? getTileStateNotified(tile) : &mTilesStates[tile];
     if(tileState == nullptr)
     {
         OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
@@ -2578,9 +2633,20 @@ bool Seat::isTileDiggableForClient(Tile* tile) const
     return false;
 }
 
-//! \brief Announces a class only after its first successful arrival; the history survives saves.
+//! \brief Queues every AI arrival and announces a human class only once; the history survives saves.
 void Seat::notifyCreatureArrival(const std::string& creatureClassName)
 {
+    if(getPlayer() != nullptr && !getPlayer()->getIsHuman())
+    {
+        int fightersBefore = 0;
+        for(Creature* creature : mGameMap->getCreaturesBySeat(this))
+            if(creature->isAlive() && !creature->getDefinition()->isWorker()) ++fightersBefore;
+        const CreatureDefinition* arrived = mGameMap->getClassDescription(creatureClassName);
+        if(arrived != nullptr && !arrived->isWorker()) --fightersBefore;
+        AiEvent event = {AiEventType::CreatureArrived, nullptr, nullptr, -1, static_cast<double>(fightersBefore),
+            mGameMap->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        mGameMap->notifyAi(*getPlayer(), event);
+    }
     if((getPlayer() == nullptr) || !getPlayer()->getIsHuman() || getPlayer()->getHasLost())
         return;
     if(std::find(mAnnouncedCreatureClasses.begin(), mAnnouncedCreatureClasses.end(), creatureClassName) !=
@@ -2758,7 +2824,16 @@ KeeperAIType Seat::playerIdToAIType(int32_t playerId)
     return static_cast<KeeperAIType>(value);
 }
 
+//! \brief Returns the player ID reserved for an AI level.
 int32_t Seat::aITypeToPlayerId(KeeperAIType type)
 {
-    return static_cast<int32_t>(type) + Seat::PLAYER_TYPE_INACTIVE_ID + 1;
+    return KeeperAITypes::toPlayerId(type);
+}
+
+//! \brief Takes and clears the AI state loaded from the save.
+std::vector<std::string> Seat::takeAiStateLoaded()
+{
+    std::vector<std::string> result;
+    result.swap(mAiStateLoaded);
+    return result;
 }

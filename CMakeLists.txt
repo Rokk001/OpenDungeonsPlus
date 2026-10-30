@@ -231,8 +231,23 @@ set(OD_SOURCEFILES
     #OpenDungeons sources
     ${SRC}/ai/AIFactory.cpp
     ${SRC}/ai/AiKnowledge.cpp
+    ${SRC}/ai/AiWar.cpp
+    ${SRC}/ai/AiMath.cpp
+    ${SRC}/ai/AiMind.cpp
+    ${SRC}/ai/AiMath.h
+    ${SRC}/ai/AiEvents.h
+    ${SRC}/ai/AiEvents.cpp
+    ${SRC}/ai/AiActions.cpp
+    ${SRC}/ai/AiActions.h
+    ${SRC}/ai/AiMind.h
+    ${SRC}/ai/AiSpells.cpp
+    ${SRC}/ai/AiSpells.h
+    ${SRC}/ai/AiTraps.cpp
+    ${SRC}/ai/AiTraps.h
     ${SRC}/ai/AIManager.cpp
     ${SRC}/ai/BaseAI.cpp
+    ${SRC}/ai/AiSaveFormat.h
+    ${SRC}/ai/AiSaveFormat.cpp
     ${SRC}/ai/KeeperAI.cpp
     ${SRC}/ai/KeeperAIType.cpp
 
@@ -824,6 +839,11 @@ if(MSVC AND Python_LIBRARY_DEBUG AND NOT PYTHON_IS_DEBUG)
     # Keep pybind11's headers consistent with the selected debug Python library.
     # Python's Windows header defines Py_DEBUG without a value as well.
     target_compile_definitions(${PROJECT_BINARY_NAME} PRIVATE "$<$<CONFIG:Debug>:Py_DEBUG=>")
+endif()
+
+# BUILD_MP_JOBS > 1 lets MSVC compile that many source files in parallel (/MP); unset keeps the default single-process compile.
+if(MSVC AND BUILD_MP_JOBS GREATER 1)
+    target_compile_options(${PROJECT_BINARY_NAME} PRIVATE "/MP${BUILD_MP_JOBS}")
 endif()
 
 # Set linker options in MSVC
