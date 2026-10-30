@@ -403,7 +403,7 @@ void ECON::manaCapWatch(KeeperAI& ai)
     {
         Tile* tile = creature->getPositionTile();
         double share = creature->getHP() / std::max(1.0, creature->getMaxHp());
-        if(tile != nullptr && tile->isClaimedForSeat(seat) && creature->getHP() > 0.0 && share < lowest)
+        if(creature->getIsOnMap() && tile != nullptr && tile->isClaimedForSeat(seat) && creature->getHP() > 0.0 && share < lowest)
         {
             lowest = share;
             hurt = creature;
