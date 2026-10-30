@@ -492,8 +492,7 @@ void ROOMS::bedWatch(KeeperAI& ai)
     if(state.bedDue < 0.0 || ai.getMind().now() < state.bedDue ||
         (!state.pendingTiles.empty() && state.pendingType != RoomType::dormitory))
         return;
-    if(placeRoom(ai, RoomType::dormitory, static_cast<uint32_t>(roomKey("DormitoryExtensionTiles"))))
-        state.bedDue = -1.0;
+    placeRoom(ai, RoomType::dormitory, static_cast<uint32_t>(roomKey("DormitoryExtensionTiles")));
 }
 
 //! \brief Extends food coverage by the configured shortage-clamped block size.
