@@ -76,6 +76,8 @@ struct WarState
     std::vector<Group> groups;
     //! \brief Survivors awaiting a successful drop after an assault.
     std::set<std::string> returning;
+    //! \brief Returners with a queued, identity-checked drop action.
+    std::set<std::string> returningPending;
 
     bool defenceRallying = false;
     Tile* defenceBanner = nullptr;

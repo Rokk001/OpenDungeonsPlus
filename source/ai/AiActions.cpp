@@ -349,12 +349,24 @@ void scheduleTiles(KeeperAI& ai, const std::string& key, const std::string& acti
 }
 }
 
+//! \brief Executes a return drop and permits another attempt if it failed.
+void returnDrop(KeeperAI& ai, const std::string& target)
+{
+    std::istringstream input(decode(target));
+    std::string action, name;
+    int x, y;
+    if(!(input >> action >> x >> y >> name)) return;
+    perform(ai, target);
+    ai.getWarState().returningPending.erase(decode(name));
+}
+
 //! \brief Registers saved-action resolution before a loaded mind resumes.
 void ACTS::bind(KeeperAI& ai)
 {
     const char* keys[] = {"dig", "build", "sell", "trap", "spell", "possess", "pickup", "drop", "slap", "setting", "research"};
     for(const char* key : keys)
         ai.getMind().onAction(key, "-", [&ai](Tile*, const std::string& target) { perform(ai, target); });
+    ai.getMind().onAction("drop", "K10", [&ai](Tile*, const std::string& target) { returnDrop(ai, target); });
 }
 
 //! \brief Schedules the human dig-marking path.
@@ -410,6 +422,17 @@ void ACTS::moveCreature(KeeperAI& ai, Creature* creature, Tile* tile)
     std::ostringstream args;
     args << "drop " << tile->getX() << ' ' << tile->getY() << ' ' << encode(creature->getName());
     schedule(ai, "drop", args.str());
+}
+//! \brief Schedules a named return drop and picks up the creature if needed.
+void ACTS::returnCreature(KeeperAI& ai, Creature* creature, Tile* tile, bool held)
+{
+    if(creature == nullptr || tile == nullptr) return;
+    if(!held) pickUp(ai, creature);
+    std::ostringstream args;
+    args << "drop " << tile->getX() << ' ' << tile->getY() << ' ' << encode(creature->getName());
+    const std::string target = encode(args.str());
+    ai.getMind().exec("drop", 1, ai.getMind().now(), "K10", nullptr, target,
+        [&ai, target]() { returnDrop(ai, target); });
 }
 //! \brief Schedules a slap subject to the entity permission and level-script limit.
 void ACTS::slap(KeeperAI& ai, Creature* creature)

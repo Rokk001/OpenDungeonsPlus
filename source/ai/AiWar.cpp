@@ -26,6 +26,7 @@
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -952,12 +953,44 @@ void secondWave(Env& env)
     }
 }
 
+//! \brief Queues each returner without a pending drop when pickup and a home drop are legal.
+void returnStep(Env& env)
+{
+    WarState& st = env.state;
+    RoomDungeonTemple* temple = ownTemple(env);
+    if(temple == nullptr)
+        return;
+    std::vector<Creature*> waiting;
+    for(const std::string& name : st.returning)
+    {
+        Creature* creature = env.gameMap.getCreature(name);
+        if(creature != nullptr && creature->isAlive() && st.returningPending.count(name) == 0)
+            waiting.push_back(creature);
+    }
+    std::sort(waiting.begin(), waiting.end(), strongerFirst);
+    for(Creature* creature : waiting)
+    {
+        const unsigned int index = env.player.getHandIndex(GameEntityType::creature, creature->getName());
+        const bool held = index < env.player.numObjectsInHand();
+        if(!held && !creature->tryPickup(env.player.getSeat()))
+            continue;
+        for(Tile* tile : temple->getCoveredTiles())
+        {
+            if(held ? env.player.isDropHandPossible(tile, index) : creature->tryDrop(env.player.getSeat(), tile))
+            {
+                st.returningPending.insert(creature->getName());
+                ACTS::returnCreature(env.ai, creature, tile, held);
+                break;
+            }
+        }
+    }
+}
+
 //! \brief Ends an assault, tracks returning survivors and tries a pending second wave.
 void endAssault(Env& env)
 {
     // AI row K10: banners removed, survivors on enemy ground carried home by hand, the rest started, AssaultOver raised
     WarState& st = env.state;
-    Seat* seat = env.player.getSeat();
     for(Group& g : st.groups)
     {
         if(g.bannerTile != nullptr)
@@ -965,25 +998,10 @@ void endAssault(Env& env)
         g.bannerTile = nullptr;
     }
 
-    RoomDungeonTemple* temple = ownTemple(env);
     std::vector<Creature*> survivors = attackers(env);
-    std::sort(survivors.begin(), survivors.end(), strongerFirst);
-    if(temple != nullptr)
-    {
-        std::vector<Tile*> templeTiles = temple->getCoveredTiles();
-        for(Creature* creature : survivors)
-        {
-            for(Tile* tile : templeTiles)
-            {
-                if(creature->tryPickup(seat) && creature->tryDrop(seat, tile))
-                {
-                    st.returning.insert(creature->getName());
-                    ACTS::moveCreature(env.ai, creature, tile);
-                    break;
-                }
-            }
-        }
-    }
+    for(Creature* creature : survivors)
+        st.returning.insert(creature->getName());
+    returnStep(env);
 
     st.groups.clear();
     st.assault = WarState::assaultNone;
@@ -1136,6 +1154,7 @@ void doTurn(Env& env)
 {
     WarState& st = env.state;
     Seat* seat = env.player.getSeat();
+    returnStep(env);
 
     // The plan step: the first one at FirstPlanSeconds + U(0, jitter), then every ScanPeriod x LookFactorPlan on average
     if(st.nextPlan < 0.0)
@@ -1277,7 +1296,7 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if((line.tag == "draw") && (line.tokens.size() == 3))
         return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"))) ||
                ((line.tokens[0] == "K07") && (line.tokens[1] == "retreatCheck")) ||
-               ((line.tokens[0] == "K10") && (line.tokens[1] == "returning")) ||
+               ((line.tokens[0] == "K10") && ((line.tokens[1] == "returning") || (line.tokens[1] == "returnPending"))) ||
                ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
     return false;
 }
@@ -1314,6 +1333,8 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
         addLine(lines, "draw", {"K07", "retreatCheck", num(std::max(0.0, st.nextRetreatCheck - env.now))});
     for(const std::string& name : st.returning)
         addLine(lines, "draw", {"K10", "returning", name});
+    for(const std::string& name : st.returningPending)
+        addLine(lines, "draw", {"K10", "returnPending", name});
     if(st.secondWaveUntil >= env.now)
         addLine(lines, "draw", {"K08", "secondWave", num(st.secondWaveUntil - env.now)});
 
@@ -1421,6 +1442,8 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
             st.nextRetreatCheck = env.now + std::atof(k[2].c_str());
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K10") && (k[1] == "returning"))
             st.returning.insert(k[2]);
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K10") && (k[1] == "returnPending"))
+            st.returningPending.insert(k[2]);
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
             st.secondWaveUntil = env.now + std::atof(k[2].c_str());
         else if((line.tag == "war") && (k[0] == "tunnel"))
