@@ -327,7 +327,7 @@ bool Room::isDestructible() const
 double Room::getTileHP() const
 {
     return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(
-        RoomManager::getRoomNameFromRoomType(getType()) + "HP", 10.0);
+        RoomManager::getRoomNameFromRoomType(getType()) + "HP", DEFAULT_TILE_HP);
 }
 
 //! \brief Adds the dirt of one room use (config key times the DirtFactor of the creature type) to the tile.

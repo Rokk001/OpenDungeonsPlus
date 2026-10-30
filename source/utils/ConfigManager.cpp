@@ -17,6 +17,7 @@
 
 #include "utils/ConfigManager.h"
 
+#include "entities/Building.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/ItemDefinition.h"
 #include "entities/Tile.h"
@@ -3188,12 +3189,19 @@ int32_t ConfigManager::getTrapConfigInt32(const std::string& param) const
     return Helper::toInt(it->second);
 }
 
+//! \brief Reads a trap value, using the building health fallback for missing trap tile health keys.
 double ConfigManager::getTrapConfigDouble(const std::string& param) const
 {
     std::map<const std::string, std::string>::const_iterator it = mTrapsConfig.find(param);
     if(it == mTrapsConfig.end())
     {
         OD_LOG_ERR("Unknown parameter param=" + param);
+        static const std::set<std::string> tileHealthKeys = {
+            "AlarmHP", "BoulderHP", "CannonHP", "FearHP", "FireburstHP", "FreezeHP",
+            "GasHP", "LightningHP", "SpikeHP", "TriggerHP", "WatchBannerHP"
+        };
+        if(tileHealthKeys.count(param) != 0)
+            return Building::DEFAULT_TILE_HP;
         return 0.0;
     }
 
