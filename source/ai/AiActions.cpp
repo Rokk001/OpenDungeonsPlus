@@ -1,4 +1,5 @@
 #include "ai/AiActions.h"
+#include "ai/AiItems.h"
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
@@ -323,6 +324,11 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!SpellManager::castSpell(&map, spell, &player, packet)) return;
         map.getLevelScript().recordEvent("Seat" + Helper::toString(seat->getId()), "cast:" + SpellManager::getSpellNameFromSpellType(spell));
         player.setSpellCooldownTurns(spell, SpellManager::getSpellCooldown(spell));
+        if(seat->getNbStoredSpecials(static_cast<uint32_t>(GiftBoxType::mana)) > 0)
+        {
+            const AiEvent event = {AiEventType::SpecialStored, nullptr, nullptr, -1, 0.0, ai.getMind().now()};
+            ITEMS::useStoredSpecial(ai, event, !ai.getWarState().fightOverRaised, false, true);
+        }
     }
 }
 

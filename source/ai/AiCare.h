@@ -58,8 +58,6 @@ private:
     double mNextControl;
     //! \brief Mind time of the last idle placement, so one firing never moves the same fighters twice.
     double mIdleAt;
-    //! \brief Own spell cooldowns at the last poll; a rise marks an own cast for the held mana box.
-    std::vector<uint32_t> mCooldowns;
     bool mLoaded;
 };
 //! \brief Checks the production-slap mistake at a creature-list look and stops own brawls.

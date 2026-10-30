@@ -209,23 +209,6 @@ bool CARE::Controller::poll()
     load();
     slapEpisodeStep(mAi, mSlap);
     possessionStep(mAi, mNextControl);
-    // A raised cooldown is the own spell cast after which a held mana box fits again.
-    Player& player = mAi.getControlledPlayer();
-    const std::size_t count = static_cast<std::size_t>(SpellType::nbSpells);
-    bool cast = false;
-    if(mCooldowns.size() != count)
-        mCooldowns.assign(count, 0);
-    for(std::size_t i = 0; i < count; ++i)
-    {
-        const uint32_t cooldown = player.getSpellCooldownTurns(static_cast<SpellType>(i));
-        cast = cast || cooldown > mCooldowns[i];
-        mCooldowns[i] = cooldown;
-    }
-    if(cast && player.getSeat()->getNbStoredSpecials(static_cast<uint32_t>(GiftBoxType::mana)) > 0)
-    {
-        const AiEvent spell = {AiEventType::SpecialStored, nullptr, nullptr, -1, 0.0, mAi.getMind().now()};
-        ITEMS::useStoredSpecial(mAi, spell, !mAi.getWarState().fightOverRaised, false, true);
-    }
     return false;
 }
 
