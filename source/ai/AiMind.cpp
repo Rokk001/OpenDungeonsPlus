@@ -314,6 +314,18 @@ double Mind::exec(const std::string& actionKey, int count, double from, const st
     return done;
 }
 
+//! \brief Finds an identical action in the live or restored hand queue.
+bool Mind::hasPendingAction(const std::string& key, const std::string& rowId, const std::string& target) const
+{
+    const std::string storedTarget = target.empty() ? "-" : target;
+    for(const Action& action : mActions)
+    {
+        if(action.key == key && action.rowId == rowId && action.target == storedTarget)
+            return true;
+    }
+    return false;
+}
+
 //! \brief Draws a row's configured mistake once within its current trigger callback.
 bool Mind::slip(const std::string& rowId)
 {

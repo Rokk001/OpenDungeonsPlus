@@ -142,6 +142,9 @@ public:
     double exec(const std::string& actionKey, int count, double from, const std::string& rowId,
                 Tile* tile, const std::string& target, const std::function<void()>& perform);
 
+    //! \brief Returns whether an identical hand action is still queued.
+    bool hasPendingAction(const std::string& key, const std::string& rowId, const std::string& target) const;
+
     //! \brief Draws the mistake of a row with its class and multiplier from [RowClasses] and the
     //! mistake multiplier of the level.
     //! \return true when the mistake is taken.
