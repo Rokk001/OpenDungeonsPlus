@@ -260,6 +260,9 @@ def main():
     # M55 was already configurable; its separate legacy default remains intentional.
     if 'MerchantMarginDefault' not in read("source/game/Seat.cpp"):
         problems.append("M55: existing merchant margin reader is missing")
+    picks = tree[tree.index("std::vector<std::string> templatePicks("):tree.index("uint32_t nextDeviationDraw(")]
+    if "getSkillTier2UnlockRanks()" not in picks or "getSkillTier3UnlockRanks()" not in picks:
+        problems.append("M9: template pick order is not derived from both configured unlock ranks")
     if problems:
         print('\n'.join(problems))
         return 1

@@ -814,14 +814,20 @@ std::vector<std::string> templatePicks(const SkillTreeConfig& config, const Type
         return picks;
 
     const std::vector<std::string> primary = pathIds(config, type.mGroup, templ->mPrimary);
-    // Tier 1, tier 2 twice, tier 3, then every tier up to the highest rank
-    picks.push_back(primary[0]);
-    picks.push_back(primary[1]);
-    picks.push_back(primary[1]);
-    picks.push_back(primary[2]);
-    for(uint32_t i = 1; i < maxRank; ++i)
+    // The order is derived from the configured unlock ranks: tier 1 up to the rank that unlocks tier 2, tier 2 up to
+    // the rank that unlocks tier 3, tier 3 once, then every tier up to the highest rank
+    const uint32_t tier2Ranks = std::min(maxRank,
+        static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier2UnlockRanks()));
+    const uint32_t tier3Ranks = std::min(maxRank,
+        static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier3UnlockRanks()));
+    for(uint32_t i = 0; i < tier2Ranks; ++i)
         picks.push_back(primary[0]);
-    for(uint32_t i = static_cast<uint32_t>(ConfigManager::getSingleton().getSkillTier3UnlockRanks()); i < maxRank; ++i)
+    for(uint32_t i = 0; i < tier3Ranks; ++i)
+        picks.push_back(primary[1]);
+    picks.push_back(primary[2]);
+    for(uint32_t i = tier2Ranks; i < maxRank; ++i)
+        picks.push_back(primary[0]);
+    for(uint32_t i = tier3Ranks; i < maxRank; ++i)
         picks.push_back(primary[1]);
     for(uint32_t i = 1; i < maxRank; ++i)
         picks.push_back(primary[2]);
