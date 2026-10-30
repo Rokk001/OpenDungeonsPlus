@@ -323,9 +323,11 @@ bool Room::isDestructible() const
 }
 
 //! \brief Hit points of one tile of this room, read from the room configuration
-//! key <RoomName>HP; logs a missing key and uses the shipped fallback of 10 HP.
+//! key <RoomName>HP; the dungeon temple uses the default tile HP.
 double Room::getTileHP() const
 {
+    if(getType() == RoomType::dungeonTemple)
+        return DEFAULT_TILE_HP;
     return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(
         RoomManager::getRoomNameFromRoomType(getType()) + "HP", DEFAULT_TILE_HP);
 }
