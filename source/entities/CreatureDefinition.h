@@ -177,6 +177,9 @@ public:
     inline bool isWorker() const
     { return (mCreatureJob == Worker); }
 
+    //! \brief True for undead creatures (Skeleton, Lich): they are never knocked out and leave no corpse or ghost.
+    inline bool                 isUndead        () const    { return mUndead; }
+
     //! \brief The runners of the heart defence: the workers, plus the two cheap and
     //! fast scout creatures, the hornet and the goblin.
     inline bool isHeartDefenceRunner() const
@@ -205,8 +208,6 @@ public:
     inline bool                 isChampion      () const    { return mChampion; }
     //! \brief Mana taken per second while a player possesses a creature of this definition (after the free period).
     inline double               getPossessManaCost () const { return mPossessManaCost; }
-    //! \brief True for undead creatures (Skeleton, Lich): they are never knocked out and leave no corpse or ghost.
-    inline bool                 isUndead        () const    { return mUndead; }
     //! \brief Own walk speed factor of a badly hurt creature of this type, negative when the global value applies
     inline double               getLowHealthWalkSpeedFactor () const    { return mLowHealthWalkSpeedFactor; }
     //! \brief Speed factor of the walk clips of this type on the client (1 = as authored), limited to 0.2 - 8.0

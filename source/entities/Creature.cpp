@@ -380,8 +380,12 @@ static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
 static const std::string SPA_SAVE_OPEN = "[Spa]";
 //! \brief Tag that closes the block of the lava spa state.
 static const std::string SPA_SAVE_CLOSE = "[/Spa]";
+//! \brief Tag that opens the optional arena knock-out state.
+static const std::string KO_SAVE_OPEN = "[Ko]";
+//! \brief Tag that closes the optional arena knock-out state.
+static const std::string KO_SAVE_CLOSE = "[/Ko]";
 //! \brief Tag that opens the optional block of the captivity state (prison mood, torture mood, broken turns in the
-//! prison and in the torture chamber, arena knock-out flag) at the end of a saved creature. Missing means all 0.
+//! prison and in the torture chamber) at the end of a saved creature. Missing means all 0.
 static const std::string CAPTIVITY_SAVE_OPEN = "[Captivity]";
 //! \brief Tag that closes the block of the captivity state.
 static const std::string CAPTIVITY_SAVE_CLOSE = "[/Captivity]";
@@ -1081,7 +1085,8 @@ std::string Creature::getCreatureStreamFormat()
             "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]\t[Wages missedWages /Wages]"
             "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]"
             "\t[Spa spaMood relaxTurns mudTilesLeft /Spa]"
-            "\t[Captivity prisonMood tortureMood prisonBrokenTurns tortureBrokenTurns arenaKnockOut /Captivity]"
+            "\t[Ko koTurnCounter arenaKnockOut /Ko]"
+            "\t[Captivity prisonMood tortureMood prisonBrokenTurns tortureBrokenTurns /Captivity]"
             "\t[Corpse corpseTurns decayTurns /Corpse]";
 
     return format;
@@ -1172,13 +1177,15 @@ void Creature::exportToStream(std::ostream& os) const
            << SPA_SAVE_CLOSE;
     }
 
+    // Optional arena knock-out block preserves the remaining time when the creature is knocked out in the arena.
+    if(mArenaKnockOut)
+        os << "\t" << KO_SAVE_OPEN << " " << mKoTurnCounter << " " << (mArenaKnockOut ? 1 : 0) << " " << KO_SAVE_CLOSE;
+
     // Optional captivity block; missing in old saves and when all its values are 0
-    if((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0) ||
-       mArenaKnockOut)
+    if((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0))
     {
         os << "	" << CAPTIVITY_SAVE_OPEN << " " << mPrisonMood << " " << mTortureMood << " " << mPrisonBrokenTurns
-           << " " << mTortureBrokenTurns << " " << (mArenaKnockOut ? 1 : 0) << " "
-           << (mArenaKnockOut ? mKoTurnCounter : 0.0) << " " << CAPTIVITY_SAVE_CLOSE;
+           << " " << mTortureBrokenTurns << " " << CAPTIVITY_SAVE_CLOSE;
     }
     if(!isAlive())
     {
@@ -1427,6 +1434,21 @@ bool Creature::importFromStream(std::istream& is)
             continue;
         }
 
+        if(appearanceToken == KO_SAVE_OPEN)
+        {
+            std::string koClose;
+            double loadedKoTurns = 0.0;
+            int32_t loadedArenaKnockOut = 0;
+            if(!(is >> loadedKoTurns >> loadedArenaKnockOut >> koClose) || (koClose != KO_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid arena knock-out block for creature=" + getName());
+                return false;
+            }
+            mKoTurnCounter = loadedKoTurns;
+            mArenaKnockOut = (loadedArenaKnockOut != 0);
+            continue;
+        }
+
         if(appearanceToken == CAPTIVITY_SAVE_OPEN)
         {
             std::string captivityClose;
@@ -1436,13 +1458,18 @@ bool Creature::importFromStream(std::istream& is)
             int32_t loadedTortureBrokenTurns = 0;
             int32_t loadedArenaKnockOut = 0;
             double loadedArenaKoTurns = 0.0;
-            // The remaining knock-out time is the last value; a block without it ends right after the arena flag
+            // Older captivity blocks may include the arena flag and its remaining knock-out time.
             bool captivityRead = static_cast<bool>(is >> loadedPrisonMood >> loadedTortureMood >> loadedPrisonBrokenTurns
-                >> loadedTortureBrokenTurns >> loadedArenaKnockOut >> captivityClose);
+                >> loadedTortureBrokenTurns >> captivityClose);
             if(captivityRead && (captivityClose != CAPTIVITY_SAVE_CLOSE))
             {
-                std::istringstream koStream(captivityClose);
-                captivityRead = static_cast<bool>(koStream >> loadedArenaKoTurns) && static_cast<bool>(is >> captivityClose);
+                std::istringstream flagStream(captivityClose);
+                captivityRead = static_cast<bool>(flagStream >> loadedArenaKnockOut) && static_cast<bool>(is >> captivityClose);
+                if(captivityRead && (captivityClose != CAPTIVITY_SAVE_CLOSE))
+                {
+                    std::istringstream koStream(captivityClose);
+                    captivityRead = static_cast<bool>(koStream >> loadedArenaKoTurns) && static_cast<bool>(is >> captivityClose);
+                }
             }
             if(!captivityRead || (captivityClose != CAPTIVITY_SAVE_CLOSE))
             {
@@ -1455,10 +1482,12 @@ bool Creature::importFromStream(std::istream& is)
             mTortureMood = loadedTortureMood;
             mPrisonBrokenTurns = loadedPrisonBrokenTurns;
             mTortureBrokenTurns = loadedTortureBrokenTurns;
-            mArenaKnockOut = (loadedArenaKnockOut != 0);
-            // A loaded arena knock-out goes on with its remaining time and gets up when it runs out
-            if(mArenaKnockOut)
+            // A legacy arena knock-out goes on with its remaining time and gets up when it runs out.
+            if(loadedArenaKnockOut != 0)
+            {
+                mArenaKnockOut = true;
                 mKoTurnCounter = std::max(1.0, loadedArenaKoTurns);
+            }
             continue;
         }
 
