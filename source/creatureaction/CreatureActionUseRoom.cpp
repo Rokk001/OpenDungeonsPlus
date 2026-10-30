@@ -128,21 +128,24 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         return true;
     }
 
-    if(!creature.decreaseJobCooldown())
-        return false;
-
-    if(moodRoom && creature.getMoodValue() <= CreatureMoodLevel::Neutral)
+    const bool fighting = creature.isActionInList(CreatureActionType::fight) ||
+        creature.isActionInList(CreatureActionType::fightFriendly);
+    if(moodRoom && !fighting && creature.getMoodValue() <= CreatureMoodLevel::Neutral)
     {
         creature.popAction();
         return true;
     }
+
+    if(!creature.decreaseJobCooldown())
+        return false;
 
     // If we are working in the room, we check that our status (mood/hungry/sleepy)
     // allows us to work
     const RoomType roomType = room->getType();
     const bool pleasure = roomType == RoomType::casino || roomType == RoomType::tavern ||
         roomType == RoomType::spa || roomType == RoomType::temple;
-    if(!pleasure && room->shouldNotUseIfBadMood(creature, forced))
+    if(!pleasure && !fighting &&
+       (roomType == RoomType::arena || room->shouldNotUseIfBadMood(creature, forced)))
     {
         if(creature.getMoodValue() >= CreatureMoodLevel::Upset ||
            creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork())

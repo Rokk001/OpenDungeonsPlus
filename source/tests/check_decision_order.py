@@ -7,7 +7,10 @@ ROOT = Path(__file__).resolve().parents[2]
 search = (ROOT / 'source/creatureaction/CreatureActionSearchJob.cpp').read_text(encoding='utf-8')
 assert not re.search(r'Random::Int\(\s*0\s*,\s*100\s*\)\s*<\s*20', search)
 assert re.search(r'workRooms\.empty\(\)\s*\?\s*pleasureRooms\s*:\s*workRooms', search)
-assert re.search(r'choices\[Random::Uint\(0,\s*choices\.size\(\)\s*-\s*1\)\]', search)
+assert re.search(r'candidates\[Random::Uint\(0,\s*candidates\.size\(\)\s*-\s*1\)\]', search)
+assert 'hasHatedCoworker' not in search[search.index('std::vector<Room*>& candidates = workRooms.empty()'):]
+assert re.search(r'if\(moodSearch\)\s*creature\.popAction\(\);\s*creature\.pushAction', search)
+assert 'room != currentRoom || !creature.getSeat()->canOwnedCreatureUseRoomFrom(room->getSeat())' in search
 source = (ROOT / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 idle = source[source.index('bool Creature::handleIdleAction('):source.index('\nbool Creature::', source.index('bool Creature::handleIdleAction(') + 1)]
 assert not re.search(r'Random::Double\(\s*0(?:\.0)?\s*,\s*1(?:\.0)?\s*\)\s*<\s*0\.4', idle)

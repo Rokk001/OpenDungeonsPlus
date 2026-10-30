@@ -21,6 +21,8 @@ assert room.index('if(creature.needInterrupt(servingNeed))') < room.index('shoul
 assert room.index('if(creature.needInterrupt(servingNeed))') < room.index('hasSlapEffect()')
 assert 'room->getType() == RoomType::hatchery && creature.isHungry()' in room
 assert 'room->getType() == RoomType::tavern' in room and 'getTavernConfigDouble("ThirstSeek")' in room
+assert room.index('if(moodRoom && !fighting') < room.index('if(!creature.decreaseJobCooldown())')
+assert 'roomType == RoomType::arena || room->shouldNotUseIfBadMood' in room
 assert not re.search(r'Random::Int\(\s*0\s*,\s*100\s*\)\s*<\s*20', room)
 sleep = (ROOT / 'source/creatureaction/CreatureActionSleep.cpp').read_text(encoding='utf-8')
 assert 'needInterrupt(' in sleep
