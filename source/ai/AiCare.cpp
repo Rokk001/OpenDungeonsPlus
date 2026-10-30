@@ -509,11 +509,10 @@ void CARE::levelWatch(KeeperAI& ai)
     const std::vector<Creature*> fighters = ownFighters(ai);
     for(Creature* creature : ownCreatures(ai))
     {
-        bool capped = false;
+        bool capped = !halls.empty() && std::find(fighters.begin(), fighters.end(), creature) != fighters.end();
         for(Room* hall : halls)
-            if(std::find(fighters.begin(), fighters.end(), creature) != fighters.end() &&
-               !hall->hasOpenCreatureSpot(creature))
-                capped = true;
+            if(capped && hall->hasOpenCreatureSpot(creature))
+                capped = false;
         Room* destination = capped ? availableRoom(ai, creature, RoomType::arena) : nullptr;
         if(destination == nullptr && idle(*creature))
         {
