@@ -227,6 +227,10 @@ def main():
                 problems.append(f"M{item}: {key} item setting reader is missing")
         elif config_file == "config/global.cfg":
             readers = source + (read("source/gamemap/SandboxMode.h") if item in (17, 18, 19, 20) else "")
+            if item in (6, 16):
+                readers += read("source/entities/Creature.cpp" if item == 6 else "source/game/Player.cpp")
+                if f'get{key}()' in source:
+                    problems.append(f"M{item}: {key} getter must stay outside the standalone header")
             if f'get{key}()' not in readers or f'm{key}' not in manager_header or f'nextParam == "{key}"' not in manager:
                 problems.append(f"M{item}: {key} getter/parser is missing")
             default = re.search(r'\bm' + key + r'\(([^\n]+)\),', manager)
