@@ -75,8 +75,8 @@ void possessionStep(KeeperAI& ai, double& nextControl);
 void idleToHall(KeeperAI& ai);
 //! \brief Moves capped trainees to the arena and fighters without work to the casino or temple.
 void levelWatch(KeeperAI& ai);
-//! \brief Takes upset creatures to the available mood room their class likes most.
-void moodRelief(KeeperAI& ai);
+//! \brief Takes the upset creature from the event to the available mood room its class likes most.
+void moodRelief(KeeperAI& ai, const AiEvent& event);
 //! \brief Immediately triggers the row that removes each upset creature's first applicable cause.
 //! \param trigger Invokes the named row now with its own draw, without queuing another reaction delay.
 void moodPatrol(KeeperAI& ai, const std::function<void(const std::string&, Creature*)>& trigger);

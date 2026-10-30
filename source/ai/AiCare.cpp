@@ -181,7 +181,7 @@ CARE::Controller::Controller(KeeperAI& ai) : mAi(ai), mNextControl(0.0), mLoaded
     const std::function<void(const std::string&, Creature*)> remedy =
         std::bind(&Controller::need, this, std::placeholders::_1, std::placeholders::_2);
     mind.onEvent("D07", {AiEventType::CreatureMood}, std::bind(moodPatrol, std::ref(ai), remedy));
-    mind.onEvent("D09", {AiEventType::CreatureMood}, std::bind(moodRelief, std::ref(ai)));
+    mind.onEvent("D09", {AiEventType::CreatureMood}, std::bind(moodRelief, std::ref(ai), std::placeholders::_1));
     mind.onEvent("G02", {AiEventType::PrisonerAge}, std::bind(&Controller::prisonLook, this));
     mind.onAction("pickup", "G02", std::bind(&Controller::prisonPickup, this,
         std::placeholders::_1, std::placeholders::_2));
@@ -551,32 +551,31 @@ void CARE::levelWatch(KeeperAI& ai)
 }
 
 //! \brief Handles one mood event, choosing the highest room affinity among rooms with a free place.
-void CARE::moodRelief(KeeperAI& ai)
+void CARE::moodRelief(KeeperAI& ai, const AiEvent& event)
 {
     // AI row D09
     if(ai.getMind().slip("D09"))
         return;
+    Creature* creature = event.creature;
+    if(creature == nullptr || creature->getSeat() != ai.getControlledPlayer().getSeat() ||
+       !creature->isAlive() || creature->getMoodValue() < CreatureMoodLevel::Upset)
+        return;
     const RoomType types[] = {RoomType::casino, RoomType::tavern, RoomType::spa, RoomType::temple};
-    for(Creature* creature : ownCreatures(ai))
+    Room* best = nullptr;
+    double likeness = 0.0;
+    for(RoomType type : types)
     {
-        if(creature->getMoodValue() < CreatureMoodLevel::Upset)
+        Room* room = availableRoom(ai, creature, type);
+        if(room == nullptr)
             continue;
-        Room* best = nullptr;
-        double likeness = 0.0;
-        for(RoomType type : types)
+        const double value = creature->getDefinition()->getRoomAffinity(type).getLikeness();
+        if(best == nullptr || value > likeness)
         {
-            Room* room = availableRoom(ai, creature, type);
-            if(room == nullptr)
-                continue;
-            const double value = creature->getDefinition()->getRoomAffinity(type).getLikeness();
-            if(best == nullptr || value > likeness)
-            {
-                best = room;
-                likeness = value;
-            }
+            best = room;
+            likeness = value;
         }
-        moveToRoom(ai, creature, best);
     }
+    moveToRoom(ai, creature, best);
 }
 
 //! \brief Uses the specified cause priority and delegates the resulting row's own decision to the caller.
