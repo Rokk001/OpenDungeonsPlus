@@ -459,6 +459,7 @@ const TileStateNotified* Seat::getKnownTileState(Tile* tile) const
     return found == mTilesStates.end() ? nullptr : &found->second;
 }
 
+//! \brief Returns whether this seat currently has vision on the tile.
 bool Seat::hasVisionOnTile(Tile* tile)
 {
     
@@ -492,6 +493,10 @@ bool Seat::hasVisionOnTile(Tile* tile)
         }
         
     }   
+
+    // An AI seat has not seen an unrecorded tile when fog is enabled.
+    if(!mPlayer->getIsHuman() && mGameMap->getIsFOWActivated())
+        return false;
 
     // by default return true
     return true;
