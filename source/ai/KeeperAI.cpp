@@ -136,7 +136,11 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     // The war rows react to their events after the shared reaction delay
     std::function<void(const AiEvent&)> warHandler = std::bind(&KeeperAI::handleWarEvent, this, std::placeholders::_1);
     mMind.onEvent("J01", std::vector<AiEventType>(1, AiEventType::Fight), warHandler);
-    mMind.onEvent("J05", std::vector<AiEventType>(1, AiEventType::HeartCritical), warHandler);
+    // Row J05 has its own handler, because it shares the Fight event with row J01
+    std::vector<AiEventType> heartEvents;
+    heartEvents.push_back(AiEventType::HeartCritical);
+    heartEvents.push_back(AiEventType::Fight);
+    mMind.onEvent("J05", heartEvents, std::bind(&KeeperAI::handleHeartEvent, this, std::placeholders::_1));
     mMind.onEvent("J07", std::vector<AiEventType>(1, AiEventType::EnemyOut), warHandler);
     mMind.onEvent("J08", std::vector<AiEventType>(1, AiEventType::FightOver), warHandler);
     mMind.onEvent("K08", std::vector<AiEventType>(1, AiEventType::EnemyTrapEmpty), warHandler);
@@ -225,6 +229,13 @@ void KeeperAI::handleWarEvent(const AiEvent& event)
 {
     WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
     WAR::onEvent(env, event);
+}
+
+//! \brief Hands the HeartCritical and Fight events of row J05 to the war module after their reaction delay.
+void KeeperAI::handleHeartEvent(const AiEvent& event)
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::heartEvent(env, event);
 }
 
 //! \brief Raises Launch through the war module when the mental step after the launch drops ends.

@@ -65,6 +65,28 @@ double key(const std::string& name)
     return ConfigManager::getSingleton().getAiConfigDouble(name);
 }
 
+//! \brief Draws the configured mistake of a row afresh, without the one-draw-per-trigger cache of Mind::slip, for
+//! draws the specification makes separate within one firing (the per-fighter J08 draw of row K01, the second K04 draw).
+//! \return True when the draw is a mistake.
+bool freshSlip(Env& env, const std::string& rowId)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const ConfigManager::AiRowClass* row = config.getAiRowClass(rowId);
+    if(row == nullptr)
+        return false;
+    std::string base;
+    if(row->mClass == "routine") base = "MistakeBaseRoutine";
+    else if(row->mClass == "rule") base = "MistakeBaseRule";
+    else if(row->mClass == "complex") base = "MistakeBaseComplex";
+    else if(row->mClass == "unfamiliar") base = "MistakeBaseUnfamiliar";
+    else if(row->mClass == "rare") base = "MistakeBaseRare";
+    else
+        return false;
+    const double probability = AiMath::mistakeProbability(config.getAiConfigDouble(base), row->mMultiplier,
+        env.settings.mistakeMultiplier, config.getAiConfigDouble("MistakeMin"), config.getAiConfigDouble("MistakeMax"));
+    return uniform01() < probability;
+}
+
 //! \brief The own dungeon temple of the AI, or nullptr when it has none.
 RoomDungeonTemple* ownTemple(Env& env)
 {
@@ -567,8 +589,9 @@ void planAttack(Env& env, bool bypassRest)
         if(tile == nullptr)
             continue;
         double share = creature->getHP() / std::max(1.0, creature->getMaxHp());
-        // The rule mistake (row J08 class) is drawn for each fighter: only RestHpShareSlip is needed
-        double needed = env.mind.slip("J08") ? key("RestHpShareSlip") : key("RestHpShare");
+        // The rule mistake (row J08 class) is drawn separately for each fighter, also inside an event trigger:
+        // only RestHpShareSlip is needed
+        double needed = freshSlip(env, "J08") ? key("RestHpShareSlip") : key("RestHpShare");
         if(share >= needed)
             ready.push_back(creature);
     }
@@ -584,7 +607,7 @@ void planAttack(Env& env, bool bypassRest)
     if(temple == nullptr)
         return;
 
-    bool ownContact = (st.contactTime >= 0.0) || (st.lastAssaultEnd > -1.0e17);
+    bool ownContact = st.contacted;
     bool trapReady = true;
     Seat* enemy = enemySeat(env);
     std::vector<AiMath::TrapKindSet> ownSet = trapSet(env, seat, st.breakthrough, nullptr, trapReady);
@@ -683,7 +706,8 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
         order.push_back(RoomType::hatchery);
         order.push_back(RoomType::dormitory);
     }
-    if(env.mind.slip("K04"))
+    // The second complex mistake is independent of the first, also when the launch runs inside an event trigger
+    if(freshSlip(env, "K04"))
     {
         order.clear();
         order.push_back(RoomType::treasury);
@@ -897,6 +921,7 @@ void assaultStep(Env& env)
     if((st.contactTime < 0.0) && (st.lastFight > env.now - key("FightOverSeconds")) && !out.empty())
     {
         st.contactTime = env.now;
+        st.contacted = true;
         st.assault = WarState::assaultRunning;
         AiEvent contact = {AiEventType::Contact, nullptr, nullptr, -1, 0.0, env.now};
         env.mind.enqueue(contact);
@@ -1028,6 +1053,23 @@ void defend(Env& env, const AiEvent& event)
     if(st.defenceRallying)
         return;
 
+    // The intruders in sight
+    std::vector<Creature*> intruders;
+    for(Seat* other : env.gameMap.getSeats())
+    {
+        if((other == seat) || other->isAlliedSeat(seat))
+            continue;
+        for(Creature* creature : env.gameMap.getCreaturesBySeat(other))
+        {
+            Tile* tile = creature->getPositionTile();
+            if(isFreeFighter(creature) && isOwnGround(env, tile))
+                intruders.push_back(creature);
+        }
+    }
+    // Only an enemy in the own territory is a contact to defend; a fight of the own attackers on enemy ground is not
+    if(intruders.empty() && !isOwnGround(env, event.tile))
+        return;
+
     // The first contact tells a seat that did not dig about the open tunnel
     if(!st.tunnelKnown && (st.tunnel != WarState::tunnelNone))
         st.tunnelKnown = true;
@@ -1051,19 +1093,6 @@ void defend(Env& env, const AiEvent& event)
             std::swap(home[i - 1], home[static_cast<size_t>(Random::Int(0, static_cast<int32_t>(i) - 1))]);
     }
 
-    // The intruders in sight
-    std::vector<Creature*> intruders;
-    for(Seat* other : env.gameMap.getSeats())
-    {
-        if((other == seat) || other->isAlliedSeat(seat))
-            continue;
-        for(Creature* creature : env.gameMap.getCreaturesBySeat(other))
-        {
-            Tile* tile = creature->getPositionTile();
-            if(isFreeFighter(creature) && isOwnGround(env, tile))
-                intruders.push_back(creature);
-        }
-    }
     Tile* fightTile = event.tile;
     if(!intruders.empty())
     {
@@ -1115,9 +1144,53 @@ void heartGuard(Env& env)
         ACTS::castSpell(env.ai, SpellType::possess, strongest);
 }
 
+void heartEvent(Env& env, const AiEvent& event)
+{
+    // Row J05 fires on HeartCritical and on a fight on a heart tile (a tile of an own dungeon temple)
+    if(event.type == AiEventType::Fight)
+    {
+        Room* room = (event.tile == nullptr) ? nullptr : event.tile->getCoveringRoom();
+        if((room == nullptr) || (room->getType() != RoomType::dungeonTemple) || (room->getSeat() != env.player.getSeat()))
+            return;
+    }
+    else if(event.type != AiEventType::HeartCritical)
+        return;
+    heartGuard(env);
+}
+
+namespace
+{
+//! \brief The place where a hurt own creature rests: its bed, or a free tile of an own infirmary that would admit it
+//! (free cot, payable admission; the same test the infirmary uses for carried patients) when it has no bed.
+//! \return The rest tile, or nullptr when the creature already lies in its bed or in an infirmary, or no place exists.
+Tile* restTileFor(Env& env, Creature* creature)
+{
+    Seat* seat = env.player.getSeat();
+    Tile* tile = creature->getPositionTile();
+    Room* room = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
+    if((tile == nullptr) || (tile == creature->getHomeTile()) || ((room != nullptr) && (room->getType() == RoomType::infirmary)))
+        return nullptr;
+    if(creature->getHomeTile() != nullptr)
+        return creature->getHomeTile();
+
+    for(Room* infirmary : env.gameMap.getRoomsByTypeAndSeat(RoomType::infirmary, seat))
+    {
+        if(!infirmary->hasCarryEntitySpot(creature))
+            continue;
+        for(Tile* covered : infirmary->getCoveredTiles())
+        {
+            if(covered->isClaimedForSeat(seat) && !covered->isFullTile())
+                return covered;
+        }
+    }
+    return nullptr;
+}
+}
+
 void restAfterFight(Env& env)
 {
-    // AI row J08: fleeing creatures are carried to the dungeon temple; the rule mistake leaves them
+    // AI row J08: wounded creatures are carried to their bed or an infirmary, other fleeing creatures to the dungeon
+    // temple; the rule mistake leaves them where they are (one draw per FightOver)
     WarState& st = env.state;
     st.defenceRallying = false;
     if(st.defenceBanner != nullptr)
@@ -1137,10 +1210,17 @@ void restAfterFight(Env& env)
     int area = static_cast<int>(key("HeartDefenceAreaTiles"));
     for(Creature* creature : env.gameMap.getCreaturesBySeat(seat))
     {
-        if(!creature->isActionInList(CreatureActionType::flee))
-            continue;
         Tile* tile = creature->getPositionTile();
         if(tile == nullptr)
+            continue;
+        Tile* rest = creature->isHurt() ? restTileFor(env, creature) : nullptr;
+        if(rest != nullptr)
+        {
+            if(creature->tryPickup(seat) && creature->tryDrop(seat, rest))
+                ACTS::moveCreature(env.ai, creature, rest);
+            continue;
+        }
+        if(!creature->isActionInList(CreatureActionType::flee))
             continue;
         if((std::abs(center->getX() - tile->getX()) <= area) && (std::abs(center->getY() - tile->getY()) <= area))
             continue;
@@ -1199,9 +1279,6 @@ void onEvent(Env& env, const AiEvent& event)
             st.lastFight = event.time;
             st.fightOverRaised = false;
             defend(env, event);
-            break;
-        case AiEventType::HeartCritical:
-            heartGuard(env);
             break;
         case AiEventType::FightOver:
             restAfterFight(env);
@@ -1294,7 +1371,7 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if(line.tag == "sighting")
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
-        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"))) ||
+        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile") || (line.tokens[1] == "contacted"))) ||
                ((line.tokens[0] == "K07") && (line.tokens[1] == "retreatCheck")) ||
                ((line.tokens[0] == "K10") && ((line.tokens[1] == "returning") || (line.tokens[1] == "returnPending"))) ||
                ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
@@ -1337,6 +1414,12 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
         addLine(lines, "draw", {"K10", "returnPending", name});
     if(st.secondWaveUntil >= env.now)
         addLine(lines, "draw", {"K08", "secondWave", num(st.secondWaveUntil - env.now)});
+    // Whether an own assault ever reached contact (the trap set of the estimate, row I04)
+    std::vector<std::string> c;
+    c.push_back("I04");
+    c.push_back("contacted");
+    c.push_back(st.contacted ? "1" : "0");
+    addLine(lines, "draw", c);
 
     for(size_t i = 0; i < st.groups.size(); ++i)
     {
@@ -1529,6 +1612,10 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
                 s.trapBase = std::atof(parts[1].c_str());
                 s.ownTraps = (parts[2] == "1");
             }
+        }
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "contacted"))
+        {
+            st.contacted = (k[2] == "1");
         }
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "recordTile"))
         {
