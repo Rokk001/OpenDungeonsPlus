@@ -99,8 +99,6 @@ void PRIS::tortureStep(KeeperAI& ai, State& state)
             if(destination != nullptr)
                 break;
         }
-        if(destination == nullptr)
-            continue;
         if(state.acceptedPrisoners.count(prisoner->getName()) == 0)
         {
             const ConfigManager& config = ConfigManager::getSingleton();
@@ -118,6 +116,8 @@ void PRIS::tortureStep(KeeperAI& ai, State& state)
             }
             state.acceptedPrisoners.insert(prisoner->getName());
         }
+        if(destination == nullptr)
+            continue;
         const std::string name = prisoner->getName();
         state.pendingPrisoners.insert(name);
         Mind& mind = ai.getMind();
