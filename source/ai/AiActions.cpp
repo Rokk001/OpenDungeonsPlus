@@ -213,7 +213,19 @@ void perform(KeeperAI& ai, const std::string& target)
                 if(tile->isBuildableUpon(seat)) legal.push_back(tile);
             if(legal.empty()) return;
             if(action == "room" && SkillManager::isRoomAvailable(static_cast<RoomType>(value), seat))
-                RoomManager::buildRoomOnTiles(&map, static_cast<RoomType>(value), &player, legal, false);
+            {
+                if(RoomManager::buildRoomOnTiles(&map, roomType, &player, legal, false))
+                {
+                    std::vector<Tile*> built;
+                    for(Tile* tile : legal)
+                    {
+                        Room* room = tile->getCoveringRoom();
+                        if(room != nullptr && room->getSeat() == seat && room->getType() == roomType)
+                            built.push_back(tile);
+                    }
+                    ECON::recordRoomBlock(ai, roomType, static_cast<uint32_t>(tiles.size()), built);
+                }
+            }
             else if(action == "trap" && SkillManager::isTrapAvailable(static_cast<TrapType>(value), seat))
                 TrapManager::buildTrapOnTiles(&map, static_cast<TrapType>(value), &player, legal, false);
         }
