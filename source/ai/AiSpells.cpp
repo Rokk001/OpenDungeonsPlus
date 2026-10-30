@@ -1262,6 +1262,7 @@ bool SPELL::drawLaunchGathering(KeeperAI& ai)
     return ai.getMind().slip("E07");
 }
 
+//! \brief Slows a visible melee enemy of the current fight, including fighting workers.
 bool SPELL::castSlow(KeeperAI& ai)
 {
     // AI row E08
@@ -1269,6 +1270,29 @@ bool SPELL::castSlow(KeeperAI& ai)
         return false;
 
     std::vector<Creature*> enemies = enemiesOnOwnGround(ai);
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    const State& state = ai.getSpellState();
+    Tile* fightTile = ai.getGameMap().getTile(state.mFightX, state.mFightY);
+    std::vector<Creature*> anchors = fightingOwn(ai);
+    for(Creature* creature : ai.getGameMap().getCreaturesBySeat(seat))
+        if(fightTile != nullptr && creature->isAlive() && creature->getDefinition()->isWorker() && inFight(creature) &&
+           creature->getPositionTile() == fightTile)
+            anchors.push_back(creature);
+    for(Creature* creature : ai.getGameMap().getCreatures())
+    {
+        if(!creature->isAlive() || !creature->getDefinition()->isWorker() || !inFight(creature) ||
+           creature->getSeat() == nullptr || seat->isAlliedSeat(creature->getSeat()) || !onOwnGround(creature, seat))
+            continue;
+        Tile* tile = creature->getPositionTile();
+        const std::vector<Seat*>& vision = tile->getSeatsWithVision();
+        if(std::find(vision.begin(), vision.end(), seat) == vision.end())
+            continue;
+        bool sameFight = tile == fightTile;
+        for(Creature* anchor : anchors)
+            sameFight = sameFight || engaged(anchor, creature);
+        if(sameFight)
+            enemies.push_back(creature);
+    }
     std::vector<Creature*> melee;
     for(Creature* creature : enemies)
     {
