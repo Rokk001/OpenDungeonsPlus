@@ -128,7 +128,9 @@ Tile* AiKnowledge::nearestKnownEnemyTile(const SightingState& sighting) const
             if((tile == nullptr) || !isKnown(tile))
                 continue;
 
-            Seat* owner = tile->getSeat();
+            const TileStateNotified* state = mSeat->getKnownTileState(tile);
+            Seat* owner = mGameMap.getIsFOWActivated() ?
+                (state == nullptr ? nullptr : mGameMap.getSeatById(state->mSeatIdOwner)) : tile->getSeat();
             if((owner == nullptr) || owner->isAlliedSeat(mSeat))
                 continue;
 
