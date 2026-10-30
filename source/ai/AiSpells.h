@@ -37,6 +37,8 @@ struct State
     State();
     //! \brief The game turn of the last Eye of Evil cast, -1 when none (row E04).
     int64_t mLastEyeTurn;
+    //! \brief True while an Eye of Evil cast is queued on the keeper's hand.
+    bool mEyePending;
     //! \brief One fight session: from the first Fight reaction of a fight until the fight is over. Parallel fights at
     //! different places have their own sessions, casting loops and first reactions.
     struct Session
@@ -98,6 +100,9 @@ bool castHaste(KeeperAI& ai, const std::vector<Creature*>& group, bool march, do
 //! \brief Casts Eye of Evil on the given tile to scout the enemy, at most once per EyeCastIntervalMinutes.
 //! \return true when the spell was cast.
 bool castEye(KeeperAI& ai, Tile* tile);
+
+//! \brief Clears the pending Eye cast and records its game turn only when it succeeded.
+void finishEyeCast(KeeperAI& ai, bool succeeded);
 
 //! \brief Casts Defense on the group that holds the entrance, before the first contact.
 //! \param holders The own creatures that hold the entrance.

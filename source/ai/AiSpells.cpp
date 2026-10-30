@@ -502,7 +502,7 @@ std::vector<std::string> splitValue(const std::string& value)
     }
 }
 
-//! \brief Reads the spell draws of a loaded game from the mind once: the turn of the last Eye of Evil cast (E04), the
+//! \brief Reads the spell draws of a loaded game from the mind once: Eye cast state (E04), the
 //! pending late Defense (E05) and the running fight sessions (E19, one line each). The mind imports its state at its
 //! first turn, at mind time 0, so a saved time relative to the save is the mind time itself.
 void restoreDraws(KeeperAI& ai)
@@ -520,6 +520,8 @@ void restoreDraws(KeeperAI& ai)
 
         if((line.tokens[0] == "E04") && (line.tokens[1] == "eyeTurn"))
             state.mLastEyeTurn = std::atoll(line.tokens[2].c_str());
+        else if((line.tokens[0] == "E04") && (line.tokens[1] == "eyePending"))
+            state.mEyePending = (line.tokens[2] == "1");
         else if((line.tokens[0] == "E05") && (line.tokens[1] == "lateDefense"))
             legacyLate = (line.tokens[2] == "1");
         else if((line.tokens[0] == "E19") && (line.tokens[1] == "session"))
@@ -548,7 +550,7 @@ void restoreDraws(KeeperAI& ai)
     }
 }
 
-//! \brief Replaces the spell draw lines of the saved AI state with the current ones.
+//! \brief Saves the spell draws, including the pending Eye cast and its last successful turn.
 void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
     restoreDraws(ai);
@@ -572,6 +574,8 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
         line.tokens.push_back(std::to_string(state.mLastEyeTurn));
         lines.push_back(line);
     }
+    if(state.mEyePending)
+        lines.push_back({"draw", {"E04", "eyePending", "1"}});
     // The times relative to the save, one line per running session
     double now = ai.getMind().now();
     for(const SPELL::State::Session& session : state.mSessions)
@@ -785,8 +789,10 @@ void onHeartCritical(KeeperAI& ai, const AiEvent& event)
 }
 }
 
+//! \brief Starts the spell state without a pending cast or fight session.
 SPELL::State::State() :
     mLastEyeTurn(-1),
+    mEyePending(false),
     mFightX(-1),
     mFightY(-1),
     mRestored(false)
@@ -1039,6 +1045,7 @@ bool SPELL::castHaste(KeeperAI& ai, const std::vector<Creature*>& group, bool ma
     return true;
 }
 
+//! \brief Schedules one Eye cast when none is pending and its interval has elapsed.
 bool SPELL::castEye(KeeperAI& ai, Tile* tile)
 {
     // AI row E04
@@ -1047,6 +1054,8 @@ bool SPELL::castEye(KeeperAI& ai, Tile* tile)
 
     restoreDraws(ai);
     State& state = ai.getSpellState();
+    if(state.mEyePending)
+        return false;
     int64_t turn = ai.getGameMap().getTurnNumber();
     double minTurns = aiKey("EyeCastIntervalMinutes") * 60.0 * ODApplication::turnsPerSecond;
     if((state.mLastEyeTurn >= 0) && (static_cast<double>(turn - state.mLastEyeTurn) < minTurns))
@@ -1056,9 +1065,19 @@ bool SPELL::castEye(KeeperAI& ai, Tile* tile)
     if(ai.getMind().slip("E04"))
         return false;
 
-    state.mLastEyeTurn = turn;
+    state.mEyePending = true;
     ACTS::castSpell(ai, SpellType::eyeEvil, tile);
     return true;
+}
+
+//! \brief Finishes an Eye cast after the server confirms success or rejection.
+void SPELL::finishEyeCast(KeeperAI& ai, bool succeeded)
+{
+    restoreDraws(ai);
+    State& state = ai.getSpellState();
+    state.mEyePending = false;
+    if(succeeded)
+        state.mLastEyeTurn = ai.getGameMap().getTurnNumber();
 }
 
 bool SPELL::castDefense(KeeperAI& ai, const std::vector<Creature*>& holders, bool fightOver, bool& lateDefense)
