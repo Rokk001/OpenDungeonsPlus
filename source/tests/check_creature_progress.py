@@ -110,7 +110,7 @@ struct ODApplication {static double turnsPerSecond;};double ODApplication::turns
 //! \brief Inactive level test, as in a normal game.
 struct RunLevelTest {static bool isActive(){return false;}static void onRecoveryFrame(bool,uint32_t){}};
 enum class CreatureOverlays {health,experience,recovery,status,mana};
-//! rief Mocks of the mana ring material lookup: the tinted material keeps the picture name, the colour is ignored.
+//! \brief Mocks of the mana ring material lookup: the tinted material keeps the picture name, the colour is ignored.
 struct RenderManager {static RenderManager& getSingleton(){static RenderManager r;return r;}
  std::string rrBuildTintedMaterial(const std::string& name,int){return name;}};
 namespace Helper {inline std::string toString(uint32_t value){return std::to_string(value);}}
