@@ -441,8 +441,8 @@ std::vector<TRAP::Entrance> TRAP::findEntrances(KeeperAI& ai)
     return entrances;
 }
 
-//! \brief Plans trap and door work, sharing an optional F14 mistake with the triggering fortification.
-void TRAP::trapLook(KeeperAI& ai, int* specialDoorMistake)
+//! \brief Plans trap and door work for the current trap look.
+void TRAP::trapLook(KeeperAI& ai)
 {
     // AI row F01
     GameMap& gameMap = ai.getGameMap();
@@ -490,7 +490,7 @@ void TRAP::trapLook(KeeperAI& ai, int* specialDoorMistake)
     if(state.mWantDivided == 1)
         want = std::max(1, want / static_cast<int>(aiKey("MistakeTrapWantDivisor")));
 
-    if(placeDoor(ai, entrances, false, specialDoorMistake))
+    if(placeDoor(ai, entrances))
         return;
 
     placeTrap(ai, trapTiles, want, entrances);
@@ -773,8 +773,8 @@ bool TRAP::reloadAllows(KeeperAI& ai, double cost)
     return (reloadMargin(ai) <= 0.0) || affordable(ai, cost);
 }
 
-//! \brief Plans a door using the shared F14 mistake when supplied.
-bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed, int* specialDoorMistake)
+//! \brief Plans an ordinary or special door for the current look.
+bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed)
 {
     // AI row F13
     // AI row F14
@@ -821,18 +821,13 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool 
         scheduled = buildOne(ai, kind, entrance.mDoor);
         break;
     }
-    TRAP::State& state = ai.getTrapState();
-    if(forgotten && (state.mDoorDue < 0.0))
-        state.mDoorDue = ai.getMind().now() + symptomDelay(ai);
+    if(forgotten)
+        ai.getMind().setNextLook("F01", ai.getMind().now() + symptomDelay(ai));
     if(scheduled || stopped || resumed)
         return scheduled || stopped;
 
     // The special doors; the mistake does not use them at this look
-    if(entrances.empty())
-        return false;
-    if(specialDoorMistake != nullptr && *specialDoorMistake < 0)
-        *specialDoorMistake = ai.getMind().slip("F14") ? 1 : 0;
-    if(specialDoorMistake != nullptr ? *specialDoorMistake != 0 : ai.getMind().slip("F14"))
+    if(entrances.empty() || ai.getMind().slip("F14"))
         return false;
 
     Tile* heart = heartTile(ai);
@@ -876,8 +871,7 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool 
 
 namespace
 {
-//! \brief Fortifies the tunnel entrance at the breakthrough tile now: it becomes an entrance of its own, the trap look
-//! runs at once (so the F rows build its door and its trap tiles) and the barricade is built one step inside (row F14).
+//! \brief Fortifies the tunnel entrance, schedules its trap look and builds the barricade one step inside (row F14).
 void fortifyNow(KeeperAI& ai, Tile* breakthrough)
 {
     if(breakthrough == nullptr)
@@ -887,8 +881,7 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     std::pair<int, int> tile(breakthrough->getX(), breakthrough->getY());
     if(std::find(state.mTunnels.begin(), state.mTunnels.end(), tile) == state.mTunnels.end())
         state.mTunnels.push_back(tile);
-    int specialDoorMistake = -1;
-    TRAP::trapLook(ai, &specialDoorMistake);
+    ai.getMind().setNextLook("F01", ai.getMind().now());
 
     std::vector<TRAP::Entrance> entrances = TRAP::findEntrances(ai);
     Seat* seat = ai.getControlledPlayer().getSeat();
@@ -896,9 +889,7 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     {
         if((entrance.mDoor == breakthrough) && SkillManager::isTrapAvailable(TrapType::doorBarricade, seat))
         {
-            if(specialDoorMistake < 0)
-                specialDoorMistake = ai.getMind().slip("F14") ? 1 : 0;
-            if(specialDoorMistake != 0)
+            if(ai.getMind().slip("F14"))
                 continue;
             Tile* inside = lineTile(ai.getGameMap(), entrance, 1);
             if(trapSpotFree(inside, seat))
@@ -907,8 +898,8 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     }
 }
 
-//! \brief Runs the steps whose mistake delay is over: watching the empty traps (F12), the forgotten door upgrade (F13)
-//! and the delayed tunnel fortifications (F15). Run by the mind every AiPollSeconds; it never raises an event, and the
+//! \brief Runs the delayed trap watch and door or tunnel actions restored from older saves.
+//! Run by the mind every AiPollSeconds; it never raises an event, and the
 //! hand is used only by the actions of the steps themselves.
 //! \return Always false.
 bool pendingStep(KeeperAI& ai)

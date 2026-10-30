@@ -192,6 +192,15 @@ void Mind::onLook(const std::string& rowId, double factor, const std::function<v
         mLooks[rowId] = {mNow + AiMath::lookInterval(factor, delayParams(), uniformDraw), false};
 }
 
+//! \brief Sets the next firing time for an existing periodic look on the mind clock.
+bool Mind::setNextLook(const std::string& rowId, double due)
+{
+    if(mLookHandlers.find(rowId) == mLookHandlers.end())
+        return false;
+    mLooks.at(rowId).due = due;
+    return true;
+}
+
 //! \brief Binds a symptom predicate without discarding its restored edge flag.
 void Mind::onPoll(const std::string& rowId, AiEventType type, const std::function<bool()>& predicate)
 {
