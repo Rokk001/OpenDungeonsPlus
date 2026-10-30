@@ -41,6 +41,10 @@ DEFAULTS = {
     "mWorkerManaShortageSeconds": "WorkerManaShortageSeconds", "mWorkerPopCountdownSeconds": "WorkerPopCountdownSeconds",
     "mAutoWorkerIntervalSeconds": "AutoWorkerIntervalSeconds", "mGiftBoxMana": "GiftBoxMana", "mGiftBoxGold": "GiftBoxGold",
     "mGiftBoxLevels": "GiftBoxLevels", "mGiftBoxWorkers": "GiftBoxWorkers", "mGiftBoxStunSeconds": "GiftBoxStunSeconds",
+    "mGhostAiGoldPerResearchPoint": "GhostAiGoldPerResearchPoint", "mGhostAiGoldPerXp": "GhostAiGoldPerXp",
+    "mSoulCrystalNormalXpPerSecond": "SoulCrystalNormalXpPerSecond", "mCreatureMoodUpset": "CreatureMoodUpset",
+    "mCreatureMoodAngry": "CreatureMoodAngry", "mCreatureMoodFurious": "CreatureMoodFurious",
+    "mNbTurnsFuriousMax": "NbTurnsFuriousMax",
 }
 for member, key in DEFAULTS.items():
     shipped = cfg_value(global_cfg, key)
@@ -57,7 +61,7 @@ if well is None or abs(float(well.group(1)) - cfg_value(global_cfg, "ManaWellBon
     problems.append("the mana well default must equal global.cfg ManaWellBonusPerTile")
 
 # getRoomConfigDoubleOrDefault fallbacks: file -> keys
-for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit"]),
+for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit", "CasinoMoodMax"]),
                    ("source/rooms/RoomArena.cpp", ["PitMoodSolitary", "PitMoodSpectator", "PitMoodVictor"]),
                    ("source/rooms/RoomHatchery.cpp", ["HatcheryDirtPerHenTurn"]),
                    ("source/creatureaction/CreatureActionEatChicken.cpp", ["HatcheryGiftHpRecoveredPerChicken"])):
@@ -69,6 +73,18 @@ for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit"]),
             problems.append(path + " has no fallback for " + key)
         elif abs(float(match.group(1)) - shipped) > 1e-9:
             problems.append(path + " falls back to " + match.group(1) + " for " + key + ", rooms.cfg has " + str(shipped))
+
+for path, constant, key, cfg in (
+    ("source/entities/Creature.cpp", "DEFAULT_PIT_MOOD_MAX", "PitMoodMax", rooms_cfg),
+    ("source/rooms/Room.cpp", "DEFAULT_ROOM_CONVERT_NEUTRAL_SECONDS_PER_TILE", "RoomConvertNeutralSecondsPerTile", rooms_cfg),
+    ("source/rooms/Room.cpp", "DEFAULT_ROOM_CONVERT_SECONDS_PER_TILE", "RoomConvertSecondsPerTile", rooms_cfg),
+    ("source/rooms/RoomPortal.cpp", "DEFAULT_PORTAL_FIRST_SPAWN_SECONDS", "PortalFirstSpawnSeconds", rooms_cfg),
+    ("source/creatureaction/CreatureActionReloadTrap.cpp", "DEFAULT_RELOAD_EXPERIENCE", "TrapReloadExperience", read("config", "traps.cfg")),
+):
+    match = re.search(r'\b' + constant + r'\s*=\s*([-0-9.]+)', read(*path.split('/')))
+    shipped = cfg_value(cfg, key)
+    if match is None or shipped is None or abs(float(match.group(1)) - shipped) > 1e-9:
+        problems.append(path + " default " + constant + " must equal " + key)
 
 cycle = read("source", "rooms", "HatcheryCycle.h")
 for member, key in (("mLayMax", "HatcheryLayMax"), ("mLayFactor", "HatcheryLayFactor")):

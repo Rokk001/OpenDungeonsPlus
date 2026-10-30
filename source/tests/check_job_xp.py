@@ -19,6 +19,7 @@ for name, key, cycle, dirt in (
     assert 'SkillType::roomTrainingHall' in expr and 'ResearchEffect::XpPerHit' in expr, name
     if cycle:
         assert cycle in expr, name
+        assert re.search(r'1\.0\s*\+\s*static_cast<double>\(creature\.getJobCooldown\(\)\)', source), name
     if dirt:
         assert 'getDirtOutputFactor()' in expr, name
 print('job xp ok')
