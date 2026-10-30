@@ -160,6 +160,23 @@ struct RoomTavernPendingSpot
     bool mWantsGame;
 };
 
+//! \brief A keg or table that was read from a saved room and is placed again unchanged (see RoomTavern::updateActiveSpots).
+struct RoomTavernSavedFurniture
+{
+    //! \brief Creates an empty saved piece of furniture.
+    RoomTavernSavedFurniture() :
+        mTile(nullptr),
+        mAngle(0.0)
+    {}
+
+    //! The tile the object stood on.
+    Tile* mTile;
+    //! The mesh name of the object.
+    std::string mMesh;
+    //! The rotation angle of the object in degrees.
+    double mAngle;
+};
+
 //! \brief A running game that was read from a saved room and waits for its two guests (see RoomTavern::doUpkeep).
 struct RoomTavernPendingGame
 {
@@ -456,6 +473,8 @@ private:
     std::map<std::string, RoomTavernPendingSpot> mPendingSpots;
     //! \brief The games read from a saved room until the creatures are bound again.
     std::vector<RoomTavernPendingGame> mPendingGames;
+    //! \brief The kegs and tables read from a saved room until updateActiveSpots has placed them again.
+    std::vector<RoomTavernSavedFurniture> mSavedFurniture;
 };
 
 #endif // ROOMTAVERN_H

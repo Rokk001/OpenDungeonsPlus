@@ -68,6 +68,28 @@ def find_line(text, pattern):
 
 creature_cpp = read('source/entities/Creature.cpp')
 room_cpp = read('source/rooms/RoomTavern.cpp')
+
+# Furniture occupies distinct tiles, kegs require a full neighbouring wall, and ordering is stable across saves.
+placement = extract(room_cpp, 'void RoomTavern::updateActiveSpots(')
+assert 'std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile)' in placement
+assert 'orderedTiles.size() / 4' in placement and 'orderedTiles.size() / 6' in placement
+assert 'neighbour->isFullTile()' in placement and 'wantedObjects.count(tile) != 0' in placement
+assert 'wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH' in placement
+
+# The table carries its two benches; it is scaled so the benches (1.19 tiles long unscaled) end on the table tile.
+scale = float(find_line(room_cpp, r'const float TAVERN_TABLE_SCALE = [0-9.]+f;').split('=')[1].strip().rstrip('f;'))
+assert 1.19 * scale <= 1.0, 'the benches of the table stay on its tile'
+assert 'object->setFurnitureScale(Ogre::Vector2(TAVERN_TABLE_SCALE, TAVERN_TABLE_SCALE));' in placement
+
+# Save/load keeps every keg and table 1:1: one Furniture line each, read back and placed instead of being recomputed.
+export = extract(room_cpp, 'void RoomTavern::exportToStream(')
+assert 'os << STREAM_TAG_FURNITURE' in export and 'getRotationAngle()' in export
+load = extract(room_cpp, 'bool RoomTavern::importFromStream(')
+assert 'tag == STREAM_TAG_FURNITURE' in load and 'mSavedFurniture.push_back(saved);' in load
+assert 'const bool restoreSaved = !mSavedFurniture.empty();' in placement and 'mSavedFurniture.clear();' in placement
+assert 'if(restoreSaved || (tile == mCounterTile) || (kegs >= kegLimit))' in placement
+assert 'if(restoreSaved || (tables >= tableLimit) || (wantedObjects.count(tile) != 0))' in placement
+
 portal_cpp = read('source/rooms/RoomPortal.cpp')
 mood_thirst_cpp = read('source/creaturemood/CreatureMoodThirst.cpp')
 mood_hunger_cpp = read('source/creaturemood/CreatureMoodHunger.cpp')

@@ -59,6 +59,8 @@ const std::string TAVERN_COUNTER_MESH = "TavernCounter";
 const std::string TAVERN_KEG_MESH = "TavernKeg";
 //! \brief Mesh name of the table on a tavern tile that lies inside the room.
 const std::string TAVERN_TABLE_MESH = "TavernTable";
+//! \brief Scale of the table mesh (with its two benches 1.19 tiles long) so the benches end at the edges of the table tile.
+const float TAVERN_TABLE_SCALE = 0.84f;
 //! \brief Object angles (degrees) for a back to the wall at +y, -y, -x and +x (same convention as the other rooms with wall furniture).
 const double OBJECT_ANGLE_WALL_TOP = 0.0;
 const double OBJECT_ANGLE_WALL_BOTTOM = 180.0;
@@ -74,6 +76,8 @@ const std::string STREAM_TAG_COUNTER = "Counter";
 const std::string STREAM_TAG_SPOT = "Spot";
 //! \brief Line of the room stream with one running game.
 const std::string STREAM_TAG_GAME = "Game";
+//! \brief Line of the room stream with one keg or table.
+const std::string STREAM_TAG_FURNITURE = "Furniture";
 //! \brief Sound family of a drink that is poured.
 const std::string SOUND_POUR = "Rooms/Tavern/Pour";
 //! \brief Sound family of a slap in a slap duel.
@@ -1265,6 +1269,7 @@ void RoomTavern::placeInnkeeper()
         mInnkeeper = InnkeeperEntity::spawnOnTile(getGameMap(), getName(), mCounterTile, angle);
 }
 
+//! \brief Updates tavern furniture and the innkeeper for the current room tiles.
 void RoomTavern::updateActiveSpots(GameMap* gameMap)
 {
     Room::updateActiveSpots(gameMap);
@@ -1298,28 +1303,76 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     if((mCounterTile == nullptr) || (std::find(mCoveredTiles.begin(), mCoveredTiles.end(), mCounterTile) == mCoveredTiles.end()))
         mCounterTile = mCoveredTiles.front();
 
-    // The counter on the counter tile, a keg on the tiles next to a wall, a table on the tiles inside the room. The
-    // object of a tile that has the wrong kind (a room that grew, the counter that moved) is replaced.
-    for(Tile* tile : mCoveredTiles)
+    // Select furniture in coordinate order so the same room restores the same placement after loading.
+    std::vector<Tile*> orderedTiles = mCoveredTiles;
+    std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile);
+    std::map<Tile*, std::string> wantedObjects;
+    std::map<Tile*, double> objectAngles;
+    wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH;
+    // A loaded room gets back exactly the kegs and tables it was saved with, at most one per tile of the room.
+    const bool restoreSaved = !mSavedFurniture.empty();
+    for(const RoomTavernSavedFurniture& saved : mSavedFurniture)
     {
-        bool isNextToWall = false;
-        const double angle = getBackToWallAngle(tile, isNextToWall);
-        std::string wantedMesh = TAVERN_TABLE_MESH;
-        if(tile == mCounterTile)
-            wantedMesh = TAVERN_COUNTER_MESH;
-        else if(isNextToWall)
-            wantedMesh = TAVERN_KEG_MESH;
-
-        std::map<Tile*, BuildingObject*>::iterator it = mBuildingObjects.find(tile);
-        if(it != mBuildingObjects.end())
+        if((wantedObjects.count(saved.mTile) != 0) ||
+           (std::find(mCoveredTiles.begin(), mCoveredTiles.end(), saved.mTile) == mCoveredTiles.end()))
+            continue;
+        wantedObjects[saved.mTile] = saved.mMesh;
+        objectAngles[saved.mTile] = saved.mAngle;
+    }
+    mSavedFurniture.clear();
+    const size_t kegLimit = orderedTiles.size() / 6;
+    const size_t tableLimit = orderedTiles.size() / 4;
+    size_t kegs = 0;
+    for(Tile* tile : orderedTiles)
+    {
+        if(restoreSaved || (tile == mCounterTile) || (kegs >= kegLimit))
+            continue;
+        const int x = tile->getX();
+        const int y = tile->getY();
+        Tile* neighbours[] = {gameMap->getTile(x, y + 1), gameMap->getTile(x, y - 1),
+                              gameMap->getTile(x - 1, y), gameMap->getTile(x + 1, y)};
+        const double angles[] = {OBJECT_ANGLE_WALL_TOP, OBJECT_ANGLE_WALL_BOTTOM,
+                                 OBJECT_ANGLE_WALL_LEFT, OBJECT_ANGLE_WALL_RIGHT};
+        for(size_t i = 0; i < 4; ++i)
         {
-            if(it->second->getMeshName() == wantedMesh)
-                continue;
+            Tile* neighbour = neighbours[i];
+            if((neighbour != nullptr) && neighbour->isFullTile())
+            {
+                wantedObjects[tile] = TAVERN_KEG_MESH;
+                objectAngles[tile] = angles[i];
+                ++kegs;
+                break;
+            }
+        }
+    }
+    size_t tables = 0;
+    for(Tile* tile : orderedTiles)
+    {
+        if(restoreSaved || (tables >= tableLimit) || (wantedObjects.count(tile) != 0))
+            continue;
+        wantedObjects[tile] = TAVERN_TABLE_MESH;
+        ++tables;
+    }
 
+    // Replace obsolete furniture and leave every unselected tile as free floor.
+    for(Tile* tile : orderedTiles)
+    {
+        std::map<Tile*, std::string>::const_iterator wanted = wantedObjects.find(tile);
+        std::map<Tile*, BuildingObject*>::iterator existing = mBuildingObjects.find(tile);
+        if(existing != mBuildingObjects.end())
+        {
+            if((wanted != wantedObjects.end()) && (existing->second->getMeshName() == wanted->second))
+                continue;
             removeBuildingObject(tile);
         }
-
-        BuildingObject* object = new BuildingObject(gameMap, *this, wantedMesh, *tile, angle, false);
+        if(wanted == wantedObjects.end())
+            continue;
+        bool isNextToWall = false;
+        std::map<Tile*, double>::const_iterator savedAngle = objectAngles.find(tile);
+        const double angle = (savedAngle != objectAngles.end()) ? savedAngle->second : getBackToWallAngle(tile, isNextToWall);
+        BuildingObject* object = new BuildingObject(gameMap, *this, wanted->second, *tile, angle, false);
+        if(wanted->second == TAVERN_TABLE_MESH)
+            object->setFurnitureScale(Ogre::Vector2(TAVERN_TABLE_SCALE, TAVERN_TABLE_SCALE));
         addBuildingObject(tile, object, gameMap);
         object->createMesh();
     }
@@ -1339,6 +1392,17 @@ void RoomTavern::exportToStream(std::ostream& os) const
         os << STREAM_TAG_INNKEEPER << " " << mCounterTile->getX() << " " << mCounterTile->getY() << std::endl;
 
     os << STREAM_TAG_COUNTER << " " << mCounterTile->getX() << " " << mCounterTile->getY() << std::endl;
+
+    // Furniture <x> <y> <mesh> <angle>: one line for every keg and table, so loading puts them back where they stood
+    for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
+    {
+        const std::string& mesh = entry.second->getMeshName();
+        if((mesh != TAVERN_KEG_MESH) && (mesh != TAVERN_TABLE_MESH))
+            continue;
+
+        os << STREAM_TAG_FURNITURE << " " << entry.first->getX() << " " << entry.first->getY() << " " << mesh << " "
+           << entry.second->getRotationAngle() << std::endl;
+    }
 
     // Spot <x> <y> <creature> <state> <turnsLeft> <drinks> <sleepAfter> <wantsGame>: one line for every guest
     for(std::map<Tile*, RoomTavernSpot>::const_iterator it = mSpots.begin(); it != mSpots.end(); ++it)
@@ -1402,6 +1466,15 @@ bool RoomTavern::importFromStream(std::istream& is)
         {
             if(!readTileFromStream(getGameMap(), is, counterTile))
                 return false;
+        }
+        else if(tag == STREAM_TAG_FURNITURE)
+        {
+            RoomTavernSavedFurniture saved;
+            if(!readTileFromStream(getGameMap(), is, saved.mTile) || !(is >> saved.mMesh >> saved.mAngle) ||
+               ((saved.mMesh != TAVERN_KEG_MESH) && (saved.mMesh != TAVERN_TABLE_MESH)))
+                return false;
+
+            mSavedFurniture.push_back(saved);
         }
         else if(tag == STREAM_TAG_SPOT)
         {
