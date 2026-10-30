@@ -69,6 +69,18 @@ Tile* castTile(KeeperAI& ai)
     return nullptr;
 }
 
+//! \brief Casts a worker when the shared summon conditions are met.
+void summonWorker(KeeperAI& ai)
+{
+    Player& player = ai.getControlledPlayer();
+    Seat* seat = player.getSeat();
+    double price = SpellSummonWorker::getNextWorkerPriceForPlayer(&ai.getGameMap(), &player);
+    if(seat->getNumCreaturesWorkers() < key("SummonWorkersMax") && seat->getMana() > key("SummonManaFactor") * price &&
+        seat->getManaIncomePerSecond() > key("SummonIncomeMin") && SkillManager::isSpellAvailable(SpellType::summonWorker, seat) &&
+        player.getSpellCooldownTurns(SpellType::summonWorker) == 0 && castTile(ai) != nullptr)
+        ACTS::castSpell(ai, SpellType::summonWorker, castTile(ai));
+}
+
 //! \brief Checks research, cooldown and the mana reserve of Create Gold.
 bool canCreateGold(KeeperAI& ai)
 {
@@ -319,13 +331,7 @@ void ECON::summonWatch(KeeperAI& ai)
     // AI row E01
     if(ai.getMind().slip("A03"))
         return;
-    Player& player = ai.getControlledPlayer();
-    Seat* seat = player.getSeat();
-    double price = SpellSummonWorker::getNextWorkerPriceForPlayer(&ai.getGameMap(), &player);
-    if(seat->getNumCreaturesWorkers() < key("SummonWorkersMax") && seat->getMana() > key("SummonManaFactor") * price &&
-        seat->getManaIncomePerSecond() > key("SummonIncomeMin") && SkillManager::isSpellAvailable(SpellType::summonWorker, seat) &&
-        player.getSpellCooldownTurns(SpellType::summonWorker) == 0 && castTile(ai) != nullptr)
-        ACTS::castSpell(ai, SpellType::summonWorker, castTile(ai));
+    summonWorker(ai);
 }
 
 //! \brief Applies the one saved reserve draw to every purchase without drawing again.
@@ -340,12 +346,12 @@ bool ECON::walletGate(KeeperAI& ai, double cost)
     return ai.getControlledPlayer().getSeat()->getGold() >= cost + key("RoomGoldMargin") + (ignore ? 0.0 : wageBill(ai)) + TRAP::reloadMargin(ai);
 }
 
-//! \brief Casts the shared gold spell with its configured reserve and mistake.
+//! \brief Casts gold with its reserve and draws a mistake only for the wage trigger.
 void ECON::castCreateGold(KeeperAI& ai, bool surplus)
 {
     // AI row A05
     // AI row E13
-    bool mistaken = ai.getMind().slip("A05");
+    bool mistaken = !surplus && ai.getMind().slip("A05");
     if(!canCreateGold(ai))
         return;
     Seat* seat = ai.getControlledPlayer().getSeat();
@@ -415,7 +421,7 @@ void ECON::manaCapWatch(KeeperAI& ai)
         ACTS::castSpell(ai, SpellType::creatureHeal, hurt);
         return;
     }
-    summonWatch(ai);
+    summonWorker(ai);
 }
 
 //! \brief Sells only specified redundant rooms or distant traps unless the sale mistake occurs.
