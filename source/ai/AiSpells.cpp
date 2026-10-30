@@ -622,11 +622,12 @@ void selectSession(KeeperAI& ai, const SPELL::State::Session& session)
     state.mFightY = session.mFightY;
 }
 
-//! \brief One pass of the casting loop of a session, and Haste once its fight lasts longer than HasteFightSeconds.
+//! \brief Runs a session's casting loop and tries Haste once an ongoing fight exceeds HasteFightSeconds.
 void stepSession(KeeperAI& ai, SPELL::State::Session& session, double now)
 {
     selectSession(ai, session);
-    if(!session.mHaste && ((now - session.mStart) > aiKey("HasteFightSeconds")))
+    if(!session.mHaste && ((now - session.mStart) > aiKey("HasteFightSeconds")) &&
+       ((now - session.mLastFight) < aiKey("FightOverSeconds")))
     {
         session.mHaste = true;
         SPELL::castHaste(ai, fightingOwn(ai), false, now - session.mStart);
