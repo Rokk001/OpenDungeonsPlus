@@ -206,7 +206,7 @@ int main(int argc,char** argv){try{
    game.refreshSkillButtonState(guardPath,"cast"+std::to_string(int(SkillType::roomGuardRoom)),guardPath+"/"+guardPath.substr(guardPath.find_last_of('/')+1)+"ProgressBar",SkillType::roomGuardRoom);
    check(guard->isDisabled()&&guard->getUserString("ResearchState")=="Unavailable","level exclusions still disable selection");
    check(guard->getTooltipText().find("Status: Not available in this level")==0,"excluded tiles explain the level restriction on hover");
-   check(guard->getProperty("ButtonImageColour")=="FF333333","excluded icons stay darkened even after a learned level");
+   check(guard->getProperty("ButtonImageColour")=="FF808080","excluded icons are dimmed to half brightness even after a learned level");
    check(guard->getProperty("ResearchTileImage")=="OpenDungeonsSkin/ResearchTileLocked"&&guard->getProperty("StateImage")=="OpenDungeonsIcons/AbortIcon","excluded tiles retain the existing X and frame");
   }
   seat.denied.clear();seat.levels.clear();seat.levels[SkillType::roomTreasury]=1;seat.gate=false;

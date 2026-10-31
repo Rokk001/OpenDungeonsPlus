@@ -104,8 +104,7 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
         return;
     if(!renderManager.isKeeperHandVisible())
         renderManager.rrToggleHandSelectorVisibility();
-    mSavedAmbient = renderManager.getSceneManager()->getAmbientLight();
-    renderManager.getSceneManager()->setAmbientLight(mMenuAmbient);
+    renderManager.beginMenuAmbient(mMenuAmbient);
     getBackgroundRectangle(renderManager)->setVisible(false);
     mActive = true;
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
@@ -152,7 +151,7 @@ void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& rend
         for(std::vector<RenderSceneGroup*>::reverse_iterator group = mSceneGroups.rbegin();
             group != mSceneGroups.rend(); ++group)
             (*group)->freeGroup(cameraManager, renderManager);
-        renderManager.getSceneManager()->setAmbientLight(mSavedAmbient);
+        renderManager.endMenuAmbient();
         mActive = false;
     }
     Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);

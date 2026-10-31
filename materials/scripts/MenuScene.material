@@ -391,8 +391,8 @@ material MenuPuddle : MenuWetStone
 material MenuMoss : MenuStone
 {
     technique { pass lighting {
-        ambient 0.045 0.055 0.028 1
-        diffuse 0.045 0.055 0.028 1
+        ambient 0.052 0.052 0.032 1
+        diffuse 0.052 0.052 0.032 1
         specular 0.012 0.012 0.008 1 5
     } }
 }
@@ -401,8 +401,8 @@ material MenuMoss : MenuStone
 material MenuLichen : MenuStone
 {
     technique { pass lighting {
-        ambient 0.075 0.071 0.041 1
-        diffuse 0.075 0.071 0.041 1
+        ambient 0.08 0.07 0.05 1
+        diffuse 0.08 0.07 0.05 1
         specular 0.012 0.012 0.010 1 5
     } }
 }
@@ -461,15 +461,15 @@ material MenuBone : MenuStone
 material MenuClothFadedA : MenuCloth
 {
     technique { pass lighting {
-        ambient 0.78 0.70 0.64 1
-        diffuse 0.78 0.70 0.64 1
+        ambient 0.46 0.40 0.36 1
+        diffuse 0.46 0.40 0.36 1
     } }
 }
 material MenuClothFadedB : MenuCloth
 {
     technique { pass lighting {
-        ambient 0.57 0.62 0.55 1
-        diffuse 0.57 0.62 0.55 1
+        ambient 0.38 0.35 0.32 1
+        diffuse 0.38 0.35 0.32 1
     } }
 }
 
@@ -499,7 +499,7 @@ material MenuEmberCrack
 {
     technique { pass { ambient 0 0 0 1
         diffuse 0 0 0 1
-        emissive 0.8 0.06 0.003
+        emissive 0.8 0.2 0.01
     } }
 }
 
@@ -508,9 +508,9 @@ material MenuBannerSymbol
 {
     technique { pass {
         cull_hardware none
-        ambient 0.24 0.025 0.014 1
-        diffuse 0.24 0.025 0.014 1
-        specular 0.08 0.025 0.014 1 24
+        ambient 0.14 0.03 0.02 1
+        diffuse 0.14 0.03 0.02 1
+        specular 0.05 0.025 0.014 1 24
     } }
 }
 

@@ -73,20 +73,21 @@ def parse_frame_time(output):
     return result
 
 
-# Engine log lines that mean a resource was not found; such a line naming a menu scene resource fails the run.
+# Engine log lines that mean a resource was not found.
 RESOURCE_ERRORS = ("Cannot locate resource", "Texture layer will be blank", "Can't assign material")
-# Name prefix shared by all menu scene textures and materials; other missing-resource lines are not judged here.
+# Name prefix shared by all menu scene textures and materials.
 MENU_RESOURCE_PREFIX = "Menu"
 
 
+# Collect missing texture lookups and existing menu resource errors.
 def find_resource_errors(log_path):
-    """Returns the distinct engine log lines (time stamp removed) that report a missing menu scene resource."""
+    """Returns distinct missing-resource lines, including non-menu texture lookup failures."""
     found = []
     if not os.path.exists(log_path):
         return found
     with open(log_path, encoding="utf-8", errors="replace") as handle:
         for text in handle:
-            if MENU_RESOURCE_PREFIX in text and any(marker in text for marker in RESOURCE_ERRORS):
+            if RESOURCE_ERRORS[0] in text or (MENU_RESOURCE_PREFIX in text and any(marker in text for marker in RESOURCE_ERRORS)):
                 entry = re.sub(r"^\d\d:\d\d:\d\d: ", "", text.strip())
                 if entry not in found:
                     found.append(entry)

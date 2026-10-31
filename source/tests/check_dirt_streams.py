@@ -73,7 +73,7 @@ static void expectNear(double a, double b, double eps, const std::string& what)
 
 namespace Helper { int toInt(const std::string& s) { return std::atoi(s.c_str()); } std::string toString(int v) { return std::to_string(v); } }
 
-enum class DirtPileKind { pile, blood, vomit };
+enum class DirtPileKind { pile, blood, vomit, bones };
 struct GameMap; struct DirtPileEntity;
 struct Tile
 {
@@ -91,9 +91,11 @@ struct RenderedMovableEntity
 };
 struct DirtPileEntity : public RenderedMovableEntity
 {
-    GameMap* mMap; DirtPileKind mKind; std::string mCreatureClass; double mDirtLeft, mAgeTurns; Ogre::Vector3 mPosition;
-    DirtPileEntity(GameMap* map, DirtPileKind kind, const std::string& creatureClass)
-      : mMap(map), mKind(kind), mCreatureClass(creatureClass), mDirtLeft(100.0), mAgeTurns(0.0) {}
+    GameMap* mMap; DirtPileKind mKind; std::string mCreatureClass; double mDirtLeft, mAgeTurns, mBoneScale, mRotation; Ogre::Vector3 mPosition;
+    DirtPileEntity(GameMap* map, DirtPileKind kind, const std::string& creatureClass, double rotation = 0.0, double scale = 1.0)
+      : mMap(map), mKind(kind), mCreatureClass(creatureClass), mDirtLeft(100.0), mAgeTurns(0.0), mBoneScale(scale), mRotation(rotation) {}
+    const Ogre::Vector3& getPosition() const { return mPosition; }
+    double getRotationAngle() const { return mRotation; }
     void restoreState(double dirtLeft, double ageTurns) { mDirtLeft = dirtLeft; mAgeTurns = ageTurns; }
     GameEntityType getObjectType() const { return GameEntityType::dirtPileEntity; }
     void addToGameMap();
@@ -184,6 +186,9 @@ static void checkSections()
     DirtPileEntity* blood = new DirtPileEntity(&map, DirtPileKind::blood, "DwarfWorker");
     blood->mPosition = Ogre::Vector3(4, 2, 0); blood->restoreState(100.0, 45.5); blood->addToGameMap();
 
+    DirtPileEntity* bones = new DirtPileEntity(&map, DirtPileKind::bones, "Skeleton", 42.0, 1.2);
+    bones->mPosition = Ogre::Vector3(5.25, 4.1, 0); bones->restoreState(80.0, 0.0); bones->addToGameMap();
+
     std::string text = writeSections(map);
     expect(text.find("[Dirt]") != std::string::npos && text.find("[/Dirt]") != std::string::npos, "the [Dirt] section is written");
     expect(text.find("[DirtPiles]") != std::string::npos && text.find("[/DirtPiles]") != std::string::npos, "the [DirtPiles] section is written");
@@ -196,8 +201,8 @@ static void checkSections()
     expectNear(loaded.getTile(7, 5)->getDirt(), 100.0, 1e-4, "full dirt round trip");
     expectNear(loaded.getTile(3, 4)->getDirt(), 0.0625, 1e-4, "small dirt round trip");
     expectNear(loaded.getTile(0, 0)->getDirt(), 0.0, 1e-9, "tiles without dirt stay clean");
-    expect(loaded.piles.size() == 2, "both piles are loaded");
-    if(loaded.piles.size() == 2)
+    expect(loaded.piles.size() == 3, "all piles are loaded");
+    if(loaded.piles.size() == 3)
     {
         expect(loaded.piles[0]->mKind == DirtPileKind::pile && loaded.piles[0]->mCreatureClass == "Orc", "pile kind and creature class");
         expect(loaded.piles[0]->getPositionTile() == loaded.getTile(2, 3), "pile tile");
@@ -205,6 +210,10 @@ static void checkSections()
         expect(loaded.piles[1]->mKind == DirtPileKind::blood && loaded.piles[1]->mCreatureClass == "DwarfWorker", "blood kind and creature class");
         expectNear(loaded.piles[1]->mAgeTurns, 45.5, 1e-4, "blood age");
         expect(loaded.piles[1]->getPositionTile() == loaded.getTile(4, 2), "blood tile");
+        expect(loaded.piles[2]->mKind == DirtPileKind::bones, "bones kind");
+        expectNear(loaded.piles[2]->mPosition.x, 5.25, 1e-4, "bones position");
+        expectNear(loaded.piles[2]->mRotation, 42.0, 1e-4, "bones rotation");
+        expectNear(loaded.piles[2]->mBoneScale, 1.2, 1e-4, "bones scale");
     }
     std::string next; in >> next;
     expect(next == "[Missiles]", "the next section is left for the next reader, got " + next);
@@ -292,7 +301,7 @@ needs_strings = '\n'.join(re.search(r'^static const std::string ' + name + r' = 
                           for name in ('NEEDS_SAVE_OPEN', 'NEEDS_SAVE_CLOSE'))
 
 pile_strings = '\n'.join(re.search(r'^[^\n]*' + name + r' = "[^"]*";$', pile_cpp, re.M).group(0)
-                         for name in ('KIND_PILE_TEXT', 'KIND_BLOOD_TEXT', 'KIND_VOMIT_TEXT', 'NO_CLASS_TEXT'))
+                         for name in ('KIND_PILE_TEXT', 'KIND_BLOOD_TEXT', 'KIND_VOMIT_TEXT', 'KIND_BONES_TEXT', 'NO_CLASS_TEXT'))
 
 section_start = map_cpp.index('//! \\brief Section tag that opens the dirt of the tiles')
 section_end = map_cpp.index('bool readGameEntity(GameMap& gameMap, const std::string& item')

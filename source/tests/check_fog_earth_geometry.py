@@ -134,8 +134,18 @@ def function(source, signature):
     return source[first + 1:end - 1]
 
 
-# Require one shared mesh/material/height/marking pipeline, with type-neutral client-only selection.
+# Require every client tile and one shared, type-neutral mesh/material/height/marking pipeline.
 def verify(sources):
+    create_all = function(sources["map"], "void GameMap::createAllEntities(")
+    assert compact("""for (int jj = 0; jj < getMapSizeY(); ++jj) {
+        for (int ii = 0; ii < getMapSizeX(); ++ii) {
+            getTile(ii,jj)->createMesh(mNodeType);
+        }
+    }""") in compact(create_all)
+    create_tile = function(sources["tile"], "void Tile::createMeshLocal(")
+    assert 'rrCreateTile(*this, *getGameMap(), *getGameMap()->getLocalPlayer(),nt)' in create_tile
+    create_render = function(sources["render"], "void RenderManager::rrCreateTile(")
+    assert 'rrRefreshTile(tile, dtc, localPlayer,nt);' in create_render
     mesh = function(sources["map"], "const TileSetValue& GameMap::getMeshForTile(")
     assert compact(mesh) == compact("""
         const TileVisual visual = !isServerGameMap() && !tile->getEverVisible() ?
@@ -215,12 +225,56 @@ def verify(sources):
     entries = re.findall(r'(Dirt_[^\s]+\.mesh)\s+(\w+)\s+([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)', earth)
     assert entries and all(material == 'DirtWall' and float(rx) == 0 and float(ry) == 0 for _, material, rx, ry, _ in entries)
     assert all((ROOT / 'models' / name).exists() for name, *_ in entries)
+    verify_view_edges(sources, entries)
+
+
+# Farthest distance in tiles from the view target to a screen corner on the ground (Ogre default FOVy 45 degrees).
+def farthest_screen_corner(height, tilt, aspect):
+    half = math.radians(22.5)
+    pitch = math.radians(tilt)
+    far = height * (math.tan(pitch + half) - math.tan(pitch))
+    near = height * (math.tan(pitch) - math.tan(pitch - half))
+    side_far = height / math.cos(pitch + half) * math.cos(half) * math.tan(half) * aspect
+    side_near = height / math.cos(pitch - half) * math.cos(half) * math.tan(half) * aspect
+    return max(math.hypot(far, side_far), math.hypot(near, side_near))
+
+
+# Tiles at the screen edges stay drawn, and past the map edge the screen shows never-seen earth walls.
+def verify_view_edges(sources, entries):
+    culling = sources['culling']
+    # Culling keeps every tile with a visible part: the footprint covers the highest wall top and a half tile diagonal.
+    wall_top = float(re.search(r'WALL_TOP_HEIGHT = ([0-9.]+);', culling).group(1))
+    assert wall_top >= max(p[2] for name, *_ in entries for p in positions(ROOT / 'models' / name)), \
+        'culling footprint must reach the highest earth wall top'
+    assert float(re.search(r'TILE_HALF_DIAGONAL = ([0-9.]+);', culling).group(1)) >= math.sqrt(0.5), \
+        'culling margin must keep the centre of every partly visible tile inside'
+    footprint = function(culling, 'std::vector<Ogre::Vector3> CullingManager::computeCullingFootprint(')
+    assert 'ray.intersects(wallTopPlane)' in footprint and 'offset + TILE_HALF_DIAGONAL' in footprint
+    assert 'cullTiles(computeCullingFootprint(camera, ogreVectors));' in function(culling, 'void CullingManager::update(')
+    start = function(culling, 'void CullingManager::startTileCulling(')
+    assert 'computeCullingFootprint(camera, ogreVectors)' in start and 'VectorInt64(footprint[ii])' in start
+    # The border outside the map uses the enclosed earth walls with the material of a never-seen tile.
+    render = sources['render']
+    assert 'createWorldBorder(gameMap);' in function(render, 'void RenderManager::initGameRenderer(')
+    assert 'destroyWorldBorder();' in function(render, 'void RenderManager::stopGameRenderer(')
+    border = function(render, 'void RenderManager::createWorldBorder(')
+    assert 'gameMap->getMeshesForEnclosedEarth()' in border
+    enclosed = function(sources['map'], 'GameMap::getMeshesForEnclosedEarth(')
+    assert 'return mTileSet->getTileValues(TileVisual::dirtFull).at(15);' in enclosed
+    assert 'colourizeEntity(entity, nullptr, false, false);' in border
+    assert 'if(xx >= 0 && xx < sizeX && yy >= 0 && yy < sizeY)' in border
+    width = int(re.search(r'const int WORLD_BORDER_TILES = (\d+);', render).group(1))
+    height = float(re.search(r'MAX_CAMERA_Z = ([0-9.]+);', sources['camera_h']).group(1))
+    tilt = float(re.search(r'DEFAULT_X_AXIS_VIEW = ([0-9.]+);', sources['camera']).group(1))
+    assert width + 0.5 >= farthest_screen_corner(height, tilt, 16.0 / 9.0), \
+        'rock border must cover a 16:9 screen at the highest default zoom with the view target on the map edge'
 
 
 sources = {key: (ROOT / path).read_text(encoding='utf-8') for key, path in {
     'map': 'source/gamemap/GameMap.cpp', 'links': 'source/gamemap/TileSet.cpp',
-    'render': 'source/render/RenderManager.cpp', 'picker': 'source/render/ODFrameListener.cpp',
-    'tileset': 'config/tilesets.cfg'}.items()}
+    'render': 'source/render/RenderManager.cpp', 'tile': 'source/entities/Tile.cpp', 'picker': 'source/render/ODFrameListener.cpp',
+    'tileset': 'config/tilesets.cfg', 'culling': 'source/camera/CullingManager.cpp',
+    'camera': 'source/camera/CameraManager.cpp', 'camera_h': 'source/camera/CameraManager.h'}.items()}
 verify(sources)
 edges = earth_edges(sources['tileset'])
 try:
@@ -231,6 +285,7 @@ else:
     raise AssertionError('raised marked-earth edge mutation accepted')
 # Each former visual mismatch and each client/server secrecy regression must fail independently.
 mutations = [
+    ('map', 'getTile(ii,jj)->createMesh(mNodeType);', 'if(getTile(ii,jj)->getEverVisible()) getTile(ii,jj)->createMesh(mNodeType);'),
     ('map', 'TileVisual::dirtFull : tile->getTileVisual()', 'TileVisual::goldFull : tile->getTileVisual()'),
     ('map', '!isServerGameMap() && ', ''),
     ('links', '!tile1->getIsOnServerMap() && ', ''),
@@ -241,6 +296,12 @@ mutations = [
     ('render', '*markPass = *technique->getPass(0);', '*markPass = *technique->getPass(0); markPass->setVertexProgram("other");'),
     ('render', 'if(!tile->getHasFogOfWar())', 'if(tile->getEverVisible() && !tile->getHasFogOfWar())'),
     ('picker', 'if(!tile->getEverVisible() || tile->isFullTile())', 'if(tile->isFullTile())'),
+    ('culling', 'WALL_TOP_HEIGHT = 1.55;', 'WALL_TOP_HEIGHT = 1.0;'),
+    ('culling', 'TILE_HALF_DIAGONAL = 0.7072;', 'TILE_HALF_DIAGONAL = 0.5;'),
+    ('culling', 'cullTiles(computeCullingFootprint(camera, ogreVectors));', 'cullTiles(ogreVectors);'),
+    ('render', '    createWorldBorder(gameMap);', '    // no border'),
+    ('render', 'colourizeEntity(entity, nullptr, false, false);', 'colourizeEntity(entity, nullptr, false, true);'),
+    ('render', 'const int WORLD_BORDER_TILES = 19;', 'const int WORLD_BORDER_TILES = 12;'),
 ]
 for key, old, new in mutations:
     assert old in sources[key], old

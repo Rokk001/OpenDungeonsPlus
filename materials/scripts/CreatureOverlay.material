@@ -118,3 +118,123 @@ material CreatureOverlay7
         }
     }
 }
+
+material ManaRing1
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing1.png
+            }
+        }
+    }
+}
+
+material ManaRing2
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing2.png
+            }
+        }
+    }
+}
+
+material ManaRing3
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing3.png
+            }
+        }
+    }
+}
+
+material ManaRing4
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing4.png
+            }
+        }
+    }
+}
+
+material ManaRing5
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing5.png
+            }
+        }
+    }
+}
+
+material ManaRing6
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing6.png
+            }
+        }
+    }
+}
+
+material ManaRing7
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing7.png
+            }
+        }
+    }
+}
+
+material ManaRing8
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture ManaRing8.png
+            }
+        }
+    }
+}
