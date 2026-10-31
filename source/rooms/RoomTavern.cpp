@@ -88,8 +88,6 @@ const std::string SOUND_CHEER = "Creatures/Default/Cheer";
 const int32_t GET_UP_TURNS = 2;
 //! \brief Turns a guest stays done after its last drink while a game partner may be found.
 const int32_t DONE_WAIT_TURNS = 1;
-//! \brief A slap duel without decision ends after this many times GameTurns turns.
-const int32_t DUEL_MAX_TURNS_FACTOR = 4;
 //! \brief Scale of the percent values of the [Tavern] block.
 const double PERCENT_SCALE = 100.0;
 //! \brief A squared direction shorter than this has no usable direction.
