@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Undead death assets: the Lich beetle effect, its particle system, texture, material and credits exist, the
-Skeleton bone heap keeps its material, and the Die clips of the Skeleton and the Lich last exactly as long as the
+Skeleton bone heap uses the original skeleton material, and the Die clips of both creatures last exactly as long as the
 DeathVanishSeconds of their creatures.cfg block (binary animation chunk scan, no compiling, no rendering)."""
 from pathlib import Path
 import importlib.util
