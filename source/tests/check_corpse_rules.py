@@ -19,6 +19,10 @@ def corpse_fixture():
  void dirtyTileByCorpse(){++dirtyCalls;}
  //! \brief Returns the original death placement.
  Ogre::Vector3 getPosition()const{return Ogre::Vector3(tile?tile->x:0,tile?tile->y:0,0);}
+ //! \brief Supplies the direction used for the fallen skeleton orientation.
+ const Ogre::Vector3& getWalkDirection()const{return Ogre::Vector3::ZERO;}
+ //! \brief Supplies the creature scale for the fallen skeleton.
+ double getLevelScale()const{return 1.0;}
  //! \brief Captures decay clip selection.
  void clearDestinations(const std::string& value,bool,bool){animation=value;}
  //! \brief Captures decay or restored idle animation.
@@ -65,6 +69,8 @@ def corpse_fixture():
  double getTiredWakefulness()const{return 20;}
  size_t getMaxCreaturesPerSeatAbsolute()const{return 20;}
 ''')
+    base = base.replace('static const Vector3 ZERO;', '//! \\brief Compares the direction components.\nbool operator==(const Vector3& other)const{return x==other.x&&y==other.y&&z==other.z;}\nstatic const Vector3 ZERO;')
+    base = base.replace('using Real=float;}', 'using Real=float;\n//! \\brief Converts a direction angle to degrees.\nstruct Radian{float value;\n//! \\brief Stores the angle in radians.\nRadian(float v):value(v){}\n//! \\brief Returns the angle in degrees.\nfloat valueDegrees()const{return value*57.2957795f;}};}')
     world = world.replace(' RoomType getType()const{return type;}', r'''
  //! \brief Supplies the unchanged room save prefix.
  void exportToStream(std::ostream&)const{}
@@ -80,6 +86,8 @@ namespace DirtPileKind{const int blood=0,pile=1;}
 struct DirtPileEntity{static int count;
  //! \brief Counts actual death blood calls.
  static void createOnTile(GameMap*,Tile*,int,const std::string&){++count;}
+ //! \brief Accepts a fallen skeleton created by the death branch.
+ static void createBones(GameMap*,Tile*,const Ogre::Vector3&,double,double){}
 };int DirtPileEntity::count=0;
 //! \brief Captures worker vanish and revival spell events.
 struct Spell{static int vanish,revivals;
