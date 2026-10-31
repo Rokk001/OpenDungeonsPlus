@@ -22,7 +22,7 @@ price = float(values["SummonChampionPrice"])
 drain = float(values["SummonChampionDrainPerSecond"])
 assert (price, drain) == (108000.0, 2250.0), "price and drain per second"
 assert price / drain == 48.0, "free period of 48 seconds"
-assert values["SummonChampionCooldown"] == "884"
+assert values["SummonChampionCooldown"] == "840"
 
 # The creature definition
 creatures = read("config/creatures.cfg")

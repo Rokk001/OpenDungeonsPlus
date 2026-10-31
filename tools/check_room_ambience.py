@@ -133,7 +133,7 @@ def materials():
 
 
 SYSTEM_KEYS = ("material", "point_rendering", "particle_width", "particle_height", "cull_each", "quota",
-               "billboard_type", "common_direction", "common_up_vector", "billboard_origin", "sorted")
+               "billboard_type", "common_direction", "common_up_vector", "billboard_origin", "sorted", "texture_sheet_size")
 EMITTER_KEYS = ("angle", "colour", "colour_range_start", "colour_range_end", "direction", "emission_rate", "position",
                 "velocity", "velocity_min", "velocity_max", "time_to_live", "time_to_live_min", "time_to_live_max",
                 "duration", "duration_min", "duration_max", "repeat_delay", "repeat_delay_min", "repeat_delay_max",
@@ -141,6 +141,8 @@ EMITTER_KEYS = ("angle", "colour", "colour_range_start", "colour_range_end", "di
 EMITTERS = ("Point", "Box", "Ring")
 AFFECTOR_KEYS = {
     "ColourFader": ("red", "green", "blue", "alpha"),
+    "ColourFader2": ("red1", "green1", "blue1", "alpha1", "red2", "green2", "blue2", "alpha2", "state_change"),
+    "TextureAnimator": ("texcoord_start", "texcoord_count", "duration", "random_offset"),
     "ColourInterpolator": tuple("time%d" % i for i in range(6)) + tuple("colour%d" % i for i in range(6)),
     "Scaler": ("rate",),
     "Rotator": ("rotation_speed_range_start", "rotation_speed_range_end", "rotation_range_start", "rotation_range_end"),

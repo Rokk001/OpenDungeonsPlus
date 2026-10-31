@@ -121,7 +121,7 @@ static TrapRegister reg(new TrapSpikeFactory);
 TrapSpike::TrapSpike(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("SpikeReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("SpikeReloadTurns");
     mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("SpikeDamagePerHitMin");
     mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("SpikeDamagePerHitMax");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("SpikeNbShootsBeforeDeactivation");

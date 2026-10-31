@@ -47,9 +47,10 @@ const std::string& CreatureMoodThirst::getModifierName() const
     return CreatureMoodThirstName;
 }
 
-int32_t CreatureMoodThirst::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodThirst::computeMood(const Creature& creature) const
 {
-    int32_t thirst = static_cast<int32_t>(creature.getThirst());
+    double thirst = creature.getThirst();
     if(thirst < mStartThirst)
         return 0;
 

@@ -2308,7 +2308,31 @@ void RenderManager::createScene(Ogre::Viewport* nViewport)
 void RenderManager::setWorldAmbientLightingFactor(float lightFactor)
 {
     Ogre::ColourValue factoredLighting(BASE_AMBIENT_VALUE * lightFactor);
+    // The settings window in the main menu must not brighten the menu scene with the game ambient.
+    if(mMenuAmbientActive)
+    {
+        mWorldAmbient = factoredLighting;
+        return;
+    }
     mSceneManager->setAmbientLight(factoredLighting);
+}
+
+//! \brief Saves the current world ambient and replaces it with the menu's own ambient until endMenuAmbient().
+void RenderManager::beginMenuAmbient(const Ogre::ColourValue& menuAmbient)
+{
+    if(!mMenuAmbientActive)
+        mWorldAmbient = mSceneManager->getAmbientLight();
+    mMenuAmbientActive = true;
+    mSceneManager->setAmbientLight(menuAmbient);
+}
+
+//! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
+void RenderManager::endMenuAmbient()
+{
+    if(!mMenuAmbientActive)
+        return;
+    mMenuAmbientActive = false;
+    mSceneManager->setAmbientLight(mWorldAmbient);
 }
 
 //! \brief Adds a menu point light with its own scene node so several lights can coexist.
@@ -4306,6 +4330,10 @@ void RenderManager::startCreatureDeathVariant(Creature* creature, Ogre::Entity* 
        getCombatMotion(entity->getMesh()->getName()) == CombatMotion::flying ||
        getCombatMotion(entity->getMesh()->getName()) == CombatMotion::crawler ||
        getCombatMotion(entity->getMesh()->getName()) == CombatMotion::tentacle)
+        return;
+
+    // The undead keep the collapse of their own death clip
+    if(creature->getDefinition()->isUndead())
         return;
 
     const int variant = static_cast<int>(std::hash<std::string>()(creature->getName()) % 3);

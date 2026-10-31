@@ -46,13 +46,10 @@ const std::string& CreatureMoodFee::getModifierName() const
     return CreatureMoodFeeName;
 }
 
-int32_t CreatureMoodFee::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodFee::computeMood(const Creature& creature) const
 {
-    double owedGold = creature.getGoldFee() - creature.getDefinition()->getFee(creature.getLevel());
-    if(owedGold < 100)
-        return 0;
-
-    return Helper::round(owedGold * 0.01) * mMoodModifier;
+    return creature.getMissedWages() * mMoodModifier;
 }
 
 CreatureMoodFee* CreatureMoodFee::clone() const

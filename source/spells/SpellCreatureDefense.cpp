@@ -175,7 +175,7 @@ bool SpellCreatureDefense::castSpell(GameMap* gameMap, Player* player, ODPacket&
     if(!player->getSeat()->takeMana(pricePerTarget))
         return false;
 
-    uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureDefenseDuration");
+    double duration = ConfigManager::getSingleton().getSpellConfigDouble("CreatureDefenseDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureDefense,
         ConfigManager::getSingleton().getSpellConfigDouble("CreatureDefenseValue"), ResearchEffect::Bonus);
     CreatureEffectDefense* effect = new CreatureEffectDefense(duration, value, 0.0, 0.0, "SpellCreatureDefense");

@@ -137,8 +137,6 @@ private:
     bool mActive = false;
     //! Parsed menu fill, independent of the game ambient restored on exit.
     Ogre::ColourValue mMenuAmbient = Ogre::ColourValue::Black;
-    //! World ambient lighting restored when the menu releases its scene.
-    Ogre::ColourValue mSavedAmbient = Ogre::ColourValue::Black;
 };
 
 #endif // RENDERSCENEMENU_H

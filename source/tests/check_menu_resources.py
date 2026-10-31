@@ -259,6 +259,8 @@ def check_sky_programs(root, folders):
     shader = (root / "shaders/MenuSky.frag").read_text(encoding="utf-8")
     assert "cloudDensity(point)" in shader and "skyPosition.z - 12.0" in shader, "atmosphere needs cloud structure and horizon height fade"
     assert "1.0 / 2.2" in shader, "linear atmosphere colours need their display transfer"
+    # The overview camera sees the dome only between heights 65 and 95, so the sky gradient must lie in that band.
+    assert "smoothstep(82.0, 93.0, skyPosition.z)" in shader and "smoothstep(64.0, 80.0, skyPosition.z)" in shader, "sky gradient must cover the visible dome band"
 
 
 # Read named script blocks while retaining nested emitter, affector and material settings.
@@ -356,20 +358,23 @@ def check_menu_lighting(root):
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
     assert len(lights) == 48, "the existing menu lights must remain, without substitute lights"
+    # The five fire lights add a constant attenuation of 1 so their near field does not clip per colour channel.
+    near_field_fires = {"LeftFire", "RightFire", "GateFire", "LeftGateFire", "RightGateFire"}
     for name, values in lights.items():
         assert len(values) == 13 and all(math.isfinite(value) for value in values), name + " has invalid light values"
-        assert values[9] > 0 and values[10] == values[11] == 0 and values[12] > 0, name + " must follow the authored inverse-square falloff"
+        constant = 1 if name in near_field_fires else 0
+        assert values[9] > 0 and values[10] == constant and values[11] == 0 and values[12] > 0, name + " must follow the authored inverse-square falloff"
     # Original warm bowl, gate and green spire samples cover both colour families and distinct ranges.
     authored = {
-        "LeftFire": ((1.7, 0.48, 0.065), (0.51, 0.144, 0.0195), 19, 0.045, 0.028),
-        "GateFire": ((1, 0.19, 0.018), (0.30, 0.057, 0.0054), 14, 0.065, 0.055),
-        "SpireLight": ((0.025, 0.95, 0.07), (0.0075, 0.285, 0.021), 35, 0.035, 0.012),
+        "LeftFire": ((1.7, 0.48, 0.065), (0.51, 0.144, 0.0195), 19, 0.045, 0.028, 26),
+        "GateFire": ((1, 0.19, 0.018), (0.30, 0.057, 0.0054), 14, 0.065, 0.055, 18),
+        "SpireLight": ((0.025, 0.95, 0.07), (0.0075, 0.285, 0.021), 35, 0.035, 0.012, 20),
     }
-    for name, (diffuse, specular, light_range, linear, quadratic) in authored.items():
+    for name, (diffuse, specular, light_range, linear, quadratic, cutoff) in authored.items():
         actual = lights[name]
         reference = light_range / 2
         attenuation = 1 + linear * reference + quadratic * reference ** 2
-        assert actual[9] == light_range, name + " changed its authored range"
+        assert actual[9] == cutoff, name + " changed its tuned range"
         assert all(math.isclose(value, original * gain, rel_tol=1e-10)
                    for value, original in zip(actual[3:9], diffuse + specular)), name + " changed its authored colour or exposure"
         for distance in (reference / 4, reference, reference * 1.5):
@@ -382,9 +387,13 @@ def check_menu_lighting(root):
     assert '"[MenuLighting]"' in scene and '"[/MenuLighting]"' in scene and "if(lightingSection)" in parser, "menu ambient section must be parsed outside native groups"
     assert "command >> kind >> ambient.r >> ambient.g >> ambient.b" in parser and "mMenuAmbient = ambient;" in parser, "configured ambient must reach the menu scene"
     reset = scene.split("void RenderSceneMenu::resetMenu", 1)[1].split("void RenderSceneMenu::freeMenu", 1)[0]
-    assert "mSavedAmbient = renderManager.getSceneManager()->getAmbientLight();" in reset and "setAmbientLight(mMenuAmbient)" in reset, "menu must save world ambient and apply its configured fill"
+    assert "renderManager.beginMenuAmbient(mMenuAmbient);" in reset, "menu must save world ambient and apply its configured fill"
     release = scene.split("void RenderSceneMenu::freeMenu", 1)[1].split("void RenderSceneMenu::updateMenu", 1)[0]
-    assert "setAmbientLight(mSavedAmbient)" in release, "leaving the menu must restore game ambient"
+    assert "renderManager.endMenuAmbient();" in release, "leaving the menu must restore game ambient"
+    manager = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
+    factor = manager.split("void RenderManager::setWorldAmbientLightingFactor", 1)[1].split("void RenderManager::beginMenuAmbient", 1)[0]
+    # Opening the settings in the main menu must not replace the menu ambient with the game ambient.
+    assert "if(mMenuAmbientActive)" in factor and "mWorldAmbient = factoredLighting;" in factor, "settings must not overwrite the menu ambient"
     print("OK: 48 authored menu lights retain calibrated falloff/exposure; menu ambient loads, applies and restores")
 
 

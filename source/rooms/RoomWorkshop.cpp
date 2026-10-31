@@ -565,8 +565,13 @@ bool RoomWorkshop::useRoom(Creature& creature, bool forced)
     if(mCrackBox != nullptr) mCrackPoints += work;
     else mPoints += work;
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("WorkshopWakefulnessPerWork"));
-    creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
-        ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax")));
+    uint32_t workCooldown = Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMin"),
+        ConfigManager::getSingleton().getRoomConfigUInt32("WorkshopCooldownWorkMax"));
+    creature.setJobCooldown(workCooldown);
+    double workCycleTurns = 1.0 + static_cast<double>(creature.getJobCooldown());
+    // Work gives experience on the training hall level
+    creature.receiveExp(ConfigManager::getSingleton().getRoomConfigDouble("JobXpPerTurn") * workCycleTurns
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit) * getDirtOutputFactor());
     addUseDirt(creature, tileCreature, "WorkshopDirtPerWork");
 
     return false;

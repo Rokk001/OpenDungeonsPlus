@@ -132,7 +132,14 @@ public:
     { mViewport = viewport; }
 
     //! \brief Sets/Updates the overall world lighting value with given factor.
+    //! While the menu ambient is active, the value is only stored and applied when the menu ends.
     void setWorldAmbientLightingFactor(float lightFactor);
+
+    //! \brief Saves the current world ambient and replaces it with the menu's own ambient until endMenuAmbient().
+    void beginMenuAmbient(const Ogre::ColourValue& menuAmbient);
+
+    //! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
+    void endMenuAmbient();
 
     //! \brief Switches the dynamic texture shadows on or off.
     //! Updates the scene manager's shadow technique, the generated-shader shadow receiver and the
@@ -465,6 +472,12 @@ private:
 
     //! \brief The main scene manager reference. Don't delete it.
     Ogre::SceneManager* mSceneManager;
+
+    //! \brief Whether the main menu currently owns the scene ambient.
+    bool mMenuAmbientActive = false;
+
+    //! \brief World ambient to restore when the menu ambient ends.
+    Ogre::ColourValue mWorldAmbient = Ogre::ColourValue::Black;
 
     //! \brief Reference to the Ogre sub scene nodes. Don't delete them.
     Ogre::SceneNode* mDraggableSceneNode;

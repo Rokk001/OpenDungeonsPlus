@@ -228,6 +228,7 @@ textures/
 -> ClaimedWall*.png                    Nobiax, Danimal         CC-BY-SA 3.0            http://opengameart.org/users/danimal
 -> ConcreteDirty*.png                  Sindwiller              CC-BY-SA 3.0            http://opengameart.org/content/dirty-concrete-floor-00
 -> CreatureOverlay*.png                hwoarangmy              CC-BY-SA 3.0
+-> ManaRing*.png                       hwoarangmy              CC-BY-SA 3.0            Derived from the segments of CreatureOverlay*.png (ManaRing4 built from CreatureOverlay3 without its last segment)
 -> CreatureStunned.png                 AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> CreatureRallyTroops.png             AI-generated with Codex  GPLv3+                  AI-generated, see "Generated assets" below
 -> Crossbow.png                        Lamoot                  CC-BY 3.0               http://opengameart.org/content/low-poly-crossbow
@@ -2074,3 +2075,11 @@ assets-src/creatures/ghosts/create_clips.py    AI-generated with Codex    GPLv3+
 gui/Items.png (soul_crystal)    AI-generated with Codex    GPLv3+    Atlas entry from the original gui/potions/soul_crystal.png painting credited above; existing icon pixels preserved.
 
 gui/ODNavigation.png (integrated minimap ring and plate states)    AI-generated with Codex image generation    GPLv3+    Original painted iron ring with four integrated plates and painted hover/pressed states, 2026-10-28; existing resource badges and navigation symbols retained.
+gui/SlotTypes.png    AI-generated with Codex    GPLv3+    Original painted equipment slot symbols.
+materials/textures/LichBeetle.png    AI-generated with Codex    GPLv3+    Original painted dark beetle sprite sheet, four top-view walking frames.
+materials/scripts/RoomAmbience.material (LichBeetle)    AI-generated with Codex    GPLv3+    Original alpha-blended material for the credited beetle sprite sheet.
+particles/RoomAmbienceSpellsExtra.particle (LichBeetles)    AI-generated with Codex    GPLv3+    Original ground-level crawling beetle swarm, reusing the credited beetle sprite sheet.
+models/skeleton.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Original two-second downward bone collapse, 2026-10-28; all other bones and clips retained byte for byte.
+models/lich.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Original two-and-a-half-second inward body and robe disintegration, 2026-10-28; all other bones and clips retained byte for byte.
+models/Pile_Skeleton.mesh (bone heap)    AI-generated with Codex    GPLv3+    Remodelled as a small heap of bones and a skull, original work.
+materials/textures/Pile_Skeleton.png    AI-generated with Codex    GPLv3+    Repainted in bone white by tools/gen_pile_textures.py.

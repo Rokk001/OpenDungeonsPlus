@@ -36,6 +36,8 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <cmath>
+
 const std::string SpellLightningName = "lightning";
 const std::string SpellLightningNameDisplay = "Lightning";
 const std::string SpellLightningCooldownKey = "LightningCooldown";
@@ -183,7 +185,7 @@ bool SpellLightning::castSpell(GameMap* gameMap, Player* player, ODPacket& packe
         SkillManager::getResearchValue(player->getSeat(), SkillType::spellLightning,
         ConfigManager::getSingleton().getSpellConfigDouble("LightningDamage"), ResearchEffect::Damage));
     creature->takeDamage(nullptr, damage, 0.0, 0.0, 0.0, pos, false);
-    creature->stun(creature->getDefinition()->getTurnsStunDropped());
+    creature->stun(static_cast<int32_t>(std::ceil(ConfigManager::getSingleton().getSpellConfigDouble("LightningStunTurns"))));
     fireSpellEffect(*pos, "Lightning", "LightningCast");
 
     return true;

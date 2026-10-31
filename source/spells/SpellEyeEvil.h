@@ -41,7 +41,7 @@ public:
     //! \brief Advances the lifetime while retaining the exact free-reveal remainder for saving.
     void doUpkeep() override;
     //! \brief Creates a free eye with base radius and the supplied unmodified duration.
-    static SpellEyeEvil* spawnFree(GameMap* map, Seat* seat, Tile* tile, int32_t turns);
+    static SpellEyeEvil* spawnFree(GameMap* map, Seat* seat, Tile* tile, double turns);
     //! \brief Saves the ordinary placement and optional free-reveal continuation.
     void exportToStream(std::ostream& stream) const override;
     //! \brief Restores the optional free-reveal mode without consuming a following record.
@@ -62,7 +62,7 @@ public:
 private:
     bool mFreeMode;
     uint32_t mFreeRadius;
-    int32_t mFreeTurns;
+    double mFreeTurns;
 };
 
 #endif // SPELLEYEEVIL_H

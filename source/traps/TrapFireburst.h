@@ -60,7 +60,7 @@ public:
 
 private:
     //! \brief Radius in tiles of the fire burst
-    uint32_t mRadius;
+    double mRadius;
 };
 
 #endif // TRAPFIREBURST_H

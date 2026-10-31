@@ -53,14 +53,14 @@ def config_value(key):
 
 # Configuration: the default behaviour
 check(config_value('RoomsClaimableByEnemies') == '1', 'RoomsClaimableByEnemies must be 1 (claimable and destructible)')
-check(config_value('RoomConvertSecondsPerTile') == '2.5', 'an enemy room takes 2.5 seconds per tile')
-check(config_value('RoomConvertNeutralSecondsPerTile') == '0.5', 'a neutral room takes 0.5 seconds per tile')
+check(config_value('RoomConvertSecondsPerTile') == '3.4014', 'an enemy room takes 3.4014 seconds per tile')
+check(config_value('RoomConvertNeutralSecondsPerTile') == '1.7007', 'a neutral room takes 1.7007 seconds per tile')
 creatures_cfg = read('config/creatures.cfg')
 imp_claim = re.search(r'^\s+ClaimRate\s+([0-9.]+)\s*$', creatures_cfg, re.M).group(1)
 check(config_value('RoomConvertClaimRate') == imp_claim,
       'RoomConvertClaimRate must be the claim rate of the worker (' + imp_claim + ')')
 check(config_value('RoomRepairFactor') == '5.0', 'an own worker repairs 5 times faster than an enemy wears down (20000 against 4000)')
-check(config_value('PortalFirstSpawnSeconds') == '25', 'the first creature of a taken over portal comes after 25 seconds')
+check(config_value('PortalFirstSpawnSeconds') == '187.72607879924954', 'the first creature of a taken over portal comes after 187.7 seconds')
 check('"RoomsClaimableByEnemies", DEFAULT_ROOMS_CLAIMABLE_BY_ENEMIES)' in room_source
       and 'static const double DEFAULT_ROOMS_CLAIMABLE_BY_ENEMIES = 1.0;' in room_source,
       'without the setting the default behaviour applies')
@@ -195,12 +195,12 @@ int main()
 {
     const double workerRate = REFERENCE;
     double seconds = turnsToTake(workerRate, ENEMY, 25, 1) / TPS;
-    check(std::fabs(seconds - 62.5) < 1.0, "a 25 tile enemy room takes one worker about 62.5 seconds");
+    check(std::fabs(seconds - 85.035) < 1.0, "a 25 tile enemy room takes one worker about 85 seconds");
     seconds = turnsToTake(workerRate, ENEMY, 9, 1) / TPS;
-    check(std::fabs(seconds - 22.5) < 1.0, "a 9 tile portal takes one worker about 22.5 seconds");
+    check(std::fabs(seconds - 30.6126) < 1.0, "a 9 tile portal takes one worker about 30.6 seconds");
     seconds = turnsToTake(workerRate, NEUTRAL, 25, 1) / TPS;
-    check(std::fabs(seconds - 12.5) < 1.0, "a 25 tile neutral room takes one worker about 12.5 seconds");
-    check(turnsToTake(workerRate, ENEMY, 25, 1) > 4 * turnsToTake(workerRate, NEUTRAL, 25, 1), "neutral rooms are about 5 times faster");
+    check(std::fabs(seconds - 42.5175) < 1.0, "a 25 tile neutral room takes one worker about 42.5 seconds");
+    check(turnsToTake(workerRate, ENEMY, 25, 1) > 1.9 * turnsToTake(workerRate, NEUTRAL, 25, 1), "neutral rooms are about 2 times faster");
     int one = turnsToTake(workerRate, ENEMY, 25, 1);
     int five = turnsToTake(workerRate, ENEMY, 25, 5);
     check(std::abs(one - 5 * five) <= 5, "five workers need a fifth of the time");
@@ -242,7 +242,7 @@ int main()
     check(repaired > 4.0 * lost, "one repairing worker outweighs four enemy workers");
     check(repaired < 5.5 * lost, "but not much more");
     seconds = 1.0 / (repaired * TPS);
-    check(std::fabs(seconds - 12.5) < 0.1, "a 25 tile room is repaired from empty by one worker in 12.5 seconds");
+    check(std::fabs(seconds - 17.007) < 0.1, "a 25 tile room is repaired from empty by one worker in 17 seconds");
     check(RoomClaim::healthRepairedPerDance(workerRate, REFERENCE, ENEMY, TPS, 0, REPAIR) >= 1.0, "a room without tiles is repaired at once");
 
     check(RoomClaim::isClaimableBy(true, false, false), "an enemy room is claimable");

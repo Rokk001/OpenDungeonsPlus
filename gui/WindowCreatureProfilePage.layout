@@ -106,6 +106,10 @@
             <Window type="OD/StaticImage" name="Slot0">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -114,6 +118,10 @@
             <Window type="OD/StaticImage" name="Slot1">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -122,6 +130,10 @@
             <Window type="OD/StaticImage" name="Slot2">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -130,6 +142,10 @@
             <Window type="OD/StaticImage" name="Slot3">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -138,6 +154,10 @@
             <Window type="OD/StaticImage" name="Slot4">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -146,6 +166,10 @@
             <Window type="OD/StaticImage" name="Slot5">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -154,6 +178,10 @@
             <Window type="OD/StaticImage" name="Slot6">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -162,6 +190,10 @@
             <Window type="OD/StaticImage" name="Slot7">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -170,6 +202,10 @@
             <Window type="OD/StaticImage" name="Slot8">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -178,6 +214,10 @@
             <Window type="OD/StaticImage" name="Slot9">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -186,6 +226,10 @@
             <Window type="OD/StaticImage" name="Slot10">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -194,6 +238,10 @@
             <Window type="OD/StaticImage" name="Slot11">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
@@ -202,6 +250,10 @@
             <Window type="OD/StaticImage" name="Slot12">
                 <Property name="Area" value="{{0,0},{0,0},{0,56},{0,56}}" />
                 <Property name="Image" value="OpenDungeonsIcons/ItemSlotEmpty" />
+                <Window type="OD/StaticImage" name="SlotType">
+                    <Property name="Area" value="{{0.18,0},{0.18,0},{0.82,0},{0.82,0}}" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
                 <Window type="OD/StaticImage" name="QualityFrame">
                     <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />

@@ -323,6 +323,11 @@ public:
     inline CreatureMoodLevel getMoodValue() const
     { return mMoodValue; }
 
+    //! \brief Returns the mood points of the last mood computation (CreatureBaseMood is not included). Prison and
+    //! torture use it to tell when a captured creature is broken.
+    inline double getMoodPoints() const
+    { return mMoodPoints; }
+
     //! \brief What the creature is doing, for the creature panel. On the server it is derived from the
     //! creature actions, on a client it is the last value received from the server.
     CreatureActivity getActivity() const;
@@ -1302,6 +1307,12 @@ public:
     inline double getGoldFee() const
     { return mGoldFee; }
 
+    //! \brief Returns the number of unpaid wages.
+    uint32_t getMissedWages() const { return mMissedWages; }
+
+    //! \brief Records the number of unpaid wages.
+    void setMissedWages(uint32_t count) { mMissedWages = count; }
+
     //! \brief Credits the exact amount of wage received.
     void decreaseGoldFee(double value)
     {
@@ -1320,6 +1331,7 @@ public:
             return 0;
 
         mGoldFee = 0;
+        mMissedWages = 0;
         mMoodCooldownTurns = 0;
         return used;
     }
@@ -1514,6 +1526,9 @@ public:
 
     bool isHungry() const;
 
+    //! \brief Returns whether an urgent need interrupts the current activity.
+    bool needInterrupt(bool servingNeed) const;
+
     //! \brief Clears knockout, lethal-shot credit and the prior fight item-drop guard after recovery or revival.
     void resetKoTurns();
 
@@ -1523,7 +1538,7 @@ public:
 
     //! \brief Knocks the creature down for the given number of turns (server side). Does nothing if dead or KO.
     //! \param nbTurns How many turns the creature stays knocked down; values of zero or less are ignored.
-    void stun(int32_t nbTurns);
+    void stun(double nbTurns);
 
     //! \brief Called when the creature is set in jail by dropping or brought by
     //! a worker. if prison is nullptr, the creature is freed
@@ -1544,7 +1559,7 @@ public:
 
     //! \brief Mood points given by a special (positive after Make Happy, negative after Make Unhappy).
     //! They fade towards 0 over time
-    inline int32_t getSpecialMood() const
+    inline double getSpecialMood() const
     { return mSpecialMood; }
 
     //! \brief Make Happy special: clears the annoyance the creature has gathered
@@ -1567,6 +1582,58 @@ public:
 
     inline void increaseTurnsPrison()
     { ++mNbTurnsPrison; }
+
+    //! \brief Returns the mood points the torture chamber took from this creature (negative, 0 = none).
+    inline double getTortureMood() const
+    { return mTortureMood; }
+
+    //! \brief Adds mood points to the torture mood (the torture chamber adds a negative amount every turn).
+    //! \param points The mood points to add.
+    inline void addTortureMood(double points)
+    { mTortureMood += points; }
+
+    //! \brief Clears the torture mood and the counter of the turns the creature has been broken in the torture chamber.
+    inline void resetTortureMood()
+    {
+        mTortureMood = 0.0;
+        mTortureBrokenTurns = 0;
+    }
+
+    //! \brief Returns the mood points the prison took from this creature (negative, 0 = none).
+    inline double getPrisonMood() const
+    { return mPrisonMood; }
+
+    //! \brief Adds mood points to the prison mood (the prison adds a negative amount every turn).
+    //! \param points The mood points to add.
+    inline void addPrisonMood(double points)
+    { mPrisonMood += points; }
+
+    //! \brief Clears the prison mood and the counter of the turns the creature has been broken in the prison.
+    inline void resetPrisonMood()
+    {
+        mPrisonMood = 0.0;
+        mPrisonBrokenTurns = 0;
+    }
+
+    //! \brief Counts one more turn the creature is broken in the torture chamber and returns the new count.
+    inline int32_t increaseTortureBrokenTurns()
+    { return ++mTortureBrokenTurns; }
+
+    //! \brief Counts one more turn the creature is broken in the prison and returns the new count.
+    inline int32_t increasePrisonBrokenTurns()
+    { return ++mPrisonBrokenTurns; }
+
+    //! \brief Restarts the count of the turns the creature is broken in the prison (its mood is above the border again).
+    inline void resetPrisonBrokenTurns()
+    { mPrisonBrokenTurns = 0; }
+
+    //! \brief Restarts the count of the turns the creature is broken in the torture chamber.
+    inline void resetTortureBrokenTurns()
+    { mTortureBrokenTurns = 0; }
+
+    //! \brief True while the creature lies knocked out after an arena fight and gets up with ArenaGetUpHpShare.
+    inline bool isArenaKnockOut() const
+    { return mArenaKnockOut; }
 
     virtual bool isDangerous(const Creature* creature, int distance) const override;
 
@@ -1845,6 +1912,8 @@ private:
 
     //! \brief At pay day, mGoldFee will be set to the creature fee and decreased when the creature gets gold
     double          mGoldFee;
+    //! \brief Number of whole wages still owed.
+    uint32_t        mMissedWages;
     //! \brief Gold carried by the creature that will be dropped if it gets killed
     double          mGoldCarried;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
@@ -1982,13 +2051,13 @@ private:
     CreatureActivity                mActivity;
     //! \brief Mood points. Computed by the creature MoodModifiers. It is promoted to class variable for debug purposes and
     //! should not be used to check mood. If the mood is to be tested, mMoodValue should be used
-    int32_t                         mMoodPoints;
+    double                          mMoodPoints;
 
     //! \brief Mood points gained by praying in a temple. They fade every turn
     int32_t                         mPrayerRelief;
 
     //! \brief Mood points set by the Make Happy and Make Unhappy specials. They fade towards 0 every turn
-    int32_t                         mSpecialMood;
+    double                          mSpecialMood;
 
     //! \brief Counts turns the creature is furious. If it stays like this for too long, it will become rogue
     int32_t                         mNbTurnFurious;
@@ -2076,6 +2145,21 @@ private:
 
     //! \brief allows to know how many turns a creature has been in prison
     int32_t                         mNbTurnsPrison;
+
+    //! \brief Mood points the torture chamber took from the creature (negative); saved
+    double                          mTortureMood;
+
+    //! \brief Mood points the prison took from the creature (negative); saved
+    double                          mPrisonMood;
+
+    //! \brief Turns the creature has been broken (mood at or below Furious) in the torture chamber; saved
+    int32_t                         mTortureBrokenTurns;
+
+    //! \brief Turns the creature has been broken (mood at or below Furious) in the prison; saved
+    int32_t                         mPrisonBrokenTurns;
+
+    //! \brief True while the creature is knocked out after an arena fight (temporary KO); saved
+    bool                            mArenaKnockOut;
 
     //! \brief Counts the number of active slaps affecting the creature
     uint32_t                        mActiveSlapsCount;

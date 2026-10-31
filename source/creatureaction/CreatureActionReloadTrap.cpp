@@ -37,7 +37,7 @@ static const double DEFAULT_RELOAD_WORK_TURNS = 12.0;
 //! \brief Turns to wait before the next try when the seat cannot pay and the trap config has no TrapReloadRetryTurns
 static const double DEFAULT_RELOAD_RETRY_TURNS = 100.0;
 //! \brief Experience given for a finished reload when the trap config has no TrapReloadExperience
-static const double DEFAULT_RELOAD_EXPERIENCE = 1.0;
+static const double DEFAULT_RELOAD_EXPERIENCE = 9.828;
 //! \brief Value of TrapReloadByWorkers when the trap config has no entry (1.0 means workers reload traps)
 static const double DEFAULT_RELOAD_BY_WORKERS = 1.0;
 //! \brief Search radius in tiles when the trap config has no TrapReloadSearchRadius

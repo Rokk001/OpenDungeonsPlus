@@ -40,6 +40,8 @@
 #include "utils/LogManager.h"
 
 #include <algorithm>
+#include <iomanip>
+#include <limits>
 #include <sstream>
 
 namespace
@@ -461,7 +463,7 @@ bool TrapDoor::shoot(Tile* tile)
     if(mDoorType != TrapType::doorRuned)
         return true;
 
-    if(mFireCooldownTurns > 0)
+    if(mFireCooldownTurns > 0.0)
         return true;
 
     std::vector<Tile*> doorTiles;
@@ -487,14 +489,15 @@ bool TrapDoor::shoot(Tile* tile)
         target->takeDamage(this, 0.0, 0.0, 0.0, damage, targetTile, false);
         target->notifyFightPlayer(targetTile);
     }
-    mFireCooldownTurns = ConfigManager::getSingleton().getTrapConfigUInt32("RunedDoorReloadTurns");
+    mFireCooldownTurns += ConfigManager::getSingleton().getTrapConfigDouble("RunedDoorReloadTurns");
     return true;
 }
 
+//! \brief Advances the door cooldown and updates its covered tiles.
 void TrapDoor::doUpkeep()
 {
-    if(mFireCooldownTurns > 0)
-        --mFireCooldownTurns;
+    if(mFireCooldownTurns > 0.0)
+        mFireCooldownTurns -= 1.0;
 
     for(Tile* tile : mCoveredTiles)
     {
@@ -731,6 +734,7 @@ double TrapDoor::getCreatureSpeed(const Creature* creature, Tile* tile) const
     return tile->getCreatureSpeedDefault(creature);
 }
 
+//! \brief Saves the door lock and its runed firing cooldown.
 void TrapDoor::exportToStream(std::ostream& os) const
 {
     Trap::exportToStream(os);
@@ -738,9 +742,18 @@ void TrapDoor::exportToStream(std::ostream& os) const
     os << mIsLocked;
     if(mKeyLocked)
         os << " KeyLock 1";
+    if(mDoorType == TrapType::doorRuned)
+    {
+        const std::streamsize precision = os.precision();
+        const std::ios::fmtflags flags = os.flags();
+        os << " FireCooldown " << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10) << mFireCooldownTurns;
+        os.flags(flags);
+        os.precision(precision);
+    }
     os << "\n";
 }
 
+//! \brief Loads the door lock and optional runed firing cooldown from older or current saves.
 bool TrapDoor::importFromStream(std::istream& is)
 {
     if(!Trap::importFromStream(is))
@@ -754,14 +767,28 @@ bool TrapDoor::importFromStream(std::istream& is)
     std::istringstream extra(remainder);
     std::string marker;
     mKeyLocked = false;
-    if(extra >> marker)
+    mFireCooldownTurns = 0.0;
+    bool hasKeyLock = false;
+    bool hasFireCooldown = false;
+    while(extra >> marker)
     {
-        int locked;
-        std::string unexpected;
-        if(marker != "KeyLock" || !(extra >> locked) || locked != 1 || (extra >> unexpected))
+        if(marker == "KeyLock" && !hasKeyLock)
+        {
+            int locked;
+            if(!(extra >> locked) || locked != 1)
+                return false;
+            hasKeyLock = true;
+            mKeyLocked = true;
+            mIsLocked = true;
+        }
+        else if(marker == "FireCooldown" && !hasFireCooldown && mDoorType == TrapType::doorRuned)
+        {
+            if(!(extra >> mFireCooldownTurns))
+                return false;
+            hasFireCooldown = true;
+        }
+        else
             return false;
-        mKeyLocked = true;
-        mIsLocked = true;
     }
     return true;
 }

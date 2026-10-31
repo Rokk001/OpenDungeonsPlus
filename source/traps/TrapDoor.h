@@ -103,9 +103,9 @@ public:
     static bool buildTrapOnTile(GameMap* gameMap, Player* player, Tile* tile);
 
 protected:
-    //! \brief Saves ordinary and optional mission lock state on the door data line.
+    //! \brief Saves the lock and runed cooldown on the door data line.
     void exportToStream(std::ostream& os) const override;
-    //! \brief Loads old door data or its optional persistent mission lock.
+    //! \brief Loads the lock and optional runed cooldown, including old door data.
     bool importFromStream(std::istream& is) override;
 
 private:
@@ -118,7 +118,7 @@ private:
     //! \brief Blocks damage, passage and hand toggles until key delivery.
     bool mKeyLocked;
     //! \brief Turns left before a runed door can fire again
-    uint32_t mFireCooldownTurns;
+    double mFireCooldownTurns;
 
     void changeDoorState(DoorEntity* doorEntity, Tile* tile, bool locked);
 };

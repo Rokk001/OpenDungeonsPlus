@@ -101,7 +101,7 @@ skills_cfg = read('config/skills.cfg')
 # Thirst grows where hunger grows (rogue creatures are skipped by the same condition) and the idle decision seeks a tavern
 growth_at = creature_cpp.index('increaseThirst(mDefinition->getThirstGrowthPerTurn());')
 assert 'increaseHunger(mDefinition->getHungerGrowthPerTurn());' in creature_cpp[growth_at - 400:growth_at]
-assert 'if(!getSeat()->isRogueSeat())' in creature_cpp[growth_at - 800:growth_at], 'thirst growth must skip rogue creatures'
+assert 'if(getSeat()->isRogueSeat())' in creature_cpp[growth_at - 800:growth_at], 'thirst growth is split for rogue creatures (they grow directly)'
 seek = creature_cpp[creature_cpp.index('// If we are thirsty, we go to a tavern'):]
 seek = seek[:seek.index('return true;')]
 assert 'getTavernConfigDouble("ThirstSeek")' in seek and 'isWorker()' in seek and 'hasThirst()' in seek, 'seek at ThirstSeek, never for workers or types without thirst'
@@ -129,7 +129,7 @@ assert 'sleepStarted()' in sleep_cpp and 'sleepEnded()' in sleep_cpp
 # neither a seat nor a prison: prisoners get the malus like every seat creature, seat-less heroes have no mood at all
 assert 'getTavernMood()' in read('source/creaturemood/CreatureMoodManager.cpp')
 for text in (mood_thirst_cpp, mood_hunger_cpp):
-    compute = extract(text, 'int32_t CreatureMood' + ('Thirst' if text is mood_thirst_cpp else 'Hunger') + '::computeMood(')
+    compute = extract(text, 'double CreatureMood' + ('Thirst' if text is mood_thirst_cpp else 'Hunger') + '::computeMood(')
     assert 'getSeat' not in compute and 'Prison' not in compute and 'isPrisoner' not in compute, 'the thirst/hunger mood is the same for every creature'
 # Games end without effects on a fight, a flight, a knock-out, a pick-up
 disturbed = extract(room_cpp, 'bool RoomTavern::isGuestDisturbed(')
@@ -166,7 +166,8 @@ assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 
 # ---- Probe -------------------------------------------------------------------------------------------------------
 tavern = block_values(global_cfg, 'Tavern')
 rooms = block_values(rooms_cfg, 'Rooms')
-config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax')]
+config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
+    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving')]
 config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
 effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
 assert effect_line is not None, 'the portal cooldown effect line is missing'
@@ -230,6 +231,8 @@ struct ConfigManager
     double getTavernConfigDouble(const std::string& key) const { return lookup(key); }
     double getRoomConfigDouble(const std::string& key) const { return lookup("Room" + key); }
     uint32_t getRoomConfigUInt32(const std::string& key) const { return static_cast<uint32_t>(lookup("Room" + key)); }
+    //! \brief Returns the shipped room value; the probe needs every key in the config, so the default is not used.
+    double getRoomConfigDoubleOrDefault(const std::string& key, double) const { return lookup("Room" + key); }
     double getDirtConfigDouble(const std::string& key) const { return lookup(key); }
 };
 static void loadConfig()
@@ -500,7 +503,7 @@ static void checkThirst()
     Creature h("H", &thirsty, &seat, 1); h.mDrunk = 50.0; h.sleepStarted(); h.sleepEnded();
     expectNear(h.mHangoverTurns, 0.0, "exactly 50 does not give a hangover"); expectNear(h.getHangoverWorkFactor(), 1.0, "no hangover, full work");
     h.mDrunk = 50.5; h.sleepStarted(); h.sleepEnded();
-    expectNear(h.mHangoverTurns, 252.0, "a hangover lasts 252 turns"); expectNear(h.mTavernMood, -10.0, "hangover mood -10");
+    expectNear(h.mHangoverTurns, 252.0, "a hangover lasts 252 turns"); expectNear(h.mTavernMood, -66.6667, "hangover mood -66.6667");
     expectNear(h.mTavernMoodTurns, 252.0, "the mood lasts as long"); expectNear(h.getHangoverWorkFactor(), 0.5, "half work and experience");
     h.sleepEnded(); expectNear(h.mHangoverTurns, 252.0, "a second wake-up without drunk sleep changes nothing");
     h.mHangoverTurns = 300.0; h.mDrunk = 60.0; h.sleepStarted(); h.sleepEnded();
@@ -526,13 +529,13 @@ static void checkDrinks()
       f.room.finishDrink(c->mTile, f.room.mSpots.find(c->mTile)->second);
       expect(f.map.treasury == 50 && c->mDrunk == 0.0 && c->mTavernMood == 0.0 && c->mThirst == 0.0, "water: free, no mood, thirst 0");
       expect(f.room.lastKind == 1, "a water event is sent"); expect(f.innkeeper.drinks == 1, "the innkeeper pours");
-      expectNear(f.map.getTile(2, 5)->dirt, 0.2605, "every drink dirties the tile", 1e-9); }
+      expectNear(f.map.getTile(2, 5)->dirt, 0.29, "every drink dirties the tile", 1e-9); }
     // Beer paid by the keeper
     { Fixture f; f.seat.beerLevel = 1; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); f.map.treasury = 50;
       Random::script({ 99.0, 99.0 }, {});
       f.room.finishDrink(c->mTile, f.room.mSpots.find(c->mTile)->second);
       expect(f.map.treasury == 45 && c->mGold == 0, "the keeper pays 5 from the treasury");
-      expectNear(c->mDrunk, 25.0, "beer: 25 drunkenness"); expectNear(c->mTavernMood, 15.0, "beer: mood +15"); expectNear(c->mTavernMoodTurns, 168.0, "beer: mood for 168 turns");
+      expectNear(c->mDrunk, 25.0, "beer: 25 drunkenness"); expectNear(c->mTavernMood, 100.0, "beer: mood +100"); expectNear(c->mTavernMoodTurns, 168.0, "beer: mood for 168 turns");
       expect(f.room.lastKind == 0, "a beer event is sent"); }
     // The keeper cannot pay: water, no malus
     { Fixture f; f.seat.beerLevel = 1; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); f.map.treasury = 4;
@@ -544,7 +547,7 @@ static void checkDrinks()
       Random::script({ 99.0, 99.0 }, {});
       f.room.finishDrink(c->mTile, f.room.mSpots.find(c->mTile)->second);
       expect(c->mGold == 7 && f.map.seatGold == 5 && f.map.treasury == 0, "the creature pays 5 from its purse to the seat");
-      expectNear(c->mTavernMood, 15.0, "beer mood"); expectNear(c->mDrunk, 25.0, "beer drunkenness"); }
+      expectNear(c->mTavernMood, 100.0, "beer mood"); expectNear(c->mDrunk, 25.0, "beer drunkenness"); }
     // Keep the original integer payment cases and preserve existing fractional balances as well.
     { Fixture f; Creature* c = f.guest("Fractional", 2, 1, TavernGuestState::drinking, 0); bool noCoin = true;
       f.map.treasury = 50.625; c->mGold = 12.375;
@@ -558,7 +561,7 @@ static void checkDrinks()
       Random::script({ 99.0, 99.0 }, {});
       f.room.finishDrink(c->mTile, f.room.mSpots.find(c->mTile)->second);
       expect(c->mGold == 4 && f.map.seatGold == 0 && f.map.treasury == 100 && c->mDrunk == 0.0, "an empty purse gives water and costs nothing");
-      expectNear(c->mTavernMood, -5.0, "no coin: mood -5"); expectNear(c->mTavernMoodTurns, 168.0, "no coin: for 168 turns"); }
+      expectNear(c->mTavernMood, -33.3333, "no coin: mood -33.3333"); expectNear(c->mTavernMoodTurns, 168.0, "no coin: for 168 turns"); }
 
     // The drink chain: 50, 25, 12.5 and 6.25 percent after the 1st to the 4th drink, never more than five
     const double thresholds[] = { 50.0, 25.0, 12.5, 6.25 };
@@ -649,28 +652,28 @@ static void checkContest()
       Random::script({ 44.9 }, {});
       f.room.playContestTurn(g); expect(f.room.mGames.size() == 1, "the game runs while turns are left");
       f.room.playContestTurn(f.room.mGames.begin());
-      expect(f.room.mGames.empty() && b->mExp == 10.0 && a->mExp == 0.0, "44.9: the weaker wins and gets double experience");
-      expectNear(b->mTavernMood, 30.0, "underdog mood 20 + 5 x 2"); expectNear(a->mTavernMood, 0.0, "the loser gets nothing"); expect(f.innkeeper.cheers == 1, "the innkeeper cheers"); }
+      expect(f.room.mGames.empty() && b->mExp == 5.72 && a->mExp == 0.0, "44.9: the weaker wins and gets double experience");
+      expectNear(b->mTavernMood, 199.9999, "underdog mood 133.3333 + 33.3333 x 2"); expectNear(a->mTavernMood, 0.0, "the loser gets nothing"); expect(f.innkeeper.cheers == 1, "the innkeeper cheers"); }
     { Fixture f; Creature* a = f.guest("A", 2, 12, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
       std::map<Tile*, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::dice, 1);
       Random::script({ 45.1 }, {});
       f.room.playContestTurn(g);
-      expect(f.room.mGames.empty() && a->mExp == 5.0 && b->mExp == 0.0, "45.1: the stronger wins with normal experience");
-      expectNear(a->mTavernMood, 20.0, "winner mood 20"); expectNear(a->mTavernMoodTurns, 168.0, "winner mood for 168 turns"); }
+      expect(f.room.mGames.empty() && a->mExp == 2.86 && b->mExp == 0.0, "45.1: the stronger wins with normal experience");
+      expectNear(a->mTavernMood, 133.3333, "winner mood 133.3333"); expectNear(a->mTavernMoodTurns, 168.0, "winner mood for 168 turns"); }
     // Equal levels: 50 / 50 and normal values for the winner
     { Fixture f; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
       std::map<Tile*, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::dice, 1);
       Random::script({ 49.9 }, {}); f.room.playContestTurn(g);
-      expect(a->mExp == 5.0 && a->mTavernMood == 20.0 && b->mExp == 0.0, "equal levels: 49.9 wins for the first guest with normal values"); }
+      expect(a->mExp == 2.86 && a->mTavernMood == 133.3333 && b->mExp == 0.0, "equal levels: 49.9 wins for the first guest with normal values"); }
     // The floor: 20 levels of difference would give 0 percent, the weaker still wins with 5 percent
     { Fixture f; Creature* a = f.guest("A", 2, 25, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 5, TavernGuestState::game, 0);
       std::map<Tile*, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::dice, 1);
       Random::script({ 4.9 }, {}); f.room.playContestTurn(g);
-      expect(b->mExp == 10.0, "20 levels: 4.9 still lets the weaker win (floor 5 percent)"); expectNear(b->mTavernMood, 50.0, "underdog mood is capped at 50"); }
+      expect(b->mExp == 5.72, "20 levels: 4.9 still lets the weaker win (floor 5 percent)"); expectNear(b->mTavernMood, 333.3333, "underdog mood is capped at 333.3333"); }
     { Fixture f; Creature* a = f.guest("A", 2, 25, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 5, TavernGuestState::game, 0);
       std::map<Tile*, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::dice, 1);
       Random::script({ 5.1 }, {}); f.room.playContestTurn(g);
-      expect(a->mExp == 5.0 && b->mExp == 0.0, "20 levels: 5.1 is a win of the stronger"); }
+      expect(a->mExp == 2.86 && b->mExp == 0.0, "20 levels: 5.1 is a win of the stronger"); }
     // Spectators: own creatures within 2 tiles (Chebyshev) of a player, not the players, not a possessed one
     { Fixture f; Creature* a = f.guest("A", 4, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 5, 10, TavernGuestState::game, 0);
       Creature* near = f.guest("Near", 7, 1, TavernGuestState::done, 0); Creature* far = f.guest("Far", 8, 1, TavernGuestState::done, 0);
@@ -679,8 +682,8 @@ static void checkContest()
       Creature* off = f.guest("Off", 3, 1, TavernGuestState::done, 0); off->mOnMap = false;
       std::map<Tile*, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::dice, 1);
       Random::script({ 10.0 }, {}); f.room.playContestTurn(g);
-      expectNear(near->mTavernMood, 10.0, "a spectator 2 tiles from a player gets +10"); expectNear(near->mTavernMoodTurns, 168.0, "spectator mood for 168 turns");
-      expectNear(far->mTavernMood, 0.0, "3 tiles away is no spectator"); expectNear(up->mTavernMood, 10.0, "2 tiles away on the other axis is a spectator");
+      expectNear(near->mTavernMood, 66.6667, "a spectator 2 tiles from a player gets +66.6667"); expectNear(near->mTavernMoodTurns, 168.0, "spectator mood for 168 turns");
+      expectNear(far->mTavernMood, 0.0, "3 tiles away is no spectator"); expectNear(up->mTavernMood, 66.6667, "2 tiles away on the other axis is a spectator");
       expectNear(possessed->mTavernMood, 0.0, "a possessed creature does not cheer"); expectNear(off->mTavernMood, 0.0, "a creature off the map does not cheer"); }
 }
 
@@ -721,7 +724,7 @@ static void checkDuel()
         if(hpCases[i].decided)
         {
             expect(f.stateOf(b) == TavernGuestState::ko && f.stateOf(a) == TavernGuestState::done, "the loser goes down, the winner is done");
-            expectNear(a->mTavernMood, 20.0, "winner mood 20"); expect(a->mExp == 5.0, "winner experience 5"); expectNear(b->mTavernMood, -10.0, "loser mood -10 for the duel");
+            expectNear(a->mTavernMood, 133.3333, "winner mood 133.3333"); expect(a->mExp == 2.86, "winner experience 2.86"); expectNear(b->mTavernMood, -66.6667, "loser mood -66.6667 for the duel");
             expect(f.room.kinds.size() == 2 && f.room.kinds[0] == 2 && f.room.kinds[1] == 3, "winner and loser are told to the clients");
         }
     }
@@ -735,11 +738,11 @@ static void checkDuel()
     { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0); a->mHp = 80.0; b->mHp = 60.0;
       b->mHit = false; std::map<Tile*, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 1);
       Random::script({}, {}); f.room.playDuelTurn(g);
-      expect(f.room.mGames.empty() && a->mExp == 5.0 && f.stateOf(b) == TavernGuestState::ko, "no decision: the one with more HP wins and the other goes down"); }
+      expect(f.room.mGames.empty() && a->mExp == 2.86 && f.stateOf(b) == TavernGuestState::ko, "no decision: the one with more HP wins and the other goes down"); }
     { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
       b->mHit = false; std::map<Tile*, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 1);
       Random::script({}, { 1 }); f.room.playDuelTurn(g);
-      expect(f.room.mGames.empty() && b->mExp == 5.0, "a tie is decided by chance"); }
+      expect(f.room.mGames.empty() && b->mExp == 2.86, "a tie is decided by chance"); }
 }
 
 static void checkKnockOutAndAbort()
@@ -796,8 +799,8 @@ static void checkMoodAndPortal()
     {
         seat.beerLevel = level;
         const double factor = (level == 0) ? 1.0 : factors[level - 1];
-        expect(getResearchedCooldown(&seat, "PortalCooldownSpawnMin") == static_cast<uint32_t>(std::round(30.0 * factor)), "portal min cooldown at Beer level " + std::to_string(level));
-        expect(getResearchedCooldown(&seat, "PortalCooldownSpawnMax") == static_cast<uint32_t>(std::round(ConfigManager::getSingleton().values["RoomPortalCooldownSpawnMax"] * factor)), "portal max cooldown at Beer level " + std::to_string(level));
+        expect(std::fabs(getResearchedCooldown(&seat, "PortalCooldownSpawnMin") - 230.15307692307692 * factor) < 1e-9, "portal min cooldown at Beer level " + std::to_string(level));
+        expect(std::fabs(getResearchedCooldown(&seat, "PortalCooldownSpawnMax") - ConfigManager::getSingleton().values["RoomPortalCooldownSpawnMax"] * factor) < 1e-9, "portal max cooldown at Beer level " + std::to_string(level));
     }
 }
 
@@ -829,8 +832,7 @@ types_start = tavern_h.index('//! \\brief Who pays for the beer a tavern serves.
 types_end = tavern_h.index('//! \\brief A room where creatures quench their thirst.')
 room_types = tavern_h[types_start:types_end]
 constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) ' + name + r' = [^;]+;$') for name in (
-    'GET_UP_TURNS', 'DONE_WAIT_TURNS', 'DUEL_MAX_TURNS_FACTOR', 'PERCENT_SCALE', 'DRINK_CHAIN_HALVING', 'DIRECTION_EPSILON',
-    'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
+    'GET_UP_TURNS', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'Ogre::Vector3 directionTo('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
@@ -839,12 +841,12 @@ room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
     'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',
     'void RoomTavern::concludeGame(', 'void RoomTavern::abortGame(', 'void RoomTavern::knockOut('])
-portal_function = extract(portal_cpp, 'static uint32_t getResearchedCooldown(')
+portal_function = extract(portal_cpp, 'static double getResearchedCooldown(')
 
 
 # The mood function bodies, taken from the mood classes and renamed to free functions on the small stub
 def mood_function(text, name, free_name):
-    compute = extract(text, 'int32_t CreatureMood' + name + '::computeMood(')
+    compute = extract(text, 'double CreatureMood' + name + '::computeMood(')
     body = compute[compute.index('{'):]
     getter = 'creature.get' + name + '()'
     assert getter in body, name

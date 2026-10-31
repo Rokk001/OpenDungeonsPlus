@@ -51,7 +51,8 @@ const std::string& CreatureMoodOutOfWork::getModifierName() const
 }
 
 //! \brief Returns the mood change for the turns the creature found no job beyond TurnsMin (counted up to TurnsMax turns).
-int32_t CreatureMoodOutOfWork::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodOutOfWork::computeMood(const Creature& creature) const
 {
     int32_t turns = creature.getNbTurnsOutOfWork();
     if(turns < mTurnsMin)

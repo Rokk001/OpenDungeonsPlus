@@ -79,6 +79,7 @@
 #include "traps/Trap.h"
 #include "traps/TrapManager.h"
 #include "traps/TrapType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
@@ -445,7 +446,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mDigSetBool(false),
     mIndexEvent(0),
     mSettings(mRootWindow, modeManager->getGui(), false, true),
-    mSandboxHeroLevel(SandboxMode::MIN_HERO_LEVEL),
+    mSandboxHeroLevel(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin())),
     mIsSkillWindowOpen(false),
     mIsLibraryLostShown(false),
     mCurrentSkillType(SkillType::nullSkillType),
@@ -3186,12 +3187,13 @@ bool GameMode::hideSandboxWindow(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Cycles the toolbox hero level between the configured sandbox bounds.
 bool GameMode::onSandboxHeroLevelClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(e);
-    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < SandboxMode::MAX_HERO_LEVEL))
+    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMax())))
         ++mSandboxHeroLevel;
-    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > SandboxMode::MIN_HERO_LEVEL))
+    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin())))
         --mSandboxHeroLevel;
 
     mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));
@@ -4578,7 +4580,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     }
     skillButton->setText("");
-    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF333333" : (level == 0 ? "FF666666" : "FFFFFFFF"));
+    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF808080" : (level == 0 ? "FF666666" : "FFFFFFFF"));
     skillButton->setProperty("ResearchLevelColour", getResearchFrameColour(level));
     CEGUI::Window* levelBadge;
     if(skillButton->isChild("ResearchLevel"))
@@ -4994,7 +4996,7 @@ void GameMode::refreshSkillConnections()
                     line = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", name);
                     line->setProperty("FrameEnabled", "False");
                     line->setProperty("BackgroundEnabled", "False");
-                    line->setProperty("Image", "OpenDungeonsSkin/SelectionBrush");
+                    line->setProperty("Image", "OpenDungeonsSkin/LineFill");
                     line->setMousePassThroughEnabled(true);
                     line->setRiseOnClickEnabled(false);
                     parent->addChild(line);

@@ -128,7 +128,7 @@ def check_creature_table(roster):
         for index in range(6):
             assert same(words[start + index], row["damage"][index]), (name, "damage column", index)
     for worker in ("Kobold", "DwarfWorker"):
-        assert same(roster.creatures[worker][0]["MinHP"][0], "62"), worker
+        assert same(roster.creatures[worker][0]["MinHP"][0], "70"), worker
     champion = roster.creatures["Champion"][0]
     assert "SkillDamageFactor" not in champion
 

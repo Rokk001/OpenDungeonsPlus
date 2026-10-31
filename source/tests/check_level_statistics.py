@@ -174,12 +174,19 @@ struct CreatureDefinition
 {
     bool isWorker() const { return mWorker; }
     bool isChampion() const { return false; }
+    //! \brief The fixture creatures are living ones (undead are never knocked out).
+    bool isUndead() const { return false; }
     bool mWorker = false;
 };
+//! \brief Supplies the turn rate the arena knock-out time is counted in.
+struct ODApplication { static double turnsPerSecond; };
+double ODApplication::turnsPerSecond = 4.0;
 struct ConfigManager
 {
     static ConfigManager& getSingleton() { static ConfigManager config; return config; }
     int getNbTurnsKoCreatureAttacked() { return 5; }
+    //! \brief Supplies the arena knock-out seconds; the fixture fights outside the arena.
+    double getRoomConfigDouble(const std::string&) { return 30.0; }
     double getSpellConfigDouble(const std::string&) { return 100.0; }
     // The creature dirt of a knock-out is outside the statistics contract (the fixture runs the non-server path)
     double getDirtConfigDouble(const std::string&) { return 0.0; }
@@ -221,6 +228,7 @@ struct Creature : public GameEntity
     double mHp;
     int mNbTurnsWithoutBattle;
     double mKoTurnCounter;
+    bool mArenaKnockOut = false;
     int mDeaths;
     bool mDirtKoThisFight = false;
     bool mFoughtSinceFightEnd = false;

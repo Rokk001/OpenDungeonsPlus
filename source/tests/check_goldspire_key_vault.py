@@ -46,7 +46,8 @@ assert "if(mKeyLocked || mDoorType == TrapType::doorBarricade)" in door
 assert "return !mKeyLocked && Trap::isClaimable(seat);" in door
 assert "if(!mKeyLocked)\n        Trap::claimForSeat" in door
 assert "return !mKeyLocked && (!isActivated(tile)" in header
-assert 'os << " KeyLock 1"' in door and 'marker != "KeyLock"' in door
+assert 'os << " KeyLock 1"' in door and 'marker == "KeyLock" && !hasKeyLock' in door
+assert 'locked != 1' in door and 'mKeyLocked = true' in door and 'mIsLocked = true' in door
 assert "mKeyLocked ? ANIMATION_CLOSE : ANIMATION_OPEN" in door
 # Reuse the physical transport save and interruption contract, never an invisible carrier token.
 stone = (root / "source/entities/MissileStone.cpp").read_text(encoding="utf-8")

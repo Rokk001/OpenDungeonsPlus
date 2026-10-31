@@ -69,6 +69,11 @@ struct GameMap {
  const std::vector<Seat*>& getSeats(){return seats;}
  int getNodeType(){return 7;}bool isInEditorMode(){return editor;}
 };
+//! \brief Supplies the room sale refund share with its shipped default.
+struct ConfigManager {
+ static ConfigManager& getSingleton(){static ConfigManager config;return config;}
+ double getRoomConfigDoubleOrDefault(const std::string&,double defaultValue)const{return defaultValue;}
+};
 struct RoomManager {static int costPerTile(int){return 100;}static void sellRoomTiles(GameMap*,Player*,ODPacket&);};
 METHOD
 int checks=0,failures=0;
