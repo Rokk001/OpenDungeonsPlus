@@ -74,7 +74,7 @@ static const float DEFAULT_IMAGE_PIXEL_DENSITY = 1.0f;
 //! Painted navigation atlas coordinates, in doubled source pixels; existing layout sizes stay unchanged.
 static const char* const PAINTED_NAVIGATION_ATLAS = "ODNavigation.png";
 static const int PAINTED_BADGE_SIZE = 256;
-static const int PAINTED_CORNER_SIZE = 256;
+static const int PAINTED_CORNER_SIZE = 192;
 static const int PAINTED_CORNER_X = 1024;
 static const int PAINTED_RIM_SIZE = 768;
 static const int PAINTED_SYMBOL_SIZE = 128;
@@ -193,27 +193,47 @@ void createHandFeedbackImage()
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
-//! Round button that fills a corner of the minimap frame: it only reacts outside the round map.
+//! \brief Hits the round integrated plate without intercepting the surrounding minimap.
 class MiniMapCornerButton : public CEGUI::PushButton
 {
 public:
     static const CEGUI::String WidgetTypeName;
+    //! \brief Constructs an integrated minimap plate with the existing button events.
     MiniMapCornerButton(const CEGUI::String& type, const CEGUI::String& name) : CEGUI::PushButton(type, name) {}
 
+    //! \brief Accepts clicks on the circular plate, including its part inside the map circle.
     bool isHit(const CEGUI::Vector2f& position, bool allowDisabled = false) const override
     {
         if(!CEGUI::PushButton::isHit(position, allowDisabled))
             return false;
-        if(getParent() == nullptr || !getParent()->isChild("MiniMap"))
-            return true;
-        // Use the actual map bounds: pixel rounding can differ from this button.
-        const CEGUI::Rectf& map = getParent()->getChild("MiniMap")->getUnclippedOuterRect().get();
-        const float x = (position.d_x - map.left() - map.getWidth() * 0.5f) / (map.getWidth() * 0.5f);
-        const float y = (position.d_y - map.top() - map.getHeight() * 0.5f) / (map.getHeight() * 0.5f);
-        return x * x + y * y >= 1.0f;
+        // Use the actual plate bounds so rounding follows the displayed image.
+        const CEGUI::Rectf& plate = getUnclippedOuterRect().get();
+        const float x = (position.d_x - plate.left() - plate.getWidth() * 0.5f) / (plate.getWidth() * 0.4375f);
+        const float y = (position.d_y - plate.top() - plate.getHeight() * 0.5f) / (plate.getHeight() * 0.4375f);
+        return x * x + y * y <= 1.0f;
     }
 };
 const CEGUI::String MiniMapCornerButton::WidgetTypeName("OD/MiniMapCornerBase");
+
+//! \brief Positions and sizes the four integrated plates as fractions of the current minimap.
+void layoutMiniMapButtons(CEGUI::Window* root)
+{
+    if(!root->isChild("MiniMap"))
+        return;
+    const CEGUI::URect map = root->getChild("MiniMap")->getArea();
+    const CEGUI::UDim width = map.d_max.d_x - map.d_min.d_x;
+    const CEGUI::UDim height = map.d_max.d_y - map.d_min.d_y;
+    const char* names[] = {"QueryButton", "SellButton", "OptionsButton", "MiniMapZoomButton"};
+    for(const char* name : names)
+    {
+        CEGUI::Window* button = root->getChild(name);
+        const CEGUI::URect area = CEGUI::PropertyHelper<CEGUI::URect>::fromString(button->getUserString("MiniMapArea"));
+        button->setArea(CEGUI::URect(map.d_min.d_x + width * area.d_min.d_x.d_scale,
+            map.d_min.d_y + height * area.d_min.d_y.d_scale,
+            map.d_min.d_x + width * area.d_max.d_x.d_scale,
+            map.d_min.d_y + height * area.d_max.d_y.d_scale));
+    }
+}
 
 const int BADGE_SIZE = 128;
 
@@ -2178,7 +2198,7 @@ bool Gui::onWindowDestroyed(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Rescales registered widgets and reflows their fitted profile documents.
+//! \brief Rescales registered widgets, aligns minimap plates and reflows fitted profile documents.
 void Gui::applyScale(const CEGUI::Sizef& displaySize)
 {
     const float resolutionScale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
@@ -2194,6 +2214,7 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     if(gameSheet != mSheets.end())
     {
         arrangeActionButtonPanels(gameSheet->second);
+        layoutMiniMapButtons(gameSheet->second);
     }
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)

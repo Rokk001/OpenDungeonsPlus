@@ -2074,6 +2074,7 @@ assets-src/creatures/ghosts/create_clips.py    AI-generated with Codex    GPLv3+
 
 gui/Items.png (soul_crystal)    AI-generated with Codex    GPLv3+    Atlas entry from the original gui/potions/soul_crystal.png painting credited above; existing icon pixels preserved.
 
+gui/ODNavigation.png (integrated minimap ring and plate states)    AI-generated with Codex image generation    GPLv3+    Original painted iron ring with four integrated plates and painted hover/pressed states, 2026-10-28; existing resource badges and navigation symbols retained.
 gui/SlotTypes.png    AI-generated with Codex    GPLv3+    Original painted equipment slot symbols.
 materials/textures/LichBeetle.png    AI-generated with Codex    GPLv3+    Original painted dark beetle sprite sheet, four top-view walking frames.
 materials/scripts/RoomAmbience.material (LichBeetle)    AI-generated with Codex    GPLv3+    Original alpha-blended material for the credited beetle sprite sheet.

@@ -68,6 +68,28 @@ def find_line(text, pattern):
 
 creature_cpp = read('source/entities/Creature.cpp')
 room_cpp = read('source/rooms/RoomTavern.cpp')
+
+# Furniture occupies distinct tiles, kegs require a full neighbouring wall, and ordering is stable across saves.
+placement = extract(room_cpp, 'void RoomTavern::updateActiveSpots(')
+assert 'std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile)' in placement
+assert 'orderedTiles.size() / 4' in placement and 'orderedTiles.size() / 6' in placement
+assert 'neighbour->isFullTile()' in placement and 'wantedObjects.count(tile) != 0' in placement
+assert 'wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH' in placement
+
+# The table carries its two benches; it is scaled so the benches (1.19 tiles long unscaled) end on the table tile.
+scale = float(find_line(room_cpp, r'const float TAVERN_TABLE_SCALE = [0-9.]+f;').split('=')[1].strip().rstrip('f;'))
+assert 1.19 * scale <= 1.0, 'the benches of the table stay on its tile'
+assert 'object->setFurnitureScale(Ogre::Vector2(TAVERN_TABLE_SCALE, TAVERN_TABLE_SCALE));' in placement
+
+# Save/load keeps every keg and table 1:1: one Furniture line each, read back and placed instead of being recomputed.
+export = extract(room_cpp, 'void RoomTavern::exportToStream(')
+assert 'os << STREAM_TAG_FURNITURE' in export and 'getRotationAngle()' in export
+load = extract(room_cpp, 'bool RoomTavern::importFromStream(')
+assert 'tag == STREAM_TAG_FURNITURE' in load and 'mSavedFurniture.push_back(saved);' in load
+assert 'const bool restoreSaved = !mSavedFurniture.empty();' in placement and 'mSavedFurniture.clear();' in placement
+assert 'if(restoreSaved || (tile == mCounterTile) || (kegs >= kegLimit))' in placement
+assert 'if(restoreSaved || (tables >= tableLimit) || (wantedObjects.count(tile) != 0))' in placement
+
 portal_cpp = read('source/rooms/RoomPortal.cpp')
 mood_thirst_cpp = read('source/creaturemood/CreatureMoodThirst.cpp')
 mood_hunger_cpp = read('source/creaturemood/CreatureMoodHunger.cpp')
@@ -115,6 +137,31 @@ for token in ('isKo()', 'isBeingDragged()', 'CreatureActionType::fight', 'Creatu
     assert token in disturbed, token
 # The loser of a slap duel goes to its bed after the visit, whatever its wakefulness
 assert 'CreatureActionSleep' in extract(room_cpp, 'bool RoomTavern::useRoom(') and 'goToBed' in room_cpp
+
+# A guest leaves the tavern: the visit pops the action, the leaving starts the leisure cooldown, the job search does not
+# send the guest back in during the cooldown, and the cooldown counts down every turn and is saved
+assert 'creature.popAction();' in extract(room_cpp, 'bool RoomTavern::useRoom(')
+assert re.search(r'const int32_t DONE_WAIT_TURNS = 1;', room_cpp), 'completed visits wait at most one turn'
+finish_drink = extract(room_cpp, 'void RoomTavern::finishDrink(')
+assert 'setSpotDone(spot, DONE_WAIT_TURNS);' in finish_drink and 'spot.mTurnsLeft =' not in finish_drink, 'a game request must not extend the completed visit'
+# The room consumes the one-turn wait and the done action then ends; conscious game players have no extra wait.
+upkeep = extract(room_cpp, 'void RoomTavern::doUpkeep(')
+assert re.search(r'if\(\(it->second.mState == TavernGuestState::done\) && \(it->second.mTurnsLeft > 0\)\)\s*--it->second.mTurnsLeft;', upkeep), 'each upkeep must consume the completed visit wait'
+use_room = extract(room_cpp, 'bool RoomTavern::useRoom(')
+done_action = use_room[use_room.index('case TavernGuestState::done:'):use_room.index('default:')]
+assert re.search(r'if\(spot.mTurnsLeft > 0\)\s*return false;', done_action), 'only a positive completed visit wait may delay exit'
+assert re.search(r'creature.popAction\(\);\s*if\(goToBed\)\s*creature.pushAction\([^;]+;\s*return true;', done_action), 'the completed visit must pop its action and resume the action queue'
+conclude = extract(room_cpp, 'void RoomTavern::concludeGame(')
+assert 'setSpotDone(winnerSpot->second, 0);' in conclude and 'setSpotDone(loserSpot->second, 0);' in conclude, 'conscious game players must finish without a wait'
+assert 'knockOut(loserSpot->second);' in conclude, 'the slap duel loser keeps the decided knock-out exception'
+assert 'startTavernCooldown()' in extract(room_cpp, 'void RoomTavern::removeCreatureUsingRoom(')
+open_spot = extract(room_cpp, 'bool RoomTavern::hasOpenCreatureSpot(')
+assert 'getTavernCooldownTurns() > 0' in open_spot and 'getThirst() < getTavernValue("ThirstSeek")' in open_spot, 'leisure visit blocked during the cooldown, thirst not'
+assert 'hasOpenCreatureSpot(&creature)' in read('source/creatureaction/CreatureActionSearchJob.cpp')
+assert 'TavernLeisureCooldownTurns' in extract(creature_cpp, 'void Creature::startTavernCooldown(')
+assert '--mTavernCooldownTurns' in extract(creature_cpp, 'void Creature::upkeepTavernState(')
+assert 'TAVERN_COOLDOWN_SAVE_OPEN << " " << mTavernCooldownTurns' in creature_cpp and 'setTavernCooldownTurns(loadedCooldown)' in creature_cpp, 'cooldown saved and loaded'
+assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 'TavernLeisureCooldownTurns is 600 in rooms.cfg'
 
 # ---- Probe -------------------------------------------------------------------------------------------------------
 tavern = block_values(global_cfg, 'Tavern')
@@ -249,7 +296,7 @@ struct Creature
     CreatureDefinition* mDefinition; Seat* mSeat; std::string mName; Tile* mTile; Ogre::Vector3 mPos;
     double mUrge, mThirst, mTavernMood, mTavernMoodTurns, mDrunk, mHangoverTurns, mHp, mExp;
     bool mVomited, mHangoverPending, mOnMap, mAlive, mKo, mDragged, mPossessed, mFighting, mFleeing, mHit;
-    uint32_t mLevel; double mGold; int takeDamageCalls;
+    uint32_t mLevel; double mGold; int takeDamageCalls; int32_t mTavernCooldownTurns = 0;
     //! \brief Initializes the tavern creature with the production fractional gold balance.
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat, uint32_t level)
       : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mUrge(0.0), mThirst(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mDrunk(0.0),
@@ -463,6 +510,12 @@ static void checkThirst()
     expectNear(h.mHangoverTurns, 300.0, "sleeping again does not shorten the hangover");
     for(int i = 0; i < 300; ++i) h.upkeepTavernState();
     expectNear(h.mHangoverTurns, 0.0, "the hangover runs out one turn at a time");
+    // The leisure cooldown after leaving a tavern counts down one turn at a time and stops at 0
+    h.mTavernCooldownTurns = 600;
+    for(int i = 0; i < 599; ++i) h.upkeepTavernState();
+    expectNear(h.mTavernCooldownTurns, 1.0, "the leisure cooldown has one turn left after 599 turns");
+    h.upkeepTavernState(); h.upkeepTavernState();
+    expectNear(h.mTavernCooldownTurns, 0.0, "the leisure cooldown ends at 0 and does not go below");
 }
 
 // ---- Drinks, payment, the chain
@@ -546,11 +599,11 @@ static void checkGameStart()
       RoomTavernSpot& spot = f.room.mSpots.find(a->mTile)->second; spot.mDrinks = 4;
       Random::script({ 50.0 }, { 0 }); f.room.finishDrink(a->mTile, spot);
       expect(f.room.mGames.empty() && !spot.mWantsGame, "a roll of 50 starts no game and the guest wants none"); }
-    // Without a neighbour the guest waits DrinkTurns (4) turns for one and starts the game when one is done
+    // Without a neighbour the guest waits one turn for one and starts the game when one is done
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
       RoomTavernSpot& spot = f.room.mSpots.find(a->mTile)->second; spot.mDrinks = 4;
       Random::script({ 1.0 }, { 0 }); f.room.finishDrink(a->mTile, spot);
-      expect(f.room.mGames.empty() && spot.mWantsGame && spot.mState == TavernGuestState::done && spot.mTurnsLeft == 4, "a guest that wants a game waits for 4 turns");
+      expect(f.room.mGames.empty() && spot.mWantsGame && spot.mState == TavernGuestState::done && spot.mTurnsLeft == 1, "a guest that wants a game waits for one turn");
       f.guest("B", 3, 1, TavernGuestState::done, 2);
       Random::script({}, { 0 }); f.room.tryStartGame(a->mTile);
       expect(f.room.mGames.size() == 1 && !spot.mWantsGame, "the waiting guest starts the game when a neighbour is done"); }

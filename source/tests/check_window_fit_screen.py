@@ -145,6 +145,15 @@ for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
     section = frame.find(".//ImagerySection[@name='%s']/FrameComponent" % section_name)
     parts = {image.get('component') for image in section.findall('Image')}
     assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
+profile = ET.parse(repo / 'gui/WindowCreatureProfile.layout').getroot().find('Window')
+tab_top = min(udims(profile.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))[1][0]
+              for name in ('ProfileTab', 'StatsTab', 'BookTab'))
+for name in ('ProfilePage', 'StatsText'):
+    content = profile.find("Window[@name='%s']" % name)
+    assert content.find("Property[@name='NonClient']").get('value') == 'False', name
+    area = udims(content.find("Property[@name='Area']").get('value'))
+    assert area[1] == (0, 0), name + ' must start at the looknfeel client origin'
+    assert area[3][0] < tab_top and area[3][1] == 0, name + ' must end above the tabs'
 close = frame.find("Child[@nameSuffix='__auto_closebutton__']/Area")
 for dimension in ('Width', 'Height'):
     node = close.find("Dim[@type='%s']/WidgetDim" % dimension)
@@ -162,11 +171,29 @@ notice = ET.parse(repo / 'gui/WindowGameEvent.layout').getroot().find('Window')
 message = udims(notice.find("Window[@name='Message']/Property[@name='Area']").get('value'))
 assert abs(message[0][0] - (1 - message[2][0])) < 1e-9, 'message margins are equal'
 notice_extent = window_extent(notice)
-notice_height = notice_extent[1][1]
-atlas = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
-border_height = float(atlas.find("Image[@name='WindowTopEdge']").get('height')) / 4
-for name in ('Message', 'Dismiss', 'Close'):
+# The panel height follows the message text (GameMode.cpp fitEventPanelToText): no fixed pixel height in the
+# layout beyond the default, the width stays at most 60 percent of the screen, and no fixed pixel heights inside.
+assert notice_extent[0][0] <= 0.6 + 1e-9 and notice_extent[0][1] <= 0, 'event panel is at most 60 percent wide'
+game_text = (repo / 'source/modes/GameMode.cpp').read_text(encoding='utf-8', errors='replace')
+assert 'fitEventPanelToText' in game_text and 'display.d_height / 3.0f' in game_text, 'event panel height follows the text'
+labels = {'Dismiss': 'DismissLabel', 'Close': 'CloseLabel'}
+for name in ('Message', 'Dismiss', 'Close', 'DismissLabel', 'CloseLabel'):
     area = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))
-    # Derive the content bounds from the existing scaled atlas border and actual panel height.
-    assert area[1][0] * notice_height >= border_height and area[3][0] * notice_height <= notice_height - border_height, name
+    assert area[1][1] == 0 and area[3][1] == 0, name + ' uses relative vertical dimensions'
+for button, label in labels.items():
+    b = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % button).get('value'))
+    l = udims(notice.find("Window[@name='%s']/Property[@name='Area']" % label).get('value'))
+    assert l[1][0] >= b[3][0], label + ' sits under its symbol button'
+    assert notice.find("Window[@name='%s']/Property[@name='Text']" % label).get('value') == button, label
+assert 'EVENT_PANEL_FIXED_HEIGHT' not in game_text, 'event panel height uses text and font size'
+assert 'textHeight + 8.0f * lineHeight' in game_text, 'button row follows font size'
 print('shared title, close button, list insets, event field and single goals entry verified')
+
+# The options page fits its two existing button groups into a screen-limited window.
+options_layout = ET.parse(repo / 'gui/WindowGameOptions.layout').getroot().find('Window')
+assert window_extent(options_layout)[1] == (0.95, 0.0)
+assert 'const float height = std::min(0.95f, (84.0f + 46.0f * entries.size())' in game_text
+assert 'const float step = 0.78f / entries.size()' in game_text
+for count in (5, 11):
+    step = 0.78 / count
+    assert 0.12 + (count - 1) * step + step * 38 / 46 < 0.9

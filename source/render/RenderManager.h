@@ -425,6 +425,13 @@ public:
     bool m_ZPrePassEnabled;
     
 private:
+    //! \brief Builds the rock border around the map: unexplored earth walls where the view reaches past
+    //! the map edge, so the screen shows game terrain there instead of the world background.
+    void createWorldBorder(GameMap* gameMap);
+
+    //! \brief Destroys the rock border of createWorldBorder with all its entities.
+    void destroyWorldBorder();
+
     Ogre::InstanceManager* mInstanceManagerCloud;
         
     Ogre::DefaultDebugDrawer ddd;

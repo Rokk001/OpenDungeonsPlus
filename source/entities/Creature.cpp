@@ -375,6 +375,10 @@ static const std::string THIRST_SAVE_OPEN = "[Thirst]";
 static const std::string CORPSE_CARRIER_SAVE_LABEL = "CorpseCarrier=";
 //! \brief Tag that closes the block of the thirst state.
 static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
+//! \brief Tag that opens the optional block with the turns until the next leisure visit to a tavern (after the thirst block).
+static const std::string TAVERN_COOLDOWN_SAVE_OPEN = "[TavernCooldown]";
+//! \brief Tag that closes the block of the tavern cooldown.
+static const std::string TAVERN_COOLDOWN_SAVE_CLOSE = "[/TavernCooldown]";
 //! \brief Tag that opens the optional block of the lava spa state (spa mood, relaxation turns, tiles that still get
 //! mud) at the end of a saved creature, after the thirst block. The blocks are read in any order.
 static const std::string SPA_SAVE_OPEN = "[Spa]";
@@ -721,6 +725,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDrunk                   (0.0),
     mVomited                 (false),
     mHangoverTurns           (0.0),
+    mTavernCooldownTurns     (0),
     mHangoverPending         (false),
     mSpaMood                 (0.0),
     mRelaxTurns              (0.0),
@@ -872,6 +877,7 @@ Creature::Creature(GameMap* gameMap) :
     mDrunk                   (0.0),
     mVomited                 (false),
     mHangoverTurns           (0.0),
+    mTavernCooldownTurns     (0),
     mHangoverPending         (false),
     mSpaMood                 (0.0),
     mRelaxTurns              (0.0),
@@ -1170,6 +1176,10 @@ void Creature::exportToStream(std::ostream& os) const
            << mDrunk << " " << (mVomited ? 1 : 0) << " " << mHangoverTurns << " " << THIRST_SAVE_CLOSE;
     }
 
+    // Optional tavern cooldown block, after the thirst block; missing in old saves and when the cooldown is over
+    if(mTavernCooldownTurns > 0)
+        os << "\t" << TAVERN_COOLDOWN_SAVE_OPEN << " " << mTavernCooldownTurns << " " << TAVERN_COOLDOWN_SAVE_CLOSE;
+
     // Optional lava spa block, after the thirst block; missing in old saves and when all its values are 0
     if((mSpaMood > 0.0) || (mRelaxTurns > 0.0) || (mSpaMudTilesLeft > 0))
     {
@@ -1412,6 +1422,21 @@ bool Creature::importFromStream(std::istream& is)
             setDrunk(loadedDrunk);
             setVomited(loadedVomited != 0);
             setHangoverTurns(loadedHangoverTurns);
+            continue;
+        }
+
+        if(appearanceToken == TAVERN_COOLDOWN_SAVE_OPEN)
+        {
+            std::string cooldownClose;
+            int32_t loadedCooldown = 0;
+            if(!(is >> loadedCooldown >> cooldownClose) || (cooldownClose != TAVERN_COOLDOWN_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid tavern cooldown block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + cooldownClose
+                    + "' instead of '" + TAVERN_COOLDOWN_SAVE_CLOSE + "'"));
+                return false;
+            }
+            setTavernCooldownTurns(loadedCooldown);
             continue;
         }
 
@@ -9247,9 +9272,24 @@ void Creature::sleepEnded()
     addTavernMood(config.getTavernConfigDouble("HangoverMood"), hangoverTurns);
 }
 
-//! \brief Lets the drunkenness fall, resets the vomit mark when sober enough and counts down mood and hangover.
+//! \brief Sets the turns until the next leisure visit to a tavern (not below 0).
+void Creature::setTavernCooldownTurns(int32_t turns)
+{
+    mTavernCooldownTurns = std::max(0, turns);
+}
+
+//! \brief The creature just left a tavern: no leisure visit for TavernLeisureCooldownTurns turns.
+void Creature::startTavernCooldown()
+{
+    setTavernCooldownTurns(static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDouble("TavernLeisureCooldownTurns")));
+}
+
+//! \brief Lets the drunkenness fall, resets the vomit mark when sober enough and counts down mood, hangover and the leisure cooldown.
 void Creature::upkeepTavernState()
 {
+    if(mTavernCooldownTurns > 0)
+        --mTavernCooldownTurns;
+
     // Nothing to count for a creature that never visited a tavern
     if((mDrunk <= 0.0) && !mVomited && (mTavernMoodTurns <= 0.0) && (mTavernMood == 0.0) && (mHangoverTurns <= 0.0))
         return;
@@ -10268,6 +10308,7 @@ void Creature::changeSeat(Seat* newSeat)
     mDrunk = 0.0;
     mVomited = false;
     mHangoverTurns = 0.0;
+    mTavernCooldownTurns = 0;
     mHangoverPending = false;
     mSpaMood = 0.0;
     mRelaxTurns = 0.0;
