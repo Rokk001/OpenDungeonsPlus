@@ -2535,6 +2535,19 @@ void Creature::dropCarriedEquipment()
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
+    // Keep the visible skeleton at the server position used for its eventual bone pile.
+    if(getIsOnServerMap() && getDefinition()->hasDeathVanishPile())
+    {
+        for(Seat* seat : mSeatsWithVisionNotified)
+        {
+            if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+                continue;
+            ServerNotification* notification = new ServerNotification(
+                ServerNotificationType::entityTeleported, seat->getPlayer());
+            notification->mPacket << getName() << getPosition();
+            ODServer::getSingleton().queueServerNotification(notification);
+        }
+    }
     setAnimationState(EntityAnimation::die_anim, false, Ogre::Vector3::ZERO, false);
 
     // We drop what we are carrying

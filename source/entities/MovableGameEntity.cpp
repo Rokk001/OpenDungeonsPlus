@@ -19,6 +19,7 @@
 
 #include "entities/GameEntityType.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -366,7 +367,14 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
     if(mPrevAnimationState == EntityAnimation::combat_attack_anim)
         addedTime *= COMBAT_ATTACK_SPEED_FACTOR;
     else if(mPrevAnimationState == EntityAnimation::die_anim)
-        addedTime *= DIE_ANIMATION_SPEED_FACTOR;
+    {
+        // Undead death clips use their configured duration independently of creature speed.
+        if(getObjectType() == GameEntityType::creature &&
+           static_cast<Creature*>(this)->getDefinition()->isUndead())
+            addedTime = static_cast<double>(timeSinceLastFrame) * gameSpeedFactor;
+        else
+            addedTime *= DIE_ANIMATION_SPEED_FACTOR;
+    }
     mAnimationTime += addedTime;
     if (!getIsOnServerMap() && getAnimationState() != nullptr &&
         mPrevAnimationState != EntityAnimation::getup_anim &&

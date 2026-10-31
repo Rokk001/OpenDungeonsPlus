@@ -179,7 +179,7 @@ enum class TileType { dirt, water, lava, gold, rock };
 enum class GameEntityType { creature, dirtPileEntity, other };
 enum class DirtPileKind { pile, blood, vomit, bones };
 
-struct Room; struct GameMap; struct Tile; struct Creature;
+struct Room; struct GameMap; struct Tile; struct Creature; struct Seat;
 
 // ---- Entities on a tile
 struct GameEntity
@@ -188,6 +188,7 @@ struct GameEntity
     virtual GameEntityType getObjectType() const = 0;
 };
 
+// Holds tile state and visible seats for the dirt probe.
 struct Tile
 {
     static const double MAX_DIRT;
@@ -199,6 +200,7 @@ struct Tile
     GameMap* mMap;
     int dirtChanges;
     std::vector<GameEntity*> mEntities;
+    std::vector<Seat*> mSeatsWithVision;
     Tile(int x, int y) : mX(x), mY(y), mDirt(0.0), mFullness(0.0), mType(TileType::dirt), mRoom(nullptr), mClaimed(false), mMap(nullptr), dirtChanges(0) {}
     int getX() const { return mX; }
     int getY() const { return mY; }
@@ -207,6 +209,8 @@ struct Tile
     bool isClaimed() const { return mClaimed; }
     GameMap* getGameMap() const { return mMap; }
     const std::vector<GameEntity*>& getEntitiesInTile() const { return mEntities; }
+    // Returns the seats that can see this tile.
+    const std::vector<Seat*>& getSeatsWithVision() const { return mSeatsWithVision; }
     void noteDirtChange() { ++dirtChanges; }
     bool canCarryDirt() const;
     void addDirt(double amount);
@@ -249,6 +253,7 @@ struct Room
 
 struct CreatureActionSearchDirtToClean { static bool isPileCleanable(const Tile& tile); };
 
+// Supplies tiles and the node type to the dirt probe.
 struct GameMap
 {
     int sizeX, sizeY;
@@ -261,20 +266,25 @@ struct GameMap
         return const_cast<Tile*>(&tiles[y * sizeX + x]);
     }
     bool isServerGameMap() const { return true; }
+    // Returns the probe's node type.
+    int getNodeType() const { return 0; }
 };
 
 // ---- Pile / blood entity
+// Tracks dirt piles and their visibility notifications in the probe.
 struct DirtPileEntity : public GameEntity
 {
     static const double DIRT_LEFT_START;
     GameMap* mMap; DirtPileKind mKind; std::string mCreatureClass; double mDirtLeft, mAgeTurns;
-    bool onMap; Tile* mTile; int removed;
+    bool onMap; Tile* mTile; int removed; bool notified;
     DirtPileEntity(GameMap* gameMap, DirtPileKind kind, const std::string& creatureClass, float angle = 0.0f, double scale = 1.0)
-      : mMap(gameMap), mKind(kind), mCreatureClass(creatureClass), mDirtLeft(DIRT_LEFT_START), mAgeTurns(0.0), onMap(false), mTile(nullptr), removed(0) {}
+      : mMap(gameMap), mKind(kind), mCreatureClass(creatureClass), mDirtLeft(DIRT_LEFT_START), mAgeTurns(0.0), onMap(false), mTile(nullptr), removed(0), notified(false) {}
     GameEntityType getObjectType() const { return GameEntityType::dirtPileEntity; }
     bool getIsOnMap() const { return onMap; }
     void addToGameMap() { onMap = true; }
     void createMesh() {}
+    // Records whether notification happened after positioning.
+    void notifySeatsWithVision(const std::vector<Seat*>&, int) { notified = mTile != nullptr; }
     void setPosition(const Ogre::Vector3& position)
     {
         mTile = mMap->getTile(static_cast<int>(position.x), static_cast<int>(position.y));
@@ -518,6 +528,7 @@ static void checkPiles()
     // Skeletons on the same tile remain separate and do not replace other dirt.
     DirtPileEntity* bones1 = DirtPileEntity::createBones(&map, tile, Ogre::Vector3(2, 2, 0), 0.0f, 1.0);
     DirtPileEntity* bones2 = DirtPileEntity::createBones(&map, tile, Ogre::Vector3(2, 2, 0), 0.0f, 1.0);
+    expect(bones1->notified && bones2->notified, "bone piles are positioned before notifying viewers");
     expect(bones1 != bones2 && DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones) == bones1, "separate skeletons remain on the tile");
     expect(bones1->cleanBy(1000.0) && DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones) == bones2, "cleaning removes one skeleton at a time");
 }

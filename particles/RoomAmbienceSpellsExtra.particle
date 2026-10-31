@@ -1167,3 +1167,138 @@ particle_system LichBeetlesLarge
         state_change 2.0
     }
 }
+
+// Large grave vermin crawl away and fade individually.
+particle_system LichBeetleModels
+{
+    material LichBeetleModel
+    point_rendering false
+    particle_width 0.65
+    particle_height 0.65
+    quota 2
+    billboard_type perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 1
+        duration 1.1
+        time_to_live_min 9
+        time_to_live_max 9
+        direction 1 0 0
+        velocity_min 0.03
+        velocity_max 0.07
+        position 0 0 0.05
+    }
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 1
+        duration 1.1
+        time_to_live_min 9
+        time_to_live_max 9
+        direction -1 0 0
+        velocity_min 0.03
+        velocity_max 0.07
+        position 0 0 0.05
+    }
+    affector ColourFader2
+    {
+        alpha1 0
+        alpha2 -0.5
+        state_change 2.0
+    }
+}
+
+// Large grave vermin crawl away and fade individually.
+particle_system LichMaggotModels
+{
+    material LichMaggotModel
+    point_rendering false
+    particle_width 0.65
+    particle_height 0.65
+    quota 2
+    billboard_type perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 1
+        duration 1.1
+        time_to_live_min 14
+        time_to_live_max 14
+        direction 0 1 0
+        velocity_min 0.03
+        velocity_max 0.07
+        position 0 0 0.05
+    }
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 1
+        duration 1.1
+        time_to_live_min 14
+        time_to_live_max 14
+        direction 0 -1 0
+        velocity_min 0.03
+        velocity_max 0.07
+        position 0 0 0.05
+    }
+    affector ColourFader2
+    {
+        alpha1 0
+        alpha2 -0.5
+        state_change 2.0
+    }
+}
+
+// Large grave vermin crawl away and fade individually.
+particle_system LichWormModels
+{
+    material LichWormModel
+    point_rendering false
+    particle_width 0.65
+    particle_height 0.65
+    quota 2
+    billboard_type perpendicular_common
+    common_direction 0 0 1
+    common_up_vector 0 1 0
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 1
+        duration 1.1
+        time_to_live_min 18.9
+        time_to_live_max 18.9
+        direction 0.707 0.707 0
+        velocity_min 0.03
+        velocity_max 0.07
+        position 0 0 0.05
+    }
+    emitter Point
+    {
+        angle 0
+        colour 1 1 1 1
+        emission_rate 1
+        duration 1.1
+        time_to_live_min 18.9
+        time_to_live_max 18.9
+        direction -0.707 -0.707 0
+        velocity_min 0.03
+        velocity_max 0.07
+        position 0 0 0.05
+    }
+    affector ColourFader2
+    {
+        alpha1 0
+        alpha2 -0.5
+        state_change 2.0
+    }
+}
