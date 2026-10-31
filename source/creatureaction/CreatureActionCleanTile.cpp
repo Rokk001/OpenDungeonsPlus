@@ -44,11 +44,18 @@ std::function<bool()> CreatureActionCleanTile::action() // allowed-lambda: signa
         std::ref(mCreature), std::ref(mTileClean), getNbTurnsActive());
 }
 
-//! \brief Takes the cleaning work off the first thing that lies on the tile: pile, vomit, blood stain, floor dirt.
+//! \brief Cleans the first skeleton, pile, vomit, blood stain or floor dirt on the tile.
 //! \param tile The tile that is cleaned.
 //! \param cleanRate The cleaning work of this turn.
 static void cleanTileStep(Tile& tile, double cleanRate)
 {
+    DirtPileEntity* bones = DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::bones);
+    if(bones != nullptr)
+    {
+        bones->cleanBy(cleanRate);
+        return;
+    }
+
     DirtPileEntity* pile = DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::pile);
     if(pile != nullptr)
     {
@@ -78,7 +85,8 @@ static void cleanTileStep(Tile& tile, double cleanRate)
 //! \brief Tells whether nothing is left to clean on the tile.
 static bool isTileClean(const Tile& tile)
 {
-    return (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::pile) == nullptr) &&
+    return (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::bones) == nullptr) &&
+        (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::pile) == nullptr) &&
         (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::vomit) == nullptr) &&
         (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::blood) == nullptr) &&
         (tile.getDirt() <= 0.0);

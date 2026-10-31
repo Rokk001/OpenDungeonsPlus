@@ -2893,7 +2893,12 @@ void Creature::doUpkeep()
                (mCorpseTurns >= getDefinition()->getDeathVanishSeconds() * ODApplication::turnsPerSecond))
             {
                 if(getIsOnServerMap() && getDefinition()->hasDeathVanishPile() && (getPositionTile() != nullptr))
-                    DirtPileEntity::createOnTile(getGameMap(), getPositionTile(), DirtPileKind::pile, getDefinition()->getClassName());
+                {
+                    const Ogre::Vector3& direction = getWalkDirection();
+                    const Ogre::Real angle = direction == Ogre::Vector3::ZERO ? 0.0f :
+                        Ogre::Radian(std::atan2(direction.x, -direction.y)).valueDegrees();
+                    DirtPileEntity::createBones(getGameMap(), getPositionTile(), getPosition(), angle, getLevelScale());
+                }
                 removeFromGameMap();
                 deleteYourself();
                 return;

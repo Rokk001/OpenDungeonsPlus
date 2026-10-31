@@ -2078,8 +2078,8 @@ gui/ODNavigation.png (integrated minimap ring and plate states)    AI-generated 
 gui/SlotTypes.png    AI-generated with Codex    GPLv3+    Original painted equipment slot symbols.
 materials/textures/LichBeetle.png    AI-generated with Codex    GPLv3+    Original painted dark beetle sprite sheet, four top-view walking frames.
 materials/scripts/RoomAmbience.material (LichBeetle)    AI-generated with Codex    GPLv3+    Original alpha-blended material for the credited beetle sprite sheet.
-particles/RoomAmbienceSpellsExtra.particle (LichBeetles)    AI-generated with Codex    GPLv3+    Original ground-level crawling beetle swarm, reusing the credited beetle sprite sheet.
-models/skeleton.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Original two-second downward bone collapse, 2026-10-28; all other bones and clips retained byte for byte.
-models/lich.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Original two-and-a-half-second inward body and robe disintegration, 2026-10-28; all other bones and clips retained byte for byte.
-models/Pile_Skeleton.mesh (bone heap)    AI-generated with Codex    GPLv3+    Remodelled as a small heap of bones and a skull, original work.
+particles/RoomAmbienceSpellsExtra.particle (LichBeetles)    AI-generated with Codex    GPLv3+    Ground-level crawling beetles in three sizes, reusing the credited beetle sprite sheet.
+models/skeleton.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second downward bone collapse; all other bones and clips retained byte for byte.
+models/lich.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second inward body and robe disintegration; all other bones and clips retained byte for byte.
+models/Pile_Skeleton.mesh (bone heap)    AI-generated with Codex    GPLv3+ for added work; original skeleton mesh licences retained in the existing attribution rows above    Final pose of the skeleton death animation, using its original material.
 materials/textures/Pile_Skeleton.png    AI-generated with Codex    GPLv3+    Repainted in bone white by tools/gen_pile_textures.py.

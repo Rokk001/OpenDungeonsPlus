@@ -105,6 +105,9 @@ double getPileMood(const GameMap& gameMap, const Tile& tile)
             if(DirtPileEntity::getEntityOnTile(neighbour, DirtPileKind::pile) != nullptr)
                 mood += pileMood;
 
+            if(DirtPileEntity::getEntityOnTile(neighbour, DirtPileKind::bones) != nullptr)
+                mood += pileMood;
+
             // A vomit puddle counts like a pile
             if(DirtPileEntity::getEntityOnTile(neighbour, DirtPileKind::vomit) != nullptr)
                 mood += pileMood;

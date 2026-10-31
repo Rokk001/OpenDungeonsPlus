@@ -177,7 +177,7 @@ static void loadConfig()
 enum class RoomType { dungeonTemple, treasury, crypt, workshop, prison, torture, temple, library, nbRooms };
 enum class TileType { dirt, water, lava, gold, rock };
 enum class GameEntityType { creature, dirtPileEntity, other };
-enum class DirtPileKind { pile, blood, vomit };
+enum class DirtPileKind { pile, blood, vomit, bones };
 
 struct Room; struct GameMap; struct Tile; struct Creature;
 
@@ -269,7 +269,7 @@ struct DirtPileEntity : public GameEntity
     static const double DIRT_LEFT_START;
     GameMap* mMap; DirtPileKind mKind; std::string mCreatureClass; double mDirtLeft, mAgeTurns;
     bool onMap; Tile* mTile; int removed;
-    DirtPileEntity(GameMap* gameMap, DirtPileKind kind, const std::string& creatureClass)
+    DirtPileEntity(GameMap* gameMap, DirtPileKind kind, const std::string& creatureClass, float angle = 0.0f, double scale = 1.0)
       : mMap(gameMap), mKind(kind), mCreatureClass(creatureClass), mDirtLeft(DIRT_LEFT_START), mAgeTurns(0.0), onMap(false), mTile(nullptr), removed(0) {}
     GameEntityType getObjectType() const { return GameEntityType::dirtPileEntity; }
     bool getIsOnMap() const { return onMap; }
@@ -288,6 +288,7 @@ struct DirtPileEntity : public GameEntity
     void deleteYourself() { ++removed; }
     void doUpkeep();
     static DirtPileEntity* createOnTile(GameMap* gameMap, Tile* tile, DirtPileKind kind, const std::string& creatureClass);
+    static DirtPileEntity* createBones(GameMap* gameMap, Tile* tile, const Ogre::Vector3& position, Ogre::Real angle, double scale);
     static DirtPileEntity* getEntityOnTile(const Tile* tile, DirtPileKind kind);
     bool cleanBy(double amount);
 };
@@ -514,6 +515,11 @@ static void checkPiles()
     // cleanBy removes the entity and tells the caller
     expect(pile->cleanBy(1000.0), "cleanBy returns true when the pile is gone");
     expect(DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile) == nullptr, "the cleaned pile is off the tile");
+    // Skeletons on the same tile remain separate and do not replace other dirt.
+    DirtPileEntity* bones1 = DirtPileEntity::createBones(&map, tile, Ogre::Vector3(2, 2, 0), 0.0f, 1.0);
+    DirtPileEntity* bones2 = DirtPileEntity::createBones(&map, tile, Ogre::Vector3(2, 2, 0), 0.0f, 1.0);
+    expect(bones1 != bones2 && DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones) == bones1, "separate skeletons remain on the tile");
+    expect(bones1->cleanBy(1000.0) && DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones) == bones2, "cleaning removes one skeleton at a time");
 }
 
 static double mood(Creature& creature) { CreatureMoodDirt m; return m.computeMood(creature); }
@@ -688,7 +694,7 @@ replacements = {
         work_point_function(workshop_cpp, 'work', 'workshopWorkPoints'),
     '@@PILE_FUNCTIONS@@': '\n'.join(extract(pile_cpp, h) for h in [
         'void DirtPileEntity::doUpkeep()', 'DirtPileEntity* DirtPileEntity::getEntityOnTile(',
-        'DirtPileEntity* DirtPileEntity::createOnTile(', 'bool DirtPileEntity::cleanBy(']),
+        'DirtPileEntity* DirtPileEntity::createOnTile(', 'DirtPileEntity* DirtPileEntity::createBones(', 'bool DirtPileEntity::cleanBy(']),
     '@@CREATURE_FUNCTIONS@@': '\n'.join(extract(creature_cpp, h) for h in [
         'void Creature::foodEaten(double val)', 'void Creature::increaseUrge(double value)', 'void Creature::setUrge(double val)',
         'void Creature::increaseCreatureDirt(double value)', 'void Creature::setCreatureDirt(double val)',

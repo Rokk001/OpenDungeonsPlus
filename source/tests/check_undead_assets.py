@@ -41,7 +41,7 @@ def main():
             effect = block
     assert effect is not None, 'roomAmbienceSpells.cfg has no [Effect] LichBeetlesSwarm'
     for key, value in (('Target', 'Event'), ('Event', 'SpellFxLichBeetles'), ('Kind', 'Particle'),
-                       ('System', 'LichBeetles'), ('Offset', '0 0 0'), ('Duration', '2.5'),
+                       ('System', 'LichBeetles'), ('Offset', '0 0 0'), ('Duration', '20'),
                        ('MaxDistance', '40'), ('Priority', '5'), ('Reduced', 'yes')):
         match = re.search(r'^\s*' + key + r'\s+(.+?)\s*$', effect, re.M)
         assert match and match.group(1) == value, 'LichBeetlesSwarm ' + key + ' must be ' + value
@@ -49,6 +49,15 @@ def main():
     particles = read('particles/RoomAmbienceSpellsExtra.particle')
     assert re.search(r'^\s*(?:particle_system\s+)?LichBeetles\s*(\{|$)', particles, re.M), \
         'RoomAmbienceSpellsExtra.particle has no particle system LichBeetles'
+
+    for size, width, height in (('Medium', '0.28', '0.36'), ('Large', '0.42', '0.54')):
+        name = 'LichBeetles' + size
+        assert re.search(r'^\s*Name\s+' + name + r'Swarm\s*$', events, re.M), name + ' event missing'
+        assert re.search(r'^\s*System\s+' + name + r'\s*$', events, re.M), name + ' system is not bound'
+        block = particles.split('particle_system ' + name, 1)[1].split('affector TextureAnimator', 1)[0]
+        assert 'particle_width ' + width in block and 'particle_height ' + height in block
+        assert block.count('emitter Point') == 4 and block.count('emission_rate 2') == 4
+        assert block.count('time_to_live_max 19.5') == 4
 
     texture = ROOT / 'materials/textures/LichBeetle.png'
     assert texture.is_file() and texture.stat().st_size > 0, 'materials/textures/LichBeetle.png is missing'
@@ -67,16 +76,14 @@ def main():
         assert entry in credits, 'CREDITS has no entry ' + entry
 
     pile = (ROOT / 'models/Pile_Skeleton.mesh').read_bytes()
-    assert b'Pile_Skeleton' in pile, 'models/Pile_Skeleton.mesh no longer names its material Pile_Skeleton'
-    assert re.search(r'^\s*material\s+Pile_Skeleton\b', read('materials/scripts/DirtPiles.material'), re.M), \
-        'DirtPiles.material has no material Pile_Skeleton'
+    assert b'undead' in pile, 'models/Pile_Skeleton.mesh must use the skeleton material'
 
     spec = importlib.util.spec_from_file_location('undead_skeleton_chunks',
                                                   ROOT / 'tools/blender-assets/splice_animation_chunks.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     creatures = read('config/creatures.cfg')
-    for creature, skeleton, seconds in (('Skeleton', 'skeleton.skeleton', 2.0), ('Lich', 'lich.skeleton', 2.5)):
+    for creature, skeleton, seconds in (('Skeleton', 'skeleton.skeleton', 5.0), ('Lich', 'lich.skeleton', 5.0)):
         match = re.search(r'^\s*DeathVanishSeconds\s+(\S+)', creature_block(creatures, creature), re.M)
         assert match and float(match.group(1)) == seconds, creature + ' DeathVanishSeconds must be ' + str(seconds)
         length = clip_length(module, skeleton, 'Die')

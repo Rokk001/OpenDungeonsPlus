@@ -38,6 +38,8 @@ static const std::string KIND_PILE_TEXT = "pile";
 static const std::string KIND_BLOOD_TEXT = "blood";
 //! \brief Text of the kind "vomit" in the saved dirt piles.
 static const std::string KIND_VOMIT_TEXT = "vomit";
+//! \brief Text of a cleanable collapsed skeleton in saved dirt piles.
+static const std::string KIND_BONES_TEXT = "bones";
 //! \brief Written in the saved dirt piles instead of an empty creature class.
 static const std::string NO_CLASS_TEXT = "none";
 //! \brief Base name of the unique name of a pile.
@@ -60,22 +62,27 @@ static const std::string& getBaseNameFor(DirtPileKind kind)
     return PILE_BASE_NAME;
 }
 
-DirtPileEntity::DirtPileEntity(GameMap* gameMap, DirtPileKind kind, const std::string& creatureClass) :
+//! \brief Creates a dirt entity with its saved orientation and skeleton scale.
+DirtPileEntity::DirtPileEntity(GameMap* gameMap, DirtPileKind kind, const std::string& creatureClass,
+                               Ogre::Real rotationAngle, double scale) :
     RenderedMovableEntity(gameMap, getBaseNameFor(kind),
-        getMeshNameFor(kind, creatureClass), 0.0f, false),
+        getMeshNameFor(kind, creatureClass), rotationAngle, false),
     mKind(kind),
     mCreatureClass(creatureClass),
     mDirtLeft(DIRT_LEFT_START),
-    mAgeTurns(0.0)
+    mAgeTurns(0.0),
+    mBoneScale(scale)
 {
 }
 
+//! \brief Creates an empty dirt entity for packet import.
 DirtPileEntity::DirtPileEntity(GameMap* gameMap) :
     RenderedMovableEntity(gameMap),
     mKind(DirtPileKind::pile),
     mCreatureClass(""),
     mDirtLeft(DIRT_LEFT_START),
-    mAgeTurns(0.0)
+    mAgeTurns(0.0),
+    mBoneScale(1.0)
 {
 }
 
@@ -167,6 +174,20 @@ DirtPileEntity* DirtPileEntity::createOnTile(GameMap* gameMap, Tile* tile, DirtP
     return dirtPile;
 }
 
+//! \brief Creates a separate cleanable skeleton without replacing other dirt on the tile.
+DirtPileEntity* DirtPileEntity::createBones(GameMap* gameMap, Tile* tile, const Ogre::Vector3& position,
+                                            Ogre::Real rotationAngle, double scale)
+{
+    if((gameMap == nullptr) || (tile == nullptr))
+        return nullptr;
+    DirtPileEntity* bones = new DirtPileEntity(gameMap, DirtPileKind::bones, "Skeleton", rotationAngle, scale);
+    bones->addToGameMap();
+    bones->createMesh();
+    bones->setPosition(position);
+    tile->addDirt(Tile::MAX_DIRT);
+    return bones;
+}
+
 bool DirtPileEntity::cleanBy(double amount)
 {
     if(amount > 0.0)
@@ -186,8 +207,11 @@ void DirtPileEntity::restoreState(double dirtLeft, double ageTurns)
     mAgeTurns = ageTurns;
 }
 
+//! \brief Returns the saved name of a dirt kind.
 std::string DirtPileEntity::kindToString(DirtPileKind kind)
 {
+    if(kind == DirtPileKind::bones)
+        return KIND_BONES_TEXT;
     if(kind == DirtPileKind::blood)
         return KIND_BLOOD_TEXT;
 
@@ -197,8 +221,14 @@ std::string DirtPileEntity::kindToString(DirtPileKind kind)
     return KIND_PILE_TEXT;
 }
 
+//! \brief Decodes the saved name of a dirt kind.
 bool DirtPileEntity::kindFromString(const std::string& text, DirtPileKind& kind)
 {
+    if(text == KIND_BONES_TEXT)
+    {
+        kind = DirtPileKind::bones;
+        return true;
+    }
     if(text == KIND_PILE_TEXT)
     {
         kind = DirtPileKind::pile;
@@ -220,6 +250,7 @@ bool DirtPileEntity::kindFromString(const std::string& text, DirtPileKind& kind)
     return false;
 }
 
+//! \brief Saves dirt state and the pose of a collapsed skeleton.
 void DirtPileEntity::exportToSaveStream(std::ostream& os) const
 {
     int32_t x = 0;
@@ -233,8 +264,12 @@ void DirtPileEntity::exportToSaveStream(std::ostream& os) const
 
     os << kindToString(mKind) << "\t" << (mCreatureClass.empty() ? NO_CLASS_TEXT : mCreatureClass) << "\t"
        << x << "\t" << y << "\t" << mDirtLeft << "\t" << mAgeTurns;
+    if(mKind == DirtPileKind::bones)
+        os << "\t" << getPosition().x << "\t" << getPosition().y << "\t" << getPosition().z
+           << "\t" << getRotationAngle() << "\t" << mBoneScale;
 }
 
+//! \brief Restores dirt and any saved collapsed skeleton pose.
 bool DirtPileEntity::importFromSaveStream(GameMap* gameMap, std::istream& is)
 {
     std::string kindText;
@@ -256,9 +291,14 @@ bool DirtPileEntity::importFromSaveStream(GameMap* gameMap, std::istream& is)
     if(gameMap->getTile(x, y) == nullptr)
         return false;
 
-    DirtPileEntity* dirtPile = new DirtPileEntity(gameMap, kind, creatureClass);
+    Ogre::Vector3 position(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f);
+    Ogre::Real angle = 0.0f;
+    double scale = 1.0;
+    if(kind == DirtPileKind::bones && !(is >> position.x >> position.y >> position.z >> angle >> scale))
+        return false;
+    DirtPileEntity* dirtPile = new DirtPileEntity(gameMap, kind, creatureClass, angle, scale);
     dirtPile->restoreState(dirtLeft, ageTurns);
-    dirtPile->mPosition = Ogre::Vector3(static_cast<Ogre::Real>(x), static_cast<Ogre::Real>(y), 0.0f);
+    dirtPile->mPosition = position;
     dirtPile->addToGameMap();
     return true;
 }
@@ -270,6 +310,7 @@ DirtPileEntity* DirtPileEntity::getDirtPileEntityFromPacket(GameMap* gameMap, OD
     return dirtPile;
 }
 
+//! \brief Sends the dirt state and skeleton size to a client.
 void DirtPileEntity::exportToPacket(ODPacket& os, const Seat* seat) const
 {
     RenderedMovableEntity::exportToPacket(os, seat);
@@ -277,8 +318,10 @@ void DirtPileEntity::exportToPacket(ODPacket& os, const Seat* seat) const
     os << mCreatureClass;
     os << mDirtLeft;
     os << mAgeTurns;
+    os << mBoneScale;
 }
 
+//! \brief Reads the dirt state and skeleton size sent by the server.
 void DirtPileEntity::importFromPacket(ODPacket& is)
 {
     RenderedMovableEntity::importFromPacket(is);
@@ -289,7 +332,10 @@ void DirtPileEntity::importFromPacket(ODPacket& is)
         mKind = DirtPileKind::blood;
     else if(kind == static_cast<int32_t>(DirtPileKind::vomit))
         mKind = DirtPileKind::vomit;
+    else if(kind == static_cast<int32_t>(DirtPileKind::bones))
+        mKind = DirtPileKind::bones;
     OD_ASSERT_TRUE(is >> mCreatureClass);
     OD_ASSERT_TRUE(is >> mDirtLeft);
     OD_ASSERT_TRUE(is >> mAgeTurns);
+    OD_ASSERT_TRUE(is >> mBoneScale);
 }
