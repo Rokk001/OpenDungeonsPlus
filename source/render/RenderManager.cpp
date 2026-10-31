@@ -32,6 +32,7 @@
 #include "entities/ChickenPose.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/DirtPileEntity.h"
 #include "entities/DoorEntity.h"
 #include "entities/GameEntity.h"
 #include "entities/GameEntityType.h"
@@ -3836,6 +3837,12 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
         node = mDraggableSceneNode->createChildSceneNode(tempString + "_node");
     node->setPosition(renderedMovableEntity->getPosition());
     node->roll(Ogre::Degree(renderedMovableEntity->getRotationAngle()));
+    if(renderedMovableEntity->getObjectType() == GameEntityType::dirtPileEntity)
+    {
+        const DirtPileEntity* dirt = static_cast<const DirtPileEntity*>(renderedMovableEntity);
+        if(dirt->getKind() == DirtPileKind::bones)
+            node->setScale(Ogre::Vector3::UNIT_SCALE * static_cast<Ogre::Real>(dirt->getBoneScale()));
+    }
 
     if(renderedMovableEntity->getObjectType() == GameEntityType::buildingObject)
     {

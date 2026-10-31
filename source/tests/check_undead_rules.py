@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[2]
-UNDEAD = {'Skeleton': ('2.0', '1', None), 'Lich': ('2.5', None, 'LichBeetles')}
+UNDEAD = {'Skeleton': ('5.0', '1', None), 'Lich': ('5.0', None, 'LichBeetles')}
 
 
 # Read one file of the repository.
@@ -79,10 +79,17 @@ def main():
     vanish = vanish.group(1)
     assert re.search(r'mCorpseTurns >= getDefinition\(\)->getDeathVanishSeconds\(\) \* ODApplication::turnsPerSecond',
                      vanish), 'the body is not removed after DeathVanishSeconds'
-    assert re.search(r'hasDeathVanishPile\(\)[^;]*\)\s*\n\s*DirtPileEntity::createOnTile\([^;]*DirtPileKind::pile', vanish), \
-        'DeathVanishPile does not leave a pile at the removal'
-    assert vanish.index('DirtPileKind::pile') < vanish.index('removeFromGameMap()'), \
+    assert re.search(r'hasDeathVanishPile\(\).*?DirtPileEntity::createBones\([^;]*getPosition\(\).*?getLevelScale\(\)', vanish, re.S), \
+        'DeathVanishPile does not preserve the skeleton position and scale'
+    assert vanish.index('DirtPileEntity::createBones') < vanish.index('removeFromGameMap()'), \
         'the pile must be created before the body is removed'
+    dirt = read('source/entities/DirtPileEntity.cpp')
+    bones = function_body(dirt, 'DirtPileEntity* DirtPileEntity::createBones(')
+    assert 'new DirtPileEntity' in bones and 'DirtPileKind::bones' in bones, 'each skeleton needs its own cleanable entity'
+    assert 'bones->setPosition(position)' in bones and 'rotationAngle, scale' in bones, 'skeleton pose is not retained'
+    cleaning = read('source/creatureaction/CreatureActionCleanTile.cpp')
+    assert cleaning.count('DirtPileKind::bones') >= 2 and 'bones->cleanBy(cleanRate)' in cleaning, \
+        'workers must find and clean skeletons'
     for signature in ('EntityCarryType Creature::getEntityCarryType(', 'bool Creature::takeCorpse(',
                       'bool Creature::reviveFromCorpse('):
         assert 'isUndead()' in function_body(creature, signature), signature + ' does not refuse an undead creature'

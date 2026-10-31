@@ -178,6 +178,8 @@ static const char* const ROOM_DIRT_HOVER_PREFIX = ". Dirt: ";
 static std::string getDirtPileHoverText(Tile* tile)
 {
     DirtPileEntity* pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile);
+    if(pile == nullptr)
+        pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones);
     if(pile != nullptr)
         return std::string(PILE_HOVER_PREFIX) + social::SocialGenerator::displayClassName(
             social::SocialProfileCache::getSingleton().getData(), pile->getCreatureClass()) + ")";
