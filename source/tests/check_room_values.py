@@ -46,6 +46,7 @@ assert "TortureTimeToConvert" not in creatures, "the per-type torture time is re
 library = read("source/rooms/RoomLibrary.cpp")
 assert "countSkillItemsOnRoom" not in library
 assert "getNumActiveSpots() - mCreaturesSpots.size()" not in library
+assert "checkIfAvailableSpot" not in library, "library research does not depend on book storage"
 
 spawn = read("config/spawnconditions.cfg").replace("\r\n", "\n")
 for cls, line in (("Troll", "RoomTiles\tWorkshop\t9\t0"), ("DarkElf", "RoomTiles\tGuardRoom\t1\t0")):

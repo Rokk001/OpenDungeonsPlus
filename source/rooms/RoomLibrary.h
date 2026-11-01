@@ -26,17 +26,18 @@ class Tile;
 enum class TileVisual;
 enum class SkillType;
 
+//! \brief Stores tile state for a library.
 class RoomLibraryTileData : public TileData
 {
 public:
+    //! \brief Creates default library tile state.
     RoomLibraryTileData() :
-        TileData(),
-        mCanHaveSkillEntity(true)
+        TileData()
     {}
 
+    //! \brief Copies existing library tile state.
     RoomLibraryTileData(const RoomLibraryTileData* roomLibraryTileData) :
-        TileData(roomLibraryTileData),
-        mCanHaveSkillEntity(roomLibraryTileData->mCanHaveSkillEntity)
+        TileData(roomLibraryTileData)
     {}
 
     virtual ~RoomLibraryTileData()
@@ -45,7 +46,6 @@ public:
     virtual RoomLibraryTileData* cloneTileData() const override
     { return new RoomLibraryTileData(this); }
 
-    bool mCanHaveSkillEntity;
 };
 
 class RoomLibrary: public Room
@@ -76,7 +76,6 @@ protected:
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
 private:
-    Tile* checkIfAvailableSpot();
     void getCreatureWantedPos(Creature* creature, Tile* tileSpot,
         Ogre::Real& wantedX, Ogre::Real& wantedY);
     std::vector<Tile*> mUnusedSpots;

@@ -324,7 +324,7 @@ int main(int argc,char** argv){try {
      check(!done.canResearchLevel(SkillType::keeperDominion,1,none)&&!done.canResearchLevel(SkillType::spellSummonChampion,1,none),"not allowed and reward skills cannot be queued");}
     std::vector<SkillType> automatic;SkillManager::buildRandomPendingSkillsForSeat(automatic,&fresh);
     fresh.setSkillTree(automatic);check(fresh.mSkillPending==automatic && !automatic.empty(),"autofill includes legal unlocks and upgrades");
-    fresh.addSkillPoints(100000);check(fresh.mSkillPending.empty(),"large book surplus drains full selected queue");
+    fresh.addSkillPoints(100000);check(fresh.mSkillPending.empty(),"large research surplus drains full selected queue");
     check(fresh.getSkillLevel(SkillType::roomTrainingHall)==2,"autofill upgrades unlocked item only once");
     Seat resumed;resumed.setSkillsDone(all);resumed.setSkillTree({SkillType::trapCannon,SkillType::trapSpike});resumed.addSkillPoints(125);
     check(resumed.mSkillPoints==125,"partial progress of the first upgrade is kept");

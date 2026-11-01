@@ -373,7 +373,8 @@ int main(){
  Tile* spot=heart.askSpotForCarriedEntity(&gold);
  check(spot!=nullptr&&heart.isTreasuryTile(spot),"a carried treasure lands on a ring tile");
  check(heart.askSpotForCarriedEntity(&gift)==center,"gifts land on the central tile");
- check(heart.askSpotForCarriedEntity(&skill)==center,"skills land on the central tile");
+ check(!heart.hasCarryEntitySpot(&skill),"the heart does not accept research books");
+ check(heart.askSpotForCarriedEntity(&skill)==nullptr,"research books have no delivery spot");
 """
 
 probe += r"""
