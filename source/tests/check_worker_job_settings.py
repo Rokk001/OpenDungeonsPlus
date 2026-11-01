@@ -46,6 +46,13 @@ for entry in ('ownKnockedOut', 'enemyKnockedOut', 'corpse', 'gold', 'items', 'gi
     assert 'WorkerCarryEntry::' + entry in classification
 for guard in ('isWorker()', 'isUndead()', 'getKoTurnCounter() >= 0', 'isAlliedSeat', 'EntityCarryType::corpse', 'dynamic_cast<MissileStone*>'):
     assert guard in classification
+# Worker exclusion applies to corpses only: living knocked-out workers use the ordinary own/enemy paths.
+creature_classification = classification[classification.index('if(entity.getObjectType() == GameEntityType::creature)'):classification.index('switch(entity.getObjectType())')]
+assert creature_classification.index('if(!patient.isAlive())') < creature_classification.index('!patient.getDefinition()->isWorker()')
+assert creature_classification.index('!patient.getDefinition()->isWorker()') < creature_classification.index('patient.getKoTurnCounter() >= 0')
+assert creature_classification.count('isWorker()') == 1
+assert creature_classification.index('patient.getKoTurnCounter() >= 0') < creature_classification.index('WorkerCarryEntry::ownKnockedOut')
+assert creature_classification.index('WorkerCarryEntry::ownKnockedOut') < creature_classification.index('WorkerCarryEntry::enemyKnockedOut')
 client_enum = read('source/network/ClientNotification.h').split('enum class ClientNotificationType', 1)[1].split('};', 1)[0]
 server_enum = read('source/network/ServerNotification.h').split('enum class ServerNotificationType', 1)[1].split('};', 1)[0]
 assert client_enum.rindex('askWorkerSettings') > client_enum.rindex('askSpaPayer')
