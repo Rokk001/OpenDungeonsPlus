@@ -1,4 +1,5 @@
 #include "ai/AiActions.h"
+#include "ai/AiEconomy.h"
 #include "ai/AiItems.h"
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
@@ -255,7 +256,24 @@ void perform(KeeperAI& ai, const std::string& target)
         uint32_t index;
         std::string recipient;
         bool mistaken;
-        if(!(input >> index >> recipient >> mistaken) || map.isInEditorMode() || player.getHasLost() || player.numObjectsInHand() != 0) return;
+        if(!(input >> index) || map.isInEditorMode() || player.getHasLost() || player.numObjectsInHand() != 0) return;
+        if(!(input >> recipient))
+        {
+            for(Room* base : map.getRoomsByTypeAndSeat(RoomType::merchant, seat))
+            {
+                RoomMerchant* merchant = static_cast<RoomMerchant*>(base);
+                Tile* table = nullptr;
+                const MerchantGood* good = merchant->findGood(index, table);
+                if(good != nullptr)
+                {
+                    if(ECON::walletGate(ai, good->mItem.getPrice(&map)))
+                        merchant->sellToKeeper(player, index);
+                    break;
+                }
+            }
+            return;
+        }
+        if(!(input >> mistaken)) return;
         Creature* fighter = map.getCreature(decode(recipient));
         Tile* destination = fighter == nullptr ? nullptr : fighter->getPositionTile();
         if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || destination == nullptr ||
@@ -264,11 +282,6 @@ void perform(KeeperAI& ai, const std::string& target)
         for(const std::unique_ptr<ItemInstance>& item : fighter->getInventory())
             freeSlot = freeSlot || item.get() == nullptr;
         if(!freeSlot) return;
-        double bill = 0.0;
-        for(Creature* creature : map.getCreaturesBySeat(seat))
-            if(creature->isAlive() && !creature->getDefinition()->isWorker())
-                bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
-        const double budget = seat->getGold() - bill - ConfigManager::getSingleton().getAiConfigDouble("RoomGoldMargin");
         for(Room* base : map.getRoomsByTypeAndSeat(RoomType::merchant, seat))
         {
             RoomMerchant* merchant = static_cast<RoomMerchant*>(base);
@@ -276,7 +289,7 @@ void perform(KeeperAI& ai, const std::string& target)
             const MerchantGood* good = merchant->findGood(index, table);
             if(good != nullptr)
             {
-                if(good->mItem.getPrice(&map) <= budget && (mistaken || RoomMerchant::wantsItem(*fighter, good->mItem)) &&
+                if(ECON::walletGate(ai, good->mItem.getPrice(&map)) && (mistaken || RoomMerchant::wantsItem(*fighter, good->mItem)) &&
                    merchant->sellToKeeper(player, index) && player.numObjectsInHand() != 0)
                 {
                     std::ostringstream args;
@@ -335,9 +348,9 @@ void perform(KeeperAI& ai, const std::string& target)
         int type, x, y;
         std::string name;
         if(!(input >> type >> x >> y >> name) || type <= static_cast<int>(SpellType::nullSpellType)
-            || type >= static_cast<int>(SpellType::nbSpells) || player.getHasLost()) return;
+            || type >= static_cast<int>(SpellType::nbSpells)) return;
         SpellType spell = static_cast<SpellType>(type);
-        if(!SkillManager::isSpellAvailable(spell, seat) || player.getSpellCooldownTurns(spell) > 0) return;
+        if(player.getHasLost() || !SkillManager::isSpellAvailable(spell, seat) || player.getSpellCooldownTurns(spell) > 0) return;
         const bool tileTarget = spell == SpellType::summonWorker || spell == SpellType::callToWar
             || spell == SpellType::eyeEvil || spell == SpellType::createGold || spell == SpellType::inferno
             || spell == SpellType::tremor || spell == SpellType::summonChampion;

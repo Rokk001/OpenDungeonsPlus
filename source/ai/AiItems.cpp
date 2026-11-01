@@ -1,6 +1,7 @@
 #include "ai/AiItems.h"
 
 #include "ai/AiActions.h"
+#include "ai/AiEconomy.h"
 #include "ai/AiMind.h"
 #include "ai/KeeperAI.h"
 #include "creaturemood/CreatureMood.h"
@@ -89,19 +90,17 @@ void useStoredSpecial(KeeperAI& ai, const AiEvent& event, bool fightSession, boo
     }
 }
 
-//! \brief Keeps the wage and building reserves when choosing the strongest fighter's merchant gift.
+//! \brief Applies the shared purchase gate when choosing the strongest fighter's merchant gift.
 void buyForStrongest(KeeperAI& ai)
 {
     // AI row H04
     Player& player = ai.getControlledPlayer();
     Seat* seat = player.getSeat();
     Creature* strongest = nullptr;
-    double bill = 0.0;
     for(Creature* creature : ai.getGameMap().getCreaturesBySeat(seat))
     {
         if(!creature->isAlive() || creature->getDefinition()->isWorker())
             continue;
-        bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
         if(creature->getIsOnMap() && !creature->isInContainment() &&
            (strongest == nullptr || creature->getHP() * creature->getRawDamagePerSecond() >
                strongest->getHP() * strongest->getRawDamagePerSecond()))
@@ -118,8 +117,6 @@ void buyForStrongest(KeeperAI& ai)
     if(!freeSlot)
         return;
     const bool mistaken = ai.getMind().slip("H04");
-    const double budget = seat->getGold() - bill -
-        ConfigManager::getSingleton().getAiConfigDouble("RoomGoldMargin");
     const std::vector<MerchantStockEntry> stock = RoomMerchant::getStock(ai.getGameMap(), seat);
     const MerchantStockEntry* best = nullptr;
     double bestPrice = 0.0;
@@ -130,7 +127,7 @@ void buyForStrongest(KeeperAI& ai)
         if(!mistaken && room != nullptr && room->getType() == RoomType::arena &&
            static_cast<RoomArena*>(room)->hasRunningFight() && !entry.mGood->mItem.mSoulCrystal)
             continue;
-        if(price > budget || (!mistaken && !RoomMerchant::wantsItem(*strongest, entry.mGood->mItem)))
+        if(!ECON::walletGate(ai, price) || (!mistaken && !RoomMerchant::wantsItem(*strongest, entry.mGood->mItem)))
             continue;
         if(best == nullptr || price > bestPrice)
         {
