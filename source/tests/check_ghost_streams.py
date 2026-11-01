@@ -186,7 +186,7 @@ int main(){
 # Assemble the original creature/room presentation tails and free-reveal codecs.
 def packet_fixture():
     from check_ghost_rules import PRELUDE
-    code = PRELUDE+r'''
+    code = PRELUDE + read('source/game/WorkerJobs.h') + r'''
 //! \brief Supplies transparent unchanged base packet and stream prefixes.
 struct RenderedMovableEntity{
  //! \brief Supplies ordinary creation prefix.
@@ -291,9 +291,14 @@ struct CreatureTail{Seat* owner=nullptr;double mGoldCarried=12.25,mInfirmaryMood
     seat_writer = seat_writer[seat_writer.index('    os << getInfirmaryPayer()'):seat_writer.rindex('}')]
     seat_reader = function(seat_source,'bool SeatData::importFromPacketForUpdate(')
     seat_reader = seat_reader[seat_reader.index('    int32_t payer = 0;'):seat_reader.rindex('}')]
+    read_jobs = function(seat_source, 'bool SeatData::readWorkerJobSettings(').replace('SeatData::', '')
+    write_jobs = function(seat_source, 'void SeatData::writeWorkerJobSettings(').replace('SeatData::', '')
     code += r'''
 //! \brief Keeps the actual owner-only room setting codec tail and its old infirmary prefix.
 struct SeatDataTail{int32_t payer=1,mInfirmaryThreshold=65;bool mInfirmaryHealOn=false,mGhostRevive=false;double mEctoplasmLevels=8.875;GhostProduct mGhostProduct=GhostProduct::crystal;
+ WorkerJobSettings mWorkerJobSettings{{},0,{{0,1,2,3,4,5}},{{0,1,2,3,4,5,6}},0};uint32_t mFreeWorkers=0;std::array<uint32_t,6> mWorkerJobCounts{};
+ READ_JOBS
+ WRITE_JOBS
  //! \brief Returns the existing payer setting.
  int32_t getInfirmaryPayer()const{return payer;}
  //! \brief Receives the existing payer setting.
@@ -307,7 +312,7 @@ struct SeatDataTail{int32_t payer=1,mInfirmaryThreshold=65;bool mInfirmaryHealOn
  //! \brief Executes the original owner-only settings decoder and validation.
  bool load(ODPacket& is){SEAT_READ}
 };
-'''.replace('SEAT_WRITE',seat_writer).replace('SEAT_READ',seat_reader)
+'''.replace('SEAT_WRITE',seat_writer).replace('SEAT_READ',seat_reader).replace('READ_JOBS','static ' + read_jobs).replace('WRITE_JOBS','static ' + write_jobs)
     return code
 
 # Check tail symmetry and preserved old fields as well as free reveal legacy boundaries.

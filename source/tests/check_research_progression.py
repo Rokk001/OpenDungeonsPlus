@@ -61,6 +61,7 @@ request = request[request.index("{") + 1:-1].replace("            break;", "    
 
 probe = r'''
 #include "game/Skill.h"
+#include "game/WorkerJobs.h"
 #include "game/SkillType.h"
 #include "rooms/RoomType.h"
 #include "traps/TrapType.h"
@@ -166,6 +167,7 @@ enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 //! \brief Supplies seat storage for actual research and optional shared-room save methods.
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
+    WorkerJobSettings mWorkerJobSettings{{},0,{{0,1,2,3,4,5}},{{0,1,2,3,4,5,6}},0};
     int32_t mInfirmaryPayer=0,mInfirmaryThreshold=100;bool mInfirmaryHealOn=true;
     //! \brief Supplies the appended optional setting block used by the production seat save path.
     int32_t getInfirmaryPayer()const{return mInfirmaryPayer;}
