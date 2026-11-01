@@ -65,6 +65,8 @@
     <Image name="SysAreaMiddle" xPos="1732" yPos="1008" width="68" height="128" />
     <Image name="SysAreaRight" xPos="1868" yPos="1008" width="68" height="128" />
     <Image name="SelectionBrush" xPos="1284" yPos="1576" width="56" height="56" />
+    <Image name="SelectionFill" xPos="1288" yPos="1596" width="48" height="12" />
+    <Image name="LineFill" xPos="1600" yPos="810" width="6" height="6" />
     <Image name="MouseTextBar" xPos="2028" yPos="1384" width="20" height="64" />
     <Image name="EditBoxTopLeft" xPos="1388" yPos="1924" width="16" height="16" />
     <Image name="EditBoxMiddle" xPos="560" yPos="1684" width="128" height="32" />

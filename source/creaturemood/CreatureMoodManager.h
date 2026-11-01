@@ -51,11 +51,12 @@ public:
     virtual ~CreatureMoodManager()
     {}
 
-    static CreatureMoodLevel getCreatureMoodLevel(int32_t moodModifiersPoints);
+    //! \brief Maps the mood points to a mood level.
+    static CreatureMoodLevel getCreatureMoodLevel(double moodModifiersPoints);
 
     //! \brief Sums type modifiers and temporary moods, including paid admission mood.
     //! \brief Sums moods after Iron Will reduces negative modifiers, then adds Charisma.
-    static int32_t computeCreatureMoodModifiers(const Creature& creature);
+    static double computeCreatureMoodModifiers(const Creature& creature);
 
     static CreatureMood* clone(const CreatureMood* mood);
 

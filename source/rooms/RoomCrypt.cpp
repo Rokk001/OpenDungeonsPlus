@@ -328,7 +328,7 @@ bool RoomCrypt::hasCarryEntitySpot(GameEntity* carriedEntity)
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
     // Only dead creatures can be carried to the crypt. Seat doesn't matter
-    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
+    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->getDefinition()->isUndead() || creature->isCorpseDecaying())
         return false;
 
     for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
@@ -349,7 +349,7 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
     }
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
-    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->isCorpseDecaying())
+    if(creature->isAlive() || creature->getDefinition()->isWorker() || creature->getDefinition()->isUndead() || creature->isCorpseDecaying())
         return nullptr;
     for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
     {
@@ -370,6 +370,15 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
     return nullptr;
 }
 
+//! \brief Checks that a body still owns its original accessible grave delivery tile.
+bool RoomCrypt::hasReservedDelivery(const Creature& body, const Tile* delivery)
+{
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+        if(spot.second == &body)
+            return getDeliveryTile(spot.first) == delivery;
+    return false;
+}
+
 //! \brief Confirms delivery without an independent rot timer, or releases an interrupted delivery.
 void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
@@ -377,6 +386,11 @@ void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carrie
     {
         if(p.second == carriedEntity)
         {
+            if(carrier == nullptr)
+            {
+                p.second = nullptr;
+                return;
+            }
             // We check if the carrier is at the expected destination
             Tile* carrierTile = carrier->getPositionTile();
             if(carrierTile == nullptr)
@@ -430,8 +444,13 @@ void RoomCrypt::exportToStream(std::ostream& os) const
         os << " " << level;
     os << "\nCryptSpots " << mRottingCreatures.size() << "\n";
     for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+    {
+        // A hand-drop override is not resumed after loading and must not reserve a grave.
+        const bool forced = spot.second != nullptr && spot.second->isCorpseCarried() &&
+            spot.second->getCorpseCarrierName().empty();
         os << spot.first->getX() << " " << spot.first->getY() << " "
-           << (spot.second == nullptr ? "none" : spot.second->getName()) << "\n";
+           << (spot.second == nullptr || forced ? "none" : spot.second->getName()) << "\n";
+    }
 }
 
 //! \brief Reads optional crypt tags, rewinding before the next room or section in legacy files.
@@ -490,7 +509,7 @@ void RoomCrypt::restoreInitialEntityState()
         if(spot == mRottingCreatures.end() || saved.second == "none")
             continue;
         Creature* creature = getGameMap()->getCreature(saved.second);
-        if(creature == nullptr || creature->isAlive() || creature->getDefinition()->isWorker())
+        if(creature == nullptr || creature->isAlive() || creature->getDefinition()->isWorker() || creature->getDefinition()->isUndead())
             continue;
         spot->second = creature;
         if(creature->getCorpseCarrierName().empty() && getCorpseSpot(*creature) != nullptr)

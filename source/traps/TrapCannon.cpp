@@ -132,7 +132,7 @@ TrapCannon::TrapCannon(GameMap* gameMap) :
     Trap(gameMap),
     mRange(0)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("CannonReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("CannonReloadTurns");
     mRange = ConfigManager::getSingleton().getTrapConfigUInt32("CannonRange");
     mMinDamage = ConfigManager::getSingleton().getTrapConfigDouble("CannonDamagePerHitMin");
     mMaxDamage = ConfigManager::getSingleton().getTrapConfigDouble("CannonDamagePerHitMax");

@@ -42,6 +42,7 @@ public:
 
     //! \brief Applies boulder damage and records actual hostile creature deaths for the owning seat.
     virtual bool hitCreature(Tile* tile, GameEntity* entity) override;
+    //! \brief Chooses wall breakage using the configured chance, then draws a direction.
     virtual bool wallHitNextDirection(const Ogre::Vector3& actDirection, Tile* tile, Ogre::Vector3& nextDirection) override;
 
     //! \brief A golf ball is a boulder that the keeper slaps: it rolls, slows down and stays where it stops.

@@ -25,6 +25,7 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 
+#include "creatureaction/CreatureActionSearchToilet.h"
 #include "creatureaction/CreatureAction.h"
 #include "creatureaction/CreatureActionEatChicken.h"
 #include "creatureaction/CreatureActionSearchFood.h"
@@ -1345,7 +1346,7 @@ void RoomHatchery::doUpkeep()
     std::vector<ChickenEntity*> roosters;
     HatcheryCounts counts;
     // Dirt the floor under every hen, chick and rooster gets per turn (eggs make none)
-    const double animalDirtPerTurn = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryDirtPerHenTurn", 0.0);
+    const double animalDirtPerTurn = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryDirtPerHenTurn", 0.0323);
     for(Tile* tile : mCoveredTiles)
     {
         std::vector<GameEntity*> entities;
@@ -2116,8 +2117,15 @@ bool RoomHatchery::hasOpenCreatureSpot(Creature* c)
 //! \brief Feeds a creature or reports missing food while it is hungry.
 bool RoomHatchery::useRoom(Creature& creature, bool forced)
 {
+    if(creature.needInterrupt(true))
+    {
+        creature.popAction();
+        creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
+        return true;
+    }
+
     // Check if the creature needs to eat
-    if(creature.getHunger() <= 5.0)
+    if(creature.getHunger() <= ConfigManager::getSingleton().getRoomConfigDouble("HatcherySatedHunger"))
     {
         creature.popAction();
         return true;

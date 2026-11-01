@@ -1,5 +1,7 @@
 #include "creatureeffect/CreatureEffectBleed.h"
 
+#include "utils/ConfigManager.h"
+
 #include "creatureeffect/CreatureEffectManager.h"
 #include "entities/Creature.h"
 #include "gamemap/GameMap.h"
@@ -9,7 +11,6 @@
 namespace
 {
 static const std::string BLEED_NAME = "Bleed";
-static const double BLEED_TURNS = 5.0;
 
 //! \brief Creates bleeding wounds when saved effects are loaded.
 class CreatureEffectBleedFactory : public CreatureEffectFactory
@@ -25,10 +26,10 @@ class CreatureEffectBleedFactory : public CreatureEffectFactory
 static CreatureEffectRegister reg(new CreatureEffectBleedFactory);
 }
 
-//! \brief Spreads a landed blow's additional damage evenly over five turns.
+//! \brief Spreads a landed blow's additional damage over the configured bleed duration.
 CreatureEffectBleed::CreatureEffectBleed(double damage, const std::string& attackerName) :
-    CreatureEffect(BLEED_TURNS, ""),
-    mDamagePerTurn(damage / BLEED_TURNS),
+    CreatureEffect(ConfigManager::getSingleton().getItemSetting("ItemEffects", "BleedTurns"), ""),
+    mDamagePerTurn(damage / ConfigManager::getSingleton().getItemSetting("ItemEffects", "BleedTurns")),
     mAttackerName(attackerName)
 {
     setSourceId("item:Bleed");

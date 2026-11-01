@@ -22,6 +22,8 @@
 #include "ai/AiCare.h"
 #include "ai/AiKnowledge.h"
 #include "ai/AiMath.h"
+#include "ai/AiSpells.h"
+#include "ai/AiTraps.h"
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -129,18 +131,22 @@ AiMath::WarConstants loadWarConstants()
     return k;
 }
 
-//! \brief The trap kinds of the trap potential with their config prefix.
+//! \brief The trap kinds of the trap potential with their config prefix and the skill of their research.
 struct TrapKindInfo
 {
     TrapType type;
     const char* prefix;
+    SkillType skill;
 };
 
 const TrapKindInfo TRAP_KINDS[6] = {
-    {TrapType::spike, "Spike"}, {TrapType::cannon, "Cannon"}, {TrapType::gas, "Gas"},
-    {TrapType::boulder, "Boulder"}, {TrapType::lightning, "Lightning"}, {TrapType::fireburst, "Fireburst"}};
+    {TrapType::spike, "Spike", SkillType::trapSpike}, {TrapType::cannon, "Cannon", SkillType::trapCannon},
+    {TrapType::gas, "Gas", SkillType::trapGas}, {TrapType::boulder, "Boulder", SkillType::trapBoulder},
+    {TrapType::lightning, "Lightning", SkillType::trapLightning}, {TrapType::fireburst, "Fireburst", SkillType::trapFireburst}};
 
-//! \brief The trap set of a seat around a tile: the tiles within CannonMaxDoorDistance of the center, per kind.
+//! \brief The trap set of a seat around a tile: the tiles within CannonMaxDoorDistance of the center, per kind, with
+//! the remaining shots of each tile and the hit damage times the research Damage effect of the AI's own seat (the
+//! enemy research cannot be seen, so it is assumed like the own).
 //! \param revealedFor When not nullptr, only tiles this seat has seen count and ready is false when all are exhausted.
 //! \param ready Receives false when every counted tile is exhausted.
 std::vector<AiMath::TrapKindSet> trapSet(Env& env, Seat* owner, Tile* center, Seat* revealedFor, bool& ready)
@@ -179,12 +185,12 @@ std::vector<AiMath::TrapKindSet> trapSet(Env& env, Seat* owner, Tile* center, Se
                     continue;
 
                 ++entry.tiles;
-                damage += 0.5 * (minDamage + maxDamage);
+                damage += SkillManager::getResearchValue(env.player.getSeat(), kind.skill, 0.5 * (minDamage + maxDamage),
+                                                         ResearchEffect::Damage);
                 ++counted;
                 if(trap->isTileExhausted(tile))
                     ++exhausted;
-                else
-                    shots += ConfigManager::getSingleton().getTrapConfigDoubleOrDefault(std::string(kind.prefix) + "NbShootsBeforeDeactivation", 1.0);
+                shots += trap->getTileShotsLeft(tile);
             }
         }
         if(entry.tiles == 0)
@@ -194,7 +200,6 @@ std::vector<AiMath::TrapKindSet> trapSet(Env& env, Seat* owner, Tile* center, Se
         double reloadTurns = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault(prefix + "ReloadTurns", 5.0);
         entry.reloadSeconds = reloadTurns / ODApplication::turnsPerSecond;
         entry.shots = shots / entry.tiles;
-        // The research Damage effect of the trap kinds is not applied here
         entry.damagePerShot = damage / entry.tiles;
         entry.targets = key("TrapTargets" + prefix);
         entry.spike = (kind.type == TrapType::spike);
@@ -276,6 +281,12 @@ bool nearerToCenter(Tile* a, Tile* b)
     return da < db;
 }
 
+//! \brief True when creature a has a higher level than creature b.
+bool higherLevelFirst(Creature* a, Creature* b)
+{
+    return a->getLevel() > b->getLevel();
+}
+
 //! \brief True when creature a has fewer hit points than creature b.
 bool lowerHpFirst(Creature* a, Creature* b)
 {
@@ -300,17 +311,22 @@ Tile* dropTileNear(Env& env, Creature* creature, Tile* around, size_t skip)
     return candidates[std::min(skip, candidates.size() - 1)];
 }
 
-//! \brief Casts a Call to War banner on a tile and remembers it in the group.
-//! \return false when the mana does not suffice.
+//! \brief Casts the Call to War banner of an assault group on a tile through the shared cast of row E07 and remembers
+//! it in the group with its lifetime (CallToWarNbTurnsMax times the research Lifetime effect, as the spell itself).
+//! \return false when the mana does not suffice or the cast is not possible.
 bool castBanner(Env& env, Group& group, Tile* tile)
 {
-    if(env.player.getSeat()->getMana() < callToWarPrice())
+    Seat* seat = env.player.getSeat();
+    if(seat->getMana() < callToWarPrice())
         return false;
 
-    ACTS::castSpell(env.ai, SpellType::callToWar, tile);
+    if(!SPELL::castCallToWar(env.ai, tile, static_cast<int>(group.members.size()), true))
+        return false;
+
     group.bannerTile = tile;
-    double lifeSeconds = ConfigManager::getSingleton().getSpellConfigDouble("CallToWarNbTurnsMax") / ODApplication::turnsPerSecond;
-    group.bannerUntil = env.now + lifeSeconds;
+    double lifeTurns = std::round(SkillManager::getResearchValue(seat, SkillType::spellCallToWar,
+        ConfigManager::getSingleton().getSpellConfigDouble("CallToWarNbTurnsMax"), ResearchEffect::Lifetime));
+    group.bannerUntil = env.now + lifeTurns / ODApplication::turnsPerSecond;
     return true;
 }
 
@@ -424,7 +440,7 @@ Tile* heartTarget(Env& env, AiKnowledge& knowledge, Seat* enemy)
 
 void planDig(Env& env)
 {
-    // AI row I01: dig toward the nearest known enemy tile once ready; before it explore (row I05)
+    // AI row I01: dig toward the nearest known enemy tile once ready; while none is known the explore look of row I05 runs
     WarState& st = env.state;
     if(st.tunnel != WarState::tunnelNone)
         return;
@@ -433,10 +449,7 @@ void planDig(Env& env)
     AiKnowledge knowledge(env.gameMap, seat);
     Tile* target = knowledge.nearestKnownEnemyTile(st.sighting);
     if(target == nullptr)
-    {
-        knowledge.exploreTunnels(env.ai, env.mind, st.exploreMarked);
         return;
-    }
 
     double minute = env.now / 60.0;
     int fighters = 0;
@@ -445,11 +458,11 @@ void planDig(Env& env)
         if(isFreeFighter(creature))
             ++fighters;
     }
-    int workers = 0;
+    std::vector<Creature*> workers;
     for(Creature* creature : env.gameMap.getCreaturesBySeat(seat))
     {
-        if(creature->getDefinition()->isWorker())
-            ++workers;
+        if(creature->getDefinition()->isWorker() && creature->isAlive() && !creature->isInPrison() && !creature->isKo())
+            workers.push_back(creature);
     }
     int trapTiles = 0;
     bool hasDoor = false;
@@ -480,7 +493,8 @@ void planDig(Env& env)
 
     // Start event: row I02 plans the route and marks it
     double detour = 0.0;
-    if(!knowledge.planRoute(env.ai, env.mind, env.settings, temple->getHeartTile(), target, detour))
+    Tile* firstDig = nullptr;
+    if(!knowledge.planRoute(env.ai, env.settings, temple->getHeartTile(), target, detour, firstDig))
         return;
 
     st.tunnel = WarState::tunnelDigging;
@@ -488,12 +502,43 @@ void planDig(Env& env)
     st.tunnelTarget = target;
     st.tunnelKnown = true;
     st.nextProbe = env.now + key("TunnelProbeSeconds");
-    // The tunnel start is announced to the rows that react to it (H03 hostile specials)
-    env.mind.enqueue({AiEventType::Start, target, nullptr, -1, 0.0, env.now});
-    (void)workers;
+
+    // The diggers: AttackDiggers workers, DigWorkersSlip on the rule mistake, never more than DiggerCapShare of the
+    // workers (at least 1); the highest level first, each dropped next to the first tile of the route
+    int planned = static_cast<int>(env.mind.slip("I01") ? key("DigWorkersSlip") : key("AttackDiggers"));
+    int cap = static_cast<int>(std::max(1.0, key("DiggerCapShare") * static_cast<double>(workers.size())));
+    int diggers = std::min(planned, cap);
+    std::sort(workers.begin(), workers.end(), higherLevelFirst);
+    for(Creature* worker : workers)
+    {
+        if(diggers <= 0)
+            break;
+        Tile* drop = dropTileNear(env, worker, firstDig, 0);
+        if((drop == nullptr) || !worker->tryPickup(seat))
+            continue;
+        ACTS::moveCreature(env.ai, worker, drop);
+        --diggers;
+    }
+
+    AiEvent started = {AiEventType::Start, target, nullptr, -1, 0.0, env.now};
+    env.mind.enqueue(started);
 }
 
-void planAttack(Env& env)
+void exploreLook(Env& env)
+{
+    WarState& st = env.state;
+    if(st.tunnel == WarState::tunnelOpen)
+        return;
+
+    AiKnowledge knowledge(env.gameMap, env.player.getSeat());
+    if(knowledge.nearestKnownEnemyTile(st.sighting) != nullptr)
+        return;
+
+    knowledge.exploreTunnels(env.ai, env.mind, st.exploreMarked);
+}
+
+//! \brief Plans an attack, optionally bypassing the post-assault rest for one second-wave attempt.
+void planAttack(Env& env, bool bypassRest)
 {
     // AI row K01: eligibility and the ready list
     // AI row K02: the estimate, the scores and the draw of the tactic
@@ -502,7 +547,9 @@ void planAttack(Env& env)
     Seat* seat = env.player.getSeat();
     if((st.tunnel != WarState::tunnelOpen) || !st.tunnelKnown || (st.assault != WarState::assaultNone))
         return;
-    if(env.now - st.lastAssaultEnd < key("RestSecondsAfterAssault"))
+    AiEvent plan = {AiEventType::Plan, st.breakthrough, nullptr, -1, 0.0, env.now};
+    env.mind.enqueue(plan);
+    if(!bypassRest && env.now - st.lastAssaultEnd < key("RestSecondsAfterAssault"))
         return;
     if(!callToWarReady(env) || (seat->getMana() < callToWarPrice()))
         return;
@@ -556,7 +603,8 @@ void planAttack(Env& env)
         usedSet = trapSet(env, enemy, st.breakthrough, seat, usedReady);
     double doorSeconds = 8.0;
     double trapPotential = AiMath::trapPotential(usedSet, doorSeconds, 1.0, k);
-    knowledge.scout(env.ai, env.mind, env.settings, st.sighting, env.now, trapPotential, usedReady, !ownContact);
+    knowledge.scout(env.ai, env.mind, env.settings, st.sighting, env.now, heartTarget(env, knowledge, enemy), trapPotential,
+                    usedReady, !ownContact);
 
     // Estimate (row I04)
     double ownIncome = seat->getManaIncomePerSecond();
@@ -701,10 +749,11 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
     if((groups.size() > 1) && !groups[0].raid && groups[1].raid)
         std::swap(groups[0], groups[1]);
 
-    // Gathering decision (row E07 class complex, drawn here as K05): a mistake skips the hand moves
-    bool walkFromHome = env.mind.slip("K05");
-    for(Group& g : groups)
+    // Gathering decision: the complex draw of row E07; a mistake skips the hand moves
+    bool walkFromHome = SPELL::drawLaunchGathering(env.ai);
+    for(size_t i = 0; i < groups.size(); ++i)
     {
+        Group& g = groups[i];
         if(!walkFromHome)
         {
             std::vector<Creature*> moved;
@@ -722,11 +771,19 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
             g.finished = true;
             continue;
         }
-        castBanner(env, g, g.targets.front());
+        // The last group's banner waits for the Launch reaction, so that Strength (row E06) comes first
+        if(i + 1 == groups.size())
+            continue;
+        // A group whose banner cannot be cast does not march
+        if(!castBanner(env, g, g.targets.front()))
+            g.finished = true;
     }
 
+    // A mental step after the last drop raises Launch; its saved hand action is restored by the K05 handler
+    env.mind.exec("think", 1, env.now, "K05", nullptr, "", std::function<void()>());
+
     st.groups = groups;
-    st.assault = WarState::assaultMoving;
+    st.assault = WarState::assaultLaunching;
     st.tactic = tactic;
     st.contactTime = -1.0;
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
@@ -735,12 +792,43 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
                       0.0, env.now});
 }
 
+void launchDropsDone(Env& env)
+{
+    // Row K05: the groups are on their drop tiles; Launch carries the main group's drop tile and the tactic (rows E06,
+    // E20, H03)
+    WarState& st = env.state;
+    if((st.assault != WarState::assaultLaunching) || st.groups.empty())
+        return;
+    Seat* enemy = enemySeat(env);
+    AiEvent launched = {AiEventType::Launch, st.groups.back().dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(),
+                        static_cast<double>(st.tactic), env.now};
+    env.mind.enqueue(launched);
+}
+
+void marchOff(Env& env)
+{
+    // Row K05: after Strength of the Launch reaction the last banner is cast, then the march starts (row E03)
+    WarState& st = env.state;
+    if((st.assault != WarState::assaultLaunching) || st.groups.empty())
+        return;
+    Group& g = st.groups.back();
+    if(!g.finished && !g.targets.empty() && !castBanner(env, g, g.targets.front()))
+        g.finished = true;
+
+    Seat* enemy = enemySeat(env);
+    AiEvent march = {AiEventType::March, g.dropTile, nullptr, (enemy == nullptr) ? -1 : enemy->getId(), 0.0, env.now};
+    env.mind.enqueue(march);
+    st.assault = WarState::assaultMoving;
+    st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
+}
+
 void assaultStep(Env& env)
 {
     // AI row K09: banners are renewed and moved to the next target
     // AI row K07: the retreat test
     WarState& st = env.state;
-    if(st.assault == WarState::assaultNone)
+    // A launch still moving its groups by hand is not a running assault yet
+    if((st.assault == WarState::assaultNone) || (st.assault == WarState::assaultLaunching))
         return;
 
     Seat* seat = env.player.getSeat();
@@ -811,6 +899,8 @@ void assaultStep(Env& env)
     {
         st.contactTime = env.now;
         st.assault = WarState::assaultRunning;
+        AiEvent contact = {AiEventType::Contact, nullptr, nullptr, -1, 0.0, env.now};
+        env.mind.enqueue(contact);
     }
     if(st.contactTime < 0.0)
         return;
@@ -836,13 +926,20 @@ void assaultStep(Env& env)
                 defenders.push_back(creature);
         }
     }
-    if(out.empty() || (powerOf(out) < env.settings.retreatThreshold * powerOf(defenders)))
+    // With no attacker left the assault ends without a draw
+    if(out.empty())
+    {
+        endAssault(env);
+        return;
+    }
+    if(powerOf(out) < env.settings.retreatThreshold * powerOf(defenders))
     {
         if(!env.mind.slip("K07"))
             endAssault(env);
     }
 }
 
+//! \brief Plans immediately or records the window for a second wave after the current assault.
 void secondWave(Env& env)
 {
     // AI row K08: the enemy traps are empty, attack again at once; the mistake waits (no second wave now)
@@ -851,14 +948,18 @@ void secondWave(Env& env)
         return;
 
     st.secondWaveUntil = env.now + key("SecondWaveMinutes") * 60.0;
-    // The rest after the last assault does not hold the second wave back
-    st.lastAssaultEnd = -1.0e18;
-    planAttack(env);
+    // The rest after the last assault does not hold the immediate second-wave attempt back
+    if(st.assault == WarState::assaultNone)
+    {
+        st.secondWaveUntil = -1.0;
+        planAttack(env, true);
+    }
 }
 
+//! \brief Ends an assault and makes a pending second-wave attempt within its window.
 void endAssault(Env& env)
 {
-    // AI row K10: banners removed, survivors on enemy ground carried home by hand, the rest started
+    // AI row K10: banners removed, survivors on enemy ground carried home by hand, the rest started, AssaultOver raised
     WarState& st = env.state;
     Seat* seat = env.player.getSeat();
     for(Group& g : st.groups)
@@ -871,7 +972,7 @@ void endAssault(Env& env)
     RoomDungeonTemple* temple = ownTemple(env);
     std::vector<Creature*> survivors = attackers(env);
     std::sort(survivors.begin(), survivors.end(), strongerFirst);
-    if((temple != nullptr) && !env.mind.slip("K10"))
+    if(temple != nullptr)
     {
         std::vector<Tile*> templeTiles = temple->getCoveredTiles();
         for(Creature* creature : survivors)
@@ -892,6 +993,13 @@ void endAssault(Env& env)
     st.tactic = -1;
     st.contactTime = -1.0;
     st.lastAssaultEnd = env.now;
+
+    AiEvent over = {AiEventType::AssaultOver, nullptr, nullptr, -1, 0.0, env.now};
+    env.mind.enqueue(over);
+    bool secondWavePending = st.secondWaveUntil >= 0.0 && env.now <= st.secondWaveUntil;
+    st.secondWaveUntil = -1.0;
+    if(secondWavePending)
+        planAttack(env, true);
 }
 
 void defend(Env& env, const AiEvent& event)
@@ -954,11 +1062,11 @@ void defend(Env& env, const AiEvent& event)
     if(fightTile == nullptr)
         return;
 
+    // The cast decision is row E07's: more than CallToWarMinCreatures at home and no complex mistake
     bool banner = callToWarReady(env) && (seat->getMana() >= callToWarPrice()) &&
-                  (static_cast<int>(home.size()) > static_cast<int>(key("CallToWarMinCreatures"))) && !env.mind.slip("E07");
+                  SPELL::castCallToWar(env.ai, fightTile, static_cast<int>(home.size()), false);
     if(banner)
     {
-        ACTS::castSpell(env.ai, SpellType::callToWar, fightTile);
         st.defenceBanner = fightTile;
     }
     else
@@ -1124,6 +1232,9 @@ void onEvent(Env& env, const AiEvent& event)
         case AiEventType::EnemyTrapEmpty:
             secondWave(env);
             break;
+        case AiEventType::Launch:
+            marchOff(env);
+            break;
         case AiEventType::AssaultOver:
             break;
         case AiEventType::EnemySpellSeen:
@@ -1174,13 +1285,48 @@ Tile* tileAt(GameMap& gameMap, const std::string& x, const std::string& y)
         return nullptr;
     return gameMap.getTile(xx, yy);
 }
+
+//! \brief Splits a saved token at ':' into at most maxParts parts; the last part keeps the rest of the token.
+std::vector<std::string> splitToken(const std::string& token, size_t maxParts)
+{
+    std::vector<std::string> parts;
+    size_t from = 0;
+    while(parts.size() + 1 < maxParts)
+    {
+        size_t colon = token.find(':', from);
+        if(colon == std::string::npos)
+            break;
+        parts.push_back(token.substr(from, colon - from));
+        from = colon + 1;
+    }
+    parts.push_back(token.substr(from));
+    return parts;
 }
 
+//! \brief True for a saved line that exportRows writes itself (the war and sighting lines and its own draw lines),
+//! so that a game saved again after loading does not keep the loaded copies next to the new ones.
+bool isOwnWarLine(const AiMath::AiStateLine& line)
+{
+    if(line.tokens.empty())
+        return false;
+    if(line.tag == "war")
+        return true;
+    if(line.tag == "sighting")
+        return line.tokens[0] != "spell";
+    if((line.tag == "draw") && (line.tokens.size() == 3))
+        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"))) ||
+               ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
+    return false;
+}
+}
+
+//! \brief Saves war observations and the remaining second-wave window.
 void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
 {
     const WarState& st = env.state;
+    lines.erase(std::remove_if(lines.begin(), lines.end(), isOwnWarLine), lines.end());
     const char* tunnelNames[3] = {"none", "digging", "open"};
-    const char* assaultNames[4] = {"none", "moving", "running", "ending"};
+    const char* assaultNames[5] = {"none", "moving", "running", "ending", "launching"};
     std::vector<std::string> t;
     t.push_back("tunnel");
     t.push_back(tunnelNames[st.tunnel]);
@@ -1189,8 +1335,9 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     t.push_back(tileY(st.tunnelTarget));
     t.push_back(tileX(st.breakthrough));
     t.push_back(tileY(st.breakthrough));
-    // The fortify of the tunnel is row F15 of another package: no fortify is pending here
-    t.push_back("-1");
+    // The fortify of the open tunnel is row F15's (triggered by TunnelOpen); it restores its pending fortify itself
+    double fortifyRemaining = TRAP::fortifyRemaining(env.ai);
+    t.push_back(fortifyRemaining < 0.0 ? "-1" : num(fortifyRemaining));
     addLine(lines, "war", t);
 
     std::vector<std::string> a;
@@ -1200,6 +1347,8 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     a.push_back(st.contactTime < 0.0 ? "-1" : num(env.now - st.contactTime));
     a.push_back(num(std::max(0.0, key("RestSecondsAfterAssault") - (env.now - st.lastAssaultEnd))));
     addLine(lines, "war", a);
+    if(st.secondWaveUntil >= env.now)
+        addLine(lines, "draw", {"K08", "secondWave", num(st.secondWaveUntil - env.now)});
 
     for(size_t i = 0; i < st.groups.size(); ++i)
     {
@@ -1253,6 +1402,12 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
             sl.push_back(num(s.fTrap));
             sl.push_back(s.ready ? "1" : "0");
             addLine(lines, "sighting", sl);
+            // The trap potential seen and whether it was the own set: "seatId:trapBase:ownTraps"
+            std::vector<std::string> tl;
+            tl.push_back("I04");
+            tl.push_back("sightingTrap");
+            tl.push_back(num(entry.first) + ":" + num(s.trapBase) + ":" + (s.ownTraps ? "1" : "0"));
+            addLine(lines, "draw", tl);
             for(const std::pair<const std::string, EnemyRecord>& record : s.records)
             {
                 std::vector<std::string> cl;
@@ -1262,6 +1417,15 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
                 cl.push_back(num(record.second.hp));
                 cl.push_back(num(record.second.rawDps));
                 addLine(lines, "sighting", cl);
+                // The tile the creature was seen on: "seatId:x:y:name"
+                if(record.second.tile != nullptr)
+                {
+                    std::vector<std::string> pl;
+                    pl.push_back("I04");
+                    pl.push_back("recordTile");
+                    pl.push_back(num(entry.first) + ":" + tileX(record.second.tile) + ":" + tileY(record.second.tile) + ":" + record.first);
+                    addLine(lines, "draw", pl);
+                }
             }
         }
         if(s.lastSpellTime >= 0.0)
@@ -1275,16 +1439,20 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     }
 }
 
+//! \brief Restores war observations and the saved second-wave window.
 void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
 {
     WarState& st = env.state;
     std::vector<Creature*> own = env.gameMap.getCreaturesBySeat(env.player.getSeat());
+    std::vector<std::string> recordTiles;
     for(const AiMath::AiStateLine& line : lines)
     {
         const std::vector<std::string>& k = line.tokens;
         if(k.empty())
             continue;
-        if((line.tag == "war") && (k[0] == "tunnel"))
+        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
+            st.secondWaveUntil = env.now + std::atof(k[2].c_str());
+        else if((line.tag == "war") && (k[0] == "tunnel"))
         {
             st.tunnel = (k[1] == "open") ? WarState::tunnelOpen : ((k[1] == "digging") ? WarState::tunnelDigging : WarState::tunnelNone);
             st.detour = std::atof(k[2].c_str());
@@ -1295,7 +1463,8 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         else if((line.tag == "war") && (k[0] == "assault"))
         {
             st.assault = (k[1] == "moving") ? WarState::assaultMoving : ((k[1] == "running") ? WarState::assaultRunning :
-                         ((k[1] == "ending") ? WarState::assaultEnding : WarState::assaultNone));
+                         ((k[1] == "ending") ? WarState::assaultEnding :
+                         ((k[1] == "launching") ? WarState::assaultLaunching : WarState::assaultNone)));
             st.tactic = (k[2] == "-") ? -1 : std::atoi(k[2].c_str());
             double age = std::atof(k[3].c_str());
             st.contactTime = (age < 0.0) ? -1.0 : env.now - age;
@@ -1357,10 +1526,37 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
             record.tile = nullptr;
             st.sighting.seats[std::atoi(k[1].c_str())].records[k[2]] = record;
         }
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "sightingTrap"))
+        {
+            std::vector<std::string> parts = splitToken(k[2], 3);
+            if(parts.size() == 3)
+            {
+                SeatSighting& s = st.sighting.seats[std::atoi(parts[0].c_str())];
+                s.trapBase = std::atof(parts[1].c_str());
+                s.ownTraps = (parts[2] == "1");
+            }
+        }
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "recordTile"))
+        {
+            // Applied after all records are read
+            recordTiles.push_back(k[2]);
+        }
         else if((line.tag == "sighting") && (k[0] == "spell"))
         {
             st.sighting.seats[std::atoi(k[1].c_str())].lastSpellTime = env.now - std::atof(k[2].c_str());
         }
+    }
+
+    // The tiles the recorded enemy creatures were seen on
+    for(const std::string& token : recordTiles)
+    {
+        std::vector<std::string> parts = splitToken(token, 4);
+        if(parts.size() != 4)
+            continue;
+        std::map<std::string, EnemyRecord>& records = st.sighting.seats[std::atoi(parts[0].c_str())].records;
+        std::map<std::string, EnemyRecord>::iterator found = records.find(parts[3]);
+        if(found != records.end())
+            found->second.tile = tileAt(env.gameMap, parts[1], parts[2]);
     }
 }
 }

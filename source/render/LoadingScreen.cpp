@@ -4,8 +4,10 @@
 #include "render/RenderManager.h"
 #include "utils/LogManager.h"
 
-#include <RTShaderSystem/OgreShaderGenerator.h>
 #include <OgreCamera.h>
+#include <OgreHighLevelGpuProgramManager.h>
+#include <OgreHighLevelGpuProgram.h>
+#include <Bites/OgreWindowEventUtilities.h>
 #include <OgreRoot.h>
 #include <OgreViewport.h>
 #include <OgreColourValue.h>
@@ -158,9 +160,9 @@ void fitLoadingImage(Ogre::Rectangle2D& rectangle, unsigned int width, unsigned 
 }
 
 //! \brief Makes an unlit loading material whose out-of-image texture coordinates are black.
-Ogre::MaterialPtr createLoadingMaterial(const std::string& texture)
+Ogre::MaterialPtr createLoadingMaterial(const std::string& texture, const std::string& group = "Graphics")
 {
-    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().create("LoadingScreen", "Graphics");
+    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().create("LoadingScreen", group);
     Ogre::Pass* pass = material->getTechnique(0)->getPass(0);
     pass->setLightingEnabled(false);
     pass->setDepthCheckEnabled(false);
@@ -180,8 +182,9 @@ void selectLoadingImage()
     int image = distribution(generator);
     if(previousImage >= 0 && image >= previousImage)
         ++image;
-    Ogre::TextureManager::getSingleton().load(LOADING_TEXTURES[image], "Graphics");
-    loadingMaterial = createLoadingMaterial(LOADING_TEXTURES[image]);
+    const std::string group = startupScene != nullptr ? "StartupLoading" : "Graphics";
+    Ogre::TextureManager::getSingleton().load(LOADING_TEXTURES[image], group);
+    loadingMaterial = createLoadingMaterial(LOADING_TEXTURES[image], group);
     previousImage = image;
 }
 }
@@ -194,21 +197,64 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window) : mContinueLoading(fals
         startupWindow = &window;
         startupScene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "LoadingScreenScene");
         Ogre::Camera* camera = startupScene->createCamera("LoadingScreenCamera");
-        Ogre::RTShader::ShaderGenerator::getSingleton().addSceneManager(startupScene);
-        window.addViewport(camera, STARTUP_VIEWPORT_ORDER)->setMaterialScheme(
-            Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+        window.addViewport(camera, STARTUP_VIEWPORT_ORDER);
         loadingRectangle = new Ogre::Rectangle2D(Ogre::String("LoadingScreenRectangle"), true);
         loadingRectangle->setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
         startupScene->getRootSceneNode()->attachObject(loadingRectangle);
         selectLoadingImage();
+        // The core OpenGL renderer needs shaders even before RTSS and its libraries exist.
+        Ogre::HighLevelGpuProgramManager& programs = Ogre::HighLevelGpuProgramManager::getSingleton();
+        Ogre::HighLevelGpuProgramPtr vertex = programs.createProgram("StartupLoadingVertex",
+            "StartupLoading", "glsl", Ogre::GPT_VERTEX_PROGRAM);
+        vertex->setSource("#version 150\nin vec4 vertex; in vec2 uv0; out vec2 pictureUV;"
+            "void main(){gl_Position=vertex; pictureUV=uv0;}");
+        vertex->load();
+        Ogre::HighLevelGpuProgramPtr fragment = programs.createProgram("StartupLoadingFragment",
+            "StartupLoading", "glsl", Ogre::GPT_FRAGMENT_PROGRAM);
+        fragment->setSource("#version 150\nuniform sampler2D picture; in vec2 pictureUV; out vec4 colour;"
+            "void main(){colour=texture(picture,pictureUV);}");
+        fragment->load();
+        Ogre::Pass* pass = loadingMaterial->getTechnique(0)->getPass(0);
+        pass->setVertexProgram(vertex->getName());
+        pass->setFragmentProgram(fragment->getName());
+        pass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
         update();
         window.update();
+        OD_LOG_INF("startup loading picture drawn");
+        Ogre::ResourceGroupManager::getSingleton().addResourceGroupListener(this);
     }
     catch(...)
     {
         finish();
         throw;
     }
+}
+
+//! \brief Pumps events and redraws only the loading viewport, leaving partially built scenes untouched.
+void LoadingScreen::presentStartup()
+{
+    if(startupWindow == nullptr || startupWindow->isClosed())
+        return;
+    Ogre::WindowEventUtilities::messagePump();
+    if(startupWindow->isClosed())
+        return;
+    fitLoadingImage(*loadingRectangle, startupWindow->getWidth(), startupWindow->getHeight());
+    startupWindow->_beginUpdate();
+    startupWindow->_updateViewport(STARTUP_VIEWPORT_ORDER);
+    startupWindow->_endUpdate();
+    startupWindow->swapBuffers();
+}
+
+//! \brief Presents the startup picture after each synchronous resource script.
+void LoadingScreen::scriptParseEnded(const Ogre::String&, bool)
+{
+    presentStartup();
+}
+
+//! \brief Presents the startup picture after each resource in a group load.
+void LoadingScreen::resourceLoadEnded()
+{
+    presentStartup();
 }
 
 //! \brief Ends only startup loading, leaving every later load path under its existing ownership.
@@ -255,6 +301,8 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
 //! \brief Restores the prior presentation when a synchronous stage fails or throws.
 LoadingScreen::~LoadingScreen()
 {
+    if(mStartup)
+        Ogre::ResourceGroupManager::getSingleton().removeResourceGroupListener(this);
     if(!mContinueLoading)
     {
         if(mStartup)
@@ -286,15 +334,15 @@ void LoadingScreen::finish()
             delete loadingRectangle;
             loadingRectangle = nullptr;
         }
-        Ogre::RTShader::ShaderGenerator::getSingleton().removeSceneManager(startupScene);
         Ogre::Root::getSingleton().destroySceneManager(startupScene);
         startupScene = nullptr;
         startupWindow = nullptr;
         if(loadingMaterial)
         {
             loadingMaterial.reset();
-            Ogre::MaterialManager::getSingleton().remove("LoadingScreen", "Graphics");
+            Ogre::MaterialManager::getSingleton().remove("LoadingScreen", "StartupLoading");
         }
+        Ogre::ResourceGroupManager::getSingleton().destroyResourceGroup("StartupLoading");
         return;
     }
     ODFrameListener* frame = ODFrameListener::getSingletonPtr();

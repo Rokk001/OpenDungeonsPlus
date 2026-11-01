@@ -51,8 +51,10 @@ remove_covered_tile = function(temple, 'bool RoomDungeonTemple::removeCoveredTil
 do_upkeep = function(temple, 'void RoomDungeonTemple::doUpkeep(')
 mesh_name = function(treasury_object, 'const char* TreasuryObject::getMeshNameForGold(')
 
-# The ring is part of the heart: fixed capacity, no treasury skill involved.
-assert 'static const int treasuryTileCapacity = 1000;' in temple
+# The ring is part of the heart: the capacity per tile is the config key DungeonHeartGoldPerTile (1000), no treasury
+# skill involved.
+assert 'treasuryTileCapacity' not in temple and 'getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0)' in temple
+assert ['DungeonHeartGoldPerTile', '1000'] in [line.split() for line in (repo / 'config/rooms.cfg').read_text(encoding='utf-8').splitlines()]
 assert 'static const int HEART_CORE_RADIUS = 1;' in temple
 assert 'dx >= -HEART_CORE_RADIUS && dx <= HEART_CORE_RADIUS' in temple
 assert 'center = getCentralTile();' in temple
@@ -371,7 +373,8 @@ int main(){
  Tile* spot=heart.askSpotForCarriedEntity(&gold);
  check(spot!=nullptr&&heart.isTreasuryTile(spot),"a carried treasure lands on a ring tile");
  check(heart.askSpotForCarriedEntity(&gift)==center,"gifts land on the central tile");
- check(heart.askSpotForCarriedEntity(&skill)==center,"skills land on the central tile");
+ check(!heart.hasCarryEntitySpot(&skill),"the heart does not accept research books");
+ check(heart.askSpotForCarriedEntity(&skill)==nullptr,"research books have no delivery spot");
 """
 
 probe += r"""

@@ -984,13 +984,16 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::roomHatchery, "Capacity", ResearchBaseSource::roomsInverse, "HatcheryTilesPerChicken", ""},
     {SkillType::roomLibrary, "PointsPerWork", ResearchBaseSource::rooms, "LibraryPointsPerWork", ""},
     {SkillType::roomTrainingHall, "XpPerHit", ResearchBaseSource::rooms, "TrainHallXpPerAttack", ""},
+    {SkillType::roomTrainingHall, "LevelCap", ResearchBaseSource::rooms, "TrainHallMaxTrainingLevel", ""},
     {SkillType::roomWorkshop, "PointsPerWork", ResearchBaseSource::rooms, "WorkshopPointsPerWork", ""},
     {SkillType::roomGuardRoom, "WakefulnessPerDuty", ResearchBaseSource::rooms, "GuardRoomWakefulnessPerDuty", ""},
     {SkillType::roomCasino, "Fee", ResearchBaseSource::rooms, "CasinoFee", ""},
     {SkillType::roomCasino, "Mood", ResearchBaseSource::rooms, "CasinoMoodSmiles", ""},
     {SkillType::roomArena, "LevelCap", ResearchBaseSource::rooms, "ArenaMaxTrainingLevel", ""},
     {SkillType::roomPrison, "Capacity", ResearchBaseSource::factor, "", ""},
-    {SkillType::roomPrison, "SkeletonLevel", ResearchBaseSource::rooms, "PrisonSkeletonBaseLevel", ""},
+    {SkillType::roomPrison, "SkeletonLevel", ResearchBaseSource::rooms, "PrisonSkeletonLevelBonus", ""},
+    {SkillType::roomPrison, "MoodLoss", ResearchBaseSource::factor, "", ""},
+    {SkillType::roomPrison, "BetrayChance", ResearchBaseSource::factor, "", ""},
     {SkillType::roomInfirmary, "HealTime", ResearchBaseSource::rooms, "InfirmaryFullHealSeconds", ""},
     {SkillType::roomGhostRoom, "EctoplasmLevels", ResearchBaseSource::rooms, "GhostLevelsPerEctoplasm", ""},
     {SkillType::roomGhostRoom, "BoxCapacity", ResearchBaseSource::rooms, "GhostBoxCapacity", ""},
@@ -1127,6 +1130,8 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::Gold] = "Gold";
         texts[ResearchEffect::PortalCooldown] = "Portal cooldown";
         texts[ResearchEffect::RelaxTime] = "Relaxation time";
+        texts[ResearchEffect::MoodLoss] = "Prisoner mood loss";
+        texts[ResearchEffect::BetrayChance] = "Betrayal chance";
         texts["GrowTime"] = "Growth time";
         texts["BrewTime"] = "Brewing time";
         texts["CrackTime"] = "Cracking effort";

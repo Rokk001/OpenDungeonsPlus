@@ -136,7 +136,9 @@ enum class ClientNotificationType
     //! Asks for or sets who pays for a bath of a lava spa: + int32_t tileX, int32_t tileY (a tile of the spa),
     //! uint32_t payer (SpaPayer), bool isSet (false only asks). Only the owner can set it; the server answers
     //! with spaPayer.
-    askSpaPayer
+    askSpaPayer,
+    //! \brief Requests or updates the owner worker settings; uint32 isSet followed by a complete record when set.
+    askWorkerSettings
 };
 
 //! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.

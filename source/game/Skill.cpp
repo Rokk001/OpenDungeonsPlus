@@ -17,6 +17,8 @@
 
 #include "game/Skill.h"
 
+#include "utils/ConfigManager.h"
+
 #include <algorithm>
 
 #include "game/Player.h"
@@ -33,11 +35,14 @@ Skill::Skill(SkillType type, int32_t neededSkillPoints, const std::vector<const 
 {
 }
 
+//! \brief Returns research cost using the configured factor for its level.
 int32_t Skill::getNeededSkillPoints(uint32_t level) const
 {
     if(level <= 1)
         return mFreeLevelOne ? 0 : mNeededSkillPoints;
-    return mNeededSkillPoints * (level == 2 ? 2 : 4);
+    return static_cast<int32_t>(mNeededSkillPoints * (level == 2 ?
+        ConfigManager::getSingleton().getResearchCostFactorLevel2() :
+        ConfigManager::getSingleton().getResearchCostFactorLevel3()));
 }
 
 bool Skill::canBeSkilled(const std::vector<SkillType>& skillsDone, const std::vector<SkillType>& skillsNotAllowed) const

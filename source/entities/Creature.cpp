@@ -28,6 +28,7 @@
 #include "ODApplication.h"
 #include "creatureaction/CreatureAction.h"
 #include "creatureaction/CreatureActionClaimGroundTile.h"
+#include "creatureaction/CreatureActionCarryEntity.h"
 #include "creatureaction/CreatureActionClaimWallTile.h"
 #include "creatureaction/CreatureActionDigTile.h"
 #include "creatureaction/CreatureActionFight.h"
@@ -98,8 +99,10 @@
 #include "game/Player.h"
 #include "game/ItemDrops.h"
 #include "game/Skill.h"
+#include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
+#include "game/WorkerAllocation.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
 #include "gamemap/LevelScriptRunner.h"
@@ -203,7 +206,7 @@ static const Ogre::Real POSSESSION_MIN_AIM_SQUARED_LENGTH = 0.0001f;
 //! \brief Pit mood points lost per second when the room config has no PitMoodDecay
 static const double DEFAULT_PIT_MOOD_DECAY_PER_SECOND = 3.0;
 //! \brief Largest pit mood (positive or negative) when the room config has no PitMoodMax
-static const double DEFAULT_PIT_MOOD_MAX = 1500.0;
+static const double DEFAULT_PIT_MOOD_MAX = 1000.0;
 //! \brief Radius in tiles of the hated company check when the room config has no HatedCompanyRadius
 static const double DEFAULT_HATED_COMPANY_RADIUS = 5.0;
 //! \brief Squared distance in tiles (3 tiles) up to which a creature in a possession group stays where it is instead of walking to the leader
@@ -213,7 +216,6 @@ static const Ogre::Real POSSESSION_AIM_MIN_DISTANCE = 0.5;
 
 // Target selection by combat class: the distance to an enemy support creature is multiplied by this
 // factor for blitzers and flankers, so they prefer it over closer enemies
-static const double COMBAT_CLASS_SUPPORT_TARGET_FACTOR = 0.5;
 
 //! \brief Returns the factor applied to the squared distance of a potential target. Lower means preferred.
 //! Blockers and support creatures attack the nearest enemy. Blitzers and flankers prefer enemy support creatures.
@@ -231,7 +233,7 @@ static double getTargetDistanceFactor(const Creature& attacker, const GameEntity
         return 1.0;
 
     if(targetCreature.getDefinition()->getCombatClass() == CreatureDefinition::CombatSupport)
-        return COMBAT_CLASS_SUPPORT_TARGET_FACTOR;
+        return ConfigManager::getSingleton().getSupportTargetDistanceFactor();
 
     return 1.0;
 }
@@ -377,11 +379,24 @@ static const std::string THIRST_SAVE_OPEN = "[Thirst]";
 static const std::string CORPSE_CARRIER_SAVE_LABEL = "CorpseCarrier=";
 //! \brief Tag that closes the block of the thirst state.
 static const std::string THIRST_SAVE_CLOSE = "[/Thirst]";
+//! \brief Tag that opens the optional block with the turns until the next leisure visit to a tavern (after the thirst block).
+static const std::string TAVERN_COOLDOWN_SAVE_OPEN = "[TavernCooldown]";
+//! \brief Tag that closes the block of the tavern cooldown.
+static const std::string TAVERN_COOLDOWN_SAVE_CLOSE = "[/TavernCooldown]";
 //! \brief Tag that opens the optional block of the lava spa state (spa mood, relaxation turns, tiles that still get
 //! mud) at the end of a saved creature, after the thirst block. The blocks are read in any order.
 static const std::string SPA_SAVE_OPEN = "[Spa]";
 //! \brief Tag that closes the block of the lava spa state.
 static const std::string SPA_SAVE_CLOSE = "[/Spa]";
+//! \brief Tag that opens the optional arena knock-out state.
+static const std::string KO_SAVE_OPEN = "[Ko]";
+//! \brief Tag that closes the optional arena knock-out state.
+static const std::string KO_SAVE_CLOSE = "[/Ko]";
+//! \brief Tag that opens the optional block of the captivity state (prison mood, torture mood, broken turns in the
+//! prison and in the torture chamber) at the end of a saved creature. Missing means all 0.
+static const std::string CAPTIVITY_SAVE_OPEN = "[Captivity]";
+//! \brief Tag that closes the block of the captivity state.
+static const std::string CAPTIVITY_SAVE_CLOSE = "[/Captivity]";
 //! \brief Factor of the parabola that gives the height of a jump: 4 x p x (1 - p) is 1 at the apex.
 static const Ogre::Real JUMP_ARC_FACTOR = 4.0f;
 //! \brief The highest value of the thirst and of the drunkenness (both go from 0 to this value).
@@ -410,11 +425,6 @@ const double Creature::WOUNDED_DRAG_MAX_DISTANCE_DEFAULT = 3.5;
 const double Creature::WOUNDED_DRAG_GAP_DEFAULT = 0.9;
 const double Creature::WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT = 1.3;
 const double Creature::WOUNDED_DRAG_WORKER_SPEED_FACTOR_DEFAULT = 0.6;
-const double Creature::WOUNDED_CARRY_RADIUS_DEFAULT = 8.0;
-const double Creature::WOUNDED_CARRY_PRIORITY_DEFAULT = 1.0;
-const double Creature::WOUNDED_CARRY_HP_PERCENT_DEFAULT = 35.0;
-const double Creature::WOUNDED_CARRY_TEMP_KO_DEFAULT = 1.0;
-const double Creature::WOUNDED_CARRY_COOLDOWN_DEFAULT = 150.0;
 const double Creature::PERCENT_FACTOR = 100.0;
 
 namespace
@@ -693,6 +703,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
+    mMissedWages             (0),
     mGoldCarried             (0),
     mGoldRemainder           (0.0),
     mGoldCarriedNotified     (0),
@@ -713,6 +724,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDrunk                   (0.0),
     mVomited                 (false),
     mHangoverTurns           (0.0),
+    mTavernCooldownTurns     (0),
     mHangoverPending         (false),
     mSpaMood                 (0.0),
     mRelaxTurns              (0.0),
@@ -742,12 +754,16 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mSeatPrison              (nullptr),
     mNbTurnsTorture          (0),
     mNbTurnsPrison           (0),
+    mTortureMood             (0.0),
+    mPrisonMood              (0.0),
+    mTortureBrokenTurns      (0),
+    mPrisonBrokenTurns       (0),
+    mArenaKnockOut           (false),
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
     mIsBeingDragged          (false),
     mDragDirtFactor          (1.0),
-    mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
     mNbTurnsRested           (0),
@@ -838,6 +854,7 @@ Creature::Creature(GameMap* gameMap) :
     mChampionTurns           (0),
     mJobCooldown             (0),
     mGoldFee                 (0),
+    mMissedWages             (0),
     mGoldCarried             (0),
     mGoldRemainder           (0.0),
     mGoldCarriedNotified     (0),
@@ -858,6 +875,7 @@ Creature::Creature(GameMap* gameMap) :
     mDrunk                   (0.0),
     mVomited                 (false),
     mHangoverTurns           (0.0),
+    mTavernCooldownTurns     (0),
     mHangoverPending         (false),
     mSpaMood                 (0.0),
     mRelaxTurns              (0.0),
@@ -887,12 +905,16 @@ Creature::Creature(GameMap* gameMap) :
     mSeatPrison              (nullptr),
     mNbTurnsTorture          (0),
     mNbTurnsPrison           (0),
+    mTortureMood             (0.0),
+    mPrisonMood              (0.0),
+    mTortureBrokenTurns      (0),
+    mPrisonBrokenTurns       (0),
+    mArenaKnockOut           (false),
     mActiveSlapsCount        (0),
     mNbTurnsInHand           (0),
     mIsInHand                (false),
     mIsBeingDragged          (false),
     mDragDirtFactor          (1.0),
-    mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
     mNbTurnsRested           (0),
@@ -1063,9 +1085,11 @@ std::string Creature::getCreatureStreamFormat()
 
     format += "ClassName\tLevel\tCurrentXP\tCurrentHP\tCurrentWakefulness"
             "\tCurrentHunger\tGoldToDeposit\tLeftWeapon\tRightWeapon\tCarriedSkill\tCarriedWeapon"
-            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]"
+            "\tNbCreatureEffects\tN*CreatureEffects\t[Appearance]\t[Mana]\t[SkillBuild]\t[Items]\t[Needs urge dirt /Needs]\t[Wages missedWages /Wages]"
             "\t[Thirst thirst tavernMood tavernMoodTurns drunk vomited hangoverTurns /Thirst]"
             "\t[Spa spaMood relaxTurns mudTilesLeft /Spa]"
+            "\t[Ko koTurnCounter arenaKnockOut /Ko]"
+            "\t[Captivity prisonMood tortureMood prisonBrokenTurns tortureBrokenTurns /Captivity]"
             "\t[Corpse corpseTurns decayTurns /Corpse]";
 
     return format;
@@ -1134,6 +1158,9 @@ void Creature::exportToStream(std::ostream& os) const
     }
     exportItemsToStream(os);
 
+    if(mMissedWages > 0)
+        os << "\t[Wages] " << mMissedWages << " [/Wages]";
+
     // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
     if((mUrge > 0.0) || (mCreatureDirt > 0.0))
         os << "\t" << NEEDS_SAVE_OPEN << " " << mUrge << " " << mCreatureDirt << " " << NEEDS_SAVE_CLOSE;
@@ -1146,11 +1173,26 @@ void Creature::exportToStream(std::ostream& os) const
            << mDrunk << " " << (mVomited ? 1 : 0) << " " << mHangoverTurns << " " << THIRST_SAVE_CLOSE;
     }
 
+    // Optional tavern cooldown block, after the thirst block; missing in old saves and when the cooldown is over
+    if(mTavernCooldownTurns > 0)
+        os << "\t" << TAVERN_COOLDOWN_SAVE_OPEN << " " << mTavernCooldownTurns << " " << TAVERN_COOLDOWN_SAVE_CLOSE;
+
     // Optional lava spa block, after the thirst block; missing in old saves and when all its values are 0
     if((mSpaMood > 0.0) || (mRelaxTurns > 0.0) || (mSpaMudTilesLeft > 0))
     {
         os << "\t" << SPA_SAVE_OPEN << " " << mSpaMood << " " << mRelaxTurns << " " << mSpaMudTilesLeft << " "
            << SPA_SAVE_CLOSE;
+    }
+
+    // Preserve an arena knockout or a death knockout, including one interrupted by a load.
+    if(mArenaKnockOut || mKoTurnCounter < 0)
+        os << "\t" << KO_SAVE_OPEN << " " << mKoTurnCounter << " " << (mArenaKnockOut ? 1 : 0) << " " << KO_SAVE_CLOSE;
+
+    // Optional captivity block; missing in old saves and when all its values are 0
+    if((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0))
+    {
+        os << "	" << CAPTIVITY_SAVE_OPEN << " " << mPrisonMood << " " << mTortureMood << " " << mPrisonBrokenTurns
+           << " " << mTortureBrokenTurns << " " << CAPTIVITY_SAVE_CLOSE;
     }
     if(!isAlive())
     {
@@ -1159,7 +1201,7 @@ void Creature::exportToStream(std::ostream& os) const
             os << "\tCorpseConsumed=1";
         else if(mDeathCounter == 0)
             os << "\tCorpseDeathPending=1";
-        if(mIsCarried)
+        if(mIsCarried && !mCorpseCarrierName.empty())
             os << "\t" << CORPSE_CARRIER_SAVE_LABEL << mCorpseCarrierName;
     }
     if(mGhostRevived)
@@ -1169,6 +1211,8 @@ void Creature::exportToStream(std::ostream& os) const
     for(const std::unique_ptr<CreatureAction>& action : mActions)
         if(action->getType()==CreatureActionType::huntGhost)
             static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
+    if(mDefinition->isWorker())
+        os << "\t[WorkerJob] " << static_cast<uint32_t>(mWorkerJob) << ' ' << (mWorkerJobFixed ? 1 : 0) << " [/WorkerJob]";
     os.precision(precision);
 }
 
@@ -1259,6 +1303,16 @@ bool Creature::importFromStream(std::istream& is)
             mNbTurnsTorture = tortureTurns;
             continue;
         }
+        if(appearanceToken == "[WorkerJob]")
+        {
+            uint32_t job = 0, fixed = 0;
+            std::string close;
+            if(!(is >> job >> fixed >> close) || job > static_cast<uint32_t>(WorkerJob::none) || fixed > 1 ||
+               (fixed && job == static_cast<uint32_t>(WorkerJob::none)) || close != "[/WorkerJob]") return false;
+            mWorkerJob = static_cast<WorkerJob>(job);
+            mWorkerJobFixed = fixed != 0;
+            continue;
+        }
         if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size(), CORPSE_CARRIER_SAVE_LABEL) == 0)
         {
             mCorpseCarrierName = appearanceToken.substr(CORPSE_CARRIER_SAVE_LABEL.size());
@@ -1341,6 +1395,14 @@ bool Creature::importFromStream(std::istream& is)
             continue;
         }
 
+        if(appearanceToken == "[Wages]")
+        {
+            std::string wagesClose;
+            if(!(is >> mMissedWages >> wagesClose) || (wagesClose != "[/Wages]"))
+                return false;
+            continue;
+        }
+
         if(appearanceToken == NEEDS_SAVE_OPEN)
         {
             std::string needsClose;
@@ -1385,6 +1447,21 @@ bool Creature::importFromStream(std::istream& is)
             continue;
         }
 
+        if(appearanceToken == TAVERN_COOLDOWN_SAVE_OPEN)
+        {
+            std::string cooldownClose;
+            int32_t loadedCooldown = 0;
+            if(!(is >> loadedCooldown >> cooldownClose) || (cooldownClose != TAVERN_COOLDOWN_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid tavern cooldown block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + cooldownClose
+                    + "' instead of '" + TAVERN_COOLDOWN_SAVE_CLOSE + "'"));
+                return false;
+            }
+            setTavernCooldownTurns(loadedCooldown);
+            continue;
+        }
+
         if(appearanceToken == SPA_SAVE_OPEN)
         {
             std::string spaClose;
@@ -1401,6 +1478,63 @@ bool Creature::importFromStream(std::istream& is)
             setSpaMood(loadedSpaMood);
             setRelaxTurns(loadedRelaxTurns);
             setSpaMudTilesLeft(loadedMudTilesLeft);
+            continue;
+        }
+
+        if(appearanceToken == KO_SAVE_OPEN)
+        {
+            std::string koClose;
+            double loadedKoTurns = 0.0;
+            int32_t loadedArenaKnockOut = 0;
+            if(!(is >> loadedKoTurns >> loadedArenaKnockOut >> koClose) || (koClose != KO_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid arena knock-out block for creature=" + getName());
+                return false;
+            }
+            mKoTurnCounter = loadedKoTurns;
+            mArenaKnockOut = (loadedArenaKnockOut != 0);
+            continue;
+        }
+
+        if(appearanceToken == CAPTIVITY_SAVE_OPEN)
+        {
+            std::string captivityClose;
+            double loadedPrisonMood = 0.0;
+            double loadedTortureMood = 0.0;
+            int32_t loadedPrisonBrokenTurns = 0;
+            int32_t loadedTortureBrokenTurns = 0;
+            int32_t loadedArenaKnockOut = 0;
+            double loadedArenaKoTurns = 0.0;
+            // Older captivity blocks may include the arena flag and its remaining knock-out time.
+            bool captivityRead = static_cast<bool>(is >> loadedPrisonMood >> loadedTortureMood >> loadedPrisonBrokenTurns
+                >> loadedTortureBrokenTurns >> captivityClose);
+            if(captivityRead && (captivityClose != CAPTIVITY_SAVE_CLOSE))
+            {
+                std::istringstream flagStream(captivityClose);
+                captivityRead = static_cast<bool>(flagStream >> loadedArenaKnockOut) && static_cast<bool>(is >> captivityClose);
+                if(captivityRead && (captivityClose != CAPTIVITY_SAVE_CLOSE))
+                {
+                    std::istringstream koStream(captivityClose);
+                    captivityRead = static_cast<bool>(koStream >> loadedArenaKoTurns) && static_cast<bool>(is >> captivityClose);
+                }
+            }
+            if(!captivityRead || (captivityClose != CAPTIVITY_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid captivity block for creature=" + getName() + ", reason="
+                    + (is.fail() ? "a value is missing or not a number" : "closing token is '" + captivityClose
+                    + "' instead of '" + CAPTIVITY_SAVE_CLOSE + "'"));
+                return false;
+            }
+            mPrisonMood = loadedPrisonMood;
+            mTortureMood = loadedTortureMood;
+            mPrisonBrokenTurns = loadedPrisonBrokenTurns;
+            mTortureBrokenTurns = loadedTortureBrokenTurns;
+            // A legacy arena knock-out goes on with its remaining time and gets up when it runs out.
+            if(loadedArenaKnockOut != 0)
+            {
+                mArenaKnockOut = true;
+                mKoTurnCounter = std::max(1.0, loadedArenaKoTurns);
+            }
             continue;
         }
 
@@ -1846,15 +1980,13 @@ std::unique_ptr<ItemInstance> Creature::setPotionSlot(size_t slot, std::unique_p
     return previous;
 }
 
-//! \brief Adds the second potion slot at level ten and the third at level twenty.
+//! \brief Adds potion slots at their configured creature levels.
 void Creature::resizePotionSlots()
 {
-    static const uint32_t SECOND_SLOT_LEVEL = 10;
-    static const uint32_t THIRD_SLOT_LEVEL = 20;
     size_t count = 1;
-    if(mLevel >= THIRD_SLOT_LEVEL)
+    if(mLevel >= ConfigManager::getSingleton().getItemSetting("Potions", "PotionSlotLevel3"))
         count = 3;
-    else if(mLevel >= SECOND_SLOT_LEVEL)
+    else if(mLevel >= ConfigManager::getSingleton().getItemSetting("Potions", "PotionSlotLevel2"))
         count = 2;
     if(mPotionSlots.size() < count)
     {
@@ -1884,19 +2016,19 @@ double Creature::getPotionFactor(const std::string& kind) const
     return factor;
 }
 
-//! \brief Gives dexterity potions their two, four or six critical chance points.
+//! \brief Gives dexterity potions their configured critical chance points.
 double Creature::getPotionCritChance() const
 {
-    static const double DEXTERITY_SMALL = 1.10;
-    static const double DEXTERITY_MEDIUM = 1.15;
-    static const double DEXTERITY_LARGE = 1.20;
+    const double DEXTERITY_SMALL = ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionFactorSmall");
+    const double DEXTERITY_MEDIUM = ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionFactorMedium");
+    const double DEXTERITY_LARGE = ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionFactorLarge");
     double points = 0.0;
     if(!getIsOnServerMap())
     {
         const double factor = getPotionFactor("DexterityChange");
-        if(factor >= DEXTERITY_LARGE) return 6.0;
-        if(factor >= DEXTERITY_MEDIUM) return 4.0;
-        if(factor >= DEXTERITY_SMALL) return 2.0;
+        if(factor >= DEXTERITY_LARGE) return ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritLarge");
+        if(factor >= DEXTERITY_MEDIUM) return ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritMedium");
+        if(factor >= DEXTERITY_SMALL) return ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritSmall");
         return 0.0;
     }
     for(const std::pair<const CreatureEffect* const, std::pair<std::string, double>>& entry : mPotionContributions)
@@ -1904,11 +2036,11 @@ double Creature::getPotionCritChance() const
         if(entry.second.first != "DexterityChange")
             continue;
         if(entry.second.second >= DEXTERITY_LARGE)
-            points += 6.0;
+            points += ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritLarge");
         else if(entry.second.second >= DEXTERITY_MEDIUM)
-            points += 4.0;
+            points += ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritMedium");
         else if(entry.second.second >= DEXTERITY_SMALL)
-            points += 2.0;
+            points += ConfigManager::getSingleton().getItemSetting("Potions", "DexterityPotionCritSmall");
     }
     return points;
 }
@@ -1947,14 +2079,12 @@ void Creature::removePotionContribution(const CreatureEffect* source)
 //! \brief Adds conditional item defense after the natural defense curve.
 double Creature::getItemDefenseFactor() const
 {
-    static const double LAST_STAND_HEALTH_SHARE = 0.25;
-    static const double BULWARK_RADIUS = 2.0;
     double bonus = getItemBonus("Defense%") + getItemEffect("ThickPlates");
-    if(mMaxHP > 0.0 && mHp < mMaxHP * LAST_STAND_HEALTH_SHARE)
+    if(mMaxHP > 0.0 && mHp < mMaxHP * ConfigManager::getSingleton().getItemSetting("ItemEffects", "LastStandHealthShare"))
         bonus += getItemEffect("LastStand");
     if(getItemEffect("Bulwark") != 0.0)
     {
-        for(const Creature* mate : getOwnCreaturesWithin(BULWARK_RADIUS))
+        for(const Creature* mate : getOwnCreaturesWithin(ConfigManager::getSingleton().getItemSetting("ItemEffects", "BulwarkRadius")))
         {
             if(mate != this)
             {
@@ -2427,6 +2557,19 @@ void Creature::dropCarriedEquipment()
     fireCreatureSound(CreatureSound::Die);
     clearActionQueue();
     clearDestinations(EntityAnimation::die_anim, false, false);
+    // Keep the visible skeleton at the server position used for its eventual bone pile.
+    if(getIsOnServerMap() && getDefinition()->hasDeathVanishPile())
+    {
+        for(Seat* seat : mSeatsWithVisionNotified)
+        {
+            if(seat->getPlayer() == nullptr || !seat->getPlayer()->getIsHuman())
+                continue;
+            ServerNotification* notification = new ServerNotification(
+                ServerNotificationType::entityTeleported, seat->getPlayer());
+            notification->mPacket << getName() << getPosition();
+            ODServer::getSingleton().queueServerNotification(notification);
+        }
+    }
     setAnimationState(EntityAnimation::die_anim, false, Ogre::Vector3::ZERO, false);
 
     // We drop what we are carrying
@@ -2464,7 +2607,7 @@ void Creature::dropCarriedEquipment()
 }
 
 //! \brief Advances creature upkeep and records an expired lethal knockout as an actual script death.
-//! Spaces authoritative standing bodies before their next action without changing action targets.
+//! Spaces authoritative standing bodies and interrupts activities for urgent needs.
 void Creature::doUpkeep()
 {
     upkeepGhostHunt();
@@ -2477,8 +2620,7 @@ void Creature::doUpkeep()
     }
     if(isAlive() && !isActionInList(CreatureActionType::fight))
     {
-        static const double MENDING_SECONDS = 10.0;
-        const double healing = getItemEffect("Mending") / 100.0 * mMaxHP / (MENDING_SECONDS * ODApplication::turnsPerSecond);
+        const double healing = getItemEffect("Mending") / 100.0 * mMaxHP / (ConfigManager::getSingleton().getItemSetting("ItemEffects", "MendingSeconds") * ODApplication::turnsPerSecond);
         if(healing > 0.0)
             heal(healing);
     }
@@ -2526,6 +2668,23 @@ void Creature::doUpkeep()
             // it is not standing on a jail. It is free
             mSeatPrison = nullptr;
             mNeedFireRefresh = true;
+            resetPrisonMood();
+            resetTortureMood();
+        }
+    }
+
+    // A creature that left prison and torture chamber for good (setInJail(nullptr) of the room already forgot the
+    // prison seat) loses its prison and torture mood; one picked up or standing in a prison or torture chamber keeps it
+    if((mSeatPrison == nullptr) && getIsOnMap() &&
+       ((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0)))
+    {
+        Tile* releaseTile = getPositionTile();
+        Room* releaseRoom = (releaseTile == nullptr) ? nullptr : releaseTile->getCoveringRoom();
+        if((releaseRoom == nullptr) ||
+           ((releaseRoom->getType() != RoomType::prison) && (releaseRoom->getType() != RoomType::torture)))
+        {
+            resetPrisonMood();
+            resetTortureMood();
         }
     }
 
@@ -2647,6 +2806,14 @@ void Creature::doUpkeep()
         if(mKoTurnCounter > 0)
             return;
 
+        // The loser of an arena fight gets up with ArenaGetUpHpShare of its max HP and looks after itself in its bed
+        if(mArenaKnockOut)
+        {
+            mArenaKnockOut = false;
+            setHP(getMaxHp() * ConfigManager::getSingleton().getRoomConfigDouble("ArenaGetUpHpShare"));
+            sleep();
+        }
+
         if(!getGameMap()->isInEditorMode())
             setAnimationState(EntityAnimation::getup_anim, false,
                 Ogre::Vector3::ZERO, false);
@@ -2662,7 +2829,7 @@ void Creature::doUpkeep()
     if(mKoTurnCounter < 0)
     {
 
-        if(getIsOnMap())
+        if(getIsOnMap() && !mIsBeingDragged)
         {
             Tile* myTile = getPositionTile();
             if(myTile == nullptr)
@@ -2716,8 +2883,9 @@ void Creature::doUpkeep()
             deleteYourself();
             return;
         }
-        // The corpse dirties the tile it lies on, never the tile under a carrying worker.
-        if(getIsOnServerMap() && !mIsCarried)
+        // The corpse dirties the tile it lies on, never the tile under a carrying worker. An undead creature leaves
+        // no corpse.
+        if(getIsOnServerMap() && !mIsCarried && !getDefinition()->isUndead())
             dirtyTileByCorpse();
 
         if(mDeathCounter == 0)
@@ -2725,13 +2893,16 @@ void Creature::doUpkeep()
             OD_LOG_INF("Creature=" + getName() + " RIP");
             dropCarriedEquipment();
 
-            // The fight leaves blood on the tile where the creature fell.
-            if(getIsOnServerMap() && (getPositionTile() != nullptr))
+            // The fight leaves blood on the tile where the creature fell (an undead creature has no blood).
+            if(getIsOnServerMap() && (getPositionTile() != nullptr) && !getDefinition()->isUndead())
                 DirtPileEntity::createOnTile(getGameMap(), getPositionTile(), DirtPileKind::blood, getDefinition()->getClassName());
 
             if(getIsOnServerMap() && (getSeat()->getPlayer() != nullptr))
                 getSeat()->getPlayer()->notifyCreatureKilled(*this);
-            if(getIsOnServerMap() && !getDefinition()->isWorker())
+            // An undead creature leaves no ghost; some fall apart in an effect of their own (DeathVanishEffect)
+            if(getIsOnServerMap() && !getDefinition()->getDeathVanishEffect().empty() && (getPositionTile() != nullptr))
+                Spell::fireSpellEffect(*getPositionTile(), getDefinition()->getDeathVanishEffect(), "");
+            if(getIsOnServerMap() && !getDefinition()->isWorker() && !getDefinition()->isUndead())
             {
                 GhostEntity* ghost = new GhostEntity(getGameMap(), *this);
                 ghost->addToGameMap();
@@ -2752,6 +2923,21 @@ void Creature::doUpkeep()
         if(!mIsCarried)
         {
             mCorpseTurns += 1.0;
+            // The body of an undead creature vanishes after DeathVanishSeconds (a bone pile may stay behind)
+            if((getDefinition()->getDeathVanishSeconds() > 0.0) &&
+               (mCorpseTurns >= getDefinition()->getDeathVanishSeconds() * ODApplication::turnsPerSecond))
+            {
+                if(getIsOnServerMap() && getDefinition()->hasDeathVanishPile() && (getPositionTile() != nullptr))
+                {
+                    const Ogre::Vector3& direction = getWalkDirection();
+                    const Ogre::Real angle = direction == Ogre::Vector3::ZERO ? 0.0f :
+                        Ogre::Radian(std::atan2(direction.x, -direction.y)).valueDegrees();
+                    DirtPileEntity::createBones(getGameMap(), getPositionTile(), getPosition(), angle, getLevelScale());
+                }
+                removeFromGameMap();
+                deleteYourself();
+                return;
+            }
             ConfigManager& config = ConfigManager::getSingleton();
             if(mDecayTurns < 0.0 && mCorpseTurns >= config.getCorpseLieSeconds() * ODApplication::turnsPerSecond)
             {
@@ -2797,6 +2983,39 @@ void Creature::doUpkeep()
         if((roomPrison != nullptr) && (decreaseJobCooldown()))
             roomPrison->useRoom(*this, true);
 
+        // A jailed creature gets hungry and thirsty like any other, and the prison slowly breaks its mood
+        // (a rogue prisoner too: the increase functions skip rogue creatures, so its needs grow here directly)
+        if(getSeat()->isRogueSeat())
+        {
+            mHunger = std::min(100.0, mHunger + mDefinition->getHungerGrowthPerTurn());
+            if(mDefinition->hasThirst())
+                mThirst = std::min(THIRST_STATE_MAX, mThirst + mDefinition->getThirstGrowthPerTurn());
+        }
+        else
+        {
+            increaseHunger(mDefinition->getHungerGrowthPerTurn());
+            increaseThirst(mDefinition->getThirstGrowthPerTurn());
+        }
+        if((roomPrison != nullptr) && (roomPrison->getType() == RoomType::prison))
+        {
+            addPrisonMood(ConfigManager::getSingleton().getRoomConfigDouble("PrisonMoodPerSecond")
+                * SkillManager::getResearchValue(mSeatPrison, SkillType::roomPrison, 1.0, ResearchEffect::MoodLoss)
+                / ODApplication::turnsPerSecond);
+        }
+
+        // The mood of a jailed creature sees its hunger, thirst, wounds, prison mood and torture mood. The Furious
+        // timer and the leave behaviour stay skipped in jail.
+        if(mMoodCooldownTurns > 0)
+        {
+            --mMoodCooldownTurns;
+        }
+        else
+        {
+            computeMood();
+            computeCreatureOverlayMoodValue();
+            mMoodCooldownTurns = Random::Int(0, 5);
+        }
+
         return;
     }
 
@@ -2823,7 +3042,10 @@ void Creature::doUpkeep()
 
 
     // Heal.
-    mHp += mDefinition->getHpHealPerTurn();
+    double naturalHeal = getMaxHp() / (ConfigManager::getSingleton().getNaturalFullHealSeconds() * ODApplication::turnsPerSecond);
+    if(getDefinition()->isUndead())
+        naturalHeal *= ConfigManager::getSingleton().getUndeadHealFactor();
+    mHp += naturalHeal;
     if (mHp > getMaxHp())
         mHp = getMaxHp();
 
@@ -2878,9 +3100,9 @@ void Creature::doUpkeep()
     {
         int32_t decay = ConfigManager::getSingleton().getRoomConfigInt32("SpecialMoodDecayPerTurn");
         if(mSpecialMood > 0)
-            mSpecialMood = std::max(0, mSpecialMood - decay);
+            mSpecialMood = std::max(0.0, mSpecialMood - decay);
         else
-            mSpecialMood = std::min(0, mSpecialMood + decay);
+            mSpecialMood = std::min(0.0, mSpecialMood + decay);
     }
 
     // The clients show the gold on the body of the carrier. They are told when it changed (cosmetic only).
@@ -3117,12 +3339,52 @@ void Creature::doUpkeep()
         }
     }
 
+    mActionTry.clear();
+
+    // Urgent needs interrupt other activities, including travel, unless a need is already being served.
+    bool servingNeed = isActionInList(CreatureActionType::searchFood) ||
+        isActionInList(CreatureActionType::searchDrink) || isActionInList(CreatureActionType::eatChicken);
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+    {
+        if(!CreatureAction::isRoomWorkAction(action->getType()))
+            continue;
+        const Room* room = static_cast<const CreatureActionUseRoom*>(action.get())->getRoom();
+        if(room != nullptr && ((room->getType() == RoomType::hatchery && isHungry()) ||
+           (room->getType() == RoomType::tavern &&
+            mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"))))
+            servingNeed = true;
+    }
+    if(!mActions.empty() && !isActionInList(CreatureActionType::searchToilet) &&
+       !isActionInList(CreatureActionType::useToilet) && needInterrupt(servingNeed))
+    {
+        bool foodAvailable = false;
+        bool drinkAvailable = false;
+        if(!servingNeed && isHungry() && !hasActionBeenTried(CreatureActionType::searchFood))
+        {
+            for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, getSeat()))
+                foodAvailable |= room->numCoveredTiles() > 0;
+        }
+        if(!servingNeed && mDefinition->hasThirst() &&
+           mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           !hasActionBeenTried(CreatureActionType::searchDrink))
+        {
+            for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))
+                drinkAvailable |= room->numCoveredTiles() > 0;
+        }
+        stopWalking();
+        clearActionQueue();
+        if(foodAvailable)
+            pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        else if(drinkAvailable)
+            pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
+        else
+            pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
+    }
+
     // The loopback variable allows creatures to begin processing a new
     // action immediately after some other action happens.
     bool loopBack = false;
     unsigned int loops = 0;
-
-    mActionTry.clear();
 
     do
     {
@@ -3205,49 +3467,72 @@ void Creature::handleHeartDefence()
     pushAction(Utils::make_unique<CreatureActionGoDefendHeart>(*this));
 }
 
-//! \brief Chooses equipment, trade and visible item actions among the existing idle needs.
+//! \brief Serves idle needs before choosing equipment, trade and other actions.
 bool Creature::handleIdleAction()
 {
     setAnimationState(EntityAnimation::idle_anim);
 
     if (mDefinition->isWorker())
     {
-        // A trap of the keeper that used up its shots is armed again before the other jobs
-        if(!hasActionBeenTried(CreatureActionType::reloadTrap) && getSeat()->getPlayer()->isWorkerReloadShareOpen() &&
-           CreatureActionReloadTrap::tryStart(*this))
-            return true;
+        const std::array<CreatureActionType, 6> actions{{
+            CreatureActionType::searchTileToDig, CreatureActionType::searchGroundTileToClaim,
+            CreatureActionType::searchWallTileToClaim, CreatureActionType::searchEntityToCarry,
+            CreatureActionType::searchDirtToClean, CreatureActionType::reloadTrap}};
+        std::array<bool, 6> available;
+        for(uint32_t job = 0; job < actions.size(); ++job)
+            available[job] = !hasActionBeenTried(actions[job]);
 
-        // Decide what to do
-        std::vector<CreatureActionType> workerActions = getSeat()->getPlayer()->getWorkerPreferredActions(*this);
-        for(CreatureActionType actionType : workerActions)
+        for(uint32_t attempts = 0; attempts < actions.size(); ++attempts)
         {
-            if(hasActionBeenTried(actionType))
-                continue;
-
-            switch(actionType)
+            WorkerJob job = getWorkerJob();
+            if(!isWorkerJobFixed())
             {
-                case CreatureActionType::searchEntityToCarry:
-                    pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, false));
-                    return true;
-                case CreatureActionType::searchGroundTileToClaim:
-                    pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, false));
-                    return true;
-                case CreatureActionType::searchTileToDig:
+                job = WorkerAllocation::chooseForIdle(*getSeat(), *this, available);
+                setWorkerJob(job, false);
+            }
+            // Gold dug before this idle choice is left on the tile when the worker leaves digging.
+            if(job != WorkerJob::dig && getGoldCarried() > 0 && getPositionTile() != nullptr)
+            {
+                Tile* tile = getPositionTile();
+                TreasuryObject* gold = new TreasuryObject(getGameMap(), getGoldCarried());
+                resetGoldCarried();
+                gold->addToGameMap();
+                gold->createMesh();
+                gold->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+                    static_cast<Ogre::Real>(tile->getY()), 0.0f));
+            }
+            const uint32_t index = static_cast<uint32_t>(job);
+            if(index >= actions.size() || !available[index] || getSeat()->getWorkerJobTargets()[index] == 0)
+                break;
+            switch(job)
+            {
+                case WorkerJob::dig:
                     pushAction(Utils::make_unique<CreatureActionSearchTileToDig>(*this, false));
                     return true;
-                case CreatureActionType::searchWallTileToClaim:
+                case WorkerJob::claimGround:
+                    pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, false));
+                    return true;
+                case WorkerJob::claimWall:
                     pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, false));
                     return true;
-                case CreatureActionType::searchDirtToClean:
+                case WorkerJob::carry:
+                    pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, false));
+                    return true;
+                case WorkerJob::clean:
                     pushAction(Utils::make_unique<CreatureActionSearchDirtToClean>(*this));
                     return true;
-                default:
-                    OD_LOG_ERR("name=" + getName() + ", unexpected worker action=" + CreatureAction::toString(actionType));
+                case WorkerJob::reload:
+                    if(CreatureActionReloadTrap::tryStart(*this))
+                        return true;
+                    available[index] = false;
+                    break;
+                case WorkerJob::none:
                     break;
             }
+            if(isWorkerJobFixed())
+                break;
         }
     }
-
     // A standing order of the level script (go to a point, attack a dungeon, wait, ...) comes first
     if(LevelScriptRunner::doCreatureOrder(*this))
         return false;
@@ -3270,6 +3555,66 @@ bool Creature::handleIdleAction()
        (mGoldFee > 0))
     {
         pushAction(Utils::make_unique<CreatureActionGetFee>(*this));
+        return true;
+    }
+
+    // If we are hungry, we go to eat
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::searchFood) &&
+        (isHungry()))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
+        return true;
+    }
+
+    // If we are thirsty, we go to a tavern. Without a tavern nothing happens here: the thirst keeps rising and
+    // its mood malus acts
+    if (!mDefinition->isWorker() &&
+        mDefinition->hasThirst() &&
+        !hasActionBeenTried(CreatureActionType::searchDrink) &&
+        (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
+        return true;
+    }
+
+    // If we have to relieve ourselves, we go to a toilet. Without a toilet room nothing happens here: the
+    // creature goes on until the urge is too strong
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::searchToilet) &&
+        (mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek")))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
+        return true;
+    }
+
+    // Check to see if we have found a "home" tile where we can sleep. Even if we are not sleepy,
+    // we want to have a bed
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::findHome) &&
+        (mHomeTile == nullptr) &&
+        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getFindHomeChance()))
+    {
+        pushAction(Utils::make_unique<CreatureActionFindHome>(*this, false));
+        return true;
+    }
+
+    // If we are sleepy, we go to sleep
+    if (!mDefinition->isWorker() &&
+        !hasActionBeenTried(CreatureActionType::sleep) &&
+        (mHomeTile != nullptr) &&
+        (Random::Double(ConfigManager::getSingleton().getSleepSeekWakefulnessMin(), ConfigManager::getSingleton().getSleepSeekWakefulnessMax()) > mWakefulness))
+    {
+        pushAction(Utils::make_unique<CreatureActionSleep>(*this));
+        return true;
+    }
+
+    // If we are in a bad mood or have a hangover, we go to a lava spa. Without a spa that can take us nothing
+    // happens here and we try again at the next search
+    if (wantsSpaBath() &&
+        !hasActionBeenTried(CreatureActionType::searchSpa))
+    {
+        pushAction(Utils::make_unique<CreatureActionSearchSpa>(*this));
         return true;
     }
 
@@ -3324,27 +3669,6 @@ bool Creature::handleIdleAction()
         }
     }
 
-    // Check to see if we have found a "home" tile where we can sleep. Even if we are not sleepy,
-    // we want to have a bed
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::findHome) &&
-        (mHomeTile == nullptr) &&
-        (Random::Double(0.0, 1.0) < 0.5))
-    {
-        pushAction(Utils::make_unique<CreatureActionFindHome>(*this, false));
-        return true;
-    }
-
-    // If we are sleepy, we go to sleep
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::sleep) &&
-        (mHomeTile != nullptr) &&
-        (Random::Double(20.0, 30.0) > mWakefulness))
-    {
-        pushAction(Utils::make_unique<CreatureActionSleep>(*this));
-        return true;
-    }
-
     // If we are drunk enough, we vomit once per drunk episode (at the next idle turn)
     if (!mDefinition->isWorker() &&
         !mVomited &&
@@ -3356,46 +3680,7 @@ bool Creature::handleIdleAction()
         return true;
     }
 
-    // If we are hungry, we go to eat
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::searchFood) &&
-        (Random::Double(70.0, 80.0) < mHunger))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchFood>(*this, false));
-        return true;
-    }
-
-    // If we are thirsty, we go to a tavern. Without a tavern nothing happens here: the thirst keeps rising and
-    // its mood malus acts
-    if (!mDefinition->isWorker() &&
-        mDefinition->hasThirst() &&
-        !hasActionBeenTried(CreatureActionType::searchDrink) &&
-        (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
-        return true;
-    }
-
-    // If we are in a bad mood or have a hangover, we go to a lava spa. Without a spa that can take us nothing
-    // happens here and we try again at the next search
-    if (wantsSpaBath() &&
-        !hasActionBeenTried(CreatureActionType::searchSpa))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchSpa>(*this));
-        return true;
-    }
-
-    // If we have to relieve ourselves, we go to a toilet. Without a toilet room nothing happens here: the
-    // creature goes on until the urge is too strong
-    if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::searchToilet) &&
-        (mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek")))
-    {
-        pushAction(Utils::make_unique<CreatureActionSearchToilet>(*this));
-        return true;
-    }
-
-    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::stealItem) && Random::Double(0.0, 1.0) < 0.2)
+    if(!mDefinition->isWorker() && !hasActionBeenTried(CreatureActionType::stealItem) && Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getStealItemChancePerIdle())
     {
         pushAction(Utils::make_unique<CreatureActionStealItem>(*this));
         return true;
@@ -3406,7 +3691,7 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         (mDefinition->getStealGold() > 0) &&
         !hasActionBeenTried(CreatureActionType::stealFreeGold) &&
-        (Random::Uint(0, 10) > 8))
+        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getStealGoldTryChance()))
     {
         pushAction(Utils::make_unique<CreatureActionStealFreeGold>(*this));
         return true;
@@ -3416,7 +3701,7 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         (getDigRate() > 0.0) &&
         !hasActionBeenTried(CreatureActionType::tunnel) &&
-        (Random::Uint(0, 10) > 6))
+        (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getTunnelTryChance()))
     {
         pushAction(Utils::make_unique<CreatureActionTunnel>(*this));
         return true;
@@ -3424,8 +3709,7 @@ bool Creature::handleIdleAction()
 
     // Otherwise, we try to work
     if (!mDefinition->isWorker() &&
-        !hasActionBeenTried(CreatureActionType::searchJob) &&
-        (Random::Double(0.0, 1.0) < 0.4))
+        !hasActionBeenTried(CreatureActionType::searchJob))
     {
         pushAction(Utils::make_unique<CreatureActionSearchJob>(*this, false));
         return true;
@@ -3575,7 +3859,7 @@ bool Creature::searchBestTargetInList(const std::vector<GameEntity*>& listObject
         if((entity->getObjectType() == GameEntityType::creature) && (ownThreat > 0.0))
         {
             threatFactor = static_cast<Creature*>(entity)->getThreat() / ownThreat;
-            threatFactor = std::max(0.5, std::min(2.0, threatFactor));
+            threatFactor = std::max(ConfigManager::getSingleton().getTargetThreatFactorMin(), std::min(ConfigManager::getSingleton().getTargetThreatFactorMax(), threatFactor));
         }
 
         GameEntity* entityAttackCheck = nullptr;
@@ -4003,11 +4287,10 @@ double Creature::getClientPoseSpeedFactor() const
     return factor;
 }
 
-//! \brief Adds Second Wind to the movement percentage sum only while below half health.
+//! \brief Adds Second Wind to movement below its configured health share.
 double Creature::getConditionalItemMoveFactor() const
 {
-    static const double SECOND_WIND_HEALTH_SHARE = 0.5;
-    if(mMaxHP <= 0.0 || mHp >= mMaxHP * SECOND_WIND_HEALTH_SHARE)
+    if(mMaxHP <= 0.0 || mHp >= mMaxHP * ConfigManager::getSingleton().getItemSetting("ItemEffects", "SecondWindHealthShare"))
         return 1.0;
     return 1.0 + getItemEffect("SecondWind") / (100.0 + getSkillPassive("move%"));
 }
@@ -4364,12 +4647,12 @@ std::string Creature::getSkillListText() const
     return result;
 }
 
-//! \brief Returns the attribute line of the displays: "Strength s - Dexterity d - Life l - Mana m -
-//! Critical x.x %".
+//! \brief Returns the attribute text of the displays as two lines so no value is split by a word wrap:
+//! "Strength s - Dexterity d - Life l" and "Mana m - Critical x.x %".
 std::string Creature::getAttributeSummaryText() const
 {
     return "Strength " + formatDisplayNumber(getStrength()) + " - Dexterity " + formatDisplayNumber(getDexterity())
-        + " - Life " + formatDisplayNumber(getLife()) + " - Mana " + formatDisplayNumber(getMana())
+        + " - Life " + formatDisplayNumber(getLife()) + "\nMana " + formatDisplayNumber(getMana())
         + " - Critical " + formatFixedNumber(getCritChance()) + " %";
 }
 
@@ -4638,7 +4921,7 @@ CreatureSkill* Creature::createTreeSkill(const std::string& skillId, uint32_t ra
     {
         const size_t index = std::min(static_cast<size_t>(rank), def->mValues.size()) - 1;
         line = CreatureSkillTree::buildSkillLine(def->mKind, def->mValues[index], def->mCooldown, def->mDuration,
-            def->mRadius, def->mRange, def->mBaseLine);
+            def->mRadius, def->mRange, def->mBaseLine, def->mMinAllies);
         if(index < def->mMana.size())
             manaCost = def->mMana[index];
     }
@@ -5988,6 +6271,11 @@ float Creature::fillProfilePage(CEGUI::Window* page)
         const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
         image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
             name : "OpenDungeonsIcons/ItemSlotEmpty");
+        const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
+            "Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"};
+        CEGUI::Window* slotType = image->getChild("SlotType");
+        slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
+        slotType->setVisible(item == nullptr);
         image->setTooltipText(item == nullptr ? "" : item->describe(getGameMap()));
         CEGUI::Window* frame = image->getChild("QualityFrame");
         frame->setVisible(item != nullptr);
@@ -6876,7 +7164,7 @@ static void addHitDirt(Tile* tile)
 
     Room* room = tile->getCoveringRoom();
     if((room != nullptr) && (room->getType() == RoomType::arena))
-        tile->addDirt(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("ArenaDirtPerHit", 0.0));
+        tile->addDirt(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("ArenaDirtPerHit", 1.7723));
     else
         tile->addDirt(ConfigManager::getSingleton().getDirtConfigDouble("CombatDirtPerHit"));
 }
@@ -6967,12 +7255,29 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
         }
         // If the attacking entity is a creature and its seat is configured to KO creatures
         // instead of killing, we KO
-        else if(ko && !getDefinition()->isWorker())
+        else if(ko && !getDefinition()->isWorker() && !getDefinition()->isUndead())
         {
             mHp = 1.0;
             recordScriptEvent(*this, "incapacitated");
-            mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked() *
-                ItemEffects::remainingFactor(*this, "QuickRise");
+            // The loser of a friendly arena fight is only knocked out for ArenaKnockOutSeconds and gets up again
+            bool arenaFight = (creatureAttacking != nullptr) && (creatureAttacking->getSeat() != nullptr)
+               && creatureAttacking->getSeat()->isAlliedSeat(getSeat())
+               && (getPositionTile() != nullptr) && (creatureAttacking->getPositionTile() != nullptr)
+               && (getPositionTile()->getCoveringRoom() != nullptr)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom() != nullptr)
+               && (getPositionTile()->getCoveringRoom()->getType() == RoomType::arena)
+               && (creatureAttacking->getPositionTile()->getCoveringRoom()->getType() == RoomType::arena);
+            if(arenaFight)
+            {
+                mKoTurnCounter = ConfigManager::getSingleton().getRoomConfigDouble("ArenaKnockOutSeconds")
+                    * ODApplication::turnsPerSecond;
+                mArenaKnockOut = true;
+            }
+            else
+            {
+                mKoTurnCounter = -ConfigManager::getSingleton().getNbTurnsKoCreatureAttacked() *
+                    ItemEffects::remainingFactor(*this, "QuickRise");
+            }
             OD_LOG_INF("creature=" + getName() + " has been KO by " + attacker->getName());
             dropItems(false);
             dropCarriedEquipment();
@@ -7205,13 +7510,16 @@ void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
     mNeedFireRefresh = true;
 
     // Fighting is tiring
-    decreaseWakefulness(0.5);
-    // but gives experience; a dirty arena teaches less, and so does a hangover, while a relaxed creature learns more
+    decreaseWakefulness(ConfigManager::getSingleton().getFightWakefulnessPerAttack());
+    // but gives experience per fighting turn on the training hall level; a dirty arena teaches less, and so does a
+    // hangover, while a relaxed creature learns more
+    double fightExp = ConfigManager::getSingleton().getRoomConfigDouble("ArenaXpPerFightTurn") * mAttackRecoveryTurns
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit);
     Room* attackRoom = (myTile == nullptr) ? nullptr : myTile->getCoveringRoom();
     if((attackRoom != nullptr) && (attackRoom->getType() == RoomType::arena))
-        receiveExp(1.5 * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor());
+        receiveExp(fightExp * attackRoom->getDirtOutputFactor() * getHangoverWorkFactor() * getRelaxWorkFactor());
     else
-        receiveExp(1.5);
+        receiveExp(fightExp);
 }
 
 //! \brief Finds an exact queued action, with specialized room work included in ordinary room-use queries.
@@ -7409,6 +7717,7 @@ bool Creature::tryDrop(Seat* seat, Tile* tile)
     return false;
 }
 
+//! \brief Drops the creature and lets a worker perform at most one forced task.
 void Creature::drop(const Ogre::Vector3& v)
 {
     interruptGhostHunt();
@@ -7455,27 +7764,35 @@ void Creature::drop(const Ogre::Vector3& v)
         Seat* seat = getSeat();
         Tile* tileMarkedDig = nullptr;
         Tile* tileMarkedDigPos = nullptr;
+        int bestDigGroup = 5;
+        float bestDigDistance = -1.0f;
+        bool bestDigHere = false;
         Tile* tileToClaim = nullptr;
         Tile* tileWallNotClaimed = nullptr;
+        std::vector<Tile*> dropWalls;
         for (Tile* tile : position->getAllNeighbors())
         {
-            if(tileMarkedDig == nullptr &&
-                tile->getMarkedForDigging(getGameMap()->getPlayerBySeat(seat))
+            if(tile->getMarkedForDigging(getGameMap()->getPlayerBySeat(seat))
                 )
             {
                 // Check if there is room for digging
                 std::vector<Tile*> tiles;
                 tile->canWorkerDig(*this, tiles);
-                // We search for the closest neighbor tile (may be not the position
-                // tile if the player drops several workers at the same tile)
-                float distBest = -1;
+                const bool gold = tile->getType() == TileType::gold || tile->getType() == TileType::gem;
+                const int group = (seat->getWorkerJobSettings().goldFirst && !gold ? 2 : 0) +
+                    (tile->hasWorkerDigging() ? 1 : 0);
                 for (Tile* neigh : tiles)
                 {
                     float dist = Pathfinding::squaredDistanceTile(*position, *neigh);
-                    if((distBest != -1) && (distBest <= dist))
+                    const bool here = neigh == position;
+                    if(tileMarkedDig != nullptr && (group > bestDigGroup ||
+                       (group == bestDigGroup && bestDigHere && !here) ||
+                       (group == bestDigGroup && bestDigHere == here && dist >= bestDigDistance)))
                         continue;
 
-                    distBest = dist;
+                    bestDigGroup = group;
+                    bestDigHere = here;
+                    bestDigDistance = dist;
                     tileMarkedDig = tile;
                     tileMarkedDigPos = neigh;
                 }
@@ -7494,14 +7811,15 @@ void Creature::drop(const Ogre::Vector3& v)
             {
                 tileToClaim = tile;
             }
-            else if(tileWallNotClaimed == nullptr &&
-                position->isClaimedForSeat(seat) &&
-                tile->isWallClaimable(seat)
+            else if(position->isClaimedForSeat(seat) &&
+                tile->isWallClaimable(seat) && tile->canWorkerClaim(*this)
                 )
             {
-                tileWallNotClaimed = tile;
+                dropWalls.push_back(tile);
             }
         }
+        if(!dropWalls.empty())
+            tileWallNotClaimed = dropWalls[Random::Uint(0, dropWalls.size() - 1)];
 
         // We try to deposit gold if we are on a room while carrying gold
         if((mGoldCarried > 0) && (mDigRate > 0.0) &&
@@ -7521,37 +7839,25 @@ void Creature::drop(const Ogre::Vector3& v)
         // Now, we can decide
         if((tileMarkedDig != nullptr) && (tileMarkedDigPos != nullptr) && (mDigRate > 0.0))
         {
-            pushAction(Utils::make_unique<CreatureActionSearchTileToDig>(*this, true));
-            pushAction(Utils::make_unique<CreatureActionDigTile>(*this, *tileMarkedDig, *tileMarkedDigPos));
+            pushAction(Utils::make_unique<CreatureActionDigTile>(*this, *tileMarkedDig, *tileMarkedDigPos, true));
             return;
         }
 
         if(!carryable.empty())
         {
-            // We look for the most important entity to carry
-            GameEntity* entityToCarry = carryable[0];
-            for(GameEntity* entity : carryable)
-            {
-                if(entity->getEntityCarryType(this) <= entityToCarry->getEntityCarryType(this))
-                    continue;
-
-                entityToCarry = entity;
-            }
-
-            pushAction(Utils::make_unique<CreatureActionGrabEntity>(*this, *entityToCarry));
+            // The forced search uses the keeper's carry order and considers only this tile.
+            pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, true));
             return;
         }
 
         if((tileToClaim != nullptr) && (getClaimRate() > 0.0))
         {
-            pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimGroundTile>(*this, *tileToClaim));
             return;
         }
 
         if((tileWallNotClaimed != nullptr) && (getClaimRate() > 0.0))
         {
-            pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimWallTile>(*this, *tileWallNotClaimed));
             return;
         }
@@ -7730,6 +8036,7 @@ void Creature::checkWalkPathIsStillValid()
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, true);
 }
 
+//! \brief Applies lava damage using the configured level scaling.
 void Creature::applyLavaDamage()
 {
     Tile* myTile = getPositionTile();
@@ -7746,6 +8053,8 @@ void Creature::applyLavaDamage()
         return;
 
     double lavaDamagePerSecond = ConfigManager::getSingleton().getLavaDamagePerSecond();
+    if(ConfigManager::getSingleton().getLavaDamageScalesWithHp())
+        lavaDamagePerSecond *= CreatureProgression::hpMultiplier(getLevel());
     takeDamage(nullptr, lavaDamagePerSecond / ODApplication::turnsPerSecond, 0.0, 0.0, 0.0, myTile, false);
 }
 
@@ -7790,13 +8099,9 @@ bool Creature::isAttackable(Tile* tile, Seat* seat) const
     return true;
 }
 
-//! \brief Preserves living patient priorities and refuses workers, decaying or consumed bodies.
+//! \brief Identifies knocked-out patients and intact corpses for transport.
 EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 {
-    // Workers cannot be carried to crypt/prison
-    if(getDefinition()->isWorker())
-        return EntityCarryType::notCarryable;
-
     // A creature knocked out to death is carried to a prison when it is an enemy. A creature of the seat of the
     // carrier is not carried: it is pulled to its own bed (same priority as before), and without an own bed it is
     // not touched and dies where it lies
@@ -7809,83 +8114,11 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
     }
 
     // Only an intact, unconsumed body can still be carried.
-    if(getHP() <= 0.0)
+    if(getHP() <= 0.0 && !getDefinition()->isWorker() && !getDefinition()->isUndead())
         return (mDecayTurns < 0.0 && mDeathCounter != std::numeric_limits<unsigned int>::max()) ?
             EntityCarryType::corpse : EntityCarryType::notCarryable;
 
-    // A hurt creature of the carrier's seat close enough is pulled to its bed (the worker takes it by the legs,
-    // see CreatureActionCarryEntity: it is not carried, but it takes the place of a carried thing in the search)
-    if((carrier != nullptr) && (carrier->getSeat() == getSeat()) && getIsOnServerMap() &&
-       isWoundedForBedCarry())
-    {
-        Tile* myTile = getPositionTile();
-        Tile* carrierTile = carrier->getPositionTile();
-        double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryRadius", WOUNDED_CARRY_RADIUS_DEFAULT);
-        if((myTile == nullptr) || (carrierTile == nullptr) ||
-           (Pathfinding::squaredDistanceTile(*myTile, *carrierTile) > (radius * radius)))
-        {
-            return EntityCarryType::notCarryable;
-        }
-
-        // The priority against the other things a worker can carry is configurable:
-        // 0 = lowest, 1 = like gold, 2 = like a creature knocked out to death
-        int32_t priority = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryPriority", WOUNDED_CARRY_PRIORITY_DEFAULT));
-        if(priority <= 0)
-            return EntityCarryType::woundedCreature;
-        if(priority == 1)
-            return EntityCarryType::gold;
-        return EntityCarryType::koCreature;
-    }
-
     return EntityCarryType::notCarryable;
-}
-
-bool Creature::isWoundedForBedCarry() const
-{
-    if(isActionInList(CreatureActionType::infirmaryRest))
-        return false;
-
-    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingDragged || mIsInHand ||
-       isPossessed() || isInPrison() || getDefinition()->isWorker() || getDefinition()->isChampion())
-    {
-        return false;
-    }
-
-    ConfigManager& config = ConfigManager::getSingleton();
-    // 0 percent switches the whole behaviour off
-    double hpPercent = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryHpPercent", WOUNDED_CARRY_HP_PERCENT_DEFAULT);
-    if((hpPercent <= 0.0) || (getMaxHp() <= 0.0) || ((getHP() * PERCENT_FACTOR) >= (getMaxHp() * hpPercent)))
-        return false;
-
-    // A creature knocked out for a while may be carried too, unless the config says no
-    if((mKoTurnCounter != 0) && (config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryTempKo", WOUNDED_CARRY_TEMP_KO_DEFAULT) <= 0.0))
-        return false;
-
-    // Creatures knocked out to death are handled by isKoToDeathForBedPull
-    if(mKoTurnCounter < 0)
-        return false;
-
-    if(getGameMap()->getTurnNumber() < mWoundedCarryNextTurn)
-        return false;
-
-    // It only goes to its own bed in a dormitory of its seat, and not when it already lies in it
-    if(!hasOwnBedInDormitory())
-        return false;
-
-    Tile* myTile = getPositionTile();
-    if((myTile == nullptr) || (myTile == mHomeTile))
-        return false;
-
-    // No fight, flight or call to war going on
-    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
-       isActionInList(CreatureActionType::flee) || isActionInList(CreatureActionType::goCallToWar) ||
-       isActionInList(CreatureActionType::leaveDungeon))
-    {
-        return false;
-    }
-
-    double enemyRadius = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT);
-    return !isHostileNear(enemyRadius);
 }
 
 bool Creature::hasOwnBedInDormitory() const
@@ -7895,20 +8128,16 @@ bool Creature::hasOwnBedInDormitory() const
         (mHomeTile->getCoveringRoom()->getSeat() == getSeat());
 }
 
+//! \brief Determines whether an own knocked-out creature can be pulled to its bed.
 bool Creature::isKoToDeathForBedPull() const
 {
     if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || (mKoTurnCounter >= 0) || mIsBeingDragged || mIsInHand ||
-       isPossessed() || isInPrison() || getDefinition()->isWorker())
+       isPossessed() || isInPrison())
     {
         return false;
     }
 
-    // Only to its own bed: without one it is not picked up, not moved and dies where it lies. The percent of
-    // health and the fights do not matter here, the counter to death is running. Only the pause after a pull
-    // that ended counts (DormitoryWoundedKoDeathCooldown, set in notifyDragEnd): the counter goes on meanwhile
-    if(getGameMap()->getTurnNumber() < mWoundedCarryNextTurn)
-        return false;
-
+    // Only a creature with its own bed is pulled to the dormitory.
     if(!hasOwnBedInDormitory())
         return false;
 
@@ -7963,14 +8192,27 @@ void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
     addEntityToPositionTile();
 }
 
+//! \brief Pauses and records a corpse transport while it is pulled on the map.
+void Creature::notifyCorpseDragStart(const Creature& carrier, bool forced)
+{
+    mIsCarried = true;
+    mCorpseCarrierName = forced ? std::string() : carrier.getName();
+}
+
+//! \brief Resumes the corpse timer after its ground transport ends.
+void Creature::notifyCorpseDragEnd()
+{
+    mIsCarried = false;
+    mCorpseCarrierName.clear();
+}
+
+//! \brief Starts a ground pull while retaining the creature's position on the map.
 void Creature::notifyDragStart(double pullerDirtFactor)
 {
     mIsBeingDragged = true;
     mDragDirtFactor = pullerDirtFactor;
 
-    // A hurt creature stops what it did, it lies on the ground and the worker pulls it (one knocked out to death
-    // included: its counter goes on running). It stays on the map (it is not carried): the walk paths the worker
-    // gives it move it.
+    // The creature lies on the map and follows the worker's path; a knockout countdown continues.
     if(getIsOnServerMap())
     {
         clearDestinations(EntityAnimation::idle_anim, true, true);
@@ -7978,6 +8220,7 @@ void Creature::notifyDragStart(double pullerDirtFactor)
     }
 }
 
+//! \brief Ends a ground pull and permits knocked-out creatures to be picked up again immediately.
 void Creature::notifyDragEnd()
 {
     if(!mIsBeingDragged)
@@ -7985,15 +8228,6 @@ void Creature::notifyDragEnd()
 
     mIsBeingDragged = false;
     mDragDirtFactor = 1.0;
-    if(!getIsOnServerMap())
-        return;
-
-    // The pause before it can be pulled again, whatever the end of the drag was
-    // (a creature knocked out to death has its own, usually longer, pause)
-    double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", WOUNDED_CARRY_COOLDOWN_DEFAULT);
-    if(mKoTurnCounter < 0)
-        cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedKoDeathCooldown", 150.0);
-    mWoundedCarryNextTurn = getGameMap()->getTurnNumber() + static_cast<int64_t>(std::max(0.0, cooldown));
 }
 
 bool Creature::setDragDestination(Tile* tile)
@@ -8011,6 +8245,16 @@ bool Creature::setDragDestination(Tile* tile)
     tileToVector2(result, path, true, 0.0);
     setWalkPath(EntityAnimation::drag_anim, EntityAnimation::idle_anim, true, true, path, true);
     return isMoving() || (posTile == tile);
+}
+
+//! \brief Returns whether a one-task hand-drop transport is running.
+bool Creature::hasForcedWorkerCarry() const
+{
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType() == CreatureActionType::carryEntity &&
+           static_cast<const CreatureActionCarryEntity&>(*action).isForced())
+            return true;
+    return false;
 }
 
 void Creature::carryEntity(GameEntity* carriedEntity)
@@ -8098,6 +8342,7 @@ bool Creature::canSlap(Seat* seat)
     return true;
 }
 
+//! \brief Applies a keeper slap and keeps the configured number of remembered slaps.
 void Creature::slap()
 {
     if(!getIsOnServerMap())
@@ -8136,13 +8381,13 @@ void Creature::slap()
 
     // We remember the slap to compute the mood. Only the latest ones are kept
     mSlapTurns.push_back(getGameMap()->getTurnNumber());
-    if(mSlapTurns.size() > 10)
+    if(mSlapTurns.size() > ConfigManager::getSingleton().getSlapMemoryMax())
         mSlapTurns.erase(mSlapTurns.begin());
 
     // The friends that see the slap are upset
     reportSlapToFriends();
 
-    mHp -= mMaxHP * ConfigManager::getSingleton().getSlapDamagePercent() / 100.0;
+    mHp -= ConfigManager::getSingleton().getSlapDamage();
     computeCreatureOverlayHealthValue();
 }
 
@@ -8693,7 +8938,8 @@ bool Creature::rollAttackHit(double attackRating, uint32_t attackerLevel, bool p
     if(possessed)
         return true;
     return Random::Double(0.0, 100.0) < DefenceChance::hitChance(attackRating, getDefenseRating(),
-        attackerLevel, getLevel());
+        attackerLevel, getLevel(), ConfigManager::getSingleton().getHitChanceScale(),
+        ConfigManager::getSingleton().getHitChanceMin(), ConfigManager::getSingleton().getHitChanceMax());
 }
 
 //! \brief Rolls one configured avoidance kind; parry cannot stop missiles and block requires a shield. The avoid
@@ -8800,7 +9046,7 @@ void Creature::fireArrivalEvent()
 
     // The creature has no vision yet and the portal belongs to the keeper, so the keeper is told directly.
     // Reading the mood only adds up the modifiers, it does not change the creature.
-    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
     CosmeticEvent event(CosmeticEventType::portalArrival);
     event.mSubject = getName();
     event.mValue = static_cast<int32_t>(CreatureMoodManager::getCreatureMoodLevel(points));
@@ -8808,13 +9054,17 @@ void Creature::fireArrivalEvent()
     ODServer::getSingleton().sendCosmeticEvent(player, event);
 }
 
+//! \brief Accrues a wage and records missed wages when the treasury is empty.
 void Creature::itsPayDay()
 {
     // Rogue creatures do not have to be paid
     if(getSeat()->isRogueSeat())
         return;
 
-    mGoldFee += mDefinition->getFee(getLevel());
+    const double wage = mDefinition->getFee(getLevel());
+    mGoldFee += wage;
+    if(wage > 0.0 && getSeat()->getGold() <= 0)
+        mMissedWages = static_cast<uint32_t>(std::ceil(mGoldFee / wage));
 }
 
 void Creature::increaseHunger(double value)
@@ -9103,9 +9353,24 @@ void Creature::sleepEnded()
     addTavernMood(config.getTavernConfigDouble("HangoverMood"), hangoverTurns);
 }
 
-//! \brief Lets the drunkenness fall, resets the vomit mark when sober enough and counts down mood and hangover.
+//! \brief Sets the turns until the next leisure visit to a tavern (not below 0).
+void Creature::setTavernCooldownTurns(int32_t turns)
+{
+    mTavernCooldownTurns = std::max(0, turns);
+}
+
+//! \brief The creature just left a tavern: no leisure visit for TavernLeisureCooldownTurns turns.
+void Creature::startTavernCooldown()
+{
+    setTavernCooldownTurns(static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDouble("TavernLeisureCooldownTurns")));
+}
+
+//! \brief Lets the drunkenness fall, resets the vomit mark when sober enough and counts down mood, hangover and the leisure cooldown.
 void Creature::upkeepTavernState()
 {
+    if(mTavernCooldownTurns > 0)
+        --mTavernCooldownTurns;
+
     // Nothing to count for a creature that never visited a tavern
     if((mDrunk <= 0.0) && !mVomited && (mTavernMoodTurns <= 0.0) && (mTavernMood == 0.0) && (mHangoverTurns <= 0.0))
         return;
@@ -9296,9 +9561,10 @@ void Creature::setInfirmaryAdmissionMood(bool creaturePaid)
     }
 }
 
+//! \brief Adds casino mood points, bounded by the configured maximum.
 void Creature::addCasinoMood(double points)
 {
-    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodMax", 1500.0);
+    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodMax", 1000.0);
     mCasinoMood = std::max(-maxPoints, std::min(maxPoints, mCasinoMood + points));
 }
 
@@ -9358,6 +9624,7 @@ void Creature::addPrayerRelief(int32_t relief, int32_t maxRelief)
     mPrayerRelief = std::min(mPrayerRelief + relief, maxRelief);
 }
 
+//! \brief Clears annoyance and temporarily offsets remaining negative mood.
 void Creature::removeAnnoyance()
 {
     mNbTurnsInHand = 0;
@@ -9367,20 +9634,21 @@ void Creature::removeAnnoyance()
     mSlapTurns.clear();
     mSpecialMood = 0;
     // What is left (hunger, tiredness, wounds, unpaid wage) is cancelled for a while, it builds up again
-    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
-    mSpecialMood = std::max(0, -points);
+    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    mSpecialMood = std::max(0.0, -points);
     mMoodCooldownTurns = 0;
 }
 
+//! \brief Applies a temporary mood penalty towards the angry level.
 void Creature::makeUnhappy()
 {
     mSpecialMood = 0;
-    int32_t points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
     // The middle of the angry level
     int32_t target = (ConfigManager::getSingleton().getCreatureMoodAngry()
         + ConfigManager::getSingleton().getCreatureMoodFurious()) / 2;
-    int32_t wanted = target - ConfigManager::getSingleton().getCreatureBaseMood() - points;
-    mSpecialMood = std::min(0, wanted);
+    double wanted = target - ConfigManager::getSingleton().getCreatureBaseMood() - points;
+    mSpecialMood = std::min(0.0, wanted);
     mMoodCooldownTurns = 0;
 }
 
@@ -9799,11 +10067,12 @@ void Creature::recordWorkerStepRecovery()
     mNeedFireRefresh = true;
 }
 
+//! \brief Sets the job cooldown with the configured slap adjustment.
 void Creature::setJobCooldown(int val)
 {
     // If the creature has been slapped, its cooldown is decreased
     if(hasSlapEffect())
-        val = Helper::round(static_cast<float>(val) * 0.8f);
+        val = Helper::round(static_cast<float>(val * ConfigManager::getSingleton().getSlapJobCooldownFactor()));
 
     mJobCooldown = val;
     mJobCooldownDuration = static_cast<uint32_t>(std::max(0, val));
@@ -9820,12 +10089,41 @@ bool Creature::isTired() const
     return (mOverlayMoodValue & CreatureMoodValues::Tired) != 0;
 }
 
+//! \brief Returns whether hunger has reached the configured threshold.
 bool Creature::isHungry() const
 {
     if(getIsOnServerMap())
-        return mHunger >= 80.0;
+        return mHunger >= ConfigManager::getSingleton().getHungerSeek();
 
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
+}
+
+//! \brief Detects urgent needs unless fighting, fleeing, held, knocked out, imprisoned or leaving.
+bool Creature::needInterrupt(bool servingNeed) const
+{
+    if(mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
+       isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
+       isActionInList(CreatureActionType::flee))
+        return false;
+    if(mUrge >= ConfigManager::getSingleton().getDirtConfigDouble("UrgeSeek") &&
+       !hasActionBeenTried(CreatureActionType::searchToilet) && RoomToilet::hasToiletRoomFor(*this))
+        return true;
+    if(servingNeed)
+        return false;
+    if(isHungry() && !hasActionBeenTried(CreatureActionType::searchFood))
+    {
+        for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, getSeat()))
+            if(room->numCoveredTiles() > 0)
+                return true;
+    }
+    if(mDefinition->hasThirst() && mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+       !hasActionBeenTried(CreatureActionType::searchDrink))
+    {
+        for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))
+            if(room->numCoveredTiles() > 0)
+                return true;
+    }
+    return false;
 }
 
 //! \brief Ends knockout state and permits one item drop in the next fight.
@@ -9852,7 +10150,7 @@ void Creature::knockOutToDeath()
 }
 
 //! \brief Stuns a living creature for the resisted duration without replacing a longer stun.
-void Creature::stun(int32_t nbTurns)
+void Creature::stun(double nbTurns)
 {
     if(!isAlive() || (nbTurns <= 0) || (mKoTurnCounter < 0))
         return;
@@ -9885,17 +10183,20 @@ void Creature::setInJail(Room* prison)
     mNeedFireRefresh = true;
 }
 
+//! \brief Returns current health weighted by the configured level threat curve.
 double Creature::getThreat() const
 {
-    // Threat multiplier in percent for the levels 1 to 10. Above level 10 the last
-    // step of the table (100 percent per level) is continued.
-    static const double THREAT_PERCENT_BY_LEVEL[10] = {100.0, 125.0, 150.0, 175.0, 200.0, 225.0, 250.0, 300.0, 400.0, 500.0};
+    // Threat multiplier in percent from the configured level table. Above its last
+    // level, continue the difference between its last two entries.
+    const std::vector<double>& threatPercentByLevel = ConfigManager::getSingleton().getThreatPercentByLevel();
     unsigned int level = (mLevel < 1) ? 1 : mLevel;
     double percent;
-    if(level <= 10)
-        percent = THREAT_PERCENT_BY_LEVEL[level - 1];
+    if(level <= threatPercentByLevel.size())
+        percent = threatPercentByLevel[level - 1];
     else
-        percent = THREAT_PERCENT_BY_LEVEL[9] + 100.0 * static_cast<double>(level - 10);
+        percent = threatPercentByLevel.back() +
+            (threatPercentByLevel.back() - threatPercentByLevel[threatPercentByLevel.size() - 2]) *
+            static_cast<double>(level - threatPercentByLevel.size());
 
     return mHp * percent / 100.0;
 }
@@ -10088,6 +10389,7 @@ void Creature::changeSeat(Seat* newSeat)
     mDrunk = 0.0;
     mVomited = false;
     mHangoverTurns = 0.0;
+    mTavernCooldownTurns = 0;
     mHangoverPending = false;
     mSpaMood = 0.0;
     mRelaxTurns = 0.0;
@@ -10096,6 +10398,11 @@ void Creature::changeSeat(Seat* newSeat)
     mUrge = 0.0;
     mNbTurnsTorture = 0;
     mNbTurnsPrison = 0;
+    mTortureMood = 0.0;
+    mPrisonMood = 0.0;
+    mTortureBrokenTurns = 0;
+    mPrisonBrokenTurns = 0;
+    mArenaKnockOut = false;
     mActiveSlapsCount = 0;
     mNbTurnsInHand = 0;
     mIsInHand = false;
@@ -10165,7 +10472,7 @@ Tile* Creature::getWalkDestinationTile() const
 //! \brief Reserves an intact dead body for Raise Dead and removes it on the next upkeep.
 bool Creature::takeCorpse()
 {
-    if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker())
+    if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker() || getDefinition()->isUndead())
         return false;
 
     // The counter is 0 until death drops and notices have run; consumption is deferred safely.
@@ -10181,7 +10488,7 @@ bool Creature::takeCorpse()
 //! \brief Restores a delivered crypt corpse's life and needs after freeing its grave reservation.
 bool Creature::reviveFromCorpse(double hpShare)
 {
-    if(!getIsOnServerMap() || isAlive() || getDefinition()->isWorker() || mIsCarried ||
+    if(!getIsOnServerMap() || isAlive() || getDefinition()->isWorker() || getDefinition()->isUndead() || mIsCarried ||
        mDeathCounter == 0 || mDeathCounter == std::numeric_limits<unsigned int>::max())
         return false;
     Tile* tile = getPositionTile();

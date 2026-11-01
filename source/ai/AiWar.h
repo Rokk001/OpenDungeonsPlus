@@ -53,7 +53,8 @@ struct Group
 struct WarState
 {
     enum TunnelPhase { tunnelNone, tunnelDigging, tunnelOpen };
-    enum AssaultPhase { assaultNone, assaultMoving, assaultRunning, assaultEnding };
+    //! assaultLaunching: the groups are being moved by hand, the last banner waits for the Launch reaction
+    enum AssaultPhase { assaultNone, assaultMoving, assaultRunning, assaultEnding, assaultLaunching };
 
     TunnelPhase tunnel = tunnelNone;
     double detour = 0.0;
@@ -105,22 +106,34 @@ void doTurn(Env& env);
 //! Plan, Launch, Contact, AssaultOver, EnemySpellSeen) after its reaction delay.
 void onEvent(Env& env, const AiEvent& event);
 
-//! \brief Digs the tunnel toward the nearest known enemy tile (row I01) or explores until an enemy tile is known.
+//! \brief Digs the tunnel toward the nearest known enemy tile (row I01) and raises Start; without a known enemy tile it
+//! does nothing.
 void planDig(Env& env);
 
-//! \brief The plan step of the attack (rows J07, K01, K02): eligibility, ready list, estimate, tactic draw.
-void planAttack(Env& env);
+//! \brief The explore look of row I05 (period LookPeriod600): while no enemy tile is known and the tunnel is not open,
+//! marks the exploration tunnels once.
+void exploreLook(Env& env);
 
-//! \brief Moves the groups by hand and casts their banners (rows K03, K04, K05).
+//! \brief Plans an attack; bypassRest skips the post-assault rest for a second-wave attempt.
+void planAttack(Env& env, bool bypassRest = false);
+
+//! \brief Moves the groups by hand and casts the banners of all but the last group (rows K03, K04, K05); a mental step
+//! after the last drop raises Launch (launchDropsDone).
 void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const EnemyEstimate& estimate);
 
-//! \brief One step of a running assault (rows K07, K09): banner renewal, next target, retreat test.
+//! \brief Raises Launch once the hand has dropped the groups (row K05); called by the mental step of launch.
+void launchDropsDone(Env& env);
+
+//! \brief The Launch reaction of row K05, after Strength of row E06: casts the last group's banner and raises March.
+void marchOff(Env& env);
+
+//! \brief One step of a running assault (rows K07, K09): banner renewal, next target, Contact, retreat test.
 void assaultStep(Env& env);
 
 //! \brief Attacks again when the enemy traps are empty (row K08).
 void secondWave(Env& env);
 
-//! \brief Ends the assault (row K10): banners removed, survivors on enemy ground carried home.
+//! \brief Ends the assault (row K10): banners removed, survivors on enemy ground carried home, AssaultOver raised.
 void endAssault(Env& env);
 
 //! \brief Defends at the first contact of an enemy group (rows J01, J02, J03, J06).

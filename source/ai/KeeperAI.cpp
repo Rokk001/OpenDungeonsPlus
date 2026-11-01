@@ -98,7 +98,7 @@ static const int NORMAL_MIN_CREATURE_LEVEL = 4;
 
 
 
-//! \brief Creates a keeper whose mind reads the selected level's configured values.
+//! \brief Creates a keeper whose mind reads the selected level's configured values and binds the spell and trap rows to it.
 KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     BaseAI(gameMap, player),
     mReactionPercent(NORMAL_REACTION_PERCENT),
@@ -128,11 +128,23 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     mMind.onEvent("J07", std::vector<AiEventType>(1, AiEventType::EnemyOut), warHandler);
     mMind.onEvent("J08", std::vector<AiEventType>(1, AiEventType::FightOver), warHandler);
     mMind.onEvent("K08", std::vector<AiEventType>(1, AiEventType::EnemyTrapEmpty), warHandler);
+    // Row K05 reacts to Launch after the E rows (catalogue order), so the last banner follows Strength
+    mMind.onEvent("K05", std::vector<AiEventType>(1, AiEventType::Launch), warHandler);
+    mMind.onAction("think", "K05", std::bind(&KeeperAI::handleLaunchStep, this, std::placeholders::_1, std::placeholders::_2));
+    // The scouting camera jumps of row I03 only take hand time; nothing is performed when they end
+    std::function<void(Tile*, const std::string&)> cameraDone = [](Tile*, const std::string&) {};
+    mMind.onAction("camera", "I03", cameraDone);
+    // The explore look of row I05 has its own period of one payday cycle
+    mMind.onLook("I05", ConfigManager::getSingleton().getAiConfigDouble("LookPeriod600") /
+        ConfigManager::getSingleton().getAiConfigDouble("ReferenceScanPeriod"), std::bind(&KeeperAI::handleExploreLook, this));
     std::function<void(std::vector<AiMath::AiStateLine>&)> warSaver = std::bind(&KeeperAI::saveWarRows, this, std::placeholders::_1);
     mMind.onSave(warSaver);
     ECON::bind(*this);
     ROOMS::bind(*this);
     RES::bind(*this);
+    // The spell, trap and door rows react to their events and looks through the mind
+    SPELL::bindRows(*this);
+    TRAP::bindRows(*this);
 }
 
 int KeeperAI::scaledCooldown(int min, int max) const
@@ -206,6 +218,19 @@ void KeeperAI::handleWarEvent(const AiEvent& event)
     WAR::onEvent(env, event);
 }
 
+//! \brief Raises Launch through the war module when the mental step after the launch drops ends.
+void KeeperAI::handleLaunchStep(Tile* tile, const std::string& target)
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::launchDropsDone(env);
+}
+
+//! \brief Runs the explore look of row I05 when its periodic timer in the Mind is due.
+void KeeperAI::handleExploreLook()
+{
+    WAR::Env env = {*this, mMind, mGameMap, mPlayer, mSettings, mWar, mMind.now()};
+    WAR::exploreLook(env);
+}
 //! \brief The room plan from ai.cfg mapped to room types, or the compiled plan when ai.cfg has none.
 std::vector<std::pair<RoomType, uint32_t>> KeeperAI::getRoomPlan()
 {

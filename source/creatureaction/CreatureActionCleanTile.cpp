@@ -17,6 +17,8 @@
 
 #include "creatureaction/CreatureActionCleanTile.h"
 
+#include "creatureaction/CreatureActionClaimGroundTile.h"
+
 #include "entities/Creature.h"
 #include "entities/DirtPileEntity.h"
 #include "entities/Tile.h"
@@ -26,9 +28,13 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+//! \brief Reserves one cleaning target while the worker walks and cleans it.
 CreatureActionCleanTile::CreatureActionCleanTile(Creature& creature, Tile& tileClean) :
     CreatureAction(creature),
-    mTileClean(tileClean)
+    mTileClean(tileClean),
+    mCleansPile(DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::pile) != nullptr ||
+                DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::vomit) != nullptr ||
+                DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::bones) != nullptr)
 {
 }
 
@@ -36,17 +42,25 @@ CreatureActionCleanTile::~CreatureActionCleanTile()
 {
 }
 
+//! \brief Advances the reserved pile or floor target without merging their limits.
 std::function<bool()> CreatureActionCleanTile::action() // allowed-lambda: signature required by CreatureAction
 {
     return std::bind(&CreatureActionCleanTile::handleCleanTile,
-        std::ref(mCreature), std::ref(mTileClean), getNbTurnsActive());
+        std::ref(mCreature), std::ref(mTileClean), getNbTurnsActive(), mCleansPile);
 }
 
-//! \brief Takes the cleaning work off the first thing that lies on the tile: pile, vomit, blood stain, floor dirt.
+//! \brief Cleans the first skeleton, pile, vomit, blood stain or floor dirt on the tile.
 //! \param tile The tile that is cleaned.
 //! \param cleanRate The cleaning work of this turn.
 static void cleanTileStep(Tile& tile, double cleanRate)
 {
+    DirtPileEntity* bones = DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::bones);
+    if(bones != nullptr)
+    {
+        bones->cleanBy(cleanRate);
+        return;
+    }
+
     DirtPileEntity* pile = DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::pile);
     if(pile != nullptr)
     {
@@ -76,13 +90,15 @@ static void cleanTileStep(Tile& tile, double cleanRate)
 //! \brief Tells whether nothing is left to clean on the tile.
 static bool isTileClean(const Tile& tile)
 {
-    return (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::pile) == nullptr) &&
+    return (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::bones) == nullptr) &&
+        (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::pile) == nullptr) &&
         (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::vomit) == nullptr) &&
         (DirtPileEntity::getEntityOnTile(&tile, DirtPileKind::blood) == nullptr) &&
         (tile.getDirt() <= 0.0);
 }
 
-bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClean, int32_t nbTurns)
+//! \brief Ends a pile target before taking any separate room or corridor target.
+bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClean, int32_t nbTurns, bool pileTarget)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -95,7 +111,10 @@ bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClea
     ConfigManager& config = ConfigManager::getSingleton();
 
     // Somebody else was faster, the tile changed hands or the worker has cleaned it long enough
-    if((tileClean.getSeat() != creature.getSeat()) || isTileClean(tileClean) ||
+    const bool pileGone = pileTarget && DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::pile) == nullptr &&
+        DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::vomit) == nullptr &&
+        DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::bones) == nullptr;
+    if((tileClean.getSeat() != creature.getSeat()) || isTileClean(tileClean) || pileGone ||
        (nbTurns >= static_cast<int32_t>(config.getDirtConfigDouble("CleaningMaxTurnsPerTile"))))
     {
         creature.popAction();
@@ -122,6 +141,7 @@ bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClea
     // The cleaning work per turn: the claim rate of the worker as a share of the whole dirt range
     double cleanRate = creature.getClaimRate() * Tile::MAX_DIRT * config.getDirtConfigDouble("CleanRateFactor");
     cleanTileStep(tileClean, cleanRate);
+    creature.receiveExp(CreatureActionClaimGroundTile::getClaimExperience(creature));
 
     // Since we wiped a tile we are done for this turn
     return false;

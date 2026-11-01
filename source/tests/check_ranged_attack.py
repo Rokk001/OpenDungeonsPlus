@@ -21,7 +21,9 @@ for text in ('entityAttack.getObjectType() == GameEntityType::creature',
              'skillData.mCooldown += getAppliedCooldownNbTurns(*skillData.mSkill);',
              'std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)',
              'mAttackRecoveryTurns = mAttackRecoveryDuration;', '++mAttackRecoverySerial;',
-             'mNeedFireRefresh = true;', 'decreaseWakefulness(0.5);', 'receiveExp(1.5);'):
+             'mNeedFireRefresh = true;',
+             'decreaseWakefulness(ConfigManager::getSingleton().getFightWakefulnessPerAttack());',
+             'getRoomConfigDouble("ArenaXpPerFightTurn") * mAttackRecoveryTurns', 'receiveExp(fightExp);'):
     assert text in method, text
 assert method.index('fireAttackTurn(') < method.index('setAnimationState(') < method.index('tryUseFight(')
 assert method.index('payManaFor(*skillData.mSkill)') < method.index('tryUseFight(')

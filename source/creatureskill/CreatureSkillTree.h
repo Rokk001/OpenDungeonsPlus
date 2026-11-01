@@ -46,6 +46,7 @@ struct SkillNumber
 //! \brief One [Skill] block: a skill of a path of a group or family (tier 1 to 3, ranks 1 to 5).
 struct SkillDef
 {
+    //! \brief Creates an empty skill definition.
     SkillDef() :
         mTier(0)
     {}
@@ -70,6 +71,8 @@ struct SkillDef
     std::vector<double> mMana;
     SkillNumber mCooldown;
     SkillNumber mDuration;
+    //! \brief Fewest allies required by an ally aura.
+    SkillNumber mMinAllies;
     SkillNumber mRadius;
     SkillNumber mRange;
     //! \brief The today line the skill scales (empty when "-").
@@ -198,17 +201,17 @@ extern const std::string TIER_FOUR_PREFIX;
 //! \brief Highest tier of a path.
 extern const uint32_t MAX_TIER;
 //! \brief Ranks needed in tier 1 before tier 2 of a path can be raised.
-extern const uint32_t TIER_TWO_UNLOCK_RANKS;
+// Read at use time through ConfigManager::getSkillTier2UnlockRanks().
 //! \brief Ranks needed in tier 2 before tier 3 of a path can be raised.
-extern const uint32_t TIER_THREE_UNLOCK_RANKS;
+// Read at use time through ConfigManager::getSkillTier3UnlockRanks().
 //! \brief Points that must be spent in the paths before the tier 4 skill can be raised.
-extern const uint32_t TIER_FOUR_MIN_SPENT;
+// Read at use time through ConfigManager::getSkillTier4MinSpent().
 //! \brief Number of points (the first ones) that draw a personal deviation.
-extern const uint32_t DEVIATION_POINTS;
+// Read at use time through ConfigManager::getSkillDeviationPoints().
 //! \brief Number of templates followers needed to allow a reset.
-extern const uint32_t RESET_MIN_FOLLOWERS;
+// Read at use time through ConfigManager::getSkillResetMinFollowers().
 //! \brief Weight factor of a template that no creature of the group follows.
-extern const uint32_t UNFOLLOWED_WEIGHT;
+// Read at use time through ConfigManager::getSkillUnfollowedWeight().
 
 //! \brief Skill points of a creature of the given level (0 below the first level with a point).
 //! \param firstLevel The level of the first point (SkillPointFirstLevel).
@@ -306,7 +309,8 @@ std::string skillClassOfKind(const std::string& kind);
 //! \param baseLine The base line (empty = none).
 //! \return The line, empty when the kind has no line.
 std::string buildSkillLine(const std::string& kind, const std::string& value, const SkillNumber& cooldown,
-    const SkillNumber& duration, const SkillNumber& radius, const SkillNumber& range, const std::string& baseLine);
+    const SkillNumber& duration, const SkillNumber& radius, const SkillNumber& range, const std::string& baseLine,
+    const SkillNumber& minAllies = SkillNumber());
 
 //! \brief Writes the build as one line of whitespace separated tokens (the stream and packet form).
 void writeBuild(const SkillBuild& build, std::ostream& os);

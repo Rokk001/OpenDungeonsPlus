@@ -21,6 +21,8 @@
 #ifndef CREATURE_H
 #define CREATURE_H
 
+#include "game/WorkerJobs.h"
+
 #include "entities/MovableGameEntity.h"
 #include "entities/CreatureActivity.h"
 #include "entities/DefenceChance.h"
@@ -172,6 +174,15 @@ class Creature: public MovableGameEntity, public Subject
     friend class ODClient;
 public:
     
+    //! \brief Reports whether the creature is currently in a keeper hand.
+    bool isInHand() const { return mIsInHand; }
+    //! \brief Returns the worker job held across turns and saves.
+    WorkerJob getWorkerJob() const { return mWorkerJob; }
+    //! \brief Reports whether this worker holds its job as a fixed assignment.
+    bool isWorkerJobFixed() const { return mWorkerJobFixed; }
+    //! \brief Sets the worker's current job and whether it is fixed.
+    void setWorkerJob(WorkerJob job, bool fixed) { mWorkerJob = job; mWorkerJobFixed = fixed; }
+
     bool parkingBit;
     
     bool parkedBit;
@@ -209,16 +220,6 @@ public:
     static const double WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT;
     //! Speed factor of a worker that pulls a creature (DormitoryWoundedDragWorkerSpeedFactor)
     static const double WOUNDED_DRAG_WORKER_SPEED_FACTOR_DEFAULT;
-    //! Radius in tiles in which a worker looks for a hurt creature (DormitoryWoundedCarryRadius)
-    static const double WOUNDED_CARRY_RADIUS_DEFAULT;
-    //! Priority against the other things a worker can carry (DormitoryWoundedCarryPriority)
-    static const double WOUNDED_CARRY_PRIORITY_DEFAULT;
-    //! Percent of health below which a creature is hurt enough to be carried (DormitoryWoundedCarryHpPercent)
-    static const double WOUNDED_CARRY_HP_PERCENT_DEFAULT;
-    //! Whether a creature knocked out for a while may be carried, 1 = yes (DormitoryWoundedCarryTempKo)
-    static const double WOUNDED_CARRY_TEMP_KO_DEFAULT;
-    //! Number of turns before a creature can be pulled again (DormitoryWoundedCarryCooldown)
-    static const double WOUNDED_CARRY_COOLDOWN_DEFAULT;
     //! Factor that turns a fraction into percent
     static const double PERCENT_FACTOR;
 
@@ -322,6 +323,11 @@ public:
 
     inline CreatureMoodLevel getMoodValue() const
     { return mMoodValue; }
+
+    //! \brief Returns the mood points of the last mood computation (CreatureBaseMood is not included). Prison and
+    //! torture use it to tell when a captured creature is broken.
+    inline double getMoodPoints() const
+    { return mMoodPoints; }
 
     //! \brief What the creature is doing, for the creature panel. On the server it is derived from the
     //! creature actions, on a client it is the last value received from the server.
@@ -973,6 +979,16 @@ public:
     //! \brief Sets the thirst (0 - 100, limited), used when a creature is loaded or by the console.
     void setThirst(double val);
 
+    //! \brief Returns the turns that must still pass before the creature may start a leisure visit to a tavern (0 = may).
+    inline int32_t getTavernCooldownTurns() const
+    { return mTavernCooldownTurns; }
+
+    //! \brief Sets the turns until the next leisure visit to a tavern (not below 0), used when a creature is loaded.
+    void setTavernCooldownTurns(int32_t turns);
+
+    //! \brief Server side. The creature just left a tavern: the cooldown of TavernLeisureCooldownTurns (rooms.cfg) starts.
+    void startTavernCooldown();
+
     //! \brief Returns the drunkenness (0 = sober, 100 = dead drunk).
     inline double getDrunk() const
     { return mDrunk; }
@@ -1162,23 +1178,20 @@ public:
     //! \brief Tells whether the creature can go through the given tile.
     bool canGoThroughTile(Tile* tile) const;
 
-    //! \brief Keeps own knockout bed/infirmary eligibility and refuses workers, decaying or consumed bodies.
+    //! \brief Keeps own knockout bed/infirmary eligibility and refuses decaying or consumed bodies.
     virtual EntityCarryType getEntityCarryType(Creature* carrier) override;
     //! \brief Pauses the body lie time while a worker carries it.
     virtual void notifyEntityCarryOn(Creature* carrier) override;
     //! \brief Resumes body lie time at the delivery or interrupted carry position.
     virtual void notifyEntityCarryOff(const Ogre::Vector3& position) override;
-
-    //! \brief Server side. True if the creature is hurt enough to be pulled to its bed by a worker:
-    //! alive, own bed in a dormitory, not standing on it, hit points below the configured share,
-    //! no fight or flight going on, no hostile creature close, not in jail, not possessed, not a
-    //! worker or in the hand and not on cooldown after the last time. The worker and the distance
-    //! are not considered here. An admitted infirmary patient stays on its paid cot.
-    bool isWoundedForBedCarry() const;
+    //! \brief Pauses and records a corpse transport while it is pulled on the map.
+    void notifyCorpseDragStart(const Creature& carrier, bool forced);
+    //! \brief Resumes the corpse timer after its ground transport ends.
+    void notifyCorpseDragEnd();
 
     //! \brief Server side. True if the creature is knocked out to death and a worker may pull it to its
     //! bed: alive, own bed in a dormitory of its seat, no hostile creature close, not in jail, not
-    //! possessed, not a worker or in the hand. Without an own bed it is not moved at all.
+    //! possessed or in the hand. Without an own bed it is not moved at all.
     bool isKoToDeathForBedPull() const;
 
     //! \brief True if the creature owns a bed (home tile) in a dormitory of its seat
@@ -1279,6 +1292,8 @@ public:
 
     inline const std::vector<std::unique_ptr<CreatureAction>>& getActions() const
     { return mActions; }
+    //! \brief Returns whether a one-task hand-drop transport is running.
+    bool hasForcedWorkerCarry() const;
 
     inline double getWakefulness() const
     { return mWakefulness; }
@@ -1299,6 +1314,12 @@ public:
     inline double getGoldFee() const
     { return mGoldFee; }
 
+    //! \brief Returns the number of unpaid wages.
+    uint32_t getMissedWages() const { return mMissedWages; }
+
+    //! \brief Records the number of unpaid wages.
+    void setMissedWages(uint32_t count) { mMissedWages = count; }
+
     //! \brief Credits the exact amount of wage received.
     void decreaseGoldFee(double value)
     {
@@ -1317,6 +1338,7 @@ public:
             return 0;
 
         mGoldFee = 0;
+        mMissedWages = 0;
         mMoodCooldownTurns = 0;
         return used;
     }
@@ -1511,6 +1533,9 @@ public:
 
     bool isHungry() const;
 
+    //! \brief Returns whether an urgent need interrupts the current activity.
+    bool needInterrupt(bool servingNeed) const;
+
     //! \brief Clears knockout, lethal-shot credit and the prior fight item-drop guard after recovery or revival.
     void resetKoTurns();
 
@@ -1520,7 +1545,7 @@ public:
 
     //! \brief Knocks the creature down for the given number of turns (server side). Does nothing if dead or KO.
     //! \param nbTurns How many turns the creature stays knocked down; values of zero or less are ignored.
-    void stun(int32_t nbTurns);
+    void stun(double nbTurns);
 
     //! \brief Called when the creature is set in jail by dropping or brought by
     //! a worker. if prison is nullptr, the creature is freed
@@ -1541,7 +1566,7 @@ public:
 
     //! \brief Mood points given by a special (positive after Make Happy, negative after Make Unhappy).
     //! They fade towards 0 over time
-    inline int32_t getSpecialMood() const
+    inline double getSpecialMood() const
     { return mSpecialMood; }
 
     //! \brief Make Happy special: clears the annoyance the creature has gathered
@@ -1564,6 +1589,58 @@ public:
 
     inline void increaseTurnsPrison()
     { ++mNbTurnsPrison; }
+
+    //! \brief Returns the mood points the torture chamber took from this creature (negative, 0 = none).
+    inline double getTortureMood() const
+    { return mTortureMood; }
+
+    //! \brief Adds mood points to the torture mood (the torture chamber adds a negative amount every turn).
+    //! \param points The mood points to add.
+    inline void addTortureMood(double points)
+    { mTortureMood += points; }
+
+    //! \brief Clears the torture mood and the counter of the turns the creature has been broken in the torture chamber.
+    inline void resetTortureMood()
+    {
+        mTortureMood = 0.0;
+        mTortureBrokenTurns = 0;
+    }
+
+    //! \brief Returns the mood points the prison took from this creature (negative, 0 = none).
+    inline double getPrisonMood() const
+    { return mPrisonMood; }
+
+    //! \brief Adds mood points to the prison mood (the prison adds a negative amount every turn).
+    //! \param points The mood points to add.
+    inline void addPrisonMood(double points)
+    { mPrisonMood += points; }
+
+    //! \brief Clears the prison mood and the counter of the turns the creature has been broken in the prison.
+    inline void resetPrisonMood()
+    {
+        mPrisonMood = 0.0;
+        mPrisonBrokenTurns = 0;
+    }
+
+    //! \brief Counts one more turn the creature is broken in the torture chamber and returns the new count.
+    inline int32_t increaseTortureBrokenTurns()
+    { return ++mTortureBrokenTurns; }
+
+    //! \brief Counts one more turn the creature is broken in the prison and returns the new count.
+    inline int32_t increasePrisonBrokenTurns()
+    { return ++mPrisonBrokenTurns; }
+
+    //! \brief Restarts the count of the turns the creature is broken in the prison (its mood is above the border again).
+    inline void resetPrisonBrokenTurns()
+    { mPrisonBrokenTurns = 0; }
+
+    //! \brief Restarts the count of the turns the creature is broken in the torture chamber.
+    inline void resetTortureBrokenTurns()
+    { mTortureBrokenTurns = 0; }
+
+    //! \brief True while the creature lies knocked out after an arena fight and gets up with ArenaGetUpHpShare.
+    inline bool isArenaKnockOut() const
+    { return mArenaKnockOut; }
 
     virtual bool isDangerous(const Creature* creature, int distance) const override;
 
@@ -1727,6 +1804,9 @@ protected:
     virtual void fireAddEntity(Seat* seat,  bool async, NodeType nt) override;
     virtual void fireRemoveEntity(Seat* seat,NodeType nt = NodeType::MTILES_NODE) override;
 private:
+    //! \brief Assigned worker job and fixed/free status, saved with the creature.
+    WorkerJob mWorkerJob = WorkerJob::none;
+    bool mWorkerJobFixed = false;
     
     enum ForceAction
     {
@@ -1842,6 +1922,8 @@ private:
 
     //! \brief At pay day, mGoldFee will be set to the creature fee and decreased when the creature gets gold
     double          mGoldFee;
+    //! \brief Number of whole wages still owed.
+    uint32_t        mMissedWages;
     //! \brief Gold carried by the creature that will be dropped if it gets killed
     double          mGoldCarried;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
@@ -1903,6 +1985,8 @@ private:
     bool            mVomited;
     //! \brief Turns a hangover still lasts; falls by 1 per turn.
     double          mHangoverTurns;
+    //! \brief Turns until the creature may start a leisure visit to a tavern again; falls by 1 per turn (server side, saved).
+    int32_t         mTavernCooldownTurns;
     //! \brief Runtime only (not saved): true when the creature fell asleep with a drunkenness above HangoverAt and has not woken up yet.
     bool            mHangoverPending;
 
@@ -1977,13 +2061,13 @@ private:
     CreatureActivity                mActivity;
     //! \brief Mood points. Computed by the creature MoodModifiers. It is promoted to class variable for debug purposes and
     //! should not be used to check mood. If the mood is to be tested, mMoodValue should be used
-    int32_t                         mMoodPoints;
+    double                          mMoodPoints;
 
     //! \brief Mood points gained by praying in a temple. They fade every turn
     int32_t                         mPrayerRelief;
 
     //! \brief Mood points set by the Make Happy and Make Unhappy specials. They fade towards 0 every turn
-    int32_t                         mSpecialMood;
+    double                          mSpecialMood;
 
     //! \brief Counts turns the creature is furious. If it stays like this for too long, it will become rogue
     int32_t                         mNbTurnFurious;
@@ -2072,6 +2156,21 @@ private:
     //! \brief allows to know how many turns a creature has been in prison
     int32_t                         mNbTurnsPrison;
 
+    //! \brief Mood points the torture chamber took from the creature (negative); saved
+    double                          mTortureMood;
+
+    //! \brief Mood points the prison took from the creature (negative); saved
+    double                          mPrisonMood;
+
+    //! \brief Turns the creature has been broken (mood at or below Furious) in the torture chamber; saved
+    int32_t                         mTortureBrokenTurns;
+
+    //! \brief Turns the creature has been broken (mood at or below Furious) in the prison; saved
+    int32_t                         mPrisonBrokenTurns;
+
+    //! \brief True while the creature is knocked out after an arena fight (temporary KO); saved
+    bool                            mArenaKnockOut;
+
     //! \brief Counts the number of active slaps affecting the creature
     uint32_t                        mActiveSlapsCount;
 
@@ -2088,7 +2187,6 @@ private:
     double                          mDragDirtFactor;
 
     //! \brief Used on server side. No worker pulls the creature to its bed again before this turn (not saved)
-    int64_t                         mWoundedCarryNextTurn;
 
     //! \brief Used on server side for the mood. Failed job searches (reset when the creature works)
     int32_t                         mNbTurnsOutOfWork;
@@ -2242,7 +2340,7 @@ private:
     void increaseThirst(double value);
 
     //! \brief Server side, once per turn. Lets the drunkenness fall by DrunkDecayPerTurn, resets the vomit mark when
-    //! the creature is sober enough again and counts down the tavern mood and the hangover.
+    //! the creature is sober enough again and counts down the tavern mood, the hangover and the leisure cooldown.
     void upkeepTavernState();
 
     //! \brief Server side, once per turn. Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down.

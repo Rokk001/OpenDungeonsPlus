@@ -35,9 +35,7 @@ namespace
 {
 static const std::string ROOM_NAME = "Merchant";
 static const std::string ROOM_DISPLAY = "Merchant room";
-static const int64_t RESERVATION_TURNS = 60;
 static const double PERCENT = 100.0;
-static const double EQUIP_MARGIN = 0.5;
 static uint32_t nextGoodsIndex = 1;
 
 //! \brief Registers the merchant through the existing room construction and editor paths.
@@ -436,7 +434,7 @@ bool RoomMerchant::wantsItem(const Creature& creature, const ItemInstance& item)
     const int32_t slot = creature.getItemEquipmentSlot(item);
     if(slot < 0) return false;
     const std::unique_ptr<ItemInstance>& worn = creature.getEquipment()[static_cast<size_t>(slot)];
-    return creature.rateItem(item) > (worn.get() == nullptr ? 0.0 : creature.rateItem(*worn)) + EQUIP_MARGIN;
+    return creature.rateItem(item) > (worn.get() == nullptr ? 0.0 : creature.rateItem(*worn)) + ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("MerchantEquipMargin", 0.5);
 }
 
 //! \brief Keeps level-gated items and potion refills, selling only unwanted carried goods.
@@ -471,7 +469,7 @@ void RoomMerchant::reserveGoods()
                     && creature->getDefinition()->getFee(0) > best->getDefinition()->getFee(0))) best = creature;
             }
             good.mReservedBy = best == nullptr ? "" : best->getName();
-            good.mReservedUntil = turn + RESERVATION_TURNS;
+            good.mReservedUntil = turn + static_cast<int64_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("MerchantReservationTurns", 60.0));
         }
 }
 

@@ -329,16 +329,9 @@ public:
     //! \brief Returns how many workers are doing the given action
     uint32_t getNbWorkersDoing(CreatureActionType actionType) const;
 
-    //! \brief Returns how many tiles of the map this player has marked for digging
+    //! \brief Returns how many known tiles this player has marked for digging
     uint32_t getNbMarkedTiles() const;
 
-    //! \brief Returns a list of the actions the worker should do based on what the other workers
-    //! of this seat are doing. The worker should try the actions on the given order
-    std::vector<CreatureActionType> getWorkerPreferredActions(Creature& worker) const;
-
-    //! \brief Returns true if one more worker may reload a trap: the workers reloading traps stay within the
-    //! configured share (TrapReloadWorkerSharePercent) of the workers doing the listed jobs
-    bool isWorkerReloadShareOpen() const;
 
 private:
     //! \brief Shared part of the defeat: chat messages, sounds, defeat sequence and statistics

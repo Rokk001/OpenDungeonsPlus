@@ -51,7 +51,8 @@ const std::string& CreatureMoodHeldInHand::getModifierName() const
 }
 
 //! \brief Returns the mood change for the turns the creature stayed in the hand beyond TurnsMin (counted up to TurnsMax turns).
-int32_t CreatureMoodHeldInHand::computeMood(const Creature& creature) const
+//! \brief Computes this mood contribution.
+double CreatureMoodHeldInHand::computeMood(const Creature& creature) const
 {
     int32_t turns = creature.getNbTurnsInHand();
     if(turns < mTurnsMin)

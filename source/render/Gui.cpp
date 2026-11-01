@@ -74,7 +74,7 @@ static const float DEFAULT_IMAGE_PIXEL_DENSITY = 1.0f;
 //! Painted navigation atlas coordinates, in doubled source pixels; existing layout sizes stay unchanged.
 static const char* const PAINTED_NAVIGATION_ATLAS = "ODNavigation.png";
 static const int PAINTED_BADGE_SIZE = 256;
-static const int PAINTED_CORNER_SIZE = 256;
+static const int PAINTED_CORNER_SIZE = 192;
 static const int PAINTED_CORNER_X = 1024;
 static const int PAINTED_RIM_SIZE = 768;
 static const int PAINTED_SYMBOL_SIZE = 128;
@@ -193,27 +193,47 @@ void createHandFeedbackImage()
     image.setArea(CEGUI::Rectf(0, 0, size, size));
 }
 
-//! Round button that fills a corner of the minimap frame: it only reacts outside the round map.
+//! \brief Hits the round integrated plate without intercepting the surrounding minimap.
 class MiniMapCornerButton : public CEGUI::PushButton
 {
 public:
     static const CEGUI::String WidgetTypeName;
+    //! \brief Constructs an integrated minimap plate with the existing button events.
     MiniMapCornerButton(const CEGUI::String& type, const CEGUI::String& name) : CEGUI::PushButton(type, name) {}
 
+    //! \brief Accepts clicks on the circular plate, including its part inside the map circle.
     bool isHit(const CEGUI::Vector2f& position, bool allowDisabled = false) const override
     {
         if(!CEGUI::PushButton::isHit(position, allowDisabled))
             return false;
-        if(getParent() == nullptr || !getParent()->isChild("MiniMap"))
-            return true;
-        // Use the actual map bounds: pixel rounding can differ from this button.
-        const CEGUI::Rectf& map = getParent()->getChild("MiniMap")->getUnclippedOuterRect().get();
-        const float x = (position.d_x - map.left() - map.getWidth() * 0.5f) / (map.getWidth() * 0.5f);
-        const float y = (position.d_y - map.top() - map.getHeight() * 0.5f) / (map.getHeight() * 0.5f);
-        return x * x + y * y >= 1.0f;
+        // Use the actual plate bounds so rounding follows the displayed image.
+        const CEGUI::Rectf& plate = getUnclippedOuterRect().get();
+        const float x = (position.d_x - plate.left() - plate.getWidth() * 0.5f) / (plate.getWidth() * 0.4375f);
+        const float y = (position.d_y - plate.top() - plate.getHeight() * 0.5f) / (plate.getHeight() * 0.4375f);
+        return x * x + y * y <= 1.0f;
     }
 };
 const CEGUI::String MiniMapCornerButton::WidgetTypeName("OD/MiniMapCornerBase");
+
+//! \brief Positions and sizes the four integrated plates as fractions of the current minimap.
+void layoutMiniMapButtons(CEGUI::Window* root)
+{
+    if(!root->isChild("MiniMap"))
+        return;
+    const CEGUI::URect map = root->getChild("MiniMap")->getArea();
+    const CEGUI::UDim width = map.d_max.d_x - map.d_min.d_x;
+    const CEGUI::UDim height = map.d_max.d_y - map.d_min.d_y;
+    const char* names[] = {"QueryButton", "SellButton", "OptionsButton", "MiniMapZoomButton"};
+    for(const char* name : names)
+    {
+        CEGUI::Window* button = root->getChild(name);
+        const CEGUI::URect area = CEGUI::PropertyHelper<CEGUI::URect>::fromString(button->getUserString("MiniMapArea"));
+        button->setArea(CEGUI::URect(map.d_min.d_x + width * area.d_min.d_x.d_scale,
+            map.d_min.d_y + height * area.d_min.d_y.d_scale,
+            map.d_min.d_x + width * area.d_max.d_x.d_scale,
+            map.d_min.d_y + height * area.d_max.d_y.d_scale));
+    }
+}
 
 const int BADGE_SIZE = 128;
 
@@ -1891,47 +1911,22 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     // social activity follow them in the same scrollable document rather than displacing the essentials.
     CEGUI::Window* equipment = page->getChild("EquipmentRow");
     const float equipmentWidth = std::max(1.0f, page->getPixelSize().d_width / scale - 148.0f - PROFILE_RIGHT_MARGIN);
-    const float headerHeight = PROFILE_FLOW_TOP - 34.0f - 2.0f * PROFILE_ROW_GAP;
-    const std::size_t slotCount = 13;
-    std::size_t columns = 1;
-    float edge = 0.0f;
-    // Fit the largest square slots beside the portrait, preserving the existing gaps between item groups.
-    for(std::size_t count = 1; count <= slotCount; ++count)
+    const float headerHeight = page->getPixelSize().d_height / scale * 0.2f;
+    const float edge = std::max(1.0f, std::min(equipmentWidth / 4.0f, headerHeight / 5.0f));
+    // Fit square slots beside the portrait, arranging worn items above the potion and inventory rows.
+    const float columns[] = {2.5f, 0.5f, 1.5f, 1.5f, 1.5f, 2.5f,
+        0.5f, 1.5f, 2.5f, 0.0f, 1.0f, 2.0f, 3.0f};
+    const float rows[] = {1.0f, 1.0f, 0.0f, 1.0f, 2.0f, 2.0f,
+        3.0f, 3.0f, 3.0f, 4.0f, 4.0f, 4.0f, 4.0f};
+    for(std::size_t slot = 0; slot < 13; ++slot)
     {
-        const std::size_t rows = (slotCount + count - 1) / count;
-        float candidate = std::min(56.0f, (headerHeight - static_cast<float>(rows - 1) * PROFILE_ROW_GAP) /
-            static_cast<float>(rows));
-        for(std::size_t first = 0; first < slotCount; first += count)
-        {
-            const std::size_t last = std::min(slotCount, first + count);
-            float gaps = 0.0f;
-            for(std::size_t slot = first + 1; slot < last; ++slot)
-                gaps += (slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP;
-            candidate = std::min(candidate, (equipmentWidth - gaps) / static_cast<float>(last - first));
-        }
-        if(candidate > edge)
-        {
-            edge = candidate;
-            columns = count;
-        }
-    }
-    float x = 0.0f;
-    float rowY = 0.0f;
-    for(std::size_t slot = 0; slot < slotCount; ++slot)
-    {
-        if(slot % columns == 0)
-        {
-            x = 0.0f;
-            rowY = static_cast<float>(slot / columns) * (edge + PROFILE_ROW_GAP);
-        }
-        else
-            x += (slot == 6 || slot == 9) ? 12.0f : PROFILE_ROW_GAP;
+        const float x = columns[slot] * edge;
+        const float rowY = rows[slot] * edge;
         setScaledArea(equipment->getChild("Slot" + Helper::toString(slot)),
             CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, rowY),
                 CEGUI::UDim(0, x + edge), CEGUI::UDim(0, rowY + edge)));
-        x += edge;
     }
-    const float equipmentHeight = rowY + edge;
+    const float equipmentHeight = 5.0f * edge;
     setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),
         CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, 34 + equipmentHeight)));
     float y = std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);
@@ -2203,7 +2198,7 @@ bool Gui::onWindowDestroyed(const CEGUI::EventArgs& e)
     return true;
 }
 
-//! \brief Rescales registered widgets and reflows their fitted profile documents.
+//! \brief Rescales registered widgets, aligns minimap plates and reflows fitted profile documents.
 void Gui::applyScale(const CEGUI::Sizef& displaySize)
 {
     const float resolutionScale = std::min(displaySize.d_width / LAYOUT_DESIGN_WIDTH,
@@ -2219,6 +2214,7 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
     if(gameSheet != mSheets.end())
     {
         arrangeActionButtonPanels(gameSheet->second);
+        layoutMiniMapButtons(gameSheet->second);
     }
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)

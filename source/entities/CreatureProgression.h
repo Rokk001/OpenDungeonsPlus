@@ -104,8 +104,8 @@ inline double combatStatAt(double base, double perLevel, double level, double (*
 inline double powerMultiplier(uint32_t level)
 {
     // Power factors at evenly spaced levels; the levels in between are interpolated linearly.
-    static const double anchors[] = {1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 3.0, 4.0, 6.0};
-    const uint32_t lastAnchor = static_cast<uint32_t>(sizeof(anchors) / sizeof(anchors[0])) - 1;
+    const std::vector<double>& anchors = ConfigManager::getSingleton().getBuildingDamageCurve();
+    const uint32_t lastAnchor = static_cast<uint32_t>(anchors.size()) - 1;
     const double position = (std::max(1u, std::min(MAX_POWER_LEVEL, level)) - 1) * static_cast<double>(lastAnchor) /
         (MAX_POWER_LEVEL - 1);
     const uint32_t index = static_cast<uint32_t>(position);

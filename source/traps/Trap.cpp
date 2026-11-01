@@ -39,7 +39,9 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <iomanip>
 #include <istream>
+#include <limits>
 #include <ostream>
 
 //! \brief Value of TrapReloadByWorkers when the trap config has no entry (1.0 means workers reload traps)
@@ -320,6 +322,20 @@ bool Trap::isTileExhausted(Tile* tile) const
     return it != mTileData.end() && static_cast<const TrapTileData*>(it->second)->isExhausted();
 }
 
+//! \brief The shots an armed tile of this trap has left; 0 for a tile that is not armed, exhausted or not one of its tiles.
+int32_t Trap::getTileShotsLeft(Tile* tile) const
+{
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end())
+        return 0;
+
+    const TrapTileData* trapTileData = static_cast<const TrapTileData*>(it->second);
+    if(!trapTileData->isActivated() || trapTileData->isExhausted())
+        return 0;
+
+    return std::max(0, trapTileData->getNbShootsBeforeDeactivation());
+}
+
 int32_t Trap::getNbNeededCraftedTrap() const
 {
     int32_t nbNeededCraftedTrap = 0;
@@ -517,6 +533,7 @@ void Trap::postponeReload(Tile* tile, int64_t untilTurn)
     static_cast<TrapTileData*>(it->second)->setReloadNextTurn(untilTurn);
 }
 
+//! \brief Returns the configured reload price for this trap type.
 int32_t Trap::getReloadPrice() const
 {
     // Price per trap type (<Trap>ReloadCost), a type without an entry pays TrapReloadCostDefault
@@ -538,7 +555,7 @@ int32_t Trap::getReloadPrice() const
             price = config.getTrapConfigDoubleOrDefault("FearReloadCost", defaultPrice);
             break;
         case TrapType::gas:
-            price = config.getTrapConfigDoubleOrDefault("GasReloadCost", defaultPrice);
+            price = config.getTrapConfigDoubleOrDefault("GasReloadCost", 467.2767084775086);
             break;
         case TrapType::lightning:
             price = config.getTrapConfigDoubleOrDefault("LightningReloadCost", defaultPrice);
@@ -743,6 +760,7 @@ void Trap::exportHeadersToStream(std::ostream& os) const
     os << getType() << "\t";
 }
 
+//! \brief Saves trap tile data and preserves fractional reload time without changing stream formatting.
 void Trap::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileData) const
 {
     TrapTileData* trapTileData = static_cast<TrapTileData*>(tileData);
@@ -751,7 +769,12 @@ void Trap::exportTileDataToStream(std::ostream& os, Tile* tile, TileData* tileDa
         return;
 
     os << "\t" << trapTileData->mHP;
-    os << "\t" << trapTileData->getReloadTime();
+    const std::streamsize precision = os.precision();
+    const std::ios_base::fmtflags flags = os.flags();
+    os << "\t" << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10)
+       << trapTileData->getReloadTime();
+    os.flags(flags);
+    os.precision(precision);
     os << "\t" << trapTileData->getNbShootsBeforeDeactivation();
     os << "\t" << trapTileData->mClaimedValue;
 
@@ -950,4 +973,11 @@ void Trap::fireTrapSound(Tile& tile, const std::string& soundFamily)
 bool Trap::importTrapFromStream(Trap& trap, std::istream& is)
 {
     return trap.importFromStream(is);
+}
+
+//! \brief Reads the trap type's configured health for each new tile.
+double Trap::getDefaultTileHP() const
+{
+    return ConfigManager::getSingleton().getTrapConfigDouble(
+        TrapManager::getTrapNameFromTrapType(getType()) + "HP");
 }

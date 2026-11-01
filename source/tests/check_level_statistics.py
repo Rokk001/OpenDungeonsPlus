@@ -174,12 +174,19 @@ struct CreatureDefinition
 {
     bool isWorker() const { return mWorker; }
     bool isChampion() const { return false; }
+    //! \brief The fixture creatures are living ones (undead are never knocked out).
+    bool isUndead() const { return false; }
     bool mWorker = false;
 };
+//! \brief Supplies the turn rate the arena knock-out time is counted in.
+struct ODApplication { static double turnsPerSecond; };
+double ODApplication::turnsPerSecond = 4.0;
 struct ConfigManager
 {
     static ConfigManager& getSingleton() { static ConfigManager config; return config; }
     int getNbTurnsKoCreatureAttacked() { return 5; }
+    //! \brief Supplies the arena knock-out seconds; the fixture fights outside the arena.
+    double getRoomConfigDouble(const std::string&) { return 30.0; }
     double getSpellConfigDouble(const std::string&) { return 100.0; }
     // The creature dirt of a knock-out is outside the statistics contract (the fixture runs the non-server path)
     double getDirtConfigDouble(const std::string&) { return 0.0; }
@@ -221,6 +228,7 @@ struct Creature : public GameEntity
     double mHp;
     int mNbTurnsWithoutBattle;
     double mKoTurnCounter;
+    bool mArenaKnockOut = false;
     int mDeaths;
     bool mDirtKoThisFight = false;
     bool mFoughtSinceFightEnd = false;
@@ -630,7 +638,7 @@ wiring_checks = 0
 
 enum_body = notification_header[notification_header.index('enum class ServerNotificationType'):]
 enum_body = enum_body[:enum_body.index('};')]
-assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-12:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump']
+assert 'levelStatistics,' in enum_body and 'possessionEnd,' in enum_body and 'editorRegionData,' in enum_body and re.findall(r'^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$', enum_body, re.M)[-13:] == ['campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings']
 assert enum_body.index('possessionEnd') > enum_body.index('possessionStart')
 assert enum_body.index('levelStatistics') < enum_body.index('heartHealth') < enum_body.index('casinoPayout') < enum_body.index('possessionStart')
 assert enum_body.index('playerDefeated') < enum_body.index('levelStatistics')

@@ -38,7 +38,8 @@ public:
     CreatureSkillSkeletonArmy() :
         mCreatureLevelMin(0),
         mNbCreatures(0),
-        mEffectDuration(0)
+        mEffectDuration(0),
+        mRadius(2)
     {}
 
     //! \brief Nothing to release.
@@ -81,6 +82,8 @@ private:
     uint32_t mEffectDuration;
     //! \brief Creature class of the summoned creatures
     std::string mCreatureClass;
+    //! \brief Tiles around the caster searched for summoning positions.
+    int32_t mRadius;
 };
 
 #endif // CREATURESKILLSKELETONARMY_H

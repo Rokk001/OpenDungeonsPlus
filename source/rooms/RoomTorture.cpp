@@ -40,6 +40,8 @@
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
 
+#include <cmath>
+
 const std::string RoomTortureName = "Torture";
 const std::string RoomTortureNameDisplay = "Torture room";
 const RoomType RoomTorture::mRoomType = RoomType::torture;
@@ -283,30 +285,16 @@ void RoomTorture::removeCreatureUsingRoom(Creature* creature)
         return;
     }
 
+    // An own creature that was tortured for its mood is no prisoner: its torture mood ends with the session. A prisoner
+    // keeps its torture mood until it is freed.
+    if(creature->getSeatPrison() == nullptr)
+        creature->resetTortureMood();
+
     creature->setInJail(nullptr);
 
     infoToUse->mCreature = nullptr;
     infoToUse->mIsReady = false;
     infoToUse->mState = 0;
-}
-
-//! \brief Torture time multipliers in percent for the creature levels 1 to 10 (higher levels use the last one)
-static const double TORTURE_LEVEL_PERCENT[] = {100.0, 105.0, 110.0, 115.0, 120.0, 130.0, 140.0, 150.0, 200.0, 300.0};
-
-//! \brief Computes how many turns a creature must be tortured before it changes side.
-//! \param creature The tortured creature; its kind and level set the time
-//! \param torturingSeat The seat that tortures it; its torture research makes the conversion faster
-//! \param dirtConvertFactor Factor of the dirt stage of the torture chamber on the time (1 in a clean chamber)
-//! \return The number of turns of torture needed
-static double tortureTurnsToConvert(const Creature& creature, const Seat* torturingSeat, double dirtConvertFactor)
-{
-    uint32_t nbLevels = sizeof(TORTURE_LEVEL_PERCENT) / sizeof(TORTURE_LEVEL_PERCENT[0]);
-    uint32_t index = std::min(std::max(creature.getLevel(), 1u), nbLevels) - 1;
-    double seconds = creature.getDefinition()->getTortureTimeToConvert() * TORTURE_LEVEL_PERCENT[index] / 100.0;
-    // The torture research makes the conversion faster
-    double speed = SkillManager::getResearchValue(torturingSeat, SkillType::roomTorture, 1.0,
-        ResearchEffect::ConversionSpeed);
-    return seconds * ODApplication::turnsPerSecond / speed * dirtConvertFactor;
 }
 
 void RoomTorture::doUpkeep()
@@ -332,29 +320,54 @@ void RoomTorture::doUpkeep()
             break;
         }
         creature->increaseTurnsTorture();
+
+        // Every tortured creature loses mood; the dirt of the chamber makes it slower
+        creature->addTortureMood(config.getRoomConfigDouble("TortureMoodPerSecond")
+            * SkillManager::getResearchValue(getSeat(), SkillType::roomTorture, 1.0, ResearchEffect::ConversionSpeed)
+            / getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3") / ODApplication::turnsPerSecond);
+
+        // Only an enemy victim whose mood is broken can convert: it rolls once per second
+        if((getSeat() != creature->getSeat()) &&
+           (config.getCreatureBaseMood() + creature->getMoodPoints() <= config.getCreatureMoodFurious()))
+        {
+            int32_t brokenTurns = creature->increaseTortureBrokenTurns();
+            bool secondPassed = std::floor(brokenTurns / ODApplication::turnsPerSecond)
+                > std::floor((brokenTurns - 1) / ODApplication::turnsPerSecond);
+            if(secondPassed && (Random::Double(0.0, 1.0) < config.getRoomConfigDouble("TortureConvertChancePerSecond")))
+            {
+                convertVictim(*creature);
+                continue;
+            }
+        }
+        else
+        {
+            creature->resetTortureBrokenTurns();
+        }
+
         double damage = creature->getMaxHp() * config.getRoomConfigDouble("TortureDamagePercentPerSecond") / ODApplication::turnsPerSecond;
         if(creature->getHP() <= damage)
-            revealEnemyInformation(*creature);
+            revealEnemyInformation(*getSeat(), *creature);
 
         creature->takeDamage(this, damage, 0.0, 0.0, 0.0, tileCreature, false);
     }
 }
 
-//! \brief A tortured enemy creature that is about to die gives away one room of its owner that was not seen yet.
-//! \param creature The tortured creature
-void RoomTorture::revealEnemyInformation(Creature& creature)
+//! \brief A tortured or betraying enemy creature gives away one room of its owner that was not seen yet.
+//! \param keeperSeat The seat that tortures or imprisons the creature and learns the room
+//! \param creature The tortured or imprisoned creature
+void RoomTorture::revealEnemyInformation(Seat& keeperSeat, Creature& creature)
 {
-    if(creature.getSeat() == getSeat())
+    if(creature.getSeat() == &keeperSeat)
         return;
 
     // AI seats see every tile anyway
-    if((getSeat()->getPlayer() == nullptr) || !getSeat()->getPlayer()->getIsHuman())
+    if((keeperSeat.getPlayer() == nullptr) || !keeperSeat.getPlayer()->getIsHuman())
         return;
 
     // The first room of the victim's owner whose first tile this seat has not seen yet is
     // revealed completely and for good (it stays known like any explored tile)
     Room* roomToReveal = nullptr;
-    const std::vector<Room*>& rooms = getGameMap()->getRooms();
+    const std::vector<Room*>& rooms = keeperSeat.getGameMap()->getRooms();
     for(Room* room : rooms)
     {
         if(room->getSeat() != creature.getSeat())
@@ -367,7 +380,7 @@ void RoomTorture::revealEnemyInformation(Creature& creature)
         if(firstTile == nullptr)
             continue;
 
-        if(getSeat()->hasSeenTile(firstTile))
+        if(keeperSeat.hasSeenTile(firstTile))
             continue;
 
         roomToReveal = room;
@@ -376,9 +389,33 @@ void RoomTorture::revealEnemyInformation(Creature& creature)
     if(roomToReveal == nullptr)
         return;
 
-    OD_LOG_INF("Torture information: seat " + Helper::toString(getSeat()->getId()) + " reveals room "
+    OD_LOG_INF("Torture information: seat " + Helper::toString(keeperSeat.getId()) + " reveals room "
         + roomToReveal->getName() + " of seat " + Helper::toString(creature.getSeat()->getId()));
-    getSeat()->revealTiles(roomToReveal->getCoveredTiles(), 1);
+    keeperSeat.revealTiles(roomToReveal->getCoveredTiles(), 1);
+
+    if((keeperSeat.getPlayer() != nullptr) &&
+       keeperSeat.getPlayer()->getIsHuman() &&
+       !keeperSeat.getPlayer()->getHasLost())
+    {
+        ServerNotification *serverNotification = new ServerNotification(
+            ServerNotificationType::chatServer, keeperSeat.getPlayer());
+        std::string msg = "A tortured prisoner has given away an enemy room";
+        serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+}
+
+//! \brief The broken enemy victim changes side: it joins the torturing seat and its captivity moods end.
+//! \param creature The victim that is converted
+void RoomTorture::convertVictim(Creature& creature)
+{
+    creature.changeSeat(getSeat());
+    creature.resetTortureMood();
+    creature.resetPrisonMood();
+    creature.startConvertedRelationships();
+    getSeat()->notifyCreatureArrival(creature.getDefinition()->getClassName());
+    getSeat()->getStatistics().mCreaturesConverted++;
+    creature.clearActionQueue();
 
     if((getSeat()->getPlayer() != nullptr) &&
        getSeat()->getPlayer()->getIsHuman() &&
@@ -386,7 +423,7 @@ void RoomTorture::revealEnemyInformation(Creature& creature)
     {
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::chatServer, getSeat()->getPlayer());
-        std::string msg = "A tortured prisoner has given away an enemy room";
+        std::string msg = "Your tormentors have convinced another creature how sweet it is to live under your rule";
         serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
@@ -430,32 +467,6 @@ bool RoomTorture::useRoom(Creature& creature, bool forced)
         Ogre::Vector3 direction = obj->getPosition() + Ogre::Vector3(0, -1, 0) - creature.getPosition();
         direction.z = 0;
         direction.normalise();
-
-        // An enemy changes side once it has been tortured long enough for its kind and level
-        if((getSeat() != creature.getSeat()) &&
-           (static_cast<double>(creature.getNbTurnsTorture()) >= tortureTurnsToConvert(creature, getSeat(),
-               getDirtStageFactor("TortureDirtConvertStage2", "TortureDirtConvertStage3"))))
-        {
-            // The creature changes side
-            creature.changeSeat(getSeat());
-            creature.startConvertedRelationships();
-            getSeat()->notifyCreatureArrival(creature.getDefinition()->getClassName());
-            getSeat()->getStatistics().mCreaturesConverted++;
-            creature.clearActionQueue();
-
-            // We return false because we don't want to choose an action before a next complete turn
-            if((getSeat()->getPlayer() != nullptr) &&
-               getSeat()->getPlayer()->getIsHuman() &&
-               !getSeat()->getPlayer()->getHasLost())
-            {
-                ServerNotification *serverNotification = new ServerNotification(
-                    ServerNotificationType::chatServer, getSeat()->getPlayer());
-                std::string msg = "Your tormentors have convinced another creature how sweet it is to live under your rule";
-                serverNotification->mPacket << msg << EventShortNoticeType::aboutCreatures;
-                ODServer::getSingleton().queueServerNotification(serverNotification);
-            }
-            return false;
-        }
 
         // We start the fire effect and we set job cooldown
         uint32_t nbTurns = Random::Uint(config.getRoomConfigUInt32("TortureSessionLengthMin"),

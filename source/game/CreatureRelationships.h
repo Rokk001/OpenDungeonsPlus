@@ -122,6 +122,8 @@ struct RelationshipSettings
     int32_t mBrawlChancePercent;
     int32_t mBrawlMaxDistanceTiles;
     int32_t mBrawlStopHealthPercent;
+    //! \brief Health margin above the stop threshold needed to start a brawl.
+    int32_t mBrawlStartHealthMarginPercent;
     int64_t mBrawlMaxTurns;
     int32_t mBrawlValueChange;
 

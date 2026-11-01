@@ -78,7 +78,7 @@ print("Successful worker and champion summons share saved first-arrival history:
 
 # Ownership acquisition counts only after the conversion actually succeeds.
 torture = (ROOT / "source/rooms/RoomTorture.cpp").read_text(encoding="utf-8")
-conversion = function(torture, "bool RoomTorture::useRoom(")
+conversion = function(torture, "void RoomTorture::convertVictim(")
 notice = "notifyCreatureArrival(creature.getDefinition()->getClassName())"
 assert conversion.count(notice) == 1
 assert conversion.index("creature.changeSeat(getSeat());") < conversion.index(notice)

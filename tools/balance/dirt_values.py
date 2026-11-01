@@ -18,7 +18,8 @@ Usage (from the repository root):
   python tools/balance/dirt_values.py            print the table
   python tools/balance/dirt_values.py --check    recompute from the config keys, assert the result is the expected
                                                  table (EXPECTED) and that config/rooms.cfg and config/global.cfg
-                                                 hold exactly these values; exit code 1 on any difference
+                                                 hold these values within CONFIG_TOLERANCE; exit code 1 on any
+                                                 difference
 """
 
 import argparse
@@ -32,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # Share of one worker's time that keeps the reference dungeon in balance
 REFERENCE_CLEANING_SHARE = 0.25
 # Working share of a occupied spot in the reference dungeon
-OCCUPANCY = 0.62
+OCCUPANCY = 0.557
 # Occupancy used for animals, meals and prisoners (always present)
 FULL_OCCUPANCY = 1.0
 # Centre spots of a 25-tile room
@@ -52,21 +53,25 @@ HIGH = 1.0
 MEDIUM = 0.5
 LOW = 0.25
 
-# The table of the plan (the values the config must hold)
+# Largest difference between a config value and the 4-decimal table: one unit of the last decimal. The config holds
+# the values of the balance simulation without rounding (computed with the unrounded working share)
+CONFIG_TOLERANCE = 0.0001
+
+# The table of the plan (the config must hold these values within CONFIG_TOLERANCE)
 EXPECTED = {
-    'WorkshopDirtPerWork': '1.5922',
-    'ArenaDirtPerHit': '1.5922',
-    'ToiletDirtPerUse': '0.5211',
+    'WorkshopDirtPerWork': '1.7723',
+    'ArenaDirtPerHit': '1.7723',
+    'ToiletDirtPerUse': '0.5800',
     'HatcheryDirtPerHenTurn': '0.0323',
     'HatcheryDirtPerMeal': '8.0769',
-    'TrainHallDirtPerHit': '0.7961',
-    'CasinoDirtPerWork': '0.7961',
-    'DormitoryDirtPerSleepTurn': '0.1448',
-    'GuardRoomDirtPerDuty': '1.2304',
-    'LibraryDirtPerWork': '0.3980',
-    'TempleDirtPerPrayerTurn': '0.0724',
+    'TrainHallDirtPerHit': '0.8862',
+    'CasinoDirtPerWork': '0.8862',
+    'DormitoryDirtPerSleepTurn': '0.1611',
+    'GuardRoomDirtPerDuty': '1.3695',
+    'LibraryDirtPerWork': '0.4430',
+    'TempleDirtPerPrayerTurn': '0.0806',
     'PrisonDirtPerPrisonerTurn': '0.1615',
-    'TortureDirtPerSession': '1.4475',
+    'TortureDirtPerSession': '1.6112',
 }
 
 
@@ -170,6 +175,11 @@ def print_table(table):
           % (table['ArenaDirtPerHit'], table['DormitoryDirtPerSleepTurn']))
 
 
+# Returns True when a config value (text) lies within CONFIG_TOLERANCE of the expected table value (text).
+def matches(value, expected):
+    return value is not None and abs(float(value) - float(expected)) <= CONFIG_TOLERANCE + 1e-12
+
+
 # Compares the computed table with EXPECTED and the config files; returns the list of differences.
 def check(table):
     problems = []
@@ -179,12 +189,12 @@ def check(table):
         if str(table[key]) != expected:
             problems.append('formula gives %s %s, expected %s' % (key, table[key], expected))
         value = read_key(rooms_cfg, key)
-        if value != expected:
+        if not matches(value, expected):
             problems.append('rooms.cfg %s is %s, expected %s' % (key, value, expected))
-    if global_dirt.get('CombatDirtPerHit') != EXPECTED['ArenaDirtPerHit']:
+    if not matches(global_dirt.get('CombatDirtPerHit'), EXPECTED['ArenaDirtPerHit']):
         problems.append('global.cfg CombatDirtPerHit is %s, expected %s'
                         % (global_dirt.get('CombatDirtPerHit'), EXPECTED['ArenaDirtPerHit']))
-    if global_dirt.get('TrailDirtPerTile') != EXPECTED['DormitoryDirtPerSleepTurn']:
+    if not matches(global_dirt.get('TrailDirtPerTile'), EXPECTED['DormitoryDirtPerSleepTurn']):
         problems.append('global.cfg TrailDirtPerTile is %s, expected %s'
                         % (global_dirt.get('TrailDirtPerTile'), EXPECTED['DormitoryDirtPerSleepTurn']))
     return problems

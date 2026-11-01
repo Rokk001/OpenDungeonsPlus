@@ -76,6 +76,11 @@ struct Seat {
   arrivalAfterPlacement=arrivalAfterPlacement&&Creature::positions==Creature::spawned
    &&Creature::addToMap==Creature::spawned;}
 };
+// Supplies the config values the production helpers read (the shipped values are compared in check_rebalance_config.py).
+struct ConfigManager {
+ static ConfigManager& getSingleton(){static ConfigManager manager;return manager;}
+ int32_t getSpellConfigInt32(const std::string&)const{return 4;}
+ double getAutoWorkerIntervalSeconds()const{return 5.0;}};
 struct BuildingObject;
 struct Room {Seat* seat;double hp=250.0;
  Room(Seat* s):seat(s){}virtual ~Room()=default;
@@ -171,8 +176,7 @@ int main(){
 
 get_heart_tile = function(temple, "Tile* RoomDungeonTemple::getHeartTile(")
 auto_workers = function(game_map, "void GameMap::updateSeatAutoWorkers(")
-constants = game_map[game_map.index("const int AUTO_WORKERS_TARGET")
-    : game_map.index("AUTO_WORKER_INTERVAL_SECONDS = 5.0;") + len("AUTO_WORKER_INTERVAL_SECONDS = 5.0;")]
+constants = function(game_map, "int autoWorkersTarget(") + " " + function(game_map, "double autoWorkerIntervalSeconds(")
 probe = probe.replace("GET_HEART_TILE", get_heart_tile)
 probe = probe.replace("AUTO_WORKERS", "namespace {\n" + constants + "\n}\n" + auto_workers)
 
@@ -182,7 +186,7 @@ assert "newCreature->addToGameMap();" in auto_workers, "the worker joins the gam
 assert "addParticleEffect(\"SummonWorker\", 3)" in auto_workers, "the worker gets the summon effect"
 assert "newCreature->createMesh();" in auto_workers, "the mesh is created so the clients are told of it"
 assert "++seat->mNumCreaturesWorkers;" in auto_workers, "the seat count follows the spawn"
-assert "AUTO_WORKERS_TARGET" in auto_workers and "AUTO_WORKER_INTERVAL_SECONDS" in auto_workers
+assert "autoWorkersTarget()" in auto_workers and "autoWorkerIntervalSeconds()" in auto_workers
 
 misc = function(game_map, "unsigned long int GameMap::doMiscUpkeep(")
 assert "updateSeatMana(seat, nbManaWellTiles, timeSinceLastTurn);" in misc and "updateSeatAutoWorkers(seat, timeSinceLastTurn);" in misc, \

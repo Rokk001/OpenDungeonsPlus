@@ -39,19 +39,22 @@
 #include "utils/Random.h"
 
 #include <cmath>
+#include <iomanip>
+#include <limits>
+#include <sstream>
 
 //! \brief Seconds before a taken over portal spawns its first creature when the room config has no PortalFirstSpawnSeconds
-static const double DEFAULT_PORTAL_FIRST_SPAWN_SECONDS = 25.0;
+static const double DEFAULT_PORTAL_FIRST_SPAWN_SECONDS = 187.72607879924954;
 
 //! \brief The turns of a portal cooldown bound after the research Beer of the tavern: the bound of the room config
 //! times the factor of the research level of the seat (both bounds get the same factor).
 //! \param seat The seat that owns the portal.
 //! \param key The room config key of the bound, PortalCooldownSpawnMin or PortalCooldownSpawnMax.
-//! \return The bound in turns, rounded.
-static uint32_t getResearchedCooldown(const Seat* seat, const std::string& key)
+//! \return The bound in turns, with its fraction.
+static double getResearchedCooldown(const Seat* seat, const std::string& key)
 {
-    const double base = static_cast<double>(ConfigManager::getSingleton().getRoomConfigUInt32(key));
-    return static_cast<uint32_t>(std::round(SkillManager::getResearchValue(seat, SkillType::tavernBeer, base, ResearchEffect::PortalCooldown)));
+    const double base = ConfigManager::getSingleton().getRoomConfigDouble(key);
+    return SkillManager::getResearchValue(seat, SkillType::tavernBeer, base, ResearchEffect::PortalCooldown);
 }
 
 const std::string RoomPortalName = "Portal";
@@ -164,9 +167,9 @@ void RoomPortal::changeOwner(Seat* seat)
     for(Tile* tile : mCoveredTiles)
         tile->claimTile(seat);
 
-    mSpawnCreatureCountdown = static_cast<int>(
+    mSpawnCreatureCountdown =
         ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PortalFirstSpawnSeconds", DEFAULT_PORTAL_FIRST_SPAWN_SECONDS)
-        * ODApplication::turnsPerSecond);
+        * ODApplication::turnsPerSecond;
 
     if((oldSeat != nullptr) && !oldSeat->isAlliedSeat(seat))
         seat->getStatistics().mRoomsCaptured++;
@@ -240,12 +243,12 @@ void RoomPortal::doUpkeep()
     // Other keepers who see the portal learn that the owner is rich (dust over the portal)
     announceKeeperWealth(getCentralTile());
 
-    if(mSpawnCreatureCountdown > 0)
+    if(mSpawnCreatureCountdown > 0.0)
     {
-        --mSpawnCreatureCountdown;
+        mSpawnCreatureCountdown -= 1.0;
         return;
     }
-    mSpawnCreatureCountdown = Random::Uint(getResearchedCooldown(getSeat(), "PortalCooldownSpawnMin"),
+    mSpawnCreatureCountdown += Random::Double(getResearchedCooldown(getSeat(), "PortalCooldownSpawnMin"),
         getResearchedCooldown(getSeat(), "PortalCooldownSpawnMax"));
 
     if (mCoveredTiles.empty())
@@ -319,14 +322,22 @@ void RoomPortal::setupRoom(const std::string& name, Seat* seat, const std::vecto
     mNbCreatureMaxIncrease = ConfigManager::getSingleton().getCreaturesPerPortal();
 }
 
+//! \brief Saves the portal health, capacity and spawn countdown.
 void RoomPortal::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
 
     // The health is written as a number of tiles, as it always was
-    os << (mClaimHealth * static_cast<double>(numCoveredTiles())) << "\t" << mNbCreatureMaxIncrease << "\n";
+    os << (mClaimHealth * static_cast<double>(numCoveredTiles())) << "\t" << mNbCreatureMaxIncrease;
+    const std::streamsize precision = os.precision();
+    const std::ios::fmtflags flags = os.flags();
+    os << "\tSpawnCountdown " << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10) << mSpawnCreatureCountdown;
+    os.flags(flags);
+    os.precision(precision);
+    os << "\n";
 }
 
+//! \brief Loads portal data and restores the optional spawn countdown from current saves.
 bool RoomPortal::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
@@ -337,6 +348,18 @@ bool RoomPortal::importFromStream(std::istream& is)
         return false;
     if(!(is >> mNbCreatureMaxIncrease))
         return false;
+
+    std::string remainder;
+    std::getline(is, remainder);
+    std::istringstream extra(remainder);
+    std::string marker;
+    mSpawnCreatureCountdown = 0.0;
+    if(extra >> marker)
+    {
+        std::string unexpected;
+        if(marker != "SpawnCountdown" || !(extra >> mSpawnCreatureCountdown) || (extra >> unexpected))
+            return false;
+    }
 
     if(numCoveredTiles() > 0)
         mClaimHealth = std::min(1.0, std::max(0.0, claimedValue / static_cast<double>(numCoveredTiles())));

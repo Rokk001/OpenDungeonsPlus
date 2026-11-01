@@ -26,6 +26,8 @@
 #include "ai/AiEconomy.h"
 #include "ai/AiResearch.h"
 #include "ai/AiCare.h"
+#include "ai/AiSpells.h"
+#include "ai/AiTraps.h"
 
 #include <cstdint>
 #include <utility>
@@ -65,6 +67,10 @@ public:
     RES::ResearchState& getResearchState() { return mResearchState; }
     //! \brief Scores known room squares around the selected placement origin.
     bool findRoomPosition(Tile* start, int32_t size, bool walls, int32_t& x, int32_t& y);
+    //! \brief What the spell rows remember for this keeper (lives as long as the keeper).
+    SPELL::State& getSpellState() { return mSpellState; }
+    //! \brief What the trap and door rows remember for this keeper (lives as long as the keeper).
+    TRAP::State& getTrapState() { return mTrapState; }
     //! \brief Writes the keeper's mind as the contents of its AIState block.
     virtual void exportState(std::ostream& os) const;
     //! \brief Restores the contents of an AIState block, or starts fresh when invalid.
@@ -82,6 +88,10 @@ private:
     void runWar();
     //! \brief Hands an event of the war rows to the war module after its reaction delay.
     void handleWarEvent(const AiEvent& event);
+    //! \brief Runs the explore look of row I05 of the war module.
+    void handleExploreLook();
+    //! \brief Performs the mental step of row K05 after the launch drops (also when restored after loading).
+    void handleLaunchStep(Tile* tile, const std::string& target);
     //! \brief Appends the war and sighting lines to the saved AI state of the mind.
     void saveWarRows(std::vector<AiMath::AiStateLine>& lines);
 
@@ -106,6 +116,10 @@ private:
     RES::ResearchState mResearchState;
     //! \brief Registers and retains this keeper's creature-care, prisoner and item decisions.
     CARE::Controller mCare{*this};
+    //! \brief The state of the spell rows (E04, E05 and the fight session).
+    SPELL::State mSpellState;
+    //! \brief The state of the trap and door rows (F01, F12, F13, F15).
+    TRAP::State mTrapState;
     //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
     int mMinHpPercentToFight;
     //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)

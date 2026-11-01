@@ -37,7 +37,7 @@ struct EnemyRecord
 {
     double hp;
     double rawDps;
-    //! \brief The tile the creature stood on when it was seen (runtime only, not saved).
+    //! \brief The tile the creature stood on when it was seen (saved as a draw line of row I04).
     Tile* tile;
 };
 
@@ -92,20 +92,23 @@ public:
     //! \return nullptr when no enemy tile is known.
     Tile* nearestKnownEnemyTile(const SightingState& sighting) const;
 
-    //! \brief Plans the tunnel to the target and marks it for digging: draws the detour of the route once (twice,
-    //! taking the longer, on the complex mistake of row I02), builds the polyline start - waypoint - target of
-    //! length (1 + detour) x distance and marks it in at most DigActions drags.
+    //! \brief Plans the tunnel to the target and marks it for digging: draws one detour, or takes the longer of two on
+    //! an I02 mistake, builds the polyline start - waypoint - target of length (1 + detour) x distance and marks it in at most
+    //! DigActions drags.
     //! \param detour Receives the detour that was drawn.
+    //! \param firstDig Receives the first tile of the route that is marked, nullptr when none.
     //! \return false when no tile could be marked.
-    bool planRoute(KeeperAI& ai, Mind& mind, const AiSettings& settings, Tile* start, Tile* target, double& detour) const;
+    bool planRoute(KeeperAI& ai, const AiSettings& settings, Tile* start, Tile* target, double& detour, Tile*& firstDig) const;
 
-    //! \brief Looks at the enemy before an attack (row I03): unless the rule mistake is drawn, every enemy fighter in
-    //! the seat's vision gets a record, the five noise factors and the ready flag are drawn for each enemy seat
-    //! with a sighting, and ScoutCameraActions camera actions are charged.
+    //! \brief Looks at the enemy before an attack (row I03): unless the rule mistake is drawn, Eye of Evil is cast on the
+    //! enemy through the shared cast of row E04, every enemy fighter in the seat's vision gets a record, the five noise
+    //! factors and the ready flag are drawn for each enemy seat with a sighting, and ScoutCameraActions camera actions
+    //! are charged.
+    //! \param eyeTile The tile the Eye of Evil is cast on (the enemy heart or the nearest known enemy tile).
     //! \param trapPotential The potential of the trap set the estimate uses (the own set before the first contact of
     //! an own assault, the revealed enemy set after it), with the ready flag of that set.
     //! \param ownTraps True when the trap set is the own one (the trap noise factor is then not applied).
-    void scout(KeeperAI& ai, Mind& mind, const AiSettings& settings, SightingState& sighting, double now,
+    void scout(KeeperAI& ai, Mind& mind, const AiSettings& settings, SightingState& sighting, double now, Tile* eyeTile,
                double trapPotential, bool trapReady, bool ownTraps) const;
 
     //! \brief The enemy as the AI believes it to be (row I04): the last sighting unchanged, or, with no record
@@ -121,7 +124,7 @@ public:
                                 double ownHp, double ownDps, double ownMana, double ownTrap, double ownIncome) const;
 
     //! \brief Marks the exploration tunnels (row I05): ExploreTunnelsPerDirection tunnels for each of the four map
-    //! directions from the own heart, once; later calls mark nothing.
+    //! directions from the own heart, once; a known seam on the way gets Leveltilesdig rings; later calls mark nothing.
     //! \param marked In/out: true once the tunnels are marked.
     //! \return true when tunnels were marked by this call.
     bool exploreTunnels(KeeperAI& ai, Mind& mind, bool& marked) const;
