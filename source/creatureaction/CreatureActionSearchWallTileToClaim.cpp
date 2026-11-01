@@ -16,6 +16,7 @@
  */
 
 #include "creatureaction/CreatureActionSearchWallTileToClaim.h"
+#include "creatureaction/WorkerSearchTargets.h"
 
 #include "creatureaction/CreatureActionClaimWallTile.h"
 #include "entities/Creature.h"
@@ -27,6 +28,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
+#include "utils/Random.h"
 
 CreatureActionSearchWallTileToClaim::CreatureActionSearchWallTileToClaim(Creature& creature, bool forced) :
     CreatureAction(creature),
@@ -45,6 +47,7 @@ std::function<bool()> CreatureActionSearchWallTileToClaim::action()
         std::ref(mCreature), getNbTurns(), mForced);
 }
 
+//! \brief Searches eligible work while the worker retains this job.
 bool CreatureActionSearchWallTileToClaim::handleSearchWallTileToClaim(Creature& creature, int32_t nbTurns, bool forced)
 {
     if(creature.getClaimRate() <= 0.0)
@@ -58,6 +61,12 @@ bool CreatureActionSearchWallTileToClaim::handleSearchWallTileToClaim(Creature& 
         return false;
     }
 
+    if(!forced && creature.getWorkerJob() != WorkerJob::claimWall)
+    {
+        creature.popAction();
+        return true;
+    }
+
     if(!forced)
     {
         // If we are claiming walls for too long, we stop to check if there is
@@ -69,48 +78,24 @@ bool CreatureActionSearchWallTileToClaim::handleSearchWallTileToClaim(Creature& 
         }
     }
 
-    // See if any of the tiles is one of our neighbors
+    // Choose randomly among reachable free walls, whether nearby or beyond sight.
     Player* tempPlayer = creature.getSeat()->getPlayer();
-    for (Tile* tile : myTile->getAllNeighbors())
+    std::vector<Tile*> available;
+    for(Tile* tile : workerSearchTiles(creature, WorkerJob::claimWall))
     {
-        if (tile->getMarkedForDigging(tempPlayer))
+        if(tile == nullptr || tile->getMarkedForDigging(tempPlayer) ||
+           !tile->isWallClaimable(creature.getSeat()) || !tile->canWorkerClaim(creature))
             continue;
-        if (!tile->isWallClaimable(creature.getSeat()))
-            continue;
-        if (!tile->canWorkerClaim(creature))
-            continue;
-
-        creature.pushAction(Utils::make_unique<CreatureActionClaimWallTile>(creature, *tile));
-        return true;
-    }
-
-    // Find paths to all of the neighbor tiles for all of the visible wall tiles.
-    float distBest = -1;
-    Tile* tileToClaim = nullptr;
-    for(Tile* tile : creature.getTilesWithinSightRadius())
-    {
-        // Check to see whether the tile is a claimable wall
-        if(tile->getMarkedForDigging(tempPlayer))
-            continue;
-        if(!tile->isWallClaimable(creature.getSeat()))
-            continue;
-        if (!tile->canWorkerClaim(creature))
-            continue;
-
-        // and can be reached by the creature
-        for(Tile* neigh : tile->getAllNeighbors())
+        for(Tile* neighbour : tile->getAllNeighbors())
         {
-            if(!creature.getGameMap()->pathExists(&creature, myTile, neigh))
-                continue;
-
-            float dist = Pathfinding::squaredDistanceTile(*myTile, *neigh);
-            if((distBest != -1) && (distBest <= dist))
-                continue;
-
-            distBest = dist;
-            tileToClaim = tile;
+            if(creature.getGameMap()->pathExists(&creature, myTile, neighbour))
+            {
+                available.push_back(tile);
+                break;
+            }
         }
     }
+    Tile* tileToClaim = available.empty() ? nullptr : available[Random::Uint(0, available.size()-1)];
 
     if(tileToClaim != nullptr)
     {

@@ -79,6 +79,7 @@
 #include "traps/Trap.h"
 #include "traps/TrapManager.h"
 #include "traps/TrapType.h"
+#include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/ResourceManager.h"
@@ -177,6 +178,8 @@ static const char* const ROOM_DIRT_HOVER_PREFIX = ". Dirt: ";
 static std::string getDirtPileHoverText(Tile* tile)
 {
     DirtPileEntity* pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile);
+    if(pile == nullptr)
+        pile = DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones);
     if(pile != nullptr)
         return std::string(PILE_HOVER_PREFIX) + social::SocialGenerator::displayClassName(
             social::SocialProfileCache::getSingleton().getData(), pile->getCreatureClass()) + ")";
@@ -445,7 +448,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mDigSetBool(false),
     mIndexEvent(0),
     mSettings(mRootWindow, modeManager->getGui(), false, true),
-    mSandboxHeroLevel(SandboxMode::MIN_HERO_LEVEL),
+    mSandboxHeroLevel(static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin())),
     mIsSkillWindowOpen(false),
     mIsLibraryLostShown(false),
     mCurrentSkillType(SkillType::nullSkillType),
@@ -3186,12 +3189,13 @@ bool GameMode::hideSandboxWindow(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Cycles the toolbox hero level between the configured sandbox bounds.
 bool GameMode::onSandboxHeroLevelClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::MouseEventArgs& mouseArgs = static_cast<const CEGUI::MouseEventArgs&>(e);
-    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < SandboxMode::MAX_HERO_LEVEL))
+    if((mouseArgs.button == CEGUI::LeftButton) && (mSandboxHeroLevel < static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMax())))
         ++mSandboxHeroLevel;
-    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > SandboxMode::MIN_HERO_LEVEL))
+    else if((mouseArgs.button == CEGUI::RightButton) && (mSandboxHeroLevel > static_cast<uint32_t>(ConfigManager::getSingleton().getSandboxHeroLevelMin())))
         --mSandboxHeroLevel;
 
     mRootWindow->getChild("SandboxWindow/HeroLevelButton")->setText("Hero level: " + Helper::toString(mSandboxHeroLevel));
@@ -3956,6 +3960,7 @@ bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Switches the options page and fits its visible entries inside the window.
 void GameMode::setOptionsPage(bool endGame)
 {
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
@@ -3965,6 +3970,24 @@ void GameMode::setOptionsPage(bool endGame)
     for(const char* name : {"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton"})
         options->getChild(name)->setVisible(endGame);
     options->setText(endGame ? "End Game" : "Options");
+
+    const std::vector<const char*> entries = endGame ?
+        std::vector<const char*>{"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton", "ContinueButton"} :
+        std::vector<const char*>{"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
+            "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton",
+            "ProductionButton", "ContinueButton"};
+    Gui& gui = mModeManager->getGui();
+    const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float height = std::min(0.95f, (84.0f + 46.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
+    gui.setScaledArea(options, CEGUI::URect(CEGUI::UDim(0.5f, -160), CEGUI::UDim(0.5f - height / 2.0f, 0),
+        CEGUI::UDim(0.5f, 160), CEGUI::UDim(0.5f + height / 2.0f, 0)));
+    const float step = 0.78f / entries.size();
+    for(size_t i = 0; i < entries.size(); ++i)
+    {
+        const float top = 0.12f + step * i;
+        gui.setScaledArea(options->getChild(entries[i]), CEGUI::URect(CEGUI::UDim(0, 24), CEGUI::UDim(top, 0),
+            CEGUI::UDim(1, -24), CEGUI::UDim(top + step * 38.0f / 46.0f, 0)));
+    }
 }
 
 bool GameMode::showEndGameFromOptions(const CEGUI::EventArgs&)
@@ -4080,11 +4103,75 @@ void GameMode::receiveEventShortNotice(EventMessage* event)
     updateEventMessageIndicator(0.0f);
 }
 
+//! \brief Design pixels of the event panel bottom edge above the screen bottom (matches WindowGameEvent.layout).
+static const float EVENT_PANEL_BOTTOM_OFFSET = 193.0f;
+//! \brief Design pixels of frame inset and scrollbar subtracted from the message width when wrapping.
+static const float EVENT_PANEL_TEXT_INSET = 44.0f;
+
+//! \brief Sets the height of the event panel so that it fits the wrapped message text plus the button row.
+//! \param gui The gui, used for the layout scale and to store the design area.
+//! \param panel The GameEventText window.
+//! \param message The text of the message, empty for no message.
+//! The text block is limited to a third of the screen height; longer texts scroll.
+static void fitEventPanelToText(Gui& gui, CEGUI::Window* panel, const std::string& message)
+{
+    CEGUI::Window* text = panel->getChild("Message");
+    const float scale = gui.getLayoutScale();
+    const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
+    const float availableWidth = std::max(1.0f, panel->getPixelSize().d_width * 0.86f - EVENT_PANEL_TEXT_INSET * scale);
+    const CEGUI::Font* font = text->getFont();
+    const float lineHeight = font->getLineSpacing();
+
+    // Greedy word wrap with the real font extents, one line at least
+    size_t lines = 1;
+    std::istringstream paragraphs(message);
+    std::string paragraph;
+    bool first = true;
+    while(std::getline(paragraphs, paragraph))
+    {
+        if(!first)
+            ++lines;
+        first = false;
+        std::istringstream words(paragraph);
+        std::string word;
+        std::string current;
+        while(words >> word)
+        {
+            const std::string candidate = current.empty() ? word : current + " " + word;
+            if(!current.empty() && font->getTextExtent(reinterpret_cast<const CEGUI::utf8*>(candidate.c_str())) > availableWidth)
+            {
+                ++lines;
+                current = word;
+            }
+            else
+                current = candidate;
+        }
+    }
+
+    const float textHeight = std::min(static_cast<float>(lines) * lineHeight, display.d_height / 3.0f);
+    const float height = textHeight + 8.0f * lineHeight;
+    const float unit = lineHeight / height;
+    gui.setScaledArea(panel, CEGUI::URect(CEGUI::UDim(0.6f, 0.0f), CEGUI::UDim(1.0f - height / display.d_height, -EVENT_PANEL_BOTTOM_OFFSET),
+        CEGUI::UDim(1.0f, -20.0f), CEGUI::UDim(1.0f, -EVENT_PANEL_BOTTOM_OFFSET)));
+    text->setArea(CEGUI::URect(CEGUI::UDim(0.07f, 0), CEGUI::UDim(2.0f * unit, 0),
+        CEGUI::UDim(0.93f, 0), CEGUI::UDim(1.0f - 6.0f * unit, 0)));
+    const char* names[] = {"Dismiss", "Close", "DismissLabel", "CloseLabel"};
+    for(size_t i = 0; i < 4; ++i)
+    {
+        const float x = (i % 2 == 0) ? 0.2f : 0.6f;
+        const bool label = i >= 2;
+        panel->getChild(names[i])->setArea(CEGUI::URect(CEGUI::UDim(x - (label ? 0.05f : 0.0f), 0),
+            CEGUI::UDim(1.0f - (label ? 3.0f : 5.0f) * unit, 0),
+            CEGUI::UDim(x + (label ? 0.1f : 0.05f), 0), CEGUI::UDim(1.0f - (label ? 2.0f : 3.0f) * unit, 0)));
+    }
+}
+
 void GameMode::showEventMessages()
 {
     CEGUI::Window* events = mRootWindow->getChild("GameEventText");
     mSelectedEventMessage = nullptr;
     events->getChild("Message")->setText("");
+    fitEventPanelToText(mModeManager->getGui(), events, "");
     events->getChild("Dismiss")->disable();
     events->show();
     events->moveToFront();
@@ -4101,6 +4188,7 @@ void GameMode::showEventMessage(EventMessage* message, bool raiseWindow)
     CEGUI::Window* events = mRootWindow->getChild("GameEventText");
     CEGUI::Window* text = events->getChild("Message");
     text->setText(reinterpret_cast<const CEGUI::utf8*>(message->getMessageAsString().c_str()));
+    fitEventPanelToText(mModeManager->getGui(), events, message->getMessageAsString());
     static_cast<CEGUI::Scrollbar*>(text->getChild("__auto_vscrollbar__"))->setScrollPosition(0);
     events->getChild("Dismiss")->enable();
     events->show();
@@ -4494,7 +4582,7 @@ void GameMode::refreshSkillButtonState(const std::string& skillButtonName, const
         guiSheet->getChild(castButtonName)->setEnabled(!isLockedByLibrary);
     }
     skillButton->setText("");
-    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF333333" : (level == 0 ? "FF666666" : "FFFFFFFF"));
+    skillButton->setProperty("ButtonImageColour", !isAllowed ? "FF808080" : (level == 0 ? "FF666666" : "FFFFFFFF"));
     skillButton->setProperty("ResearchLevelColour", getResearchFrameColour(level));
     CEGUI::Window* levelBadge;
     if(skillButton->isChild("ResearchLevel"))
@@ -4910,7 +4998,7 @@ void GameMode::refreshSkillConnections()
                     line = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticImage", name);
                     line->setProperty("FrameEnabled", "False");
                     line->setProperty("BackgroundEnabled", "False");
-                    line->setProperty("Image", "OpenDungeonsSkin/SelectionBrush");
+                    line->setProperty("Image", "OpenDungeonsSkin/LineFill");
                     line->setMousePassThroughEnabled(true);
                     line->setRiseOnClickEnabled(false);
                     parent->addChild(line);

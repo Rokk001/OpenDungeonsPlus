@@ -47,7 +47,15 @@ void main()
 {
     vec3 linearColour = surfaceEmission.rgb;
     float alpha = 1.0;
-    if(atmosphereKind == 1)
+    if(atmosphereKind == 0)
+    {
+        // The overview camera sees the dome between heights 65 and 95: dark zenith, grey band, warm horizon haze.
+        vec3 grey = vec3(0.007, 0.007, 0.006);
+        vec3 haze = vec3(0.06, 0.013, 0.006);
+        linearColour = mix(grey, linearColour, smoothstep(82.0, 93.0, skyPosition.z));
+        linearColour = mix(haze, linearColour, smoothstep(64.0, 80.0, skyPosition.z));
+    }
+    else if(atmosphereKind == 1)
     {
         vec3 point = skyPosition * 0.055;
         // The same world-space distortion and height fade keep the layered horizon continuous.

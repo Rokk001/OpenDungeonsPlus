@@ -42,9 +42,12 @@ bool infirmaryFirst(Building* building)
 }
 }
 
-CreatureActionGrabEntity::CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry) :
+//! \brief Reserves cargo and remembers its hand-drop and dig-gold origin.
+CreatureActionGrabEntity::CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry, bool forced, bool digGold) :
     CreatureAction(creature),
-    mEntityToCarry(&entityToCarry)
+    mEntityToCarry(&entityToCarry),
+    mForced(forced),
+    mDigGold(digGold)
 {
     mEntityToCarry->addGameEntityListener(this);
     mEntityToCarry->setCarryLock(mCreature, true);
@@ -59,14 +62,15 @@ CreatureActionGrabEntity::~CreatureActionGrabEntity()
     }
 }
 
+//! \brief Advances the grab while retaining its hand-drop and dig-gold origin.
 std::function<bool()> CreatureActionGrabEntity::action()
 {
     return std::bind(&CreatureActionGrabEntity::handleGrabEntity,
-        std::ref(mCreature), std::ref(mEntityToCarry));
+        std::ref(mCreature), std::ref(mEntityToCarry), mForced, mDigGold);
 }
 
-//! \brief Rechecks cargo and destination before starting ordinary or mission-item transport.
-bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* entityToCarry)
+//! \brief Rechecks cargo and retains its origin when starting a transport.
+bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* entityToCarry, bool forced, bool digGold)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -111,7 +115,7 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
             return true;
         }
         creature.popAction();
-        creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *destination));
+        creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *destination, forced, digGold));
         return true;
     }
 
@@ -172,7 +176,7 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
     }
 
     creature.popAction();
-    creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *buildingWants));
+    creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *buildingWants, forced, digGold));
     return true;
 }
 

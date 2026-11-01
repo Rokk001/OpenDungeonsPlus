@@ -271,7 +271,7 @@ if args.loading_screens:
     label->setAlpha(1.0f);
     renderer.setFrameControlExecutionEnabled(false);
     Ogre::MaterialPtr loading = createLoadingMaterial("loading_01.jpg");
-    Ogre::Rectangle2D rectangle("LoadingPreview", true);
+    Ogre::Rectangle2D rectangle(Ogre::String("LoadingPreview"), true);
     rectangle.setMaterial(loading);
     rectangle.setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
     Ogre::SceneNode* background = scene->getRootSceneNode()->createChildSceneNode();
@@ -366,6 +366,11 @@ public:
     void rrToggleHandSelectorVisibility() {mHandVisible = !mHandVisible;}
     //! \brief Leaves hand mesh animation outside the isolated camera/navigation checks.
     void rrSetHandPose(bool, bool) {}
+    Ogre::ColourValue mWorldAmbient = Ogre::ColourValue::Black;
+    //! \brief Saves the world ambient and applies the menu ambient, as the production renderer does.
+    void beginMenuAmbient(const Ogre::ColourValue& menuAmbient) {mWorldAmbient = mSceneManager->getAmbientLight(); mSceneManager->setAmbientLight(menuAmbient);}
+    //! \brief Restores the saved world ambient, as the production renderer does.
+    void endMenuAmbient() {mSceneManager->setAmbientLight(mWorldAmbient);}
 };
 
 //! \brief The existing asset loader owns render commands; these adapters delimit their parsed groups.
@@ -665,7 +670,7 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     viewport->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
     viewport->setBackgroundColour(Ogre::ColourValue::Black);
     // The original native setup supplies render objects; all camera/navigation state below is production code.
-    Ogre::Rectangle2D* background = new Ogre::Rectangle2D("MenuProbeBackground", true);
+    Ogre::Rectangle2D* background = new Ogre::Rectangle2D(Ogre::String("MenuProbeBackground"), true);
     background->setMaterial(Ogre::MaterialManager::getSingleton().getByName("Background", "Graphics"));
     scene->getRootSceneNode()->createChildSceneNode("Background")->attachObject(background);
     CameraManager menuCamera;

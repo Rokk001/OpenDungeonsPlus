@@ -174,7 +174,7 @@ bool SpellCreatureWeak::castSpell(GameMap* gameMap, Player* player, ODPacket& pa
     if(!player->getSeat()->takeMana(pricePerTarget))
         return false;
 
-    uint32_t duration = ConfigManager::getSingleton().getSpellConfigUInt32("CreatureWeakDuration");
+    double duration = ConfigManager::getSingleton().getSpellConfigDouble("CreatureWeakDuration");
     double value = SkillManager::getResearchValue(player->getSeat(), SkillType::spellCreatureWeak,
         ConfigManager::getSingleton().getSpellConfigDouble("CreatureWeakValue"), ResearchEffect::Factor);
     CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(duration, value, "SpellCreatureWeak");

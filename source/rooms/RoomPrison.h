@@ -68,6 +68,8 @@ public:
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
+    //! \brief Checks that the prisoner and its original gate reservation are still valid.
+    bool hasReservedDelivery(const Creature& prisoner, const Tile* delivery);
 
     bool isInContainment(Creature& creature) override;
 

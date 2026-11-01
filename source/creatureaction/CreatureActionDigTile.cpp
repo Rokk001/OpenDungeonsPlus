@@ -36,10 +36,12 @@
 #include "utils/MakeUnique.h"
 #include "utils/LogManager.h"
 
-CreatureActionDigTile::CreatureActionDigTile(Creature& creature, Tile& tileDig, Tile& tilePos) :
+//! \brief Reserves a digging place and records a hand-drop override.
+CreatureActionDigTile::CreatureActionDigTile(Creature& creature, Tile& tileDig, Tile& tilePos, bool forced) :
     CreatureAction(creature),
     mTileDig(tileDig),
-    mTilePos(tilePos)
+    mTilePos(tilePos),
+    mForced(forced)
 {
     mCreature.parkedBit = false;
     mTileDig.addWorkerDigging(mCreature, mTilePos);     
@@ -57,10 +59,11 @@ CreatureActionDigTile::~CreatureActionDigTile()
     mCreature.parkedBit = false;
 }
 
+//! \brief Advances the digging target while retaining its hand-drop origin.
 std::function<bool()> CreatureActionDigTile::action()
 {
     return std::bind(&CreatureActionDigTile::handleDigTile,
-        std::ref(mCreature), std::ref(mTileDig), std::ref(mTilePos));
+        std::ref(mCreature), std::ref(mTileDig), std::ref(mTilePos), mForced);
 }
 
 //! \brief Gives the gold of one dig step to the worker, the seat statistics and the level script. The worker carries the
@@ -76,8 +79,8 @@ static void payMinedGold(Creature& creature, Tile& tileDig, double gold)
         tileDig.getX(), tileDig.getY(), wholeGold);
 }
 
-//! \brief Performs digging with unchanged timing and reports actual gold, stroke tile and the next step interval.
-bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos)
+//! \brief Performs digging and drops a full gold load when the worker's dig job has ended.
+bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos, bool forced)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -151,7 +154,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             creature.fireCriticalOnStructure("dig", Ogre::Vector3(static_cast<Ogre::Real>(tileDig.getX()),
                 static_cast<Ogre::Real>(tileDig.getY()), 0.0f));
         }
-        creature.receiveExp(1.5 * creature.getDigRate() / 20.0);
+        creature.receiveExp(ConfigManager::getSingleton().getDigXpFactor() * creature.getDigRate()
+            / ConfigManager::getSingleton().getWorkXpRateDivisor());
 
         // If the tile is a gold tile accumulate gold for this creature.
         switch(tileDig.getType())
@@ -164,7 +168,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
                     ++creature.getSeat()->getStatistics().mGoldTilesMined;
 
                 // Receive experience for digging gold
-                creature.receiveExp(creature.getDigRate() / 20.0);
+                creature.receiveExp(ConfigManager::getSingleton().getGoldDigXpFactor() * creature.getDigRate()
+                    / ConfigManager::getSingleton().getWorkXpRateDivisor());
                 break;
             }
             case TileType::gem:
@@ -173,7 +178,8 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
                 static const double gemGoldPerDigStep = ConfigManager::getSingleton().getGemGoldPerDigStep();
                 payMinedGold(creature, tileDig, gemGoldPerDigStep * digFactor * criticalFactor);
                 // Receive experience for digging
-                creature.receiveExp(creature.getDigRate() / 20.0);
+                creature.receiveExp(ConfigManager::getSingleton().getGoldDigXpFactor() * creature.getDigRate()
+                    / ConfigManager::getSingleton().getWorkXpRateDivisor());
                 break;
             }
             default:
@@ -191,7 +197,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             creature.fireCosmeticEvent(event, false);
 
             creature.popAction();
-            creature.receiveExp(2.5);
+            creature.receiveExp(ConfigManager::getSingleton().getTileDugXp());
             creature.parkedBit = false;
             creature.setDestination(&tileDig);
         }
@@ -215,6 +221,13 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         obj->addToGameMap();
         obj->createMesh();
         obj->setPosition(pos);
+
+        if(!forced && creature.getWorkerJob() != WorkerJob::dig)
+        {
+            if(creature.isActionInList(CreatureActionType::digTile))
+                creature.popAction();
+            return true;
+        }
 
         bool isTreasuryAvailable = false;
         for(Room* room : creature.getGameMap()->getRooms())
@@ -244,7 +257,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             // We do not push CreatureActionType::searchEntityToCarry because we want
             // this worker to be count as digging, not as carrying stuff
             
-            creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj));
+            creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj, forced, true));
             if(creature.mDiggingEffect)
             {
                 creature.removeCreatureEffect(creature.mDiggingEffect);

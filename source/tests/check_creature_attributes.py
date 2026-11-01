@@ -312,8 +312,8 @@ def check_part_h():
     champion = creatures['Champion']
     check_values('Champion', champion, 'blitzer', 'none', 'none', 'none', 'none')
     assert float(champion['CritChanceBonus']) == CHAMPION_CRIT_BONUS
-    # Worker hit points are not changed by this plan
-    assert creatures['Kobold']['MinHP'] == '62' and creatures['DwarfWorker']['MinHP'] == '62'
+    # Worker hit points follow the rebalance (70)
+    assert creatures['Kobold']['MinHP'] == '70' and creatures['DwarfWorker']['MinHP'] == '70'
 
     # Level-file creature definitions: the values of the type whose mesh they use
     found_classes = set()
@@ -657,12 +657,13 @@ def check_part_e():
     assert 'creature.rollCritical()' in area_body and area_body.index('rollCritical()') < area_body.index('takeDamage(')
 
     # ---- 8.4 digging: one roll per dig step; a critical step removes 2 x the fullness on dirt and walls and pays 2 x the
-    # step gold on gold and gem walls (on a gold wall at most what is left); experience stays as it is
+    # step gold on gold and gem walls (on a gold wall at most what is left); experience follows the configured dig factors
     handle = function(dig, 'bool CreatureActionDigTile::handleDigTile(')
     assert handle.count('creature.rollCritical()') == 1, 'one roll per dig step'
     assert handle.index('creature.rollCritical()') < handle.index('digOutGold(digFactor * criticalFactor)')
     assert 'getCritDamageMultiplier()' in handle
-    assert 'receiveExp(1.5 * creature.getDigRate() / 20.0)' in handle and 'receiveExp(creature.getDigRate() / 20.0)' in handle
+    assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getGoldDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', handle)
+    assert re.search(r'receiveExp\(ConfigManager::getSingleton\(\)\.getDigXpFactor\(\) \* creature\.getDigRate\(\)\s*/\s*ConfigManager::getSingleton\(\)\.getWorkXpRateDivisor\(\)\)', handle)
     assert not re.search(r'receiveExp\([^;]*(digFactor|criticalFactor|getDigFactor)', handle), 'experience ignores dig% and crits'
     assert 'fireCriticalOnStructure("dig"' in handle
     tunnel_body = function(tunnel, 'bool CreatureActionTunnel::handleTunnel(') if 'bool CreatureActionTunnel::handleTunnel(' in tunnel else tunnel
@@ -759,7 +760,7 @@ def check_part_g():
             'Ogre::OverlayManager::getSingleton().getViewportHeight()') in update
     assert 'previousPosition = childPosition;' in update, 'the next child centres on the unshifted position'
 
-    # ---- 6.7 the mana ring: built like the experience ring, original mana tint, right of the health ring
+    # ---- 6.7 the mana ring: health-ring backing and eight tinted segments, right of the health ring
     enum_body = status[status.index('enum class CreatureOverlays'):status.index('};', status.index('enum class CreatureOverlays'))]
     assert enum_body.index('mana,') < enum_body.index('nbCreatureOverlays'), 'enum value mana before nbCreatureOverlays'
     constructor = function(status, 'CreatureOverlayStatus::CreatureOverlayStatus(')
@@ -767,8 +768,10 @@ def check_part_g():
     assert 'createChildOverlay("MedievalSharp", 30,\n        Ogre::ColourValue::White, manaMaterial, false)' in constructor
     assert 'forceTextArea(manaId, MANA_RING_SIZE, MANA_RING_SIZE)' in constructor
     assert 'setOffset(manaId, MANA_RING_OFFSET_X, 0.0f)' in constructor and 'displayOverlay(manaId, -1)' in constructor
-    assert 'rrBuildTintedMaterial(MANA_RING_BASE_MATERIAL' in constructor
-    assert 'MANA_RING_BASE_MATERIAL = "CreatureExperience"' in status
+    assert 'MANA_RING_BASE_MATERIAL + Helper::toString(MANA_RING_SEGMENTS)' in constructor
+    assert 'MANA_RING_BACKING_MATERIAL = "CreatureOverlay7"' in status
+    assert 'MANA_RING_BASE_MATERIAL = "ManaRing"' in status
+    assert 'MANA_RING_SEGMENTS = 8;' in status
     assert 'MANA_RING_SIZE = 64;' in status and 'MANA_RING_OFFSET_X = 64;' in status
     channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_RING_RED', 'MANA_RING_GREEN', 'MANA_RING_BLUE')]
     assert channels == [127, 227, 166]
@@ -777,10 +780,9 @@ def check_part_g():
     mana_display = hud.find('.//Window[@name="ManaDisplay"]')
     assert mana_display.find('Property[@name="TextColours"]').get('value') == 'FFF0E2C0', 'ivory HUD mana number'
     progress = function(status, 'void CreatureOverlayStatus::updateProgress(')
-    assert 'getCurrentMana() / maxMana' in progress and 'Creature::MANA_RING_STEPS' in progress
-    assert 'setAtlasFrame(manaId' in progress
-    assert re.search(r'MANA_RING_STEPS = 63;', creature), 'the 64 frame atlas'
-    assert 'PROGRESS_ATLAS_COLUMNS * PROGRESS_ATLAS_COLUMNS - 1' in status
+    assert 'getCurrentMana() / maxMana' in progress and 'manaShare * MANA_RING_SEGMENTS' in progress
+    assert 'MANA_RING_BASE_MATERIAL + Helper::toString(manaSegments)' in progress
+    assert 'displayOverlay(manaId, 0)' in progress
 
     # ---- 8.5 client: value 7 and the feedback (sparks on the target creature, else on the attacker, plus the sound)
     assert 'critical = 7' in event_h
@@ -823,7 +825,7 @@ def check_part_g():
     assert 'it->second == 0' in skills and 'result += skillName + " " + Helper::toString(it->second);' in skills
     assert 'result += ", "' in skills and 'findTierFourById' in skills and 'DISPLAY_NONE_TEXT' in skills
     attributes = function(creature, 'std::string Creature::getAttributeSummaryText() const')
-    parts = ['"Strength "', '" - Dexterity "', '" - Life "', '" - Mana "', '" - Critical "', '" %"']
+    parts = ['"Strength "', '" - Dexterity "', '" - Life "', '"\\nMana "', '" - Critical "', '" %"']
     positions = [attributes.index(part) for part in parts]
     assert positions == sorted(positions)
     equipment = function(creature, 'std::string Creature::getEquipmentText() const')
@@ -863,7 +865,7 @@ def check_part_g():
     layout_function = function(gui, 'float Gui::layoutCreatureProfilePage(')
     assert layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
     assert layout_function.index('page->getChild("EquipmentRow")') < layout_function.index('page->getChild("AttributesText")') < layout_function.index('const char* const personalRows')
-    assert 'const std::size_t slotCount = 13;' in layout_function and 'slot % columns == 0' in layout_function
+    assert 'slot < 13' in layout_function and 'columns[slot] * edge' in layout_function and 'rows[slot] * edge' in layout_function
     assert ('const char* const textRowsBefore[] = {"PathText", "SkillsText", "BioText", "LikesText",\n'
             '        "DislikesText", "RelationsText"};') in layout_function
     assert 'for(std::size_t i = 0; i < 6; ++i)\n        y = layoutProfileTextRow(page->getChild(textRowsBefore[i]), y, scale);' in layout_function

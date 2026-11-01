@@ -27,7 +27,6 @@
 #include "entities/ItemEffects.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
-#include "entities/SkillEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -38,6 +37,8 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
+
+#include <iomanip>
 
 const std::string RoomLibraryName = "Library";
 const std::string RoomLibraryNameDisplay = "Library room";
@@ -136,15 +137,13 @@ RoomLibrary::RoomLibrary(GameMap* gameMap) :
     setMeshName("Library");
 }
 
+//! \brief Creates a library workstation or decorative bookshelf at the given spot.
 BuildingObject* RoomLibrary::notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile)
 {
     switch(place)
     {
         case ActiveSpotPlace::activeSpotCenter:
         {
-            RoomLibraryTileData* roomLibraryTileData = static_cast<RoomLibraryTileData*>(mTileData[tile]);
-            roomLibraryTileData->mCanHaveSkillEntity = false;
-
             Ogre::Real x = static_cast<Ogre::Real>(tile->getX());
             Ogre::Real y = static_cast<Ogre::Real>(tile->getY());
             Ogre::Real z = 0;
@@ -177,6 +176,7 @@ BuildingObject* RoomLibrary::notifyActiveSpotCreated(ActiveSpotPlace place, Tile
     return nullptr;
 }
 
+//! \brief Merges workstations and retained research from another library.
 void RoomLibrary::absorbRoom(Room *r)
 {
     if(r->getType() != getType())
@@ -188,6 +188,11 @@ void RoomLibrary::absorbRoom(Room *r)
     Room::absorbRoom(r);
 
     RoomLibrary* roomAbs = static_cast<RoomLibrary*>(r);
+    mSkillPoints += roomAbs->mSkillPoints;
+    const int32_t wholePoints = static_cast<int32_t>(mSkillPoints);
+    mSkillPoints -= wholePoints;
+    getSeat()->addSkillPoints(wholePoints);
+    roomAbs->mSkillPoints = 0;
     mUnusedSpots.insert(mUnusedSpots.end(), roomAbs->mUnusedSpots.begin(), roomAbs->mUnusedSpots.end());
     roomAbs->mUnusedSpots.clear();
     // mCreaturesSpots should be empty on the absorbed room
@@ -222,6 +227,7 @@ void RoomLibrary::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
     mUnusedSpots.erase(itEr);
 }
 
+//! \brief Accepts researchers when research and a workstation are available.
 bool RoomLibrary::hasOpenCreatureSpot(Creature* c)
 {
     // If there is no need, we do not allow creature to work
@@ -229,11 +235,6 @@ bool RoomLibrary::hasOpenCreatureSpot(Creature* c)
         return false;
 
     if(!getSeat()->isSkilling())
-        return false;
-
-    // The stored items have their own places, independent of the researchers. When
-    // every place is taken, the library is full and nobody can research
-    if(checkIfAvailableSpot() == nullptr)
         return false;
 
     // We accept all creatures as soon as there are free active spots
@@ -295,6 +296,7 @@ void RoomLibrary::removeCreatureUsingRoom(Creature* c)
     mCreaturesSpots.erase(it);
 }
 
+//! \brief Releases researchers when their keeper is no longer researching.
 void RoomLibrary::doUpkeep()
 {
     Room::doUpkeep();
@@ -321,27 +323,11 @@ void RoomLibrary::doUpkeep()
 
         return;
     }
-
-    if(checkIfAvailableSpot() == nullptr)
-    {
-        // There is no available space for items. We remove a creature working here if there is one.
-        // If there is none, it means the library is full
-        if(mCreaturesSpots.empty())
-            return;
-
-        for(const std::pair<Creature* const,Tile*>& p : mCreaturesSpots)
-        {
-            Creature* creature = p.first;
-            creature->clearActionQueue();
-            break;
-        }
-    }
 }
 
 //! \brief A creature researches with the library research and Scholar equipment factors.
 bool RoomLibrary::useRoom(Creature& creature, bool forced)
 {
-    int32_t skillEntityPoints = ConfigManager::getSingleton().getRoomConfigInt32("LibrarySkillPointsBook");
     std::map<Creature*, Tile*>::iterator it = mCreaturesSpots.find(&creature);
     if(it == mCreaturesSpots.end())
     {
@@ -394,50 +380,22 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
         getSeat(), SkillType::roomLibrary, ConfigManager::getSingleton().getRoomConfigDouble("LibraryPointsPerWork"),
         ResearchEffect::PointsPerWork) * ItemEffects::increaseFactor(creature, "Scholar") * getDirtOutputFactor() * creature.getHangoverWorkFactor() * creature.getRelaxWorkFactor();
     creature.jobDone(ConfigManager::getSingleton().getRoomConfigDouble("LibraryWakefulnessPerWork"));
-    creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
-        ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax")));
+    uint32_t workCooldown = Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMin"),
+        ConfigManager::getSingleton().getRoomConfigUInt32("LibraryCooldownWorkMax"));
+    creature.setJobCooldown(workCooldown);
+    double workCycleTurns = 1.0 + static_cast<double>(creature.getJobCooldown());
+    // Work gives experience on the training hall level
+    creature.receiveExp(ConfigManager::getSingleton().getRoomConfigDouble("JobXpPerTurn") * workCycleTurns
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit) * getDirtOutputFactor());
     addUseDirt(creature, tileCreature, "LibraryDirtPerWork");
 
-    // We check if we have enough points to create a skill entity
+    // Credit whole research points immediately and retain the fractional remainder.
     mSkillPoints += pointsEarned;
-    if(mSkillPoints < skillEntityPoints)
-        return false;
-
-    // We check if there is an empty tile to release the skillEntity. If the library
-    // is full, the points wait until a place is free again
-    Tile* spawnTile = checkIfAvailableSpot();
-    if(spawnTile == nullptr)
-        return false;
-
-    mSkillPoints -= skillEntityPoints;
-
-    SkillEntity* skillEntity = new SkillEntity(getGameMap(), getName(), skillEntityPoints);
-    skillEntity->setSeat(getSeat());
-    skillEntity->addToGameMap();
-    Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(spawnTile->getX()), static_cast<Ogre::Real>(spawnTile->getY()), static_cast<Ogre::Real>(0.0));
-    skillEntity->createMesh();
-    skillEntity->setPosition(spawnPosition);
+    const int32_t wholePoints = static_cast<int32_t>(mSkillPoints);
+    mSkillPoints -= wholePoints;
+    getSeat()->addSkillPoints(wholePoints);
 
     return false;
-}
-
-Tile* RoomLibrary::checkIfAvailableSpot()
-{
-    for(std::pair<Tile* const, TileData*>& p : mTileData)
-    {
-        RoomLibraryTileData* roomLibraryTileData = static_cast<RoomLibraryTileData*>(p.second);
-        if(!roomLibraryTileData->mCanHaveSkillEntity)
-            continue;
-
-        // If the tile contains no item, we can add a new one
-        uint32_t nbItems = p.first->countEntitiesOnTile(GameEntityType::skillEntity);
-        if(nbItems > 0)
-            continue;
-
-        return p.first;
-    }
-
-    return nullptr;
 }
 
 void RoomLibrary::getCreatureWantedPos(Creature* creature, Tile* tileSpot,
@@ -453,18 +411,26 @@ RoomLibraryTileData* RoomLibrary::createTileData(Tile* tile)
     return new RoomLibraryTileData;
 }
 
+//! \brief Saves the fractional research remainder without losing precision.
 void RoomLibrary::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
-    os << mSkillPoints << "\n";
+    const std::streamsize precision = os.precision();
+    os << std::setprecision(17) << mSkillPoints << "\n";
+    os.precision(precision);
 }
 
+//! \brief Restores the remainder and credits whole points from older saves.
 bool RoomLibrary::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
         return false;
     if(!(is >> mSkillPoints))
         return false;
+
+    const int32_t wholePoints = static_cast<int32_t>(mSkillPoints);
+    mSkillPoints -= wholePoints;
+    getSeat()->addSkillPoints(wholePoints);
 
     return true;
 }

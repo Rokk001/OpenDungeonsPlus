@@ -19,6 +19,8 @@
 
 #include "creatureaction/CreatureActionGetFee.h"
 #include "creatureaction/CreatureActionSearchFood.h"
+#include "creatureaction/CreatureActionSearchToilet.h"
+#include "creatureaction/CreatureActionSearchDrink.h"
 #include "creatureaction/CreatureActionSearchSpa.h"
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionUseRoom.h"
@@ -26,6 +28,8 @@
 #include "creatureaction/CreatureActionHarvestHerbs.h"
 #include "creatureaction/CreatureActionBrewPotion.h"
 #include "rooms/RoomWorkshop.h"
+#include "rooms/RoomCasino.h"
+#include "utils/ConfigManager.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
@@ -43,7 +47,7 @@
 #include "utils/Random.h"
 
 //! \brief Selects the ordinary room action or its item-box workshop specialization.
-static std::unique_ptr<CreatureAction> createRoomWorkAction(Creature& creature, Room& room, bool forced)
+static std::unique_ptr<CreatureAction> createRoomWorkAction(Creature& creature, Room& room, bool forced, bool moodRoom = false)
 {
     if(room.getType() == RoomType::herbGarden)
         return std::unique_ptr<CreatureAction>(new CreatureActionHarvestHerbs(creature, room, forced));
@@ -51,7 +55,7 @@ static std::unique_ptr<CreatureAction> createRoomWorkAction(Creature& creature, 
         return std::unique_ptr<CreatureAction>(new CreatureActionBrewPotion(creature, room, forced));
     if(room.getType() == RoomType::workshop && static_cast<RoomWorkshop&>(room).hasCrackJob())
         return std::unique_ptr<CreatureAction>(new CreatureActionCrackBox(creature, room, forced));
-    return std::unique_ptr<CreatureAction>(new CreatureActionUseRoom(creature, room, forced));
+    return std::unique_ptr<CreatureAction>(new CreatureActionUseRoom(creature, room, forced, moodRoom));
 }
 
 std::function<bool()> CreatureActionSearchJob::action()
@@ -71,29 +75,40 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return false;
     }
 
-    // If we are unhappy, we do not want to work
-    switch(creature.getMoodValue())
+    const bool moodSearch = creature.getMoodValue() >= CreatureMoodLevel::Upset ||
+        creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork();
+
+    if(creature.needInterrupt(false))
     {
-        case CreatureMoodLevel::Upset:
+        bool foodAvailable = false;
+        bool drinkAvailable = false;
+        if(creature.isHungry() && !creature.hasActionBeenTried(CreatureActionType::searchFood))
         {
-            // 20% chances of not working
-            if(Random::Int(0, 100) < 20)
-            {
-                creature.popAction();
-                return true;
-            }
-            break;
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::hatchery, creature.getSeat()))
+                foodAvailable |= candidate->numCoveredTiles() > 0;
         }
-        case CreatureMoodLevel::Angry:
-        case CreatureMoodLevel::Furious:
+        if(creature.getDefinition()->hasThirst() &&
+           creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           !creature.hasActionBeenTried(CreatureActionType::searchDrink))
         {
-            // We don't work
-            creature.popAction();
-            return true;
+            for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
+                drinkAvailable |= candidate->numCoveredTiles() > 0;
         }
-        default:
-            // We can work
-            break;
+        creature.popAction();
+        if(foodAvailable)
+            creature.pushAction(Utils::make_unique<CreatureActionSearchFood>(creature, false));
+        else if(drinkAvailable)
+            creature.pushAction(Utils::make_unique<CreatureActionSearchDrink>(creature, false));
+        else
+            creature.pushAction(Utils::make_unique<CreatureActionSearchToilet>(creature));
+        return true;
+    }
+
+    if(moodSearch && creature.wantsSpaBath() && !creature.hasActionBeenTried(CreatureActionType::searchSpa))
+    {
+        creature.popAction();
+        creature.pushAction(Utils::make_unique<CreatureActionSearchSpa>(creature));
+        return true;
     }
 
     if(!creature.hasSlapEffect())
@@ -133,7 +148,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         }
     }
 
-    if(forced)
+    if(forced && !moodSearch)
     {
         // We check if we can work in the given room
         Room* room = myTile->getCoveringRoom();
@@ -162,103 +177,66 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return true;
     }
 
-    // A creature does not like to work with a creature it hates. It only does when there is no
-    // other room of the kind it wants to work in
-    Room* dislikedRoom = nullptr;
-
-    // We get the room we like the most. If we are on such a room, we start working if we can
+    Room* currentRoom = myTile->getCoveringRoom();
+    std::vector<Room*> workRooms;
+    std::vector<Room*> pleasureRooms;
+    int32_t workLikeness = 0;
+    int32_t pleasureLikeness = 0;
     for(const CreatureRoomAffinity& affinity : creature.getDefinition()->getRoomAffinity())
     {
-        dislikedRoom = nullptr;
-        // If likeness = 0, we don't consider working here
-        if(affinity.getLikeness() <= 0)
+        const RoomType type = affinity.getRoomType();
+        const bool pleasure = type == RoomType::casino || type == RoomType::tavern ||
+            type == RoomType::spa || type == RoomType::temple;
+        if(affinity.getLikeness() <= 0 || affinity.getEfficiency() <= 0 || (moodSearch && !pleasure))
             continue;
-
-        // See if we are in the room we like the most. If yes and we can work, we stay. If no,
-        // We check if there is such a room somewhere else where we can go
-        if((myTile->getCoveringRoom() != nullptr) &&
-           (myTile->getCoveringRoom()->getType() == affinity.getRoomType()) &&
-           (creature.getSeat()->canOwnedCreatureUseRoomFrom(myTile->getCoveringRoom()->getSeat())))
-        {
-            Room* room = myTile->getCoveringRoom();
-            // If the efficiency is 0 or the room is a hatchery, we only wander in the room
-            if((affinity.getEfficiency() <= 0) ||
-               (room->getType() == RoomType::hatchery))
-            {
-                // The wandering target must be a tile with a free standing point, not one covered by furniture
-                std::vector<Tile*> wanderTiles = room->getCoveredTiles();
-                RoomObjectNavigation::keepTilesWithStandingPosition(creature, wanderTiles);
-                Tile* tileDest = wanderTiles[Random::Uint(0, wanderTiles.size() - 1)];
-                creature.setDestination(tileDest);
-                return false;
-            }
-
-            // It is the room responsibility to test if the creature is suited for working in it
-            if(room->hasOpenCreatureSpot(&creature))
-            {
-                if(room->hasHatedCoworker(&creature))
-                {
-                    dislikedRoom = room;
-                }
-                else
-                {
-                    creature.pushAction(createRoomWorkAction(creature, *room, forced));
-                    return true;
-                }
-            }
-        }
-
-        // We are not in a room of the good type or we couldn't use it. We check if there is a reachable room
-        // of the good type
-        std::vector<Tile*> rooms;
         for(Room* room : creature.getGameMap()->getRooms())
         {
-            if(room->getSeat() != creature.getSeat())
+            if((room->getSeat() != creature.getSeat() &&
+                (room != currentRoom || !creature.getSeat()->canOwnedCreatureUseRoomFrom(room->getSeat()))) ||
+               room->getType() != type || room->numCoveredTiles() <= 0 || !room->hasOpenCreatureSpot(&creature))
                 continue;
-
-            if(room->numCoveredTiles() <= 0)
+            if(type == RoomType::casino && static_cast<RoomCasino*>(room)->getPayout() == CasinoPayout::money)
                 continue;
-
-            if(room->getType() != affinity.getRoomType())
-                continue;
-
-            // If efficiency is 0, we just want to wander so no need to check if the room is available
-            if((affinity.getEfficiency() > 0) && !room->hasOpenCreatureSpot(&creature))
-                continue;
-
-            // We prefer a room without a creature we hate
-            if((affinity.getEfficiency() > 0) && room->hasHatedCoworker(&creature))
-                continue;
-
             Tile* tile = room->getCoveredTile(0);
-            if(!creature.getGameMap()->pathExists(&creature, myTile, tile))
+            if(tile == nullptr || (room != currentRoom && !creature.getGameMap()->pathExists(&creature, myTile, tile)))
                 continue;
-
-            rooms.push_back(tile);
-        }
-
-        if(rooms.empty())
-        {
-            // No other room: we stay in the room we do not like so much
-            if(useDislikedRoomAsFallback(dislikedRoom != nullptr, rooms.size()))
+            std::vector<Room*>& candidates = pleasure ? pleasureRooms : workRooms;
+            int32_t& best = pleasure ? pleasureLikeness : workLikeness;
+            if(affinity.getLikeness() < best)
+                continue;
+            if(affinity.getLikeness() > best)
             {
-                creature.pushAction(createRoomWorkAction(creature, *dislikedRoom, forced));
-                return true;
+                candidates.clear();
+                best = affinity.getLikeness();
             }
-            continue;
+            candidates.push_back(room);
         }
+    }
+    std::vector<Room*>& candidates = workRooms.empty() ? pleasureRooms : workRooms;
+    if(!candidates.empty())
+    {
+        Room* room = candidates[Random::Uint(0, candidates.size() - 1)];
+        if(moodSearch)
+            creature.popAction();
+        creature.pushAction(createRoomWorkAction(creature, *room, forced, moodSearch));
+        return true;
+    }
 
-        Tile* chosenTile = nullptr;
-        std::list<Tile*> tilePath = creature.getGameMap()->findBestPath(&creature, myTile, rooms, chosenTile);
-
-        if(tilePath.empty() || (chosenTile == nullptr))
-            continue;
-
-        std::vector<Ogre::Vector2> vectorPath;
-        creature.tileToVector2(tilePath, vectorPath, true, 0.0);
-        creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, vectorPath, true);
-        creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
-        return false;
+    // Keep the existing room wandering behaviour when no work or pleasure room is available.
+    if(!moodSearch && currentRoom != nullptr &&
+       creature.getSeat()->canOwnedCreatureUseRoomFrom(currentRoom->getSeat()))
+    {
+        for(const CreatureRoomAffinity& affinity : creature.getDefinition()->getRoomAffinity())
+        {
+            if(affinity.getRoomType() != currentRoom->getType() || affinity.getLikeness() <= 0 ||
+               (affinity.getEfficiency() > 0 && currentRoom->getType() != RoomType::hatchery))
+                continue;
+            std::vector<Tile*> wanderTiles = currentRoom->getCoveredTiles();
+            RoomObjectNavigation::keepTilesWithStandingPosition(creature, wanderTiles);
+            if(!wanderTiles.empty())
+                creature.setDestination(wanderTiles[Random::Uint(0, wanderTiles.size() - 1)]);
+            return false;
+        }
     }
 
     // We found no job. If the creature wanted to work, it gets frustrated

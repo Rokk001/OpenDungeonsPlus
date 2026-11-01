@@ -20,7 +20,6 @@
 
 namespace
 {
-static const double TRADE_CHANCE = 0.3;
 static const double PERCENT = 100.0;
 //! \brief Orders usable potions by the approved healing, group buff, and mana priorities.
 enum class PotionPriority { other, mana, groupBuff, healing };
@@ -67,13 +66,14 @@ bool deliverGift(Creature& creature, ItemBagEntity& bag)
 }
 }
 
-//! \brief Tries the independent thirty-percent sale and purchase decisions outside combat.
+//! \brief Tries independent configured sale and purchase decisions outside combat.
 bool CreatureMerchantAI::decideTrade(Creature& creature)
 {
     if(!creature.getIsOnServerMap() || creature.isActionInList(CreatureActionType::fight) || creature.getSeat() == nullptr)
         return false;
+    const double tradeChance = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("MerchantTradeChance", 0.3);
     const int32_t slot = RoomMerchant::findSaleSlot(creature);
-    if(slot >= 0 && !creature.hasActionBeenTried(CreatureActionType::sellItem) && Random::Double(0.0, 1.0) < TRADE_CHANCE)
+    if(slot >= 0 && !creature.hasActionBeenTried(CreatureActionType::sellItem) && Random::Double(0.0, 1.0) < tradeChance)
         for(Room* base : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::merchant, creature.getSeat()))
         {
             RoomMerchant* room = static_cast<RoomMerchant*>(base);
@@ -83,7 +83,7 @@ bool CreatureMerchantAI::decideTrade(Creature& creature)
                 return true;
             }
         }
-    if(creature.hasActionBeenTried(CreatureActionType::buyItem) || Random::Double(0.0, 1.0) >= TRADE_CHANCE) return false;
+    if(creature.hasActionBeenTried(CreatureActionType::buyItem) || Random::Double(0.0, 1.0) >= tradeChance) return false;
     const MerchantStockEntry* best = nullptr;
     const std::vector<MerchantStockEntry> stock = RoomMerchant::getStock(*creature.getGameMap(), creature.getSeat());
     for(const MerchantStockEntry& entry : stock)
@@ -125,7 +125,7 @@ bool CreatureMerchantAI::decideSoulCrystal(Creature& creature)
         }
     }
     if(hasCrystal || !freeSlot || creature.hasActionBeenTried(CreatureActionType::buyItem)
-        || Random::Double(0.0, 1.0) >= TRADE_CHANCE) return false;
+        || Random::Double(0.0, 1.0) >= ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("MerchantTradeChance", 0.3)) return false;
     const std::vector<MerchantStockEntry> stock = RoomMerchant::getStock(*creature.getGameMap(), creature.getSeat());
     for(const MerchantStockEntry& entry : stock)
     {

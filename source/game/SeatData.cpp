@@ -37,6 +37,7 @@ static const int32_t LAB_MODE_COMBAT = 2;
 
 //! \brief Creates seat data with the specified shared room-setting defaults.
 SeatData::SeatData() :
+    mWorkerJobSettings(ConfigManager::getSingleton().getDefaultWorkerJobSettings()),
     mMerchantMargin(DEFAULT_MERCHANT_MARGIN),
     mMerchantMode("fair"),
     mLabMode(LAB_MODE_AUTOMATIC),
@@ -115,6 +116,26 @@ uint32_t SeatData::getNbStoredSpecials(uint32_t giftBoxType) const
     return mStoredSpecials[giftBoxType];
 }
 
+//! \brief Reads a complete record, leaving its validity to the caller.
+bool SeatData::readWorkerJobSettings(ODPacket& packet, WorkerJobSettings& settings)
+{
+    for(uint32_t& value : settings.fixed) if(!(packet >> value)) return false;
+    if(!(packet >> settings.freeMode)) return false;
+    for(uint32_t& value : settings.priority) if(!(packet >> value)) return false;
+    for(uint32_t& value : settings.carryOrder) if(!(packet >> value)) return false;
+    return static_cast<bool>(packet >> settings.goldFirst);
+}
+
+//! \brief Writes a complete worker settings record in fixed wire order.
+void SeatData::writeWorkerJobSettings(ODPacket& packet, const WorkerJobSettings& settings)
+{
+    for(uint32_t value : settings.fixed) packet << value;
+    packet << settings.freeMode;
+    for(uint32_t value : settings.priority) packet << value;
+    for(uint32_t value : settings.carryOrder) packet << value;
+    packet << settings.goldFirst;
+}
+
 //! \brief Reads changing seat data and the infirmary and ghost settings.
 //! \brief Receives changing seat data followed by shared room settings.
 bool SeatData::importFromPacketForUpdate(ODPacket& is)
@@ -174,6 +195,15 @@ bool SeatData::importFromPacketForUpdate(ODPacket& is)
     mEctoplasmLevels = levels;
     mGhostProduct = static_cast<GhostProduct>(product);
     mGhostRevive = revive;
+    WorkerJobSettings workerSettings;
+    uint32_t freeWorkers = 0;
+    std::array<uint32_t, 6> counts;
+    if(!readWorkerJobSettings(is, workerSettings) || !validWorkerJobSettings(workerSettings) || !(is >> freeWorkers))
+        return false;
+    for(uint32_t& value : counts) if(!(is >> value)) return false;
+    mWorkerJobSettings = workerSettings;
+    mFreeWorkers = freeWorkers;
+    mWorkerJobCounts = counts;
     return true;
 }
 
@@ -207,6 +237,9 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
     exportItemSettingsToPacket(os);
     os << getInfirmaryPayer() << mInfirmaryThreshold << mInfirmaryHealOn;
     os << mEctoplasmLevels << static_cast<uint32_t>(mGhostProduct) << mGhostRevive;
+    writeWorkerJobSettings(os, mWorkerJobSettings);
+    os << mFreeWorkers;
+    for(uint32_t value : mWorkerJobCounts) os << value;
 }
 
 //! \brief Sends full seat data followed by shared room settings.

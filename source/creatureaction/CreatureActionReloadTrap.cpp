@@ -22,6 +22,7 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/WorkerTargets.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "traps/Trap.h"
@@ -37,11 +38,9 @@ static const double DEFAULT_RELOAD_WORK_TURNS = 12.0;
 //! \brief Turns to wait before the next try when the seat cannot pay and the trap config has no TrapReloadRetryTurns
 static const double DEFAULT_RELOAD_RETRY_TURNS = 100.0;
 //! \brief Experience given for a finished reload when the trap config has no TrapReloadExperience
-static const double DEFAULT_RELOAD_EXPERIENCE = 1.0;
+static const double DEFAULT_RELOAD_EXPERIENCE = 9.828;
 //! \brief Value of TrapReloadByWorkers when the trap config has no entry (1.0 means workers reload traps)
 static const double DEFAULT_RELOAD_BY_WORKERS = 1.0;
-//! \brief Search radius in tiles when the trap config has no TrapReloadSearchRadius
-static const double DEFAULT_RELOAD_SEARCH_RADIUS = 30.0;
 
 namespace
 {
@@ -56,12 +55,13 @@ Trap* getTrapOnTile(Tile& tile)
 }
 }
 
+//! \brief Starts a reload and reserves its trap tile for the worker.
 CreatureActionReloadTrap::CreatureActionReloadTrap(Creature& creature, Tile& tileReload) :
     CreatureAction(creature),
     mTileReload(tileReload),
     mWorkTurns(0)
 {
-    // Counts in the worker share rules of the player
+    // Tracks the worker's active reload action on the player
     mCreature.getSeat()->getPlayer()->notifyWorkerAction(mCreature, getType());
 
     // One worker per tile
@@ -139,6 +139,7 @@ bool CreatureActionReloadTrap::handleReloadTrap(Creature& creature, Tile& tileRe
     return false;
 }
 
+//! \brief Starts the nearest reachable free trap from the keeper's current targets.
 bool CreatureActionReloadTrap::tryStart(Creature& creature)
 {
     ConfigManager& config = ConfigManager::getSingleton();
@@ -149,36 +150,27 @@ bool CreatureActionReloadTrap::tryStart(Creature& creature)
     if((myTile == nullptr) || !creature.getGameMap()->isServerGameMap())
         return false;
 
-    double radius = config.getTrapConfigDoubleOrDefault("TrapReloadSearchRadius", DEFAULT_RELOAD_SEARCH_RADIUS);
     Tile* bestTile = nullptr;
     float bestDist = 0.0f;
-    for(Trap* trap : creature.getGameMap()->getTraps())
+    for(const WorkerTarget& target : creature.getSeat()->getWorkerTargetLists()[static_cast<size_t>(WorkerJob::reload)])
     {
-        if(trap->getSeat() != creature.getSeat())
+        Tile* tile = target.tile;
+        if(tile == nullptr)
             continue;
-
-        // Not enough gold in the treasuries: no use to walk there
+        Trap* trap = getTrapOnTile(*tile);
+        if(trap == nullptr || trap->getSeat() != creature.getSeat())
+            continue;
         if(creature.getSeat()->getGold() < trap->getReloadPrice())
             continue;
-
-        for(Tile* tile : trap->getCoveredTiles())
-        {
-            if(!trap->canBeReloadedByWorker(tile, &creature))
-                continue;
-
-            float dist = Pathfinding::squaredDistanceTile(*myTile, *tile);
-            if(dist > (radius * radius))
-                continue;
-
-            if((bestTile != nullptr) && (bestDist <= dist))
-                continue;
-
-            if(!creature.getGameMap()->pathExists(&creature, myTile, tile))
-                continue;
-
-            bestTile = tile;
-            bestDist = dist;
-        }
+        if(!trap->canBeReloadedByWorker(tile, &creature))
+            continue;
+        float dist = Pathfinding::squaredDistanceTile(*myTile, *tile);
+        if((bestTile != nullptr) && (bestDist <= dist))
+            continue;
+        if(!creature.getGameMap()->pathExists(&creature, myTile, tile))
+            continue;
+        bestTile = tile;
+        bestDist = dist;
     }
 
     if(bestTile == nullptr)

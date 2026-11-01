@@ -24,7 +24,6 @@
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/PersistentObject.h"
-#include "entities/SkillEntity.h"
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
 #include "ODApplication.h"
@@ -88,26 +87,26 @@ struct HeartRewardSpecial
 //! \brief The twelve specials picked from when a heart is destroyed. The chance of a special is its weight
 //! divided by the sum of all weights (100): plain supplies (gold, mana, map view) are the most common,
 //! effects that change the whole dungeon at once (level up, kill creatures, stun workers) are rare.
-const HeartRewardSpecial HEART_REWARD_SPECIALS[] =
-{
-    { GiftBoxType::gold, 15 },
-    { GiftBoxType::mana, 14 },
-    { GiftBoxType::revealMap, 12 },
-    { GiftBoxType::receiveWorkers, 10 },
-    { GiftBoxType::makeHappy, 9 },
-    { GiftBoxType::healAll, 8 },
-    { GiftBoxType::makeSafe, 7 },
-    { GiftBoxType::weakenWalls, 7 },
-    { GiftBoxType::levelUp, 6 },
-    { GiftBoxType::stunWorkers, 6 },
-    { GiftBoxType::makeUnhappy, 4 },
-    { GiftBoxType::killCreatures, 2 }
-};
-const int NB_HEART_REWARD_SPECIALS = sizeof(HEART_REWARD_SPECIALS) / sizeof(HEART_REWARD_SPECIALS[0]);
-
 //! \brief Draws one special of the reward pool by its weight
 GiftBoxType pickHeartRewardSpecial()
 {
+    const HeartRewardSpecial HEART_REWARD_SPECIALS[] =
+    {
+        { GiftBoxType::gold, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightGold", 15.0)) },
+        { GiftBoxType::mana, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightMana", 14.0)) },
+        { GiftBoxType::revealMap, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightRevealMap", 12.0)) },
+        { GiftBoxType::receiveWorkers, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightReceiveWorkers", 10.0)) },
+        { GiftBoxType::makeHappy, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightMakeHappy", 9.0)) },
+        { GiftBoxType::healAll, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightHealAll", 8.0)) },
+        { GiftBoxType::makeSafe, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightMakeSafe", 7.0)) },
+        { GiftBoxType::weakenWalls, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightWeakenWalls", 7.0)) },
+        { GiftBoxType::levelUp, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightLevelUp", 6.0)) },
+        { GiftBoxType::stunWorkers, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightStunWorkers", 6.0)) },
+        { GiftBoxType::makeUnhappy, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightMakeUnhappy", 4.0)) },
+        { GiftBoxType::killCreatures, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HeartRewardWeightKillCreatures", 2.0)) }
+    };
+    const int NB_HEART_REWARD_SPECIALS = sizeof(HEART_REWARD_SPECIALS) / sizeof(HEART_REWARD_SPECIALS[0]);
+
     int totalWeight = 0;
     for(int i = 0; i < NB_HEART_REWARD_SPECIALS; ++i)
         totalWeight += HEART_REWARD_SPECIALS[i].mWeight;
@@ -406,7 +405,6 @@ static const int HEART_SHARE_PRECISION = 17;
 // The treasury ring of a 5x5 heart stores a fixed amount of gold per ring tile
 // (H6/R8). Unlike a treasury room this is not raised by the treasury skill:
 // the ring is part of the heart, not a buildable treasury.
-static const int treasuryTileCapacity = 1000;
 
 // Tiles from the heart tile to the edge of the 3x3 core; everything beyond it is the ring.
 static const int HEART_CORE_RADIUS = 1;
@@ -709,6 +707,7 @@ bool RoomDungeonTemple::isTreasuryTile(Tile* tile) const
     return false;
 }
 
+//! \brief Returns the heart-ring storage from its configured gold capacity per tile.
 int RoomDungeonTemple::getTotalGoldStorage() const
 {
     int numTreasuryTiles = 0;
@@ -717,7 +716,7 @@ int RoomDungeonTemple::getTotalGoldStorage() const
         if(isTreasuryTile(tile))
             numTreasuryTiles++;
     }
-    return numTreasuryTiles * treasuryTileCapacity;
+    return numTreasuryTiles * static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0));
 }
 
 //! \brief Sums exact gold held in the heart's treasury ring.
@@ -745,7 +744,7 @@ double RoomDungeonTemple::depositGold(double gold, Tile* tile)
     if(isTreasuryTile(tile))
     {
         RoomTreasuryTileData* roomTreasuryTileData = static_cast<RoomTreasuryTileData*>(mTileData[tile]);
-        emptySpace = std::max(0.0, treasuryTileCapacity - roomTreasuryTileData->mGoldInTile);
+        emptySpace = std::max(0.0, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0)) - roomTreasuryTileData->mGoldInTile);
         goldDeposited = std::min(emptySpace, goldToDeposit);
         roomTreasuryTileData->mGoldInTile += goldDeposited;
         goldToDeposit -= goldDeposited;
@@ -763,7 +762,7 @@ double RoomDungeonTemple::depositGold(double gold, Tile* tile)
             continue;
 
         RoomTreasuryTileData* roomTreasuryTileData = static_cast<RoomTreasuryTileData*>(p.second);
-        emptySpace = std::max(0.0, treasuryTileCapacity - roomTreasuryTileData->mGoldInTile);
+        emptySpace = std::max(0.0, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0)) - roomTreasuryTileData->mGoldInTile);
         goldDeposited = std::min(emptySpace, goldToDeposit);
         roomTreasuryTileData->mGoldInTile += goldDeposited;
         goldToDeposit -= goldDeposited;
@@ -877,7 +876,7 @@ void RoomDungeonTemple::updateTreasuryMeshesForTile(Tile* tile, RoomTreasuryTile
 
         RoomTreasuryTileData* neighbourData = static_cast<RoomTreasuryTileData*>(p.second);
         around[offsetX + 1][offsetY + 1] = TreasuryGoldLayer::levelForGold(neighbourData->mGoldInTile,
-            treasuryTileCapacity);
+            static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0)));
     }
 
     // If the mesh has not changed we do not need to do anything.
@@ -1045,7 +1044,6 @@ bool RoomDungeonTemple::hasCarryEntitySpot(GameEntity* carriedEntity)
     switch(carriedEntity->getObjectType())
     {
         case GameEntityType::giftBoxEntity:
-        case GameEntityType::skillEntity:
             return true;
         case GameEntityType::treasuryObject:
             // A 5x5 heart has space for more gold until its ring is full; a 3x3 heart
@@ -1058,12 +1056,12 @@ bool RoomDungeonTemple::hasCarryEntitySpot(GameEntity* carriedEntity)
     }
 }
 
+//! \brief Returns a destination for accepted gifts or treasury deposits.
 Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
 {
     switch(carriedEntity->getObjectType())
     {
         case GameEntityType::giftBoxEntity:
-        case GameEntityType::skillEntity:
             return getCentralTile();
         case GameEntityType::treasuryObject:
         {
@@ -1084,7 +1082,7 @@ Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
     }
 }
 
-//! \brief Accepts delivered entities at the temple and stores available specials.
+//! \brief Applies delivered gifts, stores specials, and leaves gold to the treasury.
 void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     // A gold delivery is deposited through the covering room (the treasury ring), the same
@@ -1129,16 +1127,6 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
             giftBox->removeEntityFromPositionTile();
             giftBox->removeFromGameMap();
             giftBox->deleteYourself();
-            return;
-        }
-        case GameEntityType::skillEntity:
-        {
-            // We notify the player that the skill is now available and we delete the skillEntity
-            SkillEntity* skillEntity = static_cast<SkillEntity*>(carriedEntity);
-            getSeat()->addSkillPoints(skillEntity->getSkillPoints());
-            skillEntity->removeEntityFromPositionTile();
-            skillEntity->removeFromGameMap();
-            skillEntity->deleteYourself();
             return;
         }
         default:

@@ -31,6 +31,9 @@
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
+#include <cmath>
+
 
 const std::string TrapFearName = "Fear";
 const std::string TrapFearNameDisplay = "Fear trap";
@@ -124,9 +127,9 @@ static TrapRegister reg(new TrapFearFactory);
 TrapFear::TrapFear(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("FearReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("FearReloadTurns");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("FearNbShootsBeforeDeactivation");
-    mRadius = ConfigManager::getSingleton().getTrapConfigUInt32("FearRadius");
+    mRadius = ConfigManager::getSingleton().getTrapConfigDouble("FearRadius");
     mFearTurns = ConfigManager::getSingleton().getTrapConfigDouble("FearDurationTurns");
     setMeshName("");
 }
@@ -134,7 +137,14 @@ TrapFear::TrapFear(GameMap* gameMap) :
 //! \brief Scares the enemies in sight; the time they run follows the fear trap research.
 bool TrapFear::shoot(Tile* tile)
 {
-    std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(mRadius));
+    std::vector<Tile*> visibleTiles = getGameMap()->visibleTiles(tile->getX(), tile->getY(), static_cast<int>(std::ceil(mRadius)));
+    // Keep only visible tile centres within the configured fractional radius.
+    visibleTiles.erase(std::remove_if(visibleTiles.begin(), visibleTiles.end(), [tile, this](Tile* candidate)
+    {
+        const double dx = candidate->getX() - tile->getX();
+        const double dy = candidate->getY() - tile->getY();
+        return dx * dx + dy * dy > mRadius * mRadius;
+    }), visibleTiles.end());
     std::vector<GameEntity*> enemyCreatures = getGameMap()->getVisibleCreatures(visibleTiles, getSeat(), true);
 
     // Every enemy creature in sight that is not already running away gets scared

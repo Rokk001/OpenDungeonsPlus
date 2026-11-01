@@ -343,6 +343,9 @@ bool RoomHerbGarden::useRoom(Creature& creature, bool forced)
     creature.setAnimationState(EntityAnimation::attack_anim, true);
     HerbGardenTileData& data = *static_cast<HerbGardenTileData*>(mTileData[tile]);
     data.mHarvest += 1.0/ODApplication::turnsPerSecond;
+    // One work turn gives experience on the training hall level
+    creature.receiveExp(ConfigManager::getSingleton().getRoomConfigDouble("JobXpPerTurn")
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit) * getDirtOutputFactor());
     if(data.mHarvest < ConfigManager::getSingleton().getRoomConfigDouble("HerbGardenHarvestSeconds"))
         return false;
     const uint32_t count = ConfigManager::getSingleton().getRoomConfigUInt32("HerbGardenBundlesPerBed");

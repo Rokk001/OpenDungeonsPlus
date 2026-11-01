@@ -16,6 +16,7 @@
  */
 
 #include "renderscene/RenderSceneGroup.h"
+#include "render/LoadingScreen.h"
 
 #include "renderscene/RenderScene.h"
 #include "renderscene/RenderSceneManager.h"
@@ -104,6 +105,7 @@ void RenderSceneGroup::reset(CameraManager& cameraManager, RenderManager& render
         if(!scene->activate(cameraManager, renderManager))
             return;
 
+        LoadingScreen::presentStartup();
         ++mIndexScene;
     }
 }

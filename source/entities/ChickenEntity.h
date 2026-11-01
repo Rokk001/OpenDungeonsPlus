@@ -51,6 +51,7 @@ public:
     //! \brief Initializes an animal and its persisted life-stage timer.
     ChickenEntity(GameMap* gameMap);
 
+    //! \brief Advances the chicken life cycle each turn.
     virtual void doUpkeep() override;
     //! \brief Client side: moves a flying rooster along the same curve as the server, frame by frame.
     virtual void update(Ogre::Real timeSinceLastFrame) override;

@@ -39,6 +39,7 @@ public:
 
     virtual CreatureBehaviour* clone() const override;
 
+    //! \brief Decides whether to engage a natural enemy using its configured chance.
     virtual bool processBehaviour(Creature& creature) const override;
 
     virtual void getFormatString(std::string& format) const override;

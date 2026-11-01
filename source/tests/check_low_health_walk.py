@@ -94,8 +94,8 @@ creatures_cfg = read('config/creatures.cfg')
 assert 'mLowHealthWalkSpeedFactor (-1.0)' in definition
 assert 'mLowHealthWalkSpeedFactor(def.mLowHealthWalkSpeedFactor)' in definition
 assert 'os << c->mLowHealthWalkSpeedFactor;' in definition and 'is >> c->mLowHealthWalkSpeedFactor;' in definition
-assert definition.index('os << c->mTortureTimeToConvert;') < definition.index('os << c->mLowHealthWalkSpeedFactor;') < definition.index('os << c->mXPTable')     if 'os << c->mXPTable' in definition else True
-assert definition.index('is >> c->mTortureTimeToConvert;') < definition.index('is >> c->mLowHealthWalkSpeedFactor;')
+assert definition.index('os << c->mUndead;') < definition.index('os << c->mLowHealthWalkSpeedFactor;') < definition.index('os << c->mXPTable')     if 'os << c->mXPTable' in definition else True
+assert definition.index('is >> c->mUndead;') < definition.index('is >> c->mLowHealthWalkSpeedFactor;')
 assert 'nextParam == "LowHealthWalkSpeedFactor"' in definition and '"    LowHealthWalkSpeedFactor' in definition
 assert 'double mLowHealthWalkSpeedFactor;' in definition_h and 'getLowHealthWalkSpeedFactor () const' in definition_h
 assert re.search(r'^# LowHealthWalkSpeedFactor \(Optional', creatures_cfg, re.M)

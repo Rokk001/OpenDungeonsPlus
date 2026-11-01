@@ -51,7 +51,6 @@
 #include <iostream>
 #include <map>
 
-const int32_t NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE = 30;
 const int32_t NB_TURNS_DIE_BEFORE_REMOVE = 5;
 //! \brief Upper bound (inclusive) of a percent roll (0 to 99).
 const uint32_t PERCENT_ROLL_MAX = 99;
@@ -180,6 +179,7 @@ void ChickenEntity::destroyMeshLocal(NodeType nt)
     RenderedMovableEntity::destroyMeshLocal(nt);
 }
 
+//! \brief Advances the chicken life cycle using the configured lost-adult timeout.
 void ChickenEntity::doUpkeep()
 {
     // If we are dead, we remove the chicken
@@ -261,7 +261,7 @@ void ChickenEntity::doUpkeep()
     }
 
     // If we are outside a hatchery for too long, we die
-    if(mIsSlapped || (mNbTurnOutsideHatchery >= NB_TURNS_OUTSIDE_HATCHERY_BEFORE_DIE))
+    if(mIsSlapped || (mNbTurnOutsideHatchery >= static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatcheryAdultLostTurns", 30.0))))
     {
         mChickenState = ChickenState::dying;
         clearDestinations(EntityAnimation::die_anim, false, false);

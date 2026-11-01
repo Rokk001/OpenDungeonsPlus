@@ -63,10 +63,12 @@ public:
 
     CullingManager(GameMap* gameMap, uint32_t cullingMask);
 
+    //! \brief Hides every tile, then shows the tiles inside the widened camera footprint (see computeCullingFootprint).
     void startTileCulling(Ogre::Camera* camera, const std::vector<Ogre::Vector3>& ogreVectors);
 
     void stopTileCulling(const std::vector<Ogre::Vector3>& ogreVectors);
 
+    //! \brief Shows and hides tiles for the widened footprint of the moved camera while culling is on.
     void update(Ogre::Camera* camera, const std::vector<Ogre::Vector3>& ogreVectors);
 
     //! \brief Computes the intersection points from the camera with the XY plane. The corresponding
@@ -79,6 +81,15 @@ public:
 private:
 
     void cullTiles(const std::vector<Ogre::Vector3>& ogreVectors);
+
+    //! \brief Widens the ground footprint of the camera so that every tile with a visible part keeps
+    //! its centre inside: the footprint also covers the wall tops seen at the screen edges and gets a
+    //! margin of half a tile diagonal.
+    //! \param camera The camera whose frustum corners gave the footprint.
+    //! \param groundVectors The four ground points from computeIntersectionPoints, in camera corner order.
+    //! \return The widened footprint in the same corner order, or groundVectors when it is degenerate.
+    std::vector<Ogre::Vector3> computeCullingFootprint(Ogre::Camera* camera,
+        const std::vector<Ogre::Vector3>& groundVectors) const;
 
 
 

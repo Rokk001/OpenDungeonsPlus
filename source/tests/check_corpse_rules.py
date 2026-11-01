@@ -11,6 +11,8 @@ def corpse_fixture():
  GameMap* getGameMap()const{return map;}
  //! \brief Returns the actual carry marker.
  bool isCorpseCarried()const{return mIsCarried;}
+ //! \brief Returns the saved carrier identity used by crypt reservation export.
+ const std::string& getCorpseCarrierName()const{return mCorpseCarrierName;}
  //! \brief Restores tile registration before life is restored.
  void addEntityToPositionTile(){check(!alive,"crypt release precedes revival");onMap=true;}
  //! \brief Observes the unchanged equipment drop.
@@ -19,6 +21,10 @@ def corpse_fixture():
  void dirtyTileByCorpse(){++dirtyCalls;}
  //! \brief Returns the original death placement.
  Ogre::Vector3 getPosition()const{return Ogre::Vector3(tile?tile->x:0,tile?tile->y:0,0);}
+ //! \brief Supplies the direction used for the fallen skeleton orientation.
+ const Ogre::Vector3& getWalkDirection()const{return Ogre::Vector3::ZERO;}
+ //! \brief Supplies the creature scale for the fallen skeleton.
+ double getLevelScale()const{return 1.0;}
  //! \brief Captures decay clip selection.
  void clearDestinations(const std::string& value,bool,bool){animation=value;}
  //! \brief Captures decay or restored idle animation.
@@ -65,6 +71,8 @@ def corpse_fixture():
  double getTiredWakefulness()const{return 20;}
  size_t getMaxCreaturesPerSeatAbsolute()const{return 20;}
 ''')
+    base = base.replace('static const Vector3 ZERO;', '//! \\brief Compares the direction components.\nbool operator==(const Vector3& other)const{return x==other.x&&y==other.y&&z==other.z;}\nstatic const Vector3 ZERO;')
+    base = base.replace('using Real=float;}', 'using Real=float;\n//! \\brief Converts a direction angle to degrees.\nstruct Radian{float value;\n//! \\brief Stores the angle in radians.\nRadian(float v):value(v){}\n//! \\brief Returns the angle in degrees.\nfloat valueDegrees()const{return value*57.2957795f;}};}')
     world = world.replace(' RoomType getType()const{return type;}', r'''
  //! \brief Supplies the unchanged room save prefix.
  void exportToStream(std::ostream&)const{}
@@ -75,11 +83,13 @@ def corpse_fixture():
     world = world.replace(' Creature()=default;', additions+' Creature()=default;')
     declarations = r'''
 //! \brief Captures blood creation at first death only.
-namespace DirtPileKind{const int blood=0;}
+namespace DirtPileKind{const int blood=0,pile=1;}
 //! \brief Observes the blood side effect.
 struct DirtPileEntity{static int count;
  //! \brief Counts actual death blood calls.
  static void createOnTile(GameMap*,Tile*,int,const std::string&){++count;}
+ //! \brief Accepts a fallen skeleton created by the death branch.
+ static void createBones(GameMap*,Tile*,const Ogre::Vector3&,double,double){}
 };int DirtPileEntity::count=0;
 //! \brief Captures worker vanish and revival spell events.
 struct Spell{static int vanish,revivals;
@@ -106,9 +116,9 @@ struct RoomCrypt:Room{GameMap* map=nullptr;std::map<Tile*,Creature*> mRottingCre
     source = read('source/entities/Creature.cpp')
     death = function(function(source,'void Creature::doUpkeep('),'    if (!isAlive())')
     carry = function(source,'EntityCarryType Creature::getEntityCarryType(')
-    carry_body = carry[carry.index('    if(getDefinition()->isWorker())'):carry.index('    // A creature knocked')]
-    dead_guard = carry[carry.index('    if(getHP() <= 0.0)'):carry.index('    // A hurt creature')]
-    carry_code = '\nEntityCarryType Creature::carryDead()const{'+carry_body+dead_guard+'return EntityCarryType::notCarryable;}\n'
+    dead_start = carry.index('    if(getHP() <= 0.0 &&')
+    dead_guard = carry[dead_start:carry.index('    return EntityCarryType::notCarryable;', dead_start)]
+    carry_code = '\nEntityCarryType Creature::carryDead()const{'+dead_guard+'return EntityCarryType::notCarryable;}\n'
     crypt = read('source/rooms/RoomCrypt.cpp')
     return base+world+declarations+''.join(function(crypt,sig) for sig in
         ['Tile* RoomCrypt::getCorpseSpot(', 'void RoomCrypt::removeCorpse(', 'void RoomCrypt::notifyCorpseDecayed('])+\

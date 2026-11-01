@@ -39,7 +39,8 @@ public:
 
     //! \brief Returns the mood change from the dirt of the room and the piles around the creature. Creatures that
     //! belong to no seat and free heroes feel no dirt.
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
     CreatureMoodDirt* clone() const override;

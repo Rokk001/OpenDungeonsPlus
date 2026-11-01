@@ -17,6 +17,8 @@
 
 #include "creatureaction/CreatureActionFlee.h"
 
+#include "utils/ConfigManager.h"
+
 #include "creatureaction/CreatureActionWalkToTile.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
@@ -31,7 +33,6 @@
 #include "ODApplication.h"
 #include <cmath>
 
-static const int NB_TURN_FLEE_MAX = 5;
 
 //! \brief Holds an optional ghost flinch, then dispatches the unchanged fear or enemy flight.
 std::function<bool()> CreatureActionFlee::action()
@@ -55,6 +56,7 @@ bool CreatureActionFlee::waitForScaredPose()
     return false;
 }
 
+//! \brief Runs enemy flight using the configured flight limit.
 bool CreatureActionFlee::handleFlee(Creature& creature, int32_t nbTurns)
 {
     Tile* myTile = creature.getPositionTile();
@@ -67,7 +69,7 @@ bool CreatureActionFlee::handleFlee(Creature& creature, int32_t nbTurns)
 
     // We try to go as far as possible from the enemies within visible tiles. We will quit flee mode when there will be no more
     // enemy objects nearby or if we have already flee for too much time
-    if ((creature.getVisibleEnemyObjects().empty()) || (nbTurns > NB_TURN_FLEE_MAX))
+    if ((creature.getVisibleEnemyObjects().empty()) || (nbTurns > ConfigManager::getSingleton().getFleeMaxTurns()))
     {
         creature.popAction();
         return true;

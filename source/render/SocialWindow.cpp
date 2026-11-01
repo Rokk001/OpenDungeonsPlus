@@ -533,7 +533,7 @@ void SocialWindow::rebuildCreatureList()
                 entries[i].mCrownMarkup, static_cast<CEGUI::uint>(i));
             item->setTextParsingEnabled(true);
         }
-        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionFill");
         list->addItem(item);
         if(entries[i].mName == mSelectedCreature)
         {

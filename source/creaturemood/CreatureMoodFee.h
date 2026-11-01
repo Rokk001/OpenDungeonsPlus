@@ -33,9 +33,10 @@ public:
 
     const std::string& getModifierName() const override;
     //! \brief Returns the configured unpaid wage mood for admission mood calculation.
-    int32_t getMoodModifier() const { return mMoodModifier; }
+    double getMoodModifier() const { return mMoodModifier; }
 
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     inline CreatureMoodFee* clone() const override;
 
@@ -44,7 +45,7 @@ public:
     virtual void getFormatString(std::string& format) const override;
 
 private:
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODFEE_H

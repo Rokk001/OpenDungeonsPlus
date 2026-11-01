@@ -34,7 +34,8 @@ public:
 
     const std::string& getModifierName() const override;
 
-    virtual int32_t computeMood(const Creature& creature) const override;
+    //! \brief Computes this mood contribution.
+    virtual double computeMood(const Creature& creature) const override;
 
     inline CreatureMoodTortured* clone() const override;
 
@@ -44,7 +45,7 @@ public:
 
 private:
     int32_t mTurnsMax;
-    int32_t mMoodModifier;
+    double mMoodModifier;
 };
 
 #endif // CREATUREMOODTORTURED_H

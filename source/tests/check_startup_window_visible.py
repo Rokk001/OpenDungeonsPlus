@@ -24,7 +24,11 @@ def main():
     assert application.count(SHOWN_LOG) == 1, "the line 'window shown' must be written exactly once"
     startup = application.index("LoadingScreen startupLoading(*renderWindow);", hidden)
     assert startup < show, "show the window only after the first loading frame exists"
-    resources = application.index("initialiseAllResourceGroups();", show)
+    resources = application.index("resMgr.setupOgreResources(", show)
+    assert startup < application.index('sf::WindowBase sfmlWindow(nativeHandle);') < show, "SFML must attach to the already painted hidden native window"
+    assert "sf::RenderWindow sfmlWindow(" not in application, "SFML must not create a visible window before painting"
+    assert show < application.index("LoadingScreen::presentStartup();", show) < logged, "repaint after showing the window"
+    assert logged < application.index("if (!Ogre::RTShader::ShaderGenerator::initialize())"), "show before RTSS initialization"
     assert logged < resources, "the window must be shown before blocking resource initialization"
     assert application.count("renderWindow->setHidden(false);") == 1, "exactly one place may show the startup window"
     print("OK: hidden startup window is shown with setHidden(false) and logged as 'window shown'")

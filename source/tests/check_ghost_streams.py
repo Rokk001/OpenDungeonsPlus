@@ -164,6 +164,7 @@ int main(){
  loaded.doUpkeep();check(!loaded.deleted,"box before 168 turns");near(boxed.mLifeLeft,31.625,"boxed lifetime paused during lying-box countdown");loaded.doUpkeep();check(loaded.deleted&&boxed.mState==GhostState::floating&&boxed.mAssignedHunter.empty()&&boxed.mPosition.x==4,"expired box releases at exact box placement");near(boxed.mLifeLeft,31.625,"release retains catch lifetime");
  ODPacket bp;box.exportToPacket(bp,&seat);GhostBoxEntity bc;bc.map=&map;bc.importFromPacket(bp);check(bp.cursor==bp.tokens.size()&&bc.mGhostNames==box.mGhostNames,"box creation all names");ODPacket bu;box.exportToPacketForUpdate(bu,&seat);bc.updateFromPacket(bu);check(bu.cursor==bu.tokens.size()&&bc.mOpenTurns==166.5,"box update symmetry");
  RoomCrypt crypt;crypt.map=&map;crypt.seat=&seat;crypt.mCorpseLevels={2,19,7};Creature corpse;corpse.name="body";crypt.mRottingCreatures[map.getTile(1,2)]=&corpse;crypt.mRottingCreatures[map.getTile(2,2)]=nullptr;std::stringstream cs;crypt.exportToStream(cs);cs<<" EndRoom";RoomCrypt restored;restored.map=&map;check(restored.importFromStream(cs),"crypt complete tags");std::string token;cs>>token;check(token=="EndRoom"&&restored.mCorpseLevels==crypt.mCorpseLevels&&restored.mCorpseSpotNames[{1,2}]=="body"&&restored.mCorpseSpotNames[{2,2}]=="none","crypt FIFO names and following record");std::stringstream legacy("0 [/Room] [Room] 9 next");RoomCrypt oldCrypt;check(oldCrypt.importFromStream(legacy),"legacy trailing crypt zero");legacy>>token;check(token=="[/Room]","legacy crypt leaves following room intact");
+ corpse.mIsCarried=true;corpse.mCorpseCarrierName.clear();std::stringstream forcedCrypt;crypt.exportToStream(forcedCrypt);RoomCrypt forcedCryptLoaded;forcedCryptLoaded.map=&map;check(forcedCryptLoaded.importFromStream(forcedCrypt)&&forcedCryptLoaded.mCorpseSpotNames[{1,2}]=="none","hand-drop body does not retain its grave reservation after load");corpse.mIsCarried=false;
  Creature hunter;hunter.map=&map;hunter.savedPath={Ogre::Vector2(2,3),Ogre::Vector2(3,3)};for(uint32_t state=0;state<=8;++state){CreatureActionHuntGhost action(hunter);action.mState=state;action.mTarget="target";action.mHookRoom="hooks";action.mHookX=2;action.mHookY=3;action.mTurns=1.125;action.mRepathTurns=3.875;action.mHookSlot=7;action.mEquipped=true;action.mGhosts={"a","b","c"};action.mReviveGhosts={"a","c"};action.mReviveTarget="a";action.mEmptyRoom="press";action.mDestination=map.getTile(3,4);action.mEmptyAnchor=map.getTile(4,4);std::stringstream hs;hs<<std::setprecision(17);action.exportToStream(hs);hs>>token;check(token=="[GhostHunt]","hunter opening tag");CreatureActionHuntGhost resumed(hunter);check(resumed.importFromStream(hs),"all nine hunt states roundtrip");near(resumed.mTurns,1.125,"hunter fractional step");near(resumed.mRepathTurns,3.875,"hunter fractional repath");check(resumed.mHookSlot==7&&resumed.mGhosts==action.mGhosts&&resumed.mReviveGhosts==action.mReviveGhosts&&resumed.mDestination==action.mDestination&&resumed.mEmptyAnchor==action.mEmptyAnchor&&resumed.mLoadedPath.size()==2,"exact hook cauldron stand path and revival candidates");}
  for(const std::string& malformed:{"9 none none 0 0 0 0 [/GhostHunt]","2 none none 0 0 -1 0 [/GhostHunt]","2 none none 0 0 1 1 [/GhostHunt]"}){CreatureActionHuntGhost action(hunter);std::stringstream stream(malformed);check(!action.importFromStream(stream),"malformed hunt rejected");}
  SeatRecord record;record.mEctoplasmLevels=8.875;record.mGhostProduct=GhostProduct::crystal;record.mGhostRevive=false;record.mGhostBellTargets={"a","b"};std::stringstream ss;record.save(ss);ss<<" EndSeat";SeatRecord rs;check(rs.load(ss)&&rs.mEctoplasmLevels==8.875&&rs.mGhostProduct==GhostProduct::crystal&&!rs.mGhostRevive&&rs.mGhostBellTargets==record.mGhostBellTargets,"seat bar switches and one-shot bells");std::stringstream emptySeat("[Other] [/Other] EndSeat");SeatRecord defaults;check(defaults.load(emptySeat)&&defaults.mEctoplasmLevels==0&&defaults.mGhostProduct==GhostProduct::research&&defaults.mGhostRevive,"old seat defaults");for(const std::string& text:{"[GhostRoom] -1 0 1 [/GhostRoom] EndSeat","[GhostRoom] 1 3 1 [/GhostRoom] EndSeat","[GhostRoom] 1 0 1 wrong EndSeat"}){SeatRecord broken;std::stringstream stream(text);check(!broken.load(stream),"invalid seat settings rejected");}
@@ -185,7 +186,7 @@ int main(){
 # Assemble the original creature/room presentation tails and free-reveal codecs.
 def packet_fixture():
     from check_ghost_rules import PRELUDE
-    code = PRELUDE+r'''
+    code = PRELUDE + read('source/game/WorkerJobs.h') + r'''
 //! \brief Supplies transparent unchanged base packet and stream prefixes.
 struct RenderedMovableEntity{
  //! \brief Supplies ordinary creation prefix.
@@ -290,9 +291,14 @@ struct CreatureTail{Seat* owner=nullptr;double mGoldCarried=12.25,mInfirmaryMood
     seat_writer = seat_writer[seat_writer.index('    os << getInfirmaryPayer()'):seat_writer.rindex('}')]
     seat_reader = function(seat_source,'bool SeatData::importFromPacketForUpdate(')
     seat_reader = seat_reader[seat_reader.index('    int32_t payer = 0;'):seat_reader.rindex('}')]
+    read_jobs = function(seat_source, 'bool SeatData::readWorkerJobSettings(').replace('SeatData::', '')
+    write_jobs = function(seat_source, 'void SeatData::writeWorkerJobSettings(').replace('SeatData::', '')
     code += r'''
 //! \brief Keeps the actual owner-only room setting codec tail and its old infirmary prefix.
 struct SeatDataTail{int32_t payer=1,mInfirmaryThreshold=65;bool mInfirmaryHealOn=false,mGhostRevive=false;double mEctoplasmLevels=8.875;GhostProduct mGhostProduct=GhostProduct::crystal;
+ WorkerJobSettings mWorkerJobSettings{{},0,{{0,1,2,3,4,5}},{{0,1,2,3,4,5,6}},0};uint32_t mFreeWorkers=0;std::array<uint32_t,6> mWorkerJobCounts{};
+ READ_JOBS
+ WRITE_JOBS
  //! \brief Returns the existing payer setting.
  int32_t getInfirmaryPayer()const{return payer;}
  //! \brief Receives the existing payer setting.
@@ -306,7 +312,7 @@ struct SeatDataTail{int32_t payer=1,mInfirmaryThreshold=65;bool mInfirmaryHealOn
  //! \brief Executes the original owner-only settings decoder and validation.
  bool load(ODPacket& is){SEAT_READ}
 };
-'''.replace('SEAT_WRITE',seat_writer).replace('SEAT_READ',seat_reader)
+'''.replace('SEAT_WRITE',seat_writer).replace('SEAT_READ',seat_reader).replace('READ_JOBS','static ' + read_jobs).replace('WRITE_JOBS','static ' + write_jobs)
     return code
 
 # Check tail symmetry and preserved old fields as well as free reveal legacy boundaries.

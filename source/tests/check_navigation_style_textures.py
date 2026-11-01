@@ -16,7 +16,9 @@ dumps the textures and checks the geometry that the layout and the map renderer 
 
 The same native probe also decodes the painted runtime atlas with Ogre and copies its twenty
 registered sprites with the production helper. Those copies are checked against the actual PNG
-rectangles, including all corner cutouts and the distinct painted interaction states. The older
+rectangles, including the integrated ring patches and distinct painted interaction states.
+With --painted-only, checks the actual painted patches and minimap-relative layout without
+compiling or running the native probe; the default still runs every native regression. The older
 procedural assertions remain a separate regression check, not a specification of painted colours.
 
 With --preview DIRECTORY it also writes enlarged PNGs (needs PIL): every texture, and a mock-up of
@@ -26,6 +28,7 @@ from pathlib import Path
 import argparse
 import math
 import os
+import re
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -34,6 +37,7 @@ from PIL import Image
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--preview', help='directory for enlarged preview PNGs')
+parser.add_argument('--painted-only', action='store_true', help='check integrated painting and layout without compiling the native probe')
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[2]
 source = (repo / 'source/render/Gui.cpp').read_text()
@@ -127,6 +131,7 @@ checks = 0
 failures = 0
 
 
+# Record one navigation regression assertion.
 def check(ok, why):
     global checks, failures
     checks += 1
@@ -149,6 +154,42 @@ def pixel(data, size, x, y):
 def brightness(p):
     return p[0] + p[1] + p[2]
 
+
+# Verify the painted ring and the actual minimap-relative layout before any native compilation.
+layout = ET.parse(repo / 'gui/ModeGame.layout').getroot()
+entries = {n.get('name'): n.attrib for n in ET.parse(repo / 'gui/ODNavigation.imageset').getroot().findall('Image')}
+with Image.open(repo / 'gui/ODNavigation.png') as atlas_image:
+    atlas = atlas_image.convert('RGBA')
+    ring = atlas.crop((0, 0, 768, 768))
+    check(ring.getpixel((384, 384))[3] == 0, 'map opening remains transparent')
+    for corner, name in enumerate(('QueryButton', 'SellButton', 'OptionsButton', 'MiniMapZoomButton')):
+        button = layout.find('.//Window[@name="' + name + '"]')
+        relative = button.find('UserString[@name="MiniMapArea"]').get('value')
+        dimensions = [tuple(map(float, pair)) for pair in re.findall(r'\{([\d.]+),([\d.]+)\}', relative)]
+        x, y = (535 if corner & 1 else 41), (535 if corner & 2 else 41)
+        check(all(offset == 0 for scale, offset in dimensions), name + ' has no fixed minimap-relative offsets')
+        expected = (x / 768, y / 768, (x + 192) / 768, (y + 192) / 768)
+        check(all(abs(d[0] - value) < 1e-8 for d, value in zip(dimensions, expected)),
+              name + ' aligns with its ring patch at equal diagonal angles')
+        check(button.find('Property[@name="CornerIconArea"]').get('value') == '{{0.25,0},{0.25,0},{0.75,0},{0.75,0}}',
+              name + ' centres its icon on the plate')
+        states = []
+        for state, suffix in enumerate(('', 'Hover', 'Pressed')):
+            entry = entries['MiniMapCorner' + str(corner) + suffix]
+            rect = tuple(int(entry[key]) for key in ('xPos', 'yPos', 'width', 'height'))
+            check(rect == (1024 + corner * 192, state * 192, 192, 192), name + suffix + ' matches runtime source coordinates')
+            left, top, width, height = rect
+            patch = atlas.crop((left, top, left + width, top + height))
+            states.append(patch.tobytes())
+            check(patch.getpixel((96, 96))[3] == 255, name + suffix + ' has an opaque icon seat')
+        check(states[0] == ring.crop((x, y, x + 192, y + 192)).tobytes(), name + ' is an exact part of the single ring painting')
+        check(len(set(states)) == 3, name + ' has three distinct painted states')
+check('layoutMiniMapButtons(gameSheet->second);' in source and 'width * area.d_min.d_x.d_scale' in source,
+      'production scaling applies minimap-relative layout')
+check('return x * x + y * y <= 1.0f;' in function('    bool isHit('), 'integrated plate centres accept clicks')
+if args.painted_only:
+    print('PAINTED CHECKS=%d FAILURES=%d (native probe not run)' % (checks, failures))
+    raise SystemExit(1 if failures else 0)
 
 with tempfile.TemporaryDirectory(prefix='odp-navigation-style-') as directory:
     work = Path(directory)
@@ -177,19 +218,11 @@ with tempfile.TemporaryDirectory(prefix='odp-navigation-style-') as directory:
             check(any(data[i + 3] for i in range(0, len(data), 4)), name + ' has visible painted content')
             painted[name] = (width, data)
     for corner in range(4):
-        states = []
-        for suffix in ('', 'Hover', 'Pressed'):
-            name = 'MiniMapCorner' + str(corner) + suffix
-            size, data = painted[name]
-            states.append(data)
-            outside_x = size // 4 if not corner & 1 else size - 1 - size // 4
-            outside_y = size // 4 if not corner & 2 else size - 1 - size // 4
-            bite_x = size - 16 if not corner & 1 else 16
-            bite_y = size - 16 if not corner & 2 else 16
-            check(pixel(data, size, outside_x, outside_y)[3] == 255, name + ' keeps its outer plate opaque')
-            check(pixel(data, size, bite_x, bite_y)[3] == 0, name + ' preserves the minimap circle cutout')
-        check(states[0] != states[1] and states[0] != states[2] and states[1] != states[2],
-              'painted corner %d has distinct resting, hovered and pressed states' % corner)
+        states = [painted['MiniMapCorner' + str(corner) + suffix][1] for suffix in ('', 'Hover', 'Pressed')]
+        size = painted['MiniMapCorner' + str(corner)][0]
+        check(pixel(states[0], size, size // 2, size // 2)[3] == 255,
+              'integrated plate %d has an opaque icon seat' % corner)
+        check(len(set(states)) == 3, 'painted corner %d has distinct resting, hovered and pressed states' % corner)
 
     # Legacy procedural helpers retain every original assertion independently of the painted runtime sprites.
     rim_size, north_size, plate_size, symbol_size = 384, 64, 128, 64

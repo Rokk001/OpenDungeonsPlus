@@ -158,6 +158,21 @@ void reportTavernPost(GameMap* gameMap, const CosmeticEvent& event)
 }
 }
 
+//! \brief Requests the current worker settings from the server.
+void ODClient::requestWorkerJobSettings()
+{
+    queueClientNotification(ClientNotificationType::askWorkerSettings, static_cast<uint32_t>(0));
+}
+
+//! \brief Sends a complete proposed worker settings record to the server.
+void ODClient::sendWorkerJobSettings(const WorkerJobSettings& settings)
+{
+    ClientNotification* notification = new ClientNotification(ClientNotificationType::askWorkerSettings);
+    notification->mPacket << static_cast<uint32_t>(1);
+    SeatData::writeWorkerJobSettings(notification->mPacket, settings);
+    queueClientNotification(notification);
+}
+
 ODClient::ODClient() :
     ODSocketClient(),
     mIsPlayerConfig(false),
@@ -2285,6 +2300,16 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode())->setLabWindowData(data);
             break;
         }
+        case ServerNotificationType::workerSettings:
+        {
+            WorkerJobSettings settings;
+            if(!SeatData::readWorkerJobSettings(packetReceived, settings) || !validWorkerJobSettings(settings))
+                return false;
+            if(getPlayer() != nullptr && getPlayer()->getSeat() != nullptr)
+                getPlayer()->getSeat()->setWorkerJobSettings(settings);
+            break;
+        }
+
         case ServerNotificationType::infirmaryWindow:
         case ServerNotificationType::infirmarySettings:
         {

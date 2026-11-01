@@ -85,6 +85,7 @@ public:
 
     virtual ~Building();
 
+    //! \brief Health used when a building tile has no configured value.
     const static double DEFAULT_TILE_HP;
 
     virtual void doUpkeep() override;

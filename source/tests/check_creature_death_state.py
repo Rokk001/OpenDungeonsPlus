@@ -25,7 +25,7 @@ print("Death pose is retained in authoritative state and initial corpse packets,
 
 # Lethal knockouts use the same retained lying pose, while remaining non-attackable.
 damage = function("source/entities/Creature.cpp", "double Creature::takeDamage(")
-knockout = damage[damage.index("else if(ko && !getDefinition()->isWorker())"):]
+knockout = damage[damage.index("else if(ko && !getDefinition()->isWorker() && !getDefinition()->isUndead())"):]
 assert knockout.index("mHp = 1.0;") < knockout.index("dropCarriedEquipment();")
 assert knockout.index("mKoTurnCounter = -") < knockout.index("dropCarriedEquipment();")
 assert 'recordScriptEvent(*this, "incapacitated")' in knockout

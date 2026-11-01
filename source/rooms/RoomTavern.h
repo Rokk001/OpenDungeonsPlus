@@ -93,7 +93,7 @@ struct RoomTavernSpot
     uint32_t mDrinks;
     //! True when the guest goes to its bed after the visit (the loser of a slap duel).
     bool mSleepAfter;
-    //! True while the guest, done with its drinks, waits for a neighbour to play a game with (not saved).
+    //! True while the guest, done with its drinks, waits for a neighbour to play a game with.
     bool mWantsGame;
 };
 
@@ -142,7 +142,8 @@ struct RoomTavernPendingSpot
         mState(TavernGuestState::arriving),
         mTurnsLeft(0),
         mDrinks(0),
-        mSleepAfter(false)
+        mSleepAfter(false),
+        mWantsGame(false)
     {}
 
     //! The tile of the place.
@@ -155,6 +156,25 @@ struct RoomTavernPendingSpot
     uint32_t mDrinks;
     //! True when the guest was on its way to bed after the visit.
     bool mSleepAfter;
+    //! True when the guest was waiting for a game.
+    bool mWantsGame;
+};
+
+//! \brief A keg or table that was read from a saved room and is placed again unchanged (see RoomTavern::updateActiveSpots).
+struct RoomTavernSavedFurniture
+{
+    //! \brief Creates an empty saved piece of furniture.
+    RoomTavernSavedFurniture() :
+        mTile(nullptr),
+        mAngle(0.0)
+    {}
+
+    //! The tile the object stood on.
+    Tile* mTile;
+    //! The mesh name of the object.
+    std::string mMesh;
+    //! The rotation angle of the object in degrees.
+    double mAngle;
 };
 
 //! \brief A running game that was read from a saved room and waits for its two guests (see RoomTavern::doUpkeep).
@@ -233,6 +253,9 @@ public:
 
     //! \brief A guest in a game, lying on the floor or getting up does not stop because it is hungry or tired.
     bool shouldStopUseIfHungrySleepy(Creature& creature, bool forced) override;
+
+    //! \brief Returns whether this guest is arriving for a drink or drinking.
+    bool isGuestDrinking(const Creature& creature);
 
     //! \brief A guest in a game, lying on the floor or getting up does not stop because of its mood.
     bool shouldNotUseIfBadMood(Creature& creature, bool forced) override;
@@ -453,6 +476,8 @@ private:
     std::map<std::string, RoomTavernPendingSpot> mPendingSpots;
     //! \brief The games read from a saved room until the creatures are bound again.
     std::vector<RoomTavernPendingGame> mPendingGames;
+    //! \brief The kegs and tables read from a saved room until updateActiveSpots has placed them again.
+    std::vector<RoomTavernSavedFurniture> mSavedFurniture;
 };
 
 #endif // ROOMTAVERN_H

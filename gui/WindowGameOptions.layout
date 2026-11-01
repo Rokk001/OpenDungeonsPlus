@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
     <Window type="OD/FrameWindow" name="GameOptionsWindow" >
-        <Property name="Area" value="{{0.5,-160},{0.5,-291},{0.5,160},{0.5,291}}" />
+        <Property name="Area" value="{{0.5,-160},{0.025,0},{0.5,160},{0.975,0}}" />
         <Property name="Text" value="Options" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/IconButton" name="ObjectivesButton" >

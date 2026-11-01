@@ -28,7 +28,9 @@
 #include <algorithm>
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/WorkerTargets.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/Pathfinding.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
@@ -44,17 +46,11 @@ bool infirmaryFirst(Building* building)
 }
 }
 
-//! \brief Keeps appended item bags below gold and knockout transports without changing saved enum values.
-static int32_t carryPriority(EntityCarryType type)
-{
-    if(type == EntityCarryType::itemBag || type == EntityCarryType::herbBundle)
-        return static_cast<int32_t>(EntityCarryType::gold) - 1;
-    return static_cast<int32_t>(type);
-}
-
+//! \brief Creates a carry search that returns to job selection after one target.
 CreatureActionSearchEntityToCarry::CreatureActionSearchEntityToCarry(Creature& creature, bool forced) :
     CreatureAction(creature),
-    mForced(forced)
+    mForced(forced),
+    mTargetStarted(false)
 {
     mCreature.getSeat()->getPlayer()->notifyWorkerAction(mCreature, getType());
 }
@@ -64,128 +60,97 @@ CreatureActionSearchEntityToCarry::~CreatureActionSearchEntityToCarry()
     mCreature.getSeat()->getPlayer()->notifyWorkerStopsAction(mCreature, getType());
 }
 
+//! \brief Advances the carry search while retaining its one-target state.
 std::function<bool()> CreatureActionSearchEntityToCarry::action()
 {
     return std::bind(&CreatureActionSearchEntityToCarry::handleSearchEntityToCarry,
-        std::ref(mCreature), mForced);
+        std::ref(mCreature), mForced, std::ref(mTargetStarted));
 }
 
-//! \brief Finds reachable ordinary transports and exact configured mission destinations without changing other cargo.
-bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& creature, bool forced)
+//! \brief Chooses one carry target and returns to job selection after it finishes.
+bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& creature, bool forced, bool& targetStarted)
 {
-    Tile* myTile = creature.getPositionTile();
-    if(myTile == nullptr)
+    if(targetStarted)
     {
-        OD_LOG_ERR("creature=" + creature.getName());
         creature.popAction();
         return true;
     }
-
-    std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
-    std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
-    std::vector<GameEntity*> carryableEntities = creature.getGameMap()->getCarryableEntities(&creature, creature.getTilesWithinSightRadius());
-    std::vector<Tile*> carryableEntityInMyTileClients;
-    std::vector<GameEntity*> availableEntities;
-    EntityCarryType highestPriority = EntityCarryType::notCarryable;
-    // If a carryable entity of highest priority is in my tile, I proceed it
-    GameEntity* carryableEntityInMyTile = nullptr;
-    for(GameEntity* entity : carryableEntities)
+    Tile* myTile = creature.getPositionTile();
+    if(myTile == nullptr || (!forced && creature.getWorkerJob() != WorkerJob::carry))
     {
-        // We check that the carryable entity is reachable
-        Tile* carryableEntTile = entity->getPositionTile();
-        if(!creature.getGameMap()->pathExists(&creature, myTile, carryableEntTile))
+        creature.popAction();
+        return true;
+    }
+    GameMap* map = creature.getGameMap();
+    const std::vector<Tile*>& sight = creature.getTilesWithinSightRadius();
+    std::vector<GameEntity*> candidates = map->getCarryableEntities(&creature, sight);
+    for(const WorkerTarget& target : creature.getSeat()->getWorkerTargetLists()[static_cast<size_t>(WorkerJob::carry)])
+    {
+        GameEntity* entity = map->getEntityFromTypeAndName(target.entityType, target.entityName);
+        if(entity == nullptr || entity->getPositionTile() == nullptr)
             continue;
-
-        // If we are forced to carry something, we consider only entities on our tile
-        if(forced && (myTile != carryableEntTile))
+        Tile* tile = entity->getPositionTile();
+        const bool inSight = std::find(sight.begin(), sight.end(), tile) != sight.end();
+        if(!inSight && tile->getSeat() != nullptr && tile->getSeat() != creature.getSeat() &&
+           !tile->getSeat()->isRogueSeat())
             continue;
-
-        std::vector<Tile*> missionDestinations;
+        if(std::find(candidates.begin(), candidates.end(), entity) == candidates.end())
+            candidates.push_back(entity);
+    }
+    std::vector<Building*> buildings = map->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
+    std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
+    const std::array<uint32_t, 7>& carryOrder = creature.getSeat()->getWorkerJobSettings().carryOrder;
+    std::vector<GameEntity*> best;
+    uint32_t bestRank = static_cast<uint32_t>(carryOrder.size());
+    int bestLocality = 3;
+    float bestDistance = 0.0f;
+    for(GameEntity* entity : candidates)
+    {
+        Tile* tile = entity->getPositionTile();
+        if(tile == nullptr || (forced && tile != myTile) || entity->getCarryLock(creature) ||
+           entity->getEntityCarryType(&creature) == EntityCarryType::notCarryable ||
+           !map->pathExists(&creature, myTile, tile))
+            continue;
+        WorkerCarryEntry entry = classifyWorkerCarry(*entity, creature);
+        std::array<uint32_t, 7>::const_iterator order = std::find(carryOrder.begin(), carryOrder.end(), static_cast<uint32_t>(entry));
+        if(order == carryOrder.end())
+            continue;
+        bool accepted = false;
         if(entity->getObjectType() == GameEntityType::missileObject &&
            static_cast<MissileObject*>(entity)->getMissileType() == MissileObjectType::stone)
         {
             Tile* destination = static_cast<MissileStone*>(entity)->getDeliveryTile(creature);
-            if(destination == nullptr || !creature.getGameMap()->pathExists(&creature, myTile, destination))
-                continue;
-            missionDestinations.push_back(destination);
+            accepted = destination != nullptr && map->pathExists(&creature, myTile, destination);
         }
-
-        // We check if the current entity is highest or equal to the older one (if any)
-        if(carryPriority(entity->getEntityCarryType(&creature)) > carryPriority(highestPriority))
+        for(Building* building : buildings)
+            if(building->hasCarryEntitySpot(entity))
+                accepted = true;
+        if(!accepted)
+            continue;
+        uint32_t rank = static_cast<uint32_t>(order - carryOrder.begin());
+        const bool inSight = std::find(sight.begin(), sight.end(), tile) != sight.end();
+        int locality = tile == myTile ? 0 : (inSight ? 1 : 2);
+        float distance = Pathfinding::squaredDistanceTile(*myTile, *tile);
+        if(rank < bestRank || (rank == bestRank && locality < bestLocality) ||
+           (rank == bestRank && locality == 2 && bestLocality == 2 && distance < bestDistance))
         {
-            // We check if a buildings wants this entity
-            std::vector<Tile*> tilesDest = missionDestinations;
-            for(Building* building : buildings)
-            {
-                if(building->hasCarryEntitySpot(entity))
-                {
-                    Tile* tile = building->getCoveredTile(0);
-                    tilesDest.push_back(tile);
-                }
-            }
-
-            if(!tilesDest.empty())
-            {
-                // We found a reachable building for a higher priority entity. We use this from now on
-                carryableEntityInMyTile = nullptr;
-                availableEntities.clear();
-                availableEntities.push_back(entity);
-                highestPriority = entity->getEntityCarryType(&creature);
-                if(myTile == carryableEntTile)
-                {
-                    carryableEntityInMyTile = entity;
-                    carryableEntityInMyTileClients = tilesDest;
-                }
-            }
+            best.clear();
+            bestRank = rank;
+            bestLocality = locality;
+            bestDistance = distance;
         }
-        else if(carryPriority(entity->getEntityCarryType(&creature)) == carryPriority(highestPriority))
-        {
-            // We check if a buildings wants this entity
-            std::vector<Tile*> tilesDest = missionDestinations;
-            for(Building* building : buildings)
-            {
-                if(building->hasCarryEntitySpot(entity))
-                {
-                    Tile* tile = building->getCoveredTile(0);
-                    tilesDest.push_back(tile);
-                }
-            }
-
-            if(!tilesDest.empty())
-            {
-                // We found a reachable building for a higher priority entity. We use this from now on
-                availableEntities.push_back(entity);
-                if((myTile == carryableEntTile) &&
-                   (carryableEntityInMyTile == nullptr))
-                {
-                    carryableEntityInMyTile = entity;
-                    carryableEntityInMyTileClients = tilesDest;
-                }
-            }
-        }
-        else
-        {
-            // Entity with lower priority. We don't proceed
-        }
+        if(rank == bestRank && locality == bestLocality && (locality != 2 || distance == bestDistance))
+            best.push_back(entity);
     }
-
-    if(availableEntities.empty())
+    if(best.empty())
     {
-        // No entity to carry. We can do something else
         creature.popAction();
         return true;
     }
-
-    // If a carryable entity is in my tile, I take it
-    if(carryableEntityInMyTile != nullptr)
-    {
-        creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *carryableEntityInMyTile));
-        return true;
-    }
-
-    // We randomly choose one of the visible carryable entities
-    uint32_t index = Random::Uint(0,availableEntities.size()-1);
-    GameEntity* entity = availableEntities[index];
-    creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *entity));
+    GameEntity* entity = best[Random::Uint(0, best.size()-1)];
+    targetStarted = true;
+    if(forced)
+        creature.popAction();
+    creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *entity, forced));
     return true;
 }

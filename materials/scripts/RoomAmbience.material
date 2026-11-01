@@ -95,3 +95,24 @@ material RoomAmbWeb
         }
     }
 }
+
+// Painted top-view beetles; each particle selects one of four walking frames.
+material LichBeetle
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend alpha_blend
+            depth_write off
+            diffuse vertexcolour
+
+            texture_unit
+            {
+                texture LichBeetle.png
+                tex_address_mode clamp
+            }
+        }
+    }
+}

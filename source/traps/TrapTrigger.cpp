@@ -131,7 +131,7 @@ static TrapRegister reg(new TrapTriggerFactory);
 TrapTrigger::TrapTrigger(GameMap* gameMap) :
     Trap(gameMap)
 {
-    mReloadTime = ConfigManager::getSingleton().getTrapConfigUInt32("TriggerReloadTurns");
+    mReloadTime = ConfigManager::getSingleton().getTrapConfigDouble("TriggerReloadTurns");
     mNbShootsBeforeDeactivation = ConfigManager::getSingleton().getTrapConfigUInt32("TriggerNbShootsBeforeDeactivation");
     setMeshName("");
 }

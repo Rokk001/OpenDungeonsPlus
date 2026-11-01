@@ -224,8 +224,13 @@ bool RoomGuardRoom::useRoom(Creature& creature, bool forced)
     creature.setAnimationState(EntityAnimation::idle_anim);
     creature.jobDone(SkillManager::getResearchValue(getSeat(), SkillType::roomGuardRoom,
         ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomWakefulnessPerDuty"), ResearchEffect::WakefulnessPerDuty));
-    creature.setJobCooldown(Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMin"),
-        ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMax")));
+    uint32_t dutyCooldown = Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMin"),
+        ConfigManager::getSingleton().getRoomConfigUInt32("GuardRoomCooldownDutyMax"));
+    creature.setJobCooldown(dutyCooldown);
+    double dutyCycleTurns = 1.0 + static_cast<double>(creature.getJobCooldown());
+    // Guard duty gives experience on the training hall level
+    creature.receiveExp(ConfigManager::getSingleton().getRoomConfigDouble("GuardRoomXpPerDutyTurn") * dutyCycleTurns
+        * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit));
     addUseDirt(creature, tileCreature, "GuardRoomDirtPerDuty");
 
     return false;

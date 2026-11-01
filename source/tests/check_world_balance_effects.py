@@ -42,12 +42,12 @@ EXPECTED = [
     ("roomHatchery", "LayInterval", "mul", "1.0", "0.8", "0.8"),
     ("roomHatchery", "Capacity", "mul", "1.0", "1.0", "1.5"),
     ("roomLibrary", "PointsPerWork", "mul", "1.0", "1.2", "1.4"),
-    ("roomTrainingHall", "XpPerHit", "mul", "1.0", "1.2", "1.4"),
+    ("roomTrainingHall", "XpPerHit", "mul", "1.0", "1.2", "1.2"),
     ("roomWorkshop", "PointsPerWork", "mul", "1.0", "1.2", "1.4"),
     ("roomGuardRoom", "WakefulnessPerDuty", "mul", "1.0", "0.8", "0.667"),
     ("roomCasino", "Fee", "mul", "1.0", "1.2", "1.4"),
     ("roomCasino", "Mood", "mul", "1.0", "1.2", "1.4"),
-    ("roomArena", "LevelCap", "mul", "1.0", "1.25", "1.5"),
+    ("roomArena", "LevelCap", "mul", "1.0", "1.333333", "2"),
     ("roomPrison", "Capacity", "mul", "1.0", "1.5", "2.0"),
     ("roomPrison", "SkeletonLevel", "add", "0", "1", "2"),
     ("roomInfirmary", "HealTime", "mul", "1.0", "0.8", "0.667"),
@@ -60,14 +60,14 @@ EXPECTED = [
     ("roomGhostRoom", "RevivePrice", "add", "0", "-2000", "-4000"),
     ("roomBridgeWooden", "ClaimResistance", "mul", "1.0", "1.25", "1.5"),
     ("roomBridgeStone", "ClaimResistance", "mul", "1.0", "1.5", "2.0"),
-    ("roomTorture", "ConversionSpeed", "mul", "1.0", "1.2", "1.4"),
+    ("roomTorture", "ConversionSpeed", "mul", "1.0", "1.218", "1.436"),
     ("roomTemple", "PrayerMana", "mul", "1.0", "1.2", "1.4"),
     ("keeperDominion", "CreatureLimit", "add", "2", "4", "6"),
 ] + [(trap, "Damage", "mul") + DAMAGE for trap in
      ("trapCannon", "trapSpike", "trapBoulder", "trapGas", "trapLightning", "trapFireburst")] + [
     ("trapAlarm", "Reload", "mul", "1.0", "0.8", "0.667"),
-    ("trapFear", "Duration", "mul", "1.0", "1.25", "1.5"),
-    ("trapFreeze", "Duration", "mul", "1.0", "1.25", "1.5"),
+    ("trapFear", "Duration", "mul", "1.0", "1.1731", "1.3370"),
+    ("trapFreeze", "Duration", "mul", "1.0", "1.1731", "1.3370"),
     ("trapWatchBanner", "AuraRadius", "mul", "1.0", "1.25", "1.5"),
     ("trapTrigger", "Radius", "add", "0", "1", "2"),
 ] + [(door, "HP", "mul") + DOOR_HP for door in
@@ -93,17 +93,20 @@ EXPECTED = [
     ("spellTremor", "Damage", "mul") + DAMAGE,
     ("spellInferno", "Damage", "mul") + DAMAGE,
     ("spellPossess", "ManaPerSecond", "mul", "1.0", "0.8", "0.667"),
-    ("spellDefector", "Duration", "mul", "1.0", "1.25", "1.5"),
-    ("spellHexenHen", "Duration", "mul", "1.0", "1.25", "1.5"),
+    ("spellDefector", "Duration", "mul", "1.0", "1.1731", "1.3370"),
+    ("spellHexenHen", "Duration", "mul", "1.0", "1.1731", "1.3370"),
     ("spellCreateGold", "Gold", "mul", "1.0", "1.25", "1.5"),
+    ("roomPrison", "BetrayChance", "add", "0", "0.00033175355450236967", "0.0065727699530516446"),
+    ("roomPrison", "MoodLoss", "mul", "1.0", "1.1", "1.2"),
+    ("roomTrainingHall", "LevelCap", "mul", "1.0", "1.5", "2.0"),
 ]
-assert len(EXPECTED) == 73, "the effect table has 73 lines (rows with several skill types count once per skill type)"
+assert len(EXPECTED) == 76, "the effect table has 76 lines (rows with several skill types count once per skill type)"
 
 # --- skills.cfg: the [ResearchEffects] block -------------------------------------------------------------------------
 skills_cfg = read("config/skills.cfg")
 block = skills_cfg[skills_cfg.index("\n[ResearchEffects]\n"):skills_cfg.index("\n[/ResearchEffects]\n")]
 lines = [line.split() for line in block.splitlines()[2:] if line.strip() and not line.strip().startswith("#")]
-assert len(lines) == 73, "one line per effect: %d" % len(lines)
+assert len(lines) == 76, "one line per effect: %d" % len(lines)
 for index, (line, expected) in enumerate(zip(lines, EXPECTED)):
     assert tuple(line) == expected, "line %d of [ResearchEffects]: %s, expected %s" % (index + 1, line, expected)
 assert skills_cfg.index("\n[/FreeLevelOne]\n") < skills_cfg.index("\n[ResearchEffects]\n"), "the block follows the free level one block"
@@ -131,7 +134,7 @@ def documented(text, key):
     return re.search(r"^#\s*%s\s+\(" % key, text, re.M) is not None
 
 
-for key, expected in (("TreasuryGoldPerTile", 1000), ("DormitoryWakefulnessPerTurn", 1.5), ("PrisonSkeletonBaseLevel", 1),
+for key, expected in (("TreasuryGoldPerTile", 1000), ("DormitoryWakefulnessPerTurn", 1.5), ("PrisonSkeletonLevelBonus", 0),
                       ("DungeonHeartHealPerSecond", 3.775), ("DungeonHeartManaPerSecond", 30)):
     assert value(rooms_cfg, key) == expected, key
     assert documented(rooms_cfg, key), "%s is documented in the header of rooms.cfg" % key
@@ -216,7 +219,7 @@ assert "maxGoldinTile" not in treasury and 'getRoomConfigDouble("TreasuryGoldPer
 sleep = read("source/creatureaction/CreatureActionSleep.cpp")
 assert 'getRoomConfigDouble("DormitoryWakefulnessPerTurn")' in sleep and ", 1.5" not in sleep
 prison = read("source/rooms/RoomPrison.cpp")
-assert 'getRoomConfigDouble("PrisonSkeletonBaseLevel")' in prison
+assert 'getRoomConfigDouble("PrisonSkeletonLevelBonus")' in prison and "PrisonSkeletonBaseLevel" not in prison
 assert "(mActualTiles.size() + 1)" in prison and "ResearchEffect::Capacity" in prison
 temple = read("source/rooms/RoomDungeonTemple.cpp")
 assert "HEART_HEAL_PER_SECOND" not in temple and "HEART_HEAL_PER_SECOND" not in read("source/rooms/RoomDungeonTemple.h")
@@ -261,7 +264,8 @@ texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "
          "HeartHeal": "Heart healing per second", "HeartMana": "Heart mana per second", "Price": "Price",
          "HealPerTurn": "Healing per turn", "Speed": "Speed", "Bonus": "Defense bonus", "Factor": "Factor",
          "Lifetime": "Duration", "ManaPerSecond": "Mana per second", "Gold": "Gold",
-         "PortalCooldown": "Portal cooldown", "RelaxTime": "Relaxation time", "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort"}
+         "PortalCooldown": "Portal cooldown", "RelaxTime": "Relaxation time", "GrowTime": "Growth time", "BrewTime": "Brewing time", "CrackTime": "Cracking effort",
+         "MoodLoss": "Prisoner mood loss", "BetrayChance": "Betrayal chance"}
 assert set(texts) == effect_names, "the plan names a text for every effect"
 for effect, text in texts.items():
     text_key = ('"' + effect + '"') if effect in {"GrowTime", "BrewTime", "CrackTime"} else ("ResearchEffect::" + effect)

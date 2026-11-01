@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ai/AiKnowledge.h"
 #include "ai/AiMind.h"
 #include "game/Player.h"
 
@@ -28,7 +29,6 @@
 #include "game/CreatureMerchantAI.h"
 #include "game/SkillManager.h"
 #include "game/Seat.h"
-#include "game/WorkerShare.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "render/CreatureReactions.h"
@@ -57,9 +57,6 @@ const float BATTLE_TIME_COUNT = 10.0f;
 //! \brief Minimum distance to consider that a new event of the same type is in another place
 //! Note that the distance is squared (100 would mean 10 tiles)
 const int MIN_DIST_EVENT_SQUARED = 100;
-
-//! \brief Share (percent) of the counted workers that may reload traps when the trap config has no TrapReloadWorkerSharePercent
-static const double DEFAULT_RELOAD_WORKER_SHARE_PERCENT = 20.0;
 
 //! \brief The number of seconds the local player will not be notified again if the skill queue is empty
 const float NO_RESEARCH_TIME_COUNT = 60.0f;
@@ -439,6 +436,7 @@ void Player::removeEntityFromHand(GameEntity* entity)
     }
 }
 
+//! \brief Dismisses a worker in its heart and refunds the configured mana share.
 bool Player::redemWorkerInHeart(GameEntity* entity, Tile* tile)
 {
     // Only a human dropping an own worker on the tile of a living own heart redeems it.
@@ -474,9 +472,9 @@ bool Player::redemWorkerInHeart(GameEntity* entity, Tile* tile)
     if(heart == nullptr)
         return false;
 
-    // Half of what summoning this worker costs at the current worker count
+    // The configured share of the summoning cost at the current worker count
     int32_t refund = static_cast<int32_t>(
-        SpellSummonWorker::getNextWorkerPriceForPlayer(mGameMap, this) / 2);
+        SpellSummonWorker::getNextWorkerPriceForPlayer(mGameMap, this) * ConfigManager::getSingleton().getSpellConfigDoubleOrDefault("SummonWorkerRefundShare", 0.5));
     getSeat()->addMana(static_cast<double>(refund));
 
     ServerNotification* serverNotification = new ServerNotification(
@@ -1338,101 +1336,19 @@ uint32_t Player::getNbWorkersDoing(CreatureActionType actionType) const
     return mWorkersActions.at(index);
 }
 
-//! \brief Counts the tiles of the map that this player has marked for digging.
+//! \brief Counts known tiles that this player has marked for digging.
 uint32_t Player::getNbMarkedTiles() const
 {
     uint32_t nbMarked = 0;
+    AiKnowledge knowledge(*mGameMap, mSeat);
     for(int xx = 0; xx < mGameMap->getMapSizeX(); ++xx)
     {
         for(int yy = 0; yy < mGameMap->getMapSizeY(); ++yy)
         {
             Tile* tile = mGameMap->getTile(xx, yy);
-            if((tile != nullptr) && tile->getMarkedForDigging(this))
+            if(knowledge.isKnown(tile) && tile->getMarkedForDigging(this))
                 ++nbMarked;
         }
     }
     return nbMarked;
-}
-
-std::vector<CreatureActionType> Player::getWorkerPreferredActions(Creature& worker) const
-{
-    std::vector<CreatureActionType> ret;
-    // We want to have more or less 40% workers digging, 40% claiming ground tiles and 20% claiming wall tiles
-    // Concerning carrying stuff, most workers should try unless more than 20% are already carrying.
-    uint32_t nbWorkersDigging = getNbWorkersDoing(CreatureActionType::searchTileToDig);
-    uint32_t nbWorkersClaimingGround = getNbWorkersDoing(CreatureActionType::searchGroundTileToClaim);
-    uint32_t nbWorkersClaimingWall = getNbWorkersDoing(CreatureActionType::searchWallTileToClaim);
-    uint32_t nbWorkersCarrying = getNbWorkersDoing(CreatureActionType::searchEntityToCarry);
-    // Workers reloading traps are counted in the total (own share, see isWorkerReloadShareOpen)
-    uint32_t nbWorkersReloading = getNbWorkersDoing(CreatureActionType::reloadTrap);
-    // Workers cleaning have their own share too (see CleaningWorkerSharePercent) and are counted in the total.
-    // A worker that cleans a tile still has its search action below the cleaning one, and only the search
-    // action reports to the player, so every cleaning worker is counted once
-    uint32_t nbWorkersCleaning = getNbWorkersDoing(CreatureActionType::searchDirtToClean);
-    // For the total number of workers, we consider only those doing something in the wanted list (and not
-    // the ones fighting or having nothing to do) + the one we are considering
-    uint32_t nbWorkersTotal = WorkerShare::totalWorkers(nbWorkersDigging, nbWorkersClaimingGround,
-            nbWorkersClaimingWall, nbWorkersCarrying, nbWorkersReloading) + nbWorkersCleaning;
-
-    // Cleaning is a side job: it comes first while its share is open and there is something to clean, and it
-    // never replaces the other jobs because they are still in the list after it
-    if(WorkerShare::isCleanShareOpen(nbWorkersCleaning, nbWorkersTotal,
-        ConfigManager::getSingleton().getDirtConfigDouble("CleaningWorkerSharePercent")) &&
-        (getSeat() != nullptr) && getSeat()->hasDirtToClean())
-    {
-        ret.push_back(CreatureActionType::searchDirtToClean);
-    }
-
-    bool isCarryAdded = false;
-    if(WorkerShare::isCarryFirst(nbWorkersCarrying, nbWorkersTotal))
-    {
-        isCarryAdded = true;
-        ret.push_back(CreatureActionType::searchEntityToCarry);
-    }
-
-    bool isClaimWallAdded = false;
-    if(WorkerShare::isClaimWallFirst(nbWorkersDigging, nbWorkersClaimingGround, nbWorkersTotal))
-    {
-        isClaimWallAdded = true;
-        ret.push_back(CreatureActionType::searchWallTileToClaim);
-    }
-
-    bool digTileFirst = false;
-    if(nbWorkersDigging < nbWorkersClaimingGround)
-        digTileFirst = true;
-    else if(nbWorkersDigging == nbWorkersClaimingGround)
-        digTileFirst = (Random::Uint(0,1) == 0);
-
-    if(digTileFirst)
-    {
-        ret.push_back(CreatureActionType::searchTileToDig);
-        ret.push_back(CreatureActionType::searchGroundTileToClaim);
-    }
-    else
-    {
-        ret.push_back(CreatureActionType::searchGroundTileToClaim);
-        ret.push_back(CreatureActionType::searchTileToDig);
-    }
-
-    if(!isClaimWallAdded)
-        ret.push_back(CreatureActionType::searchWallTileToClaim);
-    if(!isCarryAdded)
-        ret.push_back(CreatureActionType::searchEntityToCarry);
-
-    return ret;
-}
-
-bool Player::isWorkerReloadShareOpen() const
-{
-    // Same counting as in getWorkerPreferredActions: the workers reloading traps may be at most the
-    // configured share (default 20%) of the workers doing the listed jobs + the one we are considering
-    uint32_t nbWorkersReloading = getNbWorkersDoing(CreatureActionType::reloadTrap);
-    uint32_t nbWorkersCleaning = getNbWorkersDoing(CreatureActionType::searchDirtToClean);
-    uint32_t nbWorkersTotal = WorkerShare::totalWorkers(getNbWorkersDoing(CreatureActionType::searchTileToDig),
-            getNbWorkersDoing(CreatureActionType::searchGroundTileToClaim),
-            getNbWorkersDoing(CreatureActionType::searchWallTileToClaim),
-            getNbWorkersDoing(CreatureActionType::searchEntityToCarry), nbWorkersReloading) + nbWorkersCleaning;
-
-    double share = ConfigManager::getSingleton().getTrapConfigDoubleOrDefault("TrapReloadWorkerSharePercent", DEFAULT_RELOAD_WORKER_SHARE_PERCENT);
-    return WorkerShare::isReloadShareOpen(nbWorkersReloading, nbWorkersTotal, share);
 }
