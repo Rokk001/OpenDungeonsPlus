@@ -273,9 +273,9 @@ using Building=Room;
 //! \brief Declares the actual carry constructor state while excluding unrelated rendering and path services.
 struct CreatureActionCarryEntity:CreatureAction{
  GameEntity* mEntityToCarry=nullptr;Tile* mTileDest=nullptr;Building* mBuildingDest=nullptr;
- bool mIsDrag=false,mCorpseDrag=false,mExternalDrag=false,mDelivered=false,mForced=false;int mDragPhase=0,mDragLayTurns=0;double mDragFollowArc=0;
+ bool mIsDrag=false,mCorpseDrag=false,mExternalDrag=false,mDelivered=false,mForced=false,mDigGold=false;int mDragPhase=0,mDragLayTurns=0;double mDragFollowArc=0;
  //! \brief Executes the production room-delivery constructor supplied by the streams probe.
- CreatureActionCarryEntity(Creature&,GameEntity&,Building&,bool forced=false);
+ CreatureActionCarryEntity(Creature&,GameEntity&,Building&,bool forced=false,bool digGold=false);
  //! \brief Uses the production own-seat living-creature drag selection.
  static bool isPulledOverGround(const Creature&,GameEntity&);
  //! \brief Supplies drag attachment without changing the saved knockout countdown.

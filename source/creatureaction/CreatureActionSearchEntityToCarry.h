@@ -24,22 +24,26 @@
 class CreatureActionSearchEntityToCarry : public CreatureAction
 {
 public:
+    //! \brief Creates a search that returns to job selection after one target.
     CreatureActionSearchEntityToCarry(Creature& creature, bool forced);
     virtual ~CreatureActionSearchEntityToCarry();
 
     CreatureActionType getType() const override
     { return CreatureActionType::searchEntityToCarry; }
 
+    //! \brief Advances the search while retaining its one-target state.
     std::function<bool()> action() override;
 
     //! \brief Returns whether this search was forced by a hand drop.
     bool isForced() const { return mForced; }
     //! \brief Selects reachable cargo and its existing building or configured mission destination.
     //! \brief Searches cargo with infirmaries considered before beds.
-    static bool handleSearchEntityToCarry(Creature& creature, bool forced);
+    //! \param targetStarted Whether a target has already been handed to a grab action.
+    static bool handleSearchEntityToCarry(Creature& creature, bool forced, bool& targetStarted);
 
 private:
     bool mForced;
+    bool mTargetStarted;
 };
 
 #endif // CREATUREACTIONSEARCHENTITYTOCARRY_H

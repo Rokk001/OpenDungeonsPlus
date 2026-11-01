@@ -27,6 +27,20 @@ assert 'carryOrder' in carry and 'classifyWorkerCarry' in carry
 assert 'getEntityFromTypeAndName' in carry and 'getCarryLock(creature)' in carry
 assert 'hasCarryEntitySpot(entity)' in carry and 'getDeliveryTile(creature)' in carry
 assert 'if(forced)' in carry and 'creature.popAction()' in carry
+assert carry.index('if(targetStarted)') < carry.index('std::vector<GameEntity*> candidates')
+assert carry.index('targetStarted = true;') < carry.index('CreatureActionGrabEntity>(creature, *entity, forced)')
+assert 'mTargetStarted(false)' in carry and 'std::ref(mTargetStarted)' in carry
+carry_header = read('source/creatureaction/CreatureActionCarryEntity.h')
+grab_header = read('source/creatureaction/CreatureActionGrabEntity.h')
+assert 'bool isDigGold() const { return mDigGold; }' in carry_header
+assert 'bool isDigGold() const { return mDigGold; }' in grab_header
+assert 'bool forced = false, bool digGold = false' in carry_header and 'bool forced = false, bool digGold = false' in grab_header
+assert 'bool isForced() const' in grab_header
+assert 'mForced, mDigGold' in read('source/creatureaction/CreatureActionGrabEntity.cpp')
+assert 'mDigGold(digGold)' in read('source/creatureaction/CreatureActionGrabEntity.cpp')
+assert read('source/creatureaction/CreatureActionCarryEntity.cpp').count('mDigGold(digGold)') == 2
+for source in (dig, read('source/creatureaction/CreatureActionDigTile.cpp')):
+    assert 'CreatureActionGrabEntity>(creature, *obj, forced, true)' in source
 clean = read('source/creatureaction/CreatureActionSearchDirtToClean.cpp')
 assert 'activeCleaners' in clean and 'getWorkerCleanTilesPerCleaner()' in clean
 clean_action = read('source/creatureaction/CreatureActionCleanTile.cpp')
@@ -47,11 +61,13 @@ assert 'isForcedTransport(patient.reservedBy)' in streams and 'savedPatients' in
 assert 'spot.second->isCorpseCarried()' in read('source/rooms/RoomCrypt.cpp')
 assert 'getCorpseCarrierName().empty()' in read('source/rooms/RoomCrypt.cpp')
 grab = read('source/creatureaction/CreatureActionGrabEntity.cpp')
-assert '*entity, forced)' in carry and '*buildingWants, forced)' in grab
+assert '*entity, forced)' in carry and '*buildingWants, forced, digGold)' in grab
 assert 'getWorkerJobSettings().goldFirst' in drop and 'hasWorkerDigging()' in drop
 assert 'dropWalls[Random::Uint' in drop
 dig_action = read('source/creatureaction/CreatureActionDigTile.cpp')
-assert 'getWorkerJob() != WorkerJob::dig' in dig_action
+assert 'if(!forced && creature.getWorkerJob() != WorkerJob::dig)' in dig_action
+assert 'std::ref(mTilePos), mForced' in dig_action
+assert 'Tile& tilePos, bool forced = false' in read('source/creatureaction/CreatureActionDigTile.h')
 for repeat in ('CreatureActionSearchTileToDig>(*this, true)', 'CreatureActionSearchGroundTileToClaim>(*this, true)', 'CreatureActionSearchWallTileToClaim>(*this, true)'):
     assert repeat not in drop
 assert 'isWoundedForBedCarry()' not in read('source/rooms/RoomDormitory.cpp')

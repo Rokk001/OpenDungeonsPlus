@@ -46,9 +46,11 @@ bool infirmaryFirst(Building* building)
 }
 }
 
+//! \brief Creates a carry search that returns to job selection after one target.
 CreatureActionSearchEntityToCarry::CreatureActionSearchEntityToCarry(Creature& creature, bool forced) :
     CreatureAction(creature),
-    mForced(forced)
+    mForced(forced),
+    mTargetStarted(false)
 {
     mCreature.getSeat()->getPlayer()->notifyWorkerAction(mCreature, getType());
 }
@@ -58,15 +60,21 @@ CreatureActionSearchEntityToCarry::~CreatureActionSearchEntityToCarry()
     mCreature.getSeat()->getPlayer()->notifyWorkerStopsAction(mCreature, getType());
 }
 
+//! \brief Advances the carry search while retaining its one-target state.
 std::function<bool()> CreatureActionSearchEntityToCarry::action()
 {
     return std::bind(&CreatureActionSearchEntityToCarry::handleSearchEntityToCarry,
-        std::ref(mCreature), mForced);
+        std::ref(mCreature), mForced, std::ref(mTargetStarted));
 }
 
-//! \brief Chooses a reachable carry target in the keeper's configured order.
-bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& creature, bool forced)
+//! \brief Chooses one carry target and returns to job selection after it finishes.
+bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& creature, bool forced, bool& targetStarted)
 {
+    if(targetStarted)
+    {
+        creature.popAction();
+        return true;
+    }
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr || (!forced && creature.getWorkerJob() != WorkerJob::carry))
     {
@@ -140,6 +148,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
         return true;
     }
     GameEntity* entity = best[Random::Uint(0, best.size()-1)];
+    targetStarted = true;
     if(forced)
         creature.popAction();
     creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *entity, forced));

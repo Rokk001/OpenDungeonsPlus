@@ -75,8 +75,8 @@ void appendTrailSection(const std::vector<Ogre::Vector2>& trail, const std::vect
 
 }
 
-//! \brief Reserves the destination and starts carrying or pulling the chosen entity.
-CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced) :
+//! \brief Reserves the destination and retains the origin of the chosen transport.
+CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced, bool digGold) :
     CreatureAction(creature),
     mEntityToCarry(&entityToCarry),
     mTileDest(nullptr),
@@ -88,6 +88,7 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
          static_cast<Room&>(buildingDest).getType() == RoomType::prison)),
     mDelivered(false),
     mForced(forced),
+    mDigGold(digGold),
     mDragPhase(0),
     mDragLayTurns(0),
     mDragFollowArc(0.0)
@@ -112,8 +113,8 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
     OD_LOG_INF("creature=" + mCreature.getName() + (mIsDrag ? " is pulling " : " is carrying ") + mEntityToCarry->getName() + " to tile=" + Tile::displayAsString(mTileDest));
 }
 
-//! \brief Reuses normal carry locking, mesh attachment and interruption cleanup for mission destinations.
-CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest, bool forced) :
+//! \brief Carries a mission item while retaining the transport's origin.
+CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest, bool forced, bool digGold) :
     CreatureAction(creature),
     mEntityToCarry(&entityToCarry),
     mTileDest(&tileDest),
@@ -123,6 +124,7 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
     mExternalDrag(false),
     mDelivered(false),
     mForced(forced),
+    mDigGold(digGold),
     mDragPhase(0),
     mDragLayTurns(0),
     mDragFollowArc(0.0)

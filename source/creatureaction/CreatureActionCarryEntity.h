@@ -36,10 +36,12 @@ class CreatureActionCarryEntity : public CreatureAction, public GameEntityListen
 public:
     //! \brief Reserves a fitting cot when starting a carry to an infirmary.
     //! \param forced Whether a hand drop forced this one transport.
-    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced = false);
+    //! \param digGold Whether this transport belongs to digging rather than the carry job.
+    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced = false, bool digGold = false);
     //! \brief Carries a mission item visibly to its exact script destination without inventing a building.
     //! \param forced Whether a hand drop forced this one transport.
-    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest, bool forced = false);
+    //! \param digGold Whether this transport belongs to digging rather than the carry job.
+    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest, bool forced = false, bool digGold = false);
 
     virtual ~CreatureActionCarryEntity();
 
@@ -67,6 +69,8 @@ public:
     GameEntity* getCarriedTarget() const { return mEntityToCarry; }
     //! \brief Returns whether a hand drop forced this single transport.
     bool isForced() const { return mForced; }
+    //! \brief Returns whether this gold is transported as part of digging.
+    bool isDigGold() const { return mDigGold; }
     //! \brief Keeps a running carry attached when its destination room is absorbed.
     void replaceDestination(Building& oldRoom, Building& newRoom);
 
@@ -94,6 +98,8 @@ private:
     bool mDelivered;
     //! Whether the transport is the single task forced by a hand drop.
     bool mForced;
+    //! Whether the cargo is a digger's own gold rather than carry-job work.
+    bool mDigGold;
     //! Pulling: 0 while the worker walks, 1 while the creature is moved the last steps into the bed
     int32_t mDragPhase;
     //! Pulling: turns spent in phase 1
