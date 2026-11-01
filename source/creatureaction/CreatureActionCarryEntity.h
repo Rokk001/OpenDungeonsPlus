@@ -35,9 +35,13 @@ class CreatureActionCarryEntity : public CreatureAction, public GameEntityListen
 {
 public:
     //! \brief Reserves a fitting cot when starting a carry to an infirmary.
-    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest);
+    //! \param forced Whether a hand drop forced this one transport.
+    //! \param digGold Whether this transport belongs to digging rather than the carry job.
+    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced = false, bool digGold = false);
     //! \brief Carries a mission item visibly to its exact script destination without inventing a building.
-    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest);
+    //! \param forced Whether a hand drop forced this one transport.
+    //! \param digGold Whether this transport belongs to digging rather than the carry job.
+    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest, bool forced = false, bool digGold = false);
 
     virtual ~CreatureActionCarryEntity();
 
@@ -55,17 +59,18 @@ public:
     //! \brief Walks cargo to its destination, using a furniture-aware stand position for merchant tables.
     static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
 
-    //! \brief True if the entity is not carried but pulled over the ground: a living creature of the seat of the
-    //! carrier (hurt, knocked out for a while or knocked out to death) on its way to its own bed. Everything else
-    //! is carried: gold, bodies, traps and the knocked out enemy creatures that are taken to a prison.
+    //! \brief Returns whether a knocked-out creature or body is pulled rather than carried.
     static bool isPulledOverGround(const Creature& carrier, GameEntity& entity);
 
-    //! \brief One turn of pulling a hurt creature (see mIsDrag). The worker walks backwards to the bed with
-    //! the creature on the ground behind it: the creature is not in the carry node of the worker, it keeps
-    //! its place on the map and follows the way of the worker at a fixed distance. This action is deleted
-    //! by popAction, so nothing of it may be used after that call.
+    //! \brief Advances a ground transport until delivery or interruption.
     bool handleDragCreature();
 
+    //! \brief Returns the entity currently being carried or pulled by this action.
+    GameEntity* getCarriedTarget() const { return mEntityToCarry; }
+    //! \brief Returns whether a hand drop forced this single transport.
+    bool isForced() const { return mForced; }
+    //! \brief Returns whether this gold is transported as part of digging.
+    bool isDigGold() const { return mDigGold; }
     //! \brief Keeps a running carry attached when its destination room is absorbed.
     void replaceDestination(Building& oldRoom, Building& newRoom);
 
@@ -85,6 +90,16 @@ private:
 
     //! True if the entity is pulled instead of carried
     bool mIsDrag;
+    //! Whether this ground transport began with an intact corpse.
+    bool mCorpseDrag;
+    //! Whether the destination is a prison or a crypt rather than an own bed.
+    bool mExternalDrag;
+    //! Whether the worker completed delivery at the reserved destination.
+    bool mDelivered;
+    //! Whether the transport is the single task forced by a hand drop.
+    bool mForced;
+    //! Whether the cargo is a digger's own gold rather than carry-job work.
+    bool mDigGold;
     //! Pulling: 0 while the worker walks, 1 while the creature is moved the last steps into the bed
     int32_t mDragPhase;
     //! Pulling: turns spent in phase 1

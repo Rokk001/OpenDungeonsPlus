@@ -22,23 +22,28 @@
 
 class Tile;
 
+//! \brief Digs one marked target and retains any hand-drop override.
 class CreatureActionDigTile : public CreatureAction
 {
 public:
-    CreatureActionDigTile(Creature& creature, Tile& tileDig, Tile& tilePos);
+    //! \brief Reserves a digging place and records a hand-drop override.
+    CreatureActionDigTile(Creature& creature, Tile& tileDig, Tile& tilePos, bool forced = false);
     virtual ~CreatureActionDigTile();
 
     CreatureActionType getType() const override
     { return CreatureActionType::digTile; }
 
+    //! \brief Advances the digging target while retaining its hand-drop origin.
     std::function<bool()> action() override;
 
     //! \brief Digs with unchanged timing and reports the actual stroke tile, next worker step and credited gold.
-    static bool handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos);
+    //! \param forced Whether this target was forced by a hand drop.
+    static bool handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos, bool forced);
 
 private:
     Tile& mTileDig;
     Tile& mTilePos;
+    bool mForced;
 };
 
 #endif // CREATUREACTIONDIGTILE_H

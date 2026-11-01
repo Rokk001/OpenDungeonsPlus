@@ -16,6 +16,7 @@
  */
 
 #include "creatureaction/CreatureActionSearchGroundTileToClaim.h"
+#include "creatureaction/WorkerSearchTargets.h"
 
 #include "creatureaction/CreatureActionClaimGroundTile.h"
 #include "entities/Creature.h"
@@ -63,6 +64,7 @@ std::function<bool()> CreatureActionSearchGroundTileToClaim::action()
         std::ref(mCreature), getNbTurns(), mForced);
 }
 
+//! \brief Searches eligible work while the worker retains this job.
 bool CreatureActionSearchGroundTileToClaim::handleSearchGroundTileToClaim(Creature& creature, int32_t nbTurns, bool forced)
 {
     if(creature.getClaimRate() <= 0.0)
@@ -74,6 +76,12 @@ bool CreatureActionSearchGroundTileToClaim::handleSearchGroundTileToClaim(Creatu
         OD_LOG_ERR("creature=" + creature.getName() + ", pos=" + Helper::toString(creature.getPosition()));
         creature.popAction();
         return false;
+    }
+
+    if(!forced && creature.getWorkerJob() != WorkerJob::claimGround)
+    {
+        creature.popAction();
+        return true;
     }
 
     if(!forced)
@@ -91,7 +99,7 @@ bool CreatureActionSearchGroundTileToClaim::handleSearchGroundTileToClaim(Creatu
     // than the wearing down, so it pays off at once
     float distRepair = -1;
     Tile* tileToRepair = nullptr;
-    for(Tile* tile : creature.getTilesWithinSightRadius())
+    for(Tile* tile : workerSearchTiles(creature, WorkerJob::claimGround))
     {
         if(tile == nullptr)
             continue;
@@ -179,7 +187,7 @@ bool CreatureActionSearchGroundTileToClaim::handleSearchGroundTileToClaim(Creatu
     // If we still haven't found a tile to claim, we try to take the closest one
     float distBest = -1;
     Tile* tileToClaim = nullptr;
-    for (Tile* tile : creature.getTilesWithinSightRadius())
+    for (Tile* tile : workerSearchTiles(creature, WorkerJob::claimGround))
     {
         // if this tile is not fully claimed yet or the tile is of another player's color
         if(tile == nullptr)

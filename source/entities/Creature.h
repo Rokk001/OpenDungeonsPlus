@@ -21,6 +21,8 @@
 #ifndef CREATURE_H
 #define CREATURE_H
 
+#include "game/WorkerJobs.h"
+
 #include "entities/MovableGameEntity.h"
 #include "entities/CreatureActivity.h"
 #include "entities/DefenceChance.h"
@@ -172,6 +174,15 @@ class Creature: public MovableGameEntity, public Subject
     friend class ODClient;
 public:
     
+    //! \brief Reports whether the creature is currently in a keeper hand.
+    bool isInHand() const { return mIsInHand; }
+    //! \brief Returns the worker job held across turns and saves.
+    WorkerJob getWorkerJob() const { return mWorkerJob; }
+    //! \brief Reports whether this worker holds its job as a fixed assignment.
+    bool isWorkerJobFixed() const { return mWorkerJobFixed; }
+    //! \brief Sets the worker's current job and whether it is fixed.
+    void setWorkerJob(WorkerJob job, bool fixed) { mWorkerJob = job; mWorkerJobFixed = fixed; }
+
     bool parkingBit;
     
     bool parkedBit;
@@ -209,16 +220,6 @@ public:
     static const double WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT;
     //! Speed factor of a worker that pulls a creature (DormitoryWoundedDragWorkerSpeedFactor)
     static const double WOUNDED_DRAG_WORKER_SPEED_FACTOR_DEFAULT;
-    //! Radius in tiles in which a worker looks for a hurt creature (DormitoryWoundedCarryRadius)
-    static const double WOUNDED_CARRY_RADIUS_DEFAULT;
-    //! Priority against the other things a worker can carry (DormitoryWoundedCarryPriority)
-    static const double WOUNDED_CARRY_PRIORITY_DEFAULT;
-    //! Percent of health below which a creature is hurt enough to be carried (DormitoryWoundedCarryHpPercent)
-    static const double WOUNDED_CARRY_HP_PERCENT_DEFAULT;
-    //! Whether a creature knocked out for a while may be carried, 1 = yes (DormitoryWoundedCarryTempKo)
-    static const double WOUNDED_CARRY_TEMP_KO_DEFAULT;
-    //! Number of turns before a creature can be pulled again (DormitoryWoundedCarryCooldown)
-    static const double WOUNDED_CARRY_COOLDOWN_DEFAULT;
     //! Factor that turns a fraction into percent
     static const double PERCENT_FACTOR;
 
@@ -1170,23 +1171,20 @@ public:
     //! \brief Tells whether the creature can go through the given tile.
     bool canGoThroughTile(Tile* tile) const;
 
-    //! \brief Keeps own knockout bed/infirmary eligibility and refuses workers, decaying or consumed bodies.
+    //! \brief Keeps own knockout bed/infirmary eligibility and refuses decaying or consumed bodies.
     virtual EntityCarryType getEntityCarryType(Creature* carrier) override;
     //! \brief Pauses the body lie time while a worker carries it.
     virtual void notifyEntityCarryOn(Creature* carrier) override;
     //! \brief Resumes body lie time at the delivery or interrupted carry position.
     virtual void notifyEntityCarryOff(const Ogre::Vector3& position) override;
-
-    //! \brief Server side. True if the creature is hurt enough to be pulled to its bed by a worker:
-    //! alive, own bed in a dormitory, not standing on it, hit points below the configured share,
-    //! no fight or flight going on, no hostile creature close, not in jail, not possessed, not a
-    //! worker or in the hand and not on cooldown after the last time. The worker and the distance
-    //! are not considered here. An admitted infirmary patient stays on its paid cot.
-    bool isWoundedForBedCarry() const;
+    //! \brief Pauses and records a corpse transport while it is pulled on the map.
+    void notifyCorpseDragStart(const Creature& carrier, bool forced);
+    //! \brief Resumes the corpse timer after its ground transport ends.
+    void notifyCorpseDragEnd();
 
     //! \brief Server side. True if the creature is knocked out to death and a worker may pull it to its
     //! bed: alive, own bed in a dormitory of its seat, no hostile creature close, not in jail, not
-    //! possessed, not a worker or in the hand. Without an own bed it is not moved at all.
+    //! possessed or in the hand. Without an own bed it is not moved at all.
     bool isKoToDeathForBedPull() const;
 
     //! \brief True if the creature owns a bed (home tile) in a dormitory of its seat
@@ -1287,6 +1285,8 @@ public:
 
     inline const std::vector<std::unique_ptr<CreatureAction>>& getActions() const
     { return mActions; }
+    //! \brief Returns whether a one-task hand-drop transport is running.
+    bool hasForcedWorkerCarry() const;
 
     inline double getWakefulness() const
     { return mWakefulness; }
@@ -1797,6 +1797,9 @@ protected:
     virtual void fireAddEntity(Seat* seat,  bool async, NodeType nt) override;
     virtual void fireRemoveEntity(Seat* seat,NodeType nt = NodeType::MTILES_NODE) override;
 private:
+    //! \brief Assigned worker job and fixed/free status, saved with the creature.
+    WorkerJob mWorkerJob = WorkerJob::none;
+    bool mWorkerJobFixed = false;
     
     enum ForceAction
     {
@@ -2177,7 +2180,6 @@ private:
     double                          mDragDirtFactor;
 
     //! \brief Used on server side. No worker pulls the creature to its bed again before this turn (not saved)
-    int64_t                         mWoundedCarryNextTurn;
 
     //! \brief Used on server side for the mood. Failed job searches (reset when the creature works)
     int32_t                         mNbTurnsOutOfWork;

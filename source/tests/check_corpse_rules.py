@@ -11,6 +11,8 @@ def corpse_fixture():
  GameMap* getGameMap()const{return map;}
  //! \brief Returns the actual carry marker.
  bool isCorpseCarried()const{return mIsCarried;}
+ //! \brief Returns the saved carrier identity used by crypt reservation export.
+ const std::string& getCorpseCarrierName()const{return mCorpseCarrierName;}
  //! \brief Restores tile registration before life is restored.
  void addEntityToPositionTile(){check(!alive,"crypt release precedes revival");onMap=true;}
  //! \brief Observes the unchanged equipment drop.
@@ -114,9 +116,9 @@ struct RoomCrypt:Room{GameMap* map=nullptr;std::map<Tile*,Creature*> mRottingCre
     source = read('source/entities/Creature.cpp')
     death = function(function(source,'void Creature::doUpkeep('),'    if (!isAlive())')
     carry = function(source,'EntityCarryType Creature::getEntityCarryType(')
-    carry_body = carry[carry.index('    if(getDefinition()->isWorker() || getDefinition()->isUndead())'):carry.index('    // A creature knocked')]
-    dead_guard = carry[carry.index('    if(getHP() <= 0.0)'):carry.index('    // A hurt creature')]
-    carry_code = '\nEntityCarryType Creature::carryDead()const{'+carry_body+dead_guard+'return EntityCarryType::notCarryable;}\n'
+    dead_start = carry.index('    if(getHP() <= 0.0 &&')
+    dead_guard = carry[dead_start:carry.index('    return EntityCarryType::notCarryable;', dead_start)]
+    carry_code = '\nEntityCarryType Creature::carryDead()const{'+dead_guard+'return EntityCarryType::notCarryable;}\n'
     crypt = read('source/rooms/RoomCrypt.cpp')
     return base+world+declarations+''.join(function(crypt,sig) for sig in
         ['Tile* RoomCrypt::getCorpseSpot(', 'void RoomCrypt::removeCorpse(', 'void RoomCrypt::notifyCorpseDecayed('])+\

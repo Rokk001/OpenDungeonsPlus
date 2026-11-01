@@ -94,7 +94,7 @@ for text, room, member, work in [(library_cpp, 'RoomLibrary', 'mSkillPoints', 'p
                                  (workshop_cpp, 'RoomWorkshop', 'mPoints', 'work')]:
     assert 'double ' + member + ';' in read('source/rooms/' + room + '.h'), 'work accumulator must retain fractions'
     assert member + ' += ' + work + ';' in text, 'work must reach the fractional accumulator'
-    assert 'os << ' + member in text and 'is >> ' + member in text, 'fractional work must survive saves'
+    assert (('std::setprecision(17) << ' if room == 'RoomLibrary' else 'os << ') + member) in text and 'is >> ' + member in text, 'fractional work must survive saves'
 assert 'mPoints += roomAbs->mPoints;' in workshop_cpp, 'absorbed workshop fractions must be retained'
 # Rooms without output effect do not read the factor (crypt, treasury, portals, heart, bridges, toilet)
 for path in ('RoomCrypt', 'RoomTreasury', 'RoomPortal', 'RoomPortalWave', 'RoomDungeonTemple', 'RoomBridge', 'RoomToilet'):

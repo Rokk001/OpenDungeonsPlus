@@ -1,9 +1,8 @@
-"""Workers pull hurt creatures into their bed by the legs.
+"""Workers pull knocked-out creatures and corpses over the ground.
 
-Pure source wiring checks (no compiler, no game): server authority, configuration, one worker per creature, abort
-rules, the creature is pulled over the ground (never put into the carry node of the worker), the movement of the
-two (speed, direction, path), the clip names with their fallbacks, nothing new to save or send, the client
-reactions. The carrying of things that are really carried (gold, bodies, prisoners, traps) must stay as it was."""
+Pure source wiring checks (no compiler, no game): server authority, configuration, one worker per creature,
+abort rules, ground pulling, movement, clip fallbacks, saved corpse identity and client reactions.
+Non-creature cargo remains carried."""
 from pathlib import Path
 import re
 
@@ -35,11 +34,14 @@ render = read('source/render/RenderManager.cpp')
 config_manager = read('source/utils/ConfigManager.cpp')
 
 # Every number is in the configuration: documented, set, read with a default
-number_keys = ['DormitoryWoundedCarryHpPercent', 'DormitoryWoundedCarryRadius', 'DormitoryWoundedCarryPriority',
-               'DormitoryWoundedCarryCooldown', 'DormitoryWoundedKoDeathCooldown', 'DormitoryWoundedCarryEnemyRadius', 'DormitoryWoundedCarryMaxTurns',
-               'DormitoryWoundedCarryTempKo', 'DormitoryWoundedDragGap', 'DormitoryWoundedDragWorkerSpeedFactor',
+number_keys = ['DormitoryWoundedCarryEnemyRadius', 'DormitoryWoundedCarryMaxTurns',
+               'DormitoryWoundedDragGap', 'DormitoryWoundedDragWorkerSpeedFactor',
                'DormitoryWoundedDragFollowSpeedFactor', 'DormitoryWoundedDragMaxDistance',
                'DormitoryWoundedDragLayTurns']
+for removed in ('DormitoryWoundedCarryRadius', 'DormitoryWoundedCarryPriority',
+                'DormitoryWoundedCarryCooldown', 'DormitoryWoundedKoDeathCooldown', 'DormitoryWoundedCarryTempKo'):
+    assert removed not in rooms_cfg + creature + carry
+assert 'DormitoryWoundedCarryHpPercent' in rooms_cfg and 'DormitoryWoundedCarryHpPercent' in creature
 for key in number_keys:
     assert re.search(r'^# ' + key + r'\s', rooms_cfg, re.M), key + ' not documented'
     assert re.search(r'^    ' + key + r'\t[\d.]+', rooms_cfg, re.M), key + ' not set'
@@ -58,27 +60,22 @@ assert 'std::string ConfigManager::getRoomConfigStringOrDefault(' in config_mana
 # A new carry priority exists, below the other carryable things
 assert re.search(r'corpse,\s+woundedCreature,\s+skillEntity', entity_h)
 
-# The creature decides on the server: own seat, radius, priority from the config, nothing for other seats
+# Knocked-out creatures use their own bed or infirmary, and walking patients are not selected.
 carry_type = function_body(creature, 'EntityCarryType Creature::getEntityCarryType(')
-assert 'carrier->getSeat() == getSeat()' in carry_type and 'getIsOnServerMap()' in carry_type
-assert 'isWoundedForBedCarry()' in carry_type and 'DormitoryWoundedCarryRadius' in carry_type
-
-wounded = function_body(creature, 'bool Creature::isWoundedForBedCarry() const')
-for needle in ('getIsOnServerMap()', 'isAlive()', 'isPossessed()', 'isInPrison()', 'mIsBeingDragged',
-               'mWoundedCarryNextTurn', 'CreatureActionType::fight', 'CreatureActionType::flee',
-               'isHostileNear(', 'hasOwnBedInDormitory()', 'myTile == mHomeTile'):
-    assert needle in wounded, needle
-# No dormitory with an own bed of the seat = not pulled at all (a worker never moved a hurt creature before either)
+assert 'carrier->getSeat() == getSeat()' in carry_type and 'mKoTurnCounter < 0' in carry_type
+assert 'isWoundedForBedCarry()' not in creature + creature_h + dormitory
+assert 'EntityCarryType::woundedCreature' not in carry_type
+ko_pull = function_body(creature, 'bool Creature::isKoToDeathForBedPull() const')
 own_bed = function_body(creature, 'bool Creature::hasOwnBedInDormitory() const')
 assert 'mHomeTile != nullptr' in own_bed and 'RoomType::dormitory' in own_bed and 'getSeat() == getSeat()' in own_bed
-assert '!hasOwnBedInDormitory()' in wounded
+assert '!hasOwnBedInDormitory()' in ko_pull
 
 # One worker per creature: the existing carry lock; the creature stands still, the pause after the pulling
 assert 'getCarryLock' in read('source/entities/Tile.cpp')
 start = function_body(creature, 'void Creature::notifyDragStart(')
 assert 'mIsBeingDragged = true;' in start and 'clearActionQueue();' in start
 end = function_body(creature, 'void Creature::notifyDragEnd(')
-assert 'mWoundedCarryNextTurn =' in end and 'mIsBeingDragged = false;' in end
+assert 'mWoundedCarryNextTurn' not in end and 'mIsBeingDragged = false;' in end
 assert 'if(mIsBeingDragged && (mKoTurnCounter == 0) && isAlive())' in creature
 
 # The carrying of real carried things is as it was: the entity is taken out of the map, nothing of the pulling in it
@@ -92,8 +89,7 @@ assert 'nbTurnsActive' not in handler and 'isHostileNear' not in handler
 # Pulled, not carried: the hurt creature never goes into the carry node of the worker
 assert 'static bool isPulledOverGround(const Creature& carrier, GameEntity& entity);' in carry_h
 pulled = function_body(carry, 'bool CreatureActionCarryEntity::isPulledOverGround(')
-assert 'isAlive()' in pulled and 'getSeat() == carrier.getSeat()' in pulled
-assert 'getKoTurnCounter' not in pulled, 'knocked out to death is pulled like the other hurt ones'
+assert '!patient.isAlive()' in pulled and 'getKoTurnCounter() < 0' in pulled
 assert 'isPulledOverGround(creature, entityToCarry)' in carry
 ctor = function_body(carry, 'CreatureActionCarryEntity::CreatureActionCarryEntity(')
 assert re.search(r'if\(mIsDrag\)\s*\{\s*startDrag\(\);\s*\}\s*else\s*\{\s*mEntityToCarry->notifyEntityCarryOn\(&mCreature\);'
@@ -117,7 +113,7 @@ for needle in ('isHostileNear(', 'DormitoryWoundedCarryEnemyRadius', 'DormitoryW
                'getNbTurnsActive()'):
     assert needle in drag, needle
 assert 'getKoTurnCounter() < 0' not in drag, 'a creature knocked out to death is pulled on, not let go'
-assert 'popAction' not in drag and 'setDestination(' not in drag, 'only stopDragging may pop the action'
+assert 'popAction' not in drag and 'setDestination(mTileDest)' in drag, 'only stopDragging may pop the action'
 stop = function_body(carry, 'bool CreatureActionCarryEntity::stopDragging(')
 assert stop.rstrip().endswith('mCreature.popAction();\n    return false;'), 'nothing of the action is used after popAction'
 assert 'clearDestinations(EntityAnimation::idle_anim' in stop
@@ -143,7 +139,7 @@ assert update.count('* facing') >= 4
 
 # The dormitory accepts the hurt creature, lays it in its bed (sleep heals) and copes with a creature that is gone
 has_spot = function_body(dormitory, 'bool RoomDormitory::hasCarryEntitySpot(')
-assert 'isWoundedForBedCarry()' in has_spot and 'isKoToDeathForBedPull()' in has_spot and 'getHomeTile()' in has_spot
+assert 'isWoundedForBedCarry()' not in has_spot and 'isKoToDeathForBedPull()' in has_spot and 'getHomeTile()' in has_spot
 notify = function_body(dormitory, 'void RoomDormitory::notifyCarryingStateChanged(')
 assert 'carriedEntity == nullptr' in notify and 'carrierTile' in notify
 assert 'creature->sleep();' in notify and 'if(creature->getKoTurnCounter() < 0)\n        creature->resetKoTurns();' in notify
@@ -187,7 +183,8 @@ assert 'hasCarryEntitySpot(' in read('source/creatureaction/CreatureActionGrabEn
 # a bed lost while pulling (destroyed, given to someone else, other seat) makes the worker let go where it lies
 assert re.search(r'dragged->getSeat\(\) != mBuildingDest->getSeat\(\)\) \|\| \(mBuildingDest->askSpotForCarriedEntity\(dragged\) != mTileDest\)\)\s*'
                  r'return stopDragging\(true\);', drag)
-assert drag.index('askSpotForCarriedEntity(dragged)') < drag.index('if(mDragPhase == 1)'), 'checked in every phase'
+own_check = drag.index('dragged->getSeat() != mBuildingDest->getSeat()')
+assert drag.index('askSpotForCarriedEntity(dragged)', own_check) < drag.index('if(mDragPhase == 1)', own_check), 'own bed checked in every phase'
 # (c) death is never held back: the only hold-back of the upkeep is for a living, not knocked out creature, and
 # resetKoTurns is only called at the bed (never on pick up) and only for a creature knocked out to death
 assert 'if(mIsBeingDragged && (mKoTurnCounter == 0) && isAlive())' in creature
@@ -200,25 +197,17 @@ assert 'isAlive()' in drag
 # (1) search, pick up, target, pull, abort and lay down run over the pulling path
 ko_pull = function_body(creature, 'bool Creature::isKoToDeathForBedPull() const')
 for needle in ('getIsOnServerMap()', 'isAlive()', 'mKoTurnCounter >= 0', 'mIsBeingDragged', 'isPossessed()',
-               'isInPrison()', 'isWorker()', 'hasOwnBedInDormitory()', 'isHostileNear('):
+               'isInPrison()', 'hasOwnBedInDormitory()', 'isHostileNear('):
     assert needle in ko_pull, needle
-# 13m: one pause for the pull, shared with the other hurt ones (mWoundedCarryNextTurn, set in notifyDragEnd after every
-# end of a pull); a creature knocked out to death has its own config value, the counter to death is never touched
+# Knockout transports have no post-pull cooldown.
 assert 'DormitoryWoundedCarryHpPercent' not in ko_pull
-assert 'getTurnNumber() < mWoundedCarryNextTurn' in ko_pull
-assert ko_pull.index('getTurnNumber() < mWoundedCarryNextTurn') < ko_pull.index('hasOwnBedInDormitory()')
-drag_end = function_body(creature, 'void Creature::notifyDragEnd(')
-assert '"DormitoryWoundedKoDeathCooldown"' in drag_end and '"DormitoryWoundedCarryCooldown"' in drag_end
-assert 'mKoTurnCounter < 0' in drag_end and 'mWoundedCarryNextTurn = ' in drag_end and 'mKoTurnCounter =' not in drag_end
-assert re.search(r'^    DormitoryWoundedKoDeathCooldown	150\s*$', rooms_cfg, re.M)
-assert re.search(r'^# DormitoryWoundedKoDeathCooldown\s', rooms_cfg, re.M), 'documented'
-assert 'DormitoryWoundedKoDeathCooldown' not in function_body(creature, 'bool Creature::isWoundedForBedCarry() const')
+assert 'mWoundedCarryNextTurn' not in ko_pull + end
 assert re.search(r'if\(mKoTurnCounter < 0\)\s*\{\s*if\(\(carrier != nullptr\) && \(carrier->getSeat\(\) == getSeat\(\)\)\)\s*'
                  r'return \(isKoToDeathForBedPull\(\) \|\| RoomInfirmary::wouldAccept\(\*this\)\) \? EntityCarryType::koCreature : EntityCarryType::notCarryable;',
                  carry_type), 'own KO to death: own bed pulling or available infirmary, otherwise not touched'
 assert re.search(r'EntityCarryType::notCarryable;\s*return EntityCarryType::koCreature;\s*\}', carry_type), 'enemies still go to a prison'
 assert carry_type.index('mKoTurnCounter < 0') < carry_type.index('EntityCarryType::corpse')
-assert 'bool pullable = (creature->getKoTurnCounter() < 0) ? creature->isKoToDeathForBedPull()' in has_spot
+assert 'bool pullable = creature->isKoToDeathForBedPull()' in has_spot
 assert 'if(getIsOnServerMap())' in start and 'mKoTurnCounter >= 0' not in start, 'the pulled one lies down at once'
 # (2) the counter and the death run on while it is pulled (the creature stays on the map, nothing holds it back)
 assert 'mKoTurnCounter < 0' not in function_body(creature, 'void Creature::notifyDragStart(')
@@ -236,7 +225,9 @@ assert 'hasOwnBedInDormitory()' in ko_pull and 'askSpotForCarriedEntity(carriedE
 prison = read('source/rooms/RoomPrison.cpp')
 prison_spot = function_body(prison, 'bool RoomPrison::hasCarryEntitySpot(')
 assert 'getKoTurnCounter() >= 0' in prison_spot and 'isAlliedSeat(creature->getSeat())' in prison_spot
-assert 'isPulledOverGround(creature, entityToCarry)' in carry and 'getSeat() == carrier.getSeat()' in pulled
-assert 'notifyEntityCarryOn(&mCreature)' in ctor, 'carrying stays for gold, bodies, traps and enemies for a prison'
+assert 'isPulledOverGround(creature, entityToCarry)' in carry and 'getKoTurnCounter() < 0' in pulled
+assert 'notifyEntityCarryOn(&mCreature)' in ctor, 'carrying stays for non-creature cargo'
+assert 'mExternalDrag' in drag and 'mDelivered = true' in drag
+assert 'notifyCorpseDragStart' in drag_start and 'notifyCorpseDragEnd' in dtor
 
 print('wounded bed pulling: ok')

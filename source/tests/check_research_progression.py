@@ -61,6 +61,7 @@ request = request[request.index("{") + 1:-1].replace("            break;", "    
 
 probe = r'''
 #include "game/Skill.h"
+#include "game/WorkerJobs.h"
 #include "game/SkillType.h"
 #include "rooms/RoomType.h"
 #include "traps/TrapType.h"
@@ -166,6 +167,7 @@ enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 //! \brief Supplies seat storage for actual research and optional shared-room save methods.
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
+    WorkerJobSettings mWorkerJobSettings{{},0,{{0,1,2,3,4,5}},{{0,1,2,3,4,5,6}},0};
     int32_t mInfirmaryPayer=0,mInfirmaryThreshold=100;bool mInfirmaryHealOn=true;
     //! \brief Supplies the appended optional setting block used by the production seat save path.
     int32_t getInfirmaryPayer()const{return mInfirmaryPayer;}
@@ -324,7 +326,7 @@ int main(int argc,char** argv){try {
      check(!done.canResearchLevel(SkillType::keeperDominion,1,none)&&!done.canResearchLevel(SkillType::spellSummonChampion,1,none),"not allowed and reward skills cannot be queued");}
     std::vector<SkillType> automatic;SkillManager::buildRandomPendingSkillsForSeat(automatic,&fresh);
     fresh.setSkillTree(automatic);check(fresh.mSkillPending==automatic && !automatic.empty(),"autofill includes legal unlocks and upgrades");
-    fresh.addSkillPoints(100000);check(fresh.mSkillPending.empty(),"large book surplus drains full selected queue");
+    fresh.addSkillPoints(100000);check(fresh.mSkillPending.empty(),"large research surplus drains full selected queue");
     check(fresh.getSkillLevel(SkillType::roomTrainingHall)==2,"autofill upgrades unlocked item only once");
     Seat resumed;resumed.setSkillsDone(all);resumed.setSkillTree({SkillType::trapCannon,SkillType::trapSpike});resumed.addSkillPoints(125);
     check(resumed.mSkillPoints==125,"partial progress of the first upgrade is kept");

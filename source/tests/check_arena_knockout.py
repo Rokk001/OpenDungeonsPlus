@@ -13,7 +13,7 @@ assert re.search(r'KO_SAVE_OPEN\s*=\s*"\[Ko\]"', source)
 assert re.search(r'KO_SAVE_CLOSE\s*=\s*"\[/Ko\]"', source)
 assert '[Ko koTurnCounter arenaKnockOut /Ko]' in source
 export = source.split('Creature::exportToStream', 1)[1].split('Creature::importFromStream', 1)[0]
-assert re.search(r'if\s*\(mArenaKnockOut\).*?KO_SAVE_OPEN.*?mKoTurnCounter.*?KO_SAVE_CLOSE', export, re.S)
+assert re.search(r'if\s*\(mArenaKnockOut\s*\|\|\s*mKoTurnCounter\s*<\s*0\).*?KO_SAVE_OPEN.*?mKoTurnCounter.*?KO_SAVE_CLOSE', export, re.S)
 loaded = source.split('Creature::importFromStream', 1)[1]
 assert 'KO_SAVE_OPEN' in loaded and 'KO_SAVE_CLOSE' in loaded
 assert 'mKoTurnCounter' in loaded and 'mArenaKnockOut' in loaded

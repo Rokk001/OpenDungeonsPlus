@@ -36,13 +36,20 @@ public:
 
     std::function<bool()> action() override; // allowed-lambda: signature required by CreatureAction
 
+    //! \brief Returns the tile reserved by this cleaning action.
+    Tile& getTileClean() const { return mTileClean; }
+    //! \brief Returns whether this action reserved a pile rather than room dirt.
+    bool cleansPile() const { return mCleansPile; }
+
     //! \brief Walks to the tile and does one cleaning step on it per turn.
     //! \param nbTurns The turns this cleaning has been the running action (the walk to the tile does not count).
+    //! \param pileTarget Whether the action ends once its pile or vomit is gone.
     //! \return False if the worker did its work this turn, true if the action ended and the next one runs now.
-    static bool handleCleanTile(Creature& creature, Tile& tileClean, int32_t nbTurns);
+    static bool handleCleanTile(Creature& creature, Tile& tileClean, int32_t nbTurns, bool pileTarget);
 
 private:
     Tile& mTileClean;
+    bool mCleansPile;
 };
 
 #endif // CREATUREACTIONCLEANTILE_H

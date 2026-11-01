@@ -195,6 +195,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "tavernPayer";
         case ServerNotificationType::spaPayer:
             return "spaPayer";
+        case ServerNotificationType::workerSettings:
+            return "workerSettings";
         case ServerNotificationType::creatureJump:
             return "creatureJump";
         case ServerNotificationType::merchantWindow:

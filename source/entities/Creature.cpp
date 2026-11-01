@@ -27,6 +27,7 @@
 #include "ODApplication.h"
 #include "creatureaction/CreatureAction.h"
 #include "creatureaction/CreatureActionClaimGroundTile.h"
+#include "creatureaction/CreatureActionCarryEntity.h"
 #include "creatureaction/CreatureActionClaimWallTile.h"
 #include "creatureaction/CreatureActionDigTile.h"
 #include "creatureaction/CreatureActionFight.h"
@@ -99,6 +100,7 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
+#include "game/WorkerAllocation.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
 #include "gamemap/LevelScriptRunner.h"
@@ -421,11 +423,6 @@ const double Creature::WOUNDED_DRAG_MAX_DISTANCE_DEFAULT = 3.5;
 const double Creature::WOUNDED_DRAG_GAP_DEFAULT = 0.9;
 const double Creature::WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT = 1.3;
 const double Creature::WOUNDED_DRAG_WORKER_SPEED_FACTOR_DEFAULT = 0.6;
-const double Creature::WOUNDED_CARRY_RADIUS_DEFAULT = 8.0;
-const double Creature::WOUNDED_CARRY_PRIORITY_DEFAULT = 1.0;
-const double Creature::WOUNDED_CARRY_HP_PERCENT_DEFAULT = 35.0;
-const double Creature::WOUNDED_CARRY_TEMP_KO_DEFAULT = 1.0;
-const double Creature::WOUNDED_CARRY_COOLDOWN_DEFAULT = 150.0;
 const double Creature::PERCENT_FACTOR = 100.0;
 
 namespace
@@ -765,7 +762,6 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mIsInHand                (false),
     mIsBeingDragged          (false),
     mDragDirtFactor          (1.0),
-    mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
     mNbTurnsRested           (0),
@@ -917,7 +913,6 @@ Creature::Creature(GameMap* gameMap) :
     mIsInHand                (false),
     mIsBeingDragged          (false),
     mDragDirtFactor          (1.0),
-    mWoundedCarryNextTurn    (0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
     mNbTurnsRested           (0),
@@ -1187,8 +1182,8 @@ void Creature::exportToStream(std::ostream& os) const
            << SPA_SAVE_CLOSE;
     }
 
-    // Optional arena knock-out block preserves the remaining time when the creature is knocked out in the arena.
-    if(mArenaKnockOut)
+    // Preserve an arena knockout or a death knockout, including one interrupted by a load.
+    if(mArenaKnockOut || mKoTurnCounter < 0)
         os << "\t" << KO_SAVE_OPEN << " " << mKoTurnCounter << " " << (mArenaKnockOut ? 1 : 0) << " " << KO_SAVE_CLOSE;
 
     // Optional captivity block; missing in old saves and when all its values are 0
@@ -1204,7 +1199,7 @@ void Creature::exportToStream(std::ostream& os) const
             os << "\tCorpseConsumed=1";
         else if(mDeathCounter == 0)
             os << "\tCorpseDeathPending=1";
-        if(mIsCarried)
+        if(mIsCarried && !mCorpseCarrierName.empty())
             os << "\t" << CORPSE_CARRIER_SAVE_LABEL << mCorpseCarrierName;
     }
     if(mGhostRevived)
@@ -1212,6 +1207,8 @@ void Creature::exportToStream(std::ostream& os) const
     for(const std::unique_ptr<CreatureAction>& action : mActions)
         if(action->getType()==CreatureActionType::huntGhost)
             static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
+    if(mDefinition->isWorker())
+        os << "\t[WorkerJob] " << static_cast<uint32_t>(mWorkerJob) << ' ' << (mWorkerJobFixed ? 1 : 0) << " [/WorkerJob]";
     os.precision(precision);
 }
 
@@ -1291,6 +1288,16 @@ bool Creature::importFromStream(std::istream& is)
     bool corpseDeathPending = false;
     while(is >> appearanceToken)
     {
+        if(appearanceToken == "[WorkerJob]")
+        {
+            uint32_t job = 0, fixed = 0;
+            std::string close;
+            if(!(is >> job >> fixed >> close) || job > static_cast<uint32_t>(WorkerJob::none) || fixed > 1 ||
+               (fixed && job == static_cast<uint32_t>(WorkerJob::none)) || close != "[/WorkerJob]") return false;
+            mWorkerJob = static_cast<WorkerJob>(job);
+            mWorkerJobFixed = fixed != 0;
+            continue;
+        }
         if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size(), CORPSE_CARRIER_SAVE_LABEL) == 0)
         {
             mCorpseCarrierName = appearanceToken.substr(CORPSE_CARRIER_SAVE_LABEL.size());
@@ -2807,7 +2814,7 @@ void Creature::doUpkeep()
     if(mKoTurnCounter < 0)
     {
 
-        if(getIsOnMap())
+        if(getIsOnMap() && !mIsBeingDragged)
         {
             Tile* myTile = getPositionTile();
             if(myTile == nullptr)
@@ -3452,42 +3459,65 @@ bool Creature::handleIdleAction()
 
     if (mDefinition->isWorker())
     {
-        // A trap of the keeper that used up its shots is armed again before the other jobs
-        if(!hasActionBeenTried(CreatureActionType::reloadTrap) && getSeat()->getPlayer()->isWorkerReloadShareOpen() &&
-           CreatureActionReloadTrap::tryStart(*this))
-            return true;
+        const std::array<CreatureActionType, 6> actions{{
+            CreatureActionType::searchTileToDig, CreatureActionType::searchGroundTileToClaim,
+            CreatureActionType::searchWallTileToClaim, CreatureActionType::searchEntityToCarry,
+            CreatureActionType::searchDirtToClean, CreatureActionType::reloadTrap}};
+        std::array<bool, 6> available;
+        for(uint32_t job = 0; job < actions.size(); ++job)
+            available[job] = !hasActionBeenTried(actions[job]);
 
-        // Decide what to do
-        std::vector<CreatureActionType> workerActions = getSeat()->getPlayer()->getWorkerPreferredActions(*this);
-        for(CreatureActionType actionType : workerActions)
+        for(uint32_t attempts = 0; attempts < actions.size(); ++attempts)
         {
-            if(hasActionBeenTried(actionType))
-                continue;
-
-            switch(actionType)
+            WorkerJob job = getWorkerJob();
+            if(!isWorkerJobFixed())
             {
-                case CreatureActionType::searchEntityToCarry:
-                    pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, false));
-                    return true;
-                case CreatureActionType::searchGroundTileToClaim:
-                    pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, false));
-                    return true;
-                case CreatureActionType::searchTileToDig:
+                job = WorkerAllocation::chooseForIdle(*getSeat(), *this, available);
+                setWorkerJob(job, false);
+            }
+            // Gold dug before this idle choice is left on the tile when the worker leaves digging.
+            if(job != WorkerJob::dig && getGoldCarried() > 0 && getPositionTile() != nullptr)
+            {
+                Tile* tile = getPositionTile();
+                TreasuryObject* gold = new TreasuryObject(getGameMap(), getGoldCarried());
+                resetGoldCarried();
+                gold->addToGameMap();
+                gold->createMesh();
+                gold->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+                    static_cast<Ogre::Real>(tile->getY()), 0.0f));
+            }
+            const uint32_t index = static_cast<uint32_t>(job);
+            if(index >= actions.size() || !available[index] || getSeat()->getWorkerJobTargets()[index] == 0)
+                break;
+            switch(job)
+            {
+                case WorkerJob::dig:
                     pushAction(Utils::make_unique<CreatureActionSearchTileToDig>(*this, false));
                     return true;
-                case CreatureActionType::searchWallTileToClaim:
+                case WorkerJob::claimGround:
+                    pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, false));
+                    return true;
+                case WorkerJob::claimWall:
                     pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, false));
                     return true;
-                case CreatureActionType::searchDirtToClean:
+                case WorkerJob::carry:
+                    pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, false));
+                    return true;
+                case WorkerJob::clean:
                     pushAction(Utils::make_unique<CreatureActionSearchDirtToClean>(*this));
                     return true;
-                default:
-                    OD_LOG_ERR("name=" + getName() + ", unexpected worker action=" + CreatureAction::toString(actionType));
+                case WorkerJob::reload:
+                    if(CreatureActionReloadTrap::tryStart(*this))
+                        return true;
+                    available[index] = false;
+                    break;
+                case WorkerJob::none:
                     break;
             }
+            if(isWorkerJobFixed())
+                break;
         }
     }
-
     // A standing order of the level script (go to a point, attack a dungeon, wait, ...) comes first
     if(LevelScriptRunner::doCreatureOrder(*this))
         return false;
@@ -7623,6 +7653,7 @@ bool Creature::tryDrop(Seat* seat, Tile* tile)
     return false;
 }
 
+//! \brief Drops the creature and lets a worker perform at most one forced task.
 void Creature::drop(const Ogre::Vector3& v)
 {
     interruptGhostHunt();
@@ -7669,27 +7700,35 @@ void Creature::drop(const Ogre::Vector3& v)
         Seat* seat = getSeat();
         Tile* tileMarkedDig = nullptr;
         Tile* tileMarkedDigPos = nullptr;
+        int bestDigGroup = 5;
+        float bestDigDistance = -1.0f;
+        bool bestDigHere = false;
         Tile* tileToClaim = nullptr;
         Tile* tileWallNotClaimed = nullptr;
+        std::vector<Tile*> dropWalls;
         for (Tile* tile : position->getAllNeighbors())
         {
-            if(tileMarkedDig == nullptr &&
-                tile->getMarkedForDigging(getGameMap()->getPlayerBySeat(seat))
+            if(tile->getMarkedForDigging(getGameMap()->getPlayerBySeat(seat))
                 )
             {
                 // Check if there is room for digging
                 std::vector<Tile*> tiles;
                 tile->canWorkerDig(*this, tiles);
-                // We search for the closest neighbor tile (may be not the position
-                // tile if the player drops several workers at the same tile)
-                float distBest = -1;
+                const bool gold = tile->getType() == TileType::gold || tile->getType() == TileType::gem;
+                const int group = (seat->getWorkerJobSettings().goldFirst && !gold ? 2 : 0) +
+                    (tile->hasWorkerDigging() ? 1 : 0);
                 for (Tile* neigh : tiles)
                 {
                     float dist = Pathfinding::squaredDistanceTile(*position, *neigh);
-                    if((distBest != -1) && (distBest <= dist))
+                    const bool here = neigh == position;
+                    if(tileMarkedDig != nullptr && (group > bestDigGroup ||
+                       (group == bestDigGroup && bestDigHere && !here) ||
+                       (group == bestDigGroup && bestDigHere == here && dist >= bestDigDistance)))
                         continue;
 
-                    distBest = dist;
+                    bestDigGroup = group;
+                    bestDigHere = here;
+                    bestDigDistance = dist;
                     tileMarkedDig = tile;
                     tileMarkedDigPos = neigh;
                 }
@@ -7708,14 +7747,15 @@ void Creature::drop(const Ogre::Vector3& v)
             {
                 tileToClaim = tile;
             }
-            else if(tileWallNotClaimed == nullptr &&
-                position->isClaimedForSeat(seat) &&
-                tile->isWallClaimable(seat)
+            else if(position->isClaimedForSeat(seat) &&
+                tile->isWallClaimable(seat) && tile->canWorkerClaim(*this)
                 )
             {
-                tileWallNotClaimed = tile;
+                dropWalls.push_back(tile);
             }
         }
+        if(!dropWalls.empty())
+            tileWallNotClaimed = dropWalls[Random::Uint(0, dropWalls.size() - 1)];
 
         // We try to deposit gold if we are on a room while carrying gold
         if((mGoldCarried > 0) && (mDigRate > 0.0) &&
@@ -7735,37 +7775,25 @@ void Creature::drop(const Ogre::Vector3& v)
         // Now, we can decide
         if((tileMarkedDig != nullptr) && (tileMarkedDigPos != nullptr) && (mDigRate > 0.0))
         {
-            pushAction(Utils::make_unique<CreatureActionSearchTileToDig>(*this, true));
-            pushAction(Utils::make_unique<CreatureActionDigTile>(*this, *tileMarkedDig, *tileMarkedDigPos));
+            pushAction(Utils::make_unique<CreatureActionDigTile>(*this, *tileMarkedDig, *tileMarkedDigPos, true));
             return;
         }
 
         if(!carryable.empty())
         {
-            // We look for the most important entity to carry
-            GameEntity* entityToCarry = carryable[0];
-            for(GameEntity* entity : carryable)
-            {
-                if(entity->getEntityCarryType(this) <= entityToCarry->getEntityCarryType(this))
-                    continue;
-
-                entityToCarry = entity;
-            }
-
-            pushAction(Utils::make_unique<CreatureActionGrabEntity>(*this, *entityToCarry));
+            // The forced search uses the keeper's carry order and considers only this tile.
+            pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, true));
             return;
         }
 
         if((tileToClaim != nullptr) && (getClaimRate() > 0.0))
         {
-            pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimGroundTile>(*this, *tileToClaim));
             return;
         }
 
         if((tileWallNotClaimed != nullptr) && (getClaimRate() > 0.0))
         {
-            pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, true));
             pushAction(Utils::make_unique<CreatureActionClaimWallTile>(*this, *tileWallNotClaimed));
             return;
         }
@@ -8007,13 +8035,9 @@ bool Creature::isAttackable(Tile* tile, Seat* seat) const
     return true;
 }
 
-//! \brief Preserves living patient priorities and refuses workers, decaying or consumed bodies.
+//! \brief Identifies knocked-out patients and intact corpses for transport.
 EntityCarryType Creature::getEntityCarryType(Creature* carrier)
 {
-    // Workers cannot be carried to crypt/prison, and an undead creature leaves nothing to carry
-    if(getDefinition()->isWorker() || getDefinition()->isUndead())
-        return EntityCarryType::notCarryable;
-
     // A creature knocked out to death is carried to a prison when it is an enemy. A creature of the seat of the
     // carrier is not carried: it is pulled to its own bed (same priority as before), and without an own bed it is
     // not touched and dies where it lies
@@ -8026,83 +8050,11 @@ EntityCarryType Creature::getEntityCarryType(Creature* carrier)
     }
 
     // Only an intact, unconsumed body can still be carried.
-    if(getHP() <= 0.0)
+    if(getHP() <= 0.0 && !getDefinition()->isWorker() && !getDefinition()->isUndead())
         return (mDecayTurns < 0.0 && mDeathCounter != std::numeric_limits<unsigned int>::max()) ?
             EntityCarryType::corpse : EntityCarryType::notCarryable;
 
-    // A hurt creature of the carrier's seat close enough is pulled to its bed (the worker takes it by the legs,
-    // see CreatureActionCarryEntity: it is not carried, but it takes the place of a carried thing in the search)
-    if((carrier != nullptr) && (carrier->getSeat() == getSeat()) && getIsOnServerMap() &&
-       isWoundedForBedCarry())
-    {
-        Tile* myTile = getPositionTile();
-        Tile* carrierTile = carrier->getPositionTile();
-        double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryRadius", WOUNDED_CARRY_RADIUS_DEFAULT);
-        if((myTile == nullptr) || (carrierTile == nullptr) ||
-           (Pathfinding::squaredDistanceTile(*myTile, *carrierTile) > (radius * radius)))
-        {
-            return EntityCarryType::notCarryable;
-        }
-
-        // The priority against the other things a worker can carry is configurable:
-        // 0 = lowest, 1 = like gold, 2 = like a creature knocked out to death
-        int32_t priority = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryPriority", WOUNDED_CARRY_PRIORITY_DEFAULT));
-        if(priority <= 0)
-            return EntityCarryType::woundedCreature;
-        if(priority == 1)
-            return EntityCarryType::gold;
-        return EntityCarryType::koCreature;
-    }
-
     return EntityCarryType::notCarryable;
-}
-
-bool Creature::isWoundedForBedCarry() const
-{
-    if(isActionInList(CreatureActionType::infirmaryRest))
-        return false;
-
-    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsBeingDragged || mIsInHand ||
-       isPossessed() || isInPrison() || getDefinition()->isWorker() || getDefinition()->isChampion())
-    {
-        return false;
-    }
-
-    ConfigManager& config = ConfigManager::getSingleton();
-    // 0 percent switches the whole behaviour off
-    double hpPercent = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryHpPercent", WOUNDED_CARRY_HP_PERCENT_DEFAULT);
-    if((hpPercent <= 0.0) || (getMaxHp() <= 0.0) || ((getHP() * PERCENT_FACTOR) >= (getMaxHp() * hpPercent)))
-        return false;
-
-    // A creature knocked out for a while may be carried too, unless the config says no
-    if((mKoTurnCounter != 0) && (config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryTempKo", WOUNDED_CARRY_TEMP_KO_DEFAULT) <= 0.0))
-        return false;
-
-    // Creatures knocked out to death are handled by isKoToDeathForBedPull
-    if(mKoTurnCounter < 0)
-        return false;
-
-    if(getGameMap()->getTurnNumber() < mWoundedCarryNextTurn)
-        return false;
-
-    // It only goes to its own bed in a dormitory of its seat, and not when it already lies in it
-    if(!hasOwnBedInDormitory())
-        return false;
-
-    Tile* myTile = getPositionTile();
-    if((myTile == nullptr) || (myTile == mHomeTile))
-        return false;
-
-    // No fight, flight or call to war going on
-    if(isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
-       isActionInList(CreatureActionType::flee) || isActionInList(CreatureActionType::goCallToWar) ||
-       isActionInList(CreatureActionType::leaveDungeon))
-    {
-        return false;
-    }
-
-    double enemyRadius = config.getRoomConfigDoubleOrDefault("DormitoryWoundedCarryEnemyRadius", WOUNDED_CARRY_ENEMY_RADIUS_DEFAULT);
-    return !isHostileNear(enemyRadius);
 }
 
 bool Creature::hasOwnBedInDormitory() const
@@ -8112,20 +8064,16 @@ bool Creature::hasOwnBedInDormitory() const
         (mHomeTile->getCoveringRoom()->getSeat() == getSeat());
 }
 
+//! \brief Determines whether an own knocked-out creature can be pulled to its bed.
 bool Creature::isKoToDeathForBedPull() const
 {
     if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || (mKoTurnCounter >= 0) || mIsBeingDragged || mIsInHand ||
-       isPossessed() || isInPrison() || getDefinition()->isWorker())
+       isPossessed() || isInPrison())
     {
         return false;
     }
 
-    // Only to its own bed: without one it is not picked up, not moved and dies where it lies. The percent of
-    // health and the fights do not matter here, the counter to death is running. Only the pause after a pull
-    // that ended counts (DormitoryWoundedKoDeathCooldown, set in notifyDragEnd): the counter goes on meanwhile
-    if(getGameMap()->getTurnNumber() < mWoundedCarryNextTurn)
-        return false;
-
+    // Only a creature with its own bed is pulled to the dormitory.
     if(!hasOwnBedInDormitory())
         return false;
 
@@ -8180,14 +8128,27 @@ void Creature::notifyEntityCarryOff(const Ogre::Vector3& position)
     addEntityToPositionTile();
 }
 
+//! \brief Pauses and records a corpse transport while it is pulled on the map.
+void Creature::notifyCorpseDragStart(const Creature& carrier, bool forced)
+{
+    mIsCarried = true;
+    mCorpseCarrierName = forced ? std::string() : carrier.getName();
+}
+
+//! \brief Resumes the corpse timer after its ground transport ends.
+void Creature::notifyCorpseDragEnd()
+{
+    mIsCarried = false;
+    mCorpseCarrierName.clear();
+}
+
+//! \brief Starts a ground pull while retaining the creature's position on the map.
 void Creature::notifyDragStart(double pullerDirtFactor)
 {
     mIsBeingDragged = true;
     mDragDirtFactor = pullerDirtFactor;
 
-    // A hurt creature stops what it did, it lies on the ground and the worker pulls it (one knocked out to death
-    // included: its counter goes on running). It stays on the map (it is not carried): the walk paths the worker
-    // gives it move it.
+    // The creature lies on the map and follows the worker's path; a knockout countdown continues.
     if(getIsOnServerMap())
     {
         clearDestinations(EntityAnimation::idle_anim, true, true);
@@ -8195,6 +8156,7 @@ void Creature::notifyDragStart(double pullerDirtFactor)
     }
 }
 
+//! \brief Ends a ground pull and permits knocked-out creatures to be picked up again immediately.
 void Creature::notifyDragEnd()
 {
     if(!mIsBeingDragged)
@@ -8202,15 +8164,6 @@ void Creature::notifyDragEnd()
 
     mIsBeingDragged = false;
     mDragDirtFactor = 1.0;
-    if(!getIsOnServerMap())
-        return;
-
-    // The pause before it can be pulled again, whatever the end of the drag was
-    // (a creature knocked out to death has its own, usually longer, pause)
-    double cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedCarryCooldown", WOUNDED_CARRY_COOLDOWN_DEFAULT);
-    if(mKoTurnCounter < 0)
-        cooldown = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedKoDeathCooldown", 150.0);
-    mWoundedCarryNextTurn = getGameMap()->getTurnNumber() + static_cast<int64_t>(std::max(0.0, cooldown));
 }
 
 bool Creature::setDragDestination(Tile* tile)
@@ -8228,6 +8181,16 @@ bool Creature::setDragDestination(Tile* tile)
     tileToVector2(result, path, true, 0.0);
     setWalkPath(EntityAnimation::drag_anim, EntityAnimation::idle_anim, true, true, path, true);
     return isMoving() || (posTile == tile);
+}
+
+//! \brief Returns whether a one-task hand-drop transport is running.
+bool Creature::hasForcedWorkerCarry() const
+{
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
+        if(action->getType() == CreatureActionType::carryEntity &&
+           static_cast<const CreatureActionCarryEntity&>(*action).isForced())
+            return true;
+    return false;
 }
 
 void Creature::carryEntity(GameEntity* carriedEntity)
