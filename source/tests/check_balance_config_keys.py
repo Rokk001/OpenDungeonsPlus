@@ -35,8 +35,6 @@ SETTINGS = [
     (13, 'config/global.cfg', '-', 'TargetThreatFactorMin', '0.5', 'source/entities/Creature.cpp'),
     (14, 'config/global.cfg', '-', 'ThreatPercentByLevel', '100 125 150 175 200 225 250 300 400 500', 'source/entities/Creature.cpp'),
     (15, 'config/global.cfg', '-', 'WeakFleeChancePercent', '20', 'source/creaturebehaviour/CreatureBehaviourFleeWhenWeak.cpp'),
-    (16, 'config/global.cfg', '-', 'WorkerCarryFirstMaxShare', '0.2', 'source/game/WorkerShare.h'),
-    (16, 'config/global.cfg', '-', 'WorkerClaimWallFirstMinShare', '0.8', 'source/game/WorkerShare.h'),
     (17, 'config/global.cfg', '-', 'SandboxHeroLevelMax', '10', 'source/gamemap/SandboxMode.cpp'),
     (18, 'config/global.cfg', '-', 'SandboxHeroLevelMin', '1', 'source/gamemap/SandboxMode.cpp'),
     (19, 'config/global.cfg', '-', 'SandboxHeroesPerWave', '8', 'source/gamemap/SandboxMode.cpp'),
@@ -143,7 +141,6 @@ OLD_EXPRESSIONS = {
     13: r'std::max\(0\.5,\s*std::min\(2\.0,\s*threatFactor\)\)',
     14: r'static const double THREAT_PERCENT_BY_LEVEL\[',
     15: r'Random::Uint\(0,\s*100\)\s*<\s*20\b',
-    16: r'const double (?:CARRY_FIRST_MAX_SHARE|CLAIM_WALL_FIRST_MIN_SHARE)\s*=',
     17: r'const uint32_t SandboxMode::MAX_HERO_LEVEL\s*=',
     18: r'const uint32_t SandboxMode::MIN_HERO_LEVEL\s*=',
     19: r'const uint32_t SandboxMode::NB_HEROES_PER_WAVE\s*=',
@@ -204,6 +201,9 @@ def numbers_equal(actual, expected):
 # Checks every table entry, its configuration reader and the original removed expression.
 def main():
     problems = []
+    for key in ("WorkerCarryFirstMaxShare", "WorkerClaimWallFirstMinShare"):
+        if key in read("config/global.cfg") or key in read("source/utils/ConfigManager.cpp"):
+            problems.append(f"Removed worker share {key} is still configured")
     manager = read("source/utils/ConfigManager.cpp")
     manager_header = read("source/utils/ConfigManager.h")
     tree = read("source/creatureskill/CreatureSkillTree.cpp")
@@ -227,8 +227,8 @@ def main():
                 problems.append(f"M{item}: {key} item setting reader is missing")
         elif config_file == "config/global.cfg":
             readers = source + (read("source/gamemap/SandboxMode.h") if item in (17, 18, 19, 20) else "")
-            if item in (6, 16):
-                readers += read("source/entities/Creature.cpp" if item == 6 else "source/game/Player.cpp")
+            if item == 6:
+                readers += read("source/entities/Creature.cpp")
                 if f'get{key}()' in source:
                     problems.append(f"M{item}: {key} getter must stay outside the standalone header")
             if f'get{key}()' not in readers or f'm{key}' not in manager_header or f'nextParam == "{key}"' not in manager:
@@ -269,7 +269,7 @@ def main():
     if problems:
         print('\n'.join(problems))
         return 1
-    print(f"Balance config keys: {len(SETTINGS)} settings, M1-M57 checked")
+    print(f"Balance config keys: {len(SETTINGS)} settings checked, retired worker shares absent")
     return 0
 
 

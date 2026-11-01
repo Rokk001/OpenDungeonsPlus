@@ -19,7 +19,7 @@ def main():
     code += function(read("source/rooms/RoomInfirmaryEconomy.cpp"), "bool RoomInfirmary::canPayAdmission(")
     carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
     code += "\n#define OD_LOG_INF(message) ((void)0)\n"
-    code += function(carry, "CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest)")
+    code += function(carry, "CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced, bool digGold)")
     code += function(carry, "bool CreatureActionCarryEntity::isPulledOverGround(")
     code += r"""
 //! \brief Captures the destination selected by the actual constructor and its actual knockout counter.
@@ -91,6 +91,9 @@ int main(){try{
  original.mPatients[7]=admission;
  check(original.reserveCot(originalIncoming,carrier)==map.getTile(3,2),"initial reservation uses actual eligibility and cot-size gate");
  original.mPatients.at(91).storedCounter=-80;originalIncoming.counter=remaining;
+ carrier.forcedCarry=true;std::ostringstream forcedText;original.exportToStream(forcedText);
+ std::istringstream forcedInput(forcedText.str()+"NextRoom");RoomInfirmary forcedLoaded(&map,&seat);
+ check(forcedLoaded.importFromStream(forcedInput)&&forcedLoaded.mPatients.size()==1,"hand-drop reservation is not resumed after load");carrier.forcedCarry=false;
  InfirmaryShamanEntity figure;figure.position=Ogre::Vector3(2.25,3.75,0);original.mShaman=&figure;
  std::ostringstream saved;saved.precision(6);original.exportToStream(saved);check(saved.precision()==6,"room restores caller precision");
  std::istringstream input(saved.str()+"NextRoom");RoomInfirmary loaded(&map,&seat);

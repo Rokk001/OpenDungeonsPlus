@@ -601,8 +601,6 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTargetThreatFactorMax(2),
     mTargetThreatFactorMin(0.5),
     mWeakFleeChancePercent(20),
-    mWorkerCarryFirstMaxShare(0.2),
-    mWorkerClaimWallFirstMinShare(0.8),
     mSandboxHeroLevelMax(10),
     mSandboxHeroLevelMin(1),
     mSandboxHeroesPerWave(8),
@@ -1332,18 +1330,6 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             foundKeys.insert("WeakFleeChancePercent");
             continue;
         }
-        if(nextParam == "WorkerCarryFirstMaxShare")
-        {
-            configFile >> mWorkerCarryFirstMaxShare;
-            foundKeys.insert("WorkerCarryFirstMaxShare");
-            continue;
-        }
-        if(nextParam == "WorkerClaimWallFirstMinShare")
-        {
-            configFile >> mWorkerClaimWallFirstMinShare;
-            foundKeys.insert("WorkerClaimWallFirstMinShare");
-            continue;
-        }
         if(nextParam == "BuildingDamageCurve")
         {
             std::string line;
@@ -2031,6 +2017,65 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "WorkerPriorityParts")
+        {
+            for(uint32_t& value : mWorkerPriorityParts) if(!(configFile >> value)) return false;
+            foundKeys.insert("WorkerPriorityParts");
+            continue;
+        }
+        if(nextParam == "WorkerDefaultFixed")
+        {
+            for(uint32_t& value : mWorkerJobDefaults.fixed) if(!(configFile >> value)) return false;
+            foundKeys.insert("WorkerDefaultFixed");
+            continue;
+        }
+        if(nextParam == "WorkerDefaultFreeMode")
+        {
+            configFile >> nextParam;
+            if(nextParam != "automatic" && nextParam != "priority") return false;
+            mWorkerJobDefaults.freeMode = nextParam == "priority" ? 1 : 0;
+            foundKeys.insert("WorkerDefaultFreeMode");
+            continue;
+        }
+        if(nextParam == "WorkerDefaultPriority")
+        {
+            const std::array<std::string, 6> names{{"dig", "claimGround", "claimWall", "carry", "clean", "reload"}};
+            for(uint32_t& value : mWorkerJobDefaults.priority)
+            {
+                configFile >> nextParam;
+                std::array<std::string, 6>::const_iterator it = std::find(names.begin(), names.end(), nextParam);
+                if(it == names.end()) return false;
+                value = static_cast<uint32_t>(it - names.begin());
+            }
+            foundKeys.insert("WorkerDefaultPriority");
+            continue;
+        }
+        if(nextParam == "WorkerDefaultCarryOrder")
+        {
+            const std::array<std::string, 7> names{{"ownKnockedOut", "enemyKnockedOut", "corpse", "gold", "items", "giftBoxes", "trapsDoors"}};
+            for(uint32_t& value : mWorkerJobDefaults.carryOrder)
+            {
+                configFile >> nextParam;
+                std::array<std::string, 7>::const_iterator it = std::find(names.begin(), names.end(), nextParam);
+                if(it == names.end()) return false;
+                value = static_cast<uint32_t>(it - names.begin());
+            }
+            foundKeys.insert("WorkerDefaultCarryOrder");
+            continue;
+        }
+        if(nextParam == "WorkerDefaultGoldFirst")
+        {
+            if(!(configFile >> mWorkerJobDefaults.goldFirst) || mWorkerJobDefaults.goldFirst > 1) return false;
+            foundKeys.insert("WorkerDefaultGoldFirst");
+            continue;
+        }
+        if(nextParam == "WorkerCleanTilesPerCleaner")
+        {
+            if(!(configFile >> mWorkerCleanTilesPerCleaner) || mWorkerCleanTilesPerCleaner == 0) return false;
+            foundKeys.insert("WorkerCleanTilesPerCleaner");
+            continue;
+        }
+
         if(nextParam == "NbWorkersDigSameFaceTile")
         {
             configFile >> nextParam;
@@ -2212,6 +2257,20 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         }
     }
 
+    // Worker allocation has no hard-coded fallback: all values must come from this config.
+    for(const char* key : {"WorkerPriorityParts", "WorkerDefaultFixed", "WorkerDefaultFreeMode",
+                           "WorkerDefaultPriority", "WorkerDefaultCarryOrder", "WorkerDefaultGoldFirst",
+                           "WorkerCleanTilesPerCleaner"})
+    {
+        if(foundKeys.count(key) == 0)
+        {
+            OD_LOG_ERR("Missing GameConfig key=" + std::string(key));
+            return false;
+        }
+    }
+    if(!validWorkerJobSettings(mWorkerJobDefaults))
+        return false;
+
     if(!foundNaturalHeal)
         OD_LOG_ERR("Missing NaturalFullHealSeconds; using default");
     if(!foundUndeadHeal)
@@ -2332,10 +2391,6 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         OD_LOG_ERR("Missing GameConfig key=TargetThreatFactorMin; using shipped default");
     if(foundKeys.count("WeakFleeChancePercent") == 0)
         OD_LOG_ERR("Missing GameConfig key=WeakFleeChancePercent; using shipped default");
-    if(foundKeys.count("WorkerCarryFirstMaxShare") == 0)
-        OD_LOG_ERR("Missing GameConfig key=WorkerCarryFirstMaxShare; using shipped default");
-    if(foundKeys.count("WorkerClaimWallFirstMinShare") == 0)
-        OD_LOG_ERR("Missing GameConfig key=WorkerClaimWallFirstMinShare; using shipped default");
     if(foundKeys.count("BuildingDamageCurve") == 0)
         OD_LOG_ERR("Missing GameConfig key=BuildingDamageCurve; using shipped default");
     if(foundKeys.count("ThreatPercentByLevel") == 0)

@@ -882,6 +882,7 @@ bool readDirtSections(GameMap& gameMap, std::stringstream& levelFile)
     return true;
 }
 
+//! \brief Loads an entity section and converts legacy research books into their owner's points.
 bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType type, std::stringstream& levelFile)
 {
     std::string nextParam;
@@ -911,7 +912,20 @@ bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType ty
             return false;
         }
 
-        entity->addToGameMap();
+        if(type == GameEntityType::skillEntity)
+        {
+            SkillEntity* legacyBook = static_cast<SkillEntity*>(entity);
+            if(legacyBook->getSeat() == nullptr)
+            {
+                OD_LOG_ERR("Legacy research book has no valid owner");
+                delete legacyBook;
+                return false;
+            }
+            legacyBook->getSeat()->addSkillPoints(legacyBook->getSkillPoints());
+            delete legacyBook;
+        }
+        else
+            entity->addToGameMap();
         ++nbEntity;
     }
     OD_LOG_INF("Loaded " + Helper::toString(nbEntity) + " " + item + " in level");

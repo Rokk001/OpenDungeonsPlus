@@ -27,12 +27,14 @@ class GameEntity;
 class CreatureActionGrabEntity : public CreatureAction, public GameEntityListener
 {
 public:
-    CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry);
+    //! \brief Reserves cargo and records whether it was forced or produced by digging.
+    CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry, bool forced = false, bool digGold = false);
     virtual ~CreatureActionGrabEntity();
 
     CreatureActionType getType() const override
     { return CreatureActionType::grabEntity; }
 
+    //! \brief Advances the grab while preserving its transport origin.
     std::function<bool()> action() override;
 
     std::string getListenerName() const override;
@@ -41,12 +43,22 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
+    //! \brief Returns the entity reserved by this grab action.
+    GameEntity* getGrabTarget() const { return mEntityToCarry; }
+    //! \brief Returns whether a hand drop forced this grab.
+    bool isForced() const { return mForced; }
+    //! \brief Returns whether this gold belongs to a digger's current work.
+    bool isDigGold() const { return mDigGold; }
     //! \brief Starts carry only after validating the actual cargo tile and its reachable destination.
     //! \brief Picks a reachable infirmary before a bed for an eligible knockout.
-    static bool handleGrabEntity(Creature& creature, GameEntity* entityToCarry);
+    //! \param forced Whether this grab is the single task forced by a hand drop.
+    //! \param digGold Whether this is gold hauled as part of digging.
+    static bool handleGrabEntity(Creature& creature, GameEntity* entityToCarry, bool forced, bool digGold);
 
 private:
     GameEntity* mEntityToCarry;
+    bool mForced;
+    bool mDigGold;
 };
 
 #endif // CREATUREACTIONGRABENTITY_H

@@ -144,7 +144,7 @@ grab = read('source/creatureaction/CreatureActionGrabEntity.cpp')
 carry = read('source/creatureaction/CreatureActionCarryEntity.cpp')
 assert 'getDeliveryTile(creature)' in search and 'pathExists(&creature, myTile, destination)' in search
 assert 'getDeliveryTile(creature)' in grab and '*entityToCarry, *destination' in grab
-mission_action = carry.split('GameEntity& entityToCarry, Tile& tileDest)', 1)[1].split('\n}\n', 1)[0]
+mission_action = carry.split('GameEntity& entityToCarry, Tile& tileDest, bool forced, bool digGold)', 1)[1].split('\n}\n', 1)[0]
 assert 'mBuildingDest(nullptr)' in mission_action
 assert 'mCreature.carryEntity(mEntityToCarry);' in mission_action
 assert 'mEntityToCarry->notifyEntityCarryOff(pos);' in carry and 'mCreature.releaseCarriedEntity();' in carry
@@ -181,11 +181,13 @@ assert 'mCarriedEntity->notifyCarryMove(v);' in position_update
 assert 'mPosition.x' in read('source/entities/GameEntity.cpp')
 print('Mission metadata load failure and in-flight item save wiring: static PASS')
 
-# Both normal idle cargo selection and a forced drop-to-pickup are confined to workers.
+# Both normal idle cargo selection and the forced carry-order search are confined to workers.
 idle_worker = creature_source.split('bool Creature::handleIdleAction()', 1)[1].split('// A standing order', 1)[0]
 assert idle_worker.index('if (mDefinition->isWorker())') < idle_worker.index('CreatureActionSearchEntityToCarry')
 forced_drop = creature_source.split('void Creature::drop(const Ogre::Vector3& v)', 1)[1].split('// Fighters', 1)[0]
-assert forced_drop.index('if(mDefinition->isWorker())') < forced_drop.index('CreatureActionGrabEntity')
+assert forced_drop.index('if(mDefinition->isWorker())') < forced_drop.index('CreatureActionSearchEntityToCarry')
+assert 'CreatureActionSearchEntityToCarry>(*this, true)' in forced_drop
+assert 'CreatureActionGrabEntity>(creature, *entity, forced)' in search
 # All interruptions destroy the existing carry action, releasing the same item and its pickup lock.
 for signature in ('void Creature::pickup()', 'void Creature::dropCarriedEquipment()', 'void Creature::changeSeat('):
     interrupted = creature_source.split(signature, 1)[1].split('\n}\n', 1)[0]

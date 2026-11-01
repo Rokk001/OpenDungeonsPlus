@@ -22,6 +22,7 @@
 #include "ai/KeeperAIType.h"
 #include "creatureskill/CreatureSkillTree.h"
 #include "entities/PotionDefinition.h"
+#include "game/WorkerJobs.h"
 
 #include <OgreSingleton.h>
 #include <OgreColourValue.h>
@@ -620,12 +621,6 @@ public:
     //! \brief Returns the configured WeakFleeChancePercent value.
     double getWeakFleeChancePercent() const { return mWeakFleeChancePercent; }
 
-    //! \brief Returns the configured WorkerCarryFirstMaxShare value.
-    double getWorkerCarryFirstMaxShare() const { return mWorkerCarryFirstMaxShare; }
-
-    //! \brief Returns the configured WorkerClaimWallFirstMinShare value.
-    double getWorkerClaimWallFirstMinShare() const { return mWorkerClaimWallFirstMinShare; }
-
     //! \brief Returns the configured SandboxHeroLevelMax value.
     int32_t getSandboxHeroLevelMax() const { return mSandboxHeroLevelMax; }
 
@@ -805,6 +800,13 @@ public:
 
     inline const CreatureDefinition* getCreatureDefinitionDefaultWorker() const
     { return mCreatureDefinitionDefaultWorker; }
+
+    //! \brief Returns the configured initial worker preferences.
+    const WorkerJobSettings& getDefaultWorkerJobSettings() const { return mWorkerJobDefaults; }
+    //! \brief Returns the priority shares for the six ranks.
+    const std::array<uint32_t, 6>& getWorkerPriorityParts() const { return mWorkerPriorityParts; }
+    //! \brief Returns room tiles per allowed cleaner.
+    uint32_t getWorkerCleanTilesPerCleaner() const { return mWorkerCleanTilesPerCleaner; }
 
     inline uint32_t getNbWorkersDigSameFaceTile() const
     { return mNbWorkersDigSameFaceTile; }
@@ -1123,8 +1125,6 @@ private:
     double mTargetThreatFactorMax;
     double mTargetThreatFactorMin;
     double mWeakFleeChancePercent;
-    double mWorkerCarryFirstMaxShare;
-    double mWorkerClaimWallFirstMinShare;
     int32_t mSandboxHeroLevelMax;
     int32_t mSandboxHeroLevelMin;
     int32_t mSandboxHeroesPerWave;
@@ -1170,6 +1170,11 @@ private:
     //! \brief Default definition for the editor. At map loading, it will spawn a creature from
     //! the default seat worker depending on seat faction
     CreatureDefinition* mCreatureDefinitionDefaultWorker;
+
+    //! \brief Defaults and allocation constants read from global.cfg.
+    WorkerJobSettings mWorkerJobDefaults;
+    std::array<uint32_t, 6> mWorkerPriorityParts{};
+    uint32_t mWorkerCleanTilesPerCleaner{};
 
     uint32_t mNbWorkersDigSameFaceTile;
     uint32_t mNbWorkersClaimSameTile;

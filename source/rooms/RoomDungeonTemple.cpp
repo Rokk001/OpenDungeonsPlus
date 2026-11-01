@@ -24,7 +24,6 @@
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
 #include "entities/PersistentObject.h"
-#include "entities/SkillEntity.h"
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
 #include "ODApplication.h"
@@ -1045,7 +1044,6 @@ bool RoomDungeonTemple::hasCarryEntitySpot(GameEntity* carriedEntity)
     switch(carriedEntity->getObjectType())
     {
         case GameEntityType::giftBoxEntity:
-        case GameEntityType::skillEntity:
             return true;
         case GameEntityType::treasuryObject:
             // A 5x5 heart has space for more gold until its ring is full; a 3x3 heart
@@ -1058,12 +1056,12 @@ bool RoomDungeonTemple::hasCarryEntitySpot(GameEntity* carriedEntity)
     }
 }
 
+//! \brief Returns a destination for accepted gifts or treasury deposits.
 Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
 {
     switch(carriedEntity->getObjectType())
     {
         case GameEntityType::giftBoxEntity:
-        case GameEntityType::skillEntity:
             return getCentralTile();
         case GameEntityType::treasuryObject:
         {
@@ -1084,7 +1082,7 @@ Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
     }
 }
 
-//! \brief Accepts delivered entities at the temple and stores available specials.
+//! \brief Applies delivered gifts, stores specials, and leaves gold to the treasury.
 void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     // A gold delivery is deposited through the covering room (the treasury ring), the same
@@ -1129,16 +1127,6 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
             giftBox->removeEntityFromPositionTile();
             giftBox->removeFromGameMap();
             giftBox->deleteYourself();
-            return;
-        }
-        case GameEntityType::skillEntity:
-        {
-            // We notify the player that the skill is now available and we delete the skillEntity
-            SkillEntity* skillEntity = static_cast<SkillEntity*>(carriedEntity);
-            getSeat()->addSkillPoints(skillEntity->getSkillPoints());
-            skillEntity->removeEntityFromPositionTile();
-            skillEntity->removeFromGameMap();
-            skillEntity->deleteYourself();
             return;
         }
         default:

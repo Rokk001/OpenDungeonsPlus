@@ -48,6 +48,8 @@ public:
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     //! \brief Confirms delivery or releases an interrupted reservation without restarting corpse time.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
+    //! \brief Checks that a body still owns its original accessible grave delivery tile.
+    bool hasReservedDelivery(const Creature& body, const Tile* delivery);
 
     //! \brief Returns the reserved grave for a delivered uncarried corpse, or nullptr.
     Tile* getCorpseSpot(const Creature& creature) const;
