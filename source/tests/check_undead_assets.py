@@ -41,7 +41,7 @@ def main():
             effect = block
     assert effect is not None, 'roomAmbienceSpells.cfg has no [Effect] LichBeetlesSwarm'
     for key, value in (('Target', 'Event'), ('Event', 'SpellFxLichBeetles'), ('Kind', 'Particle'),
-                       ('System', 'LichBeetles'), ('Offset', '0 0 0'), ('Duration', '20'),
+                       ('System', 'LichBeetleModels'), ('Offset', '0 0 0'), ('Duration', '20'),
                        ('MaxDistance', '40'), ('Priority', '5'), ('Reduced', 'yes')):
         match = re.search(r'^\s*' + key + r'\s+(.+?)\s*$', effect, re.M)
         assert match and match.group(1) == value, 'LichBeetlesSwarm ' + key + ' must be ' + value
@@ -50,14 +50,19 @@ def main():
     assert re.search(r'^\s*(?:particle_system\s+)?LichBeetles\s*(\{|$)', particles, re.M), \
         'RoomAmbienceSpellsExtra.particle has no particle system LichBeetles'
 
-    for size, width, height in (('Medium', '0.28', '0.36'), ('Large', '0.42', '0.54')):
-        name = 'LichBeetles' + size
-        assert re.search(r'^\s*Name\s+' + name + r'Swarm\s*$', events, re.M), name + ' event missing'
-        assert re.search(r'^\s*System\s+' + name + r'\s*$', events, re.M), name + ' system is not bound'
-        block = particles.split('particle_system ' + name, 1)[1].split('affector TextureAnimator', 1)[0]
-        assert 'particle_width ' + width in block and 'particle_height ' + height in block
-        assert block.count('emitter Point') == 4 and block.count('emission_rate 2') == 4
-        assert block.count('time_to_live_max 19.5') == 4
+    for event, system, texture_name, lifetime in (
+            ('LichBeetlesSwarm', 'LichBeetleModels', 'LichBeetleModel', '9'),
+            ('LichBeetlesMediumSwarm', 'LichMaggotModels', 'LichMaggotModel', '14'),
+            ('LichBeetlesLargeSwarm', 'LichWormModels', 'LichWormModel', '18.9')):
+        assert re.search(r'^\s*Name\s+' + event + r'\s*$', events, re.M), event + ' missing'
+        assert re.search(r'^\s*System\s+' + system + r'\s*$', events, re.M), system + ' is not bound'
+        block = particles.split('particle_system ' + system, 1)[1].split('\n}', 1)[0]
+        assert 'material ' + texture_name in block and 'quota 2' in block
+        assert block.count('emitter Point') == 2 and block.count('emission_rate 1') == 2
+        assert block.count('time_to_live_max ' + lifetime) == 2
+        assert (ROOT / 'materials/textures' / (texture_name + '.png')).is_file()
+        assert texture_name + '.png' in read('materials/scripts/RoomAmbience.material')
+        assert 'materials/textures/' + texture_name + '.png' in read('CREDITS')
 
     texture = ROOT / 'materials/textures/LichBeetle.png'
     assert texture.is_file() and texture.stat().st_size > 0, 'materials/textures/LichBeetle.png is missing'

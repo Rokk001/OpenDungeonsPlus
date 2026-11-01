@@ -184,6 +184,8 @@ DirtPileEntity* DirtPileEntity::createBones(GameMap* gameMap, Tile* tile, const 
     bones->addToGameMap();
     bones->createMesh();
     bones->setPosition(position);
+    // Send the replacement before the corpse is removed so it appears in the same update.
+    bones->notifySeatsWithVision(tile->getSeatsWithVision(), gameMap->getNodeType());
     tile->addDirt(Tile::MAX_DIRT);
     return bones;
 }
