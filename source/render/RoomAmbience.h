@@ -257,7 +257,7 @@ private:
         //! \brief Creates a crawler that is not in the scene yet and appears at time mDue
         Crawler() :
             mNode(nullptr), mEntity(nullptr), mEffect(0), mStart(Ogre::Vector3::ZERO), mDirection(Ogre::Vector3::UNIT_X),
-            mDue(0.0), mAge(0.0), mSpeedFactor(1.0), mPhase(0.0)
+            mDue(0.0), mAge(0.0), mSpeedFactor(1.0), mSizeFactor(1.0), mPhase(0.0)
         {}
 
         Ogre::SceneNode* mNode;
@@ -271,6 +271,8 @@ private:
         double mAge;
         //! Own share of the speed of the effect, so that the crawlers do not move in step
         double mSpeedFactor;
+        //! Own share of the size of the effect, so that the crawlers of one kind differ in size
+        double mSizeFactor;
         //! Phase of the sideways wiggle
         double mPhase;
     };

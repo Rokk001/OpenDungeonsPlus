@@ -96,16 +96,21 @@ material RoomAmbWeb
     }
 }
 
-// Plain lit colours of the 3D grave vermin that crawl out of a Lich that burst (models LichBeetle, LichMaggot, LichWorm).
+// Textured, lit grave vermin that crawl out of a Lich that burst (models LichBeetle, LichMaggot, LichWorm; textures painted by
+// tools/gen_lich_vermin_textures.py).
 material LichVerminShell
 {
     technique
     {
         pass
         {
-            ambient 0.30 0.17 0.07 1.0
-            diffuse 0.45 0.26 0.09 1.0
-            specular 0.35 0.30 0.25 1.0 12.0
+            ambient 0.85 0.85 0.85 1.0
+            diffuse 1.0 1.0 1.0 1.0
+            specular 0.35 0.30 0.25 1.0 14.0
+            texture_unit
+            {
+                texture LichVerminShell.png
+            }
         }
     }
 }
@@ -126,9 +131,13 @@ material LichVerminMaggot
     {
         pass
         {
-            ambient 0.55 0.48 0.30 1.0
-            diffuse 0.80 0.70 0.46 1.0
+            ambient 0.85 0.85 0.85 1.0
+            diffuse 1.0 1.0 1.0 1.0
             specular 0.30 0.30 0.25 1.0 8.0
+            texture_unit
+            {
+                texture LichVerminMaggot.png
+            }
         }
     }
 }
@@ -138,9 +147,13 @@ material LichVerminWorm
     {
         pass
         {
-            ambient 0.35 0.13 0.09 1.0
-            diffuse 0.52 0.19 0.14 1.0
+            ambient 0.85 0.85 0.85 1.0
+            diffuse 1.0 1.0 1.0 1.0
             specular 0.30 0.20 0.20 1.0 8.0
+            texture_unit
+            {
+                texture LichVerminWorm.png
+            }
         }
     }
 }

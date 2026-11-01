@@ -75,6 +75,9 @@ const size_t MAX_CRAWLERS = 24;
 const double CRAWL_APPEAR_SPREAD = 0.6;
 //! Seconds at the end of its life in which a crawler shrinks away
 const double CRAWL_SHRINK_SECONDS = 1.5;
+//! Range of the random size factor of a crawler (small to large of the same kind)
+const double CRAWL_SIZE_MIN = 0.7;
+const double CRAWL_SIZE_MAX = 1.6;
 //! Sideways swing (tiles) of the way of a crawler
 const double CRAWL_WIGGLE = 0.06;
 //! Name of the loop clip of the skeleton of a crawler
@@ -2883,20 +2886,25 @@ bool RoomAmbience::startCrawl(const AmbienceEffect& effect, uint32_t effectIndex
     uint32_t count = static_cast<uint32_t>(std::max(0.0, effect.mAmount));
     std::uniform_real_distribution<double> angle(0.0, 6.283185307179586);
     std::uniform_real_distribution<double> speed(0.7, 1.3);
+    std::uniform_real_distribution<double> size(CRAWL_SIZE_MIN, CRAWL_SIZE_MAX);
+    std::uniform_real_distribution<double> jitter(-0.35, 0.35);
     std::uniform_real_distribution<double> spread(0.0, CRAWL_APPEAR_SPREAD);
+    // The crawlers of one effect leave in evenly spaced directions (plus some jitter) so that they never pile up
+    double firstAngle = angle(mRandom);
     uint32_t nbPlanned = 0;
     for(uint32_t i = 0; i < count; ++i)
     {
         if(mCrawlers.size() >= MAX_CRAWLERS)
             break;
 
-        double a = angle(mRandom);
+        double a = firstAngle + 6.283185307179586 * static_cast<double>(i) / static_cast<double>(count) + jitter(mRandom);
         Crawler crawler;
         crawler.mEffect = effectIndex;
         crawler.mStart = position + effect.mOffset;
         crawler.mDirection = Ogre::Vector3(static_cast<Ogre::Real>(std::cos(a)), static_cast<Ogre::Real>(std::sin(a)), 0.0f);
         crawler.mDue = mClock + effect.mDelay + spread(mRandom);
         crawler.mSpeedFactor = speed(mRandom);
+        crawler.mSizeFactor = size(mRandom);
         crawler.mPhase = angle(mRandom);
         mCrawlers.push_back(crawler);
         ++nbPlanned;
@@ -2920,7 +2928,7 @@ void RoomAmbience::updateCrawlers(double timeSinceLastFrame)
         }
 
         const AmbienceEffect& effect = effects[crawler.mEffect];
-        Ogre::Real baseScale = (effect.mAxis.x > 0.0f) ? effect.mAxis.x : 1.0f;
+        Ogre::Real baseScale = ((effect.mAxis.x > 0.0f) ? effect.mAxis.x : 1.0f) * static_cast<Ogre::Real>(crawler.mSizeFactor);
         if(crawler.mNode == nullptr)
         {
             if(mClock < crawler.mDue)
