@@ -45,6 +45,10 @@ public:
     //! \return true if the action was removed and the next action should run in the same turn.
     static bool handleFight(Creature& creature, GameEntity* entityAttack, bool koOpponent, bool notifyPlayerIfHit);
 
+    //! \brief Returns the target given to this fight, or nullptr when the creature chooses its target itself.
+    inline GameEntity* getEntityAttack() const
+    { return mEntityAttack; }
+
 private:
     GameEntity* mEntityAttack;
     bool mKoOpponent;

@@ -18,6 +18,7 @@
 #include "ai/AiTraps.h"
 
 #include "ai/AiActions.h"
+#include "ai/AiEconomy.h"
 #include "ai/AiKnowledge.h"
 #include "ai/AiMind.h"
 #include "ai/AiSettings.h"
@@ -29,6 +30,7 @@
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "ODApplication.h"
 #include "rooms/Room.h"
@@ -41,8 +43,10 @@
 #include "utils/Random.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <map>
 #include <set>
 #include <sstream>
 #include <string>
@@ -80,7 +84,7 @@ std::string numberToken(double value)
     return os.str();
 }
 
-//! \brief Reads the trap draws of a loaded game from the mind once: F01 halved plan, F12 watching, F15 tunnels and
+//! \brief Reads the trap draws of a loaded game from the mind once: F01 halved plan, F12 watching and its last test, F15 tunnels and
 //! the steps that wait for the symptom delay of a mistake (F12, F13, F15). The mind imports its state at its first
 //! turn, at mind time 0, so a saved remaining time is the mind time of the step.
 void restoreDraws(KeeperAI& ai)
@@ -102,6 +106,10 @@ void restoreDraws(KeeperAI& ai)
             state.mWantDivided = std::atoi(value.c_str());
         else if((row == "F12") && (name == "watching"))
             state.mWatching = (value == "1");
+        else if((row == "F12") && (name == "lastTestSeconds"))
+            state.mLastTestSeconds = std::atof(value.c_str());
+        else if((row == "F12") && (name == "exhausted"))
+            state.mExhausted = (value == "1");
         else if((row == "F12") && (name == "watchDue"))
             state.mWatchDue = std::atof(value.c_str());
         else if((row == "F13") && (name == "doorDue"))
@@ -148,7 +156,7 @@ void addDraw(std::vector<AiMath::AiStateLine>& lines, const std::string& row, co
     lines.push_back(line);
 }
 
-//! \brief Replaces the trap draw lines of the saved AI state with the current ones.
+//! \brief Replaces the saved trap draws, including the F12 watch result and test time.
 void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
     restoreDraws(ai);
@@ -167,7 +175,11 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
     if(state.mWantDivided >= 0)
         addDraw(lines, "F01", "trapWantDivided", std::to_string(state.mWantDivided));
     if(state.mWatching)
+    {
         addDraw(lines, "F12", "watching", "1");
+        addDraw(lines, "F12", "lastTestSeconds", numberToken(state.mLastTestSeconds));
+        addDraw(lines, "F12", "exhausted", state.mExhausted ? "1" : "0");
+    }
     for(const std::pair<int, int>& tunnel : state.mTunnels)
         addDraw(lines, "F15", "tunnel", std::to_string(tunnel.first) + "," + std::to_string(tunnel.second));
 
@@ -204,24 +216,10 @@ bool trapSpotFree(const Tile* tile, Seat* seat)
     return (tile != nullptr) && !tile->isFullTile() && tile->isBuildableUpon(seat);
 }
 
-//! \brief Returns the wage bill: the sum of the fees of the fighters of the seat.
-double wageBill(KeeperAI& ai)
-{
-    double bill = 0.0;
-    for(Creature* creature : ai.getGameMap().getCreaturesBySeat(ai.getControlledPlayer().getSeat()))
-    {
-        if(!creature->getDefinition()->isWorker())
-            bill += creature->getGoldFee();
-    }
-    return bill;
-}
-
-//! \brief Tells whether a purchase of the given cost keeps the margins free: the room margin, the wage bill and the
-//! reload margin of the traps.
+//! \brief Applies the shared purchase gate, including its saved wage-reserve decision and trap margin.
 bool affordable(KeeperAI& ai, double cost)
 {
-    double gold = ai.getControlledPlayer().getSeat()->getGold();
-    return gold >= (cost + aiKey("RoomGoldMargin") + wageBill(ai) + TRAP::reloadMargin(ai));
+    return ECON::walletGate(ai, cost);
 }
 
 //! \brief Returns the rank of a door kind: the higher, the stronger. 0 for a type that is no plain door.
@@ -345,21 +343,59 @@ bool buildOne(KeeperAI& ai, TrapType type, Tile* tile)
     return true;
 }
 
-//! \brief Returns the length of the straight run of corridor tiles inward from the door of the entrance.
-int corridorRun(GameMap& gameMap, const TRAP::Entrance& entrance)
+//! \brief Returns the known straight corridor length, or -1 if unseen tiles prevent the test.
+int corridorRun(GameMap& gameMap, Seat* seat, const TRAP::Entrance& entrance)
 {
+    AiKnowledge knowledge(gameMap, seat);
     int run = 0;
     for(int k = 1; k <= static_cast<int>(aiKey("BoulderCorridorMinTiles")); ++k)
     {
         Tile* tile = lineTile(gameMap, entrance, k);
-        if((tile == nullptr) || !TrapDoor::canDoorBeOnTile(&gameMap, tile))
+        if(tile == nullptr)
+            break;
+        if(!knowledge.isKnown(tile))
+            return -1;
+        if(tile->isFullTile())
+            break;
+        Tile* left = gameMap.getTile(tile->getX() - entrance.mDy, tile->getY() + entrance.mDx);
+        Tile* right = gameMap.getTile(tile->getX() + entrance.mDy, tile->getY() - entrance.mDx);
+        if(left == nullptr || right == nullptr)
+            break;
+        if(!knowledge.isKnown(left) || !knowledge.isKnown(right))
+            return -1;
+        if(!left->isFullTile() || !right->isFullTile())
             break;
         ++run;
     }
     return run;
 }
+
+//! \brief Finds a known buildable bend reached along the entrance corridor.
+Tile* corridorBend(GameMap& gameMap, Seat* seat, const TRAP::Entrance& entrance)
+{
+    AiKnowledge knowledge(gameMap, seat);
+    for(int k = 1; k <= gameMap.getMapSizeX() + gameMap.getMapSizeY(); ++k)
+    {
+        Tile* tile = lineTile(gameMap, entrance, k);
+        Tile* forward = lineTile(gameMap, entrance, k + 1);
+        if(tile == nullptr || forward == nullptr || !knowledge.isKnown(tile) || !knowledge.isKnown(forward) || tile->isFullTile())
+            return nullptr;
+        Tile* left = gameMap.getTile(tile->getX() - entrance.mDy, tile->getY() + entrance.mDx);
+        Tile* right = gameMap.getTile(tile->getX() + entrance.mDy, tile->getY() - entrance.mDx);
+        if(left == nullptr || right == nullptr || !knowledge.isKnown(left) || !knowledge.isKnown(right))
+            return nullptr;
+        bool leftOpen = !left->isFullTile();
+        bool rightOpen = !right->isFullTile();
+        if(forward->isFullTile())
+            return (leftOpen != rightOpen && trapSpotFree(tile, seat)) ? tile : nullptr;
+        if(leftOpen || rightOpen)
+            return nullptr;
+    }
+    return nullptr;
+}
 }
 
+//! \brief Finds owned entrances and fortified tunnels using the keeper's known tiles.
 std::vector<TRAP::Entrance> TRAP::findEntrances(KeeperAI& ai)
 {
     GameMap& gameMap = ai.getGameMap();
@@ -413,24 +449,26 @@ std::vector<TRAP::Entrance> TRAP::findEntrances(KeeperAI& ai)
         {
             Entrance entrance;
             entrance.mDoor = tunnel;
-            entrance.mDx = 1;
-            entrance.mDy = 0;
+            bool foundOutside = false;
             for(int i = 0; i < 4; ++i)
             {
                 Tile* outside = gameMap.getTile(tunnel->getX() + dx[i], tunnel->getY() + dy[i]);
-                if((outside != nullptr) && !outside->isFullTile() && !outside->isClaimedForSeat(seat))
+                if((outside != nullptr) && knowledge.isKnown(outside) && !outside->isFullTile() && !outside->isClaimedForSeat(seat))
                 {
                     entrance.mDx = -dx[i];
                     entrance.mDy = -dy[i];
+                    foundOutside = true;
                     break;
                 }
             }
-            entrances.push_back(entrance);
+            if(foundOutside)
+                entrances.push_back(entrance);
         }
     }
     return entrances;
 }
 
+//! \brief Plans trap and door work for the current trap look.
 void TRAP::trapLook(KeeperAI& ai)
 {
     // AI row F01
@@ -472,9 +510,6 @@ void TRAP::trapLook(KeeperAI& ai)
     if(waiting >= static_cast<int>(aiKey("MaxWaitingForCraft")))
         return;
 
-    if(placeDoor(ai, entrances))
-        return;
-
     // The plan: the trap tiles per entrance; the mistake of the first plan of the game halves them for good
     int want = static_cast<int>(entrances.size()) * static_cast<int>(aiKey("TrapTilesPerEntrance"));
     if(state.mWantDivided < 0)
@@ -482,9 +517,13 @@ void TRAP::trapLook(KeeperAI& ai)
     if(state.mWantDivided == 1)
         want = std::max(1, want / static_cast<int>(aiKey("MistakeTrapWantDivisor")));
 
+    if(placeDoor(ai, entrances))
+        return;
+
     placeTrap(ai, trapTiles, want, entrances);
 }
 
+//! \brief Plans one basic or special trap at an eligible entrance.
 bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<Entrance>& entrances)
 {
     // AI row F02
@@ -498,9 +537,10 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
     // The basic mix first: spike, cannon and gas up to the planned number of tiles
     if(trapTiles < want)
     {
-        // Every n-th tile is gas, the others alternate cannon and spike
+        // Every n-th tile is gas once it is researched, the others alternate cannon and spike
         int nth = static_cast<int>(aiKey("GasEveryNthTile"));
-        TrapType kind = ((trapTiles % nth) == (nth - 1)) ? TrapType::gas : ((trapTiles % 2) ? TrapType::cannon : TrapType::spike);
+        bool gas = ((trapTiles % nth) == (nth - 1)) && SkillManager::isTrapAvailable(TrapType::gas, seat);
+        TrapType kind = gas ? TrapType::gas : ((trapTiles % 2) ? TrapType::cannon : TrapType::spike);
         if(!SkillManager::isTrapAvailable(kind, seat))
             return false;
 
@@ -564,11 +604,11 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         for(const TRAP::Entrance& entrance : entrances)
         {
             // A straight corridor of the minimum length; the mistake takes a bend instead
-            bool straight = corridorRun(gameMap, entrance) >= static_cast<int>(aiKey("BoulderCorridorMinTiles"));
-            if(straight == slipped)
-                continue;
-
-            Tile* tile = lineTile(gameMap, entrance, 1);
+            Tile* tile = nullptr;
+            if(slipped)
+                tile = corridorBend(gameMap, seat, entrance);
+            else if(corridorRun(gameMap, seat, entrance) >= static_cast<int>(aiKey("BoulderCorridorMinTiles")))
+                tile = lineTile(gameMap, entrance, 1);
             if(trapSpotFree(tile, seat) && buildOne(ai, TrapType::boulder, tile))
                 return true;
         }
@@ -595,6 +635,21 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
         }
         if((spot == nullptr) && (innermost >= 0))
             spot = lineTile(gameMap, entrances[innermost], 1);
+        if(slipped && spot != nullptr && (spot->getType() == TileType::water || spot->getType() == TileType::lava))
+            spot = nullptr;
+        if(slipped && !trapSpotFree(spot, seat))
+        {
+            spot = nullptr;
+            for(const TRAP::Entrance& entrance : entrances)
+            {
+                for(int k = 1; spot == nullptr && k <= static_cast<int>(aiKey("CannonMaxDoorDistance")); ++k)
+                {
+                    Tile* tile = lineTile(gameMap, entrance, k);
+                    if(trapSpotFree(tile, seat) && tile->getType() != TileType::water && tile->getType() != TileType::lava)
+                        spot = tile;
+                }
+            }
+        }
         if(trapSpotFree(spot, seat) && buildOne(ai, TrapType::lightning, spot))
             return true;
     }
@@ -682,14 +737,52 @@ bool TRAP::placeTrap(KeeperAI& ai, int trapTiles, int want, const std::vector<En
 
     // AI row F11
     bool needBanner = SkillManager::isTrapAvailable(TrapType::watchBanner, seat) && (countTiles(ai, TrapType::watchBanner) == 0);
-    bool needTrigger = SkillManager::isTrapAvailable(TrapType::trigger, seat) && (countTiles(ai, TrapType::trigger) == 0) &&
-                       (countTiles(ai, TrapType::watchBanner) > 0);
+    bool needTrigger = SkillManager::isTrapAvailable(TrapType::trigger, seat) && (countTiles(ai, TrapType::trigger) == 0);
     if((needBanner || needTrigger) && !entrances.empty() && !ai.getMind().slip("F11"))
     {
         // The banner stands at the entrance, the trigger on the way to the trap field
         const TRAP::Entrance& entrance = entrances[0];
-        Tile* tile = lineTile(gameMap, entrance, needBanner ? -1 : 1);
-        return trapSpotFree(tile, seat) && buildOne(ai, needBanner ? TrapType::watchBanner : TrapType::trigger, tile);
+        Tile* bannerTile = lineTile(gameMap, entrance, 1);
+        if(needBanner && trapSpotFree(bannerTile, seat) && buildOne(ai, TrapType::watchBanner, bannerTile))
+            return true;
+        if(!needTrigger)
+            return false;
+        const int radius = static_cast<int>(std::lround(SkillManager::getResearchValue(seat, SkillType::trapTrigger,
+            ConfigManager::getSingleton().getTrapConfigDouble("TriggerRadius"), ResearchEffect::Radius)));
+        AiKnowledge knowledge(gameMap, seat);
+        for(const TRAP::Entrance& candidate : entrances)
+        {
+            std::map<Tile*, Tile*> previous;
+            std::vector<Tile*> pending;
+            previous[candidate.mDoor] = nullptr;
+            pending.push_back(candidate.mDoor);
+            for(std::size_t i = 0; i < pending.size(); ++i)
+            {
+                Tile* tile = pending[i];
+                Trap* target = trapAt(ai, tile);
+                if(target != nullptr && target->getType() != TrapType::watchBanner && target->getType() != TrapType::trigger &&
+                   (!target->isDoor() || target->getType() == TrapType::doorRuned))
+                {
+                    for(Tile* triggerTile = previous[tile]; triggerTile != nullptr; triggerTile = previous[triggerTile])
+                    {
+                        int dx = std::abs(triggerTile->getX() - tile->getX());
+                        int dy = std::abs(triggerTile->getY() - tile->getY());
+                        if(std::max(dx, dy) <= radius && trapSpotFree(triggerTile, seat) &&
+                           buildOne(ai, TrapType::trigger, triggerTile))
+                            return true;
+                    }
+                }
+                for(Tile* neighbor : tile->getAllNeighbors())
+                {
+                    if(neighbor == nullptr || previous.find(neighbor) != previous.end() ||
+                       !knowledge.isKnown(neighbor) || neighbor->isFullTile())
+                        continue;
+                    previous[neighbor] = tile;
+                    pending.push_back(neighbor);
+                }
+            }
+        }
+        return false;
     }
     return false;
 }
@@ -737,17 +830,23 @@ double TRAP::reloadMargin(KeeperAI& ai)
     return state.mExhausted ? aiKey("TrapGoldMargin") : 0.0;
 }
 
-bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
+bool TRAP::reloadAllows(KeeperAI& ai, double cost)
+{
+    return (reloadMargin(ai) <= 0.0) || affordable(ai, cost);
+}
+
+//! \brief Plans an ordinary or special door for the current look.
+bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances, bool resumed)
 {
     // AI row F13
     // AI row F14
     GameMap& gameMap = ai.getGameMap();
     Seat* seat = ai.getControlledPlayer().getSeat();
 
-    // The door of the best researched kind on every entrance; the mistake forgets the upgrade: a door that stands
-    // stays, an entrance without a door gets a wooden one, and the doors are looked at again after a symptom delay
+    // The best researched door is built when affordable. The simulated mistake delays the next look only while
+    // an upgrade is still outstanding; the delayed look does not draw another mistake.
     TrapType best = bestDoor(seat);
-    bool slipped = ai.getMind().slip("F13");
+    bool slipped = !resumed && ai.getMind().slip("F13");
     bool forgotten = false;
     bool scheduled = false;
     bool stopped = false;
@@ -763,19 +862,13 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
             continue;
 
         TrapType kind = best;
-        if(slipped)
-        {
-            forgotten = true;
-            if(current != nullptr)
-                continue;
-            kind = TrapType::doorWooden;
-        }
         if(!SkillManager::isTrapAvailable(kind, seat))
             continue;
 
         // Without the gold the look ends here, as before the special doors
         if(!affordable(ai, TrapManager::costPerTile(kind)))
         {
+            forgotten = slipped;
             stopped = true;
             break;
         }
@@ -790,11 +883,10 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
         scheduled = buildOne(ai, kind, entrance.mDoor);
         break;
     }
-    TRAP::State& state = ai.getTrapState();
-    if(forgotten && (state.mDoorDue < 0.0))
-        state.mDoorDue = ai.getMind().now() + symptomDelay(ai);
-    if(scheduled || stopped)
-        return scheduled;
+    if(forgotten)
+        ai.getMind().setNextLook("F01", ai.getMind().now() + symptomDelay(ai));
+    if(scheduled || stopped || resumed)
+        return scheduled || stopped;
 
     // The special doors; the mistake does not use them at this look
     if(entrances.empty() || ai.getMind().slip("F14"))
@@ -841,8 +933,7 @@ bool TRAP::placeDoor(KeeperAI& ai, const std::vector<Entrance>& entrances)
 
 namespace
 {
-//! \brief Fortifies the tunnel entrance at the breakthrough tile now: it becomes an entrance of its own, the trap look
-//! runs at once (so the F rows build its door and its trap tiles) and the barricade is built one step inside (row F14).
+//! \brief Fortifies the tunnel entrance, schedules its trap look and builds the barricade one step inside (row F14).
 void fortifyNow(KeeperAI& ai, Tile* breakthrough)
 {
     if(breakthrough == nullptr)
@@ -852,15 +943,16 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     std::pair<int, int> tile(breakthrough->getX(), breakthrough->getY());
     if(std::find(state.mTunnels.begin(), state.mTunnels.end(), tile) == state.mTunnels.end())
         state.mTunnels.push_back(tile);
-    TRAP::trapLook(ai);
+    ai.getMind().setNextLook("F01", ai.getMind().now());
 
     std::vector<TRAP::Entrance> entrances = TRAP::findEntrances(ai);
     Seat* seat = ai.getControlledPlayer().getSeat();
     for(const TRAP::Entrance& entrance : entrances)
     {
-        if((entrance.mDoor == breakthrough) && SkillManager::isTrapAvailable(TrapType::doorBarricade, seat) &&
-           !ai.getMind().slip("F14"))
+        if((entrance.mDoor == breakthrough) && SkillManager::isTrapAvailable(TrapType::doorBarricade, seat))
         {
+            if(ai.getMind().slip("F14"))
+                continue;
             Tile* inside = lineTile(ai.getGameMap(), entrance, 1);
             if(trapSpotFree(inside, seat))
                 buildOne(ai, TrapType::doorBarricade, inside);
@@ -868,8 +960,8 @@ void fortifyNow(KeeperAI& ai, Tile* breakthrough)
     }
 }
 
-//! \brief Runs the steps whose mistake delay is over: watching the empty traps (F12), the next look at the doors (F13)
-//! and the delayed tunnel fortifications (F15). Run by the mind every AiPollSeconds; it never raises an event, and the
+//! \brief Runs the delayed trap watch and door or tunnel actions restored from older saves.
+//! Run by the mind every AiPollSeconds; it never raises an event, and the
 //! hand is used only by the actions of the steps themselves.
 //! \return Always false.
 bool pendingStep(KeeperAI& ai)
@@ -885,7 +977,7 @@ bool pendingStep(KeeperAI& ai)
     if((state.mDoorDue >= 0.0) && (now >= state.mDoorDue))
     {
         state.mDoorDue = -1.0;
-        TRAP::placeDoor(ai, TRAP::findEntrances(ai));
+        TRAP::placeDoor(ai, TRAP::findEntrances(ai), true);
     }
     std::vector<TRAP::State::PendingFortify> due;
     std::vector<TRAP::State::PendingFortify> waiting;
@@ -902,10 +994,10 @@ bool pendingStep(KeeperAI& ai)
     return false;
 }
 
-//! \brief The reaction to a destroyed building: a broken door of an entrance is rebuilt at once (row F13).
+//! \brief Rebuilds a broken entrance door; old events with unknown class keep their previous behavior (row F13).
 void onBuildingDestroyed(KeeperAI& ai, const AiEvent& event)
 {
-    if(event.tile == nullptr)
+    if(event.tile == nullptr || event.buildingClass == 2)
         return;
 
     std::vector<TRAP::Entrance> entrances = TRAP::findEntrances(ai);
@@ -951,6 +1043,7 @@ void TRAP::bindRows(KeeperAI& ai)
     mind.onSave(save);
 }
 
+//! \brief Fortifies a known tunnel unless this trigger's mistake skips the fortification.
 bool TRAP::fortifyTunnel(KeeperAI& ai, Tile* breakthrough)
 {
     // AI row F15
@@ -958,16 +1051,9 @@ bool TRAP::fortifyTunnel(KeeperAI& ai, Tile* breakthrough)
         return false;
 
     restoreDraws(ai);
-    // The mistake: the AI notices the open tunnel only after another symptom delay
+    // The simulated mistake skips this fortification.
     if(ai.getMind().slip("F15"))
-    {
-        TRAP::State::PendingFortify pending;
-        pending.mX = breakthrough->getX();
-        pending.mY = breakthrough->getY();
-        pending.mDue = ai.getMind().now() + symptomDelay(ai);
-        ai.getTrapState().mFortifyDue.push_back(pending);
         return false;
-    }
 
     // The tunnel is an entrance from now on, so the trap look builds its door and the trap tiles per entrance
     fortifyNow(ai, breakthrough);

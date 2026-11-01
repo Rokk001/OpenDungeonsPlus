@@ -211,7 +211,9 @@ private:
     {
         AiEventType type;
         double due;
+        //! \brief Last fight refresh time on the mind clock.
         double time;
+        //! \brief First fight time on the mind clock.
         double fightStart;
         AiMath::ReactionKind kind;
         int x, y;

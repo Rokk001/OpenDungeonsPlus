@@ -176,6 +176,14 @@ void KeeperAI::notifyEvent(const AiEvent& event)
     mMind.enqueue(event);
 }
 
+//! \brief Updates the pending reaction without raising another fight notice.
+void KeeperAI::refreshFight(Tile* tile)
+{
+    const AiEvent event = {AiEventType::Fight, tile, nullptr, -1, 0.0, mMind.now()};
+    mEvents.notify(event);
+    mMind.refreshFight(tile);
+}
+
 //! \brief Returns the configured level values used by the decision functions.
 const AiSettings& KeeperAI::getSettings() const
 {

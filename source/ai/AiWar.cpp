@@ -330,6 +330,23 @@ bool castBanner(Env& env, Group& group, Tile* tile)
     return true;
 }
 
+//! \brief Casts Strength (row E06) and the march Haste (row E03) on the main group of a launch, after its hand moves and
+//! before its banner. The banners come first: each spell is cast only with the mana left above the price of every banner
+//! of the launch and the spell reserve.
+//! \param group The main group of the launch.
+//! \param banners How many banners the launch casts.
+void castLaunchSpells(Env& env, Group& group, size_t banners)
+{
+    ConfigManager& config = ConfigManager::getSingleton();
+    double spare = env.player.getSeat()->getMana() - static_cast<double>(banners) * callToWarPrice() -
+                   key("SpellManaReserve") * config.getMaxManaPerSeat();
+    double strengthPrice = config.getSpellConfigDouble("CreatureStrengthPrice");
+    if((spare >= strengthPrice) && SPELL::castStrength(env.ai, group.members))
+        spare -= strengthPrice;
+    if(spare >= config.getSpellConfigDouble("CreatureHastePrice"))
+        SPELL::castHaste(env.ai, group.members, true, 0.0);
+}
+
 //! \brief True when a tile is claimed for the own seat.
 bool isOwnGround(Env& env, Tile* tile)
 {
@@ -805,13 +822,16 @@ void launchDropsDone(Env& env)
     env.mind.enqueue(launched);
 }
 
+//! \brief Schedules the main group's launch spells and banner after its drops finish.
 void marchOff(Env& env)
 {
-    // Row K05: after Strength of the Launch reaction the last banner is cast, then the march starts (row E03)
+    // Row K05: after the drops, Strength and Haste precede the last banner and the march.
     WarState& st = env.state;
     if((st.assault != WarState::assaultLaunching) || st.groups.empty())
         return;
     Group& g = st.groups.back();
+    if(!g.finished && !g.targets.empty())
+        castLaunchSpells(env, g, 1);
     if(!g.finished && !g.targets.empty() && !castBanner(env, g, g.targets.front()))
         g.finished = true;
 

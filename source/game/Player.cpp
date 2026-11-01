@@ -17,6 +17,7 @@
 
 #include "ai/AiKnowledge.h"
 #include "ai/AiMind.h"
+#include "ai/BaseAI.h"
 #include "game/Player.h"
 
 #include "creatureaction/CreatureAction.h"
@@ -684,7 +685,7 @@ void Player::sendLevelStatistics(bool levelWon)
     ODServer::getSingleton().queueServerNotification(serverNotification);
 }
 
-//! \brief Notifies a keeper of a fight after applying the shared distance and time suppression.
+//! \brief Notifies a keeper of a fight or refreshes its existing marker and pending AI reaction.
 void Player::notifyTeamFighting(Player* player, Tile* tile)
 {
     // A defeated player has nothing left to defend: no "we are under attack"
@@ -706,6 +707,12 @@ void Player::notifyTeamFighting(Player* player, Tile* tile)
         {
             // A similar event is already on nearly. We only update it
             event->setTimeRemain(BATTLE_TIME_COUNT);
+            if(!getIsHuman())
+            {
+                BaseAI* ai = mGameMap->getAI(*this);
+                if(ai != nullptr)
+                    ai->refreshFight(event->getTile());
+            }
             return;
         }
     }

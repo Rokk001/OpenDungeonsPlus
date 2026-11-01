@@ -23,15 +23,18 @@
 #include "ai/KeeperAI.h"
 
 #include "creatureaction/CreatureAction.h"
+#include "creatureaction/CreatureActionFight.h"
 #include "creaturemood/CreatureMood.h"
 #include "creatureskill/CreatureSkill.h"
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "ODApplication.h"
 #include "rooms/Room.h"
@@ -45,6 +48,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <limits>
 #include <sstream>
 #include <string>
 
@@ -164,18 +168,6 @@ bool inFight(const Creature* creature)
     return creature->isActionInList(CreatureActionType::fight) || creature->isActionInList(CreatureActionType::flee);
 }
 
-//! \brief Returns the enemy fighters in sight that take part in a fight: the enemies of the current fight.
-std::vector<Creature*> fightEnemies(KeeperAI& ai)
-{
-    std::vector<Creature*> enemies;
-    for(Creature* creature : visibleEnemies(ai))
-    {
-        if(inFight(creature))
-            enemies.push_back(creature);
-    }
-    return enemies;
-}
-
 //! \brief Tells whether the first attack line of the creature's kind is a melee attack.
 bool isMelee(const Creature* creature)
 {
@@ -205,31 +197,160 @@ std::vector<Creature*> ownFighters(KeeperAI& ai)
     return fighters;
 }
 
-//! \brief Returns the own fighters that take part in a fight now: the own group of the current fight.
-std::vector<Creature*> fightingOwn(KeeperAI& ai)
+//! \brief Tells whether one of the two creatures is among the enemies the other one sees, so they can fight each other.
+bool engaged(const Creature* a, const Creature* b)
 {
-    std::vector<Creature*> fighters;
+    const std::vector<GameEntity*>& seenByA = a->getVisibleEnemyObjects();
+    if(std::find(seenByA.begin(), seenByA.end(), b) != seenByA.end())
+        return true;
+
+    const std::vector<GameEntity*>& seenByB = b->getVisibleEnemyObjects();
+    return std::find(seenByB.begin(), seenByB.end(), a) != seenByB.end();
+}
+
+//! \brief Collects the creatures of the fight at a tile: starting with the fighting creature nearest to the tile, every
+//! fighting own fighter and fighting enemy in sight that is linked to it by a chain of creatures seeing each other as
+//! enemies. A parallel fight elsewhere on the map stays out of the group.
+//! \param fightTile The tile of the Fight event of the fight, nullptr for none (empty group).
+//! \param own Out: the own fighters of the fight.
+//! \param enemies Out: the enemy fighters in sight of the fight.
+void fightGroupAt(KeeperAI& ai, Tile* fightTile, std::vector<Creature*>& own, std::vector<Creature*>& enemies)
+{
+    own.clear();
+    enemies.clear();
+    if(fightTile == nullptr)
+        return;
+
+    std::vector<Creature*> ownLeft;
     for(Creature* creature : ownFighters(ai))
     {
         if(inFight(creature))
-            fighters.push_back(creature);
+            ownLeft.push_back(creature);
     }
-    return fighters;
+    std::vector<Creature*> enemyLeft;
+    for(Creature* creature : visibleEnemies(ai))
+    {
+        if(inFight(creature))
+            enemyLeft.push_back(creature);
+    }
+
+    // The seed: the fighting creature nearest to the tile of the Fight event
+    Creature* seed = nullptr;
+    bool seedOwn = false;
+    int seedDistance = 0;
+    for(int side = 0; side < 2; ++side)
+    {
+        for(Creature* creature : (side == 0) ? ownLeft : enemyLeft)
+        {
+            Tile* tile = creature->getPositionTile();
+            int dx = tile->getX() - fightTile->getX();
+            int dy = tile->getY() - fightTile->getY();
+            int distance = dx * dx + dy * dy;
+            if((seed == nullptr) || (distance < seedDistance))
+            {
+                seed = creature;
+                seedOwn = (side == 0);
+                seedDistance = distance;
+            }
+        }
+    }
+    if(seed == nullptr)
+        return;
+
+    std::vector<Creature*>& seedLeft = seedOwn ? ownLeft : enemyLeft;
+    seedLeft.erase(std::find(seedLeft.begin(), seedLeft.end(), seed));
+    (seedOwn ? own : enemies).push_back(seed);
+
+    // Each side grows by the creatures of the other side that are engaged with one of its members
+    size_t ownDone = 0;
+    size_t enemyDone = 0;
+    while((ownDone < own.size()) || (enemyDone < enemies.size()))
+    {
+        bool fromOwn = (ownDone < own.size());
+        Creature* member = fromOwn ? own[ownDone++] : enemies[enemyDone++];
+        std::vector<Creature*>& other = fromOwn ? enemyLeft : ownLeft;
+        std::vector<Creature*>& joined = fromOwn ? enemies : own;
+        std::vector<Creature*> kept;
+        for(Creature* creature : other)
+        {
+            if(engaged(member, creature))
+                joined.push_back(creature);
+            else
+                kept.push_back(creature);
+        }
+        other.swap(kept);
+    }
 }
 
-//! \brief Returns the own fighters that stand on the tile (the drop tile of a launched group).
-std::vector<Creature*> ownFightersOn(KeeperAI& ai, const Tile* tile)
+//! \brief Collects the creatures of the fight of the session whose decisions run now (fightGroupAt at its tile).
+//! \param own Out: the own fighters of the fight.
+//! \param enemies Out: the enemy fighters in sight of the fight.
+void fightGroup(KeeperAI& ai, std::vector<Creature*>& own, std::vector<Creature*>& enemies)
 {
-    std::vector<Creature*> fighters;
-    if(tile == nullptr)
-        return fighters;
+    const SPELL::State& state = ai.getSpellState();
+    fightGroupAt(ai, ai.getGameMap().getTile(state.mFightX, state.mFightY), own, enemies);
+}
 
-    for(Creature* creature : ownFighters(ai))
+//! \brief Returns the enemy fighters in sight that take part in the current fight (fightGroup).
+std::vector<Creature*> fightEnemies(KeeperAI& ai)
+{
+    std::vector<Creature*> own;
+    std::vector<Creature*> enemies;
+    fightGroup(ai, own, enemies);
+    return enemies;
+}
+
+//! \brief Returns the own fighters that take part in the current fight (fightGroup).
+std::vector<Creature*> fightingOwn(KeeperAI& ai)
+{
+    std::vector<Creature*> own;
+    std::vector<Creature*> enemies;
+    fightGroup(ai, own, enemies);
+    return own;
+}
+
+//! \brief Returns the building the creature attacks now, or nullptr when it attacks a creature or nothing. It is the
+//! choice of CreatureActionFight::handleFight: a fight with a given target attacks only that creature; otherwise the
+//! living creatures in sight come first, and only when none of them can be attacked or reached, the buildings in sight.
+//! A worker never attacks a building.
+GameEntity* attackedBuilding(Creature* creature)
+{
+    if(creature->getDefinition()->isWorker())
+        return nullptr;
+
+    // The fight action on top of the others is the one that runs
+    const CreatureActionFight* fight = nullptr;
+    for(const std::unique_ptr<CreatureAction>& action : creature->getActions())
     {
-        if(creature->getPositionTile() == tile)
-            fighters.push_back(creature);
+        if(action->getType() == CreatureActionType::fight)
+            fight = static_cast<const CreatureActionFight*>(action.get());
     }
-    return fighters;
+    if((fight == nullptr) || (fight->getEntityAttack() != nullptr))
+        return nullptr;
+
+    std::vector<GameEntity*> creatures;
+    std::vector<GameEntity*> buildings;
+    for(GameEntity* entity : creature->getVisibleEnemyObjects())
+    {
+        if(entity->getObjectType() != GameEntityType::creature)
+            buildings.push_back(entity);
+        else if(static_cast<Creature*>(entity)->isAlive())
+            creatures.push_back(entity);
+    }
+
+    static const std::vector<Tile*> noFilter;
+    GameEntity* target = nullptr;
+    Tile* targetTile = nullptr;
+    Tile* position = nullptr;
+    CreatureSkillData* skill = nullptr;
+    if(!creatures.empty() && creature->searchBestTargetInList(creatures, noFilter, target, targetTile, position, skill))
+        return nullptr;
+
+    target = nullptr;
+    if(buildings.empty() || !creature->searchBestTargetInList(buildings, noFilter, target, targetTile, position, skill))
+        return nullptr;
+
+    return target;
 }
 
 //! \brief Returns the creature of the list with the lowest HP share.
@@ -299,13 +420,6 @@ int creaturesAround(const std::vector<Creature*>& list, const Creature* center)
     return count;
 }
 
-//! \brief Returns the seconds the hand is busy with a spell cast.
-double spellActionSeconds()
-{
-    const ConfigManager::AiAction* action = ConfigManager::getSingleton().getAiAction("spell");
-    return (action == nullptr) ? 0.0 : action->mSeconds;
-}
-
 //! \brief Returns the creatures of the list that stand on ground claimed for the AI's seat.
 std::vector<Creature*> onOwnGroundOnly(KeeperAI& ai, const std::vector<Creature*>& list)
 {
@@ -319,16 +433,21 @@ std::vector<Creature*> onOwnGroundOnly(KeeperAI& ai, const std::vector<Creature*
     return result;
 }
 
-//! \brief Returns the fighting enemies in sight that stand on ground claimed for the AI's seat.
+//! \brief Returns the enemies of the current fight that stand on ground claimed for the AI's seat.
 std::vector<Creature*> enemiesOnOwnGround(KeeperAI& ai)
 {
     return onOwnGroundOnly(ai, fightEnemies(ai));
 }
 
-//! \brief Casts a spell on the tile of the creature.
-void castOnTileOf(KeeperAI& ai, SpellType type, Creature* creature)
+//! \brief Casts a spell on the creature: the area spells Inferno and Tremor on its tile, every other spell on the
+//! creature itself, which the hand looks up by name when it reaches it (not at the time of the decision).
+//! \return The mind time at which the hand has finished the cast.
+double castOnTileOf(KeeperAI& ai, SpellType type, Creature* creature)
 {
-    ACTS::castSpell(ai, type, creature->getPositionTile());
+    if((type == SpellType::inferno) || (type == SpellType::tremor))
+        return ACTS::castSpell(ai, type, creature->getPositionTile());
+
+    return ACTS::castSpell(ai, type, creature);
 }
 
 //! \brief Tells whether the tile is covered by the heart room of the seat.
@@ -368,6 +487,36 @@ std::string numberToken(double value)
     return os.str();
 }
 
+//! \brief Encodes a creature name into one comma-free saved token.
+std::string encodeName(const std::string& value)
+{
+    static const char digits[] = "0123456789abcdef";
+    std::string result;
+    for(unsigned char ch : value)
+    {
+        result += digits[ch >> 4];
+        result += digits[ch & 15];
+    }
+    return result;
+}
+
+//! \brief Decodes one saved creature name, returning empty for an invalid token.
+std::string decodeName(const std::string& value)
+{
+    if(value.size() % 2 != 0)
+        return "";
+    std::string result;
+    for(std::size_t i = 0; i < value.size(); i += 2)
+    {
+        unsigned int ch = 0;
+        std::istringstream input(value.substr(i, 2));
+        if(!(input >> std::hex >> ch))
+            return "";
+        result += static_cast<char>(ch);
+    }
+    return result;
+}
+
 //! \brief Splits a comma separated draw value into its parts.
 std::vector<std::string> splitValue(const std::string& value)
 {
@@ -383,9 +532,9 @@ std::vector<std::string> splitValue(const std::string& value)
     }
 }
 
-//! \brief Reads the spell draws of a loaded game from the mind once: the turn of the last Eye of Evil cast (E04), the
-//! pending late Defense (E05) and a running fight session (E19). The mind imports its state at its first turn, at mind
-//! time 0, so a saved time relative to the save is the mind time itself.
+//! \brief Reads the spell draws of a loaded game from the mind once: Eye cast state (E04), the
+//! pending late Defense (E05) and the running fight sessions (E19, one line each). The mind imports its state at its
+//! first turn, at mind time 0, so a saved time relative to the save is the mind time itself.
 void restoreDraws(KeeperAI& ai)
 {
     SPELL::State& state = ai.getSpellState();
@@ -393,6 +542,7 @@ void restoreDraws(KeeperAI& ai)
         return;
 
     state.mRestored = true;
+    bool legacyLate = false;
     for(const AiMath::AiStateLine& line : ai.getMind().savedRows())
     {
         if((line.tag != "draw") || (line.tokens.size() != 3))
@@ -400,27 +550,51 @@ void restoreDraws(KeeperAI& ai)
 
         if((line.tokens[0] == "E04") && (line.tokens[1] == "eyeTurn"))
             state.mLastEyeTurn = std::atoll(line.tokens[2].c_str());
+        else if((line.tokens[0] == "E04") && (line.tokens[1] == "eyePending"))
+            state.mEyePending = (line.tokens[2] == "1");
         else if((line.tokens[0] == "E05") && (line.tokens[1] == "lateDefense"))
-            state.mLateDefense = (line.tokens[2] == "1");
+            legacyLate = (line.tokens[2] == "1");
         else if((line.tokens[0] == "E19") && (line.tokens[1] == "session"))
         {
-            // start,lastFight,x,y,nextCast,haste
+            // start,lastFight,x,y,nextCast,haste,lateDefense,holderCount,encoded holder names
             std::vector<std::string> parts = splitValue(line.tokens[2]);
-            if(parts.size() != 6)
+            if(parts.size() < 6)
                 continue;
 
-            state.mInSession = true;
-            state.mSessionStart = std::atof(parts[0].c_str());
-            state.mLastFight = std::atof(parts[1].c_str());
-            state.mFightX = std::atoi(parts[2].c_str());
-            state.mFightY = std::atoi(parts[3].c_str());
-            state.mNextCast = std::atof(parts[4].c_str());
-            state.mSessionHaste = (parts[5] == "1");
+            SPELL::State::Session session;
+            session.mStart = std::atof(parts[0].c_str());
+            session.mLastFight = std::atof(parts[1].c_str());
+            session.mFightX = std::atoi(parts[2].c_str());
+            session.mFightY = std::atoi(parts[3].c_str());
+            session.mNextCast = std::atof(parts[4].c_str());
+            session.mHaste = (parts[5] == "1");
+            session.mLateDefense = (parts.size() >= 7) && (parts[6] == "1");
+            session.mLegacyHolders = parts.size() < 8;
+            if(!session.mLegacyHolders)
+            {
+                char* end = nullptr;
+                unsigned long count = std::strtoul(parts[7].c_str(), &end, 10);
+                if(end == parts[7].c_str() || *end != '\0' || count != parts.size() - 8)
+                    continue;
+                for(std::size_t i = 8; i < parts.size(); ++i)
+                {
+                    const std::string name = decodeName(parts[i]);
+                    if(!name.empty())
+                        session.mDefenseHolders.push_back(name);
+                }
+            }
+            state.mSessions.push_back(session);
         }
+    }
+    // A save that kept one late Defense flag for the whole AI: the fights that were running owe it
+    if(legacyLate)
+    {
+        for(SPELL::State::Session& session : state.mSessions)
+            session.mLateDefense = true;
     }
 }
 
-//! \brief Replaces the spell draw lines of the saved AI state with the current ones.
+//! \brief Saves spell draws, the Eye cast state and each session's delayed Defense holders.
 void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
     restoreDraws(ai);
@@ -444,122 +618,252 @@ void saveDraws(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
         line.tokens.push_back(std::to_string(state.mLastEyeTurn));
         lines.push_back(line);
     }
-    if(state.mLateDefense)
+    if(state.mEyePending)
+        lines.push_back({"draw", {"E04", "eyePending", "1"}});
+    // The times relative to the save, one line per running session
+    double now = ai.getMind().now();
+    for(const SPELL::State::Session& session : state.mSessions)
     {
-        AiMath::AiStateLine line;
-        line.tag = "draw";
-        line.tokens.push_back("E05");
-        line.tokens.push_back("lateDefense");
-        line.tokens.push_back("1");
-        lines.push_back(line);
-    }
-    if(state.mInSession)
-    {
-        // The times relative to the save
-        double now = ai.getMind().now();
         AiMath::AiStateLine line;
         line.tag = "draw";
         line.tokens.push_back("E19");
         line.tokens.push_back("session");
-        line.tokens.push_back(numberToken(state.mSessionStart - now) + "," + numberToken(state.mLastFight - now) + "," +
-                              std::to_string(state.mFightX) + "," + std::to_string(state.mFightY) + "," +
-                              numberToken(state.mNextCast - now) + "," + (state.mSessionHaste ? "1" : "0"));
+        std::string value = numberToken(session.mStart - now) + "," + numberToken(session.mLastFight - now) + "," +
+                              std::to_string(session.mFightX) + "," + std::to_string(session.mFightY) + "," +
+                              numberToken(session.mNextCast - now) + "," + (session.mHaste ? "1" : "0") + "," +
+                              (session.mLateDefense ? "1" : "0");
+        if(!session.mLegacyHolders)
+        {
+            value += "," + std::to_string(session.mDefenseHolders.size());
+            for(const std::string& name : session.mDefenseHolders)
+                value += "," + encodeName(name);
+        }
+        line.tokens.push_back(value);
         lines.push_back(line);
     }
 }
 
-//! \brief The casting loop of the fight session: a cast as soon as the previous one allows it, and the end of the
-//! session once no Fight event came for FightOverSeconds. Run by the mind every AiPollSeconds; it never raises an event,
-//! so the loop needs no hand time of its own.
+//! \brief Returns the seconds the fight marker of the game at the tile still lasts, or a negative number when the seat
+//! shows none: the game raises one Fight event per fight place and refreshes its marker (FightOverSeconds) while the
+//! fight goes on, so the marker shows that the fight lasts and its end is the end of the fight.
+double fightMarkerRemain(KeeperAI& ai, int x, int y)
+{
+    const Player& player = ai.getControlledPlayer();
+    uint32_t index = std::numeric_limits<uint32_t>::max();
+    const PlayerEvent* event = player.getNextEvent(index);
+    uint32_t first = index;
+    while(event != nullptr)
+    {
+        Tile* tile = event->getTile();
+        if((event->getType() == PlayerEventType::fight) && (tile != nullptr) && (tile->getX() == x) && (tile->getY() == y))
+            return event->getTimeRemain();
+
+        event = player.getNextEvent(index);
+        if(index == first)
+            break;
+    }
+    return -1.0;
+}
+
+//! \brief Makes the session the one whose decisions run now: the fight spells look at the creatures of its fight.
+void selectSession(KeeperAI& ai, const SPELL::State::Session& session)
+{
+    SPELL::State& state = ai.getSpellState();
+    state.mFightX = session.mFightX;
+    state.mFightY = session.mFightY;
+}
+
+//! \brief Runs a session's casting loop and tries Haste once an ongoing fight exceeds HasteFightSeconds.
+void stepSession(KeeperAI& ai, SPELL::State::Session& session, double now)
+{
+    selectSession(ai, session);
+    if(!session.mHaste && ((now - session.mStart) > aiKey("HasteFightSeconds")) &&
+       ((now - session.mLastFight) < aiKey("FightOverSeconds")))
+    {
+        session.mHaste = true;
+        SPELL::castHaste(ai, fightingOwn(ai), false, now - session.mStart);
+    }
+
+    // On ground not claimed for the AI (an assault) only Inferno and Tremor reach the enemy
+    Tile* tile = ai.getGameMap().getTile(session.mFightX, session.mFightY);
+    bool enemyGround = (tile != nullptr) && !tile->isClaimedForSeat(ai.getControlledPlayer().getSeat());
+    SPELL::chooseSpell(ai, enemyGround, now, session.mNextCast);
+}
+
+//! \brief The casting loops of the fight sessions: a cast as soon as the previous one of the same session allows it.
+//! A session lasts while the game shows its fight marker; the marker lives FightOverSeconds after the last Fight event,
+//! so the session ends the moment the fight is over (and, when no marker is seen, FightOverSeconds after its last
+//! Fight reaction). The late Defense of the E05 mistake is cast when its own session ends. Run by the mind every
+//! AiPollSeconds; it never raises an event, so the loop needs no hand time of its own.
 //! \return Always false.
 bool sessionStep(KeeperAI& ai)
 {
     restoreDraws(ai);
     SPELL::State& state = ai.getSpellState();
-    if(!state.mInSession)
-        return false;
-
     double now = ai.getMind().now();
-    if((now - state.mLastFight) >= aiKey("FightOverSeconds"))
+    std::vector<SPELL::State::Session> running;
+    std::vector<SPELL::State::Session> ended;
+    for(const SPELL::State::Session& session : state.mSessions)
     {
-        state.mInSession = false;
-        return false;
+        SPELL::State::Session current = session;
+        double remain = fightMarkerRemain(ai, current.mFightX, current.mFightY);
+        if(remain >= 0.0)
+            current.mLastFight = std::max(current.mLastFight, now - (aiKey("FightOverSeconds") - remain));
+        if((now - current.mLastFight) < aiKey("FightOverSeconds"))
+            running.push_back(current);
+        else
+            ended.push_back(current);
     }
-
-    // On ground not claimed for the AI (an assault) only Inferno and Tremor reach the enemy
-    Tile* tile = ai.getGameMap().getTile(state.mFightX, state.mFightY);
-    bool enemyGround = (tile != nullptr) && !tile->isClaimedForSeat(ai.getControlledPlayer().getSeat());
-    SPELL::chooseSpell(ai, enemyGround, now, state.mNextCast);
+    state.mSessions.swap(running);
+    // The late Defense of a fight drawn as a mistake follows when that fight is over
+    for(SPELL::State::Session& session : ended)
+    {
+        std::vector<Creature*> holders;
+        if(session.mLegacyHolders)
+            holders = ownFighters(ai);
+        else
+            for(const std::string& name : session.mDefenseHolders)
+            {
+                Creature* creature = ai.getGameMap().getCreature(name);
+                if(creature != nullptr && creature->isAlive() && creature->getSeat() == ai.getControlledPlayer().getSeat())
+                    holders.push_back(creature);
+            }
+        SPELL::castDefense(ai, onOwnGroundOnly(ai, holders), true, session.mLateDefense);
+    }
+    for(SPELL::State::Session& session : state.mSessions)
+        stepSession(ai, session, now);
     return false;
 }
 
-//! \brief The reaction to a Fight event after its alert delay: starts or extends the fight session and makes the
-//! decisions of the single-target and support spells of this fight.
+//! \brief Tells whether two lists of creatures share a creature.
+bool shareCreature(const std::vector<Creature*>& a, const std::vector<Creature*>& b)
+{
+    for(Creature* creature : a)
+    {
+        if(std::find(b.begin(), b.end(), creature) != b.end())
+            return true;
+    }
+    return false;
+}
+
+//! \brief The reaction to a Fight event after its alert delay: starts the session of a new fight, or extends the session
+//! of the same fight (same tile or creatures of the same fight), and makes the decisions of the single-target and
+//! support spells of this fight, retaining its holders for a delayed Defense cast.
 void onFight(KeeperAI& ai, const AiEvent& event)
 {
     restoreDraws(ai);
     SPELL::State& state = ai.getSpellState();
     Seat* seat = ai.getControlledPlayer().getSeat();
     double now = ai.getMind().now();
-    bool first = !state.mInSession;
+
+    // E20 reacts to the Fight event itself; the other fight spells need a still-active session.
+    if((now - event.time) >= aiKey("FightOverSeconds"))
+    {
+        SPELL::castChampion(ai, tileNextToHeart(ai), isHeartTile(event.tile, seat));
+        return;
+    }
+
+    // The creatures of this fight; sessions that hold one of them are the same fight and are merged into one
+    std::vector<Creature*> own;
+    std::vector<Creature*> enemies;
+    fightGroupAt(ai, event.tile, own, enemies);
+    own.insert(own.end(), enemies.begin(), enemies.end());
+    int match = -1;
+    std::vector<SPELL::State::Session> kept;
+    for(const SPELL::State::Session& session : state.mSessions)
+    {
+        bool sameTile = (event.tile != nullptr) && (session.mFightX == event.tile->getX()) &&
+                        (session.mFightY == event.tile->getY());
+        bool same = sameTile || (event.tile == nullptr);
+        if(!same)
+        {
+            std::vector<Creature*> sessionOwn;
+            std::vector<Creature*> sessionEnemies;
+            fightGroupAt(ai, ai.getGameMap().getTile(session.mFightX, session.mFightY), sessionOwn, sessionEnemies);
+            same = shareCreature(own, sessionOwn) || shareCreature(own, sessionEnemies);
+        }
+        if(!same)
+        {
+            kept.push_back(session);
+            continue;
+        }
+        if(match < 0)
+        {
+            match = static_cast<int>(kept.size());
+            kept.push_back(session);
+            continue;
+        }
+        SPELL::State::Session& merged = kept[static_cast<size_t>(match)];
+        merged.mStart = std::min(merged.mStart, session.mStart);
+        merged.mLastFight = std::max(merged.mLastFight, session.mLastFight);
+        merged.mNextCast = std::max(merged.mNextCast, session.mNextCast);
+        merged.mHaste = merged.mHaste || session.mHaste;
+        merged.mLegacyHolders = (merged.mLateDefense && merged.mLegacyHolders) ||
+                                (session.mLateDefense && session.mLegacyHolders);
+        merged.mLateDefense = merged.mLateDefense || session.mLateDefense;
+        for(const std::string& name : session.mDefenseHolders)
+            if(std::find(merged.mDefenseHolders.begin(), merged.mDefenseHolders.end(), name) == merged.mDefenseHolders.end())
+                merged.mDefenseHolders.push_back(name);
+    }
+    state.mSessions.swap(kept);
+
+    bool first = (match < 0);
     if(first)
     {
-        state.mInSession = true;
-        state.mSessionStart = now;
-        state.mNextCast = now;
-        state.mSessionHaste = false;
+        SPELL::State::Session session;
+        session.mStart = event.fightStart;
+        session.mLastFight = event.time;
+        session.mFightX = -1;
+        session.mFightY = -1;
+        session.mNextCast = now;
+        session.mHaste = false;
+        session.mLateDefense = false;
+        session.mLegacyHolders = false;
+        match = static_cast<int>(state.mSessions.size());
+        state.mSessions.push_back(session);
     }
-    state.mLastFight = now;
+    SPELL::State::Session& session = state.mSessions[static_cast<size_t>(match)];
+    session.mStart = std::min(session.mStart, event.fightStart);
+    // The fight ends FightOverSeconds after the time the game raised the Fight event, not after this delayed reaction
+    session.mLastFight = std::max(session.mLastFight, event.time);
     if(event.tile != nullptr)
     {
-        state.mFightX = event.tile->getX();
-        state.mFightY = event.tile->getY();
+        session.mFightX = event.tile->getX();
+        session.mFightY = event.tile->getY();
     }
+    selectSession(ai, session);
 
     // Defense on the group that holds the entrance, at the first Fight of the session
     if(first)
-        SPELL::castDefense(ai, onOwnGroundOnly(ai, fightingOwn(ai)), false);
-
-    // Haste once the fight lasts longer than HasteFightSeconds
-    if(!state.mSessionHaste && ((now - state.mSessionStart) > aiKey("HasteFightSeconds")))
     {
-        state.mSessionHaste = true;
-        SPELL::castHaste(ai, fightingOwn(ai), false, now - state.mSessionStart);
+        const std::vector<Creature*> holders = onOwnGroundOnly(ai, fightingOwn(ai));
+        SPELL::castDefense(ai, holders, false, session.mLateDefense);
+        if(session.mLateDefense)
+            for(Creature* holder : holders)
+                session.mDefenseHolders.push_back(holder->getName());
     }
 
     SPELL::castSlow(ai);
     SPELL::castWeak(ai);
     SPELL::castDefector(ai);
-    SPELL::castHexenHen(ai, event.tile);
+    SPELL::castHexenHen(ai);
 
     // A fight on a heart tile is an attack on the heart
     bool heart = isHeartTile(event.tile, seat);
     SPELL::castChampion(ai, tileNextToHeart(ai), heart);
 
-    // The first cast of the session follows this same alert delay
-    sessionStep(ai);
+    // The first cast of the session follows this same alert delay; Haste once the fight lasts long enough
+    stepSession(ai, session, now);
 }
 
-//! \brief The late Defense cast of the E05 mistake when the fight is over.
-void onFightOver(KeeperAI& ai, const AiEvent& event)
-{
-    restoreDraws(ai);
-    SPELL::castDefense(ai, onOwnGroundOnly(ai, ownFighters(ai)), true);
-}
-
-//! \brief Haste on the main group when it starts the march; the March event carries the drop tile of the main group.
-void onMarch(KeeperAI& ai, const AiEvent& event)
-{
-    SPELL::castHaste(ai, ownFightersOn(ai, event.tile), true, 0.0);
-}
-
-//! \brief Strength on the main group while it stands on its drop tile, and the champion of an assault. The Launch event
-//! carries the drop tile of the main group and the tactic index as amount (raid 3 gets no champion).
+//! \brief The champion of an assault. The Launch event carries the drop tile of the main group and the tactic index as
+//! amount (raid 3 gets no champion).
 void onLaunch(KeeperAI& ai, const AiEvent& event)
 {
-    SPELL::castStrength(ai, ownFightersOn(ai, event.tile));
     if(static_cast<int>(event.amount) != 3)
         SPELL::castChampion(ai, event.tile, true);
+    else
+        ai.getMind().slip("E20");
 }
 
 //! \brief The champion when the heart is critical.
@@ -569,16 +873,12 @@ void onHeartCritical(KeeperAI& ai, const AiEvent& event)
 }
 }
 
+//! \brief Starts the spell state without a pending cast or fight session.
 SPELL::State::State() :
     mLastEyeTurn(-1),
-    mLateDefense(false),
-    mInSession(false),
-    mSessionStart(0.0),
-    mLastFight(0.0),
+    mEyePending(false),
     mFightX(-1),
     mFightY(-1),
-    mNextCast(0.0),
-    mSessionHaste(false),
     mRestored(false)
 {
 }
@@ -588,22 +888,26 @@ void SPELL::bindRows(KeeperAI& ai)
     Mind& mind = ai.getMind();
     KeeperAI* self = &ai;
     std::function<void(const AiEvent&)> fight = [self](const AiEvent& event) { onFight(*self, event); };
-    std::function<void(const AiEvent&)> fightOver = [self](const AiEvent& event) { onFightOver(*self, event); };
-    std::function<void(const AiEvent&)> march = [self](const AiEvent& event) { onMarch(*self, event); };
-    std::function<void(const AiEvent&)> launch = [self](const AiEvent& event) { onLaunch(*self, event); };
-    std::function<void(const AiEvent&)> heart = [self](const AiEvent& event) { onHeartCritical(*self, event); };
+    std::function<void(const AiEvent&)> champion = [self](const AiEvent& event)
+    {
+        if(event.type == AiEventType::Launch)
+            onLaunch(*self, event);
+        else
+            onHeartCritical(*self, event);
+    };
     std::function<bool()> session = [self]() { return sessionStep(*self); };
     std::function<void(std::vector<AiMath::AiStateLine>&)> save = [self](std::vector<AiMath::AiStateLine>& lines) { saveDraws(*self, lines); };
 
     mind.onEvent("E19", std::vector<AiEventType>(1, AiEventType::Fight), fight);
-    mind.onEvent("E05", std::vector<AiEventType>(1, AiEventType::FightOver), fightOver);
-    mind.onEvent("E03", std::vector<AiEventType>(1, AiEventType::March), march);
-    mind.onEvent("E06", std::vector<AiEventType>(1, AiEventType::Launch), launch);
-    mind.onEvent("E20", std::vector<AiEventType>(1, AiEventType::HeartCritical), heart);
+    std::vector<AiEventType> championEvents;
+    championEvents.push_back(AiEventType::Launch);
+    championEvents.push_back(AiEventType::HeartCritical);
+    mind.onEvent("E20", championEvents, champion);
     mind.onPoll("E19", AiEventType::Fight, session);
     mind.onSave(save);
 }
 
+//! \brief Chooses and schedules the most effective eligible fight spell for this session.
 bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& nextCast)
 {
     // AI row E02
@@ -642,18 +946,23 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         {
             case SpellType::lightning:
                 amount = (config.getSpellConfigDouble("LightningDamageMin") + config.getSpellConfigDouble("LightningDamage")) / 2.0;
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellLightning, 1.0, ResearchEffect::Damage);
                 targets = aiKey("SpellTargetsLightning");
                 break;
             case SpellType::creatureExplosion:
                 amount = config.getSpellConfigDouble("CreatureExplosionValue") * config.getSpellConfigDouble("CreatureExplosionDuration");
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellCreatureExplosion, 1.0, ResearchEffect::Damage);
+                targets = aiKey("SpellTargetsExplosion");
                 break;
             case SpellType::inferno:
                 amount = (config.getSpellConfigDouble("InfernoDamagePerTurnMin") + config.getSpellConfigDouble("InfernoDamagePerTurn")) / 2.0
                          * config.getSpellConfigDouble("InfernoNbTurns");
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellInferno, 1.0, ResearchEffect::Damage);
                 targets = aiKey("SpellTargetsInferno");
                 break;
             default:
                 amount = (config.getSpellConfigDouble("TremorDamageMin") + config.getSpellConfigDouble("TremorDamage")) / 2.0;
+                amount *= SkillManager::getResearchValue(seat, SkillType::spellTremor, 1.0, ResearchEffect::Damage);
                 targets = aiKey("SpellTargetsTremor");
                 break;
         }
@@ -666,7 +975,8 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
 
     // The heal reaches only own creatures of the fight on claimed ground, so an assault on enemy land has none
     std::vector<Creature*> hurt;
-    if(!enemyGround && canCast(ai, SpellType::creatureHeal, "SpellManaReserve"))
+    bool healOffered = !enemyGround && canCast(ai, SpellType::creatureHeal, "SpellManaReserve");
+    if(healOffered)
     {
         for(Creature* creature : fightingOwn(ai))
         {
@@ -680,13 +990,14 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
     // Only the enemies of the fight count; without an enemy in sight nothing is cast, also no heal
     std::vector<Creature*> allEnemies = fightEnemies(ai);
     std::vector<Creature*> enemies = enemyGround ? allEnemies : onOwnGroundOnly(ai, allEnemies);
-    if((damage.empty() && hurt.empty()) || allEnemies.empty())
+    if((damage.empty() && !healOffered) || allEnemies.empty())
     {
         nextCast = now + aiKey("CastRecheckSeconds");
         return false;
     }
 
-    // The choice: a mistake picks a random spell and wastes it, otherwise heal or the best damage per mana
+    // The choice: a mistake picks a random spell of those the AI can cast and wastes it, otherwise heal or the best
+    // damage per mana
     bool slipped = ai.getMind().slip("E19");
     SpellType chosen = SpellType::nullSpellType;
     if(slipped)
@@ -694,7 +1005,7 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         std::vector<SpellType> all;
         for(const SpellOption& option : damage)
             all.push_back(option.mType);
-        if(!hurt.empty())
+        if(healOffered)
             all.push_back(SpellType::creatureHeal);
         chosen = all[Random::Int(0, static_cast<int>(all.size()) - 1)];
     }
@@ -731,6 +1042,7 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         return false;
     }
 
+    double handEnd = now;
     // The target: a wasted cast goes to an own creature, which no attack spell of the AI harms
     if(chosen == SpellType::creatureHeal)
     {
@@ -740,7 +1052,7 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
             nextCast = now + aiKey("CastRecheckSeconds");
             return false;
         }
-        ACTS::castSpell(ai, chosen, target);
+        handEnd = ACTS::castSpell(ai, chosen, target);
     }
     else
     {
@@ -752,17 +1064,17 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         }
         else if(chosen == SpellType::inferno)
         {
-            // Inferno burns an area: the strongest intruder
-            target = strongest(pool);
+            // Focus on the lowest-HP intruder, or choose randomly, as for the other damage spells.
+            target = focusTarget(ai, pool);
         }
         else if(chosen == SpellType::tremor)
         {
-            // Tremor shakes an area: the intruder with the most others around
+            // Choose only a target with enough nearby intruders, then apply the normal focus decision.
+            std::vector<Creature*> grouped;
             for(Creature* creature : pool)
-            {
-                if((target == nullptr) || (creaturesAround(pool, creature) > creaturesAround(pool, target)))
-                    target = creature;
-            }
+                if(creaturesAround(pool, creature) >= static_cast<int>(aiKey("TremorMinTargets")))
+                    grouped.push_back(creature);
+            target = focusTarget(ai, grouped);
         }
         else
         {
@@ -775,12 +1087,13 @@ bool SPELL::chooseSpell(KeeperAI& ai, bool enemyGround, double now, double& next
         }
 
         if(chosen == SpellType::creatureExplosion)
-            ACTS::castSpell(ai, chosen, target);
+            handEnd = ACTS::castSpell(ai, chosen, target);
         else
-            castOnTileOf(ai, chosen, target);
+            handEnd = castOnTileOf(ai, chosen, target);
     }
 
-    nextCast = now + std::max(spellActionSeconds(), aiKey("MinRecastSeconds"));
+    // The next cast is no earlier than the later of the end of the hand action and MinRecastSeconds
+    nextCast = std::max(handEnd, now + aiKey("MinRecastSeconds"));
     return true;
 }
 
@@ -816,6 +1129,7 @@ bool SPELL::castHaste(KeeperAI& ai, const std::vector<Creature*>& group, bool ma
     return true;
 }
 
+//! \brief Schedules one Eye cast when none is pending and its interval has elapsed.
 bool SPELL::castEye(KeeperAI& ai, Tile* tile)
 {
     // AI row E04
@@ -824,6 +1138,8 @@ bool SPELL::castEye(KeeperAI& ai, Tile* tile)
 
     restoreDraws(ai);
     State& state = ai.getSpellState();
+    if(state.mEyePending)
+        return false;
     int64_t turn = ai.getGameMap().getTurnNumber();
     double minTurns = aiKey("EyeCastIntervalMinutes") * 60.0 * ODApplication::turnsPerSecond;
     if((state.mLastEyeTurn >= 0) && (static_cast<double>(turn - state.mLastEyeTurn) < minTurns))
@@ -833,28 +1149,37 @@ bool SPELL::castEye(KeeperAI& ai, Tile* tile)
     if(ai.getMind().slip("E04"))
         return false;
 
-    state.mLastEyeTurn = turn;
+    state.mEyePending = true;
     ACTS::castSpell(ai, SpellType::eyeEvil, tile);
     return true;
 }
 
-bool SPELL::castDefense(KeeperAI& ai, const std::vector<Creature*>& holders, bool fightOver)
+//! \brief Finishes an Eye cast after the server confirms success or rejection.
+void SPELL::finishEyeCast(KeeperAI& ai, bool succeeded)
+{
+    restoreDraws(ai);
+    State& state = ai.getSpellState();
+    state.mEyePending = false;
+    if(succeeded)
+        state.mLastEyeTurn = ai.getGameMap().getTurnNumber();
+}
+
+bool SPELL::castDefense(KeeperAI& ai, const std::vector<Creature*>& holders, bool fightOver, bool& lateDefense)
 {
     // AI row E05
     restoreDraws(ai);
-    State& state = ai.getSpellState();
     Seat* seat = ai.getControlledPlayer().getSeat();
     if(fightOver)
     {
         // The late cast of the mistake: after the fight
-        if(!state.mLateDefense)
+        if(!lateDefense)
             return false;
 
-        state.mLateDefense = false;
+        lateDefense = false;
     }
     else if(ai.getMind().slip("E05"))
     {
-        state.mLateDefense = true;
+        lateDefense = true;
         return false;
     }
 
@@ -906,8 +1231,15 @@ bool SPELL::castStrength(KeeperAI& ai, const std::vector<Creature*>& group)
 bool SPELL::castCallToWar(KeeperAI& ai, Tile* tile, int creaturesToGather, bool assault)
 {
     // AI row E07
-    if((tile == nullptr) || !canCast(ai, SpellType::callToWar, "SpellManaReserve"))
+    // The banner needs its price only: the launch already counts one price per group and the defence rally needs
+    // mana >= price
+    Player& player = ai.getControlledPlayer();
+    if((tile == nullptr) || !SkillManager::isSpellAvailable(SpellType::callToWar, player.getSeat()) ||
+       (player.getSpellCooldownTurns(SpellType::callToWar) > 0) ||
+       (player.getSeat()->getMana() < spellPrice(SpellType::callToWar)))
+    {
         return false;
+    }
 
     // The defence rally: only for more than CallToWarMinCreatures creatures; the complex mistake rallies them by hand
     // instead of the banner. The banners of an assault are always cast (drawLaunchGathering is the launch's draw)
@@ -930,6 +1262,7 @@ bool SPELL::drawLaunchGathering(KeeperAI& ai)
     return ai.getMind().slip("E07");
 }
 
+//! \brief Slows a visible melee enemy of the current fight, including fighting workers.
 bool SPELL::castSlow(KeeperAI& ai)
 {
     // AI row E08
@@ -937,6 +1270,29 @@ bool SPELL::castSlow(KeeperAI& ai)
         return false;
 
     std::vector<Creature*> enemies = enemiesOnOwnGround(ai);
+    Seat* seat = ai.getControlledPlayer().getSeat();
+    const State& state = ai.getSpellState();
+    Tile* fightTile = ai.getGameMap().getTile(state.mFightX, state.mFightY);
+    std::vector<Creature*> anchors = fightingOwn(ai);
+    for(Creature* creature : ai.getGameMap().getCreaturesBySeat(seat))
+        if(fightTile != nullptr && creature->isAlive() && creature->getDefinition()->isWorker() && inFight(creature) &&
+           creature->getPositionTile() == fightTile)
+            anchors.push_back(creature);
+    for(Creature* creature : ai.getGameMap().getCreatures())
+    {
+        if(!creature->isAlive() || !creature->getDefinition()->isWorker() || !inFight(creature) ||
+           creature->getSeat() == nullptr || seat->isAlliedSeat(creature->getSeat()) || !onOwnGround(creature, seat))
+            continue;
+        Tile* tile = creature->getPositionTile();
+        const std::vector<Seat*>& vision = tile->getSeatsWithVision();
+        if(std::find(vision.begin(), vision.end(), seat) == vision.end())
+            continue;
+        bool sameFight = tile == fightTile;
+        for(Creature* anchor : anchors)
+            sameFight = sameFight || engaged(anchor, creature);
+        if(sameFight)
+            enemies.push_back(creature);
+    }
     std::vector<Creature*> melee;
     for(Creature* creature : enemies)
     {
@@ -952,6 +1308,7 @@ bool SPELL::castSlow(KeeperAI& ai)
     return true;
 }
 
+//! \brief Selects an enemy for Weak according to its damage or remaining HP.
 bool SPELL::castWeak(KeeperAI& ai)
 {
     // AI row E10
@@ -963,7 +1320,9 @@ bool SPELL::castWeak(KeeperAI& ai)
     if(ai.getMind().slip("E10"))
     {
         // The mistake: a nearly dead enemy
-        target = weakest(enemies);
+        for(Creature* creature : enemies)
+            if(target == nullptr || creature->getHP() < target->getHP())
+                target = creature;
     }
     else
     {
@@ -980,6 +1339,7 @@ bool SPELL::castWeak(KeeperAI& ai)
     return true;
 }
 
+//! \brief Selects an eligible enemy for the Defector spell and schedules the cast.
 bool SPELL::castDefector(KeeperAI& ai)
 {
     // AI row E17
@@ -997,6 +1357,8 @@ bool SPELL::castDefector(KeeperAI& ai)
     std::vector<Creature*> candidates;
     for(Creature* creature : enemiesOnOwnGround(ai))
     {
+        if(creature->isInPrison() || creature->getDefinition()->isChampion())
+            continue;
         CreatureMoodLevel mood = creature->getMoodValue();
         bool lowMood = (mood != CreatureMoodLevel::Unknown) && (static_cast<int>(mood) >= static_cast<int>(CreatureMoodLevel::Upset));
         if(slipped ? (hpShare(creature) >= 1.0) : lowMood)
@@ -1010,33 +1372,27 @@ bool SPELL::castDefector(KeeperAI& ai)
     return true;
 }
 
-bool SPELL::castHexenHen(KeeperAI& ai, Tile* fightTile)
+//! \brief Selects a legal enemy target for Hexen Hen and schedules the cast.
+bool SPELL::castHexenHen(KeeperAI& ai)
 {
     // AI row E18
     if(!canCast(ai, SpellType::hexenHen, "SpellManaReserve"))
         return false;
 
     Seat* seat = ai.getControlledPlayer().getSeat();
-    // An attack on a room or the heart: the Fight event came from a tile of an own room, and the attacker fights on or
-    // next to that tile
-    Room* room = (fightTile == nullptr) ? nullptr : fightTile->getCoveringRoom();
-    bool roomAttacked = (room != nullptr) && (room->getSeat() == seat);
+    // The building each enemy of the fight attacks is the target its fight action chooses now; a room of the AI's seat
+    // (the heart is the dungeon temple room) makes it the attacker of a room or the heart
     bool slipped = ai.getMind().slip("E18");
     std::vector<Creature*> candidates;
-    for(Creature* creature : fightEnemies(ai))
+    for(Creature* creature : enemiesOnOwnGround(ai))
     {
-        Tile* tile = creature->getPositionTile();
-        bool atRoom = false;
-        if(roomAttacked)
-        {
-            int dx = std::abs(tile->getX() - fightTile->getX());
-            int dy = std::abs(tile->getY() - fightTile->getY());
-            atRoom = (dx <= 1) && (dy <= 1);
-        }
-        Room* standing = tile->getCoveringRoom();
-        bool attacksBuilding = atRoom || ((standing != nullptr) && (standing->getSeat() == seat));
+        if(creature->isHexenHen() || creature->isInPrison() || creature->getDefinition()->isChampion())
+            continue;
+        GameEntity* building = attackedBuilding(creature);
+        bool attacksRoom = (building != nullptr) && (building->getObjectType() == GameEntityType::room) &&
+                           (building->getSeat() == seat);
         // The mistake: a random enemy that attacks no building
-        if(slipped ? !attacksBuilding : atRoom)
+        if(slipped ? (building == nullptr) : attacksRoom)
             candidates.push_back(creature);
     }
     Creature* target = anyOf(candidates);
@@ -1047,9 +1403,11 @@ bool SPELL::castHexenHen(KeeperAI& ai, Tile* fightTile)
     return true;
 }
 
+//! \brief Decides whether to summon a champion at the heart, on launch, or in a trivial fight.
 bool SPELL::castChampion(KeeperAI& ai, Tile* tile, bool heartOrLaunch)
 {
     // AI row E20
+    const bool mistaken = ai.getMind().slip("E20");
     if((tile == nullptr) || !SkillManager::isSpellAvailable(SpellType::summonChampion, ai.getControlledPlayer().getSeat()))
         return false;
 
@@ -1068,7 +1426,7 @@ bool SPELL::castChampion(KeeperAI& ai, Tile* tile, bool heartOrLaunch)
         return false;
 
     // The mistake: the champion is summoned at any fight, also a trivial one
-    if(!heartOrLaunch && !ai.getMind().slip("E20"))
+    if(!heartOrLaunch && !mistaken)
         return false;
 
     ACTS::castSpell(ai, SpellType::summonChampion, tile);
