@@ -33,10 +33,23 @@ def wrapper(name):
     assert depth == 0, name
     return actions[start:end]
 
-for name, gates in (("castSpell", ("isSpellAvailable", "getSpellCooldownTurns", "SpellManager::castSpell", "setSpellCooldownTurns")),
-                    ("buildRoom", ("isRoomAvailable", "buildRoomOnTiles")),
-                    ("buildTrap", ("isTrapAvailable", "buildTrapOnTiles"))):
-    text = wrapper(name)
-    positions = [text.find(gate) for gate in gates]
-    assert all(pos >= 0 for pos in positions) and positions == sorted(positions), f"{name}: missing or misplaced gate"
+# The wrappers only schedule; the executor "perform" runs the same legality gates as the human handlers, in this order.
+perform = re.search(r"\bvoid perform\s*\(KeeperAI& ai, const std::string& target\)\s*\{", actions)
+assert perform, "missing executor perform"
+body_start = perform.end() - 1
+depth = 1
+body_end = body_start + 1
+while depth and body_end < len(actions):
+    depth += (actions[body_end] == "{") - (actions[body_end] == "}")
+    body_end += 1
+executor = actions[body_start:body_end]
+for name, gates, scheduled in (("castSpell", ("isSpellAvailable", "getSpellCooldownTurns", "SpellManager::castSpell", "setSpellCooldownTurns"), "schedule("),
+                               ("buildRoom", ("isRoomAvailable", "buildRoomOnTiles"), "scheduleTiles("),
+                               ("buildTrap", ("isTrapAvailable", "buildTrapOnTiles"), "scheduleTiles(")):
+    assert scheduled in wrapper(name), f"{name}: wrapper does not schedule through the executor"
+    position = 0
+    for gate in gates:
+        found = executor.find(gate, position)
+        assert found >= 0, f"{name}: missing or misplaced gate {gate}"
+        position = found
 print("OK")

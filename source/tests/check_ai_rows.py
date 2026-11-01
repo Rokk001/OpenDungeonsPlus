@@ -130,6 +130,10 @@ ANCHORS = {
 # Return a function body, tracking nested braces.
 def function_body(text, signature):
     match = re.search(r"\b" + re.escape(signature) + r"\s*\([^;]*?\)\s*(?:const\s*)?\{", text, re.S)
+    if not match and "::" in signature:
+        # A definition inside "namespace X { ... }" carries the bare name; only a definition line (return type first) counts
+        bare = signature.split("::", 1)[1]
+        match = re.search(r"^[A-Za-z_][\w:<>,\s\*&]*?\b" + re.escape(bare) + r"\s*\([^;]*?\)\s*(?:const\s*)?\{", text, re.S | re.M)
     assert match, f"missing function {signature}"
     start = match.end() - 1
     depth = 1
