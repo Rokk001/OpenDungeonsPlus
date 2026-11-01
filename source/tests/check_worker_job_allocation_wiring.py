@@ -36,10 +36,30 @@ for token in ('territoryAllowed(', 'getTilesWithinSightRadius()', 'pathExists(',
               'getReloadPrice()', 'hasCarryEntitySpot(', 'getDeliveryTile(', 'reservedByKeeper(',
               'collectActiveCarries(', 'setWorkerJobTargets(', 'setWorkerTargetLists('):
     assert token in collector, token
+# Territory uses its owner even during partial claims, matching searches beyond sight.
+territory = collector.split('bool territoryAllowed(', 1)[1].split('\n}', 1)[0]
+assert 'tile.getSeat()' in territory and 'owner == worker.getSeat()' in territory
+assert 'owner == nullptr' in territory and 'owner->isRogueSeat()' in territory
+assert 'getTilesWithinSightRadius()' in territory and 'isClaimed()' not in territory
+
+# A reserved destination may have no free capacity; an active transport is kept without a second availability test.
+active = collector.split('void collectActiveCarries(', 1)[1].split('\n}', 1)[0]
+assert 'carry->isForced()' in active and '(!normalSearch && digSearch)' in active
+assert 'hasCarryDestination(' not in active and 'carries.push_back(' in active
+prison = read('source/rooms/RoomPrison.cpp')
+reservation = prison.split('Tile* RoomPrison::askSpotForCarriedEntity(', 1)[1].split('\n}', 1)[0]
+assert 'mPendingPrisoners.push_back(creature)' in reservation
+assert 'collectActiveCarries(targets, allWorkers)' in collector
 turn = read('source/gamemap/GameMap.cpp').split('unsigned long int GameMap::doMiscUpkeep(', 1)[1]
 assert turn.index('refreshWorkerTargets(*seat)') < turn.index('WorkerAllocation::refreshFixed(*seat)')
 assert turn.index('WorkerAllocation::refreshFixed(*seat)') < turn.index('ge->doUpkeep()')
 for job in ('dig', 'claimGround', 'claimWall', 'carry', 'clean', 'reload'):
     assert 'case WorkerJob::' + job + ':' in creature, job
+idle = creature.split('bool Creature::handleIdleAction()', 1)[1].split('// A standing order', 1)[0]
+assert 'job != WorkerJob::dig && getGoldCarried() > 0' in idle
+assert idle.index('resetGoldCarried();') < idle.index('const uint32_t index = static_cast<uint32_t>(job);')
+assert 'gold->setPosition(' in idle
+drop = creature.split('void Creature::drop(const Ogre::Vector3& v)', 1)[1].split('// Fighters', 1)[0]
+assert 'CreatureActionDigTile>(*this, *tileMarkedDig, *tileMarkedDigPos, true)' in drop
 assert 'WorkerAllocation::chooseForIdle(' in creature
 print('worker job wiring checks passed')

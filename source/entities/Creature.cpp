@@ -3462,6 +3462,17 @@ bool Creature::handleIdleAction()
                 job = WorkerAllocation::chooseForIdle(*getSeat(), *this, available);
                 setWorkerJob(job, false);
             }
+            // Gold dug before this idle choice is left on the tile when the worker leaves digging.
+            if(job != WorkerJob::dig && getGoldCarried() > 0 && getPositionTile() != nullptr)
+            {
+                Tile* tile = getPositionTile();
+                TreasuryObject* gold = new TreasuryObject(getGameMap(), getGoldCarried());
+                resetGoldCarried();
+                gold->addToGameMap();
+                gold->createMesh();
+                gold->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(tile->getX()),
+                    static_cast<Ogre::Real>(tile->getY()), 0.0f));
+            }
             const uint32_t index = static_cast<uint32_t>(job);
             if(index >= actions.size() || !available[index] || getSeat()->getWorkerJobTargets()[index] == 0)
                 break;
@@ -7751,7 +7762,7 @@ void Creature::drop(const Ogre::Vector3& v)
         // Now, we can decide
         if((tileMarkedDig != nullptr) && (tileMarkedDigPos != nullptr) && (mDigRate > 0.0))
         {
-            pushAction(Utils::make_unique<CreatureActionDigTile>(*this, *tileMarkedDig, *tileMarkedDigPos));
+            pushAction(Utils::make_unique<CreatureActionDigTile>(*this, *tileMarkedDig, *tileMarkedDigPos, true));
             return;
         }
 

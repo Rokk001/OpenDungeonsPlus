@@ -1636,12 +1636,14 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
 
         if(nextParam == "WorkerPriorityParts")
         {
-            for(uint32_t& value : mWorkerPriorityParts) configFile >> value;
+            for(uint32_t& value : mWorkerPriorityParts) if(!(configFile >> value)) return false;
+            foundKeys.insert("WorkerPriorityParts");
             continue;
         }
         if(nextParam == "WorkerDefaultFixed")
         {
-            for(uint32_t& value : mWorkerJobDefaults.fixed) configFile >> value;
+            for(uint32_t& value : mWorkerJobDefaults.fixed) if(!(configFile >> value)) return false;
+            foundKeys.insert("WorkerDefaultFixed");
             continue;
         }
         if(nextParam == "WorkerDefaultFreeMode")
@@ -1649,6 +1651,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             configFile >> nextParam;
             if(nextParam != "automatic" && nextParam != "priority") return false;
             mWorkerJobDefaults.freeMode = nextParam == "priority" ? 1 : 0;
+            foundKeys.insert("WorkerDefaultFreeMode");
             continue;
         }
         if(nextParam == "WorkerDefaultPriority")
@@ -1661,7 +1664,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
                 if(it == names.end()) return false;
                 value = static_cast<uint32_t>(it - names.begin());
             }
-            if(!validWorkerJobSettings(mWorkerJobDefaults)) return false;
+            foundKeys.insert("WorkerDefaultPriority");
             continue;
         }
         if(nextParam == "WorkerDefaultCarryOrder")
@@ -1674,19 +1677,19 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
                 if(it == names.end()) return false;
                 value = static_cast<uint32_t>(it - names.begin());
             }
-            if(!validWorkerJobSettings(mWorkerJobDefaults)) return false;
+            foundKeys.insert("WorkerDefaultCarryOrder");
             continue;
         }
         if(nextParam == "WorkerDefaultGoldFirst")
         {
-            configFile >> mWorkerJobDefaults.goldFirst;
-            if(mWorkerJobDefaults.goldFirst > 1) return false;
+            if(!(configFile >> mWorkerJobDefaults.goldFirst) || mWorkerJobDefaults.goldFirst > 1) return false;
+            foundKeys.insert("WorkerDefaultGoldFirst");
             continue;
         }
         if(nextParam == "WorkerCleanTilesPerCleaner")
         {
-            configFile >> mWorkerCleanTilesPerCleaner;
-            if(mWorkerCleanTilesPerCleaner == 0) return false;
+            if(!(configFile >> mWorkerCleanTilesPerCleaner) || mWorkerCleanTilesPerCleaner == 0) return false;
+            foundKeys.insert("WorkerCleanTilesPerCleaner");
             continue;
         }
 
@@ -1870,6 +1873,20 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
     }
+
+    // Worker allocation has no hard-coded fallback: all values must come from this config.
+    for(const char* key : {"WorkerPriorityParts", "WorkerDefaultFixed", "WorkerDefaultFreeMode",
+                           "WorkerDefaultPriority", "WorkerDefaultCarryOrder", "WorkerDefaultGoldFirst",
+                           "WorkerCleanTilesPerCleaner"})
+    {
+        if(foundKeys.count(key) == 0)
+        {
+            OD_LOG_ERR("Missing GameConfig key=" + std::string(key));
+            return false;
+        }
+    }
+    if(!validWorkerJobSettings(mWorkerJobDefaults))
+        return false;
 
     if(!foundNaturalHeal)
         OD_LOG_ERR("Missing NaturalFullHealSeconds; using default");

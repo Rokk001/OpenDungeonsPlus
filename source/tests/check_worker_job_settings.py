@@ -15,6 +15,19 @@ for line in ('WorkerPriorityParts\t6 5 4 3 2 1', 'WorkerDefaultFixed\t0 0 0 0 0 
 for key in ('WorkerPriorityParts', 'WorkerDefaultFixed', 'WorkerDefaultFreeMode', 'WorkerDefaultPriority',
             'WorkerDefaultCarryOrder', 'WorkerDefaultGoldFirst', 'WorkerCleanTilesPerCleaner'):
     assert key in read('source/utils/ConfigManager.cpp'), key
+# Configuration supplies every default and allocation value; no hard-coded worker defaults are used.
+manager = read('source/utils/ConfigManager.cpp')
+manager_header = read('source/utils/ConfigManager.h')
+worker_header = read('source/game/WorkerJobs.h')
+for key in ('WorkerPriorityParts', 'WorkerDefaultFixed', 'WorkerDefaultFreeMode', 'WorkerDefaultPriority',
+            'WorkerDefaultCarryOrder', 'WorkerDefaultGoldFirst', 'WorkerCleanTilesPerCleaner'):
+    assert 'foundKeys.insert("' + key + '")' in manager
+    assert manager.index('foundKeys.insert("' + key + '")') < manager.index('validWorkerJobSettings(mWorkerJobDefaults)')
+assert 'if(foundKeys.count(key) == 0)' in manager and 'validWorkerJobSettings(mWorkerJobDefaults)' in manager
+assert 'mWorkerPriorityParts{{6, 5, 4, 3, 2, 1}}' not in manager_header
+assert 'mWorkerCleanTilesPerCleaner = 15' not in manager_header
+assert 'priority{{3, 0, 1, 2, 4, 5}}' not in worker_header
+assert 'carryOrder{{0, 1, 2, 3, 4, 5, 6}}' not in worker_header
 seat = read('source/game/Seat.cpp')
 assert '[WorkerJobs]' in seat and '[/WorkerJobs]' in seat
 creature = read('source/entities/Creature.cpp')

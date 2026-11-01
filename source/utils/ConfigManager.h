@@ -1105,8 +1105,8 @@ private:
 
     //! \brief Defaults and allocation constants read from global.cfg.
     WorkerJobSettings mWorkerJobDefaults;
-    std::array<uint32_t, 6> mWorkerPriorityParts{{6, 5, 4, 3, 2, 1}};
-    uint32_t mWorkerCleanTilesPerCleaner = 15;
+    std::array<uint32_t, 6> mWorkerPriorityParts{};
+    uint32_t mWorkerCleanTilesPerCleaner{};
 
     uint32_t mNbWorkersDigSameFaceTile;
     uint32_t mNbWorkersClaimSameTile;

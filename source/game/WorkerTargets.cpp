@@ -26,7 +26,8 @@ namespace
 //! \brief Tests the whole-map territory rule for a particular worker and target tile.
 bool territoryAllowed(Creature& worker, Tile& tile)
 {
-    if(!tile.isClaimed() || tile.getSeat() == worker.getSeat())
+    Seat* owner = tile.getSeat();
+    if(owner == nullptr || owner == worker.getSeat() || owner->isRogueSeat())
         return true;
     const auto& sight = worker.getTilesWithinSightRadius();
     return std::find(sight.begin(), sight.end(), &tile) != sight.end();
@@ -275,15 +276,19 @@ void collectActiveCarries(WorkerTargetLists& targets, const std::vector<Creature
             continue;
         const CreatureActionCarryEntity* carry = nullptr;
         bool normalSearch = false;
+        bool digSearch = false;
         for(const auto& action : worker->getActions())
         {
             if(action->getType() == CreatureActionType::carryEntity)
                 carry = static_cast<const CreatureActionCarryEntity*>(action.get());
+            else if(action->getType() == CreatureActionType::searchTileToDig)
+                digSearch = true;
             else if(action->getType() == CreatureActionType::searchEntityToCarry &&
                     !static_cast<const CreatureActionSearchEntityToCarry*>(action.get())->isForced())
                 normalSearch = true;
         }
-        if(!normalSearch || carry == nullptr || carry->getCarriedTarget() == nullptr)
+        if(carry == nullptr || carry->isForced() || (!normalSearch && digSearch) ||
+           carry->getCarriedTarget() == nullptr)
             continue;
         GameEntity* entity = carry->getCarriedTarget();
         const WorkerCarryEntry entry = classifyWorkerCarry(*entity, *worker);

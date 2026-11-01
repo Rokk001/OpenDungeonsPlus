@@ -17,11 +17,11 @@ enum class WorkerFreeMode : uint32_t { automatic, priority };
 //! \brief Keeper preferences for fixed jobs, free jobs and transport.
 struct WorkerJobSettings
 {
-    std::array<uint32_t, 6> fixed{{0, 0, 0, 0, 0, 0}};
-    uint32_t freeMode = 0;
-    std::array<uint32_t, 6> priority{{3, 0, 1, 2, 4, 5}};
-    std::array<uint32_t, 7> carryOrder{{0, 1, 2, 3, 4, 5, 6}};
-    uint32_t goldFirst = 0;
+    std::array<uint32_t, 6> fixed{};
+    uint32_t freeMode{};
+    std::array<uint32_t, 6> priority{};
+    std::array<uint32_t, 7> carryOrder{};
+    uint32_t goldFirst{};
 };
 
 //! \brief Validates the complete settings record without adopting partial values.
