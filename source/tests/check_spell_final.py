@@ -3,7 +3,7 @@
 
     python source/tests/check_spell_final.py
 
-No compiler is needed. Checks that no network message was added, that the kinds Beam and Projectile are wired
+No compiler is needed. Checks the network message order, that the kinds Beam and Projectile are wired
 from the config to the code, that the bolt mesh, its material and texture exist with CREDITS entries, that every
 spell has an own cast sound family (with .ogg and CREDITS entry) that the server uses, that the possession aura
 is ended on the client, that the end of the defector spell is shown, and that heal, haste, defense and slow raise
@@ -29,7 +29,7 @@ header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-13:] != ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings", "tavernWindow", "tavernPayer", "infirmaryWindow", "infirmarySettings", "ghostRoomSettings", "spaPayer", "creatureJump"]:
+if names[-14:] != ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings", "tavernWindow", "tavernPayer", "infirmaryWindow", "infirmarySettings", "ghostRoomSettings", "spaPayer", "creatureJump", "workerSettings"]:
     problems.append("campaignVictory must follow timeLimit without moving existing values")
 
 # 2. Beam and projectile are wired

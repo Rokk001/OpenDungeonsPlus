@@ -1241,8 +1241,20 @@ bool Seat::importSeatFromStream(std::istream& is)
     while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
         str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]" ||
-        str == "[ResearchRemainder]")
+        str == "[ResearchRemainder]" || str == "[WorkerJobs]")
     {
+    if(str == "[WorkerJobs]")
+    {
+        WorkerJobSettings settings;
+        for(uint32_t& value : settings.fixed) if(!(is >> value)) return false;
+        if(!(is >> settings.freeMode)) return false;
+        for(uint32_t& value : settings.priority) if(!(is >> value)) return false;
+        for(uint32_t& value : settings.carryOrder) if(!(is >> value)) return false;
+        if(!(is >> settings.goldFirst >> str) || str != "[/WorkerJobs]" || !validWorkerJobSettings(settings)) return false;
+        mWorkerJobSettings = settings;
+        if(!(is >> str)) return false;
+        continue;
+    }
     if(str == "[ResearchRemainder]")
     {
         if(!(is >> mSkillPointsRemainder) || mSkillPointsRemainder < 0.0 || mSkillPointsRemainder >= 1.0 ||
@@ -1628,6 +1640,12 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     os << "[/ResearchProgress]\n";
     if(mSkillPointsRemainder > 0.0)
         os << "[ResearchRemainder]\t" << std::setprecision(17) << mSkillPointsRemainder << std::defaultfloat << "\n";
+    os << "[WorkerJobs]";
+    for(uint32_t value : mWorkerJobSettings.fixed) os << '\t' << value;
+    os << '\t' << mWorkerJobSettings.freeMode;
+    for(uint32_t value : mWorkerJobSettings.priority) os << '\t' << value;
+    for(uint32_t value : mWorkerJobSettings.carryOrder) os << '\t' << value;
+    os << '\t' << mWorkerJobSettings.goldFirst << "\t[/WorkerJobs]\n";
     os << "[Infirmary]\t" << getInfirmaryPayer() << '\t' << mInfirmaryThreshold << '\t'
         << mInfirmaryHealOn << "\t[/Infirmary]\n";
 

@@ -422,6 +422,7 @@ set(OD_SOURCEFILES
     ${SRC}/game/SkillManager.cpp
     ${SRC}/game/SkillType.cpp
     ${SRC}/game/Seat.cpp
+    ${SRC}/game/WorkerJobs.cpp
     ${SRC}/game/SeatData.cpp
 
     ${SRC}/gamemap/DraggableTileContainer.cpp
