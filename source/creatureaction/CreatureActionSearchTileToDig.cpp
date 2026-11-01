@@ -19,7 +19,6 @@
 #include "creatureaction/WorkerSearchTargets.h"
 
 #include "creatureaction/CreatureActionDigTile.h"
-#include "creatureaction/CreatureActionGrabEntity.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
@@ -27,7 +26,6 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
-#include "rooms/Room.h"
 #include "utils/Helper.h"
 #include "utils/MakeUnique.h"
 #include "utils/LogManager.h"
@@ -149,40 +147,6 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         obj->addToGameMap();
         obj->createMesh();
         obj->setPosition(pos);
-
-        bool isTreasuryAvailable = false;
-        for(Room* room : creature.getGameMap()->getRooms())
-        {
-            if(room->getSeat() != creature.getSeat())
-                continue;
-
-            if(room->getTotalGoldStorage() <= 0)
-                continue;
-
-            if(room->getTotalGoldStored() >= room->getTotalGoldStorage())
-                continue;
-
-            if(room->numCoveredTiles() <= 0)
-                continue;
-
-            Tile* tile = room->getCoveredTile(0);
-            if(!creature.getGameMap()->pathExists(&creature, myTile, tile))
-                continue;
-
-            isTreasuryAvailable = true;
-            break;
-        }
-        if(isTreasuryAvailable)
-        {
-            // We do not push CreatureActionType::searchEntityToCarry because we want
-            // this worker to be count as digging, not as carrying stuff
-            creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj, forced, true));
-            return true;
-        }
-        else if(creature.getSeat()->getPlayer()->getIsHuman())
-        {
-            creature.getSeat()->getPlayer()->notifyNoTreasuryAvailable();
-        }
     }
 
     return true;

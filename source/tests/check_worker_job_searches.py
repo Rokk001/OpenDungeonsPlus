@@ -39,8 +39,8 @@ assert 'bool isForced() const' in grab_header
 assert 'mForced, mDigGold' in read('source/creatureaction/CreatureActionGrabEntity.cpp')
 assert 'mDigGold(digGold)' in read('source/creatureaction/CreatureActionGrabEntity.cpp')
 assert read('source/creatureaction/CreatureActionCarryEntity.cpp').count('mDigGold(digGold)') == 2
-for source in (dig, read('source/creatureaction/CreatureActionDigTile.cpp')):
-    assert 'CreatureActionGrabEntity>(creature, *obj, forced, true)' in source
+assert 'CreatureActionGrabEntity>(creature, *obj, forced, true)' in read('source/creatureaction/CreatureActionDigTile.cpp')
+assert 'CreatureActionGrabEntity>' not in dig
 clean = read('source/creatureaction/CreatureActionSearchDirtToClean.cpp')
 assert 'activeCleaners' in clean and 'getWorkerCleanTilesPerCleaner()' in clean
 clean_action = read('source/creatureaction/CreatureActionCleanTile.cpp')
