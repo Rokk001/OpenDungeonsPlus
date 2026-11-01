@@ -168,6 +168,13 @@ add_boost_test(00-Campaign
         ${SRC}/game/Campaign.cpp
         ${SRC}/game/CampaignWorld.cpp)
 
+add_boost_test(00-CampaignLevels
+        SOURCES
+        test_CampaignLevels.cpp
+        ${SRC}/game/Campaign.h
+        ${SRC}/game/Campaign.cpp
+        ${SRC}/game/CampaignWorld.cpp)
+
 add_boost_test(00-Pathfinding
         SOURCES
         test_Pathfinding.cpp)
