@@ -46,7 +46,7 @@ static uint32_t activeCleaners(Creature& worker, Tile* tile, Room* room)
 {
     uint32_t count = 0;
     for(Creature* other : worker.getGameMap()->getCreaturesBySeat(worker.getSeat()))
-        for(const auto& action : other->getActions())
+        for(const std::unique_ptr<CreatureAction>& action : other->getActions())
         {
             if(action->getType() != CreatureActionType::cleanTile)
                 continue;

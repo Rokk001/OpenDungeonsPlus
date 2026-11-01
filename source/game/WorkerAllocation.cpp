@@ -34,10 +34,10 @@ void refreshFixed(Seat& seat)
     const std::vector<Creature*> creatures = countedWorkers(seat);
     std::vector<Worker> workers;
     workers.reserve(creatures.size());
-    const auto& skillTree = ConfigManager::getSingleton().getCreatureSkillTree();
+    const CreatureSkillTree::SkillTreeConfig& skillTree = ConfigManager::getSingleton().getCreatureSkillTree();
     for(Creature* creature : creatures)
     {
-        const auto& build = creature->getSkillBuild();
+        const CreatureSkillTree::SkillBuild& build = creature->getSkillBuild();
         const double dig = CreatureSkillTree::passiveSum(skillTree, build, "dig%");
         const double claim = CreatureSkillTree::passiveSum(skillTree, build, "claim%");
         const double carry = CreatureSkillTree::passiveSum(skillTree, build, "carry%");

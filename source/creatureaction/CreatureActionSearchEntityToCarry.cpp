@@ -82,7 +82,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
         return true;
     }
     GameMap* map = creature.getGameMap();
-    const auto& sight = creature.getTilesWithinSightRadius();
+    const std::vector<Tile*>& sight = creature.getTilesWithinSightRadius();
     std::vector<GameEntity*> candidates = map->getCarryableEntities(&creature, sight);
     for(const WorkerTarget& target : creature.getSeat()->getWorkerTargetLists()[static_cast<size_t>(WorkerJob::carry)])
     {
@@ -99,7 +99,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
     }
     std::vector<Building*> buildings = map->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
     std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);
-    const auto& carryOrder = creature.getSeat()->getWorkerJobSettings().carryOrder;
+    const std::array<uint32_t, 7>& carryOrder = creature.getSeat()->getWorkerJobSettings().carryOrder;
     std::vector<GameEntity*> best;
     uint32_t bestRank = static_cast<uint32_t>(carryOrder.size());
     int bestLocality = 3;
@@ -112,7 +112,7 @@ bool CreatureActionSearchEntityToCarry::handleSearchEntityToCarry(Creature& crea
            !map->pathExists(&creature, myTile, tile))
             continue;
         WorkerCarryEntry entry = classifyWorkerCarry(*entity, creature);
-        auto order = std::find(carryOrder.begin(), carryOrder.end(), static_cast<uint32_t>(entry));
+        std::array<uint32_t, 7>::const_iterator order = std::find(carryOrder.begin(), carryOrder.end(), static_cast<uint32_t>(entry));
         if(order == carryOrder.end())
             continue;
         bool accepted = false;

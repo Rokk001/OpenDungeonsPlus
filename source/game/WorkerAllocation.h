@@ -131,6 +131,15 @@ inline bool ranksHigher(const Worker& first, const Worker& second, uint32_t job)
     return first.name < second.name;
 }
 
+//! \brief Orders worker indices by their rank for a given job.
+struct FixedRankOrder
+{
+    const std::vector<Worker>& workers;
+    uint32_t job;
+    //! \brief Compares the ranks of two indexed workers.
+    bool operator()(std::size_t a, std::size_t b) const { return ranksHigher(workers[a], workers[b], job); }
+};
+
 //! \brief Keeps the highest-ranked fixed workers and fills missing quotas in window order.
 inline void assignFixed(std::vector<Worker>& workers, const Counts& quotas)
 {
@@ -140,9 +149,7 @@ inline void assignFixed(std::vector<Worker>& workers, const Counts& quotas)
         for(std::size_t i = 0; i < workers.size(); ++i)
             if(workers[i].fixed && workers[i].job == job)
                 assigned.push_back(i);
-        std::stable_sort(assigned.begin(), assigned.end(), [&](std::size_t a, std::size_t b) {
-            return ranksHigher(workers[a], workers[b], job);
-        });
+        std::stable_sort(assigned.begin(), assigned.end(), FixedRankOrder{workers, job});
         for(std::size_t i = quotas[job]; i < assigned.size(); ++i)
             workers[assigned[i]].fixed = false;
         uint32_t have = static_cast<uint32_t>(std::min<std::size_t>(assigned.size(), quotas[job]));

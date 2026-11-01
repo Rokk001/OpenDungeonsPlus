@@ -2572,7 +2572,7 @@ Ogre::Vector2 Tile::getWorkerDiggingPosition(const Creature& worker) const
 //! \brief Returns whether any worker has reserved a digging place on this tile.
 bool Tile::hasWorkerDigging() const
 {
-    for(const auto& face : mWorkersDigging)
+    for(const std::array<const Creature*, 3>& face : mWorkersDigging)
         for(const Creature* worker : face)
             if(worker != nullptr)
                 return true;

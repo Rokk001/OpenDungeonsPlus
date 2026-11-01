@@ -373,7 +373,7 @@ Tile* RoomCrypt::askSpotForCarriedEntity(GameEntity* carriedEntity)
 //! \brief Checks that a body still owns its original accessible grave delivery tile.
 bool RoomCrypt::hasReservedDelivery(const Creature& body, const Tile* delivery)
 {
-    for(const auto& spot : mRottingCreatures)
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
         if(spot.second == &body)
             return getDeliveryTile(spot.first) == delivery;
     return false;

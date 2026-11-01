@@ -11,7 +11,7 @@
 //! \brief Combines targets accessible beyond sight with this worker's own visible tiles.
 inline std::vector<Tile*> workerSearchTiles(Creature& worker, WorkerJob job)
 {
-    const auto& sight = worker.getTilesWithinSightRadius();
+    const std::vector<Tile*>& sight = worker.getTilesWithinSightRadius();
     std::vector<Tile*> tiles(sight.begin(), sight.end());
     for(const WorkerTarget& target : worker.getSeat()->getWorkerTargetLists()[static_cast<size_t>(job)])
     {

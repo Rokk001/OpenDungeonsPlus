@@ -30,7 +30,7 @@ void RoomInfirmary::exportToStream(std::ostream& stream) const
         stream << cot.size << '\t' << cot.x << '\t' << cot.y << '\t' << cot.rotation << '\n';
     }
     size_t savedPatients = 0;
-    for(const auto& entry : mPatients)
+    for(const std::pair<const size_t, PatientInfo>& entry : mPatients)
         if(entry.second.creature != nullptr || !isForcedTransport(entry.second.reservedBy))
             ++savedPatients;
     stream << "InfirmaryPatients\t" << savedPatients << '\n';

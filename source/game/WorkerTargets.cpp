@@ -28,7 +28,7 @@ bool territoryAllowed(Creature& worker, Tile& tile)
     Seat* owner = tile.getSeat();
     if(owner == nullptr || owner == worker.getSeat() || owner->isRogueSeat())
         return true;
-    const auto& sight = worker.getTilesWithinSightRadius();
+    const std::vector<Tile*>& sight = worker.getTilesWithinSightRadius();
     return std::find(sight.begin(), sight.end(), &tile) != sight.end();
 }
 
@@ -211,22 +211,30 @@ bool reservedByKeeper(GameEntity& entity, const std::vector<Creature*>& workers)
     {
         if(worker->getWorkerJob() != WorkerJob::carry)
             continue;
-        for(const auto& action : worker->getActions())
+        for(const std::unique_ptr<CreatureAction>& action : worker->getActions())
         {
             if(action->getType() == CreatureActionType::grabEntity)
             {
-                const auto& grab = static_cast<const CreatureActionGrabEntity&>(*action);
+                const CreatureActionGrabEntity& grab = static_cast<const CreatureActionGrabEntity&>(*action);
                 if(grab.getGrabTarget() == &entity && !grab.isForced() && !grab.isDigGold())
                     return true;
             }
             else if(action->getType() == CreatureActionType::carryEntity)
             {
-                const auto& carry = static_cast<const CreatureActionCarryEntity&>(*action);
+                const CreatureActionCarryEntity& carry = static_cast<const CreatureActionCarryEntity&>(*action);
                 if(carry.getCarriedTarget() == &entity && !carry.isForced() && !carry.isDigGold())
                     return true;
             }
         }
     }
+    return false;
+}
+//! \brief Finds whether a carry target already identifies the entity.
+bool containsCarryEntity(const std::vector<WorkerTarget>& carries, const GameEntity& entity)
+{
+    for(const WorkerTarget& target : carries)
+        if(target.entityType == entity.getObjectType() && target.entityName == entity.getName())
+            return true;
     return false;
 }
 //! \brief Adds each reachable classified carry entity once, including one already reserved.
@@ -238,10 +246,8 @@ void collectCarryTile(WorkerTargetLists& targets, Tile& tile, const std::vector<
     {
         if(entity == nullptr)
             continue;
-        const auto& carries = targets[static_cast<uint32_t>(WorkerJob::carry)];
-        if(std::any_of(carries.begin(), carries.end(), [&](const WorkerTarget& target) {
-            return target.entityType == entity->getObjectType() && target.entityName == entity->getName();
-        }))
+        const std::vector<WorkerTarget>& carries = targets[static_cast<uint32_t>(WorkerJob::carry)];
+        if(containsCarryEntity(carries, *entity))
             continue;
         if(entity->getCarryLock(*workers.front()) && !reservedByKeeper(*entity, allWorkers))
             continue;
@@ -273,7 +279,7 @@ void collectActiveCarries(WorkerTargetLists& targets, const std::vector<Creature
         if(worker->getWorkerJob() != WorkerJob::carry)
             continue;
         const CreatureActionCarryEntity* carry = nullptr;
-        for(const auto& action : worker->getActions())
+        for(const std::unique_ptr<CreatureAction>& action : worker->getActions())
             if(action->getType() == CreatureActionType::carryEntity)
                 carry = static_cast<const CreatureActionCarryEntity*>(action.get());
         if(carry == nullptr || carry->isForced() || carry->isDigGold() ||
@@ -283,10 +289,7 @@ void collectActiveCarries(WorkerTargetLists& targets, const std::vector<Creature
         const WorkerCarryEntry entry = classifyWorkerCarry(*entity, *worker);
         if(entry == WorkerCarryEntry::none)
             continue;
-        const auto sameEntity = [&](const WorkerTarget& target) {
-            return target.entityType == entity->getObjectType() && target.entityName == entity->getName();
-        };
-        if(std::find_if(carries.begin(), carries.end(), sameEntity) != carries.end())
+        if(containsCarryEntity(carries, *entity))
             continue;
         carries.push_back(WorkerTarget{WorkerTargetKind::carry, worker->getPositionTile(), nullptr, 0,
                                        entity->getObjectType(), entity->getName(), entry});

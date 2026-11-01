@@ -1660,7 +1660,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             for(uint32_t& value : mWorkerJobDefaults.priority)
             {
                 configFile >> nextParam;
-                auto it = std::find(names.begin(), names.end(), nextParam);
+                std::array<std::string, 6>::const_iterator it = std::find(names.begin(), names.end(), nextParam);
                 if(it == names.end()) return false;
                 value = static_cast<uint32_t>(it - names.begin());
             }
@@ -1673,7 +1673,7 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             for(uint32_t& value : mWorkerJobDefaults.carryOrder)
             {
                 configFile >> nextParam;
-                auto it = std::find(names.begin(), names.end(), nextParam);
+                std::array<std::string, 7>::const_iterator it = std::find(names.begin(), names.end(), nextParam);
                 if(it == names.end()) return false;
                 value = static_cast<uint32_t>(it - names.begin());
             }

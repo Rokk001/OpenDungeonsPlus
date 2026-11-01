@@ -8173,7 +8173,7 @@ bool Creature::setDragDestination(Tile* tile)
 //! \brief Returns whether a one-task hand-drop transport is running.
 bool Creature::hasForcedWorkerCarry() const
 {
-    for(const auto& action : mActions)
+    for(const std::unique_ptr<CreatureAction>& action : mActions)
         if(action->getType() == CreatureActionType::carryEntity &&
            static_cast<const CreatureActionCarryEntity&>(*action).isForced())
             return true;

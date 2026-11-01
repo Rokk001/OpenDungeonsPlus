@@ -91,7 +91,7 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
     // Prefer untouched targets, and optionally gold and gems, before distance.
     Player* tempPlayer = creature.getGameMap()->getPlayerBySeat(creature.getSeat());
     const bool goldFirst = creature.getSeat()->getWorkerJobSettings().goldFirst != 0;
-    const auto& sight = creature.getTilesWithinSightRadius();
+    const std::vector<Tile*>& sight = creature.getTilesWithinSightRadius();
     int bestGroup = 5;
     bool bestStanding = false;
     float distBest = 0.0f;
