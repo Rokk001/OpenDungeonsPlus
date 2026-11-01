@@ -1212,6 +1212,8 @@ void Creature::exportToStream(std::ostream& os) const
     for(const std::unique_ptr<CreatureAction>& action : mActions)
         if(action->getType()==CreatureActionType::huntGhost)
             static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
+    if(mDefinition->isWorker())
+        os << "\t[WorkerJob] " << static_cast<uint32_t>(mWorkerJob) << ' ' << (mWorkerJobFixed ? 1 : 0) << " [/WorkerJob]";
     os.precision(precision);
 }
 
@@ -1291,6 +1293,16 @@ bool Creature::importFromStream(std::istream& is)
     bool corpseDeathPending = false;
     while(is >> appearanceToken)
     {
+        if(appearanceToken == "[WorkerJob]")
+        {
+            uint32_t job = 0, fixed = 0;
+            std::string close;
+            if(!(is >> job >> fixed >> close) || job > static_cast<uint32_t>(WorkerJob::none) || fixed > 1 ||
+               (fixed && job == static_cast<uint32_t>(WorkerJob::none)) || close != "[/WorkerJob]") return false;
+            mWorkerJob = static_cast<WorkerJob>(job);
+            mWorkerJobFixed = fixed != 0;
+            continue;
+        }
         if(appearanceToken.compare(0, CORPSE_CARRIER_SAVE_LABEL.size(), CORPSE_CARRIER_SAVE_LABEL) == 0)
         {
             mCorpseCarrierName = appearanceToken.substr(CORPSE_CARRIER_SAVE_LABEL.size());

@@ -1648,6 +1648,62 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "WorkerPriorityParts")
+        {
+            for(uint32_t& value : mWorkerPriorityParts) configFile >> value;
+            continue;
+        }
+        if(nextParam == "WorkerDefaultFixed")
+        {
+            for(uint32_t& value : mWorkerJobDefaults.fixed) configFile >> value;
+            continue;
+        }
+        if(nextParam == "WorkerDefaultFreeMode")
+        {
+            configFile >> nextParam;
+            if(nextParam != "automatic" && nextParam != "priority") return false;
+            mWorkerJobDefaults.freeMode = nextParam == "priority" ? 1 : 0;
+            continue;
+        }
+        if(nextParam == "WorkerDefaultPriority")
+        {
+            const std::array<std::string, 6> names{{"dig", "claimGround", "claimWall", "carry", "clean", "reload"}};
+            for(uint32_t& value : mWorkerJobDefaults.priority)
+            {
+                configFile >> nextParam;
+                auto it = std::find(names.begin(), names.end(), nextParam);
+                if(it == names.end()) return false;
+                value = static_cast<uint32_t>(it - names.begin());
+            }
+            if(!validWorkerJobSettings(mWorkerJobDefaults)) return false;
+            continue;
+        }
+        if(nextParam == "WorkerDefaultCarryOrder")
+        {
+            const std::array<std::string, 7> names{{"ownKnockedOut", "enemyKnockedOut", "corpse", "gold", "items", "giftBoxes", "trapsDoors"}};
+            for(uint32_t& value : mWorkerJobDefaults.carryOrder)
+            {
+                configFile >> nextParam;
+                auto it = std::find(names.begin(), names.end(), nextParam);
+                if(it == names.end()) return false;
+                value = static_cast<uint32_t>(it - names.begin());
+            }
+            if(!validWorkerJobSettings(mWorkerJobDefaults)) return false;
+            continue;
+        }
+        if(nextParam == "WorkerDefaultGoldFirst")
+        {
+            configFile >> mWorkerJobDefaults.goldFirst;
+            if(mWorkerJobDefaults.goldFirst > 1) return false;
+            continue;
+        }
+        if(nextParam == "WorkerCleanTilesPerCleaner")
+        {
+            configFile >> mWorkerCleanTilesPerCleaner;
+            if(mWorkerCleanTilesPerCleaner == 0) return false;
+            continue;
+        }
+
         if(nextParam == "NbWorkersDigSameFaceTile")
         {
             configFile >> nextParam;

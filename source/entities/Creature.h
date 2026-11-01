@@ -21,6 +21,8 @@
 #ifndef CREATURE_H
 #define CREATURE_H
 
+#include "game/WorkerJobs.h"
+
 #include "entities/MovableGameEntity.h"
 #include "entities/CreatureActivity.h"
 #include "entities/DefenceChance.h"
@@ -172,6 +174,15 @@ class Creature: public MovableGameEntity, public Subject
     friend class ODClient;
 public:
     
+    //! \brief Reports whether the creature is currently in a keeper hand.
+    bool isInHand() const { return mIsInHand; }
+    //! \brief Returns the worker job held across turns and saves.
+    WorkerJob getWorkerJob() const { return mWorkerJob; }
+    //! \brief Reports whether this worker holds its job as a fixed assignment.
+    bool isWorkerJobFixed() const { return mWorkerJobFixed; }
+    //! \brief Sets the worker's current job and whether it is fixed.
+    void setWorkerJob(WorkerJob job, bool fixed) { mWorkerJob = job; mWorkerJobFixed = fixed; }
+
     bool parkingBit;
     
     bool parkedBit;
@@ -1797,6 +1808,9 @@ protected:
     virtual void fireAddEntity(Seat* seat,  bool async, NodeType nt) override;
     virtual void fireRemoveEntity(Seat* seat,NodeType nt = NodeType::MTILES_NODE) override;
 private:
+    //! \brief Assigned worker job and fixed/free status, saved with the creature.
+    WorkerJob mWorkerJob = WorkerJob::none;
+    bool mWorkerJobFixed = false;
     
     enum ForceAction
     {

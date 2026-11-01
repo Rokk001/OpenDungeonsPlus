@@ -244,7 +244,9 @@ enum class ServerNotificationType
     //! human seats that see the jump: + string creature name, Vector3 start, Vector3 goal, uint32_t total turns,
     //! float turns that are over (a client that joins in the middle starts there).
     //! Appended after spaPayer so that no existing numeric value changes.
-    creatureJump
+    creatureJump,
+    //! \brief Current owner worker settings, returned even if a requested change is refused.
+    workerSettings
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);
