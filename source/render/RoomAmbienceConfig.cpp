@@ -338,6 +338,8 @@ bool RoomAmbienceConfig::loadEffect(std::istream& file)
                 effect.mKind = AmbienceKind::projectile;
             else if(words[1] == "CreatureClip")
                 effect.mKind = AmbienceKind::creatureClip;
+            else if(words[1] == "Crawl")
+                effect.mKind = AmbienceKind::crawl;
             else
             {
                 OD_LOG_ERR("Unknown room ambience kind: " + words[1]);

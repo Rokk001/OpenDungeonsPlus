@@ -94,7 +94,11 @@ enum class AmbienceKind
     projectile,
     //! Events only: plays a clip of Clips once on the creature the event is about (the stretch of a creature that woke);
     //! nothing happens when the creature has no such clip
-    creatureClip
+    creatureClip,
+    //! Events only: Amount copies of the animated mesh Mesh (clip "Crawl" in a loop, scale Axis x) crawl away from the
+    //! place of the event at Speed tiles per second for Duration seconds and shrink away at the end; they start Delay
+    //! seconds after the event (the vermin that come out of a Lich that burst)
+    crawl
 };
 
 //! \brief How an effect of the kind motion moves the node of its object

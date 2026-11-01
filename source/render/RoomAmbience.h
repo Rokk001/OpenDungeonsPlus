@@ -251,6 +251,32 @@ private:
         double mAge;
     };
 
+    //! \brief One animated crawling creature of an effect of the kind crawl (a maggot, a worm or a beetle)
+    struct Crawler
+    {
+        //! \brief Creates a crawler that is not in the scene yet and appears at time mDue
+        Crawler() :
+            mNode(nullptr), mEntity(nullptr), mEffect(0), mStart(Ogre::Vector3::ZERO), mDirection(Ogre::Vector3::UNIT_X),
+            mDue(0.0), mAge(0.0), mSpeedFactor(1.0), mSizeFactor(1.0), mPhase(0.0)
+        {}
+
+        Ogre::SceneNode* mNode;
+        Ogre::Entity* mEntity;
+        uint32_t mEffect;
+        Ogre::Vector3 mStart;
+        Ogre::Vector3 mDirection;
+        //! Clock time at which the crawler appears
+        double mDue;
+        //! Seconds since it appeared
+        double mAge;
+        //! Own share of the speed of the effect, so that the crawlers do not move in step
+        double mSpeedFactor;
+        //! Own share of the size of the effect, so that the crawlers of one kind differ in size
+        double mSizeFactor;
+        //! Phase of the sideways wiggle
+        double mPhase;
+    };
+
     //! \brief Where a creature was at the last scan and whose it is
     struct CreatureSpot
     {
@@ -428,6 +454,12 @@ private:
     void updateRollers(double timeSinceLastFrame);
     //! \brief Ends a roller: the object goes; with leaveEffects its fragments and the last dust stay for a moment
     void finishRoller(Roller& roller, bool leaveEffects);
+    //! \brief Plans the crawlers of an effect of the kind crawl at the given place; true if any were planned
+    bool startCrawl(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position);
+    //! \brief Creates the crawlers that are due, moves and animates the running ones and removes those that are done
+    void updateCrawlers(double timeSinceLastFrame);
+    //! \brief Removes the mesh and the scene node of a crawler from the scene
+    void destroyCrawler(Crawler& crawler);
     //! \brief Lets a running view shake fade out and moves its phase on
     void updateShake(double timeSinceLastFrame);
     //! \brief Starts a beam or a projectile (effect kinds beam and projectile) for an event at the given place
@@ -576,6 +608,8 @@ private:
     //! Time until which a trap (key "x,y" of its tile) keeps its turn, because the server aims it for a shot
     std::map<std::string, double> mTurretHoldUntil;
     std::vector<Roller> mRollers;
+    //! Crawling creatures (kind crawl), waiting for their time or running
+    std::vector<Crawler> mCrawlers;
     //! Where the creatures were at the last scan
     std::vector<CreatureSpot> mCreatureSpots;
     std::map<std::string, BusyInfo> mBusy;

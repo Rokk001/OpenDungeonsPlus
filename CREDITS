@@ -2076,15 +2076,12 @@ gui/Items.png (soul_crystal)    AI-generated with Codex    GPLv3+    Atlas entry
 
 gui/ODNavigation.png (integrated minimap ring and plate states)    AI-generated with Codex image generation    GPLv3+    Original painted iron ring with four integrated plates and painted hover/pressed states, 2026-10-28; existing resource badges and navigation symbols retained.
 gui/SlotTypes.png    AI-generated with Codex    GPLv3+    Original painted equipment slot symbols.
-materials/textures/LichBeetle.png    AI-generated with Codex    GPLv3+    Original painted dark beetle sprite sheet, four top-view walking frames.
-materials/scripts/RoomAmbience.material (LichBeetle)    AI-generated with Codex    GPLv3+    Original alpha-blended material for the credited beetle sprite sheet.
-particles/RoomAmbienceSpellsExtra.particle (LichBeetles)    AI-generated with Codex    GPLv3+    Ground-level crawling beetles in three sizes, reusing the credited beetle sprite sheet.
-models/skeleton.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second downward bone collapse; all other bones and clips retained byte for byte.
-models/lich.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second inward body and robe disintegration; all other bones and clips retained byte for byte.
+models/skeleton.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second death in which the bones lose their hold, fall to the floor one after the other and end as the heap of Pile_Skeleton; all other bones and clips retained byte for byte.
+models/lich.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second death in which the body swells, trembles and bursts, leaving nothing behind; all other bones and clips retained byte for byte.
 models/Pile_Skeleton.mesh (bone heap)    AI-generated with Codex    GPLv3+ for added work; original skeleton mesh licences retained in the existing attribution rows above    Final pose of the skeleton death animation, using its original material.
 materials/textures/Pile_Skeleton.png    AI-generated with Codex    GPLv3+    Repainted in bone white by tools/gen_pile_textures.py.
-materials/textures/LichBeetleModel.png    AI-generated with Codex    GPLv3+    Blender-rendered beetle for the Lich death effect.
-materials/textures/LichMaggotModel.png    AI-generated with Codex    GPLv3+    Blender-rendered maggot for the Lich death effect.
-materials/textures/LichWormModel.png    AI-generated with Codex    GPLv3+    Blender-rendered worm for the Lich death effect.
-materials/scripts/RoomAmbience.material (LichBeetleModel, LichMaggotModel, LichWormModel)    AI-generated with Codex    GPLv3+    Materials for the Blender-rendered Lich death vermin.
-particles/RoomAmbienceSpellsExtra.particle (LichBeetleModels, LichMaggotModels, LichWormModels)    AI-generated with Codex    GPLv3+    Crawling grave vermin for the Lich death effect.
+models/LichBeetle.mesh, models/LichBeetle.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled, textured beetle (tools/blender-assets/lich_vermin.py) with a walking clip Crawl, for the Lich death effect.
+models/LichMaggot.mesh, models/LichMaggot.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled, textured maggot (tools/blender-assets/lich_vermin.py) with a wriggling clip Crawl, for the Lich death effect.
+models/LichWorm.mesh, models/LichWorm.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled, textured worm (tools/blender-assets/lich_vermin.py) with a wriggling clip Crawl, for the Lich death effect.
+materials/scripts/RoomAmbience.material (LichVerminShell, LichVerminLeg, LichVerminMaggot, LichVerminWorm)    AI-generated with Codex    GPLv3+    Textured lit materials of the 3D grave vermin.
+materials/textures/LichVermin*.png    AI-generated    GPLv3+    Painted from periodic noise with fixed colours by tools/gen_lich_vermin_textures.py (script generated, original work).

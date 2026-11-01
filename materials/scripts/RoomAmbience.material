@@ -96,78 +96,63 @@ material RoomAmbWeb
     }
 }
 
-// Painted top-view beetles; each particle selects one of four walking frames.
-material LichBeetle
+// Textured, lit grave vermin that crawl out of a Lich that burst (models LichBeetle, LichMaggot, LichWorm; textures painted by
+// tools/gen_lich_vermin_textures.py).
+material LichVerminShell
 {
     technique
     {
         pass
         {
-            lighting off
-            scene_blend alpha_blend
-            depth_write off
-            diffuse vertexcolour
-
+            ambient 0.85 0.85 0.85 1.0
+            diffuse 1.0 1.0 1.0 1.0
+            specular 0.35 0.30 0.25 1.0 14.0
             texture_unit
             {
-                texture LichBeetle.png
-                tex_address_mode clamp
+                texture LichVerminShell.png
             }
         }
     }
 }
-
-// Blender-rendered grave vermin.
-material LichBeetleModel
+material LichVerminLeg
 {
     technique
     {
         pass
         {
-            lighting off
-            scene_blend alpha_blend
-            depth_write off
-            diffuse vertexcolour
+            ambient 0.14 0.08 0.04 1.0
+            diffuse 0.22 0.12 0.05 1.0
+        }
+    }
+}
+material LichVerminMaggot
+{
+    technique
+    {
+        pass
+        {
+            ambient 0.85 0.85 0.85 1.0
+            diffuse 1.0 1.0 1.0 1.0
+            specular 0.30 0.30 0.25 1.0 8.0
             texture_unit
             {
-                texture LichBeetleModel.png
-                tex_address_mode clamp
+                texture LichVerminMaggot.png
             }
         }
     }
 }
-material LichMaggotModel
+material LichVerminWorm
 {
     technique
     {
         pass
         {
-            lighting off
-            scene_blend alpha_blend
-            depth_write off
-            diffuse vertexcolour
+            ambient 0.85 0.85 0.85 1.0
+            diffuse 1.0 1.0 1.0 1.0
+            specular 0.30 0.20 0.20 1.0 8.0
             texture_unit
             {
-                texture LichMaggotModel.png
-                tex_address_mode clamp
-            }
-        }
-    }
-}
-material LichWormModel
-{
-    technique
-    {
-        pass
-        {
-            lighting off
-            scene_blend alpha_blend
-            depth_write off
-            diffuse vertexcolour
-            texture_unit
-            {
-                texture LichWormModel.png
-                tex_address_mode clamp
+                texture LichVerminWorm.png
             }
         }
     }
