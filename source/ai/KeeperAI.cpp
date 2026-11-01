@@ -85,16 +85,6 @@ static const std::vector<uint32_t> wantedBuildingTiles = {
     9, 25, 25, 16, 25, 25, 25, 16, 9, 25, 16, 9, 9, 25, 16, 9, 16, 16, 16, 16, 25, 16
 };
 
-// LEGACY-AI
-//! Interim normal settings for the legacy paths while their replacements are being implemented.
-static const int NORMAL_COOLDOWN_DEFENSE_MIN = 0;
-static const int NORMAL_COOLDOWN_DEFENSE_MAX = 5;
-static const int NORMAL_COOLDOWN_SAVE_WOUNDED_MIN = 0;
-static const int NORMAL_COOLDOWN_SAVE_WOUNDED_MAX = 5;
-static const int NORMAL_REACTION_PERCENT = 100;
-static const int NORMAL_MIN_HP_PERCENT_TO_FIGHT = 20;
-static const int NORMAL_MIN_FIGHTERS_TO_ATTACK = 11;
-static const int NORMAL_MIN_CREATURE_LEVEL = 4;
 
 
 
@@ -102,23 +92,10 @@ static const int NORMAL_MIN_CREATURE_LEVEL = 4;
 //! \brief Creates a keeper and binds its economy, room, research, war, spell and trap decisions.
 KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     BaseAI(gameMap, player),
-    mReactionPercent(NORMAL_REACTION_PERCENT),
     mType(type),
     mSettings(ConfigManager::getSingleton().getAiLevel(type)),
     mMind(gameMap, player, mSettings),
-    mEvents(*this),
-    mMinHpPercentToFight(NORMAL_MIN_HP_PERCENT_TO_FIGHT),
-    mMinFightersToAttack(NORMAL_MIN_FIGHTERS_TO_ATTACK),
-    mMinCreatureLevel(NORMAL_MIN_CREATURE_LEVEL),
-    mIsAttacking(false),
-    mNbFightersAtAttackStart(0),
-    mCooldownAttack(0),
-    mCooldownDefense(0),
-    mCooldownDefenseMin(NORMAL_COOLDOWN_DEFENSE_MIN),
-    mCooldownDefenseMax(NORMAL_COOLDOWN_DEFENSE_MAX),
-    mCooldownSaveWoundedCreatures(0),
-    mCooldownSaveWoundedCreaturesMin(NORMAL_COOLDOWN_SAVE_WOUNDED_MIN),
-    mCooldownSaveWoundedCreaturesMax(NORMAL_COOLDOWN_SAVE_WOUNDED_MAX)
+    mEvents(*this)
 {
     ACTS::bind(*this);
     mEvents.bind();
@@ -150,11 +127,6 @@ KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     // The spell, trap and door rows react to their events and looks through the mind
     SPELL::bindRows(*this);
     TRAP::bindRows(*this);
-}
-
-int KeeperAI::scaledCooldown(int min, int max) const
-{
-    return Random::Int((min * mReactionPercent) / 100, (max * mReactionPercent) / 100);
 }
 
 //! \brief Advances the shared mind and the keeper's war state.

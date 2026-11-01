@@ -100,12 +100,6 @@ private:
     //! \brief Appends the war and sighting lines to the saved AI state of the mind.
     void saveWarRows(std::vector<AiMath::AiStateLine>& lines);
 
-
-    //! \brief Returns a random cooldown between min and max, scaled by the AI reaction time
-    int scaledCooldown(int min, int max) const;
-
-    //! \brief Reaction time in percent of the base cooldowns (lower is faster)
-    int mReactionPercent;
     //! \brief The difficulty selected when the controller was created.
     KeeperAIType mType;
     //! \brief The selected level settings shared with the row functions.
@@ -125,23 +119,6 @@ private:
     SPELL::State mSpellState;
     //! \brief The state of the trap and door rows (F01, F12, F13, F15).
     TRAP::State mTrapState;
-    //! \brief Creatures below this percentage of their max HP are not sent to fight (lower is more aggressive)
-    int mMinHpPercentToFight;
-    //! \brief The AI attacks with more healthy fighters than this (0 = never attacks)
-    int mMinFightersToAttack;
-    //! \brief Fighters below this level are too weak for an attack; the AI waits while more of them exist than this value
-    int mMinCreatureLevel;
-    //! \brief True while the AI is sending its fighters against an enemy dungeon
-    bool mIsAttacking;
-    //! \brief Number of healthy fighters when the attack started. Used to decide when to retreat
-    int mNbFightersAtAttackStart;
-    int mCooldownAttack;
-    int mCooldownDefense;
-    int mCooldownDefenseMin;
-    int mCooldownDefenseMax;
-    int mCooldownSaveWoundedCreatures;
-    int mCooldownSaveWoundedCreaturesMin;
-    int mCooldownSaveWoundedCreaturesMax;
 };
 
 #endif // KEEPERAI_H

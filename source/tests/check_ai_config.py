@@ -49,6 +49,12 @@ for path in sorted((repo / "source/ai").glob("Ai*.cpp")):
             continue
         if value == 0.5 and re.match(r"\s*\*\s*\(", code[token.end():]):
             continue  # Arithmetic mean of a minimum and maximum.
+        line_start = code.rfind(chr(10), 0, token.start()) + 1
+        line_text = code[line_start:code.find(chr(10), token.end())]
+        if re.search(r"\.size\(\)|line\.tag|uniform01\(\)\s*<", line_text):
+            continue  # Save-format field counts and the fair coin flip are structure, not balance values.
+        if code[max(0, token.start() - 4):token.start()].rstrip().endswith("&"):
+            continue  # Bit mask of the action-text encoder, not a balance value.
         assert value not in {float(number) for number in SINGLE.values()}, f"{path.name}: balance literal {token.group()}"
 
 config = (repo / "config/ai.cfg").read_text(encoding="utf-8")
@@ -128,12 +134,16 @@ for name in levels:
         field = field_map[name].split("[")[0]
     assert re.search(r"\." + re.escape(field) + r"\b", decision_code), name
 for name in SINGLE:
-    direct = re.search(r'\b(?:getAiConfigDouble|getAiConfigInt32|aiKey|key)\s*\(\s*"' + re.escape(name) + r'"', decision_code)
+    direct = re.search(r'\b(?:getAiConfigDouble|getAiConfigInt32|aiKey|roomKey|key)\s*\(\s*"' + re.escape(name) + r'"', decision_code)
     conditional = re.search(r'\bkey\s*\(\s*\([^()]*\)\s*\?\s*"(?:' + re.escape(name) + r'|\w+)"\s*:\s*"(?:' + re.escape(name) + r'|\w+)"\s*\)', decision_code)
     conditional = conditional and re.search(r'"' + re.escape(name) + r'"', conditional.group())
     class_lookup = name.startswith("MistakeBase") and re.search(
         r'\bclassKey\s*\([^)]*\)\s*\{[^}]*return\s+"' + re.escape(name) + r'"', decision_code, re.S)
     trap_lookup = (name.startswith("TrapTargets") and name[len("TrapTargets"):] in trap_prefixes and
                    re.search(r'\bkey\s*\(\s*"TrapTargets"\s*\+\s*prefix\s*\)', war))
-    assert direct or conditional or class_lookup or trap_lookup, f"AI key not read by a decision: {name}"
+    # A key chosen by a conditional expression and passed to the key reader on the next line.
+    ternary = re.search(r'\?\s*"' + re.escape(name) + r'"\s*:\s*"\w+"|\?\s*"\w+"\s*:\s*"' + re.escape(name) + r'"', decision_code)
+    # A numbered key family is read through its prefix plus an index, e.g. "SlapMistakeInterval" + std::to_string(n).
+    numbered = name[-1:].isdigit() and re.search(r'"' + re.escape(name.rstrip("0123456789")) + r'"\s*\+', decision_code)
+    assert direct or conditional or class_lookup or trap_lookup or numbered or ternary, f"AI key not read by a decision: {name}"
 print("OK")

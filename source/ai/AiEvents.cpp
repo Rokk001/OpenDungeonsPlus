@@ -304,7 +304,7 @@ bool AiEvents::poll()
     mEdges.erase("PrisonerAge");
     for(std::map<std::string, bool>::iterator it = mEdges.begin(); it != mEdges.end();)
     {
-        if(it->first.compare(0, 12, "PrisonerAge:") == 0 && currentPrisonerEdges.count(it->first) == 0)
+        if(it->first.find("PrisonerAge:") == 0 && currentPrisonerEdges.count(it->first) == 0)
             it = mEdges.erase(it);
         else
             ++it;
