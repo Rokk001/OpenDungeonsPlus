@@ -26,7 +26,7 @@ EFFECT_KEYS = ("Name", "Target", "Match", "When", "Event", "Kind", "System", "Mo
                "WallSide", "HeartRate", "Sound", "OwnerOnly", "Object", "Loop", "GrainMin", "DirtStage", "DirtStageMin", "Unlimited")
 TARGETS = ("Object", "Tile", "Event")
 WHENS = ("Always", "Occupied", "Empty", "Hit", "Locked", "Reloading", "Ready", "LowHealth", "Vacated", "Sleeping")
-KINDS = ("Particle", "Motion", "Clip", "Model", "Shake", "Mark", "Sound", "Roll", "Turn", "Beam", "Projectile", "CreatureClip")
+KINDS = ("Particle", "Motion", "Clip", "Model", "Shake", "Mark", "Sound", "Roll", "Turn", "Beam", "Projectile", "CreatureClip", "Crawl")
 MOTIONS = ("Sway", "Wobble", "Spin", "Bob", "Pulse", "Flicker")
 # Room tile visuals that only some builds have
 OPTIONAL_VISUALS = ("guardRoom", "templeRoom")
@@ -269,8 +269,8 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: event effect without Event" % where)
         else:
             counts["names"].add(effect["Event"][0])
-        if kind not in ("Particle", "Shake", "Mark", "Sound", "Roll", "Beam", "Projectile", "Clip", "CreatureClip"):
-            problems.append("%s: event effects must be particles, shakes, marks, sounds, rolls, beams, projectiles or clips" % where)
+        if kind not in ("Particle", "Shake", "Mark", "Sound", "Roll", "Beam", "Projectile", "Clip", "CreatureClip", "Crawl"):
+            problems.append("%s: event effects must be particles, shakes, marks, sounds, rolls, beams, projectiles, clips or crawlers" % where)
     else:
         if "Match" not in effect:
             problems.append("%s: no Match" % where)
@@ -295,7 +295,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
                 problems.append("%s: a sound on an object needs Every or a positive runtime default" % where)
         if target != "Object" and "Loop" in effect:
             problems.append("%s: sound loops only work on objects" % where)
-    elif "Family" in effect or "Delay" in effect:
+    elif "Family" in effect or ("Delay" in effect and kind != "Crawl"):
         problems.append("%s: Family and Delay only belong to sounds" % where)
     if when in ("Locked", "Reloading", "Ready", "LowHealth", "Sleeping") and target != "Object":
         problems.append("%s: When %s only works on objects" % (where, when))
@@ -336,7 +336,7 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             counts["lands"].append((where, effect["Land"][0]))
         if kind == "Beam" and "Land" in effect:
             problems.append("%s: only projectiles have Land" % where)
-    elif "Land" in effect or "From" in effect or ("Mesh" in effect and kind not in ("Roll", "Model")):
+    elif "Land" in effect or "From" in effect or ("Mesh" in effect and kind not in ("Roll", "Model", "Crawl")):
         problems.append("%s: Mesh, Land and From only belong to beams and projectiles (Mesh also to rolls and models)" % where)
     if kind == "Shake":
         for key in ("Amount", "Duration", "Speed", "MaxDistance"):
@@ -346,6 +346,21 @@ def check_effect(effect, where, problems, visuals, systems, mats, counts):
             problems.append("%s: shake Amount above 0.5 is too strong" % where)
         if "Duration" in effect and is_number(effect["Duration"][0]) and float(effect["Duration"][0]) > 2.0:
             problems.append("%s: shake Duration above 2 seconds" % where)
+    if kind == "Crawl":
+        if target != "Event":
+            problems.append("%s: crawlers only work as events" % where)
+        mesh = effect.get("Mesh", [None])[0]
+        if mesh is None or not mesh_exists(mesh):
+            problems.append("%s: crawl without an existing Mesh (%s)" % (where, mesh))
+        elif not os.path.isfile(os.path.join(ROOT, "models", mesh + ".skeleton")):
+            problems.append("%s: the crawl mesh %s has no skeleton for its Crawl clip" % (where, mesh))
+        for key in ("Amount", "Speed", "Duration"):
+            if key not in effect:
+                problems.append("%s: crawl without %s" % (where, key))
+        if "Amount" in effect and is_number(effect["Amount"][0]) and float(effect["Amount"][0]) > 10.0:
+            problems.append("%s: crawl Amount above 10 creatures" % where)
+        if "Duration" in effect and is_number(effect["Duration"][0]) and float(effect["Duration"][0]) > 30.0:
+            problems.append("%s: crawl Duration above 30 seconds" % where)
     if kind == "Roll":
         if target != "Event":
             problems.append("%s: rolls only work as events" % where)

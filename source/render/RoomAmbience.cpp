@@ -69,6 +69,16 @@ const uint32_t MAX_EVENTS_PER_SCAN = 6;
 const size_t MAX_PENDING_SOUNDS = 32;
 //! Rolling objects (kind roll) alive at the same time
 const size_t MAX_ROLLERS = 3;
+//! Crawling creatures (kind crawl) alive or waiting at the same time
+const size_t MAX_CRAWLERS = 24;
+//! Seconds over which the crawlers of one effect appear one after the other
+const double CRAWL_APPEAR_SPREAD = 0.6;
+//! Seconds at the end of its life in which a crawler shrinks away
+const double CRAWL_SHRINK_SECONDS = 1.5;
+//! Sideways swing (tiles) of the way of a crawler
+const double CRAWL_WIGGLE = 0.06;
+//! Name of the loop clip of the skeleton of a crawler
+const std::string CRAWL_CLIP = "Crawl";
 //! How long the barrel of a cannon keeps the aim of the server after a shot
 const double TURRET_HOLD_SECONDS = 1.5;
 //! Creatures farther away than this (tiles) from a trap are not looked for when a rolling object picks its way
@@ -754,6 +764,9 @@ void RoomAmbience::stopAll()
         for(Roller& roller : mRollers)
             finishRoller(roller, false);
 
+        for(Crawler& crawler : mCrawlers)
+            destroyCrawler(crawler);
+
         for(Flight& flight : mFlights)
             destroyFlight(flight);
     }
@@ -764,6 +777,7 @@ void RoomAmbience::stopAll()
     mCollapses.clear();
     mTurrets.clear();
     mRollers.clear();
+    mCrawlers.clear();
     mFlights.clear();
     mPendingSounds.clear();
     mShakeTime = 0.0;
@@ -979,6 +993,7 @@ void RoomAmbience::update(Ogre::Real timeSinceLastFrame)
     updateMotions(dt);
     updateTurrets(dt);
     updateRollers(dt);
+    updateCrawlers(dt);
 
     Ogre::Camera* camera = nullptr;
     ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
@@ -2574,6 +2589,13 @@ uint32_t RoomAmbience::triggerEvent(const std::string& eventName, const Ogre::Ve
             continue;
         }
 
+        if(effect.mKind == AmbienceKind::crawl)
+        {
+            if(startCrawl(effect, index, position))
+                ++nbStarted;
+            continue;
+        }
+
         if(isFlight)
         {
             uint32_t nbBefore = static_cast<uint32_t>(mFlights.size());
@@ -2851,6 +2873,124 @@ void RoomAmbience::finishRoller(Roller& roller, bool leaveEffects)
     roller.mEntity = nullptr;
     roller.mTrailNode = nullptr;
     roller.mTrail = nullptr;
+}
+
+bool RoomAmbience::startCrawl(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position)
+{
+    if(effect.mMesh.empty() || (mMode == Mode::off))
+        return false;
+
+    uint32_t count = static_cast<uint32_t>(std::max(0.0, effect.mAmount));
+    std::uniform_real_distribution<double> angle(0.0, 6.283185307179586);
+    std::uniform_real_distribution<double> speed(0.7, 1.3);
+    std::uniform_real_distribution<double> spread(0.0, CRAWL_APPEAR_SPREAD);
+    uint32_t nbPlanned = 0;
+    for(uint32_t i = 0; i < count; ++i)
+    {
+        if(mCrawlers.size() >= MAX_CRAWLERS)
+            break;
+
+        double a = angle(mRandom);
+        Crawler crawler;
+        crawler.mEffect = effectIndex;
+        crawler.mStart = position + effect.mOffset;
+        crawler.mDirection = Ogre::Vector3(static_cast<Ogre::Real>(std::cos(a)), static_cast<Ogre::Real>(std::sin(a)), 0.0f);
+        crawler.mDue = mClock + effect.mDelay + spread(mRandom);
+        crawler.mSpeedFactor = speed(mRandom);
+        crawler.mPhase = angle(mRandom);
+        mCrawlers.push_back(crawler);
+        ++nbPlanned;
+    }
+
+    return nbPlanned > 0;
+}
+
+void RoomAmbience::updateCrawlers(double timeSinceLastFrame)
+{
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    const std::vector<AmbienceEffect>& effects = mConfig.getEffects();
+    for(std::vector<Crawler>::iterator it = mCrawlers.begin(); it != mCrawlers.end();)
+    {
+        Crawler& crawler = *it;
+        if(crawler.mEffect >= effects.size())
+        {
+            destroyCrawler(crawler);
+            it = mCrawlers.erase(it);
+            continue;
+        }
+
+        const AmbienceEffect& effect = effects[crawler.mEffect];
+        Ogre::Real baseScale = (effect.mAxis.x > 0.0f) ? effect.mAxis.x : 1.0f;
+        if(crawler.mNode == nullptr)
+        {
+            if(mClock < crawler.mDue)
+            {
+                ++it;
+                continue;
+            }
+
+            // The creature appears where the event happened and looks along its way
+            std::string name = "RoomAmbience_Crawl_" + Helper::toString(++mUniqueNumber);
+            try
+            {
+                crawler.mEntity = sceneManager->createEntity(name, effect.mMesh + MESH_SUFFIX);
+            }
+            catch(const Ogre::Exception&)
+            {
+                if(mMissingSystems.insert(effect.mMesh).second)
+                    OD_LOG_WRN("Room ambience: unknown mesh " + effect.mMesh);
+                it = mCrawlers.erase(it);
+                continue;
+            }
+
+            crawler.mNode = sceneManager->getRootSceneNode()->createChildSceneNode(name + "_node", crawler.mStart);
+            crawler.mNode->attachObject(crawler.mEntity);
+            crawler.mNode->setOrientation(Ogre::Vector3::UNIT_Y.getRotationTo(crawler.mDirection));
+            crawler.mNode->setScale(baseScale, baseScale, baseScale);
+            if(crawler.mEntity->hasAnimationState(CRAWL_CLIP))
+            {
+                Ogre::AnimationState* state = crawler.mEntity->getAnimationState(CRAWL_CLIP);
+                state->setLoop(true);
+                state->setEnabled(true);
+            }
+        }
+
+        crawler.mAge += timeSinceLastFrame;
+        if(crawler.mEntity->hasAnimationState(CRAWL_CLIP))
+            crawler.mEntity->getAnimationState(CRAWL_CLIP)->addTime(static_cast<Ogre::Real>(timeSinceLastFrame * crawler.mSpeedFactor));
+
+        double life = std::max(0.1, effect.mDuration);
+        if(crawler.mAge >= life)
+        {
+            destroyCrawler(crawler);
+            it = mCrawlers.erase(it);
+            continue;
+        }
+
+        // It crawls straight away from the place with a small sideways wiggle and shrinks away at the end
+        Ogre::Vector3 side(-crawler.mDirection.y, crawler.mDirection.x, 0.0f);
+        double way = effect.mSpeed * crawler.mSpeedFactor * crawler.mAge;
+        double wiggle = CRAWL_WIGGLE * std::sin(crawler.mAge * 3.0 + crawler.mPhase);
+        crawler.mNode->setPosition(crawler.mStart + crawler.mDirection * static_cast<Ogre::Real>(way)
+            + side * static_cast<Ogre::Real>(wiggle));
+        Ogre::Real shrink = static_cast<Ogre::Real>(std::min(1.0, (life - crawler.mAge) / CRAWL_SHRINK_SECONDS));
+        crawler.mNode->setScale(baseScale * shrink, baseScale * shrink, baseScale * shrink);
+        ++it;
+    }
+}
+
+void RoomAmbience::destroyCrawler(Crawler& crawler)
+{
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    if(crawler.mNode != nullptr)
+        crawler.mNode->detachAllObjects();
+    if(crawler.mEntity != nullptr)
+        sceneManager->destroyEntity(crawler.mEntity);
+    if(crawler.mNode != nullptr)
+        sceneManager->destroySceneNode(crawler.mNode);
+
+    crawler.mNode = nullptr;
+    crawler.mEntity = nullptr;
 }
 
 void RoomAmbience::startFlight(const AmbienceEffect& effect, const Ogre::Vector3& position)

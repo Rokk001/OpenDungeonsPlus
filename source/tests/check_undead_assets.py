@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Undead death assets: the Lich beetle effect, its particle system, texture, material and credits exist, the
+"""Undead death assets: the Lich vermin effects (3D animated models with a Crawl clip), their materials and credits exist, the
 Skeleton bone heap uses the original skeleton material, and the Die clips of both creatures last exactly as long as the
 DeathVanishSeconds of their creatures.cfg block (binary animation chunk scan, no compiling, no rendering)."""
 from pathlib import Path
@@ -35,48 +35,38 @@ def clip_length(module, skeleton, clip):
 # Run every undead asset requirement and stop at the first one that is missing.
 def main():
     events = read('config/roomAmbienceSpells.cfg')
-    effect = None
-    for block in re.findall(r'\[Effect\](.*?)\[/Effect\]', events, re.S):
-        if re.search(r'^\s*Name\s+LichBeetlesSwarm\s*$', block, re.M):
-            effect = block
-    assert effect is not None, 'roomAmbienceSpells.cfg has no [Effect] LichBeetlesSwarm'
-    for key, value in (('Target', 'Event'), ('Event', 'SpellFxLichBeetles'), ('Kind', 'Particle'),
-                       ('System', 'LichBeetleModels'), ('Offset', '0 0 0'), ('Duration', '20'),
-                       ('MaxDistance', '40'), ('Priority', '5'), ('Reduced', 'yes')):
-        match = re.search(r'^\s*' + key + r'\s+(.+?)\s*$', effect, re.M)
-        assert match and match.group(1) == value, 'LichBeetlesSwarm ' + key + ' must be ' + value
-
-    particles = read('particles/RoomAmbienceSpellsExtra.particle')
-    assert re.search(r'^\s*(?:particle_system\s+)?LichBeetles\s*(\{|$)', particles, re.M), \
-        'RoomAmbienceSpellsExtra.particle has no particle system LichBeetles'
-
-    for event, system, texture_name, lifetime in (
-            ('LichBeetlesSwarm', 'LichBeetleModels', 'LichBeetleModel', '9'),
-            ('LichBeetlesMediumSwarm', 'LichMaggotModels', 'LichMaggotModel', '14'),
-            ('LichBeetlesLargeSwarm', 'LichWormModels', 'LichWormModel', '18.9')):
-        assert re.search(r'^\s*Name\s+' + event + r'\s*$', events, re.M), event + ' missing'
-        assert re.search(r'^\s*System\s+' + system + r'\s*$', events, re.M), system + ' is not bound'
-        block = particles.split('particle_system ' + system, 1)[1].split('\n}', 1)[0]
-        assert 'material ' + texture_name in block and 'quota 2' in block
-        assert block.count('emitter Point') == 2 and block.count('emission_rate 1') == 2
-        assert block.count('time_to_live_max ' + lifetime) == 2
-        assert (ROOT / 'materials/textures' / (texture_name + '.png')).is_file()
-        assert texture_name + '.png' in read('materials/scripts/RoomAmbience.material')
-        assert 'materials/textures/' + texture_name + '.png' in read('CREDITS')
-
-    texture = ROOT / 'materials/textures/LichBeetle.png'
-    assert texture.is_file() and texture.stat().st_size > 0, 'materials/textures/LichBeetle.png is missing'
     materials = read('materials/scripts/RoomAmbience.material')
-    assert 'LichBeetle.png' in materials, 'RoomAmbience.material has no material with the LichBeetle.png texture'
-
     credits = read('CREDITS')
-    for name in ('materials/textures/LichBeetle.png', 'materials/scripts/RoomAmbience.material',
-                 'particles/RoomAmbienceSpellsExtra.particle'):
-        rows = [row for row in credits.splitlines() if name in row and ('LichBeetle' in row or name.endswith('.png'))]
-        assert rows, 'CREDITS has no row for ' + name + ' (LichBeetle)'
-    for entry in ('materials/textures/LichBeetle.png', 'materials/scripts/RoomAmbience.material (LichBeetle',
-                  'particles/RoomAmbienceSpellsExtra.particle (LichBeetles)',
-                  'models/skeleton.skeleton (new Die clip)', 'models/lich.skeleton (new Die clip)',
+    amounts = 0
+    # Three crawl effects bring the real 3D vermin (animated models with a Crawl clip) out of the Lich that burst
+    for name, mesh, matnames in (('LichBeetlesSwarm', 'LichBeetle', ('LichVerminShell', 'LichVerminLeg')),
+                                 ('LichBeetlesMediumSwarm', 'LichMaggot', ('LichVerminMaggot',)),
+                                 ('LichBeetlesLargeSwarm', 'LichWorm', ('LichVerminWorm',))):
+        effect = None
+        for block in re.findall(r'\[Effect\](.*?)\[/Effect\]', events, re.S):
+            if re.search(r'^\s*Name\s+' + name + r'\s*$', block, re.M):
+                effect = block
+        assert effect is not None, 'roomAmbienceSpells.cfg has no [Effect] ' + name
+        for key, value in (('Target', 'Event'), ('Event', 'SpellFxLichBeetles'), ('Kind', 'Crawl'), ('Mesh', mesh),
+                           ('Delay', '1.5'), ('Duration', '14'), ('MaxDistance', '40'), ('Priority', '5'),
+                           ('Reduced', 'yes')):
+            match = re.search(r'^\s*' + key + r'\s+(.+?)\s*$', effect, re.M)
+            assert match and match.group(1) == value, name + ' ' + key + ' must be ' + value
+        amounts += int(re.search(r'^\s*Amount\s+(\d+)\s*$', effect, re.M).group(1))
+        assert 'Kind        Particle' not in effect and 'System' not in effect, name + ' must not be a 2D particle effect'
+        for ext in ('.mesh', '.skeleton'):
+            path = ROOT / 'models' / (mesh + ext)
+            assert path.is_file() and path.stat().st_size > 0, 'models/' + mesh + ext + ' is missing'
+        assert b'Crawl' in (ROOT / 'models' / (mesh + '.skeleton')).read_bytes(), mesh + ' has no Crawl clip'
+        for matname in matnames:
+            assert 'material ' + matname in materials, 'RoomAmbience.material has no material ' + matname
+            assert matname.encode() in (ROOT / 'models' / (mesh + '.mesh')).read_bytes(), mesh + ' does not use ' + matname
+        assert 'models/' + mesh + '.mesh' in credits, 'CREDITS has no row for models/' + mesh + '.mesh'
+    assert 5 <= amounts <= 10, 'the Lich must release 5 to 10 vermin, not ' + str(amounts)
+    assert 'LichVerminShell' in credits, 'CREDITS has no row for the vermin materials'
+    assert 'LichBeetleModel' not in materials and 'LichBeetle.png' not in materials, 'the 2D beetle materials must be gone'
+
+    for entry in ('models/skeleton.skeleton (new Die clip)', 'models/lich.skeleton (new Die clip)',
                   'models/Pile_Skeleton.mesh (bone heap)', 'materials/textures/Pile_Skeleton.png'):
         assert entry in credits, 'CREDITS has no entry ' + entry
 
