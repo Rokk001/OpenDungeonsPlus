@@ -492,7 +492,7 @@ void ROOMS::bedWatch(KeeperAI& ai)
         return;
     State& state = ai.getRoomsState();
     const int population = seat->getNumCreaturesFighters();
-    if(state.bedPopulation != population || state.bedDue < 0.0)
+    if(state.bedPopulation != population || state.bedDue < 0.0 || state.needFired)
     {
         state.bedPopulation = population;
         state.bedDue = ai.getMind().now() + roomDelay(ai, ai.getMind().slip("B02"));
@@ -514,7 +514,7 @@ void ROOMS::hatcheryWatch(KeeperAI& ai)
         return;
     const int creatures = ai.getControlledPlayer().getSeat()->getNumCreaturesFighters();
     State& state = ai.getRoomsState();
-    if(state.foodDue < 0.0)
+    if(state.foodDue < 0.0 || state.needFired)
     {
         if(creatures <= 0 || have >= static_cast<uint32_t>(creatures))
             return;
