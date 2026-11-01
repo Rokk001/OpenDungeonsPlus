@@ -41,6 +41,8 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
+    //! \brief Returns the entity reserved by this grab action.
+    GameEntity* getGrabTarget() const { return mEntityToCarry; }
     //! \brief Starts carry only after validating the actual cargo tile and its reachable destination.
     //! \brief Picks a reachable infirmary before a bed for an eligible knockout.
     static bool handleGrabEntity(Creature& creature, GameEntity* entityToCarry);

@@ -44,6 +44,8 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
+#include "game/WorkerAllocation.h"
+#include "game/WorkerTargets.h"
 #include "gamemap/LevelScriptRunner.h"
 #include "gamemap/MapHandler.h"
 #include "gamemap/Pathfinding.h"
@@ -1915,6 +1917,17 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
     if(isServerGameMap())
         updateWallTorches();
 
+    // Refresh keeper work and fixed assignments before creatures act this turn.
+    if(isServerGameMap())
+    {
+        for(Seat* seat : mSeats)
+        {
+            if(seat->getPlayer() == nullptr)
+                continue;
+            refreshWorkerTargets(*seat);
+            WorkerAllocation::refreshFixed(*seat);
+        }
+    }
     // Carry out the upkeep round of all the active objects in the game.
     // Here, we work on a copy of the active objects list because they might
     // try to remove themselves which would break the iterator

@@ -32,6 +32,8 @@ public:
 
     std::function<bool()> action() override;
 
+    //! \brief Returns whether this search was forced by a hand drop.
+    bool isForced() const { return mForced; }
     //! \brief Selects reachable cargo and its existing building or configured mission destination.
     //! \brief Searches cargo with infirmaries considered before beds.
     static bool handleSearchEntityToCarry(Creature& creature, bool forced);
