@@ -66,6 +66,8 @@ public:
     //! by popAction, so nothing of it may be used after that call.
     bool handleDragCreature();
 
+    //! \brief Returns the entity currently being carried or pulled by this action.
+    GameEntity* getCarriedTarget() const { return mEntityToCarry; }
     //! \brief Keeps a running carry attached when its destination room is absorbed.
     void replaceDestination(Building& oldRoom, Building& newRoom);
 

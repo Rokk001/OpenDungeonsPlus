@@ -223,8 +223,6 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mTargetThreatFactorMax(2),
     mTargetThreatFactorMin(0.5),
     mWeakFleeChancePercent(20),
-    mWorkerCarryFirstMaxShare(0.2),
-    mWorkerClaimWallFirstMinShare(0.8),
     mSandboxHeroLevelMax(10),
     mSandboxHeroLevelMin(1),
     mSandboxHeroesPerWave(8),
@@ -947,18 +945,6 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         {
             configFile >> mWeakFleeChancePercent;
             foundKeys.insert("WeakFleeChancePercent");
-            continue;
-        }
-        if(nextParam == "WorkerCarryFirstMaxShare")
-        {
-            configFile >> mWorkerCarryFirstMaxShare;
-            foundKeys.insert("WorkerCarryFirstMaxShare");
-            continue;
-        }
-        if(nextParam == "WorkerClaimWallFirstMinShare")
-        {
-            configFile >> mWorkerClaimWallFirstMinShare;
-            foundKeys.insert("WorkerClaimWallFirstMinShare");
             continue;
         }
         if(nextParam == "BuildingDamageCurve")
@@ -2005,10 +1991,6 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         OD_LOG_ERR("Missing GameConfig key=TargetThreatFactorMin; using shipped default");
     if(foundKeys.count("WeakFleeChancePercent") == 0)
         OD_LOG_ERR("Missing GameConfig key=WeakFleeChancePercent; using shipped default");
-    if(foundKeys.count("WorkerCarryFirstMaxShare") == 0)
-        OD_LOG_ERR("Missing GameConfig key=WorkerCarryFirstMaxShare; using shipped default");
-    if(foundKeys.count("WorkerClaimWallFirstMinShare") == 0)
-        OD_LOG_ERR("Missing GameConfig key=WorkerClaimWallFirstMinShare; using shipped default");
     if(foundKeys.count("BuildingDamageCurve") == 0)
         OD_LOG_ERR("Missing GameConfig key=BuildingDamageCurve; using shipped default");
     if(foundKeys.count("ThreatPercentByLevel") == 0)

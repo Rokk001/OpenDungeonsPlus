@@ -56,12 +56,13 @@ Trap* getTrapOnTile(Tile& tile)
 }
 }
 
+//! \brief Starts a reload and reserves its trap tile for the worker.
 CreatureActionReloadTrap::CreatureActionReloadTrap(Creature& creature, Tile& tileReload) :
     CreatureAction(creature),
     mTileReload(tileReload),
     mWorkTurns(0)
 {
-    // Counts in the worker share rules of the player
+    // Tracks the worker's active reload action on the player
     mCreature.getSeat()->getPlayer()->notifyWorkerAction(mCreature, getType());
 
     // One worker per tile

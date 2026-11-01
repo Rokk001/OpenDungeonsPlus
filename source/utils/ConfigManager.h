@@ -618,12 +618,6 @@ public:
     //! \brief Returns the configured WeakFleeChancePercent value.
     double getWeakFleeChancePercent() const { return mWeakFleeChancePercent; }
 
-    //! \brief Returns the configured WorkerCarryFirstMaxShare value.
-    double getWorkerCarryFirstMaxShare() const { return mWorkerCarryFirstMaxShare; }
-
-    //! \brief Returns the configured WorkerClaimWallFirstMinShare value.
-    double getWorkerClaimWallFirstMinShare() const { return mWorkerClaimWallFirstMinShare; }
-
     //! \brief Returns the configured SandboxHeroLevelMax value.
     int32_t getSandboxHeroLevelMax() const { return mSandboxHeroLevelMax; }
 
@@ -1074,8 +1068,6 @@ private:
     double mTargetThreatFactorMax;
     double mTargetThreatFactorMin;
     double mWeakFleeChancePercent;
-    double mWorkerCarryFirstMaxShare;
-    double mWorkerClaimWallFirstMinShare;
     int32_t mSandboxHeroLevelMax;
     int32_t mSandboxHeroLevelMin;
     int32_t mSandboxHeroesPerWave;

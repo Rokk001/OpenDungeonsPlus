@@ -49,7 +49,7 @@ DIRT = {
     'DirtPileMood': '-100', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
     'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '5.962', 'UrgePerDrink': '15',
     'ToiletUseTurns': '4', 'ToiletWaitRadius': '1', 'ToiletReserveFactor': '3',
-    'CleaningWorkerSharePercent': '20', 'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
+    'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
     'CleaningMaxTurnsPerTile': '20',
     'CombatDirtPerHit': '1.7723', 'TrailDirtPerTile': '0.1611',
     'CreatureDirtPerFightWon': '5', 'CreatureDirtPerKo': '25', 'CreatureDirtDecayPerTurn': '0.1',
@@ -62,6 +62,7 @@ for key, value in DIRT.items():
     assert dirt.get(key) == value, '[Dirt] ' + key + ' is ' + str(dirt.get(key)) + ', expected ' + value
 extra = set(dirt) - set(DIRT)
 assert not extra, '[Dirt] keys without a design value: ' + ', '.join(sorted(extra))
+assert 'CleaningWorkerSharePercent' not in dirt
 assert 'CreatureDirtPerFight' not in dirt, 'the old key CreatureDirtPerFight must not come back'
 # The stage thresholds split 0-100 into three equal parts and the block documents each key
 assert float(dirt['DirtStage2At']) < float(dirt['DirtStage3At']) < 100.0

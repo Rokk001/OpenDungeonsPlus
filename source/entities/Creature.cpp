@@ -99,6 +99,7 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 #include "game/Seat.h"
+#include "game/WorkerAllocation.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
 #include "gamemap/LevelScriptRunner.h"
@@ -3451,42 +3452,54 @@ bool Creature::handleIdleAction()
 
     if (mDefinition->isWorker())
     {
-        // A trap of the keeper that used up its shots is armed again before the other jobs
-        if(!hasActionBeenTried(CreatureActionType::reloadTrap) && getSeat()->getPlayer()->isWorkerReloadShareOpen() &&
-           CreatureActionReloadTrap::tryStart(*this))
-            return true;
+        const std::array<CreatureActionType, 6> actions{{
+            CreatureActionType::searchTileToDig, CreatureActionType::searchGroundTileToClaim,
+            CreatureActionType::searchWallTileToClaim, CreatureActionType::searchEntityToCarry,
+            CreatureActionType::searchDirtToClean, CreatureActionType::reloadTrap}};
+        std::array<bool, 6> available;
+        for(uint32_t job = 0; job < actions.size(); ++job)
+            available[job] = !hasActionBeenTried(actions[job]);
 
-        // Decide what to do
-        std::vector<CreatureActionType> workerActions = getSeat()->getPlayer()->getWorkerPreferredActions(*this);
-        for(CreatureActionType actionType : workerActions)
+        for(uint32_t attempts = 0; attempts < actions.size(); ++attempts)
         {
-            if(hasActionBeenTried(actionType))
-                continue;
-
-            switch(actionType)
+            WorkerJob job = getWorkerJob();
+            if(!isWorkerJobFixed())
             {
-                case CreatureActionType::searchEntityToCarry:
-                    pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, false));
-                    return true;
-                case CreatureActionType::searchGroundTileToClaim:
-                    pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, false));
-                    return true;
-                case CreatureActionType::searchTileToDig:
+                job = WorkerAllocation::chooseForIdle(*getSeat(), *this, available);
+                setWorkerJob(job, false);
+            }
+            const uint32_t index = static_cast<uint32_t>(job);
+            if(index >= actions.size() || !available[index] || getSeat()->getWorkerJobTargets()[index] == 0)
+                break;
+            switch(job)
+            {
+                case WorkerJob::dig:
                     pushAction(Utils::make_unique<CreatureActionSearchTileToDig>(*this, false));
                     return true;
-                case CreatureActionType::searchWallTileToClaim:
+                case WorkerJob::claimGround:
+                    pushAction(Utils::make_unique<CreatureActionSearchGroundTileToClaim>(*this, false));
+                    return true;
+                case WorkerJob::claimWall:
                     pushAction(Utils::make_unique<CreatureActionSearchWallTileToClaim>(*this, false));
                     return true;
-                case CreatureActionType::searchDirtToClean:
+                case WorkerJob::carry:
+                    pushAction(Utils::make_unique<CreatureActionSearchEntityToCarry>(*this, false));
+                    return true;
+                case WorkerJob::clean:
                     pushAction(Utils::make_unique<CreatureActionSearchDirtToClean>(*this));
                     return true;
-                default:
-                    OD_LOG_ERR("name=" + getName() + ", unexpected worker action=" + CreatureAction::toString(actionType));
+                case WorkerJob::reload:
+                    if(CreatureActionReloadTrap::tryStart(*this))
+                        return true;
+                    available[index] = false;
+                    break;
+                case WorkerJob::none:
                     break;
             }
+            if(isWorkerJobFixed())
+                break;
         }
     }
-
     // A standing order of the level script (go to a point, attack a dungeon, wait, ...) comes first
     if(LevelScriptRunner::doCreatureOrder(*this))
         return false;

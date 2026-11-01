@@ -20,11 +20,13 @@
 
 
 #include "game/WorkerJobs.h"
+#include "game/WorkerTargets.h"
 
 #include <Ogre.h>
 #include <OgreColourValue.h>
 #include <string>
 #include <vector>
+#include <utility>
 #include <cstdint>
 
 class ODPacket;
@@ -61,6 +63,10 @@ public:
     const std::array<uint32_t, 6>& getWorkerJobTargets() const { return mWorkerJobTargets; }
     //! \brief Updates the targets counted for the keeper this turn.
     void setWorkerJobTargets(const std::array<uint32_t, 6>& targets) { mWorkerJobTargets = targets; }
+    //! \brief Returns the stable targets counted for each worker job this turn.
+    const WorkerTargetLists& getWorkerTargetLists() const { return mWorkerTargetLists; }
+    //! \brief Replaces the keeper's target lists after recounting them.
+    void setWorkerTargetLists(WorkerTargetLists targets) { mWorkerTargetLists = std::move(targets); }
     //! \brief Returns the count of living workers without a configured fixed place.
     uint32_t getFreeWorkers() const { return mFreeWorkers; }
     //! \brief Returns the number of workers holding each job.
@@ -207,6 +213,7 @@ protected:
     //! \brief Worker settings, current target counts and owner-facing worker counts.
     WorkerJobSettings mWorkerJobSettings;
     std::array<uint32_t, 6> mWorkerJobTargets{{0, 0, 0, 0, 0, 0}};
+    WorkerTargetLists mWorkerTargetLists;
     std::array<uint32_t, 6> mWorkerJobCounts{{0, 0, 0, 0, 0, 0}};
     uint32_t mFreeWorkers = 0;
     //! \brief Shared ghost-room state, also retained by Seat save records.
