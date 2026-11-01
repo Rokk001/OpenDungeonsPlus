@@ -27,6 +27,14 @@ add_boost_test(00-Random
         ${SRC}/utils/Random.h
         ${SRC}/utils/Random.cpp)
 
+add_boost_test(00-AiLevels
+        SOURCES
+        test_AiLevels.cpp
+        ${SRC}/ai/AiMath.h
+        ${SRC}/ai/AiMath.cpp
+        ${SRC}/ai/AiSaveFormat.h
+        ${SRC}/ai/AiSaveFormat.cpp)
+
 add_boost_test(00-SocialGenerator
         SOURCES
         test_SocialGenerator.cpp
