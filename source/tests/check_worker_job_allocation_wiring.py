@@ -44,7 +44,11 @@ assert 'getTilesWithinSightRadius()' in territory and 'isClaimed()' not in terri
 
 # A reserved destination may have no free capacity; an active transport is kept without a second availability test.
 active = collector.split('void collectActiveCarries(', 1)[1].split('\n}', 1)[0]
-assert 'carry->isForced()' in active and '(!normalSearch && digSearch)' in active
+assert 'carry->isForced()' in active and 'carry->isDigGold()' in active
+assert 'searchEntityToCarry' not in active
+reserved = collector.split('bool reservedByKeeper(', 1)[1].split('\n}', 1)[0]
+for marker in ('grab.isForced()', 'grab.isDigGold()', 'carry.isForced()', 'carry.isDigGold()'):
+    assert marker in reserved, marker
 assert 'hasCarryDestination(' not in active and 'carries.push_back(' in active
 prison = read('source/rooms/RoomPrison.cpp')
 reservation = prison.split('Tile* RoomPrison::askSpotForCarriedEntity(', 1)[1].split('\n}', 1)[0]

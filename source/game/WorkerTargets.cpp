@@ -3,7 +3,6 @@
 #include "creatureaction/CreatureActionCarryEntity.h"
 #include "creatureaction/CreatureActionGrabEntity.h"
 #include "creatureaction/CreatureActionSearchDirtToClean.h"
-#include "creatureaction/CreatureActionSearchEntityToCarry.h"
 #include "entities/Building.h"
 #include "entities/Creature.h"
 #include "entities/DirtPileEntity.h"
@@ -205,29 +204,28 @@ bool hasCarryDestination(Creature& worker, GameEntity& entity, const std::vector
     return false;
 }
 
-//! \brief Tests whether a lock belongs to a normal carry search of the keeper.
+//! \brief Tests whether a lock belongs to the keeper's normal carry-job transport.
 bool reservedByKeeper(GameEntity& entity, const std::vector<Creature*>& workers)
 {
     for(Creature* worker : workers)
     {
         if(worker->getWorkerJob() != WorkerJob::carry)
             continue;
-        bool normalSearch = false;
-        bool reserved = false;
         for(const auto& action : worker->getActions())
         {
-            if(action->getType() == CreatureActionType::searchEntityToCarry &&
-               !static_cast<const CreatureActionSearchEntityToCarry*>(action.get())->isForced())
-                normalSearch = true;
-            else if(action->getType() == CreatureActionType::grabEntity &&
-                    static_cast<const CreatureActionGrabEntity*>(action.get())->getGrabTarget() == &entity)
-                reserved = true;
-            else if(action->getType() == CreatureActionType::carryEntity &&
-                    static_cast<const CreatureActionCarryEntity*>(action.get())->getCarriedTarget() == &entity)
-                reserved = true;
+            if(action->getType() == CreatureActionType::grabEntity)
+            {
+                const auto& grab = static_cast<const CreatureActionGrabEntity&>(*action);
+                if(grab.getGrabTarget() == &entity && !grab.isForced() && !grab.isDigGold())
+                    return true;
+            }
+            else if(action->getType() == CreatureActionType::carryEntity)
+            {
+                const auto& carry = static_cast<const CreatureActionCarryEntity&>(*action);
+                if(carry.getCarriedTarget() == &entity && !carry.isForced() && !carry.isDigGold())
+                    return true;
+            }
         }
-        if(normalSearch && reserved)
-            return true;
     }
     return false;
 }
@@ -275,19 +273,10 @@ void collectActiveCarries(WorkerTargetLists& targets, const std::vector<Creature
         if(worker->getWorkerJob() != WorkerJob::carry)
             continue;
         const CreatureActionCarryEntity* carry = nullptr;
-        bool normalSearch = false;
-        bool digSearch = false;
         for(const auto& action : worker->getActions())
-        {
             if(action->getType() == CreatureActionType::carryEntity)
                 carry = static_cast<const CreatureActionCarryEntity*>(action.get());
-            else if(action->getType() == CreatureActionType::searchTileToDig)
-                digSearch = true;
-            else if(action->getType() == CreatureActionType::searchEntityToCarry &&
-                    !static_cast<const CreatureActionSearchEntityToCarry*>(action.get())->isForced())
-                normalSearch = true;
-        }
-        if(carry == nullptr || carry->isForced() || (!normalSearch && digSearch) ||
+        if(carry == nullptr || carry->isForced() || carry->isDigGold() ||
            carry->getCarriedTarget() == nullptr)
             continue;
         GameEntity* entity = carry->getCarriedTarget();
