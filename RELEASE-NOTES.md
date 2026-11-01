@@ -8,6 +8,8 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* The keeper AI has five levels from Easy to Hell; it plays by the same rules as you, sees only what it has explored, uses the rooms and spells you can use, and makes mistakes that grow rarer the higher the level. Hell unlocks in the campaign after finishing it on Hard.
+
 * Workers: workers spread over the jobs and targets instead of crowding one task, carry knocked-out creatures and corpses first, and the library credits research points directly.
 
 * Rebalance of the whole game: creatures work more and gain experience in every job and in the arena, healing follows the level, mana is a real resource, unpaid wages and needs affect every creature alike, prisoners starve instead of bleeding, and many prices and durations were matched to each other.
