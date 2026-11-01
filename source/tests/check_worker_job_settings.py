@@ -51,6 +51,10 @@ creature_classification = classification[classification.index('if(entity.getObje
 assert creature_classification.index('if(!patient.isAlive())') < creature_classification.index('!patient.getDefinition()->isWorker()')
 assert creature_classification.index('!patient.getDefinition()->isWorker()') < creature_classification.index('patient.getKoTurnCounter() >= 0')
 assert creature_classification.count('isWorker()') == 1
+# An undead creature may be knocked out; only its corpse is excluded.
+assert creature_classification.index('if(!patient.isAlive())') < creature_classification.index('!patient.getDefinition()->isUndead()')
+assert creature_classification.index('!patient.getDefinition()->isUndead()') < creature_classification.index('patient.getKoTurnCounter() >= 0')
+assert creature_classification.count('isUndead()') == 1
 assert creature_classification.index('patient.getKoTurnCounter() >= 0') < creature_classification.index('WorkerCarryEntry::ownKnockedOut')
 assert creature_classification.index('WorkerCarryEntry::ownKnockedOut') < creature_classification.index('WorkerCarryEntry::enemyKnockedOut')
 client_enum = read('source/network/ClientNotification.h').split('enum class ClientNotificationType', 1)[1].split('};', 1)[0]
