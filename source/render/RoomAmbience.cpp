@@ -2878,10 +2878,32 @@ void RoomAmbience::finishRoller(Roller& roller, bool leaveEffects)
     roller.mTrail = nullptr;
 }
 
-bool RoomAmbience::startCrawl(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position)
+//! rief Starts the crawling creatures of a Crawl effect. They come out of the body of the dead creature that lies
+//! on the tile of the event (its exact position), or from the position of the event if there is no such body.
+bool RoomAmbience::startCrawl(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& eventPosition)
 {
     if(effect.mMesh.empty() || (mMode == Mode::off))
         return false;
+
+    Ogre::Vector3 position = eventPosition;
+    if(mGameMap != nullptr)
+    {
+        // The event only carries the tile; the body that just died stands somewhere on it
+        Ogre::Real nearest = 1.0f;
+        for(Creature* creature : mGameMap->getCreatures())
+        {
+            if((creature == nullptr) || creature->isAlive() || !creature->getIsOnMap())
+                continue;
+
+            const Ogre::Vector3& bodyPosition = creature->getPosition();
+            Ogre::Real distance = Ogre::Vector2(bodyPosition.x - eventPosition.x, bodyPosition.y - eventPosition.y).length();
+            if(distance < nearest)
+            {
+                nearest = distance;
+                position = Ogre::Vector3(bodyPosition.x, bodyPosition.y, eventPosition.z);
+            }
+        }
+    }
 
     uint32_t count = static_cast<uint32_t>(std::max(0.0, effect.mAmount));
     std::uniform_real_distribution<double> angle(0.0, 6.283185307179586);
