@@ -80,4 +80,60 @@ for name in PROBABILITY_KEYS:
 keeper = (repo / "source/ai/KeeperAI.cpp").read_text(encoding="utf-8")
 room_match = re.search(r"wantedBuildings\s*=\s*\{(.*?)\}", keeper, re.S)
 assert room_match and re.findall(r"RoomType::(\w+)", room_match.group(1)) == [room for _, room, _ in ROOMS]
+keys_match = re.search(r"wantedBuildingKeys\s*=\s*\{(.*?)\}", keeper, re.S)
+tiles_match = re.search(r"wantedBuildingTiles\s*=\s*\{(.*?)\}", keeper, re.S)
+assert keys_match and re.findall(r'"([^"]+)"', keys_match.group(1)) == [name for name, _, _ in ROOMS]
+assert tiles_match and re.findall(r"\b\d+\b", tiles_match.group(1)) == [tiles for _, _, tiles in ROOMS]
+
+# Compare every compiled default table with the corresponding file rows.
+defaults = (repo / "source/utils/ConfigManager.cpp").read_text(encoding="utf-8")
+# Read the string rows from one compiled default table.
+def default_rows(name):
+    match = re.search(r"\b" + name + r"\s*\[\]\[\d+\]\s*=\s*\{(.*?)\n\};", defaults, re.S)
+    assert match, name
+    return [re.findall(r'"([^"\\]*)"', row) for row in re.findall(r"\{([^{}]*)\}", match.group(1))]
+
+for table, name in (("AI_LEVEL_DEFAULTS", "KeeperAILevels"),
+                    ("AI_CONFIG_DEFAULTS", "KeeperAI"),
+                    ("AI_ACTION_DEFAULTS", "Actions"),
+                    ("AI_ROW_CLASS_DEFAULTS", "RowClasses")):
+    compiled = default_rows(table)
+    configured = section(config, name)
+    assert len(compiled) == len(configured), table
+    for actual, expected in zip(compiled, configured):
+        assert len(actual) == len(expected), table
+        for a, b in zip(actual, expected):
+            try:
+                assert float(a) == float(b), (table, actual, expected)
+            except ValueError:
+                assert a == b, (table, actual, expected)
+
+# Remove C++ comments while preserving strings used as configuration keys.
+def without_comments(text):
+    return re.sub(r'''"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|//[^\n]*|/\*.*?\*/''',
+                  lambda match: ' ' if match.group().startswith(('/',)) else match.group(), text, flags=re.S)
+
+# Check that level fields and single keys are referenced by AI decision code.
+decision_code = "\n".join(without_comments(p.read_text(encoding="utf-8")) for p in sorted((repo / "source/ai").glob("*.cpp")))
+decision_code += without_comments((repo / "source/entities/Creature.cpp").read_text(encoding="utf-8"))
+field_map = dict(re.findall(r'if\(key == "(\w+)"\) return &settings\.(\w+(?:\[\d+\])?);', defaults))
+war = without_comments((repo / "source/ai/AiWar.cpp").read_text(encoding="utf-8"))
+trap_table = re.search(r'TRAP_KINDS\[\d+\]\s*=\s*\{(.*?)\};', war, re.S)
+trap_prefixes = set(re.findall(r'\{TrapType::\w+,\s*"(\w+)"', trap_table.group(1))) if trap_table else set()
+for name in levels:
+    if name == "EnemyManaEstimate":
+        field = "enemyManaEstimate"
+    else:
+        assert name in field_map, name
+        field = field_map[name].split("[")[0]
+    assert re.search(r"\." + re.escape(field) + r"\b", decision_code), name
+for name in SINGLE:
+    direct = re.search(r'\b(?:getAiConfigDouble|getAiConfigInt32|aiKey|key)\s*\(\s*"' + re.escape(name) + r'"', decision_code)
+    conditional = re.search(r'\bkey\s*\(\s*\([^()]*\)\s*\?\s*"(?:' + re.escape(name) + r'|\w+)"\s*:\s*"(?:' + re.escape(name) + r'|\w+)"\s*\)', decision_code)
+    conditional = conditional and re.search(r'"' + re.escape(name) + r'"', conditional.group())
+    class_lookup = name.startswith("MistakeBase") and re.search(
+        r'\bclassKey\s*\([^)]*\)\s*\{[^}]*return\s+"' + re.escape(name) + r'"', decision_code, re.S)
+    trap_lookup = (name.startswith("TrapTargets") and name[len("TrapTargets"):] in trap_prefixes and
+                   re.search(r'\bkey\s*\(\s*"TrapTargets"\s*\+\s*prefix\s*\)', war))
+    assert direct or conditional or class_lookup or trap_lookup, f"AI key not read by a decision: {name}"
 print("OK")
