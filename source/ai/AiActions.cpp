@@ -1,6 +1,7 @@
 #include "ai/AiActions.h"
 #include "ai/AiEconomy.h"
 #include "ai/AiItems.h"
+#include "ai/AiSpells.h"
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
@@ -16,6 +17,7 @@
 #include "rooms/RoomType.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomArena.h"
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomTavern.h"
 #include "rooms/RoomSpa.h"
@@ -29,6 +31,7 @@
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
 
+#include <functional>
 #include <sstream>
 #include <set>
 
@@ -210,7 +213,19 @@ void perform(KeeperAI& ai, const std::string& target)
                 if(tile->isBuildableUpon(seat)) legal.push_back(tile);
             if(legal.empty()) return;
             if(action == "room" && SkillManager::isRoomAvailable(static_cast<RoomType>(value), seat))
-                RoomManager::buildRoomOnTiles(&map, static_cast<RoomType>(value), &player, legal, false);
+            {
+                if(RoomManager::buildRoomOnTiles(&map, roomType, &player, legal, false))
+                {
+                    std::vector<Tile*> built;
+                    for(Tile* tile : legal)
+                    {
+                        Room* room = tile->getCoveringRoom();
+                        if(room != nullptr && room->getSeat() == seat && room->getType() == roomType)
+                            built.push_back(tile);
+                    }
+                    ECON::recordRoomBlock(ai, roomType, static_cast<uint32_t>(tiles.size()), built);
+                }
+            }
             else if(action == "trap" && SkillManager::isTrapAvailable(static_cast<TrapType>(value), seat))
                 TrapManager::buildTrapOnTiles(&map, static_cast<TrapType>(value), &player, legal, false);
         }
@@ -276,7 +291,7 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!(input >> mistaken)) return;
         Creature* fighter = map.getCreature(decode(recipient));
         Tile* destination = fighter == nullptr ? nullptr : fighter->getPositionTile();
-        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || destination == nullptr ||
+        if(fighter == nullptr || !fighter->isAlive() || !fighter->getIsOnMap() || fighter->getSeat() != seat || destination == nullptr ||
            !destination->isClaimedForSeat(seat)) return;
         bool freeSlot = false;
         for(const std::unique_ptr<ItemInstance>& item : fighter->getInventory())
@@ -289,6 +304,10 @@ void perform(KeeperAI& ai, const std::string& target)
             const MerchantGood* good = merchant->findGood(index, table);
             if(good != nullptr)
             {
+                Room* room = destination->getCoveringRoom();
+                if(!mistaken && !good->mItem.mSoulCrystal && room != nullptr && room->getType() == RoomType::arena &&
+                   static_cast<RoomArena*>(room)->hasRunningFight())
+                    return;
                 if(ECON::walletGate(ai, good->mItem.getPrice(&map)) && (mistaken || RoomMerchant::wantsItem(*fighter, good->mItem)) &&
                    merchant->sellToKeeper(player, index) && player.numObjectsInHand() != 0)
                 {
@@ -307,7 +326,7 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!(input >> recipient >> name)) return;
         Creature* fighter = map.getCreature(decode(recipient));
         Tile* tile = fighter == nullptr ? nullptr : fighter->getPositionTile();
-        if(fighter == nullptr || !fighter->isAlive() || fighter->getSeat() != seat || tile == nullptr) return;
+        if(fighter == nullptr || !fighter->isAlive() || !fighter->getIsOnMap() || fighter->getSeat() != seat || tile == nullptr) return;
         const unsigned int index = player.getHandIndex(GameEntityType::itemBagEntity, decode(name));
         if(index < player.numObjectsInHand() && player.isDropHandPossible(tile, index)) player.dropHand(tile, index);
         return;
@@ -350,27 +369,34 @@ void perform(KeeperAI& ai, const std::string& target)
         if(!(input >> type >> x >> y >> name) || type <= static_cast<int>(SpellType::nullSpellType)
             || type >= static_cast<int>(SpellType::nbSpells)) return;
         SpellType spell = static_cast<SpellType>(type);
-        if(player.getHasLost() || !SkillManager::isSpellAvailable(spell, seat) || player.getSpellCooldownTurns(spell) > 0) return;
+        //! \brief Releases a scheduled eye cast when its server checks fail.
+        const std::function<void()> failedEye = [&ai, spell]()
+        {
+            if(spell == SpellType::eyeEvil) SPELL::finishEyeCast(ai, false);
+        };
+        if(player.getHasLost() || !SkillManager::isSpellAvailable(spell, seat) || player.getSpellCooldownTurns(spell) > 0)
+        { failedEye(); return; }
         const bool tileTarget = spell == SpellType::summonWorker || spell == SpellType::callToWar
             || spell == SpellType::eyeEvil || spell == SpellType::createGold || spell == SpellType::inferno
             || spell == SpellType::tremor || spell == SpellType::summonChampion;
-        if(tileTarget != (name == "-")) return;
+        if(tileTarget != (name == "-")) { failedEye(); return; }
         ODPacket packet;
         if(name != "-")
         {
             Creature* creature = map.getCreature(decode(name));
-            if(creature == nullptr) return;
+            if(creature == nullptr) { failedEye(); return; }
             if(spell == SpellType::creatureHeal || spell == SpellType::creatureExplosion) packet << uint32_t(1);
             packet << creature->getName();
         }
         else
         {
             Tile* tile = map.getTile(x, y);
-            if(tile == nullptr) return;
+            if(tile == nullptr) { failedEye(); return; }
             if(spell == SpellType::summonWorker) packet << uint32_t(1);
             map.tileToPacket(packet, tile);
         }
-        if(!SpellManager::castSpell(&map, spell, &player, packet)) return;
+        if(!SpellManager::castSpell(&map, spell, &player, packet)) { failedEye(); return; }
+        if(spell == SpellType::eyeEvil) SPELL::finishEyeCast(ai, true);
         map.getLevelScript().recordEvent("Seat" + Helper::toString(seat->getId()), "cast:" + SpellManager::getSpellNameFromSpellType(spell));
         player.setSpellCooldownTurns(spell, SpellManager::getSpellCooldown(spell));
         if(seat->getNbStoredSpecials(static_cast<uint32_t>(GiftBoxType::mana)) > 0)
@@ -415,6 +441,15 @@ void ACTS::buildRoom(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tile
 {
     // AI row L04: ordinary prices and normal scheduling; no bonus gold, mana or speed.
     scheduleTiles(ai, "build", "room", static_cast<int>(type), tiles);
+}
+//! \brief Matches a room build against live or restored hand actions.
+bool ACTS::isRoomBuildPending(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tiles)
+{
+    if(tiles.empty()) return false;
+    std::ostringstream arguments;
+    arguments << "room " << static_cast<int>(type) << ' ';
+    writeTiles(arguments, tiles);
+    return ai.getMind().hasPendingAction("build", "-", encode(arguments.str()));
 }
 //! \brief Schedules selling only room tiles the seat may sell.
 void ACTS::sellRoomTiles(KeeperAI& ai, const std::vector<Tile*>& tiles)

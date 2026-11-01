@@ -7628,6 +7628,13 @@ bool Creature::tryPickup(Seat* seat)
     return true;
 }
 
+//! \brief Restores the in-hand state without repeating pickup events or statistics.
+void Creature::restoreInHand()
+{
+    removeEntityFromPositionTile();
+    mIsInHand = true;
+}
+
 void Creature::pickup()
 {
     interruptGhostHunt();

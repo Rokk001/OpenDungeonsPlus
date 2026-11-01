@@ -907,6 +907,9 @@ public:
     //! pickup in the statistics of the seat and the pickedup event for the level script.
     //! \brief Drops captured ghosts before the creature is lifted out of the world.
     void pickup() override;
+
+    //! \brief Restores the in-hand state of a creature loaded from a save without pickup effects.
+    void restoreInHand();
     bool tryDrop(Seat* seat, Tile* tile) override;
     //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes. It also counts the
     //! drop in the statistics of the seat.

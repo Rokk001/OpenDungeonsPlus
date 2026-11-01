@@ -16,6 +16,8 @@
  */
 
 #include "ai/AiMind.h"
+#include "ai/AiEconomy.h"
+#include "ai/KeeperAI.h"
 #include "rooms/Room.h"
 
 #include "creatureaction/CreatureActionSearchJob.h"
@@ -484,6 +486,7 @@ double Room::takeDamage(GameEntity* attacker, double absoluteDamage, double phys
     return Building::takeDamage(attacker, absoluteDamage, physicalDamage, magicalDamage, elementDamage, tileTakingDamage, ko);
 }
 
+//! \brief Transfers room tiles to a new owner and records their loss for the AI.
 Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
 {
     // Lowest common point of every owner change of a room: the dungeon heart stays with its owner
@@ -502,6 +505,13 @@ Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
     if(newRoom == nullptr)
         return nullptr;
 
+    if(gameMap->isServerGameMap() && getSeat() != nullptr && getSeat() != seat &&
+       getSeat()->getPlayer() != nullptr && !getSeat()->getPlayer()->getIsHuman())
+    {
+        KeeperAI* ai = dynamic_cast<KeeperAI*>(gameMap->getAI(*getSeat()->getPlayer()));
+        if(ai != nullptr)
+            ECON::forgetRoomTiles(*ai, tiles);
+    }
     newRoom->setIsOnMap(true);
     newRoom->setName(gameMap->nextUniqueNameRoom(newRoom->getType()));
     newRoom->setSeat(seat);

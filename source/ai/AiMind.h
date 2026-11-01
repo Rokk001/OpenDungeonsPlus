@@ -22,6 +22,7 @@
 #include "ai/AiSettings.h"
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <iosfwd>
 #include <map>
@@ -95,8 +96,14 @@ struct AiEvent
     int otherSeatId;
     //! \brief An amount that belongs to the event (gold, damage ...), 0 when none.
     double amount;
-    //! \brief Game time in seconds when the event was raised.
+    //! \brief Source time; delivered fights use the mind clock and other events use their reaction time.
     double time;
+    //! \brief Original Fight start on the mind clock; separate from the last refresh time.
+    double fightStart;
+    //! \brief Destroyed room type, or zero if unknown or not a room.
+    int roomType;
+    //! \brief Destroyed building class: zero unknown, one door, two other.
+    int buildingClass;
 };
 
 //! \brief The keeper AI's mind: queues events, draws reaction delays and mistakes, schedules the
@@ -116,6 +123,12 @@ public:
     //! kind is drawn here, once per event.
     void enqueue(const AiEvent& event);
 
+    //! \brief Returns the current firing identity, or zero outside a firing.
+    uint64_t triggerId() const;
+
+    //! \brief Updates the last fight time in a pending reaction at the marker tile.
+    void refreshFight(Tile* tile);
+
     //! \brief Delivers tunnel news during the originating Fight reaction, sharing its single alert delay.
     void dispatchRelated(const AiEvent& event);
 
@@ -128,6 +141,9 @@ public:
     //! \return The end time of the last scheduled action.
     double exec(const std::string& actionKey, int count, double from, const std::string& rowId,
                 Tile* tile, const std::string& target, const std::function<void()>& perform);
+
+    //! \brief Returns whether an identical hand action is still queued.
+    bool hasPendingAction(const std::string& key, const std::string& rowId, const std::string& target) const;
 
     //! \brief Draws the mistake of a row with its class and multiplier from [RowClasses] and the
     //! mistake multiplier of the level.
@@ -169,6 +185,9 @@ public:
     //! \brief Registers one periodic topic; its owner invokes the other rows sharing that look.
     void onLook(const std::string& rowId, double factor, const std::function<void()>& handler);
 
+    //! \brief Sets a registered look's next time on the mind clock; returns false if it is not registered.
+    bool setNextLook(const std::string& rowId, double due);
+
     //! \brief Registers a polled symptom; only its false-to-true edge queues a reaction.
     void onPoll(const std::string& rowId, AiEventType type, const std::function<bool()>& predicate);
 
@@ -192,11 +211,15 @@ private:
     {
         AiEventType type;
         double due;
+        double time;
+        double fightStart;
         AiMath::ReactionKind kind;
         int x, y;
         std::string creature;
         int seatId;
         double amount;
+        int roomType;
+        int buildingClass;
         bool noticed;
         std::string rowId;
         //! \brief Orders reactions by their scheduled time, preserving input order on ties.
@@ -256,6 +279,8 @@ private:
     std::set<std::string> mDrawnRows;
     std::map<std::string, bool> mTriggerSlips;
     bool mInTrigger;
+    uint64_t mTriggerSerial;
+    uint64_t mCurrentTrigger;
 };
 
 #endif // AIMIND_H

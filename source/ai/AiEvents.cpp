@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <limits>
+#include <set>
 #include <sstream>
 
 namespace
@@ -258,7 +259,7 @@ bool AiEvents::poll()
     std::vector<unsigned int> levels;
     Creature* worker = nullptr;
     double bill = 0.0;
-    bool wounded = false, prisoner = false;
+    bool wounded = false;
     for(Creature* creature : own)
     {
         if(!creature->isAlive())
@@ -277,11 +278,36 @@ bool AiEvents::poll()
         if(creature->isHurt() && !inBed && (room == nullptr || room->getType() != RoomType::infirmary))
             wounded = true;
     }
+    const bool legacyPrisonerEdge = mEdges["PrisonerAge"];
+    std::set<std::string> currentPrisonerEdges;
     for(Creature* creature : map.getCreatures())
     {
-        if(creature->isAlive() && creature->getSeatPrison() == seat && creature->isInPrison() &&
-            creature->getNbTurnsPrison() >= cfg.getAiConfigDouble("PrisonWaitMinutes") * 60.0 * ODApplication::turnsPerSecond)
-            prisoner = true;
+        if(!creature->isAlive() || creature->getSeatPrison() != seat || !creature->isInPrison())
+            continue;
+        const std::string key = "PrisonerAge:" + creature->getName();
+        currentPrisonerEdges.insert(key);
+        Tile* tile = creature->getIsOnMap() ? creature->getPositionTile() : nullptr;
+        Room* prison = tile == nullptr ? nullptr : tile->getCoveringRoom();
+        if(prison == nullptr || prison->getType() != RoomType::prison || prison->getSeat() != seat)
+            continue;
+        const bool mature = creature->getNbTurnsPrison() >=
+            cfg.getAiConfigDouble("PrisonWaitMinutes") * 60.0 * ODApplication::turnsPerSecond;
+        if(legacyPrisonerEdge && mEdges.find(key) == mEdges.end() && mature)
+            mEdges[key] = true;
+        if(mature && !mEdges[key])
+        {
+            const AiEvent event = {AiEventType::PrisonerAge, creature->getPositionTile(), creature, -1, 0.0, mAi.getMind().now()};
+            mAi.getMind().enqueue(event);
+        }
+        mEdges[key] = mature;
+    }
+    mEdges.erase("PrisonerAge");
+    for(std::map<std::string, bool>::iterator it = mEdges.begin(); it != mEdges.end();)
+    {
+        if(it->first.compare(0, 12, "PrisonerAge:") == 0 && currentPrisonerEdges.count(it->first) == 0)
+            it = mEdges.erase(it);
+        else
+            ++it;
     }
     edge("NoMarkedTile", AiEventType::NoMarkedTile,
         worker != nullptr && mAi.getControlledPlayer().getNbMarkedTiles() == 0);
@@ -292,7 +318,6 @@ bool AiEvents::poll()
     }
     edge("GoldBelowBill", AiEventType::GoldBelowBill, seat->getGold() < bill);
     edge("WoundedCreature", AiEventType::WoundedCreature, wounded);
-    edge("PrisonerAge", AiEventType::PrisonerAge, prisoner);
     std::sort(levels.begin(), levels.end());
     bool surplus = false;
     if(!levels.empty() && seat->getNumCreaturesFighters() == seat->getNumCreaturesFightersMax())

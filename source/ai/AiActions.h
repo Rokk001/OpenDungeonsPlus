@@ -23,6 +23,8 @@ void bind(KeeperAI& ai);
 void markDig(KeeperAI& ai, const std::vector<Tile*>& tiles, bool marked);
 //! \brief Schedules building a room on the selected tiles.
 void buildRoom(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tiles);
+//! \brief Returns whether the same room build is already queued.
+bool isRoomBuildPending(KeeperAI& ai, RoomType type, const std::vector<Tile*>& tiles);
 //! \brief Schedules selling room tiles.
 void sellRoomTiles(KeeperAI& ai, const std::vector<Tile*>& tiles);
 //! \brief Schedules building a trap on the selected tiles.
