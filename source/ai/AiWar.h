@@ -23,6 +23,7 @@
 #include "ai/AiSettings.h"
 
 #include <string>
+#include <set>
 #include <vector>
 
 class Creature;
@@ -70,9 +71,15 @@ struct WarState
     int tactic = -1;
     //! \brief Game seconds of the first contact of the assault, -1 before it.
     double contactTime = -1.0;
+    //! \brief True once an own assault has reached contact; from then on the estimate uses the revealed enemy traps.
+    bool contacted = false;
     double lastAssaultEnd = -1.0e18;
     double nextRetreatCheck = 0.0;
     std::vector<Group> groups;
+    //! \brief Survivors awaiting a successful drop after an assault.
+    std::set<std::string> returning;
+    //! \brief Returners with a queued, identity-checked drop action.
+    std::set<std::string> returningPending;
 
     bool defenceRallying = false;
     Tile* defenceBanner = nullptr;
@@ -102,7 +109,7 @@ struct Env
 //! Tunnel and combat symptom events are polled by the shared event source at AiPollSeconds.
 void doTurn(Env& env);
 
-//! \brief Handles an event of the war (Fight, HeartCritical, TunnelOpen, EnemyOut, EnemyTrapEmpty, FightOver, Start,
+//! \brief Handles an event of the war (Fight, TunnelOpen, EnemyOut, EnemyTrapEmpty, FightOver, Start,
 //! Plan, Launch, Contact, AssaultOver, EnemySpellSeen) after its reaction delay.
 void onEvent(Env& env, const AiEvent& event);
 
@@ -142,7 +149,12 @@ void defend(Env& env, const AiEvent& event);
 //! \brief Protects the heart when it is critical (row J05).
 void heartGuard(Env& env);
 
-//! \brief Picks up fleeing creatures after a fight (row J08).
+//! \brief Hands the triggers of row J05 to heartGuard: HeartCritical, and a Fight on a tile of an own dungeon temple.
+//! \param event The HeartCritical or Fight event after its reaction delay; a fight elsewhere is ignored.
+void heartEvent(Env& env, const AiEvent& event);
+
+//! \brief Carries wounded creatures to their bed or an infirmary and other fleeing creatures to the temple after a fight
+//! (row J08).
 void restAfterFight(Env& env);
 
 //! \brief Carries one hurt creature to its bed, or to an own infirmary when it has no bed (row J08 as the mood remedy of D07).

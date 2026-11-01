@@ -27,6 +27,7 @@
 #include "ai/KeeperAI.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
+#include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -64,6 +65,28 @@ double uniform01()
 double key(const std::string& name)
 {
     return ConfigManager::getSingleton().getAiConfigDouble(name);
+}
+
+//! \brief Draws the configured mistake of a row afresh, without the one-draw-per-trigger cache of Mind::slip, for
+//! draws the specification makes separate within one firing (the per-fighter J08 draw of row K01, the second K04 draw).
+//! \return True when the draw is a mistake.
+bool freshSlip(Env& env, const std::string& rowId)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const ConfigManager::AiRowClass* row = config.getAiRowClass(rowId);
+    if(row == nullptr)
+        return false;
+    std::string base;
+    if(row->mClass == "routine") base = "MistakeBaseRoutine";
+    else if(row->mClass == "rule") base = "MistakeBaseRule";
+    else if(row->mClass == "complex") base = "MistakeBaseComplex";
+    else if(row->mClass == "unfamiliar") base = "MistakeBaseUnfamiliar";
+    else if(row->mClass == "rare") base = "MistakeBaseRare";
+    else
+        return false;
+    const double probability = AiMath::mistakeProbability(config.getAiConfigDouble(base), row->mMultiplier,
+        env.settings.mistakeMultiplier, config.getAiConfigDouble("MistakeMin"), config.getAiConfigDouble("MistakeMax"));
+    return uniform01() < probability;
 }
 
 //! \brief The own dungeon temple of the AI, or nullptr when it has none.
@@ -399,6 +422,44 @@ Seat* enemySeat(Env& env)
 Tile* knownRoomTile(Env& env, AiKnowledge& knowledge, Seat* enemy, RoomType type, bool smallest, bool largest)
 {
     Tile* from = env.state.breakthrough;
+    if(type != RoomType::treasury)
+    {
+        TileVisual visual = TileVisual::nullTileVisual;
+        switch(type)
+        {
+            case RoomType::library: visual = TileVisual::libraryRoom; break;
+            case RoomType::hatchery: visual = TileVisual::hatcheryRoom; break;
+            case RoomType::dormitory: visual = TileVisual::dormitoryRoom; break;
+            case RoomType::trainingHall: visual = TileVisual::trainingHallRoom; break;
+            default: return nullptr;
+        }
+        if(enemy == nullptr)
+            return nullptr;
+        Tile* best = nullptr;
+        double bestDistance = 0.0;
+        Seat* seat = env.player.getSeat();
+        for(int x = 0; x < env.gameMap.getMapSizeX(); ++x)
+        {
+            for(int y = 0; y < env.gameMap.getMapSizeY(); ++y)
+            {
+                Tile* tile = env.gameMap.getTile(x, y);
+                const TileStateNotified* state = seat->getKnownTileState(tile);
+                const bool fogOff = !env.gameMap.getIsFOWActivated();
+                const bool matches = fogOff ? tile->getTileVisual() == visual && tile->getSeat() == enemy :
+                    state != nullptr && state->mTileVisual == visual && state->mSeatIdOwner == enemy->getId();
+                if(!matches)
+                    continue;
+                const double distance = from == nullptr ? 0.0 :
+                    std::pow(tile->getX() - from->getX(), 2) + std::pow(tile->getY() - from->getY(), 2);
+                if(best == nullptr || distance < bestDistance)
+                {
+                    best = tile;
+                    bestDistance = distance;
+                }
+            }
+        }
+        return best;
+    }
     Room* chosen = nullptr;
     for(Room* room : env.gameMap.getRoomsByTypeAndSeat(type, enemy))
     {
@@ -455,6 +516,7 @@ Tile* heartTarget(Env& env, AiKnowledge& knowledge, Seat* enemy)
 }
 }
 
+//! \brief Plans tunnel digging using the current game time and known enemy positions.
 void planDig(Env& env)
 {
     // AI row I01: dig toward the nearest known enemy tile once ready; while none is known the explore look of row I05 runs
@@ -468,7 +530,7 @@ void planDig(Env& env)
     if(target == nullptr)
         return;
 
-    double minute = env.now / 60.0;
+    double minute = static_cast<double>(env.gameMap.getTurnNumber()) / ODApplication::turnsPerSecond / 60.0;
     int fighters = 0;
     for(Creature* creature : env.gameMap.getCreaturesBySeat(seat))
     {
@@ -579,12 +641,15 @@ void planAttack(Env& env, bool bypassRest)
     {
         if(!isFreeFighter(creature))
             continue;
+        if(st.returning.count(creature->getName()) != 0)
+            continue;
         Tile* tile = creature->getPositionTile();
         if(tile == nullptr)
             continue;
         double share = creature->getHP() / std::max(1.0, creature->getMaxHp());
-        // The rule mistake (row J08 class) is drawn for each fighter: only RestHpShareSlip is needed
-        double needed = env.mind.slip("J08") ? key("RestHpShareSlip") : key("RestHpShare");
+        // The rule mistake (row J08 class) is drawn separately for each fighter, also inside an event trigger:
+        // only RestHpShareSlip is needed
+        double needed = freshSlip(env, "J08") ? key("RestHpShareSlip") : key("RestHpShare");
         if(share >= needed)
             ready.push_back(creature);
     }
@@ -600,7 +665,7 @@ void planAttack(Env& env, bool bypassRest)
     if(temple == nullptr)
         return;
 
-    bool ownContact = (st.contactTime >= 0.0) || (st.lastAssaultEnd > -1.0e17);
+    bool ownContact = st.contacted;
     bool trapReady = true;
     Seat* enemy = enemySeat(env);
     std::vector<AiMath::TrapKindSet> ownSet = trapSet(env, seat, st.breakthrough, nullptr, trapReady);
@@ -699,7 +764,8 @@ void launch(Env& env, int tactic, const std::vector<Creature*>& ready, const Ene
         order.push_back(RoomType::hatchery);
         order.push_back(RoomType::dormitory);
     }
-    if(env.mind.slip("K04"))
+    // The second complex mistake is independent of the first, also when the launch runs inside an event trigger
+    if(freshSlip(env, "K04"))
     {
         order.clear();
         order.push_back(RoomType::treasury);
@@ -842,6 +908,7 @@ void marchOff(Env& env)
     st.nextRetreatCheck = env.now + key("RetreatCheckSeconds");
 }
 
+//! \brief Advances the assault and checks whether its attackers should retreat.
 void assaultStep(Env& env)
 {
     // AI row K09: banners are renewed and moved to the next target
@@ -887,8 +954,15 @@ void assaultStep(Env& env)
 
         // The target is destroyed or no longer known: next target
         Tile* target = g.targets[g.targetIndex];
-        Room* room = target->getCoveringRoom();
-        bool gone = g.raid && ((room == nullptr) || (room->getSeat() == seat) || !knowledge.isKnown(target));
+        const TileStateNotified* knownState = seat->getKnownTileState(target);
+        const bool fogOff = !env.gameMap.getIsFOWActivated();
+        const TileVisual visual = fogOff ? target->getTileVisual() :
+            (knownState == nullptr ? TileVisual::nullTileVisual : knownState->mTileVisual);
+        const bool isRoom = (visual >= TileVisual::dungeonTempleRoom && visual <= TileVisual::guardRoom) ||
+            (visual >= TileVisual::templeRoom && visual < TileVisual::countTileVisual);
+        const bool owned = fogOff ? target->getSeat() == seat :
+            (knownState != nullptr && knownState->mSeatIdOwner == seat->getId());
+        bool gone = g.raid && (!isRoom || owned || !knowledge.isKnown(target));
         if(gone)
         {
             if(g.bannerTile != nullptr)
@@ -918,6 +992,7 @@ void assaultStep(Env& env)
     if((st.contactTime < 0.0) && (st.lastFight > env.now - key("FightOverSeconds")) && !out.empty())
     {
         st.contactTime = env.now;
+        st.contacted = true;
         st.assault = WarState::assaultRunning;
         AiEvent contact = {AiEventType::Contact, nullptr, nullptr, -1, 0.0, env.now};
         env.mind.enqueue(contact);
@@ -939,10 +1014,9 @@ void assaultStep(Env& env)
     std::vector<Creature*> defenders;
     for(Creature* creature : env.gameMap.getCreaturesBySeat(enemy))
     {
-        if(isFreeFighter(creature) && (creature->getPositionTile() != nullptr))
+        if(isFreeFighter(creature) && creature->getIsOnMap() && (creature->getPositionTile() != nullptr))
         {
-            const std::vector<Seat*>& viewers = creature->getPositionTile()->getSeatsWithVision();
-            if(std::find(viewers.begin(), viewers.end(), seat) != viewers.end())
+            if(seat->hasVisionOnTile(creature->getPositionTile()))
                 defenders.push_back(creature);
         }
     }
@@ -952,11 +1026,9 @@ void assaultStep(Env& env)
         endAssault(env);
         return;
     }
-    if(powerOf(out) < env.settings.retreatThreshold * powerOf(defenders))
-    {
-        if(!env.mind.slip("K07"))
-            endAssault(env);
-    }
+    const bool mistake = env.mind.slip("K07");
+    if(powerOf(out) < env.settings.retreatThreshold * powerOf(defenders) && !mistake)
+        endAssault(env);
 }
 
 //! \brief Plans immediately or records the window for a second wave after the current assault.
@@ -976,12 +1048,44 @@ void secondWave(Env& env)
     }
 }
 
-//! \brief Ends an assault and makes a pending second-wave attempt within its window.
+//! \brief Queues each returner without a pending drop when pickup and a home drop are legal.
+void returnStep(Env& env)
+{
+    WarState& st = env.state;
+    RoomDungeonTemple* temple = ownTemple(env);
+    if(temple == nullptr)
+        return;
+    std::vector<Creature*> waiting;
+    for(const std::string& name : st.returning)
+    {
+        Creature* creature = env.gameMap.getCreature(name);
+        if(creature != nullptr && creature->isAlive() && st.returningPending.count(name) == 0)
+            waiting.push_back(creature);
+    }
+    std::sort(waiting.begin(), waiting.end(), strongerFirst);
+    for(Creature* creature : waiting)
+    {
+        const unsigned int index = env.player.getHandIndex(GameEntityType::creature, creature->getName());
+        const bool held = index < env.player.numObjectsInHand();
+        if(!held && !creature->tryPickup(env.player.getSeat()))
+            continue;
+        for(Tile* tile : temple->getCoveredTiles())
+        {
+            if(held ? env.player.isDropHandPossible(tile, index) : creature->tryDrop(env.player.getSeat(), tile))
+            {
+                st.returningPending.insert(creature->getName());
+                ACTS::returnCreature(env.ai, creature, tile, held);
+                break;
+            }
+        }
+    }
+}
+
+//! \brief Ends an assault, tracks returning survivors and tries a pending second wave.
 void endAssault(Env& env)
 {
     // AI row K10: banners removed, survivors on enemy ground carried home by hand, the rest started, AssaultOver raised
     WarState& st = env.state;
-    Seat* seat = env.player.getSeat();
     for(Group& g : st.groups)
     {
         if(g.bannerTile != nullptr)
@@ -989,24 +1093,10 @@ void endAssault(Env& env)
         g.bannerTile = nullptr;
     }
 
-    RoomDungeonTemple* temple = ownTemple(env);
     std::vector<Creature*> survivors = attackers(env);
-    std::sort(survivors.begin(), survivors.end(), strongerFirst);
-    if(temple != nullptr)
-    {
-        std::vector<Tile*> templeTiles = temple->getCoveredTiles();
-        for(Creature* creature : survivors)
-        {
-            for(Tile* tile : templeTiles)
-            {
-                if(creature->tryPickup(seat) && creature->tryDrop(seat, tile))
-                {
-                    ACTS::moveCreature(env.ai, creature, tile);
-                    break;
-                }
-            }
-        }
-    }
+    for(Creature* creature : survivors)
+        st.returning.insert(creature->getName());
+    returnStep(env);
 
     st.groups.clear();
     st.assault = WarState::assaultNone;
@@ -1022,6 +1112,7 @@ void endAssault(Env& env)
         planAttack(env, true);
 }
 
+//! \brief Rallies home fighters against a visible intrusion after a fight alert.
 void defend(Env& env, const AiEvent& event)
 {
     // AI row J01: the alert delay of the Fight event has passed
@@ -1031,6 +1122,24 @@ void defend(Env& env, const AiEvent& event)
     WarState& st = env.state;
     Seat* seat = env.player.getSeat();
     if(st.defenceRallying)
+        return;
+
+    // The intruders in sight
+    std::vector<Creature*> intruders;
+    for(Seat* other : env.gameMap.getSeats())
+    {
+        if((other == seat) || other->isAlliedSeat(seat))
+            continue;
+        for(Creature* creature : env.gameMap.getCreaturesBySeat(other))
+        {
+            Tile* tile = creature->getPositionTile();
+            if(isFreeFighter(creature) && creature->getIsOnMap() && (tile != nullptr) &&
+               seat->hasVisionOnTile(tile) && isOwnGround(env, tile))
+                intruders.push_back(creature);
+        }
+    }
+    // Only an enemy in the own territory is a contact to defend; a fight of the own attackers on enemy ground is not
+    if(intruders.empty() && !isOwnGround(env, event.tile))
         return;
 
     // The first contact tells a seat that did not dig about the open tunnel
@@ -1056,19 +1165,6 @@ void defend(Env& env, const AiEvent& event)
             std::swap(home[i - 1], home[static_cast<size_t>(Random::Int(0, static_cast<int32_t>(i) - 1))]);
     }
 
-    // The intruders in sight
-    std::vector<Creature*> intruders;
-    for(Seat* other : env.gameMap.getSeats())
-    {
-        if((other == seat) || other->isAlliedSeat(seat))
-            continue;
-        for(Creature* creature : env.gameMap.getCreaturesBySeat(other))
-        {
-            Tile* tile = creature->getPositionTile();
-            if(isFreeFighter(creature) && isOwnGround(env, tile))
-                intruders.push_back(creature);
-        }
-    }
     Tile* fightTile = event.tile;
     if(!intruders.empty())
     {
@@ -1115,9 +1211,53 @@ void heartGuard(Env& env)
     CARE::possessDefender(env.ai, critical);
 }
 
+void heartEvent(Env& env, const AiEvent& event)
+{
+    // Row J05 fires on HeartCritical and on a fight on a heart tile (a tile of an own dungeon temple)
+    if(event.type == AiEventType::Fight)
+    {
+        Room* room = (event.tile == nullptr) ? nullptr : event.tile->getCoveringRoom();
+        if((room == nullptr) || (room->getType() != RoomType::dungeonTemple) || (room->getSeat() != env.player.getSeat()))
+            return;
+    }
+    else if(event.type != AiEventType::HeartCritical)
+        return;
+    heartGuard(env);
+}
+
+namespace
+{
+//! \brief The place where a hurt own creature rests: its bed, or a free tile of an own infirmary that would admit it
+//! (free cot, payable admission; the same test the infirmary uses for carried patients) when it has no bed.
+//! \return The rest tile, or nullptr when the creature already lies in its bed or in an infirmary, or no place exists.
+Tile* restTileFor(Env& env, Creature* creature)
+{
+    Seat* seat = env.player.getSeat();
+    Tile* tile = creature->getPositionTile();
+    Room* room = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
+    if((tile == nullptr) || (tile == creature->getHomeTile()) || ((room != nullptr) && (room->getType() == RoomType::infirmary)))
+        return nullptr;
+    if(creature->getHomeTile() != nullptr)
+        return creature->getHomeTile();
+
+    for(Room* infirmary : env.gameMap.getRoomsByTypeAndSeat(RoomType::infirmary, seat))
+    {
+        if(!infirmary->hasCarryEntitySpot(creature))
+            continue;
+        for(Tile* covered : infirmary->getCoveredTiles())
+        {
+            if(covered->isClaimedForSeat(seat) && !covered->isFullTile())
+                return covered;
+        }
+    }
+    return nullptr;
+}
+}
+
 void restAfterFight(Env& env)
 {
-    // AI row J08: fleeing creatures are carried to the dungeon temple; the rule mistake leaves them
+    // AI row J08: wounded creatures are carried to their bed or an infirmary, other fleeing creatures to the dungeon
+    // temple; the rule mistake leaves them where they are (one draw per FightOver)
     WarState& st = env.state;
     st.defenceRallying = false;
     if(st.defenceBanner != nullptr)
@@ -1137,10 +1277,17 @@ void restAfterFight(Env& env)
     int area = static_cast<int>(key("HeartDefenceAreaTiles"));
     for(Creature* creature : env.gameMap.getCreaturesBySeat(seat))
     {
-        if(!creature->isActionInList(CreatureActionType::flee))
-            continue;
         Tile* tile = creature->getPositionTile();
         if(tile == nullptr)
+            continue;
+        Tile* rest = creature->isHurt() ? restTileFor(env, creature) : nullptr;
+        if(rest != nullptr)
+        {
+            if(creature->tryPickup(seat) && creature->tryDrop(seat, rest))
+                ACTS::moveCreature(env.ai, creature, rest);
+            continue;
+        }
+        if(!creature->isActionInList(CreatureActionType::flee))
             continue;
         if((std::abs(center->getX() - tile->getX()) <= area) && (std::abs(center->getY() - tile->getY()) <= area))
             continue;
@@ -1195,6 +1342,7 @@ void doTurn(Env& env)
 {
     WarState& st = env.state;
     Seat* seat = env.player.getSeat();
+    returnStep(env);
 
     // The plan step: the first one at FirstPlanSeconds + U(0, jitter), then every ScanPeriod x LookFactorPlan on average
     if(st.nextPlan < 0.0)
@@ -1239,9 +1387,6 @@ void onEvent(Env& env, const AiEvent& event)
             st.lastFight = event.time;
             st.fightOverRaised = false;
             defend(env, event);
-            break;
-        case AiEventType::HeartCritical:
-            heartGuard(env);
             break;
         case AiEventType::FightOver:
             restAfterFight(env);
@@ -1334,13 +1479,15 @@ bool isOwnWarLine(const AiMath::AiStateLine& line)
     if(line.tag == "sighting")
         return line.tokens[0] != "spell";
     if((line.tag == "draw") && (line.tokens.size() == 3))
-        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile"))) ||
+        return ((line.tokens[0] == "I04") && ((line.tokens[1] == "sightingTrap") || (line.tokens[1] == "recordTile") || (line.tokens[1] == "contacted"))) ||
+               ((line.tokens[0] == "K07") && (line.tokens[1] == "retreatCheck")) ||
+               ((line.tokens[0] == "K10") && ((line.tokens[1] == "returning") || (line.tokens[1] == "returnPending"))) ||
                ((line.tokens[0] == "K08") && (line.tokens[1] == "secondWave"));
     return false;
 }
 }
 
-//! \brief Saves war observations and the remaining second-wave window.
+//! \brief Saves war observations, returners, the retreat timer and the second-wave window.
 void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
 {
     const WarState& st = env.state;
@@ -1367,8 +1514,20 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     a.push_back(st.contactTime < 0.0 ? "-1" : num(env.now - st.contactTime));
     a.push_back(num(std::max(0.0, key("RestSecondsAfterAssault") - (env.now - st.lastAssaultEnd))));
     addLine(lines, "war", a);
+    if(st.assault != WarState::assaultNone)
+        addLine(lines, "draw", {"K07", "retreatCheck", num(std::max(0.0, st.nextRetreatCheck - env.now))});
+    for(const std::string& name : st.returning)
+        addLine(lines, "draw", {"K10", "returning", name});
+    for(const std::string& name : st.returningPending)
+        addLine(lines, "draw", {"K10", "returnPending", name});
     if(st.secondWaveUntil >= env.now)
         addLine(lines, "draw", {"K08", "secondWave", num(st.secondWaveUntil - env.now)});
+    // Whether an own assault ever reached contact (the trap set of the estimate, row I04)
+    std::vector<std::string> c;
+    c.push_back("I04");
+    c.push_back("contacted");
+    c.push_back(st.contacted ? "1" : "0");
+    addLine(lines, "draw", c);
 
     for(size_t i = 0; i < st.groups.size(); ++i)
     {
@@ -1459,7 +1618,7 @@ void exportRows(const Env& env, std::vector<AiMath::AiStateLine>& lines)
     }
 }
 
-//! \brief Restores war observations and the saved second-wave window.
+//! \brief Restores war observations, returners, the retreat timer and the second-wave window.
 void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
 {
     WarState& st = env.state;
@@ -1470,7 +1629,13 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
         const std::vector<std::string>& k = line.tokens;
         if(k.empty())
             continue;
-        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
+        if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K07") && (k[1] == "retreatCheck"))
+            st.nextRetreatCheck = env.now + std::atof(k[2].c_str());
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K10") && (k[1] == "returning"))
+            st.returning.insert(k[2]);
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K10") && (k[1] == "returnPending"))
+            st.returningPending.insert(k[2]);
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "K08") && (k[1] == "secondWave"))
             st.secondWaveUntil = env.now + std::atof(k[2].c_str());
         else if((line.tag == "war") && (k[0] == "tunnel"))
         {
@@ -1555,6 +1720,10 @@ void importRows(Env& env, const std::vector<AiMath::AiStateLine>& lines)
                 s.trapBase = std::atof(parts[1].c_str());
                 s.ownTraps = (parts[2] == "1");
             }
+        }
+        else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "contacted"))
+        {
+            st.contacted = (k[2] == "1");
         }
         else if((line.tag == "draw") && (k.size() == 3) && (k[0] == "I04") && (k[1] == "recordTile"))
         {

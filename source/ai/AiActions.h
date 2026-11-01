@@ -43,6 +43,8 @@ void pickUp(KeeperAI& ai, Creature* creature);
 void drop(KeeperAI& ai, Tile* tile);
 //! \brief Schedules picking up and dropping a creature.
 void moveCreature(KeeperAI& ai, Creature* creature, Tile* tile);
+//! \brief Schedules an assault return, picking up the creature unless it is already held.
+void returnCreature(KeeperAI& ai, Creature* creature, Tile* tile, bool held);
 //! \brief Schedules slapping a creature.
 void slap(KeeperAI& ai, Creature* creature);
 //! \brief Schedules removing a call-to-war banner.
