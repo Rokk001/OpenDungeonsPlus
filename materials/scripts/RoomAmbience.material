@@ -116,3 +116,59 @@ material LichBeetle
         }
     }
 }
+
+// Blender-rendered grave vermin.
+material LichBeetleModel
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend alpha_blend
+            depth_write off
+            diffuse vertexcolour
+            texture_unit
+            {
+                texture LichBeetleModel.png
+                tex_address_mode clamp
+            }
+        }
+    }
+}
+material LichMaggotModel
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend alpha_blend
+            depth_write off
+            diffuse vertexcolour
+            texture_unit
+            {
+                texture LichMaggotModel.png
+                tex_address_mode clamp
+            }
+        }
+    }
+}
+material LichWormModel
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend alpha_blend
+            depth_write off
+            diffuse vertexcolour
+            texture_unit
+            {
+                texture LichWormModel.png
+                tex_address_mode clamp
+            }
+        }
+    }
+}

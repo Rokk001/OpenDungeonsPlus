@@ -2083,3 +2083,8 @@ models/skeleton.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for
 models/lich.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second inward body and robe disintegration; all other bones and clips retained byte for byte.
 models/Pile_Skeleton.mesh (bone heap)    AI-generated with Codex    GPLv3+ for added work; original skeleton mesh licences retained in the existing attribution rows above    Final pose of the skeleton death animation, using its original material.
 materials/textures/Pile_Skeleton.png    AI-generated with Codex    GPLv3+    Repainted in bone white by tools/gen_pile_textures.py.
+materials/textures/LichBeetleModel.png    AI-generated with Codex    GPLv3+    Blender-rendered beetle for the Lich death effect.
+materials/textures/LichMaggotModel.png    AI-generated with Codex    GPLv3+    Blender-rendered maggot for the Lich death effect.
+materials/textures/LichWormModel.png    AI-generated with Codex    GPLv3+    Blender-rendered worm for the Lich death effect.
+materials/scripts/RoomAmbience.material (LichBeetleModel, LichMaggotModel, LichWormModel)    AI-generated with Codex    GPLv3+    Materials for the Blender-rendered Lich death vermin.
+particles/RoomAmbienceSpellsExtra.particle (LichBeetleModels, LichMaggotModels, LichWormModels)    AI-generated with Codex    GPLv3+    Crawling grave vermin for the Lich death effect.

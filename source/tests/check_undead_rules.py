@@ -62,6 +62,12 @@ def main():
     assert 'mDeathVanishSeconds = Helper::toDouble' in definition_cpp, 'DeathVanishSeconds is not read as a double'
 
     creature = read('source/entities/Creature.cpp')
+    death = function_body(creature, 'void Creature::dropCarriedEquipment(')
+    assert re.search(r'hasDeathVanishPile\(\).*?entityTeleported.*?getName\(\) << getPosition\(\)', death, re.S), \
+        'clients do not receive the skeleton position used by the bone pile'
+    movement = function_body(read('source/entities/MovableGameEntity.cpp'), 'void MovableGameEntity::update(')
+    assert re.search(r'isUndead\(\).*?addedTime = static_cast<double>\(timeSinceLastFrame\) \* gameSpeedFactor',
+                     movement, re.S), 'undead death clips do not follow their duration in game seconds'
     assert re.search(r'else if\(ko && !getDefinition\(\)->isWorker\(\) && !getDefinition\(\)->isUndead\(\)\)',
                      creature), 'takeDamage may knock out an undead creature'
     assert re.search(r'!mIsCarried && !getDefinition\(\)->isUndead\(\)\)\s*\n\s*dirtyTileByCorpse\(\)', creature), \
@@ -87,6 +93,8 @@ def main():
     bones = function_body(dirt, 'DirtPileEntity* DirtPileEntity::createBones(')
     assert 'new DirtPileEntity' in bones and 'DirtPileKind::bones' in bones, 'each skeleton needs its own cleanable entity'
     assert 'bones->setPosition(position)' in bones and 'rotationAngle, scale' in bones, 'skeleton pose is not retained'
+    assert bones.index('bones->setPosition(position)') < bones.index('bones->notifySeatsWithVision('), \
+        'the positioned bone pile must be sent immediately before the corpse is removed'
     cleaning = read('source/creatureaction/CreatureActionCleanTile.cpp')
     assert cleaning.count('DirtPileKind::bones') >= 2 and 'bones->cleanBy(cleanRate)' in cleaning, \
         'workers must find and clean skeletons'
