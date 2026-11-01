@@ -2080,7 +2080,8 @@ models/skeleton.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for
 models/lich.skeleton (new Die clip)    AI-generated with Codex    GPLv3+ for added animation data; original rig licences retained in the existing attribution rows above    Five-second death in which the body swells, trembles and bursts, leaving nothing behind; all other bones and clips retained byte for byte.
 models/Pile_Skeleton.mesh (bone heap)    AI-generated with Codex    GPLv3+ for added work; original skeleton mesh licences retained in the existing attribution rows above    Final pose of the skeleton death animation, using its original material.
 materials/textures/Pile_Skeleton.png    AI-generated with Codex    GPLv3+    Repainted in bone white by tools/gen_pile_textures.py.
-models/LichBeetle.mesh, models/LichBeetle.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled beetle with a walking clip Crawl, for the Lich death effect.
-models/LichMaggot.mesh, models/LichMaggot.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled maggot with a wriggling clip Crawl, for the Lich death effect.
-models/LichWorm.mesh, models/LichWorm.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled worm with a wriggling clip Crawl, for the Lich death effect.
-materials/scripts/RoomAmbience.material (LichVerminShell, LichVerminLeg, LichVerminMaggot, LichVerminWorm)    AI-generated with Codex    GPLv3+    Plain lit colour materials of the 3D grave vermin.
+models/LichBeetle.mesh, models/LichBeetle.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled, textured beetle (tools/blender-assets/lich_vermin.py) with a walking clip Crawl, for the Lich death effect.
+models/LichMaggot.mesh, models/LichMaggot.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled, textured maggot (tools/blender-assets/lich_vermin.py) with a wriggling clip Crawl, for the Lich death effect.
+models/LichWorm.mesh, models/LichWorm.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled, textured worm (tools/blender-assets/lich_vermin.py) with a wriggling clip Crawl, for the Lich death effect.
+materials/scripts/RoomAmbience.material (LichVerminShell, LichVerminLeg, LichVerminMaggot, LichVerminWorm)    AI-generated with Codex    GPLv3+    Textured lit materials of the 3D grave vermin.
+materials/textures/LichVermin*.png    AI-generated    GPLv3+    Painted from periodic noise with fixed colours by tools/gen_lich_vermin_textures.py (script generated, original work).
