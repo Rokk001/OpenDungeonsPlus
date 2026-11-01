@@ -13,9 +13,9 @@ WorkerCarryEntry classifyWorkerCarry(GameEntity& entity, Creature& carrier)
     if(entity.getObjectType() == GameEntityType::creature)
     {
         Creature& patient = static_cast<Creature&>(entity);
-        if(patient.getDefinition()->isUndead()) return WorkerCarryEntry::none;
         if(!patient.isAlive())
-            return !patient.getDefinition()->isWorker() && patient.getEntityCarryType(&carrier) == EntityCarryType::corpse ?
+            return !patient.getDefinition()->isWorker() && !patient.getDefinition()->isUndead() &&
+                patient.getEntityCarryType(&carrier) == EntityCarryType::corpse ?
                 WorkerCarryEntry::corpse : WorkerCarryEntry::none;
         if(patient.getKoTurnCounter() >= 0) return WorkerCarryEntry::none;
         if(patient.getSeat() == carrier.getSeat()) return WorkerCarryEntry::ownKnockedOut;
