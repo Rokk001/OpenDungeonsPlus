@@ -28,9 +28,13 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+//! \brief Reserves one cleaning target while the worker walks and cleans it.
 CreatureActionCleanTile::CreatureActionCleanTile(Creature& creature, Tile& tileClean) :
     CreatureAction(creature),
-    mTileClean(tileClean)
+    mTileClean(tileClean),
+    mCleansPile(DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::pile) != nullptr ||
+                DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::vomit) != nullptr ||
+                DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::bones) != nullptr)
 {
 }
 
@@ -38,10 +42,11 @@ CreatureActionCleanTile::~CreatureActionCleanTile()
 {
 }
 
+//! \brief Advances the reserved pile or floor target without merging their limits.
 std::function<bool()> CreatureActionCleanTile::action() // allowed-lambda: signature required by CreatureAction
 {
     return std::bind(&CreatureActionCleanTile::handleCleanTile,
-        std::ref(mCreature), std::ref(mTileClean), getNbTurnsActive());
+        std::ref(mCreature), std::ref(mTileClean), getNbTurnsActive(), mCleansPile);
 }
 
 //! \brief Cleans the first skeleton, pile, vomit, blood stain or floor dirt on the tile.
@@ -92,7 +97,8 @@ static bool isTileClean(const Tile& tile)
         (tile.getDirt() <= 0.0);
 }
 
-bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClean, int32_t nbTurns)
+//! \brief Ends a pile target before taking any separate room or corridor target.
+bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClean, int32_t nbTurns, bool pileTarget)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -105,7 +111,10 @@ bool CreatureActionCleanTile::handleCleanTile(Creature& creature, Tile& tileClea
     ConfigManager& config = ConfigManager::getSingleton();
 
     // Somebody else was faster, the tile changed hands or the worker has cleaned it long enough
-    if((tileClean.getSeat() != creature.getSeat()) || isTileClean(tileClean) ||
+    const bool pileGone = pileTarget && DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::pile) == nullptr &&
+        DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::vomit) == nullptr &&
+        DirtPileEntity::getEntityOnTile(&tileClean, DirtPileKind::bones) == nullptr;
+    if((tileClean.getSeat() != creature.getSeat()) || isTileClean(tileClean) || pileGone ||
        (nbTurns >= static_cast<int32_t>(config.getDirtConfigDouble("CleaningMaxTurnsPerTile"))))
     {
         creature.popAction();

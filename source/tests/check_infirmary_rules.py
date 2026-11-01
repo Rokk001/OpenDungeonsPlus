@@ -68,7 +68,7 @@ struct Room;
 //! \brief Declares infirmaries referenced by fixture rest and carry actions.
 struct RoomInfirmary;
 //! \brief Identifies the room kinds required by admission and bed redirection fixtures.
-enum class RoomType{infirmary,dormitory,other};
+enum class RoomType{infirmary,dormitory,crypt,prison,other};
 //! \brief Provides only the vectors required by cot geometry and saved shaman positions.
 namespace Ogre {
 //! \brief Stores the position coordinates used by the production room methods.
@@ -273,9 +273,9 @@ using Building=Room;
 //! \brief Declares the actual carry constructor state while excluding unrelated rendering and path services.
 struct CreatureActionCarryEntity:CreatureAction{
  GameEntity* mEntityToCarry=nullptr;Tile* mTileDest=nullptr;Building* mBuildingDest=nullptr;
- bool mIsDrag=false;int mDragPhase=0,mDragLayTurns=0;double mDragFollowArc=0;
+ bool mIsDrag=false,mCorpseDrag=false,mExternalDrag=false,mDelivered=false,mForced=false,mDigGold=false;int mDragPhase=0,mDragLayTurns=0;double mDragFollowArc=0;
  //! \brief Executes the production room-delivery constructor supplied by the streams probe.
- CreatureActionCarryEntity(Creature&,GameEntity&,Building&);
+ CreatureActionCarryEntity(Creature&,GameEntity&,Building&,bool forced=false,bool digGold=false);
  //! \brief Uses the production own-seat living-creature drag selection.
  static bool isPulledOverGround(const Creature&,GameEntity&);
  //! \brief Supplies drag attachment without changing the saved knockout countdown.
@@ -295,7 +295,9 @@ int Int(int,int){return 0;}}
 //! \brief Supplies mutable resources and records actual admission, healing and action effects.
 struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=100,mInfirmaryMood=0,mInfirmaryMoodTurns=0;
  double counter=-73;int glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
- Tile* resumedCarryTarget=nullptr;double resumedCarryCounter=0;bool resumedCarryIsDrag=false;
+ Tile* resumedCarryTarget=nullptr;double resumedCarryCounter=0;bool resumedCarryIsDrag=false,forcedCarry=false;
+ //! \brief Reports a hand-drop transport so the real room writer can omit it.
+ bool hasForcedWorkerCarry()const{return forcedCarry;}
  //! \brief Returns mutable creature definitions for the actual treatment methods.
  Definition* getDefinition(){return &definition;}
  //! \brief Returns creature definitions during const admission checks.
@@ -539,6 +541,7 @@ int main(){try{
  check(room.getPatient(creature)==nullptr,"ending the rest action releases treatment");
  room.mPatients.clear();map.tiles[{0,0}]={0,0};Creature incoming,carrier,other;incoming.name="incoming";carrier.name="carrier";other.name="other";
  incoming.owner=&seat;other.owner=&seat;incoming.hp=10;incoming.counter=-51;incoming.home=&home;carrier.tile=map.getTile(0,0);
+ incoming.definition.worker=true;check(room.hasCarryEntitySpot(&incoming),"knocked-out worker can use an available cot");incoming.definition.worker=false;
  check(room.reserveCot(incoming,carrier)==map.getTile(0,0),"available cot reserved");check(room.askSpotForCarriedEntity(&incoming)==map.getTile(0,0),"reservation returns delivery tile");
  check(!room.hasCarryEntitySpot(&other),"another creature cannot take reservation");room.cancelReservation(carrier);check(room.mPatients.empty(),"interrupted carry releases reservation");
  room.reserveCot(incoming,carrier);before=map.treasury;room.notifyCarryingStateChanged(&carrier,&incoming);

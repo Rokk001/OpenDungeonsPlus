@@ -7,6 +7,12 @@
 #include <istream>
 #include <ostream>
 
+//! \brief Identifies a reservation belonging to a one-task hand-drop transport.
+static bool isForcedTransport(const Creature* carrier)
+{
+    return carrier != nullptr && carrier->hasForcedWorkerCarry();
+}
+
 //! \brief Saves cots, admissions and the incoming creature's current knockout countdown for reservations.
 void RoomInfirmary::exportToStream(std::ostream& stream) const
 {
@@ -23,10 +29,16 @@ void RoomInfirmary::exportToStream(std::ostream& stream) const
         const CotInfo& cot = entry.second;
         stream << cot.size << '\t' << cot.x << '\t' << cot.y << '\t' << cot.rotation << '\n';
     }
-    stream << "InfirmaryPatients\t" << mPatients.size() << '\n';
+    size_t savedPatients = 0;
+    for(const std::pair<const size_t, PatientInfo>& entry : mPatients)
+        if(entry.second.creature != nullptr || !isForcedTransport(entry.second.reservedBy))
+            ++savedPatients;
+    stream << "InfirmaryPatients\t" << savedPatients << '\n';
     for(const std::pair<const size_t, PatientInfo>& entry : mPatients)
     {
         const PatientInfo& patient = entry.second;
+        if(patient.creature == nullptr && isForcedTransport(patient.reservedBy))
+            continue;
         const std::string name = patient.creature == nullptr ? patient.creatureName : patient.creature->getName();
         const std::string carrier = patient.reservedBy == nullptr ? patient.reservedByName : patient.reservedBy->getName();
         double storedCounter = patient.storedCounter;

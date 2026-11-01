@@ -52,10 +52,7 @@ workers clean as a side job. All numbers are keys of `config/global.cfg` (block 
 
 ## Cleaning
 
-- At most `CleaningWorkerSharePercent` of the workers clean (the first one always may, the same
-  counting as the trap reloading share), only while the keeper has a pile or a room from stage
-  `CleanRoomFromStage` to clean. Cleaning comes first in the list of the workers' jobs but never
-  replaces digging, claiming, carrying or reloading, which stay in the list after it.
+- Workers clean according to the keeper's worker-job assignments and the available cleaning work.
 - A worker walks to the nearest pile, else the dirtiest tile of the nearest dirty room (the toilet room
   first), else a dirty corridor tile, and removes `ClaimRate x 100 x CleanRateFactor` dirt per turn
   (at most `CleaningMaxTurnsPerTile` turns per tile).

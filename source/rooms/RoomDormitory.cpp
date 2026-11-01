@@ -528,6 +528,7 @@ RoomDormitoryTileData* RoomDormitory::createTileData(Tile* tile)
     return new RoomDormitoryTileData;
 }
 
+//! \brief Accepts an own knocked-out creature with its bed in this dormitory.
 bool RoomDormitory::hasCarryEntitySpot(GameEntity* carriedEntity)
 {
     if(carriedEntity->getObjectType() != GameEntityType::creature)
@@ -537,11 +538,8 @@ bool RoomDormitory::hasCarryEntitySpot(GameEntity* carriedEntity)
         return false;
 
     Creature* creature = static_cast<Creature*>(carriedEntity);
-    // Only ko to death creatures and hurt creatures (all pulled over the ground, see
-    // Creature::isKoToDeathForBedPull and Creature::isWoundedForBedCarry) owning a bed in this
-    // dormitory should be brought here
-    bool pullable = (creature->getKoTurnCounter() < 0) ? creature->isKoToDeathForBedPull() :
-        creature->isWoundedForBedCarry();
+    // Only creatures knocked out to death and owning a bed in this dormitory are pulled here.
+    bool pullable = creature->isKoToDeathForBedPull();
     if(!pullable)
         return false;
 

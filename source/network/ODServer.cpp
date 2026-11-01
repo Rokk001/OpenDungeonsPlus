@@ -700,6 +700,18 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
             ServerNotificationType::refreshPlayerSeat, player);
         std::string goals = gameMap->getGoalsStringForPlayer(player);
         Seat* seat = player->getSeat();
+        std::array<uint32_t, 6> workerCounts{{0, 0, 0, 0, 0, 0}};
+        uint32_t livingWorkers = 0;
+        for(Creature* worker : gameMap->getCreaturesBySeat(seat))
+        {
+            if(!worker->getDefinition()->isWorker()) continue;
+            ++livingWorkers;
+            uint32_t job = static_cast<uint32_t>(worker->getWorkerJob());
+            if(job < workerCounts.size()) ++workerCounts[job];
+        }
+        uint64_t configuredFixed = 0;
+        for(uint32_t fixed : seat->getWorkerJobSettings().fixed) configuredFixed += fixed;
+        seat->setWorkerJobCounts(configuredFixed < livingWorkers ? livingWorkers - static_cast<uint32_t>(configuredFixed) : 0, workerCounts);
         seat->exportToPacketForUpdate(serverNotification->mPacket);
         serverNotification->mPacket << goals;
         ODServer::getSingleton().queueServerNotification(serverNotification);
@@ -3368,6 +3380,37 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             sendAsyncMsg(response);
             if(player->getLabWindowOpen())
                 RoomAlchemyLab::sendWindow(*gameMap, *player);
+            break;
+        }
+        case ClientNotificationType::askWorkerSettings:
+        {
+            Player* player = clientSocket->getPlayer();
+            if(player == nullptr || player->getSeat() == nullptr || !player->getIsHuman()) break;
+            Seat* seat = player->getSeat();
+            uint32_t isSet = 0;
+            WorkerJobSettings requested;
+            bool complete = static_cast<bool>(packetReceived >> isSet);
+            if(complete && isSet == 1)
+            {
+                complete = SeatData::readWorkerJobSettings(packetReceived, requested) && packetReceived.endOfPacket();
+                if(complete && validWorkerJobSettings(requested) && !player->getHasLost())
+                {
+                    uint64_t total = 0;
+                    bool raised = false;
+                    for(size_t i = 0; i < requested.fixed.size(); ++i)
+                    {
+                        total += requested.fixed[i];
+                        raised = raised || requested.fixed[i] > seat->getWorkerJobSettings().fixed[i];
+                    }
+                    uint32_t living = 0;
+                    for(Creature* worker : gameMap->getCreaturesBySeat(seat))
+                        if(worker->getDefinition()->isWorker()) ++living;
+                    if(!raised || total <= living) seat->setWorkerJobSettings(requested);
+                }
+            }
+            ServerNotification* response = new ServerNotification(ServerNotificationType::workerSettings, player);
+            SeatData::writeWorkerJobSettings(response->mPacket, seat->getWorkerJobSettings());
+            queueServerNotification(response);
             break;
         }
         case ClientNotificationType::askInfirmaryWindow:

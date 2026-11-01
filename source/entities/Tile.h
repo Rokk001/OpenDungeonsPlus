@@ -653,6 +653,8 @@ public:
     //! \brief Feels the tile vector with the available tiles the worker can
     //! go to
     void canWorkerDig(Creature& worker, std::vector<Tile*>& tiles);
+    //! \brief Returns whether any worker has reserved a digging place on this tile.
+    bool hasWorkerDigging() const;
     int getWorkerDiggingSlot(const Creature& worker, const Tile& tile) const;
     Ogre::Vector2 getWorkerDiggingPosition(const Creature& worker) const;
     bool addWorkerDigging(Creature& worker, Tile& tile);

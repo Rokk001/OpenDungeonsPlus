@@ -28,9 +28,9 @@ header = read("source", "network", "ServerNotification.h")
 body = header[header.index("enum class ServerNotificationType"):]
 body = body[:body.index("};")]
 names = re.findall(r"^\s*([A-Za-z_]\w*)\s*,?\s*(?://.*)?$", body, re.M)
-if names[-13:] != ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings", "tavernWindow", "tavernPayer", "infirmaryWindow", "infirmarySettings", "ghostRoomSettings", "spaPayer", "creatureJump"]:
+if names[-14:] != ["timeLimit", "campaignVictory", "merchantWindow", "merchantSettings", "labWindow", "labSettings", "tavernWindow", "tavernPayer", "infirmaryWindow", "infirmarySettings", "ghostRoomSettings", "spaPayer", "creatureJump", "workerSettings"]:
     problems.append("campaignVictory must follow timeLimit without moving existing values")
-if "trapEffect" not in names or names.index("trapEffect") != len(names) - 14:
+if "trapEffect" not in names or names.index("trapEffect") != len(names) - 15:
     problems.append("trapEffect must be right before timeLimit")
 
 # 2. Config kinds

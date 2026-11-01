@@ -19,10 +19,14 @@
 #define SEATDATA_H
 
 
+#include "game/WorkerJobs.h"
+#include "game/WorkerTargets.h"
+
 #include <Ogre.h>
 #include <OgreColourValue.h>
 #include <string>
 #include <vector>
+#include <utility>
 #include <cstdint>
 
 class ODPacket;
@@ -50,6 +54,30 @@ public:
     bool getGhostRevive() const { return mGhostRevive; }
     //! \brief Enables or disables own-ghost revival for all rooms of this keeper.
     void setGhostRevive(bool revive) { mGhostRevive = revive; }
+
+    //! \brief Returns the current keeper worker settings.
+    const WorkerJobSettings& getWorkerJobSettings() const { return mWorkerJobSettings; }
+    //! \brief Replaces worker settings after validation by the server or loader.
+    void setWorkerJobSettings(const WorkerJobSettings& settings) { mWorkerJobSettings = settings; }
+    //! \brief Returns current target counts in worker-job order.
+    const std::array<uint32_t, 6>& getWorkerJobTargets() const { return mWorkerJobTargets; }
+    //! \brief Updates the targets counted for the keeper this turn.
+    void setWorkerJobTargets(const std::array<uint32_t, 6>& targets) { mWorkerJobTargets = targets; }
+    //! \brief Returns the stable targets counted for each worker job this turn.
+    const WorkerTargetLists& getWorkerTargetLists() const { return mWorkerTargetLists; }
+    //! \brief Replaces the keeper's target lists after recounting them.
+    void setWorkerTargetLists(WorkerTargetLists targets) { mWorkerTargetLists = std::move(targets); }
+    //! \brief Returns the count of living workers without a configured fixed place.
+    uint32_t getFreeWorkers() const { return mFreeWorkers; }
+    //! \brief Returns the number of workers holding each job.
+    const std::array<uint32_t, 6>& getWorkerJobCounts() const { return mWorkerJobCounts; }
+    //! \brief Sets the worker counts sent with the owner seat update.
+    void setWorkerJobCounts(uint32_t freeWorkers, const std::array<uint32_t, 6>& counts)
+    { mFreeWorkers = freeWorkers; mWorkerJobCounts = counts; }
+    //! \brief Reads one complete worker settings record from a packet.
+    static bool readWorkerJobSettings(ODPacket& packet, WorkerJobSettings& settings);
+    //! \brief Writes one worker settings record to a packet.
+    static void writeWorkerJobSettings(ODPacket& packet, const WorkerJobSettings& settings);
 
     // Constructors
     //! \brief Creates seat data with the configured default discharge threshold.
@@ -182,6 +210,12 @@ public:
     static std::string displayAsString(const SeatData* seat);
 
 protected:
+    //! \brief Worker settings, current target counts and owner-facing worker counts.
+    WorkerJobSettings mWorkerJobSettings;
+    std::array<uint32_t, 6> mWorkerJobTargets{{0, 0, 0, 0, 0, 0}};
+    WorkerTargetLists mWorkerTargetLists;
+    std::array<uint32_t, 6> mWorkerJobCounts{{0, 0, 0, 0, 0, 0}};
+    uint32_t mFreeWorkers = 0;
     //! \brief Shared ghost-room state, also retained by Seat save records.
     double mEctoplasmLevels = 0.0;
     GhostProduct mGhostProduct = GhostProduct::research;
