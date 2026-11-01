@@ -537,26 +537,19 @@ void ECON::sellObsolete(KeeperAI& ai)
         }
         return;
     }
-    std::map<RoomType, uint32_t> minimumSize;
-    for(const std::pair<RoomType, uint32_t>& entry : plan)
+    // Normal sale: each recorded block is judged against the size of the [RoomPlan] row it was built for.
+    // A block of a type that also has a complete block, but is itself smaller than its row, is sold.
+    // Blocks without an assigned row (plannedTiles == 0) are never sold as partial blocks.
+    const std::vector<RoomBlock> blocks = ai.getEconomyState().roomBlocks;
+    for(const RoomBlock& block : blocks)
     {
-        std::map<RoomType, uint32_t>::iterator found = minimumSize.find(entry.first);
-        if(found == minimumSize.end() || entry.second < found->second)
-            minimumSize[entry.first] = entry.second;
-    }
-    for(const std::pair<const RoomType, uint32_t>& entry : minimumSize)
-    {
-        std::vector<Room*> rooms = ai.getGameMap().getRoomsByTypeAndSeat(entry.first, seat);
-        bool complete = false;
-        for(Room* room : rooms)
-            complete = complete || room->numCoveredTiles() >= entry.second;
-        if(!complete)
+        if(block.plannedTiles == 0 || block.tiles.empty() || block.tiles.size() >= block.plannedTiles)
             continue;
-        for(Room* room : rooms)
-        {
-            if(room->numCoveredTiles() < entry.second)
-                ACTS::sellRoomTiles(ai, room->getCoveredTiles());
-        }
+        bool complete = false;
+        for(const RoomBlock& other : blocks)
+            complete = complete || (other.type == block.type && other.plannedTiles > 0 && other.tiles.size() >= other.plannedTiles);
+        if(complete)
+            ACTS::sellRoomTiles(ai, block.tiles);
     }
     std::vector<Tile*> entryTiles = entrances(ai);
     if(entryTiles.empty())
