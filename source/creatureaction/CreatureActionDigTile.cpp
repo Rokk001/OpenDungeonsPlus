@@ -36,10 +36,12 @@
 #include "utils/MakeUnique.h"
 #include "utils/LogManager.h"
 
-CreatureActionDigTile::CreatureActionDigTile(Creature& creature, Tile& tileDig, Tile& tilePos) :
+//! \brief Reserves a digging place and records a hand-drop override.
+CreatureActionDigTile::CreatureActionDigTile(Creature& creature, Tile& tileDig, Tile& tilePos, bool forced) :
     CreatureAction(creature),
     mTileDig(tileDig),
-    mTilePos(tilePos)
+    mTilePos(tilePos),
+    mForced(forced)
 {
     mCreature.parkedBit = false;
     mTileDig.addWorkerDigging(mCreature, mTilePos);     
@@ -57,10 +59,11 @@ CreatureActionDigTile::~CreatureActionDigTile()
     mCreature.parkedBit = false;
 }
 
+//! \brief Advances the digging target while retaining its hand-drop origin.
 std::function<bool()> CreatureActionDigTile::action()
 {
     return std::bind(&CreatureActionDigTile::handleDigTile,
-        std::ref(mCreature), std::ref(mTileDig), std::ref(mTilePos));
+        std::ref(mCreature), std::ref(mTileDig), std::ref(mTilePos), mForced);
 }
 
 //! \brief Gives the gold of one dig step to the worker, the seat statistics and the level script. The worker carries the
@@ -77,7 +80,7 @@ static void payMinedGold(Creature& creature, Tile& tileDig, double gold)
 }
 
 //! \brief Performs digging and drops a full gold load when the worker's dig job has ended.
-bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos)
+bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos, bool forced)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -219,7 +222,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         obj->createMesh();
         obj->setPosition(pos);
 
-        if(creature.getWorkerJob() != WorkerJob::dig)
+        if(!forced && creature.getWorkerJob() != WorkerJob::dig)
         {
             if(creature.isActionInList(CreatureActionType::digTile))
                 creature.popAction();
@@ -254,7 +257,7 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
             // We do not push CreatureActionType::searchEntityToCarry because we want
             // this worker to be count as digging, not as carrying stuff
             
-            creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj));
+            creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj, forced, true));
             if(creature.mDiggingEffect)
             {
                 creature.removeCreatureEffect(creature.mDiggingEffect);

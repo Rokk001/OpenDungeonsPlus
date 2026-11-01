@@ -144,7 +144,7 @@ grab = read('source/creatureaction/CreatureActionGrabEntity.cpp')
 carry = read('source/creatureaction/CreatureActionCarryEntity.cpp')
 assert 'getDeliveryTile(creature)' in search and 'pathExists(&creature, myTile, destination)' in search
 assert 'getDeliveryTile(creature)' in grab and '*entityToCarry, *destination' in grab
-mission_action = carry.split('GameEntity& entityToCarry, Tile& tileDest, bool forced)', 1)[1].split('\n}\n', 1)[0]
+mission_action = carry.split('GameEntity& entityToCarry, Tile& tileDest, bool forced, bool digGold)', 1)[1].split('\n}\n', 1)[0]
 assert 'mBuildingDest(nullptr)' in mission_action
 assert 'mCreature.carryEntity(mEntityToCarry);' in mission_action
 assert 'mEntityToCarry->notifyEntityCarryOff(pos);' in carry and 'mCreature.releaseCarriedEntity();' in carry

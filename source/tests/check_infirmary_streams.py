@@ -19,7 +19,7 @@ def main():
     code += function(read("source/rooms/RoomInfirmaryEconomy.cpp"), "bool RoomInfirmary::canPayAdmission(")
     carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
     code += "\n#define OD_LOG_INF(message) ((void)0)\n"
-    code += function(carry, "CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced)")
+    code += function(carry, "CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced, bool digGold)")
     code += function(carry, "bool CreatureActionCarryEntity::isPulledOverGround(")
     code += r"""
 //! \brief Captures the destination selected by the actual constructor and its actual knockout counter.

@@ -132,7 +132,9 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
     if((tileToDig != nullptr) && (tilePos != nullptr))
     {
         // We also push the dig action to lock the tile to make sure not every worker will try to go to the same tile
-        creature.pushAction(Utils::make_unique<CreatureActionDigTile>(creature, *tileToDig, *tilePos));
+        if(forced)
+            creature.popAction();
+        creature.pushAction(Utils::make_unique<CreatureActionDigTile>(creature, *tileToDig, *tilePos, forced));
         return true;
     }
 
@@ -174,7 +176,7 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         {
             // We do not push CreatureActionType::searchEntityToCarry because we want
             // this worker to be count as digging, not as carrying stuff
-            creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj));
+            creature.pushAction(Utils::make_unique<CreatureActionGrabEntity>(creature, *obj, forced, true));
             return true;
         }
         else if(creature.getSeat()->getPlayer()->getIsHuman())
