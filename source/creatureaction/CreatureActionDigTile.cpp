@@ -76,7 +76,7 @@ static void payMinedGold(Creature& creature, Tile& tileDig, double gold)
         tileDig.getX(), tileDig.getY(), wholeGold);
 }
 
-//! \brief Performs digging with unchanged timing and reports actual gold, stroke tile and the next step interval.
+//! \brief Performs digging and drops a full gold load when the worker's dig job has ended.
 bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Tile& tilePos)
 {
     Tile* myTile = creature.getPositionTile();
@@ -218,6 +218,13 @@ bool CreatureActionDigTile::handleDigTile(Creature& creature, Tile& tileDig, Til
         obj->addToGameMap();
         obj->createMesh();
         obj->setPosition(pos);
+
+        if(creature.getWorkerJob() != WorkerJob::dig)
+        {
+            if(creature.isActionInList(CreatureActionType::digTile))
+                creature.popAction();
+            return true;
+        }
 
         bool isTreasuryAvailable = false;
         for(Room* room : creature.getGameMap()->getRooms())

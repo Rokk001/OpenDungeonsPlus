@@ -819,6 +819,7 @@ void RoomPrison::removeCreatureUsingRoom(Creature* creature)
     creature->setInJail(nullptr);
 }
 
+//! \brief Accepts living knocked-out enemies when there is room in the prison.
 bool RoomPrison::hasCarryEntitySpot(GameEntity* carriedEntity)
 {
     if(carriedEntity->getObjectType() != GameEntityType::creature)
@@ -827,7 +828,7 @@ bool RoomPrison::hasCarryEntitySpot(GameEntity* carriedEntity)
     Creature* creature = static_cast<Creature*>(carriedEntity);
 
     // Only ko to death enemy creatures should be carried to prison
-    if(creature->getKoTurnCounter() >= 0)
+    if(!creature->isAlive() || creature->getKoTurnCounter() >= 0)
        return false;
 
     // Only enemy creatures should be brought to prison
@@ -850,8 +851,18 @@ Tile* RoomPrison::askSpotForCarriedEntity(GameEntity* carriedEntity)
     return getGateTile();
 }
 
+//! \brief Checks that the prisoner and its original gate reservation are still valid.
+bool RoomPrison::hasReservedDelivery(const Creature& prisoner, const Tile* delivery)
+{
+    return getGateTile() == delivery &&
+        std::find(mPendingPrisoners.begin(), mPendingPrisoners.end(), &prisoner) != mPendingPrisoners.end();
+}
+
+//! \brief Releases the reservation and admits the prisoner only at the prison gate.
 void RoomPrison::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
+    if(carriedEntity == nullptr)
+        return;
     // The carrier has brought the enemy creature
     if(carriedEntity->getObjectType() != GameEntityType::creature)
     {
@@ -872,6 +883,9 @@ void RoomPrison::notifyCarryingStateChanged(Creature* carrier, GameEntity* carri
     }
 
     mPendingPrisoners.erase(it);
+
+    if(carrier == nullptr || carrier->getPositionTile() != getGateTile() || !prisonerCreature->isAlive())
+        return;
 
     prisonerCreature->clearActionQueue();
     prisonerCreature->pushAction(Utils::make_unique<CreatureActionUseRoom>(*prisonerCreature, *this, true));

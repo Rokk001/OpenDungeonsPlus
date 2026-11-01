@@ -26,6 +26,8 @@
 #include "entities/Tile.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomDormitory.h"
+#include "rooms/RoomCrypt.h"
+#include "rooms/RoomPrison.h"
 #include "rooms/Room.h"
 #include "rooms/RoomMerchant.h"
 #include "rooms/RoomTreasury.h"
@@ -73,12 +75,19 @@ void appendTrailSection(const std::vector<Ogre::Vector2>& trail, const std::vect
 
 }
 
-CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest) :
+//! \brief Reserves the destination and starts carrying or pulling the chosen entity.
+CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced) :
     CreatureAction(creature),
     mEntityToCarry(&entityToCarry),
     mTileDest(nullptr),
     mBuildingDest(&buildingDest),
     mIsDrag(isPulledOverGround(creature, entityToCarry)),
+    mCorpseDrag(mIsDrag && !static_cast<Creature&>(entityToCarry).isAlive()),
+    mExternalDrag(mIsDrag && buildingDest.getObjectType() == GameEntityType::room &&
+        (static_cast<Room&>(buildingDest).getType() == RoomType::crypt ||
+         static_cast<Room&>(buildingDest).getType() == RoomType::prison)),
+    mDelivered(false),
+    mForced(forced),
     mDragPhase(0),
     mDragLayTurns(0),
     mDragFollowArc(0.0)
@@ -104,12 +113,16 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
 }
 
 //! \brief Reuses normal carry locking, mesh attachment and interruption cleanup for mission destinations.
-CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest) :
+CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Tile& tileDest, bool forced) :
     CreatureAction(creature),
     mEntityToCarry(&entityToCarry),
     mTileDest(&tileDest),
     mBuildingDest(nullptr),
     mIsDrag(false),
+    mCorpseDrag(false),
+    mExternalDrag(false),
+    mDelivered(false),
+    mForced(forced),
     mDragPhase(0),
     mDragLayTurns(0),
     mDragFollowArc(0.0)
@@ -120,6 +133,7 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
     mCreature.carryEntity(mEntityToCarry);
 }
 
+//! \brief Releases cargo and confirms or cancels its destination reservation.
 CreatureActionCarryEntity::~CreatureActionCarryEntity()
 {
     if(mEntityToCarry != nullptr)
@@ -130,6 +144,8 @@ CreatureActionCarryEntity::~CreatureActionCarryEntity()
         if(mIsDrag)
         {
             OD_LOG_INF("creature=" + mCreature.getName() + " is letting go of pulled " + mEntityToCarry->getName() + ", pos=" + Helper::toString(pos));
+            if(mCorpseDrag)
+                static_cast<Creature*>(mEntityToCarry)->notifyCorpseDragEnd();
             static_cast<Creature*>(mEntityToCarry)->notifyDragEnd();
         }
         else
@@ -146,7 +162,7 @@ CreatureActionCarryEntity::~CreatureActionCarryEntity()
     if(mBuildingDest != nullptr)
     {
         mBuildingDest->removeGameEntityListener(this);
-        mBuildingDest->notifyCarryingStateChanged(&mCreature, mEntityToCarry);
+        mBuildingDest->notifyCarryingStateChanged(mExternalDrag && !mDelivered ? nullptr : &mCreature, mEntityToCarry);
     }
 }
 
@@ -167,16 +183,16 @@ std::function<bool()> CreatureActionCarryEntity::action()
         std::ref(mCreature), mEntityToCarry, mTileDest);
 }
 
+//! \brief Pulls creatures on the ground while ordinary objects remain carried.
 bool CreatureActionCarryEntity::isPulledOverGround(const Creature& carrier, GameEntity& entity)
 {
+    (void)carrier;
     if(entity.getObjectType() != GameEntityType::creature)
         return false;
 
-    // Every living creature of the own seat that is brought to its bed is pulled, also one knocked out to death.
-    // Dead ones are carried as before, and so are the knocked out enemy creatures: they are not of the seat of the
-    // worker and go to a prison, where they are carried into the cell
-    Creature& creature = static_cast<Creature&>(entity);
-    return creature.isAlive() && (creature.getSeat() == carrier.getSeat());
+    // Own and enemy knockout patients and intact bodies all travel on the ground.
+    Creature& patient = static_cast<Creature&>(entity);
+    return !patient.isAlive() || patient.getKoTurnCounter() < 0;
 }
 
 //! \brief Delivers cargo at its tile or the merchant table's existing furniture-aware stand position.
@@ -238,10 +254,13 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     return false;
 }
 
+//! \brief Starts a ground transport, preserving a corpse's timer and save identity.
 void CreatureActionCarryEntity::startDrag()
 {
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
     dragged->notifyDragStart(mCreature.getDefinition()->getDirtFactor());
+    if(mCorpseDrag)
+        dragged->notifyCorpseDragStart(mCreature, mForced);
 
     // The creature lies down on the spot (the clip of the pulled creature, the clients show a fallback pose when
     // the skeleton has none). It keeps its place on the map.
@@ -287,8 +306,8 @@ void CreatureActionCarryEntity::startLaying(Creature& dragged)
     std::vector<Ogre::Vector2> path(queue.begin(), queue.end());
     appendTrailSection(mDragTrail, mDragTrailArc, mDragFollowArc, mDragTrailArc.back(), path);
     mDragFollowArc = mDragTrailArc.back();
-    Tile* homeTile = (mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
-        static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary) ? mTileDest : dragged.getHomeTile();
+    Tile* homeTile = (mExternalDrag || (mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
+        static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary)) ? mTileDest : dragged.getHomeTile();
     if(homeTile != nullptr)
     {
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(homeTile->getX()),
@@ -297,6 +316,7 @@ void CreatureActionCarryEntity::startLaying(Creature& dragged)
     dragged.setWalkPath(EntityAnimation::dragged_anim, EntityAnimation::dragged_anim, true, false, path, false, true);
 }
 
+//! \brief Ends a pull and leaves interrupted patients and bodies at their current position.
 bool CreatureActionCarryEntity::stopDragging(bool standUp)
 {
     // A creature that is let go in the middle of the way gets up where it lies (a dead one keeps its own
@@ -305,9 +325,9 @@ bool CreatureActionCarryEntity::stopDragging(bool standUp)
     if(standUp && (mEntityToCarry != nullptr))
     {
         Creature* dragged = static_cast<Creature*>(mEntityToCarry);
-        if(dragged->isAlive() && dragged->getIsOnMap())
+        if(dragged->getIsOnMap())
         {
-            if(dragged->getKoTurnCounter() < 0)
+            if(!dragged->isAlive() || dragged->getKoTurnCounter() < 0)
                 dragged->clearDestinations(EntityAnimation::die_anim, false, false);
             else
                 dragged->clearDestinations(EntityAnimation::idle_anim, true, true);
@@ -320,6 +340,7 @@ bool CreatureActionCarryEntity::stopDragging(bool standUp)
     return false;
 }
 
+//! \brief Pulls a knockout patient or corpse to its reserved destination.
 bool CreatureActionCarryEntity::handleDragCreature()
 {
     // The creature that was pulled is gone (dead, removed or picked up: the listener let it go already), or
@@ -330,6 +351,53 @@ bool CreatureActionCarryEntity::handleDragCreature()
 
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
     ConfigManager& config = ConfigManager::getSingleton();
+
+    if(mExternalDrag)
+    {
+        if(mBuildingDest->getSeat() != mCreature.getSeat())
+            return stopDragging(true);
+        Room* room = static_cast<Room*>(mBuildingDest);
+        bool reserved = room->getType() == RoomType::crypt ?
+            static_cast<RoomCrypt*>(room)->hasReservedDelivery(*dragged, mTileDest) :
+            room->getType() == RoomType::prison &&
+                static_cast<RoomPrison*>(room)->hasReservedDelivery(*dragged, mTileDest);
+        if(!reserved)
+            return stopDragging(true);
+        // A living patient that dies is released; a corpse remains a valid transport.
+        if((!mCorpseDrag && !dragged->isAlive()) || !dragged->getIsOnMap())
+            return stopDragging(true);
+        if(mDragPhase == 1)
+        {
+            if(dragged->isMoving())
+                return false;
+            if(dragged->getPositionTile() != mTileDest)
+                return stopDragging(true);
+            mDelivered = true;
+            return stopDragging(false);
+        }
+        const Ogre::Vector3& pos = mCreature.getPosition();
+        Ogre::Vector2 point(pos.x, pos.y);
+        double step = static_cast<double>(point.distance(mDragTrail.back()));
+        if(step > DRAG_TRAIL_MIN_STEP)
+        {
+            mDragTrail.push_back(point);
+            mDragTrailArc.push_back(mDragTrailArc.back() + step);
+        }
+        const double gap = std::max(0.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap", Creature::WOUNDED_DRAG_GAP_DEFAULT));
+        followTrail(*dragged, std::max(0.0, mDragTrailArc.back() - gap));
+        if(mCreature.isMoving())
+            return false;
+        if(myTile != mTileDest)
+        {
+            // Normal walking keeps the speed used by carried prisoners and bodies.
+            if(!mCreature.setDestination(mTileDest))
+                return stopDragging(true);
+            return false;
+        }
+        // Finish the recorded trail and let the body reach the gate or grave delivery tile.
+        startLaying(*dragged);
+        return false;
+    }
 
     // A cot taken by hand, or admission that can no longer be paid, sends this same carry to the own bed.
     if(mBuildingDest->getObjectType() == GameEntityType::room && static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary)
@@ -419,6 +487,12 @@ bool CreatureActionCarryEntity::handleDragCreature()
 //! \brief Releases carried cargo and any promised treasury place when the cargo is removed or picked up.
 void CreatureActionCarryEntity::releaseEntity(const std::string& reason)
 {
+    if(mExternalDrag && mBuildingDest != nullptr)
+    {
+        mBuildingDest->notifyCarryingStateChanged(nullptr, mEntityToCarry);
+        mBuildingDest->removeGameEntityListener(this);
+        mBuildingDest = nullptr;
+    }
     if(mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
         static_cast<Room*>(mBuildingDest)->getType() == RoomType::treasury)
         static_cast<RoomTreasury*>(mBuildingDest)->releaseItemDelivery(mEntityToCarry);
@@ -430,6 +504,8 @@ void CreatureActionCarryEntity::releaseEntity(const std::string& reason)
     if(mIsDrag)
     {
         // Pulled creatures were never in the carry node of the worker
+        if(mCorpseDrag)
+            static_cast<Creature*>(mEntityToCarry)->notifyCorpseDragEnd();
         static_cast<Creature*>(mEntityToCarry)->notifyDragEnd();
     }
     else

@@ -2569,6 +2569,16 @@ Ogre::Vector2 Tile::getWorkerDiggingPosition(const Creature& worker) const
     return found == mWorkerDigPositions.end() ? Ogre::Vector2::ZERO : found->second;
 }
 
+//! \brief Returns whether any worker has reserved a digging place on this tile.
+bool Tile::hasWorkerDigging() const
+{
+    for(const auto& face : mWorkersDigging)
+        for(const Creature* worker : face)
+            if(worker != nullptr)
+                return true;
+    return false;
+}
+
 void Tile::canWorkerDig(Creature& worker, std::vector<Tile*>& tiles)
 {
     if(!getIsOnServerMap() || worker.getPositionTile() == nullptr)

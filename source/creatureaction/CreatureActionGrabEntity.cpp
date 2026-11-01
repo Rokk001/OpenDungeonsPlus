@@ -42,9 +42,11 @@ bool infirmaryFirst(Building* building)
 }
 }
 
-CreatureActionGrabEntity::CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry) :
+//! \brief Reserves a cargo entity and remembers a one-task hand-drop override.
+CreatureActionGrabEntity::CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry, bool forced) :
     CreatureAction(creature),
-    mEntityToCarry(&entityToCarry)
+    mEntityToCarry(&entityToCarry),
+    mForced(forced)
 {
     mEntityToCarry->addGameEntityListener(this);
     mEntityToCarry->setCarryLock(mCreature, true);
@@ -59,14 +61,15 @@ CreatureActionGrabEntity::~CreatureActionGrabEntity()
     }
 }
 
+//! \brief Advances the grab while carrying its hand-drop override forward.
 std::function<bool()> CreatureActionGrabEntity::action()
 {
     return std::bind(&CreatureActionGrabEntity::handleGrabEntity,
-        std::ref(mCreature), std::ref(mEntityToCarry));
+        std::ref(mCreature), std::ref(mEntityToCarry), mForced);
 }
 
 //! \brief Rechecks cargo and destination before starting ordinary or mission-item transport.
-bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* entityToCarry)
+bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* entityToCarry, bool forced)
 {
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
@@ -111,7 +114,7 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
             return true;
         }
         creature.popAction();
-        creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *destination));
+        creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *destination, forced));
         return true;
     }
 
@@ -172,7 +175,7 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
     }
 
     creature.popAction();
-    creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *buildingWants));
+    creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *buildingWants, forced));
     return true;
 }
 

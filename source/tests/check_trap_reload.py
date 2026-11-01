@@ -33,7 +33,7 @@ worker = read('source/render/WorkerReactions.cpp')
 config_h = read('source/utils/ConfigManager.h')
 
 # Every value is in the configuration: documented, set, read with a default
-keys = ['TrapReloadByWorkers', 'TrapReloadWorkTurns', 'TrapReloadCostDefault', 'TrapReloadSearchRadius',
+keys = ['TrapReloadByWorkers', 'TrapReloadWorkTurns', 'TrapReloadCostDefault',
         'TrapReloadRetryTurns', 'TrapReloadExperience']
 player = read('source/game/Player.cpp')
 for key in keys:
@@ -46,7 +46,7 @@ assert 'getTrapConfigDoubleOrDefault' in config_h
 assert 'TrapReloadCostPercent' not in traps_cfg + trap + action + player
 price = function_body(trap, 'int32_t Trap::getReloadPrice()')
 doc_start = traps_cfg.index('# <Trap>ReloadCost')
-doc_block = traps_cfg[doc_start:traps_cfg.index('# TrapReloadSearchRadius')]
+doc_block = traps_cfg[doc_start:traps_cfg.index('# TrapReloadRetryTurns')]
 assert 'costPerTile' not in price
 type_keys = {'cannon': 'Cannon', 'spike': 'Spike', 'boulder': 'Boulder', 'fear': 'Fear', 'gas': 'Gas',
              'lightning': 'Lightning', 'fireburst': 'Fireburst', 'freeze': 'Freeze', 'watchBanner': 'WatchBanner',
@@ -83,6 +83,9 @@ assert 'TrapReloadWorkerSharePercent' not in traps_cfg + player
 
 # Server only, own seat, price from the config, paid when the work is done, one worker per tile
 start = function_body(action, 'bool CreatureActionReloadTrap::tryStart(')
+assert 'TrapReloadSearchRadius' not in traps_cfg + action
+assert 'getWorkerTargetLists()' in start and 'WorkerJob::reload' in start
+assert 'squaredDistanceTile' in start and 'bestDist' in start
 assert 'isServerGameMap()' in start and 'trap->getSeat() != creature.getSeat()' in start
 assert 'canBeReloadedByWorker(' in start and 'pathExists(' in start and 'getReloadPrice()' in start
 work = function_body(action, 'bool CreatureActionReloadTrap::handleReloadTrap(')

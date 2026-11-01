@@ -314,11 +314,12 @@ bool RoomInfirmary::wouldAccept(const Creature& creature)
     return false;
 }
 
+//! \brief Accepts eligible own knocked-out creatures for an available cot.
 bool RoomInfirmary::hasCarryEntitySpot(GameEntity* entity)
 {
     if(entity==nullptr || entity->getObjectType()!=GameEntityType::creature || entity->getSeat()!=getSeat()) return false;
     Creature& creature=*static_cast<Creature*>(entity);
-    return creature.isAlive() && creature.getKoTurnCounter()<0 && !creature.getDefinition()->isWorker() && !creature.getDefinition()->isChampion() &&
+    return creature.isAlive() && creature.getKoTurnCounter()<0 && !creature.getDefinition()->isChampion() &&
         !creature.isInPrison() && !getSeat()->isRogueSeat() && getSeat()->getFaction()!="Hero" && findCot(creature,false)!=noCot && canPayAdmission(creature,false);
 }
 

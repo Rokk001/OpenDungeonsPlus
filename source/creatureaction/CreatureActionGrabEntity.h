@@ -27,7 +27,8 @@ class GameEntity;
 class CreatureActionGrabEntity : public CreatureAction, public GameEntityListener
 {
 public:
-    CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry);
+    //! \brief Reserves a cargo entity and remembers a one-task hand-drop override.
+    CreatureActionGrabEntity(Creature& creature, GameEntity& entityToCarry, bool forced = false);
     virtual ~CreatureActionGrabEntity();
 
     CreatureActionType getType() const override
@@ -45,10 +46,12 @@ public:
     GameEntity* getGrabTarget() const { return mEntityToCarry; }
     //! \brief Starts carry only after validating the actual cargo tile and its reachable destination.
     //! \brief Picks a reachable infirmary before a bed for an eligible knockout.
-    static bool handleGrabEntity(Creature& creature, GameEntity* entityToCarry);
+    //! \param forced Whether this grab is the single task forced by a hand drop.
+    static bool handleGrabEntity(Creature& creature, GameEntity* entityToCarry, bool forced);
 
 private:
     GameEntity* mEntityToCarry;
+    bool mForced;
 };
 
 #endif // CREATUREACTIONGRABENTITY_H

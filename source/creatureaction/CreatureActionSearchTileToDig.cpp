@@ -16,6 +16,7 @@
  */
 
 #include "creatureaction/CreatureActionSearchTileToDig.h"
+#include "creatureaction/WorkerSearchTargets.h"
 
 #include "creatureaction/CreatureActionDigTile.h"
 #include "creatureaction/CreatureActionGrabEntity.h"
@@ -49,6 +50,7 @@ std::function<bool()> CreatureActionSearchTileToDig::action()
         std::ref(mCreature), getNbTurns(), mForced);
 }
 
+//! \brief Searches eligible work while the worker retains this job.
 bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, int32_t nbTurns, bool forced)
 {
     if(creature.getDigRate() <= 0.0)
@@ -62,6 +64,21 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         return false;
     }
 
+    if(!forced && creature.getWorkerJob() != WorkerJob::dig)
+    {
+        creature.popAction();
+        if(creature.getGoldCarried() > 0)
+        {
+            TreasuryObject* gold = new TreasuryObject(creature.getGameMap(), creature.getGoldCarried());
+            creature.resetGoldCarried();
+            gold->addToGameMap();
+            gold->createMesh();
+            gold->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(myTile->getX()),
+                static_cast<Ogre::Real>(myTile->getY()), 0.0f));
+        }
+        return true;
+    }
+
     if(!forced)
     {
         // If we are digging tiles for too long, we stop to check if there is
@@ -73,70 +90,42 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         }
     }
 
-    // See if any of the tiles is one of our neighbors
+    // Prefer untouched targets, and optionally gold and gems, before distance.
     Player* tempPlayer = creature.getGameMap()->getPlayerBySeat(creature.getSeat());
-    for (Tile* tempTile : myTile->getAllNeighbors())
-    {
-        if (tempPlayer == nullptr)
-            break;
-
-        if (!tempTile->getMarkedForDigging(tempPlayer))
-            continue;
-
-        // Check if there is still empty space for digging the tile
-        std::vector<Tile*> tiles;
-        tempTile->canWorkerDig(creature, tiles);
-        if(tiles.empty())
-            continue;
-
-        // Check if the position tile is in the list
-        bool isOk = false;
-        for(Tile* tile : tiles)
-        {
-            if(tile != myTile)
-                continue;
-
-            isOk = true;
-            break;
-        }
-
-        if(!isOk)
-            continue;
-        
-        // We found a tile marked by our controlling seat, dig out the tile.
-        creature.pushAction(Utils::make_unique<CreatureActionDigTile>(creature, *tempTile, *myTile));
-        return true;
-    }
-
-    // Find the closest tile to dig
-    float distBest = -1;
+    const bool goldFirst = creature.getSeat()->getWorkerJobSettings().goldFirst != 0;
+    const auto& sight = creature.getTilesWithinSightRadius();
+    int bestGroup = 5;
+    bool bestStanding = false;
+    float distBest = 0.0f;
     Tile* tileToDig = nullptr;
     Tile* tilePos = nullptr;
-    for (Tile* tile : creature.getTilesWithinSightRadius())
+    for(Tile* tile : workerSearchTiles(creature, WorkerJob::dig))
     {
-        // Check to see whether the tile is marked for digging
-        if(!tile->getMarkedForDigging(tempPlayer))
+        if(tile == nullptr || tempPlayer == nullptr || !tile->getMarkedForDigging(tempPlayer))
             continue;
-
-        // and there is still room to work on it
-        std::vector<Tile*> tiles;
-        tile->canWorkerDig(creature, tiles);
-        if(tiles.empty())
-            continue;
-
-        // We search for the closest neighbor tile
-        for (Tile* neighborTile : tiles)
+        const bool gold = tile->getType() == TileType::gold || tile->getType() == TileType::gem;
+        const int group = (goldFirst && !gold ? 2 : 0) + (tile->hasWorkerDigging() ? 1 : 0);
+        std::vector<Tile*> positions;
+        tile->canWorkerDig(creature, positions);
+        for(Tile* standing : positions)
         {
-            if (!creature.getGameMap()->pathExists(&creature, myTile, neighborTile))
+            const bool inSight = std::find(sight.begin(), sight.end(), standing) != sight.end();
+            Seat* owner = standing->getSeat();
+            if(!inSight && owner != nullptr && owner != creature.getSeat() && !owner->isRogueSeat())
                 continue;
-
-            float dist = Pathfinding::squaredDistanceTile(*myTile, *neighborTile);
-            if((distBest != -1) && (distBest <= dist))
+            if(!creature.getGameMap()->pathExists(&creature, myTile, standing))
                 continue;
-
+            const bool here = standing == myTile;
+            float dist = Pathfinding::squaredDistanceTile(*myTile, *standing);
+            if(tileToDig != nullptr && (group > bestGroup ||
+               (group == bestGroup && bestStanding && !here) ||
+               (group == bestGroup && bestStanding == here && dist >= distBest)))
+                continue;
+            bestGroup = group;
+            bestStanding = here;
             distBest = dist;
             tileToDig = tile;
-            tilePos = neighborTile;
+            tilePos = standing;
         }
     }
 

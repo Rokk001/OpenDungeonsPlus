@@ -24,6 +24,7 @@
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "game/WorkerTargets.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "rooms/Room.h"
@@ -39,6 +40,34 @@
 static const int32_t ROOM_RANK_TOILET = 0;
 //! \brief Rank of every other room.
 static const int32_t ROOM_RANK_OTHER = 1;
+
+//! \brief Counts existing cleaner reservations on a tile or for room dirt.
+static uint32_t activeCleaners(Creature& worker, Tile* tile, Room* room)
+{
+    uint32_t count = 0;
+    for(Creature* other : worker.getGameMap()->getCreaturesBySeat(worker.getSeat()))
+        for(const auto& action : other->getActions())
+        {
+            if(action->getType() != CreatureActionType::cleanTile)
+                continue;
+            const CreatureActionCleanTile& cleaning = static_cast<const CreatureActionCleanTile&>(*action);
+            if(room == nullptr ? &cleaning.getTileClean() == tile :
+               (!cleaning.cleansPile() && cleaning.getTileClean().getCoveringRoom() == room))
+                ++count;
+        }
+    return count;
+}
+
+//! \brief Tests whether the keeper's current clean targets contain this tile or room.
+static bool isCleanTarget(Creature& worker, Tile* tile, WorkerTargetKind kind)
+{
+    for(const WorkerTarget& target : worker.getSeat()->getWorkerTargetLists()[static_cast<size_t>(WorkerJob::clean)])
+        if(target.kind == kind && target.tile != nullptr &&
+           (target.tile == tile || (kind == WorkerTargetKind::room &&
+            target.tile->getCoveringRoom() == tile->getCoveringRoom())))
+            return true;
+    return false;
+}
 
 CreatureActionSearchDirtToClean::CreatureActionSearchDirtToClean(Creature& creature) :
     CreatureAction(creature)
@@ -95,6 +124,8 @@ static Tile* findPileTile(Creature& creature, Tile* myTile)
 
         if(!CreatureActionSearchDirtToClean::isPileCleanable(*tile))
             continue;
+        if(!isCleanTarget(creature, tile, WorkerTargetKind::pile) || activeCleaners(creature, tile, nullptr) != 0)
+            continue;
 
         float dist = Pathfinding::squaredDistanceTile(*myTile, *tile);
         if((bestTile != nullptr) && (bestDist <= dist))
@@ -126,7 +157,10 @@ static Tile* findDirtiestReachableTile(Creature& creature, Tile* myTile, Room* r
     std::vector<Tile*> dirtyTiles;
     for(Tile* tile : room->getCoveredTiles())
     {
-        if(tile->getDirt() > 0.0)
+        if(tile->getDirt() > 0.0 && activeCleaners(creature, tile, nullptr) == 0 &&
+           DirtPileEntity::getEntityOnTile(tile, DirtPileKind::pile) == nullptr &&
+           DirtPileEntity::getEntityOnTile(tile, DirtPileKind::vomit) == nullptr &&
+           DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones) == nullptr)
             dirtyTiles.push_back(tile);
     }
 
@@ -155,13 +189,17 @@ static Tile* findRoomTile(Creature& creature, Tile* myTile)
 
         if(!room->needsCleaning())
             continue;
+        const uint32_t perCleaner = ConfigManager::getSingleton().getWorkerCleanTilesPerCleaner();
+        const uint32_t capacity = (static_cast<uint32_t>(room->numCoveredTiles()) + perCleaner - 1) / perCleaner;
+        if(activeCleaners(creature, nullptr, room) >= capacity)
+            continue;
 
         int32_t rank = getRoomRank(room);
         if(rank > bestRank)
             continue;
 
         Tile* tile = findDirtiestReachableTile(creature, myTile, room);
-        if(tile == nullptr)
+        if(tile == nullptr || !isCleanTarget(creature, tile, WorkerTargetKind::room))
             continue;
 
         float dist = Pathfinding::squaredDistanceTile(*myTile, *tile);
@@ -196,6 +234,8 @@ static Tile* findCorridorTile(Creature& creature, Tile* myTile)
             bool hasBlood = (DirtPileEntity::getEntityOnTile(tile, DirtPileKind::blood) != nullptr);
             if(!hasBlood && (tile->getDirt() < filthyDirt))
                 continue;
+            if(!isCleanTarget(creature, tile, WorkerTargetKind::corridor) || activeCleaners(creature, tile, nullptr) != 0)
+                continue;
 
             float dist = Pathfinding::squaredDistanceTile(*myTile, *tile);
             if((bestTile != nullptr) && (bestDist <= dist))
@@ -212,8 +252,14 @@ static Tile* findCorridorTile(Creature& creature, Tile* myTile)
     return bestTile;
 }
 
+//! \brief Searches the keeper's cleaning targets while the worker retains its job.
 bool CreatureActionSearchDirtToClean::handleSearchDirtToClean(Creature& creature, int32_t nbTurns)
 {
+    if(creature.getWorkerJob() != WorkerJob::clean)
+    {
+        creature.popAction();
+        return true;
+    }
     Tile* myTile = creature.getPositionTile();
     if(myTile == nullptr)
     {
