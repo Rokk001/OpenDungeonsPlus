@@ -45,7 +45,7 @@ class KeeperAI : public BaseAI
 public:
     //! \brief Creates a keeper with the selected level's configured mind and interim legacy defaults.
     KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type);
-    //! \brief Advances the mind and the legacy paths until their owners replace them.
+    //! \brief Advances the mind and the keeper's war state.
     virtual bool doTurn(double timeSinceLastTurn);
     //! \brief The map this AI plays on, for the decision functions of the SPELL and TRAP namespaces.
     GameMap& getGameMap() { return mGameMap; }

@@ -1,4 +1,5 @@
 #include "ai/AiEconomy.h"
+#include "ODApplication.h"
 
 #include "ai/AiActions.h"
 #include "ai/AiKnowledge.h"
@@ -14,11 +15,13 @@
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
+#include "rooms/RoomDungeonTemple.h"
 #include "rooms/RoomType.h"
 #include "spells/SpellSummonWorker.h"
 #include "spells/SpellType.h"
 #include "traps/Trap.h"
 #include "utils/ConfigManager.h"
+#include "utils/Helper.h"
 #include "utils/Random.h"
 
 #include <algorithm>
@@ -68,6 +71,18 @@ Tile* castTile(KeeperAI& ai)
     return nullptr;
 }
 
+//! \brief Casts a worker when the shared summon conditions are met.
+void summonWorker(KeeperAI& ai)
+{
+    Player& player = ai.getControlledPlayer();
+    Seat* seat = player.getSeat();
+    double price = SpellSummonWorker::getNextWorkerPriceForPlayer(&ai.getGameMap(), &player);
+    if(seat->getNumCreaturesWorkers() < key("SummonWorkersMax") && seat->getMana() > key("SummonManaFactor") * price &&
+        seat->getManaIncomePerSecond() > key("SummonIncomeMin") && SkillManager::isSpellAvailable(SpellType::summonWorker, seat) &&
+        player.getSpellCooldownTurns(SpellType::summonWorker) == 0 && castTile(ai) != nullptr)
+        ACTS::castSpell(ai, SpellType::summonWorker, castTile(ai));
+}
+
 //! \brief Checks research, cooldown and the mana reserve of Create Gold.
 bool canCreateGold(KeeperAI& ai)
 {
@@ -100,6 +115,38 @@ void restoreReserve(KeeperAI& ai)
     }
 }
 
+//! \brief Restores successful room actions in their original order.
+void restoreRoomBlocks(KeeperAI& ai)
+{
+    ECON::EconomyState& state = ai.getEconomyState();
+    if(state.blocksRestored)
+        return;
+    state.blocksRestored = true;
+    GameMap& map = ai.getGameMap();
+    for(const AiMath::AiStateLine& line : ai.getMind().savedRows())
+    {
+        if(line.tag != "draw" || line.tokens.size() != 3 || line.tokens[0] != "A08" || line.tokens[1] != "block")
+            continue;
+        std::string data = line.tokens[2];
+        std::replace(data.begin(), data.end(), ',', ' ');
+        std::istringstream input(data);
+        int type;
+        ECON::RoomBlock block;
+        if(!(input >> type >> block.plannedTiles))
+            continue;
+        block.type = static_cast<RoomType>(type);
+        int x, y;
+        while(input >> x >> y)
+        {
+            Tile* tile = map.getTile(x, y);
+            if(tile != nullptr)
+                block.tiles.push_back(tile);
+        }
+        if(!block.tiles.empty())
+            state.roomBlocks.push_back(block);
+    }
+}
+
 //! \brief Draws the next reserve-slip window once for the delivered payday.
 void payday(KeeperAI& ai, const AiEvent&)
 {
@@ -116,7 +163,7 @@ void payday(KeeperAI& ai, const AiEvent&)
     state.reserveSlipAt = state.reserveUntil - period + start;
 }
 
-//! \brief Returns known own land where another walker can enter.
+//! \brief Returns known own entrances and the keeper's known tunnel breakthrough.
 std::vector<Tile*> entrances(KeeperAI& ai)
 {
     std::vector<Tile*> result;
@@ -140,6 +187,16 @@ std::vector<Tile*> entrances(KeeperAI& ai)
             }
         }
     }
+    Tile* breakthrough = ai.getRoomsState().breakthrough;
+    if(knowledge.isKnown(breakthrough) && std::find(result.begin(), result.end(), breakthrough) == result.end())
+        result.push_back(breakthrough);
+    for(const AiMath::AiStateLine& line : ai.getMind().savedRows())
+        if(line.tag == "war" && line.tokens.size() == 8 && line.tokens[0] == "tunnel")
+        {
+            Tile* tile = map.getTile(Helper::toInt(line.tokens[5]), Helper::toInt(line.tokens[6]));
+            if(knowledge.isKnown(tile) && std::find(result.begin(), result.end(), tile) == result.end())
+                result.push_back(tile);
+        }
     return result;
 }
 }
@@ -150,12 +207,22 @@ namespace
 void saveEconomy(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
     restoreReserve(ai);
+    restoreRoomBlocks(ai);
     const std::function<bool(const AiMath::AiStateLine&)> owned = [](const AiMath::AiStateLine& line)
     {
-        return line.tag == "draw" && !line.tokens.empty() && line.tokens[0] == "A04";
+        return line.tag == "draw" && !line.tokens.empty() &&
+            (line.tokens[0] == "A04" || (line.tokens[0] == "A08" && line.tokens.size() == 3 && line.tokens[1] == "block"));
     };
     lines.erase(std::remove_if(lines.begin(), lines.end(), owned), lines.end());
     const ECON::EconomyState& state = ai.getEconomyState();
+    for(const ECON::RoomBlock& block : state.roomBlocks)
+    {
+        std::ostringstream data;
+        data << static_cast<int>(block.type) << ',' << block.plannedTiles;
+        for(Tile* tile : block.tiles)
+            data << ',' << tile->getX() << ',' << tile->getY();
+        lines.push_back({"draw", {"A08", "block", data.str()}});
+    }
     if(state.reserveUntil > ai.getMind().now())
     {
         std::ostringstream from, until;
@@ -169,18 +236,28 @@ void saveEconomy(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 
 }
 
-//! \brief Reports the empty mining queue only when a worker exists.
-bool noMarkedTiles(KeeperAI& ai)
-{
-    return ai.getControlledPlayer().getSeat()->getNumCreaturesWorkers() > 0 &&
-        ai.getControlledPlayer().getNbMarkedTiles() == 0;
 }
 
-//! \brief Reports whether the treasury cannot cover the next wage bill.
-bool belowBill(KeeperAI& ai)
+//! \brief Records the tiles built by one successful room action in chronological order.
+void ECON::recordRoomBlock(KeeperAI& ai, RoomType type, uint32_t plannedTiles, const std::vector<Tile*>& tiles)
 {
-    return ai.getControlledPlayer().getSeat()->getGold() < ECON::wageBill(ai);
+    if(tiles.empty())
+        return;
+    forgetRoomTiles(ai, tiles);
+    RoomBlock block;
+    block.type = type;
+    block.plannedTiles = plannedTiles;
+    block.tiles = tiles;
+    ai.getEconomyState().roomBlocks.push_back(block);
 }
+
+//! \brief Forgets room tiles when they are removed or transferred to another keeper.
+void ECON::forgetRoomTiles(KeeperAI& ai, const std::vector<Tile*>& tiles)
+{
+    restoreRoomBlocks(ai);
+    for(RoomBlock& block : ai.getEconomyState().roomBlocks)
+        for(Tile* tile : tiles)
+            block.tiles.erase(std::remove(block.tiles.begin(), block.tiles.end(), tile), block.tiles.end());
 }
 
 //! \brief Registers the economy triggers without drawing mistakes during registration.
@@ -188,13 +265,11 @@ void ECON::bind(KeeperAI& ai)
 {
     Mind& mind = ai.getMind();
     mind.onLook("A01", key("LookPeriod60") / key("ReferenceScanPeriod"), std::bind(digQueueWatch, std::ref(ai)));
-    mind.onPoll("A01", AiEventType::NoMarkedTile, std::bind(noMarkedTiles, std::ref(ai)));
     mind.onEvent("A01", {AiEventType::NoMarkedTile}, std::bind(digQueueWatch, std::ref(ai)));
     mind.onLook("A02", key("LookPeriod120") / key("ReferenceScanPeriod"), std::bind(claimWatch, std::ref(ai)));
     mind.onLook("A03", key("LookFactorSummon"), std::bind(summonWatch, std::ref(ai)));
     mind.onLook("A04", key("LookPeriod600") / key("ReferenceScanPeriod"), std::bind(walletGate, std::ref(ai), 0.0));
     mind.onEvent("A04", {AiEventType::Payday}, std::bind(payday, std::ref(ai), std::placeholders::_1));
-    mind.onPoll("A05", AiEventType::GoldBelowBill, std::bind(belowBill, std::ref(ai)));
     mind.onEvent("A05", {AiEventType::GoldBelowBill}, std::bind(castCreateGold, std::ref(ai), false));
     mind.onLook("A06", key("LookPeriod120") / key("ReferenceScanPeriod"), std::bind(goldCapacityWatch, std::ref(ai)));
     mind.onLook("A07", key("LookPeriod60") / key("ReferenceScanPeriod"), std::bind(manaCapWatch, std::ref(ai)));
@@ -207,7 +282,8 @@ double ECON::wageBill(KeeperAI& ai)
 {
     double bill = 0.0;
     for(Creature* creature : ai.getGameMap().getCreaturesBySeat(ai.getControlledPlayer().getSeat()))
-        bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
+        if(!creature->getDefinition()->isWorker())
+            bill += creature->getDefinition()->getFee(creature->getLevel()) + creature->getGoldFee();
     return bill;
 }
 
@@ -218,7 +294,8 @@ void ECON::digQueueWatch(KeeperAI& ai)
     if(ai.getMind().slip("A01"))
         return;
     Player& player = ai.getControlledPlayer();
-    double share = ai.getMind().now() / 60.0 < key("MinerShareSwitchMinute") ? key("MinerShareEarly") : key("MinerShareLate");
+    const double gameMinutes = ai.getGameMap().getTurnNumber() / (static_cast<double>(ODApplication::turnsPerSecond) * 60.0);
+    double share = gameMinutes < key("MinerShareSwitchMinute") ? key("MinerShareEarly") : key("MinerShareLate");
     int wanted = static_cast<int>(std::ceil(key("MarkedTilesPerWorker") * share * player.getSeat()->getNumCreaturesWorkers())) - player.getNbMarkedTiles();
     if(wanted <= 0)
         return;
@@ -232,7 +309,7 @@ void ECON::digQueueWatch(KeeperAI& ai)
         for(int y = 0; y < map.getMapSizeY(); ++y)
         {
             Tile* tile = map.getTile(x, y);
-            if(!knowledge.isKnown(tile) || tile->getType() != TileType::gold || !tile->isDiggable(player.getSeat()) || tile->getMarkedForDigging(&player))
+            if(!knowledge.isKnown(tile) || tile->getType() != TileType::gold || !tile->isDiggable(player.getSeat()))
                 continue;
             for(Tile* treasury : treasuries)
             {
@@ -303,9 +380,13 @@ void ECON::claimWatch(KeeperAI& ai)
             }
         }
     }
-    const std::function<bool(Tile*, Tile*)> nearest = [&heart](Tile* first, Tile* second)
+    const std::vector<Room*> temples = map.getRoomsByTypeAndSeat(RoomType::dungeonTemple, seat);
+    Tile* heartTile = temples.empty() ? nullptr : static_cast<RoomDungeonTemple*>(temples.front())->getHeartTile();
+    if(heartTile == nullptr)
+        return;
+    const std::function<bool(Tile*, Tile*)> nearest = [heartTile](Tile* first, Tile* second)
     {
-        return distance(first, heart.front()) < distance(second, heart.front());
+        return distance(first, heartTile) < distance(second, heartTile);
     };
     std::sort(candidates.begin(), candidates.end(), nearest);
     size_t wanted = static_cast<size_t>(std::ceil(key("MarkedTilesPerWorker") * seat->getNumCreaturesWorkers()));
@@ -322,13 +403,7 @@ void ECON::summonWatch(KeeperAI& ai)
     // AI row E01
     if(ai.getMind().slip("A03"))
         return;
-    Player& player = ai.getControlledPlayer();
-    Seat* seat = player.getSeat();
-    double price = SpellSummonWorker::getNextWorkerPriceForPlayer(&ai.getGameMap(), &player);
-    if(seat->getNumCreaturesWorkers() < key("SummonWorkersMax") && seat->getMana() > key("SummonManaFactor") * price &&
-        seat->getManaIncomePerSecond() > key("SummonIncomeMin") && SkillManager::isSpellAvailable(SpellType::summonWorker, seat) &&
-        player.getSpellCooldownTurns(SpellType::summonWorker) == 0 && castTile(ai) != nullptr)
-        ACTS::castSpell(ai, SpellType::summonWorker, castTile(ai));
+    summonWorker(ai);
 }
 
 //! \brief Applies the one saved reserve draw to every purchase without drawing again.
@@ -339,16 +414,16 @@ bool ECON::walletGate(KeeperAI& ai, double cost)
     restoreReserve(ai);
     const EconomyState& state = ai.getEconomyState();
     double now = ai.getMind().now();
-    bool ignore = state.reserveSlipAt >= 0.0 && now >= state.reserveSlipAt && now < state.reserveUntil;
+    bool ignore = now >= state.reserveSlipAt && now < state.reserveUntil;
     return ai.getControlledPlayer().getSeat()->getGold() >= cost + key("RoomGoldMargin") + (ignore ? 0.0 : wageBill(ai)) + TRAP::reloadMargin(ai);
 }
 
-//! \brief Casts the shared gold spell with its configured reserve and mistake.
+//! \brief Casts gold with its reserve and draws a mistake only for the wage trigger.
 void ECON::castCreateGold(KeeperAI& ai, bool surplus)
 {
     // AI row A05
     // AI row E13
-    bool mistaken = ai.getMind().slip("A05");
+    bool mistaken = !surplus && ai.getMind().slip("A05");
     if(!canCreateGold(ai))
         return;
     Seat* seat = ai.getControlledPlayer().getSeat();
@@ -380,7 +455,7 @@ void ECON::goldCapacityWatch(KeeperAI& ai)
         }
     }
     if(first > 0 && roomTiles(ai, RoomType::treasury).size() >= required)
-        ROOMS::placeRoom(ai, RoomType::treasury, first);
+        ROOMS::placeRoom(ai, RoomType::treasury, first, true);
 }
 
 //! \brief Tries gold, then the most wounded own-ground creature, then a worker.
@@ -406,7 +481,7 @@ void ECON::manaCapWatch(KeeperAI& ai)
     {
         Tile* tile = creature->getPositionTile();
         double share = creature->getHP() / std::max(1.0, creature->getMaxHp());
-        if(tile != nullptr && tile->isClaimedForSeat(seat) && creature->getHP() > 0.0 && share < lowest)
+        if(creature->getIsOnMap() && tile != nullptr && tile->isClaimedForSeat(seat) && creature->getHP() > 0.0 && share < lowest)
         {
             lowest = share;
             hurt = creature;
@@ -418,7 +493,7 @@ void ECON::manaCapWatch(KeeperAI& ai)
         ACTS::castSpell(ai, SpellType::creatureHeal, hurt);
         return;
     }
-    summonWatch(ai);
+    summonWorker(ai);
 }
 
 //! \brief Sells only specified redundant rooms or distant traps unless the sale mistake occurs.
@@ -432,6 +507,7 @@ void ECON::sellObsolete(KeeperAI& ai)
     if(seat->getGold() >= wageBill(ai))
         return;
     std::vector<std::pair<RoomType, uint32_t>> plan = KeeperAI::getRoomPlan();
+    restoreRoomBlocks(ai);
     if(mistaken)
     {
         for(std::vector<std::pair<RoomType, uint32_t>>::reverse_iterator entry = plan.rbegin(); entry != plan.rend(); ++entry)
@@ -439,7 +515,23 @@ void ECON::sellObsolete(KeeperAI& ai)
             std::vector<Room*> rooms = ai.getGameMap().getRoomsByTypeAndSeat(entry->first, seat);
             if(!rooms.empty())
             {
-                ACTS::sellRoomTiles(ai, rooms.back()->getCoveredTiles());
+                const std::vector<RoomBlock>& blocks = ai.getEconomyState().roomBlocks;
+                for(Room* room : rooms)
+                    for(Tile* tile : room->getCoveredTiles())
+                    {
+                        bool recorded = false;
+                        for(const RoomBlock& block : blocks)
+                            if(block.type == entry->first && std::find(block.tiles.begin(), block.tiles.end(), tile) != block.tiles.end())
+                                recorded = true;
+                        if(!recorded)
+                            return;
+                    }
+                for(auto block = blocks.rbegin(); block != blocks.rend(); ++block)
+                    if(block->type == entry->first && !block->tiles.empty())
+                    {
+                        ACTS::sellRoomTiles(ai, block->tiles);
+                        break;
+                    }
                 return;
             }
         }

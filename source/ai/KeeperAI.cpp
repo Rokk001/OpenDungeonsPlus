@@ -98,7 +98,8 @@ static const int NORMAL_MIN_CREATURE_LEVEL = 4;
 
 
 
-//! \brief Creates a keeper whose mind reads the selected level's configured values and binds the spell and trap rows to it.
+
+//! \brief Creates a keeper and binds its economy, room, research, war, spell and trap decisions.
 KeeperAI::KeeperAI(GameMap& gameMap, Player& player, KeeperAIType type) :
     BaseAI(gameMap, player),
     mReactionPercent(NORMAL_REACTION_PERCENT),
@@ -156,7 +157,7 @@ int KeeperAI::scaledCooldown(int min, int max) const
     return Random::Int((min * mReactionPercent) / 100, (max * mReactionPercent) / 100);
 }
 
-//! \brief Advances the shared mind and the paths still waiting for their owner packages.
+//! \brief Advances the shared mind and the keeper's war state.
 bool KeeperAI::doTurn(double timeSinceLastTurn)
 {
     // If we have no dungeon temple, we are dead

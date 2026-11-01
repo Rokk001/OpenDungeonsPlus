@@ -318,7 +318,8 @@ void prepareRoom(KeeperAI& ai, const std::vector<Tile*>& tiles)
 }
 
 //! \brief Chooses a known room position once and retains it while workers prepare the ground.
-bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
+//! \param onlyMatchingPending Leave a pending block of another type to its own caller.
+bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count, bool onlyMatchingPending)
 {
     // AI row B23
     restoreRooms(ai);
@@ -328,6 +329,8 @@ bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
     const AiKnowledge known(map, seat);
     if(!state.pendingTiles.empty())
     {
+        if(onlyMatchingPending && state.pendingType != type)
+            return true;
         bool completed = true;
         bool buildable = true;
         for(Tile* tile : state.pendingTiles)
@@ -346,7 +349,8 @@ bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
         }
         else
         {
-            if(buildable && ECON::walletGate(ai, roomCost(ai, state.pendingType, static_cast<uint32_t>(state.pendingTiles.size()))))
+            if(buildable && !ACTS::isRoomBuildPending(ai, state.pendingType, state.pendingTiles) &&
+               ECON::walletGate(ai, roomCost(ai, state.pendingType, static_cast<uint32_t>(state.pendingTiles.size()))))
                 ACTS::buildRoom(ai, state.pendingType, state.pendingTiles);
             return true;
         }
@@ -394,7 +398,7 @@ bool ROOMS::placeRoom(KeeperAI& ai, RoomType type, uint32_t count)
     bool ready = true;
     for(Tile* tile : state.pendingTiles)
         ready = ready && tile->isBuildableUpon(seat);
-    if(ready)
+    if(ready && !ACTS::isRoomBuildPending(ai, type, state.pendingTiles))
         ACTS::buildRoom(ai, type, state.pendingTiles);
     return true;
 }
@@ -415,13 +419,13 @@ void ROOMS::buildNext(KeeperAI& ai)
     // AI row G01
     restoreRooms(ai);
     State& state = ai.getRoomsState();
+    if(ai.getMind().slip("B01"))
+        return;
     if(!state.pendingTiles.empty())
     {
         if(placeRoom(ai, state.pendingType, static_cast<uint32_t>(state.pendingTiles.size())))
             return;
     }
-    if(ai.getMind().slip("B01"))
-        return;
     const std::vector<std::pair<RoomType, uint32_t>> plan = KeeperAI::getRoomPlan();
     Seat* seat = ai.getControlledPlayer().getSeat();
     std::map<RoomType, uint32_t> expected;
@@ -446,17 +450,21 @@ void ROOMS::buildNext(KeeperAI& ai)
         uint32_t count = entry.second;
         if(entry.first == RoomType::dormitory)
         {
-            if(state.dormitoryFirst < 0)
+            if(state.dormitoryFirst < 0 && roomTiles(ai, entry.first) < entry.second &&
+               SkillManager::isRoomAvailable(entry.first, seat))
                 state.dormitoryFirst = ai.getMind().slip("B02") ?
                     static_cast<int>(roomKey("MistakeTilesDormitory")) : static_cast<int>(entry.second);
-            count = static_cast<uint32_t>(state.dormitoryFirst);
+            if(state.dormitoryFirst >= 0)
+                count = static_cast<uint32_t>(state.dormitoryFirst);
         }
         if(entry.first == RoomType::hatchery)
         {
-            if(state.hatcheryFirst < 0)
+            if(state.hatcheryFirst < 0 && roomTiles(ai, entry.first) < entry.second &&
+               SkillManager::isRoomAvailable(entry.first, seat))
                 state.hatcheryFirst = ai.getMind().slip("B03") ?
                     static_cast<int>(roomKey("MistakeTilesHatchery")) : static_cast<int>(entry.second);
-            count = static_cast<uint32_t>(state.hatcheryFirst);
+            if(state.hatcheryFirst >= 0)
+                count = static_cast<uint32_t>(state.hatcheryFirst);
         }
         expected[entry.first] += count;
         if(roomTiles(ai, entry.first) >= expected[entry.first])
@@ -484,16 +492,15 @@ void ROOMS::bedWatch(KeeperAI& ai)
         return;
     State& state = ai.getRoomsState();
     const int population = seat->getNumCreaturesFighters();
-    if(state.bedPopulation != population || state.needFired)
+    if(state.bedPopulation != population || state.bedDue < 0.0)
     {
         state.bedPopulation = population;
-        state.bedDue = ai.getMind().now() + (ai.getMind().slip("B02") ? roomDelay(ai, true) : 0.0);
+        state.bedDue = ai.getMind().now() + roomDelay(ai, ai.getMind().slip("B02"));
     }
     if(state.bedDue < 0.0 || ai.getMind().now() < state.bedDue ||
         (!state.pendingTiles.empty() && state.pendingType != RoomType::dormitory))
         return;
-    if(placeRoom(ai, RoomType::dormitory, static_cast<uint32_t>(roomKey("DormitoryExtensionTiles"))))
-        state.bedDue = -1.0;
+    placeRoom(ai, RoomType::dormitory, static_cast<uint32_t>(roomKey("DormitoryExtensionTiles")));
 }
 
 //! \brief Extends food coverage by the configured shortage-clamped block size.
@@ -505,16 +512,19 @@ void ROOMS::hatcheryWatch(KeeperAI& ai)
     const uint32_t have = roomTiles(ai, RoomType::hatchery);
     if(have == 0)
         return;
-    const double need = ai.getControlledPlayer().getSeat()->getNumCreaturesFighters() * roomKey("HatcheryTilesPerCreature") - have;
-    if(need <= 0)
-        return;
+    const int creatures = ai.getControlledPlayer().getSeat()->getNumCreaturesFighters();
     State& state = ai.getRoomsState();
-    if(state.foodDue < 0.0 || state.needFired)
+    if(state.foodDue < 0.0)
+    {
+        if(creatures <= 0 || have >= static_cast<uint32_t>(creatures))
+            return;
         state.foodDue = ai.getMind().now() + roomDelay(ai, true) +
             (ai.getMind().slip("B03") ? roomDelay(ai, true) : 0.0);
+    }
     if(ai.getMind().now() < state.foodDue ||
         (!state.pendingTiles.empty() && state.pendingType != RoomType::hatchery))
         return;
+    const double need = creatures - have * roomKey("HatcheryTilesPerCreature");
     if(placeRoom(ai, RoomType::hatchery, static_cast<uint32_t>(std::min(roomKey("HatcheryExtensionMaxTiles"),
         std::max(roomKey("HatcheryExtensionMinTiles"), need)))))
         state.foodDue = -1.0;
@@ -595,7 +605,8 @@ void ROOMS::bridgeWatch(KeeperAI& ai)
             }
         if(bridge.empty())
             continue;
-        const RoomType type = lava ? RoomType::bridgeStone : RoomType::bridgeWooden;
+        const RoomType type = lava && SkillManager::isRoomAvailable(RoomType::bridgeStone, seat)
+            ? RoomType::bridgeStone : RoomType::bridgeWooden;
         if(!SkillManager::isRoomAvailable(type, seat) ||
             !ECON::walletGate(ai, bridge.size() * RoomManager::costPerTile(type)))
             return;
@@ -606,6 +617,16 @@ void ROOMS::bridgeWatch(KeeperAI& ai)
 
 namespace
 {
+//! \brief Executes a pending hatchery extension when its symptom delay has elapsed.
+bool pendingHatchery(KeeperAI& ai)
+{
+    restoreRooms(ai);
+    const double due = ai.getRoomsState().foodDue;
+    if(due >= 0.0 && ai.getMind().now() >= due)
+        ROOMS::hatcheryWatch(ai);
+    return false;
+}
+
 //! \brief Registers one room event without adding a second reaction delay.
 void roomEvent(KeeperAI& ai, void (*perform)(KeeperAI&), const AiEvent&)
 {
@@ -638,10 +659,24 @@ void roomMoodEvent(KeeperAI& ai, void (*perform)(KeeperAI&), const AiEvent& even
         perform(ai);
 }
 
-//! \brief Ignores destroyed traps and restarts room building only for a lost room.
+//! \brief Resets lost room decisions and restarts room building only for a lost room.
 void lostRoomEvent(KeeperAI& ai, const AiEvent& event)
 {
-    if(event.type == AiEventType::RoomLost || event.amount == static_cast<double>(GameEntityType::room))
+    const bool roomDestroyed = event.type == AiEventType::BuildingDestroyed &&
+        event.amount == static_cast<double>(GameEntityType::room);
+    if(event.type == AiEventType::RoomLost || roomDestroyed)
+    {
+        restoreRooms(ai);
+        ROOMS::State& state = ai.getRoomsState();
+        const int lostType = event.type == AiEventType::RoomLost ? static_cast<int>(event.amount) : event.roomType;
+        if(state.pendingTiles.empty() && lostType == static_cast<int>(RoomType::dormitory) &&
+           roomTiles(ai, RoomType::dormitory) == 0)
+            state.dormitoryFirst = -1;
+        if(state.pendingTiles.empty() && lostType == static_cast<int>(RoomType::hatchery) &&
+           roomTiles(ai, RoomType::hatchery) == 0)
+            state.hatcheryFirst = -1;
+    }
+    if(event.type == AiEventType::RoomLost || roomDestroyed)
         ROOMS::rebuildLost(ai);
 }
 }
@@ -665,8 +700,9 @@ void ROOMS::bind(KeeperAI& ai)
     mind.onLook("B17", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(ghostProduct, std::ref(ai)));
     mind.onLook("B24", roomKey("LookPeriod600") / roomKey("ReferenceScanPeriod"), std::bind(auditSettings, std::ref(ai)));
     mind.onEvent("B02", {AiEventType::CreatureArrived, AiEventType::NoBed}, std::bind(needRoomEvent, std::ref(ai), RoomType::dormitory, std::placeholders::_1));
-    mind.onEvent("B03", {AiEventType::CreatureArrived, AiEventType::FirstPortalArrival, AiEventType::NoFood},
+    mind.onEvent("B03", {AiEventType::FirstPortalArrival, AiEventType::NoFood},
         std::bind(needRoomEvent, std::ref(ai), RoomType::hatchery, std::placeholders::_1));
+    mind.onPoll("B03", AiEventType::NoFood, std::bind(pendingHatchery, std::ref(ai)));
     mind.onEvent("B09", {AiEventType::CreatureMood}, std::bind(roomMoodEvent, std::ref(ai), auditCasino, std::placeholders::_1));
     mind.onEvent("B10", {AiEventType::Dirt}, std::bind(roomEvent, std::ref(ai), toiletWatch, std::placeholders::_1));
     mind.onEvent("B13", {AiEventType::PotionReady}, std::bind(roomEvent, std::ref(ai), auditLab, std::placeholders::_1));
@@ -916,6 +952,7 @@ void templeSacrifice(KeeperAI& ai)
             for(Creature* creature : fighters)
             {
                 if(creature->getDefinition()->getClassName() != className ||
+                    !creature->tryPickup(seat) ||
                     std::find(chosen.begin(), chosen.end(), creature) != chosen.end() ||
                     (!mistake && creature->getLevel() >= median))
                     continue;

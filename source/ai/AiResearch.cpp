@@ -17,6 +17,7 @@
 
 #include "ai/AiResearch.h"
 
+#include "ODApplication.h"
 #include "ai/AiActions.h"
 #include "ai/AiMath.h"
 #include "ai/AiMind.h"
@@ -26,6 +27,7 @@
 #include "game/Skill.h"
 #include "game/SkillManager.h"
 #include "game/SkillType.h"
+#include "gamemap/GameMap.h"
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 
@@ -118,12 +120,6 @@ void tunnelOpenEvent(KeeperAI& ai, const AiEvent&)
     stateFor(ai).mTunnelOpen = true;
 }
 
-//! \brief Reports whether this keeper's library lacks a queued entry.
-bool queueEmpty(KeeperAI& ai)
-{
-    return ai.getControlledPlayer().getSeat()->getSkillPending().empty();
-}
-
 //! \brief Saves the known tunnel and the remaining retry delay for clock-relative restoration.
 void saveState(KeeperAI& ai, std::vector<AiMath::AiStateLine>& lines)
 {
@@ -181,7 +177,8 @@ SkillType chooseResearch(KeeperAI& ai)
         return cheaper(seat, left, right);
     };
     std::sort(candidates.begin(), candidates.end(), order);
-    if(ai.getMind().now() / 60.0 < cfg.getAiConfigDouble("AttackMinMinute") && !state.mTunnelOpen)
+    if(ai.getGameMap().getTurnNumber() / (static_cast<double>(ODApplication::turnsPerSecond) * 60.0) <
+        cfg.getAiConfigDouble("AttackMinMinute") && !state.mTunnelOpen)
     {
         const std::vector<SkillType> defence = {SkillType::roomWorkshop, SkillType::trapSpike,
             SkillType::trapCannon, SkillType::trapGas, SkillType::trapDoorIronbound,
@@ -247,7 +244,6 @@ void bind(KeeperAI& ai)
         std::bind(refillQueue, std::ref(ai)));
     ai.getMind().onEvent("C01", {AiEventType::NoSkillInQueue},
         std::bind(queueEmptyEvent, std::ref(ai), std::placeholders::_1));
-    ai.getMind().onPoll("C02", AiEventType::NoSkillInQueue, std::bind(queueEmpty, std::ref(ai)));
     ai.getMind().onEvent("C03", {AiEventType::TunnelOpen},
         std::bind(tunnelOpenEvent, std::ref(ai), std::placeholders::_1));
     ai.getMind().onSave(std::bind(saveState, std::ref(ai), std::placeholders::_1));
