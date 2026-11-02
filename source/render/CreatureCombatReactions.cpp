@@ -305,6 +305,26 @@ double sTickTimer = 0.0;
 uint32_t sNextFallenId = 0;
 
 //! \brief Returns the combat state of the creature with that name and creates it (calm, as of now) if it is new
+//! \brief True while the creature plays a seated tavern clip: a weapon in its hand would reach through the table
+bool playsSeatClip(const Creature* creature)
+{
+    const Ogre::AnimationState* animState = creature->getAnimationState();
+    return (animState != nullptr) && EntityAnimation::isSeatClip(animState->getAnimationName());
+}
+
+//! \brief Shows or hides the models of both weapons of the creature
+void setWeaponsVisible(const Creature* creature, bool visible)
+{
+    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
+    const char* hands[2] = {"L", "R"};
+    for(uint32_t i = 0; i < 2; ++i)
+    {
+        std::string entityName = weaponEntityName(creature, hands[i]);
+        if(sceneManager->hasEntity(entityName))
+            sceneManager->getEntity(entityName)->setVisible(visible);
+    }
+}
+
 CombatState& getState(const std::string& name, double now)
 {
     std::map<std::string, CombatState>::iterator it = sStates.find(name);
@@ -886,14 +906,14 @@ bool CreatureCombatReactions::hasWeaponModel(CreatureReactions& reactions, const
 void CreatureCombatReactions::applyVisibility(CreatureReactions& reactions, const Creature* creature, bool visible)
 {
     (void)reactions;
-    Ogre::SceneManager* sceneManager = RenderManager::getSingleton().getSceneManager();
-    const char* hands[2] = {"L", "R"};
-    for(uint32_t i = 0; i < 2; ++i)
-    {
-        std::string entityName = weaponEntityName(creature, hands[i]);
-        if(sceneManager->hasEntity(entityName))
-            sceneManager->getEntity(entityName)->setVisible(visible);
-    }
+    setWeaponsVisible(creature, visible && !playsSeatClip(creature));
+}
+
+void CreatureCombatReactions::showWeaponsForClip(const Creature* creature)
+{
+    std::map<std::string, CombatState>::const_iterator itState = sStates.find(creature->getName());
+    bool sheathed = (itState != sStates.end()) && itState->second.mSheathed;
+    setWeaponsVisible(creature, !sheathed && !playsSeatClip(creature));
 }
 
 //! \brief Remembers that the creature has put its weapons away (or drawn them) and applies it to the models
@@ -990,6 +1010,14 @@ void CreatureCombatReactions::tick(CreatureReactions& reactions)
         double sinceFight = std::min(now - state.mLastAttack, now - state.mLastAttacked);
         Ogre::AnimationState* animState = creature->getAnimationState();
         bool idle = (animState != nullptr) && (animState->getAnimationName() == "Idle") && !creature->isMoving();
+
+        // A seated guest has its weapons put away, without the standing sheathing clip on the bench and without drawing them
+        if(playsSeatClip(creature))
+        {
+            if(carriesWeapon && hasWeaponModel(reactions, creature))
+                setSheathed(reactions, creature, true);
+            continue;
+        }
 
         // Drawing and sheathing: a creature with a weapon that is not fighting and has no enemy close by puts it away
         if(carriesWeapon && hasWeaponModel(reactions, creature))

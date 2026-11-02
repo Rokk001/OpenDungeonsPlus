@@ -156,11 +156,6 @@ static const Ogre::Real CREATURE_WAKE_BLEND_DURATION = 4.0f / 30.0f;
 //! Length of the blend between a seated tavern clip and any other clip, in seconds.
 static const Ogre::Real CREATURE_SEAT_BLEND_DURATION = 0.3f;
 
-//! \brief True for the seated tavern clips (Sit, SitDrink and the others).
-static bool isSeatClip(const std::string& clip)
-{
-    return clip.compare(0, EntityAnimation::sit_anim.size(), EntityAnimation::sit_anim) == 0;
-}
 //! Seconds a room construction burst stays in the scene. It is longer than the emitter
 //! duration plus the particle lifetime, so the last particles fade out before it is removed.
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
@@ -5325,9 +5320,14 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
 
+    // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table
+    if((dropCreature != nullptr) &&
+       (EntityAnimation::isSeatClip(anim) != ((previousState != nullptr) && EntityAnimation::isSeatClip(previousState->getAnimationName()))))
+        CreatureCombatReactions::showWeaponsForClip(dropCreature);
+
     // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile
     if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState) && !freezeOnLastFrame &&
-       (isSeatClip(previousState->getAnimationName()) != isSeatClip(anim)))
+       (EntityAnimation::isSeatClip(previousState->getAnimationName()) != EntityAnimation::isSeatClip(anim)))
     {
         previousState->setEnabled(true);
         previousState->setWeight(1.0f);

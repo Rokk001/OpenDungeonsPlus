@@ -99,6 +99,11 @@ namespace EntityAnimation
     static const std::string sit_dice_anim = "SitDice";
     //! The seated loser of a slap duel with no free floor around it slumps on its seat (a skeleton without the clip plays Sit)
     static const std::string sit_slumped_anim = "SitSlumped";
+    //! \brief True for the seated tavern clips (Sit, SitDrink and the others).
+    inline bool isSeatClip(const std::string& clip)
+    {
+        return clip.compare(0, sit_anim.size(), sit_anim) == 0;
+    }
     //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
     static const std::string scared_anim = "Scared";
     //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.
