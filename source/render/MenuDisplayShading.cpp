@@ -17,6 +17,7 @@
 
 #include "render/MenuDisplayShading.h"
 
+#include <OgreColourValue.h>
 #include <OgreMaterial.h>
 #include <OgrePass.h>
 #include <OgreTechnique.h>
@@ -37,6 +38,15 @@ static const Ogre::String MENU_DISPLAY_TYPE = "MenuDisplayEncoding";
 static const Ogre::String MENU_MATERIAL_PREFIX = "Menu";
 //! Shader library file, without extension, that holds the encoding function.
 static const Ogre::String MENU_DISPLAY_LIBRARY = "MenuDisplay";
+//! Must match the factor in MenuDisplay.glsl. It moves the clamp of the generated lighting from light value 1 to the white point 4.
+static const Ogre::Real MENU_LIGHT_HEADROOM = 4.0f;
+
+//! \brief Scales a surface colour into the lighting headroom, keeping its alpha.
+static Ogre::ColourValue toLightingHeadroom(const Ogre::ColourValue& colour)
+{
+    return Ogre::ColourValue(colour.r / MENU_LIGHT_HEADROOM, colour.g / MENU_LIGHT_HEADROOM,
+        colour.b / MENU_LIGHT_HEADROOM, colour.a);
+}
 
 //! \brief Encodes the final colour of lit menu scene passes for the display target.
 class MenuDisplaySubRenderState : public Ogre::RTShader::SubRenderState
@@ -55,11 +65,18 @@ public:
     {}
 
     //! \brief Accepts only lit passes of menu materials; unlit decals and the hand keep their colours.
-    bool preAddToRenderState(const Ogre::RTShader::RenderState*, Ogre::Pass* srcPass, Ogre::Pass*) override
+    //! The generated pass enters the lighting with scaled surface colours, always derived from the source pass.
+    bool preAddToRenderState(const Ogre::RTShader::RenderState*, Ogre::Pass* srcPass, Ogre::Pass* dstPass) override
     {
         const Ogre::String& materialName = srcPass->getParent()->getParent()->getName();
-        return srcPass->getLightingEnabled()
-            && materialName.compare(0, MENU_MATERIAL_PREFIX.size(), MENU_MATERIAL_PREFIX) == 0;
+        if(!srcPass->getLightingEnabled()
+            || materialName.compare(0, MENU_MATERIAL_PREFIX.size(), MENU_MATERIAL_PREFIX) != 0)
+            return false;
+        dstPass->setAmbient(toLightingHeadroom(srcPass->getAmbient()));
+        dstPass->setDiffuse(toLightingHeadroom(srcPass->getDiffuse()));
+        dstPass->setSpecular(toLightingHeadroom(srcPass->getSpecular()));
+        dstPass->setSelfIllumination(toLightingHeadroom(srcPass->getSelfIllumination()));
+        return true;
     }
 
     //! \brief Calls the encoding function on the fragment output.

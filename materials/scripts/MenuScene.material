@@ -79,14 +79,16 @@ material MenuIron : RTSS/NormalMapping_MultiPass
     }
 }
 
+// Former flat surfaces carry the fortress stone texture. Dividing by its mean linear colour (0.0706 0.06 0.0494) keeps their average response to light.
 material MenuWood
 {
     technique
     {
         pass
         {
-            ambient 0.18 0.11 0.07 1
-            diffuse 0.18 0.11 0.07 1
+            ambient 2.55 1.83 1.42 1
+            diffuse 2.55 1.83 1.42 1
+            texture_unit { texture MenuFortressStone.png gamma }
         }
     }
 }
@@ -97,20 +99,23 @@ material MenuParchment
     {
         pass
         {
-            ambient 0.42 0.36 0.25 1
-            diffuse 0.42 0.36 0.25 1
+            ambient 5.95 6.00 5.06 1
+            diffuse 5.95 6.00 5.06 1
+            texture_unit { texture MenuFortressStone.png gamma }
         }
     }
 }
 
+// Fire barely lifts this surface, and its ambient matches MenuDarkStone: nearly black in the overview, readable stone under the flight fill.
 material MenuBlack
 {
     technique
     {
         pass
         {
-            ambient 0.012 0.014 0.016 1
-            diffuse 0.012 0.014 0.016 1
+            ambient 0.48 0.50 0.52 1
+            diffuse 0.17 0.233 0.324 1
+            texture_unit { texture MenuFortressStone.png gamma }
         }
     }
 }
@@ -170,9 +175,10 @@ material MenuMountain
         pass
         {
             lighting on
-            ambient 0.012 0.016 0.022 1
-            diffuse 0.012 0.016 0.022 1
+            ambient 0.48 0.50 0.52 1
+            diffuse 0.17 0.267 0.445 1
             emissive 0 0 0
+            texture_unit { texture MenuFortressStone.png gamma }
         }
     }
 }
@@ -308,9 +314,10 @@ material MenuCrystalBright
 material MenuDistantStone
 {
     technique { pass {
-        ambient 0.018 0.019 0.018 1
-        diffuse 0.09 0.095 0.09 1
+        ambient 0.48 0.50 0.52 1
+        diffuse 1.27 1.58 1.82 1
         specular 0 0 0 1 1
+        texture_unit { texture MenuFortressStone.png gamma }
     } }
 }
 
@@ -367,9 +374,10 @@ material MenuRoughStone : MenuStone
 material MenuSoot
 {
     technique { pass {
-        ambient 0.009 0.007 0.005 1
-        diffuse 0.009 0.007 0.005 1
+        ambient 0.24 0.25 0.26 1
+        diffuse 0.127 0.117 0.101 1
         specular 0.004 0.004 0.004 1 4
+        texture_unit { texture MenuFortressStone.png gamma }
     } }
 }
 
@@ -574,10 +582,11 @@ material MenuWetSlime : MenuStone
 material MenuAsh
 {
     technique { pass {
-        ambient 0.025 0.023 0.020 1
-        diffuse 0.025 0.023 0.020 1
+        ambient 0.48 0.50 0.52 1
+        diffuse 0.354 0.383 0.405 1
         specular 0 0 0 1 1
         cull_hardware none
+        texture_unit { texture MenuFortressStone.png gamma }
     } }
 }
 

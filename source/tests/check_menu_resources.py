@@ -294,6 +294,9 @@ def check_menu_surface_passes(root):
     for name, parent in parents.items():
         if parent in bases:
             assert re.findall(r"\bpass\s+(\w+)\s*\{", materials[name]) == ["lighting"], name + " must override the inherited normal-mapped pass"
+    # Former flat surfaces must show a texture instead of a single colour.
+    for name in ("MenuBlack", "MenuMountain", "MenuDistantStone", "MenuWood", "MenuParchment", "MenuSoot", "MenuAsh"):
+        assert "texture MenuFortressStone.png gamma" in materials[name], name + " must not render as a flat untextured surface"
     print("OK: menu surface colours and normal maps share one lighting pass, including inherited overrides")
 
 
@@ -371,7 +374,12 @@ def check_menu_lighting(root):
     # Lit menu materials are encoded for the display in their generated shaders; the light count stays fixed in the menu.
     display = (root / "source/render/MenuDisplayShading.cpp").read_text(encoding="utf-8")
     assert "getLightingEnabled()" in display and 'MENU_MATERIAL_PREFIX = "Menu"' in display, "display encoding must stay limited to lit menu materials"
-    assert "MenuDisplay_Encode" in (root / "shaders/MenuDisplay.glsl").read_text(encoding="utf-8") and "MenuDisplay_Encode" in display, "display encoding function must exist"
+    display_shader = (root / "shaders/MenuDisplay.glsl").read_text(encoding="utf-8")
+    assert "MenuDisplay_Encode" in display_shader and "MenuDisplay_Encode" in display, "display encoding function must exist"
+    # The generated lighting clamps to 1 before the texture, so the surface scale and the restoring factor must stay equal.
+    assert "MENU_LIGHT_HEADROOM = 4.0f;" in display and "max(colour.rgb, vec3(0.0)) * 4.0;" in display_shader, "menu lighting must keep the same headroom in code and shader"
+    for setter, getter in (("setAmbient", "getAmbient"), ("setDiffuse", "getDiffuse"), ("setSpecular", "getSpecular"), ("setSelfIllumination", "getSelfIllumination")):
+        assert f"dstPass->{setter}(toLightingHeadroom(srcPass->{getter}()));" in display, setter + " must enter the lighting headroom from the source pass"
     manager_source = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
     assert "registerMenuDisplayShading(*mShaderGenerator);" in manager_source and "setLightCountAutoUpdate(false)" in manager_source and "setLightCountAutoUpdate(true)" in manager_source, "menu shaders must keep one light count"
     menu_source = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
