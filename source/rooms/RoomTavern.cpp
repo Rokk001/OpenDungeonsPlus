@@ -77,6 +77,10 @@ const double ANGLE_EPSILON = 0.01;
 const double TABLE_ANGLES[] = { 0.0, 90.0 };
 //! \brief Number of entries of TABLE_ANGLES.
 const size_t NB_TABLE_ANGLES = 2;
+//! \brief Room tiles per keg at most.
+const size_t TAVERN_TILES_PER_KEG = 6;
+//! \brief Room tiles per table at most: one table tile per four room tiles, and a table covers two tiles.
+const size_t TAVERN_TILES_PER_TABLE = 8;
 //! \brief A guest closer to its seat than this (squared, in tiles) sits on it.
 const float SEAT_REACHED_SQUARED = 0.0025f;
 //! \brief A point this far beside the bench (in tiles) is where a guest gets on and off when it has little room.
@@ -244,6 +248,33 @@ Ogre::Vector2 tableMiddle(const Tile& tile, double angleDegrees)
     tableStep(angleDegrees, dx, dy);
     return Ogre::Vector2(static_cast<Ogre::Real>(tile.getX()) + 0.5f * static_cast<Ogre::Real>(dx),
         static_cast<Ogre::Real>(tile.getY()) + 0.5f * static_cast<Ogre::Real>(dy));
+}
+
+//! \brief True when the tiles on both long sides of a table, where its benches stand, are tiles of the room without
+//! furniture, so that the guests on the benches neither sit in a wall nor against other furniture.
+//! \param gameMap The map of the room.
+//! \param tile The tile of the table object.
+//! \param second The second tile of the table.
+//! \param roomTiles The tiles of the room.
+//! \param furnitureTiles The tiles that already carry furniture.
+bool areBenchSidesFree(GameMap* gameMap, const Tile& tile, const Tile& second, const std::vector<Tile*>& roomTiles,
+    const std::vector<Tile*>& furnitureTiles)
+{
+    // Across the table: the length of the table turned by a quarter
+    const int32_t acrossX = second.getY() - tile.getY();
+    const int32_t acrossY = tile.getX() - second.getX();
+    const Tile* pieces[] = { &tile, &second };
+    for(const Tile* piece : pieces)
+    {
+        for(int32_t side = -1; side <= 1; side += 2)
+        {
+            Tile* neighbour = gameMap->getTile(piece->getX() + side * acrossX, piece->getY() + side * acrossY);
+            if((neighbour == nullptr) || (std::find(roomTiles.begin(), roomTiles.end(), neighbour) == roomTiles.end()) ||
+               (std::find(furnitureTiles.begin(), furnitureTiles.end(), neighbour) != furnitureTiles.end()))
+                return false;
+        }
+    }
+    return true;
 }
 
 //! \brief Returns whether the room contains a complete three by three block.
@@ -1981,10 +2012,11 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
         furnitureTiles.push_back(saved.mTile);
     }
     mSavedFurniture.clear();
-    const size_t kegLimit = orderedTiles.size() / 6;
-    const size_t tableLimit = orderedTiles.size() / 4;
+    const size_t kegLimit = orderedTiles.size() / TAVERN_TILES_PER_KEG;
+    const size_t tableLimit = orderedTiles.size() / TAVERN_TILES_PER_TABLE;
     // Pick the candidate furthest from already placed furniture, with coordinate order breaking ties. A table needs two
-    // free tiles next to each other; when no such pair is left, no further table is placed.
+    // free tiles next to each other; when no such pair is left, no further table is placed. A table whose benches face
+    // free floor of the room on both sides comes before one with a bench at a wall or at other furniture.
     for(size_t kind = 0; !restoreSaved && (kind < 2); ++kind)
     {
         const size_t limit = (kind == 0) ? kegLimit : tableLimit;
@@ -1994,6 +2026,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
             Tile* bestSecond = nullptr;
             double bestAngle = 0.0;
             int32_t bestDistance = -1;
+            bool bestBenchesFree = false;
             for(Tile* tile : orderedTiles)
             {
                 if(std::find(furnitureTiles.begin(), furnitureTiles.end(), tile) != furnitureTiles.end())
@@ -2006,6 +2039,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
                 {
                     double angle = 0.0;
                     Tile* second = nullptr;
+                    bool benchesFree = false;
                     if(kind == 0)
                     {
                         Tile* neighbours[] = {gameMap->getTile(x, y + 1), gameMap->getTile(x, y - 1),
@@ -2036,6 +2070,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
                            (std::find(orderedTiles.begin(), orderedTiles.end(), second) == orderedTiles.end()) ||
                            (std::find(furnitureTiles.begin(), furnitureTiles.end(), second) != furnitureTiles.end()))
                             continue;
+                        benchesFree = areBenchSidesFree(gameMap, *tile, *second, orderedTiles, furnitureTiles);
                     }
                     // The distance of the piece to the nearest furniture, from each of its tiles
                     int32_t distance = std::numeric_limits<int32_t>::max();
@@ -2051,12 +2086,13 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
                             distance = std::min(distance, sx * sx + sy * sy);
                         }
                     }
-                    if(distance > bestDistance)
+                    if((benchesFree && !bestBenchesFree) || ((benchesFree == bestBenchesFree) && (distance > bestDistance)))
                     {
                         best = tile;
                         bestSecond = second;
                         bestAngle = angle;
                         bestDistance = distance;
+                        bestBenchesFree = benchesFree;
                     }
                 }
             }

@@ -21,7 +21,7 @@ once the keeper has researched Beer, beer for gold. All numbers are keys of `con
 
 - The first tile of a tavern is the counter with the innkeeper figure (not a creature). Kegs stand along the
   walls (at most one per six tiles, never two side by side) and tables are spread over the room (at most one per
-  four tiles). A table is two tiles long and has two benches with four places each; a large creature (a bed of
+  eight tiles, preferably with free floor on both bench sides). A table is two tiles long and has two benches with four places each; a large creature (a bed of
   two by two tiles) takes two neighbouring places, half of a bench. A creature without a free place does not
   enter: it tries another tavern of its keeper, otherwise it goes back to work until its visit cooldown is over.
 - A tavern needs a block of three by three tiles. One that loses it takes no guests until it has one again, and
