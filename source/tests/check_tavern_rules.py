@@ -96,7 +96,14 @@ assert 'if(distance > bestDistance)' in placement
 assert '(orderedTiles != mLayoutTiles) || (mCounterTile != mLayoutCounter)' in placement
 assert 'if(hadLayout && layoutChanged)' in placement and 'standUpGuests();' in placement
 stand_up = extract(room_cpp, 'void RoomTavern::standUpGuests(')
-assert 'mGames.clear();' in stand_up and 'pickFreeSeat(*guest.mCreature, seat)' in stand_up and 'startTavernCooldown();' in stand_up
+assert 'mGames.clear();' in stand_up and 'pickFreeSeat(*guest.mCreature, seat)' in stand_up and 'sendToOtherTavernOrWork(*creature, otherTavern);' in stand_up
+assert 'TavernGuestState::game' in stand_up, 'a guest whose game ended looks for a seat again'
+# A guest without a seat tries another tavern of the keeper, otherwise it goes to work under the visit cooldown.
+assert 'startTavernCooldown();' in extract(room_cpp, 'void RoomTavern::sendToOtherTavernOrWork(')
+assert 'hasOpenCreatureSpot(&creature)' in extract(room_cpp, 'Room* RoomTavern::findOtherTavern(')
+# A lost tile or table does not dismiss a guest: it looks for a seat again.
+assert 'clearActionQueue' not in extract(room_cpp, 'bool RoomTavern::removeCoveredTile(')
+assert 'standUpGuests();' in extract(room_cpp, 'void RoomTavern::reseatGuestsAtLostTables(')
 # A save without seat data spreads the furniture again, ends its games and lets its guests look for a seat.
 assert 'if(!hasSeatLayout)' in load and 'mSavedFurniture.clear();' in load and 'mPendingGames.clear();' in load
 assert 'os << STREAM_TAG_SEAT_LAYOUT' in export
@@ -104,7 +111,13 @@ assert 'os << STREAM_TAG_SEAT_LAYOUT' in export
 use_room_text = extract(room_cpp, 'bool RoomTavern::useRoom(')
 assert 'walkToSeat(creature, seat, spot.mWholeBench)' in use_room_text and 'stepOffSeat(creature, seat, spot.mWholeBench)' in use_room_text
 assert 'setDestination' not in use_room_text
-assert 'EntityAnimation::sit_anim, true, false, route, false, true' in extract(room_cpp, 'bool RoomTavern::walkToSeat(')
+walk_to_seat = extract(room_cpp, 'bool RoomTavern::walkToSeat(')
+assert 'EntityAnimation::sit_anim, true, false, route, false, true' in walk_to_seat
+# Without a way around the furniture a guest takes another seat or leaves; it never walks through furniture.
+assert 'path(&creature, seat.mTable)' not in walk_to_seat
+assert '!walkToOtherSeat(creature, seat)' in use_room_text
+# The walk into the room ends on free floor, not in the middle of a table.
+assert 'mBuildingObjects.find(tile) != mBuildingObjects.end()' in extract(room_cpp, 'Tile* RoomTavern::getArrivalTile(')
 # The benches of the scaled table mesh: seat surface 0.39 to 0.59 from the middle, bench 0.78 long.
 assert 'const float TAVERN_BENCH_OFFSET = 0.4116f;' in room_cpp and 'const float TAVERN_SEAT_SIDE_OFFSET = 0.164f;' in room_cpp
 assert 'const uint32_t TAVERN_SEATS_PER_TABLE = 4;' in read('source/rooms/RoomTavern.h')
@@ -121,6 +134,7 @@ assert creature_cpp.count('(mTavernCooldownTurns <= 0)') == 3
 # The loser falls onto a free floor tile, or slumps on its seat when none is free.
 fall = extract(room_cpp, 'bool RoomTavern::fallNextToBench(')
 assert 'mBuildingObjects.find(tile) != mBuildingObjects.end()' in fall and 'tile->getCoveringRoom() != this' in fall
+assert 'standingPosition(solid, middle, point)' in fall and 'clearSegment(onTheWay, position, point)' in fall
 assert 'if(!fallNextToBench(spot))' in extract(room_cpp, 'void RoomTavern::knockOut(')
 assert 'EntityAnimation::sit_slumped_anim' in extract(room_cpp, 'void RoomTavern::showSpotState(')
 

@@ -449,8 +449,25 @@ private:
     //! \return True when the guest walks; false when there is no free point next to the bench.
     bool stepOffSeat(Creature& creature, const RoomTavernSeat& seat, bool wholeBench);
 
+    //! \brief Moves a guest whose seat cannot be reached to another free seat it can walk to.
+    //! \param creature The guest.
+    //! \param seat The seat that cannot be reached.
+    //! \return True when the guest walks to another seat.
+    bool walkToOtherSeat(Creature& creature, const RoomTavernSeat& seat);
+
+    //! \brief Returns another tavern of the keeper that has a seat for the creature and can be reached.
+    //! \param creature The creature that needs a seat.
+    //! \return The tavern, or nullptr when there is none.
+    Room* findOtherTavern(Creature& creature);
+
+    //! \brief Sends a guest this tavern has no seat for away: to the other tavern, otherwise to its work and the visit cooldown.
+    //! \param creature The guest; its action queue must no longer hold a use of this tavern.
+    //! \param otherTavern The tavern found by findOtherTavern before the guest left, or nullptr.
+    void sendToOtherTavernOrWork(Creature& creature, Room* otherTavern);
+
     //! \brief All guests stand up: running games end without a winner and without effects, and each guest looks for a
-    //! free seat again by the normal rule. A guest without a free seat leaves and tries again after the visit cooldown.
+    //! free seat again by the normal rule. A guest without a free seat goes to another tavern of the keeper, otherwise
+    //! it leaves and tries again after the visit cooldown.
     void standUpGuests();
 
     //! \brief Shows what the guest does in its state: the clip of the state, turned towards what it looks at.
@@ -479,8 +496,8 @@ private:
     //! \brief Ends the games and the lying of guests that were disturbed (fight, flight, knocked out, dragged away).
     void abortDisturbedGuests();
 
-    //! \brief Server side. Ends the places whose tile the room has lost; their guests stop.
-    void releaseGuestsOnLostTiles();
+    //! \brief Server side. Lets the guests stand up and look for a seat again when the table of one of them is gone.
+    void reseatGuestsAtLostTables();
 
     //! \brief Binds the guests and games read from a saved room to their creatures again.
     void resumeLoadedGuests();

@@ -419,11 +419,32 @@ bool RoomTavern::hasMinimumBlock() const
     return hasTavernBlock(mCoveredTiles);
 }
 
-//! \brief Returns the table tile of the seat of the guest, so that it walks straight to its table.
+//! \brief Returns the free floor tile of the room nearest to the seat of the guest; the walk onto the bench starts there.
 Tile* RoomTavern::getArrivalTile(const Creature& creature)
 {
     std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(&creature);
-    return (it != mSpots.end()) ? it->first.mTable : getCoveredTile(0);
+    Tile* reference = (it != mSpots.end()) ? it->first.mTable : getCoveredTile(0);
+    if(reference == nullptr)
+        return nullptr;
+
+    // The middle of a tile with furniture lies inside the furniture, so a tile path may not end there
+    Tile* best = nullptr;
+    int32_t bestDistance = std::numeric_limits<int32_t>::max();
+    for(Tile* tile : mCoveredTiles)
+    {
+        if((mBuildingObjects.find(tile) != mBuildingObjects.end()) || !creature.canGoThroughTile(tile))
+            continue;
+
+        const int32_t dx = tile->getX() - reference->getX();
+        const int32_t dy = tile->getY() - reference->getY();
+        const int32_t distance = dx * dx + dy * dy;
+        if(distance < bestDistance)
+        {
+            bestDistance = distance;
+            best = tile;
+        }
+    }
+    return (best != nullptr) ? best : reference;
 }
 
 //! \brief Checks that the tavern is large enough and has a free seat for the creature.
@@ -632,18 +653,9 @@ bool RoomTavern::walkToSeat(Creature& creature, const RoomTavernSeat& seat, bool
         break;
     }
 
-    // No clear way around the furniture: the guest takes the tile path, and the seat is still where it ends up
+    // Without a clear way around the furniture the seat cannot be reached; the guest never walks through furniture
     if(route.empty())
-    {
-        if(seat.mTable != creatureTile)
-        {
-            const std::list<Tile*> tiles = getGameMap()->path(&creature, seat.mTable);
-            if(tiles.empty())
-                return false;
-            Creature::tileToVector2(tiles, route, true, 0.0f);
-        }
-        route.push_back(target);
-    }
+        return false;
 
     creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::sit_anim, true, false, route, false, true);
     creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
@@ -662,6 +674,60 @@ bool RoomTavern::stepOffSeat(Creature& creature, const RoomTavernSeat& seat, boo
     creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, route, false, true);
     creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
     return true;
+}
+
+//! \brief Moves a guest whose seat cannot be reached to another free seat it can walk to.
+bool RoomTavern::walkToOtherSeat(Creature& creature, const RoomTavernSeat& seat)
+{
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator own = mSpots.find(seat);
+    if((own == mSpots.end()) || (own->second.mCreature != &creature))
+        return false;
+
+    const bool wholeBench = own->second.mWholeBench;
+    const uint32_t step = wholeBench ? TAVERN_SEATS_PER_BENCH : 1;
+    for(Tile* table : getTableTiles())
+    {
+        for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; index += step)
+        {
+            const RoomTavernSeat candidate(table, index);
+            if((candidate == seat) || !isFreeSeat(candidate, wholeBench) || !walkToSeat(creature, candidate, wholeBench))
+                continue;
+
+            const RoomTavernSpot spot = own->second;
+            mSpots.erase(own);
+            mSpots.insert(std::make_pair(candidate, spot));
+            return true;
+        }
+    }
+    return false;
+}
+
+//! \brief Returns another tavern of the keeper that has a seat for the creature and can be reached.
+Room* RoomTavern::findOtherTavern(Creature& creature)
+{
+    Tile* position = creature.getPositionTile();
+    if(position == nullptr)
+        return nullptr;
+
+    for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
+    {
+        if((room == this) || (room->numCoveredTiles() <= 0) || !room->hasOpenCreatureSpot(&creature))
+            continue;
+
+        Tile* tile = room->getArrivalTile(creature);
+        if((tile != nullptr) && getGameMap()->pathExists(&creature, position, tile))
+            return room;
+    }
+    return nullptr;
+}
+
+//! \brief Sends a guest this tavern has no seat for away; its action queue must no longer hold a use of this tavern.
+void RoomTavern::sendToOtherTavernOrWork(Creature& creature, Room* otherTavern)
+{
+    if(otherTavern != nullptr)
+        creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *otherTavern, false));
+    else
+        creature.startTavernCooldown();
 }
 
 std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(const Creature* creature)
@@ -697,9 +763,10 @@ void RoomTavern::standUpGuests()
             continue;
         }
 
-        // A guest that was drinking sits down again; a guest whose visit was over only passes through its seat to leave
+        // A guest that was drinking or playing sits down again; a guest whose visit was over only passes through its seat to leave
         const bool visitOver = guest.mSleepAfter ||
-            ((guest.mState != TavernGuestState::arriving) && (guest.mState != TavernGuestState::drinking));
+            ((guest.mState != TavernGuestState::arriving) && (guest.mState != TavernGuestState::drinking) &&
+             (guest.mState != TavernGuestState::game));
         guest.mWholeBench = isLargeGuest(*guest.mCreature);
         guest.mWantsGame = false;
         guest.mLeftSeat = false;
@@ -712,8 +779,9 @@ void RoomTavern::standUpGuests()
     // Clearing the actions releases the guest from the room, so they are handled after the loop
     for(Creature* creature : withoutSeat)
     {
-        creature->startTavernCooldown();
+        Room* otherTavern = findOtherTavern(*creature);
         creature->clearActionQueue();
+        sendToOtherTavernOrWork(*creature, otherTavern);
     }
 }
 
@@ -832,9 +900,12 @@ bool RoomTavern::useRoom(Creature& creature, bool forced)
             // Walk to the seat; the walk is an action on top of this one, so we are called again when it is over
             if(!isOnSeat(creature, seat, spot.mWholeBench))
             {
-                if(!creature.isMoving() && !walkToSeat(creature, seat, spot.mWholeBench))
+                if(!creature.isMoving() && !walkToSeat(creature, seat, spot.mWholeBench) && !walkToOtherSeat(creature, seat))
                 {
+                    // No seat of this room can be reached: another tavern of the keeper, otherwise back to work
+                    Room* otherTavern = findOtherTavern(creature);
                     creature.popAction();
+                    sendToOtherTavernOrWork(creature, otherTavern);
                     return true;
                 }
                 return false;
@@ -985,7 +1056,7 @@ void RoomTavern::doUpkeep()
         return;
 
     resumeLoadedGuests();
-    releaseGuestsOnLostTiles();
+    reseatGuestsAtLostTables();
     abortDisturbedGuests();
     upkeepGames();
     upkeepSpots();
@@ -1005,18 +1076,18 @@ void RoomTavern::doUpkeep()
     }
 }
 
-void RoomTavern::releaseGuestsOnLostTiles()
+//! \brief A guest whose table is gone gets up with the others and looks for a seat again.
+void RoomTavern::reseatGuestsAtLostTables()
 {
-    std::vector<Creature*> lost;
-    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    const std::vector<Tile*> tables = getTableTiles();
+    for(const std::pair<const RoomTavernSeat, RoomTavernSpot>& entry : mSpots)
     {
-        if(std::find(mCoveredTiles.begin(), mCoveredTiles.end(), it->first.mTable) == mCoveredTiles.end())
-            lost.push_back(it->second.mCreature);
-    }
+        if(std::find(tables.begin(), tables.end(), entry.first.mTable) != tables.end())
+            continue;
 
-    // Clearing the actions releases the places, so the guests are handled after the loop
-    for(Creature* creature : lost)
-        creature->clearActionQueue();
+        standUpGuests();
+        return;
+    }
 }
 
 void RoomTavern::abortDisturbedGuests()
@@ -1423,9 +1494,16 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
     if((creature == nullptr) || (own == mSpots.end()) || !creature->getIsOnMap())
         return false;
 
-    // The free floor tile nearest to the seat: part of the room, without furniture, and no other loser lies on it
+    // The free floor tile nearest to the seat: part of the room, without furniture, and no other loser lies on it.
+    // The way there may leave the own bench but never crosses other furniture, and the loser never lands in furniture.
     const Ogre::Vector2 position = getSeatPosition(own->first, spot.mWholeBench);
+    std::map<Tile*, BuildingObject*>::const_iterator ownTable = mBuildingObjects.find(own->first.mTable);
+    if(ownTable == mBuildingObjects.end())
+        return false;
+    const std::vector<RoomObjectPath::Obstacle> solid = RoomObjectNavigation::bodyObstacles(*creature);
+    const std::vector<RoomObjectPath::Obstacle> onTheWay = RoomObjectNavigation::bodyObstacles(*creature, ownTable->second);
     Tile* best = nullptr;
+    Ogre::Vector2 bestPoint = position;
     float bestDistance = std::numeric_limits<float>::max();
     for(int32_t dx = -1; dx <= 1; ++dx)
     {
@@ -1447,11 +1525,17 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
                 continue;
 
             const Ogre::Vector2 middle(static_cast<Ogre::Real>(tile->getX()), static_cast<Ogre::Real>(tile->getY()));
-            const float distance = middle.squaredDistance(position);
+            Ogre::Vector2 point = middle;
+            if(!RoomObjectNavigation::standingPosition(solid, middle, point) ||
+               !RoomObjectPath::clearSegment(onTheWay, position, point))
+                continue;
+
+            const float distance = point.squaredDistance(position);
             if(distance < bestDistance)
             {
                 bestDistance = distance;
                 best = tile;
+                bestPoint = point;
             }
         }
     }
@@ -1460,7 +1544,7 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
         return false;
 
     // The loser reels off the bench and goes down where the short walk ends
-    const std::vector<Ogre::Vector2> route(1, Ogre::Vector2(static_cast<Ogre::Real>(best->getX()), static_cast<Ogre::Real>(best->getY())));
+    const std::vector<Ogre::Vector2> route(1, bestPoint);
     creature->setWalkPath(EntityAnimation::stagger_anim, EntityAnimation::knockedout_anim, true, false, route, false, true);
     return true;
 }
@@ -1637,16 +1721,7 @@ bool RoomTavern::removeCoveredTile(Tile* t)
     if(!Room::removeCoveredTile(t))
         return false;
 
-    // A guest drinking on the tile, or walking to it, stops: a game it plays ends without winner and without effects.
-    // Clearing its actions releases it from the room, so we work on a copy.
-    std::vector<Creature*> guests = mCreaturesUsingRoom;
-    for(Creature* guest : guests)
-    {
-        std::map<RoomTavernSeat, RoomTavernSpot>::iterator spot = findSpotOf(guest);
-        const bool hasSpotOnTile = (spot != mSpots.end()) && (spot->first.mTable == t);
-        if((guest->getPositionTile() == t) || hasSpotOnTile)
-            guest->clearActionQueue();
-    }
+    // The guests stay: updateActiveSpots follows every lost tile, spreads the furniture again and lets them look for a seat.
 
     // The next remaining tile becomes the counter; the innkeeper follows in updateActiveSpots
     if(t == mCounterTile)
@@ -1747,6 +1822,10 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     {
         mCounterTile = nullptr;
         removeInnkeeper();
+        mLayoutTiles.clear();
+        mLayoutCounter = nullptr;
+        // Nothing is left to sit on: the guests go to another tavern or back to work
+        standUpGuests();
         return;
     }
 
