@@ -170,6 +170,38 @@ Ogre::Vector3 tileMiddle(const Tile& tile)
     return Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()), static_cast<Ogre::Real>(tile.getY()), 0.0f);
 }
 
+//! \brief Returns whether the room contains a complete three by three block.
+bool hasTavernBlock(const std::vector<Tile*>& tiles)
+{
+    for(const Tile* origin : tiles)
+    {
+        bool complete = true;
+        for(int dx = 0; dx < 3 && complete; ++dx)
+        {
+            for(int dy = 0; dy < 3; ++dy)
+            {
+                bool found = false;
+                for(const Tile* tile : tiles)
+                {
+                    if((tile->getX() == origin->getX() + dx) && (tile->getY() == origin->getY() + dy))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if(!found)
+                {
+                    complete = false;
+                    break;
+                }
+            }
+        }
+        if(complete)
+            return true;
+    }
+    return false;
+}
+
 //! \brief Builds, prices and loads taverns; registered for RoomType::tavern.
 class RoomTavernFactory : public RoomFactory
 {
@@ -285,6 +317,9 @@ uint32_t RoomTavern::getNbDrinkingTiles() const
 
 bool RoomTavern::hasOpenCreatureSpot(Creature* c)
 {
+    if(!hasTavernBlock(mCoveredTiles))
+        return false;
+
     // A creature the saved room waits for has its place, whatever the other guests do
     if((c != nullptr) && (mPendingSpots.find(c->getName()) != mPendingSpots.end()))
         return true;
@@ -367,7 +402,7 @@ std::map<Tile*, RoomTavernSpot>::iterator RoomTavern::findSpotOf(const Creature*
 //! \brief Assigns a guest a tavern spot and restores its saved state.
 bool RoomTavern::addCreatureUsingRoom(Creature* creature)
 {
-    if(creature == nullptr)
+    if((creature == nullptr) || !hasTavernBlock(mCoveredTiles))
         return false;
 
     // The place the creature had when the room was saved, if it is still free
