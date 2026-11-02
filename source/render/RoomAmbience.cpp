@@ -2878,7 +2878,7 @@ void RoomAmbience::finishRoller(Roller& roller, bool leaveEffects)
     roller.mTrail = nullptr;
 }
 
-//! rief Starts the crawling creatures of a Crawl effect. They come out of the body of the dead creature that lies
+//! \brief Starts the crawling creatures of a Crawl effect. They come out of the body of the dead creature that lies
 //! on the tile of the event (its exact position), or from the position of the event if there is no such body.
 bool RoomAmbience::startCrawl(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& eventPosition)
 {
