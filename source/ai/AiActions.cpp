@@ -417,7 +417,9 @@ void perform(KeeperAI& ai, const std::string& target)
 double schedule(KeeperAI& ai, const std::string& key, const std::string& arguments)
 {
     const std::string target = encode(arguments);
-    return ai.getMind().exec(key, 1, ai.getMind().now(), "-", nullptr, target, [&ai, target]() { perform(ai, target); });
+    KeeperAI* self = &ai;
+    std::function<void()> step = [self, target]() { perform(*self, target); };
+    return ai.getMind().exec(key, 1, ai.getMind().now(), "-", nullptr, target, step);
 }
 
 //! \brief Schedules one rectangular selection as one hand action.
@@ -446,9 +448,12 @@ void returnDrop(KeeperAI& ai, const std::string& target)
 void ACTS::bind(KeeperAI& ai)
 {
     const char* keys[] = {"dig", "build", "sell", "trap", "spell", "possess", "pickup", "drop", "slap", "setting", "research"};
+    KeeperAI* self = &ai;
+    std::function<void(Tile*, const std::string&)> performStep = [self](Tile*, const std::string& target) { perform(*self, target); };
+    std::function<void(Tile*, const std::string&)> returnStep = [self](Tile*, const std::string& target) { returnDrop(*self, target); };
     for(const char* key : keys)
-        ai.getMind().onAction(key, "-", [&ai](Tile*, const std::string& target) { perform(ai, target); });
-    ai.getMind().onAction("drop", "K10", [&ai](Tile*, const std::string& target) { returnDrop(ai, target); });
+        ai.getMind().onAction(key, "-", performStep);
+    ai.getMind().onAction("drop", "K10", returnStep);
 }
 
 //! \brief Schedules the human dig-marking path.
@@ -522,8 +527,9 @@ void ACTS::returnCreature(KeeperAI& ai, Creature* creature, Tile* tile, bool hel
     std::ostringstream args;
     args << "drop " << tile->getX() << ' ' << tile->getY() << ' ' << encode(creature->getName());
     const std::string target = encode(args.str());
-    ai.getMind().exec("drop", 1, ai.getMind().now(), "K10", nullptr, target,
-        [&ai, target]() { returnDrop(ai, target); });
+    KeeperAI* self = &ai;
+    std::function<void()> dropStep = [self, target]() { returnDrop(*self, target); };
+    ai.getMind().exec("drop", 1, ai.getMind().now(), "K10", nullptr, target, dropStep);
 }
 //! \brief Schedules a slap subject to the entity permission and level-script limit.
 void ACTS::slap(KeeperAI& ai, Creature* creature)

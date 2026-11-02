@@ -51,10 +51,13 @@ AiEvents::AiEvents(KeeperAI& ai) : mAi(ai), mLoaded(false), mPayday(false), mArr
 //! \brief Uses the existing mind poll clock and AIState callbacks, without a second scheduler.
 void AiEvents::bind()
 {
-    mAi.getMind().onPoll("I06Events", AiEventType::NoMarkedTile, [this]() { return poll(); });
-    mAi.getMind().onSave([this](std::vector<AiMath::AiStateLine>& lines) { save(lines); });
-    mAi.getMind().onEvent("I06Contact", {AiEventType::Fight},
-        [this](const AiEvent& event) { contact(event); });
+    AiEvents* self = this;
+    std::function<bool()> pollStep = [self]() { return self->poll(); };
+    std::function<void(std::vector<AiMath::AiStateLine>&)> saveStep = [self](std::vector<AiMath::AiStateLine>& lines) { self->save(lines); };
+    std::function<void(const AiEvent&)> contactStep = [self](const AiEvent& event) { self->contact(event); };
+    mAi.getMind().onPoll("I06Events", AiEventType::NoMarkedTile, pollStep);
+    mAi.getMind().onSave(saveStep);
+    mAi.getMind().onEvent("I06Contact", {AiEventType::Fight}, contactStep);
 }
 
 //! \brief Dispatches derived information during the parent event's existing reaction and mistake scope.

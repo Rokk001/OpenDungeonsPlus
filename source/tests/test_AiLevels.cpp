@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(test_MistakeFormulaAndDelays)
     BOOST_CHECK_CLOSE(AiMath::mistakeProbability(0.5, 4.0, 1.0, 0.004, 0.85), 0.85, 1e-9);
 
     AiMath::DelayParams params = {20.0, 0.5, 60.0, 0.5, 5.0, 0.72, 0.217};
-    AiMath::Uniform01 half = []() { return 0.5; };
+    AiMath::Uniform01 half = []() { return 0.5; }; // allowed-lambda: typed test stub
     BOOST_CHECK_EQUAL(AiMath::reactionDelay(AiMath::ReactionKind::internal, params, half), 0.0);
     BOOST_CHECK_EQUAL(AiMath::reactionDelay(AiMath::ReactionKind::hardLimit, params, half), 0.0);
     BOOST_CHECK(AiMath::reactionDelay(AiMath::ReactionKind::alert, params, half) > 0.0);
