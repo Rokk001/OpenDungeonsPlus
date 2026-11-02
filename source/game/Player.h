@@ -152,6 +152,9 @@ public:
      */
     void pickUpEntity(GameEntity *entity);
 
+    //! \brief Restores ordered held entities from a save without repeating pickup effects.
+    void restoreObjectsInHand(const std::vector<GameEntity*>& entities);
+
     //! \brief Check to see the first object in hand can be dropped on Tile t and do so if possible.
     bool isDropHandPossible(Tile *t, unsigned int index = 0);
 
@@ -328,6 +331,9 @@ public:
 
     //! \brief Returns how many workers are doing the given action
     uint32_t getNbWorkersDoing(CreatureActionType actionType) const;
+
+    //! \brief Returns how many known tiles this player has marked for digging
+    uint32_t getNbMarkedTiles() const;
 
 
 private:

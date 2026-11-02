@@ -18,6 +18,7 @@
 #ifndef BASEAI_H
 #define BASEAI_H
 
+#include <iosfwd>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -27,6 +28,7 @@ class Player;
 class Room;
 class Tile;
 class Seat;
+struct AiEvent;
 
 enum class KeeperAIType;
 
@@ -36,6 +38,18 @@ class BaseAI
 public:
     //! \brief Returns the player controlled by this instance.
     const Player& getPlayer() const { return mPlayer; }
+
+    //! \brief Writes AI state when the implementation has state to save.
+    virtual void exportState(std::ostream&) const {}
+
+    //! \brief Restores a saved controller state after the map entities exist.
+    virtual bool importState(const std::vector<std::string>&) { return true; }
+
+    //! \brief Accepts a game notice; controllers without a mind ignore it.
+    virtual void notifyEvent(const AiEvent&) {}
+
+    //! \brief Updates the timestamp of a pending fight notice when its marker is refreshed.
+    virtual void refreshFight(Tile*) {}
 
     virtual ~BaseAI()
     {}
@@ -61,6 +75,7 @@ protected:
         int32_t& bestX, int32_t& bestY);
 
     bool digWayToTile(Tile* tileStart, Tile* tileEnd);
+    //! \brief Scores a known room footprint and its usable wall spots.
     bool computePointsForRoom(Tile* tile, Seat* playerSeat, int32_t wantedSize,
         bool bottomLeft2TopRight, bool useWalls, int32_t& points);
 
@@ -68,7 +83,9 @@ protected:
     Player& mPlayer;
 
 private:
+    //! \brief Checks whether a known tile can be considered for a room floor.
     bool shouldGroundTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* playerSeat);
+    //! \brief Checks whether a known tile can be considered for a room wall.
     bool shouldWallTileBeConsideredForBestPlaceForRoom(Tile* tile, Seat* playerSeat);
 };
 

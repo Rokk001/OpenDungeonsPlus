@@ -228,6 +228,7 @@ bool SpellCreatureHeal::castSpell(GameMap* gameMap, Player* player, ODPacket& pa
     return castSpellOnCreatures(gameMap, player, creatures);
 }
 
+//! \brief Casts the keeper spell and reports its effect to seats with vision.
 bool SpellCreatureHeal::castSpellOnCreatures(GameMap* gameMap, Player* player, std::vector<Creature*>& creatures)
 {
     int32_t pricePerTarget = ConfigManager::getSingleton().getSpellConfigInt32("CreatureHealPrice");
@@ -265,7 +266,7 @@ bool SpellCreatureHeal::castSpellOnCreatures(GameMap* gameMap, Player* player, s
 
     for(Tile* tile : affectedTiles)
     {
-        fireSpellEffect(*tile, "Heal", "HealCast");
+        fireSpellEffect(*tile, "Heal", "HealCast", gameMap, player->getSeat());
     }
 
     return true;

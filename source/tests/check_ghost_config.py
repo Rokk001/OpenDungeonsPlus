@@ -59,7 +59,13 @@ def main():
         assert len(matches)==1 and matches[0][0]==mode and list(map(float,matches[0][1].split()))==values, effect
     assert not re.search(r'^\s*roomCrypt\s+RotTime\b', skills, re.M)
     ai = read('source/ai/KeeperAI.cpp')
-    assert re.search(r'RoomType::crypt\s*,\s*RoomType::ghostRoom', ai)
+    # The compiled room order and the [RoomPlan] order of ai.cfg are the same whole list of the plan
+    plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', read('config/ai.cfg'), re.M | re.S).group(1)
+    plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+    compiled_names = re.findall(r'"(\w+)"', re.search(r'wantedBuildingKeys = \{(.*?)\};', ai, re.S).group(1))
+    assert plan_names == ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture'], plan_names
+    assert compiled_names == plan_names, compiled_names
+    assert plan_names.index('ghostroom') == 17 and plan_names.index('crypt') == 19
     creatures = {}
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
         match = re.search(r'^\s*Name\s+(\S+)', block, re.M)

@@ -17,6 +17,7 @@
 
 #include "spells/Spell.h"
 
+#include "ai/AiMind.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
@@ -35,6 +36,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include "ODApplication.h"
 #include <algorithm>
 #include <iomanip>
 #include <istream>
@@ -252,7 +254,9 @@ void Spell::fireSpellSound(Tile& tile, const std::string& soundFamily)
 const std::string Spell::SPELL_EFFECT_PREFIX = "SpellFx/";
 const std::string Spell::HAND_CAST_EFFECT_NAME = "HandCast";
 
-void Spell::fireSpellEffect(Tile& tile, const std::string& effectName, const std::string& soundFamily)
+//! \brief Shows a spell effect to humans and reports visible enemy keeper casts to AI seats.
+void Spell::fireSpellEffect(Tile& tile, const std::string& effectName, const std::string& soundFamily,
+    GameMap* gameMap, const Seat* caster)
 {
     if(!soundFamily.empty())
         fireSpellSound(tile, soundFamily);
@@ -265,7 +269,15 @@ void Spell::fireSpellEffect(Tile& tile, const std::string& effectName, const std
         if(seat->getPlayer() == nullptr)
             continue;
         if(!seat->getPlayer()->getIsHuman())
+        {
+            if(gameMap != nullptr && caster != nullptr && seat != caster && !seat->isAlliedSeat(caster))
+            {
+                AiEvent event = {AiEventType::EnemySpellSeen, &tile, nullptr, caster->getId(), 0.0,
+                    static_cast<double>(gameMap->getTurnNumber()) / ODApplication::turnsPerSecond};
+                gameMap->notifyAi(*seat->getPlayer(), event);
+            }
             continue;
+        }
 
         ServerNotification *serverNotification = new ServerNotification(
             ServerNotificationType::playSpatialSound, seat->getPlayer());

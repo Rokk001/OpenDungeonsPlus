@@ -143,12 +143,14 @@ bool Campaign::importDefinition(std::istream& is)
     return !mLevels.empty();
 }
 
+//! \brief Reads campaign progress, finished difficulties and retained creatures.
 bool Campaign::importProgress(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
     mCompleted.assign(mLevels.size(), false);
     mDiscovered.assign(mLevels.size(), false);
     mDifficulty = getDefaultDifficulty();
+    mFinishedDifficulties.clear();
     mKeptClass.clear();
     mKeptLevel = 0;
 
@@ -163,6 +165,19 @@ bool Campaign::importProgress(std::istream& is)
             uint32_t difficulty;
             if((ss >> difficulty) && (difficulty < static_cast<uint32_t>(KeeperAIType::nbAI)))
                 mDifficulty = difficulty;
+            continue;
+        }
+        if(keyword == "Finished")
+        {
+            std::string name;
+            while(ss >> name)
+            {
+                for(uint32_t i = 0; i < static_cast<uint32_t>(KeeperAIType::nbAI); ++i)
+                {
+                    if(name == KeeperAITypes::nameOf(static_cast<KeeperAIType>(i)))
+                        mFinishedDifficulties.insert(name);
+                }
+            }
             continue;
         }
         if(keyword == "KeptMinion")
@@ -190,6 +205,7 @@ bool Campaign::importProgress(std::istream& is)
     return true;
 }
 
+//! \brief Writes campaign progress and completed difficulties.
 void Campaign::exportProgress(std::ostream& os) const
 {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -209,6 +225,10 @@ void Campaign::exportProgress(std::ostream& os) const
     }
     os << "\n";
     os << "Difficulty " << mDifficulty << "\n";
+    os << "Finished";
+    for(std::set<std::string>::const_iterator it = mFinishedDifficulties.begin(); it != mFinishedDifficulties.end(); ++it)
+        os << " " << *it;
+    os << "\n";
     if(!mKeptClass.empty())
         os << "KeptMinion " << mKeptClass << " " << mKeptLevel << "\n";
 }
@@ -426,6 +446,13 @@ bool Campaign::takeKeptMinion(std::string& className, uint32_t& level)
     return true;
 }
 
+//! \brief Returns whether Hard has been completed.
+bool Campaign::isHellUnlocked() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mFinishedDifficulties.count("hard") != 0;
+}
+
 void Campaign::resetProgress()
 {
     {
@@ -524,6 +551,7 @@ std::string Campaign::getLevelSummary() const
     return mLevelSummary;
 }
 
+//! \brief Records the won level and any completed campaign difficulty.
 bool Campaign::onLevelWon()
 {
     {
@@ -532,6 +560,8 @@ bool Campaign::onLevelWon()
             return false;
 
         mCompleted[mPlayedLevel] = true;
+        if(getCurrentLevelNoLock() == mLevels.size())
+            mFinishedDifficulties.insert(KeeperAITypes::nameOf(static_cast<KeeperAIType>(mDifficulty)));
         mPlayedLevelWon = true;
         if(!mKeptPendingClass.empty())
         {

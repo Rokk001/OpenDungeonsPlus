@@ -32,7 +32,7 @@ spell_code += read("source", "creatureeffect", "CreatureEffectDefector.cpp") + \
     read("source", "creatureeffect", "CreatureEffectHexenHen.cpp")
 cfg = read("config", "roomAmbienceSpells.cfg") + read("config", "roomAmbienceSpellsFx.cfg")
 events = set(re.findall(r"^\s*Event\s+(\S+)", cfg, re.M))
-reported = set("SpellFx" + name for name in re.findall(r'fireSpellEffect\([^;]*?"(\w+)"\s*,\s*"[^"]*"\)', spell_code))
+reported = set("SpellFx" + name for name in re.findall(r'fireSpellEffect\([^;]*?"(\w+)"\s*,\s*"[^"]*"\s*(?:,[^;]*)?\)', spell_code))
 for effect in ("Summon", "Champion", "CallToWar", "Explosion", "Strength", "Weak", "EyeEvil", "Gold", "Lightning",
                "Tremor", "Defector", "Hen", "Inferno", "InfernoHit", "Possess"):
     if "SpellFx" + effect not in reported:

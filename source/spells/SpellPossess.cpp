@@ -153,6 +153,7 @@ void SpellPossess::checkSpellCast(GameMap* gameMap, const InputManager& inputMan
     ODClient::getSingleton().queueClientNotification(clientNotification);
 }
 
+//! \brief Casts the keeper spell and reports its effect to seats with vision.
 bool SpellPossess::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
 {
     std::string creatureName;
@@ -189,7 +190,7 @@ bool SpellPossess::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     creature->addParticleEffect(Creature::POSSESSION_AURA_SCRIPT, -1);
     Tile* pos = creature->getPositionTile();
     if(pos != nullptr)
-        fireSpellEffect(*pos, "Possess", "PossessCast");
+        fireSpellEffect(*pos, "Possess", "PossessCast", gameMap, player->getSeat());
     return true;
 }
 

@@ -25,6 +25,8 @@
 #include "gamemap/LevelScript.h"
 
 #include "ai/KeeperAIType.h"
+#include "ai/BaseAI.h"
+#include "ai/AiMind.h"
 #include "creatureaction/CreatureAction.h"
 #include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
@@ -1760,6 +1762,7 @@ void GameMap::doPlayerAITurn(double timeSinceLastTurn)
     mAiManager.doTurn(timeSinceLastTurn);
 }
 
+//! \brief Updates upkeep, including payday notices for human and AI keepers.
 unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 {
     Tile *tempTile;
@@ -1775,8 +1778,6 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
         // We only notify players with a dungeon temple
         for(Player* player : getPlayers())
         {
-            if(!player->getIsHuman())
-                continue;
             if(player->getHasLost())
                 continue;
 
@@ -1796,6 +1797,14 @@ unsigned long int GameMap::doMiscUpkeep(double timeSinceLastTurn)
 
             if(!isCreatureSeat)
                 continue;
+
+            if(!player->getIsHuman())
+            {
+                AiEvent event = {AiEventType::Payday, nullptr, nullptr, -1, 0.0,
+                    this->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+                this->notifyAi(*player, event);
+                continue;
+            }
 
             ServerNotification *serverNotification = new ServerNotification(
                 ServerNotificationType::chatServer, player);
@@ -2360,6 +2369,7 @@ void GameMap::updateCreatureOverlays(Ogre::Real timeSinceLastFrame)
     }
 }
 
+//! \brief Notifies allied players and AIs about a fight.
 void GameMap::playerIsFighting(Player* player, Tile* tile)
 {
     if (player == nullptr)
@@ -2372,8 +2382,8 @@ void GameMap::playerIsFighting(Player* player, Tile* tile)
     // Get every player's allies
     for (Player* ally : mPlayers)
     {
-        // No need to warn AI about music
-        if (!ally || !ally->getIsHuman())
+        // AI keepers receive fight events without client music notifications.
+        if (!ally)
             continue;
 
         if (ally->getSeat() == nullptr || !ally->getSeat()->isAlliedSeat(player->getSeat()))
@@ -2704,6 +2714,16 @@ bool GameMap::addPlayer(Player* player)
     mPlayers.push_back(player);
     OD_LOG_INF(serverStr() + "Added player: " + player->getNick());
     return true;
+}
+
+//! \brief Forwards a server event to the player's AI, if any.
+void GameMap::notifyAi(Player& player, const AiEvent& event)
+{
+    if(!isServerGameMap() || player.getIsHuman())
+        return;
+    BaseAI* ai = getAI(player);
+    if(ai != nullptr)
+        ai->notifyEvent(event);
 }
 
 bool GameMap::assignAI(Player& player, KeeperAIType aiType)
@@ -3800,6 +3820,18 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
     }
 
     return tempSS.str();
+}
+
+//! \brief The cap of the claimed tiles that count for the mana income (see manaIncomePerSecond).
+double GameMap::getManaIncomeTilesCap() const
+{
+    return manaIncomeTilesCap();
+}
+
+//! \brief Seconds left until the next payday: the payday period minus the time since the last payday.
+double GameMap::getTimeToPayDay() const
+{
+    return std::max(0.0, static_cast<double>(ConfigManager::getSingleton().getTimePayDay()) - mTimePayDay);
 }
 
 //! \brief Deposits exact gold into the keeper's rooms and returns any overflow.

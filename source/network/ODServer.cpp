@@ -22,6 +22,7 @@
 #include "gamemap/LevelScriptRunner.h"
 
 #include "ai/KeeperAIType.h"
+#include "ai/BaseAI.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
@@ -519,7 +520,9 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         {
             // In the campaign the AI level is the difficulty chosen for the campaign
             KeeperAIType aiType = KeeperAIType::normal;
-            if(Campaign::getSingleton().isActive())
+            if(seat->getAiLevel() != KeeperAIType::nbAI)
+                aiType = seat->getAiLevel();
+            else if(Campaign::getSingleton().isActive())
                 aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getDifficulty());
             seat->setConfigPlayerId(Seat::aITypeToPlayerId(aiType));
         }
@@ -842,6 +845,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
     }
 }
 
+//! \brief Starts the game, restores controller state and advances synchronized turns.
 void ODServer::serverThread()
 {
     GameMap* gameMap = mGameMap;
@@ -932,6 +936,18 @@ void ODServer::serverThread()
                 }
 
                 gameMap->createAllEntities();
+
+                // Restore AI hands after entity placement and before the first game upkeep.
+                for(Seat* seat : seats)
+                {
+                    Player* player = seat->getPlayer();
+                    BaseAI* ai = player == nullptr ? nullptr : gameMap->getAI(*player);
+                    if(ai == nullptr)
+                        continue;
+                    const std::vector<std::string> lines = seat->takeAiStateLoaded();
+                    if(!lines.empty() && !ai->importState(lines))
+                        OD_LOG_WRN("Invalid AI state; starting a fresh keeper mind");
+                }
                 
                 // Fill starting gold
                 for(Seat* seat : gameMap->getSeats())
@@ -1678,6 +1694,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
                     aiPlayer->setNick("Keeper AI " + KeeperAITypes::toString(aiType) + " " + Helper::toString(seatId));
                     gameMap->addPlayer(aiPlayer);
                     seat->setPlayer(aiPlayer);
+                    seat->setAiLevel(aiType);
                     gameMap->assignAI(*aiPlayer, aiType);
                 }
                 else

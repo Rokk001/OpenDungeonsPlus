@@ -72,6 +72,27 @@ bool CreatureSkillMissileLaunch::canBeUsedBy(const Creature* creature) const
     return true;
 }
 
+//! \brief The shot damage range against a creature before rolls, defence, target items and critical hits.
+void CreatureSkillMissileLaunch::getCreatureDamageRange(const Creature& creature, double& minSum, double& maxSum) const
+{
+    // The same scaling as a shot of tryUseFight
+    double damageFactor = appliesSkillDamageFactor() ? creature.getDefinition()->getSkillDamageFactor() : 1.0;
+    const double referenceMinHP = ConfigManager::getSingleton().getSkillSpellReferenceMinHP();
+    if(isTreeSkill() && referenceMinHP > 0.0)
+        damageFactor *= creature.getDefinition()->getMinHp() / referenceMinHP;
+    double phyMin = mPhyMin * damageFactor, phyMax = mPhyMax * damageFactor;
+    double magMin = mMagMin * damageFactor, magMax = mMagMax * damageFactor;
+    double eleMin = mEleMin * damageFactor, eleMax = mEleMax * damageFactor;
+    const bool carriesBow = creature.carriesBowOrCrossbow();
+    const bool dexterityLine = carriesBow && getSkillName() != "Grenade" && !isTreeSkill();
+    const double damageLevel = dexterityLine ? creature.getDexterityLevel() : static_cast<double>(creature.getLevel());
+    const bool spellLine = isTreeSkill() || (!carriesBow && creature.getDefinition()->isFirstAttackSkill(this));
+    CombatDamage::scale(creature, phyMin, phyMax, magMin, magMax, eleMin, eleMax,
+        damageLevel, spellLine ? "spell%" : "dmg%");
+    minSum = phyMin + magMin + eleMin;
+    maxSum = phyMax + magMax + eleMax;
+}
+
 //! \brief Launches a projectile retaining shooter identity for its damage and equipment effects.
 bool CreatureSkillMissileLaunch::tryUseFight(GameMap& gameMap, Creature* creature, float range,
         GameEntity* attackedObject, Tile* attackedTile, bool ko, bool notifyPlayerIfHit) const

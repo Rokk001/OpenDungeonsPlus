@@ -1,3 +1,4 @@
+#include "ai/AiMind.h"
 #include "creatureaction/CreatureActionHuntGhost.h"
 #include <OgreBillboardChain.h>
 #include <OgreParticleSystem.h>
@@ -73,6 +74,7 @@
 #include "creatureskill/CreatureSkill.h"
 #include "creatureskill/CreatureSkillManager.h"
 #include "creatureskill/CreatureSkillMeleeFight.h"
+#include "creatureskill/CreatureSkillMissileLaunch.h"
 
 
 #include "entities/ChickenEntity.h"
@@ -1204,6 +1206,8 @@ void Creature::exportToStream(std::ostream& os) const
     }
     if(mGhostRevived)
         os << " [GhostRevival] " << mSpecialMood << ' ' << mThirst << " [/GhostRevival]";
+    if(mNbTurnsPrison != 0 || mNbTurnsTorture != 0)
+        os << " [Captivity] " << mNbTurnsPrison << ' ' << mNbTurnsTorture << " [/Captivity]";
     for(const std::unique_ptr<CreatureAction>& action : mActions)
         if(action->getType()==CreatureActionType::huntGhost)
             static_cast<const CreatureActionHuntGhost*>(action.get())->exportToStream(os);
@@ -1288,6 +1292,17 @@ bool Creature::importFromStream(std::istream& is)
     bool corpseDeathPending = false;
     while(is >> appearanceToken)
     {
+        if(appearanceToken == "[Captivity]")
+        {
+            int32_t prisonTurns, tortureTurns;
+            std::string close;
+            if(!(is >> prisonTurns >> tortureTurns >> close) || close != "[/Captivity]" ||
+               prisonTurns < 0 || tortureTurns < 0)
+                return false;
+            mNbTurnsPrison = prisonTurns;
+            mNbTurnsTorture = tortureTurns;
+            continue;
+        }
         if(appearanceToken == "[WorkerJob]")
         {
             uint32_t job = 0, fixed = 0;
@@ -7408,6 +7423,55 @@ double Creature::getAppliedCooldownNbTurns(const CreatureSkill& skill) const
     return cooldown;
 }
 
+//! \brief Mean damage per second of the main attack line against an undefended target, without any roll.
+double Creature::getRawDamagePerSecond() const
+{
+    // The main attack line: the melee attack, or for a creature without one its first ranged attack
+    const CreatureSkillMeleeFight* melee = nullptr;
+    const CreatureSkillMissileLaunch* ranged = nullptr;
+    for(const CreatureSkillData& skillData : mSkillData)
+    {
+        if(!skillData.mSkill->canBeUsedBy(this))
+            continue;
+
+        melee = dynamic_cast<const CreatureSkillMeleeFight*>(skillData.mSkill);
+        if(melee != nullptr)
+            break;
+    }
+    if(melee == nullptr)
+    {
+        for(const CreatureSkillData& skillData : mSkillData)
+        {
+            if(!skillData.mSkill->canBeUsedBy(this) || !isLevelScaledAttack(*skillData.mSkill))
+                continue;
+
+            ranged = dynamic_cast<const CreatureSkillMissileLaunch*>(skillData.mSkill);
+            if(ranged != nullptr)
+                break;
+        }
+    }
+
+    double minSum = 0.0;
+    double maxSum = 0.0;
+    const CreatureSkill* attack = nullptr;
+    if(melee != nullptr)
+    {
+        melee->getCreatureDamageRange(*this, minSum, maxSum);
+        attack = melee;
+    }
+    else if(ranged != nullptr)
+    {
+        ranged->getCreatureDamageRange(*this, minSum, maxSum);
+        attack = ranged;
+    }
+    else
+        return 0.0;
+
+    const double hitFactor = ConfigManager::getSingleton().getAiConfigDouble("RawHitFactor");
+    return hitFactor * 0.5 * (minSum + maxSum) / std::max(1.0, getAppliedCooldownNbTurns(*attack))
+        * ODApplication::turnsPerSecond;
+}
+
 void Creature::useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit)
 {
@@ -7562,6 +7626,13 @@ bool Creature::tryPickup(Seat* seat)
         return false;
 
     return true;
+}
+
+//! \brief Restores the in-hand state without repeating pickup events or statistics.
+void Creature::restoreInHand()
+{
+    removeEntityFromPositionTile();
+    mIsInHand = true;
 }
 
 void Creature::pickup()
@@ -8436,14 +8507,20 @@ void Creature::fireCreatureRefreshIfNeeded()
     }
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgTookFee(int goldTaken)
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, static_cast<double>(goldTaken),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     std::string suffix;
     // We don't display the same message if we have taken all our fee or only a part of it
@@ -8455,62 +8532,92 @@ void Creature::fireChatMsgTookFee(int goldTaken)
     getSeat()->getPlayer()->notifyCreatureEvent(*this, suffix);
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgLeftDungeon()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, 0.0,
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " left your dungeon");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgLeavingDungeon()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, 0.0,
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is leaving your dungeon");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgBecameRogue()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureLeft, getPositionTile(), this, -1, 0.0,
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is not under your control anymore !");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgUnhappy()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureMood, getPositionTile(), this, -1, static_cast<double>(getMoodValue()),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is unhappy !");
 }
 
+//! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgFurious()
 {
     if(getSeat()->getPlayer() == nullptr)
         return;
-    if(!getSeat()->getPlayer()->getIsHuman())
-        return;
     if(getSeat()->getPlayer()->getHasLost())
         return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+    {
+        AiEvent event = {AiEventType::CreatureMood, getPositionTile(), this, -1, static_cast<double>(getMoodValue()),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*getSeat()->getPlayer(), event);
+        return;
+    }
 
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is furious !");
 }

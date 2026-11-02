@@ -186,7 +186,7 @@ bool SpellLightning::castSpell(GameMap* gameMap, Player* player, ODPacket& packe
         ConfigManager::getSingleton().getSpellConfigDouble("LightningDamage"), ResearchEffect::Damage));
     creature->takeDamage(nullptr, damage, 0.0, 0.0, 0.0, pos, false);
     creature->stun(static_cast<int32_t>(std::ceil(ConfigManager::getSingleton().getSpellConfigDouble("LightningStunTurns"))));
-    fireSpellEffect(*pos, "Lightning", "LightningCast");
+    fireSpellEffect(*pos, "Lightning", "LightningCast", gameMap, player->getSeat());
 
     return true;
 }

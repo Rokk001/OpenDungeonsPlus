@@ -63,7 +63,8 @@ struct GameEntity {Seat* seat;int deaths=0;GameEntity(Seat* s=nullptr):seat(s){}
 struct Creature:GameEntity {CreatureDefinition definition;Creature(Seat* s,bool worker):GameEntity(s){definition.worker=worker;}
  GameEntityType getObjectType()const override{return GameEntityType::creature;}
  const CreatureDefinition* getDefinition()const{return &definition;}};
-struct GameMap {bool editor=false;int fights=0;
+enum class AiEventType {HeartCritical};struct Creature;struct AiEvent {AiEventType type;Tile* tile;Creature* creature;int otherSeatId;double amount;double time;};
+struct GameMap {bool editor=false;int fights=0; int notified=0;int64_t getTurnNumber()const{return 0;}void notifyAi(Player&,const AiEvent&){++notified;}
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}
  void addManaToSeat(int,int){}uint32_t getHeartDestroyedReward()const{return 0;}
  static const uint32_t SKIRMISH_HEART_REWARD_SPECIALS=1;static const uint32_t SKIRMISH_HEART_REWARD_ROOMS_AND_LAND=2;};

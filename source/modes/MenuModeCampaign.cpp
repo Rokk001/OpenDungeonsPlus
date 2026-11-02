@@ -458,6 +458,7 @@ void MenuModeCampaign::activate()
         RunLevelTest::onCampaignMapShown(playedLevelWon);
 }
 
+//! \brief Displays the campaign difficulty and its unlock hint.
 void MenuModeCampaign::updateDifficultyButton()
 {
     Campaign& campaign = Campaign::getSingleton();
@@ -469,16 +470,24 @@ void MenuModeCampaign::updateDifficultyButton()
     button->setText("Difficulty: " + name);
     // The difficulty is chosen when a new campaign is begun and then stays
     button->setEnabled(!campaign.hasProgress());
+    button->setTooltipText(!campaign.hasProgress() && !campaign.isHellUnlocked() ? "Finish the campaign on Hard to unlock Hell." : "");
 }
 
+//! \brief Selects the next unlocked campaign difficulty.
 bool MenuModeCampaign::difficultyButtonPressed(const CEGUI::EventArgs&)
 {
     Campaign& campaign = Campaign::getSingleton();
     if(campaign.hasProgress())
         return true;
 
-    uint32_t next = (campaign.getDifficulty() + 1) % static_cast<uint32_t>(KeeperAIType::nbAI);
-    campaign.setDifficulty(next);
+    size_t index = 0;
+    while(index < KeeperAITypes::displayOrder.size() && static_cast<uint32_t>(KeeperAITypes::displayOrder[index]) != campaign.getDifficulty())
+        ++index;
+    do
+    {
+        index = (index + 1) % KeeperAITypes::displayOrder.size();
+    } while(KeeperAITypes::displayOrder[index] == KeeperAIType::hell && !campaign.isHellUnlocked());
+    campaign.setDifficulty(static_cast<uint32_t>(KeeperAITypes::displayOrder[index]));
     updateDifficultyButton();
     return true;
 }

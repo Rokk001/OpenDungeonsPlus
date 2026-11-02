@@ -830,6 +830,13 @@ public:
     //! \return The cooldown in turns (may be a fraction) that is applied and shown on the recovery clock.
     double getAppliedCooldownNbTurns(const CreatureSkill& skill) const;
 
+    //! \brief The mean damage per second of the creature against an undefended target (heart, rooms): its main attack
+    //! line (the melee attack, or for a creature without one its first ranged attack), scaled as the fight scales it,
+    //! times RawHitFactor of ai.cfg, divided by the applied cooldown and times the turns per second. No hit roll,
+    //! avoidance, critical hit, item or strike factor.
+    //! \return The damage per second, 0 for a creature without an attack line
+    double getRawDamagePerSecond() const;
+
     //! \brief performs the given attack on the given target
     void useAttack(CreatureSkillData& skillData, GameEntity& entityAttack,
         Tile& tileAttack, bool ko, bool notifyPlayerIfHit);
@@ -900,6 +907,9 @@ public:
     //! pickup in the statistics of the seat and the pickedup event for the level script.
     //! \brief Drops captured ghosts before the creature is lifted out of the world.
     void pickup() override;
+
+    //! \brief Restores the in-hand state of a creature loaded from a save without pickup effects.
+    void restoreInHand();
     bool tryDrop(Seat* seat, Tile* tile) override;
     //! \brief Drops the creature and clears stale lethal-shot credit when the knockout changes. It also counts the
     //! drop in the statistics of the seat.
