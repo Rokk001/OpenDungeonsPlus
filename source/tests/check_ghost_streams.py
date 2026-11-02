@@ -133,7 +133,7 @@ struct SeatRecord{double mEctoplasmLevels=0;GhostProduct mGhostProduct=GhostProd
   if(str=="[Other]"){if(!(is>>str)||str!="[/Other]"||!(is>>str))return false;continue;}return str=="EndSeat";}}
 };
 //! \brief Retains exact corpse clocks, transient markers and the fading revival mood.
-struct CorpseRecord{double mCorpseTurns=0,mDecayTurns=-1,mSpecialMood=0,mThirst=0,mSavedRevivalThirst=0;unsigned int mDeathCounter=1;bool mIsCarried=false,mGhostRevived=false,mRevivalThirstFromSave=false;std::string mHpString="0",mCorpseCarrierName;
+struct CorpseRecord{int32_t mNbTurnsPrison=0,mNbTurnsTorture=0;double mCorpseTurns=0,mDecayTurns=-1,mSpecialMood=0,mThirst=0,mSavedRevivalThirst=0;unsigned int mDeathCounter=1;bool mIsCarried=false,mGhostRevived=false,mRevivalThirstFromSave=false;std::string mHpString="0",mCorpseCarrierName;
  //! \brief Reports the dead saved record to the real writer.
  bool isAlive()const{return mHpString=="max"||std::stod(mHpString)>0;}
  //! \brief Writes original corpse and revival blocks at full precision.
