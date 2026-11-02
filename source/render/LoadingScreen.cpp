@@ -29,6 +29,7 @@
 #include <CEGUI/System.h>
 #include <CEGUI/GUIContext.h>
 #include <CEGUI/Window.h>
+#include <CEGUI/WindowManager.h>
 
 #include <algorithm>
 #include <random>
@@ -59,6 +60,7 @@ bool previousRectangleVisible = true;
 int previousImage = -1;
 CEGUI::Window* hiddenRoot = nullptr;
 CEGUI::Window* loadingText = nullptr;
+CEGUI::Window* temporaryLoadingText = nullptr;
 float previousRootAlpha = 1.0f;
 bool previousRootEnabled = true;
 float previousTextAlpha = 1.0f;
@@ -130,6 +132,11 @@ void restoreLoadingInterface()
     for(const std::pair<CEGUI::Window*, bool>& saved : previousVisibility)
         saved.first->setVisible(saved.second);
     previousVisibility.clear();
+    if(temporaryLoadingText != nullptr)
+    {
+        CEGUI::WindowManager::getSingleton().destroyWindow(temporaryLoadingText);
+        temporaryLoadingText = nullptr;
+    }
     hasDeferredStatus = false;
     hiddenRoot = nullptr;
     loadingText = nullptr;
@@ -141,6 +148,7 @@ bool loadingRootDestroyed(const CEGUI::EventArgs&)
     hasDeferredStatus = false;
     hiddenRoot = nullptr;
     loadingText = nullptr;
+    temporaryLoadingText = nullptr;
     statusOverride = nullptr;
     previousVisibility.clear();
     independentAlpha.clear();
@@ -361,7 +369,7 @@ void LoadingScreen::finish()
         frame->updateMenuScene(0.0f);
 }
 
-//! \brief Fits the shared startup/world/menu picture and retains the existing loading text once the GUI exists.
+//! \brief Fits the loading picture and shows existing or temporary status text once the GUI exists.
 void LoadingScreen::update()
 {
     if(loadingRectangle == nullptr)
@@ -391,6 +399,18 @@ void LoadingScreen::update()
         return;
     hiddenRoot = root;
     loadingText = statusOverride != nullptr ? statusOverride : findLoadingText(root);
+    if(loadingText == nullptr)
+    {
+        temporaryLoadingText = CEGUI::WindowManager::getSingleton().createWindow("OD/StaticText");
+        temporaryLoadingText->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0.8f, 0),
+            CEGUI::UDim(1, 0), CEGUI::UDim(0.8f, 20)));
+        temporaryLoadingText->setText("Loading...");
+        temporaryLoadingText->setProperty("FrameEnabled", "False");
+        temporaryLoadingText->setProperty("BackgroundEnabled", "False");
+        temporaryLoadingText->setProperty("HorzFormatting", "CentreAligned");
+        root->addChild(temporaryLoadingText);
+        loadingText = temporaryLoadingText;
+    }
     previousRootAlpha = root->getAlpha();
     previousRootEnabled = !root->isDisabled();
     if(loadingText != nullptr)
