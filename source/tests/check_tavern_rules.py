@@ -109,7 +109,7 @@ assert 'if(!hasSeatLayout)' in load and 'mSavedFurniture.clear();' in load and '
 assert 'os << STREAM_TAG_SEAT_LAYOUT' in export
 # Guests walk to a seat on a bench, never to the middle of a tile with furniture, and step off it when they leave.
 use_room_text = extract(room_cpp, 'bool RoomTavern::useRoom(')
-assert 'walkToSeat(creature, seat, spot.mWholeBench)' in use_room_text and 'stepOffSeat(creature, seat, spot.mWholeBench)' in use_room_text
+assert 'walkToSeat(creature, seat, spot.mTwoPlaces)' in use_room_text and 'stepOffSeat(creature, seat, spot.mTwoPlaces)' in use_room_text
 assert 'setDestination' not in use_room_text
 walk_to_seat = extract(room_cpp, 'bool RoomTavern::walkToSeat(')
 assert 'EntityAnimation::sit_anim, true, false, route, false, true' in walk_to_seat
@@ -117,7 +117,7 @@ assert 'EntityAnimation::sit_anim, true, false, route, false, true' in walk_to_s
 assert 'path(&creature, seat.mTable)' not in walk_to_seat
 assert '!walkToOtherSeat(creature, seat)' in use_room_text
 # A guest closed in on its seat stays on it, and the plain tile path never leads through tavern furniture.
-assert 'if(stepOffSeat(creature, seat, spot.mWholeBench))' in use_room_text
+assert 'if(stepOffSeat(creature, seat, spot.mTwoPlaces))' in use_room_text
 set_destination = extract(read('source/entities/Creature.cpp'), 'bool Creature::setDestination(')
 assert 'RoomType::tavern' in set_destination and 'getBuildingObjectFromTile(step)' in set_destination
 assert set_destination.index('RoomType::tavern') < set_destination.index('path, true, true)')
@@ -451,7 +451,7 @@ public:
     void abortDisturbedGuests();
     void finishDrink(Tile* tile, RoomTavernSpot& spot);
     bool payForBeer(Creature& creature, bool& noCoin);
-    bool isFreeSeat(const RoomTavernSeat& seat, bool wholeBench) const;
+    bool isFreeSeat(const RoomTavernSeat& seat, bool twoPlaces) const;
     bool pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) const;
     static bool isLargeGuest(const Creature& creature);
     void tryStartGame(const RoomTavernSeat& seat);
@@ -743,7 +743,7 @@ static void checkSeats()
       Creature troll("Troll", &large, &f.seat, 1); troll.mTile = f.map.getTile(2, 5); Creature goblin("Goblin", &f.thirsty, &f.seat, 1);
       expect(RoomTavern::isLargeGuest(troll) && !RoomTavern::isLargeGuest(goblin), "a bed of two by two tiles makes a creature large");
       RoomTavernSeat picked; expect(f.room.pickFreeSeat(troll, picked) && picked.mIndex == 0, "a large creature takes the first seat of a bench");
-      RoomTavernSpot spot(&troll); spot.mWholeBench = true; f.room.mSpots.insert(std::make_pair(picked, spot));
+      RoomTavernSpot spot(&troll); spot.mTwoPlaces = true; f.room.mSpots.insert(std::make_pair(picked, spot));
       expect(!f.room.isFreeSeat(RoomTavernSeat(picked.mTable, 1), false), "nobody sits next to a large creature");
       expect(f.room.isFreeSeat(RoomTavernSeat(picked.mTable, 2), true), "the opposite bench stays free");
       RoomTavernSeat next; expect(f.room.pickFreeSeat(troll, next) && next.mTable == picked.mTable && next.mIndex == 2, "a second large creature takes the opposite bench"); }

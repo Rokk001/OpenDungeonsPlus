@@ -19,8 +19,14 @@ once the keeper has researched Beer, beer for gold. All numbers are keys of `con
 
 ## The room
 
-- The first tile of a tavern is the counter with the innkeeper figure (not a creature); the other tiles are
-  places to drink with kegs along the walls and tables inside. One guest stands on each place.
+- The first tile of a tavern is the counter with the innkeeper figure (not a creature). Kegs stand along the
+  walls (at most one per six tiles, never two side by side) and tables are spread over the room (at most one per
+  four tiles). A table is two tiles long and has two benches with four places each; a large creature (a bed of
+  two by two tiles) takes two neighbouring places, half of a bench. A creature without a free place does not
+  enter: it tries another tavern of its keeper, otherwise it goes back to work until its visit cooldown is over.
+- A tavern needs a block of three by three tiles. One that loses it takes no guests until it has one again, and
+  its room information says why. When a tavern grows or shrinks, the furniture is spread again, all guests stand
+  up, running games end without a winner and the guests look for a place again.
 - A drink takes `DrinkTurns` turns. The keeper chooses per tavern who pays for the beer: the keeper (treasury)
   or the creature (its own purse). If the payer cannot pay, the guest gets water (a creature that cannot pay
   also loses `NoCoinMood` mood). Beer adds drunkenness, mood and urge; water only a little urge.
@@ -28,18 +34,21 @@ once the keeper has researched Beer, beer for gold. All numbers are keys of `con
   `MaxDrinksPerVisit` per visit. Drunkenness falls by `DrunkDecayPerTurn`; from `StaggerAt` the creature walks
   slower, from `VomitAt` it vomits once per drunk episode (a dirt pile that workers clean). A creature that falls
   asleep above `HangoverAt` wakes up with a hangover (`HangoverTurns`: half work and experience, less mood).
-- After the last drink a guest plays a game with `GameChancePercent` when a neighbour is done as well: arm
+- After the last drink a guest plays a game with `GameChancePercent` when a guest at the same table is done as well: arm
   wrestling, dice or (with Beer) a slap duel. Games cost no gold. The weaker creature has the better chance than
   its level suggests (`GameUnderdog...`). In a slap duel a normal slap takes `SlapDamage` hit points, a critical
   slap (`SlapCritBasePercent` plus `SlapCritPerLevel` per level of difference) ends the duel, and so does
-  falling below `SlapDuelLoseBelowHp`. The loser lies `DuelKoTurns` turns and then goes to bed.
+  falling below `SlapDuelLoseBelowHp`. The loser falls onto a free floor tile next to its bench (on its seat
+  when none is free), lies `DuelKoTurns` turns and then goes to bed. Guests within `GameSpectatorRadius` cheer.
 - Beer research levels 2 and 3 shorten the portal cooldown (research effect `PortalCooldown`).
 
 ## Saves and tools
 
 - Creature streams hold an optional block `[Thirst] <thirst> <tavernMood> <tavernMoodTurns> <drunk> <vomited>
   <hangoverTurns> [/Thirst]` after the `[Needs]` block; the room stream holds `TavernPayer`, `Innkeeper`,
-  `Counter`, `Spot` and `Game` lines, so a running game continues where it stood. Files without them load.
+  `Counter`, `SeatLayout`, `Furniture`, `Spot` and `Game` lines, so the kegs and tables stand where they stood
+  and a running game continues. Files without them load. A room without `SeatLayout 2` (saved before the tables
+  were two tiles long) spreads its furniture again, ends its games and lets its guests look for a place.
 - The checks are `check_tavern_config.py`, `check_tavern_rules.py`, `check_tavern_room.py`,
   `check_tavern_streams.py` and `check_tavern_assets.py` in `source/tests`.
 - `levels/skirmish/TestTavern.level` is a small test map with a tavern, a hatchery, a casino, a treasury with
