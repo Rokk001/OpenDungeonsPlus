@@ -1308,7 +1308,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     if((mCounterTile == nullptr) || (std::find(mCoveredTiles.begin(), mCoveredTiles.end(), mCounterTile) == mCoveredTiles.end()))
         mCounterTile = mCoveredTiles.front();
 
-    // Select furniture in coordinate order so the same room restores the same placement after loading.
+    // Order candidates for deterministic furniture placement.
     std::vector<Tile*> orderedTiles = mCoveredTiles;
     std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile);
     std::map<Tile*, std::string> wantedObjects;
@@ -1327,36 +1327,64 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     mSavedFurniture.clear();
     const size_t kegLimit = orderedTiles.size() / 6;
     const size_t tableLimit = orderedTiles.size() / 4;
-    size_t kegs = 0;
-    for(Tile* tile : orderedTiles)
+    // Pick the candidate furthest from already placed furniture, with coordinate order breaking ties.
+    for(size_t kind = 0; !restoreSaved && (kind < 2); ++kind)
     {
-        if(restoreSaved || (tile == mCounterTile) || (kegs >= kegLimit))
-            continue;
-        const int x = tile->getX();
-        const int y = tile->getY();
-        Tile* neighbours[] = {gameMap->getTile(x, y + 1), gameMap->getTile(x, y - 1),
-                              gameMap->getTile(x - 1, y), gameMap->getTile(x + 1, y)};
-        const double angles[] = {OBJECT_ANGLE_WALL_TOP, OBJECT_ANGLE_WALL_BOTTOM,
-                                 OBJECT_ANGLE_WALL_LEFT, OBJECT_ANGLE_WALL_RIGHT};
-        for(size_t i = 0; i < 4; ++i)
+        const size_t limit = (kind == 0) ? kegLimit : tableLimit;
+        for(size_t count = 0; count < limit; ++count)
         {
-            Tile* neighbour = neighbours[i];
-            if((neighbour != nullptr) && neighbour->isFullTile())
+            Tile* best = nullptr;
+            double bestAngle = 0.0;
+            int32_t bestDistance = -1;
+            for(Tile* tile : orderedTiles)
             {
-                wantedObjects[tile] = TAVERN_KEG_MESH;
-                objectAngles[tile] = angles[i];
-                ++kegs;
-                break;
+                if(wantedObjects.count(tile) != 0)
+                    continue;
+                const int x = tile->getX();
+                const int y = tile->getY();
+                double angle = 0.0;
+                if(kind == 0)
+                {
+                    Tile* neighbours[] = {gameMap->getTile(x, y + 1), gameMap->getTile(x, y - 1),
+                                          gameMap->getTile(x - 1, y), gameMap->getTile(x + 1, y)};
+                    const double angles[] = {OBJECT_ANGLE_WALL_TOP, OBJECT_ANGLE_WALL_BOTTOM,
+                                             OBJECT_ANGLE_WALL_LEFT, OBJECT_ANGLE_WALL_RIGHT};
+                    bool wall = false;
+                    bool adjacentKeg = false;
+                    for(size_t i = 0; i < 4; ++i)
+                    {
+                        if((neighbours[i] != nullptr) && neighbours[i]->isFullTile() && !wall)
+                        {
+                            wall = true;
+                            angle = angles[i];
+                        }
+                        auto object = wantedObjects.find(neighbours[i]);
+                        if((object != wantedObjects.end()) && (object->second == TAVERN_KEG_MESH))
+                            adjacentKeg = true;
+                    }
+                    if(!wall || adjacentKeg)
+                        continue;
+                }
+                int32_t distance = std::numeric_limits<int32_t>::max();
+                for(const auto& object : wantedObjects)
+                {
+                    const int32_t dx = x - object.first->getX();
+                    const int32_t dy = y - object.first->getY();
+                    distance = std::min(distance, dx * dx + dy * dy);
+                }
+                if(distance > bestDistance)
+                {
+                    best = tile;
+                    bestAngle = angle;
+                    bestDistance = distance;
+                }
             }
+            if(best == nullptr)
+                break;
+            wantedObjects[best] = (kind == 0) ? TAVERN_KEG_MESH : TAVERN_TABLE_MESH;
+            if(kind == 0)
+                objectAngles[best] = bestAngle;
         }
-    }
-    size_t tables = 0;
-    for(Tile* tile : orderedTiles)
-    {
-        if(restoreSaved || (tables >= tableLimit) || (wantedObjects.count(tile) != 0))
-            continue;
-        wantedObjects[tile] = TAVERN_TABLE_MESH;
-        ++tables;
     }
 
     // Replace obsolete furniture and leave every unselected tile as free floor.

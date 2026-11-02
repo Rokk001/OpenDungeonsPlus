@@ -73,7 +73,7 @@ room_cpp = read('source/rooms/RoomTavern.cpp')
 placement = extract(room_cpp, 'void RoomTavern::updateActiveSpots(')
 assert 'std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile)' in placement
 assert 'orderedTiles.size() / 4' in placement and 'orderedTiles.size() / 6' in placement
-assert 'neighbour->isFullTile()' in placement and 'wantedObjects.count(tile) != 0' in placement
+assert 'neighbours[i]->isFullTile()' in placement and 'wantedObjects.count(tile) != 0' in placement
 assert 'wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH' in placement
 
 # The table carries its two benches; it is scaled so the benches (1.19 tiles long unscaled) end on the table tile.
@@ -87,8 +87,10 @@ assert 'os << STREAM_TAG_FURNITURE' in export and 'getRotationAngle()' in export
 load = extract(room_cpp, 'bool RoomTavern::importFromStream(')
 assert 'tag == STREAM_TAG_FURNITURE' in load and 'mSavedFurniture.push_back(saved);' in load
 assert 'const bool restoreSaved = !mSavedFurniture.empty();' in placement and 'mSavedFurniture.clear();' in placement
-assert 'if(restoreSaved || (tile == mCounterTile) || (kegs >= kegLimit))' in placement
-assert 'if(restoreSaved || (tables >= tableLimit) || (wantedObjects.count(tile) != 0))' in placement
+assert '!restoreSaved && (kind < 2)' in placement
+assert 'const size_t limit = (kind == 0) ? kegLimit : tableLimit;' in placement
+assert 'if(!wall || adjacentKeg)' in placement
+assert 'if(distance > bestDistance)' in placement
 
 portal_cpp = read('source/rooms/RoomPortal.cpp')
 mood_thirst_cpp = read('source/creaturemood/CreatureMoodThirst.cpp')
