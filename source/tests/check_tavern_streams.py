@@ -7,8 +7,9 @@ The real functions are cut out of the sources and run against small stubs:
               thirst stays at 0), exportThirstStateToPacket / importThirstStateFromPacket
   RoomTavern  exportToStream / importFromStream with the helper functions of the stream: TavernPayer, Innkeeper, Counter,
               Spot (all states, also the short old form) and Game lines (all three kinds, the turn, the slaps taken),
-              a running game and a knocked-out loser keep their remaining turns and seats, lines in any order, a save
-              without seat data spreads its furniture again, ends its games and sends its guests to look for a seat, an old
+              a running game and a knocked-out loser keep their remaining turns and seats (places 0 to 7 of the long
+              tables), lines in any order, a save without seat data or with the seat format 1 of the tables of one tile
+              spreads its furniture again, ends its games and sends its guests to look for a seat, an old
               room without the lines loads, the next token of the stream is put back, broken lines are refused
 The packet order, the notification types and the place where a guest is bound again after loading are checked on the
 source text.
@@ -70,8 +71,12 @@ for notification, names in (('source/network/ServerNotification.h', ('tavernWind
                             ('source/network/ClientNotification.h', ('askTavernWindow', 'askTavernPayer', 'askInfirmaryWindow', 'askInfirmarySettings', 'askGhostRoomSettings', 'askSpaPayer', 'askWorkerSettings'))):
     text = read(notification)
     enum_body = text[text.index('enum class '):text.index('};', text.index('enum class '))]
-    tail = [w for w in re.findall(r'^\s*(\w+),?\s*(?://.*)?$', enum_body, re.M) if w not in ('enum', 'class')][-len(names):]
-    assert tail == list(names), notification + ' must end with ' + ', '.join(names) + ', found ' + ', '.join(tail)
+    # The entries stay together in this order; later entries may follow them (their numbers do not move)
+    entries = [w for w in re.findall(r'^\s*(\w+),?\s*(?://.*)?$', enum_body, re.M) if w not in ('enum', 'class')]
+    assert names[0] in entries, notification + ' misses ' + names[0]
+    start = entries.index(names[0])
+    found = entries[start:start + len(names)]
+    assert found == list(names), notification + ' must hold ' + ', '.join(names) + ' in a row, found ' + ', '.join(found)
 for path, names in (('source/network/ServerNotification.cpp', ('tavernWindow', 'tavernPayer')),
                     ('source/network/ClientNotification.cpp', ('askTavernWindow', 'askTavernPayer'))):
     for name in names:
@@ -306,11 +311,11 @@ static void checkRoomStream()
     room.mSpots.insert(std::make_pair(RoomTavernSeat(map.getTile(2, 2), 1), RoomTavernSpot(&a)));
     RoomTavernSpot& drinking = room.mSpots.find(RoomTavernSeat(map.getTile(2, 2), 1))->second;
     drinking.mState = TavernGuestState::drinking; drinking.mTurnsLeft = 3; drinking.mDrinks = 2;
-    room.mSpots.insert(std::make_pair(RoomTavernSeat(map.getTile(3, 2), 3), RoomTavernSpot(&b)));
-    RoomTavernSpot& lying = room.mSpots.find(RoomTavernSeat(map.getTile(3, 2), 3))->second;
+    room.mSpots.insert(std::make_pair(RoomTavernSeat(map.getTile(3, 2), 7), RoomTavernSpot(&b)));
+    RoomTavernSpot& lying = room.mSpots.find(RoomTavernSeat(map.getTile(3, 2), 7))->second;
     lying.mState = TavernGuestState::ko; lying.mTurnsLeft = 17; lying.mSleepAfter = true;
     RoomTavernGame duel;
-    duel.mKind = TavernGameKind::slapDuel; duel.mSeatA = RoomTavernSeat(map.getTile(4, 2), 0); duel.mSeatB = RoomTavernSeat(map.getTile(5, 2), 2);
+    duel.mKind = TavernGameKind::slapDuel; duel.mSeatA = RoomTavernSeat(map.getTile(4, 2), 0); duel.mSeatB = RoomTavernSeat(map.getTile(5, 2), 6);
     duel.mCreatureA = &c; duel.mCreatureB = &d; duel.mTurnsLeft = 19; duel.mSlapsTakenA = 2; duel.mSlapsTakenB = 1; duel.mTurnIsA = false;
     room.mGames[duel.mSeatA] = duel;
     RoomTavernGame dice;
@@ -321,11 +326,11 @@ static void checkRoomStream()
     std::string text = exportRoom(room);
     expect(text.find("TavernPayer 1") != std::string::npos, "the payer is written");
     expect(text.find("Counter 1 2") != std::string::npos && text.find("Innkeeper 1 2") != std::string::npos, "counter and innkeeper are written");
-    expect(text.find("SeatLayout 1") != std::string::npos, "the seat data is marked");
-    expect(text.find("Spot 3 2 Bert ko 17 0 1 0 3") != std::string::npos, "a guest keeps its seat: " + text);
+    expect(text.find("SeatLayout 2") != std::string::npos, "the seat data of the long tables is marked");
+    expect(text.find("Spot 3 2 Bert ko 17 0 1 0 7") != std::string::npos, "a guest keeps its place on the long bench: " + text);
     expect(text.find("Spot 3 2 Bert ko 17 0 1") != std::string::npos, "a lying loser keeps its remaining turns: " + text);
     expect(text.find("Spot 2 2 Anna drinking 3 2 0") != std::string::npos, "a drinking guest keeps its turns and drinks");
-    expect(text.find("Game 2 4 2 5 2 Cleo Dirk 19 2 1 1 0 2") != std::string::npos, "a running duel keeps the turns, hits, whose turn it is and both seats: " + text);
+    expect(text.find("Game 2 4 2 5 2 Cleo Dirk 19 2 1 1 0 6") != std::string::npos, "a running duel keeps the turns, hits, whose turn it is and both seats: " + text);
 
     // Load: pending places and games hold every value, the next token of the stream is still there
     GameMap map2(10, 10);
@@ -356,7 +361,7 @@ static void checkRoomStream()
     if(spot != loaded.mPendingSpots.end())
     {
         expect(spot->second.mState == TavernGuestState::ko && spot->second.mTurnsLeft == 17 && spot->second.mSleepAfter &&
-               spot->second.mSeat == RoomTavernSeat(map2.getTile(3, 2), 3), "the knocked-out loser lies for the remaining turns, goes to bed and keeps its seat");
+               spot->second.mSeat == RoomTavernSeat(map2.getTile(3, 2), 7), "the knocked-out loser lies for the remaining turns, goes to bed and keeps its seat");
     }
     else expect(false, "Bert has a saved place");
     spot = loaded.mPendingSpots.find("Anna");
@@ -368,7 +373,7 @@ static void checkRoomStream()
     {
         const RoomTavernPendingGame& g = loaded.mPendingGames[0];
         expect(g.mKind == TavernGameKind::slapDuel && g.mNameA == "Cleo" && g.mNameB == "Dirk" && g.mTurnsLeft == 19 && g.mSlapsTakenA == 2 &&
-               g.mSlapsTakenB == 1 && !g.mTurnIsA && g.mSeatA == RoomTavernSeat(map2.getTile(4, 2), 0) && g.mSeatB == RoomTavernSeat(map2.getTile(5, 2), 2), "slap duel round trip");
+               g.mSlapsTakenB == 1 && !g.mTurnIsA && g.mSeatA == RoomTavernSeat(map2.getTile(4, 2), 0) && g.mSeatB == RoomTavernSeat(map2.getTile(5, 2), 6), "slap duel round trip");
         const RoomTavernPendingGame& h = loaded.mPendingGames[1];
         expect(h.mKind == TavernGameKind::dice && h.mTurnIsA && h.mTurnsLeft == 5 && h.mNameA == "Anna" && h.mNameB == "Bert", "dice game round trip");
     }
@@ -381,7 +386,7 @@ static void checkRoomStream()
 
     // Lines in any order, the short Spot form without a seat number, an old room without any tavern line
     GameMap map4(10, 10); RoomTavern shuffled(&map4); for(int i = 1; i < 6; ++i) shuffled.mCoveredTiles.push_back(map4.getTile(i, 2));
-    std::stringstream shuffledIn("RoomData\nGame 0 2 4 3 4 Anna Bert 4 0 0 0\nSpot 3 2 Cleo drinking 2\nCounter 3 2\nSeatLayout 1\nTavernPayer 0\nTail");
+    std::stringstream shuffledIn("RoomData\nGame 0 2 4 3 4 Anna Bert 4 0 0 0\nSpot 3 2 Cleo drinking 2\nCounter 3 2\nSeatLayout 2\nTavernPayer 0\nTail");
     expect(shuffled.importFromStream(shuffledIn), "lines in any order are read");
     expect(shuffled.mCounterTile == map4.getTile(3, 2) && shuffled.mPayer == TavernPayer::keeper, "counter and payer in any order");
     expect(shuffled.mPendingSpots.size() == 1 && shuffled.mPendingSpots["Cleo"].mDrinks == 0 && shuffled.mPendingSpots["Cleo"].mTurnsLeft == 2, "the short Spot form loads");
@@ -402,6 +407,18 @@ static void checkRoomStream()
            oldSave.mPendingSpots["Anna"].mSeat.mTable == nullptr, "a drinking guest looks for a seat and keeps its drinks");
     expect(oldSave.mPendingSpots["Bert"].mState == TavernGuestState::done, "a player of an ended game is done");
     expect(oldSave.mPendingSpots["Cleo"].mState == TavernGuestState::done && oldSave.mPendingSpots["Cleo"].mSleepAfter, "a lying loser gets up and still goes to bed");
+    // A save of seat format 1 had tables of one tile: it is spread again like a save without seat data
+    GameMap mapOne(10, 10); RoomTavern formatOne(&mapOne); for(int i = 1; i < 6; ++i) formatOne.mCoveredTiles.push_back(mapOne.getTile(i, 2));
+    std::stringstream formatOneIn("RoomData\nTavernPayer 0\nCounter 1 2\nSeatLayout 1\nFurniture 3 2 TavernTable 0\nFurniture 5 2 TavernKeg 90\n"
+        "Spot 3 2 Anna drinking 3 1 0 0 2\nSpot 3 2 Bert game 0 1 0 0 3\nGame 0 3 2 3 2 Bert Anna 4 0 0 0 3 2\nTail");
+    expect(formatOne.importFromStream(formatOneIn), "a save of seat format 1 is read");
+    expect(formatOne.mSavedFurniture.empty(), "the tables of one tile are spread again as tables of two tiles");
+    expect(formatOne.mPendingGames.empty(), "the games of a format 1 save end without a winner");
+    expect(formatOne.mPendingSpots.size() == 2 && formatOne.mPendingSpots["Anna"].mSeat.mTable == nullptr &&
+           formatOne.mPendingSpots["Anna"].mState == TavernGuestState::arriving && formatOne.mPendingSpots["Anna"].mDrinks == 1,
+           "a guest of a format 1 save looks for a place again and keeps its drinks");
+    expect(formatOne.mPendingSpots["Bert"].mState == TavernGuestState::done, "a player of a format 1 save is done");
+    std::string formatOneTail; formatOneIn >> formatOneTail; expect(formatOneTail == "Tail", "the format 1 save leaves its next token");
     GameMap map5(10, 10); RoomTavern oldRoom(&map5);
     std::stringstream oldIn("RoomData\nNextRoom 1");
     expect(oldRoom.importFromStream(oldIn) && oldRoom.mPayer == TavernPayer::keeper && oldRoom.mPendingSpots.empty() && oldRoom.mPendingGames.empty(), "an old room loads with the defaults");
@@ -414,7 +431,7 @@ static void checkRoomStream()
     const char* broken[] = {
         "RoomData\nTavernPayer 7\n", "RoomData\nGame 9 1 1 2 1 A B 4 0 0 0\n", "RoomData\nSpot 1 1 A sitting 3\n",
         "RoomData\nSpot 1 1 A drinking\n", "RoomData\nCounter 3\n", "RoomData\nGame 0 1 1 2 1 A B\n", "RoomData\nSeatLayout 9\n",
-        "RoomData\nSpot 1 1 A drinking 3 0 0 0 4\n", "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 4\n" };
+        "RoomData\nSeatLayout 0\n", "RoomData\nSpot 1 1 A drinking 3 0 0 0 8\n", "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 8\n" };
     for(unsigned i = 0; i < sizeof(broken) / sizeof(broken[0]); ++i)
     {
         RoomTavern bad(&map7); std::stringstream badIn(broken[i]);

@@ -31,6 +31,18 @@ TABLE_TOP = 0.4425
 TABLE_HALF_WIDTH = 0.26
 # The guest of a seat sits this far beside the middle of the bench, on either side; a guest of a whole bench sits on its middle.
 SEAT_SIDE = 0.164
+# The table is two tiles long: each half is the old table, so every place sees the same parts next to it. The places of a
+# bench lie this far apart; a normal guest sits on one of four places, a large one in the middle of two of them. The places,
+# measured from the middle of the long table along the bench.
+SEAT_SPACING = 0.328
+NORMAL_PLACES = (-1.5 * SEAT_SPACING, -0.5 * SEAT_SPACING, 0.5 * SEAT_SPACING, 1.5 * SEAT_SPACING)
+LARGE_PLACES = (-SEAT_SPACING, SEAT_SPACING)
+# Along the long table, from its middle: half the length of the top, the middles of the two pedestals, half the length of
+# a bench, and where the legs of a bench stand.
+LONG_TABLE_HALF_LENGTH = TABLE_HALF_WIDTH + SEAT_SPACING
+PEDESTAL_MIDDLES = (-SEAT_SPACING, SEAT_SPACING)
+LONG_BENCH_HALF_LENGTH = 2.0 * SEAT_SPACING
+LONG_BENCH_LEG_X = (0.187 + SEAT_SPACING, 0.26 + SEAT_SPACING)
 # The parts of the table mesh below the top, seen from the middle of the bench: (half width, y from, y to, z from, z to).
 PEDESTAL = (0.193, -0.605, -0.219, 0.0, 0.38)
 BENCH = (0.328, -0.088, 0.087, 0.202, BENCH_TOP)
@@ -79,7 +91,7 @@ REST_TURNS = (90.0, -90.0, 0.0, 180.0)
 REST_HEAD_TURNS = (50.0, 25.0, 0.0)
 REST_HEAD_ADVANTAGE = 0.08
 # A body with free limbs lies this much further from the table, so that the limbs can move above it.
-REST_EXTRA_BACK = {'LavaSpawn': 0.12, 'Rat': 0.02, 'Roach': 0.08}
+REST_EXTRA_BACK = {'LavaSpawn': 0.16, 'Rat': 0.02, 'Roach': 0.08}
 # A clip that keeps less than this share of its motion plays on the spine and the head alone, if that moves more.
 LOW_MOTION_SHARE = 0.25
 # A clip faster than this, in heights of the body per second, moves less as a whole, tried with these shares of its motion.
@@ -255,9 +267,9 @@ def body_vertices(skeleton, chains, weights):
             if row and sum(weight for bone, weight in row if bone not in legs) >= 0.9]
 
 
-# Measure per frame how far a posed body reaches into the furniture, in units of the points. A guest of a seat is measured on
-# both seats, because the same clip plays on both. The top of the table counts from its near edge, which also catches a limb
-# deep inside this thin plate; every other part counts from its nearest face.
+# Measure per frame how far a posed body reaches into the furniture, in units of the points. The table is two tiles long and
+# the same clip plays on every place a guest can take, so the body is measured on each of them. The top of the table counts
+# from its near edge, which also catches a limb deep inside this thin plate; every other part counts from its nearest face.
 def frame_depths(points, selected=None):
     if selected is not None:
         points = points[:, selected, :]
@@ -265,16 +277,20 @@ def frame_depths(points, selected=None):
     world = points * scene
     x, y, z = world[:, :, 0], world[:, :, 1], world[:, :, 2]
     worst = np.zeros(points.shape[:2])
-    for side in (0.0,) if SCENE['whole_bench'] else (SEAT_SIDE, -SEAT_SIDE):
-        beside = np.abs(x - side)
-        inside = (z > TABLE_UNDERSIDE) & (z < TABLE_TOP) & (beside < TABLE_HALF_WIDTH) & (y > TABLE_FAR_EDGE)
+    for place in LARGE_PLACES if SCENE['whole_bench'] else NORMAL_PLACES:
+        # Along the bench, measured from the middle of the long table
+        along = np.abs(x + place)
+        inside = (z > TABLE_UNDERSIDE) & (z < TABLE_TOP) & (along < LONG_TABLE_HALF_LENGTH) & (y > TABLE_FAR_EDGE)
         worst = np.maximum(worst, np.where(inside, TABLE_NEAR_EDGE - y, 0.0))
         half, near, far, low, high = PEDESTAL
-        worst = np.maximum(worst, np.minimum.reduce([half - beside, y - near, far - y, z - low, high - z]))
-        half, near, far, low, high = BENCH
-        worst = np.maximum(worst, np.minimum.reduce([half - beside, y - near, far - y, z - low, high - BENCH_SINK - z]))
-        worst = np.maximum(worst, np.minimum.reduce([beside - BENCH_LEG_X[0], BENCH_LEG_X[1] - beside, BENCH_LEG_Y - np.abs(y),
-                                                     z, BENCH_LEG_TOP - z]))
+        for middle in PEDESTAL_MIDDLES:
+            beside = np.abs(x + place - middle)
+            worst = np.maximum(worst, np.minimum.reduce([half - beside, y - near, far - y, z - low, high - z]))
+        _, near, far, low, high = BENCH
+        worst = np.maximum(worst, np.minimum.reduce([LONG_BENCH_HALF_LENGTH - along, y - near, far - y, z - low,
+                                                     high - BENCH_SINK - z]))
+        worst = np.maximum(worst, np.minimum.reduce([along - LONG_BENCH_LEG_X[0], LONG_BENCH_LEG_X[1] - along,
+                                                     BENCH_LEG_Y - np.abs(y), z, BENCH_LEG_TOP - z]))
     return np.maximum(0.0, worst.max(axis=1)) / scene
 
 

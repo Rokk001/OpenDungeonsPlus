@@ -143,6 +143,7 @@
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
 #include "rooms/RoomSpa.h"
+#include "rooms/RoomTavern.h"
 #include "rooms/RoomToilet.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/Spell.h"
@@ -7991,7 +7992,7 @@ bool Creature::setDestination(Tile* tile)
         {
             Room* room = step->getCoveringRoom();
             if((step != posTile) && (room != nullptr) && (room->getType() == RoomType::tavern) &&
-               (room->getBuildingObjectFromTile(step) != nullptr))
+               static_cast<RoomTavern*>(room)->hasFurnitureOn(step))
             {
                 OD_LOG_INF("creature=" + getName() + " has no way around the tavern furniture on " + Tile::displayAsString(step));
                 return false;

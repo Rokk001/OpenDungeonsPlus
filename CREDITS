@@ -1693,7 +1693,7 @@ assets-src/rooms/tavern/Innkeeper.blend    AI-generated with Codex    GPLv3+    
 assets-src/rooms/tavern/TavernCounter.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
 assets-src/rooms/tavern/TavernKeg.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
 assets-src/rooms/tavern/TavernMug.blend    AI-generated with Codex    GPLv3+    Original Blender source with embedded textures and grip-centred origin for the existing right-hand weapon mount, 2026-10-25
-assets-src/rooms/tavern/TavernTable.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25
+assets-src/rooms/tavern/TavernTable.blend    AI-generated with Codex    GPLv3+    Original individual Blender source with embedded model textures, 2026-10-25; lengthened to two tiles (top and benches stretched, pedestal doubled), 2026-11-02
 materials/scripts/TavernEffects.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
 materials/scripts/TavernFloor.material    AI-generated with Codex    GPLv3+    Original tavern floor and sixteen neighbour-mask materials using existing project room shaders, 2026-10-25
 materials/scripts/TavernObjects.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
@@ -1718,7 +1718,7 @@ models/Innkeeper.skeleton    AI-generated with Codex    GPLv3+    Original Innke
 models/TavernCounter.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 models/TavernKeg.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 models/TavernMug.mesh    AI-generated with Codex    GPLv3+    Original wooden mug exported with a grip-centred origin and the existing right-hand weapon-mount orientation, 2026-10-25
-models/TavernTable.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/TavernTable.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25; two tiles long since 2026-11-02
 models/Vomit.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 particles/Tavern.particle    AI-generated with Codex    GPLv3+    New standalone TavernSmoke and DuelBirds asset definitions, existing particle files unchanged, 2026-10-25
 
