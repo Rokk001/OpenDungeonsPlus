@@ -3,7 +3,7 @@
     <Window type="DefaultWindow" name="DungeonbookProfile">
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Window type="OD/StaticImage" name="Portrait">
-            <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.44,0}}" />
+            <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.38,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Window type="OD/StaticImage" name="Image">
@@ -17,7 +17,7 @@
             </Window>
         </Window>
         <Window type="OD/StaticText" name="NameText">
-            <Property name="Area" value="{{0.02,0},{0.44,0},{0.98,0},{0.50,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.38,0},{0.98,0},{0.43,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -25,7 +25,7 @@
             <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/StaticText" name="KeeperText">
-            <Property name="Area" value="{{0.02,0},{0.50,0},{0.64,0},{0.56,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.43,0},{0.64,0},{0.48,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -33,11 +33,11 @@
             <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/Button" name="SocialButton">
-            <Property name="Area" value="{{0.66,0},{0.50,0},{0.98,0},{0.56,0}}" />
+            <Property name="Area" value="{{0.66,0},{0.43,0},{0.98,0},{0.48,0}}" />
             <Property name="Text" value="Social profile" />
         </Window>
         <Window type="DefaultWindow" name="Attributes">
-            <Property name="Area" value="{{0.02,0},{0.56,0},{0.98,0},{0.72,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.48,0},{0.98,0},{0.60,0}}" />
             <Window type="OD/StaticText" name="Strength">
                 <Property name="Area" value="{{0,0},{0,0},{0.25,0},{1,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
@@ -63,8 +63,24 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
         </Window>
+        <Window type="OD/StaticText" name="SkillsPanel">
+            <Property name="Area" value="{{0.02,0},{0.61,0},{0.49,0},{0.78,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="VertScrollbar" value="True" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="DefensePanel">
+            <Property name="Area" value="{{0.51,0},{0.61,0},{0.98,0},{0.78,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="VertScrollbar" value="True" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
         <Window type="OD/StaticText" name="StatsText">
-            <Property name="Area" value="{{0.02,0},{0.73,0},{0.98,0},{0.98,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.79,0},{0.98,0},{0.98,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="FrameEnabled" value="True" />
             <Property name="BackgroundEnabled" value="False" />

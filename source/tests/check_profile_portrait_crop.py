@@ -50,3 +50,10 @@ for width, height in [(887,1774), (221,443), (512,1024), (256,256), (443,221)]:
         source = [(0,0), (side,0), (0,side), (side,side)]
         assert source[1][0] > source[0][0] and source[0][1] == 0
 print('profile portrait crop ok: whole JPEG square, unchanged tinted/raw fallback and uniform fit')
+
+# The Dungeonbook fallback retains the same top-square crop and masks its outside pixels.
+assert 'getCircularCreatureProfilePortraitImage' in portrait
+assert 'sourceOgre->getBuffer()->blitToMemory' in portrait
+assert 'sourceIndex = (static_cast<size_t>(y) * width + x)' in portrait
+assert 'pixels[index + 3] = 0' in portrait
+assert 'getTintedPortraitNames().insert(name)' in portrait

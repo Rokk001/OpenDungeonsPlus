@@ -112,7 +112,12 @@ namespace
         Seat* seat = player->getSeat();
         if(seat == nullptr || !player->getIsHuman())
             return;
-        const std::vector<Creature*> creatures = gameMap->getCreaturesByAlliedSeat(seat);
+        std::vector<Creature*> creatures = gameMap->getCreaturesByAlliedSeat(seat);
+        // Only player-owned allied creatures belong in the book.
+        creatures.erase(std::remove_if(creatures.begin(), creatures.end(), [](const Creature* creature)
+        {
+            return creature->getSeat()->getPlayer() == nullptr;
+        }), creatures.end());
         ServerNotification* notification = new ServerNotification(ServerNotificationType::dungeonbookRoster, player);
         notification->mPacket << static_cast<uint32_t>(creatures.size());
         for(Creature* creature : creatures)
@@ -123,11 +128,21 @@ namespace
             const uint32_t moodBits = creature->getOverlayMoodValue();
             const bool unhappy = (moodBits & (CreatureMoodValues::Hungry | CreatureMoodValues::Tired)) != 0 ||
                 static_cast<int32_t>(creature->getMoodValue()) >= static_cast<int32_t>(CreatureMoodLevel::Upset);
+            // Keep the game values but omit the creature card's developer-only debug section.
+            std::string stats = creature->getStatsText(owner);
+            const std::string debugTitle = "[font='MedievalSharp-10'][colour='FFF2C860']\nDebugging information";
+            const std::string::size_type debug = stats.find(debugTitle);
+            if(debug != std::string::npos)
+            {
+                const std::string::size_type mood = stats.find("\nMood: ", debug);
+                stats.erase(debug, mood == std::string::npos ? std::string::npos : mood - debug);
+            }
             notification->mPacket << creature->getName() << creature->getDefinition()->getClassName() << keeperName
                 << CreatureAppearanceLogic::toToken(creature->getAppearance())
-                << creature->getStatsText(owner) << static_cast<uint32_t>(creature->getLevel())
+                << stats << static_cast<uint32_t>(creature->getLevel())
                 << creature->getStrength() << creature->getDexterity() << creature->getLife() << creature->getMana()
-                << creature->getDefinition()->isWorker() << creature->getDefinition()->isChampion() << unhappy;
+                << creature->getSkillListText() << creature->getPhysicalDefense() << creature->getMagicalDefense()
+                << creature->getElementDefense() << creature->getDefinition()->isWorker() << creature->getDefinition()->isChampion() << unhappy;
         }
         ODServer::getSingleton().queueServerNotification(notification);
     }

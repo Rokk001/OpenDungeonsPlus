@@ -2322,6 +2322,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 social::DungeonbookEntry entry;
                 if(!(packetReceived >> entry.name >> entry.className >> entry.keeper >> entry.appearance >> entry.stats
                      >> entry.level >> entry.strength >> entry.dexterity >> entry.life >> entry.mana
+                     >> entry.skills >> entry.physicalDefense >> entry.magicalDefense >> entry.elementDefense
                      >> entry.worker >> entry.champion >> entry.unhappy))
                     return false;
                 entries.push_back(entry);

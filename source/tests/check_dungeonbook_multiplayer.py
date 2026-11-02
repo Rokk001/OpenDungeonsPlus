@@ -94,3 +94,37 @@ for test in ('00-DungeonbookMultiplayer', '00-DungeonbookQuirks', '00-CreatureAp
     assert 'add_boost_test(%s' % test in tests, test
 
 print('dungeonbook multiplayer wiring ok')
+
+# The book receives the server's complete allied roster, including creatures outside client vision.
+roster = server[server.index('    void notifyDungeonbookRoster(GameMap* gameMap, Player* player)'):]
+roster = roster[:roster.index('    //! \\brief Sends the current patients')]
+assert 'getCreaturesByAlliedSeat(seat)' in roster
+assert 'mSeatsWithVisionNotified' not in roster and 'getIsOnMap()' not in roster
+assert 'keeper->getNick()' in roster and 'getStatsText(owner)' in roster
+assert 'stats.erase(debug,' in roster and 'stats.find("\\nMood: ", debug)' in roster, 'keep mood values without developer details'
+assert 'creature->getSeat()->getPlayer() == nullptr' in roster, 'non-player seats are excluded'
+server_fields = ('creature->getName()', 'creature->getDefinition()->getClassName()', 'keeperName',
+                 'CreatureAppearanceLogic::toToken(creature->getAppearance())', '<< stats',
+                 'creature->getLevel()', 'creature->getStrength()', 'creature->getDexterity()',
+                 'creature->getLife()', 'creature->getMana()', 'creature->getSkillListText()',
+                 'creature->getPhysicalDefense()', 'creature->getMagicalDefense()', 'creature->getElementDefense()',
+                 'creature->getDefinition()->isWorker()', 'creature->getDefinition()->isChampion()', 'unhappy')
+wire = roster[roster.index('notification->mPacket << creature->getName()'):]
+positions = [wire.index(field) for field in server_fields]
+assert positions == sorted(positions), 'server snapshot field order changed'
+client_case = client[client.index('case ServerNotificationType::dungeonbookRoster:'):]
+client_case = client_case[:client_case.index('break;')]
+client_fields = ('entry.name', 'entry.className', 'entry.keeper', 'entry.appearance', 'entry.stats', 'entry.level',
+                 'entry.strength', 'entry.dexterity', 'entry.life', 'entry.mana', 'entry.skills',
+                 'entry.physicalDefense', 'entry.magicalDefense', 'entry.elementDefense',
+                 'entry.worker', 'entry.champion', 'entry.unhappy')
+positions = [client_case.index(field) for field in client_fields]
+assert positions == sorted(positions), 'client snapshot field order differs from server'
+assert 'setDungeonbookRoster(entries)' in client_case
+assert 'if(!(packetReceived >>' in client_case, 'incomplete snapshots must not replace the roster'
+assert 'if(sock->getDungeonbookRosterOpen())' in server
+window = read('source/render/SocialWindow.cpp')
+assert 'askDungeonbookRoster, true' in window and 'askDungeonbookRoster, false' in window
+assert 'getDungeonbookRoster()' in window and 'selected->keeper' in window
+assert 'getCreature(selected->name)' not in window, 'roster rendering must not require a visible map entity'
+print('allied Dungeonbook snapshot field order and subscription wiring ok')

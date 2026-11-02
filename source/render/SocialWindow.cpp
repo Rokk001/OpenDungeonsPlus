@@ -459,7 +459,7 @@ void SocialWindow::refreshProfile()
         const CEGUI::Image* portrait = getCircularCreatureAppearanceImage(selected->name, appearance);
         const CreatureDefinition* definition = mGameMap.getClassDescription(selected->className);
         if(portrait == nullptr && definition != nullptr)
-            portrait = &getCreatureProfilePortraitImage(selected->name, definition->getMeshName(), profile.mGender);
+            portrait = &getCircularCreatureProfilePortraitImage(selected->name, definition->getMeshName(), profile.mGender);
         mDungeonbookPage->getChild("Portrait/Image")->setProperty("Image", portrait == nullptr ? "" : portrait->getName());
         const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
         const double values[] = {selected->strength, selected->dexterity, selected->life, selected->mana};
@@ -469,6 +469,11 @@ void SocialWindow::refreshProfile()
             text << names[i] << "\n" << values[i];
             mDungeonbookPage->getChild(std::string("Attributes/") + names[i])->setText(text.str());
         }
+        mDungeonbookPage->getChild("SkillsPanel")->setText("Skills\n" + escapeMarkup(selected->skills));
+        std::ostringstream defense;
+        defense << "Defense\nPhysical: " << selected->physicalDefense << "\nMagical: " << selected->magicalDefense
+            << "\nElemental: " << selected->elementDefense;
+        mDungeonbookPage->getChild("DefensePanel")->setText(defense.str());
         CEGUI::Window* stats = mDungeonbookPage->getChild("StatsText");
         if(stats->getText() != selected->stats)
             stats->setText(selected->stats);

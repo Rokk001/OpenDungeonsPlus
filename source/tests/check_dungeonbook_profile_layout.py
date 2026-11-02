@@ -189,3 +189,21 @@ print('profile layout ok: card %dx%d design px, page %d px, typical latest ends 
     card_width, card_height, page_height, typical[0], typical[1], worst[1]))
 for line in report:
     print('  ' + line)
+
+# Selected profile variant: portrait above a horizontal attribute row and two information panels.
+chosen = ET.parse(repo / 'gui/WindowDungeonbookProfile.layout').getroot().find('Window')
+areas = {}
+for name in ('Portrait', 'Attributes', 'SkillsPanel', 'DefensePanel', 'StatsText'):
+    value = chosen.find("Window[@name='%s']/Property[@name='Area']" % name).get('value')
+    coords = [float(x) for x in re.findall(r'\{(-?\d+(?:\.\d+)?),-?\d+(?:\.\d+)?\}', value)]
+    assert len(coords) == 4, name
+    areas[name] = coords
+assert areas['Portrait'][3] <= areas['Attributes'][1]
+assert areas['Attributes'][3] <= areas['SkillsPanel'][1] == areas['DefensePanel'][1]
+assert areas['SkillsPanel'][2] <= areas['DefensePanel'][0]
+assert areas['SkillsPanel'][3] <= areas['StatsText'][1]
+assert {w.get('name') for w in chosen.find("Window[@name='Attributes']").findall('Window')} == {
+    'Strength', 'Dexterity', 'Life', 'Mana'}
+for name in ('SkillsPanel', 'DefensePanel', 'StatsText'):
+    assert chosen.find("Window[@name='%s']/Property[@name='VertScrollbar']" % name).get('value') == 'True'
+print('chosen profile arrangement and scrollable values verified')
