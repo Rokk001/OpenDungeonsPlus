@@ -207,3 +207,23 @@ assert {w.get('name') for w in chosen.find("Window[@name='Attributes']").findall
 for name in ('SkillsPanel', 'DefensePanel', 'StatsText'):
     assert chosen.find("Window[@name='%s']/Property[@name='VertScrollbar']" % name).get('value') == 'True'
 print('chosen profile arrangement and scrollable values verified')
+
+# Variant 2 keeps its illustrated parchment and circular frame behind interactive content.
+background = chosen.find("Window[@name='PageBackground']")
+assert background is not None and chosen.findall('Window')[0] == background
+assert background.find("Property[@name='Image']").get('value') == 'DungeonbookArt/Page'
+assert background.find("Property[@name='MousePassThroughEnabled']").get('value') == 'True'
+frame = chosen.find("Window[@name='Portrait']/Window[@name='Frame']")
+assert frame.find("Property[@name='Image']").get('value') == 'DungeonbookFrame/Ring'
+assert frame.find("Property[@name='MousePassThroughEnabled']").get('value') == 'True'
+imageset = ET.parse(repo / 'gui/DungeonbookPage.imageset').getroot()
+assert imageset.get('name') == 'DungeonbookArt' and imageset.get('imagefile') == 'DungeonbookPage.png'
+assert (repo / 'gui' / imageset.get('imagefile')).is_file()
+scheme = ET.parse(repo / 'gui/ODSkin.scheme').getroot()
+assert scheme.find("Imageset[@filename='DungeonbookPage.imageset'][@name='DungeonbookArt']") is not None
+ring_set = ET.parse(repo / 'gui/DungeonbookFrame.imageset').getroot()
+assert ring_set.get('name') == 'DungeonbookFrame' and (repo / 'gui' / ring_set.get('imagefile')).is_file()
+assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='DungeonbookFrame']") is not None
+credits = (repo / 'CREDITS').read_text()
+assert 'gui/DungeonbookPage.png' in credits and 'gui/DungeonbookFrame.png' in credits
+print('profile background, frame and resource registration verified')

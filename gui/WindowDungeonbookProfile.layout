@@ -2,18 +2,36 @@
 <GUILayout version="4">
     <Window type="DefaultWindow" name="DungeonbookProfile">
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+        <Window type="OD/StaticImage" name="PageBackground">
+            <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+            <Property name="Image" value="DungeonbookArt/Page" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticImage" name="Portrait">
             <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.38,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Window type="OD/StaticImage" name="Image">
-                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                <Property name="Area" value="{{0.16,0},{0.16,0},{0.84,0},{0.84,0}}" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="AspectRatio" value="1" />
                 <Property name="HorizontalAlignment" value="Centre" />
                 <Property name="VerticalAlignment" value="Centre" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
+            </Window>
+            <Window type="OD/StaticImage" name="Frame">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                <Property name="Image" value="DungeonbookFrame/Ring" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="AspectRatio" value="1" />
+                <Property name="HorizontalAlignment" value="Centre" />
+                <Property name="VerticalAlignment" value="Centre" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="NameText">

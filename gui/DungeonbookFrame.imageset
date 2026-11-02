@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Imageset name="DungeonbookFrame" imagefile="DungeonbookFrame.png" nativeHorzRes="1254" nativeVertRes="1254" autoScaled="false" version="2">
+    <Image name="Ring" xPos="0" yPos="0" width="1254" height="1254" />
+</Imageset>
