@@ -7,7 +7,10 @@ What is checked (fixed values of this branch, counted once)
   clips      Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped; a bone without a track stays in its rest pose
   seam       the first and the last frame of a clip show the same pose, so that it loops and returns to the seat pose
   height     the pose of Sit reaches above the seat of the bench
-  table      the pose of Sit reaches at most 0.06 tiles into the table top, seen from the middle of the bench
+  table      no clip reaches more than 0.04 tiles into the table top at a key, seen from the middle of the bench, at the
+             smallest and the largest creature scale of the level; between keys at most 15 percent of a clip may do so
+  bench      the pelvis of a walking body stays on the bench in Sit
+  large      the types with a 2x2 bed are the large models of the clip author
 
 Calls (from the repository root; needs OgreXMLConverter on the PATH or in OGRE_XML_CONVERTER, no compiler, no game):
   python source/tests/check_tavern_seat_clips.py
@@ -28,8 +31,12 @@ from check_animation_assets import export
 
 SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitDice', 'SitSlumped']
 VISITING_SKELETONS = 30
-# The pose of Sit may reach this far into the table top (a hand or a tusk on its edge), in tiles
-MAX_SIT_TABLE_DEPTH = 0.06
+# A clip may reach this far into the table top (a hand or a tusk on its edge), in tiles
+MAX_TABLE_DEPTH = 0.04
+# On its way onto the table top an arm passes the edge between two keys. This share of a clip may show that.
+MAX_CROSSING_SHARE = 0.15
+# The pelvis stays this close to the middle of the bench (half of the depth of the bench), in tiles
+MAX_PELVIS_BEHIND = 0.084
 # First and last frame of a clip may differ by this share of the height of the body
 MAX_SEAM = 1e-3
 
@@ -66,11 +73,23 @@ def check_skeleton(name, mesh_name, out):
         points = rest.skin_vertices(skeleton, ends, vertices, weights)
         seam = float(np.abs(points[0] - points[1]).max() / height)
         assert seam < MAX_SEAM, (name, clip, 'first and last frame differ', seam)
+        keys = max(played.tracks.values(), key=lambda track: len(track.t)).t
+        depth = seats.level_depth(rest.skin_vertices(skeleton, skeleton.locals_at(played, keys), vertices, weights))
+        assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the table top at a key', depth)
+        fine = np.linspace(0.0, played.length, 97)
+        points = rest.skin_vertices(skeleton, skeleton.locals_at(played, fine), vertices, weights)
+        crossing = np.maximum(seats.frame_depths(points), seats.frame_depths(points * seats.LEVEL_SCALE_HIGH)) > MAX_TABLE_DEPTH
+        assert crossing.mean() <= MAX_CROSSING_SHARE, (name, clip, 'stays in the table between keys', float(crossing.mean()))
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
-    depth = seats.table_depth(points)
-    assert depth <= MAX_SIT_TABLE_DEPTH, (name, 'Sit reaches into the table top', depth)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')
+    body_rig = seats.rig.config(name, seats.rig.Skeleton(str(out / (name + '.skeleton.xml'))))
+    if seats.is_humanoid(body_rig):
+        chains = seats.thigh_chains(skeleton, seats.leg_chains(skeleton, name, vertices, weights, idle), body_rig)
+        world = skeleton.fk(sit)
+        for chain in chains:
+            pelvis = world[skeleton.idx[chain[0]]][0][0]
+            assert pelvis[1] <= MAX_PELVIS_BEHIND, (name, 'the pelvis lies behind the bench', pelvis[1])
     return len(SEAT_CLIPS)
 
 
@@ -79,6 +98,14 @@ def main():
     found = visitors()
     assert len(found) == VISITING_SKELETONS, len(found)
     assert 'Kobold' not in found and 'skeleton' not in found, 'workers and the Skeleton do not visit the tavern'
+    configuration = (ROOT / 'config' / 'creatures.cfg').read_text(encoding='utf-8', errors='replace')
+    large = set()
+    for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', configuration, re.S):
+        mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)
+        bed = re.search(r'^\s*BedDim\s+(\d+)\s+(\d+)', block, re.M)
+        if mesh and bed and int(bed.group(1)) >= 2 and int(bed.group(2)) >= 2 and mesh.group(1) in found.values():
+            large.add(next(key for key, value in found.items() if value == mesh.group(1)))
+    assert large == set(seats.LARGE_MODELS), ('large models', sorted(large))
     out = ROOT / 'out' / 'tavern-seat-clips'
     out.mkdir(parents=True, exist_ok=True)
     tested = 0

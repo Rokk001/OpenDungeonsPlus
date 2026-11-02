@@ -1,8 +1,8 @@
-# Keeps the seated tavern clips of one creature as actions of its Blender source, exports them and renders a review.
+# Keeps the seated tavern clips of one creature as actions of its Blender source and exports them.
 #
-# Usage: blender --background <Model>.blend --python tavern_seats_blend.py -- <seats.skeleton.xml> <table.mesh.xml>
-#        <review folder> [--save <exported.skeleton.xml>]
-# Without --save nothing is written to the Blender source: the actions exist only for the review images.
+# Usage: blender --background <Model>.blend --python tavern_seats_blend.py -- <seats.skeleton.xml>
+#        [--save <exported.skeleton.xml>] [--review <table.mesh.xml> <review folder>]
+# Without --save nothing is written to the Blender source. Only --review renders images.
 import math
 import os
 import sys
@@ -107,11 +107,13 @@ def render_reviews(arm, table_path, folder, model):
 # Runs the steps for the Blender source that is open.
 def main():
     args = sys.argv[sys.argv.index('--') + 1:]
-    seats, table_path, folder = args[0], args[1], args[2]
+    seats = args[0]
     model = os.path.splitext(os.path.basename(bpy.data.filepath))[0]
     arm = source_armature()
     add_actions(arm, seats)
-    render_reviews(arm, table_path, folder, model)
+    if '--review' in args:
+        at = args.index('--review')
+        render_reviews(arm, args[at + 1], args[at + 2], model)
     if '--save' in args:
         exported = args[args.index('--save') + 1]
         oo.export_skeleton_xml(arm, exported, only_actions=set(CLIPS))
