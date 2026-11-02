@@ -3366,6 +3366,7 @@ void Creature::doUpkeep()
         }
         if(!servingNeed && mDefinition->hasThirst() &&
            mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           (mTavernCooldownTurns <= 0) &&
            !hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))
@@ -3572,6 +3573,7 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         mDefinition->hasThirst() &&
         !hasActionBeenTried(CreatureActionType::searchDrink) &&
+        (mTavernCooldownTurns <= 0) &&
         (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
     {
         pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
@@ -10124,6 +10126,7 @@ bool Creature::needInterrupt(bool servingNeed) const
                 return true;
     }
     if(mDefinition->hasThirst() && mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+       (mTavernCooldownTurns <= 0) &&
        !hasActionBeenTried(CreatureActionType::searchDrink))
     {
         for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))

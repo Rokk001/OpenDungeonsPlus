@@ -83,6 +83,9 @@ static const MeshBounds meshBounds[] = {
     {"SpiderBed", -.35f, -.435f, .35f, .435f, .59f},
     {"StillShelf", -.435f, -.185f, .435f, .215f},
     {"StoneCoffin", -.425477f, -.693722f, .425477f, .693722f, .767922f},
+    {"TavernCounter", -.52f, -.338f, .52f, .25f, .5975f},
+    {"TavernKeg", -.2504f, -.371773f, .2504f, .2504f, .52f},
+    {"TavernTable", -.595f, -.39f, .595f, .39f, .4425f},
     {"TentacleBed", -.448981f, -.476366f, .461978f, .436628f, .276672f},
     {"TortureObject", -.7007f, -.606824f, .7007f, .606824f},
     {"TrainingDummy1", -.248242f, -.128432f, .248296f, .330221f},
@@ -149,7 +152,8 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
        name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron" ||
-       name == "SpaChair" || name == "SpaMudPool" || name == "SpaPoolRim" || name == "SpaSpringboard")
+       name == "SpaChair" || name == "SpaMudPool" || name == "SpaPoolRim" || name == "SpaSpringboard" ||
+       name == "TavernCounter" || name == "TavernKeg" || name == "TavernTable")
         return {1.0f, 1.0f};
     // Treasury piles can fill adjacent tiles at arbitrary angles. Bound their
     // diagonal, not just their unrotated width, so rotation retains the margin.

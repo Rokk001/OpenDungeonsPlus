@@ -5257,6 +5257,27 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         {
             anim = EntityAnimation::attack_anim;
         }
+        else if (anim == EntityAnimation::sit_drink_anim)
+        {
+            // A skeleton without the seated tavern clips plays the matching standing clip
+            anim = EntityAnimation::drink_anim;
+        }
+        else if (anim == EntityAnimation::sit_slap_anim)
+        {
+            anim = EntityAnimation::slap_anim;
+        }
+        else if (anim == EntityAnimation::sit_armwrestle_anim)
+        {
+            anim = EntityAnimation::armwrestle_anim;
+        }
+        else if (anim == EntityAnimation::sit_dice_anim)
+        {
+            anim = EntityAnimation::dice_anim;
+        }
+        else if (anim == EntityAnimation::sit_slapped_anim || anim == EntityAnimation::sit_slumped_anim)
+        {
+            anim = EntityAnimation::sit_anim;
+        }
         else if (anim == EntityAnimation::armwrestle_anim || anim == EntityAnimation::slap_anim)
         {
             // A skeleton without the tavern game clips plays its attack clip
@@ -7857,7 +7878,7 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         return;
 
     Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
-    if(anim == EntityAnimation::drink_anim)
+    if((anim == EntityAnimation::drink_anim) || (anim == EntityAnimation::sit_drink_anim))
     {
         Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
         if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(TAVERN_MUG_MESH))

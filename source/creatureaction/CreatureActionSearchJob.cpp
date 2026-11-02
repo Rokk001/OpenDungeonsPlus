@@ -89,6 +89,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         }
         if(creature.getDefinition()->hasThirst() &&
            creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           (creature.getTavernCooldownTurns() <= 0) &&
            !creature.hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))

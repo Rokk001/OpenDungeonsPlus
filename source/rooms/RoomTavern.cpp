@@ -19,20 +19,24 @@
 
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionUseRoom.h"
+#include "creatureaction/CreatureActionWalkToTile.h"
 #include "entities/BuildingObject.h"
 #include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/InnkeeperEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Seat.h"
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "network/CosmeticEvent.h"
 #include "network/ODPacket.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
 #include "utils/ConfigManager.h"
+#include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include "utils/Random.h"
@@ -62,6 +66,16 @@ const std::string TAVERN_KEG_MESH = "TavernKeg";
 const std::string TAVERN_TABLE_MESH = "TavernTable";
 //! \brief Scale of the table mesh (with its two benches 1.19 tiles long) so the benches end at the edges of the table tile.
 const float TAVERN_TABLE_SCALE = 0.84f;
+//! \brief Distance of the middle of a bench from the middle of the table (scaled mesh: seat surface at 0.39 to 0.59).
+const float TAVERN_BENCH_OFFSET = 0.4116f;
+//! \brief Distance of a seat from the middle of its bench (scaled mesh: bench 0.78 long, two seats).
+const float TAVERN_SEAT_SIDE_OFFSET = 0.164f;
+//! \brief A guest closer to its seat than this (squared, in tiles) sits on it.
+const float SEAT_REACHED_SQUARED = 0.0025f;
+//! \brief A point this far beside the bench (in tiles) is where a guest gets on and off when it has little room.
+const float SEAT_STAGING_DISTANCE = 0.5f;
+//! \brief A factor that converts degrees to radians.
+const double DEGREES_TO_RADIANS = 3.14159265358979323846 / 180.0;
 //! \brief Object angles (degrees) for a back to the wall at +y, -y, -x and +x (same convention as the other rooms with wall furniture).
 const double OBJECT_ANGLE_WALL_TOP = 0.0;
 const double OBJECT_ANGLE_WALL_BOTTOM = 180.0;
@@ -79,6 +93,10 @@ const std::string STREAM_TAG_SPOT = "Spot";
 const std::string STREAM_TAG_GAME = "Game";
 //! \brief Line of the room stream with one keg or table.
 const std::string STREAM_TAG_FURNITURE = "Furniture";
+//! \brief Line of the room stream that marks a save whose guests have seats at the tables (format number).
+const std::string STREAM_TAG_SEAT_LAYOUT = "SeatLayout";
+//! \brief The format number of the seat data written to the room stream.
+const uint32_t SEAT_LAYOUT_VERSION = 1;
 //! \brief Sound family of a drink that is poured.
 const std::string SOUND_POUR = "Rooms/Tavern/Pour";
 //! \brief Sound family of a slap in a slap duel.
@@ -171,6 +189,23 @@ Ogre::Vector3 tileMiddle(const Tile& tile)
     return Ogre::Vector3(static_cast<Ogre::Real>(tile.getX()), static_cast<Ogre::Real>(tile.getY()), 0.0f);
 }
 
+//! \brief The place of a seat relative to the middle of its table.
+//! \param index The number of the seat at the table.
+//! \param wholeBench True for a guest that sits in the middle of the bench.
+//! \param angleDegrees The rotation of the table.
+Ogre::Vector2 seatOffset(uint32_t index, bool wholeBench, double angleDegrees)
+{
+    const float x = (index < TAVERN_SEATS_PER_BENCH) ? TAVERN_BENCH_OFFSET : -TAVERN_BENCH_OFFSET;
+    float y = 0.0f;
+    if(!wholeBench)
+        y = ((index % TAVERN_SEATS_PER_BENCH) == 0) ? TAVERN_SEAT_SIDE_OFFSET : -TAVERN_SEAT_SIDE_OFFSET;
+
+    const double angle = angleDegrees * DEGREES_TO_RADIANS;
+    const float cosine = static_cast<float>(std::cos(angle));
+    const float sine = static_cast<float>(std::sin(angle));
+    return Ogre::Vector2(x * cosine - y * sine, x * sine + y * cosine);
+}
+
 //! \brief Returns whether the room contains a complete three by three block.
 bool hasTavernBlock(const std::vector<Tile*>& tiles)
 {
@@ -223,7 +258,7 @@ bool canBuildTavern(GameMap* gameMap, Seat* seat, const std::vector<Tile*>& tile
                 if((neighbour == nullptr) ||
                    (std::find(connected.begin(), connected.end(), neighbour) != connected.end()))
                     continue;
-                auto selected = std::find(remaining.begin(), remaining.end(), neighbour);
+                std::vector<Tile*>::iterator selected = std::find(remaining.begin(), remaining.end(), neighbour);
                 Room* room = neighbour->getCoveringRoom();
                 if(selected != remaining.end())
                     remaining.erase(selected);
@@ -363,7 +398,8 @@ RoomTavern::RoomTavern(GameMap* gameMap) :
     Room(gameMap),
     mPayer(TavernPayer::keeper),
     mCounterTile(nullptr),
-    mInnkeeper(nullptr)
+    mInnkeeper(nullptr),
+    mLayoutCounter(nullptr)
 {
     setMeshName("Room");
 }
@@ -383,7 +419,14 @@ bool RoomTavern::hasMinimumBlock() const
     return hasTavernBlock(mCoveredTiles);
 }
 
-//! \brief Checks that the tavern is large enough and has a free guest place.
+//! \brief Returns the table tile of the seat of the guest, so that it walks straight to its table.
+Tile* RoomTavern::getArrivalTile(const Creature& creature)
+{
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(&creature);
+    return (it != mSpots.end()) ? it->first.mTable : getCoveredTile(0);
+}
+
+//! \brief Checks that the tavern is large enough and has a free seat for the creature.
 bool RoomTavern::hasOpenCreatureSpot(Creature* c)
 {
     if(!hasTavernBlock(mCoveredTiles))
@@ -398,68 +441,232 @@ bool RoomTavern::hasOpenCreatureSpot(Creature* c)
        (c->getThirst() < getTavernValue("ThirstSeek")))
         return false;
 
-    for(Tile* tile : mCoveredTiles)
+    // Without a creature any free seat will do
+    if(c == nullptr)
     {
-        if(isFreeSpotTile(tile))
-            return true;
+        for(Tile* table : getTableTiles())
+        {
+            for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; ++index)
+            {
+                if(isFreeSeat(RoomTavernSeat(table, index), false))
+                    return true;
+            }
+        }
+        return false;
     }
 
-    return false;
+    RoomTavernSeat seat;
+    return pickFreeSeat(*c, seat);
 }
 
-bool RoomTavern::isFreeSpotTile(Tile* tile) const
+//! \brief Returns the tiles of the tables of the room in coordinate order.
+std::vector<Tile*> RoomTavern::getTableTiles() const
 {
-    if((tile == nullptr) || (tile == mCounterTile))
+    std::vector<Tile*> tables;
+    for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
+    {
+        if(entry.second->getMeshName() == TAVERN_TABLE_MESH)
+            tables.push_back(entry.first);
+    }
+    std::sort(tables.begin(), tables.end(), Room::compareTile);
+    return tables;
+}
+
+//! \brief True when the seat is at a table of the room and can take a guest.
+bool RoomTavern::isFreeSeat(const RoomTavernSeat& seat, bool wholeBench) const
+{
+    if((seat.mTable == nullptr) || (seat.mIndex >= TAVERN_SEATS_PER_TABLE))
         return false;
 
-    return mSpots.find(tile) == mSpots.end();
+    const uint32_t first = seat.mIndex - (seat.mIndex % TAVERN_SEATS_PER_BENCH);
+    std::map<RoomTavernSeat, RoomTavernSpot>::const_iterator firstSeat = mSpots.find(RoomTavernSeat(seat.mTable, first));
+    std::map<RoomTavernSeat, RoomTavernSpot>::const_iterator secondSeat = mSpots.find(RoomTavernSeat(seat.mTable, first + 1));
+    if(wholeBench)
+        return (seat.mIndex == first) && (firstSeat == mSpots.end()) && (secondSeat == mSpots.end());
+
+    // A guest that takes the whole bench is kept under the first seat of the bench
+    if((firstSeat != mSpots.end()) && firstSeat->second.mWholeBench)
+        return false;
+
+    return mSpots.find(seat) == mSpots.end();
 }
 
-Tile* RoomTavern::pickFreeSpotTile(const Creature& creature) const
+//! \brief True when the creature is large (a bed of two by two tiles) and takes a whole bench alone.
+bool RoomTavern::isLargeGuest(const Creature& creature)
 {
+    const CreatureDefinition* definition = creature.getDefinition();
+    return (definition != nullptr) && (definition->getBedDim1() >= 2) && (definition->getBedDim2() >= 2);
+}
+
+//! \brief Picks a free seat for the creature; a table with a guest comes first, then the nearest table.
+bool RoomTavern::pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) const
+{
+    const bool wholeBench = isLargeGuest(creature);
+    const uint32_t step = wholeBench ? TAVERN_SEATS_PER_BENCH : 1;
     Tile* creatureTile = creature.getPositionTile();
-    Tile* best = nullptr;
     int32_t bestDistance = std::numeric_limits<int32_t>::max();
-    bool bestNextToGuest = false;
-    for(Tile* tile : mCoveredTiles)
+    bool bestHasGuest = false;
+    bool found = false;
+    for(Tile* table : getTableTiles())
     {
-        if(!isFreeSpotTile(tile))
-            continue;
+        // A table with a guest comes first, so that two guests can play a game
+        bool hasGuest = false;
+        for(const std::pair<const RoomTavernSeat, RoomTavernSpot>& entry : mSpots)
+        {
+            if(entry.first.mTable == table)
+                hasGuest = true;
+        }
 
         int32_t distance = 0;
         if(creatureTile != nullptr)
         {
-            const int32_t dx = tile->getX() - creatureTile->getX();
-            const int32_t dy = tile->getY() - creatureTile->getY();
+            const int32_t dx = table->getX() - creatureTile->getX();
+            const int32_t dy = table->getY() - creatureTile->getY();
             distance = dx * dx + dy * dy;
         }
 
-        // A place next to a guest comes first, so that two guests can play a game
-        bool nextToGuest = false;
-        static const int32_t SIDE_DX[] = { 1, -1, 0, 0 };
-        static const int32_t SIDE_DY[] = { 0, 0, 1, -1 };
-        static const uint32_t NB_SIDES = 4;
-        for(uint32_t i = 0; i < NB_SIDES; ++i)
-        {
-            Tile* side = getGameMap()->getTile(tile->getX() + SIDE_DX[i], tile->getY() + SIDE_DY[i]);
-            if((side != nullptr) && (mSpots.find(side) != mSpots.end()))
-                nextToGuest = true;
-        }
+        if(found && (hasGuest == bestHasGuest) && (distance >= bestDistance))
+            continue;
+        if(found && bestHasGuest && !hasGuest)
+            continue;
 
-        if((nextToGuest && !bestNextToGuest) || ((nextToGuest == bestNextToGuest) && (distance < bestDistance)))
+        for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; index += step)
         {
+            if(!isFreeSeat(RoomTavernSeat(table, index), wholeBench))
+                continue;
+
+            seat = RoomTavernSeat(table, index);
+            found = true;
             bestDistance = distance;
-            bestNextToGuest = nextToGuest;
-            best = tile;
+            bestHasGuest = hasGuest;
+            break;
         }
     }
 
-    return best;
+    return found;
 }
 
-std::map<Tile*, RoomTavernSpot>::iterator RoomTavern::findSpotOf(const Creature* creature)
+//! \brief Returns where a guest sits on the ground, from the place and rotation of the table.
+Ogre::Vector2 RoomTavern::getSeatPosition(const RoomTavernSeat& seat, bool wholeBench) const
 {
-    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    double angle = 0.0;
+    std::map<Tile*, BuildingObject*>::const_iterator table = mBuildingObjects.find(seat.mTable);
+    if(table != mBuildingObjects.end())
+        angle = table->second->getRotationAngle();
+
+    const Ogre::Vector2 offset = seatOffset(seat.mIndex, wholeBench, angle);
+    return Ogre::Vector2(static_cast<Ogre::Real>(seat.mTable->getX()) + offset.x,
+        static_cast<Ogre::Real>(seat.mTable->getY()) + offset.y);
+}
+
+//! \brief True when the guest is at the place of its seat.
+bool RoomTavern::isOnSeat(const Creature& creature, const RoomTavernSeat& seat, bool wholeBench) const
+{
+    const Ogre::Vector2 position = getSeatPosition(seat, wholeBench);
+    const Ogre::Vector2 current(creature.getPosition().x, creature.getPosition().y);
+    return current.squaredDistance(position) < SEAT_REACHED_SQUARED;
+}
+
+//! \brief Finds free points next to the seat from where a creature gets onto the bench.
+void RoomTavern::findSeatStagingPoints(Creature& creature, const RoomTavernSeat& seat, bool wholeBench,
+    std::vector<Ogre::Vector2>& stagingPoints) const
+{
+    stagingPoints.clear();
+    std::map<Tile*, BuildingObject*>::const_iterator table = mBuildingObjects.find(seat.mTable);
+    if(table == mBuildingObjects.end())
+        return;
+
+    // The table of the seat is the object the creature may enter; everything else stays an obstacle
+    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::bodyObstacles(creature, table->second);
+    const Ogre::Vector2 target = getSeatPosition(seat, wholeBench);
+    const Ogre::Vector2 middle(static_cast<Ogre::Real>(seat.mTable->getX()), static_cast<Ogre::Real>(seat.mTable->getY()));
+    Ogre::Vector2 away = target - middle;
+    away.normalise();
+    const Ogre::Vector2 side(-away.y, away.x);
+    const Ogre::Vector2 directions[] = { away, away + side, away - side, side, -side };
+    const float distances[] = { RoomObjectNavigation::clearance(creature) + SEAT_STAGING_DISTANCE, SEAT_STAGING_DISTANCE };
+    for(float distance : distances)
+    {
+        for(const Ogre::Vector2& direction : directions)
+        {
+            const Ogre::Vector2 staging = target + direction.normalisedCopy() * distance;
+            Tile* tile = getGameMap()->getTile(Helper::round(staging.x), Helper::round(staging.y));
+            if((tile == nullptr) || !creature.canGoThroughTile(tile) ||
+               !RoomObjectPath::clearPoint(obstacles, staging) || !RoomObjectPath::clearSegment(obstacles, staging, target))
+                continue;
+
+            stagingPoints.push_back(staging);
+        }
+    }
+}
+
+//! \brief Walks the guest around the furniture and onto its seat; the last leg goes straight to the bench.
+bool RoomTavern::walkToSeat(Creature& creature, const RoomTavernSeat& seat, bool wholeBench)
+{
+    Tile* creatureTile = creature.getPositionTile();
+    if(creatureTile == nullptr)
+        return false;
+
+    const Ogre::Vector2 target = getSeatPosition(seat, wholeBench);
+    std::vector<Ogre::Vector2> route;
+    std::vector<Ogre::Vector2> stagingPoints;
+    findSeatStagingPoints(creature, seat, wholeBench, stagingPoints);
+    for(const Ogre::Vector2& staging : stagingPoints)
+    {
+        std::vector<Ogre::Vector2> path;
+        Tile* stagingTile = getGameMap()->getTile(Helper::round(staging.x), Helper::round(staging.y));
+        if(stagingTile != creatureTile)
+        {
+            const std::list<Tile*> tiles = getGameMap()->path(&creature, stagingTile);
+            if(tiles.empty())
+                continue;
+            Creature::tileToVector2(tiles, path, true, 0.0f);
+        }
+        path.push_back(staging);
+        RoomObjectNavigation::refine(creature, path);
+        if(path.empty() || !(path.back() == staging))
+            continue;
+
+        path.push_back(target);
+        route = path;
+        break;
+    }
+
+    // No clear way around the furniture: the guest takes the tile path, and the seat is still where it ends up
+    if(route.empty())
+    {
+        if(seat.mTable != creatureTile)
+        {
+            const std::list<Tile*> tiles = getGameMap()->path(&creature, seat.mTable);
+            if(tiles.empty())
+                return false;
+            Creature::tileToVector2(tiles, route, true, 0.0f);
+        }
+        route.push_back(target);
+    }
+
+    creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::sit_anim, true, false, route, false, true);
+    creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
+    return true;
+}
+
+//! \brief Lets a guest at the end of its visit step away from the bench, so it never leaves through the furniture.
+bool RoomTavern::stepOffSeat(Creature& creature, const RoomTavernSeat& seat, bool wholeBench)
+{
+    std::vector<Ogre::Vector2> stagingPoints;
+    findSeatStagingPoints(creature, seat, wholeBench, stagingPoints);
+    if(stagingPoints.empty())
+        return false;
+
+    const std::vector<Ogre::Vector2> route(1, stagingPoints.front());
+    creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, route, false, true);
+    creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
+    return true;
+}
+
+std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(const Creature* creature)
+{
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         if(it->second.mCreature == creature)
             return it;
@@ -468,33 +675,74 @@ std::map<Tile*, RoomTavernSpot>::iterator RoomTavern::findSpotOf(const Creature*
     return mSpots.end();
 }
 
+//! \brief All guests stand up and look for a free seat again by the normal rule.
+void RoomTavern::standUpGuests()
+{
+    // Running games end without a winner and without effects
+    mGames.clear();
+
+    std::vector<RoomTavernSpot> guests;
+    for(const std::pair<const RoomTavernSeat, RoomTavernSpot>& entry : mSpots)
+        guests.push_back(entry.second);
+    mSpots.clear();
+
+    const bool hasBlock = hasTavernBlock(mCoveredTiles);
+    std::vector<Creature*> withoutSeat;
+    for(RoomTavernSpot& guest : guests)
+    {
+        RoomTavernSeat seat;
+        if(!hasBlock || !pickFreeSeat(*guest.mCreature, seat))
+        {
+            withoutSeat.push_back(guest.mCreature);
+            continue;
+        }
+
+        // A guest that was drinking sits down again; a guest whose visit was over only passes through its seat to leave
+        const bool visitOver = guest.mSleepAfter ||
+            ((guest.mState != TavernGuestState::arriving) && (guest.mState != TavernGuestState::drinking));
+        guest.mWholeBench = isLargeGuest(*guest.mCreature);
+        guest.mWantsGame = false;
+        guest.mLeftSeat = false;
+        guest.mState = visitOver ? TavernGuestState::done : TavernGuestState::arriving;
+        guest.mTurnsLeft = 0;
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.insert(std::make_pair(seat, guest)).first;
+        showSpotState(seat.mTable, it->second);
+    }
+
+    // Clearing the actions releases the guest from the room, so they are handled after the loop
+    for(Creature* creature : withoutSeat)
+    {
+        creature->startTavernCooldown();
+        creature->clearActionQueue();
+    }
+}
+
 //! \brief Assigns a guest a tavern spot and restores its saved state.
 bool RoomTavern::addCreatureUsingRoom(Creature* creature)
 {
     if((creature == nullptr) || !hasTavernBlock(mCoveredTiles))
         return false;
 
-    // The place the creature had when the room was saved, if it is still free
-    Tile* tile = nullptr;
+    // The seat the creature had when the room was saved, if it is still free
+    const bool wholeBench = isLargeGuest(*creature);
+    const std::vector<Tile*> tables = getTableTiles();
+    RoomTavernSeat seat;
     std::map<std::string, RoomTavernPendingSpot>::iterator pending = mPendingSpots.find(creature->getName());
-    if((pending != mPendingSpots.end()) && isFreeSpotTile(pending->second.mTile) &&
-       (std::find(mCoveredTiles.begin(), mCoveredTiles.end(), pending->second.mTile) != mCoveredTiles.end()))
+    if((pending != mPendingSpots.end()) && isFreeSeat(pending->second.mSeat, wholeBench) &&
+       (std::find(tables.begin(), tables.end(), pending->second.mSeat.mTable) != tables.end()))
     {
-        tile = pending->second.mTile;
+        seat = pending->second.mSeat;
     }
-    else
+    else if(!pickFreeSeat(*creature, seat))
     {
-        pending = mPendingSpots.end();
-        tile = pickFreeSpotTile(*creature);
-    }
-
-    if(tile == nullptr)
         return false;
+    }
 
     if(!Room::addCreatureUsingRoom(creature))
         return false;
 
-    std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.insert(std::make_pair(tile, RoomTavernSpot(creature))).first;
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.insert(std::make_pair(seat, RoomTavernSpot(creature))).first;
+    it->second.mWholeBench = wholeBench;
     if(pending != mPendingSpots.end())
     {
         it->second.mState = pending->second.mState;
@@ -502,8 +750,11 @@ bool RoomTavern::addCreatureUsingRoom(Creature* creature)
         it->second.mDrinks = pending->second.mDrinks;
         it->second.mSleepAfter = pending->second.mSleepAfter;
         it->second.mWantsGame = pending->second.mWantsGame;
+        // A guest that lost its saved seat walks to the new one before it drinks again
+        if(!(seat == pending->second.mSeat) && (it->second.mState == TavernGuestState::drinking))
+            setSpotState(it->second, TavernGuestState::arriving, 0);
         mPendingSpots.erase(pending);
-        showSpotState(tile, it->second);
+        showSpotState(seat.mTable, it->second);
     }
 
     return true;
@@ -513,18 +764,20 @@ void RoomTavern::removeCreatureUsingRoom(Creature* creature)
 {
     Room::removeCreatureUsingRoom(creature);
 
-    std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(creature);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(creature);
     if(it == mSpots.end())
         return;
 
     // The place goes first: the creature may be on its way out of the game (dead, removed), so its clips are not touched here.
     // Whatever clip it still shows is replaced by the next thing it does. Its leisure cooldown starts, so that the job search
-    // does not send it back in at once while it still stands on a tavern tile.
-    it->second.mCreature->startTavernCooldown();
+    // does not send it back in at once while it still stands on a tavern tile. A thirsty guest that was stopped before its
+    // first drink keeps looking for a drink.
+    if((it->second.mDrinks > 0) || (it->second.mCreature->getThirst() < getTavernValue("ThirstSeek")))
+        it->second.mCreature->startTavernCooldown();
     mSpots.erase(it);
 
     // A game of the guest ends without effects; its partner is done
-    std::map<Tile*, RoomTavernGame>::iterator game = mGames.begin();
+    std::map<RoomTavernSeat, RoomTavernGame>::iterator game = mGames.begin();
     while(game != mGames.end())
     {
         if((game->second.mCreatureA == creature) || (game->second.mCreatureB == creature))
@@ -540,14 +793,14 @@ void RoomTavern::removeCreatureUsingRoom(Creature* creature)
 //! \brief Returns whether this guest is arriving for a drink or drinking.
 bool RoomTavern::isGuestDrinking(const Creature& creature)
 {
-    std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(&creature);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(&creature);
     return it != mSpots.end() && (it->second.mState == TavernGuestState::arriving ||
         it->second.mState == TavernGuestState::drinking);
 }
 
 bool RoomTavern::shouldStopUseIfHungrySleepy(Creature& creature, bool forced)
 {
-    std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(&creature);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(&creature);
     if(it == mSpots.end())
         return true;
 
@@ -562,7 +815,7 @@ bool RoomTavern::shouldNotUseIfBadMood(Creature& creature, bool forced)
 
 bool RoomTavern::useRoom(Creature& creature, bool forced)
 {
-    std::map<Tile*, RoomTavernSpot>::iterator it = findSpotOf(&creature);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(&creature);
     if(it == mSpots.end())
     {
         OD_LOG_ERR("room=" + getName() + ", creature=" + creature.getName());
@@ -570,16 +823,16 @@ bool RoomTavern::useRoom(Creature& creature, bool forced)
         return true;
     }
 
-    Tile* spotTile = it->first;
+    const RoomTavernSeat seat = it->first;
     RoomTavernSpot& spot = it->second;
     switch(spot.mState)
     {
         case TavernGuestState::arriving:
         {
-            // Walk to the place; the walk is an action on top of this one, so we are called again when it is over
-            if(creature.getPositionTile() != spotTile)
+            // Walk to the seat; the walk is an action on top of this one, so we are called again when it is over
+            if(!isOnSeat(creature, seat, spot.mWholeBench))
             {
-                if(!creature.isMoving() && !creature.setDestination(spotTile))
+                if(!creature.isMoving() && !walkToSeat(creature, seat, spot.mWholeBench))
                 {
                     creature.popAction();
                     return true;
@@ -587,9 +840,9 @@ bool RoomTavern::useRoom(Creature& creature, bool forced)
                 return false;
             }
 
-            // On the place the first drink starts
+            // On the seat the first drink starts
             setSpotState(spot, TavernGuestState::drinking, static_cast<int32_t>(getTavernValue("DrinkTurns")));
-            showSpotState(spotTile, spot);
+            showSpotState(seat.mTable, spot);
             return false;
         }
         case TavernGuestState::done:
@@ -597,6 +850,14 @@ bool RoomTavern::useRoom(Creature& creature, bool forced)
             // The guest waits until the room has let the turns of the state pass
             if(spot.mTurnsLeft > 0)
                 return false;
+
+            // The guest gets off the bench before it leaves, so it does not walk through the table
+            if(!spot.mLeftSeat)
+            {
+                spot.mLeftSeat = true;
+                if(isOnSeat(creature, seat, spot.mWholeBench) && stepOffSeat(creature, seat, spot.mWholeBench))
+                    return false;
+            }
 
             // The visit is over. The loser of a slap duel goes to its bed, whatever its wakefulness
             const bool goToBed = spot.mSleepAfter && (creature.getHomeTile() != nullptr);
@@ -621,37 +882,45 @@ void RoomTavern::setSpotDone(RoomTavernSpot& spot, int32_t turns)
 {
     setSpotState(spot, TavernGuestState::done, turns);
     spot.mWantsGame = false;
-    if((spot.mCreature != nullptr) && spot.mCreature->getIsOnMap())
-        spot.mCreature->setAnimationState(EntityAnimation::idle_anim, true);
+    showSpotState(nullptr, spot);
 }
 
+//! \brief Shows the clip of the state of a guest, seated while it is on its seat and turned towards what it looks at.
 void RoomTavern::showSpotState(Tile* tile, RoomTavernSpot& spot)
 {
     Creature* creature = spot.mCreature;
     if((creature == nullptr) || !creature->getIsOnMap())
         return;
 
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator own = findSpotOf(creature);
+    const bool seated = (own != mSpots.end()) && isOnSeat(*creature, own->first, spot.mWholeBench);
+    // A seated guest looks across its table
+    Ogre::Vector3 towardsTable = Ogre::Vector3::ZERO;
+    if(seated)
+        towardsTable = directionTo(*creature, tileMiddle(*own->first.mTable));
+
     switch(spot.mState)
     {
         case TavernGuestState::drinking:
-        {
-            // The guest looks at the counter while it drinks
-            Ogre::Vector3 direction = Ogre::Vector3::ZERO;
-            if(mCounterTile != nullptr)
-                direction = directionTo(*creature, tileMiddle(*mCounterTile));
-            creature->setAnimationState(EntityAnimation::drink_anim, true, direction, false);
+            creature->setAnimationState(EntityAnimation::sit_drink_anim, true, towardsTable, false);
             break;
-        }
         case TavernGuestState::ko:
-            creature->setAnimationState(EntityAnimation::knockedout_anim, true, Ogre::Vector3::ZERO, false);
+            // Without a free floor tile the loser stays on its seat
+            if(seated)
+                creature->setAnimationState(EntityAnimation::sit_slumped_anim, true, towardsTable, false);
+            else
+                creature->setAnimationState(EntityAnimation::knockedout_anim, true, Ogre::Vector3::ZERO, false);
             break;
         case TavernGuestState::getUp:
-            creature->setAnimationState(EntityAnimation::getup_anim, false, Ogre::Vector3::ZERO, false);
+            if(seated)
+                creature->setAnimationState(EntityAnimation::sit_anim, true, towardsTable, false);
+            else
+                creature->setAnimationState(EntityAnimation::getup_anim, false, Ogre::Vector3::ZERO, false);
             break;
         case TavernGuestState::game:
         {
             // The clip of the game, turned towards the opponent
-            for(std::map<Tile*, RoomTavernGame>::iterator it = mGames.begin(); it != mGames.end(); ++it)
+            for(std::map<RoomTavernSeat, RoomTavernGame>::iterator it = mGames.begin(); it != mGames.end(); ++it)
             {
                 RoomTavernGame& game = it->second;
                 Creature* opponent = nullptr;
@@ -662,18 +931,21 @@ void RoomTavern::showSpotState(Tile* tile, RoomTavernSpot& spot)
                 if(opponent == nullptr)
                     continue;
 
-                std::string clip = EntityAnimation::idle_anim;
+                std::string clip = EntityAnimation::sit_anim;
                 if(game.mKind == TavernGameKind::armWrestling)
-                    clip = EntityAnimation::armwrestle_anim;
+                    clip = EntityAnimation::sit_armwrestle_anim;
                 else if(game.mKind == TavernGameKind::dice)
-                    clip = EntityAnimation::dice_anim;
+                    clip = EntityAnimation::sit_dice_anim;
                 creature->setAnimationState(clip, true, directionTo(*creature, opponent->getPosition()), false);
                 break;
             }
             break;
         }
         default:
-            creature->setAnimationState(EntityAnimation::idle_anim, true);
+            if(seated)
+                creature->setAnimationState(EntityAnimation::sit_anim, true, towardsTable, false);
+            else
+                creature->setAnimationState(EntityAnimation::idle_anim, true);
             break;
     }
 }
@@ -718,15 +990,15 @@ void RoomTavern::doUpkeep()
     upkeepGames();
     upkeepSpots();
 
-    // A guest that wants a game and waits for a neighbour looks for a partner again every turn
-    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    // A guest that wants a game and waits for a partner at its table looks for one again every turn
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         if((it->second.mState == TavernGuestState::done) && it->second.mWantsGame && (it->second.mTurnsLeft > 0))
             tryStartGame(it->first);
     }
 
     // A guest that is done is looked for by a partner during these turns only
-    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         if((it->second.mState == TavernGuestState::done) && (it->second.mTurnsLeft > 0))
             --it->second.mTurnsLeft;
@@ -736,9 +1008,9 @@ void RoomTavern::doUpkeep()
 void RoomTavern::releaseGuestsOnLostTiles()
 {
     std::vector<Creature*> lost;
-    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
-        if(std::find(mCoveredTiles.begin(), mCoveredTiles.end(), it->first) == mCoveredTiles.end())
+        if(std::find(mCoveredTiles.begin(), mCoveredTiles.end(), it->first.mTable) == mCoveredTiles.end())
             lost.push_back(it->second.mCreature);
     }
 
@@ -750,7 +1022,7 @@ void RoomTavern::releaseGuestsOnLostTiles()
 void RoomTavern::abortDisturbedGuests()
 {
     // A fight, a flight, a knock-out or a hand that takes a guest away ends its game without effects
-    std::map<Tile*, RoomTavernGame>::iterator game = mGames.begin();
+    std::map<RoomTavernSeat, RoomTavernGame>::iterator game = mGames.begin();
     while(game != mGames.end())
     {
         if(isGuestDisturbed(*game->second.mCreatureA) || isGuestDisturbed(*game->second.mCreatureB))
@@ -763,7 +1035,7 @@ void RoomTavern::abortDisturbedGuests()
     }
 
     // A fight nearby ends the lying at once: the guest gets up and does not go to bed
-    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         RoomTavernSpot& spot = it->second;
         if((spot.mState != TavernGuestState::ko) && (spot.mState != TavernGuestState::getUp))
@@ -779,7 +1051,7 @@ void RoomTavern::abortDisturbedGuests()
 
 void RoomTavern::upkeepSpots()
 {
-    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         RoomTavernSpot& spot = it->second;
         switch(spot.mState)
@@ -788,7 +1060,7 @@ void RoomTavern::upkeepSpots()
             {
                 --spot.mTurnsLeft;
                 if(spot.mTurnsLeft <= 0)
-                    finishDrink(it->first, spot);
+                    finishDrink(it->first.mTable, spot);
                 break;
             }
             case TavernGuestState::ko:
@@ -797,7 +1069,7 @@ void RoomTavern::upkeepSpots()
                 if(spot.mTurnsLeft <= 0)
                 {
                     setSpotState(spot, TavernGuestState::getUp, GET_UP_TURNS);
-                    showSpotState(it->first, spot);
+                    showSpotState(it->first.mTable, spot);
                 }
                 break;
             }
@@ -873,28 +1145,30 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
     if(Random::Double(0.0, PERCENT_SCALE) < getTavernValue("GameChancePercent"))
     {
         spot.mWantsGame = true;
-        tryStartGame(tile);
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator own = findSpotOf(creature);
+        if(own != mSpots.end())
+            tryStartGame(own->first);
     }
 }
 
-void RoomTavern::tryStartGame(Tile* tile)
+//! \brief Lets the guest that wants a game start it with a guest of the same table.
+void RoomTavern::tryStartGame(const RoomTavernSeat& seat)
 {
-    std::map<Tile*, RoomTavernSpot>::iterator own = mSpots.find(tile);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator own = mSpots.find(seat);
     if((own == mSpots.end()) || !own->second.mWantsGame)
         return;
 
-    // A neighbour on one of the four sides that is done too (and waits for the turns to pass) and of the same seat
-    static const int32_t NEIGHBOUR_DX[] = { 1, -1, 0, 0 };
-    static const int32_t NEIGHBOUR_DY[] = { 0, 0, 1, -1 };
-    static const uint32_t NB_NEIGHBOURS = 4;
-    std::vector<Tile*> partners;
-    for(uint32_t i = 0; i < NB_NEIGHBOURS; ++i)
+    // A guest at the same table that is done too (and waits for the turns to pass) and of the same seat of the keeper;
+    // one on the opposite bench comes first, so that the two can face each other
+    std::vector<RoomTavernSeat> partners;
+    std::vector<RoomTavernSeat> oppositePartners;
+    for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; ++index)
     {
-        Tile* neighbour = getGameMap()->getTile(tile->getX() + NEIGHBOUR_DX[i], tile->getY() + NEIGHBOUR_DY[i]);
-        if(neighbour == nullptr)
+        if(index == seat.mIndex)
             continue;
 
-        std::map<Tile*, RoomTavernSpot>::iterator other = mSpots.find(neighbour);
+        const RoomTavernSeat otherSeat(seat.mTable, index);
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator other = mSpots.find(otherSeat);
         if(other == mSpots.end())
             continue;
 
@@ -904,29 +1178,39 @@ void RoomTavern::tryStartGame(Tile* tile)
         if(other->second.mCreature->getSeat() != own->second.mCreature->getSeat())
             continue;
 
-        partners.push_back(neighbour);
+        if((index / TAVERN_SEATS_PER_BENCH) != (seat.mIndex / TAVERN_SEATS_PER_BENCH))
+            oppositePartners.push_back(otherSeat);
+        else
+            partners.push_back(otherSeat);
     }
+
+    if(!oppositePartners.empty())
+        partners = oppositePartners;
 
     if(partners.empty())
         return;
 
-    startGame(tile, partners[Random::Uint(0, static_cast<uint32_t>(partners.size()) - 1)]);
+    startGame(seat, partners[Random::Uint(0, static_cast<uint32_t>(partners.size()) - 1)]);
 }
 
 //! \brief Starts a tavern game using the available game kinds and configured duel limit.
-void RoomTavern::startGame(Tile* tileA, Tile* tileB)
+void RoomTavern::startGame(const RoomTavernSeat& seatA, const RoomTavernSeat& seatB)
 {
-    std::map<Tile*, RoomTavernSpot>::iterator spotA = mSpots.find(tileA);
-    std::map<Tile*, RoomTavernSpot>::iterator spotB = mSpots.find(tileB);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotA = mSpots.find(seatA);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotB = mSpots.find(seatB);
     if((spotA == mSpots.end()) || (spotB == mSpots.end()))
+        return;
+
+    // Duels and games take place only at one table
+    if(!(seatA.mTable == seatB.mTable))
         return;
 
     // Arm wrestling and dice with the same chance; the slap duel joins the draw when beer is served
     const uint32_t nbGames = servesBeer() ? NB_GAMES_WITH_BEER : NB_GAMES_WITHOUT_BEER;
     RoomTavernGame game;
     game.mKind = static_cast<TavernGameKind>(Random::Uint(0, nbGames - 1));
-    game.mTileA = tileA;
-    game.mTileB = tileB;
+    game.mSeatA = seatA;
+    game.mSeatB = seatB;
     game.mCreatureA = spotA->second.mCreature;
     game.mCreatureB = spotB->second.mCreature;
     game.mTurnIsA = true;
@@ -934,23 +1218,23 @@ void RoomTavern::startGame(Tile* tileA, Tile* tileB)
         game.mTurnsLeft = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("TavernDuelMaxTurnsFactor", 4.0) * getTavernValue("GameTurns"));
     else
         game.mTurnsLeft = static_cast<int32_t>(getTavernValue("GameTurns"));
-    mGames[tileA] = game;
+    mGames[seatA] = game;
 
     spotA->second.mWantsGame = false;
     spotB->second.mWantsGame = false;
     setSpotState(spotA->second, TavernGuestState::game, 0);
     setSpotState(spotB->second, TavernGuestState::game, 0);
-    showSpotState(tileA, spotA->second);
-    showSpotState(tileB, spotB->second);
+    showSpotState(seatA.mTable, spotA->second);
+    showSpotState(seatB.mTable, spotB->second);
 }
 
 void RoomTavern::upkeepGames()
 {
-    std::map<Tile*, RoomTavernGame>::iterator it = mGames.begin();
+    std::map<RoomTavernSeat, RoomTavernGame>::iterator it = mGames.begin();
     while(it != mGames.end())
     {
         // A game that ends erases itself, so the next entry is taken first
-        std::map<Tile*, RoomTavernGame>::iterator current = it;
+        std::map<RoomTavernSeat, RoomTavernGame>::iterator current = it;
         ++it;
         if(current->second.mKind == TavernGameKind::slapDuel)
             playDuelTurn(current);
@@ -959,7 +1243,7 @@ void RoomTavern::upkeepGames()
     }
 }
 
-void RoomTavern::playContestTurn(std::map<Tile*, RoomTavernGame>::iterator it)
+void RoomTavern::playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it)
 {
     RoomTavernGame& game = it->second;
     --game.mTurnsLeft;
@@ -981,7 +1265,8 @@ void RoomTavern::playContestTurn(std::map<Tile*, RoomTavernGame>::iterator it)
         concludeGame(it, higher, 0);
 }
 
-void RoomTavern::playDuelTurn(std::map<Tile*, RoomTavernGame>::iterator it)
+//! \brief Plays one turn of a slap duel: the seated guest whose turn it is swings and the other one reels when it is hit.
+void RoomTavern::playDuelTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it)
 {
     RoomTavernGame& game = it->second;
     Creature* slapper = game.mTurnIsA ? game.mCreatureA : game.mCreatureB;
@@ -989,10 +1274,11 @@ void RoomTavern::playDuelTurn(std::map<Tile*, RoomTavernGame>::iterator it)
     uint32_t& targetSlaps = game.mTurnIsA ? game.mSlapsTakenB : game.mSlapsTakenA;
 
     // The slapper swings; a miss passes the turn
-    slapper->setAnimationState(EntityAnimation::slap_anim, false, directionTo(*slapper, target->getPosition()), true);
+    slapper->setAnimationState(EntityAnimation::sit_slap_anim, false, directionTo(*slapper, target->getPosition()), false);
     playSoundAt(slapper->getPositionTile(), SOUND_SLAP);
     if(target->rollAttackHit(slapper->getAttackRating(), slapper->getLevel(), slapper->isPossessed()))
     {
+        target->setAnimationState(EntityAnimation::sit_slapped_anim, false, directionTo(*target, slapper->getPosition()), false);
         // A critical slap (10 percent at equal level, 0.25 points per level of difference) wins the duel at once
         const double levelDifference = static_cast<double>(slapper->getLevel()) - static_cast<double>(target->getLevel());
         const double criticalPercent = getTavernValue("SlapCritBasePercent") +
@@ -1041,17 +1327,22 @@ void RoomTavern::cheerSpectators(const RoomTavernGame& game)
         if(tile == nullptr)
             continue;
 
-        // Within the radius (Chebyshev distance) of one of the two players
-        const int32_t distanceA = std::max(std::abs(tile->getX() - game.mTileA->getX()),
-            std::abs(tile->getY() - game.mTileA->getY()));
-        const int32_t distanceB = std::max(std::abs(tile->getX() - game.mTileB->getX()),
-            std::abs(tile->getY() - game.mTileB->getY()));
+        // Within the radius (Chebyshev distance) of one of the two players, from where each of them sits
+        Tile* tileA = game.mCreatureA->getPositionTile();
+        Tile* tileB = game.mCreatureB->getPositionTile();
+        if((tileA == nullptr) || (tileB == nullptr))
+            continue;
+
+        const int32_t distanceA = std::max(std::abs(tile->getX() - tileA->getX()),
+            std::abs(tile->getY() - tileA->getY()));
+        const int32_t distanceB = std::max(std::abs(tile->getX() - tileB->getX()),
+            std::abs(tile->getY() - tileB->getY()));
         if(std::min(distanceA, distanceB) <= radius)
             creature->addTavernMood(getTavernValue("GameSpectatorMood"), getTavernValue("BeerMoodTurns"));
     }
 }
 
-void RoomTavern::concludeGame(std::map<Tile*, RoomTavernGame>::iterator it, Creature* winner, uint32_t underdogLevels)
+void RoomTavern::concludeGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator it, Creature* winner, uint32_t underdogLevels)
 {
     RoomTavernGame game = it->second;
     mGames.erase(it);
@@ -1082,11 +1373,11 @@ void RoomTavern::concludeGame(std::map<Tile*, RoomTavernGame>::iterator it, Crea
     playSoundAt(mCounterTile, SOUND_CHEER);
 
     // Both players are done; the loser of a slap duel goes down
-    std::map<Tile*, RoomTavernSpot>::iterator winnerSpot = findSpotOf(winner);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator winnerSpot = findSpotOf(winner);
     if(winnerSpot != mSpots.end())
         setSpotDone(winnerSpot->second, 0);
 
-    std::map<Tile*, RoomTavernSpot>::iterator loserSpot = findSpotOf(loser);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator loserSpot = findSpotOf(loser);
     if(loserSpot == mSpots.end())
         return;
 
@@ -1101,17 +1392,17 @@ void RoomTavern::concludeGame(std::map<Tile*, RoomTavernGame>::iterator it, Crea
     }
 }
 
-void RoomTavern::abortGame(std::map<Tile*, RoomTavernGame>::iterator it)
+void RoomTavern::abortGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator it)
 {
     RoomTavernGame game = it->second;
     mGames.erase(it);
 
     // Both guests are done; one of them may have left the room already
-    std::map<Tile*, RoomTavernSpot>::iterator spotA = findSpotOf(game.mCreatureA);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotA = findSpotOf(game.mCreatureA);
     if(spotA != mSpots.end())
         setSpotDone(spotA->second, 0);
 
-    std::map<Tile*, RoomTavernSpot>::iterator spotB = findSpotOf(game.mCreatureB);
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotB = findSpotOf(game.mCreatureB);
     if(spotB != mSpots.end())
         setSpotDone(spotB->second, 0);
 }
@@ -1120,7 +1411,58 @@ void RoomTavern::knockOut(RoomTavernSpot& spot)
 {
     spot.mSleepAfter = true;
     setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")));
-    showSpotState(nullptr, spot);
+    if(!fallNextToBench(spot))
+        showSpotState(nullptr, spot);
+}
+
+//! \brief The loser of a slap duel falls from its bench onto a free floor tile next to the table.
+bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
+{
+    Creature* creature = spot.mCreature;
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator own = findSpotOf(creature);
+    if((creature == nullptr) || (own == mSpots.end()) || !creature->getIsOnMap())
+        return false;
+
+    // The free floor tile nearest to the seat: part of the room, without furniture, and no other loser lies on it
+    const Ogre::Vector2 position = getSeatPosition(own->first, spot.mWholeBench);
+    Tile* best = nullptr;
+    float bestDistance = std::numeric_limits<float>::max();
+    for(int32_t dx = -1; dx <= 1; ++dx)
+    {
+        for(int32_t dy = -1; dy <= 1; ++dy)
+        {
+            Tile* tile = getGameMap()->getTile(own->first.mTable->getX() + dx, own->first.mTable->getY() + dy);
+            if((tile == nullptr) || (tile->getCoveringRoom() != this) ||
+               (mBuildingObjects.find(tile) != mBuildingObjects.end()) || !creature->canGoThroughTile(tile))
+                continue;
+
+            bool taken = false;
+            for(const std::pair<const RoomTavernSeat, RoomTavernSpot>& entry : mSpots)
+            {
+                if((entry.second.mCreature != creature) && (entry.second.mCreature->getPositionTile() == tile) &&
+                   ((entry.second.mState == TavernGuestState::ko) || (entry.second.mState == TavernGuestState::getUp)))
+                    taken = true;
+            }
+            if(taken)
+                continue;
+
+            const Ogre::Vector2 middle(static_cast<Ogre::Real>(tile->getX()), static_cast<Ogre::Real>(tile->getY()));
+            const float distance = middle.squaredDistance(position);
+            if(distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = tile;
+            }
+        }
+    }
+
+    if(best == nullptr)
+        return false;
+
+    // The loser reels off the bench and goes down where the short walk ends
+    const std::vector<Ogre::Vector2> route(1, Ogre::Vector2(static_cast<Ogre::Real>(best->getX()), static_cast<Ogre::Real>(best->getY())));
+    creature->setWalkPath(EntityAnimation::stagger_anim, EntityAnimation::knockedout_anim, true, false, route, false, true);
+    return true;
 }
 
 void RoomTavern::resumeLoadedGuests()
@@ -1149,36 +1491,36 @@ void RoomTavern::resumeLoadedGuests()
     {
         Creature* creatureA = getGameMap()->getCreature(saved.mNameA);
         Creature* creatureB = getGameMap()->getCreature(saved.mNameB);
-        std::map<Tile*, RoomTavernSpot>::iterator spotA = findSpotOf(creatureA);
-        std::map<Tile*, RoomTavernSpot>::iterator spotB = findSpotOf(creatureB);
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotA = findSpotOf(creatureA);
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotB = findSpotOf(creatureB);
         if((creatureA == nullptr) || (creatureB == nullptr) || (spotA == mSpots.end()) || (spotB == mSpots.end()) ||
            (spotA->second.mState != TavernGuestState::game) || (spotB->second.mState != TavernGuestState::game))
             continue;
 
         RoomTavernGame game;
         game.mKind = saved.mKind;
-        game.mTileA = spotA->first;
-        game.mTileB = spotB->first;
+        game.mSeatA = spotA->first;
+        game.mSeatB = spotB->first;
         game.mCreatureA = creatureA;
         game.mCreatureB = creatureB;
         game.mTurnsLeft = saved.mTurnsLeft;
         game.mSlapsTakenA = saved.mSlapsTakenA;
         game.mSlapsTakenB = saved.mSlapsTakenB;
         game.mTurnIsA = saved.mTurnIsA;
-        mGames[game.mTileA] = game;
-        showSpotState(spotA->first, spotA->second);
-        showSpotState(spotB->first, spotB->second);
+        mGames[game.mSeatA] = game;
+        showSpotState(spotA->first.mTable, spotA->second);
+        showSpotState(spotB->first.mTable, spotB->second);
     }
     mPendingGames.clear();
 
     // A guest in a game whose partner did not come back is done
-    for(std::map<Tile*, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         if(it->second.mState != TavernGuestState::game)
             continue;
 
         bool inGame = false;
-        for(std::map<Tile*, RoomTavernGame>::iterator game = mGames.begin(); game != mGames.end(); ++game)
+        for(std::map<RoomTavernSeat, RoomTavernGame>::iterator game = mGames.begin(); game != mGames.end(); ++game)
         {
             if((game->second.mCreatureA == it->second.mCreature) || (game->second.mCreatureB == it->second.mCreature))
                 inGame = true;
@@ -1300,8 +1642,8 @@ bool RoomTavern::removeCoveredTile(Tile* t)
     std::vector<Creature*> guests = mCreaturesUsingRoom;
     for(Creature* guest : guests)
     {
-        std::map<Tile*, RoomTavernSpot>::iterator spot = findSpotOf(guest);
-        const bool hasSpotOnTile = (spot != mSpots.end()) && (spot->first == t);
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator spot = findSpotOf(guest);
+        const bool hasSpotOnTile = (spot != mSpots.end()) && (spot->first.mTable == t);
         if((guest->getPositionTile() == t) || hasSpotOnTile)
             guest->clearActionQueue();
     }
@@ -1415,6 +1757,15 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     // Order candidates for deterministic furniture placement.
     std::vector<Tile*> orderedTiles = mCoveredTiles;
     std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile);
+    // The furniture stays as it is while the tiles and the counter stay the same; seated guests depend on it
+    const bool hadLayout = !mLayoutTiles.empty();
+    const bool layoutChanged = (orderedTiles != mLayoutTiles) || (mCounterTile != mLayoutCounter);
+    if(!layoutChanged && mSavedFurniture.empty())
+    {
+        placeInnkeeper();
+        return;
+    }
+
     std::map<Tile*, std::string> wantedObjects;
     std::map<Tile*, double> objectAngles;
     wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH;
@@ -1462,7 +1813,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
                             wall = true;
                             angle = angles[i];
                         }
-                        auto object = wantedObjects.find(neighbours[i]);
+                        std::map<Tile*, std::string>::const_iterator object = wantedObjects.find(neighbours[i]);
                         if((object != wantedObjects.end()) && (object->second == TAVERN_KEG_MESH))
                             adjacentKeg = true;
                     }
@@ -1470,7 +1821,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
                         continue;
                 }
                 int32_t distance = std::numeric_limits<int32_t>::max();
-                for(const auto& object : wantedObjects)
+                for(const std::pair<Tile* const, std::string>& object : wantedObjects)
                 {
                     const int32_t dx = x - object.first->getX();
                     const int32_t dy = y - object.first->getY();
@@ -1515,6 +1866,12 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     }
 
     placeInnkeeper();
+
+    // The furniture was spread again: all guests stand up and look for a seat at the new tables
+    mLayoutTiles = orderedTiles;
+    mLayoutCounter = mCounterTile;
+    if(hadLayout && layoutChanged)
+        standUpGuests();
 }
 
 //! \brief Writes the tavern and its guest and game states to the stream.
@@ -1529,6 +1886,7 @@ void RoomTavern::exportToStream(std::ostream& os) const
         os << STREAM_TAG_INNKEEPER << " " << mCounterTile->getX() << " " << mCounterTile->getY() << std::endl;
 
     os << STREAM_TAG_COUNTER << " " << mCounterTile->getX() << " " << mCounterTile->getY() << std::endl;
+    os << STREAM_TAG_SEAT_LAYOUT << " " << SEAT_LAYOUT_VERSION << std::endl;
 
     // Furniture <x> <y> <mesh> <angle>: one line for every keg and table, so loading puts them back where they stood
     for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
@@ -1541,27 +1899,28 @@ void RoomTavern::exportToStream(std::ostream& os) const
            << entry.second->getRotationAngle() << std::endl;
     }
 
-    // Spot <x> <y> <creature> <state> <turnsLeft> <drinks> <sleepAfter> <wantsGame>: one line for every guest
-    for(std::map<Tile*, RoomTavernSpot>::const_iterator it = mSpots.begin(); it != mSpots.end(); ++it)
+    // Spot <tableX> <tableY> <creature> <state> <turnsLeft> <drinks> <sleepAfter> <wantsGame> <seat>: one line for every guest
+    for(std::map<RoomTavernSeat, RoomTavernSpot>::const_iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
         const RoomTavernSpot& spot = it->second;
         if(spot.mCreature == nullptr)
             continue;
 
-        os << STREAM_TAG_SPOT << " " << it->first->getX() << " " << it->first->getY() << " " << spot.mCreature->getName()
+        os << STREAM_TAG_SPOT << " " << it->first.mTable->getX() << " " << it->first.mTable->getY() << " " << spot.mCreature->getName()
            << " " << guestStateToString(spot.mState) << " " << spot.mTurnsLeft << " " << spot.mDrinks << " "
-           << (spot.mSleepAfter ? 1 : 0) << " " << (spot.mWantsGame ? 1 : 0) << std::endl;
+           << (spot.mSleepAfter ? 1 : 0) << " " << (spot.mWantsGame ? 1 : 0) << " " << it->first.mIndex << std::endl;
     }
 
-    // Game <kind> <xA> <yA> <xB> <yB> <creatureA> <creatureB> <turnsLeft> <slapsA> <slapsB> <turn>: one line for every
-    // running game (turn: 0 = the first guest slaps next, 1 = the second)
-    for(std::map<Tile*, RoomTavernGame>::const_iterator it = mGames.begin(); it != mGames.end(); ++it)
+    // Game <kind> <xA> <yA> <xB> <yB> <creatureA> <creatureB> <turnsLeft> <slapsA> <slapsB> <turn> <seatA> <seatB>: one line
+    // for every running game (turn: 0 = the first guest slaps next, 1 = the second)
+    for(std::map<RoomTavernSeat, RoomTavernGame>::const_iterator it = mGames.begin(); it != mGames.end(); ++it)
     {
         const RoomTavernGame& game = it->second;
-        os << STREAM_TAG_GAME << " " << static_cast<uint32_t>(game.mKind) << " " << game.mTileA->getX() << " "
-           << game.mTileA->getY() << " " << game.mTileB->getX() << " " << game.mTileB->getY() << " "
+        os << STREAM_TAG_GAME << " " << static_cast<uint32_t>(game.mKind) << " " << game.mSeatA.mTable->getX() << " "
+           << game.mSeatA.mTable->getY() << " " << game.mSeatB.mTable->getX() << " " << game.mSeatB.mTable->getY() << " "
            << game.mCreatureA->getName() << " " << game.mCreatureB->getName() << " " << game.mTurnsLeft << " "
-           << game.mSlapsTakenA << " " << game.mSlapsTakenB << " " << (game.mTurnIsA ? 0 : 1) << std::endl;
+           << game.mSlapsTakenA << " " << game.mSlapsTakenB << " " << (game.mTurnIsA ? 0 : 1) << " "
+           << game.mSeatA.mIndex << " " << game.mSeatB.mIndex << std::endl;
     }
 }
 
@@ -1575,6 +1934,7 @@ bool RoomTavern::importFromStream(std::istream& is)
     // is none of them belongs to what follows in the stream: it is put back.
     Tile* innkeeperTile = nullptr;
     Tile* counterTile = nullptr;
+    bool hasSeatLayout = false;
     while(true)
     {
         std::streampos pos = is.tellg();
@@ -1604,6 +1964,14 @@ bool RoomTavern::importFromStream(std::istream& is)
             if(!readTileFromStream(getGameMap(), is, counterTile))
                 return false;
         }
+        else if(tag == STREAM_TAG_SEAT_LAYOUT)
+        {
+            uint32_t version = 0;
+            if(!(is >> version) || (version != SEAT_LAYOUT_VERSION))
+                return false;
+
+            hasSeatLayout = true;
+        }
         else if(tag == STREAM_TAG_FURNITURE)
         {
             RoomTavernSavedFurniture saved;
@@ -1615,7 +1983,7 @@ bool RoomTavern::importFromStream(std::istream& is)
         }
         else if(tag == STREAM_TAG_SPOT)
         {
-            // The rest of the line: x y creature state turnsLeft [drinks sleepAfter wantsGame]
+            // The rest of the line: x y creature state turnsLeft [drinks sleepAfter wantsGame seat]
             std::string rest;
             std::getline(is, rest);
             std::istringstream line(rest);
@@ -1629,16 +1997,20 @@ bool RoomTavern::importFromStream(std::istream& is)
 
             int32_t sleepAfter = 0;
             int32_t wantsGame = 0;
-            line >> saved.mDrinks >> sleepAfter >> wantsGame;
+            uint32_t seatIndex = 0;
+            line >> saved.mDrinks >> sleepAfter >> wantsGame >> seatIndex;
+            if(seatIndex >= TAVERN_SEATS_PER_TABLE)
+                return false;
+
             saved.mSleepAfter = (sleepAfter != 0);
             saved.mWantsGame = (wantsGame != 0);
-            saved.mTile = getGameMap()->getTile(x, y);
-            if(saved.mTile != nullptr)
+            saved.mSeat = RoomTavernSeat(getGameMap()->getTile(x, y), seatIndex);
+            if(saved.mSeat.mTable != nullptr)
                 mPendingSpots[name] = saved;
         }
         else if(tag == STREAM_TAG_GAME)
         {
-            // The rest of the line: kind xA yA xB yB creatureA creatureB turnsLeft slapsA slapsB turn
+            // The rest of the line: kind xA yA xB yB creatureA creatureB turnsLeft slapsA slapsB turn [seatA seatB]
             std::string rest;
             std::getline(is, rest);
             std::istringstream line(rest);
@@ -1654,9 +2026,15 @@ bool RoomTavern::importFromStream(std::istream& is)
                (kind > static_cast<uint32_t>(TavernGameKind::slapDuel)))
                 return false;
 
+            uint32_t seatA = 0;
+            uint32_t seatB = 0;
+            line >> seatA >> seatB;
+            if((seatA >= TAVERN_SEATS_PER_TABLE) || (seatB >= TAVERN_SEATS_PER_TABLE))
+                return false;
+
             saved.mKind = static_cast<TavernGameKind>(kind);
-            saved.mTileA = getGameMap()->getTile(xA, yA);
-            saved.mTileB = getGameMap()->getTile(xB, yB);
+            saved.mSeatA = RoomTavernSeat(getGameMap()->getTile(xA, yA), seatA);
+            saved.mSeatB = RoomTavernSeat(getGameMap()->getTile(xB, yB), seatB);
             saved.mTurnIsA = (turn == 0);
             mPendingGames.push_back(saved);
         }
@@ -1673,6 +2051,23 @@ bool RoomTavern::importFromStream(std::istream& is)
     Tile* wantedCounter = (counterTile != nullptr) ? counterTile : innkeeperTile;
     if((wantedCounter != nullptr) && (std::find(mCoveredTiles.begin(), mCoveredTiles.end(), wantedCounter) != mCoveredTiles.end()))
         mCounterTile = wantedCounter;
+
+    // A save made before tables had seats: the furniture is spread again by the current rule, running games end without
+    // a winner, and each guest looks for a free seat by the normal rule
+    if(!hasSeatLayout)
+    {
+        mSavedFurniture.clear();
+        mPendingGames.clear();
+        for(std::map<std::string, RoomTavernPendingSpot>::iterator it = mPendingSpots.begin(); it != mPendingSpots.end(); ++it)
+        {
+            RoomTavernPendingSpot& saved = it->second;
+            const bool stillDrinking = (saved.mState == TavernGuestState::arriving) || (saved.mState == TavernGuestState::drinking);
+            saved.mState = stillDrinking ? TavernGuestState::arriving : TavernGuestState::done;
+            saved.mSeat = RoomTavernSeat();
+            saved.mTurnsLeft = 0;
+            saved.mWantsGame = false;
+        }
+    }
 
     return true;
 }
