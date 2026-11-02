@@ -7,8 +7,9 @@ What is checked (fixed values of this branch, counted once)
   clips      Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped; a bone without a track stays in its rest pose
   seam       the first and the last frame of a clip show the same pose, so that it loops and returns to the seat pose
   height     the pose of Sit reaches above the seat of the bench
-  table      no clip reaches more than 0.04 tiles into the table top at a key, seen from the middle of the bench, at the
-             smallest and the largest creature scale of the level; between keys at most 15 percent of a clip may do so
+  table      no clip reaches more than 0.04 tiles into the table top at any of 385 samples, also between its keys, seen from
+             the middle of the bench, at the smallest and the largest creature scale of the level
+  weapons    attached weapon models are hidden during a seated clip (read from the source, not run)
   bench      the pelvis of a walking body stays on the bench in Sit
   large      the types with a 2x2 bed are the large models of the clip author
 
@@ -33,8 +34,8 @@ SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitD
 VISITING_SKELETONS = 30
 # A clip may reach this far into the table top (a hand or a tusk on its edge), in tiles
 MAX_TABLE_DEPTH = 0.04
-# On its way onto the table top an arm passes the edge between two keys. This share of a clip may show that.
-MAX_CROSSING_SHARE = 0.15
+# Samples per clip: dense enough that a fast arm does not pass the table top between two of them
+TABLE_SAMPLES = 385
 # The pelvis stays this close to the middle of the bench (half of the depth of the bench), in tiles
 MAX_PELVIS_BEHIND = 0.084
 # First and last frame of a clip may differ by this share of the height of the body
@@ -73,13 +74,10 @@ def check_skeleton(name, mesh_name, out):
         points = rest.skin_vertices(skeleton, ends, vertices, weights)
         seam = float(np.abs(points[0] - points[1]).max() / height)
         assert seam < MAX_SEAM, (name, clip, 'first and last frame differ', seam)
-        keys = max(played.tracks.values(), key=lambda track: len(track.t)).t
-        depth = seats.level_depth(rest.skin_vertices(skeleton, skeleton.locals_at(played, keys), vertices, weights))
-        assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the table top at a key', depth)
-        fine = np.linspace(0.0, played.length, 97)
+        fine = np.linspace(0.0, played.length, TABLE_SAMPLES)
         points = rest.skin_vertices(skeleton, skeleton.locals_at(played, fine), vertices, weights)
-        crossing = np.maximum(seats.frame_depths(points), seats.frame_depths(points * seats.LEVEL_SCALE_HIGH)) > MAX_TABLE_DEPTH
-        assert crossing.mean() <= MAX_CROSSING_SHARE, (name, clip, 'stays in the table between keys', float(crossing.mean()))
+        depth = seats.level_depth(points)
+        assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the table top', depth)
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')
@@ -93,8 +91,20 @@ def check_skeleton(name, mesh_name, out):
     return len(SEAT_CLIPS)
 
 
+# Checks in the source that the attached weapon models stay hidden while a guest sits.
+def check_weapons_hidden():
+    combat = (ROOT / 'source' / 'render' / 'CreatureCombatReactions.cpp').read_text(encoding='utf-8')
+    assert 'setWeaponsVisible(creature, visible && !playsSeatClip(creature));' in combat, 'a drawn weapon shows on a seated guest'
+    assert 'setWeaponsVisible(creature, !sheathed && !playsSeatClip(creature));' in combat, 'getting up restores the wrong state'
+    assert combat.index('if(playsSeatClip(creature))') < combat.index('if(carriesWeapon && hasWeaponModel(reactions, creature))\n        {'), \
+        'the tick draws or sheathes a seated guest with a standing clip'
+    render = (ROOT / 'source' / 'render' / 'RenderManager.cpp').read_text(encoding='utf-8')
+    assert 'CreatureCombatReactions::showWeaponsForClip(dropCreature);' in render, 'a change of the clip does not update the weapons'
+
+
 # Runs the check over all visiting skeletons.
 def main():
+    check_weapons_hidden()
     found = visitors()
     assert len(found) == VISITING_SKELETONS, len(found)
     assert 'Kobold' not in found and 'skeleton' not in found, 'workers and the Skeleton do not visit the tavern'

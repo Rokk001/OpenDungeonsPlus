@@ -61,11 +61,17 @@ LONG_WEAPON_DIRECTION = (0.0, 0.15, 1.0)
 DAMP_SHARES = (1.0, 0.8, 0.6, 0.4, 0.2, 0.0)
 # A moving clip may reach this far into the table: damping a hand on the edge makes the arm jump, and that crosses more of it.
 CLIP_TABLE_TOLERANCE = 0.035
-# Between its keys a clip may show a limb in the table for this share of its length; a clip above it moves less as a whole.
-MAX_CROSSING_SHARE = 0.14
+# No sample between the keys of a clip may show a limb deeper in the table than this; a clip that does moves less as a whole.
+MAX_CROSSING_SHARE = 0.0
 CROSSING_DEPTH = 0.04
 CROSSING_STEPS = 4
 CLIP_MOTION_SHARES = (0.8, 0.6, 0.4, 0.2, 0.0)
+# A crossing that is left after the arms are led around the table: the clip moves less around it, in rounds over a few frames.
+NOTCH_ROUNDS = 40
+NOTCH_DEPTH = 0.25
+NOTCH_FRAMES = 2.0
+# Damping may not make a body part faster than this, in heights of the body per second, unless the clip is that fast anyway.
+MAX_BODY_SPEED = 10.0
 # A relaxed arm may reach this far below the floor (the tip of a weapon) before it is raised for it.
 FLOOR_TOLERANCE = 0.05
 # How far a relaxed arm tries to rise at the shoulder, in degrees.
@@ -82,15 +88,38 @@ LEAN_BACK_MAX = 36.0
 # Up to this many degrees an arm rises at its shoulder to pass over the table.
 ARM_LIFT_STEP = 8.0
 ARM_LIFT_MAX = 48.0
+# An arm that crosses the table edge bends on its way so that the hand passes above the table. The angles at the shoulder and
+# the elbow in degrees around the axis across the body, and how often a route is searched again around a crossing.
+ROUTE_SHOULDER = (0.0, -15.0, -30.0, -45.0, -60.0, 15.0, 30.0, 45.0)
+ROUTE_ELBOW = (0.0, -20.0, -40.0, -60.0, -80.0, -100.0, -120.0)
+ROUTE_DEPTH = 0.03
+ROUTE_DEPTH_COST = 1.0e5
+ROUTE_BEND_COST = 1.0e-3
+ROUTE_STEP_COST = 1.0e-1
+ROUTE_CROSSING_COST = 1.0e4
+ROUTE_NEAR = 20.0
+ROUTE_SMOOTH_FRAMES = 2.0
+# The route is coarse. The frames around the deepest crossing then bend by this many degrees at a time, a smooth bump over
+# this many frames, in the direction that helps most; the limits keep the shoulder and the elbow in a natural range.
+ROUTE_PUSH_DEGREES = 8.0
+ROUTE_PUSH_MIN_DEGREES = 1.0
+ROUTE_PUSH_FRAMES = 2.0
+ROUTE_PUSH_NARROW_FRAMES = 0.8
+ROUTE_PUSH_ROUNDS = 60
+ROUTE_PUSH_DIRECTIONS = ((0.0, -1.0), (-1.0, 0.0), (1.0, 0.0), (1.0, -1.0), (-1.0, -1.0), (0.0, 1.0))
+ROUTE_SHOULDER_RANGE = (-80.0, 60.0)
+ROUTE_ELBOW_RANGE = (-150.0, 20.0)
+ROUTE_TRIES = 40
+ROUTE_PASSES = 2
 # Size of the body while it is posed: the bench and the table are measured in the units of the unscaled model.
 SCENE = {'size': 1.0}
 # (clip, length in seconds, keyframes, source clip of the upper body, looped)
 CLIPS = (('Sit', 4.0, 17, None, True),
-         ('SitDrink', None, 25, 'Drink', True),
-         ('SitSlap', None, 25, 'Slap', False),
+         ('SitDrink', None, 49, 'Drink', True),
+         ('SitSlap', None, 49, 'Slap', False),
          ('SitSlapped', 0.8, 17, None, False),
-         ('SitArmWrestle', None, 25, 'ArmWrestle', True),
-         ('SitDice', None, 25, 'Dice', True),
+         ('SitArmWrestle', None, 49, 'ArmWrestle', True),
+         ('SitDice', None, 49, 'Dice', True),
          ('SitSlumped', 4.0, 17, None, True))
 # Share of a clip at each end in which the upper body goes from the seat pose to the source clip and back.
 BLEND_SHARE = 0.12
@@ -275,7 +304,7 @@ def mix_with_seat(local, seated, shares):
 
 # Reduce the motion of a clip in each frame that reaches into the table, as little as that frame allows. A share between two
 # others can be the worse one: an arm that rests on the table top passes the edge of the table on its way there.
-def damp_into_table(skeleton, local, seated, vertices, weights):
+def damp_into_table(skeleton, local, seated, vertices, weights, smooth=True):
     limit = CLIP_TABLE_TOLERANCE
     if worst_depths(rest.skin_vertices(skeleton, local, vertices, weights)).max() <= limit:
         return local
@@ -287,7 +316,14 @@ def damp_into_table(skeleton, local, seated, vertices, weights):
         good = (depths <= limit) & ~decided
         shares[good] = share
         decided |= good
-    return mix_with_seat(local, seated, shares)
+    if not smooth:
+        return mix_with_seat(local, seated, shares)
+    # A share that changes from one frame to the next makes the limb jump: each frame takes the lowest share around it, smoothly
+    frames = np.arange(count)
+    near = np.abs(frames[:, None] - frames[None, :]) <= ROUTE_SMOOTH_FRAMES
+    lowest = np.where(near, shares[None, :], 1.0).min(axis=1)
+    kernel = np.exp(-0.5 * ((frames[:, None] - frames[None, :]) / ROUTE_SMOOTH_FRAMES) ** 2)
+    return mix_with_seat(local, seated, np.minimum(lowest, (kernel @ lowest) / kernel.sum(axis=1)))
 
 
 # Return the share of a clip, sampled between its keys, that shows a limb in the table at either end of the level scale.
@@ -302,8 +338,202 @@ def crossing_share(skeleton, local, vertices, weights):
     return float((worst_depths(rest.skin_vertices(skeleton, sampled, vertices, weights)) > CROSSING_DEPTH).mean())
 
 
-# Damp a clip into the table, and let it move less as a whole when a limb still stays in the table too long.
-def keep_out_of_table(skeleton, local, seated, vertices, weights):
+# Return the depth in the table per sample between the keys of a clip, at either end of the level scale.
+def fine_depths(skeleton, local, vertices, weights):
+    count = local[0][0].shape[0]
+    fine = np.linspace(0.0, count - 1.0, (count - 1) * CROSSING_STEPS + 1)
+    lower = np.minimum(fine.astype(int), count - 2)
+    amounts = fine - lower
+    sampled = [(position[lower] + (position[lower + 1] - position[lower]) * amounts[:, None],
+                slerp(rotation[lower], rotation[lower + 1], amounts),
+                scale[lower] + (scale[lower + 1] - scale[lower]) * amounts[:, None]) for position, rotation, scale in local]
+    return worst_depths(rest.skin_vertices(skeleton, sampled, vertices, weights))
+
+
+# Bend an arm by the given angles per frame at the shoulder and the elbow.
+def bend_arm(skeleton, local, shoulder, elbow, shoulder_degrees, elbow_degrees):
+    bent = hold_copy(local)
+    rest.rotate_joint(skeleton, bent, shoulder, rig.X_AXIS, np.radians(shoulder_degrees))
+    rest.rotate_joint(skeleton, bent, elbow, rig.X_AXIS, np.radians(elbow_degrees))
+    return bent
+
+
+# Return the cheapest bend per frame through the costs of the frames; forbidden holds the expensive steps between two frames.
+def cheapest_route(frame_costs, angles, forbidden):
+    count, choices = frame_costs.shape
+    steps = ROUTE_STEP_COST * ((angles[:, None, :] - angles[None, :, :]) ** 2).sum(axis=2)
+    totals = np.full(choices, np.inf)
+    totals[0] = 0.0
+    back = np.zeros((count, choices), dtype=int)
+    for frame in range(1, count):
+        moves = steps.copy()
+        for (at, first, second), cost in forbidden.items():
+            if at == frame - 1:
+                moves[first, second] += cost
+        candidates = totals[:, None] + moves
+        back[frame] = candidates.argmin(axis=0)
+        totals = candidates.min(axis=0) + frame_costs[frame]
+    path = np.zeros(count, dtype=int)
+    for frame in range(count - 1, 0, -1):
+        path[frame - 1] = back[frame, path[frame]]
+    return path
+
+
+# Smooth the angles of a route over time, so that the arm does not jump from one bend to the next; the ends stay.
+def smooth_route(degrees):
+    count = len(degrees)
+    frames = np.arange(count)
+    kernel = np.exp(-0.5 * ((frames[:, None] - frames[None, :]) / ROUTE_SMOOTH_FRAMES) ** 2)
+    smooth = (kernel @ degrees.astype(float)) / kernel.sum(axis=1)
+    fade = np.minimum(1.0, np.minimum(frames, count - 1 - frames) / (2.0 * ROUTE_SMOOTH_FRAMES))
+    return smooth * fade
+
+
+# Bend the frames around the deepest crossing of a route further, as long as that takes the arm out of the table.
+def push_route(skeleton, local, joints, held_vertices, held_weights, shoulder_degrees, elbow_degrees):
+    count = len(shoulder_degrees)
+    frames = np.arange(count)
+    bent = bend_arm(skeleton, local, joints[0], joints[1], shoulder_degrees, elbow_degrees)
+    depths = fine_depths(skeleton, bent, held_vertices, held_weights)
+    step = ROUTE_PUSH_DEGREES
+    width = ROUTE_PUSH_FRAMES
+    for _ in range(ROUTE_PUSH_ROUNDS):
+        if depths.max() <= ROUTE_DEPTH:
+            break
+        if step < ROUTE_PUSH_MIN_DEGREES:
+            # A crossing right after the seat pose needs a narrow bump, because the first and the last frame do not bend
+            if width <= ROUTE_PUSH_NARROW_FRAMES:
+                break
+            width = ROUTE_PUSH_NARROW_FRAMES
+            step = ROUTE_PUSH_DEGREES
+        centre = float(depths.argmax()) / CROSSING_STEPS
+        bump = np.exp(-0.5 * ((frames - centre) / width) ** 2)
+        bump[[0, -1]] = 0.0
+        score = np.maximum(0.0, depths - ROUTE_DEPTH).sum()
+        found = None
+        for first, second in ROUTE_PUSH_DIRECTIONS:
+            trial_shoulder = np.clip(shoulder_degrees + first * step * bump, *ROUTE_SHOULDER_RANGE)
+            trial_elbow = np.clip(elbow_degrees + second * step * bump, *ROUTE_ELBOW_RANGE)
+            trial = bend_arm(skeleton, local, joints[0], joints[1], trial_shoulder, trial_elbow)
+            trial_depths = fine_depths(skeleton, trial, held_vertices, held_weights)
+            trial_score = np.maximum(0.0, trial_depths - ROUTE_DEPTH).sum()
+            if trial_score < score - 1e-5:
+                found = (trial_shoulder, trial_elbow, trial, trial_depths)
+                score = trial_score
+        if found is None:
+            step *= 0.5
+            continue
+        shoulder_degrees, elbow_degrees, bent, depths = found
+    return bent, float(depths.max())
+
+
+# Search the route of one arm for the two joints that bend it; returns the bent clip and its depth, or None if nothing helped.
+def route_arm(skeleton, local, joints, held_vertices, held_weights, start_depth):
+    count = local[0][0].shape[0]
+    angles = np.array([(first, second) for first in ROUTE_SHOULDER for second in ROUTE_ELBOW])
+    frame_costs = np.zeros((count, len(angles)))
+    for choice, (first, second) in enumerate(angles):
+        bent = bend_arm(skeleton, local, joints[0], joints[1], np.full(count, first), np.full(count, second))
+        depths = worst_depths(rest.skin_vertices(skeleton, bent, held_vertices, held_weights))
+        frame_costs[:, choice] = (ROUTE_DEPTH_COST * np.maximum(0.0, depths - ROUTE_DEPTH) ** 2 +
+                                  ROUTE_BEND_COST * (first * first + second * second))
+    # The ends of a clip stay the seat pose, so that it joins the other clips
+    frame_costs[[0, -1], :] = np.inf
+    frame_costs[[0, -1], 0] = 0.0
+    forbidden = {}
+    best_path = None
+    best_depth = start_depth
+    for _ in range(ROUTE_TRIES):
+        path = cheapest_route(frame_costs, angles, forbidden)
+        bent = bend_arm(skeleton, local, joints[0], joints[1], angles[path, 0], angles[path, 1])
+        depths = fine_depths(skeleton, bent, held_vertices, held_weights)
+        if (best_path is None) or (depths.max() < best_depth - 1e-4):
+            best_path, best_depth = path, float(depths.max())
+        if depths.max() <= ROUTE_DEPTH:
+            break
+        for sample in np.flatnonzero(depths > ROUTE_DEPTH):
+            at = min(int(sample) // CROSSING_STEPS, count - 2)
+            # What lies one step of the grid beside a step through the table goes through it as well
+            near_first = np.flatnonzero(np.abs(angles - angles[path[at]]).max(axis=1) <= ROUTE_NEAR)
+            near_second = np.flatnonzero(np.abs(angles - angles[path[at + 1]]).max(axis=1) <= ROUTE_NEAR)
+            for first in near_first:
+                for second in near_second:
+                    forbidden[(at, int(first), int(second))] = ROUTE_CROSSING_COST
+    result, depth = push_route(skeleton, local, joints, held_vertices, held_weights,
+                               smooth_route(angles[best_path, 0]), smooth_route(angles[best_path, 1]))
+    return (result, depth) if depth < start_depth - 1e-4 else None
+
+
+# Lead every arm that crosses the table edge around it: the first and the last frame stay the seat pose, the frames between
+# bend as little as it takes. Only the arm and what it holds are measured here. A chain can end at the hand or at the forearm,
+# so the last two pairs of its joints are tried.
+def route_arms_over_table(skeleton, local, body_rig, vertices, weights):
+    if not isinstance(body_rig, list):
+        return local
+    vertices = np.asarray(vertices)
+    for item in body_rig:
+        for chain in list(item.get('hang', [])) + ([item['press']] if item.get('press') else []):
+            joints = [bone for bone in chain if bone in skeleton.idx]
+            if len(joints) < 2:
+                continue
+            bones = {skeleton.idx[bone] for bone in joints[-3:]}
+            for index in skeleton.topo:
+                if skeleton.parent[index] in bones:
+                    bones.add(index)
+            held = [index for index, row in enumerate(weights) if sum(weight for bone, weight in row if bone in bones) >= 0.5]
+            if not held:
+                continue
+            held_vertices = vertices[held]
+            held_weights = [weights[index] for index in held]
+            depth = float(fine_depths(skeleton, local, held_vertices, held_weights).max())
+            pairs = [joints[-2:]] if len(joints) < 3 else [joints[-3:-1], joints[-2:]]
+            for pair in pairs:
+                if depth <= ROUTE_DEPTH:
+                    break
+                routed = route_arm(skeleton, local, pair, held_vertices, held_weights, depth)
+                if routed is not None:
+                    local, depth = routed
+    return local
+
+
+# Let a clip move less only around its crossings of the table, as long as that clears them; returns None if it does not.
+def notch_crossings(skeleton, local, seated, vertices, weights):
+    count = local[0][0].shape[0]
+    frames = np.arange(count)
+    shares = np.ones(count)
+    result = local
+    for _ in range(NOTCH_ROUNDS):
+        depths = fine_depths(skeleton, result, vertices, weights)
+        if depths.max() <= CROSSING_DEPTH:
+            return result
+        centre = float(depths.argmax()) / CROSSING_STEPS
+        shares *= 1.0 - NOTCH_DEPTH * np.exp(-0.5 * ((frames - centre) / NOTCH_FRAMES) ** 2)
+        result = mix_with_seat(local, seated, shares)
+    return None
+
+
+# Return how far a clip moves from its first frame, and the highest speed of a vertex per frame.
+def clip_motion(skeleton, local, vertices, weights):
+    points = rest.skin_vertices(skeleton, local, vertices, weights)
+    return (float(np.linalg.norm(points - points[:1], axis=2).max()),
+            float(np.linalg.norm(np.diff(points, axis=0), axis=2).max()))
+
+
+# Damp a clip into the table, and let it move less as a whole when a limb still stays in the table. Smooth damping does not
+# jump but can stop a clip that needs its full reach, so both are tried: the clip that moves most without jumping is kept.
+def keep_out_of_table(skeleton, local, seated, vertices, weights, height, seconds_per_frame):
+    fastest = max(MAX_BODY_SPEED * height * seconds_per_frame, clip_motion(skeleton, local, vertices, weights)[1])
+    candidates = []
+    for smooth in (False, True):
+        result = damp_into_table(skeleton, local, seated, vertices, weights, smooth)
+        notched = notch_crossings(skeleton, result, seated, vertices, weights)
+        if notched is not None:
+            candidates.append((notched,) + clip_motion(skeleton, notched, vertices, weights))
+    calm = [item for item in candidates if item[2] <= fastest]
+    if calm:
+        return max(calm, key=lambda item: item[1])[0]
+    if candidates:
+        return min(candidates, key=lambda item: item[2])[0]
     result = damp_into_table(skeleton, local, seated, vertices, weights)
     for share in CLIP_MOTION_SHARES:
         if crossing_share(skeleton, result, vertices, weights) <= MAX_CROSSING_SHARE:
@@ -907,7 +1137,11 @@ def author(source, mesh, destination):
             lean_out_of_table(skeleton, local, times, length, spine, head, vertices, weights)
         hold_weapons_upright(skeleton, local, weapons)
         settle(local)
-        local = keep_out_of_table(skeleton, local, seated, vertices, weights)
+        if source_clip or clip == 'SitSlapped':
+            for _ in range(ROUTE_PASSES):
+                local = route_arms_over_table(skeleton, local, body_rig, vertices, weights)
+                hold_weapons_upright(skeleton, local, weapons)
+        local = keep_out_of_table(skeleton, local, seated, vertices, weights, height, length / (keys - 1))
         settle(local)
         apply_seat_scale(skeleton, local, info['size'])
         posed = rest.skin_vertices(skeleton, local, vertices, weights)
