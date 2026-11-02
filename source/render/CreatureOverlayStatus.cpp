@@ -47,7 +47,7 @@ enum class CreatureOverlays
     crown,
     //! Mood symbol
     status,
-    //! Mana ring, drawn right of the health ring
+    //! Mana ring inside the health ring
     mana,
     nbCreatureOverlays
 };
@@ -57,8 +57,8 @@ const uint32_t PROGRESS_ATLAS_COLUMNS = 8;
 //! Last frame of the atlases. Frame 0 shows no progress.
 const uint32_t PROGRESS_ATLAS_LAST_FRAME = PROGRESS_ATLAS_COLUMNS * PROGRESS_ATLAS_COLUMNS - 1;
 //! Character heights of the level caption, which gets smaller for two-digit levels.
-const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 32;
-const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;
+const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 30;
+const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 18;
 //! Character height of the overlay that shows the emote of a reaction
 const Ogre::Real EMOTE_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the emote picture
@@ -68,24 +68,23 @@ const std::string CROWN_MATERIAL_NAME = "ChampionCrown";
 //! Character height of the crown overlay (it shows no text)
 const Ogre::Real CROWN_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the crown picture
-const Ogre::Real CROWN_SIZE = 64;
+const Ogre::Real CROWN_SIZE = 28;
 //! Name prefix of the mana ring arc materials: the segments of the health ring picture without disc, ManaRing1 to
 //! ManaRing8 show that many segments, tinted with the mana colour
 const std::string MANA_RING_BASE_MATERIAL = "ManaRing";
 //! Number of segments of the mana ring, as many as the health ring has
 const uint32_t MANA_RING_SEGMENTS = 8;
-//! Material of the mana ring backing disc and frame: the full-health picture of the health ring (disc and frame, no segments)
-const std::string MANA_RING_BACKING_MATERIAL = "CreatureOverlay7";
 //! Colour channels (0 to 255) of the mana ring: the colour of the mana number in the game HUD
 const Ogre::Real MANA_RING_RED = 127.0f;
 const Ogre::Real MANA_RING_GREEN = 227.0f;
 const Ogre::Real MANA_RING_BLUE = 166.0f;
 //! Highest value of a colour channel
 const Ogre::Real COLOUR_CHANNEL_MAX = 255.0f;
-//! Width and height in pixels of the area of the mana ring (as for the other rings)
+//! Width and height in pixels of the mana ring inside the health badge
 const Ogre::Real MANA_RING_SIZE = 64;
-//! Horizontal shift in pixels of the mana ring: right of the health ring, touching it
-const Ogre::Real MANA_RING_OFFSET_X = 64;
+//! Size of the health badge and of the centred mood icon
+const Ogre::Real HEALTH_BADGE_SIZE = 112;
+const Ogre::Real STATUS_ICON_SIZE = 28;
 
 //! \brief Returns the colour of the mana ring arc: the colour of the mana number in the game HUD.
 static Ogre::ColourValue getManaColour()
@@ -134,7 +133,7 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     uint32_t healthId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
         Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f), "");
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)] = healthId;
-    mMovableTextOverlay->forceTextArea(healthId, 64,64);
+    mMovableTextOverlay->forceTextArea(healthId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE);
     mMovableTextOverlay->centerCaption(healthId);
     mMovableTextOverlay->displayOverlay(healthId, 0);
 
@@ -166,21 +165,12 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     uint32_t statusId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 16,
         Ogre::ColourValue::White, "", false);
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::status)] = statusId;
-    mMovableTextOverlay->forceTextArea(statusId, 30,30);
+    mMovableTextOverlay->forceTextArea(statusId, STATUS_ICON_SIZE, STATUS_ICON_SIZE);
     // Note: We set the material to the first status overlay material otherwise, materials
     // are not shown when we change then ingame
     mMovableTextOverlay->setMaterialName(statusId, CREATURE_OVERLAY_STATUS_PREFIX + "1");
     mMovableTextOverlay->displayOverlay(statusId, 0);
 
-    // The mana ring uses the backing disc and frame of the health ring (its full-health picture, tinted with the seat
-    // colour by updateHealth), shifted right of the health ring.
-    const std::string manaBackingMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(
-        MANA_RING_BACKING_MATERIAL, mSeat->getColorValue());
-    mManaBackingId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
-        Ogre::ColourValue::White, manaBackingMaterial, false);
-    mMovableTextOverlay->forceTextArea(mManaBackingId, MANA_RING_SIZE, MANA_RING_SIZE);
-    mMovableTextOverlay->setOffset(mManaBackingId, MANA_RING_OFFSET_X, 0.0f);
-    mMovableTextOverlay->displayOverlay(mManaBackingId, -1);
     // The arc is the segments of the health ring in the HUD mana colour; updateProgress picks the picture with the
     // number of segments that matches the mana.
     const std::string manaMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(
@@ -189,7 +179,6 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
         Ogre::ColourValue::White, manaMaterial, false);
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::mana)] = manaId;
     mMovableTextOverlay->forceTextArea(manaId, MANA_RING_SIZE, MANA_RING_SIZE);
-    mMovableTextOverlay->setOffset(manaId, MANA_RING_OFFSET_X, 0.0f);
     mMovableTextOverlay->displayOverlay(manaId, -1);
 }
 
@@ -233,6 +222,7 @@ void CreatureOverlayStatus::hideEmote()
     mMovableTextOverlay->displayOverlay(mEmoteId, 0);
 }
 
+//! \brief Updates the health material and the level display.
 void CreatureOverlayStatus::updateHealth()
 {
     // We adapt the material
@@ -246,13 +236,6 @@ void CreatureOverlayStatus::updateHealth()
             mSeat->getColorValue());
         uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
         mMovableTextOverlay->setMaterialName(healthId, material);
-        // The mana ring backing follows the seat colour like the health ring (it does not exist yet while the
-        // constructor makes the first call)
-        if(mManaBackingId != 0)
-        {
-            mMovableTextOverlay->setMaterialName(mManaBackingId, RenderManager::getSingleton().rrBuildTintedMaterial(
-                MANA_RING_BACKING_MATERIAL, mSeat->getColorValue()));
-        }
     }
 
     if(mLevel != mCreature->getLevel())

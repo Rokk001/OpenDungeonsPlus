@@ -61,6 +61,9 @@ class ODClient: public Ogre::Singleton<ODClient>,
     //! \brief Connects to the server host:port
     bool replay(const std::string& filename) override;
 
+    //! \brief Reports whether the client is playing a recorded replay.
+    bool isReplay() const { return getSource() == ODSource::file; }
+
     //! \brief Adds a client notification to the client notification queue.
     void queueClientNotification(ClientNotification* n);
 

@@ -23,6 +23,7 @@
 #include <map>
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 namespace social
 {
@@ -109,6 +110,15 @@ struct Post
     bool mIsWorker;
 };
 
+//! \brief One server-authoritative allied creature in the Dungeonbook roster.
+struct DungeonbookEntry
+{
+    std::string name, className, keeper, appearance, stats, skills, equipment, path;
+    uint32_t level;
+    double strength, dexterity, life, mana, critical, attackRating, defenseRating, physicalDefense, magicalDefense, elementDefense;
+    bool worker, champion, unhappy;
+};
+
 //! \brief In-memory log of the creature posts of the local game. It is never saved and never
 //! sent over the network. All limits are applied when a post is added, nothing is polled.
 class PostLog
@@ -171,7 +181,18 @@ public:
     inline void rosterChanged()
     { ++mRosterVersion; }
 
+    //! \brief Replaces the current allied roster with a complete server snapshot.
+    void setDungeonbookRoster(const std::vector<DungeonbookEntry>& entries) { mDungeonbookRoster = entries; mDungeonbookRosterReady = true; ++mRosterVersion; }
+    //! \brief Clears the previous subscription snapshot while waiting for a new one.
+    void clearDungeonbookRoster() { mDungeonbookRoster.clear(); mDungeonbookRosterReady = false; ++mRosterVersion; }
+    //! \brief Reports whether a roster snapshot has arrived.
+    bool isDungeonbookRosterReady() const { return mDungeonbookRosterReady; }
+    //! \brief Returns the most recent server roster snapshot.
+    const std::vector<DungeonbookEntry>& getDungeonbookRoster() const { return mDungeonbookRoster; }
+
 private:
+    std::vector<DungeonbookEntry> mDungeonbookRoster;
+    bool mDungeonbookRosterReady = false;
     int64_t secondsToTurns(uint32_t seconds) const;
 
     //! True between start() and stop()

@@ -66,6 +66,8 @@ public:
     bool onProfileTabClicked(const CEGUI::EventArgs& e);
     //! \brief A friend or foe name in the profile: selects that creature.
     bool onLinkClicked(const CEGUI::EventArgs& e);
+    //! \brief Switches between the attributes and the existing social profile.
+    bool onProfileViewClicked(const CEGUI::EventArgs& e);
 
     //! \brief Marks the tab button as the active one (gold, in brackets); the button stays enabled.
     static void setTabState(CEGUI::Window* tab, const std::string& label, bool active);
@@ -110,6 +112,9 @@ private:
     bool mProfileTab;
     //! The profile page inside the profile pane, created when it is needed the first time
     CEGUI::Window* mProfilePage;
+    //! Attribute page and selected profile view.
+    CEGUI::Window* mDungeonbookPage;
+    bool mShowingSocial;
     //! Click subscriptions of the friend and foe names of the profile page
     std::vector<CEGUI::Event::Connection> mLinkConnections;
     //! Roster version of the post log the list was built for

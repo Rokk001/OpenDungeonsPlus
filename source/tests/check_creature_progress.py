@@ -32,9 +32,9 @@ for sig in ('void Creature::importFromPacket(', 'void Creature::updateFromPacket
     assert 'importProgressFromPacket(is);' in function(creature, sig)
 assert 'mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);' in source
 overlay_source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text().replace('\r\n', '\n')
-# Mana ring layers: backing disc and frame from the health picture set, arc of up to eight segments of the health ring
-# (ManaRing1 to ManaRing8), no spokes
-assert 'MANA_RING_BACKING_MATERIAL = "CreatureOverlay7"' in overlay_source
+# Mana ring uses up to eight segments inside the existing badge.
+assert 'MANA_RING_SIZE = 64;' in overlay_source
+assert 'MANA_RING_OFFSET_X' not in overlay_source
 assert 'MANA_RING_BASE_MATERIAL = "ManaRing"' in overlay_source
 assert 'MANA_RING_SEGMENTS = 8;' in overlay_source
 assert 'static_cast<uint32_t>(manaShare * MANA_RING_SEGMENTS + 0.5)' in overlay_source
@@ -42,7 +42,6 @@ material_script = (root / 'materials/scripts/CreatureOverlay.material').read_tex
 for segments in range(1, 9):
     assert (root / ('materials/textures/ManaRing%d.png' % segments)).exists()
     assert 'material ManaRing%d\n' % segments in material_script
-assert 'rrBuildTintedMaterial(\n        MANA_RING_BACKING_MATERIAL, mSeat->getColorValue())' in overlay_source
 assert '"CreatureOverlay0"' not in overlay_source.split('CreatureOverlayStatus::CreatureOverlayStatus(')[1]
 assert 'mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)' in source
 server = (root / 'source/network/ODServer.cpp').read_text()

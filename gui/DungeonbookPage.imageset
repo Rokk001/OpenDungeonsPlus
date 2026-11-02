@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Imageset name="DungeonbookArt" imagefile="DungeonbookPage.png" nativeHorzRes="1024" nativeVertRes="1536" autoScaled="false" version="2">
+    <Image name="Page" xPos="0" yPos="0" width="1024" height="1536" />
+</Imageset>

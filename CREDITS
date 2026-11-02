@@ -2085,3 +2085,6 @@ models/LichMaggot.mesh, models/LichMaggot.skeleton    AI-generated with Codex   
 models/LichWorm.mesh, models/LichWorm.skeleton    AI-generated with Codex    GPLv3+    Original Blender-modelled, textured worm (tools/blender-assets/lich_vermin.py) with a wriggling clip Crawl, for the Lich death effect.
 materials/scripts/RoomAmbience.material (LichVerminShell, LichVerminLeg, LichVerminMaggot, LichVerminWorm)    AI-generated with Codex    GPLv3+    Textured lit materials of the 3D grave vermin.
 materials/textures/LichVermin*.png    AI-generated    GPLv3+    Painted from periodic noise with fixed colours by tools/gen_lich_vermin_textures.py (script generated, original work).
+
+gui/DungeonbookPage.png    AI-generated with Codex image generation    GPLv3+    Original dark parchment and bronze frame for the creature profile, 2026-11-02.
+gui/DungeonbookFrame.png    AI-generated with Codex image generation    GPLv3+    Original circular bronze portrait frame for the creature profile, 2026-11-02.

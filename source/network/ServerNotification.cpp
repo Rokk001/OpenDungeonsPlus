@@ -222,6 +222,8 @@ std::string ServerNotification::typeString(ServerNotificationType type)
             return "sandboxStatus";
         case ServerNotificationType::sandboxRealmComplete:
             return "sandboxRealmComplete";
+        case ServerNotificationType::dungeonbookRoster:
+            return "dungeonbookRoster";
         default:
             OD_LOG_ERR("Unknown enum for ServerNotificationType="
                 + Helper::toString(static_cast<int>(type)));

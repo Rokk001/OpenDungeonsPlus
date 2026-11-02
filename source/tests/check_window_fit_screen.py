@@ -110,6 +110,23 @@ assert all(abs(quit_area[axis][0] + quit_area[axis + 2][0] - 1.0) < 0.00001
            and quit_area[axis][1] == -quit_area[axis + 2][1] for axis in (0, 1)), 'quit confirmation must be centred'
 assert {child.get('name') for child in quit_window.findall('Window')} == {'YesOption', 'NoOption', 'SaveReplayCheckbox'}
 
+# The replay checkbox must stay below both confirmation buttons at every tested scale.
+quit_children = {child.get('name'): udims(child.find("Property[@name='Area']").get('value'))
+                 for child in quit_window.findall('Window')}
+for screen_w, screen_h in SCREENS:
+    for user_scale in USER_SCALES:
+        scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user_scale
+        extent = window_extent(quit_window)
+        effective_scale = scale * fit_factor(extent, screen_w, screen_h, scale)
+        # A frame's client area cannot be taller than its outer window.
+        height = extent[1][0] * screen_h + extent[1][1] * effective_scale
+        checkbox_top = quit_children['SaveReplayCheckbox'][1]
+        for name in ('YesOption', 'NoOption'):
+            button_bottom = quit_children[name][3]
+            for client_height in (0, height):
+                assert checkbox_top[0] * client_height + checkbox_top[1] * effective_scale >= (
+                    button_bottom[0] * client_height + button_bottom[1] * effective_scale), (name, screen_w, screen_h, user_scale)
+
 too_large = []
 for screen_w, screen_h in SCREENS:
     for user_scale in USER_SCALES:

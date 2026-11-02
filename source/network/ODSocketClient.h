@@ -50,6 +50,7 @@ class ODSocketClient
             file
         };
 
+        //! \brief Initializes the connection and disables all negotiated extensions.
         ODSocketClient():
             mSource(ODSource::none),
             mPlayer(nullptr),
@@ -66,7 +67,8 @@ class ODSocketClient
             mSupportsCreatureActivity(false),
             mSupportsCreaturePanel(false),
             mSupportsCreatureProgress(false),
-            mSupportsCosmeticEvents(false)
+            mSupportsCosmeticEvents(false),
+            mSupportsDungeonbookRoster(false)
         {}
 
         virtual ~ODSocketClient()
@@ -100,6 +102,10 @@ class ODSocketClient
         bool supportsCosmeticEvents() const { return mSupportsCosmeticEvents; }
         //! \brief Records whether the client negotiated cosmetic events (see CosmeticEvent.h)
         void setSupportsCosmeticEvents(bool supported) { mSupportsCosmeticEvents = supported; }
+        //! \brief Whether both peers agreed to Dungeonbook roster snapshots.
+        bool supportsDungeonbookRoster() const { return mSupportsDungeonbookRoster; }
+        //! \brief Records the negotiated Dungeonbook roster capability.
+        void setSupportsDungeonbookRoster(bool supported) { mSupportsDungeonbookRoster = supported; }
         int64_t getLastTurnAck() { return mLastTurnAck; }
         void setLastTurnAck(int64_t lastTurnAck) { mLastTurnAck = lastTurnAck; }
         //! \brief Heart health fraction of the last heartHealth message sent, negative if none
@@ -117,6 +123,10 @@ class ODSocketClient
         bool getInfirmaryWindowOpen() const { return mInfirmaryWindowOpen; }
         //! \brief Starts or stops patient window updates for this connection.
         void setInfirmaryWindowOpen(bool open) { mInfirmaryWindowOpen = open; }
+        //! \brief Reports whether the Dungeonbook roster is subscribed.
+        bool getDungeonbookRosterOpen() const { return mDungeonbookRosterOpen; }
+        //! \brief Starts or stops Dungeonbook roster updates.
+        void setDungeonbookRosterOpen(bool open) { mDungeonbookRosterOpen = open; }
         bool getNestsSynced() const { return mNestsSynced; }
         void setNestsSynced(bool synced) { mNestsSynced = synced; }
         //! \brief Heart HP (whole points) of the last heartHealth message sent, negative if none
@@ -201,6 +211,7 @@ class ODSocketClient
         //! True once the client got the nest places of the hatcheries
         bool mNestsSynced;
         bool mInfirmaryWindowOpen = false;
+        bool mDungeonbookRosterOpen = false;
         std::string mState;
 
 
@@ -222,6 +233,8 @@ class ODSocketClient
         //! \brief Creature experience and attack recovery in creature packets
         bool mSupportsCreatureProgress;
         bool mSupportsCosmeticEvents;
+        //! \brief Allied Dungeonbook roster snapshots.
+        bool mSupportsDungeonbookRoster;
 
         //! \brief the replay filename being written. Used to later optionally delete it
         //! if asked to.
