@@ -246,7 +246,9 @@ enum class ServerNotificationType
     //! Appended after spaPayer so that no existing numeric value changes.
     creatureJump,
     //! \brief Current owner worker settings, returned even if a requested change is refused.
-    workerSettings
+    workerSettings,
+    //! \brief Complete current roster and profile statistics of allied creatures.
+    dungeonbookRoster
 };
 
 ODPacket& operator<<(ODPacket& os, const ServerNotificationType& nt);

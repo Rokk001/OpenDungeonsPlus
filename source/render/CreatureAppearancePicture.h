@@ -22,6 +22,9 @@ namespace CEGUI
 //! Set the returned image immediately because later requests may evict older textures.
 const CEGUI::Image* getCreatureAppearanceImage(const std::string& creatureName, const CreatureAppearance& appearance);
 
+//! \brief Returns the existing portrait clipped to a circular frame, or nullptr if unavailable.
+const CEGUI::Image* getCircularCreatureAppearanceImage(const std::string& creatureName, const CreatureAppearance& appearance);
+
 //! \brief Returns the client's cached whole-image catalog, or nullptr if it is missing or invalid.
 const PortraitCatalog* getClientPortraitCatalog(const std::string& catalogId);
 

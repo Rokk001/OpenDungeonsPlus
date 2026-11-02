@@ -81,6 +81,7 @@ bool ODSocketClient::replay(const std::string& filename)
 void ODSocketClient::disconnect(bool keepReplay)
 {
     mInfirmaryWindowOpen = false;
+    mDungeonbookRosterOpen = false;
     mSupportsLiveNickname = false;
     mSupportsCreatureMood = false;
     mSupportsCreatureActivity = false;

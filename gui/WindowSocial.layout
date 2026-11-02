@@ -60,6 +60,11 @@
                 <Property name="VertFormatting" value="TopAligned" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />
             </Window>
+            <Window type="OD/Button" name="ProfileBackButton">
+                <Property name="Area" value="{{0.68,0},{0.92,0},{0.98,0},{0.99,0}}" />
+                <Property name="Text" value="Attributes" />
+                <Property name="Visible" value="False" />
+            </Window>
             <Window type="DefaultWindow" name="ProfileHolder">
                 <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
             </Window>

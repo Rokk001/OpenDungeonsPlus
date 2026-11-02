@@ -141,10 +141,13 @@ void PostLog::start(int64_t turnNow, double turnsPerSecond)
     mEnabledFromTurn = turnNow + BURST_TURNS;
 }
 
+//! \brief Clears the posts and Dungeonbook roster when leaving a game.
 void PostLog::stop()
 {
     mActive = false;
     mPosts.clear();
+    mDungeonbookRoster.clear();
+    mDungeonbookRosterReady = false;
     mLastPostTurns.clear();
     mCreaturePostTurns.clear();
     mGlobalPostTurns.clear();

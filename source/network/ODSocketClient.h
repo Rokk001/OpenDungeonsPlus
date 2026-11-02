@@ -117,6 +117,10 @@ class ODSocketClient
         bool getInfirmaryWindowOpen() const { return mInfirmaryWindowOpen; }
         //! \brief Starts or stops patient window updates for this connection.
         void setInfirmaryWindowOpen(bool open) { mInfirmaryWindowOpen = open; }
+        //! \brief Reports whether the Dungeonbook roster is subscribed.
+        bool getDungeonbookRosterOpen() const { return mDungeonbookRosterOpen; }
+        //! \brief Starts or stops Dungeonbook roster updates.
+        void setDungeonbookRosterOpen(bool open) { mDungeonbookRosterOpen = open; }
         bool getNestsSynced() const { return mNestsSynced; }
         void setNestsSynced(bool synced) { mNestsSynced = synced; }
         //! \brief Heart HP (whole points) of the last heartHealth message sent, negative if none
@@ -201,6 +205,7 @@ class ODSocketClient
         //! True once the client got the nest places of the hatcheries
         bool mNestsSynced;
         bool mInfirmaryWindowOpen = false;
+        bool mDungeonbookRosterOpen = false;
         std::string mState;
 
 

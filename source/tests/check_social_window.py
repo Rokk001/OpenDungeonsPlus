@@ -92,6 +92,25 @@ frame = frame[:frame.index('\n}\n')]
 check('mSocialWindow->update(' in frame and 'PostLog' not in frame, 'the feed is not polled per frame')
 
 window = read('source/render/SocialWindow.cpp')
+server = read('source/network/ODServer.cpp')
+check('getCreaturesByAlliedSeat(seat)' in server and 'keeper->getNick()' in server and 'creature.keeper' in window,
+      'the server sends allied creatures with their keeper name')
+check('item->setTooltipText(entries[i].mText)' in window, 'full list entry remains available when elided')
+client = read('source/network/ODClient.cpp')
+check('getDungeonbookRosterOpen()' in server and 'notifyDungeonbookRoster(gameMap, player)' in server,
+      'server sends snapshots only to subscribed clients')
+check('askDungeonbookRoster, true' in window and 'askDungeonbookRoster, false' in window,
+      'opening and closing the book starts and stops roster updates')
+for fragment in ('getStatsText(owner)', 'getStrength()', 'getDexterity()', 'getLife()', 'getMana()',
+                 'CreatureAppearanceLogic::toToken(creature->getAppearance())'):
+    check(fragment in server, 'server roster includes actual profile data: ' + fragment)
+for fragment in ('entry.name', 'entry.className', 'entry.keeper', 'entry.appearance', 'entry.stats',
+                 'entry.level', 'entry.strength', 'entry.dexterity', 'entry.life', 'entry.mana',
+                 'entry.worker', 'entry.champion', 'entry.unhappy'):
+    check(fragment in client[client.index('case ServerNotificationType::dungeonbookRoster:'):],
+          'client reads server roster field ' + fragment)
+check('getDungeonbookRoster()' in window and 'getCircularCreatureAppearanceImage' in window,
+      'the book uses the server roster and its assigned portrait')
 header = read('source/render/SocialWindow.h')
 check('onOpenProfileClicked' not in window + gamemode + header and 'createStatsWindow' not in window,
       'no window is opened from the Dungeonbook')
@@ -115,8 +134,8 @@ selection = selection[:selection.index('\n}\n')]
 check('showTab(true)' in selection, 'selecting a creature shows its profile')
 check('fillProfilePage(mProfilePage)' in window and 'createCreatureProfilePage(holder)' in window,
       'the profile uses the shared fill function')
-check('setTabState' in window and 'setDisabled(' not in window and 'setEnabled(' not in window,
-      'the active tab stays enabled')
+tabs = window[window.index('void SocialWindow::setTabState'):window.index('bool SocialWindow::isVisible')]
+check('setDisabled(' not in tabs and 'setEnabled(' not in tabs, 'the active tab stays enabled')
 check('log.getVersion() != mShownProfilePostVersion' in window, 'the profile redraws only when needed')
 check('if(!mWindow->isVisible())' in window, 'update does nothing while hidden')
 check('REFRESH_CHECK_INTERVAL = 0.25f' in window and 'MAX_FEED_ROWS = 25' in window, 'redraw throttle and row limit')

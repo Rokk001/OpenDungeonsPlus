@@ -23,7 +23,10 @@
 
 #include "ai/KeeperAIType.h"
 #include "ai/BaseAI.h"
+#include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
+#include "entities/CreatureMoodValues.h"
+#include "game/CreatureAppearance.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/MapLight.h"
@@ -103,6 +106,32 @@ static const int32_t MASTER_SERVER_STATUS_FINISHED = 2;
 
 namespace
 {
+    //! \brief Sends a complete allied roster independent of the client's map visibility.
+    void notifyDungeonbookRoster(GameMap* gameMap, Player* player)
+    {
+        Seat* seat = player->getSeat();
+        if(seat == nullptr || !player->getIsHuman())
+            return;
+        const std::vector<Creature*> creatures = gameMap->getCreaturesByAlliedSeat(seat);
+        ServerNotification* notification = new ServerNotification(ServerNotificationType::dungeonbookRoster, player);
+        notification->mPacket << static_cast<uint32_t>(creatures.size());
+        for(Creature* creature : creatures)
+        {
+            const Seat* owner = creature->getSeat();
+            const Player* keeper = owner->getPlayer();
+            const std::string keeperName = keeper == nullptr ? "Seat " + std::to_string(owner->getId()) : keeper->getNick();
+            const uint32_t moodBits = creature->getOverlayMoodValue();
+            const bool unhappy = (moodBits & (CreatureMoodValues::Hungry | CreatureMoodValues::Tired)) != 0 ||
+                static_cast<int32_t>(creature->getMoodValue()) >= static_cast<int32_t>(CreatureMoodLevel::Upset);
+            notification->mPacket << creature->getName() << creature->getDefinition()->getClassName() << keeperName
+                << CreatureAppearanceLogic::toToken(creature->getAppearance())
+                << creature->getStatsText(owner) << static_cast<uint32_t>(creature->getLevel())
+                << creature->getStrength() << creature->getDexterity() << creature->getLife() << creature->getMana()
+                << creature->getDefinition()->isWorker() << creature->getDefinition()->isChampion() << unhappy;
+        }
+        ODServer::getSingleton().queueServerNotification(notification);
+    }
+
     //! \brief Sends the current patients of all owned infirmaries and their remaining healing time.
     void notifyInfirmaryWindow(GameMap* gameMap, Player* player)
     {
@@ -666,6 +695,7 @@ void ODServer::handleConsoleCommand(Player* player, GameMap* gameMap, const std:
 
 //! \brief Starts a synchronized turn and sends the current player and subscribed room state.
 //! \brief Advances the server turn and sends each player notifications with private item data masked.
+//! \brief Advances the server turn and sends updates to subscribed clients.
 void ODServer::startNewTurn(double timeSinceLastTurn)
 {
     GameMap* gameMap = mGameMap;
@@ -723,6 +753,9 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
         notifyHeartStages(gameMap, sock, player);
         notifyHatcheryGrainSeen(gameMap, sock, player);
         notifyTileDirt(gameMap, sock, player);
+        if(sock->getDungeonbookRosterOpen())
+            notifyDungeonbookRoster(gameMap, player);
+
         if(sock->getInfirmaryWindowOpen())
             notifyInfirmaryWindow(gameMap, player);
 
@@ -1080,6 +1113,7 @@ bool refuseIfDefeated(Player* player)
 }
 
 //! \brief Validates and handles requests received from a connected player.
+//! \brief Processes one client notification, including Dungeonbook subscriptions.
 bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 {
     if (!clientSocket)
@@ -2275,6 +2309,16 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             int64_t turn;
             OD_ASSERT_TRUE(packetReceived >> turn);
             clientSocket->setLastTurnAck(turn);
+            break;
+        }
+
+        case ClientNotificationType::askDungeonbookRoster:
+        {
+            bool open = false;
+            OD_ASSERT_TRUE(packetReceived >> open);
+            clientSocket->setDungeonbookRosterOpen(open);
+            if(open)
+                notifyDungeonbookRoster(gameMap, clientSocket->getPlayer());
             break;
         }
 

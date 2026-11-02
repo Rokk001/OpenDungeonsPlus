@@ -245,6 +245,7 @@ static bool areSavedGameSeatsFixed(const GameMap& gameMap)
 }
 
 //! \brief Dispatches validated server packets to the active game or menu presentation.
+//! \brief Applies a server notification to the current client state.
 bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceived)
 {
     ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
@@ -2307,6 +2308,25 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 return false;
             if(getPlayer() != nullptr && getPlayer()->getSeat() != nullptr)
                 getPlayer()->getSeat()->setWorkerJobSettings(settings);
+            break;
+        }
+
+        case ServerNotificationType::dungeonbookRoster:
+        {
+            uint32_t count = 0;
+            if(!(packetReceived >> count))
+                return false;
+            std::vector<social::DungeonbookEntry> entries;
+            for(uint32_t i = 0; i < count; ++i)
+            {
+                social::DungeonbookEntry entry;
+                if(!(packetReceived >> entry.name >> entry.className >> entry.keeper >> entry.appearance >> entry.stats
+                     >> entry.level >> entry.strength >> entry.dexterity >> entry.life >> entry.mana
+                     >> entry.worker >> entry.champion >> entry.unhappy))
+                    return false;
+                entries.push_back(entry);
+            }
+            social::PostLog::getSingleton().setDungeonbookRoster(entries);
             break;
         }
 

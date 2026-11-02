@@ -17,14 +17,16 @@
 
 #include "render/SocialWindow.h"
 
-#include "creaturemood/CreatureMood.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
-#include "entities/CreatureMoodValues.h"
+#include "game/CreatureAppearance.h"
 #include "game/Player.h"
 #include "gamemap/GameMap.h"
 #include "modes/ModeManager.h"
+#include "network/ODClient.h"
 #include "render/Gui.h"
+#include "render/CreatureAppearancePicture.h"
+#include "render/CreaturePortrait.h"
 #include "render/ODFrameListener.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
@@ -33,11 +35,13 @@
 #include "ODApplication.h"
 
 #include <CEGUI/Font.h>
+#include <CEGUI/Image.h>
 #include <CEGUI/widgets/Listbox.h>
 #include <CEGUI/widgets/PushButton.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/Scrollbar.h>
 #include <CEGUI/Window.h>
+#include <CEGUI/WindowManager.h>
 
 #include <algorithm>
 #include <deque>
@@ -112,15 +116,6 @@ std::string formatAge(int64_t turns)
     return stream.str();
 }
 
-bool isUnhappy(const Creature& creature)
-{
-    uint32_t bits = creature.getOverlayMoodValue();
-    if((bits & (CreatureMoodValues::Hungry | CreatureMoodValues::Tired)) != 0)
-        return true;
-
-    return static_cast<int32_t>(creature.getMoodValue()) >= static_cast<int32_t>(CreatureMoodLevel::Upset);
-}
-
 //! \brief The text of a post, empty if its category has no template
 std::string renderPostText(const social::Post& post, const social::CreatureProfile& profile)
 {
@@ -186,6 +181,8 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mRebuildingList(false),
     mProfileTab(false),
     mProfilePage(nullptr),
+    mDungeonbookPage(nullptr),
+    mShowingSocial(false),
     mShownRosterVersion(0),
     mShownPostVersion(0),
     mSinceRefreshCheck(0.0f),
@@ -213,8 +210,14 @@ bool SocialWindow::isVisible() const
     return mWindow->isVisible();
 }
 
+//! \brief Opens the Dungeonbook and subscribes to its allied roster.
 void SocialWindow::show()
 {
+    if(!mWindow->isVisible())
+    {
+        social::PostLog::getSingleton().clearDungeonbookRoster();
+        ODClient::getSingleton().queueClientNotification(ClientNotificationType::askDungeonbookRoster, true);
+    }
     mWindow->show();
     mWindow->moveToFront();
     rebuildCreatureList();
@@ -228,6 +231,7 @@ void SocialWindow::showCreature(const std::string& creatureName)
     mFilter = CreatureFilter::All;
     mWindow->getChild("FilterButton")->setText(FILTER_LABEL_ALL);
     mSelectedCreature = creatureName;
+    mShowingSocial = false;
     mProfileTab = true;
     show();
 }
@@ -252,8 +256,13 @@ std::string SocialWindow::describeLatestPost(const std::string& creatureName, in
     return "Latest: " + text + "  (" + formatAge(turnNow - post->mTurn) + ")";
 }
 
+//! \brief Closes the Dungeonbook and stops its roster updates.
 void SocialWindow::hide()
 {
+    if(!mWindow->isVisible())
+        return;
+    ODClient::getSingleton().queueClientNotification(ClientNotificationType::askDungeonbookRoster, false);
+    social::PostLog::getSingleton().clearDungeonbookRoster();
     mWindow->hide();
 }
 
@@ -332,7 +341,10 @@ bool SocialWindow::onSelectionChanged(const CEGUI::EventArgs& /*e*/)
 
     // Selecting a creature shows its profile right away
     if(!mSelectedCreature.empty())
+    {
+        mShowingSocial = false;
         showTab(true);
+    }
     else if(mProfileTab)
         refreshProfile();
     if(mSelectedOnly)
@@ -360,6 +372,14 @@ bool SocialWindow::onLinkClicked(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Switches between the selected creature attributes and social profile.
+bool SocialWindow::onProfileViewClicked(const CEGUI::EventArgs&)
+{
+    mShowingSocial = !mShowingSocial;
+    refreshProfile();
+    return true;
+}
+
 void SocialWindow::selectCreature(const std::string& creatureName)
 {
     if((mFilter != CreatureFilter::All) &&
@@ -369,6 +389,7 @@ void SocialWindow::selectCreature(const std::string& creatureName)
         mWindow->getChild("FilterButton")->setText(FILTER_LABEL_ALL);
     }
     mSelectedCreature = creatureName;
+    mShowingSocial = false;
     rebuildCreatureList();
     if(mSelectedOnly)
         rebuildFeed();
@@ -395,14 +416,68 @@ void SocialWindow::refreshProfile()
 
     CEGUI::Window* pane = mWindow->getChild("ProfilePane");
     Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);
-    bool hasCreature = (creature != nullptr);
+    const std::vector<social::DungeonbookEntry>& roster = log.getDungeonbookRoster();
+    const social::DungeonbookEntry* selected = nullptr;
+    for(const social::DungeonbookEntry& entry : roster)
+        if(entry.name == mSelectedCreature)
+            selected = &entry;
     CEGUI::Window* holder = pane->getChild("ProfileHolder");
-    pane->getChild("ProfileHint")->setVisible(!hasCreature);
-    holder->setVisible(hasCreature);
+    pane->getChild("ProfileHint")->setVisible(selected == nullptr);
+    holder->setVisible(selected != nullptr);
+    if(selected == nullptr)
+    {
+        pane->getChild("ProfileBackButton")->hide();
+        return;
+    }
+    Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
+    if(mDungeonbookPage == nullptr)
+    {
+        mDungeonbookPage = CEGUI::WindowManager::getSingleton().loadLayoutFromFile("WindowDungeonbookProfile.layout");
+        holder->addChild(mDungeonbookPage);
+        gui.registerWindowHierarchy(mDungeonbookPage);
+        mLinkConnections.push_back(mDungeonbookPage->getChild("SocialButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileViewClicked, this)));
+        mLinkConnections.push_back(pane->getChild("ProfileBackButton")->subscribeEvent(
+            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileViewClicked, this)));
+    }
+    const bool showSocial = mShowingSocial && creature != nullptr;
+    mDungeonbookPage->setVisible(!showSocial);
+    if(mProfilePage != nullptr)
+        mProfilePage->setVisible(showSocial);
+    pane->getChild("ProfileBackButton")->setVisible(showSocial);
+    gui.setScaledArea(holder, CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0),
+        CEGUI::UDim(showSocial ? 0.91f : 1.0f, 0)));
+    if(!showSocial)
+    {
+        social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+        const social::CreatureProfile& profile = cache.getProfile(selected->name, selected->className, selected->worker);
+        mDungeonbookPage->getChild("NameText")->setText(escapeMarkup(profile.getFullName()));
+        mDungeonbookPage->getChild("KeeperText")->setText("Keeper: " + escapeMarkup(selected->keeper));
+        mDungeonbookPage->getChild("SocialButton")->setEnabled(creature != nullptr);
+        CreatureAppearance appearance;
+        CreatureAppearanceLogic::fromToken(selected->appearance, appearance);
+        const CEGUI::Image* portrait = getCircularCreatureAppearanceImage(selected->name, appearance);
+        const CreatureDefinition* definition = mGameMap.getClassDescription(selected->className);
+        if(portrait == nullptr && definition != nullptr)
+            portrait = &getCreatureProfilePortraitImage(selected->name, definition->getMeshName(), profile.mGender);
+        mDungeonbookPage->getChild("Portrait/Image")->setProperty("Image", portrait == nullptr ? "" : portrait->getName());
+        const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
+        const double values[] = {selected->strength, selected->dexterity, selected->life, selected->mana};
+        for(std::size_t i = 0; i < 4; ++i)
+        {
+            std::ostringstream text;
+            text << names[i] << "\n" << values[i];
+            mDungeonbookPage->getChild(std::string("Attributes/") + names[i])->setText(text.str());
+        }
+        CEGUI::Window* stats = mDungeonbookPage->getChild("StatsText");
+        if(stats->getText() != selected->stats)
+            stats->setText(selected->stats);
+        return;
+    }
+    bool hasCreature = true;
 
     if(hasCreature)
     {
-        Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
         if(mProfilePage == nullptr)
         {
             mProfilePage = gui.createCreatureProfilePage(holder);
@@ -415,6 +490,8 @@ void SocialWindow::refreshProfile()
             }
         }
 
+        mProfilePage->setVisible(true);
+
         // A newly selected creature opens on its essential information, while timed refreshes keep the scroll position.
         if(!mProfilePage->isUserStringDefined("ProfileCreature") ||
             mProfilePage->getUserString("ProfileCreature") != mSelectedCreature)
@@ -425,7 +502,7 @@ void SocialWindow::refreshProfile()
 
         // The full pane is the opening page; the recent posts follow the profile in the same scroll area.
         gui.setScaledArea(holder, CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0),
-            CEGUI::UDim(1, 0)));
+            CEGUI::UDim(0.91f, 0)));
     }
 
     std::string posts;
@@ -464,46 +541,38 @@ void SocialWindow::refreshProfile()
     }
 }
 
+//! \brief Lists the server roster of own and allied creatures with their keeper.
 void SocialWindow::rebuildCreatureList()
 {
     CEGUI::Listbox* list = static_cast<CEGUI::Listbox*>(mWindow->getChild("CreatureList"));
     mShownRosterVersion = social::PostLog::getSingleton().getRosterVersion();
 
     std::vector<CreatureListEntry> entries;
-    Player* localPlayer = mGameMap.getLocalPlayer();
-    std::size_t total = 0;
-    if(localPlayer != nullptr)
+    const std::vector<social::DungeonbookEntry>& creatures = social::PostLog::getSingleton().getDungeonbookRoster();
+    const std::size_t total = creatures.size();
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    for(const social::DungeonbookEntry& creature : creatures)
     {
-        social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-        std::vector<Creature*> creatures = mGameMap.getCreaturesBySeat(localPlayer->getSeat());
-        total = creatures.size();
-        for(Creature* creature : creatures)
-        {
-            bool isWorker = creature->getDefinition()->isWorker();
-            if((mFilter == CreatureFilter::Workers) && !isWorker)
-                continue;
-            if((mFilter == CreatureFilter::Fighters) && isWorker)
-                continue;
-            if((mFilter == CreatureFilter::Unhappy) && !isUnhappy(*creature))
-                continue;
-
-            const std::string& className = creature->getDefinition()->getClassName();
-            const social::CreatureProfile& profile = cache.getProfile(creature->getName(), className, isWorker);
-            std::ostringstream text;
-            text << profile.getFullName() << " (" << social::SocialGenerator::displayClassName(cache.getData(), className) <<
-                ")  ";
-            CreatureListEntry entry;
-            // The champion shows a crown instead of its level
-            if(creature->getDefinition()->isChampion())
-                entry.mCrownMarkup = CHAMPION_CROWN_MARKUP;
-            else
-                text << "L" << creature->getLevel();
-
-            entry.mSortKey = className + "|" + profile.getFullName() + "|" + creature->getName();
-            entry.mText = text.str();
-            entry.mName = creature->getName();
-            entries.push_back(entry);
-        }
+        if((mFilter == CreatureFilter::Workers) && !creature.worker)
+            continue;
+        if((mFilter == CreatureFilter::Fighters) && creature.worker)
+            continue;
+        if((mFilter == CreatureFilter::Unhappy) && !creature.unhappy)
+            continue;
+        const social::CreatureProfile& profile = cache.getProfile(creature.name, creature.className, creature.worker);
+        std::ostringstream text;
+        text << "[" << creature.keeper << "] " << profile.getFullName() << " (" <<
+            social::SocialGenerator::displayClassName(cache.getData(), creature.className) << ")  ";
+        CreatureListEntry entry;
+        // The champion shows a crown instead of its level
+        if(creature.champion)
+            entry.mCrownMarkup = CHAMPION_CROWN_MARKUP;
+        else
+            text << "L" << creature.level;
+        entry.mSortKey = creature.className + "|" + profile.getFullName() + "|" + creature.name;
+        entry.mText = text.str();
+        entry.mName = creature.name;
+        entries.push_back(entry);
     }
     std::sort(entries.begin(), entries.end(), isEntryBefore);
 
@@ -533,6 +602,7 @@ void SocialWindow::rebuildCreatureList()
                 entries[i].mCrownMarkup, static_cast<CEGUI::uint>(i));
             item->setTextParsingEnabled(true);
         }
+        item->setTooltipText(entries[i].mText);
         item->setSelectionBrushImage("OpenDungeonsSkin/SelectionFill");
         list->addItem(item);
         if(entries[i].mName == mSelectedCreature)
@@ -544,7 +614,7 @@ void SocialWindow::rebuildCreatureList()
     list->getVertScrollbar()->setScrollPosition(scroll);
     mRebuildingList = false;
 
-    if(!selectionFound)
+    if(!selectionFound && social::PostLog::getSingleton().isDungeonbookRosterReady())
         mSelectedCreature.clear();
     if(mProfileTab)
         refreshProfile();
