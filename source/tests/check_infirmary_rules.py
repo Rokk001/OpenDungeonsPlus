@@ -135,7 +135,7 @@ struct Seat{Player player;double mana=10000;int payer=0,threshold=100;bool heal=
  std::string getFaction()const{return "Keeper";}
 };
 //! \brief Identifies fixture entities to the actual carry and admission methods.
-enum class GameEntityType{creature,room,other};
+enum class GameEntityType{creature,room,treasuryObject,other};
 //! \brief Supplies the real carry-entry type and ownership contract.
 struct GameEntity{Seat* owner=nullptr;
  //! \brief Allows fixture creatures to be destroyed through their entity interface.
@@ -275,7 +275,7 @@ struct CreatureActionCarryEntity:CreatureAction{
  GameEntity* mEntityToCarry=nullptr;Tile* mTileDest=nullptr;Building* mBuildingDest=nullptr;
  bool mIsDrag=false,mCorpseDrag=false,mExternalDrag=false,mDelivered=false,mForced=false,mDigGold=false;int mDragPhase=0,mDragLayTurns=0;double mDragFollowArc=0;
  //! \brief Executes the production room-delivery constructor supplied by the streams probe.
- CreatureActionCarryEntity(Creature&,GameEntity&,Building&,bool forced=false,bool digGold=false);
+ CreatureActionCarryEntity(Creature&,GameEntity&,Building&,bool forced=false,bool digGold=false,Tile* goldTile=nullptr);
  //! \brief Uses the production own-seat living-creature drag selection.
  static bool isPulledOverGround(const Creature&,GameEntity&);
  //! \brief Supplies drag attachment without changing the saved knockout countdown.

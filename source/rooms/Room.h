@@ -260,6 +260,11 @@ public:
     virtual double getTotalGoldStored() const
     { return 0; }
 
+    //! \brief Returns how much more gold the given tile of this room can take (0 for a tile that stores no gold,
+    //! a tile with no hit points left or a full tile).
+    virtual double getGoldSpaceInTile(Tile* tile) const
+    { return 0; }
+
     //! \brief Deposits the given gold in the room. Returns the gold that could
     //! be deposited (may be less than the given amount if not enough space)
     virtual double depositGold(double gold, Tile *tile)

@@ -89,6 +89,7 @@ public:
     virtual double getTotalGoldStored() const override;
     //! \brief Deposits gold and returns the amount stored, including fractions.
     //! \brief Deposits gold and reports a delivery burst only when the owner has exactly one heart.
+    virtual double getGoldSpaceInTile(Tile* tile) const override;
     virtual double depositGold(double gold, Tile *tile) override;
     //! \brief Withdraws up to the requested gold, including fractions.
     virtual double withdrawGold(double gold) override;
