@@ -33,7 +33,7 @@ for sig in ('void Creature::importFromPacket(', 'void Creature::updateFromPacket
 assert 'mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);' in source
 overlay_source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text().replace('\r\n', '\n')
 # Mana ring uses up to eight segments inside the existing badge.
-assert 'MANA_RING_SIZE = 48;' in overlay_source
+assert 'MANA_RING_SIZE = 64;' in overlay_source
 assert 'MANA_RING_OFFSET_X' not in overlay_source
 assert 'MANA_RING_BASE_MATERIAL = "ManaRing"' in overlay_source
 assert 'MANA_RING_SEGMENTS = 8;' in overlay_source

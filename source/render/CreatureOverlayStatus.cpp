@@ -57,8 +57,8 @@ const uint32_t PROGRESS_ATLAS_COLUMNS = 8;
 //! Last frame of the atlases. Frame 0 shows no progress.
 const uint32_t PROGRESS_ATLAS_LAST_FRAME = PROGRESS_ATLAS_COLUMNS * PROGRESS_ATLAS_COLUMNS - 1;
 //! Character heights of the level caption, which gets smaller for two-digit levels.
-const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 32;
-const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;
+const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 30;
+const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 18;
 //! Character height of the overlay that shows the emote of a reaction
 const Ogre::Real EMOTE_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the emote picture
@@ -68,7 +68,7 @@ const std::string CROWN_MATERIAL_NAME = "ChampionCrown";
 //! Character height of the crown overlay (it shows no text)
 const Ogre::Real CROWN_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the crown picture
-const Ogre::Real CROWN_SIZE = 64;
+const Ogre::Real CROWN_SIZE = 28;
 //! Name prefix of the mana ring arc materials: the segments of the health ring picture without disc, ManaRing1 to
 //! ManaRing8 show that many segments, tinted with the mana colour
 const std::string MANA_RING_BASE_MATERIAL = "ManaRing";
@@ -80,8 +80,11 @@ const Ogre::Real MANA_RING_GREEN = 227.0f;
 const Ogre::Real MANA_RING_BLUE = 166.0f;
 //! Highest value of a colour channel
 const Ogre::Real COLOUR_CHANNEL_MAX = 255.0f;
-//! Width and height in pixels of the mana ring inside the 64-pixel health badge
-const Ogre::Real MANA_RING_SIZE = 48;
+//! Width and height in pixels of the mana ring inside the health badge
+const Ogre::Real MANA_RING_SIZE = 64;
+//! Size of the health badge and of the centred mood icon
+const Ogre::Real HEALTH_BADGE_SIZE = 112;
+const Ogre::Real STATUS_ICON_SIZE = 28;
 
 //! \brief Returns the colour of the mana ring arc: the colour of the mana number in the game HUD.
 static Ogre::ColourValue getManaColour()
@@ -130,7 +133,7 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     uint32_t healthId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
         Ogre::ColourValue(0.04f, 0.04f, 0.04f, 1.0f), "");
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)] = healthId;
-    mMovableTextOverlay->forceTextArea(healthId, 64,64);
+    mMovableTextOverlay->forceTextArea(healthId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE);
     mMovableTextOverlay->centerCaption(healthId);
     mMovableTextOverlay->displayOverlay(healthId, 0);
 
@@ -162,7 +165,7 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     uint32_t statusId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 16,
         Ogre::ColourValue::White, "", false);
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::status)] = statusId;
-    mMovableTextOverlay->forceTextArea(statusId, 30,30);
+    mMovableTextOverlay->forceTextArea(statusId, STATUS_ICON_SIZE, STATUS_ICON_SIZE);
     // Note: We set the material to the first status overlay material otherwise, materials
     // are not shown when we change then ingame
     mMovableTextOverlay->setMaterialName(statusId, CREATURE_OVERLAY_STATUS_PREFIX + "1");

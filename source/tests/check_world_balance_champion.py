@@ -108,7 +108,7 @@ for text in ('createChildOverlay("MedievalSharp", CROWN_CHAR_HEIGHT', "forceText
              "setMaterialName(crownId, CROWN_MATERIAL_NAME)", "displayOverlay(crownId, 0)",
              'CROWN_MATERIAL_NAME = "ChampionCrown"'):
     assert text in overlay, text
-assert "CROWN_SIZE = 64" in overlay
+assert "CROWN_SIZE = 28" in overlay
 shown = function_body(overlay, "static void showLevelDisplay")
 assert 'setCaption(levelId, "")' in shown and "displayOverlay(crownId, -1)" in shown
 health = function_body(overlay, "void CreatureOverlayStatus::updateHealth()")

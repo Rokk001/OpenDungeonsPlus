@@ -771,7 +771,7 @@ def check_part_g():
     assert 'MANA_RING_BASE_MATERIAL + Helper::toString(MANA_RING_SEGMENTS)' in constructor
     assert 'MANA_RING_BASE_MATERIAL = "ManaRing"' in status
     assert 'MANA_RING_SEGMENTS = 8;' in status
-    assert 'MANA_RING_SIZE = 48;' in status and 'MANA_RING_OFFSET_X' not in status
+    assert 'MANA_RING_SIZE = 64;' in status and 'MANA_RING_OFFSET_X' not in status
     channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_RING_RED', 'MANA_RING_GREEN', 'MANA_RING_BLUE')]
     assert channels == [127, 227, 166]
     # The painted HUD uses ivory text; the creature's mana ring keeps its original green tint.
