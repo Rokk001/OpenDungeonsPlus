@@ -22,7 +22,7 @@ def main():
     logged = application.index(SHOWN_LOG, show)
     assert application.count('misc["hidden"] = "true";') == 1, "unexpected second hidden window creation"
     assert application.count(SHOWN_LOG) == 1, "the line 'window shown' must be written exactly once"
-    startup = application.index("LoadingScreen startupLoading(*renderWindow);", hidden)
+    startup = application.index("LoadingScreen startupLoading(*renderWindow, overlaySystem);", hidden)
     assert startup < show, "show the window only after the first loading frame exists"
     resources = application.index("resMgr.setupOgreResources(", show)
     assert startup < application.index('sf::WindowBase sfmlWindow(nativeHandle);') < show, "SFML must attach to the already painted hidden native window"

@@ -55,6 +55,7 @@
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
 #include "render/LooseGoldMesh.h"
+#include "render/MenuDisplayShading.h"
 #include "render/TreasuryCreatureRules.h"
 #include "render/TwoWeaponStrike.h"
 #include "render/WeaponTrail.h"
@@ -1635,6 +1636,7 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     // mShaderGenerator->setShaderCacheEnabled(true);
     
     mShaderGenerator->addSceneManager(mSceneManager); 
+    registerMenuDisplayShading(*mShaderGenerator);
     setDynamicShadowsEnabled(ConfigManager::getSingleton().getAudioValue(Config::SHADOWS) == "Yes");
     ddd.setStatic(true);
     mSceneManager->addListener(&ddd);
@@ -2327,6 +2329,12 @@ void RenderManager::beginMenuAmbient(const Ogre::ColourValue& menuAmbient)
     mSceneManager->setAmbientLight(menuAmbient);
 }
 
+void RenderManager::setMenuAmbient(const Ogre::ColourValue& menuAmbient)
+{
+    if(mMenuAmbientActive)
+        mSceneManager->setAmbientLight(menuAmbient);
+}
+
 //! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
 void RenderManager::endMenuAmbient()
 {
@@ -2334,6 +2342,21 @@ void RenderManager::endMenuAmbient()
         return;
     mMenuAmbientActive = false;
     mSceneManager->setAmbientLight(mWorldAmbient);
+}
+
+void RenderManager::pinMenuShaderLights()
+{
+    Ogre::RTShader::RenderState* renderState =
+        mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+    renderState->setLightCountAutoUpdate(false);
+    renderState->setLightCount(static_cast<Ogre::int32>(mSceneManager->getMovableObjects(Ogre::MOT_LIGHT).size()));
+    mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+}
+
+void RenderManager::releaseMenuShaderLights()
+{
+    mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME)->setLightCountAutoUpdate(true);
+    mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 }
 
 //! \brief Adds a menu point light with its own scene node so several lights can coexist.

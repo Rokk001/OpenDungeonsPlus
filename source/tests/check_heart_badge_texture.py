@@ -318,6 +318,7 @@ menu_helpers = ''
 if args.menu_scene:
     menu_helpers = r'''
 #include "renderscene/RenderSceneMenu.h"
+#include <iomanip>
 #include <OgreRectangle2D.h>
 #include <CEGUI/widgets/ButtonBase.h>
 #include <CEGUI/widgets/FrameWindow.h>
@@ -371,6 +372,11 @@ public:
     void beginMenuAmbient(const Ogre::ColourValue& menuAmbient) {mWorldAmbient = mSceneManager->getAmbientLight(); mSceneManager->setAmbientLight(menuAmbient);}
     //! \brief Restores the saved world ambient, as the production renderer does.
     void endMenuAmbient() {mSceneManager->setAmbientLight(mWorldAmbient);}
+    //! \brief Applies the fill of the current menu camera, as the production renderer does.
+    void setMenuAmbient(const Ogre::ColourValue& menuAmbient) {mSceneManager->setAmbientLight(menuAmbient);}
+    //! \brief Leaves the generated shader light count outside the isolated camera/navigation checks.
+    void pinMenuShaderLights() {}
+    void releaseMenuShaderLights() {}
 };
 
 //! \brief The existing asset loader owns render commands; these adapters delimit their parsed groups.
@@ -433,6 +439,7 @@ bool readNextLineNotEmpty(std::istream& input, std::string& line)
 }
 #define OD_LOG_ERR(message) throw std::runtime_error(message)
 #define OD_LOG_WRN(message) throw std::runtime_error(message)
+#define OD_LOG_INF(message) std::cout << (message) << std::endl
 PRODUCTION_MENU_CODE
 PRODUCTION_PROJECTION
 
@@ -530,7 +537,7 @@ void finishMenuFlight(RenderSceneMenu& menu, CameraManager& camera, RenderManage
     {
         navigation.onFrameStarted(frame);
         for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER,
-            BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+            BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
             check(!navigation.mManager.mGui.mRoot->getChild(name)->isVisible(),
                 "overview entries stay hidden for every flight frame: " + name);
         menu.updateMenu(camera, render, frame.timeSinceLastFrame);
@@ -720,7 +727,7 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     CEGUI::Window* menuRoot = windows.createWindow("DefaultWindow", "MenuProbeRoot");
     CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(menuRoot);
     for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS,
-        BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER, BUTTON_START_REPLAY, BUTTON_MAPEDITOR,
+        BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER, BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR,
         BUTTON_SETTINGS, BUTTON_QUIT})
         menuRoot->addChild(windows.createWindow("DefaultWindow", name));
     for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS})
@@ -746,7 +753,7 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
         finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
         checkMenuPose(menuScene, menuCamera, "overview");
         for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER,
-            BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+            BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
             check(menuRoot->getChild(name)->isVisible(), "overview entries return after arrival: " + name);
     }
     navigation.changeModeAfterFlight(AbstractModeManager::MENU_REPLAY, CEGUI::EventArgs());

@@ -47,7 +47,7 @@ def main():
     resources = (root / "cmake/config/resources.cfg.in").read_text(encoding="utf-8")
     assert "FileSystem=materials/textures/loading" in resources, "loading images must be discoverable by Ogre"
     application = (root / "source/ODApplication.cpp").read_text(encoding="utf-8")
-    startup = application.index("LoadingScreen startupLoading(*renderWindow);")
+    startup = application.index("LoadingScreen startupLoading(*renderWindow, overlaySystem);")
     assert application.index('misc["hidden"] = "true";') < startup, "native window must start hidden"
     resources = application.index("resMgr.setupOgreResources(")
     shaders = application.index("if (!Ogre::RTShader::ShaderGenerator::initialize())")
@@ -55,9 +55,11 @@ def main():
     assert startup < shown < resources < shaders, "show the first picture before full resource setup and RTSS"
     assert application.index('"materials/textures/loading", "FileSystem", "StartupLoading"') < startup, "register only the picture folder before drawing"
     assert startup < application.index("renderWindow->setVisible(true);", startup), "present the loading picture before showing the native window"
-    constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window)", 1)[1].split("void LoadingScreen::presentStartup()", 1)[0]
+    constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& overlaySystem)", 1)[1].split("void LoadingScreen::presentStartup()", 1)[0]
     assert "selectLoadingImage();" in constructor and "update();" in constructor and "window.update();" in constructor, "startup must present the shared picture mechanism"
     assert "ShaderGenerator" not in constructor, "the first picture must not depend on RTSS"
+    for token in ('addRenderQueueListener(&overlaySystem)', 'setFontName("StartupLoadingFont", "StartupLoading")', 'setCaption("Loading...")', 'startupOverlay->show()'):
+        assert token in constructor, f"missing startup loading text: {token}"
     for token in ('"StartupLoadingVertex"', '"StartupLoadingFragment"', "vertex->setSource(", "fragment->setSource(", 'setNamedConstant("picture", 0)'):
         assert token in constructor, f"missing standalone startup shader setup: {token}"
     present = source.split("void LoadingScreen::presentStartup()", 1)[1].split("void LoadingScreen::scriptParseEnded", 1)[0]
@@ -72,6 +74,14 @@ def main():
     groups = (root / "source/renderscene/RenderSceneGroup.cpp").read_text(encoding="utf-8")
     reset = groups.split("void RenderSceneGroup::reset(", 1)[1].split("void RenderSceneGroup::freeGroup(", 1)[0]
     assert reset.index("scene->activate(") < reset.index("LoadingScreen::presentStartup();") < reset.index("++mIndexScene;"), "refresh between synchronous menu commands"
+    update = source.split("void LoadingScreen::update()", 1)[1]
+    fallback = update.split("if(loadingText == nullptr)", 1)[1].split("previousRootAlpha", 1)[0]
+    assert 'createWindow("OD/StaticText")' in fallback and 'setText("Loading...")' in fallback, "missing fallback loading text"
+    assert "root->addChild(temporaryLoadingText);" in fallback and "loadingText = temporaryLoadingText;" in fallback, "fallback text must be attached and shown"
+    restore = source.split("void restoreLoadingInterface()", 1)[1].split("bool loadingRootDestroyed", 1)[0]
+    assert "destroyWindow(temporaryLoadingText);" in restore, "temporary loading text must be removed"
+    destroyed = source.split("bool loadingRootDestroyed", 1)[1].split("void fitLoadingImage", 1)[0]
+    assert "temporaryLoadingText = nullptr;" in destroyed, "root destruction must clear the temporary text pointer"
     finish = source.split("void LoadingScreen::finish()", 1)[1].split("void LoadingScreen::update()", 1)[0]
     for cleanup in ("removeViewport(STARTUP_VIEWPORT_ORDER)", "destroySceneManager(startupScene)", 'destroyResourceGroup("StartupLoading")'):
         assert cleanup in finish, f"missing startup resource cleanup: {cleanup}"
@@ -80,7 +90,20 @@ def main():
     listener = (root / "source/render/ODFrameListener.cpp").read_text(encoding="utf-8")
     menu = listener.split("void ODFrameListener::createMainMenuScene()", 1)[1].split("void ODFrameListener::freeMainMenuScene()", 1)[0]
     assert menu.index("resetMenu(") < menu.index("LoadingScreen::finishStartup();"), "keep the startup picture until menu creation finishes"
-    print(f"OK: 25 referenced loading pictures, 1920x1080, {total} bytes; startup order and cleanup")
+    # Every later load path constructs the screen and so reaches update(), whose fallback covers a root without a text.
+    sites = {}
+    for path in (root / "source").rglob("*.cpp"):
+        if path.name == "LoadingScreen.cpp":
+            continue
+        found = re.findall(r"(?m)^\s*LoadingScreen \w+[;(]", path.read_text(encoding="utf-8", errors="replace"))
+        if found:
+            sites[path.name] = len(found)
+    expected_sites = {"EditorMode.cpp": 2, "MenuModeConfigureSeats.cpp": 1, "MenuModeEditorNew.cpp": 1, "ODClient.cpp": 3, "ODServer.cpp": 1, "ODApplication.cpp": 1}
+    assert sites == expected_sites, "review the loading text of a changed load path: " + str(sites)
+    later = source.split("LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus)", 1)[1].split("catch(...)", 1)[0]
+    assert "update();" in later and "getRenderWindow()->update();" in later, "every later load path must show its text at once"
+    assert "statusOverride != nullptr ? statusOverride : findLoadingText(root);" in source, "the text must come from the override or the sheet before the fallback"
+    print(f"OK: 25 referenced loading pictures, 1920x1080, {total} bytes; startup order and cleanup; {sum(sites.values())} load paths show their text")
 
 
 if __name__ == "__main__":

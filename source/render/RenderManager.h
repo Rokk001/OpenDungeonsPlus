@@ -138,8 +138,18 @@ public:
     //! \brief Saves the current world ambient and replaces it with the menu's own ambient until endMenuAmbient().
     void beginMenuAmbient(const Ogre::ColourValue& menuAmbient);
 
+    //! \brief Changes the menu ambient while the menu owns the scene ambient.
+    void setMenuAmbient(const Ogre::ColourValue& menuAmbient);
+
     //! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
     void endMenuAmbient();
+
+    //! \brief Keeps one generated shader set for the menu, sized for all of its lights, until releaseMenuShaderLights().
+    //! Otherwise the shader generator follows the number of visible lights, which changes during camera flights.
+    void pinMenuShaderLights();
+
+    //! \brief Lets the generated shaders follow the number of scene lights again.
+    void releaseMenuShaderLights();
 
     //! \brief Switches the dynamic texture shadows on or off.
     //! Updates the scene manager's shadow technique, the generated-shader shadow receiver and the
