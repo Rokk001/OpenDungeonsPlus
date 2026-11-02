@@ -20,6 +20,7 @@ from pathlib import Path
 import math
 import re
 import struct
+from xml.etree import ElementTree
 
 from PIL import Image
 
@@ -387,7 +388,17 @@ def check_menu_lighting(root):
     assert "releaseMenuShaderLights()" in menu_source, "leaving the menu must release the fixed light count"
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
-    assert len(lights) == 47 and "TitleGreen" not in lights, "menu lights must not cast green light on the title"
+    assert len(lights) == 42, "unexpected number of menu lights: " + str(len(lights))
+    green = {name for name, values in lights.items() if values[4] > values[3] * 1.5 and values[4] > values[5] * 1.5}
+    assert green == {"SpireLight", "SpireSummitScatter"}, "green light belongs only to the spire and the right tower: " + str(sorted(green))
+    # The title and its crest carry no green of their own.
+    crest = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8").split("material MenuTitleCrest", 1)[1].split("\nmaterial ", 1)[0]
+    crest_red, crest_green, _ = [float(value) for value in re.search(r"emissive\s+(\S+)\s+(\S+)\s+(\S+)", crest).groups()]
+    assert crest_green < crest_red, "the title crest must not glow green"
+    with Image.open(root / "materials/textures/menu/MenuTitle.png") as image:
+        red_band, green_band, _, alpha_band = image.convert("RGBA").split()
+    green_pixels = sum(1 for red_value, green_value, alpha in zip(red_band.tobytes(), green_band.tobytes(), alpha_band.tobytes()) if alpha > 96 and green_value > red_value)
+    assert green_pixels == 0, "the title texture must not contain green: " + str(green_pixels)
     # The five fire lights add a constant attenuation of 1 so their near field does not clip per colour channel.
     near_field_fires = {"LeftFire", "RightFire", "GateFire", "LeftGateFire", "RightGateFire"}
     for name, values in lights.items():
@@ -424,7 +435,42 @@ def check_menu_lighting(root):
     factor = manager.split("void RenderManager::setWorldAmbientLightingFactor", 1)[1].split("void RenderManager::beginMenuAmbient", 1)[0]
     # Opening the settings in the main menu must not replace the menu ambient with the game ambient.
     assert "if(mMenuAmbientActive)" in factor and "mWorldAmbient = factoredLighting;" in factor, "settings must not overwrite the menu ambient"
-    print("OK: 48 authored menu lights retain calibrated falloff/exposure; menu ambient loads, applies and restores")
+    print(f"OK: {len(lights)} authored menu lights retain calibrated falloff/exposure; menu ambient loads, applies and restores")
+
+
+# One multiplayer entry leads to four differently named actions; the load dialog opens directly from the main menu.
+def check_menu_entries(root):
+    def buttons(layout):
+        tree = ElementTree.parse(root / "gui" / layout).getroot()
+        return {window.get("name"): next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Text")
+                for window in tree.iter("Window") if window.get("type") == "OD/MenuTextButton"}
+    source = (root / "source/modes/MenuModeMain.cpp").read_text(encoding="utf-8")
+    actions = {"MasterServerHostButton": ("Host Online", "BUTTON_MASTERSERVER_HOST", "MENU_MASTERSERVER_HOST"),
+               "MasterServerJoinButton": ("Join Online", "BUTTON_MASTERSERVER_JOIN", "MENU_MASTERSERVER_JOIN"),
+               "MultiplayerServerHostButton": ("Host via IP", "BUTTON_MULTIPLAYER_HOST", "MENU_MULTIPLAYER_SERVER"),
+               "MultiplayerServerJoinButton": ("Join via IP", "BUTTON_MULTIPLAYER_JOIN", "MENU_MULTIPLAYER_CLIENT")}
+    multiplayer = buttons("WindowMultiplayerSubMenu.layout")
+    assert multiplayer == {name: action[0] for name, action in actions.items()}, "multiplayer menu must show its four actions once: " + str(multiplayer)
+    for name, (_, constant, mode) in actions.items():
+        assert f'{constant} = "{name}"' in source and f"multiplayerWin->getChild({constant}),\n                           AbstractModeManager::ModeType::{mode}" in source, name + " must keep its network path"
+    main_menu = buttons("MenuMain.layout")
+    assert list(main_menu.values()).count("Multiplayer") == 1 and main_menu.get("LoadGameButton") == "Load Game", "main menu needs one Multiplayer and one Load Game entry"
+    assert "connectModeChangeEvent(BUTTON_LOAD_GAME, AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);" in source, "Load Game must open the existing load dialog"
+    assert "BUTTON_LOAD_GAME, BUTTON_START_REPLAY" in source.split("void MenuModeMain::showMainMenuButtons", 1)[1], "Load Game must hide with the other entries during flights"
+    print("OK: one multiplayer entry with four actions; Load Game opens the existing dialog")
+
+
+# Every flight logs its real frame times, measured before the step clamp.
+def check_flight_frame_log(root):
+    scene = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
+    update = scene.split("void RenderSceneMenu::updateMenu", 1)[1].split("void RenderSceneMenu::updateFireLights", 1)[0]
+    assert update.index("mFlightFrames.addFrame(timeSinceLastFrame);") < update.index("mFlight.advance(timeSinceLastFrame)"), "frame times must be taken before the flight clamps its step"
+    assert 'logFlightFrames("arrived");' in update and update.index('logFlightFrames("arrived");') < update.index("mCurrentPlace = mFlightPlace;"), "each arrival must log with its starting place"
+    assert 'logFlightFrames("interrupted");' in scene.split("void RenderSceneMenu::freeMenu", 1)[1].split("mFlight.reset();", 1)[0], "a flight cut off by leaving the menu must still log"
+    assert "mFlightFrames.reset();" in scene.split("bool RenderSceneMenu::beginPath", 1)[1].split("return true;", 1)[0], "every flight must start with empty statistics"
+    for word in ("frames=", "meanMs=", "maxMs=", "framesOver33Ms="):
+        assert word in scene, "flight log line lacks " + word
+    print("OK: every menu flight logs mean and maximum frame times")
 
 
 # Fail when a menu scene texture, material, mesh or skeleton cannot be resolved.
@@ -436,6 +482,8 @@ def main():
     check_menu_surface_passes(root)
     check_menu_particles(root, folders)
     check_menu_lighting(root)
+    check_menu_entries(root)
+    check_flight_frame_log(root)
     missing = []
     menu_count = 0
     for script, number, name in texture_references(root):

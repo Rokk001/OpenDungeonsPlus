@@ -113,6 +113,8 @@ private:
     bool beginPath(CameraManager& cameraManager, const CameraPath& path, const std::string& destination);
     //! \brief Samples the active curved path with eased time and quaternion interpolation.
     CameraPose samplePath(Ogre::Real progress) const;
+    //! \brief Writes the frame times of the current flight to the log.
+    void logFlightFrames(const char* outcome) const;
     //! \brief Advances configured firelight without multiplying the previous frame's result.
     void updateFireLights(Ogre::Real elapsed);
     //! Parsed native scene commands, in authored activation order.
@@ -133,6 +135,8 @@ private:
     std::string mFlightPlace;
     //! Timer shared by native arrival, destination and return flights.
     MenuFlight mFlight;
+    //! Unclamped frame times of the current flight.
+    MenuFlightFrameStats mFlightFrames;
     //! Whether parsed groups currently own live render objects.
     bool mActive = false;
     //! Parsed menu fill of the overview, independent of the game ambient restored on exit.

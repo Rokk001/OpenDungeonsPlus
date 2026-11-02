@@ -657,13 +657,13 @@ material MenuTitleIron : MenuIron
     } }
 }
 
-// The hanging crest is the only green accent away from the poisoned tower.
+// The hanging crest glows like the ember cracks of the title; green stays on the poisoned tower.
 material MenuTitleCrest
 {
     technique { pass {
         ambient 0 0 0 1
         diffuse 0 0 0 1
-        emissive 0.009 0.32 0.025
+        emissive 0.32 0.08 0.008
         cull_hardware none
     } }
 }

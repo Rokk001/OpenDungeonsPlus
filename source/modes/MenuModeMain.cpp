@@ -41,6 +41,7 @@
 // Main buttons
 const std::string BUTTON_CAMPAIGN = "StartCampaignButton";
 const std::string BUTTON_SKIRMISH = "StartSkirmishButton";
+const std::string BUTTON_LOAD_GAME = "LoadGameButton";
 const std::string BUTTON_START_REPLAY = "StartReplayButton";
 const std::string BUTTON_MAPEDITOR = "MapEditorButton";
 const std::string BUTTON_MULTIPLAYER = "MultiplayerModeButton";
@@ -107,6 +108,7 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
     CEGUI::Window* rootWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
     OD_ASSERT_TRUE(rootWin != nullptr);
 
+    connectModeChangeEvent(BUTTON_LOAD_GAME, AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);
     connectModeChangeEvent(BUTTON_START_REPLAY, AbstractModeManager::ModeType::MENU_REPLAY);
 
     connectModeChangeEvent(rootWin->getChild(BUTTON_QUIT),
@@ -452,7 +454,7 @@ void MenuModeMain::showMainMenuButtons(bool visible)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
     for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH,
-        BUTTON_MULTIPLAYER, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+        BUTTON_MULTIPLAYER, BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
         mainWin->getChild(name)->setVisible(visible);
 }
 

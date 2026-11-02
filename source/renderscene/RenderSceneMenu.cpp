@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <sstream>
 
 //! Scene node holding the full screen background rectangle created by the render manager.
@@ -133,6 +134,8 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
 //! \brief Restores firelight baselines, frees native commands and restores the world background and lighting.
 void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
+    if(mFlight.isActive())
+        logFlightFrames("interrupted");
     mFlight.reset();
     mFlightFill = 0.0f;
     mFlightPoses.clear();
@@ -194,13 +197,30 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     updateFireLights(timeSinceLastFrame);
     if(!mFlight.isActive())
         return;
+    // Measured before the flight clamps its step, so a slow frame keeps its real length in the log.
+    mFlightFrames.addFrame(timeSinceLastFrame);
     const bool arrived = mFlight.advance(timeSinceLastFrame);
     applyCameraPose(cameraManager, samplePath(mFlight.getProgress()));
     const Ogre::Real fillTarget = mFlightPlace == OVERVIEW_PLACE ? 0.0f : 1.0f;
     mFlightFill = mFlightFillStart + (fillTarget - mFlightFillStart) * mFlight.getProgress();
     renderManager.setMenuAmbient(mMenuAmbient + (mFlightAmbient - mMenuAmbient) * mFlightFill);
     if(arrived)
+    {
+        logFlightFrames("arrived");
         mCurrentPlace = mFlightPlace;
+    }
+}
+
+//! \brief Logs one line per flight, so that every route can be read after a menu session.
+void RenderSceneMenu::logFlightFrames(const char* outcome) const
+{
+    std::ostringstream line;
+    line << std::fixed << std::setprecision(2) << "Menu flight " << mCurrentPlace << " -> " << mFlightPlace
+        << " " << outcome << ": frames=" << mFlightFrames.getFrames()
+        << " meanMs=" << mFlightFrames.getMeanMilliseconds()
+        << " maxMs=" << mFlightFrames.getMaxMilliseconds()
+        << " framesOver33Ms=" << mFlightFrames.getSlowFrames();
+    OD_LOG_INF(line.str());
 }
 
 //! \brief Scales authored firelight colours by a bounded smooth waveform in interface time.
@@ -280,6 +300,7 @@ bool RenderSceneMenu::beginPath(CameraManager& cameraManager, const CameraPath& 
         return false;
     mFlightPoses.swap(poses);
     mFlightPlace = destination;
+    mFlightFrames.reset();
     mFlightFillStart = mFlightFill;
     return true;
 }
