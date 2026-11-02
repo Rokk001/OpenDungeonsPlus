@@ -151,6 +151,11 @@ public:
     //! \brief Lets the generated shaders follow the number of scene lights again.
     void releaseMenuShaderLights();
 
+    //! \brief Generates and compiles the shaders of every material in the menu scene at once.
+    //! The shader generator otherwise builds them in the frame in which an object first comes into view,
+    //! which stalls a camera flight. Call it after pinMenuShaderLights(), so the shaders match the fixed light count.
+    void prepareMenuShaders();
+
     //! \brief Switches the dynamic texture shadows on or off.
     //! Updates the scene manager's shadow technique, the generated-shader shadow receiver and the
     //! shadowingEnabled constant of every loaded material that declares it.

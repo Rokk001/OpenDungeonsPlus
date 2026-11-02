@@ -389,6 +389,10 @@ def check_menu_lighting(root):
     menu_source = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
     assert menu_source.index("sceneGroup->reset(") < menu_source.index("pinMenuShaderLights()") < menu_source.index("updateMenu(cameraManager, renderManager, 0.0f)"), "the light count must be fixed after the menu lights exist"
     assert "releaseMenuShaderLights()" in menu_source, "leaving the menu must release the fixed light count"
+    # Shaders built in the frame an object first comes into view stall a flight, so the menu builds them all at its start.
+    assert menu_source.index("pinMenuShaderLights()") < menu_source.index("prepareMenuShaders()") < menu_source.index("updateMenu(cameraManager, renderManager, 0.0f)"), "menu shaders must be built for the fixed light count before the first menu frame"
+    prepare = manager_source.split("void RenderManager::prepareMenuShaders()", 1)[1].split("\n}\n", 1)[0]
+    assert "collectMenuNodeMaterials(mMainMenuSceneNode, materials);" in prepare and "createShaderBasedTechnique(*material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme)" in prepare and "validateMaterial(scheme, *material);" in prepare, "every menu material must get its generated shaders before the first flight"
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
     assert len(lights) == 42, "unexpected number of menu lights: " + str(len(lights))

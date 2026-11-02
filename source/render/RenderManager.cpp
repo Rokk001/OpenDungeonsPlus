@@ -2362,6 +2362,62 @@ void RenderManager::releaseMenuShaderLights()
     mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 }
 
+//! \brief Adds the materials of an entity, of its sub entities and of the objects attached to its bones.
+//! Particle systems add the material of their sprites.
+static void collectMenuObjectMaterials(const Ogre::MovableObject* object, std::set<Ogre::Material*>& materials)
+{
+    const Ogre::Entity* entity = dynamic_cast<const Ogre::Entity*>(object);
+    if(entity != nullptr)
+    {
+        for(const Ogre::SubEntity* subEntity : entity->getSubEntities())
+        {
+            const Ogre::MaterialPtr& material = subEntity->getMaterial();
+            if(material)
+                materials.insert(material.get());
+        }
+        for(const Ogre::MovableObject* attached : entity->getAttachedObjects())
+            collectMenuObjectMaterials(attached, materials);
+        return;
+    }
+    const Ogre::ParticleSystem* particleSystem = dynamic_cast<const Ogre::ParticleSystem*>(object);
+    if(particleSystem == nullptr)
+        return;
+    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().getByName(
+        particleSystem->getMaterialName(), particleSystem->getResourceGroupName());
+    if(material)
+        materials.insert(material.get());
+}
+
+//! \brief Adds the materials of every object below a menu scene node, child nodes included.
+static void collectMenuNodeMaterials(const Ogre::Node* node, std::set<Ogre::Material*>& materials)
+{
+    const Ogre::SceneNode* sceneNode = dynamic_cast<const Ogre::SceneNode*>(node);
+    if(sceneNode != nullptr)
+    {
+        for(const Ogre::MovableObject* object : sceneNode->getAttachedObjects())
+            collectMenuObjectMaterials(object, materials);
+    }
+    for(const Ogre::Node* child : node->getChildren())
+        collectMenuNodeMaterials(child, materials);
+}
+
+void RenderManager::prepareMenuShaders()
+{
+    std::set<Ogre::Material*> materials;
+    collectMenuNodeMaterials(mMainMenuSceneNode, materials);
+    const Ogre::String& scheme = Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME;
+    // The same two calls the technique resolver makes when a material first renders; materials with their own
+    // programs are refused here as there and keep them.
+    for(Ogre::Material* material : materials)
+    {
+        material->load();
+        if(!mShaderGenerator->createShaderBasedTechnique(*material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme))
+            continue;
+        mShaderGenerator->validateMaterial(scheme, *material);
+    }
+    OD_LOG_INF("Prepared the shaders of " + Helper::toString(static_cast<uint32_t>(materials.size())) + " menu materials");
+}
+
 //! \brief Adds a menu point light with its own scene node so several lights can coexist.
 Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogre::Vector3& pos,
         const Ogre::ColourValue& diffuse, const Ogre::ColourValue& specular, Ogre::Real attenuationRange,

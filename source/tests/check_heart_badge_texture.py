@@ -377,6 +377,8 @@ public:
     //! \brief Leaves the generated shader light count outside the isolated camera/navigation checks.
     void pinMenuShaderLights() {}
     void releaseMenuShaderLights() {}
+    //! \brief Leaves the generated shaders outside the isolated camera/navigation checks.
+    void prepareMenuShaders() {}
 };
 
 //! \brief The existing asset loader owns render commands; these adapters delimit their parsed groups.

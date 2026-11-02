@@ -96,7 +96,7 @@ void RenderSceneMenu::dispatchSyncPost(const std::string& event)
         sceneGroup->notifySyncPost(event);
 }
 
-//! \brief Instantiates native groups with configured ambient, captures firelight and selects the overview.
+//! \brief Instantiates native groups with configured ambient, prepares their shaders, captures firelight and selects the overview.
 void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& renderManager)
 {
     if(mActive)
@@ -111,6 +111,8 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
         sceneGroup->reset(cameraManager, renderManager);
     renderManager.pinMenuShaderLights();
+    // Objects that first come into view during a flight would otherwise build their shaders in that frame.
+    renderManager.prepareMenuShaders();
     mFireTime = 0.0f;
     for(FireLight& fire : mFireLights)
     {
