@@ -354,8 +354,13 @@ def check_menu_lighting(root):
     strength = float(re.search(r'inputs\["Strength"\]\.default_value = ([0-9.]+)', world).group(1))
     ambient_block = config.split("[MenuLighting]", 1)[1].split("[/MenuLighting]", 1)[0]
     ambient = [float(value) for value in re.search(r"(?m)^Ambient\s+([^\n]+)", ambient_block).group(1).split()]
-    assert len(ambient) == 3 and all(math.isclose(actual, value * strength * gain, rel_tol=1e-10)
-                                    for actual, value in zip(ambient, colour)), "menu ambient must retain the authored warm sky and exposure"
+    assert ambient == [0.012, 0.010, 0.009], "menu fill must keep unlit stone readable and nearly neutral"
+    # Lit menu materials are encoded for the display in their generated shaders.
+    display = (root / "source/render/MenuDisplayShading.cpp").read_text(encoding="utf-8")
+    assert "getLightingEnabled()" in display and 'MENU_MATERIAL_PREFIX = "Menu"' in display, "display encoding must stay limited to lit menu materials"
+    assert "MenuDisplay_Encode" in (root / "shaders/MenuDisplay.glsl").read_text(encoding="utf-8") and "MenuDisplay_Encode" in display, "display encoding function must exist"
+    manager_source = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
+    assert "registerMenuDisplayShading(*mShaderGenerator);" in manager_source, "lit menu materials must receive display encoding"
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
     assert len(lights) == 47 and "TitleGreen" not in lights, "menu lights must not cast green light on the title"

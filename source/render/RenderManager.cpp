@@ -55,6 +55,7 @@
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
 #include "render/LooseGoldMesh.h"
+#include "render/MenuDisplayShading.h"
 #include "render/TreasuryCreatureRules.h"
 #include "render/TwoWeaponStrike.h"
 #include "render/WeaponTrail.h"
@@ -1635,6 +1636,7 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     // mShaderGenerator->setShaderCacheEnabled(true);
     
     mShaderGenerator->addSceneManager(mSceneManager); 
+    registerMenuDisplayShading(*mShaderGenerator);
     setDynamicShadowsEnabled(ConfigManager::getSingleton().getAudioValue(Config::SHADOWS) == "Yes");
     ddd.setStatic(true);
     mSceneManager->addListener(&ddd);
