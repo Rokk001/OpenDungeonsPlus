@@ -527,7 +527,8 @@ def breathe(skeleton, local, author_rig, motion, name):
 
 
 # Bend grounded legs through the project's IK and fold humanoid arms toward the knees.
-def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights, lying=False, breath=None):
+# A seat (drop, lift, forward) replaces the rest measures: how far the body sinks, how high and how far ahead the feet end.
+def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights, lying=False, breath=None, seat=None):
     config = RIGS.get(name) or insect_config(skeleton, base, vertices, weights, name)
     if config is None:
         local = limbless_rest(skeleton, base, amount, name, lying)
@@ -597,6 +598,8 @@ def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights,
         assert clearance > 0.0, 'Spider resting must visibly lower the torso'
     drop = clearance * (0.75 if lying and name in PRONE_BODIES else
                         (0.45 if humanoid else (0.75 if lying else 0.55)))
+    if seat is not None:
+        drop = seat['drop']
     offset = np.zeros((len(amount), 3))
     offset[:, 2] = -drop * amount
     move_roots(skeleton, local, offset)
@@ -682,7 +685,9 @@ def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights,
             original_position, original_rotation, original_scale = original[unit.ids[-1]]
             target = original_position + np.einsum('nij,nj->ni', original_rotation, original_scale * unit.eff_off)
             if humanoid:
-                target[:, 1] -= height * 0.2 * amount
+                target[:, 1] -= (height * 0.2 if seat is None else seat['forward']) * amount
+            if seat is not None:
+                target[:, 2] += seat['lift'] * amount
             if name == 'CaveHornet':
                 target[:, 2] += (original_points[0, :, 2].min() - target[0, 2]) * amount
             world = skeleton.fk(local)
