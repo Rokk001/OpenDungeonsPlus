@@ -93,9 +93,37 @@ check('mSocialWindow->update(' in frame and 'PostLog' not in frame, 'the feed is
 
 window = read('source/render/SocialWindow.cpp')
 server = read('source/network/ODServer.cpp')
-check('getCreaturesByAlliedSeat(seat)' in server and 'keeper->getNick()' in server and 'creature.keeper' in window,
+check('seat->isAlliedSeat(owner)' in server and 'keeper->getNick()' in server and 'creature.keeper' in window,
       'the server sends allied creatures with their keeper name')
 check('item->setTooltipText(entries[i].mText)' in window, 'full list entry remains available when elided')
+
+# Older peers and replays have no on-demand server roster; use recorded creatures and the original profile.
+local_start = window.index('bool useLocalCreatureRoster()')
+local_end = window.index('\n}', local_start)
+local_mode = window[local_start:local_end]
+check('client.isReplay()' in local_mode and '!client.supportsDungeonbookRoster()' in local_mode,
+      'recorded and unsupported connections use local data')
+client_header = read('source/network/ODClient.h')
+check('bool isReplay() const' in client_header, 'replay state is publicly available to the view')
+show = window[window.index('void SocialWindow::show()'):window.index('void SocialWindow::showCreature(')]
+hide = window[window.index('void SocialWindow::hide()'):window.index('void SocialWindow::update(')]
+check('!useLocalCreatureRoster()' in show and 'askDungeonbookRoster, true' in show,
+      'no roster subscription is sent when it cannot be answered')
+check('!useLocalCreatureRoster()' in hide and 'askDungeonbookRoster, false' in hide,
+      'no unsubscribe is sent to a replay or unsupported peer')
+roster_body = window[window.index('void SocialWindow::rebuildCreatureList()'):window.index('void SocialWindow::rebuildFeed()')]
+for source in ('mGameMap.getSeats()', 'isAlliedSeat(seat)', 'mGameMap.getCreaturesBySeat(seat)',
+               'entry.name = creature->getName()', 'entry.keeper = seat->getPlayer()->getNick()'):
+    check(source in roster_body, 'local list uses the recorded allied creature data: ' + source)
+profile_body = window[window.index('void SocialWindow::refreshProfile()'):window.index('void SocialWindow::rebuildCreatureList()')]
+check('if(localRoster)' in profile_body and 'creature->fillProfilePage(mProfilePage)' in profile_body,
+      'local mode retains the existing social profile without server-only statistics')
+check('getStatsText(' not in profile_body, 'local profile does not invent server-only statistics')
+check('Known creatures (' in roster_body and 'detailed server statistics are unavailable' in roster_body,
+      'local roster is identified as incomplete')
+destructor = window[window.index('SocialWindow::~SocialWindow()'):window.index('void SocialWindow::setTabState')]
+check('connection->disconnect()' in destructor and 'windows.destroyWindow(mProfilePage)' in destructor and
+      'windows.destroyWindow(mDungeonbookPage)' in destructor, 'both dynamic pages and subscriptions are released')
 client = read('source/network/ODClient.cpp')
 check('getDungeonbookRosterOpen()' in server and 'notifyDungeonbookRoster(gameMap, player)' in server,
       'server sends snapshots only to subscribed clients')

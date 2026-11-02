@@ -449,21 +449,28 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);
             setSupportsCosmeticEvents(false);
 
+            bool dungeonbookRoster = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> dungeonbookRoster);
+            setSupportsDungeonbookRoster(false);
+
             ODPacket packSend;
             const std::string& nick = gameMap->getLocalPlayerNick();
             packSend << ClientNotificationType::setNick << nick;
-            if(liveNickname || creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
+            if(liveNickname || creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << liveNickname;
-            if(creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
+            if(creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creatureMood;
-            if(creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
+            if(creatureActivity || creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creatureActivity;
-            if(creaturePanel || creatureProgress || cosmeticEvents)
+            if(creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creaturePanel;
-            if(creatureProgress || cosmeticEvents)
+            if(creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creatureProgress;
-            if(cosmeticEvents)
-                packSend << true;
+            if(cosmeticEvents || dungeonbookRoster)
+                packSend << cosmeticEvents;
+            if(dungeonbookRoster)
+                packSend << dungeonbookRoster;
             send(packSend);
 
             // We can proceed to configure seat level
@@ -684,6 +691,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);
             setSupportsCosmeticEvents(cosmeticEvents);
+
+            bool dungeonbookRoster = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> dungeonbookRoster);
+            setSupportsDungeonbookRoster(dungeonbookRoster);
 
             // Now that the we have received all needed information, we can launch the requested mode
             OD_LOG_INF("Starting game map");
@@ -2313,6 +2325,8 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
 
         case ServerNotificationType::dungeonbookRoster:
         {
+            if(!supportsDungeonbookRoster())
+                return false;
             uint32_t count = 0;
             if(!(packetReceived >> count))
                 return false;
