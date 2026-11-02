@@ -28,6 +28,7 @@
 #include "game/SkillType.h"
 #include "gamemap/GameMap.h"
 #include "network/CosmeticEvent.h"
+#include "network/ODPacket.h"
 #include "network/ODServer.h"
 #include "network/ServerNotification.h"
 #include "rooms/RoomManager.h"
@@ -202,6 +203,41 @@ bool hasTavernBlock(const std::vector<Tile*>& tiles)
     return false;
 }
 
+//! \brief Checks every resulting tavern connected to the proposed new tiles.
+bool canBuildTavern(GameMap* gameMap, Seat* seat, const std::vector<Tile*>& tiles)
+{
+    std::vector<Tile*> remaining = tiles;
+    while(!remaining.empty())
+    {
+        std::vector<Tile*> connected(1, remaining.back());
+        remaining.pop_back();
+        for(size_t i = 0; i < connected.size(); ++i)
+        {
+            Tile* tile = connected[i];
+            Tile* neighbours[] = {gameMap->getTile(tile->getX() + 1, tile->getY()),
+                                  gameMap->getTile(tile->getX() - 1, tile->getY()),
+                                  gameMap->getTile(tile->getX(), tile->getY() + 1),
+                                  gameMap->getTile(tile->getX(), tile->getY() - 1)};
+            for(Tile* neighbour : neighbours)
+            {
+                if((neighbour == nullptr) ||
+                   (std::find(connected.begin(), connected.end(), neighbour) != connected.end()))
+                    continue;
+                auto selected = std::find(remaining.begin(), remaining.end(), neighbour);
+                Room* room = neighbour->getCoveringRoom();
+                if(selected != remaining.end())
+                    remaining.erase(selected);
+                else if((room == nullptr) || (room->getType() != RoomType::tavern) || (room->getSeat() != seat))
+                    continue;
+                connected.push_back(neighbour);
+            }
+        }
+        if(!hasTavernBlock(connected))
+            return false;
+    }
+    return !tiles.empty();
+}
+
 //! \brief Builds, prices and loads taverns; registered for RoomType::tavern.
 class RoomTavernFactory : public RoomFactory
 {
@@ -225,10 +261,12 @@ class RoomTavernFactory : public RoomFactory
         checkBuildRoomDefault(gameMap, RoomTavern::mRoomType, inputManager, inputCommand);
     }
 
+    //! \brief Builds a tavern only when each resulting room contains a three by three block.
     bool buildRoom(GameMap* gameMap, Player* player, ODPacket& packet) const override
     {
         std::vector<Tile*> tiles;
-        if(!getRoomTilesDefault(tiles, gameMap, player, packet))
+        if(!getRoomTilesDefault(tiles, gameMap, player, packet) ||
+           !canBuildTavern(gameMap, player->getSeat(), tiles))
             return false;
 
         int32_t pricePerTarget = RoomManager::costPerTile(RoomTavern::mRoomType);
@@ -245,8 +283,28 @@ class RoomTavernFactory : public RoomFactory
         checkBuildRoomDefaultEditor(gameMap, RoomTavern::mRoomType, inputManager, inputCommand);
     }
 
+    //! \brief Checks the resulting tavern before the editor changes any tiles.
     bool buildRoomEditor(GameMap* gameMap, ODPacket& packet) const override
     {
+        ODPacket probe(packet);
+        int32_t seatId = 0;
+        uint32_t count = 0;
+        if(!(probe >> seatId >> count))
+            return false;
+        Seat* seat = gameMap->getSeatById(seatId);
+        if(seat == nullptr)
+            return false;
+        std::vector<Tile*> tiles;
+        while(count-- > 0)
+        {
+            Tile* tile = gameMap->tileFromPacket(probe);
+            if(tile == nullptr)
+                return false;
+            if(tile->getCoveringBuilding() == nullptr)
+                tiles.push_back(tile);
+        }
+        if(!canBuildTavern(gameMap, seat, tiles))
+            return false;
         RoomTavern* room = new RoomTavern(gameMap);
         return buildRoomDefaultEditor(gameMap, room, packet);
     }
@@ -265,8 +323,12 @@ class RoomTavernFactory : public RoomFactory
         return room;
     }
 
+    //! \brief Builds a tavern on the tiles when each resulting room contains a three by three block.
     bool buildRoomOnTiles(GameMap* gameMap, Player* player, const std::vector<Tile*>& tiles, bool noFee =false) const override
     {
+        if(!canBuildTavern(gameMap, player->getSeat(), tiles))
+            return false;
+
         int32_t pricePerTarget = RoomManager::costPerTile(RoomTavern::mRoomType);
         int32_t price = static_cast<int32_t>(tiles.size()) * pricePerTarget;
         if(!noFee)
@@ -315,6 +377,13 @@ uint32_t RoomTavern::getNbDrinkingTiles() const
     return nbTiles;
 }
 
+//! \brief Returns whether the tavern contains a full three by three block.
+bool RoomTavern::hasMinimumBlock() const
+{
+    return hasTavernBlock(mCoveredTiles);
+}
+
+//! \brief Checks that the tavern is large enough and has a free guest place.
 bool RoomTavern::hasOpenCreatureSpot(Creature* c)
 {
     if(!hasTavernBlock(mCoveredTiles))

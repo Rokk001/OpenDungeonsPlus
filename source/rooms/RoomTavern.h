@@ -293,6 +293,9 @@ public:
     //! creatures again in the first turn (doUpkeep).
     bool importFromStream(std::istream& is) override;
 
+    //! \brief Returns whether the tavern contains a full three by three block.
+    bool hasMinimumBlock() const;
+
     //! \brief Returns who pays for the beer.
     inline TavernPayer getPayer() const
     { return mPayer; }

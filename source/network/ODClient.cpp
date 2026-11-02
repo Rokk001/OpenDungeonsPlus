@@ -2366,8 +2366,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             double beerPrice = 0.0;
             OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer >> beerResearched >> beerPrice);
 
+            bool hasMinimumBlock = true;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> hasMinimumBlock);
             GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
-            gameMode->setTavernWindowShown(xx, yy, payer, beerResearched, beerPrice);
+            gameMode->setTavernWindowShown(xx, yy, payer, beerResearched, beerPrice, hasMinimumBlock);
             break;
         }
 
