@@ -81,8 +81,15 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
         </Window>
+        <Window type="OD/StaticText" name="CombatPanel">
+            <Property name="Area" value="{{0.02,0},{0.61,0},{0.98,0},{0.69,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="VertScrollbar" value="True" />
+        </Window>
         <Window type="OD/StaticText" name="SkillsPanel">
-            <Property name="Area" value="{{0.02,0},{0.61,0},{0.49,0},{0.78,0}}" />
+            <Property name="Area" value="{{0.66,0},{0.79,0},{0.98,0},{0.88,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="FrameEnabled" value="True" />
             <Property name="BackgroundEnabled" value="False" />
@@ -90,15 +97,27 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="DefensePanel">
-            <Property name="Area" value="{{0.51,0},{0.61,0},{0.98,0},{0.78,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.70,0},{0.98,0},{0.78,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="FrameEnabled" value="True" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="VertScrollbar" value="True" />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
+        <Window type="OD/StaticText" name="EquipmentPanel">
+            <Property name="Area" value="{{0.02,0},{0.79,0},{0.33,0},{0.88,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertScrollbar" value="True" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="PathPanel">
+            <Property name="Area" value="{{0.34,0},{0.79,0},{0.65,0},{0.88,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="VertScrollbar" value="True" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
         <Window type="OD/StaticText" name="StatsText">
-            <Property name="Area" value="{{0.02,0},{0.79,0},{0.98,0},{0.98,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.89,0},{0.98,0},{0.98,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="FrameEnabled" value="True" />
             <Property name="BackgroundEnabled" value="False" />

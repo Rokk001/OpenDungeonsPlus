@@ -113,9 +113,9 @@ struct Post
 //! \brief One server-authoritative allied creature in the Dungeonbook roster.
 struct DungeonbookEntry
 {
-    std::string name, className, keeper, appearance, stats, skills;
+    std::string name, className, keeper, appearance, stats, skills, equipment, path;
     uint32_t level;
-    double strength, dexterity, life, mana, physicalDefense, magicalDefense, elementDefense;
+    double strength, dexterity, life, mana, critical, attackRating, defenseRating, physicalDefense, magicalDefense, elementDefense;
     bool worker, champion, unhappy;
 };
 

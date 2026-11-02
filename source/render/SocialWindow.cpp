@@ -503,6 +503,12 @@ void SocialWindow::refreshProfile()
                 mDungeonbookPage->getChild(std::string("Attributes/") + names[i])->setText(text.str());
             }
             mDungeonbookPage->getChild("SkillsPanel")->setText("Skills\n" + escapeMarkup(selected->skills));
+            mDungeonbookPage->getChild("EquipmentPanel")->setText("Equipment\n" + escapeMarkup(selected->equipment));
+            mDungeonbookPage->getChild("PathPanel")->setText("Path\n" + escapeMarkup(selected->path));
+            std::ostringstream combat;
+            combat << "Critical: " << selected->critical << "%\nAttack Rating: " << selected->attackRating
+                << "\nDefense Rating: " << selected->defenseRating;
+            mDungeonbookPage->getChild("CombatPanel")->setText(combat.str());
             std::ostringstream defense;
             defense << "Defense\nPhysical: " << selected->physicalDefense << "\nMagical: " << selected->magicalDefense
                 << "\nElemental: " << selected->elementDefense;

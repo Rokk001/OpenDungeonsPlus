@@ -151,7 +151,9 @@ namespace
                 << CreatureAppearanceLogic::toToken(creature->getAppearance())
                 << stats << static_cast<uint32_t>(creature->getLevel())
                 << creature->getStrength() << creature->getDexterity() << creature->getLife() << creature->getMana()
-                << creature->getSkillListText() << creature->getPhysicalDefense() << creature->getMagicalDefense()
+                << creature->getSkillListText() << creature->getEquipmentText() << creature->getSkillPathText()
+                << creature->getCritChance() << creature->getAttackRating() << creature->getDefenseRating()
+                << creature->getPhysicalDefense() << creature->getMagicalDefense()
                 << creature->getElementDefense() << creature->getDefinition()->isWorker() << creature->getDefinition()->isChampion() << unhappy;
         }
         ODServer::getSingleton().queueServerNotification(notification);

@@ -116,6 +116,8 @@ server_fields = ('creature->getName()', 'creature->getDefinition()->getClassName
                  'CreatureAppearanceLogic::toToken(creature->getAppearance())', '<< stats',
                  'creature->getLevel()', 'creature->getStrength()', 'creature->getDexterity()',
                  'creature->getLife()', 'creature->getMana()', 'creature->getSkillListText()',
+                 'creature->getEquipmentText()', 'creature->getSkillPathText()', 'creature->getCritChance()',
+                 'creature->getAttackRating()', 'creature->getDefenseRating()',
                  'creature->getPhysicalDefense()', 'creature->getMagicalDefense()', 'creature->getElementDefense()',
                  'creature->getDefinition()->isWorker()', 'creature->getDefinition()->isChampion()', 'unhappy')
 wire = roster[roster.index('notification->mPacket << creature->getName()'):]
@@ -125,6 +127,7 @@ client_case = client[client.index('case ServerNotificationType::dungeonbookRoste
 client_case = client_case[:client_case.index('break;')]
 client_fields = ('entry.name', 'entry.className', 'entry.keeper', 'entry.appearance', 'entry.stats', 'entry.level',
                  'entry.strength', 'entry.dexterity', 'entry.life', 'entry.mana', 'entry.skills',
+                 'entry.equipment', 'entry.path', 'entry.critical', 'entry.attackRating', 'entry.defenseRating',
                  'entry.physicalDefense', 'entry.magicalDefense', 'entry.elementDefense',
                  'entry.worker', 'entry.champion', 'entry.unhappy')
 positions = [client_case.index(field) for field in client_fields]
