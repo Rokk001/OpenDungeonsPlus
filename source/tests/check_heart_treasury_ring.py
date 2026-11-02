@@ -38,6 +38,7 @@ get_heart_max_hp = (function(temple, 'double RoomDungeonTemple::getHeartHPFactor
 get_hp = function(temple, 'double RoomDungeonTemple::getHP(')
 get_ring_center_tile = function(temple, 'Tile* RoomDungeonTemple::getRingCenterTile(')
 is_treasury_tile = function(temple, 'bool RoomDungeonTemple::isTreasuryTile(')
+get_gold_space = function(temple, 'double RoomDungeonTemple::getGoldSpaceInTile(')
 get_total_gold_storage = function(temple, 'int RoomDungeonTemple::getTotalGoldStorage(')
 get_total_gold_stored = function(temple, 'double RoomDungeonTemple::getTotalGoldStored(')
 deposit_gold = function(temple, 'double RoomDungeonTemple::depositGold(')
@@ -224,6 +225,7 @@ struct RoomDungeonTemple:Room {
  Tile* getHeartTile() const;
  Tile* getRingCenterTile() const;
  bool isTreasuryTile(Tile*) const;
+ double getGoldSpaceInTile(Tile*) const;
  int getTotalGoldStorage() const;
  double getTotalGoldStored() const;
  double depositGold(double,Tile*);
@@ -242,6 +244,7 @@ __GET_HEART_MAX_HP__
 __GET_HP__
 __GET_RING_CENTER_TILE__
 __IS_TREASURY_TILE__
+__GET_GOLD_SPACE__
 __GET_TOTAL_GOLD_STORAGE__
 __GET_TOTAL_GOLD_STORED__
 __DEPOSIT_GOLD__
@@ -366,6 +369,8 @@ int main(){
 
  check(heart.withdrawGold(1234)==1234,"withdrawal gives back the requested gold");
  check(heart.getTotalGoldStored()==14766,"the stored gold drops accordingly");
+ check(heart.getGoldSpaceInTile(ringA)==1000&&heart.getGoldSpaceInTile(center)==0,"a ring tile reports its free room, a core tile none");
+ check(heart.hasCarryEntitySpot(&gold),"a ring with free tiles accepts a carried treasure");
  check(heart.withdrawGold(9999999)==14766,"withdrawing more than stored takes everything");
  check(heart.getTotalGoldStored()==0,"the ring is empty again");
  check(heart.withdrawGold(1)==0,"an empty ring gives nothing");
@@ -468,6 +473,7 @@ probe = probe.replace('__GET_HEART_MAX_HP__', get_heart_max_hp)
 probe = probe.replace('__GET_HP__', get_hp)
 probe = probe.replace('__GET_RING_CENTER_TILE__', get_ring_center_tile)
 probe = probe.replace('__IS_TREASURY_TILE__', is_treasury_tile)
+probe = probe.replace('__GET_GOLD_SPACE__', get_gold_space)
 probe = probe.replace('__GET_TOTAL_GOLD_STORAGE__', get_total_gold_storage)
 probe = probe.replace('__GET_TOTAL_GOLD_STORED__', get_total_gold_stored)
 probe = probe.replace('__DEPOSIT_GOLD__', deposit_gold)

@@ -119,6 +119,17 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
         return true;
     }
 
+    // Gold goes to the nearest own gold tile with room (treasury tiles and heart ring tiles together)
+    if(entityToCarry->getObjectType() == GameEntityType::treasuryObject)
+    {
+        Tile* goldTile = CreatureActionCarryEntity::findNearestGoldTile(creature, myTile);
+        Building* goldRoom = (goldTile == nullptr) ? nullptr : goldTile->getCoveringBuilding();
+        creature.popAction();
+        if(goldRoom != nullptr)
+            creature.pushAction(Utils::make_unique<CreatureActionCarryEntity>(creature, *entityToCarry, *goldRoom, forced, digGold, goldTile));
+        return true;
+    }
+
     // We try to find a building that wants the entity
     std::vector<Building*> buildings = creature.getGameMap()->getReachableBuildingsPerSeat(creature.getSeat(), myTile, &creature);
     std::stable_partition(buildings.begin(), buildings.end(), infirmaryFirst);

@@ -24,6 +24,7 @@
 #include "entities/MissileStone.h"
 #include "entities/ItemBagEntity.h"
 #include "entities/Tile.h"
+#include "gamemap/GameMap.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomCrypt.h"
@@ -37,7 +38,9 @@
 #include "utils/LogManager.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <deque>
+#include <list>
 
 namespace
 {
@@ -76,7 +79,7 @@ void appendTrailSection(const std::vector<Ogre::Vector2>& trail, const std::vect
 }
 
 //! \brief Reserves the destination and retains the origin of the chosen transport.
-CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced, bool digGold) :
+CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced, bool digGold, Tile* goldTile) :
     CreatureAction(creature),
     mEntityToCarry(&entityToCarry),
     mTileDest(nullptr),
@@ -110,6 +113,8 @@ CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEnt
         mTileDest = static_cast<RoomInfirmary*>(mBuildingDest)->reserveCot(static_cast<Creature&>(*mEntityToCarry), mCreature);
     else
         mTileDest = mBuildingDest->askSpotForCarriedEntity(mEntityToCarry);
+    if(goldTile != nullptr && mEntityToCarry->getObjectType() == GameEntityType::treasuryObject)
+        mTileDest = goldTile;
     OD_LOG_INF("creature=" + mCreature.getName() + (mIsDrag ? " is pulling " : " is carrying ") + mEntityToCarry->getName() + " to tile=" + Tile::displayAsString(mTileDest));
 }
 
@@ -181,8 +186,109 @@ std::function<bool()> CreatureActionCarryEntity::action()
     if(mIsDrag)
         return std::bind(&CreatureActionCarryEntity::handleDragCreature, this);
 
+    if(mEntityToCarry != nullptr && mEntityToCarry->getObjectType() == GameEntityType::treasuryObject)
+        return std::bind(&CreatureActionCarryEntity::handleCarryGold, this);
+
     return std::bind(&CreatureActionCarryEntity::handleCarryEntity,
         std::ref(mCreature), mEntityToCarry, mTileDest);
+}
+
+//! \brief Returns the gold the creature's own gold room can still take on the tile (0 if the tile is no own gold tile).
+static double getOwnGoldSpace(const Creature& creature, Tile* tile)
+{
+    Room* room = tile->getCoveringRoom();
+    if(room == nullptr || room->getSeat() != creature.getSeat())
+        return 0.0;
+    return room->getGoldSpaceInTile(tile);
+}
+
+//! \brief Picks the gold tile with room that has the shortest walking way from the given tile.
+Tile* CreatureActionCarryEntity::findNearestGoldTile(Creature& creature, Tile* from)
+{
+    GameMap* gameMap = creature.getGameMap();
+    // Heart ring tiles first so that they win between equally long ways
+    std::vector<Tile*> candidates;
+    std::vector<bool> isHeart;
+    for(int pass = 0; pass < 2; ++pass)
+    {
+        RoomType type = (pass == 0) ? RoomType::dungeonTemple : RoomType::treasury;
+        const std::vector<Room*> rooms = gameMap->getRoomsByTypeAndSeat(type, creature.getSeat());
+        for(Room* room : rooms)
+        {
+            for(Tile* tile : room->getCoveredTiles())
+            {
+                if(room->getGoldSpaceInTile(tile) <= 0.0)
+                    continue;
+                candidates.push_back(tile);
+                isHeart.push_back(pass == 0);
+            }
+        }
+    }
+
+    Tile* best = nullptr;
+    bool bestIsHeart = false;
+    size_t bestLength = 0;
+    for(size_t i = 0; i < candidates.size(); ++i)
+    {
+        Tile* tile = candidates[i];
+        // A way is never shorter than the number of tiles in a straight line (diagonals count as one step)
+        size_t minLength = static_cast<size_t>(std::max(std::abs(tile->getX() - from->getX()), std::abs(tile->getY() - from->getY()))) + 1;
+        if(best != nullptr && minLength > bestLength)
+            continue;
+        if(!gameMap->pathExists(&creature, from, tile))
+            continue;
+        size_t length = 0;
+        if(tile == from)
+            length = 1;
+        else
+        {
+            std::list<Tile*> way = gameMap->path(from, tile, &creature, creature.getSeat(), false);
+            if(way.empty())
+                continue;
+            length = way.size();
+        }
+        if(best == nullptr || length < bestLength || (length == bestLength && isHeart[i] && !bestIsHeart))
+        {
+            best = tile;
+            bestIsHeart = isHeart[i];
+            bestLength = length;
+        }
+    }
+    return best;
+}
+
+//! \brief Walks gold to its gold tile; when that tile can take no more gold the nearest tile with room is chosen from
+//! where the worker stands, and when there is none the gold is put down where the worker stands.
+bool CreatureActionCarryEntity::handleCarryGold()
+{
+    Tile* myTile = mCreature.getPositionTile();
+    if(myTile == nullptr || mEntityToCarry == nullptr)
+    {
+        mCreature.popAction();
+        return false;
+    }
+
+    if(mTileDest == nullptr || getOwnGoldSpace(mCreature, mTileDest) <= 0.0)
+    {
+        Tile* newDest = findNearestGoldTile(mCreature, myTile);
+        if(newDest == nullptr)
+        {
+            // No own gold tile has room: the gold stays on the ground where the worker stands
+            mCreature.popAction();
+            return false;
+        }
+        mTileDest = newDest;
+        Building* newBuilding = newDest->getCoveringBuilding();
+        if(newBuilding != mBuildingDest)
+        {
+            if(mBuildingDest != nullptr)
+                mBuildingDest->removeGameEntityListener(this);
+            mBuildingDest = newBuilding;
+            if(mBuildingDest != nullptr)
+                mBuildingDest->addGameEntityListener(this);
+        }
+    }
+    return handleCarryEntity(mCreature, mEntityToCarry, mTileDest);
 }
 
 //! \brief Pulls creatures on the ground while ordinary objects remain carried.
