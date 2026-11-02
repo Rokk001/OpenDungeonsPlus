@@ -258,6 +258,7 @@ def check_sky_programs(root, folders):
             assert re.search(requirement, block), name + " lacks atmosphere setting " + requirement
     shader = (root / "shaders/MenuSky.frag").read_text(encoding="utf-8")
     assert "cloudDensity(point)" in shader and "skyPosition.z - 12.0" in shader, "atmosphere needs cloud structure and horizon height fade"
+    assert "cloudNoise(skyPosition * 0.055)" in shader, "the lower sky must retain cloud structure during camera flights"
     assert "1.0 / 2.2" in shader, "linear atmosphere colours need their display transfer"
     # The overview camera sees the dome only between heights 65 and 95, so the sky gradient must lie in that band.
     assert "smoothstep(82.0, 93.0, skyPosition.z)" in shader and "smoothstep(64.0, 80.0, skyPosition.z)" in shader, "sky gradient must cover the visible dome band"
