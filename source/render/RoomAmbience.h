@@ -455,7 +455,7 @@ private:
     //! \brief Ends a roller: the object goes; with leaveEffects its fragments and the last dust stay for a moment
     void finishRoller(Roller& roller, bool leaveEffects);
     //! \brief Plans the crawlers of an effect of the kind crawl at the given place; true if any were planned
-    bool startCrawl(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& position);
+    bool startCrawl(const AmbienceEffect& effect, uint32_t effectIndex, const Ogre::Vector3& eventPosition);
     //! \brief Creates the crawlers that are due, moves and animates the running ones and removes those that are done
     void updateCrawlers(double timeSinceLastFrame);
     //! \brief Removes the mesh and the scene node of a crawler from the scene

@@ -5106,8 +5106,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         }
     }
 
+    // The Lich bursts while it stands (its own Die clip), so it never gets the lying-down fallback on death.
     if(anim == EntityAnimation::die_anim && dropCreature != nullptr &&
-       needsCreatureDropFallback(objectEntity))
+       needsCreatureDropFallback(objectEntity) &&
+       !(objectEntity->getMesh()->getName() == "lich.mesh" && objectEntity->getSkeleton()->hasAnimation(anim)))
     {
         cancelCreatureDropAnimation(dropCreature);
         Ogre::SceneNode* node = dropCreature->getEntityNode();
