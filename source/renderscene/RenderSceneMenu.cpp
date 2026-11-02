@@ -109,6 +109,7 @@ void RenderSceneMenu::resetMenu(CameraManager& cameraManager, RenderManager& ren
     mActive = true;
     for(RenderSceneGroup* sceneGroup : mSceneGroups)
         sceneGroup->reset(cameraManager, renderManager);
+    renderManager.pinMenuShaderLights();
     mFireTime = 0.0f;
     for(FireLight& fire : mFireLights)
     {
@@ -152,6 +153,7 @@ void RenderSceneMenu::freeMenu(CameraManager& cameraManager, RenderManager& rend
             group != mSceneGroups.rend(); ++group)
             (*group)->freeGroup(cameraManager, renderManager);
         renderManager.endMenuAmbient();
+        renderManager.releaseMenuShaderLights();
         mActive = false;
     }
     Ogre::Rectangle2D* background = getBackgroundRectangle(renderManager);

@@ -2338,6 +2338,21 @@ void RenderManager::endMenuAmbient()
     mSceneManager->setAmbientLight(mWorldAmbient);
 }
 
+void RenderManager::pinMenuShaderLights()
+{
+    Ogre::RTShader::RenderState* renderState =
+        mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+    renderState->setLightCountAutoUpdate(false);
+    renderState->setLightCount(static_cast<Ogre::int32>(mSceneManager->getMovableObjects(Ogre::MOT_LIGHT).size()));
+    mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+}
+
+void RenderManager::releaseMenuShaderLights()
+{
+    mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME)->setLightCountAutoUpdate(true);
+    mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+}
+
 //! \brief Adds a menu point light with its own scene node so several lights can coexist.
 Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogre::Vector3& pos,
         const Ogre::ColourValue& diffuse, const Ogre::ColourValue& specular, Ogre::Real attenuationRange,
