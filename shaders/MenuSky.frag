@@ -52,7 +52,8 @@ void main()
         // The overview camera sees the dome between heights 65 and 95: dark zenith, grey band, warm horizon haze.
         vec3 grey = vec3(0.007, 0.007, 0.006);
         vec3 haze = vec3(0.06, 0.013, 0.006);
-        haze = mix(vec3(0.002, 0.0025, 0.002), haze, cloudNoise(skyPosition * 0.055));
+        if(skyPosition.z < 80.0)
+            haze = mix(vec3(0.002, 0.0025, 0.002), haze, cloudDensity(skyPosition * 0.055));
         linearColour = mix(grey, linearColour, smoothstep(82.0, 93.0, skyPosition.z));
         linearColour = mix(haze, linearColour, smoothstep(64.0, 80.0, skyPosition.z));
     }

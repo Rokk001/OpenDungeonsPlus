@@ -660,6 +660,7 @@ material MenuTitleCrest
 }
 
 // Fractured lunar stone glows a desaturated blood red behind drifting cloud fragments.
+// Emission gives the median moon colour of the approved image (149 48 25) through the mean linear texture value and the sky shader.
 material MenuBloodMoon
 {
     receive_shadows off
@@ -670,7 +671,7 @@ material MenuBloodMoon
             lighting off
             ambient 0.30 0.018 0.010 1
             diffuse 0.30 0.018 0.010 1
-            emissive 0.77 0.045 0.021
+            emissive 2.50 0.248 0.070
             specular 0 0 0 1 1
             vertex_program_ref MenuSkyVertex {}
             fragment_program_ref MenuSkyFragment

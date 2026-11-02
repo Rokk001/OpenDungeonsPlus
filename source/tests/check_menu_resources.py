@@ -258,7 +258,7 @@ def check_sky_programs(root, folders):
             assert re.search(requirement, block), name + " lacks atmosphere setting " + requirement
     shader = (root / "shaders/MenuSky.frag").read_text(encoding="utf-8")
     assert "cloudDensity(point)" in shader and "skyPosition.z - 12.0" in shader, "atmosphere needs cloud structure and horizon height fade"
-    assert "cloudNoise(skyPosition * 0.055)" in shader, "the lower sky must retain cloud structure during camera flights"
+    assert "cloudDensity(skyPosition * 0.055)" in shader, "the lower sky must retain cloud structure during camera flights"
     assert "1.0 / 2.2" in shader, "linear atmosphere colours need their display transfer"
     # The overview camera sees the dome only between heights 65 and 95, so the sky gradient must lie in that band.
     assert "smoothstep(82.0, 93.0, skyPosition.z)" in shader and "smoothstep(64.0, 80.0, skyPosition.z)" in shader, "sky gradient must cover the visible dome band"
@@ -354,7 +354,20 @@ def check_menu_lighting(root):
     strength = float(re.search(r'inputs\["Strength"\]\.default_value = ([0-9.]+)', world).group(1))
     ambient_block = config.split("[MenuLighting]", 1)[1].split("[/MenuLighting]", 1)[0]
     ambient = [float(value) for value in re.search(r"(?m)^Ambient\s+([^\n]+)", ambient_block).group(1).split()]
-    assert ambient == [0.012, 0.010, 0.009], "menu fill must keep unlit stone readable and nearly neutral"
+    assert ambient == [0.012, 0.010, 0.009], "overview fill must keep unlit stone close to the approved image"
+    flight_ambient = [float(value) for value in re.search(r"(?m)^FlightAmbient\s+([^\n]+)", ambient_block).group(1).split()]
+    stone_path = next(folder / "MenuFortressStone.png" for folder in graphics_folders(root) if (folder / "MenuFortressStone.png").is_file())
+    with Image.open(stone_path) as image:
+        stone = image.convert("RGB").resize((64, 64))
+    channels = [sum(((value / 255 + 0.055) / 1.055) ** 2.4 if value > 10 else value / 255 / 12.92 for value in stone.getchannel(band).tobytes()) / 4096 for band in range(3)]
+    readable = [(fill * mean * 0.85) ** (1 / 2.2) * 255 for fill, mean in zip(flight_ambient, channels)]
+    assert all(24 <= value <= 32 for value in readable) and max(readable) - min(readable) <= 2, "unlit stone away from the overview must stay readable and neutral, got " + str(readable)
+    fill_source = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
+    assert "renderManager.setMenuAmbient(mMenuAmbient + (mFlightAmbient - mMenuAmbient) * mFlightFill);" in fill_source and "mFlightFill = 0.0f;" in fill_source, "the camera flight must blend the fill and the overview must start without it"
+    fog_source = (root / "particles/MenuScene.particle").read_text(encoding="utf-8")
+    for system in ("MenuCourtyardFog", "MenuGraveMist"):
+        fog = fog_source.split("particle_system " + system, 1)[1].split("\nparticle_system ", 1)[0]
+        assert "RoomAmbSmoke" in fog and "ColourInterpolator" in fog and "colour0 0.235 0.11 0.016 0.0" in fog and "colour3 0.235 0.11 0.016 0.0" in fog, system + " must use the fog colour of the approved image and fade in and out"
     # Lit menu materials are encoded for the display in their generated shaders; the light count stays fixed in the menu.
     display = (root / "source/render/MenuDisplayShading.cpp").read_text(encoding="utf-8")
     assert "getLightingEnabled()" in display and 'MENU_MATERIAL_PREFIX = "Menu"' in display, "display encoding must stay limited to lit menu materials"

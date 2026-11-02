@@ -371,6 +371,11 @@ public:
     void beginMenuAmbient(const Ogre::ColourValue& menuAmbient) {mWorldAmbient = mSceneManager->getAmbientLight(); mSceneManager->setAmbientLight(menuAmbient);}
     //! \brief Restores the saved world ambient, as the production renderer does.
     void endMenuAmbient() {mSceneManager->setAmbientLight(mWorldAmbient);}
+    //! \brief Applies the fill of the current menu camera, as the production renderer does.
+    void setMenuAmbient(const Ogre::ColourValue& menuAmbient) {mSceneManager->setAmbientLight(menuAmbient);}
+    //! \brief Leaves the generated shader light count outside the isolated camera/navigation checks.
+    void pinMenuShaderLights() {}
+    void releaseMenuShaderLights() {}
 };
 
 //! \brief The existing asset loader owns render commands; these adapters delimit their parsed groups.

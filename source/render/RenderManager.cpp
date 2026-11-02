@@ -2329,6 +2329,12 @@ void RenderManager::beginMenuAmbient(const Ogre::ColourValue& menuAmbient)
     mSceneManager->setAmbientLight(menuAmbient);
 }
 
+void RenderManager::setMenuAmbient(const Ogre::ColourValue& menuAmbient)
+{
+    if(mMenuAmbientActive)
+        mSceneManager->setAmbientLight(menuAmbient);
+}
+
 //! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
 void RenderManager::endMenuAmbient()
 {

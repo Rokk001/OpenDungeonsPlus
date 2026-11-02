@@ -138,6 +138,9 @@ public:
     //! \brief Saves the current world ambient and replaces it with the menu's own ambient until endMenuAmbient().
     void beginMenuAmbient(const Ogre::ColourValue& menuAmbient);
 
+    //! \brief Changes the menu ambient while the menu owns the scene ambient.
+    void setMenuAmbient(const Ogre::ColourValue& menuAmbient);
+
     //! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
     void endMenuAmbient();
 
