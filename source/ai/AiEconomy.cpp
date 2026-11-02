@@ -526,7 +526,7 @@ void ECON::sellObsolete(KeeperAI& ai)
                         if(!recorded)
                             return;
                     }
-                for(auto block = blocks.rbegin(); block != blocks.rend(); ++block)
+                for(std::vector<RoomBlock>::const_reverse_iterator block = blocks.rbegin(); block != blocks.rend(); ++block)
                     if(block->type == entry->first && !block->tiles.empty())
                     {
                         ACTS::sellRoomTiles(ai, block->tiles);
