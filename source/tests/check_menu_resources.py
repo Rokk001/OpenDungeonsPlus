@@ -357,7 +357,7 @@ def check_menu_lighting(root):
                                     for actual, value in zip(ambient, colour)), "menu ambient must retain the authored warm sky and exposure"
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
-    assert len(lights) == 48, "the existing menu lights must remain, without substitute lights"
+    assert len(lights) == 47 and "TitleGreen" not in lights, "menu lights must not cast green light on the title"
     # The five fire lights add a constant attenuation of 1 so their near field does not clip per colour channel.
     near_field_fires = {"LeftFire", "RightFire", "GateFire", "LeftGateFire", "RightGateFire"}
     for name, values in lights.items():
