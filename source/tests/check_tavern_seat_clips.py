@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""Seated tavern clips: every skeleton of a creature type that visits the tavern holds the seven clips, each starts and
-ends in the seat pose, the body rests on the bench or its feet and the seat pose stays out of the table top.
+"""Seated tavern clips: every skeleton of a creature type that visits the tavern holds the seven clips at full size, each
+starts and ends in the seat pose, the body rests on the bench or its feet and stays out of the furniture.
 
 What is checked (fixed values of this branch, counted once)
   visitors   30 skeletons belong to the types whose Tavern line in creatures.cfg is not "0 0"
   clips      Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped; a bone without a track stays in its rest pose
   seam       the first and the last frame of a clip show the same pose, so that it loops and returns to the seat pose
   height     the pose of Sit reaches above the seat of the bench
-  table      no clip reaches more than 0.04 tiles into the table top at any of 385 samples, also between its keys, seen from
-             the middle of the bench, at the smallest and the largest creature scale of the level
+  full size  every root of a skeleton keeps the scale it has in Idle in a seated clip
+  furniture  no clip reaches more than 0.04 tiles into the table top, the pedestal, the bench or its legs at any of 385 samples,
+             also between its keys, on every seat the guest can take, at the smallest and the largest creature scale of the
+             level; the bench counts below the 0.015 tiles a body presses into it; the mug counts in SitDrink
+  resting    the bodies that do not sit on legs lie on the bench: the lowest part above the seat rests on it
   weapons    attached weapon models are hidden during a seated clip (read from the source, not run)
-  bench      the pelvis of a walking body stays on the bench in Sit
+  bench      the pelvis of a walking body stays on the bench in Sit, except for the listed large bodies, whose limit is their own
+  floor      the feet of a sitting body stand on the floor in Sit
   large      the types with a 2x2 bed are the large models of the clip author
 
 Calls (from the repository root; needs OgreXMLConverter on the PATH or in OGRE_XML_CONVERTER, no compiler, no game):
@@ -38,6 +42,15 @@ MAX_TABLE_DEPTH = 0.04
 TABLE_SAMPLES = 385
 # The pelvis stays this close to the middle of the bench (half of the depth of the bench), in tiles
 MAX_PELVIS_BEHIND = 0.084
+# How far the pelvis joint of one leg can lie behind the middle of the pelvis when the body turns on the bench
+MAX_BACK_SIDE = 0.06
+# A root may differ from its scale in Idle by this share: the breath of a spine that is a root, 0.008, passes; the smallest
+# shrinking of a body that was ever used, 0.04, does not
+MAX_ROOT_SCALE = 0.01
+# The lowest part above the seat of a resting body lies this close to the seat, in tiles
+MAX_REST_GAP = 0.03
+# Mesh below the floor in Sit, in tiles: the foot of a rig stands in the floor by this little in its own rest pose
+MIN_FLOOR = -0.1
 # First and last frame of a clip may differ by this share of the height of the body
 MAX_SEAM = 1e-3
 
@@ -61,6 +74,8 @@ def visitors():
 def check_skeleton(name, mesh_name, out):
     export(name + '.skeleton', out)
     export(mesh_name, out)
+    export(seats.MUG_MESH, out)
+    seats.SCENE['whole_bench'] = name in seats.LARGE_MODELS
     skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
     vertices, faces, weights = rest.mesh_data(out / (mesh_name + '.xml'))
     idle = skeleton.locals_at(skeleton.clips['Idle'], np.zeros(1))
@@ -75,19 +90,32 @@ def check_skeleton(name, mesh_name, out):
         seam = float(np.abs(points[0] - points[1]).max() / height)
         assert seam < MAX_SEAM, (name, clip, 'first and last frame differ', seam)
         fine = np.linspace(0.0, played.length, TABLE_SAMPLES)
-        points = rest.skin_vertices(skeleton, skeleton.locals_at(played, fine), vertices, weights)
+        locals_fine = skeleton.locals_at(played, fine)
+        for index in skeleton.topo:
+            if skeleton.parent[index] < 0:
+                assert np.abs(locals_fine[index][2] / idle[index][2][0] - 1.0).max() < MAX_ROOT_SCALE, (name, clip, 'a root is scaled', skeleton.names[index])
+        clip_vertices, clip_weights = (seats.with_mug(skeleton, vertices, weights, out / (mesh_name + '.xml')) if clip == 'SitDrink' else (vertices, weights))
+        points = rest.skin_vertices(skeleton, locals_fine, clip_vertices, clip_weights)
         depth = seats.level_depth(points)
-        assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the table top', depth)
+        assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')
     body_rig = seats.rig.config(name, seats.rig.Skeleton(str(out / (name + '.skeleton.xml'))))
-    if seats.is_humanoid(body_rig):
+    if name in seats.RESTING_MODELS:
+        half, near, far = seats.BENCH[:3]
+        reach = half if seats.SCENE['whole_bench'] else half + seats.SEAT_SIDE
+        over = (np.abs(points[0, :, 0]) < reach) & (points[0, :, 1] > near) & (points[0, :, 1] < far)
+        assert over.any(), (name, 'rests beside the bench')
+        assert abs(float(points[0, over, 2].min()) * seats.LEVEL_SCALE_MIDDLE - seats.BENCH_TOP) < MAX_REST_GAP, (name, 'does not rest on the bench')
+    else:
         chains = seats.thigh_chains(skeleton, seats.leg_chains(skeleton, name, vertices, weights, idle), body_rig)
         world = skeleton.fk(sit)
+        limit = seats.LARGE_BACK_SHIFTS.get(name, MAX_PELVIS_BEHIND)
         for chain in chains:
             pelvis = world[skeleton.idx[chain[0]]][0][0]
-            assert pelvis[1] <= MAX_PELVIS_BEHIND, (name, 'the pelvis lies behind the bench', pelvis[1])
+            assert pelvis[1] <= limit + MAX_BACK_SIDE, (name, 'the pelvis lies behind its place on the bench', pelvis[1])
+        assert float(points[0, :, 2].min()) > MIN_FLOOR, (name, 'a part of the body lies below the floor', float(points[0, :, 2].min()))
     return len(SEAT_CLIPS)
 
 

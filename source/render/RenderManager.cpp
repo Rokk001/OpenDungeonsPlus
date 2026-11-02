@@ -4524,6 +4524,8 @@ void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapo
 
     ent->attachObjectToBone(weaponBone->getName(), weaponEntity,
                             mount.mRotation, mount.mOffset);
+    // A guest that gets a weapon while it sits at a tavern table keeps it hidden like its other weapons
+    CreatureCombatReactions::showWeaponsForClip(curCreature);
 }
 
 //! \brief Uses the second material's seal only while a bag is merchant-owned stock.

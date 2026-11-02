@@ -23,23 +23,46 @@ import gen_walk_hurt as rig
 
 # Height of the seat surface of the bench of the table mesh (the table is scaled in x and y only).
 BENCH_TOP = 0.2575
-# The guest stands on the middle of the bench and looks along -y. Where the top of the table starts from there.
+# The guest stands on the middle of the bench and looks along -y. Where the top of the table lies from there.
 TABLE_NEAR_EDGE = -0.0882
-TABLE_UNDERSIDE = 0.351
+TABLE_FAR_EDGE = -0.735
+TABLE_UNDERSIDE = 0.37
 TABLE_TOP = 0.4425
-# Half of the length of the table top, plus the side offset of a seat on its bench.
-TABLE_HALF_WIDTH = 0.30
+TABLE_HALF_WIDTH = 0.26
+# The guest of a seat sits this far beside the middle of the bench, on either side; a guest of a whole bench sits on its middle.
+SEAT_SIDE = 0.164
+# The parts of the table mesh below the top, seen from the middle of the bench: (half width, y from, y to, z from, z to).
+PEDESTAL = (0.193, -0.605, -0.219, 0.0, 0.38)
+BENCH = (0.328, -0.088, 0.087, 0.202, BENCH_TOP)
+BENCH_LEG_X = (0.187, 0.26)
+BENCH_LEG_Y = 0.042
+BENCH_LEG_TOP = 0.21
+# A body presses this far into the seat of the bench where it rests on it.
+BENCH_SINK = 0.015
 # How far the pelvis joint lies above the seat surface, as a share of the length of the thigh.
 HIP_ABOVE_SEAT = 0.35
 # The knees of a guest bend at least by this share of the length of the thigh.
 MIN_KNEE_BEND = 0.25
 # Tried in this order: how far the feet are placed in front of the body, as a share of the height of the body.
-FOOT_REACH = (0.2, 0.12, 0.05, 0.0)
-# The furthest a body moves back on its bench to stay out of the table top: the pelvis stays on the bench (0.084 to its edge).
-MAX_BACK_SHIFT = 0.06
-MAX_ARM_BACK_SHIFT = 0.06
-# Tried in this order: the size of a walking body on the bench, kept by a scale key on the roots in every seated clip.
-SEAT_SCALES = (1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6)
+FOOT_REACH = (0.2, 0.16, 0.12, 0.08, 0.04, 0.0)
+# Tried in this order: how much higher the pelvis lies than that, in tiles, for a thick thigh or a robe over the bench.
+HIP_RAISES = (0.0, 0.015, 0.03, 0.045)
+# Tried in this order: how far a tall body turns on the bench in degrees, so that its knees pass the table and the pedestal; the
+# head turns back to the table for it. A guest of a whole bench also spreads its feet this far around the pedestal.
+SEAT_TURNS = (0.0, 20.0, 35.0)
+SEAT_SPREADS = (0.0, 0.12, 0.24, 0.36)
+# A guest of a seat moves its feet this far apart at most, past the legs of the bench.
+SEAT_SIDE_SPREADS = (0.0, 0.05, 0.1)
+# Tried from the front in steps of this size up to MAX_BACK_SHIFT.
+SEAT_BACK_STEP = 0.012
+# A sitting body counts as out of the furniture up to this, without its arms: the arms have their own steps afterwards.
+SEAT_TOLERANCE = 0.006
+# A later choice of the search only wins when it stays this much further out of the furniture.
+SEAT_GAIN = 0.004
+# The furthest a sitting body moves back on its bench to stay out of the table top: its pelvis stays on the bench.
+MAX_BACK_SHIFT = 0.084
+# A belly or a knee too large for that sits further back at full size: the front of its seat stays on the bench.
+LARGE_BACK_SHIFTS = {'Troll': 0.2, 'Dragon': 0.2, 'PitDemon': 0.2, 'lich': 0.16}
 # The creature scale of the level runs from 1.0 to 1.1 (CreatureLevelGrowthMax). The clips fit the middle of that range, so
 # the pelvis lies at most about 0.013 tiles beside the bench while the feet stay on the floor at every level.
 LEVEL_SCALE_LOW = 1.0
@@ -47,11 +70,38 @@ LEVEL_SCALE_HIGH = 1.1
 LEVEL_SCALE_MIDDLE = 1.05
 # Types with a bed of 2x2 in creatures.cfg have a whole bench; every other guest has half of it.
 LARGE_MODELS = ('PitDemon', 'Troll', 'Scarab', 'Dragon', 'Kreatur')
-BENCH_LENGTH = 0.78
-# A body on four or more legs that does not fit in front of the table lies along the bench, not smaller than this.
-MIN_LENGTHWISE_SCALE = 0.45
-LENGTHWISE_TURN = 90.0
-LENGTHWISE_HEAD_TURN = -63.0
+# Bodies that do not sit on a bench but rest on it in the pose they rest in on the ground, tried turned in this order: along
+# the bench first. The head of a body along the bench looks towards the table.
+RESTING_MODELS = ('CaveHornet', 'Kreatur', 'LavaSpawn', 'Rat', 'Roach', 'Scarab', 'Slime', 'Spider', 'Tentacle', 'Wyvern')
+REST_TURNS = (90.0, -90.0, 0.0, 180.0)
+# Tried in this order: how far the head of a body along the bench looks at the table; a head that turns less wins when that
+# saves this much of the step back.
+REST_HEAD_TURNS = (50.0, 25.0, 0.0)
+REST_HEAD_ADVANTAGE = 0.08
+# A body with free limbs lies this much further from the table, so that the limbs can move above it.
+REST_EXTRA_BACK = {'LavaSpawn': 0.12, 'Rat': 0.02, 'Roach': 0.08}
+# A clip that keeps less than this share of its motion plays on the spine and the head alone, if that moves more.
+LOW_MOTION_SHARE = 0.25
+# A clip faster than this, in heights of the body per second, moves less as a whole, tried with these shares of its motion.
+MAX_CLIP_SPEED = 12.0
+CALM_SHARES = (0.85, 0.7, 0.55, 0.4, 0.3)
+# A flat body turns this share of a slap, because its long legs would sweep far.
+RESTING_SLAP_SHARE = 0.4
+# How far a resting body moves behind the middle of the bench at most, in steps of this size, to stay out of the table.
+REST_BACK_STEP = 0.01
+REST_BACK_MAX = 0.8
+# A resting body stays out of the furniture up to this, and a turn along the bench stays unless another saves this much.
+REST_TOLERANCE = 0.015
+REST_TURN_ADVANTAGE = 0.25
+# A snake body rolls up on the bench, and the tail of every other resting body curls around it: the degrees per joint.
+COILED_MODELS = ('Tentacle', 'LavaSpawn')
+COIL_TAIL_DEGREES = 110.0
+CURL_TAIL_DEGREES = 40.0
+# The clips a resting body takes its pose from, tried in this order; a snake body keeps its upper body up.
+REST_SOURCES = {'LavaSpawn': ('AmbientSit', 'AmbientLie')}
+DEFAULT_REST_SOURCES = ('AmbientLie',)
+# A walking body that does not fit on its legs at full size up to this depth rests on the bench instead.
+SEATED_LIMIT = 0.025
 # A held item that reaches further than this from the hand, and more than this many forearms, is a long weapon: it stays
 # upright while the creature sits. A chain without upper arm, forearm and hand holds no weapon of its own.
 LONG_WEAPON_REACH = 0.45
@@ -75,12 +125,7 @@ MAX_BODY_SPEED = 10.0
 # A relaxed arm may reach this far below the floor (the tip of a weapon) before it is raised for it.
 FLOOR_TOLERANCE = 0.05
 # How far a relaxed arm tries to rise at the shoulder, in degrees.
-RELAXED_ARM_ANGLES = (0.0, 15.0, 30.0, 45.0, 60.0)
-# Tried in this order: how far a long body rears up in degrees, so that it fits on the bench in front of the table.
-REAR_ANGLES = (0.0, 25.0, 40.0, 55.0, 70.0, 85.0)
-# Share of the rearing that the head and the tail turn back, so that the head looks ahead and the tail stays low.
-REAR_HEAD_SHARE = 0.8
-REAR_TAIL_SHARE = 1.0
+RELAXED_ARM_ANGLES = (0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0)
 # A clip may reach this far into the table (a hand on its edge); up to this many degrees the upper body leans back for it.
 TABLE_TOLERANCE = 0.02
 LEAN_BACK_STEP = 6.0
@@ -111,8 +156,8 @@ ROUTE_SHOULDER_RANGE = (-80.0, 60.0)
 ROUTE_ELBOW_RANGE = (-150.0, 20.0)
 ROUTE_TRIES = 40
 ROUTE_PASSES = 2
-# Size of the body while it is posed: the bench and the table are measured in the units of the unscaled model.
-SCENE = {'size': 1.0}
+# The creature scale of the level a body is posed at, and whether the guest takes a whole bench.
+SCENE = {'size': LEVEL_SCALE_MIDDLE, 'whole_bench': False}
 # (clip, length in seconds, keyframes, source clip of the upper body, looped)
 CLIPS = (('Sit', 4.0, 17, None, True),
          ('SitDrink', None, 49, 'Drink', True),
@@ -121,6 +166,11 @@ CLIPS = (('Sit', 4.0, 17, None, True),
          ('SitArmWrestle', None, 49, 'ArmWrestle', True),
          ('SitDice', None, 49, 'Dice', True),
          ('SitSlumped', 4.0, 17, None, True))
+# The bone that holds the mug of SitDrink, and the turn of an attached mesh to the axes of its bone.
+MUG_BONE = 'Weapon_R'
+MUG_MESH = 'TavernMug.mesh'
+MUG_POINTS = 200
+MUG_TURN = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
 # Share of a clip at each end in which the upper body goes from the seat pose to the source clip and back.
 BLEND_SHARE = 0.12
 # Recoil of a slap in degrees: turn of the head and spine, tilt back; damped over the clip.
@@ -205,40 +255,52 @@ def body_vertices(skeleton, chains, weights):
             if row and sum(weight for bone, weight in row if bone not in legs) >= 0.9]
 
 
-# Measure per frame how far a posed body reaches into the table on the side the guest looks at, in units of the points.
-def frame_depths(points, selected=None, under=False):
+# Measure per frame how far a posed body reaches into the furniture, in units of the points. A guest of a seat is measured on
+# both seats, because the same clip plays on both. The top of the table counts from its near edge, which also catches a limb
+# deep inside this thin plate; every other part counts from its nearest face.
+def frame_depths(points, selected=None):
     if selected is not None:
         points = points[:, selected, :]
     scene = SCENE['size']
-    low = (BENCH_TOP if under else TABLE_UNDERSIDE) / scene
-    inside = ((points[:, :, 2] > low) & (points[:, :, 2] < TABLE_TOP / scene) &
-              (np.abs(points[:, :, 0]) < TABLE_HALF_WIDTH / scene))
-    depth = TABLE_NEAR_EDGE / scene - points[:, :, 1]
-    depth[~inside] = 0.0
-    return np.maximum(0.0, depth.max(axis=1))
+    world = points * scene
+    x, y, z = world[:, :, 0], world[:, :, 1], world[:, :, 2]
+    worst = np.zeros(points.shape[:2])
+    for side in (0.0,) if SCENE['whole_bench'] else (SEAT_SIDE, -SEAT_SIDE):
+        beside = np.abs(x - side)
+        inside = (z > TABLE_UNDERSIDE) & (z < TABLE_TOP) & (beside < TABLE_HALF_WIDTH) & (y > TABLE_FAR_EDGE)
+        worst = np.maximum(worst, np.where(inside, TABLE_NEAR_EDGE - y, 0.0))
+        half, near, far, low, high = PEDESTAL
+        worst = np.maximum(worst, np.minimum.reduce([half - beside, y - near, far - y, z - low, high - z]))
+        half, near, far, low, high = BENCH
+        worst = np.maximum(worst, np.minimum.reduce([half - beside, y - near, far - y, z - low, high - BENCH_SINK - z]))
+        worst = np.maximum(worst, np.minimum.reduce([beside - BENCH_LEG_X[0], BENCH_LEG_X[1] - beside, BENCH_LEG_Y - np.abs(y),
+                                                     z, BENCH_LEG_TOP - z]))
+    return np.maximum(0.0, worst.max(axis=1)) / scene
 
 
-# Measure how far a posed body reaches into the table on the side the guest looks at; selected limits it to some vertices.
-def table_depth(points, selected=None, under=False):
-    return float(frame_depths(points, selected, under).max())
+# Measure how far a posed body reaches into the furniture; selected limits it to some vertices.
+def table_depth(points, selected=None):
+    return float(frame_depths(points, selected).max())
 
 
 # Measure a pose of a finished clip at the smallest and the largest creature scale of the level, in tiles.
 def level_depth(points):
     saved = SCENE['size']
-    SCENE['size'] = 1.0
-    depth = max(table_depth(points * LEVEL_SCALE_LOW), table_depth(points * LEVEL_SCALE_HIGH))
+    depth = 0.0
+    for level in (LEVEL_SCALE_LOW, LEVEL_SCALE_HIGH):
+        SCENE['size'] = level
+        depth = max(depth, table_depth(points) * level)
     SCENE['size'] = saved
     return depth
 
 
 # Measure per frame how far a pose reaches into the table at the smallest and the largest creature scale of the level, in
-# tiles; the points are in the units of the current scene, whose size holds the middle of that scale.
+# tiles.
 def worst_depths(points):
     saved = SCENE['size']
     depths = np.zeros(points.shape[0])
     for level in (LEVEL_SCALE_LOW, LEVEL_SCALE_HIGH):
-        SCENE['size'] = saved * level / LEVEL_SCALE_MIDDLE
+        SCENE['size'] = level
         depths = np.maximum(depths, frame_depths(points) * SCENE['size'])
     SCENE['size'] = saved
     return depths
@@ -543,29 +605,41 @@ def keep_out_of_table(skeleton, local, seated, vertices, weights, height, second
     return result
 
 
-# Turn a posed body around the vertical through the floor origin, so that it lies along its bench.
-def turn_lengthwise(skeleton, local, body_rig):
-    amount = np.full(1, math.radians(LENGTHWISE_TURN))
+# Let a clip that is too fast move less as a whole, as long as it stays out of the furniture.
+def calm_clip(skeleton, local, start, vertices, weights, height, seconds_per_frame):
+    limit = MAX_CLIP_SPEED * height * seconds_per_frame
+    if clip_motion(skeleton, local, vertices, weights)[1] <= limit:
+        return local
+    count = local[0][0].shape[0]
+    allowed = max(CROSSING_DEPTH, float(fine_depths(skeleton, local, vertices, weights).max()))
+    for share in CALM_SHARES:
+        trial = mix_with_seat(local, start, np.full(count, share))
+        if float(fine_depths(skeleton, trial, vertices, weights).max()) > allowed:
+            continue
+        local = trial
+        if clip_motion(skeleton, local, vertices, weights)[1] <= limit:
+            break
+    return local
+
+
+# Return a clip that plays only the spine and the head of a played clip on the pose it starts from.
+def spine_only(skeleton, start, played, count, spine, head):
+    local = hold(start, count)
+    for bone in spine + ([head] if head else []):
+        index = skeleton.idx[bone]
+        local[index] = (local[index][0], played[index][1].copy(), local[index][2])
+    return local
+
+
+# Turn a posed body around the vertical through the floor origin.
+def turn_body(skeleton, local, degrees):
+    amount = np.full(1, math.radians(degrees))
     quaternion = feet.rv2q(np.array([[0.0, 0.0, 1.0]]) * amount[:, None])
     matrix = feet.q2m(quaternion)
     for index in skeleton.topo:
         if skeleton.parent[index] < 0:
             position, rotation, scale = local[index]
             local[index] = (np.einsum('nij,nj->ni', matrix, position), feet.qmul(quaternion, rotation), scale)
-    if isinstance(body_rig, list):
-        for item in body_rig:
-            if item.get('head') in skeleton.idx:
-                rest.rotate_joint(skeleton, local, item['head'], rig.Z_AXIS, np.radians(np.full(1, LENGTHWISE_HEAD_TURN)))
-
-
-# Make the bones of a clip keep the size of the body on the bench, seen from the floor origin.
-def apply_seat_scale(skeleton, local, size):
-    if size >= 1.0:
-        return
-    for index in skeleton.topo:
-        if skeleton.parent[index] < 0:
-            position, rotation, scale = local[index]
-            local[index] = (position * size, rotation, scale * size)
 
 
 # Return the bones of the arms of a humanoid and what they hold.
@@ -634,8 +708,8 @@ def relax_arms(skeleton, local, base, body_rig, vertices, weights, floor):
             if not held:
                 continue
             points = rest.skin_vertices(skeleton, local, vertices, weights)
-            best_depth = table_depth(points, held)
-            if best_depth <= TABLE_TOLERANCE / SCENE['size']:
+            best_depth = float(worst_depths(points[:, held]).max())
+            if best_depth <= TABLE_TOLERANCE:
                 continue
             best_low = max(0.0, floor - float(points[0, held, 2].min()) - FLOOR_TOLERANCE)
             best = None
@@ -646,11 +720,11 @@ def relax_arms(skeleton, local, base, body_rig, vertices, weights, floor):
                 if degrees > 0.0:
                     rest.rotate_joint(skeleton, trial, chain[0], rig.X_AXIS, np.radians(np.full(1, -degrees)))
                 points = rest.skin_vertices(skeleton, trial, vertices, weights)
-                depth = table_depth(points, held)
+                depth = float(worst_depths(points[:, held]).max())
                 low = max(0.0, floor - float(points[0, held, 2].min()) - FLOOR_TOLERANCE)
                 if depth + low < best_depth + best_low - 1e-4:
                     best, best_depth, best_low = trial, depth, low
-                if depth <= TABLE_TOLERANCE / SCENE['size'] and low <= 0.0:
+                if depth <= TABLE_TOLERANCE and low <= 0.0:
                     break
             if best is not None:
                 for index, entry in enumerate(best):
@@ -739,189 +813,189 @@ def vertices_without(weights, bones):
             if sum(weight for bone, weight in row if bone in bones) < 0.5]
 
 
-# Let a long body rear up on its hind part; the head looks ahead again and the tail stays low behind the bench.
-def rear_up(skeleton, local, body_rig, degrees):
-    if degrees <= 0.0:
-        return
-    rest.tilt_body(skeleton, local, np.radians(np.full(1, -degrees)))
-    if isinstance(body_rig, list):
-        for item in body_rig:
-            if item.get('head') in skeleton.idx:
-                rest.rotate_joint(skeleton, local, item['head'], rig.X_AXIS, np.radians(np.full(1, degrees * REAR_HEAD_SHARE)))
-            for chain in item.get('tail', []):
-                if chain and chain[0] in skeleton.idx:
-                    rest.rotate_joint(skeleton, local, chain[0], rig.X_AXIS, np.radians(np.full(1, degrees * REAR_TAIL_SHARE)))
-
-
 # Pose the guest on the bench for one candidate of foot placement; returns the hold pose and the support height.
-def seat_candidate(skeleton, body_rig, base, height, name, vertices, weights, chains, forward):
+def seat_candidate(skeleton, body_rig, base, height, name, vertices, weights, chains, forward, raised=0.0, spread=0.0):
     amount = np.ones(1)
-    humanoid = is_humanoid(body_rig)
     world = skeleton.fk(base)
-    if humanoid:
-        thighs = thigh_chains(skeleton, chains, body_rig)
-        hip, thigh = hip_measure(skeleton, thighs, world)
-        wanted = BENCH_TOP / SCENE['size'] + HIP_ABOVE_SEAT * thigh
-        drop = hip - wanted
-        lift = max(0.0, MIN_KNEE_BEND * thigh - drop)
-        for attempt in range(8):
-            try:
-                local, error = rest.sitting(skeleton, body_rig, base, amount, height, name, vertices, weights,
-                                            seat={'drop': drop, 'lift': lift, 'forward': forward})
-                break
-            except AssertionError:
-                # The feet cannot reach their place: they hang a bit higher
-                lift += 0.02 * height
-        else:
-            raise AssertionError((name, 'no seated leg solution'))
-        # The correction of the rest tool can lift a body; the pelvis goes back to the seat, the feet go with it
-        posed = skeleton.fk(local)
-        now, _ = hip_measure(skeleton, thighs, posed)
-        offset = np.zeros((1, 3))
-        offset[0, 2] = wanted - now
-        centre = np.mean([posed[skeleton.idx[chain[0]]][0][0, 1] for chain in thighs])
-        offset[0, 1] = -centre
-        rest.move_roots(skeleton, local, offset)
-        points = rest.skin_vertices(skeleton, local, vertices, weights)
-        return local, max(0.0, float(points[0, :, 2].min())), 'seated'
-
-    # Every other body rests like on the ground, on its belly when it is tall, otherwise on top of the bench
-    plain = rest.sitting(skeleton, body_rig, base, amount, height, name, vertices, weights)[0]
-    floor = float(rest.skin_vertices(skeleton, base, vertices, weights)[0, :, 2].min())
-    carrying = vertices_without(weights, free_bones(skeleton, body_rig))
-    selected = body_vertices(skeleton, chains, weights) if chains else []
-    if selected:
-        belly = float(rest.skin_vertices(skeleton, base, vertices, weights)[0, selected, 2].min()) - floor
-        if belly >= BENCH_TOP / SCENE['size']:
-            try:
-                local = rest.sitting(skeleton, body_rig, base, amount, height, name, vertices, weights,
-                                     seat={'drop': belly - BENCH_TOP / SCENE['size'], 'lift': 0.0, 'forward': 0.0})[0]
-            except AssertionError:
-                local = None
-            if local is not None:
-                points = rest.skin_vertices(skeleton, local, vertices, weights)
-                offset = np.zeros((1, 3))
-                offset[0, 2] = floor - float(points[0, carrying, 2].min())
-                rest.move_roots(skeleton, local, offset)
-                return local, floor, 'belly'
-    return plain, BENCH_TOP / SCENE['size'], 'perched'
-
-
-# Lift a perched body onto the bench and move it so that its rear lies on the middle of the bench.
-def place_on_bench(skeleton, local, vertices, weights, carrying):
-    points = rest.skin_vertices(skeleton, local, vertices, weights)
-    offset = np.zeros((1, 3))
-    offset[0, 2] = BENCH_TOP / SCENE['size'] - float(points[0, carrying, 2].min())
-    near = points[0, carrying, 2] < float(points[0, carrying, 2].min()) + 0.04
-    offset[0, 1] = -float(points[0, carrying, 1][near].mean())
-    offset[0, 0] = -float(points[0, carrying, 0][near].mean())
-    rest.move_roots(skeleton, local, offset)
-
-
-# Lay a body along its bench when it does not fit in front of the table; returns None when it still does not fit.
-def lengthwise_pose(skeleton, body_rig, base, height, name, vertices, weights, chains, carrying):
-    lengths = rest.skin_vertices(skeleton, base, vertices, weights)[0, carrying, 1]
-    room = BENCH_LENGTH if name in LARGE_MODELS else BENCH_LENGTH / 2.0
-    size = min(1.0, room / float(np.ptp(lengths)))
-    if size < MIN_LENGTHWISE_SCALE:
-        return None
-    SCENE['size'] = size * LEVEL_SCALE_MIDDLE
-    local, support, mode = seat_candidate(skeleton, body_rig, base, height, name, vertices, weights, chains, 0.0)
-    turn_lengthwise(skeleton, local, body_rig)
-    if mode == 'perched':
-        place_on_bench(skeleton, local, vertices, weights, carrying)
-    # The body stays on the bench: from its middle it may lie back as far as the bench goes
-    depth = table_depth(rest.skin_vertices(skeleton, local, vertices, weights), carrying, True)
-    if depth > MAX_BACK_SHIFT / SCENE['size'] + TABLE_TOLERANCE / SCENE['size']:
-        return None
-    offset = np.zeros((1, 3))
-    offset[0, 1] = min(depth, MAX_BACK_SHIFT / SCENE['size'])
-    rest.move_roots(skeleton, local, offset)
-    if worst_depths(rest.skin_vertices(skeleton, local, vertices, weights)).max() > TABLE_TOLERANCE:
-        return None
-    return local, support, mode, size
-
-
-# Choose the seat pose that stays out of the table, moving a large body back on its bench when it must.
-def seat_pose(skeleton, body_rig, base, height, name, vertices, weights, chains):
-    humanoid = is_humanoid(body_rig)
-    weapons = long_weapons(skeleton, base, body_rig, vertices, weights)
-    if humanoid:
-        for size in SEAT_SCALES:
-            SCENE['size'] = size * LEVEL_SCALE_MIDDLE
-            found = seat_pose_at_size(skeleton, body_rig, base, height, name, vertices, weights, chains, weapons)
-            if worst_depths(rest.skin_vertices(skeleton, found[0], vertices, weights)).max() <= TABLE_TOLERANCE:
-                break
-        found[2]['size'] = size
-        found[2]['lengthwise'] = False
-        return found + (weapons,)
-    SCENE['size'] = LEVEL_SCALE_MIDDLE
-    found = seat_pose_at_size(skeleton, body_rig, base, height, name, vertices, weights, chains, weapons)
-    found[2]['size'] = 1.0
-    found[2]['lengthwise'] = False
-    if found[2]['rear'] > 0.0:
-        lying = lengthwise_pose(skeleton, body_rig, base, height, name, vertices, weights, chains, found[3])
-        if lying is not None:
-            local, support, mode, size = lying
-            return local, support, {'mode': mode, 'foot_reach': 0.0, 'rear': 0.0, 'back_shift': 0.0, 'size': size,
-                                    'lengthwise': True}, found[3], weapons
-    # A body that keeps reaching into the table gets smaller on the bench
-    for size in SEAT_SCALES:
-        SCENE['size'] = size * LEVEL_SCALE_MIDDLE
-        found = seat_pose_at_size(skeleton, body_rig, base, height, name, vertices, weights, chains, weapons)
-        if worst_depths(rest.skin_vertices(skeleton, found[0], vertices, weights)).max() <= TABLE_TOLERANCE:
+    thighs = thigh_chains(skeleton, chains, body_rig)
+    hip, thigh = hip_measure(skeleton, thighs, world)
+    wanted = (BENCH_TOP + raised) / SCENE['size'] + HIP_ABOVE_SEAT * thigh
+    drop = hip - wanted
+    lift = max(0.0, MIN_KNEE_BEND * thigh - drop)
+    for attempt in range(8):
+        try:
+            local, error = rest.sitting(skeleton, body_rig, base, amount, height, name, vertices, weights,
+                                        seat={'drop': drop, 'lift': lift, 'forward': forward, 'spread': spread})
             break
-    found[2]['size'] = size
-    found[2]['lengthwise'] = False
-    return found + (weapons,)
+        except AssertionError:
+            # The feet cannot reach their place: they hang a bit higher
+            lift += 0.02 * height
+    else:
+        raise AssertionError((name, 'no seated leg solution'))
+    posed = skeleton.fk(local)
+    offset = np.zeros((1, 3))
+    centre = np.mean([posed[skeleton.idx[chain[0]]][0][0, 1] for chain in thighs])
+    offset[0, 1] = -centre
+    rest.move_roots(skeleton, local, offset)
+    points = rest.skin_vertices(skeleton, local, vertices, weights)
+    return local, max(0.0, float(points[0, :, 2].min())), 'seated'
 
 
-# Choose the seat pose at the size of the current scene.
-def seat_pose_at_size(skeleton, body_rig, base, height, name, vertices, weights, chains, weapons):
-    humanoid = is_humanoid(body_rig)
+# Lift a body onto the seat of the bench: the lowest part above the seat rests on it, what hangs beside the seat may go lower.
+def lift_onto_bench(skeleton, local, vertices, weights):
+    half, near, far = BENCH[:3]
+    scene = SCENE['size']
+    # The same clip plays on both seats of a bench
+    reach = half if SCENE['whole_bench'] else half + SEAT_SIDE
+    for _ in range(4):
+        points = rest.skin_vertices(skeleton, local, vertices, weights)[0] * scene
+        over = (np.abs(points[:, 0]) < reach) & (points[:, 1] > near) & (points[:, 1] < far)
+        if not over.any():
+            return False
+        offset = np.zeros((1, 3))
+        offset[0, 2] = (BENCH_TOP - float(points[over, 2].min())) / scene
+        rest.move_roots(skeleton, local, offset)
+        if abs(offset[0, 2]) < 1e-4:
+            break
+    return True
+
+
+# Roll up the tail of a resting body joint by joint, around the vertical of the body.
+def coil_tail(skeleton, local, body_rig, degrees):
+    if not isinstance(body_rig, list):
+        return
+    for item in body_rig:
+        for chain in item.get('tail', []):
+            for bone in chain:
+                if bone in skeleton.idx:
+                    rest.rotate_joint(skeleton, local, bone, rig.Z_AXIS, np.radians(np.full(1, degrees)))
+
+
+# Return the pose in which a body rests on the bench at full size, in the pose it rests in on the ground: turned along the
+# bench when that stays out of the table, and moved back as little as that takes.
+def resting_pose(skeleton, body_rig, name, vertices, weights):
+    best = None
+    for source_name in REST_SOURCES.get(name, DEFAULT_REST_SOURCES):
+        played = skeleton.clips[source_name]
+        source = skeleton.locals_at(played, np.array([played.length * 0.5]))
+        for turn in REST_TURNS:
+            head = upper_chain(skeleton, body_rig, [])[1]
+            turn_best = None
+            # The tail curls to the side that needs the smaller step back
+            curl = COIL_TAIL_DEGREES if name in COILED_MODELS else CURL_TAIL_DEGREES
+            heads = REST_HEAD_TURNS if head and abs(turn) == 90.0 else (0.0,)
+            for head_turn, tail_turn in [(first, second) for first in heads for second in (curl, -curl)]:
+                local = hold_copy(source)
+                coil_tail(skeleton, local, body_rig, tail_turn)
+                turn_body(skeleton, local, turn)
+                if head_turn > 0.0:
+                    rest.rotate_joint(skeleton, local, head, rig.Z_AXIS, np.radians(np.full(1, -math.copysign(head_turn, turn))))
+                points = rest.skin_vertices(skeleton, local, vertices, weights)[0]
+                offset = np.zeros((1, 3))
+                offset[0, 0] = -0.5 * float(points[:, 0].min() + points[:, 0].max())
+                offset[0, 1] = -0.5 * float(np.percentile(points[:, 1], 10) + np.percentile(points[:, 1], 90))
+                rest.move_roots(skeleton, local, offset)
+                back = 0.0
+                trial = None
+                while back <= REST_BACK_MAX:
+                    trial = hold_copy(local)
+                    offset = np.zeros((1, 3))
+                    offset[0, 1] = back / SCENE['size']
+                    rest.move_roots(skeleton, trial, offset)
+                    if lift_onto_bench(skeleton, trial, vertices, weights):
+                        depth = float(worst_depths(rest.skin_vertices(skeleton, trial, vertices, weights)).max())
+                        if depth <= REST_TOLERANCE:
+                            break
+                    back += REST_BACK_STEP
+                else:
+                    continue
+                if turn_best is None or back < turn_best[1] - REST_HEAD_ADVANTAGE:
+                    turn_best = (trial, back, turn)
+            # A later turn only wins with a clearly smaller step back
+            if turn_best is not None and (best is None or turn_best[1] < best[1] - REST_TURN_ADVANTAGE):
+                best = turn_best
+    assert best is not None, (name, 'no resting pose on the bench')
+    extra = REST_EXTRA_BACK.get(name, 0.0)
+    if extra > 0.0:
+        offset = np.zeros((1, 3))
+        offset[0, 1] = extra / SCENE['size']
+        rest.move_roots(skeleton, best[0], offset)
+        lift_onto_bench(skeleton, best[0], vertices, weights)
+    return best[0], best[1] + extra, best[2]
+
+
+# Choose the pose of the guest on the bench at full size: it sits on its legs or rests on the bench.
+def seat_pose(skeleton, body_rig, base, height, name, vertices, weights, chains):
+    weapons = [] if name in RESTING_MODELS else long_weapons(skeleton, base, body_rig, vertices, weights)
+    if name not in RESTING_MODELS:
+        try:
+            found = seat_pose_on_legs(skeleton, body_rig, base, height, name, vertices, weights, chains, weapons)
+        except AssertionError:
+            found = None
+        if found is not None and found[2]['body_depth'] <= SEATED_LIMIT:
+            return found + (weapons,)
+    local, back, turn = resting_pose(skeleton, body_rig, name, vertices, weights)
+    carrying = vertices_without(weights, free_bones(skeleton, body_rig))
+    support = float(rest.skin_vertices(skeleton, local, vertices, weights)[0, carrying, 2].min())
+    return local, support, {'mode': 'resting', 'foot_reach': 0.0, 'rear': 0.0, 'back_shift': back, 'turn': turn}, carrying, []
+
+
+# Choose the seat pose of a body that sits on its legs.
+def seat_pose_on_legs(skeleton, body_rig, base, height, name, vertices, weights, chains, weapons):
     carrying = vertices_without(weights, free_bones(skeleton, body_rig))
     without_arms = vertices_without(weights, arm_bones(skeleton, body_rig) | free_bones(skeleton, body_rig))
+    # Everything but the arms decides the place of the feet, the height of the pelvis and how far the body moves back and turns
     best = None
-    for share in FOOT_REACH if humanoid else (0.0,):
-        original, support, mode = seat_candidate(skeleton, body_rig, base, height, name, vertices, weights, chains, height * share)
-        for degrees in (0.0,) if humanoid else REAR_ANGLES:
-            local = copy.deepcopy(original)
-            rear_up(skeleton, local, body_rig, degrees)
-            if mode == 'perched':
-                place_on_bench(skeleton, local, vertices, weights, carrying)
-            depth = table_depth(rest.skin_vertices(skeleton, local, vertices, weights), without_arms, not humanoid)
-            if best is None or depth < best[3] - 1e-4:
-                best = (local, support, mode, depth, share, degrees)
-            if depth <= 0.0:
+    solved = {}
+    spreads = SEAT_SPREADS if SCENE['whole_bench'] else SEAT_SIDE_SPREADS
+    furthest = LARGE_BACK_SHIFTS.get(name, MAX_BACK_SHIFT)
+    choices = [(turn, spread, raised, share) for turn in SEAT_TURNS for spread in spreads for raised in HIP_RAISES for share in FOOT_REACH]
+    for turn, spread, raised, share in choices:
+        key = (spread, raised, share)
+        if key not in solved:
+            try:
+                local, support, mode = seat_candidate(skeleton, body_rig, base, height, name, vertices, weights, chains, height * share, raised, spread)
+                solved[key] = (local, support, mode, rest.skin_vertices(skeleton, local, vertices, weights)[:, without_arms])
+            except AssertionError:
+                solved[key] = None
+        if solved[key] is None:
+            continue
+        local, support, mode, points = solved[key]
+        angle = math.radians(turn)
+        turned = points.copy()
+        turned[:, :, 0] = points[:, :, 0] * math.cos(angle) - points[:, :, 1] * math.sin(angle)
+        turned[:, :, 1] = points[:, :, 0] * math.sin(angle) + points[:, :, 1] * math.cos(angle)
+        for step in np.arange(0.0, furthest + 1e-6, SEAT_BACK_STEP):
+            depth = float(worst_depths(turned + np.array([0.0, step / SCENE['size'], 0.0])).max())
+            if best is None or depth < best[3] - SEAT_GAIN:
+                best = (local, support, mode, depth, share, step / SCENE['size'], turn, raised, spread)
+            if depth <= SEAT_TOLERANCE:
                 break
-        if best[3] <= 0.0:
+        if best is not None and best[3] <= SEAT_TOLERANCE:
             break
-    local, support, mode, depth, share, degrees = best
-    back = min(depth, MAX_BACK_SHIFT / SCENE['size'])
+    assert best is not None, (name, 'no seated leg solution')
+    local, support, mode, depth, share, back, turn, raised, spread = best
+    local = hold_copy(local)
+    if turn > 0.0:
+        turn_body(skeleton, local, turn)
+        spine, head = upper_chain(skeleton, body_rig, chains)
+        if head:
+            rest.rotate_joint(skeleton, local, head, rig.Z_AXIS, np.radians(np.full(1, -turn)))
     if back > 0.0:
         offset = np.zeros((1, 3))
         offset[0, 1] = back
         rest.move_roots(skeleton, local, offset)
-    if humanoid:
-        floor = float(rest.skin_vertices(skeleton, base, vertices, weights)[0, :, 2].min())
-        hold_weapons_upright(skeleton, local, weapons)
-        relax_arms(skeleton, local, base, body_rig, vertices, weights, floor)
-        hold_weapons_upright(skeleton, local, weapons)
-        remaining = table_depth(rest.skin_vertices(skeleton, local, vertices, weights))
-        extra = 0.0
-        if remaining > TABLE_TOLERANCE / SCENE['size']:
-            extra = min(remaining, max(0.0, MAX_ARM_BACK_SHIFT / SCENE['size'] - back))
-        if extra > 0.0:
-            offset = np.zeros((1, 3))
-            offset[0, 1] = extra
-            rest.move_roots(skeleton, local, offset)
-            back += extra
-        # A hunched body straightens up on the bench to stay out of the table; its arms follow it
-        spine, head = upper_chain(skeleton, body_rig, chains)
-        straighten_seat(skeleton, local, spine, head, vertices, weights)
-        relax_arms(skeleton, local, base, body_rig, vertices, weights, floor)
-        hold_weapons_upright(skeleton, local, weapons)
-    return local, support, {'mode': mode, 'foot_reach': share, 'rear': degrees, 'back_shift': back * SCENE['size']}, carrying
+    floor = float(rest.skin_vertices(skeleton, base, vertices, weights)[0, :, 2].min())
+    hold_weapons_upright(skeleton, local, weapons)
+    relax_arms(skeleton, local, base, body_rig, vertices, weights, floor)
+    hold_weapons_upright(skeleton, local, weapons)
+    # A hunched body straightens up on the bench to stay out of the table; its arms follow it
+    spine, head = upper_chain(skeleton, body_rig, chains)
+    straighten_seat(skeleton, local, spine, head, vertices, weights)
+    relax_arms(skeleton, local, base, body_rig, vertices, weights, floor)
+    hold_weapons_upright(skeleton, local, weapons)
+    return local, support, {'mode': mode, 'foot_reach': share, 'rear': 0.0, 'back_shift': back * SCENE['size'], 'turn': turn, 'raised': raised,
+                            'spread': spread, 'body_depth': depth}, carrying
 
 
 # Repeat a hold pose for the frames of a clip.
@@ -1010,12 +1084,12 @@ def upper_chain(skeleton, body_rig, chains):
 
 
 # Turn the upper body as a reaction to a slap: it swings away, comes back and settles.
-def slapped_clip(skeleton, seated, times, length, spine, head):
+def slapped_clip(skeleton, seated, times, length, spine, head, share_of_slap):
     count = len(times)
     local = hold(seated, count)
     progress = times / length
-    decay = np.exp(-3.5 * progress) * np.sin(2.0 * math.pi * SLAP_OSCILLATIONS * progress) * (1.0 - progress)
-    tilt = np.exp(-4.0 * progress) * np.sin(math.pi * np.minimum(1.0, progress * 3.0)) * (1.0 - progress)
+    decay = share_of_slap * np.exp(-3.5 * progress) * np.sin(2.0 * math.pi * SLAP_OSCILLATIONS * progress) * (1.0 - progress)
+    tilt = share_of_slap * np.exp(-4.0 * progress) * np.sin(math.pi * np.minimum(1.0, progress * 3.0)) * (1.0 - progress)
     bones = spine + ([head] if head else [])
     for bone in bones:
         share = 1.0 / len(bones)
@@ -1060,6 +1134,23 @@ def keep_on_support(skeleton, local, vertices, weights, support, carrying):
         rest.move_roots(skeleton, local, offset)
 
 
+# Return the vertices and weights of a body with the mug it drinks from in its right hand, or as they are without that hand.
+def with_mug(skeleton, vertices, weights, mesh):
+    if MUG_BONE not in skeleton.idx:
+        return vertices, weights
+    path = mesh.parent / (MUG_MESH + '.xml')
+    # The outline of a mug is enough for a collision and its full mesh slows every measure down
+    mug = rest.mesh_data(path)[0]
+    mug = mug[::max(1, len(mug) // MUG_POINTS)]
+    bone = skeleton.idx[MUG_BONE]
+    bind = skeleton.fk([(skeleton.rest_pos[index][None], skeleton.rest_q[index][None], skeleton.rest_s[index][None])
+                        for index in range(len(skeleton.names))])[bone]
+    # The mesh of an attached item is turned from the upright of its file to the axes of the bone
+    turned = mug @ MUG_TURN.T
+    placed = (turned * bind[2][0]) @ bind[1][0].T + bind[0][0]
+    return np.concatenate((np.asarray(vertices), placed)), list(weights) + [[(bone, 1.0)] for _ in range(len(placed))]
+
+
 # Serialize a clip; a bone that does not move in the clip gets two keys instead of all of them.
 def clip_xml(skeleton, local, times, name, length):
     lines = ['<animation name="' + name + '" length="' + str(float(length)) + '"><tracks>']
@@ -1096,6 +1187,8 @@ def author(source, mesh, destination):
     height = float(np.ptp(points[0, :, 2]))
     chains = leg_chains(skeleton, name, vertices, weights, base)
     humanoid = is_humanoid(body_rig)
+    SCENE['whole_bench'] = name in LARGE_MODELS
+    SCENE['size'] = LEVEL_SCALE_MIDDLE
     seated, support, info, carrying, weapons = seat_pose(skeleton, body_rig, base, height, name, vertices, weights, chains)
     info['long_weapons'] = [hand for hand, _ in weapons]
     upper_only = humanoid or (isinstance(body_rig, list) and all(item['kind'] == 'torso' for item in body_rig))
@@ -1107,22 +1200,28 @@ def author(source, mesh, destination):
     blocks = []
 
     # Keeps a body that is not seated on its legs on what carries it
-    # (in the units of the model: the seat scale comes after this)
     def settle(local):
         if not humanoid:
             keep_on_support(skeleton, local, vertices, weights, support, carrying)
 
+    body_vertices_only, body_weights_only = vertices, weights
     for clip, length, keys, source_clip, looped in CLIPS:
+        vertices, weights = with_mug(skeleton, body_vertices_only, body_weights_only, mesh) if clip == 'SitDrink' else (body_vertices_only, body_weights_only)
         played = skeleton.clips[source_clip] if source_clip else None
         if length is None:
             length = float(played.length)
         times = np.linspace(0.0, length, keys)
+        # The arm with the mug starts a little higher than in the seat pose where the mug would reach into the table
+        start = seated
+        if clip == 'SitDrink':
+            start = hold_copy(seated)
+            relax_arms(skeleton, start, base, body_rig, vertices, weights, floor)
         if source_clip and upper_only:
-            local = upper_body_clip(skeleton, seated, base, played, times, length, fixed)
+            local = upper_body_clip(skeleton, start, base, played, times, length, fixed)
         elif source_clip:
-            local = whole_body_clip(skeleton, seated, base, played, times, length)
+            local = whole_body_clip(skeleton, start, base, played, times, length)
         elif clip == 'SitSlapped':
-            local = slapped_clip(skeleton, seated, times, length, spine, head)
+            local = slapped_clip(skeleton, seated, times, length, spine, head, RESTING_SLAP_SHARE if info['mode'] == 'resting' else 1.0)
         elif clip == 'SitSlumped':
             limit = SLUMP_BOW if isinstance(body_rig, list) and any(item.get('spine') for item in body_rig) else info['rear']
             local = slumped_clip(skeleton, seated, times, length, spine, head, vertices, weights, limit, settle)
@@ -1131,6 +1230,7 @@ def author(source, mesh, destination):
             local = hold(seated, keys)
             alive(skeleton, local, body_rig, name, times, head)
         hold_weapons_upright(skeleton, local, weapons)
+        unrouted = hold_copy(local)
         if source_clip:
             lift_arms_over_table(skeleton, local, times, length, body_rig, vertices, weights)
         if source_clip or clip == 'SitSlapped':
@@ -1141,9 +1241,19 @@ def author(source, mesh, destination):
             for _ in range(ROUTE_PASSES):
                 local = route_arms_over_table(skeleton, local, body_rig, vertices, weights)
                 hold_weapons_upright(skeleton, local, weapons)
-        local = keep_out_of_table(skeleton, local, seated, vertices, weights, height, length / (keys - 1))
+        free_motion = clip_motion(skeleton, local, vertices, weights)[0]
+        local = keep_out_of_table(skeleton, local, start, vertices, weights, height, length / (keys - 1))
+        if source_clip and clip_motion(skeleton, local, vertices, weights)[0] < LOW_MOTION_SHARE * free_motion:
+            calmer = spine_only(skeleton, start, unrouted, keys, spine, head)
+            calmer = keep_out_of_table(skeleton, calmer, start, vertices, weights, height, length / (keys - 1))
+            if clip_motion(skeleton, calmer, vertices, weights)[0] > clip_motion(skeleton, local, vertices, weights)[0]:
+                local = calmer
+        local = calm_clip(skeleton, local, start, vertices, weights, height, length / (keys - 1))
+        # An arm that stays far too fast around the table rests and leaves the clip to the spine and the head
+        if source_clip and clip_motion(skeleton, local, vertices, weights)[1] > 2.0 * MAX_CLIP_SPEED * height * length / (keys - 1):
+            local = keep_out_of_table(skeleton, spine_only(skeleton, start, unrouted, keys, spine, head), start, vertices, weights,
+                                      height, length / (keys - 1))
         settle(local)
-        apply_seat_scale(skeleton, local, info['size'])
         posed = rest.skin_vertices(skeleton, local, vertices, weights)
         report['clips'][clip] = {
             'length': length,
@@ -1151,9 +1261,10 @@ def author(source, mesh, destination):
             'lowest': float(posed[:, carrying, 2].min()),
             'highest': float(posed[:, :, 2].max()),
             'end_error': float(np.abs(posed[0] - posed[-1]).max() / height),
+            'motion': float(np.linalg.norm(posed - posed[:1], axis=2).max() / height),
+            'free_motion': float(free_motion / height),
             'step': float(np.linalg.norm(np.diff(posed, axis=0), axis=2).max() / height)}
         blocks.append(clip_xml(skeleton, local, times, clip, length))
-    SCENE['size'] = 1.0
     text = source.read_text(encoding='utf-8')
     head_part = text[:text.index('<animations>')]
     destination.write_text(head_part + '<animations>\n' + '\n'.join(blocks) + '\n</animations>\n</skeleton>\n', encoding='utf-8')
@@ -1174,8 +1285,7 @@ def main():
                         args.output / (name + '.seats.skeleton.xml'))
         (args.output / (name + '.seats.json')).write_text(json.dumps(report, indent=1) + '\n', encoding='utf-8')
         print(name, report['mode'], 'support', round(report['support'], 3), 'reach', report['foot_reach'],
-              'rear', report['rear'], 'back', round(report['back_shift'], 3), 'size', report['size'],
-              'lengthwise', report['lengthwise'], 'weapons', report['long_weapons'], 'depth',
+              'back', round(report['back_shift'], 3), 'turn', report['turn'], 'weapons', report['long_weapons'], 'depth',
               {clip: round(values['table_depth'], 3) for clip, values in report['clips'].items()}, flush=True)
 
 
