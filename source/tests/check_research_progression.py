@@ -143,7 +143,7 @@ struct SkillManager {
 };
 SkillManager& getSkillManager(){static SkillManager m;return m;}
 #include "ai/AiSaveFormat.h"
-//! rief Fixture spell name table for the saved spell cooldown block.
+//! \brief Fixture spell name table for the saved spell cooldown block.
 struct SpellManager {static const std::string& getSpellNameFromSpellType(SpellType){static std::string n="x";return n;}static SpellType getSpellTypeFromSpellName(const std::string&){return SpellType::nullSpellType;}};
 struct GameMap {bool server=true;bool isServerGameMap()const{return server;}bool isInEditorMode()const{return false;}};
 struct Player {
