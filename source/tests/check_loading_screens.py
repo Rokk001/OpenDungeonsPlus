@@ -72,6 +72,14 @@ def main():
     groups = (root / "source/renderscene/RenderSceneGroup.cpp").read_text(encoding="utf-8")
     reset = groups.split("void RenderSceneGroup::reset(", 1)[1].split("void RenderSceneGroup::freeGroup(", 1)[0]
     assert reset.index("scene->activate(") < reset.index("LoadingScreen::presentStartup();") < reset.index("++mIndexScene;"), "refresh between synchronous menu commands"
+    update = source.split("void LoadingScreen::update()", 1)[1]
+    fallback = update.split("if(loadingText == nullptr)", 1)[1].split("previousRootAlpha", 1)[0]
+    assert 'createWindow("OD/StaticText")' in fallback and 'setText("Loading...")' in fallback, "missing fallback loading text"
+    assert "root->addChild(temporaryLoadingText);" in fallback and "loadingText = temporaryLoadingText;" in fallback, "fallback text must be attached and shown"
+    restore = source.split("void restoreLoadingInterface()", 1)[1].split("bool loadingRootDestroyed", 1)[0]
+    assert "destroyWindow(temporaryLoadingText);" in restore, "temporary loading text must be removed"
+    destroyed = source.split("bool loadingRootDestroyed", 1)[1].split("void fitLoadingImage", 1)[0]
+    assert "temporaryLoadingText = nullptr;" in destroyed, "root destruction must clear the temporary text pointer"
     finish = source.split("void LoadingScreen::finish()", 1)[1].split("void LoadingScreen::update()", 1)[0]
     for cleanup in ("removeViewport(STARTUP_VIEWPORT_ORDER)", "destroySceneManager(startupScene)", 'destroyResourceGroup("StartupLoading")'):
         assert cleanup in finish, f"missing startup resource cleanup: {cleanup}"
