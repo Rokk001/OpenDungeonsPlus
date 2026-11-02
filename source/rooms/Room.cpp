@@ -15,6 +15,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ai/AiMind.h"
+#include "ai/AiEconomy.h"
+#include "ai/KeeperAI.h"
 #include "rooms/Room.h"
 
 #include "creatureaction/CreatureActionSearchJob.h"
@@ -282,6 +285,7 @@ void Room::fireTakeoverEvent(Seat* oldSeat, Seat* newSeat, const std::vector<Til
     }
 }
 
+//! \brief Reports a captured room to its new human owner and its former keeper.
 void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
 {
     if(!getGameMap()->isServerGameMap())
@@ -309,6 +313,12 @@ void Room::notifyOwnerChanged(Seat* oldSeat, Seat* newSeat)
             ServerNotificationType::chatServer, oldPlayer);
         serverNotification->mPacket << "A room has been lost" << EventShortNoticeType::majorGameEvent;
         ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+    else if(oldPlayer != nullptr && !oldPlayer->getHasLost())
+    {
+        AiEvent event = {AiEventType::RoomLost, numCoveredTiles() > 0 ? getCoveredTile(0) : nullptr, nullptr, newSeat->getId(), static_cast<double>(getType()),
+            getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+        getGameMap()->notifyAi(*oldPlayer, event);
     }
 }
 
@@ -476,6 +486,7 @@ double Room::takeDamage(GameEntity* attacker, double absoluteDamage, double phys
     return Building::takeDamage(attacker, absoluteDamage, physicalDamage, magicalDamage, elementDamage, tileTakingDamage, ko);
 }
 
+//! \brief Transfers room tiles to a new owner and records their loss for the AI.
 Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
 {
     // Lowest common point of every owner change of a room: the dungeon heart stays with its owner
@@ -494,6 +505,13 @@ Room* Room::handTilesOverToSeat(Seat* seat, const std::vector<Tile*>& tiles)
     if(newRoom == nullptr)
         return nullptr;
 
+    if(gameMap->isServerGameMap() && getSeat() != nullptr && getSeat() != seat &&
+       getSeat()->getPlayer() != nullptr && !getSeat()->getPlayer()->getIsHuman())
+    {
+        KeeperAI* ai = dynamic_cast<KeeperAI*>(gameMap->getAI(*getSeat()->getPlayer()));
+        if(ai != nullptr)
+            ECON::forgetRoomTiles(*ai, tiles);
+    }
     newRoom->setIsOnMap(true);
     newRoom->setName(gameMap->nextUniqueNameRoom(newRoom->getType()));
     newRoom->setSeat(seat);

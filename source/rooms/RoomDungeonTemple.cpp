@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ai/AiMind.h"
 #include "rooms/RoomDungeonTemple.h"
 
 #include "entities/BuildingObject.h"
@@ -442,6 +443,13 @@ double RoomDungeonTemple::getHeartMaxHP() const
     return ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartHP", 15100.0) * getHeartHPFactor();
 }
 
+//! \brief The heart healing per second with the heart healing research of the owner, as the upkeep heals it.
+double RoomDungeonTemple::getHeartHealPerSecond() const
+{
+    return SkillManager::getResearchValue(getSeat(), SkillType::keeperHeartMending,
+        ConfigManager::getSingleton().getRoomConfigDouble("DungeonHeartHealPerSecond"), ResearchEffect::HeartHeal);
+}
+
 double RoomDungeonTemple::getHeartHealthFraction() const
 {
     const double maxHP = getHeartMaxHP();
@@ -457,6 +465,7 @@ bool RoomDungeonTemple::canAttackHeart(Tile* tile, Seat* seat) const
         && getHP(nullptr) > 0.0;
 }
 
+//! \brief Applies heart damage and reports fights and the critical health warning.
 double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteDamage,
     double physicalDamage, double magicalDamage, double elementDamage,
     Tile* tileTakingDamage)
@@ -506,6 +515,12 @@ double RoomDungeonTemple::takeHeartDamage(GameEntity* attacker, double absoluteD
             serverNotification->mPacket << "Your dungeon heart is in critical condition!"
                 << EventShortNoticeType::majorGameEvent;
             ODServer::getSingleton().queueServerNotification(serverNotification);
+        }
+        else if(owner != nullptr && !owner->getHasLost())
+        {
+            AiEvent event = {AiEventType::HeartCritical, tileTakingDamage, nullptr, -1, 0.0,
+                getGameMap()->getTurnNumber() / static_cast<double>(ODApplication::turnsPerSecond)};
+            getGameMap()->notifyAi(*owner, event);
         }
     }
     if(getSeat()->getPlayer() != nullptr)
@@ -1067,7 +1082,7 @@ Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
     }
 }
 
-//! \brief Applies gifts delivered to the heart and leaves gold to the treasury.
+//! \brief Applies delivered gifts, stores specials, and leaves gold to the treasury.
 void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     // A gold delivery is deposited through the covering room (the treasury ring), the same
@@ -1090,16 +1105,19 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
         {
             GiftBoxEntity* giftBox = static_cast<GiftBoxEntity*>(carriedEntity);
             Player* owner = getSeat()->getPlayer();
-            if((giftBox->getGiftBoxType() != GiftBoxType::skill) && (owner != nullptr) && owner->getIsHuman())
+            if((giftBox->getGiftBoxType() != GiftBoxType::skill) && (owner != nullptr))
             {
                 // The special is kept as a button, the player decides when to use it
                 GiftBoxBonus* bonus = static_cast<GiftBoxBonus*>(giftBox);
                 getSeat()->addStoredSpecial(bonus->getGiftBoxType(), bonus->getAmount());
-                ServerNotification* serverNotification = new ServerNotification(
-                    ServerNotificationType::chatServer, owner);
-                std::string msg = "You received the special: " + GiftBoxBonus::getDisplayName(bonus->getGiftBoxType()) + ".";
-                serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
-                ODServer::getSingleton().queueServerNotification(serverNotification);
+                if(owner->getIsHuman())
+                {
+                    ServerNotification* serverNotification = new ServerNotification(
+                        ServerNotificationType::chatServer, owner);
+                    std::string msg = "You received the special: " + GiftBoxBonus::getDisplayName(bonus->getGiftBoxType()) + ".";
+                    serverNotification->mPacket << msg << EventShortNoticeType::majorGameEvent;
+                    ODServer::getSingleton().queueServerNotification(serverNotification);
+                }
             }
             else
             {

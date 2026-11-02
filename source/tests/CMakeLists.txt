@@ -27,6 +27,14 @@ add_boost_test(00-Random
         ${SRC}/utils/Random.h
         ${SRC}/utils/Random.cpp)
 
+add_boost_test(00-AiLevels
+        SOURCES
+        test_AiLevels.cpp
+        ${SRC}/ai/AiMath.h
+        ${SRC}/ai/AiMath.cpp
+        ${SRC}/ai/AiSaveFormat.h
+        ${SRC}/ai/AiSaveFormat.cpp)
+
 add_boost_test(00-SocialGenerator
         SOURCES
         test_SocialGenerator.cpp
@@ -156,6 +164,13 @@ add_boost_test(00-LevelScript
 add_boost_test(00-Campaign
         SOURCES
         test_Campaign.cpp
+        ${SRC}/game/Campaign.h
+        ${SRC}/game/Campaign.cpp
+        ${SRC}/game/CampaignWorld.cpp)
+
+add_boost_test(00-CampaignLevels
+        SOURCES
+        test_CampaignLevels.cpp
         ${SRC}/game/Campaign.h
         ${SRC}/game/Campaign.cpp
         ${SRC}/game/CampaignWorld.cpp)

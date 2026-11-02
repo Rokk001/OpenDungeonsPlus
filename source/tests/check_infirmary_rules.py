@@ -420,6 +420,8 @@ def room_declaration():
  void cancelReservation(Creature&);
  //! \brief Executes production admission handling when a carrier reaches its destination.
  void notifyCarryingStateChanged(Creature*,GameEntity*);
+ //! \brief Executes the shared wounded-admission test used by the AI pre-check and the manual drop.
+ bool canAdmitWounded(Creature&);
  //! \brief Executes the actual manual-drop eligibility and keeper-payment rule.
  void creatureDropped(Creature&);
  //! \brief Records a cot's tile without creating a rendered building object.
@@ -451,7 +453,7 @@ def main():
             "void RoomInfirmary::releasePatient(", "bool RoomInfirmary::restPatient(",
             "void RoomInfirmary::abandon(", "void RoomInfirmary::abandonAll(",
             "int RoomInfirmary::cotSize(", "size_t RoomInfirmary::findCot(",
-            "bool RoomInfirmary::hasCarryEntitySpot(", "Tile* RoomInfirmary::reserveCot(",
+            "bool RoomInfirmary::hasCarryEntitySpot(", "bool RoomInfirmary::canAdmitWounded(", "Tile* RoomInfirmary::reserveCot(",
             "Tile* RoomInfirmary::askSpotForCarriedEntity(", "void RoomInfirmary::cancelReservation(",
             "void RoomInfirmary::notifyCarryingStateChanged(", "void RoomInfirmary::creatureDropped("):
         code += function(core, signature) + "\n"
@@ -502,7 +504,7 @@ int main(){try{
  seat.payer=1;check(room.payAdmission(creature,false,amount,payer),"creature admission accepted");
  near(creature.gold,82.6,"purse exact charge");near(map.credited,17.4,"purse admission credited");near(creature.mInfirmaryMood,-36,"creature fee mood");
  check(room.payAdmission(creature,true,amount,payer)&&payer==0,"manual drop forces keeper");near(creature.gold,82.6,"manual leaves purse");
- seat.player.human=false;check(room.payAdmission(creature,false,amount,payer)&&payer==0,"AI forces keeper");seat.player.human=true;
+ seat.player.human=false;double purseBefore=creature.gold;check(room.payAdmission(creature,false,amount,payer)&&payer==1,"AI payer settable like a human's");near(creature.gold,purseBefore-17.4,"AI pays from the purse");seat.player.human=true;
  creature.gold=17.3;double before=map.credited;check(!room.payAdmission(creature,false,amount,payer),"insufficient purse refuses");near(map.credited,before,"refusal no partial charge");
  seat.payer=0;treasury.gold=17.3;before=map.treasury;check(!room.payAdmission(creature,false,amount,payer),"insufficient treasury refuses");near(map.treasury,before,"keeper refusal no partial charge");treasury.gold=1000;
  for(double wage:{58.0,2320.0})for(double maximum:{100.0,1703.0})for(double factor:{1.0,.8,.667}){

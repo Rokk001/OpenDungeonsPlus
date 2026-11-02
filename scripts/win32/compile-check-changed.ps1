@@ -84,7 +84,11 @@ if ($free -lt 2048) { "RAM too low: $free MB" | Out-File -Encoding ascii $log; e
 
 $files = @(& git -C $wt diff --name-only --diff-filter=AM "$Base...HEAD" -- source | Where-Object { $_ -like '*.cpp' })
 $rsp = "$outDir\args.rsp"
-(Get-ReleaseCompilerArgs) | Out-File -Encoding ascii $rsp
+# Boost test sources include a header that cmake generates only in a test-enabled build folder; give them the header-only variant.
+$boostConfigDir = "$outDir\boostcfg"
+New-Item -ItemType Directory -Force $boostConfigDir | Out-Null
+Copy-Item -Force "$wt\cmake\modules\BoostTestTargets\BoostTestTargetsIncluded.h" "$boostConfigDir\BoostTestTargetConfig.h"
+(Get-ReleaseCompilerArgs) + @('/I' + (Format-RspArg $boostConfigDir)) | Out-File -Encoding ascii $rsp
 "compile check of $($files.Count) file(s) against $Base" | Out-File -Encoding ascii $log
 $failed = 0
 foreach ($f in $files) {

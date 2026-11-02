@@ -179,7 +179,7 @@ bool SpellCreatureWeak::castSpell(GameMap* gameMap, Player* player, ODPacket& pa
         ConfigManager::getSingleton().getSpellConfigDouble("CreatureWeakValue"), ResearchEffect::Factor);
     CreatureEffectStrengthChange* effect = new CreatureEffectStrengthChange(duration, value, "SpellCreatureWeak");
     creature->addCreatureEffect(effect);
-    fireSpellEffect(*pos, "Weak", "WeakCast");
+    fireSpellEffect(*pos, "Weak", "WeakCast", gameMap, player->getSeat());
 
     return true;
 }

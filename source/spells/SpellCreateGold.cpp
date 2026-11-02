@@ -145,7 +145,7 @@ bool SpellCreateGold::castSpell(GameMap* gameMap, Player* player, ODPacket& pack
                                 static_cast<Ogre::Real>(0.0));
     obj->createMesh();
     obj->setPosition(spawnPosition);
-    fireSpellEffect(*tile, "Gold", "GoldCast");
+    fireSpellEffect(*tile, "Gold", "GoldCast", gameMap, player->getSeat());
 
     return true;
 }

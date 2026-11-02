@@ -231,8 +231,32 @@ set(OD_SOURCEFILES
     #OpenDungeons sources
     ${SRC}/ai/AIFactory.cpp
     ${SRC}/ai/AiKnowledge.cpp
+    ${SRC}/ai/AiWar.cpp
+    ${SRC}/ai/AiMath.cpp
+    ${SRC}/ai/AiMind.cpp
+    ${SRC}/ai/AiMath.h
+    ${SRC}/ai/AiEvents.h
+    ${SRC}/ai/AiEvents.cpp
+    ${SRC}/ai/AiActions.cpp
+    ${SRC}/ai/AiItems.cpp
+    ${SRC}/ai/AiItems.h
+    ${SRC}/ai/AiCare.cpp
+    ${SRC}/ai/AiCare.h
+    ${SRC}/ai/AiPrison.cpp
+    ${SRC}/ai/AiPrison.h
+    ${SRC}/ai/AiActions.h
+    ${SRC}/ai/AiMind.h
+    ${SRC}/ai/AiSpells.cpp
+    ${SRC}/ai/AiSpells.h
+    ${SRC}/ai/AiTraps.cpp
+    ${SRC}/ai/AiTraps.h
     ${SRC}/ai/AIManager.cpp
     ${SRC}/ai/BaseAI.cpp
+    ${SRC}/ai/AiSaveFormat.h
+    ${SRC}/ai/AiSaveFormat.cpp
+    ${SRC}/ai/AiEconomy.cpp
+    ${SRC}/ai/AiRooms.cpp
+    ${SRC}/ai/AiResearch.cpp
     ${SRC}/ai/KeeperAI.cpp
     ${SRC}/ai/KeeperAIType.cpp
 

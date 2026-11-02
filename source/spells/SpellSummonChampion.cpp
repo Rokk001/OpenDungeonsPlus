@@ -170,7 +170,7 @@ bool SpellSummonChampion::castSpell(GameMap* gameMap, Player* player, ODPacket& 
     champion->createMesh();
     champion->setPosition(spawnPosition);
     player->getSeat()->notifyCreatureArrival(definition->getClassName());
-    fireSpellEffect(*tile, "Champion", "ChampionCast");
+    fireSpellEffect(*tile, "Champion", "ChampionCast", gameMap, player->getSeat());
 
     return true;
 }

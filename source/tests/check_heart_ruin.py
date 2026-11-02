@@ -139,7 +139,8 @@ struct Room:Building {
  void removeAllBuildingObjects(){objectsRemoved+=static_cast<int>(mBuildingObjects.size());mBuildingObjects.clear();}
 };
 struct PlainRoom:Room {PlainRoom(GameMap* m,Seat* s):Room(m,s){}};
-struct GameMap {bool editor=false;int fights=0,sounds=0;std::vector<Room*> mRooms;std::vector<Seat*> seats;
+enum class AiEventType {HeartCritical};struct Creature;struct AiEvent {AiEventType type;Tile* tile;Creature* creature;int otherSeatId;double amount;double time;};
+struct GameMap {bool editor=false;int fights=0,sounds=0; int notified=0;void notifyAi(Player&,const AiEvent&){++notified;}std::vector<Room*> mRooms;std::vector<Seat*> seats;
  bool isInEditorMode(){return editor;}void playerIsFighting(Player*,Tile*){++fights;}
  int64_t getTurnNumber()const{return 0;}std::vector<Seat*>& getSeats(){return seats;}std::vector<Room*>& getRooms(){return mRooms;}
  void fireRelativeSound(std::vector<Seat*>&,SoundRelativeKeeperStatements){++sounds;}

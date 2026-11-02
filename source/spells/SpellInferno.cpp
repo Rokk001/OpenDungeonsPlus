@@ -155,7 +155,7 @@ bool SpellInferno::castSpell(GameMap* gameMap, Player* player, ODPacket& packet)
     if(!player->getSeat()->takeMana(price))
         return false;
 
-    fireSpellEffect(*tileTarget, "Inferno", "InfernoCast");
+    fireSpellEffect(*tileTarget, "Inferno", "InfernoCast", gameMap, player->getSeat());
 
     double radius = ConfigManager::getSingleton().getSpellConfigDouble("InfernoRadiusTiles");
     double damagePerTurn = SkillManager::getResearchValue(player->getSeat(), SkillType::spellInferno,

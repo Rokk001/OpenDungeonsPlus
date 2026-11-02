@@ -130,8 +130,13 @@ ai = read('source/ai/KeeperAI.cpp')
 wanted = ai[ai.index('static const std::vector<RoomType> wantedBuildings = {'):]
 wanted = wanted[:wanted.index('};')]
 order = re.findall(r'RoomType::(\w+)', wanted)
-assert order[:3] == ['dormitory', 'toilet', 'treasury'], order
-assert order.count('toilet') == 1
+# The compiled room order and the [RoomPlan] order of ai.cfg are the same whole list of the plan
+plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', read('config/ai.cfg'), re.M | re.S).group(1)
+plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+compiled_names = re.findall(r'"(\w+)"', re.search(r'wantedBuildingKeys = \{(.*?)\};', ai, re.S).group(1))
+assert plan_names == ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture'], plan_names
+assert compiled_names == plan_names, compiled_names
+assert plan_names.index('toilet') == 8 and plan_names.count('toilet') == 1
 
 # 8. Research tree order: the toilet entry follows the casino entry in the tier II row
 assert registered.index('roomCasino') + 1 == registered.index('roomToilet'), 'the toilet follows the casino in the tree'

@@ -6,7 +6,7 @@ untracked files); the existing code is never reported. Rules:
 
   auto            `auto` used as a type in C++ files (source/**, *.cpp/*.h) and in the C++
                   probes of check scripts.
-  lambda          Lambdas and std::function in new C++. A block that a check script cuts
+  lambda          Lambdas in new C++ (a std::function type is allowed, CLAUDE.md). A block that a check script cuts
                   out of the source may carry the marker comment "// allowed-lambda: <why>"
                   on the same line or on the added line directly above.
   control-char    Control characters 0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F in any added line.
@@ -33,7 +33,7 @@ SELF_PATH = "source/tests/check_coding_rules.py"
 DEFAULT_BASE = "origin/integration/all"
 HOOK_SCRIPT = os.path.join("scripts", "check-protected-content.py")
 
-# Marker that excuses a lambda / std::function in a block a check script cuts out.
+# Marker that excuses a lambda in a block a check script cuts out.
 LAMBDA_MARKER = "allowed-lambda:"
 
 CPP_EXTENSIONS = (".cpp", ".h", ".hpp", ".cc", ".c")
@@ -59,6 +59,7 @@ LAMBDA_PATTERNS = (
                r"(?:->[^{;]*)?\{"),
     re.compile(r"(?<![\w\)\]])\[[^\]\[]*\]\s*\([^)]*\)\s*(?:mutable\s*)?(?:->[^{;]*)?\{"),
 )
+# A lambda assigned to a variable declared with a std::function type is the allowed closure form.
 STD_FUNCTION_PATTERN = re.compile(r"std::function\s*<")
 
 HUNK_PATTERN = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
@@ -180,14 +181,15 @@ def check_cpp_rules(path, lines, violations):
         if not is_comment_only and not stripped.startswith("#"):
             if AUTO_PATTERN.search(code):
                 violations.append((path, line_no, "auto", "write the type out instead of auto"))
-            has_lambda = STD_FUNCTION_PATTERN.search(code) is not None
+            has_lambda = False
+            typed = STD_FUNCTION_PATTERN.search(code) is not None and "=" in code
             for pattern in LAMBDA_PATTERNS:
-                if pattern.search(code):
+                if pattern.search(code) and not typed:
                     has_lambda = True
             excused = LAMBDA_MARKER in text or LAMBDA_MARKER in previous_text
             if has_lambda and not excused:
                 violations.append((path, line_no, "lambda",
-                                   "use a named function; no lambda or std::function "
+                                   "use a named function or give the closure a std::function type "
                                    "(marker: // %s <reason>)" % LAMBDA_MARKER))
         previous_text = text
 

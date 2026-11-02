@@ -116,7 +116,13 @@ assert skill_manager.index('"BeerButton"') < skill_manager.index('"SpaButton"') 
 # 4. The AI builds the spa directly after the tavern
 wanted = re.search(r'wantedBuildings = \{(.*?)\};', keeper_ai, re.S).group(1)
 order = re.findall(r'RoomType::(\w+)', wanted)
-assert order.index('spa') == order.index('tavern') + 1, 'the spa follows the tavern in wantedBuildings: ' + ', '.join(order)
+# The compiled room order and the [RoomPlan] order of ai.cfg are the same whole list of the plan
+plan_section = re.search(r'^\[RoomPlan\]\s*$(.*?)^\[/RoomPlan\]', read('config/ai.cfg'), re.M | re.S).group(1)
+plan_names = [row.split()[0] for row in plan_section.splitlines() if row.strip() and not row.lstrip().startswith('#')]
+compiled_names = re.findall(r'"(\w+)"', re.search(r'wantedBuildingKeys = \{(.*?)\};', keeper_ai, re.S).group(1))
+assert plan_names == ['treasury', 'dormitory', 'hatchery', 'tavern', 'library', 'training', 'workshop', 'casino', 'toilet', 'treasury2', 'merchant', 'guard', 'herbgarden', 'arena', 'prison', 'alchemy', 'infirmary', 'ghostroom', 'spa', 'crypt', 'temple', 'torture'], plan_names
+assert compiled_names == plan_names, compiled_names
+assert plan_names.index('spa') == 18 and plan_names.count('spa') == 1
 
 # 5. The six texts of the post "relaxed"
 texts = re.findall(r'^Post\trelaxed\t\*\t(.+)$', social_cfg, re.M)

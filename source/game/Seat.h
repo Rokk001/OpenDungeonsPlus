@@ -20,6 +20,8 @@
 
 #include "entities/NodeType.h"
 #include "game/SeatData.h"
+#include "ai/KeeperAIType.h"
+#include "spells/SpellType.h"
 #include "game/SeatStatistics.h"
 
 
@@ -288,6 +290,9 @@ public:
     //! uses it later with the button of the special. The boxes are saved with the seat.
     void addStoredSpecial(GiftBoxType type, uint32_t amount);
 
+    //! \brief Returns the amount of the first stored box of this type, which useStoredSpecial consumes next.
+    uint32_t getStoredSpecialAmount(GiftBoxType type) const;
+
     //! \brief Server side. Applies one stored special of the given type and removes it.
     //! Returns false if the seat has none of that type.
     bool useStoredSpecial(GiftBoxType type);
@@ -311,6 +316,9 @@ public:
     
     //! \brief Returns true if this seat can see the given tile and false otherwise
     bool hasVisionOnTile(Tile* tile);
+
+    //! \brief Returns remembered terrain and ownership without revealing a tile's current hidden state.
+    const TileStateNotified* getKnownTileState(Tile* tile) const;
 
     //! \brief Returns true if this seat has been notified about the given tile at least once (server side)
     bool hasSeenTile(Tile* tile);
@@ -471,8 +479,18 @@ public:
     static KeeperAIType playerIdToAIType(int32_t playerId);
     static int32_t aITypeToPlayerId(KeeperAIType type);
 
+    //! \brief Returns the AI level loaded or selected for this seat.
+    KeeperAIType getAiLevel() const { return mAiLevel; }
+    //! \brief Records the selected AI level.
+    void setAiLevel(KeeperAIType level) { mAiLevel = level; }
+    //! \brief Takes the saved AI state for its first turn.
+    std::vector<std::string> takeAiStateLoaded();
+
 private:
     //! \brief The game map this seat belongs to
+    KeeperAIType mAiLevel = KeeperAIType::nbAI;
+    std::vector<std::pair<SpellType, uint32_t>> mSpellCooldownsLoaded;
+    std::vector<std::string> mAiStateLoaded;
     GameMap* mGameMap;
 
     //! \brief The player sitting on this seat

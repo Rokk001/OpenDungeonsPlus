@@ -154,6 +154,9 @@ public:
     void restoreInitialEntityState() override;
 
     // Functions specific to this class.
+    //! \brief Number of beds in this dormitory.
+    inline uint32_t getNbBeds() const
+    { return static_cast<uint32_t>(mBedRoomObjectsInfo.size()); }
     std::vector<Tile*> getOpenTiles();
     Tile* claimTileForSleeping(Tile *t, Creature *c);
     bool releaseTileForSleeping(Tile *t, Creature *c);

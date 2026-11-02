@@ -142,13 +142,17 @@ struct SkillManager {
     static void buildRandomPendingSkillsForSeat(std::vector<SkillType>&,const Seat*);
 };
 SkillManager& getSkillManager(){static SkillManager m;return m;}
-struct GameMap {bool server=true;bool isServerGameMap()const{return server;}};
+#include "ai/AiSaveFormat.h"
+//! \brief Fixture spell name table for the saved spell cooldown block.
+struct SpellManager {static const std::string& getSpellNameFromSpellType(SpellType){static std::string n="x";return n;}static SpellType getSpellTypeFromSpellName(const std::string&){return SpellType::nullSpellType;}};
+struct GameMap {bool server=true;bool isServerGameMap()const{return server;}bool isInEditorMode()const{return false;}};
 struct Player {
     Seat* seat=nullptr;int warnings=0;
     Seat* getSeat()const{return seat;}
     bool getIsHuman()const{return true;}
     bool getHasLost()const{return false;}
     void notifyNoSkillInQueue(){++warnings;}
+    uint32_t getSpellCooldownTurns(SpellType)const{return 0;}
 };
 enum class ServerNotificationType {skillsDone,skillTree,chatServer};
 enum class EventShortNoticeType {aboutSkills};
@@ -196,6 +200,8 @@ struct Seat {
     std::map<SkillType,uint32_t> mResearchLevels;
     Seat(){player.seat=this;}
     Player* getPlayer() {return &player;}
+    Player* getPlayer() const {return const_cast<Player*>(&player);}
+    std::vector<std::pair<SpellType,uint32_t>> mSpellCooldownsLoaded;
     bool isSkilling()const{return mCurrentSkill!=nullptr;}
     uint32_t getNbRooms(RoomType)const{return 1;}
     const std::vector<SkillType>& getSkillDone()const{return mSkillDone;}
@@ -422,7 +428,7 @@ with tempfile.TemporaryDirectory(prefix="research-progression-") as directory:
     subprocess.run([
         "cl", "/nologo", "/EHsc", "/MD", "/std:c++17",
         f"/I{root / 'source'}", f"/I{prefix / 'include'}", f"/I{prefix / 'include/OGRE'}",
-        str(cpp), str(root / "source/network/ODPacket.cpp"), str(root / "source/game/SkillType.cpp"), str(root / "source/utils/NameAliases.cpp"),
+        str(cpp), str(root / "source/network/ODPacket.cpp"), str(root / "source/game/SkillType.cpp"), str(root / "source/utils/NameAliases.cpp"), str(root / "source/ai/AiSaveFormat.cpp"),
         f"/Fe:{executable}", "/link", f"/LIBPATH:{prefix / 'lib'}",
         "OgreMain.lib", "sfml-network.lib", "sfml-system.lib"
     ], cwd=work, check=True)
