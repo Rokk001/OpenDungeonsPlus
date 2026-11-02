@@ -1,7 +1,7 @@
 """Pin the rule that a worker puts carried gold on the nearest own gold tile with room (treasury tiles and
 heart ring tiles together) instead of one fixed tile of a room.
 
-Without --probe only the source wiring is checked (nothing is compiled). With --probe the real
+Run with --source-only it checks only the source wiring (nothing is compiled). Otherwise the real
 functions findNearestGoldTile, handleCarryGold, getOwnGoldSpace and the two getGoldSpaceInTile
 functions are cut out of the sources and run against small stand-ins for the map, the rooms and the
 worker, covering the acceptance cases that depend on the walking way and on the gold in the tiles."""
@@ -63,8 +63,8 @@ assert 'depositGold(mGoldValue, tile)' in read('source/entities/TreasuryObject.c
 assert 'getTotalGoldStorage() <= 0' in function(read('source/entities/TreasuryObject.cpp'),
                                                 'EntityCarryType TreasuryObject::getEntityCarryType(')
 
-if '--probe' not in sys.argv:
-    print('Source checks passed; compiled probe requires --probe')
+if '--source-only' in sys.argv:
+    print('Source checks passed; compiled probe skipped by --source-only')
     raise SystemExit(0)
 
 probe = r"""
