@@ -90,7 +90,20 @@ def main():
     listener = (root / "source/render/ODFrameListener.cpp").read_text(encoding="utf-8")
     menu = listener.split("void ODFrameListener::createMainMenuScene()", 1)[1].split("void ODFrameListener::freeMainMenuScene()", 1)[0]
     assert menu.index("resetMenu(") < menu.index("LoadingScreen::finishStartup();"), "keep the startup picture until menu creation finishes"
-    print(f"OK: 25 referenced loading pictures, 1920x1080, {total} bytes; startup order and cleanup")
+    # Every later load path constructs the screen and so reaches update(), whose fallback covers a root without a text.
+    sites = {}
+    for path in (root / "source").rglob("*.cpp"):
+        if path.name == "LoadingScreen.cpp":
+            continue
+        found = re.findall(r"(?m)^\s*LoadingScreen \w+[;(]", path.read_text(encoding="utf-8", errors="replace"))
+        if found:
+            sites[path.name] = len(found)
+    expected_sites = {"EditorMode.cpp": 2, "MenuModeConfigureSeats.cpp": 1, "MenuModeEditorNew.cpp": 1, "ODClient.cpp": 3, "ODServer.cpp": 1, "ODApplication.cpp": 1}
+    assert sites == expected_sites, "review the loading text of a changed load path: " + str(sites)
+    later = source.split("LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus)", 1)[1].split("catch(...)", 1)[0]
+    assert "update();" in later and "getRenderWindow()->update();" in later, "every later load path must show its text at once"
+    assert "statusOverride != nullptr ? statusOverride : findLoadingText(root);" in source, "the text must come from the override or the sheet before the fallback"
+    print(f"OK: 25 referenced loading pictures, 1920x1080, {total} bytes; startup order and cleanup; {sum(sites.values())} load paths show their text")
 
 
 if __name__ == "__main__":

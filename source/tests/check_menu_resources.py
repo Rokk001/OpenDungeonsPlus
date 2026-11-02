@@ -453,6 +453,18 @@ def check_menu_entries(root):
     assert multiplayer == {name: action[0] for name, action in actions.items()}, "multiplayer menu must show its four actions once: " + str(multiplayer)
     for name, (_, constant, mode) in actions.items():
         assert f'{constant} = "{name}"' in source and f"multiplayerWin->getChild({constant}),\n                           AbstractModeManager::ModeType::{mode}" in source, name + " must keep its network path"
+    for layout in ("MenuMain.layout", "WindowMultiplayerSubMenu.layout"):
+        tree = ElementTree.parse(root / "gui" / layout).getroot()
+        rows = []
+        for window in tree.iter("Window"):
+            if window.get("type") != "OD/MenuTextButton":
+                continue
+            area = next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Area")
+            numbers = [float(value) for value in re.findall(r"-?[0-9.]+", area)]
+            rows.append((numbers[3], numbers[7]))
+        rows.sort()
+        assert all(first[1] <= second[0] for first, second in zip(rows, rows[1:])), layout + " has overlapping rows"
+        assert all(0 <= 240 + top and 240 + bottom <= 480 for top, bottom in rows), layout + " does not fit a window 480 pixels high"
     main_menu = buttons("MenuMain.layout")
     assert list(main_menu.values()).count("Multiplayer") == 1 and main_menu.get("LoadGameButton") == "Load Game", "main menu needs one Multiplayer and one Load Game entry"
     assert "connectModeChangeEvent(BUTTON_LOAD_GAME, AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);" in source, "Load Game must open the existing load dialog"
