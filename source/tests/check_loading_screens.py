@@ -47,7 +47,7 @@ def main():
     resources = (root / "cmake/config/resources.cfg.in").read_text(encoding="utf-8")
     assert "FileSystem=materials/textures/loading" in resources, "loading images must be discoverable by Ogre"
     application = (root / "source/ODApplication.cpp").read_text(encoding="utf-8")
-    startup = application.index("LoadingScreen startupLoading(*renderWindow);")
+    startup = application.index("LoadingScreen startupLoading(*renderWindow, overlaySystem);")
     assert application.index('misc["hidden"] = "true";') < startup, "native window must start hidden"
     resources = application.index("resMgr.setupOgreResources(")
     shaders = application.index("if (!Ogre::RTShader::ShaderGenerator::initialize())")
@@ -55,9 +55,11 @@ def main():
     assert startup < shown < resources < shaders, "show the first picture before full resource setup and RTSS"
     assert application.index('"materials/textures/loading", "FileSystem", "StartupLoading"') < startup, "register only the picture folder before drawing"
     assert startup < application.index("renderWindow->setVisible(true);", startup), "present the loading picture before showing the native window"
-    constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window)", 1)[1].split("void LoadingScreen::presentStartup()", 1)[0]
+    constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& overlaySystem)", 1)[1].split("void LoadingScreen::presentStartup()", 1)[0]
     assert "selectLoadingImage();" in constructor and "update();" in constructor and "window.update();" in constructor, "startup must present the shared picture mechanism"
     assert "ShaderGenerator" not in constructor, "the first picture must not depend on RTSS"
+    for token in ('addRenderQueueListener(&overlaySystem)', 'setFontName("StartupLoadingFont", "StartupLoading")', 'setCaption("Loading...")', 'startupOverlay->show()'):
+        assert token in constructor, f"missing startup loading text: {token}"
     for token in ('"StartupLoadingVertex"', '"StartupLoadingFragment"', "vertex->setSource(", "fragment->setSource(", 'setNamedConstant("picture", 0)'):
         assert token in constructor, f"missing standalone startup shader setup: {token}"
     present = source.split("void LoadingScreen::presentStartup()", 1)[1].split("void LoadingScreen::scriptParseEnded", 1)[0]

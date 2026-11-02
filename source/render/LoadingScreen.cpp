@@ -23,6 +23,13 @@
 #include <OgreSceneNode.h>
 #include <OgreTextureManager.h>
 #include <OgreTextureUnitState.h>
+#include <Overlay/OgreOverlaySystem.h>
+#include <Overlay/OgreOverlayManager.h>
+#include <Overlay/OgreOverlay.h>
+#include <Overlay/OgreOverlayContainer.h>
+#include <Overlay/OgreTextAreaOverlayElement.h>
+#include <Overlay/OgreFontManager.h>
+#include <Overlay/OgreFont.h>
 
 #include <CEGUI/Event.h>
 #include <CEGUI/String.h>
@@ -50,6 +57,9 @@ const char* const LOADING_TEXTURES[] = {
 Ogre::Rectangle2D* loadingRectangle = nullptr;
 Ogre::SceneManager* startupScene = nullptr;
 Ogre::RenderWindow* startupWindow = nullptr;
+Ogre::Overlay* startupOverlay = nullptr;
+Ogre::OverlayContainer* startupTextPanel = nullptr;
+Ogre::TextAreaOverlayElement* startupText = nullptr;
 //! Startup sits above the normal viewport until the first menu scene is ready.
 const int STARTUP_VIEWPORT_ORDER = 1;
 Ogre::MaterialPtr previousMaterial;
@@ -198,12 +208,13 @@ void selectLoadingImage()
 }
 
 //! \brief Uses the existing picture mechanism with only a camera and rectangle before full resource initialization.
-LoadingScreen::LoadingScreen(Ogre::RenderWindow& window) : mContinueLoading(false), mStartup(true)
+LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& overlaySystem) : mContinueLoading(false), mStartup(true)
 {
     try
     {
         startupWindow = &window;
         startupScene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "LoadingScreenScene");
+        startupScene->addRenderQueueListener(&overlaySystem);
         Ogre::Camera* camera = startupScene->createCamera("LoadingScreenCamera");
         window.addViewport(camera, STARTUP_VIEWPORT_ORDER);
         loadingRectangle = new Ogre::Rectangle2D(Ogre::String("LoadingScreenRectangle"), true);
@@ -226,6 +237,31 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window) : mContinueLoading(fals
         pass->setVertexProgram(vertex->getName());
         pass->setFragmentProgram(fragment->getName());
         pass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
+        Ogre::FontPtr font = Ogre::FontManager::getSingleton().create("StartupLoadingFont", "StartupLoading");
+        font->setType(Ogre::FT_TRUETYPE);
+        font->setSource("MedievalSharp-Bold.ttf");
+        font->setTrueTypeSize(16);
+        font->setTrueTypeResolution(72);
+        font->addCodePointRange(Ogre::Font::CodePointRange(9, 166));
+        font->load();
+        Ogre::Pass* fontPass = font->getMaterial()->getTechnique(0)->getPass(0);
+        fontPass->setVertexProgram(vertex->getName());
+        fontPass->setFragmentProgram(fragment->getName());
+        fontPass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
+        Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
+        startupOverlay = overlays.create("StartupLoadingOverlay");
+        startupTextPanel = static_cast<Ogre::OverlayContainer*>(overlays.createOverlayElement("Panel", "StartupLoadingPanel"));
+        startupTextPanel->setDimensions(1, 1);
+        startupOverlay->add2D(startupTextPanel);
+        startupText = static_cast<Ogre::TextAreaOverlayElement*>(overlays.createOverlayElement("TextArea", "StartupLoadingText"));
+        startupText->setFontName("StartupLoadingFont", "StartupLoading");
+        startupText->setMetricsMode(Ogre::GMM_RELATIVE);
+        startupText->setPosition(0.5f, 0.8f);
+        startupText->setCharHeight(0.025f);
+        startupText->setAlignment(Ogre::TextAreaOverlayElement::Center);
+        startupText->setCaption("Loading...");
+        startupTextPanel->addChild(startupText);
+        startupOverlay->show();
         update();
         window.update();
         OD_LOG_INF("startup loading picture drawn");
@@ -342,6 +378,16 @@ void LoadingScreen::finish()
             delete loadingRectangle;
             loadingRectangle = nullptr;
         }
+        Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
+        if(startupOverlay != nullptr)
+            overlays.destroy(startupOverlay);
+        if(startupText != nullptr)
+            overlays.destroyOverlayElement(startupText);
+        if(startupTextPanel != nullptr)
+            overlays.destroyOverlayElement(startupTextPanel);
+        startupOverlay = nullptr;
+        startupText = nullptr;
+        startupTextPanel = nullptr;
         Ogre::Root::getSingleton().destroySceneManager(startupScene);
         startupScene = nullptr;
         startupWindow = nullptr;

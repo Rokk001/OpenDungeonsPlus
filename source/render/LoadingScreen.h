@@ -4,7 +4,7 @@
 #include <OgreResourceGroupManager.h>
 
 namespace CEGUI { class Window; }
-namespace Ogre { class RenderWindow; }
+namespace Ogre { class RenderWindow; class OverlaySystem; }
 
 //! \brief Shows one session-selected loading picture and restores the previous presentation on failure.
 class LoadingScreen : private Ogre::ResourceGroupListener
@@ -13,7 +13,7 @@ public:
     //! \brief Shows the loading picture and presents a frame before a blocking operation.
     explicit LoadingScreen(CEGUI::Window* existingStatus = nullptr);
     //! \brief Presents the same loading picture before the normal renderer and GUI exist.
-    explicit LoadingScreen(Ogre::RenderWindow& startupWindow);
+    explicit LoadingScreen(Ogre::RenderWindow& startupWindow, Ogre::OverlaySystem& overlaySystem);
     //! \brief Removes the temporary startup viewport once the main menu scene is ready.
     static void finishStartup();
     //! \brief Pumps native events and presents only the startup picture during synchronous initialization.
