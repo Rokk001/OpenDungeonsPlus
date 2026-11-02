@@ -540,6 +540,19 @@ private:
     std::map<Creature*, uint32_t> mCreatureAttackSides;
     //! The side of the blow shown last per creature (true: left hand), for the weapon trail
     std::map<const Creature*, bool> mCreatureLastBlowLeft;
+    //! \brief A creature that goes from a seated tavern clip to another clip, or the other way round.
+    struct CreatureSeatBlend
+    {
+        Creature* mCreature;
+        Ogre::AnimationState* mFrom;
+        Ogre::AnimationState* mTo;
+        Ogre::Real mElapsed;
+    };
+    std::vector<CreatureSeatBlend> mCreatureSeatBlends;
+    //! \brief Ends the blend of the creature at once, with the clip it goes to in full.
+    void cancelCreatureSeatBlend(Creature* creature);
+    //! \brief Moves the running blends on.
+    void updateCreatureSeatBlends(Ogre::Real timeSinceLastFrame);
 
     //! A smooth turn of a creature towards its target before a blow (cosmetic, ends by itself)
     struct CreatureTurn

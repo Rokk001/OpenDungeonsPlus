@@ -3094,7 +3094,7 @@ bool GameMode::cycleTavernPayer(const CEGUI::EventArgs&)
 }
 
 //! \brief Shows the answer of the server about the tavern the window is open for: payer and beer.
-void GameMode::setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool beerResearched, double beerPrice)
+void GameMode::setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool beerResearched, double beerPrice, bool hasMinimumBlock)
 {
     if((tileX != mTavernX) || (tileY != mTavernY))
         return;
@@ -3103,6 +3103,7 @@ void GameMode::setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool b
     if(beerResearched)
         beerText = "Beer: " + Helper::toString(static_cast<int32_t>(beerPrice + 0.5)) + " gold";
     mRootWindow->getChild("TavernWindow/BeerText")->setText(beerText);
+    mRootWindow->getChild("TavernWindow/SizeText")->setText(hasMinimumBlock ? "" : "Guests need a complete 3 x 3 block.");
     setTavernPayerShown(tileX, tileY, payer);
 }
 

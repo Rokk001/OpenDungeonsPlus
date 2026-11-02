@@ -3625,7 +3625,7 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
 
             ServerNotification notif(ServerNotificationType::tavernWindow, player);
             notif.mPacket << xx << yy << static_cast<uint32_t>(roomTavern->getPayer()) << roomTavern->servesBeer()
-                << ConfigManager::getSingleton().getTavernConfigDouble("BeerPrice");
+                << ConfigManager::getSingleton().getTavernConfigDouble("BeerPrice") << roomTavern->hasMinimumBlock();
             sendAsyncMsg(notif);
             break;
         }

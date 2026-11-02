@@ -27,6 +27,8 @@ FOOT_ORIENTATION_WEIGHT = 50.0
 PRONE_BODIES = ('Dragon', 'PitDemon', 'Lizardman')
 BREATH_AMOUNT = 0.008
 BREATH_SECONDS = 4.0
+# Degrees a knee turns outward per tile that the feet of a seat end further apart.
+SEAT_SPLAY_PER_SPREAD = 140.0
 
 
 # Read shared or per-submesh geometry and its original skin influences for contact measurements.
@@ -527,7 +529,9 @@ def breathe(skeleton, local, author_rig, motion, name):
 
 
 # Bend grounded legs through the project's IK and fold humanoid arms toward the knees.
-def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights, lying=False, breath=None):
+# A seat (drop, lift, forward, spread) replaces the rest measures: how far the body sinks, how high, how far ahead and how far
+# apart the feet end. The body then stays at that height: its feet stand on the floor whatever hangs from it.
+def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights, lying=False, breath=None, seat=None):
     config = RIGS.get(name) or insect_config(skeleton, base, vertices, weights, name)
     if config is None:
         local = limbless_rest(skeleton, base, amount, name, lying)
@@ -597,6 +601,8 @@ def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights,
         assert clearance > 0.0, 'Spider resting must visibly lower the torso'
     drop = clearance * (0.75 if lying and name in PRONE_BODIES else
                         (0.45 if humanoid else (0.75 if lying else 0.55)))
+    if seat is not None:
+        drop = seat['drop']
     offset = np.zeros((len(amount), 3))
     offset[:, 2] = -drop * amount
     move_roots(skeleton, local, offset)
@@ -607,6 +613,11 @@ def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights,
                 continue
             for index, degrees in zip(unit.ids[:3], (-80.0, 110.0, -30.0)):
                 rotate_joint(skeleton, local, skeleton.names[index], rig.X_AXIS, np.radians(degrees * amount))
+            if seat is not None and seat.get('spread', 0.0) > 0.0:
+                # Feet that end further apart take their knees along, on the side of each leg
+                side = math.copysign(1.0, float(original[unit.ids[0]][0][0, 0]))
+                rotate_joint(skeleton, local, skeleton.names[unit.ids[0]], rig.Z_AXIS,
+                             np.radians(side * SEAT_SPLAY_PER_SPREAD * seat['spread'] * amount))
     if isinstance(author_rig, list):
         for item in author_rig:
             if item.get('head') in skeleton.idx:
@@ -656,7 +667,7 @@ def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights,
         fold_hover_wings(skeleton, local, base, vertices, weights, amount)
     if breath is not None:
         breathe(skeleton, local, author_rig, breath, name)
-    if units:
+    if units and seat is None:
         # Resolve torso/head clearance before planting the feet, rather than lifting planted feet afterwards.
         leg_bones = {index for unit in units for index in unit.ids}
         if humanoid:
@@ -682,7 +693,10 @@ def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights,
             original_position, original_rotation, original_scale = original[unit.ids[-1]]
             target = original_position + np.einsum('nij,nj->ni', original_rotation, original_scale * unit.eff_off)
             if humanoid:
-                target[:, 1] -= height * 0.2 * amount
+                target[:, 1] -= (height * 0.2 if seat is None else seat['forward']) * amount
+            if seat is not None:
+                target[:, 2] += seat['lift'] * amount
+                target[:, 0] += np.sign(target[:, 0]) * seat.get('spread', 0.0) * amount
             if name == 'CaveHornet':
                 target[:, 2] += (original_points[0, :, 2].min() - target[0, 2]) * amount
             world = skeleton.fk(local)
@@ -695,6 +709,8 @@ def sitting(skeleton, author_rig, base, amount, height, name, vertices, weights,
             for index, solved_local in zip(unit.ids, solved):
                 local[index] = solved_local
             errors.append(float(error.max() / height))
+        if seat is not None:
+            break
         if lying and humanoid and name not in PRONE_BODIES:
             # This temporary upright pose is rotated onto its back next; a held blade may safely extend downward here.
             break

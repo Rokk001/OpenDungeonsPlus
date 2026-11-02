@@ -222,7 +222,7 @@ enum class ServerNotificationType
     //! \brief Owner-only laboratory settings: int32_t production mode.
     labSettings,
     //! \brief Answer to askTavernWindow, owner only: + int32_t tileX, int32_t tileY (a tile of the tavern),
-    //! uint32_t payer (TavernPayer), bool beerResearched, double beerPrice (gold per beer).
+    //! uint32_t payer (TavernPayer), bool beerResearched, double beerPrice (gold per beer), bool hasMinimumBlock.
     //! Appended last so that no existing numeric value changes.
     tavernWindow,
     //! \brief Answer to askTavernPayer, owner only: + int32_t tileX, int32_t tileY, uint32_t payer (TavernPayer)

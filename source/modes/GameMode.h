@@ -274,7 +274,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \param payer The payer (TavernPayer as a number).
     //! \param beerResearched True when the tavern serves beer.
     //! \param beerPrice The gold one beer costs.
-    void setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool beerResearched, double beerPrice);
+    //! \param hasMinimumBlock Whether the room has a full three by three block.
+    void setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool beerResearched, double beerPrice, bool hasMinimumBlock);
     //! \brief Called when the server tells who pays for the beer of a tavern. It is only shown if it is the tavern
     //! the window is open for.
     //! \param tileX The x coordinate of a tile of the tavern.
