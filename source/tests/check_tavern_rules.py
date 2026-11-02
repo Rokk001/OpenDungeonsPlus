@@ -116,6 +116,18 @@ assert 'EntityAnimation::sit_anim, true, false, route, false, true' in walk_to_s
 # Without a way around the furniture a guest takes another seat or leaves; it never walks through furniture.
 assert 'path(&creature, seat.mTable)' not in walk_to_seat
 assert '!walkToOtherSeat(creature, seat)' in use_room_text
+# A guest closed in on its seat stays on it, and the plain tile path never leads through tavern furniture.
+assert 'if(stepOffSeat(creature, seat, spot.mWholeBench))' in use_room_text
+set_destination = extract(read('source/entities/Creature.cpp'), 'bool Creature::setDestination(')
+assert 'RoomType::tavern' in set_destination and 'getBuildingObjectFromTile(step)' in set_destination
+assert set_destination.index('RoomType::tavern') < set_destination.index('path, true, true)')
+# A player of a game that ended with the room change sits down again and orders no further drink for it.
+assert 'guest.mWantsGame = !visitOver && (guest.mState == TavernGuestState::game);' in extract(room_cpp, 'void RoomTavern::standUpGuests(')
+assert use_room_text.index('if(spot.mWantsGame)') < use_room_text.index('On the seat the first drink starts')
+# Sitting down and getting up blend the clips.
+render_cpp = read('source/render/RenderManager.cpp')
+assert 'mCreatureSeatBlends.push_back' in render_cpp and 'updateCreatureSeatBlends(timeSinceLastFrame);' in render_cpp
+assert render_cpp.count('cancelCreatureSeatBlend(curCreature);') == 2
 # The walk into the room ends on free floor, not in the middle of a table.
 assert 'mBuildingObjects.find(tile) != mBuildingObjects.end()' in extract(room_cpp, 'Tile* RoomTavern::getArrivalTile(')
 # The benches of the scaled table mesh: seat surface 0.39 to 0.59 from the middle, bench 0.78 long.

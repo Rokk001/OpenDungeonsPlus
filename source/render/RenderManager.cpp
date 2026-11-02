@@ -153,6 +153,14 @@ static const Ogre::Real SLEEP_BED_MAX_SQUARED_DISTANCE = 1.0f;
 static const Ogre::Real SLEEP_BED_CLEARANCE = 0.01f;
 //! Reuse the hand's short four-frame pose blend when entering a native wake clip.
 static const Ogre::Real CREATURE_WAKE_BLEND_DURATION = 4.0f / 30.0f;
+//! Length of the blend between a seated tavern clip and any other clip, in seconds.
+static const Ogre::Real CREATURE_SEAT_BLEND_DURATION = 0.3f;
+
+//! \brief True for the seated tavern clips (Sit, SitDrink and the others).
+static bool isSeatClip(const std::string& clip)
+{
+    return clip.compare(0, EntityAnimation::sit_anim.size(), EntityAnimation::sit_anim) == 0;
+}
 //! Seconds a room construction burst stays in the scene. It is longer than the emitter
 //! duration plus the particle lifetime, so the last particles fade out before it is removed.
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
@@ -2610,6 +2618,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
 
     updateCreatureTurns(timeSinceLastFrame);
     updateCreatureDeathVariants(timeSinceLastFrame);
+    updateCreatureSeatBlends(timeSinceLastFrame);
 
     std::vector<Creature*> finishedFeeding;
     std::vector<Creature*> finishedWaking;
@@ -4127,6 +4136,9 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
         curCreature->setOverlayStatus(nullptr);
     }
 
+    // The clips of the old entity end with it
+    cancelCreatureSeatBlend(curCreature);
+
     // We keep the current animation if the new mesh has it
     std::string animName = EntityAnimation::idle_anim;
     bool animLoop = true;
@@ -4184,6 +4196,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     mCreatureAttackVariants.erase(curCreature);
     mCreatureAttackSides.erase(curCreature);
     mCreatureLastBlowLeft.erase(curCreature);
+    cancelCreatureSeatBlend(curCreature);
     for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end();)
     {
         if(it->mCreature == curCreature)
@@ -4986,6 +4999,7 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
 
     if(dropCreature != nullptr)
     {
+        cancelCreatureSeatBlend(dropCreature);
         clearCreatureDecay(dropCreature);
         updateCreatureTavernProps(dropCreature, anim);
     }
@@ -5305,10 +5319,64 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     if (!objectEntity->getSkeleton()->hasAnimation(anim))
         return;
 
+    Ogre::AnimationState* previousState = curAnimatedObject->getAnimationState();
     Ogre::AnimationState* animState = setEntityAnimation(objectEntity, anim, loop && !freezeOnLastFrame);
     if(freezeOnLastFrame)
         animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
+
+    // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile
+    if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState) && !freezeOnLastFrame &&
+       (isSeatClip(previousState->getAnimationName()) != isSeatClip(anim)))
+    {
+        previousState->setEnabled(true);
+        previousState->setWeight(1.0f);
+        animState->setWeight(0.0f);
+        mCreatureSeatBlends.push_back({dropCreature, previousState, animState, 0.0f});
+    }
+}
+
+void RenderManager::cancelCreatureSeatBlend(Creature* creature)
+{
+    for(std::vector<CreatureSeatBlend>::iterator it = mCreatureSeatBlends.begin(); it != mCreatureSeatBlends.end();)
+    {
+        if(it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+
+        it->mFrom->setEnabled(false);
+        it->mTo->setWeight(1.0f);
+        it = mCreatureSeatBlends.erase(it);
+    }
+}
+
+void RenderManager::updateCreatureSeatBlends(Ogre::Real timeSinceLastFrame)
+{
+    for(std::vector<CreatureSeatBlend>::iterator it = mCreatureSeatBlends.begin(); it != mCreatureSeatBlends.end();)
+    {
+        // Another clip took over without passing rrSetObjectAnimationState: it keeps its own weights
+        if(it->mCreature->getAnimationState() != it->mTo)
+        {
+            it = mCreatureSeatBlends.erase(it);
+            continue;
+        }
+
+        it->mElapsed += timeSinceLastFrame;
+        const Ogre::Real phase = std::min(it->mElapsed / CREATURE_SEAT_BLEND_DURATION, 1.0f);
+        const Ogre::Real weight = phase * phase * (3.0f - 2.0f * phase);
+        it->mFrom->setWeight(1.0f - weight);
+        it->mTo->setWeight(weight);
+        if(phase < 1.0f)
+        {
+            ++it;
+            continue;
+        }
+
+        it->mFrom->setEnabled(false);
+        it = mCreatureSeatBlends.erase(it);
+    }
 }
 
 bool RenderManager::rrHasObjectClip(MovableGameEntity* animatedObject, const std::string& clip, bool& entityFound)

@@ -768,7 +768,8 @@ void RoomTavern::standUpGuests()
             ((guest.mState != TavernGuestState::arriving) && (guest.mState != TavernGuestState::drinking) &&
              (guest.mState != TavernGuestState::game));
         guest.mWholeBench = isLargeGuest(*guest.mCreature);
-        guest.mWantsGame = false;
+        // A player of the game that ended looks for a new game from its seat and orders nothing for it
+        guest.mWantsGame = !visitOver && (guest.mState == TavernGuestState::game);
         guest.mLeftSeat = false;
         guest.mState = visitOver ? TavernGuestState::done : TavernGuestState::arriving;
         guest.mTurnsLeft = 0;
@@ -911,6 +912,14 @@ bool RoomTavern::useRoom(Creature& creature, bool forced)
                 return false;
             }
 
+            // A player whose game ended when the room changed goes on looking for a game, without a further drink
+            if(spot.mWantsGame)
+            {
+                setSpotState(spot, TavernGuestState::done, DONE_WAIT_TURNS);
+                showSpotState(seat.mTable, spot);
+                return false;
+            }
+
             // On the seat the first drink starts
             setSpotState(spot, TavernGuestState::drinking, static_cast<int32_t>(getTavernValue("DrinkTurns")));
             showSpotState(seat.mTable, spot);
@@ -922,12 +931,17 @@ bool RoomTavern::useRoom(Creature& creature, bool forced)
             if(spot.mTurnsLeft > 0)
                 return false;
 
-            // The guest gets off the bench before it leaves, so it does not walk through the table
+            // The guest gets off the bench before it leaves, so it does not walk through the table. While furniture
+            // closes in its seat it stays seated and tries again in the next turn
             if(!spot.mLeftSeat)
             {
-                spot.mLeftSeat = true;
-                if(isOnSeat(creature, seat, spot.mWholeBench) && stepOffSeat(creature, seat, spot.mWholeBench))
+                if(isOnSeat(creature, seat, spot.mWholeBench))
+                {
+                    if(stepOffSeat(creature, seat, spot.mWholeBench))
+                        spot.mLeftSeat = true;
                     return false;
+                }
+                spot.mLeftSeat = true;
             }
 
             // The visit is over. The loser of a slap duel goes to its bed, whatever its wakefulness
