@@ -377,8 +377,11 @@ def check_menu_lighting(root):
     assert "getLightingEnabled()" in display and 'MENU_MATERIAL_PREFIX = "Menu"' in display, "display encoding must stay limited to lit menu materials"
     display_shader = (root / "shaders/MenuDisplay.glsl").read_text(encoding="utf-8")
     assert "MenuDisplay_Encode" in display_shader and "MenuDisplay_Encode" in display, "display encoding function must exist"
-    # The generated lighting clamps to 1 before the texture, so the surface scale and the restoring factor must stay equal.
+    # The surface scale and the restoring factor must stay equal.
     assert "MENU_LIGHT_HEADROOM = 4.0f;" in display and "max(colour.rgb, vec3(0.0)) * 4.0;" in display_shader, "menu lighting must keep the same headroom in code and shader"
+    # A per-channel clamp of the light sums turns red ground olive under strong coal lights; the display stage encodes once.
+    assert 'MENU_UNCLAMPED_LIGHTING_DEFINES = "USE_LINEAR_COLOURS,TARGET_CONSUMES_LINEAR";' in display and "fragmentProgram->addPreprocessorDefines(MENU_UNCLAMPED_LIGHTING_DEFINES);" in display, "menu lighting must not clamp light sums per colour channel"
+    assert "pow(min(mapped, vec3(1.0)), vec3(1.0 / 2.2))" in display_shader, "menu colours must be encoded exactly once by the display stage"
     for setter, getter in (("setAmbient", "getAmbient"), ("setDiffuse", "getDiffuse"), ("setSpecular", "getSpecular"), ("setSelfIllumination", "getSelfIllumination")):
         assert f"dstPass->{setter}(toLightingHeadroom(srcPass->{getter}()));" in display, setter + " must enter the lighting headroom from the source pass"
     manager_source = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")

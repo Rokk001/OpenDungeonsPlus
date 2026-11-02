@@ -38,8 +38,12 @@ static const Ogre::String MENU_DISPLAY_TYPE = "MenuDisplayEncoding";
 static const Ogre::String MENU_MATERIAL_PREFIX = "Menu";
 //! Shader library file, without extension, that holds the encoding function.
 static const Ogre::String MENU_DISPLAY_LIBRARY = "MenuDisplay";
-//! Must match the factor in MenuDisplay.glsl. It moves the clamp of the generated lighting from light value 1 to the white point 4.
+//! Must match the factor in MenuDisplay.glsl. Surface colours enter the lighting at a quarter and the encoding restores them.
 static const Ogre::Real MENU_LIGHT_HEADROOM = 4.0f;
+//! Without these defines the generated lighting clamps each light sum per colour channel. A strong red light near a surface
+//! then clips red and green together, so red ground turns olive. The encoding rolls each channel off towards its white point instead, and
+//! TARGET_CONSUMES_LINEAR keeps the generator from adding its own gamma step on top of that encoding.
+static const Ogre::String MENU_UNCLAMPED_LIGHTING_DEFINES = "USE_LINEAR_COLOURS,TARGET_CONSUMES_LINEAR";
 
 //! \brief Scales a surface colour into the lighting headroom, keeping its alpha.
 static Ogre::ColourValue toLightingHeadroom(const Ogre::ColourValue& colour)
@@ -79,10 +83,11 @@ public:
         return true;
     }
 
-    //! \brief Calls the encoding function on the fragment output.
+    //! \brief Lifts the per-channel clamp of the light sums and calls the encoding function on the fragment output.
     bool createCpuSubPrograms(Ogre::RTShader::ProgramSet* programSet) override
     {
         Ogre::RTShader::Program* fragmentProgram = programSet->getCpuProgram(Ogre::GPT_FRAGMENT_PROGRAM);
+        fragmentProgram->addPreprocessorDefines(MENU_UNCLAMPED_LIGHTING_DEFINES);
         fragmentProgram->addDependency(MENU_DISPLAY_LIBRARY);
         Ogre::RTShader::Function* fragmentMain = fragmentProgram->getMain();
         Ogre::RTShader::ParameterPtr colour =
