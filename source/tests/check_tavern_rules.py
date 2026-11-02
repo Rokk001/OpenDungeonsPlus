@@ -13,8 +13,9 @@ What is run (the function bodies are taken from the source files, not copied by 
   cheerSpectators / concludeGame / abortGame / abortDisturbedGuests / knockOut / upkeepSpots / addDrinkDirt
                       beer only with the research, both payment paths and their fallbacks to water, the drink chain
                       50 / 25 / 12.5 / 6.25 percent with the cap of five, the 50 percent game chance and the same table
-                      rule, eight places per table (four per bench), two neighbouring places for a large creature and
-                      mixed benches, the draw of the three games (the slap duel only with beer), the underdog chances with the
+                      rule, eight places per table (four per bench), a large creature takes the places its seated width
+                      needs (a dragon three, every other whole bench), shares a bench only when all fit side by side, a bench
+                      with a wall behind it stays empty, the draw of the three games (the slap duel only with beer), the underdog chances with the
                       floor of 5 percent, underdog mood and double experience, spectators, the slap duel (10 HP per hit,
                       critical chance 10 +- 0.25 per level, knock-out at a critical or below 30 HP, HP never below 1,
                       the time limit), 42 turns lying then getting up, a fight, a flight, a knock-out or a pick-up ends a
@@ -139,7 +140,7 @@ assert 'const uint32_t SEAT_LAYOUT_VERSION = 2;' in room_cpp
 assert 'hasSeatLayout = (version == SEAT_LAYOUT_VERSION);' in load and '(version == 0) || (version > SEAT_LAYOUT_VERSION)' in load
 # Guests walk to a seat on a bench, never to the middle of a tile with furniture, and step off it when they leave.
 use_room_text = extract(room_cpp, 'bool RoomTavern::useRoom(')
-assert 'walkToSeat(creature, seat, spot.mTwoPlaces)' in use_room_text and 'stepOffSeat(creature, seat, spot.mTwoPlaces)' in use_room_text
+assert 'walkToSeat(creature, seat, spot.mPlaces)' in use_room_text and 'stepOffSeat(creature, seat, spot.mPlaces)' in use_room_text
 assert 'setDestination' not in use_room_text
 walk_to_seat = extract(room_cpp, 'bool RoomTavern::walkToSeat(')
 assert 'EntityAnimation::sit_anim, true, false, route, false, true' in walk_to_seat
@@ -147,7 +148,7 @@ assert 'EntityAnimation::sit_anim, true, false, route, false, true' in walk_to_s
 assert 'path(&creature, seat.mTable)' not in walk_to_seat
 assert '!walkToOtherSeat(creature, seat)' in use_room_text
 # A guest closed in on its seat stays on it, and the plain tile path never leads through tavern furniture.
-assert 'if(stepOffSeat(creature, seat, spot.mTwoPlaces))' in use_room_text
+assert 'if(stepOffSeat(creature, seat, spot.mPlaces))' in use_room_text
 set_destination = extract(read('source/entities/Creature.cpp'), 'bool Creature::setDestination(')
 assert 'RoomType::tavern' in set_destination and 'static_cast<RoomTavern*>(room)->hasFurnitureOn(step)' in set_destination
 assert set_destination.index('RoomType::tavern') < set_destination.index('path, true, true)')
@@ -160,26 +161,40 @@ assert 'mCreatureSeatBlends.push_back' in render_cpp and 'updateCreatureSeatBlen
 assert render_cpp.count('cancelCreatureSeatBlend(curCreature);') == 2
 # The walk into the room ends on free floor next to the seat, not on a tile of a table (also not on its second tile).
 arrival = extract(room_cpp, 'Tile* RoomTavern::getArrivalTile(')
-assert 'hasFurnitureOn(tile)' in arrival and 'getSeatPosition(it->first, it->second.mTwoPlaces)' in arrival
+assert 'hasFurnitureOn(tile)' in arrival and 'getSeatPosition(it->first, it->second.mPlaces)' in arrival
 # The benches of the scaled table mesh: seat surface 0.39 to 0.59 from the middle, bench 1.31 long with four places.
 assert 'const float TAVERN_BENCH_OFFSET = 0.4116f;' in room_cpp and 'const float TAVERN_SEAT_SPACING = 0.328f;' in room_cpp
 tavern_h_text = read('source/rooms/RoomTavern.h')
 assert 'const uint32_t TAVERN_SEATS_PER_BENCH = 4;' in tavern_h_text
 assert 'const uint32_t TAVERN_SEATS_PER_TABLE = 2 * TAVERN_SEATS_PER_BENCH;' in tavern_h_text
-assert 'const uint32_t TAVERN_SEATS_PER_LARGE_GUEST = 2;' in tavern_h_text
+# A bench with a wall (or the map edge) behind it stays empty: the seat test asks for it, and it reads full tiles next to either table tile
+is_free_seat = extract(room_cpp, 'bool RoomTavern::isFreeSeat(')
+assert 'if(isBenchBlocked(seat.mTable, bench))' in is_free_seat and 'return false;' in is_free_seat
+bench_wall = extract(room_cpp, 'bool isBenchBehindWall(')
+assert 'behind->isFullTile()' in bench_wall and '(behind == nullptr)' in bench_wall and 'tableSecondTile(gameMap, tile, angleDegrees)' in bench_wall
+assert 'TAVERN_SEATS_PER_LARGE_GUEST' not in tavern_h_text and 'TAVERN_SEATS_PER_LARGE_GUEST' not in room_cpp
 # The places of a bench, from the formula of seatOffset: four places 0.328 apart, symmetric around the middle of the table;
-# a large guest sits in the middle of two places, above a pedestal. All of them lie on the bench (1.56 x 0.84 long).
+# a large guest sits in the middle of the places it takes: a whole bench on the middle of the table, three places 0.164 beside it.
+# All of them lie on the bench (1.56 x 0.84 long).
 seat_offset = extract(room_cpp, 'Ogre::Vector2 seatOffset(')
 assert 'float y = (0.5f * static_cast<float>(TAVERN_SEATS_PER_BENCH - 1) - place) * TAVERN_SEAT_SPACING;' in seat_offset
-assert 'y -= 0.5f * static_cast<float>(TAVERN_SEATS_PER_LARGE_GUEST - 1) * TAVERN_SEAT_SPACING;' in seat_offset
+assert 'y -= 0.5f * static_cast<float>(places - 1) * TAVERN_SEAT_SPACING;' in seat_offset
 spacing = 0.328
 places = [(0.5 * 3 - place) * spacing for place in range(4)]
-large_places = [(0.5 * 3 - place) * spacing - 0.5 * spacing for place in (0, 2)]
+large_places = [(0.5 * 3 - place) * spacing - 0.5 * spacing * (count - 1) for place, count in ((0, 4), (0, 3), (1, 3))]
 assert [round(value, 3) for value in places] == [0.492, 0.164, -0.164, -0.492], places
-assert [round(value, 3) for value in large_places] == [0.328, -0.328], large_places
+assert [round(value, 3) for value in large_places] == [0.0, 0.164, -0.164], large_places
 bench_half = 0.78 * scale
 assert all(abs(value) + 0.5 * spacing <= bench_half + 1e-3 for value in places), 'every place lies on the bench'
-assert all(abs(abs(value) - 0.39 * scale) < 0.01 for value in large_places), 'a large guest sits above a pedestal'
+# The seated widths (tiles) decide how many places a large guest takes; a place is 0.328 wide, a bench 1.31
+widths = dict(re.findall(r'\{ "(\w+\.mesh)", ([0-9.]+)f \}', extract(room_cpp, 'uint32_t RoomTavern::getPlacesOf(').replace('}, {', '}\n{')))
+assert {name: float(width) for name, width in widths.items()} == {'Kreatur.mesh': 1.03, 'PitDemon.mesh': 1.11, 'Scarab.mesh': 1.18, 'Troll.mesh': 1.22, 'Dragon.mesh': 0.78}, widths
+import math
+places_of = {name: max(1, min(4, math.ceil(float(width) / spacing - 0.001))) for name, width in widths.items()}
+assert places_of == {'Kreatur.mesh': 4, 'PitDemon.mesh': 4, 'Scarab.mesh': 4, 'Troll.mesh': 4, 'Dragon.mesh': 3}, places_of
+# Everyone fits side by side: the dragon (0.78) leaves room for one more guest of a bench of 1.31, no other large guest does
+assert 0.78 + spacing <= 4 * spacing and 0.78 + 2 * spacing > 4 * spacing
+assert all(float(width) + spacing > 4 * spacing for name, width in widths.items() if name != 'Dragon.mesh')
 # A seated guest looks straight across its table, wherever it sits along the bench
 assert 'towardsTable = getAcrossTableDirection(own->first);' in extract(room_cpp, 'void RoomTavern::showSpotState(')
 assert 'getBedDim1() >= 2' in extract(room_cpp, 'bool RoomTavern::isLargeGuest(') and 'getBedDim2() >= 2' in extract(room_cpp, 'bool RoomTavern::isLargeGuest(')
@@ -397,8 +412,9 @@ struct Seat
 
 struct CreatureDefinition
 {
-    bool thirsty; int bedDim;
-    explicit CreatureDefinition(bool t) : thirsty(t), bedDim(1) {}
+    bool thirsty; int bedDim; std::string meshName;
+    explicit CreatureDefinition(bool t) : thirsty(t), bedDim(1), meshName("Goblin.mesh") {}
+    const std::string& getMeshName() const { return meshName; }
     bool hasThirst() const { return thirsty; }
     int getBedDim1() const { return bedDim; }
     int getBedDim2() const { return bedDim; }
@@ -503,9 +519,12 @@ public:
     void abortDisturbedGuests();
     void finishDrink(Tile* tile, RoomTavernSpot& spot);
     bool payForBeer(Creature& creature, bool& noCoin);
-    bool isFreeSeat(const RoomTavernSeat& seat, bool twoPlaces) const;
+    bool isFreeSeat(const RoomTavernSeat& seat, uint32_t places) const;
+    bool isBenchBlocked(const Tile* table, uint32_t bench) const
+    { for(unsigned i = 0; i < mBlockedBenches.size(); ++i) if(mBlockedBenches[i].first == table && mBlockedBenches[i].second == bench) return true; return false; }
     bool pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) const;
     static bool isLargeGuest(const Creature& creature);
+    static uint32_t getPlacesOf(const Creature& creature);
     void tryStartGame(const RoomTavernSeat& seat);
     void startGame(const RoomTavernSeat& seatA, const RoomTavernSeat& seatB);
     void playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
@@ -521,6 +540,8 @@ public:
     std::map<RoomTavernSeat, RoomTavernSpot> mSpots;
     std::map<RoomTavernSeat, RoomTavernGame> mGames;
     std::vector<Tile*> mTestTables;
+    //! The benches with a wall behind them: (table, bench)
+    std::vector<std::pair<const Tile*, uint32_t> > mBlockedBenches;
     int events; int lastKind; std::vector<int> kinds;
 };
 @@ROOM_FUNCTIONS@@
@@ -540,12 +561,13 @@ struct SkillManager
 // ---- A tavern with guests for the tests
 struct Fixture
 {
-    GameMap map; Seat seat; Player player; CreatureDefinition thirsty; CreatureDefinition largeDefinition; RoomTavern room;
+    GameMap map; Seat seat; Player player; CreatureDefinition thirsty; CreatureDefinition largeDefinition; CreatureDefinition dragonDefinition; RoomTavern room;
     InnkeeperEntity innkeeper;
     std::vector<Creature*> guests;
-    Fixture() : map(12, 12), thirsty(true), largeDefinition(true), room(&map, &seat)
+    Fixture() : map(12, 12), thirsty(true), largeDefinition(true), dragonDefinition(true), room(&map, &seat)
     {
-        largeDefinition.bedDim = 2;
+        largeDefinition.bedDim = 2; largeDefinition.meshName = "Troll.mesh";
+        dragonDefinition.bedDim = 2; dragonDefinition.meshName = "Dragon.mesh";
         seat.player = &player; room.mInnkeeper = &innkeeper;
         for(int i = 1; i < 10; ++i) room.mCoveredTiles.push_back(map.getTile(i, 5));
         room.mCounterTile = map.getTile(1, 5);
@@ -560,12 +582,13 @@ struct Fixture
         return RoomTavernSeat(map.getTile(2 + 4 * ((x - 2) / 4), 5), (step < 2) ? step : step + 2);
     }
     // Adds a guest on the given place of a table without changing where it stands
-    Creature* guestOn(const std::string& name, Tile* table, uint32_t index, bool large)
+    // places: 1 for a normal guest, 4 for a large one (troll), 3 for the dragon
+    Creature* guestOn(const std::string& name, Tile* table, uint32_t index, uint32_t places)
     {
-        Creature* c = new Creature(name, large ? &largeDefinition : &thirsty, &seat, 1);
+        Creature* c = new Creature(name, (places == 4) ? &largeDefinition : ((places == 3) ? &dragonDefinition : &thirsty), &seat, 1);
         c->mTile = table; c->mPos = Ogre::Vector3(static_cast<float>(table->x), 5.0f, 0.0f);
         guests.push_back(c); map.creatures.push_back(c);
-        RoomTavernSpot spot(c); spot.mState = TavernGuestState::drinking; spot.mTurnsLeft = 2; spot.mTwoPlaces = large;
+        RoomTavernSpot spot(c); spot.mState = TavernGuestState::drinking; spot.mTurnsLeft = 2; spot.mPlaces = places;
         room.mSpots.insert(std::make_pair(RoomTavernSeat(table, index), spot));
         return c;
     }
@@ -796,44 +819,65 @@ static void checkSeats()
       expect(f.room.pickFreeSeat(*n, picked) && picked.mTable == f.map.getTile(6, 5), "without guests the nearest table is taken"); }
     // Eight places per table (four on each bench), then the next table, then nobody: no entry without a free seat
     { Fixture f; Tile* tables[] = { f.map.getTile(2, 5), f.map.getTile(6, 5) };
-      for(int t = 0; t < 2; ++t) for(uint32_t i = 0; i < 8; ++i) if(!(t == 1 && i == 7)) f.guestOn("G" + std::to_string(t * 8 + i), tables[t], i, false);
+      for(int t = 0; t < 2; ++t) for(uint32_t i = 0; i < 8; ++i) if(!(t == 1 && i == 7)) f.guestOn("G" + std::to_string(t * 8 + i), tables[t], i, 1);
       Creature late("Late", &f.thirsty, &f.seat, 1); late.mTile = f.map.getTile(2, 5); RoomTavernSeat picked;
       expect(f.room.pickFreeSeat(late, picked) && picked.mTable == tables[1] && picked.mIndex == 7, "the last free place of eight is found");
-      f.guestOn("G15", tables[1], 7, false);
+      f.guestOn("G15", tables[1], 7, 1);
       expect(f.room.mSpots.size() == 16, "two tables hold sixteen guests");
       expect(!f.room.pickFreeSeat(late, picked), "a creature without a free seat finds none"); }
     // Each bench has four places; a taken place is not free, the others of the bench are
-    { Fixture f; Tile* table = f.map.getTile(2, 5); f.guestOn("G", table, 0, false);
-      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 0), false), "a taken place is not free");
-      expect(f.room.isFreeSeat(RoomTavernSeat(table, 1), false) && f.room.isFreeSeat(RoomTavernSeat(table, 2), false) &&
-             f.room.isFreeSeat(RoomTavernSeat(table, 3), false), "three more guests fit on the bench");
-      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 0), true), "a large guest does not fit on a pair with another guest");
-      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 1), true), "a large guest starts on an even place");
-      expect(f.room.isFreeSeat(RoomTavernSeat(table, 2), true), "the other half of the bench is free for a large guest");
-      expect(f.room.isFreeSeat(RoomTavernSeat(table, 4), true) && f.room.isFreeSeat(RoomTavernSeat(table, 6), true), "the other bench takes two large guests");
-      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 8), false), "a table has eight places");
-      expect(!f.room.isFreeSeat(RoomTavernSeat(nullptr, 0), false), "no table, no seat"); }
-    // A large creature takes two places, half of a bench, so a table holds four of them; bed size 2x2 makes a creature large
+    { Fixture f; Tile* table = f.map.getTile(2, 5); f.guestOn("G", table, 0, 1);
+      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 0), 1), "a taken place is not free");
+      expect(f.room.isFreeSeat(RoomTavernSeat(table, 1), 1) && f.room.isFreeSeat(RoomTavernSeat(table, 2), 1) &&
+             f.room.isFreeSeat(RoomTavernSeat(table, 3), 1), "three more guests fit on the bench");
+      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 0), 4), "a large guest does not fit on a bench with another guest");
+      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 1), 4), "a whole bench guest does not start on the second place");
+      expect(f.room.isFreeSeat(RoomTavernSeat(table, 1), 3), "a dragon fits next to one guest");
+      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 2), 3), "three places do not fit from the third place of a bench");
+      expect(f.room.isFreeSeat(RoomTavernSeat(table, 4), 4), "the other bench takes a whole bench guest");
+      expect(!f.room.isFreeSeat(RoomTavernSeat(table, 8), 1), "a table has eight places");
+      expect(!f.room.isFreeSeat(RoomTavernSeat(nullptr, 0), 1), "no table, no seat"); }
+    // A bed of two by two tiles makes a creature large; the seated width decides how many places it takes
     { Fixture f; Creature troll("Troll", &f.largeDefinition, &f.seat, 1); troll.mTile = f.map.getTile(2, 5); Creature goblin("Goblin", &f.thirsty, &f.seat, 1);
+      Creature dragon("Dragon", &f.dragonDefinition, &f.seat, 1);
       expect(RoomTavern::isLargeGuest(troll) && !RoomTavern::isLargeGuest(goblin), "a bed of two by two tiles makes a creature large");
-      RoomTavernSeat picked; expect(f.room.pickFreeSeat(troll, picked) && picked.mIndex == 0, "a large creature takes the first pair of a bench");
-      f.guestOn("Troll1", picked.mTable, picked.mIndex, true);
-      expect(!f.room.isFreeSeat(RoomTavernSeat(picked.mTable, 1), false), "nobody sits on the second place of a large creature");
-      expect(f.room.isFreeSeat(RoomTavernSeat(picked.mTable, 2), false), "a normal guest sits next to a large creature");
-      for(uint32_t expected = 2; expected <= 6; expected += 2)
-      { RoomTavernSeat next; expect(f.room.pickFreeSeat(troll, next) && next.mTable == picked.mTable && next.mIndex == expected, "the next large creature takes the next pair of the table");
-        f.guestOn("Troll" + std::to_string(expected), next.mTable, next.mIndex, true); }
-      RoomTavernSeat fifth; expect(f.room.pickFreeSeat(troll, fifth) && fifth.mTable == f.map.getTile(6, 5), "a table holds four large guests, the fifth goes to the next table"); }
-    // Large and normal guests share a bench: a large one and two normal ones fill it
-    { Fixture f; Tile* table = f.map.getTile(2, 5); f.guestOn("Troll", table, 0, true); f.guestOn("A", table, 2, false); f.guestOn("B", table, 3, false);
+      expect(RoomTavern::getPlacesOf(goblin) == 1 && RoomTavern::getPlacesOf(troll) == 4 && RoomTavern::getPlacesOf(dragon) == 3, "a normal guest takes a place, a troll a bench, a dragon three places");
+      RoomTavernSeat picked; expect(f.room.pickFreeSeat(troll, picked) && picked.mIndex == 0, "a large creature takes the first bench");
+      f.guestOn("Troll1", picked.mTable, picked.mIndex, 4);
+      expect(!f.room.isFreeSeat(RoomTavernSeat(picked.mTable, 1), 1) && !f.room.isFreeSeat(RoomTavernSeat(picked.mTable, 3), 1), "nobody sits next to a troll");
+      RoomTavernSeat next; expect(f.room.pickFreeSeat(troll, next) && next.mTable == picked.mTable && next.mIndex == 4, "the next large creature takes the other bench");
+      f.guestOn("Troll2", next.mTable, next.mIndex, 4);
+      RoomTavernSeat third; expect(f.room.pickFreeSeat(troll, third) && third.mTable == f.map.getTile(6, 5), "a table holds two trolls, the third goes to the next table"); }
+    // A dragon shares its bench with one normal guest, on either side of it
+    { Fixture f; Tile* table = f.map.getTile(2, 5); f.guestOn("Dragon", table, 0, 3);
       Creature goblin("Goblin", &f.thirsty, &f.seat, 1); goblin.mTile = table; RoomTavernSeat picked;
-      expect(f.room.pickFreeSeat(goblin, picked) && picked.mTable == table && picked.mIndex == 4, "the full bench sends the next guest to the other bench"); }
-    // One guest on every pair: a large creature finds no two free places next to each other, a small one still finds a seat
+      expect(f.room.pickFreeSeat(goblin, picked) && picked.mTable == table && picked.mIndex == 3, "one normal guest sits next to the dragon");
+      f.guestOn("Goblin", table, 3, 1);
+      expect(f.room.pickFreeSeat(goblin, picked) && picked.mIndex == 4, "the full bench sends the next guest to the other bench");
+      Creature dragon("Dragon2", &f.dragonDefinition, &f.seat, 1); dragon.mTile = table;
+      expect(f.room.pickFreeSeat(dragon, picked) && picked.mIndex == 4, "a second dragon does not fit on the same bench"); }
+    { Fixture f; Tile* table = f.map.getTile(2, 5); f.guestOn("Goblin", table, 0, 1);
+      Creature dragon("Dragon", &f.dragonDefinition, &f.seat, 1); dragon.mTile = table; RoomTavernSeat picked;
+      expect(f.room.pickFreeSeat(dragon, picked) && picked.mIndex == 1, "a dragon takes the three places next to one guest"); }
+    // A large guest never sits on a bench with a guest it does not fit next to
+    { Fixture f; Tile* table = f.map.getTile(2, 5); f.guestOn("A", table, 3, 1);
+      Creature troll("Troll", &f.largeDefinition, &f.seat, 1); troll.mTile = table; RoomTavernSeat picked;
+      expect(f.room.pickFreeSeat(troll, picked) && picked.mIndex == 4, "a troll takes the empty bench, not the one with a guest"); }
+    // One guest on every bench: a large creature finds no whole bench, a small one still finds a seat
     { Fixture f; Tile* tables[] = { f.map.getTile(2, 5), f.map.getTile(6, 5) };
-      for(int t = 0; t < 2; ++t) for(uint32_t i = 0; i < 8; i += 2) f.guestOn("G" + std::to_string(t * 8 + i), tables[t], i, false);
+      for(int t = 0; t < 2; ++t) for(uint32_t i = 0; i < 8; i += 4) f.guestOn("G" + std::to_string(t * 8 + i), tables[t], i, 1);
       Creature troll("Troll", &f.largeDefinition, &f.seat, 1); RoomTavernSeat picked;
-      expect(!f.room.pickFreeSeat(troll, picked), "a large creature does not enter without two free places");
+      expect(!f.room.pickFreeSeat(troll, picked), "a large creature does not enter without a free bench");
       Creature goblin("Goblin", &f.thirsty, &f.seat, 1); expect(f.room.pickFreeSeat(goblin, picked), "a small one still finds a seat"); }
+    // A bench with a wall behind it stays empty for every guest, large ones too
+    { Fixture f; Tile* table = f.map.getTile(2, 5); f.room.mBlockedBenches.push_back(std::make_pair(table, 0u));
+      Creature goblin("Goblin", &f.thirsty, &f.seat, 1); goblin.mTile = table; RoomTavernSeat picked;
+      for(uint32_t i = 0; i < 4; ++i) expect(!f.room.isFreeSeat(RoomTavernSeat(table, i), 1), "nobody sits on a bench with a wall behind it");
+      expect(f.room.pickFreeSeat(goblin, picked) && picked.mTable == table && picked.mIndex == 4, "the guest takes the bench without a wall");
+      Creature troll("Troll", &f.largeDefinition, &f.seat, 1); troll.mTile = table;
+      expect(f.room.pickFreeSeat(troll, picked) && picked.mTable == table && picked.mIndex == 4, "a large guest takes the bench without a wall");
+      f.room.mBlockedBenches.push_back(std::make_pair(table, 1u));
+      expect(f.room.pickFreeSeat(goblin, picked) && picked.mTable == f.map.getTile(6, 5), "a table with a wall behind both benches seats nobody"); }
 }
 
 static void checkContest()
@@ -1026,10 +1070,11 @@ types_end = tavern_h.index('//! \\brief A room where creatures quench their thir
 room_types = tavern_h[types_start:types_end]
 constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) ' + name + r' = [^;]+;$') for name in (
     'GET_UP_TURNS', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
+constants += '\n' + find_line(room_cpp, r'^const float TAVERN_SEAT_SPACING = [^;]+;$')
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'Ogre::Vector3 directionTo('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
-    'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
+    'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',
     'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
     'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',
