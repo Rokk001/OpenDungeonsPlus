@@ -3825,7 +3825,7 @@ std::string GameMap::getGoalsStringForPlayer(Player* player)
 //! \brief The cap of the claimed tiles that count for the mana income (see manaIncomePerSecond).
 double GameMap::getManaIncomeTilesCap() const
 {
-    return MANA_INCOME_TILES_CAP;
+    return manaIncomeTilesCap();
 }
 
 //! \brief Seconds left until the next payday: the payday period minus the time since the last payday.

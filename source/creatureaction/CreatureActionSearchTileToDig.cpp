@@ -19,11 +19,13 @@
 #include "creatureaction/WorkerSearchTargets.h"
 
 #include "creatureaction/CreatureActionDigTile.h"
+#include "creatureaction/CreatureActionGrabEntity.h"
 #include "entities/Creature.h"
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
 #include "game/Player.h"
 #include "game/Seat.h"
+#include "rooms/Room.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
 #include "utils/Helper.h"

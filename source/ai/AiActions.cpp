@@ -38,7 +38,7 @@
 namespace
 {
 //! \brief Schedules an encoded keeper action for later execution.
-void schedule(KeeperAI& ai, const std::string& key, const std::string& arguments);
+double schedule(KeeperAI& ai, const std::string& key, const std::string& arguments);
 //! \brief Encodes arbitrary names and action arguments as a whitespace-free save token.
 std::string encode(const std::string& value)
 {
