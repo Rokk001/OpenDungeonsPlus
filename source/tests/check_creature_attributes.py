@@ -760,19 +760,18 @@ def check_part_g():
             'Ogre::OverlayManager::getSingleton().getViewportHeight()') in update
     assert 'previousPosition = childPosition;' in update, 'the next child centres on the unshifted position'
 
-    # ---- 6.7 the mana ring: health-ring backing and eight tinted segments, right of the health ring
+    # ---- 6.7 the mana ring: eight tinted segments inside the health badge
     enum_body = status[status.index('enum class CreatureOverlays'):status.index('};', status.index('enum class CreatureOverlays'))]
     assert enum_body.index('mana,') < enum_body.index('nbCreatureOverlays'), 'enum value mana before nbCreatureOverlays'
     constructor = function(status, 'CreatureOverlayStatus::CreatureOverlayStatus(')
     assert constructor.rindex('CreatureOverlays::mana') > constructor.rindex('CreatureOverlays::status'), 'created last'
     assert 'createChildOverlay("MedievalSharp", 30,\n        Ogre::ColourValue::White, manaMaterial, false)' in constructor
     assert 'forceTextArea(manaId, MANA_RING_SIZE, MANA_RING_SIZE)' in constructor
-    assert 'setOffset(manaId, MANA_RING_OFFSET_X, 0.0f)' in constructor and 'displayOverlay(manaId, -1)' in constructor
+    assert 'setOffset(manaId' not in constructor and 'displayOverlay(manaId, -1)' in constructor
     assert 'MANA_RING_BASE_MATERIAL + Helper::toString(MANA_RING_SEGMENTS)' in constructor
-    assert 'MANA_RING_BACKING_MATERIAL = "CreatureOverlay7"' in status
     assert 'MANA_RING_BASE_MATERIAL = "ManaRing"' in status
     assert 'MANA_RING_SEGMENTS = 8;' in status
-    assert 'MANA_RING_SIZE = 64;' in status and 'MANA_RING_OFFSET_X = 64;' in status
+    assert 'MANA_RING_SIZE = 48;' in status and 'MANA_RING_OFFSET_X' not in status
     channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_RING_RED', 'MANA_RING_GREEN', 'MANA_RING_BLUE')]
     assert channels == [127, 227, 166]
     # The painted HUD uses ivory text; the creature's mana ring keeps its original green tint.
