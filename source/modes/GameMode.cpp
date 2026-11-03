@@ -4078,7 +4078,7 @@ bool GameMode::saveGame(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
-//! rief Receives a notice and presents it as a single message tab per distinct text.
+//! \brief Receives a notice and presents it as a single message tab per distinct text.
 //! \param event The notice, owned by this mode afterwards (deleted at once when an identical one is pending).
 //! A repeated notice only makes the pending tab unread again, so the queue never piles up identical info buttons.
 void GameMode::receiveEventShortNotice(EventMessage* event)

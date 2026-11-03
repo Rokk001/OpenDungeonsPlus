@@ -225,6 +225,15 @@ Ogre::MaterialPtr createRingMaterial(const std::string& group)
     return material;
 }
 
+//! \brief Rotates a ring texture coordinate around the texture centre by the angle given as cosine and sine.
+//! Rotating the sampled coordinates by -angle turns the picture clockwise (v points down).
+Ogre::Vector2 turnRingUV(float c, float s, float x, float y)
+{
+    const float dx = x - 0.5f;
+    const float dy = y - 0.5f;
+    return Ogre::Vector2(0.5f + dx * c + dy * s, 0.5f - dx * s + dy * c);
+}
+
 //! \brief Places the ring below the text and turns it clockwise by the elapsed time.
 void fitLoadingRing(Ogre::Rectangle2D& rectangle, unsigned int width, unsigned int height)
 {
@@ -237,14 +246,7 @@ void fitLoadingRing(Ogre::Rectangle2D& rectangle, unsigned int width, unsigned i
     const float halfWidth = halfHeight * static_cast<float>(height) / static_cast<float>(std::max(1u, width));
     const float centerY = 1.0f - 2.0f * LOADING_RING_CENTER;
     rectangle.setCorners(-halfWidth, centerY + halfHeight, halfWidth, centerY - halfHeight);
-    // Rotating the sampled coordinates by -angle turns the picture clockwise (v points down).
-    const auto turned = [c, s](float x, float y) -> Ogre::Vector2
-    {
-        const float dx = x - 0.5f;
-        const float dy = y - 0.5f;
-        return Ogre::Vector2(0.5f + dx * c + dy * s, 0.5f - dx * s + dy * c);
-    };
-    rectangle.setUVs(turned(0.0f, 0.0f), turned(0.0f, 1.0f), turned(1.0f, 0.0f), turned(1.0f, 1.0f));
+    rectangle.setUVs(turnRingUV(c, s, 0.0f, 0.0f), turnRingUV(c, s, 0.0f, 1.0f), turnRingUV(c, s, 1.0f, 0.0f), turnRingUV(c, s, 1.0f, 1.0f));
 }
 
 //! \brief Creates the ring rectangle above the picture in the given scene.
