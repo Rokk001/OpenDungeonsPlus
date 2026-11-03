@@ -163,8 +163,7 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
     if(!pleasure && !fighting &&
        (roomType == RoomType::arena || room->shouldNotUseIfBadMood(creature, forced)))
     {
-        if(creature.getMoodValue() >= CreatureMoodLevel::Upset ||
-           creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork())
+        if(creature.getMoodValue() >= CreatureMoodLevel::Upset)
         {
             creature.popAction();
             creature.pushAction(Utils::make_unique<CreatureActionSearchJob>(creature, false));

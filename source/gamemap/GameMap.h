@@ -196,6 +196,9 @@ public:
     //! \brief Server side: every few turns, nemesis pairs that are close and idle may start a brawl.
     void checkRelationshipBrawls();
 
+    //! \brief Lets the rampaging creatures start brawls with own creatures (also when the relationships are off).
+    void checkRampageBrawls();
+
     //! \brief Server side. Sends every tier that is not neutral to the player of the given seat.
     void sendRelationshipTiers(Seat* seat);
 
@@ -377,6 +380,10 @@ public:
     double getManaIncomeTilesCap() const;
     //! \brief Seconds left until the next payday.
     double getTimeToPayDay() const;
+
+    //! \brief Returns the game seconds the last turn took (the leave clock and the rampage of the creatures count them).
+    inline double getLastTurnSeconds() const
+    { return mLastTurnSeconds; }
 
     //! \brief Returns a pointer to the player structure stored by this GameMap whose name matches pName.
     Player* getPlayer(const std::string& cName) const;
@@ -945,6 +952,9 @@ private:
     bool mIsPaused;
 
     Ogre::Real mTimePayDay;
+
+    //! \brief The game seconds the last turn took, set at the start of every turn.
+    double mLastTurnSeconds;
 
     //! \brief Level related filenames.
     std::string mLevelFileName;

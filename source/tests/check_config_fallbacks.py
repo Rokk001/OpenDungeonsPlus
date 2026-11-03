@@ -44,7 +44,7 @@ DEFAULTS = {
     "mGhostAiGoldPerResearchPoint": "GhostAiGoldPerResearchPoint", "mGhostAiGoldPerXp": "GhostAiGoldPerXp",
     "mSoulCrystalNormalXpPerSecond": "SoulCrystalNormalXpPerSecond", "mCreatureMoodUpset": "CreatureMoodUpset",
     "mCreatureMoodAngry": "CreatureMoodAngry", "mCreatureMoodFurious": "CreatureMoodFurious",
-    "mNbTurnsFuriousMax": "NbTurnsFuriousMax",
+    "mMoodRampageBrawlVictim": "MoodRampageBrawlVictim",
 }
 for member, key in DEFAULTS.items():
     shipped = cfg_value(global_cfg, key)
@@ -120,6 +120,21 @@ for key in ('ManaIncomeTilesCap', 'ManaPerClaimedTilePerSecond', 'WorkerManaUpke
         problems.append("missing-key logging is not wired for " + key)
 if 'foundKeys.count(key) == 0' not in manager or 'Missing GameConfig key=' not in manager:
     problems.append("missing GameConfig fallbacks must be logged")
+
+# The rampage block of global.cfg: the shipped values equal the defaults of the ConfigManager constructor, and the keys of the
+# old wage rules and of the old rogue rule are gone from the code and from the configuration
+rampage_block = re.search(r"\[Rampage\](.*?)\[/Rampage\]", global_cfg, re.S)
+if rampage_block is None:
+    problems.append("global.cfg has no [Rampage] block")
+else:
+    for key in ("RampageTileDamage", "RampageHitTurns", "RampagePileTurns"):
+        shipped = cfg_value(rampage_block.group(1), key)
+        match = re.search(r'mRampageConfig\["' + key + r'"\] = ([-0-9.]+);', manager)
+        if shipped is None or match is None or abs(float(match.group(1)) - shipped) > 1e-9:
+            problems.append("the default of " + key + " must equal the [Rampage] block of global.cfg")
+for gone in ("UnpaidWagesStopWork", "UnpaidWagesLeave", "NbTurnsFuriousMax"):
+    if cfg_value(global_cfg, gone) is not None or gone in manager or ("# " + gone) in global_cfg:
+        problems.append(gone + " must be gone from global.cfg and the ConfigManager")
 
 if problems:
     print("\n".join("FAIL: " + p for p in problems))

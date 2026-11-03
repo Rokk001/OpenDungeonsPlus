@@ -42,6 +42,7 @@
 #include "creatureaction/CreatureActionGrabEntity.h"
 #include "creatureaction/CreatureActionLeaveDungeon.h"
 #include "creatureaction/CreatureActionParkToTile.h"
+#include "creatureaction/CreatureActionRampage.h"
 #include "creatureaction/CreatureActionPossessed.h"
 #include "creatureaction/CreatureActionReloadTrap.h"
 #include "creatureaction/CreatureActionSearchDirtToClean.h"
@@ -398,6 +399,10 @@ static const double PLEASURE_GAIN_EPSILON = 1e-9;
 static const std::string ROOM_LOCKS_SAVE_OPEN = "[RoomLocks]";
 //! \brief Tag that closes the block of the room locks.
 static const std::string ROOM_LOCKS_SAVE_CLOSE = "[/RoomLocks]";
+//! \brief Tag that opens the optional block of the leave clock and the rampage.
+static const std::string MOOD_DECISION_SAVE_OPEN = "[MoodDecision]";
+//! \brief Tag that closes the block of the leave clock and the rampage.
+static const std::string MOOD_DECISION_SAVE_CLOSE = "[/MoodDecision]";
 //! \brief Turns after the last turn of watching a fight in which a spectator of the arena still counts as watching.
 static const int32_t ARENA_WATCH_GRACE_TURNS = 2;
 //! \brief Tag that opens the optional arena knock-out state.
@@ -761,7 +766,17 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mMoodFromOldSave         (false),
     mMoodTurnsPending        (0),
     mPrayedSinceMoodLook     (false),
-    mNbTurnFurious           (-1),
+    mLeaveClockRunning       (false),
+    mLeaveClockSeconds       (0.0),
+    mLeavingByMood           (false),
+    mCharismaSeen            (-1.0),
+    mRampageSecondsLeft      (0.0),
+    mRampageHitTurns         (0),
+    mRampagePileTurns        (0),
+    mRampageTargetX          (-1),
+    mRampageTargetY          (-1),
+    mBrawlRampage            (false),
+    mBrawlRampageVictim      (false),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (CreatureMoodValues::Nothing),
     mClientTileSpeedRatio    (-1.0),
@@ -915,7 +930,17 @@ Creature::Creature(GameMap* gameMap) :
     mMoodFromOldSave         (false),
     mMoodTurnsPending        (0),
     mPrayedSinceMoodLook     (false),
-    mNbTurnFurious           (-1),
+    mLeaveClockRunning       (false),
+    mLeaveClockSeconds       (0.0),
+    mLeavingByMood           (false),
+    mCharismaSeen            (-1.0),
+    mRampageSecondsLeft      (0.0),
+    mRampageHitTurns         (0),
+    mRampagePileTurns        (0),
+    mRampageTargetX          (-1),
+    mRampageTargetY          (-1),
+    mBrawlRampage            (false),
+    mBrawlRampageVictim      (false),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (0),
     mClientTileSpeedRatio    (-1.0),
@@ -1250,6 +1275,14 @@ void Creature::exportToStream(std::ostream& os) const
         for(const std::pair<const std::string, int32_t>& pair : mMoodRelationPairs)
             os << " " << pair.first << " " << pair.second;
         os << " [/Mood]";
+    }
+    // Leave clock and rampage, saved one to one: the clock (running flag and game seconds), the rampage (game seconds left,
+    // turns to the next hit and the next pile, the target tile). Missing in old saves and when neither runs.
+    if(mLeaveClockRunning || isRampaging())
+    {
+        os << "\t" << MOOD_DECISION_SAVE_OPEN << " " << (mLeaveClockRunning ? 1 : 0) << " " << mLeaveClockSeconds << " "
+           << mRampageSecondsLeft << " " << mRampageHitTurns << " " << mRampagePileTurns << " " << mRampageTargetX << " "
+           << mRampageTargetY << " " << MOOD_DECISION_SAVE_CLOSE;
     }
     // The first value is the special mood of old saves (always 0 now), kept for the layout of the block
     if(mGhostRevived)
@@ -1587,6 +1620,33 @@ bool Creature::importFromStream(std::istream& is)
             }
             mKoTurnCounter = loadedKoTurns;
             mArenaKnockOut = (loadedArenaKnockOut != 0);
+            continue;
+        }
+
+        if(appearanceToken == MOOD_DECISION_SAVE_OPEN)
+        {
+            int32_t loadedRunning = 0;
+            double loadedClock = 0.0;
+            double loadedRampage = 0.0;
+            int32_t loadedHitTurns = 0;
+            int32_t loadedPileTurns = 0;
+            int32_t loadedTargetX = -1;
+            int32_t loadedTargetY = -1;
+            std::string decisionClose;
+            if(!(is >> loadedRunning >> loadedClock >> loadedRampage >> loadedHitTurns >> loadedPileTurns >> loadedTargetX
+                >> loadedTargetY >> decisionClose) || (decisionClose != MOOD_DECISION_SAVE_CLOSE) ||
+               !std::isfinite(loadedClock) || !std::isfinite(loadedRampage))
+            {
+                OD_LOG_WRN("Invalid leave clock block for creature=" + getName());
+                return false;
+            }
+            mLeaveClockRunning = (loadedRunning != 0);
+            mLeaveClockSeconds = std::max(0.0, loadedClock);
+            mRampageSecondsLeft = std::max(0.0, loadedRampage);
+            mRampageHitTurns = std::max(0, loadedHitTurns);
+            mRampagePileTurns = std::max(0, loadedPileTurns);
+            mRampageTargetX = loadedTargetX;
+            mRampageTargetY = loadedTargetY;
             continue;
         }
 
@@ -3156,7 +3216,8 @@ void Creature::doUpkeep()
         }
 
         // The mood of a jailed creature sees its hunger, thirst and wounds, the prison and the torture chamber change its
-        // stored mood directly. The Furious timer and the leave behaviour stay skipped in jail.
+        // stored mood directly. A captive has no leave clock: a clock that ran before the capture is reset.
+        stopMoodDecision();
         ++mMoodTurnsPending;
         if(mMoodCooldownTurns > 0)
         {
@@ -3263,27 +3324,8 @@ void Creature::doUpkeep()
         mMoodCooldownTurns = Random::Int(0, 5);
     }
 
-    if(mMoodValue < CreatureMoodLevel::Furious)
-    {
-        mNbTurnFurious = -1;
-    }
-    else
-    {
-        // If the creature is furious for too long, it will become rogue
-        if(mNbTurnFurious < 0)
-            mNbTurnFurious = 0;
-        else
-            ++mNbTurnFurious;
-
-        if(mNbTurnFurious >= ConfigManager::getSingleton().getNbTurnsFuriousMax())
-        {
-            // We couldn't leave the dungeon in time, we become rogue
-            fireChatMsgBecameRogue();
-
-            Seat* rogueSeat = getGameMap()->getSeatRogue();
-            changeSeat(rogueSeat);
-        }
-    }
+    // The leave clock, the draw after one pay day at the bottom of the mood and the rampage
+    upkeepMoodDecision();
 
     ++mNbTurnsWithoutBattle;
     // The turn the counter goes from 0 to 1 is the end of a fight: the creature gets a little dirty
@@ -3690,6 +3732,14 @@ bool Creature::handleIdleAction()
         return true;
     }
 
+    // A rampaging creature walks through the rooms of its keeper and hits them. It does not sleep, work or look for
+    // pleasure; when there is nothing to destroy it wanders around
+    if(!mDefinition->isWorker() && isRampaging() && !hasActionBeenTried(CreatureActionType::rampage))
+    {
+        pushAction(Utils::make_unique<CreatureActionRampage>(*this));
+        return true;
+    }
+
     // Check to see if we have found a "home" tile where we can sleep. Even if we are not sleepy,
     // we want to have a bed
     if (!mDefinition->isWorker() &&
@@ -3703,6 +3753,7 @@ bool Creature::handleIdleAction()
 
     // If we are sleepy, we go to sleep
     if (!mDefinition->isWorker() &&
+        !isRampaging() &&
         !hasActionBeenTried(CreatureActionType::sleep) &&
         (mHomeTile != nullptr) &&
         (Random::Double(ConfigManager::getSingleton().getSleepSeekWakefulnessMin(), ConfigManager::getSingleton().getSleepSeekWakefulnessMax()) > mWakefulness))
@@ -3811,6 +3862,7 @@ bool Creature::handleIdleAction()
 
     // Otherwise, we try to work
     if (!mDefinition->isWorker() &&
+        !isRampaging() &&
         !hasActionBeenTried(CreatureActionType::searchJob))
     {
         pushAction(Utils::make_unique<CreatureActionSearchJob>(*this, false));
@@ -7024,10 +7076,24 @@ double Creature::getRelationshipRageFactor(const Seat* victimSeat) const
     return 1.0 + static_cast<double>(getGameMap()->getCreatureRelationships()->getSettings().mGriefRageBonusPercent) / 100.0;
 }
 
-bool Creature::canStartBrawl() const
+//! \brief True if the creature can start a brawl now. The brawl of a rampage does not need the relationships to be on, the
+//! other rules (no worker, no rogue, no hero, no prisoner) are the same.
+bool Creature::canStartBrawl(bool rampage) const
 {
-    if(!canHaveRelationships())
+    if(rampage)
+    {
+        Seat* seat = getSeat();
+        const bool hasSeat = (seat != nullptr);
+        if(!relationshipsAllowed(getIsOnServerMap(), hasSeat, hasSeat && seat->isRogueSeat(),
+            hasSeat && (seat->getFaction() == "Hero"), getDefinition()->isWorker(), isInPrison()))
+        {
+            return false;
+        }
+    }
+    else if(!canHaveRelationships())
+    {
         return false;
+    }
 
     BrawlCandidateState state;
     state.mAllowed = true;
@@ -7042,12 +7108,14 @@ bool Creature::canStartBrawl() const
     state.mInArenaOrCasino = (room != nullptr) && ((room->getType() == RoomType::arena) || (room->getType() == RoomType::casino));
     state.mHp = getHP();
     state.mMaxHp = mMaxHP;
-    return ::canStartBrawl(state, getGameMap()->getCreatureRelationships()->getSettings());
+    return ::canStartBrawl(state, getBrawlSettings());
 }
 
-void Creature::startBrawl(Creature& opponent)
+//! \brief Starts a brawl with the opponent. In the brawl of a rampage the rampaging creature is the aggressor and the other
+//! one is the victim, which loses MoodRampageBrawlVictim when the brawl ends instead of becoming angry.
+void Creature::startBrawl(Creature& opponent, bool rampage)
 {
-    if(!canStartBrawl() || !opponent.canStartBrawl())
+    if(!canStartBrawl(rampage) || !opponent.canStartBrawl(rampage))
         return;
 
     int64_t turn = getGameMap()->getTurnNumber();
@@ -7055,6 +7123,18 @@ void Creature::startBrawl(Creature& opponent)
     mBrawlStartTurn = turn;
     opponent.mBrawlOpponent = getName();
     opponent.mBrawlStartTurn = turn;
+    mBrawlRampage = rampage;
+    opponent.mBrawlRampage = rampage;
+    mBrawlRampageVictim = false;
+    opponent.mBrawlRampageVictim = false;
+    if(rampage)
+    {
+        // The one that does not rampage is the victim
+        if(isRampaging() || !opponent.isRampaging())
+            opponent.mBrawlRampageVictim = true;
+        else
+            mBrawlRampageVictim = true;
+    }
 
     // Both fight to knock the other one out, the fight never kills
     Creature* creatures[2] = {this, &opponent};
@@ -7075,10 +7155,12 @@ void Creature::updateBrawl()
 
     Creature* opponent = getGameMap()->getCreature(mBrawlOpponent);
     CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
-    if((opponent == nullptr) || (relationships == nullptr) || (opponent->mBrawlOpponent != getName()))
+    if((opponent == nullptr) || (!mBrawlRampage && (relationships == nullptr)) || (opponent->mBrawlOpponent != getName()))
     {
         // The opponent is gone (or has already stopped): nothing to end for it
         mBrawlOpponent.clear();
+        mBrawlRampage = false;
+        mBrawlRampageVictim = false;
         return;
     }
 
@@ -7095,7 +7177,7 @@ void Creature::updateBrawl()
     other.mHp = opponent->getHP();
     other.mMaxHp = opponent->mMaxHP;
     if(shouldStopBrawl(own, other, getGameMap()->getTurnNumber() - mBrawlStartTurn,
-        isActionInList(CreatureActionType::fightFriendly), relationships->getSettings()))
+        isActionInList(CreatureActionType::fightFriendly), getBrawlSettings()))
     {
         endBrawl();
     }
@@ -7124,13 +7206,19 @@ void Creature::endBrawl()
         if((creature == nullptr) || !creature->isAlive())
             continue;
 
-        // The fight stops (unless the creature already got something else to do), both stay angry
+        // The fight stops (unless the creature already got something else to do), both stay angry. After the brawl of a
+        // rampage only the victim loses mood, the rampaging creature stays as it is.
         if(creature->isActionInList(CreatureActionType::fightFriendly))
         {
             creature->clearDestinations(EntityAnimation::idle_anim, true, true);
             creature->clearActionQueue();
         }
-        creature->makeAngry();
+        if(!creature->mBrawlRampage)
+            creature->makeAngry();
+        else if(creature->mBrawlRampageVictim)
+            creature->applyMoodEvent(ConfigManager::getSingleton().getMoodRampageBrawlVictim(), false);
+        creature->mBrawlRampage = false;
+        creature->mBrawlRampageVictim = false;
     }
 
     if(relationships != nullptr)
@@ -8809,6 +8897,19 @@ void Creature::fireChatMsgBecameRogue()
     getSeat()->getPlayer()->notifyCreatureEvent(*this, " is not under your control anymore !");
 }
 
+//! \brief Reports the rampage of the creature to its human keeper.
+void Creature::fireChatMsgRampaging()
+{
+    if(getSeat()->getPlayer() == nullptr)
+        return;
+    if(getSeat()->getPlayer()->getHasLost())
+        return;
+    if(!getSeat()->getPlayer()->getIsHuman())
+        return;
+
+    getSeat()->getPlayer()->notifyCreatureEvent(*this, " is rampaging in your dungeon !");
+}
+
 //! \brief Reports the creature notice to its human keeper or queues the matching AI event.
 void Creature::fireChatMsgUnhappy()
 {
@@ -9575,7 +9676,7 @@ void Creature::setSpaMudTilesLeft(int32_t tiles)
 bool Creature::wantsSpaBath() const
 {
     if((mDefinition == nullptr) || mDefinition->isWorker() || mIsInHand || isInPrison() ||
-       (getSeat() == nullptr) || getSeat()->isRogueSeat())
+       (getSeat() == nullptr) || getSeat()->isRogueSeat() || isRampaging())
         return false;
 
     // A running pleasure buff or the lock of the spa (the relaxation) keeps the creature away, also with a hangover
@@ -9649,10 +9750,10 @@ double Creature::getRoomLockTurns(PleasureRoomKind kind) const
     return (it == mRoomLockTurns.end()) ? 0.0 : it->second;
 }
 
-//! \brief No running pleasure buff and the room not closed.
+//! \brief No running pleasure buff, the room not closed and no rampage.
 bool Creature::canUsePleasureRoom(PleasureRoomKind kind) const
 {
-    return !hasPleasureBuff() && !isRoomLocked(kind);
+    return !isRampaging() && !hasPleasureBuff() && !isRoomLocked(kind);
 }
 
 //! \brief Closes the given pleasure room for the given turns; a longer running lock stays.
@@ -10185,10 +10286,12 @@ void Creature::clearMoodCounters()
 }
 
 //! \brief Make Happy: clears the annoyance counters and sets the stored mood to the maximum. Running effects keep running.
+//! A running leave clock is reset and a running rampage ends.
 void Creature::removeAnnoyance()
 {
     clearMoodCounters();
     setStoredMood(ConfigManager::getSingleton().getCreatureBaseMood());
+    stopMoodDecision();
 }
 
 //! \brief Make Unhappy: takes MakeUnhappyMoodJump at once and starts a debuff of MakeUnhappyMoodFall over MakeUnhappyTurns.
@@ -10559,6 +10662,265 @@ void Creature::computeMood()
     }
 }
 
+//! \brief Returns true if the keeper has a portal that this creature can walk to.
+bool Creature::hasReachableOwnPortal()
+{
+    Tile* myTile = getPositionTile();
+    if((myTile == nullptr) || (getSeat() == nullptr))
+        return false;
+
+    std::vector<Room*> portals = getGameMap()->getRoomsByTypeAndSeat(RoomType::portal, getSeat());
+    portals = getGameMap()->getReachableRooms(portals, myTile, this);
+    return !portals.empty();
+}
+
+//! \brief Resets the leave clock, ends a running rampage and turns back a creature that walks to its portal because of the
+//! draw: the mood is back at the Upset level (a solved problem, Make Happy) or a Charisma item was put on.
+void Creature::stopMoodDecision()
+{
+    mLeaveClockRunning = false;
+    mLeaveClockSeconds = 0.0;
+    if(isRampaging())
+        endRampage();
+
+    if(!mLeavingByMood)
+        return;
+
+    mLeavingByMood = false;
+    if(isActionInList(CreatureActionType::leaveDungeon))
+    {
+        // The creature turns back and stays
+        OD_LOG_INF("creature=" + getName() + " stays, its mood is back");
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+        clearActionQueue();
+    }
+}
+
+//! \brief The creature that walks to its portal because of the draw found no portal it can reach: it draws again.
+void Creature::drawMoodDecisionAgain()
+{
+    if(!mLeavingByMood)
+        return;
+
+    mLeavingByMood = false;
+    drawMoodDecision();
+}
+
+//! \brief Once per turn. The leave clock starts when the effective mood reaches 0, counts game time and is reset when the
+//! effective mood is back at the Upset level (CreatureMoodAngry) or a Charisma item is put on. It pauses while the creature
+//! is held in the hand, knocked out or possessed. When it reaches TimePayDay the creature draws. A running rampage is
+//! counted down and ends at once when the mood is back at the Upset level.
+void Creature::upkeepMoodDecision()
+{
+    if((mDefinition == nullptr) || mDefinition->getCreatureMoods().empty() || (getSeat() == nullptr) ||
+       getSeat()->isRogueSeat() || !isAlive() || !getIsOnServerMap())
+    {
+        stopMoodDecision();
+        return;
+    }
+
+    // A walk to the portal that was interrupted (a fight, a pick up) is over
+    if(mLeavingByMood && !isActionInList(CreatureActionType::leaveDungeon))
+        mLeavingByMood = false;
+
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double effective = getEffectiveMood();
+    const double charisma = effective - mStoredMood;
+    const bool charismaPutOn = (mCharismaSeen >= 0.0) && (charisma > mCharismaSeen);
+    mCharismaSeen = charisma;
+    if((effective >= static_cast<double>(config.getCreatureMoodAngry())) || charismaPutOn)
+    {
+        stopMoodDecision();
+        return;
+    }
+
+    if(isRampaging())
+    {
+        upkeepRampage();
+        return;
+    }
+
+    const bool paused = mIsInHand || isKo() || isPossessed();
+    if(!mLeaveClockRunning)
+    {
+        if(paused || (effective > 0.0))
+            return;
+
+        OD_LOG_INF("creature=" + getName() + " starts its leave clock");
+        mLeaveClockRunning = true;
+        mLeaveClockSeconds = 0.0;
+        return;
+    }
+
+    if(paused)
+        return;
+
+    mLeaveClockSeconds += getGameMap()->getLastTurnSeconds();
+    if((mLeaveClockSeconds >= static_cast<double>(config.getTimePayDay())) &&
+       !isActionInList(CreatureActionType::leaveDungeon))
+    {
+        drawMoodDecision();
+    }
+}
+
+//! \brief The draw after one pay day at the bottom of the mood, with the chances of the creature type: leave the dungeon
+//! (the creature draws again when no own portal is reachable), turn rogue or rampage. The leave clock starts a new period,
+//! so a creature that is still at the bottom one pay day later draws again.
+void Creature::drawMoodDecision()
+{
+    mLeaveClockSeconds = 0.0;
+    const double leaveChance = std::max(0.0, mDefinition->getMoodLeaveChance());
+    const double rampageChance = std::max(0.0, mDefinition->getMoodRampageChance());
+    const double rogueChance = std::max(0.0, mDefinition->getMoodRogueChance());
+    const double total = leaveChance + rampageChance + rogueChance;
+    if(total <= 0.0)
+        return;
+
+    // A leave draw without a reachable portal is drawn again; the draws are bounded in case only "leave" is possible
+    static const uint32_t MAX_DRAWS = 32;
+    for(uint32_t draw = 0; draw < MAX_DRAWS; ++draw)
+    {
+        const double roll = Random::Double(0.0, total);
+        if(roll < leaveChance)
+        {
+            if(!hasReachableOwnPortal())
+                continue;
+
+            OD_LOG_INF("creature=" + getName() + " wants to leave its dungeon");
+            mLeavingByMood = true;
+            leaveDungeon();
+            // The best friend may follow (only with relationships on)
+            reportLeavingToBestFriend();
+            return;
+        }
+
+        if(roll < leaveChance + rampageChance)
+        {
+            OD_LOG_INF("creature=" + getName() + " starts to rampage");
+            startRampage();
+            return;
+        }
+
+        // The creature turns rogue
+        OD_LOG_INF("creature=" + getName() + " becomes rogue");
+        fireChatMsgBecameRogue();
+        changeSeat(getGameMap()->getSeatRogue());
+        return;
+    }
+}
+
+//! \brief Starts a rampage of one pay day: the creature drops what it does and walks through the rooms of its keeper.
+void Creature::startRampage()
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    mRampageSecondsLeft = static_cast<double>(config.getTimePayDay());
+    mRampageHitTurns = static_cast<int32_t>(std::max(1.0, config.getRampageConfigDouble("RampageHitTurns")));
+    mRampagePileTurns = static_cast<int32_t>(std::max(1.0, config.getRampageConfigDouble("RampagePileTurns")));
+    clearRampageTarget();
+    mLeaveClockSeconds = 0.0;
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    clearActionQueue();
+    fireChatMsgRampaging();
+    mNeedFireRefresh = true;
+    computeCreatureOverlayMoodValue();
+}
+
+//! \brief Ends the running rampage and forgets its counters.
+void Creature::endRampage()
+{
+    mRampageSecondsLeft = 0.0;
+    mRampageHitTurns = 0;
+    mRampagePileTurns = 0;
+    clearRampageTarget();
+    if(isActionInList(CreatureActionType::rampage))
+    {
+        clearDestinations(EntityAnimation::idle_anim, true, true);
+        clearActionQueue();
+    }
+    mNeedFireRefresh = true;
+    computeCreatureOverlayMoodValue();
+}
+
+//! \brief Once per turn while the creature rampages. The rampage lasts one pay day; at its end the creature draws again
+//! (the mood is still below the Upset level, otherwise the rampage would have ended before). The creature puts a dirt pile
+//! on its tile every RampagePileTurns and hits the room tile it stands on every RampageHitTurns.
+void Creature::upkeepRampage()
+{
+    mRampageSecondsLeft -= getGameMap()->getLastTurnSeconds();
+    if(mRampageSecondsLeft <= 0.0)
+    {
+        endRampage();
+        drawMoodDecision();
+        return;
+    }
+
+    Tile* myTile = getPositionTile();
+    if(mIsInHand || isKo() || isPossessed() || (myTile == nullptr))
+        return;
+
+    const ConfigManager& config = ConfigManager::getSingleton();
+    --mRampagePileTurns;
+    if(mRampagePileTurns <= 0)
+    {
+        mRampagePileTurns = static_cast<int32_t>(std::max(1.0, config.getRampageConfigDouble("RampagePileTurns")));
+        DirtPileEntity::createOnTile(getGameMap(), myTile, DirtPileKind::pile, mDefinition->getClassName());
+    }
+
+    Tile* target = getRampageTarget();
+    if((target == nullptr) || (target != myTile))
+        return;
+
+    --mRampageHitTurns;
+    if(mRampageHitTurns > 0)
+        return;
+
+    mRampageHitTurns = static_cast<int32_t>(std::max(1.0, config.getRampageConfigDouble("RampageHitTurns")));
+    if(!CreatureActionRampage::hitTile(*this, *target))
+        clearRampageTarget();
+}
+
+//! \brief Returns the room tile the rampaging creature walks to and hits, nullptr if it has none.
+Tile* Creature::getRampageTarget() const
+{
+    if((mRampageTargetX < 0) || (mRampageTargetY < 0))
+        return nullptr;
+
+    return getGameMap()->getTile(mRampageTargetX, mRampageTargetY);
+}
+
+//! \brief Sets the room tile the rampaging creature hits and starts the count to the first hit.
+void Creature::setRampageTarget(Tile* tile)
+{
+    if(tile == nullptr)
+    {
+        clearRampageTarget();
+        return;
+    }
+
+    mRampageTargetX = tile->getX();
+    mRampageTargetY = tile->getY();
+    mRampageHitTurns = static_cast<int32_t>(std::max(1.0,
+        ConfigManager::getSingleton().getRampageConfigDouble("RampageHitTurns")));
+}
+
+//! \brief Forgets the room tile of the rampage.
+void Creature::clearRampageTarget()
+{
+    mRampageTargetX = -1;
+    mRampageTargetY = -1;
+}
+
+//! \brief The settings of the brawl rules: the ones of the relationships when they are on, otherwise the ones of the
+//! configuration (a rampage brawls also when the relationships are switched off).
+RelationshipSettings Creature::getBrawlSettings() const
+{
+    const CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    if(relationships != nullptr)
+        return relationships->getSettings();
+
+    return RelationshipSettings::fromConfig(ConfigManager::getSingleton().getRelationshipsConfig());
+}
+
 void Creature::computeCreatureOverlayHealthValue()
 {
     if(!getIsOnServerMap())
@@ -10612,6 +10974,10 @@ void Creature::computeCreatureOverlayMoodValue()
             default:
                 break;
         }
+
+        // A rampaging creature shows the Furious icon
+        if(isRampaging())
+            value |= CreatureMoodValues::Furious;
 
         // We update the mood bit array according to actions in the list
         for (const std::unique_ptr<CreatureAction>& ca : mActions)
@@ -11256,6 +11622,12 @@ void Creature::changeSeat(Seat* newSeat)
     mMoodDirtRooms.clear();
     mMoodRelationPairs.clear();
     mPrayedSinceMoodLook = false;
+    mLeaveClockRunning = false;
+    mLeaveClockSeconds = 0.0;
+    mLeavingByMood = false;
+    mCharismaSeen = -1.0;
+    if(isRampaging())
+        endRampage();
     mRageUntilTurn = 0;
     mBrawlResumeOpponent.clear();
     mWakefulness = 100;

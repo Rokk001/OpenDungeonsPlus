@@ -48,22 +48,13 @@ CreatureBehaviour* CreatureBehaviourLeaveDungeonWhenFurious::clone() const
     return new CreatureBehaviourLeaveDungeonWhenFurious;
 }
 
-//! \brief Leaves when too many wages are unpaid. A furious creature does not leave by itself any more: leaving happens
-//! only through the leave clock.
+//! \brief A creature that walks to its portal because of the draw after one pay day at the bottom of its mood does nothing
+//! else. The leaving itself is decided by the leave clock of the creature (Creature::upkeepMoodDecision); neither missed wages
+//! nor a furious mood make a creature leave by themselves.
 bool CreatureBehaviourLeaveDungeonWhenFurious::processBehaviour(Creature& creature) const
 {
-    // The creature should try to leave if repeatedly unpaid
-    if(creature.getMissedWages() < ConfigManager::getSingleton().getUnpaidWagesLeave())
-        return true;
+    if(creature.isLeavingByMood() && creature.isActionInList(CreatureActionType::leaveDungeon))
+        return false;
 
-    if(!creature.isActionInList(CreatureActionType::leaveDungeon))
-    {
-        OD_LOG_INF("creature=" + creature.getName() + " wants to leave its dungeon");
-        creature.leaveDungeon();
-        // The best friend may follow (only with relationships on)
-        creature.reportLeavingToBestFriend();
-    }
-
-    // A creature that wants to leave does nothing else
-    return false;
+    return true;
 }

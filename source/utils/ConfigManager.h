@@ -242,6 +242,11 @@ public:
     inline double getMoodBattleWon() const
     { return mMoodBattleWon; }
 
+    //! \brief Mood an own creature loses once when it was in a brawl with a rampaging creature ([GameConfig]
+    //! MoodRampageBrawlVictim, a negative number)
+    inline double getMoodRampageBrawlVictim() const
+    { return mMoodRampageBrawlVictim; }
+
     //! \brief HP a slap of the keeper hand takes from every creature (fixed amount, [GameConfig] SlapDamage)
     inline double getSlapDamage() const
     { return mSlapDamage; }
@@ -432,9 +437,6 @@ public:
     inline uint32_t getBaseSpawnPoint() const
     { return mBaseSpawnPoint; }
 
-    inline int32_t getNbTurnsFuriousMax() const
-    { return mNbTurnsFuriousMax; }
-
     inline double getMaxManaPerSeat() const
     { return mMaxManaPerSeat; }
 
@@ -517,11 +519,6 @@ public:
     inline double getUndeadHealFactor() const { return mUndeadHealFactor; }
     //! \brief Returns whether lava damage follows the health curve.
     inline bool getLavaDamageScalesWithHp() const { return mLavaDamageScalesWithHp; }
-    //! \brief Returns the configured UnpaidWagesLeave value.
-    uint32_t getUnpaidWagesLeave() const { return mUnpaidWagesLeave; }
-
-    //! \brief Returns the configured UnpaidWagesStopWork value.
-    uint32_t getUnpaidWagesStopWork() const { return mUnpaidWagesStopWork; }
 
     //! \brief Returns the configured FindHomeChance value.
     double getFindHomeChance() const { return mFindHomeChance; }
@@ -698,6 +695,9 @@ public:
     //! \brief Returns the value of a key of the [Tavern] block of global.cfg (thirst, drinks, drunkenness, hangover,
     //! games); logs an error and returns 0 when the key is unknown.
     double getTavernConfigDouble(const std::string& param) const;
+    //! \brief Returns the value of a key of the [Rampage] block of global.cfg (damage to a room tile, turns between
+    //! hits, turns between piles); logs an error and returns 0 when the key is unknown.
+    double getRampageConfigDouble(const std::string& param) const;
     //! \brief Same as getRoomConfigString but returns defaultValue instead of logging an error when the
     //! parameter is not in the configuration file (or has no value).
     std::string getRoomConfigStringOrDefault(const std::string& param, const std::string& defaultValue) const;
@@ -895,6 +895,8 @@ private:
     bool loadGlobalLegacyMoodConfig(std::stringstream& configFile);
     //! \brief Reads the [Tavern] block of global.cfg into mTavernConfig.
     bool loadGlobalTavernConfig(std::stringstream& configFile);
+    //! \brief Reads the [Rampage] block of global.cfg into mRampageConfig.
+    bool loadGlobalRampageConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
     //! \brief Loads equipment definitions and their numeric balance settings.
     bool loadEquipements(const std::string& fileName);
@@ -1003,6 +1005,7 @@ private:
     double mMoodPayday;
     double mMoodMeal;
     double mMoodBattleWon;
+    double mMoodRampageBrawlVictim;
     double mSlapDamage;
     double mLavaDamagePerSecond;
     uint32_t mSlapEffectDuration;
@@ -1075,7 +1078,6 @@ private:
     double mShieldBlockPerLevel;
     double mShieldBlockMax;
     int64_t mTimePayDay;
-    int32_t mNbTurnsFuriousMax;
     double mMaxManaPerSeat;
     //! \brief Extra mana per second for each claimed mana well tile
     double mManaWellBonusPerTile;
@@ -1104,8 +1106,6 @@ private:
     double mNaturalFullHealSeconds;
     double mUndeadHealFactor;
     bool mLavaDamageScalesWithHp;
-    uint32_t mUnpaidWagesLeave;
-    uint32_t mUnpaidWagesStopWork;
     double mFindHomeChance;
     double mSleepSeekWakefulnessMin;
     double mSleepSeekWakefulnessMax;
@@ -1169,6 +1169,8 @@ private:
     std::map<std::string, double> mLegacyMoodConfig;
     //! \brief The keys of the [Tavern] block of global.cfg
     std::map<std::string, double> mTavernConfig;
+    //! \brief The keys of the [Rampage] block of global.cfg
+    std::map<std::string, double> mRampageConfig;
     std::map<std::string, std::string> mRelationshipsConfig;
     std::map<const std::string, std::string> mTrapsConfig;
     std::map<const std::string, std::string> mSpellConfig;

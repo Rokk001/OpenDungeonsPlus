@@ -75,8 +75,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return false;
     }
 
-    const bool moodSearch = creature.getMoodValue() >= CreatureMoodLevel::Upset ||
-        creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork();
+    const bool moodSearch = creature.getMoodValue() >= CreatureMoodLevel::Upset;
 
     if(creature.needInterrupt(false))
     {

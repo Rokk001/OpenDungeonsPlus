@@ -491,6 +491,7 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mMoodPayday(100.0),
     mMoodMeal(50.0),
     mMoodBattleWon(100.0),
+    mMoodRampageBrawlVictim(-100.0),
     mSlapDamage(10),
     mLavaDamagePerSecond(50),
     mSlapEffectDuration(20),
@@ -539,7 +540,6 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mShieldBlockPerLevel(0.0),
     mShieldBlockMax(25.0),
     mTimePayDay(600),
-    mNbTurnsFuriousMax(302),
     mMaxManaPerSeat(200000.0),
     mManaWellBonusPerTile(DEFAULT_MANA_WELL_BONUS_PER_TILE),
     mManaIncomeTilesCap(500.0),
@@ -563,8 +563,6 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mNaturalFullHealSeconds(939.96),
     mUndeadHealFactor(0.6666666666666666),
     mLavaDamageScalesWithHp(true),
-    mUnpaidWagesLeave(3),
-    mUnpaidWagesStopWork(2),
     mFindHomeChance(0.5),
     mSleepSeekWakefulnessMin(20.0),
     mSleepSeekWakefulnessMax(30.0),
@@ -615,6 +613,10 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mNbWorkersDigSameFaceTile(3),
     mNbWorkersClaimSameTile(1)
 {
+    // The shipped values of the [Rampage] block; global.cfg overrides them
+    mRampageConfig["RampageTileDamage"] = 5.0;
+    mRampageConfig["RampageHitTurns"] = 42.0;
+    mRampageConfig["RampagePileTurns"] = 168.0;
     // TODO: it might be better to go through the creature definitions and try to pickup the first worker we can find
     mCreatureDefinitionDefaultWorker = new CreatureDefinition(DefaultWorkerCreatureDefinition,
         CreatureDefinition::CreatureJob::Worker, "Kobold.mesh");
@@ -832,6 +834,15 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
 
             continue;
         }
+
+        if(nextParam == "[Rampage]")
+        {
+            // The rampage block is optional: without it every rampage key keeps its shipped value
+            if(!loadGlobalRampageConfig(configFile))
+                break;
+
+            continue;
+        }
     }
 
     if(paramsOk != 0x07)
@@ -901,6 +912,29 @@ bool ConfigManager::loadGlobalTavernConfig(std::stringstream& configFile)
 
     OD_LOG_ERR("Missing [/Tavern] in global.cfg");
     return false;
+}
+
+//! \brief Reads the [Rampage] block of global.cfg: one "key value" pair per line up to [/Rampage].
+bool ConfigManager::loadGlobalRampageConfig(std::stringstream& configFile)
+{
+    if(readGlobalNumberBlock(configFile, "[/Rampage]", mRampageConfig))
+        return true;
+
+    OD_LOG_ERR("Missing [/Rampage] in global.cfg");
+    return false;
+}
+
+//! \brief Returns the value of a [Rampage] key of global.cfg, 0 (and an error in the log) when the key is unknown.
+double ConfigManager::getRampageConfigDouble(const std::string& param) const
+{
+    std::map<std::string, double>::const_iterator it = mRampageConfig.find(param);
+    if(it == mRampageConfig.end())
+    {
+        OD_LOG_ERR("Unknown rampage parameter param=" + param);
+        return 0.0;
+    }
+
+    return it->second;
 }
 
 //! \brief Reads the [LegacyMood] block of global.cfg: one "key value" pair per line up to [/LegacyMood].
@@ -1851,14 +1885,6 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
-        if(nextParam == "NbTurnsFuriousMax")
-        {
-            configFile >> nextParam;
-            mNbTurnsFuriousMax = Helper::toInt(nextParam);
-            foundKeys.insert("NbTurnsFuriousMax");
-            // Not mandatory
-        }
-
         if(nextParam == "MaxManaPerSeat")
         {
             configFile >> nextParam;
@@ -2076,6 +2102,14 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "MoodRampageBrawlVictim")
+        {
+            configFile >> nextParam;
+            mMoodRampageBrawlVictim = Helper::toDouble(nextParam);
+            foundKeys.insert("MoodRampageBrawlVictim");
+            // Not mandatory
+        }
+
         if(nextParam == "WorkerPriorityParts")
         {
             for(uint32_t& value : mWorkerPriorityParts) if(!(configFile >> value)) return false;
@@ -2224,20 +2258,6 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             foundLavaScaling = true;
         }
 
-        if(nextParam == "UnpaidWagesLeave")
-        {
-            configFile >> nextParam;
-            mUnpaidWagesLeave = Helper::toUInt32(nextParam);
-            foundKeys.insert("UnpaidWagesLeave");
-        }
-
-        if(nextParam == "UnpaidWagesStopWork")
-        {
-            configFile >> nextParam;
-            mUnpaidWagesStopWork = Helper::toUInt32(nextParam);
-            foundKeys.insert("UnpaidWagesStopWork");
-        }
-
         if(nextParam == "FindHomeChance")
         {
             configFile >> nextParam;
@@ -2371,11 +2391,11 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         "HungerSeek",
         "ManaIncomeTilesCap",
         "MoodBattleWon",
+        "MoodRampageBrawlVictim",
         "MoodMeal",
         "MoodPayday",
         "ManaPerClaimedTilePerSecond",
         "ManaWellBonusPerTile",
-        "NbTurnsFuriousMax",
         "NbTurnsKoCreatureAttacked",
         "SlapDamage",
         "SlapEffectDuration",
@@ -2386,8 +2406,6 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         "StealItemChancePerIdle",
         "TimePayDay",
         "TunnelTryChance",
-        "UnpaidWagesLeave",
-        "UnpaidWagesStopWork",
         "WorkerManaShortageSeconds",
         "WorkerManaUpkeepPerSecond",
         "WorkerPopCountdownSeconds",

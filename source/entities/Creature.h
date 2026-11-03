@@ -47,6 +47,7 @@
 
 enum class RelationshipEvent;
 struct RelationshipCreatureState;
+struct RelationshipSettings;
 class Building;
 class Creature;
 class CreatureAction;
@@ -389,9 +390,6 @@ public:
     //! \brief Whether experience and attack recovery were received from the server. Only a client sets it,
     //! and only if the server sent them.
     bool hasProgressInformation() const { return mHasProgressInformation; }
-
-    inline int32_t getNbTurnFurious() const
-    { return mNbTurnFurious; }
 
     //! \brief Number of turns the creature has been held in the hand (decreases after being dropped)
     inline int32_t getNbTurnsInHand() const
@@ -811,7 +809,10 @@ public:
 
     //! Server side. Starts a brawl with the opponent: both fight to knock the other one out
     //! (never to kill) until updateBrawl ends it.
-    void startBrawl(Creature& opponent);
+    //! \param opponent The creature to brawl with.
+    //! \param rampage True for the brawl of a rampage: this creature rampages, the opponent is its victim (it loses
+    //! MoodRampageBrawlVictim when the brawl ends) and relationships do not have to be switched on.
+    void startBrawl(Creature& opponent, bool rampage = false);
 
     //! Server side. Checks the end conditions of the brawl (low health, interrupted, too long).
     void updateBrawl();
@@ -821,7 +822,50 @@ public:
     void endBrawl();
 
     //! Server side. True if the creature can start a brawl now (idle, not in a fight and not hurt).
-    bool canStartBrawl() const;
+    //! \param rampage True when the brawl is the brawl of a rampage, which does not need relationships to be on.
+    bool canStartBrawl(bool rampage = false) const;
+
+    //! \brief Server side. True while the creature rampages in its dungeon.
+    inline bool isRampaging() const
+    { return mRampageSecondsLeft > 0.0; }
+
+    //! \brief Server side. True while the leave clock counts (the mood reached 0 and has not come back to the Upset level).
+    inline bool isLeaveClockRunning() const
+    { return mLeaveClockRunning; }
+
+    //! \brief Server side. Game seconds the leave clock has counted.
+    inline double getLeaveClockSeconds() const
+    { return mLeaveClockSeconds; }
+
+    //! \brief Server side. Game seconds the running rampage still lasts.
+    inline double getRampageSecondsLeft() const
+    { return mRampageSecondsLeft; }
+
+    //! \brief Server side. The room tile the rampaging creature walks to and hits, nullptr if it has none.
+    Tile* getRampageTarget() const;
+
+    //! \brief Server side. Sets the room tile the rampaging creature hits and starts the count to the first hit.
+    //! \param tile The target tile.
+    void setRampageTarget(Tile* tile);
+
+    //! \brief Server side. Forgets the room tile of the rampage (destroyed, sold or lost).
+    void clearRampageTarget();
+
+    //! \brief Server side. Resets the leave clock, ends a running rampage and turns back a creature that walks to its portal
+    //! because of the draw (the mood is back at the Upset level, Make Happy, a Charisma item).
+    void stopMoodDecision();
+
+    //! \brief Server side. True if the keeper has a portal this creature can reach.
+    bool hasReachableOwnPortal();
+
+    //! \brief Server side. True while the creature walks to its portal because of the draw after one pay day at the
+    //! bottom of its mood (not when the keeper dropped it on the portal or a friend follows it).
+    inline bool isLeavingByMood() const
+    { return mLeavingByMood; }
+
+    //! \brief Server side. The creature that walks to its portal because of the draw found no portal it can reach: it draws
+    //! again.
+    void drawMoodDecisionAgain();
 
     //! Server side. Fills state with what has to be saved of the relationships of this creature
     //! (grief mood, rage, brawl). Returns false if there is nothing to save.
@@ -1532,6 +1576,8 @@ public:
     void fireChatMsgLeavingDungeon();
     //! \brief Reports loss of control using the client profile name.
     void fireChatMsgBecameRogue();
+    //! \brief Reports a rampage using the client profile name.
+    void fireChatMsgRampaging();
     //! \brief Reports unhappiness using the client profile name.
     void fireChatMsgUnhappy();
     //! \brief Reports fury using the client profile name.
@@ -1663,7 +1709,8 @@ public:
     //! \param relief The mood points of the turn (TemplePrayerReliefPerTurn).
     void addPrayerRelief(double relief);
 
-    //! \brief Make Happy special: clears the annoyance the creature has gathered and sets the stored mood to the maximum
+    //! \brief Make Happy special: clears the annoyance the creature has gathered and sets the stored mood to the maximum;
+    //! a running leave clock is reset and a running rampage ends
     void removeAnnoyance();
 
     //! \brief Make Unhappy special: takes MakeUnhappyMoodJump from the stored mood at once and starts a debuff of
@@ -2202,8 +2249,41 @@ private:
     //! prayer calmed it, for the calmed reaction).
     bool                            mPrayedSinceMoodLook;
 
-    //! \brief Counts turns the creature is furious. If it stays like this for too long, it will become rogue
-    int32_t                         mNbTurnFurious;
+    //! \brief Server side, saved. True while the leave clock counts. It starts when the effective mood reaches 0 and stops
+    //! (reset) when the effective mood is back at the Upset level (CreatureMoodAngry).
+    bool                            mLeaveClockRunning;
+
+    //! \brief Server side, saved. Game seconds the leave clock has counted. At TimePayDay the creature draws.
+    double                          mLeaveClockSeconds;
+
+    //! \brief Server side. True while the creature walks to its portal because of the draw (and not because the keeper
+    //! dropped it on the portal or a friend followed it): it turns back when the mood is back at the Upset level.
+    bool                            mLeavingByMood;
+
+    //! \brief Server side. The Charisma of the worn items at the last look, -1 before the first look. A rise is a Charisma
+    //! item put on.
+    double                          mCharismaSeen;
+
+    //! \brief Server side, saved. Game seconds the running rampage still lasts, 0 if the creature does not rampage.
+    double                          mRampageSecondsLeft;
+
+    //! \brief Server side, saved. Turns until the rampaging creature hits the room tile it stands on (counts while it stands
+    //! on its target tile).
+    int32_t                         mRampageHitTurns;
+
+    //! \brief Server side, saved. Turns until the rampaging creature puts a dirt pile on its tile.
+    int32_t                         mRampagePileTurns;
+
+    //! \brief Server side, saved. The room tile the rampaging creature hits, -1 / -1 if it has none.
+    int32_t                         mRampageTargetX;
+    int32_t                         mRampageTargetY;
+
+    //! \brief Server side. True for the brawl of a rampage (set on both fighters).
+    bool                            mBrawlRampage;
+
+    //! \brief Server side. True for the own creature that a rampaging creature brawls with: it loses
+    //! MoodRampageBrawlVictim when the brawl ends.
+    bool                            mBrawlRampageVictim;
 
     //! \brief Represents the life value displayed on client side. We do not notify each HP change
     //! to avoid too many communication. But when mOverlayHealthValue changes, we will
@@ -2472,6 +2552,28 @@ private:
     //! \brief Server side, once per turn. Counts the locks of casino, temple and arena down and ends the visit of an
     //! arena spectator that has stopped watching.
     void upkeepRoomLocks();
+
+    //! \brief Server side, once per turn. Runs the leave clock (start at mood 0, pause while held, knocked out or possessed,
+    //! reset at the Upset level) and the draw when it reaches TimePayDay, and the running rampage.
+    void upkeepMoodDecision();
+
+    //! \brief Server side. Draws once with the chances of the creature type: leave the dungeon (draws again when no own
+    //! portal is reachable), turn rogue or rampage.
+    void drawMoodDecision();
+
+    //! \brief Server side. Starts a rampage of one pay day in the dungeon of the keeper.
+    void startRampage();
+
+    //! \brief Server side. Ends the running rampage and forgets its counters.
+    void endRampage();
+
+    //! \brief Server side, once per turn while the creature rampages: lets the pay day run out, puts the dirt piles and hits
+    //! the room tile the creature stands on.
+    void upkeepRampage();
+
+    //! \brief Server side. The settings of the brawl rules: the ones of the relationships when they are on, otherwise the
+    //! ones of the configuration.
+    RelationshipSettings getBrawlSettings() const;
 
     //! \brief Server side. Tells the clients that see the creature about the jump that has just started
     //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed); seats without a human
