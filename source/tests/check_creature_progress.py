@@ -171,15 +171,15 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
   status.updateProgress(.35f);check(overlay.frames[2]>1&&overlay.frames[2]<63,"worker interval sweeps within the server turn");
   unsigned paused=overlay.frames[2];status.updateProgress(0);check(overlay.frames[2]==paused,"worker recovery freezes while paused");
  }
- auto near=[](float a,double b){return std::abs(a-b)<1e-4;};
+ struct Near{static bool within(float a,double b){return std::abs(a-b)<1e-4;}};
  b.mMaxMana=40;b.mOverlayHealthValue=0;for(double mana:{0.,2.,5.,20.,36.,40.,60.,-5.}){b.mMana=mana;status.updateProgress(0);
   const double share=mana<=0?0.:mana>=40?1.:mana/40;
   check(share==0?!overlay.shown[4]:overlay.shown[4],"mana part is shown while there is mana");
-  check(near(overlay.bottom[4],1.0)&&near(overlay.top[4],2./3+(1./3)*(1-share)),"mana drains from the top inside the lower third");
-  check(near(overlay.top[0],0.)&&near(overlay.bottom[0],2./3),"full health fills the upper two thirds");}
- b.mMana=20;b.mOverlayHealthValue=4;status.updateProgress(0);check(near(overlay.top[0],2./3*0.5)&&near(overlay.bottom[0],2./3),"half health drains the red part from the top");
- b.mMaxMana=0;b.mMana=10;b.mOverlayHealthValue=0;status.updateProgress(0);check(!overlay.shown[4]&&near(overlay.top[0],0.)&&near(overlay.bottom[0],1.),"no mana pool shows the whole flower as health");
- b.mOverlayHealthValue=4;status.updateProgress(0);check(near(overlay.top[0],0.5)&&near(overlay.bottom[0],1.),"health drains from the top without mana");b.mOverlayHealthValue=0;
+  check(Near::within(overlay.bottom[4],1.0)&&Near::within(overlay.top[4],2./3+(1./3)*(1-share)),"mana drains from the top inside the lower third");
+  check(Near::within(overlay.top[0],0.)&&Near::within(overlay.bottom[0],2./3),"full health fills the upper two thirds");}
+ b.mMana=20;b.mOverlayHealthValue=4;status.updateProgress(0);check(Near::within(overlay.top[0],2./3*0.5)&&Near::within(overlay.bottom[0],2./3),"half health drains the red part from the top");
+ b.mMaxMana=0;b.mMana=10;b.mOverlayHealthValue=0;status.updateProgress(0);check(!overlay.shown[4]&&Near::within(overlay.top[0],0.)&&Near::within(overlay.bottom[0],1.),"no mana pool shows the whole flower as health");
+ b.mOverlayHealthValue=4;status.updateProgress(0);check(Near::within(overlay.top[0],0.5)&&Near::within(overlay.bottom[0],1.),"health drains from the top without mana");b.mOverlayHealthValue=0;
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }

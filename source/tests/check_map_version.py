@@ -44,9 +44,11 @@ probe = r'''
 #include <stdexcept>
 #include <string>
 #define OD_LOG_WRN(message) ((void)0)
-namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:VERSION.1"; }
+namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:VERSION.1"; const std::string VERSION="VERSION"; }
 namespace Helper { READER }
-bool load(std::stringstream& levelFile) { std::string nextParam; LOAD return true; }
+void setLoadError(const std::string&) {}
+HELPERFUNCTION
+bool load(std::stringstream& levelFile) { const std::string fileName="probe"; std::string nextParam; LOAD return true; }
 bool list(std::stringstream& levelFile) { std::string nextParam; LIST return true; }
 //! \brief Checks stable level formats with a numbered build and rejects unsupported headers.
 int main(int argc,char** argv) {
