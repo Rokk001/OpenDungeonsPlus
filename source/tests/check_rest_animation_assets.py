@@ -37,7 +37,7 @@ def check_floor(points, floor, height):
 def rest_track_names(skeleton, skeleton_name, weighted):
     required = set(skeleton.names)
     parent = {'skeleton.skeleton': 'itemRightHand', 'lich.skeleton': 'itemRightHand',
-              'PitDemon.skeleton': 'Hand_R'}.get(skeleton_name)
+              'PitDemon.skeleton': 'Hand_R', 'Kreatur.skeleton': 'tentafr4_r', 'Scarab.skeleton': 'Bone.001_R.005'}.get(skeleton_name)
     if parent is not None:
         assert 'Weapon_R' in skeleton.idx, (skeleton_name, 'missing passive weapon mount')
         mount = skeleton.idx['Weapon_R']

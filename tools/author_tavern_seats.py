@@ -186,6 +186,13 @@ CLIPS = (('Sit', 4.0, 17, None, True),
 MUG_BONE = 'Weapon_R'
 MUG_MESH = 'TavernMug.mesh'
 MUG_POINTS = 200
+# How far the mug stands along its bone from the bottom to the rim, in tiles (the mesh reaches from 0.009 to -0.171 along x).
+MUG_HEIGHT = 0.17
+# Steps along the way of the foot of the mug that the limb is solved for
+MUG_WAY_STEPS = 65
+TABLE_SAMPLES_COARSE = 97
+# The skeletons that have no hand or limb for the mug mount: the mug is not shown for them in SitDrink.
+NO_MUG_MOUNT = ('CaveHornet', 'Defender', 'Rat', 'Roach', 'Slime', 'Spider', 'Tentacle')
 MUG_TURN = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
 # Share of a clip at each end in which the upper body goes from the seat pose to the source clip and back.
 BLEND_SHARE = 0.12
@@ -256,6 +263,19 @@ PLAY_HAMMERS = {
         'arms': (('arm1.L', 'arm2.L', 'finger1.L', 0.0), ('arm1.R', 'arm2.R', 'finger1.R', math.pi)),
         'cycles': 2, 'raised': ((40.0, 25.0), (35.0, 5.0)), 'slammed': ((45.0, 30.0), (70.0, -65.0))}}
 PLAY_AXES = {'x': (1.0, 0.0, 0.0), 'y': (0.0, 1.0, 0.0), 'z': (0.0, 0.0, 1.0)}
+# A body whose limb has no hand brings the mug to its mouth on that limb: SitDrink of the chain of bones that ends in the bone
+# that carries the mug (Weapon_R), as (bones from the base of the limb to the carrier, the bone of the head, the mouth in the
+# frame of that bone, where the foot of the mug is held in front of the mouth in the frame of the body, how high the foot rises
+# on its way, drinks in the clip).
+# The limb follows the chain of joints that reaches the foot of the mug, the mug tips from upright until its rim lies at the mouth.
+PLAY_MUGS = {
+    ('Kreatur', 'SitDrink'): {
+        'chain': ('tentafr1_r', 'tentafr2_r', 'tentafr3_r', 'tentafr4_r'), 'head': 'head', 'mouth': (0.0, 0.11, 0.0),
+        'foot': (0.0, -0.1, 0.14), 'arc': 0.15, 'drinks': 1},
+    ('Scarab', 'SitDrink'): {
+        'chain': ('Bone.001_R', 'Bone.001_R.001', 'Bone.001_R.002', 'Bone.001_R.003', 'Bone.001_R.004', 'Bone.001_R.005'),
+        'head': 'Bone.004', 'mouth': (0.0, 0.2, 0.0), 'foot': (0.0, -0.1, 0.14), 'arc': 0.15, 'drinks': 1},
+}
 
 
 # Whether the rig is a walking body with arms: its legs stay in the seat pose while its upper body plays the clips.
@@ -1234,11 +1254,80 @@ def hammer_arms(skeleton, local, seated, times, length, hammer):
         aim_bone(skeleton, local, forearm, hand, directions[1])
 
 
+# Solve a chain of joints for a point by moving it from the tip to the root and back; the root stays and the lengths stay.
+def reach_chain(joints, target, rounds=80):
+    lengths = [float(np.linalg.norm(joints[index + 1] - joints[index])) for index in range(len(joints) - 1)]
+    points = [joint.copy() for joint in joints]
+    root = points[0].copy()
+    for _ in range(rounds):
+        points[-1] = target.copy()
+        for index in range(len(points) - 2, -1, -1):
+            step = points[index] - points[index + 1]
+            points[index] = points[index + 1] + step / np.linalg.norm(step) * lengths[index]
+        points[0] = root.copy()
+        for index in range(1, len(points)):
+            step = points[index] - points[index - 1]
+            points[index] = points[index - 1] + step / np.linalg.norm(step) * lengths[index - 1]
+    return points
+
+
+# Return how close the rim of the mug comes to the mouth in a clip of a body that drinks on a limb, in tiles.
+def mug_rim_distance(skeleton, clip, mug):
+    played = skeleton.clips[clip]
+    world = skeleton.fk(skeleton.locals_at(played, np.linspace(0.0, played.length, TABLE_SAMPLES_COARSE)))
+    holder = world[skeleton.idx[MUG_BONE]]
+    rim = holder[0] - MUG_HEIGHT * holder[1][:, :, 0]
+    head = world[skeleton.idx[mug['head']]]
+    mouth = head[0] + np.einsum('nij,j->ni', head[1], np.array(mug['mouth']))
+    return float(np.linalg.norm(rim - mouth, axis=1).min())
+
+
+# Bring the mug of a limb to the mouth and back, as often as the clip drinks: the limb goes from the seat pose to the pose that
+# holds the foot of the mug in front of the mouth, and the mug tips from upright until its rim lies at the mouth.
+def drink_with_limb(skeleton, local, seated, times, length, mug):
+    chain = mug['chain']
+    world = skeleton.fk(seated)
+    head, rotation = world[skeleton.idx[mug['head']]][0][0], world[skeleton.idx[mug['head']]][1][0]
+    mouth = head + rotation @ np.array(mug['mouth'])
+    foot = mouth + np.array(mug['foot'])
+    joints = [world[skeleton.idx[bone]][0][0] for bone in chain]
+    tipped = (mouth - foot) / np.linalg.norm(mouth - foot)
+    progress = times / length
+    lift = np.clip(1.6 * (0.5 - 0.5 * np.cos(2.0 * math.pi * mug['drinks'] * progress)), 0.0, 1.0)
+    share = (lift * lift * (3.0 - 2.0 * lift) * ends(times, length))[:, None]
+    # The foot of the mug goes from where the limb hangs to the mouth over an arc that rises. The limb is solved along that way
+    # in small steps, each from the pose of the one before, so that it does not jump; a frame takes the pose of its share of the
+    # way, so that the first and the last frame show the seat pose and the way back is the way there.
+    way = np.linspace(0.0, 1.0, MUG_WAY_STEPS)
+    poses = [joints]
+    for place in way[1:]:
+        poses.append(reach_chain(poses[-1], joints[-1] + (foot - joints[-1]) * place + np.array([0.0, 0.0, mug['arc']]) * (4.0 * place * (1.0 - place))))
+    steps = []
+    for index in range(len(chain) - 1):
+        vectors = np.array([pose[index + 1] - pose[index] for pose in poses])
+        along = np.stack([np.interp(share[:, 0], way, vectors[:, axis]) for axis in range(3)], axis=1)
+        steps.append(along / np.linalg.norm(along, axis=1)[:, None])
+    for index in range(len(chain) - 1):
+        aim_bone(skeleton, local, chain[index], chain[index + 1], steps[index])
+    upright = np.array([0.0, 0.0, 1.0])
+    wanted = upright + (tipped - upright) * share
+    wanted /= np.linalg.norm(wanted, axis=1)[:, None]
+    # The mug stands along the -x axis of its bone
+    current = -skeleton.fk(local)[skeleton.idx[MUG_BONE]][1][:, :, 0]
+    axis = np.cross(current, wanted)
+    size = np.linalg.norm(axis, axis=1)
+    angle = np.arctan2(size, np.einsum('ni,ni->n', current, wanted))
+    axis = np.where(size[:, None] > 1e-9, axis / np.maximum(size, 1e-9)[:, None], np.array([[0.0, 0.0, 1.0]]))
+    rest.rotate_joint(skeleton, local, chain[-1], axis, angle)
+
+
 # Return the clip a body plays on its own bones in place of its source clip, or None.
 def playful_clip(skeleton, seated, times, length, name, clip):
     swings = PLAY_SWINGS.get((name, clip))
-    if swings is None:
+    mug = PLAY_MUGS.get((name, clip))
+    if swings is None and mug is None:
         return None
+    swings = swings or ()
     progress = times / length
     fade = ends(times, length)
     local = hold(seated, len(times))
@@ -1247,6 +1336,8 @@ def playful_clip(skeleton, seated, times, length, name, clip):
         rest.rotate_joint(skeleton, local, bone, PLAY_AXES[axis], angle)
     if (name, clip) in PLAY_HAMMERS:
         hammer_arms(skeleton, local, seated, times, length, PLAY_HAMMERS[(name, clip)])
+    if mug is not None:
+        drink_with_limb(skeleton, local, seated, times, length, mug)
     return local
 
 
