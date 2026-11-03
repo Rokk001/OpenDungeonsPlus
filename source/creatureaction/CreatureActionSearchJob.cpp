@@ -222,6 +222,10 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return true;
     }
 
+    // An upset creature that found no pleasure room to go to wishes for one when its keeper has none it may use
+    if(moodSearch)
+        creature.notePleasureWish();
+
     // Keep the existing room wandering behaviour when no work or pleasure room is available.
     if(!moodSearch && currentRoom != nullptr &&
        creature.getSeat()->canOwnedCreatureUseRoomFrom(currentRoom->getSeat()))

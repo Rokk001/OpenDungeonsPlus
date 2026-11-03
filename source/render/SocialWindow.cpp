@@ -134,7 +134,8 @@ std::string renderPostText(const social::Post& post, const social::CreatureProfi
     std::string room;
     if((post.mCategory == social::PostCategory::LevelUp) || (post.mCategory == social::PostCategory::Payday))
         level = post.mArgument;
-    else if((post.mCategory == social::PostCategory::Work) || (post.mCategory == social::PostCategory::Train))
+    else if((post.mCategory == social::PostCategory::Work) || (post.mCategory == social::PostCategory::Train) ||
+        (post.mCategory == social::PostCategory::Wish) || (post.mCategory == social::PostCategory::ThanksWish))
         room = social::CreaturePosts::getRoomName(post.mArgument);
 
     return social::SocialGenerator::renderPost(cache.getData(), profile, post.mIsWorker,

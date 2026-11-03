@@ -148,7 +148,42 @@ enum class CosmeticEventType : int32_t
     //! CosmeticTavernKind, mValue2 and mText are not used (0, empty), mPosition the position of the creature. Sent to the
     //! keepers that see the tile of the creature. Only shows bubbles and posts; the game never depends on it. Older
     //! clients skip the kind.
-    tavernEvent = 24
+    tavernEvent = 24,
+    //! A lasting mood problem of a creature started or ended, or an upset creature wishes for a pleasure room or can use
+    //! one now. The Dungeonbook turns it into a complaint, a wish or a thank-you post. mSubject the creature, mValue the
+    //! CosmeticMoodPostKind, mValue2 the CosmeticMoodCause (complaint and problemEnded) or the RoomType of the pleasure
+    //! room (wish and wishMet), mObject, mText and mPosition are not used. Sent only to the keeper of the creature. Only
+    //! shows posts; the game never depends on it. Older clients skip the kind.
+    moodPost = 25
+};
+
+//! \brief The kind in mValue of the event moodPost
+enum class CosmeticMoodPostKind : int32_t
+{
+    //! A lasting problem started (post: complaint about the cause in mValue2)
+    complaint = 0,
+    //! The lasting problem of the cause in mValue2 ended (post: thank-you, if the complaint was written)
+    problemEnded = 1,
+    //! An upset creature looks for a pleasure room and its keeper has none it may use; mValue2 is the RoomType it likes
+    //! most (post: wish)
+    wish = 2,
+    //! A pleasure room can be used now; mValue2 is its RoomType (post: thank-you, if the wish was written)
+    wishMet = 3
+};
+
+//! \brief The cause in mValue2 of the event moodPost for a complaint or an ended problem; the numbers are the ones of
+//! social::MoodCause
+enum class CosmeticMoodCause : int32_t
+{
+    noBed = 0,
+    hungry = 1,
+    thirsty = 2,
+    tired = 3,
+    noWage = 4,
+    wounded = 5,
+    held = 6,
+    noWork = 7,
+    noFight = 8
 };
 
 //! \brief The kind in mValue of the event tavernEvent

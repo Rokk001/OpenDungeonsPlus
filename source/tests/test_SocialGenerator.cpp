@@ -20,6 +20,7 @@
 #include "social/SocialRng.h"
 
 #include <fstream>
+#include <set>
 #include <sstream>
 
 #define BOOST_TEST_MODULE SocialGenerator
@@ -349,4 +350,54 @@ BOOST_AUTO_TEST_CASE(test_SocialNameVariants)
         social::SocialGenerator::MAX_NAME_VARIANT + 1);
     BOOST_CHECK_EQUAL(fallback.mSurname, "Orc17");
     BOOST_CHECK(fallback.mTitle.empty());
+}
+
+// Case "posts": every complaint and thank-you cause has at least 3 different texts, the wish and its thank-you name the room
+BOOST_AUTO_TEST_CASE(test_SocialMoodPosts)
+{
+    social::SocialData data;
+    data.loadFromDirectory(getConfigDirectory());
+    social::CreatureProfile profile = social::SocialGenerator::makeProfile(data, "Orc17", "Orc", false);
+    const char* causes[] = {"bed", "hungry", "thirsty", "tired", "wage", "wounded", "held", "work", "fight"};
+    const char* kinds[] = {"complain", "thanks"};
+    for(std::size_t kind = 0; kind < sizeof(kinds) / sizeof(kinds[0]); ++kind)
+    {
+        for(std::size_t cause = 0; cause < sizeof(causes) / sizeof(causes[0]); ++cause)
+        {
+            const std::string category = std::string(kinds[kind]) + causes[cause];
+            std::set<std::string> variants;
+            for(uint32_t variant = 0; variant < 64; ++variant)
+            {
+                std::string text = social::SocialGenerator::renderPost(data, profile, false, category, variant, 0, "", "");
+                BOOST_CHECK_MESSAGE(!text.empty(), category);
+                variants.insert(text);
+            }
+            BOOST_CHECK_MESSAGE(variants.size() >= 3, category);
+        }
+    }
+
+    // The wish and its thank-you say which room the creature wants
+    const char* roomCategories[] = {"wish", "thankswish"};
+    for(std::size_t i = 0; i < sizeof(roomCategories) / sizeof(roomCategories[0]); ++i)
+    {
+        std::set<std::string> variants;
+        for(uint32_t variant = 0; variant < 64; ++variant)
+        {
+            std::string text = social::SocialGenerator::renderPost(data, profile, false, roomCategories[i], variant, 0,
+                "casino", "");
+            BOOST_CHECK_MESSAGE(text.find("casino") != std::string::npos, text);
+            variants.insert(text);
+        }
+        BOOST_CHECK_MESSAGE(variants.size() >= 3, roomCategories[i]);
+    }
+
+    // A creature of every kind of name group has a text for a cause that also has texts of its own for the group
+    const char* classes[] = {"Kobold", "DwarfWorker", "Knight", "Elf", "Goblin", "Orc", "LizardMan", "Skeleton", "PitDemon",
+        "Rat", "Troll"};
+    for(std::size_t i = 0; i < sizeof(classes) / sizeof(classes[0]); ++i)
+    {
+        social::CreatureProfile other = social::SocialGenerator::makeProfile(data, "Creature5", classes[i], false);
+        BOOST_CHECK_MESSAGE(!social::SocialGenerator::renderPost(data, other, false, "complainbed", 1, 0, "", "").empty(),
+            classes[i]);
+    }
 }

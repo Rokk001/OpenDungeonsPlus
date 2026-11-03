@@ -1177,6 +1177,12 @@ public:
     //! the hand and has a hangover, or is Upset, Angry or Furious with its relaxation run out.
     bool wantsSpaBath() const;
 
+    //! \brief Server side. Called when an Upset (or worse) creature looked for a pleasure room and found none to use. When the
+    //! keeper has no pleasure room the creature may use at all (a room that is only locked, busy or far away still counts as
+    //! one), the keeper is told that the creature wishes for the pleasure room it likes most (cosmetic only: a post of the
+    //! Dungeonbook). The wish is told again every 120 seconds while the keeper still has none.
+    void notePleasureWish();
+
     //! \brief Server side. Starts a jump from the position of the creature to the target and tells the clients
     //! that see it (see sendJumpNotification). The jump lasts SpaJumpTurns turns and reaches SpaJumpHeight tiles.
     //! \param target The point the creature lands on.
@@ -1472,6 +1478,13 @@ public:
     //! the same room less than FilthyPostSeconds ago.
     //! \param roomName The name of the filthy room.
     void socialFilthyRoom(const std::string& roomName);
+
+    //! \brief Client side. The server told that a lasting mood problem of this creature started or ended, or that it wishes
+    //! for a pleasure room or can use one now: adds the complaint, wish or thank-you post if the creature belongs to the
+    //! local player (see CosmeticEventType::moodPost).
+    //! \param kind The CosmeticMoodPostKind.
+    //! \param value The CosmeticMoodCause (complaint, problem ended) or the RoomType of the pleasure room (wish, wish met).
+    void socialMoodPost(int32_t kind, int32_t value);
 
     inline int32_t getNbTurnsWithoutBattle() const
     { return mNbTurnsWithoutBattle; }
@@ -2017,6 +2030,11 @@ private:
     //! \brief Server side. Whether the clients were told that the creature has a bed: -1 not yet, 0 no, 1 yes
     //! (cosmetic events only, not saved)
     int32_t         mBedNotified;
+    //! \brief Server side. True while the creature wishes for a pleasure room and the keeper was told (cosmetic events only,
+    //! not saved)
+    bool            mPleasureWished;
+    //! \brief Server side. The turn from which the wish is told again (cosmetic events only, not saved)
+    int64_t         mWishNextTurn;
     //! \brief Client side. The turn of the last Filthy post of this creature, by room name (not saved)
     std::map<std::string, int64_t> mFilthyPostTurn;
 
@@ -2505,6 +2523,29 @@ private:
     //! \brief Server side. Looks at the lasting problems of the creature type.
     //! \param turns The turns that passed since the last look.
     void computeMoodProblems(int32_t turns);
+
+    //! \brief Server side. Tells the keeper that a lasting mood problem started or ended when the problem has a post of the
+    //! Dungeonbook (cosmetic only).
+    //! \param modifierName The name of the mood modifier of the problem.
+    //! \param started True when the problem started, false when it ended.
+    void fireMoodProblemPost(const std::string& modifierName, bool started);
+
+    //! \brief Server side. Tells the keeper about a mood post of the Dungeonbook (cosmetic only, see CosmeticEventType::moodPost).
+    //! \param kind The CosmeticMoodPostKind.
+    //! \param value The CosmeticMoodCause or the RoomType.
+    void fireMoodPost(int32_t kind, int32_t value);
+
+    //! \brief Server side. The pleasure room kind the creature likes most by its room affinity (casino, tavern, temple).
+    //! \return The RoomType as a number, -1 if the creature likes none.
+    int32_t getLikedPleasureRoom() const;
+
+    //! \brief Server side. A pleasure room kind of which the keeper has a room the creature may use (the kinds of its room
+    //! affinity and the lava spa). A lock or a full room does not matter, only that there is one.
+    //! \return The RoomType of such a room as a number, -1 if the keeper has none.
+    int32_t getUsablePleasureRoom() const;
+
+    //! \brief Server side. Tells the keeper that a pleasure room can be used now when the creature had wished for one.
+    void noteWishMet();
 
     //! \brief Server side. Looks at the hated creatures and nemeses of the same keeper (relationships).
     //! \param turns The turns that passed since the last look.
