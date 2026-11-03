@@ -1614,7 +1614,7 @@ POLISH_SPECS=[
     ("MenuBurntTorchA",(-8.0,-6.2,-0.15),"BurntTorch"),("MenuBurntTorchB",(8.7,-6.8,-0.15),"BurntTorch"),
     ("MenuCharredRemains",(7.1,-5.8,-0.16),"CharredRemains"),
     ("MenuBrokenSlabLeft",(-4.6,-16.8,-0.16),"BrokenSlab"),("MenuBrokenSlabRight",(4.5,-11.1,-0.16),"BrokenSlab"),
-    ("MenuGateBeast",(0, 13.2, -0.18),"GateBeast"),("MenuLavaWallLeft",(-14.1,5.89,0),"LavaWall"),
+    ("MenuGateBeast",(0, 27.0, -0.18),"GateBeast"),("MenuLavaWallLeft",(-14.1,5.89,0),"LavaWall"),
     ("MenuLavaWallRight",(15.0,5.79,0),"LavaWall"),("MenuVolcanicRuins",(-65, 110, 27.0),"VolcanicRuins"),
     ("MenuHorizonCrows",(-12,65,24),"HorizonCrows"),("MenuTitlePlaque",(0,2.95,10.9),"TitlePlaque"),
     ("MenuTitleCrest",(0,2.9,8.5),"TitleCrest"),("MenuBloodMoon",(-33,83,35),"BloodMoon")]
