@@ -185,6 +185,14 @@ public:
     virtual Creature* getCreatureUsingRoom(unsigned index);
     virtual bool hasOpenCreatureSpot(Creature* c) { return false; }
 
+    //! \brief Returns the tile a creature walks to when it comes to use the room from outside.
+    //! \param creature The creature that comes to the room.
+    virtual Tile* getArrivalTile(const Creature& creature) { return getCoveredTile(0); }
+
+    //! \brief True while the creature is registered as a user of this room.
+    //! \param creature The creature to test.
+    bool hasCreatureUsingRoom(const Creature& creature) const;
+
     //! True if a creature of the same keeper that the creature hates works in the room
     //! (relationships option on only).
     bool hasHatedCoworker(Creature* c) const;

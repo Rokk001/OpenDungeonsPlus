@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 //! \brief Timing limits for the configured three-dimensional menu camera paths.
 namespace MenuFlightSettings
@@ -28,7 +29,56 @@ namespace MenuFlightSettings
     const float DURATION = 2.0f;
     //! Longest time step taken into account, so that a slow frame cannot skip the flight
     const float MAX_STEP = 0.25f;
+    //! Longest frame in seconds that still counts as smooth during a flight
+    const float SMOOTH_FRAME_LIMIT = 0.033f;
 }
+
+//! \brief Collects the unclamped frame times of one flight for its log line.
+class MenuFlightFrameStats
+{
+public:
+    //! \brief Forgets the previous flight.
+    void reset()
+    { *this = MenuFlightFrameStats(); }
+
+    //! \brief Counts one finished frame; the zero steps of scene setup are no frames.
+    void addFrame(float seconds)
+    {
+        if(!std::isfinite(seconds) || seconds <= 0.0f)
+            return;
+        ++mFrames;
+        mTotal += seconds;
+        mLongest = std::max(mLongest, seconds);
+        if(seconds > MenuFlightSettings::SMOOTH_FRAME_LIMIT)
+            ++mSlowFrames;
+    }
+
+    //! \brief Returns the number of counted frames.
+    uint32_t getFrames() const
+    { return mFrames; }
+
+    //! \brief Returns the frames above the smooth limit.
+    uint32_t getSlowFrames() const
+    { return mSlowFrames; }
+
+    //! \brief Returns the mean frame time in milliseconds, or 0 without frames.
+    double getMeanMilliseconds() const
+    { return mFrames == 0 ? 0.0 : mTotal * 1000.0 / mFrames; }
+
+    //! \brief Returns the longest frame time in milliseconds.
+    double getMaxMilliseconds() const
+    { return mLongest * 1000.0; }
+
+private:
+    //! Frames counted so far.
+    uint32_t mFrames = 0;
+    //! Frames above the smooth limit.
+    uint32_t mSlowFrames = 0;
+    //! Sum of the counted frame times in seconds.
+    double mTotal = 0.0;
+    //! Longest counted frame time in seconds.
+    float mLongest = 0.0f;
+};
 
 //! \brief Advances one configured camera path and rejects overlapping flight requests.
 class MenuFlight

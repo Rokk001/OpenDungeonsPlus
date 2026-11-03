@@ -12,7 +12,7 @@ What is checked
                                       entry after the casino), 56 entries, six free entries, the portal cooldown wiring
   KeeperAI                            the tavern follows the hatchery in the build list
   counter tile                        the first tile of the room is the counter tile; counter, keg (wall side) and table
-                                      (inner tiles) objects; the counter tile is never a drinking spot
+                                      objects; the counter tile never holds a table, so it is never a seat
   AI payer                            taverns of computer keepers let the creatures pay
 
 Calls (from the repository root):
@@ -149,8 +149,9 @@ assert 'TAVERN_COUNTER_MESH' in update and 'TAVERN_KEG_MESH' in update and 'TAVE
 assert 'removeInnkeeper();' in update and 'placeInnkeeper();' in update
 for name, mesh in (('TAVERN_COUNTER_MESH', 'TavernCounter'), ('TAVERN_KEG_MESH', 'TavernKeg'), ('TAVERN_TABLE_MESH', 'TavernTable')):
     assert 'const std::string ' + name + ' = "' + mesh + '";' in room_cpp, name
-free_spot = extract(room_cpp, 'bool RoomTavern::isFreeSpotTile(')
-assert 'tile == mCounterTile' in free_spot, 'the counter tile is never a spot'
+assert 'wantedObjects[mCounterTile] = TAVERN_COUNTER_MESH;' in update, 'the counter tile never holds a table'
+tables = extract(room_cpp, 'std::vector<Tile*> RoomTavern::getTableTiles(')
+assert 'entry.second->getMeshName() == TAVERN_TABLE_MESH' in tables, 'seats exist only at tables'
 drinking_tiles = extract(room_cpp, 'uint32_t RoomTavern::getNbDrinkingTiles()')
 assert 'nbTiles - 1' in drinking_tiles
 for mesh in ('TavernCounter', 'TavernKeg', 'TavernTable', 'Innkeeper', 'TavernMug', 'Vomit'):

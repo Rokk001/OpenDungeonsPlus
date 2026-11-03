@@ -18,6 +18,7 @@
 #include <CEGUI/BasicImage.h>
 #include <CEGUI/ImageManager.h>
 #include <CEGUI/RendererModules/Ogre/Renderer.h>
+#include <CEGUI/RendererModules/Ogre/Texture.h>
 #include <CEGUI/System.h>
 #include <CEGUI/Texture.h>
 
@@ -452,6 +453,87 @@ const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureN
     else if(texture)
         Ogre::TextureManager::getSingleton().remove(texture->getHandle());
     return getProfileFallbackImage(portraitKey);
+}
+
+//! \brief Copies the existing profile fallback into a circular framed image using its original crop.
+const CEGUI::Image& getCircularCreatureProfilePortraitImage(const std::string& creatureName,
+    const std::string& meshName, const std::string& gender)
+{
+    const std::string name = "CircularProfileCreaturePortrait/" + creatureName;
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    if(images.isDefined(name))
+        return images.get(name);
+
+    const CEGUI::Image& source = getCreatureProfilePortraitImage(creatureName, meshName, gender);
+    CEGUI::OgreRenderer& renderer = static_cast<CEGUI::OgreRenderer&>(
+        *CEGUI::System::getSingleton().getRenderer());
+    std::string sourceName = source.getName().c_str();
+    if(!renderer.isTextureDefined(sourceName))
+    {
+        const std::string prefix = "ProfileCreaturePortrait/";
+        const std::string key = sourceName.substr(prefix.size());
+        sourceName = "IllustratedCreaturePortrait/" + key;
+        if(!renderer.isTextureDefined(sourceName))
+            sourceName = "CreaturePortrait/" + key;
+    }
+    CEGUI::OgreTexture& sourceTexture = static_cast<CEGUI::OgreTexture&>(renderer.getTexture(sourceName));
+    Ogre::TexturePtr sourceOgre = sourceTexture.getOgreTexture();
+    const uint32_t width = static_cast<uint32_t>(sourceOgre->getWidth());
+    const uint32_t height = static_cast<uint32_t>(sourceOgre->getHeight());
+    const CEGUI::Sizef originalSize = sourceTexture.getOriginalDataSize();
+    const uint32_t side = std::min(std::min(width, height), static_cast<uint32_t>(
+        std::min(originalSize.d_width, originalSize.d_height)));
+    std::vector<uint8_t> sourcePixels(static_cast<size_t>(width) * height * RGBA_CHANNELS);
+    sourceOgre->getBuffer()->blitToMemory(Ogre::PixelBox(width, height, 1, Ogre::PF_BYTE_RGBA, &sourcePixels[0]));
+    std::vector<uint8_t> pixels(static_cast<size_t>(side) * side * RGBA_CHANNELS);
+    const float center = static_cast<float>(side) * 0.5f;
+    const float radius = center - 1.0f;
+    const float innerRadius = radius - static_cast<float>(side) * (12.0f / 1024.0f);
+    for(uint32_t y = 0; y < side; ++y)
+    {
+        for(uint32_t x = 0; x < side; ++x)
+        {
+            const size_t sourceIndex = (static_cast<size_t>(y) * width + x) * RGBA_CHANNELS;
+            const size_t index = (static_cast<size_t>(y) * side + x) * RGBA_CHANNELS;
+            std::copy(sourcePixels.begin() + sourceIndex, sourcePixels.begin() + sourceIndex + RGBA_CHANNELS,
+                pixels.begin() + index);
+            const float dx = static_cast<float>(x) + 0.5f - center;
+            const float dy = static_cast<float>(y) + 0.5f - center;
+            const float distanceSquared = dx * dx + dy * dy;
+            if(distanceSquared > radius * radius)
+                pixels[index + 3] = 0;
+            else if(distanceSquared >= innerRadius * innerRadius)
+            {
+                pixels[index] = 170;
+                pixels[index + 1] = 128;
+                pixels[index + 2] = 62;
+                pixels[index + 3] = 255;
+            }
+        }
+    }
+    Ogre::TexturePtr texture = Ogre::TextureManager::getSingleton().createManual(name, "General", Ogre::TEX_TYPE_2D,
+        side, side, 0, Ogre::PF_BYTE_RGBA, Ogre::TU_DEFAULT);
+    try
+    {
+        texture->getBuffer()->blitFromMemory(Ogre::PixelBox(side, side, 1, Ogre::PF_BYTE_RGBA, &pixels[0]));
+        CEGUI::Texture& guiTexture = renderer.createTexture(name, texture, true);
+        CEGUI::BasicImage& image = static_cast<CEGUI::BasicImage&>(images.create("BasicImage", name));
+        image.setTexture(&guiTexture);
+        image.setArea(CEGUI::Rectf(0, 0, static_cast<float>(side), static_cast<float>(side)));
+        image.setAutoScaled(CEGUI::ASM_Disabled);
+        getTintedPortraitNames().insert(name);
+        return image;
+    }
+    catch(...)
+    {
+        if(images.isDefined(name))
+            images.destroy(name);
+        if(renderer.isTextureDefined(name))
+            renderer.destroyTexture(name);
+        else
+            Ogre::TextureManager::getSingleton().remove(texture->getHandle());
+        throw;
+    }
 }
 
 void clearCreatureProfilePortraits()

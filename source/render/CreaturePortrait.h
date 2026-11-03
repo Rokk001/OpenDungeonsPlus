@@ -41,6 +41,10 @@ const CEGUI::Image& getCreatureHandIconImage(const std::string& meshName);
 const CEGUI::Image& getCreatureProfilePortraitImage(const std::string& creatureName, const std::string& meshName,
     const std::string& gender);
 
+//! Returns the existing profile fallback cropped and masked to a circular frame.
+const CEGUI::Image& getCircularCreatureProfilePortraitImage(const std::string& creatureName,
+    const std::string& meshName, const std::string& gender);
+
 //! Destroy the tinted portraits of all creatures (end of a game).
 void clearCreatureProfilePortraits();
 

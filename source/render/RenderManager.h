@@ -138,8 +138,23 @@ public:
     //! \brief Saves the current world ambient and replaces it with the menu's own ambient until endMenuAmbient().
     void beginMenuAmbient(const Ogre::ColourValue& menuAmbient);
 
+    //! \brief Changes the menu ambient while the menu owns the scene ambient.
+    void setMenuAmbient(const Ogre::ColourValue& menuAmbient);
+
     //! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
     void endMenuAmbient();
+
+    //! \brief Keeps one generated shader set for the menu, sized for all of its lights, until releaseMenuShaderLights().
+    //! Otherwise the shader generator follows the number of visible lights, which changes during camera flights.
+    void pinMenuShaderLights();
+
+    //! \brief Lets the generated shaders follow the number of scene lights again.
+    void releaseMenuShaderLights();
+
+    //! \brief Generates and compiles the shaders of every material in the menu scene at once.
+    //! The shader generator otherwise builds them in the frame in which an object first comes into view,
+    //! which stalls a camera flight. Call it after pinMenuShaderLights(), so the shaders match the fixed light count.
+    void prepareMenuShaders();
 
     //! \brief Switches the dynamic texture shadows on or off.
     //! Updates the scene manager's shadow technique, the generated-shader shadow receiver and the
@@ -530,6 +545,19 @@ private:
     std::map<Creature*, uint32_t> mCreatureAttackSides;
     //! The side of the blow shown last per creature (true: left hand), for the weapon trail
     std::map<const Creature*, bool> mCreatureLastBlowLeft;
+    //! \brief A creature that goes from a seated tavern clip to another clip, or the other way round.
+    struct CreatureSeatBlend
+    {
+        Creature* mCreature;
+        Ogre::AnimationState* mFrom;
+        Ogre::AnimationState* mTo;
+        Ogre::Real mElapsed;
+    };
+    std::vector<CreatureSeatBlend> mCreatureSeatBlends;
+    //! \brief Ends the blend of the creature at once, with the clip it goes to in full.
+    void cancelCreatureSeatBlend(Creature* creature);
+    //! \brief Moves the running blends on.
+    void updateCreatureSeatBlends(Ogre::Real timeSinceLastFrame);
 
     //! A smooth turn of a creature towards its target before a blow (cosmetic, ends by itself)
     struct CreatureTurn

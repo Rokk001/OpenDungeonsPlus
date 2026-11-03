@@ -19,6 +19,13 @@
             <Property name="Text" value="Keeper pays" />
             <Property name="TooltipText" value="Who pays for beer" />
         </Window>
+        <Window type="OD/StaticText" name="SizeText" >
+            <Property name="Area" value="{{0,20},{0,130},{1,-20},{0,160}}" />
+            <Property name="Text" value="" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+        </Window>
         <Window type="OD/Button" name="CloseButton" >
             <Property name="Area" value="{{0.5,-64},{1,-50},{0.5,64},{1,-16}}" />
             <Property name="Text" value="Close" />

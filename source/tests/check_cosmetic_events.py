@@ -21,15 +21,15 @@ names = [m.group(1) for m in re.finditer(r'^\s*(\w+),?\s*(?://.*)?$', body, re.M
 # The tavern notifications follow the equipment notifications; the complete combined tail is pinned below
 # Existing kinds retain their order before the appended campaign victory.
 # Existing kinds retain their order before the appended equipment and infirmary notifications.
-assert names[-23:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
-                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings'], names[-23:]
+assert names[-24:] == ['cosmeticEvent', 'creatureAppearance', 'relationshipTier', 'chickenKindChanged', 'chickenFight',
+                       'hatcheryNests', 'chickenRoofFlight', 'chickenMount', 'trapEffect', 'timeLimit', 'campaignVictory', 'merchantWindow', 'merchantSettings', 'labWindow', 'labSettings', 'tavernWindow', 'tavernPayer', 'infirmaryWindow', 'infirmarySettings', 'ghostRoomSettings', 'spaPayer', 'creatureJump', 'workerSettings', 'dungeonbookRoster'], names[-24:]
 assert 'case ServerNotificationType::cosmeticEvent:' in read('source/network/ServerNotification.cpp')
 
 server = read('source/network/ODServer.cpp')
 client = read('source/network/ODClient.cpp')
 socket_h = read('source/network/ODSocketClient.h')
 # The offer is the sixth flag of pickNick, the agreement is read only when the packet has it
-assert 'pickNick << mServerMode << true << true << true << true << true << true;' in server
+assert 'pickNick << mServerMode << true << true << true << true << true << true << true;' in server
 assert 'if(!packetReceived.endOfPacket())\n                OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);' in server
 assert 'clientSocket->setSupportsCosmeticEvents(cosmeticEvents);' in server
 assert server.count('<< clientSocket->supportsCosmeticEvents();') == 1

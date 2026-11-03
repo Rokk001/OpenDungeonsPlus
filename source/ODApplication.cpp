@@ -233,10 +233,17 @@ void ODApplication::startClient()
         fullscreen, &misc);
     Ogre::WindowEventUtilities::_addRenderWindow(renderWindow);
 
-    // Only the loading-picture directory and its inline shaders precede the first draw.
+    // The loading picture and its existing text font precede the first draw.
     Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
         resMgr.getGameDataPath() + "materials/textures/loading", "FileSystem", "StartupLoading");
-    LoadingScreen startupLoading(*renderWindow);
+    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
+        resMgr.getGameDataPath() + "gui/fonts", "FileSystem", "StartupLoading");
+    LoadingScreen startupLoading(*renderWindow, overlaySystem);
+    // The startup font is loaded; the location must not stay in the group, because initialiseAllResourceGroups()
+    // would otherwise parse ogrefonts.fontdef there and create the game fonts (Fonts/MedievalSharp) in a group that
+    // is destroyed after startup, before RTSS has a technique for their materials.
+    Ogre::ResourceGroupManager::getSingleton().removeResourceLocation(
+        resMgr.getGameDataPath() + "gui/fonts", "StartupLoading");
 #ifdef OD_USE_SFML_WINDOW
     // Attach event handling after the picture exists; SFML never creates a visible blank window.
     sf::WindowHandle nativeHandle;

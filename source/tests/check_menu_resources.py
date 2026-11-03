@@ -20,6 +20,7 @@ from pathlib import Path
 import math
 import re
 import struct
+from xml.etree import ElementTree
 
 from PIL import Image
 
@@ -258,6 +259,7 @@ def check_sky_programs(root, folders):
             assert re.search(requirement, block), name + " lacks atmosphere setting " + requirement
     shader = (root / "shaders/MenuSky.frag").read_text(encoding="utf-8")
     assert "cloudDensity(point)" in shader and "skyPosition.z - 12.0" in shader, "atmosphere needs cloud structure and horizon height fade"
+    assert "cloudDensity(skyPosition * 0.055)" in shader, "the lower sky must retain cloud structure during camera flights"
     assert "1.0 / 2.2" in shader, "linear atmosphere colours need their display transfer"
     # The overview camera sees the dome only between heights 65 and 95, so the sky gradient must lie in that band.
     assert "smoothstep(82.0, 93.0, skyPosition.z)" in shader and "smoothstep(64.0, 80.0, skyPosition.z)" in shader, "sky gradient must cover the visible dome band"
@@ -293,6 +295,9 @@ def check_menu_surface_passes(root):
     for name, parent in parents.items():
         if parent in bases:
             assert re.findall(r"\bpass\s+(\w+)\s*\{", materials[name]) == ["lighting"], name + " must override the inherited normal-mapped pass"
+    # Former flat surfaces must show a texture instead of a single colour.
+    for name in ("MenuBlack", "MenuMountain", "MenuDistantStone", "MenuWood", "MenuParchment", "MenuSoot", "MenuAsh"):
+        assert "texture MenuFortressStone.png gamma" in materials[name], name + " must not render as a flat untextured surface"
     print("OK: menu surface colours and normal maps share one lighting pass, including inherited overrides")
 
 
@@ -353,11 +358,54 @@ def check_menu_lighting(root):
     strength = float(re.search(r'inputs\["Strength"\]\.default_value = ([0-9.]+)', world).group(1))
     ambient_block = config.split("[MenuLighting]", 1)[1].split("[/MenuLighting]", 1)[0]
     ambient = [float(value) for value in re.search(r"(?m)^Ambient\s+([^\n]+)", ambient_block).group(1).split()]
-    assert len(ambient) == 3 and all(math.isclose(actual, value * strength * gain, rel_tol=1e-10)
-                                    for actual, value in zip(ambient, colour)), "menu ambient must retain the authored warm sky and exposure"
+    assert ambient == [0.012, 0.010, 0.009], "overview fill must keep unlit stone close to the approved image"
+    flight_ambient = [float(value) for value in re.search(r"(?m)^FlightAmbient\s+([^\n]+)", ambient_block).group(1).split()]
+    stone_path = next(folder / "MenuFortressStone.png" for folder in graphics_folders(root) if (folder / "MenuFortressStone.png").is_file())
+    with Image.open(stone_path) as image:
+        stone = image.convert("RGB").resize((64, 64))
+    channels = [sum(((value / 255 + 0.055) / 1.055) ** 2.4 if value > 10 else value / 255 / 12.92 for value in stone.getchannel(band).tobytes()) / 4096 for band in range(3)]
+    readable = [(fill * mean * 0.85) ** (1 / 2.2) * 255 for fill, mean in zip(flight_ambient, channels)]
+    assert all(24 <= value <= 32 for value in readable) and max(readable) - min(readable) <= 2, "unlit stone away from the overview must stay readable and neutral, got " + str(readable)
+    fill_source = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
+    assert "renderManager.setMenuAmbient(mMenuAmbient + (mFlightAmbient - mMenuAmbient) * mFlightFill);" in fill_source and "mFlightFill = 0.0f;" in fill_source, "the camera flight must blend the fill and the overview must start without it"
+    fog_source = (root / "particles/MenuScene.particle").read_text(encoding="utf-8")
+    for system in ("MenuCourtyardFog", "MenuGraveMist"):
+        fog = fog_source.split("particle_system " + system, 1)[1].split("\nparticle_system ", 1)[0]
+        assert "RoomAmbSmoke" in fog and "ColourInterpolator" in fog and "colour0 0.235 0.11 0.016 0.0" in fog and "colour3 0.235 0.11 0.016 0.0" in fog, system + " must use the fog colour of the approved image and fade in and out"
+    # Lit menu materials are encoded for the display in their generated shaders; the light count stays fixed in the menu.
+    display = (root / "source/render/MenuDisplayShading.cpp").read_text(encoding="utf-8")
+    assert "getLightingEnabled()" in display and 'MENU_MATERIAL_PREFIX = "Menu"' in display, "display encoding must stay limited to lit menu materials"
+    display_shader = (root / "shaders/MenuDisplay.glsl").read_text(encoding="utf-8")
+    assert "MenuDisplay_Encode" in display_shader and "MenuDisplay_Encode" in display, "display encoding function must exist"
+    # The surface scale and the restoring factor must stay equal.
+    assert "MENU_LIGHT_HEADROOM = 4.0f;" in display and "max(colour.rgb, vec3(0.0)) * 4.0;" in display_shader, "menu lighting must keep the same headroom in code and shader"
+    # A per-channel clamp of the light sums turns red ground olive under strong coal lights; the display stage encodes once.
+    assert 'MENU_UNCLAMPED_LIGHTING_DEFINES = "USE_LINEAR_COLOURS,TARGET_CONSUMES_LINEAR";' in display and "fragmentProgram->addPreprocessorDefines(MENU_UNCLAMPED_LIGHTING_DEFINES);" in display, "menu lighting must not clamp light sums per colour channel"
+    assert "pow(min(mapped, vec3(1.0)), vec3(1.0 / 2.2))" in display_shader, "menu colours must be encoded exactly once by the display stage"
+    for setter, getter in (("setAmbient", "getAmbient"), ("setDiffuse", "getDiffuse"), ("setSpecular", "getSpecular"), ("setSelfIllumination", "getSelfIllumination")):
+        assert f"dstPass->{setter}(toLightingHeadroom(srcPass->{getter}()));" in display, setter + " must enter the lighting headroom from the source pass"
+    manager_source = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
+    assert "registerMenuDisplayShading(*mShaderGenerator);" in manager_source and "setLightCountAutoUpdate(false)" in manager_source and "setLightCountAutoUpdate(true)" in manager_source, "menu shaders must keep one light count"
+    menu_source = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
+    assert menu_source.index("sceneGroup->reset(") < menu_source.index("pinMenuShaderLights()") < menu_source.index("updateMenu(cameraManager, renderManager, 0.0f)"), "the light count must be fixed after the menu lights exist"
+    assert "releaseMenuShaderLights()" in menu_source, "leaving the menu must release the fixed light count"
+    # Shaders built in the frame an object first comes into view stall a flight, so the menu builds them all at its start.
+    assert menu_source.index("pinMenuShaderLights()") < menu_source.index("prepareMenuShaders()") < menu_source.index("updateMenu(cameraManager, renderManager, 0.0f)"), "menu shaders must be built for the fixed light count before the first menu frame"
+    prepare = manager_source.split("void RenderManager::prepareMenuShaders()", 1)[1].split("\n}\n", 1)[0]
+    assert "collectMenuNodeMaterials(mMainMenuSceneNode, materials);" in prepare and "createShaderBasedTechnique(*material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme)" in prepare and "validateMaterial(scheme, *material);" in prepare, "every menu material must get its generated shaders before the first flight"
     lights = {words[1]: [float(value) for value in words[2:]] for words in
               (line.split() for line in config.splitlines()) if words and words[0] == "AddPointLight"}
-    assert len(lights) == 48, "the existing menu lights must remain, without substitute lights"
+    assert len(lights) == 42, "unexpected number of menu lights: " + str(len(lights))
+    green = {name for name, values in lights.items() if values[4] > values[3] * 1.5 and values[4] > values[5] * 1.5}
+    assert green == {"SpireLight", "SpireSummitScatter"}, "green light belongs only to the spire and the right tower: " + str(sorted(green))
+    # The title and its crest carry no green of their own.
+    crest = (root / "materials/scripts/MenuScene.material").read_text(encoding="utf-8").split("material MenuTitleCrest", 1)[1].split("\nmaterial ", 1)[0]
+    crest_red, crest_green, _ = [float(value) for value in re.search(r"emissive\s+(\S+)\s+(\S+)\s+(\S+)", crest).groups()]
+    assert crest_green < crest_red, "the title crest must not glow green"
+    with Image.open(root / "materials/textures/menu/MenuTitle.png") as image:
+        red_band, green_band, _, alpha_band = image.convert("RGBA").split()
+    green_pixels = sum(1 for red_value, green_value, alpha in zip(red_band.tobytes(), green_band.tobytes(), alpha_band.tobytes()) if alpha > 96 and green_value > red_value)
+    assert green_pixels == 0, "the title texture must not contain green: " + str(green_pixels)
     # The five fire lights add a constant attenuation of 1 so their near field does not clip per colour channel.
     near_field_fires = {"LeftFire", "RightFire", "GateFire", "LeftGateFire", "RightGateFire"}
     for name, values in lights.items():
@@ -394,7 +442,54 @@ def check_menu_lighting(root):
     factor = manager.split("void RenderManager::setWorldAmbientLightingFactor", 1)[1].split("void RenderManager::beginMenuAmbient", 1)[0]
     # Opening the settings in the main menu must not replace the menu ambient with the game ambient.
     assert "if(mMenuAmbientActive)" in factor and "mWorldAmbient = factoredLighting;" in factor, "settings must not overwrite the menu ambient"
-    print("OK: 48 authored menu lights retain calibrated falloff/exposure; menu ambient loads, applies and restores")
+    print(f"OK: {len(lights)} authored menu lights retain calibrated falloff/exposure; menu ambient loads, applies and restores")
+
+
+# One multiplayer entry leads to four differently named actions; the load dialog opens directly from the main menu.
+def check_menu_entries(root):
+    def buttons(layout):
+        tree = ElementTree.parse(root / "gui" / layout).getroot()
+        return {window.get("name"): next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Text")
+                for window in tree.iter("Window") if window.get("type") == "OD/MenuTextButton"}
+    source = (root / "source/modes/MenuModeMain.cpp").read_text(encoding="utf-8")
+    actions = {"MasterServerHostButton": ("Host Online", "BUTTON_MASTERSERVER_HOST", "MENU_MASTERSERVER_HOST"),
+               "MasterServerJoinButton": ("Join Online", "BUTTON_MASTERSERVER_JOIN", "MENU_MASTERSERVER_JOIN"),
+               "MultiplayerServerHostButton": ("Host via IP", "BUTTON_MULTIPLAYER_HOST", "MENU_MULTIPLAYER_SERVER"),
+               "MultiplayerServerJoinButton": ("Join via IP", "BUTTON_MULTIPLAYER_JOIN", "MENU_MULTIPLAYER_CLIENT")}
+    multiplayer = buttons("WindowMultiplayerSubMenu.layout")
+    assert multiplayer == {name: action[0] for name, action in actions.items()}, "multiplayer menu must show its four actions once: " + str(multiplayer)
+    for name, (_, constant, mode) in actions.items():
+        assert f'{constant} = "{name}"' in source and f"multiplayerWin->getChild({constant}),\n                           AbstractModeManager::ModeType::{mode}" in source, name + " must keep its network path"
+    for layout in ("MenuMain.layout", "WindowMultiplayerSubMenu.layout"):
+        tree = ElementTree.parse(root / "gui" / layout).getroot()
+        rows = []
+        for window in tree.iter("Window"):
+            if window.get("type") != "OD/MenuTextButton":
+                continue
+            area = next(prop.get("value") for prop in window.findall("Property") if prop.get("name") == "Area")
+            numbers = [float(value) for value in re.findall(r"-?[0-9.]+", area)]
+            rows.append((numbers[3], numbers[7]))
+        rows.sort()
+        assert all(first[1] <= second[0] for first, second in zip(rows, rows[1:])), layout + " has overlapping rows"
+        assert all(0 <= 240 + top and 240 + bottom <= 480 for top, bottom in rows), layout + " does not fit a window 480 pixels high"
+    main_menu = buttons("MenuMain.layout")
+    assert list(main_menu.values()).count("Multiplayer") == 1 and main_menu.get("LoadGameButton") == "Load Game", "main menu needs one Multiplayer and one Load Game entry"
+    assert "connectModeChangeEvent(BUTTON_LOAD_GAME, AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);" in source, "Load Game must open the existing load dialog"
+    assert "BUTTON_LOAD_GAME, BUTTON_START_REPLAY" in source.split("void MenuModeMain::showMainMenuButtons", 1)[1], "Load Game must hide with the other entries during flights"
+    print("OK: one multiplayer entry with four actions; Load Game opens the existing dialog")
+
+
+# Every flight logs its real frame times, measured before the step clamp.
+def check_flight_frame_log(root):
+    scene = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
+    update = scene.split("void RenderSceneMenu::updateMenu", 1)[1].split("void RenderSceneMenu::updateFireLights", 1)[0]
+    assert update.index("mFlightFrames.addFrame(timeSinceLastFrame);") < update.index("mFlight.advance(timeSinceLastFrame)"), "frame times must be taken before the flight clamps its step"
+    assert 'logFlightFrames("arrived");' in update and update.index('logFlightFrames("arrived");') < update.index("mCurrentPlace = mFlightPlace;"), "each arrival must log with its starting place"
+    assert 'logFlightFrames("interrupted");' in scene.split("void RenderSceneMenu::freeMenu", 1)[1].split("mFlight.reset();", 1)[0], "a flight cut off by leaving the menu must still log"
+    assert "mFlightFrames.reset();" in scene.split("bool RenderSceneMenu::beginPath", 1)[1].split("return true;", 1)[0], "every flight must start with empty statistics"
+    for word in ("frames=", "meanMs=", "maxMs=", "framesOver33Ms="):
+        assert word in scene, "flight log line lacks " + word
+    print("OK: every menu flight logs mean and maximum frame times")
 
 
 # Fail when a menu scene texture, material, mesh or skeleton cannot be resolved.
@@ -406,6 +501,8 @@ def main():
     check_menu_surface_passes(root)
     check_menu_particles(root, folders)
     check_menu_lighting(root)
+    check_menu_entries(root)
+    check_flight_frame_log(root)
     missing = []
     menu_count = 0
     for script, number, name in texture_references(root):

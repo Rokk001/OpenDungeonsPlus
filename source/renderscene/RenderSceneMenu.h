@@ -113,6 +113,8 @@ private:
     bool beginPath(CameraManager& cameraManager, const CameraPath& path, const std::string& destination);
     //! \brief Samples the active curved path with eased time and quaternion interpolation.
     CameraPose samplePath(Ogre::Real progress) const;
+    //! \brief Writes the frame times of the current flight to the log.
+    void logFlightFrames(const char* outcome) const;
     //! \brief Advances configured firelight without multiplying the previous frame's result.
     void updateFireLights(Ogre::Real elapsed);
     //! Parsed native scene commands, in authored activation order.
@@ -133,10 +135,18 @@ private:
     std::string mFlightPlace;
     //! Timer shared by native arrival, destination and return flights.
     MenuFlight mFlight;
+    //! Unclamped frame times of the current flight.
+    MenuFlightFrameStats mFlightFrames;
     //! Whether parsed groups currently own live render objects.
     bool mActive = false;
-    //! Parsed menu fill, independent of the game ambient restored on exit.
+    //! Parsed menu fill of the overview, independent of the game ambient restored on exit.
     Ogre::ColourValue mMenuAmbient = Ogre::ColourValue::Black;
+    //! Parsed menu fill away from the overview, where no fire pool lights the view.
+    Ogre::ColourValue mFlightAmbient = Ogre::ColourValue::Black;
+    //! Current share of the away fill, from 0 at the overview to 1 elsewhere.
+    Ogre::Real mFlightFill = 0.0f;
+    //! Share of the away fill when the active flight started.
+    Ogre::Real mFlightFillStart = 0.0f;
 };
 
 #endif // RENDERSCENEMENU_H

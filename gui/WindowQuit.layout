@@ -19,7 +19,7 @@
             <Property name="InheritsAlpha" value="False" />
         </Window>
         <Window type="OD/Checkbox" name="SaveReplayCheckbox" >
-            <Property name="Area" value="{{0.5,-120},{0,96},{0.5,120},{0,123}}" />
+            <Property name="Area" value="{{0.5,-120},{0.68,0},{0.5,120},{0.82,0}}" />
             <Property name="Text" value="Save the game replay?" />
         </Window>
     </Window>

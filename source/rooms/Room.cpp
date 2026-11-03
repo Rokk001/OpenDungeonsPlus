@@ -718,6 +718,12 @@ bool Room::addCreatureUsingRoom(Creature* c)
     return true;
 }
 
+//! \brief True while the creature is registered as a user of this room.
+bool Room::hasCreatureUsingRoom(const Creature& creature) const
+{
+    return std::find(mCreaturesUsingRoom.begin(), mCreaturesUsingRoom.end(), &creature) != mCreaturesUsingRoom.end();
+}
+
 void Room::removeCreatureUsingRoom(Creature *c)
 {
     releaseInteractionPosition(c);

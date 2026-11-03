@@ -181,6 +181,8 @@ std::string ClientNotification::typeString(ClientNotificationType type)
             return "askLabWindow";
         case ClientNotificationType::askLabSetting:
             return "askLabSetting";
+        case ClientNotificationType::askDungeonbookRoster:
+            return "askDungeonbookRoster";
         default:
             OD_LOG_ERR("Unknown enum for ClientNotificationType="
                 + Helper::toString(static_cast<int>(type)));

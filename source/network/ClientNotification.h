@@ -138,7 +138,9 @@ enum class ClientNotificationType
     //! with spaPayer.
     askSpaPayer,
     //! \brief Requests or updates the owner worker settings; uint32 isSet followed by a complete record when set.
-    askWorkerSettings
+    askWorkerSettings,
+    //! \brief Subscribes to the allied Dungeonbook roster while its window is open.
+    askDungeonbookRoster
 };
 
 //! \brief What an editorRegionEdit message asks the server to do with the region markers of the level script.

@@ -143,6 +143,7 @@
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
 #include "rooms/RoomSpa.h"
+#include "rooms/RoomTavern.h"
 #include "rooms/RoomToilet.h"
 #include "sound/SoundEffectsManager.h"
 #include "spells/Spell.h"
@@ -3366,6 +3367,7 @@ void Creature::doUpkeep()
         }
         if(!servingNeed && mDefinition->hasThirst() &&
            mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           (mTavernCooldownTurns <= 0) &&
            !hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))
@@ -3572,6 +3574,7 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         mDefinition->hasThirst() &&
         !hasActionBeenTried(CreatureActionType::searchDrink) &&
+        (mTavernCooldownTurns <= 0) &&
         (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
     {
         pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
@@ -7983,6 +7986,19 @@ bool Creature::setDestination(Tile* tile)
             return false;
         }
 
+        // The plain tile path runs through the middle of its tiles. Tavern furniture stays closed to it: a creature
+        // waits for a way around rather than walk through a table, keg or counter. It may only leave its own tile.
+        for(Tile* step : result)
+        {
+            Room* room = step->getCoveringRoom();
+            if((step != posTile) && (room != nullptr) && (room->getType() == RoomType::tavern) &&
+               static_cast<RoomTavern*>(room)->hasFurnitureOn(step))
+            {
+                OD_LOG_INF("creature=" + getName() + " has no way around the tavern furniture on " + Tile::displayAsString(step));
+                return false;
+            }
+        }
+
         // The tile path exists but the refinement around room objects found no route
         // (for example because the tile center is covered by an object). We walk the
         // tile path as it is instead of failing the whole action.
@@ -10124,6 +10140,7 @@ bool Creature::needInterrupt(bool servingNeed) const
                 return true;
     }
     if(mDefinition->hasThirst() && mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+       (mTavernCooldownTurns <= 0) &&
        !hasActionBeenTried(CreatureActionType::searchDrink))
     {
         for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))

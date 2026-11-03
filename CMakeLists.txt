@@ -534,6 +534,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/PortraitTint.cpp
     ${SRC}/render/PortraitCatalog.cpp
     ${SRC}/render/CreatureAppearancePicture.cpp
+    ${SRC}/render/MenuDisplayShading.cpp
     ${SRC}/render/PortraitCatalogRegistry.cpp
     ${SRC}/render/DungeonbookAppearanceConfig.cpp
     ${SRC}/render/DungeonbookQuirks.cpp

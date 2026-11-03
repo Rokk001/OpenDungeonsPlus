@@ -79,6 +79,16 @@ bool CreatureActionSearchDrink::handleSearchDrink(Creature& creature, bool force
 
     if(tavernTiles.empty())
     {
+        // A tavern exists but has no free seat for the creature: it goes back to its work and tries again after the
+        // visit cooldown; the mood malus of the thirst goes on
+        for(Room* tavern : taverns)
+        {
+            if(tavern->numCoveredTiles() > 0)
+            {
+                creature.startTavernCooldown();
+                break;
+            }
+        }
         creature.popAction();
         return true;
     }

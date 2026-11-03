@@ -55,6 +55,7 @@
 #include "render/MovableTextOverlay.h"
 #include "render/ODFrameListener.h"
 #include "render/LooseGoldMesh.h"
+#include "render/MenuDisplayShading.h"
 #include "render/TreasuryCreatureRules.h"
 #include "render/TwoWeaponStrike.h"
 #include "render/WeaponTrail.h"
@@ -153,6 +154,9 @@ static const Ogre::Real SLEEP_BED_MAX_SQUARED_DISTANCE = 1.0f;
 static const Ogre::Real SLEEP_BED_CLEARANCE = 0.01f;
 //! Reuse the hand's short four-frame pose blend when entering a native wake clip.
 static const Ogre::Real CREATURE_WAKE_BLEND_DURATION = 4.0f / 30.0f;
+//! Length of the blend between a seated tavern clip and any other clip, in seconds.
+static const Ogre::Real CREATURE_SEAT_BLEND_DURATION = 0.3f;
+
 //! Seconds a room construction burst stays in the scene. It is longer than the emitter
 //! duration plus the particle lifetime, so the last particles fade out before it is removed.
 const Ogre::Real ROOM_CONSTRUCTION_EFFECT_DURATION = 1.1f;
@@ -1635,6 +1639,7 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     // mShaderGenerator->setShaderCacheEnabled(true);
     
     mShaderGenerator->addSceneManager(mSceneManager); 
+    registerMenuDisplayShading(*mShaderGenerator);
     setDynamicShadowsEnabled(ConfigManager::getSingleton().getAudioValue(Config::SHADOWS) == "Yes");
     ddd.setStatic(true);
     mSceneManager->addListener(&ddd);
@@ -2327,6 +2332,12 @@ void RenderManager::beginMenuAmbient(const Ogre::ColourValue& menuAmbient)
     mSceneManager->setAmbientLight(menuAmbient);
 }
 
+void RenderManager::setMenuAmbient(const Ogre::ColourValue& menuAmbient)
+{
+    if(mMenuAmbientActive)
+        mSceneManager->setAmbientLight(menuAmbient);
+}
+
 //! \brief Restores the world ambient saved by beginMenuAmbient(), including settings changed meanwhile.
 void RenderManager::endMenuAmbient()
 {
@@ -2334,6 +2345,81 @@ void RenderManager::endMenuAmbient()
         return;
     mMenuAmbientActive = false;
     mSceneManager->setAmbientLight(mWorldAmbient);
+}
+
+void RenderManager::pinMenuShaderLights()
+{
+    Ogre::RTShader::RenderState* renderState =
+        mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+    renderState->setLightCountAutoUpdate(false);
+    renderState->setLightCount(static_cast<Ogre::int32>(mSceneManager->getMovableObjects(Ogre::MOT_LIGHT).size()));
+    mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+}
+
+//! \brief Lets the shaders count the lights again. Does nothing once the shader generator is destroyed,
+//! because the menu is also freed while the game shuts down, after the application destroyed the generator.
+void RenderManager::releaseMenuShaderLights()
+{
+    if(Ogre::RTShader::ShaderGenerator::getSingletonPtr() != mShaderGenerator)
+        return;
+    mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME)->setLightCountAutoUpdate(true);
+    mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+}
+
+//! \brief Adds the materials of an entity, of its sub entities and of the objects attached to its bones.
+//! Particle systems add the material of their sprites.
+static void collectMenuObjectMaterials(const Ogre::MovableObject* object, std::set<Ogre::Material*>& materials)
+{
+    const Ogre::Entity* entity = dynamic_cast<const Ogre::Entity*>(object);
+    if(entity != nullptr)
+    {
+        for(const Ogre::SubEntity* subEntity : entity->getSubEntities())
+        {
+            const Ogre::MaterialPtr& material = subEntity->getMaterial();
+            if(material)
+                materials.insert(material.get());
+        }
+        for(const Ogre::MovableObject* attached : entity->getAttachedObjects())
+            collectMenuObjectMaterials(attached, materials);
+        return;
+    }
+    const Ogre::ParticleSystem* particleSystem = dynamic_cast<const Ogre::ParticleSystem*>(object);
+    if(particleSystem == nullptr)
+        return;
+    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().getByName(
+        particleSystem->getMaterialName(), particleSystem->getResourceGroupName());
+    if(material)
+        materials.insert(material.get());
+}
+
+//! \brief Adds the materials of every object below a menu scene node, child nodes included.
+static void collectMenuNodeMaterials(const Ogre::Node* node, std::set<Ogre::Material*>& materials)
+{
+    const Ogre::SceneNode* sceneNode = dynamic_cast<const Ogre::SceneNode*>(node);
+    if(sceneNode != nullptr)
+    {
+        for(const Ogre::MovableObject* object : sceneNode->getAttachedObjects())
+            collectMenuObjectMaterials(object, materials);
+    }
+    for(const Ogre::Node* child : node->getChildren())
+        collectMenuNodeMaterials(child, materials);
+}
+
+void RenderManager::prepareMenuShaders()
+{
+    std::set<Ogre::Material*> materials;
+    collectMenuNodeMaterials(mMainMenuSceneNode, materials);
+    const Ogre::String& scheme = Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME;
+    // The same two calls the technique resolver makes when a material first renders; materials with their own
+    // programs are refused here as there and keep them.
+    for(Ogre::Material* material : materials)
+    {
+        material->load();
+        if(!mShaderGenerator->createShaderBasedTechnique(*material, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme))
+            continue;
+        mShaderGenerator->validateMaterial(scheme, *material);
+    }
+    OD_LOG_INF("Prepared the shaders of " + Helper::toString(static_cast<uint32_t>(materials.size())) + " menu materials");
 }
 
 //! \brief Adds a menu point light with its own scene node so several lights can coexist.
@@ -2610,6 +2696,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
 
     updateCreatureTurns(timeSinceLastFrame);
     updateCreatureDeathVariants(timeSinceLastFrame);
+    updateCreatureSeatBlends(timeSinceLastFrame);
 
     std::vector<Creature*> finishedFeeding;
     std::vector<Creature*> finishedWaking;
@@ -4127,6 +4214,9 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
         curCreature->setOverlayStatus(nullptr);
     }
 
+    // The clips of the old entity end with it
+    cancelCreatureSeatBlend(curCreature);
+
     // We keep the current animation if the new mesh has it
     std::string animName = EntityAnimation::idle_anim;
     bool animLoop = true;
@@ -4184,6 +4274,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
     mCreatureAttackVariants.erase(curCreature);
     mCreatureAttackSides.erase(curCreature);
     mCreatureLastBlowLeft.erase(curCreature);
+    cancelCreatureSeatBlend(curCreature);
     for(std::vector<CreatureTurn>::iterator it = mCreatureTurns.begin(); it != mCreatureTurns.end();)
     {
         if(it->mCreature == curCreature)
@@ -4516,6 +4607,8 @@ void RenderManager::rrCreateWeapon(Creature* curCreature, const Weapon* curWeapo
 
     ent->attachObjectToBone(weaponBone->getName(), weaponEntity,
                             mount.mRotation, mount.mOffset);
+    // A guest that gets a weapon while it sits at a tavern table keeps it hidden like its other weapons
+    CreatureCombatReactions::showWeaponsForClip(curCreature);
 }
 
 //! \brief Uses the second material's seal only while a bag is merchant-owned stock.
@@ -4986,6 +5079,7 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
 
     if(dropCreature != nullptr)
     {
+        cancelCreatureSeatBlend(dropCreature);
         clearCreatureDecay(dropCreature);
         updateCreatureTavernProps(dropCreature, anim);
     }
@@ -5257,6 +5351,27 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         {
             anim = EntityAnimation::attack_anim;
         }
+        else if (anim == EntityAnimation::sit_drink_anim)
+        {
+            // A skeleton without the seated tavern clips plays the matching standing clip
+            anim = EntityAnimation::drink_anim;
+        }
+        else if (anim == EntityAnimation::sit_slap_anim)
+        {
+            anim = EntityAnimation::slap_anim;
+        }
+        else if (anim == EntityAnimation::sit_armwrestle_anim)
+        {
+            anim = EntityAnimation::armwrestle_anim;
+        }
+        else if (anim == EntityAnimation::sit_dice_anim)
+        {
+            anim = EntityAnimation::dice_anim;
+        }
+        else if (anim == EntityAnimation::sit_slapped_anim || anim == EntityAnimation::sit_slumped_anim)
+        {
+            anim = EntityAnimation::sit_anim;
+        }
         else if (anim == EntityAnimation::armwrestle_anim || anim == EntityAnimation::slap_anim)
         {
             // A skeleton without the tavern game clips plays its attack clip
@@ -5284,10 +5399,69 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
     if (!objectEntity->getSkeleton()->hasAnimation(anim))
         return;
 
+    Ogre::AnimationState* previousState = curAnimatedObject->getAnimationState();
     Ogre::AnimationState* animState = setEntityAnimation(objectEntity, anim, loop && !freezeOnLastFrame);
     if(freezeOnLastFrame)
         animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
+
+    // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table
+    if((dropCreature != nullptr) &&
+       (EntityAnimation::isSeatClip(anim) != ((previousState != nullptr) && EntityAnimation::isSeatClip(previousState->getAnimationName()))))
+        CreatureCombatReactions::showWeaponsForClip(dropCreature);
+
+    // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile
+    if((dropCreature != nullptr) && (previousState != nullptr) && (previousState != animState) && !freezeOnLastFrame &&
+       (EntityAnimation::isSeatClip(previousState->getAnimationName()) != EntityAnimation::isSeatClip(anim)))
+    {
+        previousState->setEnabled(true);
+        previousState->setWeight(1.0f);
+        animState->setWeight(0.0f);
+        mCreatureSeatBlends.push_back({dropCreature, previousState, animState, 0.0f});
+    }
+}
+
+void RenderManager::cancelCreatureSeatBlend(Creature* creature)
+{
+    for(std::vector<CreatureSeatBlend>::iterator it = mCreatureSeatBlends.begin(); it != mCreatureSeatBlends.end();)
+    {
+        if(it->mCreature != creature)
+        {
+            ++it;
+            continue;
+        }
+
+        it->mFrom->setEnabled(false);
+        it->mTo->setWeight(1.0f);
+        it = mCreatureSeatBlends.erase(it);
+    }
+}
+
+void RenderManager::updateCreatureSeatBlends(Ogre::Real timeSinceLastFrame)
+{
+    for(std::vector<CreatureSeatBlend>::iterator it = mCreatureSeatBlends.begin(); it != mCreatureSeatBlends.end();)
+    {
+        // Another clip took over without passing rrSetObjectAnimationState: it keeps its own weights
+        if(it->mCreature->getAnimationState() != it->mTo)
+        {
+            it = mCreatureSeatBlends.erase(it);
+            continue;
+        }
+
+        it->mElapsed += timeSinceLastFrame;
+        const Ogre::Real phase = std::min(it->mElapsed / CREATURE_SEAT_BLEND_DURATION, 1.0f);
+        const Ogre::Real weight = phase * phase * (3.0f - 2.0f * phase);
+        it->mFrom->setWeight(1.0f - weight);
+        it->mTo->setWeight(weight);
+        if(phase < 1.0f)
+        {
+            ++it;
+            continue;
+        }
+
+        it->mFrom->setEnabled(false);
+        it = mCreatureSeatBlends.erase(it);
+    }
 }
 
 bool RenderManager::rrHasObjectClip(MovableGameEntity* animatedObject, const std::string& clip, bool& entityFound)
@@ -7857,7 +8031,7 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         return;
 
     Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
-    if(anim == EntityAnimation::drink_anim)
+    if((anim == EntityAnimation::drink_anim) || (anim == EntityAnimation::sit_drink_anim))
     {
         Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
         if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(TAVERN_MUG_MESH))

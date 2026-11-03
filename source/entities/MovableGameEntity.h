@@ -85,6 +85,25 @@ namespace EntityAnimation
     static const std::string dice_anim = "Dice";
     //! The loser of a slap duel lies on the floor (a skeleton without the clip plays Dragged, then Idle)
     static const std::string knockedout_anim = "KnockedOut";
+    //! A guest of a tavern sits on a bench (a skeleton without the clip plays Idle)
+    static const std::string sit_anim = "Sit";
+    //! A seated guest of a tavern drinks from a mug in its right hand (a skeleton without the clip plays Drink)
+    static const std::string sit_drink_anim = "SitDrink";
+    //! A seated guest of a tavern swings at its opponent in a slap duel (a skeleton without the clip plays Slap)
+    static const std::string sit_slap_anim = "SitSlap";
+    //! A seated guest of a tavern reels from a slap (a skeleton without the clip plays Sit)
+    static const std::string sit_slapped_anim = "SitSlapped";
+    //! Two seated guests of a tavern arm-wrestle (a skeleton without the clip plays ArmWrestle)
+    static const std::string sit_armwrestle_anim = "SitArmWrestle";
+    //! Two seated guests of a tavern shake and throw dice (a skeleton without the clip plays Dice)
+    static const std::string sit_dice_anim = "SitDice";
+    //! The seated loser of a slap duel with no free floor around it slumps on its seat (a skeleton without the clip plays Sit)
+    static const std::string sit_slumped_anim = "SitSlumped";
+    //! \brief True for the seated tavern clips (Sit, SitDrink and the others).
+    inline bool isSeatClip(const std::string& clip)
+    {
+        return clip.compare(0, sit_anim.size(), sit_anim) == 0;
+    }
     //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
     static const std::string scared_anim = "Scared";
     //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.

@@ -66,6 +66,10 @@ public:
     //! \brief Forgets everything, shows the weapons again and removes the fallen ones
     static void stopAll(CreatureReactions& reactions);
 
+    //! \brief Hides the weapon models of a creature that plays a seated tavern clip and brings them back afterwards, unless
+    //! they are sheathed. Works without the reactions, so that a guest at a table shows no weapon in any reaction mode.
+    static void showWeaponsForClip(const Creature* creature);
+
 private:
     //! \brief Returns true if the reactions are switched to full and their configuration is loaded
     static bool isActive(const CreatureReactions& reactions);

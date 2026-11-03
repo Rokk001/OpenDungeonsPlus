@@ -99,6 +99,13 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         return true;
     }
 
+    // A creature the tavern has no seat for does not enter the room
+    if((room->getType() == RoomType::tavern) && !room->hasCreatureUsingRoom(creature))
+    {
+        creature.popAction();
+        return true;
+    }
+
     const bool servingNeed = (room->getType() == RoomType::hatchery && creature.isHungry()) ||
         (room->getType() == RoomType::tavern &&
          creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"));
@@ -113,6 +120,7 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         }
         if(!servingNeed && creature.getDefinition()->hasThirst() &&
            creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
+           (creature.getTavernCooldownTurns() <= 0) &&
            !creature.hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
@@ -159,7 +167,7 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
     // We check if we are on a room tile. If not, we will go to one
     if(myTile->getCoveringRoom() != room)
     {
-        Tile* dest = room->getCoveredTile(0);
+        Tile* dest = room->getArrivalTile(creature);
         if(dest == nullptr)
         {
             // No tile to go to !

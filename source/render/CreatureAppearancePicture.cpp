@@ -186,7 +186,7 @@ void destroyPicture(const std::string& name)
 
 //! \brief Uploads the selected JPEG as-is, preserving its whole square and natural painted colors.
 const CEGUI::Image* buildPicture(PictureState& state, const CreatureAppearance& appearance,
-    const PortraitCatalog& catalog, const std::string& name, uint64_t& bytes, std::string& error)
+    const PortraitCatalog& catalog, const std::string& name, uint64_t& bytes, std::string& error, bool circular)
 {
     const PortraitCatalog::Image* entry = catalog.findImage(appearance.getImageNumber());
     if(entry == nullptr)
@@ -199,6 +199,33 @@ const CEGUI::Image* buildPicture(PictureState& state, const CreatureAppearance& 
     std::vector<uint8_t> data;
     if(!loadRgbaImage(entry->mPath, data, width, height, error))
         return nullptr;
+
+    if(circular)
+    {
+        // The existing portrait is clipped to a circular gold frame for the Dungeonbook page.
+        const float center = static_cast<float>(width) * 0.5f;
+        const float radius = center - 1.0f;
+        const float innerRadius = radius - 12.0f;
+        for(uint32_t y = 0; y < height; ++y)
+        {
+            for(uint32_t x = 0; x < width; ++x)
+            {
+                const float dx = static_cast<float>(x) + 0.5f - center;
+                const float dy = static_cast<float>(y) + 0.5f - center;
+                const float distanceSquared = dx * dx + dy * dy;
+                const size_t pixel = (static_cast<size_t>(y) * width + x) * 4;
+                if(distanceSquared > radius * radius)
+                    data[pixel + 3] = 0;
+                else if(distanceSquared >= innerRadius * innerRadius)
+                {
+                    data[pixel] = 170;
+                    data[pixel + 1] = 128;
+                    data[pixel + 2] = 62;
+                    data[pixel + 3] = 255;
+                }
+            }
+        }
+    }
 
     CEGUI::OgreRenderer& renderer = static_cast<CEGUI::OgreRenderer&>(*CEGUI::System::getSingleton().getRenderer());
     CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
@@ -284,8 +311,8 @@ std::vector<std::string> cacheEvict(std::vector<CacheEntry>& entries, uint32_t m
 
 }
 
-//! \brief Shows a stored whole portrait, falling back through the existing caller on any failure.
-const CEGUI::Image* getCreatureAppearanceImage(const std::string& creatureName, const CreatureAppearance& appearance)
+//! \brief Loads and caches a square or circular rendering of the stored whole portrait.
+static const CEGUI::Image* getAppearancePicture(const std::string& creatureName, const CreatureAppearance& appearance, bool circular)
 {
     if(appearance.isEmpty())
         return nullptr;
@@ -311,7 +338,7 @@ const CEGUI::Image* getCreatureAppearanceImage(const std::string& creatureName, 
     CreatureAppearanceLogic::validate(*catalog, catalogId, creatureName, shown);
     if(shown.isEmpty())
         return nullptr;
-    const std::string key = CreatureAppearanceLogic::toToken(shown);
+    const std::string key = CreatureAppearanceLogic::toToken(shown) + (circular ? "/circular" : "");
     const std::string name = PICTURE_PREFIX + key;
     if(state.mFailed.count(key) != 0)
         return nullptr;
@@ -320,7 +347,7 @@ const CEGUI::Image* getCreatureAppearanceImage(const std::string& creatureName, 
         return &images.get(name);
     uint64_t bytes = 0;
     std::string error;
-    const CEGUI::Image* image = buildPicture(state, shown, *catalog, name, bytes, error);
+    const CEGUI::Image* image = buildPicture(state, shown, *catalog, name, bytes, error, circular);
     if(image == nullptr)
     {
         rememberFailure(state, key, error);
@@ -333,6 +360,18 @@ const CEGUI::Image* getCreatureAppearanceImage(const std::string& creatureName, 
     for(const std::string& removed : evicted)
         destroyPicture(PICTURE_PREFIX + removed);
     return image;
+}
+
+//! \brief Shows the unchanged stored portrait in the existing profile.
+const CEGUI::Image* getCreatureAppearanceImage(const std::string& creatureName, const CreatureAppearance& appearance)
+{
+    return getAppearancePicture(creatureName, appearance, false);
+}
+
+//! \brief Shows the stored portrait clipped to a circular Dungeonbook frame.
+const CEGUI::Image* getCircularCreatureAppearanceImage(const std::string& creatureName, const CreatureAppearance& appearance)
+{
+    return getAppearancePicture(creatureName, appearance, true);
 }
 
 //! \brief Exposes the cached whole-image catalog to client callers.

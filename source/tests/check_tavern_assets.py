@@ -13,6 +13,8 @@ What is checked
               the ambience entries name them; scripts/check_sound_sources.py is green
   clips       Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit and Hangover in every skeleton a creature
               type uses (the clip names are listed once, the client asks for them in EntityAnimation)
+  seat clips  Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice and SitSlumped once in each of the 30 skeletons
+              of the types that visit the tavern (their poses are measured by check_tavern_seat_clips.py)
   credits     every file above has a CREDITS row, every changed skeleton has a row for its new clips
 
 Calls (from the repository root):
@@ -29,6 +31,9 @@ root = Path(__file__).resolve().parents[2]
 
 # The nine clips every creature skeleton gets, in the order of the design
 TAVERN_CLIPS = ['Drink', 'Slap', 'ArmWrestle', 'Dice', 'KnockedOut', 'GetUp', 'Stagger', 'Vomit', 'Hangover']
+# The seven seated clips of every skeleton of a type that visits the tavern, and the number of those skeletons
+SEAT_CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitDice', 'SitSlumped']
+VISITING_SKELETONS = 30
 # The clips of the innkeeper figure
 INNKEEPER_CLIPS = ['Idle', 'Pour', 'Cheer']
 # Size of the object textures, of the painted icon sources and of the bird atlas
@@ -158,6 +163,22 @@ for skeleton in unique_skeletons:
     for clip in TAVERN_CLIPS:
         assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
 
+# The seated clips in every skeleton of a type that visits the tavern (its Tavern line is not 0 0)
+for token in ('sit_anim = "Sit"', 'sit_drink_anim = "SitDrink"', 'sit_slap_anim = "SitSlap"', 'sit_slapped_anim = "SitSlapped"',
+              'sit_armwrestle_anim = "SitArmWrestle"', 'sit_dice_anim = "SitDice"', 'sit_slumped_anim = "SitSlumped"'):
+    assert token in animation_h, 'EntityAnimation lacks ' + token
+visiting = set()
+for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
+    name_field = re.search(r'^\s*Name\s+(\S+)', block, re.M)
+    tavern_line = re.search(r'^\s*Tavern\s+(\S+)\s+(\S+)', block, re.M)
+    if name_field and tavern_line and (float(tavern_line.group(1)) > 0.0 or float(tavern_line.group(2)) > 0.0):
+        visiting.add(skeletons[name_field.group(1)])
+assert len(visiting) == VISITING_SKELETONS, 'the types that visit the tavern use 30 skeletons, found ' + str(len(visiting))
+for skeleton in sorted(visiting):
+    data = (root / 'models' / skeleton).read_bytes()
+    for clip in SEAT_CLIPS:
+        assert len(re.findall(rb'(?<![A-Za-z0-9_])' + clip.encode('ascii') + rb'\n', data)) == 1, skeleton + ' must hold the clip ' + clip + ' exactly once'
+
 # 7. CREDITS: a row for every file of the tavern assets and for every skeleton with new clips
 patterns = []
 for line in credits.splitlines():
@@ -189,6 +210,9 @@ for path in files:
 for skeleton in unique_skeletons:
     assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Drink, Slap, ArmWrestle, Dice, KnockedOut, GetUp, Stagger, Vomit, Hangover tracks\)',
                      credits, re.M | re.I), 'CREDITS has no row for the new clips in ' + skeleton
+for skeleton in sorted(visiting):
+    assert re.search(r'^models/' + re.escape(skeleton) + r' \(new Sit, SitDrink, SitSlap, SitSlapped, SitArmWrestle, SitDice, SitSlumped tracks\)',
+                     credits, re.M), 'CREDITS has no row for the seated clips in ' + skeleton
 # Every sound row names a source address and the licence CC0 (the recordings are real, never generated)
 for sound in ('Pour', 'Murmur', 'Clink', 'Slap', 'Cheer'):
     row = [l for l in credits.splitlines() if re.search(r'/' + sound + r'\.ogg\s', l)]

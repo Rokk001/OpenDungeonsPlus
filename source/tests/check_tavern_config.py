@@ -15,6 +15,11 @@ What is checked
   skills.cfg               roomTavern 100, tavernBeer 250, FreeLevelOne has roomTavern, the one effect line of the
                            portal cooldown (1.0 / 0.9 / 0.8), both keys documented
   rooms.cfg                TavernCostPerTile, TavernHP, TavernDirtPerDrink documented
+  furniture                one table per eight tiles (one table tile per four, a table covers two) and one keg per
+                           six; a model of the spread of RoomTavern::updateActiveSpots on closed rectangular rooms from
+                           3x3 to 8x8 tiles: every table covers two free tiles of the room, no keg stands next to another
+                           keg or away from a wall, no tile carries two pieces, the maxima hold, every room with a 3x3
+                           block gets a table, and from 5x5 on at least two tables have free floor on both bench sides
 
 Calls (from the repository root):
   python source/tests/check_tavern_config.py            plain file checks, no compiler, no game
@@ -166,9 +171,98 @@ assert not [l for l in effect_lines if l[0] == 'roomTavern'], 'roomTavern has no
 for key in ('roomTavern', 'tavernBeer'):
     assert_documented(skills_cfg, key, 'skills.cfg')
 
-# Furniture density follows the room area: one table per four tiles and one keg per six.
+# Furniture density follows the room area: one table tile per four tiles (a table covers two, so one table per eight)
+# and one keg per six.
 room_cpp = read('source/rooms/RoomTavern.cpp')
-assert 'const size_t tableLimit = orderedTiles.size() / 4;' in room_cpp
-assert 'const size_t kegLimit = orderedTiles.size() / 6;' in room_cpp
+assert 'const size_t tableLimit = orderedTiles.size() / TAVERN_TILES_PER_TABLE;' in room_cpp
+assert 'const size_t kegLimit = orderedTiles.size() / TAVERN_TILES_PER_KEG;' in room_cpp
+assert 'const size_t TAVERN_TILES_PER_KEG = 6;' in room_cpp and 'const size_t TAVERN_TILES_PER_TABLE = 8;' in room_cpp
+# The model below follows these lines of the placement; a change of them needs a change of the model.
+for token in ('const double TABLE_ANGLES[] = { 0.0, 90.0 };', 'if(!wall || adjacentKeg)',
+              'if((benchesFree && !bestBenchesFree) || ((benchesFree == bestBenchesFree) && (distance > bestDistance)))',
+              'const int32_t acrossX = second.getY() - tile.getY();', 'const int32_t acrossY = tile.getX() - second.getX();',
+              'if(isBenchBehindWall(gameMap, *tile, angle, 0) && isBenchBehindWall(gameMap, *tile, angle, 1))',
+              'second = tableSecondTile(gameMap, *tile, angle);', 'furnitureTiles.push_back(bestSecond);',
+              'std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile);'):
+    assert token in room_cpp, token
+
+
+# The benches of a table that have a wall (a tile outside the room) behind them, next to either of its two tiles: bench 0 lies
+# on the +x side of the table turned by its angle, bench 1 on the opposite side. Nobody sits on such a bench.
+def walled_benches(inside, tile, second):
+    across = (second[1] - tile[1], tile[0] - second[0])
+    return [bench for bench, side in ((0, 1), (1, -1))
+            if any((t[0] + side * across[0], t[1] + side * across[1]) not in inside for t in (tile, second))]
+
+
+# A model of the spread of the furniture of RoomTavern::updateActiveSpots for a closed rectangular room (every tile around
+# it is a wall). Returns the counter tile, the kegs and the tables as (tile, second tile, both bench sides free). A table
+# with a wall behind both of its benches is not placed; a bench with a wall behind it stays empty (see walled_benches).
+def spread(width, height):
+    tiles = sorted((x, y) for x in range(width) for y in range(height))
+    inside = set(tiles)
+    counter = tiles[0]
+    furniture = [counter]
+    kegs = []
+    tables = []
+    for kind, limit in (('keg', len(tiles) // 6), ('table', len(tiles) // 8)):
+        for _ in range(limit):
+            best = None
+            best_distance = -1
+            best_free = False
+            for tile in tiles:
+                if tile in furniture:
+                    continue
+                # A table points along y (0 degrees: second tile at y + 1) or along -x (90 degrees: at x - 1)
+                for second in ((None,) if kind == 'keg' else ((tile[0], tile[1] + 1), (tile[0] - 1, tile[1]))):
+                    free = False
+                    if kind == 'keg':
+                        neighbours = ((tile[0], tile[1] + 1), (tile[0], tile[1] - 1), (tile[0] - 1, tile[1]), (tile[0] + 1, tile[1]))
+                        if all(n in inside for n in neighbours) or any(n in kegs for n in neighbours):
+                            continue
+                    else:
+                        if second not in inside or second in furniture:
+                            continue
+                        # Across the table, where the benches stand: both sides of both tiles are free floor of the room
+                        across = (second[1] - tile[1], tile[0] - second[0])
+                        if len(walled_benches(inside, tile, second)) == 2:
+                            continue
+                        free = all((t[0] + side * across[0], t[1] + side * across[1]) in inside and
+                                   (t[0] + side * across[0], t[1] + side * across[1]) not in furniture
+                                   for t in (tile, second) for side in (1, -1))
+                    pieces = (tile,) if second is None else (tile, second)
+                    distance = min((a[0] - f[0]) ** 2 + (a[1] - f[1]) ** 2 for a in pieces for f in furniture)
+                    if (free and not best_free) or (free == best_free and distance > best_distance):
+                        best, best_distance, best_free = (tile, second), distance, free
+            if best is None:
+                break
+            if kind == 'keg':
+                kegs.append(best[0])
+                furniture.append(best[0])
+            else:
+                tables.append(best + (best_free,))
+                furniture.extend(best)
+    return counter, kegs, tables
+
+
+for width in range(3, 9):
+    for height in range(3, 9):
+        counter, kegs, tables = spread(width, height)
+        inside = {(x, y) for x in range(width) for y in range(height)}
+        taken = [counter] + kegs + [t for table in tables for t in table[:2]]
+        assert len(taken) == len(set(taken)) and set(taken) <= inside, (width, height, 'a tile carries two pieces')
+        assert len(kegs) <= width * height // 6 and len(tables) <= width * height // 8, (width, height, 'the maxima hold')
+        assert tables, (width, height, 'a room with a 3x3 block gets a table')
+        if min(width, height) >= 5:
+            assert sum(1 for table in tables if table[2]) >= min(2, len(tables)), (width, height, 'two tables have free floor at both benches')
+        for first, second, _ in tables:
+            assert abs(first[0] - second[0]) + abs(first[1] - second[1]) == 1, (width, height, 'a table covers two neighbouring tiles')
+            assert len(walled_benches(inside, first, second)) < 2, (width, height, 'a table has a bench with no wall behind it')
+        # Every room with a 3x3 block keeps at least four usable places (a bench without a wall behind it)
+        assert sum(4 * (2 - len(walled_benches(inside, first, second))) for first, second, _ in tables) >= 4, (width, height, 'places')
+        for keg in kegs:
+            assert any(n not in inside for n in ((keg[0] + 1, keg[1]), (keg[0] - 1, keg[1]), (keg[0], keg[1] + 1), (keg[0], keg[1] - 1))), \
+                (width, height, 'a keg stands at a wall')
+            assert not any(abs(keg[0] - other[0]) + abs(keg[1] - other[1]) == 1 for other in kegs), (width, height, 'two kegs side by side')
 
 print('tavern config ok')

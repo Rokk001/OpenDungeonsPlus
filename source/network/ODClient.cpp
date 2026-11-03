@@ -245,6 +245,7 @@ static bool areSavedGameSeatsFixed(const GameMap& gameMap)
 }
 
 //! \brief Dispatches validated server packets to the active game or menu presentation.
+//! \brief Applies a server notification to the current client state.
 bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceived)
 {
     ODFrameListener* frameListener = ODFrameListener::getSingletonPtr();
@@ -448,21 +449,28 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);
             setSupportsCosmeticEvents(false);
 
+            bool dungeonbookRoster = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> dungeonbookRoster);
+            setSupportsDungeonbookRoster(false);
+
             ODPacket packSend;
             const std::string& nick = gameMap->getLocalPlayerNick();
             packSend << ClientNotificationType::setNick << nick;
-            if(liveNickname || creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
+            if(liveNickname || creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << liveNickname;
-            if(creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
+            if(creatureMood || creatureActivity || creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creatureMood;
-            if(creatureActivity || creaturePanel || creatureProgress || cosmeticEvents)
+            if(creatureActivity || creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creatureActivity;
-            if(creaturePanel || creatureProgress || cosmeticEvents)
+            if(creaturePanel || creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creaturePanel;
-            if(creatureProgress || cosmeticEvents)
+            if(creatureProgress || cosmeticEvents || dungeonbookRoster)
                 packSend << creatureProgress;
-            if(cosmeticEvents)
-                packSend << true;
+            if(cosmeticEvents || dungeonbookRoster)
+                packSend << cosmeticEvents;
+            if(dungeonbookRoster)
+                packSend << dungeonbookRoster;
             send(packSend);
 
             // We can proceed to configure seat level
@@ -683,6 +691,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             if(!packetReceived.endOfPacket())
                 OD_ASSERT_TRUE(packetReceived >> cosmeticEvents);
             setSupportsCosmeticEvents(cosmeticEvents);
+
+            bool dungeonbookRoster = false;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> dungeonbookRoster);
+            setSupportsDungeonbookRoster(dungeonbookRoster);
 
             // Now that the we have received all needed information, we can launch the requested mode
             OD_LOG_INF("Starting game map");
@@ -2310,6 +2323,29 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             break;
         }
 
+        case ServerNotificationType::dungeonbookRoster:
+        {
+            if(!supportsDungeonbookRoster())
+                return false;
+            uint32_t count = 0;
+            if(!(packetReceived >> count))
+                return false;
+            std::vector<social::DungeonbookEntry> entries;
+            for(uint32_t i = 0; i < count; ++i)
+            {
+                social::DungeonbookEntry entry;
+                if(!(packetReceived >> entry.name >> entry.className >> entry.keeper >> entry.appearance >> entry.stats
+                     >> entry.level >> entry.strength >> entry.dexterity >> entry.life >> entry.mana
+                     >> entry.skills >> entry.equipment >> entry.path >> entry.critical >> entry.attackRating >> entry.defenseRating
+                     >> entry.physicalDefense >> entry.magicalDefense >> entry.elementDefense
+                     >> entry.worker >> entry.champion >> entry.unhappy))
+                    return false;
+                entries.push_back(entry);
+            }
+            social::PostLog::getSingleton().setDungeonbookRoster(entries);
+            break;
+        }
+
         case ServerNotificationType::infirmaryWindow:
         case ServerNotificationType::infirmarySettings:
         {
@@ -2366,8 +2402,11 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             double beerPrice = 0.0;
             OD_ASSERT_TRUE(packetReceived >> xx >> yy >> payer >> beerResearched >> beerPrice);
 
+            bool hasMinimumBlock = true;
+            if(!packetReceived.endOfPacket())
+                OD_ASSERT_TRUE(packetReceived >> hasMinimumBlock);
             GameMode* gameMode = static_cast<GameMode*>(frameListener->getModeManager()->getCurrentMode());
-            gameMode->setTavernWindowShown(xx, yy, payer, beerResearched, beerPrice);
+            gameMode->setTavernWindowShown(xx, yy, payer, beerResearched, beerPrice, hasMinimumBlock);
             break;
         }
 
