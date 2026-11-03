@@ -4,8 +4,8 @@ follows the tavern in the order the AI builds, and every key is documented in th
 
 What is checked
   rooms.cfg [Rooms]       all Spa keys with their values, no Spa key without a design value, every key documented
-  derived values          SpaMoodPerTurn = TemplePrayerReliefPerTurn (SpaMoodMax 300 and SpaMoodDecayPerTurn 0.4 are set by the owner),
-                          SpaBathTurns = SpaMoodMax / SpaMoodPerTurn,
+  derived values          SpaMoodPerTurn = TemplePrayerReliefPerTurn (10.5 mood points per turn; SpaMoodMax and SpaMoodDecayPerTurn are gone),
+                          SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath,
                           SpaRelaxTurns = HangoverTurns of global.cfg, SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns
                           (both to 4 places), SpaCostPerTile = CasinoCostPerTile, SpaHP = CasinoHP,
                           SpaDirtPerBath = 1.6154 / (0.557 x 9 / (SpaBathTurns + 1)) to 4 places
@@ -58,8 +58,8 @@ tavern = block_values(global_cfg, 'Tavern')
 
 # 1. Every Spa key with the value of the design (section 4 of the design)
 SPA = {
-    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodMax': '300', 'SpaMoodPerTurn': '21',
-    'SpaMoodDecayPerTurn': '0.4', 'SpaBathTurns': '14.2857', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
+    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodPerTurn': '10.5',
+    'SpaBathTurns': '14.2857', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
     'SpaDirtPerBath': '4.9257', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
     'SpaAttendantActMaxSeconds': '20', 'SpaAttendantCannonballMinSeconds': '120',
     'SpaAttendantCannonballMaxSeconds': '180', 'SpaCannonballChance': '0.25', 'SpaJumpTurns': '2',
@@ -79,8 +79,9 @@ assert float(tavern['BeerPrice']) == 5.0, 'BeerPrice is 5 gold'
 
 # 2. The values that derive from existing keys still equal them
 assert float(rooms['SpaMoodPerTurn']) == float(rooms['TemplePrayerReliefPerTurn'])
-bath_turns = float(rooms['SpaMoodMax']) / float(rooms['SpaMoodPerTurn'])
-assert round(bath_turns, 4) == float(rooms['SpaBathTurns']), 'SpaBathTurns = SpaMoodMax / SpaMoodPerTurn'
+# SpaMoodMax and SpaMoodDecayPerTurn are gone (the mood is added to the stored mood); one bath gives 150 mood points
+bath_mood = float(rooms['SpaMoodPerTurn']) * float(rooms['SpaBathTurns'])
+assert round(bath_mood, 1) == 150.0, 'SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath'
 assert float(rooms['SpaRelaxTurns']) == float(tavern['HangoverTurns']), 'SpaRelaxTurns = HangoverTurns'
 factor = 1.0 + float(rooms['SpaBathTurns']) / float(rooms['SpaRelaxTurns'])
 assert round(factor, 4) == float(rooms['SpaRelaxWorkFactor']), 'SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns'

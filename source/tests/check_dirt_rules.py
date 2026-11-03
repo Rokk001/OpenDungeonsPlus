@@ -7,7 +7,8 @@ What is run (the function bodies are taken from the source files, not copied by 
   Room::addUseDirt                                    the room key times the DirtFactor of the creature type
   DirtPileEntity::createOnTile / getEntityOnTile / doUpkeep / cleanBy   a pile sets 100 and is refreshed, blood
                                                       dries at BloodDryTurns and keeps the tile dirt
-  CreatureMoodDirt (the stage and pile mood)          values per stage x Cleanliness, per pile in the radius, no mood
+  CreatureMoodDirt (the stage and pile fall, the cleaned reward)   fall per turn per stage x Cleanliness, per pile in the
+                                                      radius, once-only reward per stage when a room is cleaned, nothing
                                                       for seat-less heroes
   Creature::increaseUrge / foodEaten / setUrge / increaseCreatureDirt / upkeepCreatureDirt / dirtyEnteredTile and the
   two fight blocks (fight end +5, knock-out +25, never both)
@@ -122,7 +123,15 @@ def work_point_function(text, variable, name):
 
 # ---- Probe -------------------------------------------------------------------------------------------------------
 dirt = block_values(read('config/global.cfg'), 'Dirt')
-config_entries = [(k, v) for k, v in dirt.items()] + [(k, v) for k, v in rooms_values.items() if 'DirtPer' in k]
+global_text = read('config/global.cfg')
+mood_meal = re.search(r'^\s*MoodMeal\s+(\S+)\s*$', global_text, re.M)
+assert mood_meal is not None, 'MoodMeal is missing'
+mood_battle_won = re.search(r'^\s*MoodBattleWon\s+(\S+)\s*$', global_text, re.M)
+assert mood_battle_won is not None, 'MoodBattleWon is missing'
+base_mood_line = re.search(r'^\s*CreatureBaseMood\s+(\S+)\s*$', global_text, re.M)
+assert base_mood_line is not None, 'CreatureBaseMood is missing'
+base_mood = repr(float(base_mood_line.group(1)))
+config_entries = [(k, v) for k, v in dirt.items()] + [(k, v) for k, v in rooms_values.items() if 'DirtPer' in k] + [('MoodMeal', mood_meal.group(1)), ('MoodBattleWon', mood_battle_won.group(1))]
 config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
 
 probe = r'''
@@ -159,6 +168,8 @@ struct ConfigManager
     }
     double getDirtConfigDouble(const std::string& key) const { return lookup(key); }
     double getRoomConfigDouble(const std::string& key) const { return lookup(key); }
+    double getMoodMeal() const { return lookup("MoodMeal"); }
+    double getMoodBattleWon() const { return lookup("MoodBattleWon"); }
     double getRoomConfigDoubleOrDefault(const std::string& key, double def) const
     {
         std::map<std::string, double>::const_iterator it = values.find(key);
@@ -312,12 +323,12 @@ struct RoomSpa { static bool isPoolTile(const Tile*) { return false; } };
 struct Creature
 {
     Seat* mSeat; CreatureDefinition* mDefinition; GameMap* mMap; Tile* mTile;
-    double mUrge, mCreatureDirt, mHunger;
+    double mUrge, mCreatureDirt, mHunger, mStoredMood;
     double mDragDirtFactor; bool mFoughtSinceFightEnd;
     bool mDirtKoThisFight, mIsBeingDragged, mTorturedThisTurn, inPrison, inContainment, koTemp, koDeath;
     int mNbTurnsWithoutBattle; GameEntity* mCarriedEntity; int32_t mSpaMudTilesLeft;
     Creature(Seat* seat, CreatureDefinition* definition, GameMap* map, Tile* tile)
-      : mSeat(seat), mDefinition(definition), mMap(map), mTile(tile), mUrge(0.0), mCreatureDirt(0.0), mHunger(50.0), mDragDirtFactor(1.0), mFoughtSinceFightEnd(false),
+      : mSeat(seat), mDefinition(definition), mMap(map), mTile(tile), mUrge(0.0), mCreatureDirt(0.0), mHunger(50.0), mStoredMood(500.0), mDragDirtFactor(1.0), mFoughtSinceFightEnd(false),
         mDirtKoThisFight(false), mIsBeingDragged(false), mTorturedThisTurn(false), inPrison(false), inContainment(false),
         koTemp(false), koDeath(false), mNbTurnsWithoutBattle(5), mCarriedEntity(nullptr), mSpaMudTilesLeft(0) {}
     Seat* getSeat() const { return mSeat; }
@@ -329,6 +340,10 @@ struct Creature
     bool getIsOnServerMap() const { return true; }
     bool isKoTemp() const { return koTemp; }
     bool isKoDeath() const { return koDeath; }
+    // The one-time mood event of the real creature, reduced to its effect on the stored mood: 0 .. CreatureBaseMood
+    void applyMoodEvent(double points, bool sensitive)
+    { mStoredMood = std::max(0.0, std::min(@@BASE_MOOD@@, mStoredMood + points)); }
+    void applyBattleWonMood();
     void increaseUrge(double value);
     void setUrge(double val);
     void foodEaten(double val);
@@ -357,7 +372,7 @@ void Creature::koBlock(bool wasKo)
 }
 
 // ---- Mood
-struct CreatureMoodDirt { double computeMood(const Creature& creature) const; };
+struct CreatureMoodDirt { double getFallPerTurn(const Creature& creature) const; static double getCleanedReward(const Creature& creature, uint32_t stage); };
 namespace {
 @@MOOD_FUNCTIONS@@
 }
@@ -533,7 +548,10 @@ static void checkPiles()
     expect(bones1->cleanBy(1000.0) && DirtPileEntity::getEntityOnTile(tile, DirtPileKind::bones) == bones2, "cleaning removes one skeleton at a time");
 }
 
-static double mood(Creature& creature) { CreatureMoodDirt m; return m.computeMood(creature); }
+static double mood(Creature& creature) { CreatureMoodDirt m; return m.getFallPerTurn(creature); }
+static double reward(Creature& creature, uint32_t stage) { return CreatureMoodDirt::getCleanedReward(creature, stage); }
+static bool same(double a, double b) { return std::fabs(a - b) < 1e-12; }
+static const double STAGE2 = -0.0298, STAGE3 = -0.0595, PILE = -0.0298;
 
 static void checkMood()
 {
@@ -544,52 +562,65 @@ static void checkMood()
     Tile* tile = map.getTile(2, 2);
     Creature creature(&seat, &definition, &map, tile);
     struct Case { double dirtValue; double cleanliness; double expected; };
+    // The fall per turn of the room stage (stage 2 at dirt 50, stage 3 at dirt 90) times the Cleanliness of the type
     static const Case cases[] = {
-        {0.0, 1.0, 0}, {50.0, 1.0, -100}, {90.0, 1.0, -200}, {50.0, 0.25, -25}, {90.0, 0.25, -50}, {50.0, 0.5, -50},
-        {90.0, 0.5, -100}, {50.0, 1.5, -150}, {90.0, 1.5, -300}, {50.0, 2.0, -200}, {90.0, 2.0, -400}};
+        {0.0, 1.0, 0}, {50.0, 1.0, STAGE2}, {90.0, 1.0, STAGE3}, {50.0, 0.25, STAGE2 * 0.25}, {90.0, 0.25, STAGE3 * 0.25}, {50.0, 0.5, STAGE2 * 0.5},
+        {90.0, 0.5, STAGE3 * 0.5}, {50.0, 1.5, STAGE2 * 1.5}, {90.0, 1.5, STAGE3 * 1.5}, {50.0, 2.0, STAGE2 * 2.0}, {90.0, 2.0, STAGE3 * 2.0}};
     for(unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
     {
         for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = cases[i].dirtValue;
         definition.cleanliness = cases[i].cleanliness;
-        expect(mood(creature) == cases[i].expected, "stage mood at dirt " + std::to_string(cases[i].dirtValue) + " x " + std::to_string(cases[i].cleanliness) + " got " + std::to_string(mood(creature)));
+        expect(same(mood(creature), cases[i].expected), "stage fall at dirt " + std::to_string(cases[i].dirtValue) + " x " + std::to_string(cases[i].cleanliness) + " got " + std::to_string(mood(creature)));
     }
     // Piles within the radius, once per pile, Cleanliness applies; blood gives nothing; stage 1 room
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 0.0;
     definition.cleanliness = 1.0;
-    expect(mood(creature) == 0, "no dirt, no mood");
+    expect(same(mood(creature), 0.0), "no dirt, no fall");
     DirtPileEntity::createOnTile(&map, map.getTile(4, 4), DirtPileKind::pile, "Orc");   // distance 2: inside
-    expect(mood(creature) == -100, "one pile at distance 2 gives DirtPileMood");
+    expect(same(mood(creature), PILE), "one pile at distance 2 gives DirtPileMoodFallPerTurn");
     DirtPileEntity::createOnTile(&map, map.getTile(5, 5), DirtPileKind::pile, "Orc");   // distance 3: outside
-    expect(mood(creature) == -100, "a pile at distance 3 gives nothing");
+    expect(same(mood(creature), PILE), "a pile at distance 3 gives nothing");
     DirtPileEntity::createOnTile(&map, map.getTile(2, 1), DirtPileKind::pile, "Rat");
-    expect(mood(creature) == -200, "every pile counts once");
+    expect(same(mood(creature), 2 * PILE), "every pile counts once");
     DirtPileEntity::createOnTile(&map, map.getTile(1, 2), DirtPileKind::blood, "Orc");
-    expect(mood(creature) == -200, "blood gives no mood");
+    expect(same(mood(creature), 2 * PILE), "blood gives no fall");
     definition.cleanliness = 2.0;
-    expect(mood(creature) == -400, "piles times Cleanliness");
+    expect(same(mood(creature), 4 * PILE), "piles times Cleanliness");
     definition.cleanliness = 1.0;
-    // Crypt: no stage mood at stage 3
+    // Crypt: no stage fall at stage 3
     Tile* cryptTile = map.getTile(8, 8);
     for(unsigned t = 0; t < crypt->mCoveredTiles.size(); ++t) crypt->mCoveredTiles[t]->mDirt = 90.0;
     Creature inCrypt(&seat, &definition, &map, cryptTile);
-    expect(mood(inCrypt) == 0, "a crypt gives no dirt mood");
+    expect(same(mood(inCrypt), 0.0), "a crypt gives no dirt fall");
     DirtPileEntity::createOnTile(&map, map.getTile(9, 9), DirtPileKind::vomit, "Orc");
-    expect(mood(inCrypt) == -100, "a vomit puddle counts like a pile");
-    // No mood without a seat, none for a free hero or rogue creature, but a captured hero is a prisoner
+    expect(same(mood(inCrypt), PILE), "a vomit puddle counts like a pile");
+    // No fall without a seat, none for a free hero or rogue creature, but a captured hero is a prisoner
     for(unsigned t = 0; t < room->mCoveredTiles.size(); ++t) room->mCoveredTiles[t]->mDirt = 90.0;
     Creature seatless(nullptr, &definition, &map, tile);
-    expect(mood(seatless) == 0, "no seat, no mood");
+    expect(same(mood(seatless), 0.0), "no seat, no fall");
     Seat heroSeat; heroSeat.faction = "Hero";
     Creature hero(&heroSeat, &definition, &map, tile);
-    expect(mood(hero) == 0, "a free hero has no mood");
+    expect(same(mood(hero), 0.0), "a free hero has no mood");
     hero.inPrison = true;
-    // The stage mood -200 plus the two piles that still lie within the radius (-100 each)
-    expect(mood(hero) == -400, "a hero in prison feels the dirt");
+    // The stage fall plus the two piles that still lie within the radius
+    expect(same(mood(hero), STAGE3 + 2 * PILE), "a hero in prison feels the dirt");
     hero.inPrison = false; hero.inContainment = true;
-    expect(mood(hero) == -400, "a hero in containment feels the dirt");
+    expect(same(mood(hero), STAGE3 + 2 * PILE), "a hero in containment feels the dirt");
     Seat rogueSeat; rogueSeat.rogue = true;
     Creature rogue(&rogueSeat, &definition, &map, tile);
-    expect(mood(rogue) == 0, "a rogue creature has no mood");
+    expect(same(mood(rogue), 0.0), "a rogue creature has no mood");
+    // The mood a creature gets once when a room it uses is cleaned from stage 2 or 3: DirtCleanedMoodStage2 25, Stage3 50, times Cleanliness
+    definition.cleanliness = 1.0;
+    expect(same(reward(creature, 2), 25.0) && same(reward(creature, 3), 50.0), "cleaned reward 25 from stage 2, 50 from stage 3");
+    expect(same(reward(creature, 1), 0.0) && same(reward(creature, 0), 0.0), "no reward for a room that never got dirty");
+    definition.cleanliness = 2.0;
+    expect(same(reward(creature, 2), 50.0) && same(reward(creature, 3), 100.0), "the cleaned reward times Cleanliness");
+    definition.cleanliness = 0.5;
+    expect(same(reward(creature, 2), 12.5) && same(reward(creature, 3), 25.0), "the cleaned reward times a Cleanliness below 1");
+    definition.cleanliness = 1.0;
+    expect(same(reward(seatless, 3), 0.0) && same(reward(hero, 3), 50.0) && same(reward(rogue, 3), 0.0), "the reward follows the same who-feels-dirt rule");
+    hero.inContainment = false;
+    expect(same(reward(hero, 3), 0.0), "a free hero gets no reward");
 }
 
 static void checkUrgeAndCreatureDirt()
@@ -608,6 +639,7 @@ static void checkUrgeAndCreatureDirt()
     for(int i = 0; i < seekChickens - 1; ++i) creature.foodEaten(1.0);
     expect(creature.mUrge < seek, "one chicken fewer than ceil(UrgeSeek / UrgePerChicken) stays below UrgeSeek");
     expectNear(creature.mHunger, 50.0 - (seekChickens - 1), "hunger fell by 1 per chicken");
+    expectNear(creature.mStoredMood, 500.0 + ConfigManager::getSingleton().getMoodMeal() * (seekChickens - 1), "every meal adds MoodMeal to the stored mood once");
     creature.foodEaten(1.0);
     expect(creature.mUrge >= seek, "ceil(UrgeSeek / UrgePerChicken) chickens reach UrgeSeek");
     for(int i = seekChickens; i < relieveChickens - 1; ++i) creature.foodEaten(1.0);
@@ -623,21 +655,26 @@ static void checkUrgeAndCreatureDirt()
     Seat rogueSeat; rogueSeat.rogue = true; Creature rogue(&rogueSeat, &definition, &map, tile);
     rogue.increaseUrge(50.0); expectNear(rogue.mUrge, 0.0, "a rogue creature gets no urge");
     // Creature dirt: fight end +5, knock-out +25 and then nothing at the fight end, then +5 for the next fight
-    creature.setCreatureDirt(0.0);
+    creature.setCreatureDirt(0.0); creature.mStoredMood = 500.0;
     creature.mNbTurnsWithoutBattle = 0; creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 0.0, "no fight, no dirt: a creature that never fought gets nothing at the first count");
+    expectNear(creature.mStoredMood, 500.0, "no fight, no battle-won mood");
     creature.mNbTurnsWithoutBattle = 0; creature.mFoughtSinceFightEnd = true; creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 5.0, "a fight won adds CreatureDirtPerFightWon"); expect(!creature.mFoughtSinceFightEnd, "the fight flag is cleared at the fight end");
+    expectNear(creature.mStoredMood, 500.0 + ConfigManager::getSingleton().getMoodBattleWon(), "a fight won adds MoodBattleWon to the stored mood once");
     creature.mNbTurnsWithoutBattle = 5; creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 5.0, "only the turn the counter reaches 1 counts");
+    expectNear(creature.mStoredMood, 500.0 + ConfigManager::getSingleton().getMoodBattleWon(), "only the turn the counter reaches 1 gives the battle-won mood");
     creature.mNbTurnsWithoutBattle = 0; creature.mFoughtSinceFightEnd = true; creature.koTemp = true; creature.koBlock(false);
     expectNear(creature.mCreatureDirt, 30.0, "a knock-out adds CreatureDirtPerKo"); expect(creature.mDirtKoThisFight, "the knock-out is remembered");
     creature.koBlock(true);
     expectNear(creature.mCreatureDirt, 30.0, "a creature that was KO already adds nothing again");
     creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 30.0, "the fight end after a knock-out adds nothing"); expect(!creature.mDirtKoThisFight, "the flag is reset at the fight end");
+    expectNear(creature.mStoredMood, 500.0 + ConfigManager::getSingleton().getMoodBattleWon(), "a battle that ended in a knock-out gives no battle-won mood");
     creature.mNbTurnsWithoutBattle = 0; creature.mFoughtSinceFightEnd = true; creature.koTemp = false; creature.fightEndBlock();
     expectNear(creature.mCreatureDirt, 35.0, "the next fight adds again");
+    expectNear(creature.mStoredMood, 500.0 + 2 * ConfigManager::getSingleton().getMoodBattleWon(), "the next battle won adds the mood again");
     creature.setCreatureDirt(500.0); expectNear(creature.mCreatureDirt, 100.0, "creature dirt is clamped");
     // Decay 0.1 per turn, prison and torture hold it at 100
     creature.setCreatureDirt(10.0); creature.upkeepCreatureDirt(); expectNear(creature.mCreatureDirt, 9.9, "decay per turn");
@@ -693,6 +730,7 @@ mood_functions = mood_cpp[mood_start:mood_end]
 
 replacements = {
     '@@CONFIG@@': config_table,
+    '@@BASE_MOOD@@': base_mood,
     '@@MAXDIRT@@': re.search(r'^const double Tile::MAX_DIRT = [0-9.]+;$', tile_cpp, re.M).group(0),
     '@@TILE_FUNCTIONS@@': '\n'.join(extract(tile_cpp, h) for h in [
         'bool Tile::canCarryDirt() const', 'void Tile::addDirt(double amount)', 'void Tile::cleanDirt(double amount)',
@@ -709,11 +747,12 @@ replacements = {
     '@@CREATURE_FUNCTIONS@@': '\n'.join(extract(creature_cpp, h) for h in [
         'void Creature::foodEaten(double val)', 'void Creature::increaseUrge(double value)', 'void Creature::setUrge(double val)',
         'void Creature::increaseCreatureDirt(double value)', 'void Creature::setCreatureDirt(double val)',
-        'void Creature::upkeepCreatureDirt()', 'void Creature::dirtyEnteredTile(Tile* tile)']) + '\nvoid Creature::washed() { mCreatureDirt = 0.0; }',
+        'void Creature::upkeepCreatureDirt()', 'void Creature::dirtyEnteredTile(Tile* tile)', 'void Creature::applyBattleWonMood()'])+ '\nvoid Creature::washed() { mCreatureDirt = 0.0; }',
     '@@FIGHT_END_BLOCK@@': fight_block,
     '@@KO_BLOCK@@': ko_block,
     '@@MOOD_FUNCTIONS@@': mood_functions,
-    '@@MOOD_COMPUTE@@': extract(mood_cpp, 'double CreatureMoodDirt::computeMood(const Creature& creature) const'),
+    '@@MOOD_COMPUTE@@': extract(mood_cpp, 'double CreatureMoodDirt::getFallPerTurn(const Creature& creature) const') + '\n' +
+        extract(mood_cpp, 'double CreatureMoodDirt::getCleanedReward(const Creature& creature, uint32_t stage)'),
 }
 for token, text in replacements.items():
     assert token in probe, token

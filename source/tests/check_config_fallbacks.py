@@ -61,7 +61,7 @@ if well is None or abs(float(well.group(1)) - cfg_value(global_cfg, "ManaWellBon
     problems.append("the mana well default must equal global.cfg ManaWellBonusPerTile")
 
 # getRoomConfigDoubleOrDefault fallbacks: file -> keys
-for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit", "CasinoMoodMax"]),
+for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit"]),
                    ("source/rooms/RoomArena.cpp", ["PitMoodSolitary", "PitMoodSpectator", "PitMoodVictor"]),
                    ("source/rooms/RoomHatchery.cpp", ["HatcheryDirtPerHenTurn"]),
                    ("source/creatureaction/CreatureActionEatChicken.cpp", ["HatcheryGiftHpRecoveredPerChicken"])):
@@ -75,7 +75,6 @@ for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit", "CasinoM
             problems.append(path + " falls back to " + match.group(1) + " for " + key + ", rooms.cfg has " + str(shipped))
 
 for path, constant, key, cfg in (
-    ("source/entities/Creature.cpp", "DEFAULT_PIT_MOOD_MAX", "PitMoodMax", rooms_cfg),
     ("source/rooms/Room.cpp", "DEFAULT_ROOM_CONVERT_NEUTRAL_SECONDS_PER_TILE", "RoomConvertNeutralSecondsPerTile", rooms_cfg),
     ("source/rooms/Room.cpp", "DEFAULT_ROOM_CONVERT_SECONDS_PER_TILE", "RoomConvertSecondsPerTile", rooms_cfg),
     ("source/rooms/RoomPortal.cpp", "DEFAULT_PORTAL_FIRST_SPAWN_SECONDS", "PortalFirstSpawnSeconds", rooms_cfg),
@@ -85,6 +84,16 @@ for path, constant, key, cfg in (
     shipped = cfg_value(cfg, key)
     if match is None or shipped is None or abs(float(match.group(1)) - shipped) > 1e-9:
         problems.append(path + " default " + constant + " must equal " + key)
+
+# The mood caps and decays of the pit and the casino are gone: the moods are one-time values added to the stored
+# mood, so neither the config nor the code keeps a cap key or a default for them.
+creature_source = read("source", "entities", "Creature.cpp")
+for gone in ("PitMoodMax", "PitMoodDecay", "CasinoMoodMax", "CasinoMoodDecay"):
+    if cfg_value(rooms_cfg, gone) is not None or gone in creature_source:
+        problems.append(gone + " must be gone from rooms.cfg and Creature.cpp")
+for gone in ("DEFAULT_PIT_MOOD_MAX", "DEFAULT_PIT_MOOD_DECAY_PER_SECOND"):
+    if gone in creature_source:
+        problems.append("Creature.cpp must not keep " + gone)
 
 cycle = read("source", "rooms", "HatcheryCycle.h")
 for member, key in (("mLayMax", "HatcheryLayMax"), ("mLayFactor", "HatcheryLayFactor")):

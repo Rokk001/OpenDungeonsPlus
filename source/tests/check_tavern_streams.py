@@ -148,6 +148,8 @@ struct Creature
     void setThirst(double val);
     void setDrunk(double val);
     void setHangoverTurns(double turns);
+    // The one-time mood event that addTavernMood calls; the stored mood is not part of the thirst state, so nothing is kept
+    void applyMoodEvent(double points, bool sensitive) {}
     void addTavernMood(double points, double turns);
     void exportThirstStateToPacket(ODPacket& os) const;
     void importThirstStateFromPacket(ODPacket& is);

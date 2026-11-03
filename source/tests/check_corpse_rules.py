@@ -4,7 +4,7 @@ from check_ghost_rules import PRELUDE, GHOST_WORLD, function, read, run_probe
 # Extend controlled services with corpse observations; no phase or FIFO algorithms live in mocks.
 def corpse_fixture():
     additions = r'''
- unsigned int mDeathCounter=0;double hp=100,mCorpseTurns=0,mDecayTurns=-1,mMaxHP=100,mHunger=0,mWakefulness=0,mThirst=0,mSpecialMood=0;bool mIsCarried=false,mNeedFireRefresh=false,mGhostRevived=false,server=true;std::string mCorpseCarrierName,animation;int drops=0,dirtyCalls=0,queueClears=0,koResets=0;
+ unsigned int mDeathCounter=0;double hp=100,mCorpseTurns=0,mDecayTurns=-1,mMaxHP=100,mHunger=0,mWakefulness=0,mThirst=0,mStoredMood=731.5;bool mIsCarried=false,mNeedFireRefresh=false,mGhostRevived=false,server=true;std::string mCorpseCarrierName,animation;int drops=0,dirtyCalls=0,queueClears=0,koResets=0,moodCounterClears=0;
  //! \brief Reports corpse authority.
  bool getIsOnServerMap()const{return server;}
  //! \brief Returns the controlled world.
@@ -35,8 +35,8 @@ def corpse_fixture():
  void resetKoTurns(){++koResets;ko=false;}
  //! \brief Restores the requested exact health share.
  void setHP(double value){alive=value>0;hp=value;}
- //! \brief Supplies an independent observable happy mood.
- void removeAnnoyance(){mSpecialMood=37.25;}
+ //! \brief Observes that only the annoyance counters are forgotten; the stored mood is left as it was at death.
+ void clearMoodCounters(){++moodCounterClears;}
  //! \brief Observes ordinary mood recomputation.
  void computeMood(){}
  //! \brief Observes ordinary overlay recomputation.
@@ -145,7 +145,7 @@ int main(){
   map.creatures.clear();std::vector<Creature> population(20);for(Creature& member:population){member.seat=&seat;map.creatures.push_back(&member);}crypt.mCorpseLevels.assign(threshold-1,4);crypt.mRottingCreatures[&tile]=&body;crypt.notifyCorpseDecayed(body);check(crypt.mCorpseLevels.size()==size_t(threshold)&&map.creatures.size()==20,"population cap retains FIFO levels");map.creatures.clear();crypt.mRottingCreatures[&tile]=&body;crypt.notifyCorpseDecayed(body);check(map.creatures.size()==1&&crypt.mCorpseLevels.size()==1,"later decay retries retained FIFO group");
  }
  seat.tier=1;RoomCrypt crypt;crypt.map=&map;crypt.seat=&seat;crypt.type=RoomType::crypt;tile.room=&crypt;Creature revived;revived.map=&map;revived.seat=&seat;revived.tile=&tile;revived.alive=false;revived.mDeathCounter=1;revived.mDecayTurns=250.125;revived.mCorpseTurns=418.125;revived.onMap=false;revived.level=17;revived.exp=12.25;crypt.mRottingCreatures[&tile]=&revived;
- check(revived.reviveFromCorpse(.35),"delivered decaying body can revive");near(revived.hp,35,"35 percent health");near(revived.exp,12.25,"revival retains old XP");check(revived.level==17&&revived.onMap&&crypt.mRottingCreatures[&tile]==nullptr,"revival retains level and releases grave");near(revived.mThirst,80,"revival direct thirst applies even to non-thirsty classes");near(revived.mHunger,80,"revival hungry");near(revived.mWakefulness,20,"revival tired");check(revived.koResets==1&&revived.queueClears==1&&revived.mDecayTurns==-1&&revived.mDeathCounter==0,"revival clears fatal and corpse state");
+ check(revived.reviveFromCorpse(.35),"delivered decaying body can revive");near(revived.hp,35,"35 percent health");near(revived.exp,12.25,"revival retains old XP");check(revived.level==17&&revived.onMap&&crypt.mRottingCreatures[&tile]==nullptr,"revival retains level and releases grave");near(revived.mThirst,80,"revival direct thirst applies even to non-thirsty classes");near(revived.mHunger,80,"revival hungry");near(revived.mWakefulness,20,"revival tired");check(revived.moodCounterClears==1,"revival forgets the annoyance counters once");near(revived.mStoredMood,731.5,"revival keeps the stored mood the creature died with");check(revived.koResets==1&&revived.queueClears==1&&revived.mDecayTurns==-1&&revived.mDeathCounter==0,"revival clears fatal and corpse state");
  check(!revived.reviveFromCorpse(.35),"living creature cannot revive again");revived.alive=false;revived.mDeathCounter=1;revived.mIsCarried=true;check(!revived.reviveFromCorpse(.35),"carried body cannot revive");
  std::cout<<"corpse clocks, FIFO crypt and revival: ok\n";
 }

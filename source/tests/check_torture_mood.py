@@ -12,6 +12,7 @@ for obsolete in ('TORTURE_LEVEL_PERCENT', 'tortureTurnsToConvert', 'TortureTimeT
     for text in (torture, definition, header, config):
         assert obsolete not in text, obsolete
 assert re.search(r'addTortureMood\(.*?TortureMoodPerSecond.*?ResearchEffect::ConversionSpeed.*?ODApplication::turnsPerSecond', torture, re.S)
-assert re.search(r'getSeat\(\)\s*!=\s*creature->getSeat\(\).*?getCreatureBaseMood\(\)\s*\+\s*creature->getMoodPoints\(\)\s*<=\s*config.getCreatureMoodFurious\(\).*?increaseTortureBrokenTurns\(\).*?floor\(brokenTurns\s*/\s*ODApplication::turnsPerSecond\).*?floor\(\(brokenTurns\s*-\s*1\)\s*/\s*ODApplication::turnsPerSecond\).*?secondPassed.*?Random::Double\(0\.0,\s*1\.0\).*?TortureConvertChancePerSecond.*?convertVictim\(\*creature\)', torture, re.S)
+assert re.search(r'getSeat\(\)\s*!=\s*creature->getSeat\(\).*?creature->getMoodPoints\(\)\s*<\s*config.getCreatureMoodFurious\(\).*?increaseTortureBrokenTurns\(\).*?floor\(brokenTurns\s*/\s*ODApplication::turnsPerSecond\).*?floor\(\(brokenTurns\s*-\s*1\)\s*/\s*ODApplication::turnsPerSecond\).*?secondPassed.*?Random::Double\(0\.0,\s*1\.0\).*?TortureConvertChancePerSecond.*?convertVictim\(\*creature\)', torture, re.S)
+assert not re.search(r'getCreatureBaseMood\(\)\s*\+\s*creature->getMoodPoints\(\)', torture), 'the effective mood is compared directly'
 assert 'resetTortureBrokenTurns()' in torture
 print('torture mood ok')

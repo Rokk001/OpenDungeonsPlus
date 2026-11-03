@@ -204,7 +204,10 @@ BOOST_AUTO_TEST_CASE(test_OptionOffIdentityOfQueries)
     std::vector<std::string> others = names("Orc2", "Troll1", "Imp1");
 
     BOOST_CHECK_EQUAL(relationships.combatModifier("Orc1", others), 0.0);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("Orc1"), 0);
+    std::vector<std::pair<std::string, int32_t> > moodPairs;
+    moodPairs.push_back(std::pair<std::string, int32_t>("stale", 1));
+    relationships.getMoodPairs("Orc1", moodPairs);
+    BOOST_CHECK(moodPairs.empty());
     std::vector<std::pair<std::string, uint32_t> > trainees;
     trainees.push_back(std::pair<std::string, uint32_t>("Orc2", 9));
     BOOST_CHECK_EQUAL(relationships.mentoringFactor("Orc1", 1, trainees), 1.0);

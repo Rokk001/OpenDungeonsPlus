@@ -155,7 +155,13 @@ check("removeAnnoyance" in bonus and "makeUnhappy()" in bonus and "claimTile(sea
       and "unclaimTile()" in bonus and "stun(nbTurns)" in bonus and "setLevel(ConfigManager::getSingleton().getSpellConfigUInt32(\"SummonWorkerUpgradedLevel\"))" in bonus,
       "the new special effects must call the creature and tile functions")
 mood = (root / "source/creaturemood/CreatureMoodManager.cpp").read_text(encoding="utf-8")
-check("getSpecialMood()" in mood, "the special mood must count in the mood points")
+creature_cpp = (root / "source/entities/Creature.cpp").read_text(encoding="utf-8")
+check("getSpecialMood" not in mood and "mSpecialMood" not in creature_cpp,
+      "the special mood is gone: the specials change the stored mood")
+check(re.search(r"void Creature::removeAnnoyance\(\)\s*\{[^}]*setStoredMood\(ConfigManager::getSingleton\(\)\.getCreatureBaseMood\(\)\)", creature_cpp) is not None
+      and re.search(r"void Creature::makeUnhappy\(\)\s*\{[^}]*applyMoodEvent\(config\.getRoomConfigDouble\(\"MakeUnhappyMoodJump\"\)", creature_cpp) is not None,
+      "the special mood effects must act on the stored mood")
+check("mMoodPoints = getEffectiveMood();" in creature_cpp, "the stored mood must count in the mood points")
 
 if failures:
     print("\n".join(failures))

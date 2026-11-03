@@ -18,17 +18,18 @@ def main():
         "InfirmaryFullHealSeconds": 60, "DormitoryFullHealSeconds": 150,
         "InfirmaryCotShareSmall": 12, "InfirmaryCotShareMedium": 17,
         "InfirmaryCotShareLarge": 6, "InfirmaryMinRoomSide": 4,
-        "InfirmaryAdmissionWageShare": .3, "InfirmaryMoodWageShare": .3,
+        "InfirmaryAdmissionWageShare": .3, "InfirmaryMoodWageShare": .075,
         "InfirmaryManaPerWage": 2, "InfirmaryDischargeMinPercent": 40,
         "InfirmaryDischargeMaxPercent": 100, "InfirmaryDischargeStepPercent": 10,
-        "InfirmaryDischargeDefaultPercent": 100, "InfirmaryMoodDefaultTurns": 30,
-        "InfirmaryHealGlowTurns": 7, "InfirmaryShamanWalkMinSeconds": 8,
+        "InfirmaryDischargeDefaultPercent": 100,        "InfirmaryHealGlowTurns": 7, "InfirmaryShamanWalkMinSeconds": 8,
         "InfirmaryShamanWalkMaxSeconds": 15, "InfirmaryShamanPoseMinSeconds": 10,
         "InfirmaryShamanPoseMaxSeconds": 20, "InfirmaryShamanAnimationSeconds": 2}
     if "void Tile::addDirt(" in (repo / "source/entities/Tile.cpp").read_text(encoding="utf-8"):
         expected["InfirmaryDirtPerTreatment"] = 17.4
     for key, number in expected.items():
         assert value(rooms, key) == number, key
+    # The mood is a one-time value (share of the wage) added to the stored mood: no mood duration key any more.
+    assert not re.search(r"^\s*InfirmaryMoodDefaultTurns\b", rooms, re.M)
     assert value(rooms, "InfirmaryCostPerTile") == value(rooms, "PrisonCostPerTile")
     creatures = (repo / "config/creatures.cfg").read_text(encoding="utf-8")
     dimensions = Counter(tuple(sorted(map(int, row))) for row in
