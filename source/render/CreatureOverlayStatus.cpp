@@ -96,6 +96,13 @@ static Ogre::ColourValue getManaColour()
         MANA_COLOUR_BLUE / COLOUR_CHANNEL_MAX);
 }
 
+
+//! \brief Returns the colour of the life part of the badge flower, a strong red for every seat.
+static Ogre::ColourValue getLifeColour()
+{
+    return Ogre::ColourValue(LIFE_COLOUR_RED / COLOUR_CHANNEL_MAX, LIFE_COLOUR_GREEN / COLOUR_CHANNEL_MAX,
+        LIFE_COLOUR_BLUE / COLOUR_CHANNEL_MAX);
+}
 //! \brief Shows the level of a creature in the recovery overlay: the level number, or for the champion an empty
 //! caption and the crown.
 //! \param overlay The overlay of the creature.
