@@ -29,6 +29,8 @@
 #include <Overlay/OgreOverlayManager.h>
 #include <Overlay/OgrePanelOverlayElement.h>
 
+#include <algorithm>
+
 namespace
 {
 //! Number of copies of a caption drawn behind it to make the outline
@@ -304,6 +306,21 @@ void MovableTextOverlay::setAtlasFrame(uint32_t childOverlayId, uint32_t frame, 
         u, v, u + size, v + size);
 }
 
+//! \brief Cuts a horizontal band out of the picture of a child overlay; update() places and sizes the band.
+void MovableTextOverlay::setVerticalBand(uint32_t childOverlayId, Ogre::Real top, Ogre::Real bottom)
+{
+    if(childOverlayId >= mChildOverlays.size())
+        return;
+    ChildOverlay& child = mChildOverlays[childOverlayId];
+    top = std::max(0.0f, std::min(1.0f, top));
+    bottom = std::max(top, std::min(1.0f, bottom));
+    if(child.mBandTop == top && child.mBandBottom == bottom)
+        return;
+    child.mBandTop = top;
+    child.mBandBottom = bottom;
+    static_cast<Ogre::PanelOverlayElement*>(child.mOverlayContainer)->setUV(0.0f, top, 1.0f, bottom);
+}
+
 void MovableTextOverlay::setCaptionSize(uint32_t childOverlayId, Ogre::Real height)
 {
     if(childOverlayId >= mChildOverlays.size())
@@ -526,8 +543,10 @@ void MovableTextOverlay::update(Ogre::Real timeSincelastFrame)
         // The offset (pixels at scale 1) moves only the drawing; the next child still centres on the unshifted box
         childOverlay.mOverlayContainer->setPosition(
             childPosition.x + childOverlay.mOffsetX * childOverlay.mScale / Ogre::OverlayManager::getSingleton().getViewportWidth(),
-            childPosition.y + childOverlay.mOffsetY * childOverlay.mScale / Ogre::OverlayManager::getSingleton().getViewportHeight());
-        childOverlay.mOverlayContainer->setDimensions(relTextWidth, relTextHeight);
+            childPosition.y + childOverlay.mOffsetY * childOverlay.mScale / Ogre::OverlayManager::getSingleton().getViewportHeight()
+            + relTextHeight * childOverlay.mBandTop);
+        childOverlay.mOverlayContainer->setDimensions(relTextWidth,
+            relTextHeight * (childOverlay.mBandBottom - childOverlay.mBandTop));
         previousPosition = childPosition;
         previousWidth = relTextWidth;
         previousHeight = relTextHeight;
