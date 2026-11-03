@@ -315,3 +315,58 @@ assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='Dunge
 credits = (repo / 'CREDITS').read_text()
 assert 'gui/DungeonbookPage.png' in credits and 'gui/DungeonbookFrame.png' in credits
 print('profile background, frame and resource registration verified')
+
+# Second page of the profile: the eight values of the former statistics field, reached by a button on the first page.
+# The page covers the first one, has no scrollbar, and every tile is high and wide enough at every screen and UI scale.
+stats_page = chosen.find("Window[@name='StatisticsPage']")
+assert stats_page is not None and stats_page.find("Property[@name='Visible']").get('value') == 'False'
+assert stats_page.find("Property[@name='Image']").get('value') == 'DungeonbookArt/Page', 'the page covers the first page'
+assert chosen.find("Window[@name='StatisticsButton']") is not None, 'the first page needs the button to the statistics'
+assert stats_page.find("Window[@name='BackButton']") is not None, 'the statistics page needs a button back'
+page_areas = {}
+for window in stats_page.findall('Window'):
+    coords = [float(a) for a, b in re.findall(r'\{(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\}',
+                                             window.find("Property[@name='Area']").get('value'))]
+    page_areas[window.get('name')] = (coords[0], coords[1], coords[2], coords[3])
+button_area = areas['StatisticsButton']
+# the button sits left of the portrait ring (a square in the middle of the portrait), so page 1 keeps its arrangement
+assert button_area[2] < 0.35 and button_area[3] <= areas['NameText'][1] and button_area[0] >= areas['Portrait'][0]
+statistics = ('Experience', 'HP', 'Gold', 'SightRadius', 'Potions', 'Inventory', 'DamagePerSecond', 'SkillPoints')
+for name in statistics:
+    tile, panel = page_areas[name + 'Tile'], page_areas[name + 'Panel']
+    assert panel[0] >= tile[0] and panel[2] <= tile[2] and panel[1] >= tile[1] and panel[3] <= tile[3], name
+    assert 0 <= tile[0] < tile[2] <= 1 and 0 <= tile[1] < tile[3] <= 1, name
+tiles = [page_areas[n + 'Tile'] for n in statistics]
+for i, first in enumerate(tiles):
+    for second in tiles[i + 1:]:
+        assert first[2] <= second[0] or second[2] <= first[0] or first[3] <= second[1] or second[3] <= first[1], 'tiles overlap'
+assert max(page_areas['Title'][3], page_areas['BackButton'][3]) <= min(t[1] for t in tiles) and max(t[3] for t in tiles) <= 1.0
+assert page_areas['BackButton'][2] <= page_areas['Title'][0], 'the back button sits where the button to the statistics is'
+# code: shown by the button, filled from the statistics text, shortened to the tile instead of scrolling
+assert 'onStatisticsViewClicked' in social and 'mShowingStatistics' in social
+assert social.count('mShowingStatistics = false;') >= 3, 'selecting another creature returns to the first page'
+for label in ('Experience', 'HP', 'Gold', 'Potions', 'Inventory', 'Raw damage per second', 'Sight radius',
+              'Skill points earned / spent'):
+    assert '"%s"' % label in social, label
+assert 'findStatisticsValue(selected->stats' in social
+assert 'setProfileTile(statisticsPage->getChild(std::string(line.window) + "Panel")' in social
+assert 'creature->getRawDamagePerSecond()' in (repo / 'source/network/ODServer.cpp').read_text(), 'the server still sends them'
+# Fit: the tile text is the title in the 8 point font and up to four value lines in the 6 point font
+tile_lines = LINE['MedievalSharp-8'] + 4 * LINE['MedievalSharp-6']
+for screen_w, screen_h in ((640, 480), (800, 600), (1024, 768), (1280, 720), (1920, 1080), (7680, 4320)):
+    for user in (0.8, 1.0, 1.2):
+        scale = min(screen_w / 1024.0, screen_h / 768.0) * user
+        fit = min(1.0, screen_w / (window_w * scale), screen_h / (window_h * scale))
+        pane_h = (window_h * scale * fit - title_height * scale - 2 * border * scale * fit) * 0.9
+        pane_w = (window_w * scale * fit - 2 * side * scale * fit) * 0.5
+        for name in statistics:
+            panel = page_areas[name + 'Panel']
+            assert pane_h * (panel[3] - panel[1]) + 1e-6 >= tile_lines * scale, (name, screen_w, screen_h, user)
+            # the longest title ("Damage per second") has to fit one line of the tile
+            assert pane_w * (panel[2] - panel[0]) + 1e-6 >= len('Damage per second') * CHAR_8 * scale, (name, screen_w, user)
+        assert pane_h * (page_areas['BackButton'][3] - page_areas['BackButton'][1]) + 1e-6 >= LINE_8 * scale
+        assert pane_w * (page_areas['BackButton'][2] - page_areas['BackButton'][0]) + 1e-6 >= len('Back') * CHAR_8 * scale
+        assert pane_h * (page_areas['Title'][3] - page_areas['Title'][1]) + 1e-6 >= LINE['MedievalSharp-10'] * scale
+        assert pane_w * (button_area[2] - button_area[0]) + 1e-6 >= len('Statistics') * CHAR_8 * scale
+        assert pane_h * (button_area[3] - button_area[1]) + 1e-6 >= LINE_8 * scale
+print('statistics page verified: eight tiles, button there and back, fits 640x480 to 8K at 80 to 120 percent')
