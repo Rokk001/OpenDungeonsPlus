@@ -186,6 +186,7 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     return launchSavedGame(level);
 }
 
+//! \brief Starts the server with a saved game and shows the exact cause in the menu if loading fails.
 bool MenuModeLoad::launchSavedGame(const std::string& level)
 {
     std::string nickname = ConfigManager::getSingleton().getGameValue(Config::NICKNAME, std::string(), false);
@@ -200,7 +201,9 @@ bool MenuModeLoad::launchSavedGame(const std::string& level)
     {
         OD_LOG_ERR("Could not start server for single player game !!!");
         tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-        tmpWin->setText("ERROR: Could not start server for single player game !!!");
+        const std::string& cause = MapHandler::getLastLoadError();
+        tmpWin->setText(cause.empty() ? std::string("ERROR: Could not start the saved game. See the log for details.")
+                                      : "ERROR: This saved game can't be loaded. " + cause);
         tmpWin->show();
         return true;
     }

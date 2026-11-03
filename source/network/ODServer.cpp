@@ -471,7 +471,7 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
     {
         mServerMode = ServerMode::ModeNone;
         mServerState = ServerState::StateNone;
-        OD_LOG_INF("Couldn't start server. The level file can't be loaded: " + levelFilename);
+        OD_LOG_ERR("Couldn't start server. The level file can't be loaded: " + levelFilename + ", cause: " + MapHandler::getLastLoadError());
         stopServer();
         return false;
     }
