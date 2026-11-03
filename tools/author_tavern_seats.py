@@ -86,6 +86,8 @@ LARGE_MODELS = ('PitDemon', 'Troll', 'Scarab', 'Dragon', 'Kreatur')
 # the bench first. The head of a body along the bench looks towards the table.
 RESTING_MODELS = ('CaveHornet', 'Kreatur', 'LavaSpawn', 'Rat', 'Roach', 'Scarab', 'Slime', 'Spider', 'Tentacle', 'Wyvern')
 REST_TURNS = (90.0, -90.0, 0.0, 180.0)
+# A body that may not turn its back to the table, tried in this order.
+REST_TURN_LIMITS = {'Scarab': (90.0, -90.0, 0.0)}
 # Tried in this order: how far the head of a body along the bench looks at the table; a head that turns less wins when that
 # saves this much of the step back.
 REST_HEAD_TURNS = (50.0, 25.0, 0.0)
@@ -110,7 +112,9 @@ COILED_MODELS = ('Tentacle', 'LavaSpawn')
 COIL_TAIL_DEGREES = 110.0
 CURL_TAIL_DEGREES = 40.0
 # The clips a resting body takes its pose from, tried in this order; a snake body keeps its upper body up.
-REST_SOURCES = {'LavaSpawn': ('AmbientSit', 'AmbientLie')}
+REST_SOURCES = {'LavaSpawn': ('AmbientSit', 'AmbientLie'), 'Scarab': ('AmbientLie', 'AmbientSit', 'Sleep')}
+# A resting body lies no deeper in the floor than this: what hangs behind the bench may not sink through the floor.
+REST_FLOOR_SINK = 0.03
 DEFAULT_REST_SOURCES = ('AmbientLie',)
 # A walking body that does not fit on its legs at full size up to this depth rests on the bench instead.
 SEATED_LIMIT = 0.025
@@ -195,6 +199,63 @@ SLUMP_HEAD = 28.0
 BREATH = 0.008
 BREATH_SECONDS = 4.0
 SWAY_DEGREES = 2.0
+
+# Bodies whose own clips hardly move them play a clip made for them: the bones swing on the seat pose, each as
+# (bone, world axis, degrees, cycles in the clip, phase in radians, mean degrees). A swing is the mean plus the degrees times a
+# sine, and it fades in and out at the ends of the clip like every clip. A limb that hangs over the table swings away from it
+# and back, never into it. A chain of bones follows its first bone with a lag, like a whip.
+WHIP_LAG = 0.6
+
+
+def whip(chain, axis, degrees, cycles, phase, up, lag=WHIP_LAG):
+    return tuple((bone, axis, degrees, cycles, phase - lag * index, up * degrees) for index, bone in enumerate(chain))
+
+
+PLAY_SWINGS = {
+    ('Kreatur', 'SitSlap'): (
+        (('body', 'y', 4.0, 2, 0.0, -4.0), ('head', 'z', 30.0, 3, 0.0, 0.0), ('head', 'x', 12.0, 2, 1.0, 0.0))
+        + whip(('tentafr1_r', 'tentafr2_r'), 'x', 18.0, 2, 0.0, -1.0) + whip(('tentab1_r', 'tentab2_r'), 'x', 18.0, 2, 3.14, -1.0)
+        + whip(('tentafr1_l', 'tentafr2_l'), 'x', 18.0, 2, 3.14, 1.0) + whip(('tentab1_l', 'tentab2_l'), 'x', 18.0, 2, 0.0, 1.0)
+        + whip(('tail1', 'tail2'), 'z', 40.0, 3, 0.0, 0.0, 0.7)),
+    ('Kreatur', 'SitDice'): (
+        (('body', 'y', 3.0, 4, 0.0, -3.0), ('head', 'y', 14.0, 4, 0.0, -2.0), ('head', 'z', 22.0, 2, 0.5, 0.0))
+        + whip(('tentafr1_r', 'tentafr2_r'), 'x', 10.0, 6, 0.0, -1.0, 0.8) + whip(('tentab1_r', 'tentab2_r'), 'x', 14.0, 2, 1.5, -1.0, 0.8)
+        + whip(('tentafr1_l', 'tentafr2_l'), 'x', 14.0, 2, 3.14, 1.0, 0.8) + whip(('tentab1_l', 'tentab2_l'), 'x', 14.0, 2, 0.0, 1.0, 0.8)
+        + whip(('tail1', 'tail2'), 'z', 35.0, 5, 0.0, 0.0, 0.7)),
+    ('Kreatur', 'SitArmWrestle'): (
+        (('body', 'y', 3.0, 3, 0.0, -3.0), ('head', 'x', 8.0, 6, 0.0, 0.0), ('head', 'y', 6.0, 3, 1.0, -2.0),
+         ('tentafr1_r', 'z', 12.0, 5, 0.0, 0.0), ('tentafr2_r', 'z', 10.0, 5, 0.8, 0.0),
+         ('tentafr1_l', 'z', 12.0, 5, 3.14, 0.0), ('tentafr2_l', 'z', 10.0, 5, 3.9, 0.0))
+        + whip(('tentab1_r', 'tentab2_r'), 'x', 8.0, 3, 0.0, -1.0, 0.8) + whip(('tail1', 'tail2'), 'z', 25.0, 4, 0.0, 0.0, 0.7)),
+    ('Scarab', 'SitSlap'): (
+        ('Bone.001', 'y', -4.0, 2, 0.0, -4.0), ('Bone.004', 'y', 28.0, 4, 0.0, 0.0), ('Bone.003', 'y', 14.0, 4, 0.5, 0.0),
+        ('Bone.001_L', 'x', 26.0, 2, 3.14, 13.0), ('Bone.001_L.001', 'x', 30.0, 2, 2.44, 13.0), ('Bone.001_L.002', 'x', 20.0, 2, 1.74, 0.0)),
+    ('Scarab', 'SitDice'): (
+        ('Bone.001', 'y', -4.0, 4, 0.0, -4.0), ('Bone.004', 'y', 20.0, 4, 0.0, 0.0), ('Bone.003', 'y', 10.0, 4, 0.6, 0.0),
+        ('Bone.004', 'z', 20.0, 2, 0.0, 0.0),
+        ('Bone.001_L', 'x', 12.0, 6, 0.0, 12.0), ('Bone.001_L.001', 'x', 14.0, 6, -0.8, 14.0), ('Bone.001_L.002', 'x', 10.0, 6, -1.6, 0.0)),
+    ('Scarab', 'SitArmWrestle'): (
+        ('Bone.001', 'y', -3.0, 3, 0.0, -3.0), ('Bone.004', 'y', 12.0, 6, 0.0, 0.0), ('Bone.003', 'y', 6.0, 6, 0.5, 0.0),
+        ('Bone.001_L', 'x', 10.0, 4, 0.0, 10.0), ('Bone.001_L.001', 'x', 12.0, 4, -0.8, 12.0)),
+    ('CaveHornet', 'SitDice'): (
+        ('Head', 'y', 20.0, 4, 0.0, 0.0), ('Head', 'z', 20.0, 2, 0.5, 0.0), ('Body2', 'z', 10.0, 2, 1.0, 0.0),
+        ('Tail1', 'z', 30.0, 5, 0.0, 0.0), ('Tail2', 'z', 35.0, 5, -0.7, 0.0), ('Proboscis1_L', 'y', 15.0, 6, 0.0, 0.0),
+        ('Proboscis1_R', 'y', 15.0, 6, 3.14, 0.0)),
+    ('Slime', 'SitDice'): (
+        ('slime_base', 'z', 18.0, 2, 0.0, 0.0), ('slime_mid', 'z', 26.0, 2, -0.8, 0.0), ('slime_head', 'y', 28.0, 4, 0.0, 0.0),
+        ('slime_head', 'z', 35.0, 2, -1.6, 0.0)),
+    ('LavaSpawn', 'SitSlap'): (
+        ('spine', 'x', 8.0, 2, 0.0, 0.0), ('chest', 'x', 10.0, 2, 0.6, 0.0), ('head', 'z', 22.0, 3, 0.0, 0.0),
+        ('tail1', 'z', 30.0, 3, 0.0, 0.0), ('tail2', 'z', 40.0, 3, 1.0, 0.0)),
+}
+# Arms that hammer on the table in turns, as (upper arm, forearm, end of the forearm, phase): the two segments aim at a
+# direction given by the yaw (0 outwards, 90 forwards) and the pitch in degrees. Raised: (yaw, pitch) of the upper arm and the
+# forearm; slammed: the same when the hand comes down on the table.
+PLAY_HAMMERS = {
+    ('LavaSpawn', 'SitSlap'): {
+        'arms': (('arm1.L', 'arm2.L', 'finger1.L', 0.0), ('arm1.R', 'arm2.R', 'finger1.R', math.pi)),
+        'cycles': 2, 'raised': ((40.0, 25.0), (35.0, 5.0)), 'slammed': ((45.0, 30.0), (70.0, -65.0))}}
+PLAY_AXES = {'x': (1.0, 0.0, 0.0), 'y': (0.0, 1.0, 0.0), 'z': (0.0, 0.0, 1.0)}
 
 
 # Whether the rig is a walking body with arms: its legs stay in the seat pose while its upper body plays the clips.
@@ -894,7 +955,7 @@ def resting_pose(skeleton, body_rig, name, vertices, weights):
     for source_name in REST_SOURCES.get(name, DEFAULT_REST_SOURCES):
         played = skeleton.clips[source_name]
         source = skeleton.locals_at(played, np.array([played.length * 0.5]))
-        for turn in REST_TURNS:
+        for turn in REST_TURN_LIMITS.get(name, REST_TURNS):
             head = upper_chain(skeleton, body_rig, [])[1]
             turn_best = None
             # The tail curls to the side that needs the smaller step back
@@ -920,7 +981,8 @@ def resting_pose(skeleton, body_rig, name, vertices, weights):
                     rest.move_roots(skeleton, trial, offset)
                     if lift_onto_bench(skeleton, trial, vertices, weights):
                         depth = float(worst_depths(rest.skin_vertices(skeleton, trial, vertices, weights)).max())
-                        if depth <= REST_TOLERANCE:
+                        sunk = float(rest.skin_vertices(skeleton, trial, vertices, weights)[0, :, 2].min()) * SCENE['size']
+                        if depth <= REST_TOLERANCE and sunk >= -REST_FLOOR_SINK:
                             break
                     back += REST_BACK_STEP
                 else:
@@ -1132,6 +1194,62 @@ def slumped_clip(skeleton, seated, times, length, spine, head, vertices, weights
     return local
 
 
+# Turn a bone so that the vector from it to one of its children points along the given direction in every frame.
+def aim_bone(skeleton, local, bone, child, direction):
+    world = skeleton.fk(local)
+    current = world[skeleton.idx[child]][0] - world[skeleton.idx[bone]][0]
+    current /= np.linalg.norm(current, axis=1)[:, None]
+    direction = direction / np.linalg.norm(direction, axis=1)[:, None]
+    axis = np.cross(current, direction)
+    length = np.linalg.norm(axis, axis=1)
+    angle = np.arctan2(length, np.einsum('ni,ni->n', current, direction))
+    axis = np.where(length[:, None] > 1e-9, axis / np.maximum(length, 1e-9)[:, None], np.array([[0.0, 0.0, 1.0]]))
+    rest.rotate_joint(skeleton, local, bone, axis, angle)
+
+
+# Return the yaw and the pitch in degrees of a vector, seen from a body that looks along -y with its side at +x or -x.
+def yaw_pitch(vector, side):
+    return (math.degrees(math.atan2(-vector[1], side * vector[0])), math.degrees(math.asin(vector[2] / np.linalg.norm(vector))))
+
+
+# Let the arms hammer on the table in turns. The hand rises before it moves forward and moves back before it comes down, so
+# that it does not cross the table on its way from and to the hanging arm.
+def hammer_arms(skeleton, local, seated, times, length, hammer):
+    progress = times / length
+    fade = ends(times, length)
+    lagging = fade ** 3
+    world = skeleton.fk(seated)
+    for upper, forearm, hand, phase in hammer['arms']:
+        start = [world[skeleton.idx[bone]][0][0] for bone in (upper, forearm, hand)]
+        side = 1.0 if start[1][0] >= start[0][0] else -1.0
+        hanging = (yaw_pitch(start[1] - start[0], side), yaw_pitch(start[2] - start[1], side))
+        swing = 0.5 + 0.5 * np.sin(2.0 * math.pi * hammer['cycles'] * progress + phase - 0.5 * math.pi)
+        directions = []
+        for hang, raised, slammed in zip(hanging, hammer['raised'], hammer['slammed']):
+            yaw = hang[0] + (raised[0] + (slammed[0] - raised[0]) * swing - hang[0]) * lagging
+            pitch = hang[1] + (raised[1] + (slammed[1] - raised[1]) * swing - hang[1]) * fade
+            yaw, pitch = np.radians(yaw), np.radians(pitch)
+            directions.append(np.stack([side * np.cos(pitch) * np.cos(yaw), -np.cos(pitch) * np.sin(yaw), np.sin(pitch)], axis=1))
+        aim_bone(skeleton, local, upper, forearm, directions[0])
+        aim_bone(skeleton, local, forearm, hand, directions[1])
+
+
+# Return the clip a body plays on its own bones in place of its source clip, or None.
+def playful_clip(skeleton, seated, times, length, name, clip):
+    swings = PLAY_SWINGS.get((name, clip))
+    if swings is None:
+        return None
+    progress = times / length
+    fade = ends(times, length)
+    local = hold(seated, len(times))
+    for bone, axis, degrees, cycles, phase, mean in swings:
+        angle = fade * np.radians(mean + degrees * np.sin(2.0 * math.pi * cycles * progress + phase))
+        rest.rotate_joint(skeleton, local, bone, PLAY_AXES[axis], angle)
+    if (name, clip) in PLAY_HAMMERS:
+        hammer_arms(skeleton, local, seated, times, length, PLAY_HAMMERS[(name, clip)])
+    return local
+
+
 # Add the breath and a small movement of the head to a clip that holds the seat pose.
 def alive(skeleton, local, body_rig, name, times, head, amount=1.0):
     breath = amount * BREATH * np.sin(times * (2.0 * math.pi / BREATH_SECONDS))
@@ -1232,7 +1350,10 @@ def author(source, mesh, destination):
         if clip == 'SitDrink':
             start = hold_copy(seated)
             relax_arms(skeleton, start, base, body_rig, vertices, weights, floor)
-        if source_clip and upper_only:
+        played_own = playful_clip(skeleton, start, times, length, name, clip) if source_clip else None
+        if played_own is not None:
+            local = played_own
+        elif source_clip and upper_only:
             local = upper_body_clip(skeleton, start, base, played, times, length, fixed)
         elif source_clip:
             local = whole_body_clip(skeleton, start, base, played, times, length)
@@ -1247,26 +1368,26 @@ def author(source, mesh, destination):
             alive(skeleton, local, body_rig, name, times, head)
         hold_weapons_upright(skeleton, local, weapons)
         unrouted = hold_copy(local)
-        if source_clip:
+        if source_clip and played_own is None:
             lift_arms_over_table(skeleton, local, times, length, body_rig, vertices, weights)
-        if source_clip or clip == 'SitSlapped':
+        if (source_clip and played_own is None) or clip == 'SitSlapped':
             lean_out_of_table(skeleton, local, times, length, spine, head, vertices, weights)
         hold_weapons_upright(skeleton, local, weapons)
         settle(local)
-        if source_clip or clip == 'SitSlapped':
+        if (source_clip and played_own is None) or clip == 'SitSlapped':
             for _ in range(ROUTE_PASSES):
                 local = route_arms_over_table(skeleton, local, body_rig, vertices, weights)
                 hold_weapons_upright(skeleton, local, weapons)
         free_motion = clip_motion(skeleton, local, vertices, weights)[0]
         local = keep_out_of_table(skeleton, local, start, vertices, weights, height, length / (keys - 1))
-        if source_clip and clip_motion(skeleton, local, vertices, weights)[0] < LOW_MOTION_SHARE * free_motion:
+        if source_clip and played_own is None and clip_motion(skeleton, local, vertices, weights)[0] < LOW_MOTION_SHARE * free_motion:
             calmer = spine_only(skeleton, start, unrouted, keys, spine, head)
             calmer = keep_out_of_table(skeleton, calmer, start, vertices, weights, height, length / (keys - 1))
             if clip_motion(skeleton, calmer, vertices, weights)[0] > clip_motion(skeleton, local, vertices, weights)[0]:
                 local = calmer
         local = calm_clip(skeleton, local, start, vertices, weights, height, length / (keys - 1))
         # An arm that stays far too fast around the table rests and leaves the clip to the spine and the head
-        if source_clip and clip_motion(skeleton, local, vertices, weights)[1] > 2.0 * MAX_CLIP_SPEED * height * length / (keys - 1):
+        if source_clip and played_own is None and clip_motion(skeleton, local, vertices, weights)[1] > 2.0 * MAX_CLIP_SPEED * height * length / (keys - 1):
             local = keep_out_of_table(skeleton, spine_only(skeleton, start, unrouted, keys, spine, head), start, vertices, weights,
                                       height, length / (keys - 1))
         settle(local)

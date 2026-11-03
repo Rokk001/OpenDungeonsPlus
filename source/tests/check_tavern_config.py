@@ -181,13 +181,23 @@ assert 'const size_t TAVERN_TILES_PER_KEG = 6;' in room_cpp and 'const size_t TA
 for token in ('const double TABLE_ANGLES[] = { 0.0, 90.0 };', 'if(!wall || adjacentKeg)',
               'if((benchesFree && !bestBenchesFree) || ((benchesFree == bestBenchesFree) && (distance > bestDistance)))',
               'const int32_t acrossX = second.getY() - tile.getY();', 'const int32_t acrossY = tile.getX() - second.getX();',
+              'if(isBenchBehindWall(gameMap, *tile, angle, 0) && isBenchBehindWall(gameMap, *tile, angle, 1))',
               'second = tableSecondTile(gameMap, *tile, angle);', 'furnitureTiles.push_back(bestSecond);',
               'std::sort(orderedTiles.begin(), orderedTiles.end(), Room::compareTile);'):
     assert token in room_cpp, token
 
 
+# The benches of a table that have a wall (a tile outside the room) behind them, next to either of its two tiles: bench 0 lies
+# on the +x side of the table turned by its angle, bench 1 on the opposite side. Nobody sits on such a bench.
+def walled_benches(inside, tile, second):
+    across = (second[1] - tile[1], tile[0] - second[0])
+    return [bench for bench, side in ((0, 1), (1, -1))
+            if any((t[0] + side * across[0], t[1] + side * across[1]) not in inside for t in (tile, second))]
+
+
 # A model of the spread of the furniture of RoomTavern::updateActiveSpots for a closed rectangular room (every tile around
-# it is a wall). Returns the counter tile, the kegs and the tables as (tile, second tile, both bench sides free).
+# it is a wall). Returns the counter tile, the kegs and the tables as (tile, second tile, both bench sides free). A table
+# with a wall behind both of its benches is not placed; a bench with a wall behind it stays empty (see walled_benches).
 def spread(width, height):
     tiles = sorted((x, y) for x in range(width) for y in range(height))
     inside = set(tiles)
@@ -215,6 +225,8 @@ def spread(width, height):
                             continue
                         # Across the table, where the benches stand: both sides of both tiles are free floor of the room
                         across = (second[1] - tile[1], tile[0] - second[0])
+                        if len(walled_benches(inside, tile, second)) == 2:
+                            continue
                         free = all((t[0] + side * across[0], t[1] + side * across[1]) in inside and
                                    (t[0] + side * across[0], t[1] + side * across[1]) not in furniture
                                    for t in (tile, second) for side in (1, -1))
@@ -245,6 +257,9 @@ for width in range(3, 9):
             assert sum(1 for table in tables if table[2]) >= min(2, len(tables)), (width, height, 'two tables have free floor at both benches')
         for first, second, _ in tables:
             assert abs(first[0] - second[0]) + abs(first[1] - second[1]) == 1, (width, height, 'a table covers two neighbouring tiles')
+            assert len(walled_benches(inside, first, second)) < 2, (width, height, 'a table has a bench with no wall behind it')
+        # Every room with a 3x3 block keeps at least four usable places (a bench without a wall behind it)
+        assert sum(4 * (2 - len(walled_benches(inside, first, second))) for first, second, _ in tables) >= 4, (width, height, 'places')
         for keg in kegs:
             assert any(n not in inside for n in ((keg[0] + 1, keg[1]), (keg[0] - 1, keg[1]), (keg[0], keg[1] + 1), (keg[0], keg[1] - 1))), \
                 (width, height, 'a keg stands at a wall')

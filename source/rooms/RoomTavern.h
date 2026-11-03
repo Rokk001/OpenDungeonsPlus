@@ -76,13 +76,10 @@ enum class TavernGameKind
 const uint32_t TAVERN_SEATS_PER_BENCH = 4;
 //! \brief Number of places of a tavern table: two benches with four places each.
 const uint32_t TAVERN_SEATS_PER_TABLE = 2 * TAVERN_SEATS_PER_BENCH;
-//! \brief Number of neighbouring places a large guest takes on its bench: half of the bench, so two large guests or one
-//! large and two other guests share a bench.
-const uint32_t TAVERN_SEATS_PER_LARGE_GUEST = 2;
 
 //! \brief One seat of a tavern: the tile of the table (the tile its object belongs to) and the number of the place at
-//! that table (0 to 3 on the first bench, 4 to 7 on the second). A large guest takes two neighbouring places that start
-//! at an even number and is kept under the first of them.
+//! that table (0 to 3 on the first bench, 4 to 7 on the second). A large guest takes several neighbouring places of one
+//! bench and is kept under the first of them.
 struct RoomTavernSeat
 {
     //! \brief Creates an empty seat without a table.
@@ -132,7 +129,7 @@ struct RoomTavernSpot
         mDrinks(0),
         mSleepAfter(false),
         mWantsGame(false),
-        mTwoPlaces(false),
+        mPlaces(1),
         mLeftSeat(false)
     {}
 
@@ -148,8 +145,8 @@ struct RoomTavernSpot
     bool mSleepAfter;
     //! True while the guest, done with its drinks, waits for a guest of its table to play a game with.
     bool mWantsGame;
-    //! True when the guest is large and takes two neighbouring places, half of its bench.
-    bool mTwoPlaces;
+    //! Number of neighbouring places the guest takes on its bench: 1, or more for a large guest.
+    uint32_t mPlaces;
     //! True once the guest has stepped away from its bench at the end of the visit.
     bool mLeftSeat;
 };
@@ -265,7 +262,8 @@ struct RoomTavernPendingGame
 
 //! \brief A room where creatures quench their thirst. The first tile of the room is the counter, where the innkeeper
 //! stands; kegs stand at the walls and tables are spread over the room. Every table is two tiles long and has two
-//! benches with four places each; a large creature takes two of them, half of a bench. A guest sits and drinks water or beer (paid by the keeper or by
+//! benches with four places each; a large creature takes the places its width needs, up to a whole bench, and a bench with
+//! a wall behind it stays empty. A guest sits and drinks water or beer (paid by the keeper or by
 //! the guest), may take more drinks and may play a game with a guest of its table: arm wrestling, dice or, with Beer, a
 //! slap duel. The room keeps the counter, the furniture, the innkeeper, who pays for the beer, the seats of the guests
 //! and the games, and saves them all.
@@ -279,8 +277,8 @@ public:
     RoomType getType() const override
     { return mRoomType; }
 
-    //! \brief True when the tavern contains a full three by three block and has a free seat for the creature (two
-    //! free neighbouring places for a large one). A creature the saved room still waits for always has its place.
+    //! \brief True when the tavern contains a full three by three block and has a free seat for the creature (as
+    //! many free neighbouring places of one bench as its width needs for a large one). A creature the saved room still waits for always has its place.
     bool hasOpenCreatureSpot(Creature* c) override;
 
     //! \brief Gives the creature a free seat, or the seat it had when the room was saved.
@@ -410,10 +408,16 @@ private:
     //! \brief Returns the tiles of the tables of the room in coordinate order.
     std::vector<Tile*> getTableTiles() const;
 
-    //! \brief True when the seat is at a table of the room and can take a guest.
-    //! \param seat The seat to test; for a large guest the first of its two places.
-    //! \param twoPlaces True when the guest is large and needs two neighbouring places.
-    bool isFreeSeat(const RoomTavernSeat& seat, bool twoPlaces) const;
+    //! \brief True when the seat is at a table of the room and can take a guest: its bench has no wall behind it and
+    //! all the places the guest needs, starting at the seat, are free on that bench.
+    //! \param seat The seat to test; for a large guest the first of its places.
+    //! \param places The number of neighbouring places the guest needs.
+    bool isFreeSeat(const RoomTavernSeat& seat, uint32_t places) const;
+
+    //! \brief True when a bench has a wall (or the edge of the map) directly behind it, so that nobody sits there.
+    //! \param table The tile of the table.
+    //! \param bench 0 for the first bench of the table, 1 for the second.
+    bool isBenchBlocked(const Tile* table, uint32_t bench) const;
 
     //! \brief Picks a free seat for the creature; a table with a guest comes first, then the nearest table.
     //! \param creature The guest.
@@ -421,14 +425,19 @@ private:
     //! \return False if the room has no free seat for the creature.
     bool pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) const;
 
-    //! \brief True when the creature is large (a bed of two by two tiles) and takes two places, half of a bench.
+    //! \brief True when the creature is large (a bed of two by two tiles) and takes more than one place.
     //! \param creature The creature to test.
     static bool isLargeGuest(const Creature& creature);
 
+    //! \brief The number of neighbouring places on a bench the creature needs: 1, or for a large creature as many as its
+    //! seated width covers (the places are 0.328 tiles wide).
+    //! \param creature The creature.
+    static uint32_t getPlacesOf(const Creature& creature);
+
     //! \brief Returns where a guest sits on the ground, from the place and rotation of the table.
     //! \param seat The seat.
-    //! \param twoPlaces True for a large guest (it sits in the middle of its two places).
-    Ogre::Vector2 getSeatPosition(const RoomTavernSeat& seat, bool twoPlaces) const;
+    //! \param places The number of places the guest takes (it sits in the middle of them).
+    Ogre::Vector2 getSeatPosition(const RoomTavernSeat& seat, uint32_t places) const;
 
     //! \brief Returns the direction on the ground in which a guest on the seat looks across its table.
     //! \param seat The seat.
@@ -437,30 +446,30 @@ private:
     //! \brief True when the guest is at the place of its seat.
     //! \param creature The guest.
     //! \param seat The seat.
-    //! \param twoPlaces True for a large guest that takes two places.
-    bool isOnSeat(const Creature& creature, const RoomTavernSeat& seat, bool twoPlaces) const;
+    //! \param places The number of places the guest takes.
+    bool isOnSeat(const Creature& creature, const RoomTavernSeat& seat, uint32_t places) const;
 
     //! \brief Finds free points next to the seat from where a creature gets onto the bench.
     //! \param creature The guest.
     //! \param seat The seat.
-    //! \param twoPlaces True for a large guest that takes two places.
+    //! \param places The number of places the guest takes.
     //! \param stagingPoints Set to the usable points, the best first.
-    void findSeatStagingPoints(Creature& creature, const RoomTavernSeat& seat, bool twoPlaces,
+    void findSeatStagingPoints(Creature& creature, const RoomTavernSeat& seat, uint32_t places,
         std::vector<Ogre::Vector2>& stagingPoints) const;
 
     //! \brief Walks the guest around the furniture and onto its seat; the last leg goes straight to the bench.
     //! \param creature The guest.
     //! \param seat The seat.
-    //! \param twoPlaces True for a large guest that takes two places.
+    //! \param places The number of places the guest takes.
     //! \return False when there is no way to the seat.
-    bool walkToSeat(Creature& creature, const RoomTavernSeat& seat, bool twoPlaces);
+    bool walkToSeat(Creature& creature, const RoomTavernSeat& seat, uint32_t places);
 
     //! \brief Lets a guest at the end of its visit step away from the bench, so it never leaves through the furniture.
     //! \param creature The guest.
     //! \param seat The seat.
-    //! \param twoPlaces True for a large guest that takes two places.
+    //! \param places The number of places the guest takes.
     //! \return True when the guest walks; false when there is no free point next to the bench.
-    bool stepOffSeat(Creature& creature, const RoomTavernSeat& seat, bool twoPlaces);
+    bool stepOffSeat(Creature& creature, const RoomTavernSeat& seat, uint32_t places);
 
     //! \brief Moves a guest whose seat cannot be reached to another free seat it can walk to.
     //! \param creature The guest.
@@ -605,7 +614,7 @@ private:
     //! entity is removed by removeInnkeeper.
     InnkeeperEntity* mInnkeeper;
     //! \brief The places of the guests, by seat (server side only). A seat without entry has no guest; a large guest
-    //! is kept under the first of its two places.
+    //! is kept under the first of its places.
     std::map<RoomTavernSeat, RoomTavernSpot> mSpots;
     //! \brief The running games, by the seat of the first guest (server side only).
     std::map<RoomTavernSeat, RoomTavernGame> mGames;
