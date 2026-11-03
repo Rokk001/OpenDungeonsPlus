@@ -143,6 +143,7 @@
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomPrison.h"
 #include "rooms/RoomArena.h"
+#include "rooms/RoomCasino.h"
 #include "rooms/RoomSpa.h"
 #include "rooms/RoomTavern.h"
 #include "rooms/RoomToilet.h"
@@ -710,6 +711,8 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
     mBedNotified             (-1),
+    mPleasureWished          (false),
+    mWishNextTurn            (0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
@@ -859,6 +862,8 @@ Creature::Creature(GameMap* gameMap) :
     mGoldCarriedNotified     (0),
     mGoldCarriedCosmeticNotified(0),
     mBedNotified             (-1),
+    mPleasureWished          (false),
+    mWishNextTurn            (0),
     mSkillTypeDropDeath      (SkillType::nullSkillType),
     mWeaponDropDeath         ("none"),
     mStatsWindow             (nullptr),
@@ -5705,6 +5710,42 @@ void Creature::socialFilthyRoom(const std::string& roomName)
     socialEvent(social::PostCategory::Filthy);
 }
 
+//! \brief Adds the complaint, wish or thank-you post the server announced for this creature, if it is one of the local
+//! player. A thank-you only follows a complaint or wish that was really written (the post limits can drop a post).
+void Creature::socialMoodPost(int32_t kind, int32_t value)
+{
+    if(!isSocialFeedSource())
+        return;
+
+    social::PostLog& log = social::PostLog::getSingleton();
+    const int64_t turn = getGameMap()->getTurnNumber();
+    const std::string& className = getDefinition()->getClassName();
+    const bool isWorker = getDefinition()->isWorker();
+    const bool validCause = (value >= 0) && (value < static_cast<int32_t>(social::MoodCause::Nb));
+    const bool validRoom = (value >= 0) && (value < static_cast<int32_t>(RoomType::nbRooms));
+    switch(static_cast<CosmeticMoodPostKind>(kind))
+    {
+        case CosmeticMoodPostKind::complaint:
+            if(validCause)
+                log.addComplaint(turn, getName(), className, isWorker, static_cast<social::MoodCause>(value));
+            break;
+        case CosmeticMoodPostKind::problemEnded:
+            if(validCause)
+                log.addComplaintThanks(turn, getName(), className, isWorker, static_cast<social::MoodCause>(value));
+            break;
+        case CosmeticMoodPostKind::wish:
+            if(validRoom)
+                log.addWish(turn, getName(), className, isWorker, value);
+            break;
+        case CosmeticMoodPostKind::wishMet:
+            if(validRoom)
+                log.addWishThanks(turn, getName(), className, isWorker, value);
+            break;
+        default:
+            break;
+    }
+}
+
 double Creature::getExperienceProgress() const
 {
     if(!getIsOnServerMap())
@@ -9167,6 +9208,144 @@ void Creature::fireArrivalEvent()
     ODServer::getSingleton().sendCosmeticEvent(player, event);
 }
 
+//! \brief Seconds between two wishes of the same creature while its keeper still has no pleasure room it may use.
+static const double MOOD_WISH_REPEAT_SECONDS = 120.0;
+
+//! \brief True for the room kinds a creature visits to lift its mood (the ones the search for a mood room looks at).
+static bool isPleasureRoomType(RoomType type)
+{
+    return (type == RoomType::casino) || (type == RoomType::tavern) || (type == RoomType::spa) ||
+        (type == RoomType::temple);
+}
+
+//! \brief Tells the keeper that a lasting mood problem started or ended when it has a post of the Dungeonbook.
+void Creature::fireMoodProblemPost(const std::string& modifierName, bool started)
+{
+    // The names are the ones of the mood modifiers of the creature configuration
+    CosmeticMoodCause cause = CosmeticMoodCause::noBed;
+    if(modifierName == "NoLair")
+        cause = CosmeticMoodCause::noBed;
+    else if(modifierName == "Hunger")
+        cause = CosmeticMoodCause::hungry;
+    else if(modifierName == "Thirst")
+        cause = CosmeticMoodCause::thirsty;
+    else if(modifierName == "Wakefulness")
+        cause = CosmeticMoodCause::tired;
+    else if(modifierName == "Fee")
+        cause = CosmeticMoodCause::noWage;
+    else if(modifierName == "HpLoss")
+        cause = CosmeticMoodCause::wounded;
+    else if(modifierName == "HeldInHand")
+        cause = CosmeticMoodCause::held;
+    else if(modifierName == "OutOfWork")
+        cause = CosmeticMoodCause::noWork;
+    else if(modifierName == "TurnsWithoutFight")
+        cause = CosmeticMoodCause::noFight;
+    else
+        return;
+
+    fireMoodPost(static_cast<int32_t>(started ? CosmeticMoodPostKind::complaint : CosmeticMoodPostKind::problemEnded),
+        static_cast<int32_t>(cause));
+}
+
+//! \brief Sends a mood post event to the keeper of the creature, if the keeper is a human player.
+void Creature::fireMoodPost(int32_t kind, int32_t value)
+{
+    Player* player = (getSeat() == nullptr) ? nullptr : getSeat()->getPlayer();
+    if(player == nullptr || !player->getIsHuman())
+        return;
+
+    CosmeticEvent event(CosmeticEventType::moodPost);
+    event.mSubject = getName();
+    event.mValue = kind;
+    event.mValue2 = value;
+    ODServer::getSingleton().sendCosmeticEvent(player, event);
+}
+
+//! \brief The pleasure room kind with the highest likeness in the room affinity of the creature type; the first one in the
+//! configuration wins a tie.
+int32_t Creature::getLikedPleasureRoom() const
+{
+    int32_t liked = -1;
+    int32_t likedLikeness = 0;
+    for(const CreatureRoomAffinity& affinity : mDefinition->getRoomAffinity())
+    {
+        if(!isPleasureRoomType(affinity.getRoomType()) || (affinity.getLikeness() <= 0) || (affinity.getEfficiency() <= 0))
+            continue;
+
+        if(affinity.getLikeness() > likedLikeness)
+        {
+            liked = static_cast<int32_t>(affinity.getRoomType());
+            likedLikeness = affinity.getLikeness();
+        }
+    }
+    return liked;
+}
+
+//! \brief The first pleasure room kind of the room affinity (then the lava spa) of which the keeper has a room with floor
+//! that the creature may use. A casino that pays money is not used by creatures.
+int32_t Creature::getUsablePleasureRoom() const
+{
+    std::vector<RoomType> types;
+    for(const CreatureRoomAffinity& affinity : mDefinition->getRoomAffinity())
+    {
+        if(isPleasureRoomType(affinity.getRoomType()) && (affinity.getLikeness() > 0) && (affinity.getEfficiency() > 0))
+            types.push_back(affinity.getRoomType());
+    }
+    types.push_back(RoomType::spa);
+
+    for(RoomType type : types)
+    {
+        for(Room* room : getGameMap()->getRoomsByTypeAndSeat(type, getSeat()))
+        {
+            if(room->numCoveredTiles() <= 0)
+                continue;
+
+            if((type == RoomType::casino) && (static_cast<RoomCasino*>(room)->getPayout() == CasinoPayout::money))
+                continue;
+
+            return static_cast<int32_t>(type);
+        }
+    }
+    return -1;
+}
+
+//! \brief Tells the keeper that the creature wishes for the pleasure room it likes most when the keeper has none to use.
+void Creature::notePleasureWish()
+{
+    if((mDefinition == nullptr) || mDefinition->isWorker() || (getSeat() == nullptr) || getSeat()->isRogueSeat())
+        return;
+
+    if(getMoodValue() < CreatureMoodLevel::Upset)
+        return;
+
+    const int32_t liked = getLikedPleasureRoom();
+    if((liked < 0) || (getUsablePleasureRoom() >= 0))
+        return;
+
+    const int64_t turn = getGameMap()->getTurnNumber();
+    if(mPleasureWished && (turn < mWishNextTurn))
+        return;
+
+    mPleasureWished = true;
+    mWishNextTurn = turn + static_cast<int64_t>(MOOD_WISH_REPEAT_SECONDS * ODApplication::turnsPerSecond);
+    fireMoodPost(static_cast<int32_t>(CosmeticMoodPostKind::wish), liked);
+}
+
+//! \brief Tells the keeper that a pleasure room can be used now, once, when the creature had wished for one.
+void Creature::noteWishMet()
+{
+    if(!mPleasureWished)
+        return;
+
+    const int32_t room = getUsablePleasureRoom();
+    if(room < 0)
+        return;
+
+    mPleasureWished = false;
+    fireMoodPost(static_cast<int32_t>(CosmeticMoodPostKind::wishMet), room);
+}
+
 //! \brief Accrues a wage and records missed wages when the treasury is empty.
 void Creature::itsPayDay()
 {
@@ -9883,6 +10062,12 @@ void Creature::computeMoodProblems(int32_t turns)
         const double previous = (it == mMoodProblems.end()) ? 0.0 : it->second;
         if(mMoodPrimed)
         {
+            // The keeper's Dungeonbook gets a complaint when the problem starts and a thank-you when it ends
+            if((previous <= 0.0) && (amount > 0.0))
+                fireMoodProblemPost(mood->getModifierName(), true);
+            else if((previous > 0.0) && (amount <= 0.0))
+                fireMoodProblemPost(mood->getModifierName(), false);
+
             if(amount > previous)
                 changeStoredMoodBySensitivity(mood->getJump() * (amount - previous));
             else if(amount < previous)
@@ -10068,6 +10253,7 @@ void Creature::computeMood()
     }
     computeMoodEffects(turns);
     mMoodPrimed = true;
+    noteWishMet();
 
     mMoodPoints = getEffectiveMood();
 

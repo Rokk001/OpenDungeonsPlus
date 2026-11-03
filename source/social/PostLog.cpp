@@ -106,8 +106,104 @@ std::string getPostCategoryName(PostCategory category)
             return "ghosthunted";
         case PostCategory::Relaxed:
             return "relaxed";
+        case PostCategory::ComplainBed:
+            return "complainbed";
+        case PostCategory::ComplainHungry:
+            return "complainhungry";
+        case PostCategory::ComplainThirsty:
+            return "complainthirsty";
+        case PostCategory::ComplainTired:
+            return "complaintired";
+        case PostCategory::ComplainWage:
+            return "complainwage";
+        case PostCategory::ComplainWounded:
+            return "complainwounded";
+        case PostCategory::ComplainHeld:
+            return "complainheld";
+        case PostCategory::ComplainWork:
+            return "complainwork";
+        case PostCategory::ComplainFight:
+            return "complainfight";
+        case PostCategory::Wish:
+            return "wish";
+        case PostCategory::ThanksBed:
+            return "thanksbed";
+        case PostCategory::ThanksHungry:
+            return "thankshungry";
+        case PostCategory::ThanksThirsty:
+            return "thanksthirsty";
+        case PostCategory::ThanksTired:
+            return "thankstired";
+        case PostCategory::ThanksWage:
+            return "thankswage";
+        case PostCategory::ThanksWounded:
+            return "thankswounded";
+        case PostCategory::ThanksHeld:
+            return "thanksheld";
+        case PostCategory::ThanksWork:
+            return "thankswork";
+        case PostCategory::ThanksFight:
+            return "thanksfight";
+        case PostCategory::ThanksWish:
+            return "thankswish";
         default:
             return "";
+    }
+}
+
+//! \brief The category of the complaint about a cause, Nb for an unknown cause.
+PostCategory getComplaintCategory(MoodCause cause)
+{
+    switch(cause)
+    {
+        case MoodCause::NoBed:
+            return PostCategory::ComplainBed;
+        case MoodCause::Hungry:
+            return PostCategory::ComplainHungry;
+        case MoodCause::Thirsty:
+            return PostCategory::ComplainThirsty;
+        case MoodCause::Tired:
+            return PostCategory::ComplainTired;
+        case MoodCause::NoWage:
+            return PostCategory::ComplainWage;
+        case MoodCause::Wounded:
+            return PostCategory::ComplainWounded;
+        case MoodCause::Held:
+            return PostCategory::ComplainHeld;
+        case MoodCause::NoWork:
+            return PostCategory::ComplainWork;
+        case MoodCause::NoFight:
+            return PostCategory::ComplainFight;
+        default:
+            return PostCategory::Nb;
+    }
+}
+
+//! \brief The category of the thank-you for a solved cause, Nb for an unknown cause.
+PostCategory getThanksCategory(MoodCause cause)
+{
+    switch(cause)
+    {
+        case MoodCause::NoBed:
+            return PostCategory::ThanksBed;
+        case MoodCause::Hungry:
+            return PostCategory::ThanksHungry;
+        case MoodCause::Thirsty:
+            return PostCategory::ThanksThirsty;
+        case MoodCause::Tired:
+            return PostCategory::ThanksTired;
+        case MoodCause::NoWage:
+            return PostCategory::ThanksWage;
+        case MoodCause::Wounded:
+            return PostCategory::ThanksWounded;
+        case MoodCause::Held:
+            return PostCategory::ThanksHeld;
+        case MoodCause::NoWork:
+            return PostCategory::ThanksWork;
+        case MoodCause::NoFight:
+            return PostCategory::ThanksFight;
+        default:
+            return PostCategory::Nb;
     }
 }
 
@@ -152,6 +248,7 @@ void PostLog::stop()
     mCreaturePostTurns.clear();
     mGlobalPostTurns.clear();
     mRecentTexts.clear();
+    mOpenMoodPosts.clear();
     ++mVersion;
     ++mRosterVersion;
 }
@@ -233,6 +330,53 @@ bool PostLog::addPost(int64_t turn, const std::string& creature, const std::stri
         mPosts.pop_front();
     ++mVersion;
     return true;
+}
+
+//! \brief Adds the complaint about a lasting mood problem that started and remembers it when it was written.
+bool PostLog::addComplaint(int64_t turn, const std::string& creature, const std::string& className,
+    bool isWorker, MoodCause cause)
+{
+    const PostCategory category = getComplaintCategory(cause);
+    if(!addPost(turn, creature, className, isWorker, category, 0))
+        return false;
+
+    std::ostringstream keyStream;
+    keyStream << creature << "|" << static_cast<int32_t>(cause);
+    mOpenMoodPosts.insert(keyStream.str());
+    return true;
+}
+
+//! \brief Adds the thank-you for a problem that ended when its complaint was written, and forgets the complaint.
+bool PostLog::addComplaintThanks(int64_t turn, const std::string& creature, const std::string& className,
+    bool isWorker, MoodCause cause)
+{
+    std::ostringstream keyStream;
+    keyStream << creature << "|" << static_cast<int32_t>(cause);
+    if(mOpenMoodPosts.erase(keyStream.str()) == 0)
+        return false;
+
+    return addPost(turn, creature, className, isWorker, getThanksCategory(cause), 0);
+}
+
+//! \brief Adds the wish for a pleasure room the keeper does not have and remembers it when it was written.
+bool PostLog::addWish(int64_t turn, const std::string& creature, const std::string& className,
+    bool isWorker, int32_t roomType)
+{
+    if(!addPost(turn, creature, className, isWorker, PostCategory::Wish, roomType))
+        return false;
+
+    mOpenMoodPosts.insert(creature + "|wish");
+    return true;
+}
+
+//! \brief Adds the thank-you for a pleasure room that can be used now when the wish was written, and forgets the wish.
+bool PostLog::addWishThanks(int64_t turn, const std::string& creature, const std::string& className,
+    bool isWorker, int32_t roomType)
+{
+    if(mOpenMoodPosts.erase(creature + "|wish") == 0)
+        return false;
+
+    return addPost(turn, creature, className, isWorker, PostCategory::ThanksWish, roomType);
 }
 
 }

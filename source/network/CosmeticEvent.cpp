@@ -31,7 +31,8 @@ bool CosmeticEvent::isKnownType() const
             (mType == static_cast<int32_t>(CosmeticEventType::goldDelivery)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::boxCracked)) ||
             (mType == static_cast<int32_t>(CosmeticEventType::cauldronBang)) ||
-            (mType == static_cast<int32_t>(CosmeticEventType::tavernEvent)));
+            (mType == static_cast<int32_t>(CosmeticEventType::tavernEvent)) ||
+            (mType == static_cast<int32_t>(CosmeticEventType::moodPost)));
 }
 
 //! \brief Returns the diagnostic name of a supported cosmetic event.
@@ -89,6 +90,8 @@ std::string CosmeticEvent::typeString() const
             return "goldDelivery";
         case static_cast<int32_t>(CosmeticEventType::tavernEvent):
             return "tavernEvent";
+        case static_cast<int32_t>(CosmeticEventType::moodPost):
+            return "moodPost";
         default:
             break;
     }
