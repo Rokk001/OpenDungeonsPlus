@@ -58,8 +58,26 @@ def main():
     constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& overlaySystem)", 1)[1].split("void LoadingScreen::presentStartup()", 1)[0]
     assert "selectLoadingImage();" in constructor and "update();" in constructor and "window.update();" in constructor, "startup must present the shared picture mechanism"
     assert "ShaderGenerator" not in constructor, "the first picture must not depend on RTSS"
-    for token in ('addRenderQueueListener(&overlaySystem)', 'setFontName("StartupLoadingFont", "StartupLoading")', 'setCaption("Loading...")', 'startupOverlay->show()'):
-        assert token in constructor, f"missing startup loading text: {token}"
+    for token in ('addRenderQueueListener(&overlaySystem)', 'createLoadingText("StartupLoadingFont", "StartupLoading")', 'createLoadingRing(*startupScene, "StartupLoading")', "ringPass->setFragmentProgram("):
+        assert token in constructor, f"missing startup loading text or ring: {token}"
+    text = source.split("void createLoadingText(", 1)[1].split("void destroyLoadingIndicator(", 1)[0]
+    for token in ('setCaption("Loading...")', "loadingOverlay->show()", "GMM_RELATIVE", "setCharHeight(LOADING_TEXT_HEIGHT)"):
+        assert token in text, f"missing overlay text setup: {token}"
+    height = float(re.search(r"LOADING_TEXT_HEIGHT = ([0-9.]+)f", source).group(1))
+    assert height >= 0.06, "the loading text must be at least 6 percent of the window height (65 px at 1080p, 130 px at 4K)"
+    fonts = re.findall(r"setTrueTypeSize\((\d+)\)", source)
+    assert fonts and all(int(size) >= 96 for size in fonts), "the font bitmap must stay sharp when the text is scaled up"
+    # The ember ring: material, rotation by time, creation on the startup path and on every later path, cleanup.
+    assert 'createTextureUnitState("loading_ring.png")' in source and "SBT_TRANSPARENT_ALPHA" in source, "ring material missing"
+    ring = source.split("void fitLoadingRing(", 1)[1].split("void createLoadingRing(", 1)[0]
+    assert "steady_clock" in ring and "LOADING_RING_SECONDS" in ring and "setUVs(" in ring, "the ring must turn with time"
+    later_construct = source.split("LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus)", 1)[1].split("catch(...)", 1)[0]
+    assert 'createLoadingRing(*RenderManager::getSingleton().getSceneManager(), "Graphics")' in later_construct and "createLoadingText(LOADING_FONT_NAME" in later_construct, "later load paths must create ring and text"
+    assert source.count("fitLoadingRing(*ringRectangle") == 2, "startup present and update() must both advance the ring"
+    assert 'destroyLoadingIndicator("StartupLoading")' in source and 'destroyLoadingIndicator("Graphics")' in source, "ring and text must be released on both paths"
+    assert "loadingText->setAlpha(0.0f);" in source, "the small widget text must not draw over the large text"
+    ring_png = (root / "materials/textures/loading/loading_ring.png").read_bytes()
+    assert ring_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", ring_png, 16) == (256, 256), "ring texture missing or wrong size"
     for token in ('"StartupLoadingVertex"', '"StartupLoadingFragment"', "vertex->setSource(", "fragment->setSource(", 'setNamedConstant("picture", 0)'):
         assert token in constructor, f"missing standalone startup shader setup: {token}"
     present = source.split("void LoadingScreen::presentStartup()", 1)[1].split("void LoadingScreen::scriptParseEnded", 1)[0]
