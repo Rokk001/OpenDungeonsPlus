@@ -47,7 +47,7 @@ enum class CreatureOverlays
     crown,
     //! Mood symbol
     status,
-    //! Mana ring inside the health ring
+    //! Lower part of the badge flower, drawn in blue for the mana
     mana,
     nbCreatureOverlays
 };
@@ -57,8 +57,8 @@ const uint32_t PROGRESS_ATLAS_COLUMNS = 8;
 //! Last frame of the atlases. Frame 0 shows no progress.
 const uint32_t PROGRESS_ATLAS_LAST_FRAME = PROGRESS_ATLAS_COLUMNS * PROGRESS_ATLAS_COLUMNS - 1;
 //! Character heights of the level caption, which gets smaller for two-digit levels.
-const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 30;
-const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 18;
+const Ogre::Real LEVEL_CAPTION_SIZE_ONE_DIGIT = 32;
+const Ogre::Real LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;
 //! Character height of the overlay that shows the emote of a reaction
 const Ogre::Real EMOTE_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the emote picture
@@ -68,29 +68,26 @@ const std::string CROWN_MATERIAL_NAME = "ChampionCrown";
 //! Character height of the crown overlay (it shows no text)
 const Ogre::Real CROWN_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the crown picture
-const Ogre::Real CROWN_SIZE = 28;
-//! Name prefix of the mana ring arc materials: the segments of the health ring picture without disc, ManaRing1 to
-//! ManaRing8 show that many segments, tinted with the mana colour
-const std::string MANA_RING_BASE_MATERIAL = "ManaRing";
-//! Number of segments of the mana ring, as many as the health ring has
-const uint32_t MANA_RING_SEGMENTS = 8;
-//! Colour channels (0 to 255) of the mana ring: the colour of the mana number in the game HUD
-const Ogre::Real MANA_RING_RED = 127.0f;
-const Ogre::Real MANA_RING_GREEN = 227.0f;
-const Ogre::Real MANA_RING_BLUE = 166.0f;
+const Ogre::Real CROWN_SIZE = 64;
+//! Material of the badge flower. The health part is tinted with the seat colour, the mana part with the mana colour.
+const std::string BADGE_FLOWER_MATERIAL = "CreatureOverlay0";
+//! Share of the flower height (from the bottom) that shows the mana of a creature that has mana
+const Ogre::Real MANA_FLOWER_SHARE = 1.0f / 3.0f;
+//! Colour channels (0 to 255) of the mana part of the flower, a strong blue
+const Ogre::Real MANA_COLOUR_RED = 25.0f;
+const Ogre::Real MANA_COLOUR_GREEN = 90.0f;
+const Ogre::Real MANA_COLOUR_BLUE = 255.0f;
 //! Highest value of a colour channel
 const Ogre::Real COLOUR_CHANNEL_MAX = 255.0f;
-//! Width and height in pixels of the mana ring inside the health badge
-const Ogre::Real MANA_RING_SIZE = 64;
 //! Size of the health badge and of the centred mood icon
-const Ogre::Real HEALTH_BADGE_SIZE = 112;
-const Ogre::Real STATUS_ICON_SIZE = 28;
+const Ogre::Real HEALTH_BADGE_SIZE = 64;
+const Ogre::Real STATUS_ICON_SIZE = 30;
 
-//! \brief Returns the colour of the mana ring arc: the colour of the mana number in the game HUD.
+//! \brief Returns the colour of the mana part of the badge flower, a strong blue.
 static Ogre::ColourValue getManaColour()
 {
-    return Ogre::ColourValue(MANA_RING_RED / COLOUR_CHANNEL_MAX, MANA_RING_GREEN / COLOUR_CHANNEL_MAX,
-        MANA_RING_BLUE / COLOUR_CHANNEL_MAX);
+    return Ogre::ColourValue(MANA_COLOUR_RED / COLOUR_CHANNEL_MAX, MANA_COLOUR_GREEN / COLOUR_CHANNEL_MAX,
+        MANA_COLOUR_BLUE / COLOUR_CHANNEL_MAX);
 }
 
 //! \brief Shows the level of a creature in the recovery overlay: the level number, or for the champion an empty
@@ -113,7 +110,7 @@ static void showLevelDisplay(MovableTextOverlay* overlay, uint32_t levelId, uint
     overlay->setCaption(levelId, Helper::toString(level));
 }
 
-//! \brief Creates the layered health, experience, recovery and mana displays for a creature.
+//! \brief Creates the layered badge flower (health and mana), experience, recovery and level displays for a creature.
 CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* ent,
         Ogre::Camera* cam) :
     mCreature(creature),
@@ -136,6 +133,16 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     mMovableTextOverlay->forceTextArea(healthId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE);
     mMovableTextOverlay->centerCaption(healthId);
     mMovableTextOverlay->displayOverlay(healthId, 0);
+
+    // The mana part of the flower lies directly over the health part, below the rings and the level; updateProgress
+    // cuts both parts to their bands.
+    const std::string manaMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(
+        BADGE_FLOWER_MATERIAL, getManaColour());
+    uint32_t manaId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
+        Ogre::ColourValue::White, manaMaterial, false);
+    mOverlayIds[static_cast<uint32_t>(CreatureOverlays::mana)] = manaId;
+    mMovableTextOverlay->forceTextArea(manaId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE);
+    mMovableTextOverlay->displayOverlay(manaId, 0);
 
     uint32_t experienceId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
         Ogre::ColourValue::White, "CreatureExperience", false);
@@ -170,16 +177,6 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     // are not shown when we change then ingame
     mMovableTextOverlay->setMaterialName(statusId, CREATURE_OVERLAY_STATUS_PREFIX + "1");
     mMovableTextOverlay->displayOverlay(statusId, 0);
-
-    // The arc is the segments of the health ring in the HUD mana colour; updateProgress picks the picture with the
-    // number of segments that matches the mana.
-    const std::string manaMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(
-        MANA_RING_BASE_MATERIAL + Helper::toString(MANA_RING_SEGMENTS), getManaColour());
-    uint32_t manaId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
-        Ogre::ColourValue::White, manaMaterial, false);
-    mOverlayIds[static_cast<uint32_t>(CreatureOverlays::mana)] = manaId;
-    mMovableTextOverlay->forceTextArea(manaId, MANA_RING_SIZE, MANA_RING_SIZE);
-    mMovableTextOverlay->displayOverlay(manaId, -1);
 }
 
 CreatureOverlayStatus::~CreatureOverlayStatus()
@@ -222,7 +219,7 @@ void CreatureOverlayStatus::hideEmote()
     mMovableTextOverlay->displayOverlay(mEmoteId, 0);
 }
 
-//! \brief Updates the health material and the level display.
+//! \brief Updates the health colour and the level display. The health part is cut in updateProgress.
 void CreatureOverlayStatus::updateHealth()
 {
     // We adapt the material
@@ -232,8 +229,7 @@ void CreatureOverlayStatus::updateHealth()
         mHealthValue = mCreature->getOverlayHealthValue();
         mSeat = mCreature->getSeat();
         std::string material = RenderManager::getSingleton().rrBuildTintedMaterial(
-            "CreatureOverlay" + Helper::toString(mHealthValue),
-            mSeat->getColorValue());
+            BADGE_FLOWER_MATERIAL, mSeat->getColorValue());
         uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
         mMovableTextOverlay->setMaterialName(healthId, material);
     }
@@ -253,27 +249,26 @@ void CreatureOverlayStatus::updateHealth()
 
 }
 
-//! \brief Updates the experience ring, the mana ring and the recovery clock, and reports the shown clock frame to the level test.
+//! \brief Updates the health and mana parts of the badge flower, the experience ring and the recovery clock, and reports the shown clock frame to the level test.
 void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
 {
+    // The flower is one picture: the upper part shows the health in the seat colour, the lower third the mana in blue.
+    // Both parts drain from the top, so they keep their lower edge. A creature without mana shows the whole flower
+    // as health.
+    const uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
     const uint32_t manaId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::mana)];
     const double maxMana = mCreature->getMaxMana();
-    const double manaShare = maxMana > 0.0 ? std::max(0.0, std::min(1.0, mCreature->getCurrentMana() / maxMana)) : 0.0;
-    const uint32_t manaSegments = static_cast<uint32_t>(manaShare * MANA_RING_SEGMENTS + 0.5);
-    if(manaSegments != mManaSegments)
-    {
-        mManaSegments = manaSegments;
-        if(manaSegments == 0)
-        {
-            mMovableTextOverlay->displayOverlay(manaId, 0);
-        }
-        else
-        {
-            mMovableTextOverlay->setMaterialName(manaId, RenderManager::getSingleton().rrBuildTintedMaterial(
-                MANA_RING_BASE_MATERIAL + Helper::toString(manaSegments), getManaColour()));
-            mMovableTextOverlay->displayOverlay(manaId, -1);
-        }
-    }
+    const bool hasMana = maxMana > 0.0;
+    const double manaShare = hasMana ? std::max(0.0, std::min(1.0, mCreature->getCurrentMana() / maxMana)) : 0.0;
+    const double healthStages = static_cast<double>(Creature::NB_OVERLAY_HEALTH_VALUES);
+    const double healthShare = std::max(0.0, std::min(1.0,
+        (healthStages - static_cast<double>(mCreature->getOverlayHealthValue())) / healthStages));
+    const double healthBottom = hasMana ? 1.0 - MANA_FLOWER_SHARE : 1.0;
+    mMovableTextOverlay->setVerticalBand(healthId, static_cast<Ogre::Real>(healthBottom * (1.0 - healthShare)),
+        static_cast<Ogre::Real>(healthBottom));
+    mMovableTextOverlay->setVerticalBand(manaId,
+        static_cast<Ogre::Real>(healthBottom + MANA_FLOWER_SHARE * (1.0 - manaShare)), 1.0f);
+    mMovableTextOverlay->displayOverlay(manaId, manaShare > 0.0 ? -1 : 0);
     const uint32_t experienceId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::experience)];
     const uint32_t recoveryId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::recovery)];
     const bool known = mCreature->hasProgressInformation();
