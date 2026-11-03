@@ -10,7 +10,7 @@
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticImage" name="Portrait">
-            <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.38,0}}" />
+            <Property name="Area" value="{{0.06,0},{0.03,0},{0.94,0},{0.237,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Window type="OD/StaticImage" name="Image">
@@ -35,7 +35,7 @@
             </Window>
         </Window>
         <Window type="OD/StaticText" name="NameText">
-            <Property name="Area" value="{{0.02,0},{0.38,0},{0.98,0},{0.43,0}}" />
+            <Property name="Area" value="{{0.06,0},{0.242,0},{0.94,0},{0.298,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -43,7 +43,7 @@
             <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/StaticText" name="KeeperText">
-            <Property name="Area" value="{{0.02,0},{0.43,0},{0.64,0},{0.48,0}}" />
+            <Property name="Area" value="{{0.06,0},{0.303,0},{0.55,0},{0.359,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -51,80 +51,140 @@
             <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/Button" name="SocialButton">
-            <Property name="Area" value="{{0.66,0},{0.43,0},{0.98,0},{0.48,0}}" />
+            <Property name="Area" value="{{0.57,0},{0.303,0},{0.94,0},{0.359,0}}" />
             <Property name="Text" value="Social profile" />
         </Window>
         <Window type="DefaultWindow" name="Attributes">
-            <Property name="Area" value="{{0.02,0},{0.48,0},{0.98,0},{0.60,0}}" />
+            <Property name="Area" value="{{0.06,0},{0.368,0},{0.94,0},{0.462,0}}" />
             <Window type="OD/StaticText" name="Strength">
-                <Property name="Area" value="{{0,0},{0,0},{0.25,0},{1,0}}" />
+                <Property name="Area" value="{{0,0},{0,0},{0.241,0},{1,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Dexterity">
-                <Property name="Area" value="{{0.25,0},{0,0},{0.5,0},{1,0}}" />
+                <Property name="Area" value="{{0.253,0},{0,0},{0.494,0},{1,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Life">
-                <Property name="Area" value="{{0.5,0},{0,0},{0.75,0},{1,0}}" />
+                <Property name="Area" value="{{0.506,0},{0,0},{0.747,0},{1,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Mana">
-                <Property name="Area" value="{{0.75,0},{0,0},{1,0},{1,0}}" />
+                <Property name="Area" value="{{0.759,0},{0,0},{1.0,0},{1,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="True" />
+                <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="CombatPanel">
-            <Property name="Area" value="{{0.02,0},{0.61,0},{0.98,0},{0.69,0}}" />
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="FrameEnabled" value="True" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="VertScrollbar" value="True" />
+            <Property name="Area" value="{{0.06,0},{0.472,0},{0.94,0},{0.608,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+            <Property name="MousePassThroughEnabled" value="True" />
         </Window>
-        <Window type="OD/StaticText" name="SkillsPanel">
-            <Property name="Area" value="{{0.66,0},{0.79,0},{0.98,0},{0.88,0}}" />
+        <Window type="OD/StaticText" name="CombatLabels">
+            <Property name="Area" value="{{0.09,0},{0.472,0},{0.62,0},{0.608,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
-            <Property name="FrameEnabled" value="True" />
+            <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="VertScrollbar" value="True" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="Text" value="Critical %&#10;Attack Rating&#10;Defense Rating" />
+        </Window>
+        <Window type="OD/StaticText" name="CombatValues">
+            <Property name="Area" value="{{0.62,0},{0.472,0},{0.91,0},{0.608,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="RightAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/StaticText" name="DefensePanel">
-            <Property name="Area" value="{{0.02,0},{0.70,0},{0.98,0},{0.78,0}}" />
+            <Property name="Area" value="{{0.06,0},{0.617,0},{0.94,0},{0.753,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
+        <Window type="OD/StaticText" name="DefenseLabels">
+            <Property name="Area" value="{{0.09,0},{0.617,0},{0.62,0},{0.753,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
-            <Property name="FrameEnabled" value="True" />
+            <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="VertScrollbar" value="True" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+            <Property name="HorzFormatting" value="LeftAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="Text" value="Physical Defense&#10;Magical Defense&#10;Element Defense" />
+        </Window>
+        <Window type="OD/StaticText" name="DefenseValues">
+            <Property name="Area" value="{{0.62,0},{0.617,0},{0.91,0},{0.753,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="RightAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="EquipmentTile">
+            <Property name="Area" value="{{0.06,0},{0.763,0},{0.33,0},{0.969,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+            <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticText" name="EquipmentPanel">
-            <Property name="Area" value="{{0.02,0},{0.79,0},{0.33,0},{0.88,0}}" />
+            <Property name="Area" value="{{0.0708,0},{0.768,0},{0.3192,0},{0.965,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
-            <Property name="VertScrollbar" value="True" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="VertFormatting" value="TopAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="PathTile">
+            <Property name="Area" value="{{0.345,0},{0.763,0},{0.655,0},{0.969,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+            <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticText" name="PathPanel">
-            <Property name="Area" value="{{0.34,0},{0.79,0},{0.65,0},{0.88,0}}" />
+            <Property name="Area" value="{{0.3574,0},{0.768,0},{0.6426,0},{0.965,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
-            <Property name="VertScrollbar" value="True" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-        </Window>
-        <Window type="OD/StaticText" name="StatsText">
-            <Property name="Area" value="{{0.02,0},{0.89,0},{0.98,0},{0.98,0}}" />
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="FrameEnabled" value="True" />
+            <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="VertScrollbar" value="True" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
             <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="SkillsTile">
+            <Property name="Area" value="{{0.67,0},{0.763,0},{0.94,0},{0.969,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
+        <Window type="OD/StaticText" name="SkillsPanel">
+            <Property name="Area" value="{{0.6808,0},{0.768,0},{0.9292,0},{0.965,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="VertFormatting" value="TopAligned" />
         </Window>
     </Window>
 </GUILayout>
-
