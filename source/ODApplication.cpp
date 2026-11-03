@@ -239,6 +239,11 @@ void ODApplication::startClient()
     Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
         resMgr.getGameDataPath() + "gui/fonts", "FileSystem", "StartupLoading");
     LoadingScreen startupLoading(*renderWindow, overlaySystem);
+    // The startup font is loaded; the location must not stay in the group, because initialiseAllResourceGroups()
+    // would otherwise parse ogrefonts.fontdef there and create the game fonts (Fonts/MedievalSharp) in a group that
+    // is destroyed after startup, before RTSS has a technique for their materials.
+    Ogre::ResourceGroupManager::getSingleton().removeResourceLocation(
+        resMgr.getGameDataPath() + "gui/fonts", "StartupLoading");
 #ifdef OD_USE_SFML_WINDOW
     // Attach event handling after the picture exists; SFML never creates a visible blank window.
     sf::WindowHandle nativeHandle;
