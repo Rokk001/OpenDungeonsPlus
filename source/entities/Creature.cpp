@@ -389,6 +389,16 @@ static const std::string TAVERN_COOLDOWN_SAVE_CLOSE = "[/TavernCooldown]";
 static const std::string SPA_SAVE_OPEN = "[Spa]";
 //! \brief Tag that closes the block of the lava spa state.
 static const std::string SPA_SAVE_CLOSE = "[/Spa]";
+//! \brief Largest number of room locks a saved creature may list (casino, temple, arena and room for later ones).
+static const uint32_t MAX_SAVED_ROOM_LOCKS = 16;
+//! \brief Mood that a visit may be below PleasureVisitMax and still count as full (rounding of the sums).
+static const double PLEASURE_GAIN_EPSILON = 1e-9;
+//! \brief Tag that opens the optional block of the pleasure visit and the room locks of casino, temple and arena.
+static const std::string ROOM_LOCKS_SAVE_OPEN = "[RoomLocks]";
+//! \brief Tag that closes the block of the room locks.
+static const std::string ROOM_LOCKS_SAVE_CLOSE = "[/RoomLocks]";
+//! \brief Turns after the last turn of watching a fight in which a spectator of the arena still counts as watching.
+static const int32_t ARENA_WATCH_GRACE_TURNS = 2;
 //! \brief Tag that opens the optional arena knock-out state.
 static const std::string KO_SAVE_OPEN = "[Ko]";
 //! \brief Tag that closes the optional arena knock-out state.
@@ -730,6 +740,9 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mRelaxTurns              (0.0),
     mSpaMudTilesLeft         (0),
     mSpaBathing              (false),
+    mPleasureVisitGain       (0.0),
+    mPleasureVisitKind       (-1),
+    mArenaWatchTurns         (0),
     mJumpFrom                (Ogre::Vector3::ZERO),
     mJumpTo                  (Ogre::Vector3::ZERO),
     mJumpTurns               (0),
@@ -879,6 +892,9 @@ Creature::Creature(GameMap* gameMap) :
     mRelaxTurns              (0.0),
     mSpaMudTilesLeft         (0),
     mSpaBathing              (false),
+    mPleasureVisitGain       (0.0),
+    mPleasureVisitKind       (-1),
+    mArenaWatchTurns         (0),
     mJumpFrom                (Ogre::Vector3::ZERO),
     mJumpTo                  (Ogre::Vector3::ZERO),
     mJumpTurns               (0),
@@ -1179,6 +1195,17 @@ void Creature::exportToStream(std::ostream& os) const
     {
         os << "\t" << SPA_SAVE_OPEN << " " << mSpaMood << " " << mRelaxTurns << " " << mSpaMudTilesLeft << " "
            << SPA_SAVE_CLOSE;
+    }
+
+    // Optional block of the running pleasure visit and the locks of casino, temple and arena (the spa lock is the
+    // relaxation of the spa block, the tavern lock the cooldown block); missing when nothing runs
+    if(hasPleasureState())
+    {
+        os << "\t" << ROOM_LOCKS_SAVE_OPEN << " " << mPleasureVisitKind << " " << mPleasureVisitGain << " "
+           << mArenaWatchTurns << " " << mRoomLockTurns.size();
+        for(const std::pair<const std::string, double>& lock : mRoomLockTurns)
+            os << " " << lock.first << " " << lock.second;
+        os << " " << ROOM_LOCKS_SAVE_CLOSE;
     }
 
     // Preserve an arena knockout or a death knockout, including one interrupted by a load.
@@ -1499,6 +1526,47 @@ bool Creature::importFromStream(std::istream& is)
             setSpaMood(loadedSpaMood);
             setRelaxTurns(loadedRelaxTurns);
             setSpaMudTilesLeft(loadedMudTilesLeft);
+            continue;
+        }
+
+        if(appearanceToken == ROOM_LOCKS_SAVE_OPEN)
+        {
+            std::string locksClose;
+            int32_t loadedVisitKind = -1;
+            double loadedVisitGain = 0.0;
+            int32_t loadedWatchTurns = 0;
+            uint32_t nbLocks = 0;
+            if(!(is >> loadedVisitKind >> loadedVisitGain >> loadedWatchTurns >> nbLocks) ||
+               !std::isfinite(loadedVisitGain) || (nbLocks > MAX_SAVED_ROOM_LOCKS))
+            {
+                OD_LOG_WRN("Invalid room locks block for creature=" + getName());
+                return false;
+            }
+            std::map<std::string, double> loadedLocks;
+            for(uint32_t ii = 0; ii < nbLocks; ++ii)
+            {
+                std::string lockName;
+                double lockTurns = 0.0;
+                if(!(is >> lockName >> lockTurns) || !std::isfinite(lockTurns))
+                {
+                    OD_LOG_WRN("Invalid room lock for creature=" + getName());
+                    return false;
+                }
+                if(lockTurns > 0.0)
+                    loadedLocks[lockName] = lockTurns;
+            }
+            if(!(is >> locksClose) || (locksClose != ROOM_LOCKS_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid room locks block for creature=" + getName() + ", closing token is '" + locksClose
+                    + "' instead of '" + ROOM_LOCKS_SAVE_CLOSE + "'");
+                return false;
+            }
+            const bool kindKnown = (loadedVisitKind >= static_cast<int32_t>(PleasureRoomKind::spa)) &&
+                (loadedVisitKind <= static_cast<int32_t>(PleasureRoomKind::arena));
+            mPleasureVisitKind = kindKnown ? loadedVisitKind : -1;
+            mPleasureVisitGain = kindKnown ? loadedVisitGain : 0.0;
+            mArenaWatchTurns = std::max(0, loadedWatchTurns);
+            mRoomLockTurns = loadedLocks;
             continue;
         }
 
@@ -3234,6 +3302,9 @@ void Creature::doUpkeep()
     // The relaxation runs out
     upkeepSpaState();
 
+    // The locks of casino, temple and arena run out
+    upkeepRoomLocks();
+
     // The skill tree: reset window, reset and the active skills of changed ranks
     upkeepSkillTree();
 
@@ -3392,7 +3463,6 @@ void Creature::doUpkeep()
         }
         if(!servingNeed && mDefinition->hasThirst() &&
            mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
-           (mTavernCooldownTurns <= 0) &&
            !hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))
@@ -3599,7 +3669,6 @@ bool Creature::handleIdleAction()
     if (!mDefinition->isWorker() &&
         mDefinition->hasThirst() &&
         !hasActionBeenTried(CreatureActionType::searchDrink) &&
-        (mTavernCooldownTurns <= 0) &&
         (mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek")))
     {
         pushAction(Utils::make_unique<CreatureActionSearchDrink>(*this, false));
@@ -6252,7 +6321,13 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
 {
     std::vector<std::string> buffs;
     std::vector<std::string> debuffs;
-    if(relaxTurns > 0.0)
+
+    // The buff Relaxed of a spa visit is a mood effect that runs as long as the relaxation; it is listed once
+    bool relaxedEffect = false;
+    for(const CreatureMoodEffect& effect : moodEffects)
+        relaxedEffect = relaxedEffect || ((effect.mTurnsLeft > 0.0) && (effect.mName == "Relaxed"));
+
+    if((relaxTurns > 0.0) && !relaxedEffect)
         buffs.push_back("Buff: Relaxed (" + getProfileEffectTime(relaxTurns) + ")");
 
     for(const CreatureMoodEffect& effect : moodEffects)
@@ -9251,10 +9326,14 @@ void Creature::setHangoverTurns(double turns)
     mHangoverTurns = std::max(0.0, turns);
 }
 
-//! \brief Adds a one-time tavern mood change to the stored mood; the turns are not used any more.
-void Creature::addTavernMood(double points, double turns)
+//! \brief Adds a tavern mood change to the stored mood: inside a leisure visit it counts toward the PleasureVisitMax of
+//! the visit, otherwise (a drink visit, a spectator, a hangover) it is a plain one-time event.
+void Creature::addTavernMood(double points)
 {
-    applyMoodEvent(points, false);
+    if(mPleasureVisitKind == static_cast<int32_t>(PleasureRoomKind::tavern))
+        addPleasureMood(PleasureRoomKind::tavern, points);
+    else
+        applyMoodEvent(points, false);
 }
 
 //! \brief True if the drunkenness has reached StaggerAt.
@@ -9276,10 +9355,13 @@ double Creature::getHangoverWorkFactor() const
     return ConfigManager::getSingleton().getTavernConfigDouble("HangoverWorkFactor");
 }
 
-//! \brief Adds mood points of the lava spa to the stored mood.
+//! \brief Adds mood points of the lava spa to the stored mood; inside a spa visit they count toward its PleasureVisitMax.
 void Creature::addSpaMood(double points)
 {
-    applyMoodEvent(points, false);
+    if(mPleasureVisitKind == static_cast<int32_t>(PleasureRoomKind::spa))
+        addPleasureMood(PleasureRoomKind::spa, points);
+    else
+        applyMoodEvent(points, false);
 }
 
 //! \brief Takes over the spa mood of an old save, not below 0.
@@ -9309,19 +9391,20 @@ void Creature::setSpaMudTilesLeft(int32_t tiles)
     mSpaMudTilesLeft = std::max(0, tiles);
 }
 
-//! \brief True for a creature that is no worker, not in prison and not in the hand and either has a hangover or is
-//! in a bad mood (Upset, Angry, Furious) with its relaxation run out.
+//! \brief True for a creature that is no worker, not in prison and not in the hand, has no running pleasure buff and
+//! its relaxation (the spa lock) run out, and either has a hangover or is in a bad mood (Upset, Angry, Furious).
 bool Creature::wantsSpaBath() const
 {
     if((mDefinition == nullptr) || mDefinition->isWorker() || mIsInHand || isInPrison() ||
        (getSeat() == nullptr) || getSeat()->isRogueSeat())
         return false;
 
+    // A running pleasure buff or the lock of the spa (the relaxation) keeps the creature away, also with a hangover
+    if(!canUsePleasureRoom(PleasureRoomKind::spa))
+        return false;
+
     if(mHangoverTurns > 0.0)
         return true;
-
-    if(mRelaxTurns > 0.0)
-        return false;
 
     const CreatureMoodLevel mood = getMoodValue();
     return (mood == CreatureMoodLevel::Upset) || (mood == CreatureMoodLevel::Angry) || (mood == CreatureMoodLevel::Furious);
@@ -9335,6 +9418,190 @@ void Creature::upkeepSpaState()
 
     if(mRelaxTurns > 0.0)
         mRelaxTurns = std::max(0.0, mRelaxTurns - 1.0);
+}
+
+//! \brief Counts the locks of casino, temple and arena down by 1 per turn and ends the visit of an arena spectator that
+//! has not watched for ARENA_WATCH_GRACE_TURNS turns.
+void Creature::upkeepRoomLocks()
+{
+    std::map<std::string, double>::iterator it = mRoomLockTurns.begin();
+    while(it != mRoomLockTurns.end())
+    {
+        it->second -= 1.0;
+        if(it->second <= 0.0)
+            it = mRoomLockTurns.erase(it);
+        else
+            ++it;
+    }
+
+    if(mArenaWatchTurns > 0)
+    {
+        --mArenaWatchTurns;
+        if(mArenaWatchTurns == 0)
+            finishPleasureVisit(PleasureRoomKind::arena, false);
+    }
+}
+
+//! \brief True while a mood effect named like a pleasure buff runs.
+bool Creature::hasPleasureBuff() const
+{
+    for(const CreatureMoodEffect& effect : mMoodEffects)
+    {
+        if((effect.mTurnsLeft > 0.0) && CreatureMoodPleasure::isBuffName(effect.mName))
+            return true;
+    }
+    return false;
+}
+
+//! \brief The turns the given pleasure room is still closed to the creature.
+double Creature::getRoomLockTurns(PleasureRoomKind kind) const
+{
+    switch(kind)
+    {
+        case PleasureRoomKind::spa:
+            return mRelaxTurns;
+        case PleasureRoomKind::tavern:
+            return static_cast<double>(mTavernCooldownTurns);
+        default:
+            break;
+    }
+
+    std::map<std::string, double>::const_iterator it = mRoomLockTurns.find(CreatureMoodPleasure::lockName(kind));
+    return (it == mRoomLockTurns.end()) ? 0.0 : it->second;
+}
+
+//! \brief No running pleasure buff and the room not closed.
+bool Creature::canUsePleasureRoom(PleasureRoomKind kind) const
+{
+    return !hasPleasureBuff() && !isRoomLocked(kind);
+}
+
+//! \brief Closes the given pleasure room for the given turns; a longer running lock stays.
+void Creature::startRoomLock(PleasureRoomKind kind, double turns)
+{
+    if(turns <= 0.0)
+        return;
+
+    switch(kind)
+    {
+        case PleasureRoomKind::spa:
+            setRelaxTurns(std::max(mRelaxTurns, turns));
+            return;
+        case PleasureRoomKind::tavern:
+            setTavernCooldownTurns(std::max(mTavernCooldownTurns, static_cast<int32_t>(turns)));
+            return;
+        default:
+            break;
+    }
+
+    double& lock = mRoomLockTurns[CreatureMoodPleasure::lockName(kind)];
+    lock = std::max(lock, turns);
+}
+
+//! \brief A visit to the given pleasure room begins with nothing gained inside the room.
+void Creature::beginPleasureVisit(PleasureRoomKind kind)
+{
+    mPleasureVisitKind = static_cast<int32_t>(kind);
+    mPleasureVisitGain = 0.0;
+}
+
+//! \brief Adds mood gained or lost inside the room of the running visit; a gain is cut at PleasureVisitMax.
+void Creature::addPleasureMood(PleasureRoomKind kind, double points)
+{
+    double applied = points;
+    if(points > 0.0)
+    {
+        // A gain needs the running visit to that room and no running pleasure buff
+        if((mPleasureVisitKind != static_cast<int32_t>(kind)) || hasPleasureBuff())
+            return;
+
+        const double room = ConfigManager::getSingleton().getRoomConfigDouble("PleasureVisitMax") - mPleasureVisitGain;
+        applied = std::max(0.0, std::min(points, room));
+    }
+
+    if(mPleasureVisitKind == static_cast<int32_t>(kind))
+        mPleasureVisitGain += applied;
+
+    applyMoodEvent(applied, false);
+}
+
+//! \brief True when the running visit to the given room has gained PleasureVisitMax.
+bool Creature::isPleasureVisitFull(PleasureRoomKind kind) const
+{
+    return (mPleasureVisitKind == static_cast<int32_t>(kind)) &&
+        (mPleasureVisitGain >= ConfigManager::getSingleton().getRoomConfigDouble("PleasureVisitMax") - PLEASURE_GAIN_EPSILON);
+}
+
+//! \brief A spectator watches a fight for one turn: the arena visit starts with it and counts toward PleasureVisitMax.
+void Creature::addPitSpectatorMood(double points)
+{
+    if(!canUsePleasureRoom(PleasureRoomKind::arena))
+        return;
+
+    // Another running visit (a tavern, a casino) keeps the creature from being a spectator
+    if((mPleasureVisitKind >= 0) && (mPleasureVisitKind != static_cast<int32_t>(PleasureRoomKind::arena)))
+        return;
+
+    if(mPleasureVisitKind != static_cast<int32_t>(PleasureRoomKind::arena))
+        beginPleasureVisit(PleasureRoomKind::arena);
+
+    mArenaWatchTurns = ARENA_WATCH_GRACE_TURNS;
+    addPleasureMood(PleasureRoomKind::arena, points);
+    if(isPleasureVisitFull(PleasureRoomKind::arena))
+        finishPleasureVisit(PleasureRoomKind::arena, false);
+}
+
+//! \brief The running visit to the given room ends: the pleasure buff of a visit that gained mood, the room lock.
+void Creature::finishPleasureVisit(PleasureRoomKind kind, double buffTurns, double lockTurns, bool lockWithoutGain)
+{
+    if(mPleasureVisitKind != static_cast<int32_t>(kind))
+        return;
+
+    const double gain = mPleasureVisitGain;
+    mPleasureVisitKind = -1;
+    mPleasureVisitGain = 0.0;
+    if(kind == PleasureRoomKind::arena)
+        mArenaWatchTurns = 0;
+
+    if(gain > 0.0)
+        addMoodEffect(CreatureMoodPleasure::buffName(kind),
+            ConfigManager::getSingleton().getRoomConfigDouble("PleasureBuffMood"), buffTurns);
+
+    if((gain > 0.0) || lockWithoutGain)
+        startRoomLock(kind, lockTurns);
+}
+
+//! \brief The running visit to the given room ends with the buff turns and the lock turns of the configuration.
+void Creature::finishPleasureVisit(PleasureRoomKind kind, bool lockWithoutGain)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    std::string lockKey;
+    switch(kind)
+    {
+        case PleasureRoomKind::spa:
+            lockKey = "SpaRelaxTurns";
+            break;
+        case PleasureRoomKind::tavern:
+            lockKey = "TavernLeisureCooldownTurns";
+            break;
+        case PleasureRoomKind::casino:
+            lockKey = "CasinoVisitLockTurns";
+            break;
+        case PleasureRoomKind::temple:
+            lockKey = "TempleVisitLockTurns";
+            break;
+        case PleasureRoomKind::arena:
+            lockKey = "ArenaVisitLockTurns";
+            break;
+    }
+    finishPleasureVisit(kind, config.getRoomConfigDouble("SpaRelaxTurns"), config.getRoomConfigDouble(lockKey),
+        lockWithoutGain);
+}
+
+//! \brief True when a pleasure visit runs or a lock of casino, temple or arena is closed.
+bool Creature::hasPleasureState() const
+{
+    return (mPleasureVisitKind >= 0) || (mArenaWatchTurns > 0) || !mRoomLockTurns.empty();
 }
 
 //! \brief The point on the arc: a straight line from the start to the landing point with a parabola on the height
@@ -9459,7 +9726,7 @@ void Creature::sleepEnded()
     ConfigManager& config = ConfigManager::getSingleton();
     double hangoverTurns = config.getTavernConfigDouble("HangoverTurns");
     mHangoverTurns = std::max(mHangoverTurns, hangoverTurns);
-    addTavernMood(config.getTavernConfigDouble("HangoverMood"), hangoverTurns);
+    addTavernMood(config.getTavernConfigDouble("HangoverMood"));
 }
 
 //! \brief Sets the turns until the next leisure visit to a tavern (not below 0).
@@ -9662,10 +9929,10 @@ void Creature::setInfirmaryAdmissionMood(bool creaturePaid)
     applyMoodEvent(creaturePaid ? -points : points, false);
 }
 
-//! \brief Adds casino mood points to the stored mood.
+//! \brief Adds casino mood points inside the casino visit; a gain counts toward its PleasureVisitMax.
 void Creature::addCasinoMood(double points)
 {
-    applyMoodEvent(points, false);
+    addPleasureMood(PleasureRoomKind::casino, points);
 }
 
 //! \brief Adds the mood points of the arena to the stored mood.
@@ -9720,10 +9987,11 @@ uint32_t Creature::getNbHatedCompanyNear() const
     return nbCreatures;
 }
 
-//! \brief Adds the relief of one turn of praying to the stored mood and remembers the prayer for the calmed reaction.
+//! \brief Adds the relief of one turn of praying inside the temple visit (it counts toward its PleasureVisitMax) and
+//! remembers the prayer for the calmed reaction.
 void Creature::addPrayerRelief(double relief)
 {
-    applyMoodEvent(relief, false);
+    addPleasureMood(PleasureRoomKind::temple, relief);
     mPrayedSinceMoodLook = true;
 }
 
@@ -10534,7 +10802,6 @@ bool Creature::needInterrupt(bool servingNeed) const
                 return true;
     }
     if(mDefinition->hasThirst() && mThirst >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
-       (mTavernCooldownTurns <= 0) &&
        !hasActionBeenTried(CreatureActionType::searchDrink))
     {
         for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, getSeat()))

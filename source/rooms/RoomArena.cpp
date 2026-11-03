@@ -353,7 +353,7 @@ void RoomArena::updatePitMood()
                 if(Pathfinding::squaredDistanceTile(*tileCreature, *tile) > squaredRadius)
                     continue;
 
-                creature->addPitMood(moodPerTurn);
+                creature->addPitSpectatorMood(moodPerTurn);
                 break;
             }
         }

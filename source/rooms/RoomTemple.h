@@ -44,9 +44,15 @@ public:
     RoomType getType() const override
     { return mRoomType; }
 
-    //! \brief One praying creature per outer tile, the pool is not used for praying
+    //! \brief One praying creature per outer tile, the pool is not used for praying; a creature of the keeper with a
+    //! running pleasure buff or with the temple locked after its last visit is not taken
     bool hasOpenCreatureSpot(Creature* c) override;
-    //! \brief Releases the creature from the room and forgets its prayer spot
+    //! \brief Registers the creature as a user of the room and starts its temple visit, whose prayer relief counts
+    //! toward PleasureVisitMax
+    //! \param c The creature that starts to use the room
+    bool addCreatureUsingRoom(Creature* c) override;
+    //! \brief Releases the creature from the room, forgets its prayer spot and ends its temple visit (the pleasure
+    //! buff of a visit that gained mood and the lock of the temple)
     //! \param c The creature that stops using the room
     void removeCreatureUsingRoom(Creature* c) override;
 

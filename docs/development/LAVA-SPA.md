@@ -23,21 +23,23 @@ documented in the header of the file) and `config/skills.cfg` (`roomSpa`, the ef
 
 ## Bathing
 
-- A creature that is no worker, not in prison and not in the hand wants a bath when its mood is Upset, Angry or Furious and
-  its relaxation has run out, or when it has a hangover (a hangover ignores the relaxation).
-- The bath lasts `SpaBathTurns` (14.2857, the counted turns reach it in the 15th turn). Every turn adds `SpaMoodPerTurn`
-  (21) spa mood up to `SpaMoodMax` (300, so a bath restores only a part of a bad mood); the spa mood is one more part of the
-  creature's mood, does not fade while the creature sits in the bath and fades by `SpaMoodDecayPerTurn` (0.4) per turn
-  once the bath is over. One bath in `SpaCannonballChance` starts with a jump from the
-  springboard (an arc of `SpaJumpTurns`, `SpaJumpHeight` tiles, then a mud splash). The bath is paid at the landing, before it starts; if it cannot be paid then, the creature gets its place back and does not bathe.
-- At the end of the bath the creature is relaxed for `SpaRelaxTurns` (252; 302.4 and 352.8 with research levels 2 and 3):
-  the points and experience it earns in the library, workshop and training hall and in the arena are multiplied by
-  `SpaRelaxWorkFactor` (1.0567). Nothing in combat changes. The hangover ends at once and the creature writes the post
-  "relaxed".
+- A creature that is no worker, not in prison and not in the hand wants a bath when its mood is Upset, Angry or Furious
+  or when it has a hangover, and it has no running pleasure buff and its relaxation (the lock of the spa) has run out.
+- A bath is a pleasure visit. It gives `SpaMoodJump` (50) mood when it starts, then every turn `SpaMoodPerTurn` (10.5) for
+  `SpaBathTurns` (14.2857, the counted turns reach it in the 15th turn): 200 in the room, the `PleasureVisitMax`. One bath in
+  `SpaCannonballChance` starts with a jump from the springboard (an arc of `SpaJumpTurns`, `SpaJumpHeight` tiles, then a mud
+  splash). The bath is paid at the landing, before it starts; if it cannot be paid then, the creature gets its place back and
+  does not bathe.
+- At the end of the bath the creature gets the buff Relaxed: `PleasureBuffMood` (100) over `SpaRelaxTurns` (252; 302.4 and
+  352.8 with research levels 2 and 3), so a bath gives 300 in total. For as long the spa is closed to the creature (only the
+  spa, the other pleasure rooms stay open to it unless it has the buff, which closes all of them) and the points and
+  experience it earns in the library, workshop and training hall and in the arena are multiplied by `SpaRelaxWorkFactor`
+  (1.0567). Nothing in combat changes. The hangover ends at once and the creature writes the post "relaxed".
 - The bath does not clean the creature. A creature that leaves the pool leaves mud on the next `SpaMudTrailTiles` (3) tiles
   it enters outside the pool, `SpaDirtPerBath` in total (times its dirt factor), so the tiles around the pool get dirtier.
 - A bath that is broken off (fight, flight, knock-out, pick-up by the hand, room removed or taken over, tile sold) keeps the
-  mood gained so far, gives no relaxation, leaves the hangover and returns no gold.
+  mood gained so far and, like every visit that gained mood, gives the buff and closes the spa; it leaves the hangover and
+  returns no gold.
 
 ## Pool attendant
 
@@ -57,7 +59,9 @@ keeper of the room and changes owner with it.
 
 ## Saves and tools
 
-- Creature streams hold an optional block `[Spa] <spaMood> <relaxTurns> <mudTilesLeft> [/Spa]` after the `[Thirst]` block.
+- Creature streams hold an optional block `[Spa] <spaMood> <relaxTurns> <mudTilesLeft> [/Spa]` after the `[Thirst]` block
+  (the relaxation is the lock of the spa; the pleasure buff is a running mood effect in the `[Mood]` block; the visit in
+  progress and the locks of casino, temple and arena are the optional block `[RoomLocks]`).
   The room stream holds `SpaPayer`, `PoolAttendant` and `SpaBathers` lines, so a running bath, a jump in the air and the
   attendant in the middle of an act continue where they stood. Files without them load.
 - The checks are `check_spa_config.py`, `check_spa_rules.py`, `check_spa_layout.py`, `check_spa_streams.py` and

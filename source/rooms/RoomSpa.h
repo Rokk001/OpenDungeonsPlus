@@ -343,6 +343,15 @@ private:
     //! \param bather The place of the bather.
     void finishBath(RoomSpaBather& bather);
 
+    //! \brief The turns the relaxation after a bath lasts for the keeper of the spa: SpaRelaxTurns lengthened by the
+    //! research effect RelaxTime. The pleasure buff of the bath and the lock of the spa last as long.
+    double getRelaxTurns() const;
+
+    //! \brief Ends the pleasure visit of a bather whose bath was broken off: the mood it gained stays and, as for every
+    //! visit that gained mood, the pleasure buff starts and the spa is closed to the creature.
+    //! \param creature The bather.
+    void finishBrokenVisit(Creature& creature);
+
     //! \brief Runs the places for one turn: moves the jumpers and lifts the spa mood of the bathers.
     void upkeepBathers();
 

@@ -5,7 +5,8 @@ follows the tavern in the order the AI builds, and every key is documented in th
 What is checked
   rooms.cfg [Rooms]       all Spa keys with their values, no Spa key without a design value, every key documented
   derived values          SpaMoodPerTurn = TemplePrayerReliefPerTurn (10.5 mood points per turn; SpaMoodMax and SpaMoodDecayPerTurn are gone),
-                          SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath,
+                          SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath, SpaMoodJump 50 on top of it = the 200 of
+                          PleasureVisitMax, PleasureBuffMood 100 over SpaRelaxTurns = 300 in total per visit,
                           SpaRelaxTurns = HangoverTurns of global.cfg, SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns
                           (both to 4 places), SpaCostPerTile = CasinoCostPerTile, SpaHP = CasinoHP,
                           SpaDirtPerBath = 1.6154 / (0.557 x 9 / (SpaBathTurns + 1)) to 4 places
@@ -58,7 +59,7 @@ tavern = block_values(global_cfg, 'Tavern')
 
 # 1. Every Spa key with the value of the design (section 4 of the design)
 SPA = {
-    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodPerTurn': '10.5',
+    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodJump': '50', 'SpaMoodPerTurn': '10.5',
     'SpaBathTurns': '14.2857', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
     'SpaDirtPerBath': '4.9257', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
     'SpaAttendantActMaxSeconds': '20', 'SpaAttendantCannonballMinSeconds': '120',
@@ -82,6 +83,11 @@ assert float(rooms['SpaMoodPerTurn']) == float(rooms['TemplePrayerReliefPerTurn'
 # SpaMoodMax and SpaMoodDecayPerTurn are gone (the mood is added to the stored mood); one bath gives 150 mood points
 bath_mood = float(rooms['SpaMoodPerTurn']) * float(rooms['SpaBathTurns'])
 assert round(bath_mood, 1) == 150.0, 'SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath'
+# The jump when the bath starts and the turns of the bath fill the visit limit; the buff after it makes the 300 of the design
+assert round(float(rooms['SpaMoodJump']) + bath_mood, 1) == float(rooms['PleasureVisitMax']) == 200.0, 'SpaMoodJump + bath = PleasureVisitMax 200'
+assert float(rooms['PleasureBuffMood']) == 100.0 and float(rooms['PleasureVisitMax']) + float(rooms['PleasureBuffMood']) == 300.0
+for key in ('PleasureVisitMax', 'PleasureBuffMood', 'CasinoVisitLockTurns', 'TempleVisitLockTurns', 'ArenaVisitLockTurns'):
+    assert_documented(rooms_cfg, key, 'rooms.cfg')
 assert float(rooms['SpaRelaxTurns']) == float(tavern['HangoverTurns']), 'SpaRelaxTurns = HangoverTurns'
 factor = 1.0 + float(rooms['SpaBathTurns']) / float(rooms['SpaRelaxTurns'])
 assert round(factor, 4) == float(rooms['SpaRelaxWorkFactor']), 'SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns'

@@ -28,6 +28,7 @@
 #include "entities/DefenceChance.h"
 #include "eventsystem/CreatureMoved.h"
 #include "creaturemood/CreatureMoodEffect.h"
+#include "creaturemood/CreatureMoodPleasure.h"
 #include "creatureskill/CreatureSkillTree.h"
 #include "eventsystem/Subject.h"
 #include "game/CreatureAppearance.h"
@@ -1046,9 +1047,9 @@ public:
     { return mTavernMoodTurns; }
 
     //! \brief Adds a one-time tavern mood change (a beer, a game, a hangover) to the stored mood.
-    //! \param points The mood (negative for a malus).
-    //! \param turns Not used any more (the mood does not run out), kept for the callers.
-    void addTavernMood(double points, double turns);
+    //! \param points The mood (negative for a malus). During a leisure visit to a tavern it counts toward the
+    //! PleasureVisitMax of the visit, otherwise (a drink visit, a spectator, a hangover) it is a plain event.
+    void addTavernMood(double points);
 
     //! \brief True if the creature is drunk enough to stagger (StaggerAt). On a client only the own seat's creatures
     //! know their drunkenness.
@@ -1075,8 +1076,9 @@ public:
     inline double getSpaMood() const
     { return mSpaMood; }
 
-    //! \brief Adds mood points of the lava spa to the stored mood.
-    //! \param points The mood points to add (one turn of a bath adds SpaMoodPerTurn).
+    //! \brief Adds mood points of the lava spa to the stored mood; inside a spa visit they count toward the
+    //! PleasureVisitMax of the visit.
+    //! \param points The mood points to add (the jump of the bath start SpaMoodJump, one turn of a bath SpaMoodPerTurn).
     void addSpaMood(double points);
 
     //! \brief Takes over the spa mood an old save held, used when a creature is loaded from such a save.
@@ -1098,6 +1100,69 @@ public:
     //! \brief Returns the factor on the room points and the experience the creature earns: SpaRelaxWorkFactor
     //! while it is relaxed, else 1. It is used at the places where the hangover factor is used and never in combat.
     double getRelaxWorkFactor() const;
+
+    //! \brief True while the creature has a running pleasure buff (Relaxed or Pleasure). A creature with a pleasure
+    //! buff looks for no pleasure room and enters none, and no pleasure room gives it new mood.
+    bool hasPleasureBuff() const;
+
+    //! \brief Returns the turns the given pleasure room is still closed to the creature (0 = open). The spa lock is the
+    //! relaxation, the tavern lock the leisure cooldown, the others are kept in the room locks.
+    //! \param kind The pleasure room.
+    double getRoomLockTurns(PleasureRoomKind kind) const;
+
+    //! \brief True while the given pleasure room is closed to the creature (only that room).
+    //! \param kind The pleasure room.
+    inline bool isRoomLocked(PleasureRoomKind kind) const
+    { return getRoomLockTurns(kind) > 0.0; }
+
+    //! \brief True when the creature may look for and enter the given pleasure room: no running pleasure buff and
+    //! the room is not locked.
+    //! \param kind The pleasure room.
+    bool canUsePleasureRoom(PleasureRoomKind kind) const;
+
+    //! \brief Server side. Closes the given pleasure room to the creature for the given turns.
+    //! \param kind The pleasure room.
+    //! \param turns The turns the lock lasts, 0 or less changes nothing.
+    void startRoomLock(PleasureRoomKind kind, double turns);
+
+    //! \brief Server side. A visit to the given pleasure room begins: the mood gained inside the room starts at 0.
+    //! \param kind The pleasure room.
+    void beginPleasureVisit(PleasureRoomKind kind);
+
+    //! \brief Server side. Adds mood gained or lost inside the room of the running visit. A gain is cut so that the
+    //! visit gains at most PleasureVisitMax in total; a loss is taken as it is and lowers what the visit gained.
+    //! Without a running visit to that room, or with a running pleasure buff, a gain is not given.
+    //! \param kind The pleasure room.
+    //! \param points The mood change, negative for a loss.
+    void addPleasureMood(PleasureRoomKind kind, double points);
+
+    //! \brief True when the running visit to the given room has gained PleasureVisitMax, so the visit ends.
+    //! \param kind The pleasure room.
+    bool isPleasureVisitFull(PleasureRoomKind kind) const;
+
+    //! \brief Server side. A spectator watches a fight in the arena for one turn: the visit starts with the first
+    //! turn, ends when the creature has not watched for a few turns, and counts toward PleasureVisitMax.
+    //! \param points The mood of the turn (PitMoodSpectator per turn).
+    void addPitSpectatorMood(double points);
+
+    //! \brief Server side. The running visit to the given room ends. A visit that gained mood starts the pleasure buff
+    //! (PleasureBuffMood over the given turns) and closes the room for the given turns. A visit that gained nothing
+    //! only closes the room when lockWithoutGain is set. Nothing happens without a running visit to that room.
+    //! \param kind The pleasure room.
+    //! \param buffTurns The turns the pleasure buff runs.
+    //! \param lockTurns The turns the room stays closed.
+    //! \param lockWithoutGain True when the room is closed also if the visit gained no mood.
+    void finishPleasureVisit(PleasureRoomKind kind, double buffTurns, double lockTurns, bool lockWithoutGain);
+
+    //! \brief Server side. The running visit to the given room ends with the buff turns of SpaRelaxTurns and the lock
+    //! turns of the room as the configuration says (TavernLeisureCooldownTurns, CasinoVisitLockTurns,
+    //! TempleVisitLockTurns, ArenaVisitLockTurns).
+    //! \param kind The pleasure room.
+    //! \param lockWithoutGain True when the room is closed also if the visit gained no mood.
+    void finishPleasureVisit(PleasureRoomKind kind, bool lockWithoutGain);
+
+    //! \brief True when a pleasure visit runs or a casino, temple or arena lock is closed, so there is something to save.
+    bool hasPleasureState() const;
 
     //! \brief Returns how many of the next tiles the creature enters outside a pool still get a share of the mud
     //! it carries out of a bath.
@@ -2008,6 +2073,15 @@ private:
     int32_t         mSpaMudTilesLeft;
     //! \brief Runtime only (not saved): true while the creature sits in a lava spa bath, the spa mood does not fade then.
     bool            mSpaBathing;
+    //! \brief The mood the running pleasure visit gained inside the room (saved with the room locks).
+    double          mPleasureVisitGain;
+    //! \brief The pleasure room of the running visit as a PleasureRoomKind, -1 when no visit runs (saved).
+    int32_t         mPleasureVisitKind;
+    //! \brief Turns left before a spectator of the arena counts as gone, kept up while it watches (saved).
+    int32_t         mArenaWatchTurns;
+    //! \brief The turns the pleasure rooms casino, temple and arena are still closed, by lock name (saved). The spa
+    //! lock is mRelaxTurns, the tavern lock mTavernCooldownTurns.
+    std::map<std::string, double> mRoomLockTurns;
     //! \brief Runtime only (not saved): start of the running jump.
     Ogre::Vector3   mJumpFrom;
     //! \brief Runtime only (not saved): landing point of the running jump.
@@ -2048,6 +2122,10 @@ private:
     Ogre::BillboardChain* mGhostBeamChain = nullptr;
     Ogre::SceneNode* mGhostSparkNode = nullptr;
     Ogre::ParticleSystem* mGhostBeamSparks = nullptr;
+    //! \brief The running mood effects (buffs and debuffs). Saved on the server, sent to the keeper for the effect line.
+    //! Declared before mActions, so that it is still alive when the actions of the creature end a pleasure visit (the
+    //! pleasure buff starts then).
+    std::vector<CreatureMoodEffect> mMoodEffects;
     std::vector<std::unique_ptr<CreatureAction>>    mActions;
     std::vector<Tile*>              mVisualDebugEntityTiles;
 
@@ -2091,9 +2169,6 @@ private:
     //! \brief Server side, saved. The lasting problems that held at the last look: the name of the modifier and how
     //! strong it was (the number of missed wages for the wage problem, otherwise 1).
     std::map<std::string, double>   mMoodProblems;
-
-    //! \brief The running mood effects (buffs and debuffs). Saved on the server, sent to the keeper for the effect line.
-    std::vector<CreatureMoodEffect> mMoodEffects;
 
     //! \brief Server side, saved. The rooms the creature uses (its bed room, its work room) that were dirty at stage 2 or
     //! 3 since they were last clean: the room name and the highest stage. The cleaning reward is given once when such a
@@ -2375,6 +2450,10 @@ private:
 
     //! \brief Server side, once per turn. Counts the relaxation down.
     void upkeepSpaState();
+
+    //! \brief Server side, once per turn. Counts the locks of casino, temple and arena down and ends the visit of an
+    //! arena spectator that has stopped watching.
+    void upkeepRoomLocks();
 
     //! \brief Server side. Tells the clients that see the creature about the jump that has just started
     //! (ServerNotificationType::creatureJump with name, from, to, turns and elapsed); seats without a human

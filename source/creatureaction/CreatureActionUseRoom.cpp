@@ -120,7 +120,6 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         }
         if(!servingNeed && creature.getDefinition()->hasThirst() &&
            creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
-           (creature.getTavernCooldownTurns() <= 0) &&
            !creature.hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
@@ -139,6 +138,15 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
     const bool fighting = creature.isActionInList(CreatureActionType::fight) ||
         creature.isActionInList(CreatureActionType::fightFriendly);
     if(moodRoom && !fighting && creature.getMoodValue() <= CreatureMoodLevel::Neutral)
+    {
+        creature.popAction();
+        return true;
+    }
+
+    // A casino or temple visit that has gained PleasureVisitMax is over (the pleasure buff and the lock follow when the
+    // creature leaves the room)
+    if(!fighting && (((room->getType() == RoomType::casino) && creature.isPleasureVisitFull(PleasureRoomKind::casino)) ||
+       ((room->getType() == RoomType::temple) && creature.isPleasureVisitFull(PleasureRoomKind::temple))))
     {
         creature.popAction();
         return true;

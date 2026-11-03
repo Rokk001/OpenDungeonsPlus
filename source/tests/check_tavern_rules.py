@@ -209,7 +209,10 @@ assert '{"TavernTable", -.595f, -.78f, .595f, .78f},' in bounds_h, 'the navigati
 assert 'creature.startTavernCooldown();' in read('source/creatureaction/CreatureActionSearchDrink.cpp')
 use_room_action = read('source/creatureaction/CreatureActionUseRoom.cpp')
 assert '!room->hasCreatureUsingRoom(creature)' in use_room_action and 'room->getArrivalTile(creature)' in use_room_action
-assert creature_cpp.count('(mTavernCooldownTurns <= 0)') == 3
+# A thirsty creature may drink with the tavern locked (E7): no search for a drink looks at the lock any more
+assert creature_cpp.count('(mTavernCooldownTurns <= 0)') == 0
+for path in ('source/creatureaction/CreatureActionSearchJob.cpp', 'source/creatureaction/CreatureActionUseRoom.cpp'):
+    assert 'getTavernCooldownTurns() <= 0' not in read(path), path
 # The loser falls onto a free floor tile, or slumps on its seat when none is free.
 fall = extract(room_cpp, 'bool RoomTavern::fallNextToBench(')
 assert 'hasFurnitureOn(tile)' in fall and 'tile->getCoveringRoom() != this' in fall
@@ -288,9 +291,13 @@ assert re.search(r'creature.popAction\(\);\s*if\(goToBed\)\s*creature.pushAction
 conclude = extract(room_cpp, 'void RoomTavern::concludeGame(')
 assert 'setSpotDone(winnerSpot->second, 0);' in conclude and 'setSpotDone(loserSpot->second, 0);' in conclude, 'conscious game players must finish without a wait'
 assert 'knockOut(loserSpot->second);' in conclude, 'the slap duel loser keeps the decided knock-out exception'
-assert 'startTavernCooldown()' in extract(room_cpp, 'void RoomTavern::removeCreatureUsingRoom(')
+# The end of a leisure visit gives the pleasure buff (when mood was gained) and the lock; a drink visit started none
+leave = extract(room_cpp, 'void RoomTavern::removeCreatureUsingRoom(')
+assert 'finishPleasureVisit(PleasureRoomKind::tavern, true)' in leave and 'startTavernCooldown()' not in leave
+add_guest = extract(room_cpp, 'bool RoomTavern::addCreatureUsingRoom(')
+assert 'beginPleasureVisit(PleasureRoomKind::tavern)' in add_guest and 'getThirst() < getTavernValue("ThirstSeek")' in add_guest, 'only a creature that is not thirsty comes for a leisure visit'
 open_spot = extract(room_cpp, 'bool RoomTavern::hasOpenCreatureSpot(')
-assert 'getTavernCooldownTurns() > 0' in open_spot and 'getThirst() < getTavernValue("ThirstSeek")' in open_spot, 'leisure visit blocked during the cooldown, thirst not'
+assert 'canUsePleasureRoom(PleasureRoomKind::tavern)' in open_spot and 'getThirst() < getTavernValue("ThirstSeek")' in open_spot, 'leisure visit blocked by the buff and the lock, thirst not'
 assert 'hasOpenCreatureSpot(&creature)' in read('source/creatureaction/CreatureActionSearchJob.cpp')
 assert 'TavernLeisureCooldownTurns' in extract(creature_cpp, 'void Creature::startTavernCooldown(')
 assert '--mTavernCooldownTurns' in extract(creature_cpp, 'void Creature::upkeepTavernState(')
@@ -385,6 +392,7 @@ struct EntityAnimation { static const std::string sit_slap_anim; static const st
 const std::string EntityAnimation::sit_slap_anim = "SitSlap";
 const std::string EntityAnimation::sit_slapped_anim = "SitSlapped";
 @@DRINKKIND@@
+enum class PleasureRoomKind { spa, tavern, casino, temple, arena };
 static const double THIRST_STATE_MAX = 100.0;
 static const double NEED_MAX = 100.0;
 //! The stored mood every probe creature starts with (a value in the middle of 0 .. CreatureBaseMood, so a loss and a gain both show)
@@ -435,7 +443,7 @@ struct Creature
     CreatureDefinition* mDefinition; Seat* mSeat; std::string mName; Tile* mTile; Ogre::Vector3 mPos;
     double mUrge, mThirst, mTavernMood, mTavernMoodTurns, mDrunk, mHangoverTurns, mHp, mExp, mStoredMood;
     bool mVomited, mHangoverPending, mOnMap, mAlive, mKo, mDragged, mPossessed, mFighting, mFleeing, mHit;
-    uint32_t mLevel; double mGold; int takeDamageCalls; int32_t mTavernCooldownTurns = 0;
+    uint32_t mLevel; double mGold; int takeDamageCalls; int32_t mTavernCooldownTurns = 0; int32_t mPleasureVisitKind = -1;
     //! \brief Initializes the tavern creature with the production fractional gold balance.
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat, uint32_t level)
       : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mUrge(0.0), mThirst(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mDrunk(0.0),
@@ -474,7 +482,9 @@ struct Creature
     void setThirst(double val);
     void setDrunk(double val);
     void setHangoverTurns(double turns);
-    void addTavernMood(double points, double turns);
+    void addTavernMood(double points);
+    // The leisure visit limit of the real creature (PleasureVisitMax) is worked out in check_pleasure_rooms.py
+    void addPleasureMood(PleasureRoomKind kind, double points) { applyMoodEvent(points, false); }
     void drinkTaken(DrinkKind kind);
     bool isStaggering() const;
     double getHangoverWorkFactor() const;
@@ -666,15 +676,15 @@ static void checkThirst()
     expectNear(s.mDrunk, 0.0, "25 drunkenness are gone after 50 turns");
 
     // Tavern mood: a one-time value on the stored mood without any timer; each call adds once and nothing fades afterwards
-    Creature m("M", &thirsty, &seat, 1); m.addTavernMood(15.0, 168.0);
+    Creature m("M", &thirsty, &seat, 1); m.addTavernMood(15.0);
     expectNear(m.mStoredMood, START_MOOD + 15.0, "the tavern mood is added to the stored mood at once");
     expectNear(m.mTavernMood, 0.0, "the old-save carrier stays 0"); expectNear(m.mTavernMoodTurns, 0.0, "no timer is started");
     for(int i = 0; i < 400; ++i) m.upkeepTavernState();
     expectNear(m.mStoredMood, START_MOOD + 15.0, "nothing fades, also not after 400 turns");
-    m.addTavernMood(15.0, 168.0);
+    m.addTavernMood(15.0);
     expectNear(m.mStoredMood, START_MOOD + 30.0, "a new drink adds its value once more");
-    m.addTavernMood(-1000000.0, 0.0); expectNear(m.mStoredMood, 0.0, "the stored mood does not go below 0");
-    m.addTavernMood(1000000.0, 0.0); expectNear(m.mStoredMood, @@BASE_MOOD@@, "the stored mood does not exceed CreatureBaseMood");
+    m.addTavernMood(-1000000.0); expectNear(m.mStoredMood, 0.0, "the stored mood does not go below 0");
+    m.addTavernMood(1000000.0); expectNear(m.mStoredMood, @@BASE_MOOD@@, "the stored mood does not exceed CreatureBaseMood");
     // An old save carries a tavern mood with its timer: the upkeep still counts it down and clears it
     Creature old("O", &thirsty, &seat, 1); old.mTavernMood = 15.0; old.mTavernMoodTurns = 168.0;
     for(int i = 0; i < 167; ++i) old.upkeepTavernState();

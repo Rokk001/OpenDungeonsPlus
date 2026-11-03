@@ -582,8 +582,9 @@ bool RoomTavern::hasOpenCreatureSpot(Creature* c)
     if((c != nullptr) && (mPendingSpots.find(c->getName()) != mPendingSpots.end()))
         return true;
 
-    // A leisure visit (the creature is not thirsty) waits until the cooldown since its last tavern visit is over
-    if((c != nullptr) && (c->getTavernCooldownTurns() > 0) &&
+    // A leisure visit (the creature is not thirsty) needs a creature without a running pleasure buff and with the tavern
+    // open to it (the lock since its last leisure visit is over); a thirsty creature may always come for a drink
+    if((c != nullptr) && !c->canUsePleasureRoom(PleasureRoomKind::tavern) &&
        (c->getThirst() < getTavernValue("ThirstSeek")))
         return false;
 
@@ -1007,6 +1008,13 @@ bool RoomTavern::addCreatureUsingRoom(Creature* creature)
 
     std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.insert(std::make_pair(seat, RoomTavernSpot(creature))).first;
     it->second.mPlaces = places;
+
+    // A creature that is not thirsty comes for a leisure visit, which counts toward PleasureVisitMax and ends with the
+    // pleasure buff and the tavern lock; a thirsty one comes for a drink and gets neither. A visit saved with the
+    // creature goes on with the gain it had
+    if((pending == mPendingSpots.end()) && (creature->getThirst() < getTavernValue("ThirstSeek")))
+        creature->beginPleasureVisit(PleasureRoomKind::tavern);
+
     if(pending != mPendingSpots.end())
     {
         it->second.mState = pending->second.mState;
@@ -1033,11 +1041,11 @@ void RoomTavern::removeCreatureUsingRoom(Creature* creature)
         return;
 
     // The place goes first: the creature may be on its way out of the game (dead, removed), so its clips are not touched here.
-    // Whatever clip it still shows is replaced by the next thing it does. Its leisure cooldown starts, so that the job search
-    // does not send it back in at once while it still stands on a tavern tile. A thirsty guest that was stopped before its
-    // first drink keeps looking for a drink.
-    if((it->second.mDrinks > 0) || (it->second.mCreature->getThirst() < getTavernValue("ThirstSeek")))
-        it->second.mCreature->startTavernCooldown();
+    // Whatever clip it still shows is replaced by the next thing it does. A leisure visit ends: a visit that gained mood
+    // gives the pleasure buff, and the tavern is closed to the creature (also after a visit that gained nothing), so that
+    // the job search does not send it back in at once while it still stands on a tavern tile. A drink visit gives neither
+    // buff nor lock; a thirsty guest that was stopped before its first drink keeps looking for a drink.
+    it->second.mCreature->finishPleasureVisit(PleasureRoomKind::tavern, true);
     mSpots.erase(it);
 
     // A game of the guest ends without effects; its partner is done
@@ -1395,9 +1403,9 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
 
     creature->drinkTaken(kind);
     if(kind == DrinkKind::beer)
-        creature->addTavernMood(getTavernValue("BeerMood"), getTavernValue("BeerMoodTurns"));
+        creature->addTavernMood(getTavernValue("BeerMood"));
     else if(noCoin)
-        creature->addTavernMood(getTavernValue("NoCoinMood"), getTavernValue("NoCoinMoodTurns"));
+        creature->addTavernMood(getTavernValue("NoCoinMood"));
 
     sendTavernEvent(*creature, static_cast<int32_t>((kind == DrinkKind::beer) ? CosmeticTavernKind::beer : CosmeticTavernKind::water), nullptr);
     addDrinkDirt(tile);
@@ -1618,7 +1626,7 @@ void RoomTavern::cheerSpectators(const RoomTavernGame& game)
         const int32_t distanceB = std::max(std::abs(tile->getX() - tileB->getX()),
             std::abs(tile->getY() - tileB->getY()));
         if(std::min(distanceA, distanceB) <= radius)
-            creature->addTavernMood(getTavernValue("GameSpectatorMood"), getTavernValue("BeerMoodTurns"));
+            creature->addTavernMood(getTavernValue("GameSpectatorMood"));
     }
 }
 
@@ -1637,7 +1645,7 @@ void RoomTavern::concludeGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator
             winnerMood + getTavernValue("GameUnderdogMoodPerLevel") * underdogLevels);
         winnerXp *= 2.0;
     }
-    winner->addTavernMood(winnerMood, getTavernValue("BeerMoodTurns"));
+    winner->addTavernMood(winnerMood);
     winner->receiveExp(winnerXp);
     cheerSpectators(game);
 
@@ -1663,7 +1671,7 @@ void RoomTavern::concludeGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator
 
     if(game.mKind == TavernGameKind::slapDuel)
     {
-        loser->addTavernMood(getTavernValue("GameLoserMood"), getTavernValue("BeerMoodTurns"));
+        loser->addTavernMood(getTavernValue("GameLoserMood"));
         knockOut(loserSpot->second);
     }
     else
