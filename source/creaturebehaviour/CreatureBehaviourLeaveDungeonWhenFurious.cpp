@@ -48,12 +48,12 @@ CreatureBehaviour* CreatureBehaviourLeaveDungeonWhenFurious::clone() const
     return new CreatureBehaviourLeaveDungeonWhenFurious;
 }
 
-//! \brief Leaves when the creature is furious or too many wages are unpaid.
+//! \brief Leaves when too many wages are unpaid. A furious creature does not leave by itself any more: leaving happens
+//! only through the leave clock.
 bool CreatureBehaviourLeaveDungeonWhenFurious::processBehaviour(Creature& creature) const
 {
-    // The creature should try to leave if furious or repeatedly unpaid
-    if(creature.getMoodValue() < CreatureMoodLevel::Furious &&
-       creature.getMissedWages() < ConfigManager::getSingleton().getUnpaidWagesLeave())
+    // The creature should try to leave if repeatedly unpaid
+    if(creature.getMissedWages() < ConfigManager::getSingleton().getUnpaidWagesLeave())
         return true;
 
     if(!creature.isActionInList(CreatureActionType::leaveDungeon))

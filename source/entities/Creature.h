@@ -27,6 +27,7 @@
 #include "entities/CreatureActivity.h"
 #include "entities/DefenceChance.h"
 #include "eventsystem/CreatureMoved.h"
+#include "creaturemood/CreatureMoodEffect.h"
 #include "creatureskill/CreatureSkillTree.h"
 #include "eventsystem/Subject.h"
 #include "game/CreatureAppearance.h"
@@ -324,10 +325,53 @@ public:
     inline CreatureMoodLevel getMoodValue() const
     { return mMoodValue; }
 
-    //! \brief Returns the mood points of the last mood computation (CreatureBaseMood is not included). Prison and
-    //! torture use it to tell when a captured creature is broken.
+    //! \brief Returns the effective mood of the last mood computation: the stored mood plus the Charisma of all worn
+    //! items (for a captive only the stored mood). Prison and torture use it to tell when a captured creature is broken.
     inline double getMoodPoints() const
     { return mMoodPoints; }
+
+    //! \brief Returns the stored mood of the creature, 0 .. CreatureBaseMood (the Charisma of the worn items is not
+    //! included).
+    inline double getStoredMood() const
+    { return mStoredMood; }
+
+    //! \brief Returns the stored mood plus the Charisma of all worn items, the value the mood levels are read from. A
+    //! captive in a prison or a torture chamber has no Charisma floor, its effective mood is the stored mood.
+    double getEffectiveMood() const;
+
+    //! \brief Sets the stored mood, limited to 0 .. CreatureBaseMood, and reads the mood level again at once.
+    //! \param mood The new stored mood.
+    void setStoredMood(double mood);
+
+    //! \brief Adds a one-time mood change to the stored mood. A loss is lowered by Iron Will and, when sensitive, scaled
+    //! by the sensitivity of the creature type; the stored mood stays within 0 .. CreatureBaseMood.
+    //! \param points The mood change, negative for a loss.
+    //! \param sensitive True if the sensitivity of the creature type multiplies a loss (problem and event losses).
+    void applyMoodEvent(double points, bool sensitive);
+
+    //! \brief Starts a running effect (buff or debuff) that adds its mood evenly over the given turns. Effects are
+    //! separate instances and add up, also the same effect several times.
+    //! \param name The name of the effect without spaces, for the effect line of the profile page (for example
+    //! "MakeUnhappy").
+    //! \param totalPoints The mood the effect adds in total, negative for a debuff.
+    //! \param turns The turns the effect runs.
+    void addMoodEffect(const std::string& name, double totalPoints, double turns);
+
+    //! \brief The running mood effects (buffs and debuffs) of the creature.
+    inline const std::vector<CreatureMoodEffect>& getMoodEffects() const
+    { return mMoodEffects; }
+
+    //! \brief The sensitivity of the creature type to mood problems and losses (1 for a creature without definition).
+    double getMoodSensitivity() const;
+
+    //! \brief Server side. The creature was paid its whole wage: it gets MoodPayday once.
+    void applyPaydayMood();
+
+    //! \brief Server side. The creature has won a battle: it gets MoodBattleWon once.
+    void applyBattleWonMood();
+
+    //! \brief Server side. The creature wakes up rested in its lair: it gets the Rested mood of its type once.
+    void applyRestedMood();
 
     //! \brief What the creature is doing, for the creature panel. On the server it is derived from the
     //! creature actions, on a client it is the last value received from the server.
@@ -368,30 +412,14 @@ public:
     inline int32_t getNbTurnsTortureMood() const
     { return mNbTurnsTortureMood; }
 
-    //! \brief Number of turns of sleep in the lair still relieving the mood (fades after waking up)
-    inline int32_t getNbTurnsRested() const
-    { return mNbTurnsRested; }
-
-    //! \brief Number of turns spent near a creature of the opposite alignment, fading after leaving it
-    inline int32_t getNbTurnsHatedCompany() const
-    { return mNbTurnsHatedCompany; }
-
     //! \brief Good creatures are the ones of the hero faction, all others are evil
     bool isGoodAligned() const;
 
-    //! \brief True if a creature of the opposite alignment of an allied seat is close
-    bool isHatedCompanyNear() const;
+    //! \brief Number of creatures of the opposite alignment of an allied seat that are close
+    uint32_t getNbHatedCompanyNear() const;
 
-    //! \brief Mood points the arena gave to the creature (positive) or took from it (negative). Fades over time
-    inline double getPitMood() const
-    { return mPitMood; }
-
-    //! \brief Changes the pit mood points. They are limited by the PitMoodMax room setting
+    //! \brief Adds the mood points the arena gives to the creature (positive) or takes from it (negative) to the stored mood
     void addPitMood(double points);
-
-    //! \brief Called on server side each turn the creature sleeps in its lair
-    inline void markRested()
-    { mRestedThisTurn = true; }
 
     //! \brief Number of slaps received during the last nbTurns turns
     int32_t getNbRecentSlaps(int32_t nbTurns) const;
@@ -589,10 +617,8 @@ public:
     void dropItems(bool dead);
     //! \brief Unregisters held Epics when this creature permanently leaves the map.
     void unregisterHeldEpics();
-    //! \brief Adds the mood points of a merchant deal or keeper gift.
+    //! \brief Adds the mood points of a merchant deal or keeper gift to the stored mood.
     void addMerchantMood(double points);
-    //! \brief Returns the merchant mood contribution used by the existing mood calculation.
-    double getMerchantMood() const { return mMerchantMood; }
     //! \brief Returns carried gold including the fractional proceeds retained by the existing gold helper.
     double getGoldCarriedAmount() const { return mGoldCarried + mGoldRemainder; }
     //! \brief Records the prescribed pending deal byte and item name for the owner's next update.
@@ -751,13 +777,9 @@ public:
     //! one, 0 if the option is off. Added to all three defense values.
     double getRelationshipCombatModifier() const;
 
-    //! Server side. Mood points from the hated creatures of the same keeper and from relationship
-    //! events (grief, ...), 0 if the option is off.
-    int32_t getRelationshipMood() const;
-
-    //! Server side. Adds mood points (negative or positive) that fade again, does nothing if the
-    //! creature cannot have relationships.
-    void addRelationshipMood(int32_t points);
+    //! Server side. Adds a one-time mood change from a relationship event (grief, a slap seen, a friend near) to the
+    //! stored mood, does nothing if the creature cannot have relationships. A loss is scaled by the sensitivity.
+    void addRelationshipMood(double points);
 
     //! Server side. Called when this creature died: its friends grieve, and get a rage against
     //! the side of the killer (may be nullptr).
@@ -1014,8 +1036,8 @@ public:
     inline void setVomited(bool vomited)
     { mVomited = vomited; }
 
-    //! \brief Mood points the tavern gave to the creature (positive) or took from it (negative). Falls to 0 when its
-    //! timer runs out.
+    //! \brief Mood points of the tavern the creature held in an old save (always 0 otherwise, the tavern now changes the
+    //! stored mood). The value stays in the save and stream layout.
     inline double getTavernMood() const
     { return mTavernMood; }
 
@@ -1023,10 +1045,9 @@ public:
     inline double getTavernMoodTurns() const
     { return mTavernMoodTurns; }
 
-    //! \brief Sets the tavern mood to points for the given number of turns; a new value replaces the old one and
-    //! starts the timer again.
+    //! \brief Adds a one-time tavern mood change (a beer, a game, a hangover) to the stored mood.
     //! \param points The mood (negative for a malus).
-    //! \param turns How long it lasts, in turns.
+    //! \param turns Not used any more (the mood does not run out), kept for the callers.
     void addTavernMood(double points, double turns);
 
     //! \brief True if the creature is drunk enough to stagger (StaggerAt). On a client only the own seat's creatures
@@ -1049,15 +1070,16 @@ public:
     //! (HangoverTurns, mood HangoverMood once). A hangover that still runs is not shortened.
     void sleepEnded();
 
-    //! \brief Mood points the lava spa gave to the creature (0 to SpaMoodMax). Fades by SpaMoodDecayPerTurn per turn.
+    //! \brief Mood points of the lava spa the creature held in an old save (always 0 otherwise, the spa now changes the
+    //! stored mood). The value stays in the save and stream layout.
     inline double getSpaMood() const
     { return mSpaMood; }
 
-    //! \brief Raises the spa mood by points, limited to 0 .. SpaMoodMax (rooms.cfg).
+    //! \brief Adds mood points of the lava spa to the stored mood.
     //! \param points The mood points to add (one turn of a bath adds SpaMoodPerTurn).
     void addSpaMood(double points);
 
-    //! \brief Sets the spa mood (limited to 0 .. SpaMoodMax), used when a creature is loaded.
+    //! \brief Takes over the spa mood an old save held, used when a creature is loaded from such a save.
     //! \param val The mood points.
     void setSpaMood(double val);
 
@@ -1392,16 +1414,15 @@ public:
     inline void setNbTurnsWithoutBattle(int32_t nbTurnsWithoutBattle)
     { mNbTurnsWithoutBattle = nbTurnsWithoutBattle; }
 
-    //! \brief Mood points the casino gave to the creature (positive) or took from it (negative). Fades over time
-    inline double getCasinoMood() const
-    { return mCasinoMood; }
-
-    //! \brief Changes the casino mood points. They are limited by the CasinoMoodMax room setting
+    //! \brief Adds the mood points the casino gives to the creature (positive) or takes from it (negative) to the stored mood
     void addCasinoMood(double points);
 
-    //! \brief Returns the temporary mood from the last paid infirmary admission.
+    //! \brief Returns the admission mood an old save held (always 0 otherwise, the admission now changes the stored
+    //! mood). The value stays in the save and stream layout.
     double getInfirmaryMood() const { return mInfirmaryMood; }
-    //! \brief Applies the type's fee mood and rested duration for a paid admission.
+    //! \brief Adds the mood of an infirmary admission to the stored mood: InfirmaryMoodWageShare of the wage of the
+    //! creature, plus when the keeper paid, minus when the creature paid.
+    //! \param creaturePaid True if the creature paid the admission itself.
     void setInfirmaryAdmissionMood(bool creaturePaid);
 
     inline GameEntity* getCarriedEntity() const
@@ -1560,23 +1581,19 @@ public:
     inline bool isInContainment() const
     { return (mSeatPrison != nullptr); }
 
-    //! \brief Mood relief the creature got from praying in a temple. It fades over time
-    inline int32_t getPrayerRelief() const
-    { return mPrayerRelief; }
+    //! \brief Adds the relief of one turn of praying in a temple to the stored mood.
+    //! \param relief The mood points of the turn (TemplePrayerReliefPerTurn).
+    void addPrayerRelief(double relief);
 
-    //! \brief Adds relief from praying, up to maxRelief
-    void addPrayerRelief(int32_t relief, int32_t maxRelief);
-
-    //! \brief Mood points given by a special (positive after Make Happy, negative after Make Unhappy).
-    //! They fade towards 0 over time
-    inline double getSpecialMood() const
-    { return mSpecialMood; }
-
-    //! \brief Make Happy special: clears the annoyance the creature has gathered
+    //! \brief Make Happy special: clears the annoyance the creature has gathered and sets the stored mood to the maximum
     void removeAnnoyance();
 
-    //! \brief Make Unhappy special: pushes the creature down to the angry mood level
+    //! \brief Make Unhappy special: takes MakeUnhappyMoodJump from the stored mood at once and starts a debuff of
+    //! MakeUnhappyMoodFall over MakeUnhappyTurns turns
     void makeUnhappy();
+
+    //! \brief Brawl end of two creatures that fought each other: the stored mood is at most the mood of an angry creature
+    void makeAngry();
 
     inline int32_t getNbTurnsTorture() const
     { return mNbTurnsTorture; }
@@ -1593,35 +1610,27 @@ public:
     inline void increaseTurnsPrison()
     { ++mNbTurnsPrison; }
 
-    //! \brief Returns the mood points the torture chamber took from this creature (negative, 0 = none).
-    inline double getTortureMood() const
-    { return mTortureMood; }
-
-    //! \brief Adds mood points to the torture mood (the torture chamber adds a negative amount every turn).
+    //! \brief Takes mood points from the stored mood (the torture chamber adds a negative amount every turn). Captive
+    //! rates are not scaled by the sensitivity.
     //! \param points The mood points to add.
     inline void addTortureMood(double points)
-    { mTortureMood += points; }
+    { changeStoredMood(points); }
 
-    //! \brief Clears the torture mood and the counter of the turns the creature has been broken in the torture chamber.
+    //! \brief Clears the counter of the turns the creature has been broken in the torture chamber.
     inline void resetTortureMood()
     {
-        mTortureMood = 0.0;
         mTortureBrokenTurns = 0;
     }
 
-    //! \brief Returns the mood points the prison took from this creature (negative, 0 = none).
-    inline double getPrisonMood() const
-    { return mPrisonMood; }
-
-    //! \brief Adds mood points to the prison mood (the prison adds a negative amount every turn).
+    //! \brief Takes mood points from the stored mood (the prison adds a negative amount every turn). Captive rates are
+    //! not scaled by the sensitivity.
     //! \param points The mood points to add.
     inline void addPrisonMood(double points)
-    { mPrisonMood += points; }
+    { changeStoredMood(points); }
 
-    //! \brief Clears the prison mood and the counter of the turns the creature has been broken in the prison.
+    //! \brief Clears the counter of the turns the creature has been broken in the prison.
     inline void resetPrisonMood()
     {
-        mPrisonMood = 0.0;
         mPrisonBrokenTurns = 0;
     }
 
@@ -1931,7 +1940,7 @@ private:
     double          mGoldCarried;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
     double          mGoldRemainder;
-    //! \brief Temporary merchant mood, saved with the creature and sent to the owner.
+    //! \brief The merchant mood an old save held, only read from old saves (the merchant now changes the stored mood).
     double mMerchantMood = 0.0;
     //! \brief Pending owner-only deal payload, consumed when its update is written.
     mutable uint8_t mLastItemDeal = 0;
@@ -1970,17 +1979,15 @@ private:
     //! \brief Runtime only (not saved): true once the creature took or dealt a hit since the last fight end, so a creature that never fought gets no creature dirt when the battle counter first counts up
     bool            mFoughtSinceFightEnd;
 
-    //! \brief Used on server side for the mood. Set by the casino, fades by CasinoMoodDecay per second
-    double          mCasinoMood;
-    //! \brief Admission mood and its remaining lifetime, saved exactly.
+    //! \brief The admission mood and its remaining lifetime an old save held, only read from old saves.
     double          mInfirmaryMood;
     double          mInfirmaryMoodTurns;
 
     //! \brief The thirst (0 - 100). Grows by ThirstGrowth/Turn of the type, a drink sets it to 0.
     double          mThirst;
-    //! \brief Mood points of the tavern (a beer, a game, a hangover); 0 when mTavernMoodTurns has run out.
+    //! \brief The tavern mood an old save held, only read from old saves (the tavern now changes the stored mood).
     double          mTavernMood;
-    //! \brief Turns the tavern mood lasts; falls by 1 per turn.
+    //! \brief Turns the tavern mood of an old save lasted; falls by 1 per turn.
     double          mTavernMoodTurns;
     //! \brief The drunkenness (0 - 100). A beer adds DrunkPerBeer, it falls by DrunkDecayPerTurn per turn.
     double          mDrunk;
@@ -1993,7 +2000,7 @@ private:
     //! \brief Runtime only (not saved): true when the creature fell asleep with a drunkenness above HangoverAt and has not woken up yet.
     bool            mHangoverPending;
 
-    //! \brief Mood points of the lava spa (0 .. SpaMoodMax); rises in a bath, falls by SpaMoodDecayPerTurn per turn.
+    //! \brief The spa mood an old save held, only read from old saves (the spa now changes the stored mood).
     double          mSpaMood;
     //! \brief Turns the relaxation after a bath still lasts; falls by 1 per turn.
     double          mRelaxTurns;
@@ -2062,15 +2069,45 @@ private:
     //! \brief Last activity sent to the clients (server) or received from the server (client). The server
     //! compares it with the current one to know when to send an update.
     CreatureActivity                mActivity;
-    //! \brief Mood points. Computed by the creature MoodModifiers. It is promoted to class variable for debug purposes and
-    //! should not be used to check mood. If the mood is to be tested, mMoodValue should be used
+    //! \brief The effective mood of the last mood computation (stored mood plus Charisma). It is promoted to class
+    //! variable for debug purposes and should not be used to check mood. If the mood is to be tested, mMoodValue should
+    //! be used
     double                          mMoodPoints;
 
-    //! \brief Mood points gained by praying in a temple. They fade every turn
-    int32_t                         mPrayerRelief;
+    //! \brief The stored mood, 0 .. CreatureBaseMood. It only changes through problems, events and effects, never by itself.
+    double                          mStoredMood;
 
-    //! \brief Mood points set by the Make Happy and Make Unhappy specials. They fade towards 0 every turn
-    double                          mSpecialMood;
+    //! \brief Server side. True once the lasting problems of the creature were looked at for the first time (a problem that
+    //! holds then counts as started, without a jump). Saved with the problems.
+    bool                            mMoodPrimed;
+
+    //! \brief Server side. True when the creature was loaded from a save without a stored mood: the first mood
+    //! computation maps the old mood to the stored one.
+    bool                            mMoodFromOldSave;
+
+    //! \brief Server side. Turns that passed since the mood was computed the last time (the falls and effects count them).
+    int32_t                         mMoodTurnsPending;
+
+    //! \brief Server side, saved. The lasting problems that held at the last look: the name of the modifier and how
+    //! strong it was (the number of missed wages for the wage problem, otherwise 1).
+    std::map<std::string, double>   mMoodProblems;
+
+    //! \brief The running mood effects (buffs and debuffs). Saved on the server, sent to the keeper for the effect line.
+    std::vector<CreatureMoodEffect> mMoodEffects;
+
+    //! \brief Server side, saved. The rooms the creature uses (its bed room, its work room) that were dirty at stage 2 or
+    //! 3 since they were last clean: the room name and the highest stage. The cleaning reward is given once when such a
+    //! room is clean again.
+    std::map<std::string, uint32_t> mMoodDirtRooms;
+
+    //! \brief Server side, saved. The creatures of the same keeper that affect the mood through the relationships: the
+    //! creature name and the kind (CreatureRelationships::MoodPairKind: hated, nemesis or partner). Hated and nemesis
+    //! count as lasting problems, a new partner gives a one-time bonus.
+    std::map<std::string, int32_t>  mMoodRelationPairs;
+
+    //! \brief Server side. True if the creature prayed in a temple since the mood level was read the last time (the
+    //! prayer calmed it, for the calmed reaction).
+    bool                            mPrayedSinceMoodLook;
 
     //! \brief Counts turns the creature is furious. If it stays like this for too long, it will become rogue
     int32_t                         mNbTurnFurious;
@@ -2143,8 +2180,6 @@ private:
     //! measured between the home tiles (sleeping) or the positions.
     bool hasFriendDoing(CreatureActionType action, double maxTiles, bool useHomeTile) const;
 
-    //! Mood points from relationship events that fade each turn (relationships)
-    int32_t                         mRelationshipTempMood = 0;
     //! Rage after the death of a friend: until which turn it lasts and the id of the seat it is against
     int64_t                         mRageUntilTurn = 0;
     int32_t                         mRageSeatId = -1;
@@ -2159,10 +2194,10 @@ private:
     //! \brief allows to know how many turns a creature has been in prison
     int32_t                         mNbTurnsPrison;
 
-    //! \brief Mood points the torture chamber took from the creature (negative); saved
+    //! \brief The torture mood an old save held, only read from old saves (the torture chamber now changes the stored mood)
     double                          mTortureMood;
 
-    //! \brief Mood points the prison took from the creature (negative); saved
+    //! \brief The prison mood an old save held, only read from old saves (the prison now changes the stored mood)
     double                          mPrisonMood;
 
     //! \brief Turns the creature has been broken (mood at or below Furious) in the torture chamber; saved
@@ -2194,17 +2229,9 @@ private:
     //! \brief Used on server side for the mood. Failed job searches (reset when the creature works)
     int32_t                         mNbTurnsOutOfWork;
 
-    //! \brief Used on server side for the mood. Turns of torture and of rest, growing while it lasts and fading afterwards
+    //! \brief Used on server side for the mood. Turns of torture, growing while it lasts and fading afterwards
     int32_t                         mNbTurnsTortureMood;
-    int32_t                         mNbTurnsRested;
     bool                            mTorturedThisTurn;
-    bool                            mRestedThisTurn;
-
-    //! \brief Used on server side for the mood. Turns spent near a creature of the opposite alignment
-    int32_t                         mNbTurnsHatedCompany;
-
-    //! \brief Used on server side for the mood. Set by the arena, fades by PitMoodDecay per second
-    double                          mPitMood;
 
     //! \brief Used on server side for the mood. Turn numbers of the latest slaps
     std::vector<int64_t>            mSlapTurns;
@@ -2346,7 +2373,7 @@ private:
     //! the creature is sober enough again and counts down the tavern mood, the hangover and the leisure cooldown.
     void upkeepTavernState();
 
-    //! \brief Server side, once per turn. Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down.
+    //! \brief Server side, once per turn. Counts the relaxation down.
     void upkeepSpaState();
 
     //! \brief Server side. Tells the clients that see the creature about the jump that has just started
@@ -2378,12 +2405,50 @@ private:
     //! \brief Server side: a corpse dirties the tile it lies on by CombatDirtPerHit every turn.
     void dirtyTileByCorpse();
 
+    //! \brief Server side. Advances the stored mood by the turns that passed: looks at the lasting problems (jump, fall,
+    //! reward), the problems that come and go, the hated creatures, the dirt of the used rooms and the running effects,
+    //! then reads the mood level again.
     void computeMood();
+
+    //! \brief Server side. Adds mood points to the stored mood as they are (no sensitivity, no Iron Will) and keeps it
+    //! within 0 .. CreatureBaseMood.
+    //! \param points The mood change.
+    void changeStoredMood(double points);
+
+    //! \brief Server side. Applies the jump, fall or reward of a problem: scaled by the sensitivity, a loss also by Iron Will.
+    //! \param points The mood change of the problem at sensitivity 1.0.
+    void changeStoredMoodBySensitivity(double points);
+
+    //! \brief Server side. Forgets the annoyance counters of the mood (turns in the hand, without work, tortured, without a
+    //! fight, slaps).
+    void clearMoodCounters();
+
+    //! \brief Server side. Looks at the lasting problems of the creature type.
+    //! \param turns The turns that passed since the last look.
+    void computeMoodProblems(int32_t turns);
+
+    //! \brief Server side. Looks at the hated creatures and nemeses of the same keeper (relationships).
+    //! \param turns The turns that passed since the last look.
+    void computeMoodHatedPairs(int32_t turns);
+
+    //! \brief Server side. Gives the cleaning reward when a room the creature uses was cleaned.
+    void computeMoodDirtRooms();
+
+    //! \brief Server side. Lets the running effects act for the turns that passed and removes the ones that ended.
+    //! \param turns The turns that passed since the last look.
+    void computeMoodEffects(int32_t turns);
+
+    //! \brief Server side. Maps the mood of a creature loaded from a save without stored mood to the stored mood.
+    void mapOldSaveMoodToStored();
 
     //! \brief Optional packet blocks, written only for clients that agreed to them. The mood is
     //! sent as unknown for creatures of non-allied seats.
     void exportMoodToPacket(ODPacket& os, const Seat* seat) const;
     void importMoodFromPacket(ODPacket& is);
+    //! \brief Writes the running mood effects to a packet, only the keeper of the creature gets them (others get none).
+    void exportMoodEffectsToPacket(ODPacket& os, const Seat* seat) const;
+    //! \brief Reads the running mood effects written by exportMoodEffectsToPacket.
+    void importMoodEffectsFromPacket(ODPacket& is);
     //! \brief The activity is sent as unknown for creatures of non-allied seats.
     void exportActivityToPacket(ODPacket& os, const Seat* seat) const;
     void importActivityFromPacket(ODPacket& is);

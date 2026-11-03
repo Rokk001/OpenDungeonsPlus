@@ -21,8 +21,9 @@
 
 #include "entities/Creature.h"
 #include "entities/GhostEntity.h"
-#include "creaturemood/CreatureMoodFee.h"
+#include "creaturemood/CreatureMoodDirt.h"
 #include "creaturemood/CreatureMoodRested.h"
+#include "creaturemood/CreatureMoodSlapped.h"
 #include "entities/CreatureProgression.h"
 
 #include "ODApplication.h"
@@ -175,6 +176,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cctype>
+#include <set>
 #include <cstdlib>
 #include <iomanip>
 #include <limits>
@@ -204,10 +206,8 @@ static const Ogre::Real CANNON_MISSILE_HEIGHT = 0.3;
 static const Ogre::Real POSSESSION_MIN_DIRECTION_SQUARED_LENGTH = 0.0001f;
 //! \brief Squared length below which a possession aim direction counts as no aim
 static const Ogre::Real POSSESSION_MIN_AIM_SQUARED_LENGTH = 0.0001f;
-//! \brief Pit mood points lost per second when the room config has no PitMoodDecay
-static const double DEFAULT_PIT_MOOD_DECAY_PER_SECOND = 3.0;
-//! \brief Largest pit mood (positive or negative) when the room config has no PitMoodMax
-static const double DEFAULT_PIT_MOOD_MAX = 1000.0;
+//! \brief Largest number of entries of one list in the mood block of a save or of the running effects in a packet
+static const uint32_t MOOD_SAVE_MAX_ITEMS = 1000;
 //! \brief Radius in tiles of the hated company check when the room config has no HatedCompanyRadius
 static const double DEFAULT_HATED_COMPANY_RADIUS = 5.0;
 //! \brief Squared distance in tiles (3 tiles) up to which a creature in a possession group stays where it is instead of walking to the leader
@@ -716,7 +716,6 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mNbTurnsWithoutBattle    (0),
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
-    mCasinoMood              (0.0),
     mInfirmaryMood           (0.0),
     mInfirmaryMoodTurns      (0.0),
     mThirst                  (0.0),
@@ -741,8 +740,11 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
-    mPrayerRelief            (0),
-    mSpecialMood             (0),
+    mStoredMood              (ConfigManager::getSingleton().getCreatureBaseMood()),
+    mMoodPrimed              (false),
+    mMoodFromOldSave         (false),
+    mMoodTurnsPending        (0),
+    mPrayedSinceMoodLook     (false),
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (CreatureMoodValues::Nothing),
@@ -767,11 +769,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mDragDirtFactor          (1.0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
-    mNbTurnsRested           (0),
     mTorturedThisTurn        (false),
-    mRestedThisTurn          (false),
-    mNbTurnsHatedCompany     (0),
-    mPitMood                 (0.0),
     mIsHexenHen               (false),
     mHexenHenMeshShown        (false)
 {
@@ -867,7 +865,6 @@ Creature::Creature(GameMap* gameMap) :
     mNbTurnsWithoutBattle    (0),
     mDirtKoThisFight         (false),
     mFoughtSinceFightEnd     (false),
-    mCasinoMood              (0.0),
     mInfirmaryMood           (0.0),
     mInfirmaryMoodTurns      (0.0),
     mThirst                  (0.0),
@@ -892,8 +889,11 @@ Creature::Creature(GameMap* gameMap) :
     mMoodCooldownTurns       (0),
     mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
-    mPrayerRelief            (0),
-    mSpecialMood             (0),
+    mStoredMood              (ConfigManager::getSingleton().getCreatureBaseMood()),
+    mMoodPrimed              (false),
+    mMoodFromOldSave         (false),
+    mMoodTurnsPending        (0),
+    mPrayedSinceMoodLook     (false),
     mNbTurnFurious           (-1),
     mOverlayHealthValue      (0),
     mOverlayMoodValue        (0),
@@ -918,11 +918,7 @@ Creature::Creature(GameMap* gameMap) :
     mDragDirtFactor          (1.0),
     mNbTurnsOutOfWork        (0),
     mNbTurnsTortureMood      (0),
-    mNbTurnsRested           (0),
     mTorturedThisTurn        (false),
-    mRestedThisTurn          (false),
-    mNbTurnsHatedCompany     (0),
-    mPitMood                 (0.0),
     mIsHexenHen               (false),
     mHexenHenMeshShown        (false)
 {
@@ -1190,9 +1186,9 @@ void Creature::exportToStream(std::ostream& os) const
         os << "\t" << KO_SAVE_OPEN << " " << mKoTurnCounter << " " << (mArenaKnockOut ? 1 : 0) << " " << KO_SAVE_CLOSE;
 
     // Optional captivity block; missing in old saves and when all its values are 0
-    if((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0))
+    if((mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0))
     {
-        os << "	" << CAPTIVITY_SAVE_OPEN << " " << mPrisonMood << " " << mTortureMood << " " << mPrisonBrokenTurns
+        os << "	" << CAPTIVITY_SAVE_OPEN << " " << 0.0 << " " << 0.0 << " " << mPrisonBrokenTurns
            << " " << mTortureBrokenTurns << " " << CAPTIVITY_SAVE_CLOSE;
     }
     if(!isAlive())
@@ -1205,8 +1201,27 @@ void Creature::exportToStream(std::ostream& os) const
         if(mIsCarried && !mCorpseCarrierName.empty())
             os << "\t" << CORPSE_CARRIER_SAVE_LABEL << mCorpseCarrierName;
     }
+    // Stored mood block: the stored mood, the running effects, the lasting problems that hold, the used rooms that were
+    // dirty and the relationships that affect the mood. Missing in old saves, which map their old mood to the stored one.
+    if(!mDefinition->getCreatureMoods().empty())
+    {
+        os << "\t[Mood] " << mStoredMood << " " << (mMoodPrimed ? 1 : 0) << " " << mMoodEffects.size();
+        for(const CreatureMoodEffect& effect : mMoodEffects)
+            os << " " << effect.mName << " " << effect.mStrength << " " << effect.mTurnsLeft;
+        os << " " << mMoodProblems.size();
+        for(const std::pair<const std::string, double>& problem : mMoodProblems)
+            os << " " << problem.first << " " << problem.second;
+        os << " " << mMoodDirtRooms.size();
+        for(const std::pair<const std::string, uint32_t>& room : mMoodDirtRooms)
+            os << " " << room.first << " " << room.second;
+        os << " " << mMoodRelationPairs.size();
+        for(const std::pair<const std::string, int32_t>& pair : mMoodRelationPairs)
+            os << " " << pair.first << " " << pair.second;
+        os << " [/Mood]";
+    }
+    // The first value is the special mood of old saves (always 0 now), kept for the layout of the block
     if(mGhostRevived)
-        os << " [GhostRevival] " << mSpecialMood << ' ' << mThirst << " [/GhostRevival]";
+        os << " [GhostRevival] " << 0.0 << ' ' << mThirst << " [/GhostRevival]";
     if(mNbTurnsPrison != 0 || mNbTurnsTorture != 0)
         os << " [Captivity] " << mNbTurnsPrison << ' ' << mNbTurnsTorture << " [/Captivity]";
     for(const std::unique_ptr<CreatureAction>& action : mActions)
@@ -1226,6 +1241,8 @@ bool Creature::importFromStream(std::istream& is)
     if(!MovableGameEntity::importFromStream(is))
         return false;
     std::string tempString;
+    // A save without a [Mood] block (an old save or a level file) maps the old mood to the stored mood
+    mMoodFromOldSave = true;
 
     if(!(is >> mDefinitionString))
         return false;
@@ -1332,7 +1349,8 @@ bool Creature::importFromStream(std::istream& is)
         if(appearanceToken == "[GhostRevival]")
         {
             std::string close;
-            if(!(is >> mSpecialMood >> mSavedRevivalThirst >> close) || close!="[/GhostRevival]" ||
+            double oldSpecialMood = 0.0;
+            if(!(is >> oldSpecialMood >> mSavedRevivalThirst >> close) || close!="[/GhostRevival]" ||
                !std::isfinite(mSavedRevivalThirst) || mSavedRevivalThirst<0.0 || mSavedRevivalThirst>THIRST_STATE_MAX) return false;
             mGhostRevived=true;mRevivalThirstFromSave=true;
             continue;
@@ -1441,7 +1459,9 @@ bool Creature::importFromStream(std::istream& is)
             // The definition is not resolved yet (see the note at the top), so only the range is limited here;
             // setupDefinition clears non-thirsty types except the exact thirst restored by GhostRevival.
             mThirst = std::min(THIRST_STATE_MAX, std::max(0.0, loadedThirst));
-            addTavernMood(loadedTavernMood, loadedTavernMoodTurns);
+            // The tavern mood of an old save is only kept to map the old mood to the stored mood
+            mTavernMood = loadedTavernMood;
+            mTavernMoodTurns = std::max(0.0, loadedTavernMoodTurns);
             setDrunk(loadedDrunk);
             setVomited(loadedVomited != 0);
             setHangoverTurns(loadedHangoverTurns);
@@ -1494,6 +1514,74 @@ bool Creature::importFromStream(std::istream& is)
             }
             mKoTurnCounter = loadedKoTurns;
             mArenaKnockOut = (loadedArenaKnockOut != 0);
+            continue;
+        }
+
+        if(appearanceToken == "[Mood]")
+        {
+            double loadedStored = 0.0;
+            int32_t loadedPrimed = 0;
+            uint32_t nbItems = 0;
+            std::string moodClose;
+            if(!(is >> loadedStored >> loadedPrimed >> nbItems) || !std::isfinite(loadedStored) || (nbItems > MOOD_SAVE_MAX_ITEMS))
+            {
+                OD_LOG_WRN("Invalid mood block for creature=" + getName());
+                return false;
+            }
+            mMoodEffects.clear();
+            for(uint32_t ii = 0; ii < nbItems; ++ii)
+            {
+                CreatureMoodEffect effect;
+                if(!(is >> effect.mName >> effect.mStrength >> effect.mTurnsLeft) || !std::isfinite(effect.mStrength) ||
+                   !std::isfinite(effect.mTurnsLeft))
+                {
+                    OD_LOG_WRN("Invalid mood effect for creature=" + getName());
+                    return false;
+                }
+                if(effect.mTurnsLeft > 0.0)
+                    mMoodEffects.push_back(effect);
+            }
+            mMoodProblems.clear();
+            if(!(is >> nbItems) || (nbItems > MOOD_SAVE_MAX_ITEMS))
+                return false;
+            for(uint32_t ii = 0; ii < nbItems; ++ii)
+            {
+                std::string problemName;
+                double amount = 0.0;
+                if(!(is >> problemName >> amount) || !std::isfinite(amount))
+                    return false;
+                mMoodProblems[problemName] = amount;
+            }
+            mMoodDirtRooms.clear();
+            if(!(is >> nbItems) || (nbItems > MOOD_SAVE_MAX_ITEMS))
+                return false;
+            for(uint32_t ii = 0; ii < nbItems; ++ii)
+            {
+                std::string roomName;
+                uint32_t stage = 0;
+                if(!(is >> roomName >> stage))
+                    return false;
+                mMoodDirtRooms[roomName] = stage;
+            }
+            mMoodRelationPairs.clear();
+            if(!(is >> nbItems) || (nbItems > MOOD_SAVE_MAX_ITEMS))
+                return false;
+            for(uint32_t ii = 0; ii < nbItems; ++ii)
+            {
+                std::string pairName;
+                int32_t kind = 0;
+                if(!(is >> pairName >> kind))
+                    return false;
+                mMoodRelationPairs[pairName] = kind;
+            }
+            if(!(is >> moodClose) || (moodClose != "[/Mood]"))
+            {
+                OD_LOG_WRN("Invalid mood block for creature=" + getName() + ", closing token is '" + moodClose + "'");
+                return false;
+            }
+            mStoredMood = std::max(0.0, std::min(static_cast<double>(ConfigManager::getSingleton().getCreatureBaseMood()), loadedStored));
+            mMoodPrimed = (loadedPrimed != 0);
+            mMoodFromOldSave = false;
             continue;
         }
 
@@ -2281,6 +2369,7 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
         os << 0.0;
         os << 0.0;
     }
+    exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
 }
@@ -2357,6 +2446,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
     importSpaStateFromPacket(is);
+    importMoodEffectsFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
@@ -2675,9 +2765,9 @@ void Creature::doUpkeep()
     }
 
     // A creature that left prison and torture chamber for good (setInJail(nullptr) of the room already forgot the
-    // prison seat) loses its prison and torture mood; one picked up or standing in a prison or torture chamber keeps it
+    // prison seat) forgets how long it was broken; one picked up or standing in a prison or torture chamber keeps it
     if((mSeatPrison == nullptr) && getIsOnMap() &&
-       ((mPrisonMood != 0.0) || (mTortureMood != 0.0) || (mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0)))
+       ((mPrisonBrokenTurns != 0) || (mTortureBrokenTurns != 0)))
     {
         Tile* releaseTile = getPositionTile();
         Room* releaseRoom = (releaseTile == nullptr) ? nullptr : releaseTile->getCoveringRoom();
@@ -2756,28 +2846,16 @@ void Creature::doUpkeep()
     else if(mNbTurnsInHand > 0)
         --mNbTurnsInHand;
 
-    // Torture weighs on the mood while it lasts, sleeping in the lair relieves it. Both fade afterwards
+    // Torture weighs on the mood while it lasts and fades afterwards
     if(mTorturedThisTurn)
         ++mNbTurnsTortureMood;
     else if(mNbTurnsTortureMood > 0)
         --mNbTurnsTortureMood;
 
-    if(mRestedThisTurn)
-        ++mNbTurnsRested;
-    else if(mNbTurnsRested > 0)
-        --mNbTurnsRested;
-
-    // Staying near a creature of the opposite alignment annoys, the annoyance fades afterwards
-    if(isHatedCompanyNear())
-        ++mNbTurnsHatedCompany;
-    else if(mNbTurnsHatedCompany > 0)
-        --mNbTurnsHatedCompany;
-
     if(getIsOnServerMap())
         upkeepCreatureDirt();
 
     mTorturedThisTurn = false;
-    mRestedThisTurn = false;
 
     if(mInfirmaryMoodTurns > 0.0)
     {
@@ -3004,8 +3082,9 @@ void Creature::doUpkeep()
                 / ODApplication::turnsPerSecond);
         }
 
-        // The mood of a jailed creature sees its hunger, thirst, wounds, prison mood and torture mood. The Furious
-        // timer and the leave behaviour stay skipped in jail.
+        // The mood of a jailed creature sees its hunger, thirst and wounds, the prison and the torture chamber change its
+        // stored mood directly. The Furious timer and the leave behaviour stay skipped in jail.
+        ++mMoodTurnsPending;
         if(mMoodCooldownTurns > 0)
         {
             --mMoodCooldownTurns;
@@ -3070,41 +3149,11 @@ void Creature::doUpkeep()
     mVisibleAlliedObjects        = getVisibleAlliedObjects();
     mReachableAlliedObjects      = getReachableAttackableObjects(mVisibleAlliedObjects);
 
-    // The relief from praying fades
-    if(mPrayerRelief > 0)
-    {
-        mPrayerRelief -= ConfigManager::getSingleton().getRoomConfigInt32("TemplePrayerReliefDecayPerTurn");
-        if(mPrayerRelief < 0)
-            mPrayerRelief = 0;
-    }
-
     // A nemesis brawl may end, a brawl restored from a saved game may start
     if(!mBrawlOpponent.empty())
         updateBrawl();
     else if(!mBrawlResumeOpponent.empty())
         resumeBrawl();
-
-    // The mood from relationship events fades
-    if(mRelationshipTempMood != 0)
-    {
-        CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
-        int32_t decay = (relationships == nullptr) ? std::abs(mRelationshipTempMood) :
-            relationships->getSettings().mTempMoodDecayPerTurn;
-        if(mRelationshipTempMood > 0)
-            mRelationshipTempMood = std::max(0, mRelationshipTempMood - decay);
-        else
-            mRelationshipTempMood = std::min(0, mRelationshipTempMood + decay);
-    }
-
-    // The mood set by the specials fades
-    if(mSpecialMood != 0)
-    {
-        int32_t decay = ConfigManager::getSingleton().getRoomConfigInt32("SpecialMoodDecayPerTurn");
-        if(mSpecialMood > 0)
-            mSpecialMood = std::max(0.0, mSpecialMood - decay);
-        else
-            mSpecialMood = std::min(0.0, mSpecialMood + decay);
-    }
 
     // The clients show the gold on the body of the carrier. They are told when it changed (cosmetic only).
     if(mGoldCarried != mGoldCarriedCosmeticNotified)
@@ -3128,6 +3177,7 @@ void Creature::doUpkeep()
     }
 
     // Check if we should compute mood
+    ++mMoodTurnsPending;
     if(mMoodCooldownTurns > 0)
     {
         --mMoodCooldownTurns;
@@ -3169,44 +3219,19 @@ void Creature::doUpkeep()
     if(mNbTurnsWithoutBattle == 1)
     {
         if(mFoughtSinceFightEnd && !mDirtKoThisFight)
+        {
             increaseCreatureDirt(ConfigManager::getSingleton().getDirtConfigDouble("CreatureDirtPerFightWon"));
+            // The creature won the battle
+            applyBattleWonMood();
+        }
         mDirtKoThisFight = false;
         mFoughtSinceFightEnd = false;
     }
 
-    // The pit mood fades towards 0
-    if(mPitMood != 0.0)
-    {
-        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodDecay", DEFAULT_PIT_MOOD_DECAY_PER_SECOND)
-            / ODApplication::turnsPerSecond;
-        if(mPitMood > 0.0)
-            mPitMood = std::max(0.0, mPitMood - decay);
-        else
-            mPitMood = std::min(0.0, mPitMood + decay);
-    }
-
-    // The merchant contribution fades by its configured points per simulation turn.
-    if(mMerchantMood != 0.0)
-    {
-        const double decay = ConfigManager::getSingleton().getRoomConfigDouble("MerchantMoodDecay");
-        if(mMerchantMood > 0.0) mMerchantMood = std::max(0.0, mMerchantMood - decay);
-        else mMerchantMood = std::min(0.0, mMerchantMood + decay);
-    }
-    // The casino mood fades towards 0
-    if(mCasinoMood != 0.0)
-    {
-        double decay = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodDecay", 3.0)
-            / ODApplication::turnsPerSecond;
-        if(mCasinoMood > 0.0)
-            mCasinoMood = std::max(0.0, mCasinoMood - decay);
-        else
-            mCasinoMood = std::min(0.0, mCasinoMood + decay);
-    }
-
-    // The drunkenness falls, the tavern mood and the hangover run out
+    // The drunkenness falls and the hangover runs out
     upkeepTavernState();
 
-    // The spa mood fades and the relaxation runs out
+    // The relaxation runs out
     upkeepSpaState();
 
     // The skill tree: reset window, reset and the active skills of changed ranks
@@ -5391,6 +5416,7 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
         os << 0.0;
         os << 0.0;
     }
+    exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
 }
@@ -5409,6 +5435,36 @@ void Creature::exportSpaStateToPacket(ODPacket& os) const
 {
     os << mSpaMood;
     os << mRelaxTurns;
+}
+
+//! \brief Writes the running mood effects to a packet. Only the keeper of the creature gets them, for every other seat
+//! the list is empty.
+void Creature::exportMoodEffectsToPacket(ODPacket& os, const Seat* seat) const
+{
+    if(seat != getSeat())
+    {
+        os << static_cast<uint32_t>(0);
+        return;
+    }
+
+    os << static_cast<uint32_t>(mMoodEffects.size());
+    for(const CreatureMoodEffect& effect : mMoodEffects)
+        os << effect.mName << effect.mStrength << effect.mTurnsLeft;
+}
+
+//! \brief Reads the running mood effects written by exportMoodEffectsToPacket.
+void Creature::importMoodEffectsFromPacket(ODPacket& is)
+{
+    mMoodEffects.clear();
+    uint32_t nbEffects = 0;
+    OD_ASSERT_TRUE(is >> nbEffects);
+    for(uint32_t ii = 0; ii < nbEffects; ++ii)
+    {
+        CreatureMoodEffect effect;
+        OD_ASSERT_TRUE(is >> effect.mName >> effect.mStrength >> effect.mTurnsLeft);
+        if(ii < MOOD_SAVE_MAX_ITEMS)
+            mMoodEffects.push_back(effect);
+    }
 }
 
 //! \brief Reads the thirst state written by exportThirstStateToPacket.
@@ -5519,6 +5575,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCreatureDirt);
     importThirstStateFromPacket(is);
     importSpaStateFromPacket(is);
+    importMoodEffectsFromPacket(is);
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
@@ -5613,7 +5670,7 @@ void Creature::socialCreatureRemoved()
 
 //! \brief Adds the mood points of the keeper's margin or a direct gift without an invented cap.
 void Creature::addMerchantMood(double points)
-{ mMerchantMood += points; mNeedFireRefresh = true; }
+{ applyMoodEvent(points, false); }
 
 //! \brief Keeps one owner-only deal notification until its next creature update is written.
 void Creature::setLastItemDeal(uint8_t deal, const std::string& name)
@@ -6155,32 +6212,69 @@ std::string Creature::getGender() const
 //! \brief Seconds of one minute, for the time in the effect lines of the Dungeonbook page.
 static const uint32_t PROFILE_SECONDS_PER_MINUTE = 60;
 
+//! \brief The name of a mood effect for the effect line: the capital letters inside the name start a new word.
+//! \param name The name of the effect without spaces (for example "MakeUnhappy").
+//! \return The name with spaces (for example "Make Unhappy").
+static std::string getMoodEffectDisplayName(const std::string& name)
+{
+    std::string display;
+    for(std::string::size_type ii = 0; ii < name.size(); ++ii)
+    {
+        if((ii > 0) && std::isupper(static_cast<unsigned char>(name[ii])) &&
+           !std::isupper(static_cast<unsigned char>(name[ii - 1])))
+            display += ' ';
+
+        display += name[ii];
+    }
+    return display;
+}
+
+//! \brief The time of an effect line as minutes:seconds (turns divided by the turns per second, seconds rounded down).
+//! \param turns The turns that are left.
+static std::string getProfileEffectTime(double turns)
+{
+    const uint32_t totalSeconds = static_cast<uint32_t>(std::floor(turns / ODApplication::turnsPerSecond));
+    const uint32_t seconds = totalSeconds % PROFILE_SECONDS_PER_MINUTE;
+    return Helper::toString(totalSeconds / PROFILE_SECONDS_PER_MINUTE) + ":" + (seconds < 10 ? "0" : "") +
+        Helper::toString(seconds);
+}
+
 //! \brief The lines of the active buffs and debuffs of a creature for the Dungeonbook page, buffs first: the buff
-//! Relaxed while the relaxation lasts, the debuff Hangover while the hangover lasts. Each line shows the time that is
-//! left as minutes:seconds (turns divided by the turns per second, seconds rounded down).
+//! Relaxed while the relaxation lasts, the buffs and debuffs of the mood effects (a pleasure buff, Make Unhappy) and the
+//! debuff Hangover while the hangover lasts. Each line shows the time that is left as minutes:seconds (turns divided by
+//! the turns per second, seconds rounded down).
 //! \param relaxTurns The turns the relaxation lasts, 0 or less for none.
 //! \param hangoverTurns The turns the hangover lasts, 0 or less for none.
+//! \param moodEffects The running mood effects.
 //! \return The lines separated by a line break, empty when no effect is active.
-static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns)
+static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns,
+    const std::vector<CreatureMoodEffect>& moodEffects)
 {
-    std::string effects;
-    const double turnsPerSecond = ODApplication::turnsPerSecond;
-    for(uint32_t kind = 0; kind < 2; ++kind)
+    std::vector<std::string> buffs;
+    std::vector<std::string> debuffs;
+    if(relaxTurns > 0.0)
+        buffs.push_back("Buff: Relaxed (" + getProfileEffectTime(relaxTurns) + ")");
+
+    for(const CreatureMoodEffect& effect : moodEffects)
     {
-        const bool isBuff = (kind == 0);
-        const double turns = isBuff ? relaxTurns : hangoverTurns;
-        if(turns <= 0.0)
+        if(effect.mTurnsLeft <= 0.0)
             continue;
 
-        const uint32_t totalSeconds = static_cast<uint32_t>(std::floor(turns / turnsPerSecond));
-        const uint32_t seconds = totalSeconds % PROFILE_SECONDS_PER_MINUTE;
-        std::string line = isBuff ? "Buff: Relaxed (" : "Debuff: Hangover (";
-        line += Helper::toString(totalSeconds / PROFILE_SECONDS_PER_MINUTE) + ":" + (seconds < 10 ? "0" : "") +
-            Helper::toString(seconds) + ")";
-        if(!effects.empty())
-            effects += "\n";
-        effects += line;
+        const bool isBuff = (effect.mStrength >= 0.0);
+        (isBuff ? buffs : debuffs).push_back(std::string(isBuff ? "Buff: " : "Debuff: ") +
+            getMoodEffectDisplayName(effect.mName) + " (" + getProfileEffectTime(effect.mTurnsLeft) + ")");
     }
+
+    if(hangoverTurns > 0.0)
+        debuffs.push_back("Debuff: Hangover (" + getProfileEffectTime(hangoverTurns) + ")");
+
+    std::string effects;
+    for(const std::string& line : buffs)
+        effects += (effects.empty() ? "" : "\n") + line;
+
+    for(const std::string& line : debuffs)
+        effects += (effects.empty() ? "" : "\n") + line;
+
     return effects;
 }
 
@@ -6333,7 +6427,7 @@ float Creature::fillProfilePage(CEGUI::Window* page)
 
     // The buffs and debuffs row: only for the creatures of our own side and only while an effect is active
     CEGUI::Window* effectsText = page->getChild("EffectsText");
-    const std::string effects = getProfileEffectsText(mRelaxTurns, mHangoverTurns);
+    const std::string effects = getProfileEffectsText(mRelaxTurns, mHangoverTurns, mMoodEffects);
     effectsText->setText(effects);
     effectsText->setVisible(isOwn && !effects.empty());
     if(!isAllied)
@@ -6650,23 +6744,12 @@ double Creature::getRelationshipCombatModifier() const
     return mCombatModifier;
 }
 
-int32_t Creature::getRelationshipMood() const
+void Creature::addRelationshipMood(double points)
 {
-    if(!canHaveRelationships())
-        return 0;
-
-    return getGameMap()->getCreatureRelationships()->moodModifier(getName()) + mRelationshipTempMood;
-}
-
-void Creature::addRelationshipMood(int32_t points)
-{
-    if(!canHaveRelationships() || (points == 0))
+    if(!canHaveRelationships() || (points == 0.0))
         return;
 
-    int32_t maxMood = getGameMap()->getCreatureRelationships()->getSettings().mTempMoodMax;
-    mRelationshipTempMood = std::max(-maxMood, std::min(maxMood, mRelationshipTempMood + points));
-    // The mood is computed again soon
-    mMoodCooldownTurns = 0;
+    applyMoodEvent(points, true);
 }
 
 void Creature::reportDeathToFriends(GameEntity* killer)
@@ -6690,7 +6773,7 @@ void Creature::reportDeathToFriends(GameEntity* killer)
         }
 
         // The partner grieves more than a friend
-        int32_t penalty = relationships->isLovers(getName(), mourner->getName()) ?
+        double penalty = relationships->isLovers(getName(), mourner->getName()) ?
             settings.mPartnerGriefMoodPenalty : settings.mGriefMoodPenalty;
         mourner->addRelationshipMood(-penalty);
         if((killer != nullptr) && (killer->getSeat() != nullptr) && (killer->getSeat() != getSeat()))
@@ -6739,7 +6822,7 @@ void Creature::reportSlapToFriends()
         return;
 
     CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
-    int32_t penalty = relationships->getSettings().mSlapFriendsMoodPenalty;
+    double penalty = relationships->getSettings().mSlapFriendsMoodPenalty;
     // Only the friends that can see the slapped creature care
     std::vector<GameEntity*> seers = getGameMap()->getVisibleCreatures(getVisibleTiles(), getSeat(), false);
     for(GameEntity* seer : seers)
@@ -6931,7 +7014,7 @@ void Creature::endBrawl()
             creature->clearDestinations(EntityAnimation::idle_anim, true, true);
             creature->clearActionQueue();
         }
-        creature->makeUnhappy();
+        creature->makeAngry();
     }
 
     if(relationships != nullptr)
@@ -6955,7 +7038,8 @@ bool Creature::getRelationshipState(RelationshipCreatureState& state) const
     if(!canHaveRelationships())
         return !state.isEmpty();
 
-    state.mGriefMood = mRelationshipTempMood;
+    // The grief is a one-time loss now, there is no fading grief mood to save
+    state.mGriefMood = 0;
     if(mRageUntilTurn > turn)
     {
         state.mRageTurnsLeft = mRageUntilTurn - turn;
@@ -6997,7 +7081,6 @@ void Creature::setRelationshipState(const RelationshipCreatureState& state)
 
     const RelationshipSettings& settings = gameMap->getCreatureRelationships()->getSettings();
     int64_t turn = gameMap->getTurnNumber();
-    mRelationshipTempMood = std::max(-settings.mTempMoodMax, std::min(settings.mTempMoodMax, state.mGriefMood));
     if((state.mRageTurnsLeft > 0) && (state.mRageSeatId >= 0))
     {
         mRageUntilTurn = turn + state.mRageTurnsLeft;
@@ -8402,7 +8485,15 @@ void Creature::slap()
         ConfigManager::getSingleton().getSlapEffectDuration(), "");
     addCreatureEffect(effect);
 
-    // We remember the slap to compute the mood. Only the latest ones are kept
+    // A slap costs mood, but only while fewer than the allowed number of slaps happened within its time
+    for(const CreatureMood* mood : mDefinition->getCreatureMoods())
+    {
+        const CreatureMoodSlapped* slapped = dynamic_cast<const CreatureMoodSlapped*>(mood);
+        if((slapped != nullptr) && (getNbRecentSlaps(slapped->getDurationTurns()) < slapped->getMaxSlaps()))
+            applyMoodEvent(slapped->getJump(), true);
+    }
+
+    // We remember the slap to count the slaps that cost mood. Only the latest ones are kept
     mSlapTurns.push_back(getGameMap()->getTurnNumber());
     if(mSlapTurns.size() > ConfigManager::getSingleton().getSlapMemoryMax())
         mSlapTurns.erase(mSlapTurns.begin());
@@ -9040,7 +9131,7 @@ DefenceChance::Outcome Creature::rollMeleeDefence(bool missile) const
 void Creature::fireImpatientIfNeeded()
 {
     // The game counts a creature as frustrated from the turns its OutOfWork mood starts at. It is told then,
-    // and again each time the mood has grown over its whole range.
+    // and again every few turns.
     int32_t turnsMin = 10;
     int32_t repeat = 40;
     for(const CreatureMood* mood : getDefinition()->getCreatureMoods())
@@ -9050,7 +9141,6 @@ void Creature::fireImpatientIfNeeded()
             continue;
 
         turnsMin = outOfWork->getTurnsMin();
-        repeat = std::max(1, outOfWork->getTurnsMax());
         break;
     }
 
@@ -9068,8 +9158,8 @@ void Creature::fireArrivalEvent()
         return;
 
     // The creature has no vision yet and the portal belongs to the keeper, so the keeper is told directly.
-    // Reading the mood only adds up the modifiers, it does not change the creature.
-    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    // Reading the mood does not change the creature.
+    double points = getEffectiveMood();
     CosmeticEvent event(CosmeticEventType::portalArrival);
     event.mSubject = getName();
     event.mValue = static_cast<int32_t>(CreatureMoodManager::getCreatureMoodLevel(points));
@@ -9105,6 +9195,8 @@ void Creature::foodEaten(double val)
     if(mHunger < 0.0)
         mHunger = 0.0;
 
+    // A meal lifts the mood a little
+    applyMoodEvent(ConfigManager::getSingleton().getMoodMeal(), false);
     increaseUrge(ConfigManager::getSingleton().getDirtConfigDouble("UrgePerChicken"));
 }
 
@@ -9159,11 +9251,10 @@ void Creature::setHangoverTurns(double turns)
     mHangoverTurns = std::max(0.0, turns);
 }
 
-//! \brief Sets the tavern mood and starts its timer again.
+//! \brief Adds a one-time tavern mood change to the stored mood; the turns are not used any more.
 void Creature::addTavernMood(double points, double turns)
 {
-    mTavernMood = points;
-    mTavernMoodTurns = std::max(0.0, turns);
+    applyMoodEvent(points, false);
 }
 
 //! \brief True if the drunkenness has reached StaggerAt.
@@ -9185,17 +9276,16 @@ double Creature::getHangoverWorkFactor() const
     return ConfigManager::getSingleton().getTavernConfigDouble("HangoverWorkFactor");
 }
 
-//! \brief Raises the spa mood, limited to 0 .. SpaMoodMax.
+//! \brief Adds mood points of the lava spa to the stored mood.
 void Creature::addSpaMood(double points)
 {
-    setSpaMood(mSpaMood + points);
+    applyMoodEvent(points, false);
 }
 
-//! \brief Sets the spa mood, limited to 0 .. SpaMoodMax.
+//! \brief Takes over the spa mood of an old save, not below 0.
 void Creature::setSpaMood(double val)
 {
-    const double maxPoints = ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodMax");
-    mSpaMood = std::max(0.0, std::min(maxPoints, val));
+    mSpaMood = std::max(0.0, val);
 }
 
 //! \brief Sets the turns the relaxation still lasts, not below 0.
@@ -9237,15 +9327,11 @@ bool Creature::wantsSpaBath() const
     return (mood == CreatureMoodLevel::Upset) || (mood == CreatureMoodLevel::Angry) || (mood == CreatureMoodLevel::Furious);
 }
 
-//! \brief Lets the spa mood fade by SpaMoodDecayPerTurn and counts the relaxation down by 1 per turn. The mood does not fade
-//! while the creature sits in a bath (the bath lifts it exactly to SpaMoodMax).
+//! \brief Counts the relaxation down by 1 per turn.
 void Creature::upkeepSpaState()
 {
-    if((mSpaMood <= 0.0) && (mRelaxTurns <= 0.0))
+    if(mRelaxTurns <= 0.0)
         return;
-
-    if((mSpaMood > 0.0) && !mSpaBathing)
-        mSpaMood = std::max(0.0, mSpaMood - ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodDecayPerTurn"));
 
     if(mRelaxTurns > 0.0)
         mRelaxTurns = std::max(0.0, mRelaxTurns - 1.0);
@@ -9567,34 +9653,25 @@ void Creature::decreaseWakefulness(double value)
     mWakefulness = std::max(0.0, mWakefulness - value);
 }
 
-//! \brief Applies the admission mood using the configured fee modifier and rested lifetime.
+//! \brief Adds the admission mood to the stored mood: InfirmaryMoodWageShare of the wage of the creature, plus when the
+//! keeper paid the admission, minus when the creature paid it.
 void Creature::setInfirmaryAdmissionMood(bool creaturePaid)
 {
-    mInfirmaryMood = 0.0;
-    mInfirmaryMoodTurns = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryMoodDefaultTurns");
-    for(const CreatureMood* mood : getDefinition()->getCreatureMoods())
-    {
-        const CreatureMoodFee* fee = dynamic_cast<const CreatureMoodFee*>(mood);
-        if(fee != nullptr)
-            mInfirmaryMood = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryMoodWageShare") *
-                fee->getMoodModifier() * (creaturePaid ? 1.0 : -1.0);
-        const CreatureMoodRested* rested = dynamic_cast<const CreatureMoodRested*>(mood);
-        if(rested != nullptr)
-            mInfirmaryMoodTurns = rested->getTurnsMax();
-    }
+    const double wage = getDefinition()->getFee(getLevel());
+    const double points = ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryMoodWageShare") * wage;
+    applyMoodEvent(creaturePaid ? -points : points, false);
 }
 
-//! \brief Adds casino mood points, bounded by the configured maximum.
+//! \brief Adds casino mood points to the stored mood.
 void Creature::addCasinoMood(double points)
 {
-    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("CasinoMoodMax", 1000.0);
-    mCasinoMood = std::max(-maxPoints, std::min(maxPoints, mCasinoMood + points));
+    applyMoodEvent(points, false);
 }
 
+//! \brief Adds the mood points of the arena to the stored mood.
 void Creature::addPitMood(double points)
 {
-    double maxPoints = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("PitMoodMax", DEFAULT_PIT_MOOD_MAX);
-    mPitMood = std::max(-maxPoints, std::min(maxPoints, mPitMood + points));
+    applyMoodEvent(points, false);
 }
 
 bool Creature::isGoodAligned() const
@@ -9603,16 +9680,17 @@ bool Creature::isGoodAligned() const
     return std::find(heroClasses.begin(), heroClasses.end(), mDefinition->getClassName()) != heroClasses.end();
 }
 
-bool Creature::isHatedCompanyNear() const
+uint32_t Creature::getNbHatedCompanyNear() const
 {
     // Only creatures that have moods can be annoyed
     if(mDefinition->getCreatureMoods().empty() || !getIsOnMap() || !isAlive())
-        return false;
+        return 0;
 
     Tile* myTile = getPositionTile();
     if(myTile == nullptr)
-        return false;
+        return 0;
 
+    uint32_t nbCreatures = 0;
     bool isGood = isGoodAligned();
     double radius = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("HatedCompanyRadius", DEFAULT_HATED_COMPANY_RADIUS);
     double squaredRadius = radius * radius;
@@ -9637,48 +9715,364 @@ bool Creature::isHatedCompanyNear() const
             continue;
 
         if(Pathfinding::squaredDistanceTile(*myTile, *otherTile) <= squaredRadius)
-            return true;
+            ++nbCreatures;
     }
-    return false;
+    return nbCreatures;
 }
 
-void Creature::addPrayerRelief(int32_t relief, int32_t maxRelief)
+//! \brief Adds the relief of one turn of praying to the stored mood and remembers the prayer for the calmed reaction.
+void Creature::addPrayerRelief(double relief)
 {
-    mPrayerRelief = std::min(mPrayerRelief + relief, maxRelief);
+    applyMoodEvent(relief, false);
+    mPrayedSinceMoodLook = true;
 }
 
-//! \brief Clears annoyance and temporarily offsets remaining negative mood.
-void Creature::removeAnnoyance()
+//! \brief Forgets the annoyance counters of the mood (turns in the hand, without work, tortured, without a fight, slaps).
+void Creature::clearMoodCounters()
 {
     mNbTurnsInHand = 0;
     mNbTurnsOutOfWork = 0;
     mNbTurnsTortureMood = 0;
     mNbTurnsWithoutBattle = 0;
     mSlapTurns.clear();
-    mSpecialMood = 0;
-    // What is left (hunger, tiredness, wounds, unpaid wage) is cancelled for a while, it builds up again
-    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
-    mSpecialMood = std::max(0.0, -points);
-    mMoodCooldownTurns = 0;
 }
 
-//! \brief Applies a temporary mood penalty towards the angry level.
+//! \brief Make Happy: clears the annoyance counters and sets the stored mood to the maximum. Running effects keep running.
+void Creature::removeAnnoyance()
+{
+    clearMoodCounters();
+    setStoredMood(ConfigManager::getSingleton().getCreatureBaseMood());
+}
+
+//! \brief Make Unhappy: takes MakeUnhappyMoodJump at once and starts a debuff of MakeUnhappyMoodFall over MakeUnhappyTurns.
+//! Every box acts fully, also a second one while the debuff of the first still runs.
 void Creature::makeUnhappy()
 {
-    mSpecialMood = 0;
-    double points = CreatureMoodManager::computeCreatureMoodModifiers(*this);
-    // The middle of the angry level
-    int32_t target = (ConfigManager::getSingleton().getCreatureMoodAngry()
-        + ConfigManager::getSingleton().getCreatureMoodFurious()) / 2;
-    double wanted = target - ConfigManager::getSingleton().getCreatureBaseMood() - points;
-    mSpecialMood = std::min(0.0, wanted);
+    const ConfigManager& config = ConfigManager::getSingleton();
+    applyMoodEvent(config.getRoomConfigDouble("MakeUnhappyMoodJump"), false);
+    addMoodEffect("MakeUnhappy", config.getRoomConfigDouble("MakeUnhappyMoodFall"),
+        config.getRoomConfigDouble("MakeUnhappyTurns"));
     mMoodCooldownTurns = 0;
 }
 
+//! \brief The end of a nemesis brawl: the stored mood of the creature is at most BrawlEndMoodMax (angry).
+void Creature::makeAngry()
+{
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    if((relationships == nullptr) || mDefinition->getCreatureMoods().empty())
+        return;
+
+    setStoredMood(std::min(mStoredMood, relationships->getSettings().mBrawlEndMoodMax));
+}
+
+//! \brief Returns the stored mood plus the Charisma of all worn items; a captive has no Charisma floor.
+double Creature::getEffectiveMood() const
+{
+    if(isInContainment())
+        return mStoredMood;
+
+    return mStoredMood + std::max(0.0, getItemEffect("Charisma"));
+}
+
+//! \brief Returns the sensitivity of the creature type to mood problems and losses.
+double Creature::getMoodSensitivity() const
+{
+    if(mDefinition == nullptr)
+        return 1.0;
+
+    return mDefinition->getMoodSensitivity();
+}
+
+//! \brief Sets the stored mood within 0 .. CreatureBaseMood.
+void Creature::setStoredMood(double mood)
+{
+    mStoredMood = std::max(0.0, std::min(static_cast<double>(ConfigManager::getSingleton().getCreatureBaseMood()), mood));
+    mMoodCooldownTurns = 0;
+}
+
+//! \brief Adds mood points to the stored mood as they are and keeps it within 0 .. CreatureBaseMood.
+void Creature::changeStoredMood(double points)
+{
+    mStoredMood = std::max(0.0, std::min(static_cast<double>(ConfigManager::getSingleton().getCreatureBaseMood()),
+        mStoredMood + points));
+}
+
+//! \brief Applies the jump, fall or reward of a problem: scaled by the sensitivity of the creature type and, for a loss,
+//! lowered by Iron Will.
+void Creature::changeStoredMoodBySensitivity(double points)
+{
+    double value = points * getMoodSensitivity();
+    if(value < 0.0)
+        value = ItemEffects::moodModifier(*this, value);
+
+    changeStoredMood(value);
+}
+
+//! \brief Adds a one-time mood change; a loss is lowered by Iron Will and, when sensitive, scaled by the sensitivity.
+void Creature::applyMoodEvent(double points, bool sensitive)
+{
+    // Only creatures that have a mood are affected
+    if((mDefinition == nullptr) || mDefinition->getCreatureMoods().empty())
+        return;
+
+    double value = points;
+    if(value < 0.0)
+    {
+        if(sensitive)
+            value *= getMoodSensitivity();
+        value = ItemEffects::moodModifier(*this, value);
+    }
+    changeStoredMood(value);
+    // The level is read again soon
+    mMoodCooldownTurns = 0;
+}
+
+//! \brief Starts a running effect that adds its mood evenly over its turns.
+void Creature::addMoodEffect(const std::string& name, double totalPoints, double turns)
+{
+    if((mDefinition == nullptr) || mDefinition->getCreatureMoods().empty() || (turns <= 0.0))
+        return;
+
+    mMoodEffects.push_back(CreatureMoodEffect(name, totalPoints / turns, turns));
+    mNeedFireRefresh = true;
+}
+
+//! \brief The creature was paid its whole wage.
+void Creature::applyPaydayMood()
+{
+    applyMoodEvent(ConfigManager::getSingleton().getMoodPayday(), false);
+}
+
+//! \brief The creature has won a battle.
+void Creature::applyBattleWonMood()
+{
+    applyMoodEvent(ConfigManager::getSingleton().getMoodBattleWon(), false);
+}
+
+//! \brief The creature wakes up rested: it gets the Rested mood of its type.
+void Creature::applyRestedMood()
+{
+    for(const CreatureMood* mood : mDefinition->getCreatureMoods())
+    {
+        const CreatureMoodRested* rested = dynamic_cast<const CreatureMoodRested*>(mood);
+        if(rested != nullptr)
+            applyMoodEvent(rested->getJump(), false);
+    }
+}
+
+//! \brief Looks at the lasting problems of the creature type and the problems that come and go: a jump when a lasting
+//! problem starts, the fall for the turns that passed while it holds, a reward when it ends. A problem that holds at the
+//! first look counts as started without a jump.
+void Creature::computeMoodProblems(int32_t turns)
+{
+    for(const CreatureMood* mood : mDefinition->getCreatureMoods())
+    {
+        if(mood->getKind() == CreatureMoodKind::Event)
+            continue;
+
+        if(mood->getKind() == CreatureMoodKind::ComeAndGo)
+        {
+            const double fall = mood->getFallPerTurn(*this);
+            if(fall != 0.0)
+                changeStoredMoodBySensitivity(fall * turns);
+            continue;
+        }
+
+        const double amount = mood->getAmount(*this);
+        std::map<std::string, double>::iterator it = mMoodProblems.find(mood->getModifierName());
+        const double previous = (it == mMoodProblems.end()) ? 0.0 : it->second;
+        if(mMoodPrimed)
+        {
+            if(amount > previous)
+                changeStoredMoodBySensitivity(mood->getJump() * (amount - previous));
+            else if(amount < previous)
+                changeStoredMoodBySensitivity(mood->getReward() * (previous - amount));
+        }
+
+        // The fall runs once while the problem holds, whatever its strength
+        if(amount > 0.0)
+        {
+            changeStoredMoodBySensitivity(mood->getFall() * turns);
+            mMoodProblems[mood->getModifierName()] = amount;
+        }
+        else if(it != mMoodProblems.end())
+        {
+            mMoodProblems.erase(it);
+        }
+    }
+
+    // Dirty rooms and dirt piles nearby (no line in the creature configuration, the global dirt values apply to all)
+    static const CreatureMoodDirt dirtMood;
+    const double dirtFall = dirtMood.getFallPerTurn(*this);
+    if(dirtFall != 0.0)
+        changeStoredMoodBySensitivity(dirtFall * turns);
+}
+
+//! \brief Looks at the partner, the nemesis and the hated creatures of the same keeper: a new partner gives a one-time
+//! bonus, a hated creature or nemesis is a lasting problem with a jump, a fall per turn and a reward.
+void Creature::computeMoodHatedPairs(int32_t turns)
+{
+    if(!canHaveRelationships())
+    {
+        mMoodRelationPairs.clear();
+        return;
+    }
+
+    CreatureRelationships* relationships = getGameMap()->getCreatureRelationships();
+    const RelationshipSettings& settings = relationships->getSettings();
+    std::vector<std::pair<std::string, int32_t> > pairs;
+    relationships->getMoodPairs(getName(), pairs);
+    std::map<std::string, int32_t> current;
+    for(const std::pair<std::string, int32_t>& pair : pairs)
+    {
+        current[pair.first] = pair.second;
+        std::map<std::string, int32_t>::const_iterator old = mMoodRelationPairs.find(pair.first);
+        const bool isNew = (old == mMoodRelationPairs.end()) || (old->second != pair.second);
+        if(pair.second == CreatureRelationships::MoodPairLovers)
+        {
+            if(isNew && mMoodPrimed)
+                applyMoodEvent(settings.mMoodBonusLovers, false);
+            continue;
+        }
+
+        const bool nemesis = (pair.second == CreatureRelationships::MoodPairNemesis);
+        if(isNew && mMoodPrimed)
+            changeStoredMoodBySensitivity(-(nemesis ? settings.mMoodPenaltyNemesis : settings.mMoodPenaltyHated));
+        changeStoredMoodBySensitivity(-(nemesis ? settings.mMoodFallNemesis : settings.mMoodFallHated) * turns);
+    }
+
+    // A hated creature or nemesis that is gone (or became something else) gives the reward back
+    for(const std::pair<const std::string, int32_t>& old : mMoodRelationPairs)
+    {
+        std::map<std::string, int32_t>::const_iterator now = current.find(old.first);
+        if((now != current.end()) && (now->second == old.second))
+            continue;
+
+        if(old.second == CreatureRelationships::MoodPairNemesis)
+            changeStoredMoodBySensitivity(settings.mMoodPenaltyNemesis);
+        else if(old.second == CreatureRelationships::MoodPairHated)
+            changeStoredMoodBySensitivity(settings.mMoodPenaltyHated);
+    }
+    mMoodRelationPairs = current;
+}
+
+//! \brief Gives the cleaning reward once when a room the creature uses (the room of its bed, the room it works in) goes
+//! from stage 2 or 3 back to stage 1. The reward is the one of the highest stage the room had since it was last clean.
+void Creature::computeMoodDirtRooms()
+{
+    std::vector<Room*> usedRooms;
+    if((mHomeTile != nullptr) && (mHomeTile->getCoveringRoom() != nullptr))
+        usedRooms.push_back(mHomeTile->getCoveringRoom());
+
+    if(isActionInList(CreatureActionType::useRoom))
+    {
+        Tile* tile = getPositionTile();
+        Room* workRoom = (tile == nullptr) ? nullptr : tile->getCoveringRoom();
+        if((workRoom != nullptr) && (std::find(usedRooms.begin(), usedRooms.end(), workRoom) == usedRooms.end()))
+            usedRooms.push_back(workRoom);
+    }
+
+    std::set<std::string> usedNames;
+    for(Room* room : usedRooms)
+    {
+        const std::string roomName = room->getName();
+        usedNames.insert(roomName);
+        const uint32_t stage = room->getDirtStage();
+        std::map<std::string, uint32_t>::iterator it = mMoodDirtRooms.find(roomName);
+        if(stage >= 2)
+        {
+            if((it == mMoodDirtRooms.end()) || (it->second < stage))
+                mMoodDirtRooms[roomName] = stage;
+            continue;
+        }
+
+        if(it != mMoodDirtRooms.end())
+        {
+            changeStoredMoodBySensitivity(CreatureMoodDirt::getCleanedReward(*this, it->second));
+            mMoodDirtRooms.erase(it);
+        }
+    }
+
+    // A room the creature does not use any more can not be cleaned for it
+    for(std::map<std::string, uint32_t>::iterator it = mMoodDirtRooms.begin(); it != mMoodDirtRooms.end();)
+    {
+        if(usedNames.count(it->first) == 0)
+            it = mMoodDirtRooms.erase(it);
+        else
+            ++it;
+    }
+}
+
+//! \brief Lets every running effect act for the turns that passed and drops the ones that ended.
+void Creature::computeMoodEffects(int32_t turns)
+{
+    for(std::vector<CreatureMoodEffect>::iterator it = mMoodEffects.begin(); it != mMoodEffects.end();)
+    {
+        const double effectTurns = std::min(static_cast<double>(turns), it->mTurnsLeft);
+        double points = it->mStrength * effectTurns;
+        if(points < 0.0)
+            points = ItemEffects::moodModifier(*this, points);
+
+        changeStoredMood(points);
+        it->mTurnsLeft -= effectTurns;
+        if(it->mTurnsLeft <= 0.0)
+        {
+            it = mMoodEffects.erase(it);
+            mNeedFireRefresh = true;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+//! \brief Maps the mood of a creature loaded from a save without stored mood to the stored mood: the old formula gives
+//! the old mood (with the temporary moods the save held), which is mapped range to range.
+void Creature::mapOldSaveMoodToStored()
+{
+    mMoodFromOldSave = false;
+    const double temporary = ItemEffects::moodModifier(*this, mTavernMood) + ItemEffects::moodModifier(*this, mSpaMood) +
+        ItemEffects::moodModifier(*this, mInfirmaryMood) + ItemEffects::moodModifier(*this, mMerchantMood) +
+        mPrisonMood + mTortureMood;
+    mTavernMood = 0.0;
+    mTavernMoodTurns = 0.0;
+    mSpaMood = 0.0;
+    mInfirmaryMood = 0.0;
+    mInfirmaryMoodTurns = 0.0;
+    mMerchantMood = 0.0;
+    mPrisonMood = 0.0;
+    mTortureMood = 0.0;
+    setStoredMood(CreatureMoodManager::mapOldSaveMood(CreatureMoodManager::computeOldSaveMood(*this, temporary)));
+}
+
+//! \brief Advances the stored mood by the turns that passed since the last look and reads the mood level again.
 void Creature::computeMood()
 {
-    mMoodPoints = CreatureMoodManager::computeCreatureMoodModifiers(*this);
+    const bool hasMood = !mDefinition->getCreatureMoods().empty();
+    if(mMoodFromOldSave)
+    {
+        if(hasMood)
+            mapOldSaveMoodToStored();
+        else
+            mMoodFromOldSave = false;
+    }
 
+    const int32_t turns = std::max(1, mMoodTurnsPending);
+    mMoodTurnsPending = 0;
+    if(hasMood)
+    {
+        computeMoodProblems(turns);
+        computeMoodHatedPairs(turns);
+        computeMoodDirtRooms();
+    }
+    computeMoodEffects(turns);
+    mMoodPrimed = true;
+
+    mMoodPoints = getEffectiveMood();
+
+    const bool prayed = mPrayedSinceMoodLook;
+    mPrayedSinceMoodLook = false;
     CreatureMoodLevel oldMoodValue = mMoodValue;
     mMoodValue = CreatureMoodManager::getCreatureMoodLevel(mMoodPoints);
     if(mMoodValue == oldMoodValue)
@@ -9691,7 +10085,7 @@ void Creature::computeMood()
 
     // The anger fell below the angry level while the relief of a prayer in the temple was working: calmed
     if((oldMoodValue >= CreatureMoodLevel::Angry) && (mMoodValue < CreatureMoodLevel::Angry) &&
-       (mMoodValue != CreatureMoodLevel::Unknown) && (mPrayerRelief > 0))
+       (mMoodValue != CreatureMoodLevel::Unknown) && prayed)
     {
         fireCosmeticEvent(static_cast<int32_t>(CosmeticEventType::calmed), static_cast<int32_t>(mMoodValue),
             static_cast<int32_t>(oldMoodValue), true);
@@ -10398,11 +10792,17 @@ void Creature::changeSeat(Seat* newSeat)
     setSeat(newSeat);
     if(getGameMap()->isRelationshipsEnabled())
         getGameMap()->getCreatureRelationships()->removeCreature(getName());
+    // A creature that changes side starts at the lower end of Neutral
     mMoodValue = CreatureMoodLevel::Neutral;
-    mMoodPoints = 0;
-    mPrayerRelief = 0;
-    mSpecialMood = 0;
-    mRelationshipTempMood = 0;
+    mStoredMood = ConfigManager::getSingleton().getCreatureMoodUpset();
+    mMoodPoints = mStoredMood;
+    mMoodPrimed = false;
+    mMoodFromOldSave = false;
+    mMoodProblems.clear();
+    mMoodEffects.clear();
+    mMoodDirtRooms.clear();
+    mMoodRelationPairs.clear();
+    mPrayedSinceMoodLook = false;
     mRageUntilTurn = 0;
     mBrawlResumeOpponent.clear();
     mWakefulness = 100;
@@ -10432,13 +10832,8 @@ void Creature::changeSeat(Seat* newSeat)
     mIsInHand = false;
     mNbTurnsOutOfWork = 0;
     mNbTurnsTortureMood = 0;
-    mNbTurnsRested = 0;
-    mNbTurnsHatedCompany = 0;
-    mPitMood = 0.0;
     mTorturedThisTurn = false;
-    mRestedThisTurn = false;
     mSlapTurns.clear();
-    mCasinoMood = 0.0;
     clearDestinations(EntityAnimation::idle_anim, true, true);
     clearActionQueue();
     mNeedFireRefresh = true;
@@ -10537,7 +10932,8 @@ bool Creature::reviveFromCorpse(double hpShare)
     mWakefulness = ConfigManager::getSingleton().getTiredWakefulness();
     mThirst = 80.0;
     mGhostRevived = true;
-    removeAnnoyance();
+    // The creature comes back with the stored mood it had when it died
+    clearMoodCounters();
     computeMood();
     computeCreatureOverlayMoodValue();
     clearDestinations(EntityAnimation::idle_anim, true, true);

@@ -20,17 +20,20 @@
 #include "creaturemood/CreatureMoodManager.h"
 #include "entities/Creature.h"
 
-#include <sstream>
+#include <algorithm>
 
 static const std::string CreatureMoodHungerName = "Hunger";
 
 namespace
 {
+//! \brief Factory that creates CreatureMoodHunger objects from the creature configuration.
 class CreatureMoodHungerFactory : public CreatureMoodFactory
 {
+    //! \brief Creates a new CreatureMoodHunger with default values.
     CreatureMood* createCreatureMood() const override
     { return new CreatureMoodHunger; }
 
+    //! \brief Returns the configuration name of this modifier.
     const std::string& getCreatureMoodName() const override
     {
         return CreatureMoodHungerName;
@@ -41,51 +44,46 @@ class CreatureMoodHungerFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodHungerFactory);
 }
 
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodHunger::getModifierName() const
 {
     return CreatureMoodHungerName;
 }
 
-//! \brief Computes this mood contribution.
-double CreatureMoodHunger::computeMood(const Creature& creature) const
+//! \brief Returns 1 while the hunger of the creature has reached the start value, otherwise 0.
+double CreatureMoodHunger::getAmount(const Creature& creature) const
 {
-    double hunger = creature.getHunger();
-    if(hunger < mStartHunger)
-        return 0;
-
-    return (hunger - mStartHunger) * mMoodModifier;
+    return (creature.getHunger() >= mStartHunger) ? 1.0 : 0.0;
 }
 
+//! \brief Returns a copy of this modifier.
 CreatureMoodHunger* CreatureMoodHunger::clone() const
 {
     return new CreatureMoodHunger(*this);
 }
 
+//! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
 bool CreatureMoodHunger::importFromStream(std::istream& is)
 {
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
     if(!(is >> mStartHunger))
         return false;
-    if(!(is >> mMoodModifier))
-        return false;
 
-    return true;
+    return CreatureMood::importFromStream(is);
 }
 
+//! \brief Writes the parameters and then the value columns to the stream.
 void CreatureMoodHunger::exportToStream(std::ostream& os) const
 {
-    CreatureMood::exportToStream(os);
     os << "\t" << mStartHunger;
-    os << "\t" << mMoodModifier;
+    CreatureMood::exportToStream(os);
 }
 
+//! \brief Appends the names of the parameters and then of the value columns to the format string.
 void CreatureMoodHunger::getFormatString(std::string& format) const
 {
-    CreatureMood::getFormatString(format);
     if(!format.empty())
         format += "\t";
 
-    format += "StartHunger\tMoodModifier";
+    format += "StartHunger";
+    CreatureMood::getFormatString(format);
 }

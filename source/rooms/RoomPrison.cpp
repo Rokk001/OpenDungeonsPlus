@@ -343,8 +343,7 @@ void RoomPrison::doUpkeep()
             // From research level 2 a prisoner whose mood is broken may betray an enemy room: one roll per second
             double betrayChance = SkillManager::getResearchValue(getSeat(), SkillType::roomPrison, 0.0, ResearchEffect::BetrayChance);
             if(creature->isAlive() && (betrayChance > 0.0) &&
-               (ConfigManager::getSingleton().getCreatureBaseMood() + creature->getMoodPoints()
-                <= ConfigManager::getSingleton().getCreatureMoodFurious()))
+               (creature->getMoodPoints() < ConfigManager::getSingleton().getCreatureMoodFurious()))
             {
                 int32_t brokenTurns = creature->increasePrisonBrokenTurns();
                 bool secondPassed = std::floor(brokenTurns / ODApplication::turnsPerSecond)

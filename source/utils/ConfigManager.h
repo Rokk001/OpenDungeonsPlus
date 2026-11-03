@@ -230,6 +230,18 @@ public:
     inline int32_t getCreatureMoodFurious() const
     { return mCreatureMoodFurious; }
 
+    //! \brief Mood a creature gets once when its wage is paid ([GameConfig] MoodPayday)
+    inline double getMoodPayday() const
+    { return mMoodPayday; }
+
+    //! \brief Mood a creature gets once for a meal ([GameConfig] MoodMeal)
+    inline double getMoodMeal() const
+    { return mMoodMeal; }
+
+    //! \brief Mood a creature gets once when it has won a battle ([GameConfig] MoodBattleWon)
+    inline double getMoodBattleWon() const
+    { return mMoodBattleWon; }
+
     //! \brief HP a slap of the keeper hand takes from every creature (fixed amount, [GameConfig] SlapDamage)
     inline double getSlapDamage() const
     { return mSlapDamage; }
@@ -677,6 +689,9 @@ public:
     double getRoomConfigDoubleOrDefault(const std::string& param, double defaultValue) const;
     //! \brief Tells whether the parameter is in the rooms configuration
     bool hasRoomConfig(const std::string& param) const;
+    //! \brief Returns the value of a key of the [LegacyMood] block of global.cfg (the old mood values that map the
+    //! mood of an old save to the stored mood); logs an error and returns 0 when the key is unknown.
+    double getLegacyMoodConfigDouble(const std::string& param) const;
     //! \brief Returns the value of a key of the [Dirt] block of global.cfg (stages, moods, urge, cleaning, blood);
     //! logs an error and returns 0 when the key is unknown.
     double getDirtConfigDouble(const std::string& param) const;
@@ -876,6 +891,8 @@ private:
     bool loadGlobalGameConfig(std::stringstream& configFile);
     //! \brief Reads the [Dirt] block of global.cfg into mDirtConfig.
     bool loadGlobalDirtConfig(std::stringstream& configFile);
+    //! \brief Reads the [LegacyMood] block of global.cfg into mLegacyMoodConfig.
+    bool loadGlobalLegacyMoodConfig(std::stringstream& configFile);
     //! \brief Reads the [Tavern] block of global.cfg into mTavernConfig.
     bool loadGlobalTavernConfig(std::stringstream& configFile);
     bool loadCreatureDefinitions(const std::string& fileName);
@@ -983,6 +1000,9 @@ private:
     int32_t mCreatureMoodUpset;
     int32_t mCreatureMoodAngry;
     int32_t mCreatureMoodFurious;
+    double mMoodPayday;
+    double mMoodMeal;
+    double mMoodBattleWon;
     double mSlapDamage;
     double mLavaDamagePerSecond;
     uint32_t mSlapEffectDuration;
@@ -1145,6 +1165,8 @@ private:
     std::map<const std::string, std::string> mRoomsConfig;
     //! \brief The keys of the [Dirt] block of global.cfg
     std::map<std::string, double> mDirtConfig;
+    //! \brief The keys of the [LegacyMood] block of global.cfg
+    std::map<std::string, double> mLegacyMoodConfig;
     //! \brief The keys of the [Tavern] block of global.cfg
     std::map<std::string, double> mTavernConfig;
     std::map<std::string, std::string> mRelationshipsConfig;

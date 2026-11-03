@@ -48,8 +48,8 @@ const std::string& CreatureMoodCreature::getModifierName() const
     return CreatureMoodCreatureName;
 }
 
-//! \brief Computes this mood contribution.
-double CreatureMoodCreature::computeMood(const Creature& creature) const
+//! \brief Returns the number of creatures of the natural enemy class in sight of the creature.
+double CreatureMoodCreature::getAmount(const Creature& creature) const
 {
     std::vector<GameEntity*> alliedCreatures = creature.getGameMap()->getVisibleCreatures(creature.getVisibleTiles(),
         creature.getSeat(), false);
@@ -68,39 +68,37 @@ double CreatureMoodCreature::computeMood(const Creature& creature) const
 
         ++nbCreatures;
     }
-    return nbCreatures * mMoodModifier;
+    return static_cast<double>(nbCreatures);
 }
 
+//! \brief Returns a copy of this modifier.
 CreatureMoodCreature* CreatureMoodCreature::clone() const
 {
     return new CreatureMoodCreature(*this);
 }
 
+//! \brief Reads the creature class and then the fall per turn from the configuration stream.
 bool CreatureMoodCreature::importFromStream(std::istream& is)
 {
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
     if(!(is >> mCreatureClass))
         return false;
-    if(!(is >> mMoodModifier))
-        return false;
 
-    return true;
+    return CreatureMood::importFromStream(is);
 }
 
+//! \brief Writes the creature class and then the fall per turn.
 void CreatureMoodCreature::exportToStream(std::ostream& os) const
 {
-    CreatureMood::exportToStream(os);
     os << "\t" << mCreatureClass;
-    os << "\t" << mMoodModifier;
+    CreatureMood::exportToStream(os);
 }
 
+//! \brief Appends the names of the creature class and of the fall column to the format string.
 void CreatureMoodCreature::getFormatString(std::string& format) const
 {
-    CreatureMood::getFormatString(format);
     if(!format.empty())
         format += "\t";
 
-    format += "CreatureClass\tMoodModifier";
+    format += "CreatureClass";
+    CreatureMood::getFormatString(format);
 }

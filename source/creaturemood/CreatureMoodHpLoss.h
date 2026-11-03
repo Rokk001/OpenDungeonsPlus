@@ -20,29 +20,28 @@
 
 #include "creaturemood/CreatureMood.h"
 
+//! \brief Lasting problem: the creature is wounded (its health is below the low health threshold of the global configuration).
 class CreatureMoodHpLoss : public CreatureMood
 {
 public:
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodHpLoss() :
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Lasting, CreatureMoodColumns::JumpFallReward)
     {}
 
+    //! \brief Destroys the modifier.
     virtual ~CreatureMoodHpLoss()
     {}
 
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 1 while the health of the creature is below LowHealthWalkThresholdPercent of its maximum, otherwise 0.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
-    inline CreatureMoodHpLoss* clone() const override;
-
-    virtual bool importFromStream(std::istream& is) override;
-    virtual void exportToStream(std::ostream& os) const override;
-    virtual void getFormatString(std::string& format) const override;
-
-private:
-    double mMoodModifier;
+    //! \brief Returns a copy of this modifier.
+    CreatureMoodHpLoss* clone() const override;
 };
 
 #endif // CREATUREMOODHPLOSS_H

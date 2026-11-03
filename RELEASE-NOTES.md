@@ -8,6 +8,8 @@ our repository at https://github.com/OpenDungeons/OpenDungeons
 
 ### Unreleased
 
+* Creature mood: mood is a stored value from 0 to 1500 that problems, events, rooms and buffs move; an unhappy creature tells you why in the Dungeonbook, and one left at the bottom too long leaves, turns rogue or rampages.
+
 * The keeper AI has five levels from Easy to Hell; it plays by the same rules as you, sees only what it has explored, uses the rooms and spells you can use, and makes mistakes that grow rarer the higher the level. Hell unlocks in the campaign after finishing it on Hard.
 
 * Workers: workers spread over the jobs and targets instead of crowding one task, carry knocked-out creatures and corpses first, and the library credits research points directly.

@@ -26,11 +26,14 @@ static const std::string CreatureMoodRestedName = "Rested";
 
 namespace
 {
+//! \brief Factory that creates CreatureMoodRested objects from the creature configuration.
 class CreatureMoodRestedFactory : public CreatureMoodFactory
 {
+    //! \brief Creates a new CreatureMoodRested with default values.
     CreatureMood* createCreatureMood() const override
     { return new CreatureMoodRested; }
 
+    //! \brief Returns the configuration name of this modifier.
     const std::string& getCreatureMoodName() const override
     {
         return CreatureMoodRestedName;
@@ -41,48 +44,20 @@ class CreatureMoodRestedFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodRestedFactory);
 }
 
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodRested::getModifierName() const
 {
     return CreatureMoodRestedName;
 }
 
-//! \brief Computes this mood contribution.
-double CreatureMoodRested::computeMood(const Creature& creature) const
+//! \brief Returns 0, waking rested is an event and not a problem that holds.
+double CreatureMoodRested::getAmount(const Creature& creature) const
 {
-    int32_t turns = std::min(creature.getNbTurnsRested(), mTurnsMax);
-    return turns * mMoodModifier;
+    return 0.0;
 }
 
+//! \brief Returns a copy of this modifier.
 CreatureMoodRested* CreatureMoodRested::clone() const
 {
     return new CreatureMoodRested(*this);
-}
-
-bool CreatureMoodRested::importFromStream(std::istream& is)
-{
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
-    if(!(is >> mTurnsMax))
-        return false;
-    if(!(is >> mMoodModifier))
-        return false;
-
-    return true;
-}
-
-void CreatureMoodRested::exportToStream(std::ostream& os) const
-{
-    CreatureMood::exportToStream(os);
-    os << "\t" << mTurnsMax;
-    os << "\t" << mMoodModifier;
-}
-
-void CreatureMoodRested::getFormatString(std::string& format) const
-{
-    CreatureMood::getFormatString(format);
-    if(!format.empty())
-        format += "\t";
-
-    format += "TurnsMax\tMoodModifier";
 }

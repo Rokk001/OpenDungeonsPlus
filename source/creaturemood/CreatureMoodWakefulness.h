@@ -20,31 +20,40 @@
 
 #include "creaturemood/CreatureMood.h"
 
+//! \brief Lasting problem: the creature is tired.
 class CreatureMoodWakefulness : public CreatureMood
 {
 public:
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodWakefulness() :
-        mStartWakefulness(0),
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Lasting, CreatureMoodColumns::JumpFallReward),
+        mStartWakefulness(0)
     {}
 
+    //! \brief Destroys the modifier.
     virtual ~CreatureMoodWakefulness()
     {}
 
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 1 while the wakefulness of the creature is at or below the start value, otherwise 0.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
-    inline CreatureMoodWakefulness* clone() const override;
+    //! \brief Returns a copy of this modifier.
+    CreatureMoodWakefulness* clone() const override;
 
+    //! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
     virtual bool importFromStream(std::istream& is) override;
+    //! \brief Writes the parameters and then the value columns to the stream.
     virtual void exportToStream(std::ostream& os) const override;
+    //! \brief Appends the names of the parameters and then of the value columns to the format string.
     virtual void getFormatString(std::string& format) const override;
 
 private:
-    int32_t mStartWakefulness;
-    double mMoodModifier;
+    //! \brief The wakefulness (0 - 100) up to which the problem holds
+    double mStartWakefulness;
 };
 
 #endif // CREATUREMOODWAKEFULNESS_H

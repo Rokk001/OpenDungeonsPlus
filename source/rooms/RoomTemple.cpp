@@ -251,8 +251,7 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     int32_t mana = static_cast<int32_t>(mPrayerManaPending);
     mPrayerManaPending -= mana;
     getGameMap()->addManaToSeat(mana, getSeat()->getId());
-    creature.addPrayerRelief(configManager.getRoomConfigInt32("TemplePrayerReliefPerTurn"),
-        configManager.getRoomConfigInt32("TemplePrayerReliefMax"));
+    creature.addPrayerRelief(configManager.getRoomConfigDouble("TemplePrayerReliefPerTurn"));
     addUseDirt(creature, tileCreature, "TempleDirtPerPrayerTurn");
 
     // Creatures of the same keeper that pray in this temple at the same time may reconcile

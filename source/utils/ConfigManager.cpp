@@ -486,8 +486,11 @@ ConfigManager::ConfigManager(const std::string& configPath, const std::string& u
     mCreatureBaseMood(1500),
     mCreatureMoodHappy(1200),
     mCreatureMoodUpset(1000),
-    mCreatureMoodAngry(0),
-    mCreatureMoodFurious(-1000),
+    mCreatureMoodAngry(500),
+    mCreatureMoodFurious(100),
+    mMoodPayday(100.0),
+    mMoodMeal(50.0),
+    mMoodBattleWon(100.0),
     mSlapDamage(10),
     mLavaDamagePerSecond(50),
     mSlapEffectDuration(20),
@@ -812,6 +815,15 @@ bool ConfigManager::loadGlobalConfig(const std::string& configPath)
             continue;
         }
 
+        if(nextParam == "[LegacyMood]")
+        {
+            // The block of the old mood values is optional: without it every key reads as 0
+            if(!loadGlobalLegacyMoodConfig(configFile))
+                break;
+
+            continue;
+        }
+
         if(nextParam == "[Tavern]")
         {
             // The tavern block is optional: without it every tavern key reads as 0
@@ -889,6 +901,29 @@ bool ConfigManager::loadGlobalTavernConfig(std::stringstream& configFile)
 
     OD_LOG_ERR("Missing [/Tavern] in global.cfg");
     return false;
+}
+
+//! \brief Reads the [LegacyMood] block of global.cfg: one "key value" pair per line up to [/LegacyMood].
+bool ConfigManager::loadGlobalLegacyMoodConfig(std::stringstream& configFile)
+{
+    if(readGlobalNumberBlock(configFile, "[/LegacyMood]", mLegacyMoodConfig))
+        return true;
+
+    OD_LOG_ERR("Missing [/LegacyMood] in global.cfg");
+    return false;
+}
+
+//! \brief Returns the value of a [LegacyMood] key of global.cfg, 0 (and an error in the log) when the key is unknown.
+double ConfigManager::getLegacyMoodConfigDouble(const std::string& param) const
+{
+    std::map<std::string, double>::const_iterator it = mLegacyMoodConfig.find(param);
+    if(it == mLegacyMoodConfig.end())
+    {
+        OD_LOG_ERR("Unknown legacy mood parameter param=" + param);
+        return 0.0;
+    }
+
+    return it->second;
 }
 
 //! \brief Returns the value of a [Tavern] key of global.cfg, 0 (and an error in the log) when the key is unknown.
@@ -2017,6 +2052,30 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
             // Not mandatory
         }
 
+        if(nextParam == "MoodPayday")
+        {
+            configFile >> nextParam;
+            mMoodPayday = Helper::toDouble(nextParam);
+            foundKeys.insert("MoodPayday");
+            // Not mandatory
+        }
+
+        if(nextParam == "MoodMeal")
+        {
+            configFile >> nextParam;
+            mMoodMeal = Helper::toDouble(nextParam);
+            foundKeys.insert("MoodMeal");
+            // Not mandatory
+        }
+
+        if(nextParam == "MoodBattleWon")
+        {
+            configFile >> nextParam;
+            mMoodBattleWon = Helper::toDouble(nextParam);
+            foundKeys.insert("MoodBattleWon");
+            // Not mandatory
+        }
+
         if(nextParam == "WorkerPriorityParts")
         {
             for(uint32_t& value : mWorkerPriorityParts) if(!(configFile >> value)) return false;
@@ -2311,6 +2370,9 @@ bool ConfigManager::loadGlobalGameConfig(std::stringstream& configFile)
         "GiftBoxWorkers",
         "HungerSeek",
         "ManaIncomeTilesCap",
+        "MoodBattleWon",
+        "MoodMeal",
+        "MoodPayday",
         "ManaPerClaimedTilePerSecond",
         "ManaWellBonusPerTile",
         "NbTurnsFuriousMax",

@@ -20,32 +20,28 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Defines the mood modifier associated with unpaid creature wages.
+//! \brief Lasting problem: the creature did not get its wage. The jump and the reward count per wage, the fall runs once while any wage is missed.
 class CreatureMoodFee : public CreatureMood
 {
 public:
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodFee() :
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Lasting, CreatureMoodColumns::JumpFallReward)
     {}
 
+    //! \brief Destroys the modifier.
     virtual ~CreatureMoodFee()
     {}
 
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
-    //! \brief Returns the configured unpaid wage mood for admission mood calculation.
-    double getMoodModifier() const { return mMoodModifier; }
 
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns the number of wages the creature missed.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
-    inline CreatureMoodFee* clone() const override;
-
-    virtual bool importFromStream(std::istream& is) override;
-    virtual void exportToStream(std::ostream& os) const override;
-    virtual void getFormatString(std::string& format) const override;
-
-private:
-    double mMoodModifier;
+    //! \brief Returns a copy of this modifier.
+    CreatureMoodFee* clone() const override;
 };
 
 #endif // CREATUREMOODFEE_H

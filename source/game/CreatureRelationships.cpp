@@ -141,8 +141,11 @@ RelationshipSettings::RelationshipSettings() :
     mCombatBonusFriends(0.75),
     mCombatBonusBestFriends(1.5),
     mCombatPenaltyNemesis(0.75),
-    mMoodPenaltyHated(250),
-    mMoodPenaltyNemesis(400),
+    mMoodPenaltyHated(62.5),
+    mMoodPenaltyNemesis(100.0),
+    mMoodFallHated(0.0744),
+    mMoodFallNemesis(0.1190),
+    mBrawlEndMoodMax(300.0),
     mMoodMaxPairs(2),
     mMaxFriends(3),
     mMaxPartners(1),
@@ -156,24 +159,22 @@ RelationshipSettings::RelationshipSettings() :
     mBrawlValueChange(-6),
     mMentorMinLevelDiff(2),
     mMentorXpBonusPercent(30),
-    mTempMoodMax(1000),
-    mTempMoodDecayPerTurn(3),
-    mGriefMoodPenalty(400),
+    mGriefMoodPenalty(100.0),
     mGriefRageTurns(200),
     mGriefRageBonusPercent(20),
     mJealousyValueLoss(3),
     mLoversJealousyValueLoss(8),
     mLoversBreakValue(70),
     mCombatBonusLovers(2.5),
-    mMoodBonusLovers(300),
-    mPartnerGriefMoodPenalty(800),
+    mMoodBonusLovers(75.0),
+    mPartnerGriefMoodPenalty(200.0),
     mLeavePartnerChancePercent(70),
     mLeaveTogetherChancePercent(30),
-    mSleepNextToFriendMood(50),
+    mSleepNextToFriendMood(12.5),
     mNeighbourBedTiles(3),
-    mEatTogetherMood(100),
+    mEatTogetherMood(25.0),
     mEatTogetherTiles(6),
-    mSlapFriendsMoodPenalty(60),
+    mSlapFriendsMoodPenalty(15.0),
     mConvertedCaptorValue(-20)
 {
 }
@@ -218,8 +219,6 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"EventArenaLoss", &settings.mEventArenaLoss},
         {"EventChickenSnatched", &settings.mEventChickenSnatched},
         {"EventPrayedTogether", &settings.mEventPrayedTogether},
-        {"MoodPenaltyHated", &settings.mMoodPenaltyHated},
-        {"MoodPenaltyNemesis", &settings.mMoodPenaltyNemesis},
         {"MoodMaxPairs", &settings.mMoodMaxPairs},
         {"MaxFriends", &settings.mMaxFriends},
         {"MaxPartners", &settings.mMaxPartners},
@@ -231,22 +230,14 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"BrawlValueChange", &settings.mBrawlValueChange},
         {"MentorMinLevelDiff", &settings.mMentorMinLevelDiff},
         {"MentorXpBonusPercent", &settings.mMentorXpBonusPercent},
-        {"TempMoodMax", &settings.mTempMoodMax},
-        {"TempMoodDecayPerTurn", &settings.mTempMoodDecayPerTurn},
-        {"GriefMoodPenalty", &settings.mGriefMoodPenalty},
         {"GriefRageBonusPercent", &settings.mGriefRageBonusPercent},
         {"JealousyValueLoss", &settings.mJealousyValueLoss},
         {"LoversJealousyValueLoss", &settings.mLoversJealousyValueLoss},
         {"LoversBreakValue", &settings.mLoversBreakValue},
-        {"MoodBonusLovers", &settings.mMoodBonusLovers},
-        {"PartnerGriefMoodPenalty", &settings.mPartnerGriefMoodPenalty},
         {"LeavePartnerChancePercent", &settings.mLeavePartnerChancePercent},
         {"LeaveTogetherChancePercent", &settings.mLeaveTogetherChancePercent},
-        {"SleepNextToFriendMood", &settings.mSleepNextToFriendMood},
         {"NeighbourBedTiles", &settings.mNeighbourBedTiles},
-        {"EatTogetherMood", &settings.mEatTogetherMood},
         {"EatTogetherTiles", &settings.mEatTogetherTiles},
-        {"SlapFriendsMoodPenalty", &settings.mSlapFriendsMoodPenalty},
         {"ConvertedCaptorValue", &settings.mConvertedCaptorValue}
     };
     struct DoubleEntry
@@ -260,7 +251,18 @@ RelationshipSettings RelationshipSettings::fromConfig(const std::map<std::string
         {"CombatBonusFriends", &settings.mCombatBonusFriends},
         {"CombatBonusBestFriends", &settings.mCombatBonusBestFriends},
         {"CombatBonusLovers", &settings.mCombatBonusLovers},
-        {"CombatPenaltyNemesis", &settings.mCombatPenaltyNemesis}
+        {"CombatPenaltyNemesis", &settings.mCombatPenaltyNemesis},
+        {"MoodPenaltyHated", &settings.mMoodPenaltyHated},
+        {"MoodPenaltyNemesis", &settings.mMoodPenaltyNemesis},
+        {"MoodFallHated", &settings.mMoodFallHated},
+        {"MoodFallNemesis", &settings.mMoodFallNemesis},
+        {"BrawlEndMoodMax", &settings.mBrawlEndMoodMax},
+        {"GriefMoodPenalty", &settings.mGriefMoodPenalty},
+        {"MoodBonusLovers", &settings.mMoodBonusLovers},
+        {"PartnerGriefMoodPenalty", &settings.mPartnerGriefMoodPenalty},
+        {"SleepNextToFriendMood", &settings.mSleepNextToFriendMood},
+        {"EatTogetherMood", &settings.mEatTogetherMood},
+        {"SlapFriendsMoodPenalty", &settings.mSlapFriendsMoodPenalty}
     };
     TurnEntry turnEntries[] =
     {
@@ -795,18 +797,19 @@ double CreatureRelationships::mentoringFactor(const std::string& creature, uint3
     return 1.0;
 }
 
-int32_t CreatureRelationships::moodModifier(const std::string& creature) const
+void CreatureRelationships::getMoodPairs(const std::string& creature,
+    std::vector<std::pair<std::string, int32_t> >& pairs) const
 {
+    pairs.clear();
     std::vector<std::pair<std::string, int32_t> > partners;
     getPartners(creature, partners);
     int32_t nbHated = 0;
-    int32_t modifier = 0;
     for(size_t i = 0; i < partners.size(); ++i)
     {
         // The partner is a pure bonus and does not count against the hated limit
         if(isLovers(creature, partners[i].first))
         {
-            modifier += mSettings.mMoodBonusLovers;
+            pairs.push_back(std::make_pair(partners[i].first, static_cast<int32_t>(MoodPairLovers)));
             continue;
         }
 
@@ -814,16 +817,14 @@ int32_t CreatureRelationships::moodModifier(const std::string& creature) const
             continue;
 
         if(partners[i].second <= mSettings.mThresholdNemesis)
-            modifier -= mSettings.mMoodPenaltyNemesis;
+            pairs.push_back(std::make_pair(partners[i].first, static_cast<int32_t>(MoodPairNemesis)));
         else if(partners[i].second <= mSettings.mThresholdHated)
-            modifier -= mSettings.mMoodPenaltyHated;
+            pairs.push_back(std::make_pair(partners[i].first, static_cast<int32_t>(MoodPairHated)));
         else
             continue;
 
         ++nbHated;
     }
-
-    return modifier;
 }
 
 std::string CreatureRelationships::getBestFriend(const std::string& creature) const

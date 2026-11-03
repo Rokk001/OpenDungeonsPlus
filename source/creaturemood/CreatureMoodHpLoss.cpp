@@ -19,17 +19,22 @@
 
 #include "creaturemood/CreatureMoodManager.h"
 #include "entities/Creature.h"
-#include "utils/Helper.h"
+#include "utils/ConfigManager.h"
+
+#include <algorithm>
 
 static const std::string CreatureMoodHpLossName = "HpLoss";
 
 namespace
 {
+//! \brief Factory that creates CreatureMoodHpLoss objects from the creature configuration.
 class CreatureMoodHpLossFactory : public CreatureMoodFactory
 {
+    //! \brief Creates a new CreatureMoodHpLoss with default values.
     CreatureMood* createCreatureMood() const override
     { return new CreatureMoodHpLoss; }
 
+    //! \brief Returns the configuration name of this modifier.
     const std::string& getCreatureMoodName() const override
     {
         return CreatureMoodHpLossName;
@@ -40,44 +45,24 @@ class CreatureMoodHpLossFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodHpLossFactory);
 }
 
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodHpLoss::getModifierName() const
 {
     return CreatureMoodHpLossName;
 }
 
-//! \brief Computes this mood contribution.
-double CreatureMoodHpLoss::computeMood(const Creature& creature) const
+//! \brief Returns 1 while the health of the creature is below LowHealthWalkThresholdPercent of its maximum, otherwise 0.
+double CreatureMoodHpLoss::getAmount(const Creature& creature) const
 {
-    return (creature.getMaxHp() - creature.getHP()) / creature.getMaxHp() * mMoodModifier;
+    if(creature.getMaxHp() <= 0.0)
+        return 0.0;
+
+    const double thresholdPercent = ConfigManager::getSingleton().getLowHealthWalkThresholdPercent();
+    return (creature.getHP() / creature.getMaxHp() * 100.0 < thresholdPercent) ? 1.0 : 0.0;
 }
 
+//! \brief Returns a copy of this modifier.
 CreatureMoodHpLoss* CreatureMoodHpLoss::clone() const
 {
     return new CreatureMoodHpLoss(*this);
-}
-
-bool CreatureMoodHpLoss::importFromStream(std::istream& is)
-{
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
-    if(!(is >> mMoodModifier))
-        return false;
-
-    return true;
-}
-
-void CreatureMoodHpLoss::exportToStream(std::ostream& os) const
-{
-    CreatureMood::exportToStream(os);
-    os << "\t" << mMoodModifier;
-}
-
-void CreatureMoodHpLoss::getFormatString(std::string& format) const
-{
-    CreatureMood::getFormatString(format);
-    if(!format.empty())
-        format += "\t";
-
-    format += "MoodModifier";
 }

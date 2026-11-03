@@ -254,6 +254,9 @@ public:
     inline double getUrgeGrowthPerTurn() const { return mUrgeGrowthPerTurn; }
     //! \brief Returns how much the creature minds dirt (0 = not at all, 1 = normal, 2 = twice as much).
     inline double getCleanliness() const { return mCleanliness; }
+    //! \brief Returns how strongly the creature type reacts to mood problems and losses (the factor on every jump, fall,
+    //! reward and one-time loss; 1 = normal).
+    inline double getMoodSensitivity() const { return mMoodSensitivity; }
     //! \brief Returns the factor on all dirt the creature produces (1 = normal, 2 = twice as much).
     inline double getDirtFactor() const { return mDirtFactor; }
     //! \brief Returns how fast the thirst grows per turn (0 = the creature never gets thirsty).
@@ -447,6 +450,10 @@ private:
 
     //! \brief Optional (Cleanliness, 0 - 2): factor on the mood the dirt around the creature costs. Default 1.0 when not set
     double mCleanliness;
+
+    //! \brief Optional (MoodSensitivity): factor on every jump, fall and reward of the mood problems and on the one-time
+    //! mood losses of the creature type. Default 1.0 when not set
+    double mMoodSensitivity;
 
     //! \brief Optional (DirtFactor, 0 - 2): factor on all dirt the creature produces. Default 1.0 when not set
     double mDirtFactor;

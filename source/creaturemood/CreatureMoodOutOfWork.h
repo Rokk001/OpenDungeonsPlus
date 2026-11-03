@@ -20,50 +20,44 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Applied when the creature wants to work but could not find a job for some time.
+//! \brief Lasting problem: the creature finds no work.
 class CreatureMoodOutOfWork : public CreatureMood
 {
 public:
-    //! \brief Creates the modifier with all values set to zero.
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodOutOfWork() :
-        mTurnsMin(0),
-        mTurnsMax(0),
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Lasting, CreatureMoodColumns::JumpFallReward),
+        mTurnsMin(0)
     {}
 
     //! \brief Destroys the modifier.
     virtual ~CreatureMoodOutOfWork()
     {}
 
-    //! \brief Returns the name under which this modifier is listed in the mood configuration.
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Returns the mood change for the turns the creature found no job beyond TurnsMin (counted up to TurnsMax turns).
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 1 while the creature counts at least TurnsMin turns without work, otherwise 0.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
-    //! \brief Turns without a job from which the mood starts to drop
+    //! \brief Returns a copy of this modifier.
+    CreatureMoodOutOfWork* clone() const override;
+
+    //! \brief Returns the number of turns without work from which the problem holds.
     inline int32_t getTurnsMin() const
     { return mTurnsMin; }
 
-    //! \brief Number of further turns over which the mood keeps dropping
-    inline int32_t getTurnsMax() const
-    { return mTurnsMax; }
-
-    //! \brief Returns a copy of this modifier.
-    inline CreatureMoodOutOfWork* clone() const override;
-
-    //! \brief Reads the modifier parameters from the configuration stream; returns false if a value is missing.
+    //! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
     virtual bool importFromStream(std::istream& is) override;
-    //! \brief Writes the modifier parameters to the stream.
+    //! \brief Writes the parameters and then the value columns to the stream.
     virtual void exportToStream(std::ostream& os) const override;
-    //! \brief Appends the names of the modifier parameters to the format string.
+    //! \brief Appends the names of the parameters and then of the value columns to the format string.
     virtual void getFormatString(std::string& format) const override;
 
 private:
+    //! \brief Number of turns without work from which the problem holds
     int32_t mTurnsMin;
-    int32_t mTurnsMax;
-    double mMoodModifier;
 };
 
 #endif // CREATUREMOODOUTOFWORK_H

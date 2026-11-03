@@ -18,7 +18,6 @@
 #include "creaturemood/CreatureMoodManager.h"
 
 #include "creaturemood/CreatureMood.h"
-#include "creaturemood/CreatureMoodDirt.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/ItemEffects.h"
@@ -26,6 +25,7 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <algorithm>
 #include <istream>
 #include <vector>
 
@@ -56,10 +56,10 @@ void CreatureMoodManager::unregisterFactory(const CreatureMoodFactory* factory)
     factories.erase(it);
 }
 
-//! \brief Maps the mood points to a mood level.
-CreatureMoodLevel CreatureMoodManager::getCreatureMoodLevel(double moodModifiersPoints)
+//! \brief Maps the effective mood to a mood level with the ranges of the global configuration.
+CreatureMoodLevel CreatureMoodManager::getCreatureMoodLevel(double effectiveMood)
 {
-    double mood = ConfigManager::getSingleton().getCreatureBaseMood() + moodModifiersPoints;
+    double mood = effectiveMood;
     if(mood >= ConfigManager::getSingleton().getCreatureMoodHappy())
         return CreatureMoodLevel::Happy;
 
@@ -75,39 +75,61 @@ CreatureMoodLevel CreatureMoodManager::getCreatureMoodLevel(double moodModifiers
     return CreatureMoodLevel::Furious;
 }
 
-//! \brief Adds mood modifiers after Iron Will reduces each negative one, then adds Charisma.
-double CreatureMoodManager::computeCreatureMoodModifiers(const Creature& creature)
+//! \brief Maps the mood of an old save to the stored scale, range to range, linear inside each range, no rounding.
+double CreatureMoodManager::mapOldSaveMood(double oldMood)
 {
-    double moodValue = 0.0;
-    for(const CreatureMood* mood : creature.getDefinition()->getCreatureMoods())
-    {
-        moodValue += ItemEffects::moodModifier(creature, mood->computeMood(creature));
-    }
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double maxMood = config.getCreatureBaseMood();
+    const double upset = config.getCreatureMoodUpset();
+    const double angry = config.getCreatureMoodAngry();
+    const double furious = config.getCreatureMoodFurious();
+    // The old ranges: Neutral and Happy from 1000, Upset from 0, Angry from -1000, Furious below
+    const double oldUpsetFrom = 0.0;
+    const double oldAngryFrom = -1000.0;
+    const double oldFuriousFrom = -2000.0;
 
-    // The casino can raise or lower the mood of any creature
-    moodValue += ItemEffects::moodModifier(creature, creature.getCasinoMood());
-    moodValue += ItemEffects::moodModifier(creature, creature.getMerchantMood());
-    // Praying in a temple makes the creature feel better, whatever its other moods are
-    moodValue += ItemEffects::moodModifier(creature, creature.getPrayerRelief());
-    // Make Happy and Make Unhappy specials
-    moodValue += ItemEffects::moodModifier(creature, creature.getSpecialMood());
-    // Fights in the arena
-    moodValue += ItemEffects::moodModifier(creature, creature.getPitMood());
-    moodValue += ItemEffects::moodModifier(creature, creature.getInfirmaryMood());
-    // A bath in the lava spa lifts the mood
-    moodValue += ItemEffects::moodModifier(creature, creature.getSpaMood());
-    // A drink, a game won or lost and a hangover at the tavern
-    moodValue += ItemEffects::moodModifier(creature, creature.getTavernMood());
-    // Dirty rooms and dirt piles nearby (no line in the creature configuration, the global dirt values apply to all)
-    static const CreatureMoodDirt dirtMood;
-    moodValue += ItemEffects::moodModifier(creature, dirtMood.computeMood(creature));
-    // Creatures of the same keeper that it hates (only with relationships on)
-    moodValue += ItemEffects::moodModifier(creature, creature.getRelationshipMood());
-    // The mood the prison and the torture chamber took from a captured creature
-    moodValue += creature.getPrisonMood() + creature.getTortureMood();
-    moodValue += creature.getItemEffect("Charisma");
+    if(oldMood >= upset)
+        return std::min(maxMood, oldMood);
 
-    return moodValue;
+    if(oldMood >= oldUpsetFrom)
+        return angry + (oldMood - oldUpsetFrom) / (upset - 1.0 - oldUpsetFrom) * (upset - 1.0 - angry);
+
+    if(oldMood >= oldAngryFrom)
+        return furious + (oldMood - oldAngryFrom) / (oldUpsetFrom - 1.0 - oldAngryFrom) * (angry - 1.0 - furious);
+
+    if(oldMood > oldFuriousFrom)
+        return (oldMood - oldFuriousFrom) / (oldAngryFrom - oldFuriousFrom) * (furious - 1.0);
+
+    return 0.0;
+}
+
+//! \brief Sums the old modifiers a loaded creature still shows and the temporary moods the old save held.
+double CreatureMoodManager::computeOldSaveMood(const Creature& creature, double savedTemporaryMood)
+{
+    const ConfigManager& config = ConfigManager::getSingleton();
+    double points = 0.0;
+    // Hunger, thirst and wakefulness grew per point beyond their start values
+    if(creature.getHunger() >= config.getLegacyMoodConfigDouble("HungerStart"))
+        points += ItemEffects::moodModifier(creature, (creature.getHunger() - config.getLegacyMoodConfigDouble("HungerStart"))
+            * config.getLegacyMoodConfigDouble("HungerPerPoint"));
+    if(creature.getThirst() >= config.getLegacyMoodConfigDouble("ThirstStart"))
+        points += ItemEffects::moodModifier(creature, (creature.getThirst() - config.getLegacyMoodConfigDouble("ThirstStart"))
+            * config.getLegacyMoodConfigDouble("ThirstPerPoint"));
+    if(creature.getWakefulness() <= config.getLegacyMoodConfigDouble("WakefulnessStart"))
+        points += ItemEffects::moodModifier(creature, (config.getLegacyMoodConfigDouble("WakefulnessStart") - creature.getWakefulness())
+            * config.getLegacyMoodConfigDouble("WakefulnessPerPoint"));
+
+    // Missed wages, wounds and a missing lair
+    points += ItemEffects::moodModifier(creature, creature.getMissedWages() * config.getLegacyMoodConfigDouble("FeePerWage"));
+    if(creature.getMaxHp() > 0.0)
+        points += ItemEffects::moodModifier(creature, (creature.getMaxHp() - creature.getHP()) / creature.getMaxHp()
+            * config.getLegacyMoodConfigDouble("HpLossFull"));
+    if(creature.getHomeTile() == nullptr)
+        points += ItemEffects::moodModifier(creature, config.getLegacyMoodConfigDouble("NoLair"));
+
+    // The temporary moods the old save held (tavern, spa, infirmary, merchant, prison and torture)
+    points += savedTemporaryMood;
+    return config.getCreatureBaseMood() + points;
 }
 
 CreatureMood* CreatureMoodManager::clone(const CreatureMood* mood)

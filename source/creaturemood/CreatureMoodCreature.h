@@ -24,11 +24,13 @@
 
 class CreatureDefinition;
 
+//! \brief Problem that comes and goes: creatures of a natural enemy class in sight of the creature annoy it, per creature.
 class CreatureMoodCreature : public CreatureMood
 {
 public:
+    //! \brief Creates the modifier with empty parameters (they are read from the configuration).
     CreatureMoodCreature() :
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::ComeAndGo, CreatureMoodColumns::Fall)
     {}
 
     virtual ~CreatureMoodCreature() {}
@@ -45,8 +47,8 @@ public:
     virtual void getFormatString(std::string& format) const override;
 
 private:
+    //! \brief The class name of the creatures that annoy the creature
     std::string mCreatureClass;
-    double mMoodModifier;
 };
 
 #endif // CREATUREMOODCREATURE_H

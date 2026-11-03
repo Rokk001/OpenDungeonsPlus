@@ -20,42 +20,40 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Applied when the creature is held in the hand for too long.
+//! \brief Lasting problem: the creature is held in the hand of the keeper for long periods. The resentment fades once dropped.
 class CreatureMoodHeldInHand : public CreatureMood
 {
 public:
-    //! \brief Creates the modifier with all values set to zero.
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodHeldInHand() :
-        mTurnsMin(0),
-        mTurnsMax(0),
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Lasting, CreatureMoodColumns::JumpFallReward),
+        mTurnsMin(0)
     {}
 
     //! \brief Destroys the modifier.
     virtual ~CreatureMoodHeldInHand()
     {}
 
-    //! \brief Returns the name under which this modifier is listed in the mood configuration.
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Returns the mood change for the turns the creature stayed in the hand beyond TurnsMin (counted up to TurnsMax turns).
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 1 while the creature counts at least TurnsMin turns in the hand, otherwise 0.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
-    inline CreatureMoodHeldInHand* clone() const override;
+    CreatureMoodHeldInHand* clone() const override;
 
-    //! \brief Reads the modifier parameters from the configuration stream; returns false if a value is missing.
+    //! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
     virtual bool importFromStream(std::istream& is) override;
-    //! \brief Writes the modifier parameters to the stream.
+    //! \brief Writes the parameters and then the value columns to the stream.
     virtual void exportToStream(std::ostream& os) const override;
-    //! \brief Appends the names of the modifier parameters to the format string.
+    //! \brief Appends the names of the parameters and then of the value columns to the format string.
     virtual void getFormatString(std::string& format) const override;
 
 private:
+    //! \brief Number of turns in the hand from which the problem holds
     int32_t mTurnsMin;
-    int32_t mTurnsMax;
-    double mMoodModifier;
 };
 
 #endif // CREATUREMOODHELDINHAND_H

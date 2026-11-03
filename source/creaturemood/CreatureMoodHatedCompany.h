@@ -20,42 +20,28 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Annoyance of a creature that stays near a creature of the opposite alignment. Fades after leaving it.
+//! \brief Problem that comes and goes: creatures of the opposite alignment near the creature annoy it, per creature.
 class CreatureMoodHatedCompany : public CreatureMood
 {
 public:
-    //! \brief Creates the modifier with empty parameters (they are read from the configuration).
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodHatedCompany() :
-        mTurnsMax(0),
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::ComeAndGo, CreatureMoodColumns::Fall)
     {}
 
-    //! \brief Nothing to release.
+    //! \brief Destroys the modifier.
     virtual ~CreatureMoodHatedCompany()
     {}
 
-    //! \brief The name of this modifier ("HatedCompany").
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Mood change per turn spent near a hated creature, counted up to TurnsMax turns.
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns the number of creatures of the opposite alignment near the creature.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
-    inline CreatureMoodHatedCompany* clone() const override;
-
-    //! \brief Reads TurnsMax and MoodModifier, returns false if one is missing.
-    virtual bool importFromStream(std::istream& is) override;
-    //! \brief Writes TurnsMax and MoodModifier.
-    virtual void exportToStream(std::ostream& os) const override;
-    //! \brief Appends the column names TurnsMax and MoodModifier.
-    virtual void getFormatString(std::string& format) const override;
-
-private:
-    //! \brief Number of turns near a hated creature after which the mood change stops growing
-    int32_t mTurnsMax;
-    //! \brief Mood change for each of these turns
-    double mMoodModifier;
+    CreatureMoodHatedCompany* clone() const override;
 };
 
 #endif // CREATUREMOODHATEDCOMPANY_H

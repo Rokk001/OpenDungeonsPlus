@@ -103,6 +103,7 @@ CreatureDefinition::CreatureDefinition(
         mTierFourSkill ("none"),
         mUrgeGrowthPerTurn (0.0),
         mCleanliness (1.0),
+        mMoodSensitivity (1.0),
         mDirtFactor (1.0),
         mThirstGrowthPerTurn (0.0),
         mDeathVanishSeconds (0.0),
@@ -189,6 +190,7 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mTierFourSkill(def.mTierFourSkill),
         mUrgeGrowthPerTurn(def.mUrgeGrowthPerTurn),
         mCleanliness(def.mCleanliness),
+        mMoodSensitivity(def.mMoodSensitivity),
         mDirtFactor(def.mDirtFactor),
         mThirstGrowthPerTurn(def.mThirstGrowthPerTurn),
         mDeathVanishSeconds(def.mDeathVanishSeconds),
@@ -473,6 +475,7 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mTierFourSkill;
     os << c->mUrgeGrowthPerTurn;
     os << c->mCleanliness;
+    os << c->mMoodSensitivity;
     os << c->mDirtFactor;
     os << c->mThirstGrowthPerTurn;
     os << c->mDeathVanishSeconds;
@@ -547,6 +550,7 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mTierFourSkill;
     is >> c->mUrgeGrowthPerTurn;
     is >> c->mCleanliness;
+    is >> c->mMoodSensitivity;
     is >> c->mDirtFactor;
     is >> c->mThirstGrowthPerTurn;
     is >> c->mDeathVanishSeconds;
@@ -920,6 +924,12 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
                 creatureDef->mCleanliness = Helper::toDouble(nextParam);
                 continue;
             }
+            else if (nextParam == "MoodSensitivity")
+            {
+                defFile >> nextParam;
+                creatureDef->mMoodSensitivity = Helper::toDouble(nextParam);
+                continue;
+            }
             else if (nextParam == "DirtFactor")
             {
                 defFile >> nextParam;
@@ -1265,6 +1275,8 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
         file << "    DeathVanishSeconds\t" << def2->mDeathVanishSeconds << std::endl;
     if((def1 == nullptr) ? (def2->mCleanliness != 1.0) : (def1->mCleanliness != def2->mCleanliness))
         file << "    Cleanliness\t" << def2->mCleanliness << std::endl;
+    if((def1 == nullptr) ? (def2->mMoodSensitivity != 1.0) : (def1->mMoodSensitivity != def2->mMoodSensitivity))
+        file << "    MoodSensitivity\t" << def2->mMoodSensitivity << std::endl;
     if((def1 == nullptr) ? (def2->mDirtFactor != 1.0) : (def1->mDirtFactor != def2->mDirtFactor))
         file << "    DirtFactor\t" << def2->mDirtFactor << std::endl;
 
