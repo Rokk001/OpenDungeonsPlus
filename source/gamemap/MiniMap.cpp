@@ -74,6 +74,10 @@ const Ogre::Real ANIMATION_PHASES_PER_SECOND = 2.0f;
 //! Colour of solid dirt, also used for unowned claimed tiles.
 const Ogre::ColourValue DIRT_COLOUR(0.36f, 0.18f, 0.05f);
 
+//! Colour of dug-out earth ground (also gold, gem and rock ground): the dark brown of the earth, lighter than
+//! solid dirt so that floor and wall stay apart, but never grey or sandy like stone.
+const Ogre::ColourValue EARTH_GROUND_COLOUR(0.47f, 0.27f, 0.10f);
+
 //! \brief Minimap image that clips the map to a circle when requested and draws the camera
 //! area outline and the direction to the dungeon heart above its stone backing and map.
 class MiniMapImage : public CEGUI::BasicImage
@@ -348,7 +352,7 @@ MiniMap::TileColour MiniMap::colourFromTile(Tile& tile, Seat& playerSeat, unsign
             case TileVisual::goldGround:
             case TileVisual::gemGround:
             case TileVisual::rockGround:
-                result.colour = Ogre::ColourValue(0.82f, 0.70f, 0.50f);
+                result.colour = EARTH_GROUND_COLOUR;
                 break;
             case TileVisual::dirtFull:
                 result.colour = DIRT_COLOUR;

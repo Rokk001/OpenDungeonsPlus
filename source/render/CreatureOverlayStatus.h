@@ -71,6 +71,8 @@ private:
     Seat* mSeat;
     MovableTextOverlay* mMovableTextOverlay;
     uint32_t mHealthValue;
+    //! \brief True if the health ring currently uses the outer ring picture because the creature has mana
+    bool mHasMana = false;
     unsigned int mLevel;
     Ogre::Real mTimeDisplayStatus;
     uint32_t mStatus;

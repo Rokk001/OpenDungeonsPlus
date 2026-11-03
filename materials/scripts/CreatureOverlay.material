@@ -14,6 +14,36 @@ material CreatureOverlay0
     }
 }
 
+material CreatureOverlayHealthOuter
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthOuter.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaInner
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaInner.png
+            }
+        }
+    }
+}
+
 material CreatureOverlay1
 {
     technique

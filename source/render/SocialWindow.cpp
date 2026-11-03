@@ -48,6 +48,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <iomanip>
 #include <sstream>
 
 namespace
@@ -217,6 +218,25 @@ std::string findStatisticsValue(const std::string& stats, const std::string& lab
             return plain.substr(prefix.size());
     }
     return std::string();
+}
+
+//! \brief Formats a Dungeonbook value for display with at most two decimals and without trailing zeros.
+//! The stored values are doubles (for example 1.83149...), which would otherwise show four or more decimals.
+std::string formatProfileValue(double value)
+{
+    std::ostringstream text;
+    text << std::fixed << std::setprecision(2) << value;
+    std::string result = text.str();
+    if(result.find('.') != std::string::npos)
+    {
+        while(!result.empty() && result[result.size() - 1] == '0')
+            result.erase(result.size() - 1);
+        if(!result.empty() && result[result.size() - 1] == '.')
+            result.erase(result.size() - 1);
+    }
+    if(result == "-0")
+        result = "0";
+    return result;
 }
 
 //! \brief Fills a Dungeonbook value tile with a title line and its value in the small font.
@@ -580,7 +600,7 @@ void SocialWindow::refreshProfile()
             for(std::size_t i = 0; i < 4; ++i)
             {
                 std::ostringstream text;
-                text << names[i] << "\n" << values[i];
+                text << names[i] << "\n" << formatProfileValue(values[i]);
                 mDungeonbookPage->getChild(std::string("Attributes/") + names[i])->setText(text.str());
             }
             setProfileTile(mDungeonbookPage->getChild("EquipmentPanel"), "Equipment", selected->equipment);
@@ -588,10 +608,12 @@ void SocialWindow::refreshProfile()
             setProfileTile(mDungeonbookPage->getChild("SkillsPanel"), "Skills", selected->skills);
             // The labels are fixed in the layout; the value column holds one line per label, right aligned.
             std::ostringstream combat;
-            combat << selected->critical << " %\n" << selected->attackRating << "\n" << selected->defenseRating;
+            combat << formatProfileValue(selected->critical) << " %\n" << formatProfileValue(selected->attackRating) << "\n"
+                << formatProfileValue(selected->defenseRating);
             mDungeonbookPage->getChild("CombatValues")->setText(combat.str());
             std::ostringstream defense;
-            defense << selected->physicalDefense << "\n" << selected->magicalDefense << "\n" << selected->elementDefense;
+            defense << formatProfileValue(selected->physicalDefense) << "\n" << formatProfileValue(selected->magicalDefense) << "\n"
+                << formatProfileValue(selected->elementDefense);
             mDungeonbookPage->getChild("DefenseValues")->setText(defense.str());
             // The second page covers the first one; its values come from the lines of the statistics text
             CEGUI::Window* statisticsPage = mDungeonbookPage->getChild("StatisticsPage");

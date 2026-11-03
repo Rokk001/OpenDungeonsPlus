@@ -64,6 +64,8 @@ Ogre::RenderWindow* startupWindow = nullptr;
 Ogre::ManualObject* ringObject = nullptr;
 Ogre::SceneManager* ringScene = nullptr;
 Ogre::MaterialPtr ringMaterial;
+//! The grey empty ring track that is always drawn completely below the glowing fill.
+Ogre::MaterialPtr ringTrackMaterial;
 Ogre::Overlay* loadingOverlay = nullptr;
 Ogre::OverlayContainer* loadingTextPanel = nullptr;
 Ogre::TextAreaOverlayElement* loadingTextArea = nullptr;
@@ -232,59 +234,86 @@ Ogre::MaterialPtr createLoadingMaterial(const std::string& texture, const std::s
     return material;
 }
 
-//! \brief Makes the unlit alpha-blended material of the ember ring with a transparent texture border.
-Ogre::MaterialPtr createRingMaterial(const std::string& group)
+//! \brief Makes an unlit alpha-blended ring material with a transparent texture border.
+//! \param name Material name.
+//! \param texture Ring texture: the glowing fill or the grey empty track.
+//! \param group Resource group of the material.
+Ogre::MaterialPtr createRingMaterial(const std::string& name, const std::string& texture, const std::string& group)
 {
-    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().create("LoadingRing", group);
+    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().create(name, group);
     Ogre::Pass* pass = material->getTechnique(0)->getPass(0);
     pass->setLightingEnabled(false);
     pass->setDepthCheckEnabled(false);
     pass->setDepthWriteEnabled(false);
     pass->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA);
     pass->setCullingMode(Ogre::CULL_NONE);
-    Ogre::TextureUnitState* image = pass->createTextureUnitState("loading_ring.png");
+    Ogre::TextureUnitState* image = pass->createTextureUnitState(texture);
     image->setTextureAddressingMode(Ogre::TAM_BORDER);
     image->setTextureBorderColour(Ogre::ColourValue(0.0f, 0.0f, 0.0f, 0.0f));
     image->setTextureFiltering(Ogre::TFO_BILINEAR);
     return material;
 }
 
-//! \brief Fills the ring clockwise from the top by the real load progress; the full circle is closed at 100 percent.
-//! The ring texture is mapped onto a fan of triangles, so the filled part shows the unchanged glow picture.
+//! \brief Writes one clockwise fan of the ring from the top into the open section of the manual object.
+//! \param ring Manual object whose section is currently open.
+//! \param angle Angle in radians the fan covers; segments beyond it collapse onto its end.
+//! \param halfWidth Horizontal radius in screen space.
+//! \param halfHeight Vertical radius in screen space.
+//! \param centerY Vertical centre in screen space.
+void writeRingFan(Ogre::ManualObject& ring, float angle, float halfWidth, float halfHeight, float centerY)
+{
+    ring.position(0.0f, centerY, 0.0f);
+    ring.textureCoord(0.5f, 0.5f);
+    for(unsigned int i = 0; i <= LOADING_RING_SEGMENTS; ++i)
+    {
+        // Segments beyond the filled angle collapse onto its end, so the vertex count stays constant.
+        const float segmentAngle = std::min(angle, 6.2831853f * static_cast<float>(i) / LOADING_RING_SEGMENTS);
+        const float sine = std::sin(segmentAngle);
+        const float cosine = std::cos(segmentAngle);
+        ring.position(sine * halfWidth, centerY + cosine * halfHeight, 0.0f);
+        ring.textureCoord(0.5f + 0.5f * sine, 0.5f - 0.5f * cosine);
+    }
+    for(unsigned int i = 0; i < LOADING_RING_SEGMENTS; ++i)
+        ring.triangle(0, i + 1, i + 2);
+}
+
+//! \brief Draws the complete grey empty ring and fills it clockwise from the top by the real load progress.
+//! Section 0 is the grey track with all 360 degrees, always visible; section 1 is the glowing fill on top of it
+//! that covers the full circle at 100 percent.
 void fitLoadingRing(Ogre::ManualObject& ring, unsigned int width, unsigned int height)
 {
     const float halfHeight = LOADING_RING_RADIUS * 2.0f;
     const float halfWidth = halfHeight * static_cast<float>(height) / static_cast<float>(std::max(1u, width));
     const float centerY = 1.0f - 2.0f * LOADING_RING_CENTER;
     const float filled = 6.2831853f * std::min(1.0f, std::max(0.0f, loadingProgress));
-    if(ring.getNumSections() == 0)
-        ring.begin(ringMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    const bool created = ring.getNumSections() == 0;
+    if(created)
+        ring.begin(ringTrackMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST);
     else
         ring.beginUpdate(0);
-    ring.position(0.0f, centerY, 0.0f);
-    ring.textureCoord(0.5f, 0.5f);
-    for(unsigned int i = 0; i <= LOADING_RING_SEGMENTS; ++i)
-    {
-        // Segments beyond the filled angle collapse onto its end, so the vertex count stays constant.
-        const float angle = std::min(filled, 6.2831853f * static_cast<float>(i) / LOADING_RING_SEGMENTS);
-        const float sine = std::sin(angle);
-        const float cosine = std::cos(angle);
-        ring.position(sine * halfWidth, centerY + cosine * halfHeight, 0.0f);
-        ring.textureCoord(0.5f + 0.5f * sine, 0.5f - 0.5f * cosine);
-    }
-    for(unsigned int i = 0; i < LOADING_RING_SEGMENTS; ++i)
-        ring.triangle(0, i + 1, i + 2);
+    writeRingFan(ring, 6.2831853f, halfWidth, halfHeight, centerY);
+    ring.end();
+    if(created)
+        ring.begin(ringMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    else
+        ring.beginUpdate(1);
+    writeRingFan(ring, filled, halfWidth, halfHeight, centerY);
     ring.end();
     ring.setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
-    Ogre::ManualObject::ManualObjectSection* section = ring.getSection(0);
-    section->setUseIdentityProjection(true);
-    section->setUseIdentityView(true);
+    for(unsigned int i = 0; i < 2; ++i)
+    {
+        Ogre::ManualObject::ManualObjectSection* section = ring.getSection(i);
+        section->setUseIdentityProjection(true);
+        section->setUseIdentityView(true);
+    }
 }
 
 //! \brief Creates the ring object above the picture in the given scene; it starts empty.
 void createLoadingRing(Ogre::SceneManager& scene, const std::string& group)
 {
-    ringMaterial = createRingMaterial(group);
+    ringTrackMaterial = createRingMaterial("LoadingRingTrack", "loading_ring_empty.png", group);
+    ringMaterial = createRingMaterial("LoadingRing", "loading_ring.png", group);
+    Ogre::TextureManager::getSingleton().load("loading_ring_empty.png", group);
     Ogre::TextureManager::getSingleton().load("loading_ring.png", group);
     ringScene = &scene;
     ringObject = scene.createManualObject("LoadingScreenRing");
@@ -345,6 +374,11 @@ void destroyLoadingIndicator(const std::string& group)
     {
         ringMaterial.reset();
         Ogre::MaterialManager::getSingleton().remove("LoadingRing", group);
+    }
+    if(ringTrackMaterial)
+    {
+        ringTrackMaterial.reset();
+        Ogre::MaterialManager::getSingleton().remove("LoadingRingTrack", group);
     }
     Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
     if(hiddenDebugText != nullptr)
@@ -431,6 +465,10 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& ov
         ringPass->setVertexProgram(vertex->getName());
         ringPass->setFragmentProgram(fragment->getName());
         ringPass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
+        Ogre::Pass* trackPass = ringTrackMaterial->getTechnique(0)->getPass(0);
+        trackPass->setVertexProgram(vertex->getName());
+        trackPass->setFragmentProgram(fragment->getName());
+        trackPass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
         createLoadingText("StartupLoadingFont", "StartupLoading");
         update();
         window.update();

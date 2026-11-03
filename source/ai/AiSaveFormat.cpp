@@ -12,7 +12,18 @@ KeeperAIType readOptionalAiLevel(std::istream& is, std::string& nextToken)
     if(!(is >> nextToken) || nextToken != "aiLevel")
         return KeeperAIType::nbAI;
     std::string name;
-    if(!(is >> name >> nextToken))
+    if(!(is >> name))
+        return KeeperAIType::nbAI;
+    if(name == "Wrong")
+    {
+        std::string placeholderRest;
+        if(!(is >> placeholderRest) || placeholderRest != "value")
+        {
+            nextToken = placeholderRest;
+            return KeeperAIType::nbAI;
+        }
+    }
+    if(!(is >> nextToken))
         return KeeperAIType::nbAI;
     for(unsigned int i = 0; i < static_cast<unsigned int>(KeeperAIType::nbAI); ++i)
     {
