@@ -44,9 +44,9 @@ check('createInstancedEntity("DirtInstanced")' not in render,
       "unknown tiles still use the independent unlit fog material")
 check("if(tile.getFogOfWarCloud() != nullptr)" in render,
       "revealing cloud-free unknown ground must safely handle its absent cloud")
-# Unknown and known earth share DirtWall, including its normals, lighting and colour grade.
+# Unknown and known earth share the Dirt material, including its normals, lighting and colour grade.
 material = (root / "materials/scripts/Dirt.material").read_text(encoding="utf-8")
-wall_material = material[material.index("material DirtWall"):]
+wall_material = material[material.index("material Dirt "):]
 check("vertex_program_ref myDirtTileVertexShader" in wall_material
       and "fragment_program_ref myDirtTileFragmentShader" in wall_material,
       "ordinary earth must retain its common geometry and lighting programs")
