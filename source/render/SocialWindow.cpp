@@ -188,6 +188,37 @@ bool isTileTextFitting(const CEGUI::Window* tile, float height)
     return CEGUI::PropertyHelper<float>::fromString(tile->getProperty("VertExtent")) <= height;
 }
 
+//! \brief Returns the value after "label: " of the first line of the statistics text that starts with the label,
+//! without colour and font markup tags. The result is empty if the line does not exist.
+std::string findStatisticsValue(const std::string& stats, const std::string& label)
+{
+    const std::string prefix = label + ": ";
+    std::string::size_type lineStart = 0;
+    while(lineStart < stats.size())
+    {
+        std::string::size_type lineEnd = stats.find('\n', lineStart);
+        if(lineEnd == std::string::npos)
+            lineEnd = stats.size();
+        const std::string line = stats.substr(lineStart, lineEnd - lineStart);
+        lineStart = lineEnd + 1;
+        // The markup of a line may start before the label (a font or colour tag), so the tags are dropped first
+        std::string plain;
+        bool inTag = false;
+        for(std::size_t i = 0; i < line.size(); ++i)
+        {
+            if(line[i] == '[')
+                inTag = true;
+            else if(line[i] == ']' && inTag)
+                inTag = false;
+            else if(!inTag)
+                plain += line[i];
+        }
+        if(plain.compare(0, prefix.size(), prefix) == 0)
+            return plain.substr(prefix.size());
+    }
+    return std::string();
+}
+
 //! \brief Fills a Dungeonbook value tile with a title line and its value in the small font.
 //! The value is shortened with "..." until it fits the tile height, so the tile never needs a scrollbar.
 void setProfileTile(CEGUI::Window* tile, const std::string& title, const std::string& value)
@@ -227,6 +258,7 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mProfilePage(nullptr),
     mDungeonbookPage(nullptr),
     mShowingSocial(false),
+    mShowingStatistics(false),
     mShownRosterVersion(0),
     mShownPostVersion(0),
     mSinceRefreshCheck(0.0f),
@@ -282,6 +314,7 @@ void SocialWindow::showCreature(const std::string& creatureName)
     mWindow->getChild("FilterButton")->setText(FILTER_LABEL_ALL);
     mSelectedCreature = creatureName;
     mShowingSocial = false;
+    mShowingStatistics = false;
     mProfileTab = true;
     show();
 }
@@ -396,6 +429,7 @@ bool SocialWindow::onSelectionChanged(const CEGUI::EventArgs& /*e*/)
     if(!mSelectedCreature.empty())
     {
         mShowingSocial = false;
+    mShowingStatistics = false;
         showTab(true);
     }
     else if(mProfileTab)
@@ -433,6 +467,14 @@ bool SocialWindow::onProfileViewClicked(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Switches the Dungeonbook profile between its first page and the statistics page.
+bool SocialWindow::onStatisticsViewClicked(const CEGUI::EventArgs&)
+{
+    mShowingStatistics = !mShowingStatistics;
+    refreshProfile();
+    return true;
+}
+
 void SocialWindow::selectCreature(const std::string& creatureName)
 {
     if((mFilter != CreatureFilter::All) &&
@@ -443,6 +485,7 @@ void SocialWindow::selectCreature(const std::string& creatureName)
     }
     mSelectedCreature = creatureName;
     mShowingSocial = false;
+    mShowingStatistics = false;
     rebuildCreatureList();
     if(mSelectedOnly)
         rebuildFeed();
@@ -504,6 +547,10 @@ void SocialWindow::refreshProfile()
             gui.registerWindowHierarchy(mDungeonbookPage);
             mLinkConnections.push_back(mDungeonbookPage->getChild("SocialButton")->subscribeEvent(
                 CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileViewClicked, this)));
+            mLinkConnections.push_back(mDungeonbookPage->getChild("StatisticsButton")->subscribeEvent(
+                CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onStatisticsViewClicked, this)));
+            mLinkConnections.push_back(mDungeonbookPage->getChild("StatisticsPage/BackButton")->subscribeEvent(
+                CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onStatisticsViewClicked, this)));
             mLinkConnections.push_back(pane->getChild("ProfileBackButton")->subscribeEvent(
                 CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileViewClicked, this)));
         }
@@ -546,6 +593,33 @@ void SocialWindow::refreshProfile()
             std::ostringstream defense;
             defense << selected->physicalDefense << "\n" << selected->magicalDefense << "\n" << selected->elementDefense;
             mDungeonbookPage->getChild("DefenseValues")->setText(defense.str());
+            // The second page covers the first one; its values come from the lines of the statistics text
+            CEGUI::Window* statisticsPage = mDungeonbookPage->getChild("StatisticsPage");
+            statisticsPage->setVisible(mShowingStatistics);
+            for(std::size_t i = 0; i < mDungeonbookPage->getChildCount(); ++i)
+            {
+                CEGUI::Window* child = mDungeonbookPage->getChildAtIdx(i);
+                if(child != statisticsPage && child->getName() != "PageBackground")
+                    child->setVisible(!mShowingStatistics);
+            }
+            if(mShowingStatistics)
+            {
+                CEGUI::Window* title = statisticsPage->getChild("Title");
+                title->setText(escapeMarkup(elideToWidth(title->getFont(), profile.getFullName(), title->getPixelSize().d_width)));
+                struct StatisticsLine { const char* window; const char* title; const char* label; };
+                const StatisticsLine lines[] = {
+                    {"Experience", "Experience", "Experience"}, {"HP", "Hit points", "HP"}, {"Gold", "Gold", "Gold"},
+                    {"SightRadius", "Sight radius", "Sight radius"}, {"Potions", "Potions", "Potions"},
+                    {"Inventory", "Inventory", "Inventory"}, {"DamagePerSecond", "Damage per second", "Raw damage per second"},
+                    {"SkillPoints", "Skill points", "Skill points earned / spent"}};
+                for(const StatisticsLine& line : lines)
+                {
+                    std::string value = findStatisticsValue(selected->stats, line.label);
+                    if(value.empty())
+                        value = "-";
+                    setProfileTile(statisticsPage->getChild(std::string(line.window) + "Panel"), line.title, value);
+                }
+            }
             return;
         }
     }
