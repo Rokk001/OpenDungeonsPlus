@@ -1,5 +1,6 @@
 #include "render/LoadingScreen.h"
 
+#include "ODApplication.h"
 #include "render/ODFrameListener.h"
 #include "render/RenderManager.h"
 #include "utils/LogManager.h"
@@ -11,6 +12,7 @@
 #include <OgreRoot.h>
 #include <OgreViewport.h>
 #include <OgreColourValue.h>
+#include <OgreManualObject.h>
 #include <OgreMaterial.h>
 #include <OgreMaterialManager.h>
 #include <OgrePass.h>
@@ -39,7 +41,6 @@
 #include <CEGUI/WindowManager.h>
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <random>
 #include <string>
@@ -60,11 +61,32 @@ Ogre::Rectangle2D* loadingRectangle = nullptr;
 Ogre::SceneManager* startupScene = nullptr;
 Ogre::RenderWindow* startupWindow = nullptr;
 //! The ember ring sits below the text and is drawn on top of the picture in every loading path.
-Ogre::Rectangle2D* ringRectangle = nullptr;
+Ogre::ManualObject* ringObject = nullptr;
+Ogre::SceneManager* ringScene = nullptr;
 Ogre::MaterialPtr ringMaterial;
 Ogre::Overlay* loadingOverlay = nullptr;
 Ogre::OverlayContainer* loadingTextPanel = nullptr;
 Ogre::TextAreaOverlayElement* loadingTextArea = nullptr;
+Ogre::TextAreaOverlayElement* loadingVersionArea = nullptr;
+//! The debug text box of the running game is hidden while a loading picture is shown.
+Ogre::OverlayElement* hiddenDebugText = nullptr;
+bool hiddenDebugTextWasVisible = false;
+//! Real progress of the current load as a fraction of finished load steps; it never goes backwards.
+float loadingProgress = 0.0f;
+//! Progress span of the resource group initialization that is currently running at startup.
+bool groupSpanActive = false;
+float groupSpanFrom = 0.0f;
+float groupSpanTo = 0.0f;
+size_t groupSpanGroups = 1;
+size_t groupSpanGroupsDone = 0;
+size_t groupSpanScripts = 1;
+size_t groupSpanScriptsDone = 0;
+//! Segments of the filled ring; the geometry keeps this size so it can be updated in place.
+const unsigned int LOADING_RING_SEGMENTS = 96;
+//! Version text: height and right/top position as fractions of the window.
+const float LOADING_VERSION_HEIGHT = 0.028f;
+const float LOADING_VERSION_RIGHT = 0.985f;
+const float LOADING_VERSION_TOP = 0.955f;
 //! Text height as a fraction of the window height; relative metrics make it scale with every resolution.
 const float LOADING_TEXT_HEIGHT = 0.075f;
 //! Top of the text as a fraction of the window height.
@@ -73,10 +95,11 @@ const float LOADING_TEXT_TOP = 0.34f;
 const float LOADING_RING_CENTER = 0.60f;
 //! Ring radius as a fraction of the window height.
 const float LOADING_RING_RADIUS = 0.11f;
-//! Seconds of one full clockwise turn.
-const float LOADING_RING_SECONDS = 2.0f;
 //! Name of the overlay font created for the loading paths after startup.
 const char* const LOADING_FONT_NAME = "LoadingScreenFont";
+//! Number of startup stages whose completion fills the ring: window, resource setup, resource groups, sound,
+//! scripting, interface and the first menu scene.
+const float STARTUP_STAGES = 7.0f;
 //! Startup sits above the normal viewport until the first menu scene is ready.
 const int STARTUP_VIEWPORT_ORDER = 1;
 Ogre::MaterialPtr previousMaterial;
@@ -218,6 +241,7 @@ Ogre::MaterialPtr createRingMaterial(const std::string& group)
     pass->setDepthCheckEnabled(false);
     pass->setDepthWriteEnabled(false);
     pass->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA);
+    pass->setCullingMode(Ogre::CULL_NONE);
     Ogre::TextureUnitState* image = pass->createTextureUnitState("loading_ring.png");
     image->setTextureAddressingMode(Ogre::TAM_BORDER);
     image->setTextureBorderColour(Ogre::ColourValue(0.0f, 0.0f, 0.0f, 0.0f));
@@ -225,40 +249,49 @@ Ogre::MaterialPtr createRingMaterial(const std::string& group)
     return material;
 }
 
-//! \brief Rotates a ring texture coordinate around the texture centre by the angle given as cosine and sine.
-//! Rotating the sampled coordinates by -angle turns the picture clockwise (v points down).
-Ogre::Vector2 turnRingUV(float c, float s, float x, float y)
+//! \brief Fills the ring clockwise from the top by the real load progress; the full circle is closed at 100 percent.
+//! The ring texture is mapped onto a fan of triangles, so the filled part shows the unchanged glow picture.
+void fitLoadingRing(Ogre::ManualObject& ring, unsigned int width, unsigned int height)
 {
-    const float dx = x - 0.5f;
-    const float dy = y - 0.5f;
-    return Ogre::Vector2(0.5f + dx * c + dy * s, 0.5f - dx * s + dy * c);
-}
-
-//! \brief Places the ring below the text and turns it clockwise by the elapsed time.
-void fitLoadingRing(Ogre::Rectangle2D& rectangle, unsigned int width, unsigned int height)
-{
-    static const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    const float seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - begin).count();
-    const float angle = 6.2831853f * std::fmod(seconds, LOADING_RING_SECONDS) / LOADING_RING_SECONDS;
-    const float c = std::cos(angle);
-    const float s = std::sin(angle);
     const float halfHeight = LOADING_RING_RADIUS * 2.0f;
     const float halfWidth = halfHeight * static_cast<float>(height) / static_cast<float>(std::max(1u, width));
     const float centerY = 1.0f - 2.0f * LOADING_RING_CENTER;
-    rectangle.setCorners(-halfWidth, centerY + halfHeight, halfWidth, centerY - halfHeight);
-    rectangle.setUVs(turnRingUV(c, s, 0.0f, 0.0f), turnRingUV(c, s, 0.0f, 1.0f), turnRingUV(c, s, 1.0f, 0.0f), turnRingUV(c, s, 1.0f, 1.0f));
+    const float filled = 6.2831853f * std::min(1.0f, std::max(0.0f, loadingProgress));
+    if(ring.getNumSections() == 0)
+        ring.begin(ringMaterial, Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    else
+        ring.beginUpdate(0);
+    ring.position(0.0f, centerY, 0.0f);
+    ring.textureCoord(0.5f, 0.5f);
+    for(unsigned int i = 0; i <= LOADING_RING_SEGMENTS; ++i)
+    {
+        // Segments beyond the filled angle collapse onto its end, so the vertex count stays constant.
+        const float angle = std::min(filled, 6.2831853f * static_cast<float>(i) / LOADING_RING_SEGMENTS);
+        const float sine = std::sin(angle);
+        const float cosine = std::cos(angle);
+        ring.position(sine * halfWidth, centerY + cosine * halfHeight, 0.0f);
+        ring.textureCoord(0.5f + 0.5f * sine, 0.5f - 0.5f * cosine);
+    }
+    for(unsigned int i = 0; i < LOADING_RING_SEGMENTS; ++i)
+        ring.triangle(0, i + 1, i + 2);
+    ring.end();
+    ring.setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
+    Ogre::ManualObject::ManualObjectSection* section = ring.getSection(0);
+    section->setUseIdentityProjection(true);
+    section->setUseIdentityView(true);
 }
 
-//! \brief Creates the ring rectangle above the picture in the given scene.
+//! \brief Creates the ring object above the picture in the given scene; it starts empty.
 void createLoadingRing(Ogre::SceneManager& scene, const std::string& group)
 {
     ringMaterial = createRingMaterial(group);
     Ogre::TextureManager::getSingleton().load("loading_ring.png", group);
-    ringRectangle = new Ogre::Rectangle2D(Ogre::String("LoadingScreenRing"), true);
-    ringRectangle->setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
-    ringRectangle->setMaterial(ringMaterial);
-    ringRectangle->setRenderQueueGroup(RenderManager::OD_RENDER_QUEUE_ID_GUI);
-    scene.getRootSceneNode()->attachObject(ringRectangle);
+    ringScene = &scene;
+    ringObject = scene.createManualObject("LoadingScreenRing");
+    ringObject->setDynamic(true);
+    ringObject->setRenderQueueGroup(RenderManager::OD_RENDER_QUEUE_ID_GUI);
+    scene.getRootSceneNode()->attachObject(ringObject);
+    fitLoadingRing(*ringObject, 1u, 1u);
 }
 
 //! \brief Creates the large centred loading text as an overlay with the given font.
@@ -278,17 +311,35 @@ void createLoadingText(const std::string& fontName, const std::string& fontGroup
     loadingTextArea->setColour(Ogre::ColourValue(0.86f, 0.82f, 0.76f));
     loadingTextArea->setCaption("Loading...");
     loadingTextPanel->addChild(loadingTextArea);
+    // The version sits small in the bottom right corner, right-aligned at its position.
+    loadingVersionArea = static_cast<Ogre::TextAreaOverlayElement*>(overlays.createOverlayElement("TextArea", "LoadingScreenVersion"));
+    loadingVersionArea->setFontName(fontName, fontGroup);
+    loadingVersionArea->setMetricsMode(Ogre::GMM_RELATIVE);
+    loadingVersionArea->setPosition(LOADING_VERSION_RIGHT, LOADING_VERSION_TOP);
+    loadingVersionArea->setCharHeight(LOADING_VERSION_HEIGHT);
+    loadingVersionArea->setAlignment(Ogre::TextAreaOverlayElement::Right);
+    loadingVersionArea->setColour(Ogre::ColourValue(0.86f, 0.82f, 0.76f));
+    loadingVersionArea->setCaption(ODApplication::VERSION);
+    loadingTextPanel->addChild(loadingVersionArea);
+    // The game's own debug text box (welcome text with the version) must not show up in the middle of the picture.
+    if(overlays.hasOverlayElement("DebugMessages"))
+    {
+        hiddenDebugText = overlays.getOverlayElement("DebugMessages");
+        hiddenDebugTextWasVisible = hiddenDebugText->isVisible();
+        hiddenDebugText->hide();
+    }
     loadingOverlay->show();
 }
 
-//! \brief Removes the ring rectangle, its material and the overlay text of the current loading path.
+//! \brief Removes the ring object, its material and the overlay texts of the current loading path.
 void destroyLoadingIndicator(const std::string& group)
 {
-    if(ringRectangle != nullptr)
+    if(ringObject != nullptr)
     {
-        ringRectangle->detachFromParent();
-        delete ringRectangle;
-        ringRectangle = nullptr;
+        ringObject->detachFromParent();
+        ringScene->destroyManualObject(ringObject);
+        ringObject = nullptr;
+        ringScene = nullptr;
     }
     if(ringMaterial)
     {
@@ -296,15 +347,26 @@ void destroyLoadingIndicator(const std::string& group)
         Ogre::MaterialManager::getSingleton().remove("LoadingRing", group);
     }
     Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
+    if(hiddenDebugText != nullptr)
+    {
+        if(hiddenDebugTextWasVisible)
+            hiddenDebugText->show();
+        hiddenDebugText = nullptr;
+    }
     if(loadingOverlay != nullptr)
         overlays.destroy(loadingOverlay);
     if(loadingTextArea != nullptr)
         overlays.destroyOverlayElement(loadingTextArea);
+    if(loadingVersionArea != nullptr)
+        overlays.destroyOverlayElement(loadingVersionArea);
     if(loadingTextPanel != nullptr)
         overlays.destroyOverlayElement(loadingTextPanel);
     loadingOverlay = nullptr;
     loadingTextArea = nullptr;
+    loadingVersionArea = nullptr;
     loadingTextPanel = nullptr;
+    loadingProgress = 0.0f;
+    groupSpanActive = false;
 }
 
 //! \brief Selects and loads one picture for both startup and every existing loading path.
@@ -328,6 +390,7 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& ov
     try
     {
         startupWindow = &window;
+        loadingProgress = 0.0f;
         startupScene = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "LoadingScreenScene");
         startupScene->addRenderQueueListener(&overlaySystem);
         Ogre::Camera* camera = startupScene->createCamera("LoadingScreenCamera");
@@ -381,27 +444,97 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& ov
     }
 }
 
+//! \brief Converts a count of finished startup stages (a fraction of a stage is allowed) to the progress fraction.
+float LoadingScreen::startupFraction(float stagesDone)
+{
+    return stagesDone / STARTUP_STAGES;
+}
+
+//! \brief Reports a finished map load step: raises the progress to the finished share of all steps and redraws.
+void LoadingScreen::loadStepDone(LoadStep step)
+{
+    setProgress(static_cast<float>(step) / static_cast<float>(LOAD_STEP_COUNT));
+}
+
 //! \brief Pumps events and redraws only the loading viewport, leaving partially built scenes untouched.
-void LoadingScreen::presentStartup()
+//! A fraction of 0 or more first raises the real startup progress to that value.
+void LoadingScreen::presentStartup(float progress)
 {
     if(startupWindow == nullptr || startupWindow->isClosed())
         return;
+    if(progress >= 0.0f)
+        loadingProgress = std::max(loadingProgress, std::min(1.0f, progress));
     Ogre::WindowEventUtilities::messagePump();
     if(startupWindow->isClosed())
         return;
     fitLoadingImage(*loadingRectangle, startupWindow->getWidth(), startupWindow->getHeight());
-    if(ringRectangle != nullptr)
-        fitLoadingRing(*ringRectangle, startupWindow->getWidth(), startupWindow->getHeight());
+    if(ringObject != nullptr)
+        fitLoadingRing(*ringObject, startupWindow->getWidth(), startupWindow->getHeight());
     startupWindow->_beginUpdate();
     startupWindow->_updateViewport(STARTUP_VIEWPORT_ORDER);
     startupWindow->_endUpdate();
     startupWindow->swapBuffers();
 }
 
-//! \brief Presents the startup picture after each synchronous resource script.
+//! \brief Starts counting the scripts of a resource group that is being initialized in the running span.
+void LoadingScreen::resourceGroupScriptingStarted(const Ogre::String&, size_t scriptCount)
+{
+    groupSpanScripts = std::max<size_t>(1, scriptCount);
+    groupSpanScriptsDone = 0;
+}
+
+//! \brief Counts a finished resource group of the running span.
+void LoadingScreen::resourceGroupScriptingEnded(const Ogre::String&)
+{
+    ++groupSpanGroupsDone;
+    groupSpanScriptsDone = 0;
+    groupSpanScripts = 1;
+}
+
+//! \brief Presents the startup picture after each synchronous resource script and advances the group progress.
 void LoadingScreen::scriptParseEnded(const Ogre::String&, bool)
 {
+    ++groupSpanScriptsDone;
+    if(groupSpanActive)
+    {
+        const float done = static_cast<float>(groupSpanGroupsDone)
+            + std::min(1.0f, static_cast<float>(groupSpanScriptsDone) / static_cast<float>(groupSpanScripts));
+        const float fraction = std::min(1.0f, done / static_cast<float>(groupSpanGroups));
+        loadingProgress = std::max(loadingProgress, groupSpanFrom + (groupSpanTo - groupSpanFrom) * fraction);
+    }
     presentStartup();
+}
+
+//! \brief Lets the resource groups initialized next fill the ring from one progress value to another.
+void LoadingScreen::beginGroupProgress(float from, float to)
+{
+    groupSpanActive = true;
+    groupSpanFrom = from;
+    groupSpanTo = to;
+    groupSpanGroups = std::max<size_t>(1, Ogre::ResourceGroupManager::getSingleton().getResourceGroups().size());
+    groupSpanGroupsDone = 0;
+    groupSpanScripts = 1;
+    groupSpanScriptsDone = 0;
+}
+
+//! \brief Sets the real load progress (0 to 1, never decreasing) and redraws so that the ring visibly grows.
+void LoadingScreen::setProgress(float fraction)
+{
+    if(loadingRectangle == nullptr)
+        return;
+    groupSpanActive = false;
+    loadingProgress = std::max(loadingProgress, std::min(1.0f, std::max(0.0f, fraction)));
+    if(startupScene != nullptr)
+    {
+        presentStartup();
+        return;
+    }
+    ODFrameListener* frame = ODFrameListener::getSingletonPtr();
+    if(frame == nullptr)
+        return;
+    update();
+    // Updating only the render target avoids recursively processing input, sockets or mode changes.
+    frame->getRenderWindow()->update();
 }
 
 //! \brief Presents the startup picture after each resource in a group load.
@@ -432,6 +565,7 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
             previousMaterial = loadingRectangle->getMaterial();
             previousQueue = loadingRectangle->getRenderQueueGroup();
             previousRectangleVisible = loadingRectangle->isVisible();
+            loadingProgress = 0.0f;
             selectLoadingImage();
             createLoadingRing(*RenderManager::getSingleton().getSceneManager(), "Graphics");
             if(!Ogre::FontManager::getSingleton().getByName(LOADING_FONT_NAME, "GUI"))
@@ -539,8 +673,8 @@ void LoadingScreen::update()
     loadingRectangle->setVisible(true);
     loadingRectangle->setRenderQueueGroup(RenderManager::OD_RENDER_QUEUE_ID_GUI - 1);
     fitLoadingImage(*loadingRectangle, window->getWidth(), window->getHeight());
-    if(ringRectangle != nullptr)
-        fitLoadingRing(*ringRectangle, window->getWidth(), window->getHeight());
+    if(ringObject != nullptr)
+        fitLoadingRing(*ringObject, window->getWidth(), window->getHeight());
     if(CEGUI::System::getSingletonPtr() == nullptr)
         return;
     CEGUI::Window* root = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();

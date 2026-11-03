@@ -189,7 +189,7 @@ void ODApplication::startClient()
     // Needed for the TextRenderer and the Render Manager
     Ogre::OverlaySystem overlaySystem;
 
-    const std::string windowTitle = "OpenDungeons " + VERSION;
+    const std::string windowTitle = "Moreya " + VERSION;
 
     OD_LOG_INF("Creating window...");
 
@@ -255,13 +255,13 @@ void ODApplication::startClient()
     // (it is a no-op there), only setHidden(false) shows the window.
     renderWindow->setHidden(false);
     renderWindow->setVisible(true);
-    LoadingScreen::presentStartup();
+    LoadingScreen::presentStartup(LoadingScreen::startupFraction(1.0f));
     OD_LOG_INF("window shown");
 
     //NOTE: This is currently done here as it has to be done after initialising mRoot,
     // but before running initialiseAllResourceGroups()
     resMgr.setupOgreResources(ogreRoot.getRenderSystem()->getNativeShadingLanguageVersion());
-    LoadingScreen::presentStartup();
+    LoadingScreen::presentStartup(LoadingScreen::startupFraction(2.0f));
 
     // Setup Icon (On Windows)
     // NOTE: On linux at least, the icon is usually handled through desktop files.
@@ -290,17 +290,18 @@ void ODApplication::startClient()
     Ogre::MaterialManager::getSingleton().addListener(sgListener);
 #endif
     
+    LoadingScreen::beginGroupProgress(LoadingScreen::startupFraction(2.0f), LoadingScreen::startupFraction(3.0f));
     Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
-    LoadingScreen::presentStartup();
+    LoadingScreen::presentStartup(LoadingScreen::startupFraction(3.0f));
 
     MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
     SoundEffectsManager soundEffectsManager;
-    LoadingScreen::presentStartup();
+    LoadingScreen::presentStartup(LoadingScreen::startupFraction(4.0f));
 
     // Keep Python alive across game-mode changes; consoles own only their game state.
     pybind11::scoped_interpreter pythonInterpreter;
     pybind11::gil_scoped_release pythonMainThreadRelease;
-    LoadingScreen::presentStartup();
+    LoadingScreen::presentStartup(LoadingScreen::startupFraction(5.0f));
 
     ODServer server;
     ODClient client;
@@ -309,7 +310,7 @@ void ODApplication::startClient()
 
     Ogre::MaterialManager::getSingleton().setActiveScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
     Gui gui(&soundEffectsManager, resMgr.getCeguiLogFile(), *renderWindow);
-    LoadingScreen::presentStartup();
+    LoadingScreen::presentStartup(LoadingScreen::startupFraction(6.0f));
     TextRenderer textRenderer;
     textRenderer.addTextBox("DebugMessages", ODApplication::MOTD.c_str(), 840,
                                 30, 50, 70, Ogre::ColourValue::Green);
@@ -412,5 +413,5 @@ const std::string ODApplication::VERSION = OD_VERSION;
 const std::string ODApplication::VERSION = "0.7.4";
 #endif
 const std::string ODApplication::VERSIONSTRING = "OpenDungeons_Version:" + VERSION;
-std::string ODApplication::MOTD = "Welcome to Open Dungeons\tVersion:  " + VERSION;
+std::string ODApplication::MOTD = "Welcome to Moreya\tVersion:  " + VERSION;
 const std::string ODApplication::POINTER_INFO_STRING = "pointerInfo";

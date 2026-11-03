@@ -475,6 +475,7 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         stopServer();
         return false;
     }
+    LoadingScreen::loadStepDone(LoadingScreen::LOAD_LEVEL_READ);
 
     // The relationships option comes from the game setup, a saved game brings its own setting
     if(mode == ServerMode::ModeEditor)
@@ -511,6 +512,7 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         stopServer();
         return false;
     }
+    LoadingScreen::loadStepDone(LoadingScreen::LOAD_SERVER_LISTENING);
     int mId = 0 ;
     for(Seat* seat : gameMap->getSeats())
     {
