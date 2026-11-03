@@ -68,13 +68,18 @@ def main():
     fonts = re.findall(r"setTrueTypeSize\((\d+)\)", source)
     assert fonts and all(int(size) >= 96 for size in fonts), "the font bitmap must stay sharp when the text is scaled up"
     # The ember ring: material, fill by real progress, creation on the startup path and on every later path, cleanup.
-    assert 'createTextureUnitState("loading_ring.png")' in source and "SBT_TRANSPARENT_ALPHA" in source, "ring material missing"
-    ring = source.split("void fitLoadingRing(", 1)[1].split("void createLoadingRing(", 1)[0]
-    assert "loadingProgress" in ring and "6.2831853f" in ring and "triangle(" in ring, "the ring must fill clockwise by the real progress"
+    assert 'createTextureUnitState(texture)' in source and "SBT_TRANSPARENT_ALPHA" in source, "ring material missing"
+    ring = source.split("void writeRingFan(", 1)[1].split("void createLoadingRing(", 1)[0]
+    assert "loadingProgress" in source and "6.2831853f" in ring and "triangle(" in ring, "the ring must fill clockwise by the real progress"
     assert "steady_clock" not in source and "LOADING_RING_SECONDS" not in source and "time_point" not in source, "no time-based progress or spinning"
     assert "sine * halfWidth" in ring and "centerY + cosine * halfHeight" in ring, "the fill must start at the top and run clockwise"
     assert "setUseIdentityProjection(true)" in ring and "setUseIdentityView(true)" in ring, "the ring fan must be drawn in screen space"
     assert "setCullingMode(Ogre::CULL_NONE)" in source, "the ring must be visible whatever the fan winding"
+    # The grey empty track must always be drawn as a complete circle below the fill.
+    assert "writeRingFan(ring, 6.2831853f," in source and "writeRingFan(ring, filled," in source, "the grey track must cover all 360 degrees and the fill follows the progress"
+    assert source.index("ring.begin(ringTrackMaterial") < source.index("ring.begin(ringMaterial"), "the track section must be drawn before the fill section"
+    assert '"LoadingRingTrack", "loading_ring_empty.png"' in source and "ringTrackMaterial->getTechnique(0)->getPass(0)" in source, "track material must exist on every path including the startup shader"
+    assert 'remove("LoadingRingTrack", group)' in source, "track material must be released"
     later_construct = source.split("LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus)", 1)[1].split("catch(...)", 1)[0]
     assert 'createLoadingRing(*RenderManager::getSingleton().getSceneManager(), "Graphics")' in later_construct and "createLoadingText(LOADING_FONT_NAME" in later_construct, "later load paths must create ring and text"
     assert source.count("fitLoadingRing(*ringObject") == 3, "creation, startup present and update() must both redraw the ring"
@@ -100,6 +105,8 @@ def main():
     assert "loadingText->setAlpha(0.0f);" in source, "the small widget text must not draw over the large text"
     ring_png = (root / "materials/textures/loading/loading_ring.png").read_bytes()
     assert ring_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", ring_png, 16) == (256, 256), "ring texture missing or wrong size"
+    track_png = (root / "materials/textures/loading/loading_ring_empty.png").read_bytes()
+    assert track_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", track_png, 16) == (256, 256), "empty ring texture missing or wrong size"
     for token in ('"StartupLoadingVertex"', '"StartupLoadingFragment"', "vertex->setSource(", "fragment->setSource(", 'setNamedConstant("picture", 0)'):
         assert token in constructor, f"missing standalone startup shader setup: {token}"
     present = source.split("void LoadingScreen::presentStartup(float progress)", 1)[1].split("void LoadingScreen::resourceGroupScriptingStarted", 1)[0]
