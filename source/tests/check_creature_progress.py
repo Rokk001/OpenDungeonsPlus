@@ -32,9 +32,9 @@ for sig in ('void Creature::importFromPacket(', 'void Creature::updateFromPacket
     assert 'importProgressFromPacket(is);' in function(creature, sig)
 assert 'mAttackRecoveryTurns = std::max(0.0, mAttackRecoveryTurns - 1.0);' in source
 overlay_source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text().replace('\r\n', '\n')
-# Mana is the lower third of the badge flower, cut from the top; the thin mana ring is gone.
+# Mana is the inner ring of the badge flower, health the outer ring; both shrink from the top.
 assert 'MANA_RING' not in overlay_source
-assert 'MANA_FLOWER_SHARE = 1.0f / 3.0f;' in overlay_source
+assert 'MANA_FLOWER_SHARE' not in overlay_source
 assert 'BADGE_FLOWER_MATERIAL = "CreatureOverlay0";' in overlay_source
 assert 'mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)' in source
 server = (root / 'source/network/ODServer.cpp').read_text()
@@ -103,7 +103,6 @@ struct ODApplication {static double turnsPerSecond;};double ODApplication::turns
 //! \brief Inactive level test, as in a normal game.
 struct RunLevelTest {static bool isActive(){return false;}static void onRecoveryFrame(bool,uint32_t){}};
 enum class CreatureOverlays {health,experience,recovery,status,mana};
-const float MANA_FLOWER_SHARE=1.0f/3.0f;
 const uint32_t PROGRESS_ATLAS_COLUMNS=8;
 const uint32_t PROGRESS_ATLAS_LAST_FRAME=PROGRESS_ATLAS_COLUMNS*PROGRESS_ATLAS_COLUMNS-1;
 struct MovableTextOverlay {
@@ -175,9 +174,9 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  b.mMaxMana=40;b.mOverlayHealthValue=0;for(double mana:{0.,2.,5.,20.,36.,40.,60.,-5.}){b.mMana=mana;status.updateProgress(0);
   const double share=mana<=0?0.:mana>=40?1.:mana/40;
   check(share==0?!overlay.shown[4]:overlay.shown[4],"mana part is shown while there is mana");
-  check(Near::within(overlay.bottom[4],1.0)&&Near::within(overlay.top[4],2./3+(1./3)*(1-share)),"mana drains from the top inside the lower third");
-  check(Near::within(overlay.top[0],0.)&&Near::within(overlay.bottom[0],2./3),"full health fills the upper two thirds");}
- b.mMana=20;b.mOverlayHealthValue=4;status.updateProgress(0);check(Near::within(overlay.top[0],2./3*0.5)&&Near::within(overlay.bottom[0],2./3),"half health drains the red part from the top");
+  check(Near::within(overlay.bottom[4],1.0)&&Near::within(overlay.top[4],1-share),"the inner mana ring shrinks with the mana");
+  check(Near::within(overlay.top[0],0.)&&Near::within(overlay.bottom[0],1.),"full health fills the whole outer ring");}
+ b.mMana=20;b.mOverlayHealthValue=4;status.updateProgress(0);check(Near::within(overlay.top[0],0.5)&&Near::within(overlay.bottom[0],1.),"half health shrinks the outer ring to half");
  b.mMaxMana=0;b.mMana=10;b.mOverlayHealthValue=0;status.updateProgress(0);check(!overlay.shown[4]&&Near::within(overlay.top[0],0.)&&Near::within(overlay.bottom[0],1.),"no mana pool shows the whole flower as health");
  b.mOverlayHealthValue=4;status.updateProgress(0);check(Near::within(overlay.top[0],0.5)&&Near::within(overlay.bottom[0],1.),"health drains from the top without mana");b.mOverlayHealthValue=0;
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
