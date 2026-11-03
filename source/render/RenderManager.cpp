@@ -2356,8 +2356,12 @@ void RenderManager::pinMenuShaderLights()
     mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 }
 
+//! \brief Lets the shaders count the lights again. Does nothing once the shader generator is destroyed,
+//! because the menu is also freed while the game shuts down, after the application destroyed the generator.
 void RenderManager::releaseMenuShaderLights()
 {
+    if(Ogre::RTShader::ShaderGenerator::getSingletonPtr() != mShaderGenerator)
+        return;
     mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME)->setLightCountAutoUpdate(true);
     mShaderGenerator->invalidateScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 }
