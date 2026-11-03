@@ -383,6 +383,16 @@ double RoomTreasury::getTotalGoldStored() const
     return totalGold;
 }
 
+//! \brief Returns the gold the tile can still take, 0 for a foreign tile or a tile with no hit points left.
+double RoomTreasury::getGoldSpaceInTile(Tile* tile) const
+{
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end() || it->second->mHP <= 0)
+        return 0.0;
+    const RoomTreasuryTileData* data = static_cast<const RoomTreasuryTileData*>(it->second);
+    return std::max(0.0, getGoldCapacityPerTile() - data->mGoldInTile);
+}
+
 //! \brief Deposits as much exact gold as the room can hold.
 //! \brief Deposits unchanged gold and reports its burst when the owner has one unambiguous heart.
 double RoomTreasury::depositGold(double gold, Tile *tile)
@@ -610,10 +620,14 @@ bool RoomTreasury::hasCarryEntitySpot(GameEntity* carriedEntity)
     if(carriedEntity->getObjectType() != GameEntityType::treasuryObject)
         return false;
 
-    if(getTotalGoldStored() >= getTotalGoldStorage())
-        return false;
+    // The room takes gold as long as one of its tiles has room
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(getGoldSpaceInTile(tile) > 0.0)
+            return true;
+    }
 
-    return true;
+    return false;
 }
 
 //! \brief Books the first available item place so concurrent carriers cannot promise it twice.

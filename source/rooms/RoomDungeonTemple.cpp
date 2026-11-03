@@ -733,6 +733,18 @@ double RoomDungeonTemple::getTotalGoldStored() const
     return totalGold;
 }
 
+//! \brief Returns the gold a ring tile can still take, 0 for a core tile or a tile with no hit points left.
+double RoomDungeonTemple::getGoldSpaceInTile(Tile* tile) const
+{
+    if(!isTreasuryTile(tile))
+        return 0.0;
+    std::map<Tile*, TileData*>::const_iterator it = mTileData.find(tile);
+    if(it == mTileData.end() || it->second->mHP <= 0)
+        return 0.0;
+    const RoomTreasuryTileData* data = static_cast<const RoomTreasuryTileData*>(it->second);
+    return std::max(0.0, static_cast<int>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DungeonHeartGoldPerTile", 1000.0)) - data->mGoldInTile);
+}
+
 //! \brief Deposits exact gold into treasury ring tiles.
 //! \brief Deposits unchanged gold into the ring and reports one cosmetic burst at the actual heart.
 double RoomDungeonTemple::depositGold(double gold, Tile* tile)
@@ -1046,11 +1058,14 @@ bool RoomDungeonTemple::hasCarryEntitySpot(GameEntity* carriedEntity)
         case GameEntityType::giftBoxEntity:
             return true;
         case GameEntityType::treasuryObject:
-            // A 5x5 heart has space for more gold until its ring is full; a 3x3 heart
+            // A 5x5 heart has space for more gold while one ring tile has room; a 3x3 heart
             // never accepts gold (it has no ring)
-            if(getTotalGoldStored() >= getTotalGoldStorage())
-                return false;
-            return true;
+            for(Tile* tile : mCoveredTiles)
+            {
+                if(getGoldSpaceInTile(tile) > 0.0)
+                    return true;
+            }
+            return false;
         default:
             return false;
     }
@@ -1067,11 +1082,11 @@ Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
         {
             if(!hasCarryEntitySpot(carriedEntity))
                 return nullptr;
-            // Any ring tile works: the deposit is handled by the covering room and fills the
-            // whole ring
+            // Gold carriers name their own ring tile (the nearest with room); this is the fallback.
+            // The deposit is handled by the covering room and fills the whole ring
             for(Tile* tile : mCoveredTiles)
             {
-                if(isTreasuryTile(tile))
+                if(getGoldSpaceInTile(tile) > 0.0)
                     return tile;
             }
             return nullptr;

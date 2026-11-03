@@ -95,6 +95,7 @@ public:
     virtual double getTotalGoldStored() const override;
     //! \brief Deposits gold in the ring while retaining fractional payments.
     //! \brief Deposits gold into the ring and reports the actual heart position for the delivery burst.
+    virtual double getGoldSpaceInTile(Tile* tile) const override;
     virtual double depositGold(double gold, Tile* tile) override;
     //! \brief Withdraws ring gold while retaining fractional payments.
     virtual double withdrawGold(double gold) override;

@@ -37,7 +37,8 @@ public:
     //! \brief Reserves a fitting cot when starting a carry to an infirmary.
     //! \param forced Whether a hand drop forced this one transport.
     //! \param digGold Whether this transport belongs to digging rather than the carry job.
-    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced = false, bool digGold = false);
+    //! \param goldTile For carried gold: the gold tile of buildingDest the gold is put down on (nullptr = the building's own choice).
+    CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest, bool forced = false, bool digGold = false, Tile* goldTile = nullptr);
     //! \brief Carries a mission item visibly to its exact script destination without inventing a building.
     //! \param forced Whether a hand drop forced this one transport.
     //! \param digGold Whether this transport belongs to digging rather than the carry job.
@@ -58,6 +59,14 @@ public:
 
     //! \brief Walks cargo to its destination, using a furniture-aware stand position for merchant tables.
     static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
+
+    //! \brief Returns the nearest own gold tile with room (own treasuries and own heart ring) that the creature
+    //! can walk to from the given tile, or nullptr when no gold tile has room or none can be reached.
+    //! Between equally near tiles a heart ring tile wins.
+    static Tile* findNearestGoldTile(Creature& creature, Tile* from);
+
+    //! \brief Carries gold to its gold tile and picks the nearest tile with room again when that tile can take no more.
+    bool handleCarryGold();
 
     //! \brief Returns whether a knocked-out creature or body is pulled rather than carried.
     static bool isPulledOverGround(const Creature& carrier, GameEntity& entity);
