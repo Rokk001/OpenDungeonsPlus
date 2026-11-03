@@ -114,6 +114,11 @@ private:
     Ogre::Real mOffsetX = 0.0f;
     //! Vertical shift in pixels (at scale 1) of the drawing; it does not change where the next child is centred
     Ogre::Real mOffsetY = 0.0f;
+
+    //! Top edge of the shown part of the picture as a fraction of its height (0 = top edge, 1 = bottom edge)
+    Ogre::Real mBandTop = 0.0f;
+    //! Bottom edge of the shown part of the picture as a fraction of its height
+    Ogre::Real mBandBottom = 1.0f;
 };
 
 class MovableTextOverlay
@@ -159,6 +164,13 @@ public:
     //! \param x Horizontal offset in pixels, positive to the right
     //! \param y Vertical offset in pixels, positive downwards
     void setOffset(uint32_t childOverlayId, Ogre::Real x, Ogre::Real y);
+    //! \brief Shows only a horizontal band of the picture of a child overlay, cut from the full picture.
+    //! The band is drawn at the place it has in the full picture, so a flower cut into a red upper part and a blue
+    //! lower part still looks like one flower. An empty band (top >= bottom) draws nothing.
+    //! \param childOverlayId The child overlay to cut
+    //! \param top Upper edge of the band as a fraction of the picture height, 0 is the top edge of the picture
+    //! \param bottom Lower edge of the band as a fraction of the picture height, 1 is the bottom edge of the picture
+    void setVerticalBand(uint32_t childOverlayId, Ogre::Real top, Ogre::Real bottom);
     //! \brief Shows one cell of the material texture, which is a square grid of columns x columns cells.
     //! The frame number enumerates the cells row by row from the top left to the bottom right square.
     //! The cell is shown by mapping the overlay to its u,v texture coordinates in [0..1]x[0..1].

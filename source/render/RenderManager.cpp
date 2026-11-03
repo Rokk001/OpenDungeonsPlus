@@ -2437,6 +2437,8 @@ Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogr
     Ogre::SceneNode* sn = mSceneManager->getRootSceneNode()->createChildSceneNode("PointLightMenuSceneNode_" + name, pos);
     sn->attachObject(light);
     light->setType(Ogre::Light::LT_POINT);
+    // The menu has dozens of lights; shadow maps for them would be rendered again every frame.
+    light->setCastShadows(false);
     light->setDiffuseColour(diffuse);
     light->setSpecularColour(specular);
     light->setAttenuation(attenuationRange, attenuationConstant, attenuationLinear, attenuationQuadratic);

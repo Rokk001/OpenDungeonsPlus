@@ -722,6 +722,7 @@ void ODFrameListener::createMainMenuScene()
     mCameraManager.setMainMenuProjection(true);
     mMainScene->resetMenu(mCameraManager, *mRenderManager);
     OD_LOG_INF("startup menu ready");
+    LoadingScreen::presentStartup(1.0f);
     LoadingScreen::finishStartup();
 }
 

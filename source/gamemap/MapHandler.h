@@ -56,6 +56,13 @@ namespace MapHandler
     //! \brief Loads supported level formats and reports every rejected section.
     bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap);
 
+    //! \brief Tells whether a file version header (e.g. "OpenDungeons_Version:0.7.4.20") can be loaded.
+    //! Any build number of a supported release (0.7.1, 0.7.2, 0.7.4) is accepted, as is the running version.
+    bool isSupportedVersionHeader(const std::string& header);
+
+    //! \brief Returns the exact reason why the last readGameMapFromFile call failed (empty if it did not fail).
+    const std::string& getLastLoadError();
+
     //! \brief Writes the game map to a level file, including the [Triggers] section if the level has a script.
     //! \param fileName The level file to write.
     //! \param gameMap The game map to save.

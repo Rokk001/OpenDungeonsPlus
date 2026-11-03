@@ -71,6 +71,9 @@ int main(int argc,char** argv) {
 }
 '''
 probe = probe.replace("OpenDungeons_Version:VERSION", "OpenDungeons_Version:" + version)
+helper_start = source.index("bool isSupportedVersionHeader(")
+helper_function = source[helper_start:source.index(chr(10) + "}" + chr(10), helper_start) + 3]
+probe = probe.replace("HELPERFUNCTION", helper_function)
 probe = probe.replace("LOAD", header("bool readGameMapFromFile("))
 probe = probe.replace("LIST", header("bool getMapInfo("))
 probe = probe.replace("READER", reader)

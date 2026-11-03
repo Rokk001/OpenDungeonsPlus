@@ -66,13 +66,51 @@
 
 namespace MapHandler {
 
+namespace {
+//! \brief The reason of the last failed level load, shown in the menu.
+std::string lastLoadError;
+
+//! \brief Remembers a load failure and writes its exact cause to the log.
+void setLoadError(const std::string& message)
+{
+    lastLoadError = message;
+    OD_LOG_ERR("Level load failed: " + message);
+}
+} // namespace
+
+//! \brief Tells whether a file version header can be loaded, ignoring the build number of the writing version.
+bool isSupportedVersionHeader(const std::string& header)
+{
+    if(header == ODApplication::VERSIONSTRING)
+        return true;
+    const char* releases[] = {"OpenDungeons_Version:0.7.1", "OpenDungeons_Version:0.7.2", "OpenDungeons_Version:0.7.4"};
+    for(const char* release : releases)
+    {
+        const std::string base(release);
+        if(header == base)
+            return true;
+        // A build number follows as ".<digits>"
+        if(header.size() > base.size() + 1 && header.compare(0, base.size(), base) == 0 && header[base.size()] == '.'
+           && header.find_first_not_of("0123456789", base.size() + 1) == std::string::npos)
+            return true;
+    }
+    return false;
+}
+
+//! \brief Returns the exact reason why the last level load failed.
+const std::string& getLastLoadError()
+{
+    return lastLoadError;
+}
+
 //! \brief Loads map state and reports the failing section, retaining optional legacy sections.
 bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 {
+    lastLoadError.clear();
     std::stringstream levelFile;
     if(!Helper::readFile(fileName, levelFile,true))
     {
-        OD_LOG_ERR("Could not read level file=" + fileName);
+        setLoadError("Could not read the file " + fileName);
         return false;
     }
     
@@ -94,17 +132,17 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     CreatureMoved::GAME_MAP_WIDTH = mapSizeX;
     
     levelFile >> nextParam;
-    if (nextParam.compare(ODApplication::VERSIONSTRING) != 0 && nextParam != "OpenDungeons_Version:0.7.1" && nextParam != "OpenDungeons_Version:0.7.2" && nextParam != "OpenDungeons_Version:0.7.4")
+    if (!isSupportedVersionHeader(nextParam))
     {
-        OD_LOG_WRN("Attempting to load a file produced by a different version of OpenDungeons, filename="
-            + fileName + ", file version=" + nextParam + ", odversion=" + ODApplication::VERSION);
+        setLoadError("Unsupported file version '" + nextParam + "' (this game is " + ODApplication::VERSION
+            + "), file=" + fileName);
         return false;
     }
 
     levelFile >> nextParam;
     if (nextParam != "[Info]")
     {
-        OD_LOG_WRN("Invalid info start format: " + nextParam);
+        setLoadError("Expected [Info] after the version but found '" + nextParam + "', file=" + fileName);
         return false;
     }
 
@@ -202,7 +240,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     
     if (nextParam != "[Seats]")
     {
-        OD_LOG_WRN("Invalid seats start format=" + nextParam);
+        setLoadError("Expected [Seats] but found '" + nextParam + "', file=" + fileName);
         return false;
     }
 
@@ -228,7 +266,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         Seat* tempSeat = new Seat(&gameMap);
         if(!tempSeat->importSeatFromStream(levelFile))
         {
-            OD_LOG_ERR("Invalid Seat data for seat id=" + Helper::toString(tempSeat->getId()) + ", file=" + fileName);
+            setLoadError("Invalid Seat data for seat id=" + Helper::toString(tempSeat->getId()) + ", file=" + fileName);
             delete tempSeat;
             return false;
         }
@@ -245,7 +283,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile >> nextParam;
     if (nextParam != "[Goals]")
     {
-        OD_LOG_WRN("Invalid Goals start format=" + nextParam);
+        setLoadError("Expected [Goals] but found '" + nextParam + "', file=" + fileName);
         return false;
     }
 
@@ -270,7 +308,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile >> nextParam;
     if (nextParam != "[Tiles]")
     {
-        OD_LOG_WRN("Invalid tile start format:" + nextParam);
+        setLoadError("Expected [Tiles] but found '" + nextParam + "', file=" + fileName);
         return false;
     }
 
@@ -1316,7 +1354,7 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
     std::string nextParam;
     // Read in the version number from the level file
     levelFile >> nextParam;
-    if (nextParam.compare(ODApplication::VERSIONSTRING) != 0 && nextParam != "OpenDungeons_Version:0.7.1" && nextParam != "OpenDungeons_Version:0.7.2" && nextParam != "OpenDungeons_Version:0.7.4")
+    if (!isSupportedVersionHeader(nextParam))
         return false;
 
     levelFile >> nextParam;
