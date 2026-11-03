@@ -202,7 +202,7 @@ assert 'getBedDim1() >= 2' in extract(room_cpp, 'bool RoomTavern::isLargeGuest('
 bounds_h = read('source/gamemap/RoomObjectBounds.h')
 for mesh in ('TavernCounter', 'TavernKeg', 'TavernTable'):
     assert '{"' + mesh + '", ' in bounds_h and 'name == "' + mesh + '"' in bounds_h, mesh
-assert '{"TavernTable", -.595f, -.78f, .595f, .78f, .4425f},' in bounds_h, 'the navigation knows the long table'
+assert '{"TavernTable", -.595f, -.78f, .595f, .78f},' in bounds_h, 'the navigation knows the long table'
 
 # A creature without a seat does not enter; a thirsty one tries again after the visit cooldown.
 assert 'creature.startTavernCooldown();' in read('source/creatureaction/CreatureActionSearchDrink.cpp')
