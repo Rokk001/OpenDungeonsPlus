@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """Generates the darker, muted wall textures of the dungeon palette (materials/textures/).
 
-  - DirtWall.png / DirtWallNormal.png: warm dark brown, rough natural earth (no regular cells) for the earth wall (dirtFull) tiles and their fog of war
-    mesh. 256x256, truly periodic (FFT noise and a wrapping cell pattern), so it stays seam free with the world
-    space UV of DirtTile.vert (one repeat per tile on upward facing surfaces).
   - DungeonClaimedWall*.png: the existing atlases of the reinforced wall are regraded in place. Bricks and stone caps
     keep their painted structure (mortar, cracks, relief) but become darker and a cool blue-grey (clearly different from the warm earth wall), and the flat brown earth
     path on top is replaced by a mottled slate surface. The normal maps and the ownership mask are not touched.
@@ -97,36 +94,6 @@ def cells_on_torus(n, seed, count, warp_amp, warp_seed):
     return idx, (d2 - d1) * 0.5, off
 
 
-# Screen values are about 1.2x the texture luminance and 1.25x the texture saturation (room shader gain and
-# saturation boost, cursor light); the means below follow the project's dungeon palette and were calibrated
-# with the overview render.
-EARTH_MEAN = np.array([46.0, 36.0, 27.0]) / 255.0   # warm dark brown, hue about 28 degrees
-
-
-def ridged(n, seed, fx, octaves=3):
-    """Periodic ridged noise in 0..1 (bright thin ridges), used for the rough natural rock of the earth wall."""
-    return 1.0 - np.abs(np.tanh(0.9 * fbm(n, seed, fx, octaves)))
-
-
-def earth_wall():
-    n = 256
-    # natural rock and packed earth: no regular cells, only warped broad patches, ridged crevices and grit
-    patch = fbm(n, 103, 3.5, 3)
-    patch2 = fbm(n, 106, 9.0, 3)
-    ridge = ridged(n, 107, 8.0, 3)
-    ridge2 = ridged(n, 108, 20.0, 2)
-    grain = fbm(n, 104, 60.0, 2)
-    pits = smoothstep(1.5, 2.3, fbm(n, 109, 14.0, 2))
-    crev = smoothstep(0.80, 0.97, ridge)
-    crev2 = smoothstep(0.88, 0.99, ridge2)
-    lum = 1.0 + 0.20 * patch + 0.12 * patch2 + 0.09 * grain - 0.38 * crev - 0.20 * crev2 - 0.30 * pits
-    warm = fbm(n, 110, 4.0, 2)
-    col = EARTH_MEAN[None, None, :] * lum[..., None]
-    col *= (1.0 + 0.10 * warm[..., None] * np.array([1.0, 0.0, -1.0])[None, None, :])
-    height = 0.50 * ridge + 0.20 * ridge2 + 0.25 * patch + 0.12 * patch2 + 0.08 * grain - 0.35 * pits
-    return col, normal_map(height, 3.2)
-
-
 def rgb_to_sat(a):
     mx = a.max(-1)
     mn = a.min(-1)
@@ -198,9 +165,6 @@ def main():
     texdir = sys.argv[1]
     outdir = sys.argv[2] if len(sys.argv) > 2 else texdir
     os.makedirs(outdir, exist_ok=True)
-    col, nrm = earth_wall()
-    save_rgb(col, os.path.join(outdir, 'DirtWall.png'))
-    save_rgb(nrm, os.path.join(outdir, 'DirtWallNormal.png'))
     for code in ('0000', '0100', '0101', '0110', '1110', '1111'):
         name = 'DungeonClaimedWall%s.png' % code
         wall_atlas(original_atlas(texdir, name)).save(os.path.join(outdir, name), optimize=True)

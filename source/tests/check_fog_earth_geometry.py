@@ -79,7 +79,7 @@ def earth_edges(tileset, offset=0.0):
         if not fields or not fields[0].endswith('.mesh'):
             continue
         name, material, rx, ry, rz = fields
-        assert mask is not None and material == 'DirtWall' and float(rx) == float(ry) == 0
+        assert mask is not None and material == 'Dirt' and float(rx) == float(ry) == 0
         angle = math.radians(float(rz))
         vertices = [(x * math.cos(angle) - y * math.sin(angle),
                      x * math.sin(angle) + y * math.cos(angle), z + offset)
@@ -223,7 +223,7 @@ def verify(sources):
     earth = sources['tileset'].split('[dirtFull]', 1)[1].split('[/dirtFull]', 1)[0]
     assert all(mask in earth for mask in (f'{i:04b}' for i in range(16)))
     entries = re.findall(r'(Dirt_[^\s]+\.mesh)\s+(\w+)\s+([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)', earth)
-    assert entries and all(material == 'DirtWall' and float(rx) == 0 and float(ry) == 0 for _, material, rx, ry, _ in entries)
+    assert entries and all(material == 'Dirt' and float(rx) == 0 and float(ry) == 0 for _, material, rx, ry, _ in entries)
     assert all((ROOT / 'models' / name).exists() for name, *_ in entries)
     verify_view_edges(sources, entries)
 
