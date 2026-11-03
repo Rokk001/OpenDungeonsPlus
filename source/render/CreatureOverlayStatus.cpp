@@ -69,9 +69,9 @@ const std::string CROWN_MATERIAL_NAME = "ChampionCrown";
 const Ogre::Real CROWN_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the crown picture
 const Ogre::Real CROWN_SIZE = 64;
-//! Material of the whole badge flower, used as health ring of a creature without mana. It is tinted with the seat colour.
+//! Material of the whole badge flower, used as health ring of a creature without mana. It is tinted red.
 const std::string BADGE_FLOWER_MATERIAL = "CreatureOverlay0";
-//! Material of the outer ring of the flower (health ring of a creature with mana), tinted with the seat colour
+//! Material of the outer ring of the flower (health ring of a creature with mana), tinted red
 const std::string BADGE_OUTER_RING_MATERIAL = "CreatureOverlayHealthOuter";
 //! Material of the inner ring of the flower (mana ring), tinted with the mana colour
 const std::string BADGE_INNER_RING_MATERIAL = "CreatureOverlayManaInner";
@@ -79,6 +79,10 @@ const std::string BADGE_INNER_RING_MATERIAL = "CreatureOverlayManaInner";
 const Ogre::Real MANA_COLOUR_RED = 25.0f;
 const Ogre::Real MANA_COLOUR_GREEN = 90.0f;
 const Ogre::Real MANA_COLOUR_BLUE = 255.0f;
+//! Colour channels (0 to 255) of the life part of the flower, a strong red for every seat
+const Ogre::Real LIFE_COLOUR_RED = 220.0f;
+const Ogre::Real LIFE_COLOUR_GREEN = 25.0f;
+const Ogre::Real LIFE_COLOUR_BLUE = 25.0f;
 //! Highest value of a colour channel
 const Ogre::Real COLOUR_CHANNEL_MAX = 255.0f;
 //! Size of the health badge and of the centred mood icon
@@ -234,7 +238,7 @@ void CreatureOverlayStatus::updateHealth()
         mHasMana = hasMana;
         // With mana only the outer ring shows the health, the inner ring belongs to the mana
         std::string material = RenderManager::getSingleton().rrBuildTintedMaterial(
-            hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL, mSeat->getColorValue());
+            hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL, getLifeColour());
         uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
         mMovableTextOverlay->setMaterialName(healthId, material);
     }
@@ -257,7 +261,7 @@ void CreatureOverlayStatus::updateHealth()
 //! \brief Shrinks the outer health ring and the inner mana ring to their values, updates the experience ring and the recovery clock, and reports the shown clock frame to the level test.
 void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
 {
-    // Each ring is a picture of its own (outer ring in the seat colour for the life, inner ring blue for the mana).
+    // Each ring is a picture of its own (outer ring in red for the life, inner ring blue for the mana).
     // A ring shrinks with its value, from the top, so it keeps its lower edge. A creature without mana shows the
     // whole flower as health ring.
     const uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];

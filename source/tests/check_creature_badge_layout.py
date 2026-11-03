@@ -27,7 +27,11 @@ assert constructor.index('CreatureOverlays::health') < constructor.index('Creatu
 assert constructor.index('CreatureOverlays::mana') < constructor.index('CreatureOverlays::experience')
 assert 'BADGE_INNER_RING_MATERIAL, getManaColour()' in constructor
 # A creature with mana gets the outer ring picture as health ring, one without mana the whole flower.
-assert 'hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL' in source
+assert 'hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL, getLifeColour()' in source
+# The life ring is red for every seat, not tinted with the seat colour.
+update_health = source[source.index('void CreatureOverlayStatus::updateHealth('):source.index('if(mLevel != mCreature->getLevel())')]
+assert 'getColorValue' not in update_health
+assert 'LIFE_COLOUR_RED = 220.0f' in source and 'LIFE_COLOUR_GREEN = 25.0f' in source and 'LIFE_COLOUR_BLUE = 25.0f' in source
 assert '(mHasMana != hasMana)' in source
 
 # Both rings shrink proportionally to their value and keep their lower edge.
