@@ -370,3 +370,30 @@ for screen_w, screen_h in ((640, 480), (800, 600), (1024, 768), (1280, 720), (19
         assert pane_w * (button_area[2] - button_area[0]) + 1e-6 >= len('Statistics') * CHAR_8 * scale
         assert pane_h * (button_area[3] - button_area[1]) + 1e-6 >= LINE_8 * scale
 print('statistics page verified: eight tiles, button there and back, fits 640x480 to 8K at 80 to 120 percent')
+
+# Portrait: with Centre alignment CEGUI adds the minimum of the area to the centred position as an offset, so the image
+# area has to start at 0 (a minimum of 0.16 shifted the picture to the right and down, off the middle of the ring).
+# It is a square (shrunk to the smaller side) that fills the opening of the ring, which is about 71 percent of the ring image.
+image = chosen.find("Window[@name='Portrait']/Window[@name='Image']")
+image_area = [float(a) for a, b in re.findall(r'\{(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\}',
+                                              image.find("Property[@name='Area']").get('value'))]
+assert image_area[0] == 0.0 and abs(image_area[1]) <= 0.02, 'a minimum of the area would move the centred image'
+assert image.find("Property[@name='HorizontalAlignment']").get('value') == 'Centre'
+assert image.find("Property[@name='VerticalAlignment']").get('value') == 'Centre'
+assert image.find("Property[@name='AspectMode']").get('value') == 'Shrink'
+image_size = (image_area[2] - image_area[0], image_area[3] - image_area[1])
+assert abs(image_size[0] - image_size[1]) <= 0.02 and 0.72 <= image_size[0] <= 0.85, 'the picture fills the ring opening'
+assert frame.find("Property[@name='Area']").get('value') == '{{0,0},{0,0},{1,0},{1,0}}'
+assert frame.find("Property[@name='HorizontalAlignment']").get('value') == 'Centre'
+# the portrait block takes a quarter of the page height (it was about a fifth)
+assert areas['Portrait'][3] - areas['Portrait'][1] >= 0.24
+# tiles are tight: no more than about 20 percent higher than title plus four small lines need at the smallest pane
+smallest_pane = (window_h - title_height - 2 * border) * 0.9
+for name in ('EquipmentTile', 'PathTile', 'SkillsTile'):
+    assert (areas[name][3] - areas[name][1]) * smallest_pane <= tile_need * 1.3, name + ' has too much empty space'
+# values are rounded for display
+assert 'std::string formatProfileValue(double value)' in social and 'std::setprecision(2)' in social
+for field in ('critical', 'attackRating', 'defenseRating', 'physicalDefense', 'magicalDefense', 'elementDefense'):
+    assert 'formatProfileValue(selected->%s)' % field in social, field
+assert 'formatProfileValue(values[i])' in social
+print('portrait centred and filling the ring, values rounded, tiles tight')
