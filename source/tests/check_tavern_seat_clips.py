@@ -12,6 +12,8 @@ What is checked (fixed values of this branch, counted once)
              also between its keys, on every seat the guest can take, at the smallest and the largest creature scale of the
              level; the bench counts below the 0.015 tiles a body presses into it; the mug counts in SitDrink
   resting    the bodies that do not sit on legs lie on the bench: the lowest part above the seat rests on it
+  mug        every skeleton has the mount Weapon_R for the mug except the listed ones; on Kreatur and Scarab a limb brings the rim of
+             the mug to within 0.03 tiles of the mouth in SitDrink
   weapons    attached weapon models are hidden during a seated clip (read from the source, not run)
   bench      the pelvis of a walking body stays on the bench in Sit, except for the listed large bodies, whose limit is their own
   floor      the feet of a sitting body stand on the floor in Sit
@@ -51,6 +53,8 @@ MAX_ROOT_SCALE = 0.01
 MAX_REST_GAP = 0.03
 # Mesh below the floor in Sit, in tiles: the foot of a rig stands in the floor by this little in its own rest pose
 MIN_FLOOR = -0.1
+# The rim of the mug of a body that drinks on a limb comes this close to its mouth in SitDrink, in tiles
+MAX_MUG_REACH = 0.03
 # First and last frame of a clip may differ by this share of the height of the body
 MAX_SEAM = 1e-3
 
@@ -98,6 +102,11 @@ def check_skeleton(name, mesh_name, out):
         points = rest.skin_vertices(skeleton, locals_fine, clip_vertices, clip_weights)
         depth = seats.level_depth(points)
         assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
+    has_mount = seats.MUG_BONE in skeleton.idx
+    assert has_mount == (name not in seats.NO_MUG_MOUNT), (name, 'mug mount', has_mount)
+    drink = seats.PLAY_MUGS.get((name, 'SitDrink'))
+    if drink is not None:
+        assert seats.mug_rim_distance(skeleton, 'SitDrink', drink) <= MAX_MUG_REACH, (name, 'the mug does not reach the mouth')
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')

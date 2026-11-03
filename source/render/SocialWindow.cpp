@@ -181,6 +181,40 @@ std::string elideToWidth(const CEGUI::Font* font, const std::string& text, float
         shortened.erase(shortened.size() - 1);
     return shortened + "...";
 }
+
+//! \brief True if the text of the window is not higher than the given pixel height.
+bool isTileTextFitting(const CEGUI::Window* tile, float height)
+{
+    return CEGUI::PropertyHelper<float>::fromString(tile->getProperty("VertExtent")) <= height;
+}
+
+//! \brief Fills a Dungeonbook value tile with a title line and its value in the small font.
+//! The value is shortened with "..." until it fits the tile height, so the tile never needs a scrollbar.
+void setProfileTile(CEGUI::Window* tile, const std::string& title, const std::string& value)
+{
+    const std::string head = "[font='MedievalSharp-8'][colour='FFF2C860']" + title +
+        "\n[font='MedievalSharp-6'][colour='FFE8DCC0']";
+    const float height = tile->getPixelSize().d_height;
+    tile->setText(head + escapeMarkup(value));
+    if(height <= 0.0f || isTileTextFitting(tile, height))
+        return;
+
+    // Binary search for the longest prefix (cut at a character boundary) that fits together with the dots
+    std::size_t low = 0;
+    std::size_t high = value.size();
+    while(low < high)
+    {
+        std::size_t middle = (low + high + 1) / 2;
+        while(middle > 0 && (static_cast<unsigned char>(value[middle]) & 0xC0) == 0x80)
+            --middle;
+        tile->setText(head + escapeMarkup(value.substr(0, middle) + "..."));
+        if(middle > low && isTileTextFitting(tile, height))
+            low = middle;
+        else
+            high = (middle > low) ? middle - 1 : low;
+    }
+    tile->setText(head + escapeMarkup(value.substr(0, low) + "..."));
+}
 }
 
 SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
@@ -502,20 +536,16 @@ void SocialWindow::refreshProfile()
                 text << names[i] << "\n" << values[i];
                 mDungeonbookPage->getChild(std::string("Attributes/") + names[i])->setText(text.str());
             }
-            mDungeonbookPage->getChild("SkillsPanel")->setText("Skills\n" + escapeMarkup(selected->skills));
-            mDungeonbookPage->getChild("EquipmentPanel")->setText("Equipment\n" + escapeMarkup(selected->equipment));
-            mDungeonbookPage->getChild("PathPanel")->setText("Path\n" + escapeMarkup(selected->path));
+            setProfileTile(mDungeonbookPage->getChild("EquipmentPanel"), "Equipment", selected->equipment);
+            setProfileTile(mDungeonbookPage->getChild("PathPanel"), "Path", selected->path);
+            setProfileTile(mDungeonbookPage->getChild("SkillsPanel"), "Skills", selected->skills);
+            // The labels are fixed in the layout; the value column holds one line per label, right aligned.
             std::ostringstream combat;
-            combat << "Critical: " << selected->critical << "%\nAttack Rating: " << selected->attackRating
-                << "\nDefense Rating: " << selected->defenseRating;
-            mDungeonbookPage->getChild("CombatPanel")->setText(combat.str());
+            combat << selected->critical << " %\n" << selected->attackRating << "\n" << selected->defenseRating;
+            mDungeonbookPage->getChild("CombatValues")->setText(combat.str());
             std::ostringstream defense;
-            defense << "Defense\nPhysical: " << selected->physicalDefense << "\nMagical: " << selected->magicalDefense
-                << "\nElemental: " << selected->elementDefense;
-            mDungeonbookPage->getChild("DefensePanel")->setText(defense.str());
-            CEGUI::Window* stats = mDungeonbookPage->getChild("StatsText");
-            if(stats->getText() != selected->stats)
-                stats->setText(selected->stats);
+            defense << selected->physicalDefense << "\n" << selected->magicalDefense << "\n" << selected->elementDefense;
+            mDungeonbookPage->getChild("DefenseValues")->setText(defense.str());
             return;
         }
     }

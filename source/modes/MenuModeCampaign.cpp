@@ -103,6 +103,8 @@ const std::string WORLD_DEFINITION_FILE = "campaign-world.json";
 const std::string WORLD_BASE_FILE = "world_base.png";
 const std::string WORLD_IDMAP_FILE = "world_idmap.png";
 const std::string WORLD_IMAGE_PREFIX = "CampaignWorld/";
+//! Name prefix of every window created on the map
+const std::string WORLD_WINDOW_PREFIX = "CampaignWorld_";
 const std::string CAMPAIGN_TITLE = "The Fall of Hollowmark";
 
 //! Time the lift layer needs to fade in or out, in seconds
@@ -552,13 +554,29 @@ CEGUI::Image* MenuModeCampaign::loadWorldImage(const std::string& file)
     image.setArea(CEGUI::Rectf(0, 0, static_cast<float>(width), static_cast<float>(height)));
     return &image;
 }
-
+//! \brief Removes the map windows of this and of earlier visits, found by their name prefix.
 void MenuModeCampaign::clearMap()
 {
     CEGUI::WindowManager& windowManager = CEGUI::WindowManager::getSingleton();
-    for(std::vector<CEGUI::Window*>::iterator it = mWorldWindows.begin(); it != mWorldWindows.end(); ++it)
-        windowManager.destroyWindow(*it);
     mWorldWindows.clear();
+
+    // The mode is created again on every visit but the gui sheet stays, so windows of an earlier
+    // visit are not in the list. Remove them by name or fillMap meets the same names again.
+    CEGUI::Window* sheet = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu);
+    if(sheet->isChild(CMP_MAP))
+    {
+        CEGUI::Window* map = sheet->getChild(CMP_MAP);
+        for(size_t i = map->getChildCount(); i > 0; --i)
+        {
+            CEGUI::Window* child = map->getChildAtIdx(i - 1);
+            if(child->getName().compare(0, WORLD_WINDOW_PREFIX.size(), WORLD_WINDOW_PREFIX) == 0)
+            {
+                map->removeChild(child);
+                windowManager.destroyWindow(child);
+            }
+        }
+    }
+    windowManager.cleanDeadPool();
     mLiftWindow = nullptr;
     mTooltip = nullptr;
 }
@@ -574,7 +592,7 @@ void MenuModeCampaign::setMapArea(CEGUI::Window* window, float x, float y, float
 CEGUI::Window* MenuModeCampaign::createMapWindow(const std::string& type, const std::string& name, float x, float y,
     float width, float height)
 {
-    CEGUI::Window* window = CEGUI::WindowManager::getSingleton().createWindow(type, "CampaignWorld_" + name);
+    CEGUI::Window* window = CEGUI::WindowManager::getSingleton().createWindow(type, WORLD_WINDOW_PREFIX + name);
     CEGUI::Window* map = getModeManager().getGui().getGuiSheet(Gui::guiSheet::campaignMenu)->getChild(CMP_MAP);
     setMapArea(window, x, y, width, height);
     // The map handles the mouse itself, with the id map

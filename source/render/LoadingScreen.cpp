@@ -39,6 +39,8 @@
 #include <CEGUI/WindowManager.h>
 
 #include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <random>
 #include <string>
 #include <utility>
@@ -57,9 +59,24 @@ const char* const LOADING_TEXTURES[] = {
 Ogre::Rectangle2D* loadingRectangle = nullptr;
 Ogre::SceneManager* startupScene = nullptr;
 Ogre::RenderWindow* startupWindow = nullptr;
-Ogre::Overlay* startupOverlay = nullptr;
-Ogre::OverlayContainer* startupTextPanel = nullptr;
-Ogre::TextAreaOverlayElement* startupText = nullptr;
+//! The ember ring sits below the text and is drawn on top of the picture in every loading path.
+Ogre::Rectangle2D* ringRectangle = nullptr;
+Ogre::MaterialPtr ringMaterial;
+Ogre::Overlay* loadingOverlay = nullptr;
+Ogre::OverlayContainer* loadingTextPanel = nullptr;
+Ogre::TextAreaOverlayElement* loadingTextArea = nullptr;
+//! Text height as a fraction of the window height; relative metrics make it scale with every resolution.
+const float LOADING_TEXT_HEIGHT = 0.075f;
+//! Top of the text as a fraction of the window height.
+const float LOADING_TEXT_TOP = 0.34f;
+//! Vertical centre of the ring as a fraction of the window height.
+const float LOADING_RING_CENTER = 0.60f;
+//! Ring radius as a fraction of the window height.
+const float LOADING_RING_RADIUS = 0.11f;
+//! Seconds of one full clockwise turn.
+const float LOADING_RING_SECONDS = 2.0f;
+//! Name of the overlay font created for the loading paths after startup.
+const char* const LOADING_FONT_NAME = "LoadingScreenFont";
 //! Startup sits above the normal viewport until the first menu scene is ready.
 const int STARTUP_VIEWPORT_ORDER = 1;
 Ogre::MaterialPtr previousMaterial;
@@ -192,6 +209,104 @@ Ogre::MaterialPtr createLoadingMaterial(const std::string& texture, const std::s
     return material;
 }
 
+//! \brief Makes the unlit alpha-blended material of the ember ring with a transparent texture border.
+Ogre::MaterialPtr createRingMaterial(const std::string& group)
+{
+    Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().create("LoadingRing", group);
+    Ogre::Pass* pass = material->getTechnique(0)->getPass(0);
+    pass->setLightingEnabled(false);
+    pass->setDepthCheckEnabled(false);
+    pass->setDepthWriteEnabled(false);
+    pass->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA);
+    Ogre::TextureUnitState* image = pass->createTextureUnitState("loading_ring.png");
+    image->setTextureAddressingMode(Ogre::TAM_BORDER);
+    image->setTextureBorderColour(Ogre::ColourValue(0.0f, 0.0f, 0.0f, 0.0f));
+    image->setTextureFiltering(Ogre::TFO_BILINEAR);
+    return material;
+}
+
+//! \brief Rotates a ring texture coordinate around the texture centre by the angle given as cosine and sine.
+//! Rotating the sampled coordinates by -angle turns the picture clockwise (v points down).
+Ogre::Vector2 turnRingUV(float c, float s, float x, float y)
+{
+    const float dx = x - 0.5f;
+    const float dy = y - 0.5f;
+    return Ogre::Vector2(0.5f + dx * c + dy * s, 0.5f - dx * s + dy * c);
+}
+
+//! \brief Places the ring below the text and turns it clockwise by the elapsed time.
+void fitLoadingRing(Ogre::Rectangle2D& rectangle, unsigned int width, unsigned int height)
+{
+    static const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    const float seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - begin).count();
+    const float angle = 6.2831853f * std::fmod(seconds, LOADING_RING_SECONDS) / LOADING_RING_SECONDS;
+    const float c = std::cos(angle);
+    const float s = std::sin(angle);
+    const float halfHeight = LOADING_RING_RADIUS * 2.0f;
+    const float halfWidth = halfHeight * static_cast<float>(height) / static_cast<float>(std::max(1u, width));
+    const float centerY = 1.0f - 2.0f * LOADING_RING_CENTER;
+    rectangle.setCorners(-halfWidth, centerY + halfHeight, halfWidth, centerY - halfHeight);
+    rectangle.setUVs(turnRingUV(c, s, 0.0f, 0.0f), turnRingUV(c, s, 0.0f, 1.0f), turnRingUV(c, s, 1.0f, 0.0f), turnRingUV(c, s, 1.0f, 1.0f));
+}
+
+//! \brief Creates the ring rectangle above the picture in the given scene.
+void createLoadingRing(Ogre::SceneManager& scene, const std::string& group)
+{
+    ringMaterial = createRingMaterial(group);
+    Ogre::TextureManager::getSingleton().load("loading_ring.png", group);
+    ringRectangle = new Ogre::Rectangle2D(Ogre::String("LoadingScreenRing"), true);
+    ringRectangle->setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
+    ringRectangle->setMaterial(ringMaterial);
+    ringRectangle->setRenderQueueGroup(RenderManager::OD_RENDER_QUEUE_ID_GUI);
+    scene.getRootSceneNode()->attachObject(ringRectangle);
+}
+
+//! \brief Creates the large centred loading text as an overlay with the given font.
+void createLoadingText(const std::string& fontName, const std::string& fontGroup)
+{
+    Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
+    loadingOverlay = overlays.create("LoadingScreenOverlay");
+    loadingTextPanel = static_cast<Ogre::OverlayContainer*>(overlays.createOverlayElement("Panel", "LoadingScreenPanel"));
+    loadingTextPanel->setDimensions(1, 1);
+    loadingOverlay->add2D(loadingTextPanel);
+    loadingTextArea = static_cast<Ogre::TextAreaOverlayElement*>(overlays.createOverlayElement("TextArea", "LoadingScreenText"));
+    loadingTextArea->setFontName(fontName, fontGroup);
+    loadingTextArea->setMetricsMode(Ogre::GMM_RELATIVE);
+    loadingTextArea->setPosition(0.5f, LOADING_TEXT_TOP);
+    loadingTextArea->setCharHeight(LOADING_TEXT_HEIGHT);
+    loadingTextArea->setAlignment(Ogre::TextAreaOverlayElement::Center);
+    loadingTextArea->setColour(Ogre::ColourValue(0.86f, 0.82f, 0.76f));
+    loadingTextArea->setCaption("Loading...");
+    loadingTextPanel->addChild(loadingTextArea);
+    loadingOverlay->show();
+}
+
+//! \brief Removes the ring rectangle, its material and the overlay text of the current loading path.
+void destroyLoadingIndicator(const std::string& group)
+{
+    if(ringRectangle != nullptr)
+    {
+        ringRectangle->detachFromParent();
+        delete ringRectangle;
+        ringRectangle = nullptr;
+    }
+    if(ringMaterial)
+    {
+        ringMaterial.reset();
+        Ogre::MaterialManager::getSingleton().remove("LoadingRing", group);
+    }
+    Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
+    if(loadingOverlay != nullptr)
+        overlays.destroy(loadingOverlay);
+    if(loadingTextArea != nullptr)
+        overlays.destroyOverlayElement(loadingTextArea);
+    if(loadingTextPanel != nullptr)
+        overlays.destroyOverlayElement(loadingTextPanel);
+    loadingOverlay = nullptr;
+    loadingTextArea = nullptr;
+    loadingTextPanel = nullptr;
+}
+
 //! \brief Selects and loads one picture for both startup and every existing loading path.
 void selectLoadingImage()
 {
@@ -221,6 +336,7 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& ov
         loadingRectangle->setBoundingBox(Ogre::AxisAlignedBox::BOX_INFINITE);
         startupScene->getRootSceneNode()->attachObject(loadingRectangle);
         selectLoadingImage();
+        createLoadingRing(*startupScene, "StartupLoading");
         // The core OpenGL renderer needs shaders even before RTSS and its libraries exist.
         Ogre::HighLevelGpuProgramManager& programs = Ogre::HighLevelGpuProgramManager::getSingleton();
         Ogre::HighLevelGpuProgramPtr vertex = programs.createProgram("StartupLoadingVertex",
@@ -240,28 +356,19 @@ LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& ov
         Ogre::FontPtr font = Ogre::FontManager::getSingleton().create("StartupLoadingFont", "StartupLoading");
         font->setType(Ogre::FT_TRUETYPE);
         font->setSource("MedievalSharp-Bold.ttf");
-        font->setTrueTypeSize(16);
+        font->setTrueTypeSize(128);
         font->setTrueTypeResolution(72);
-        font->addCodePointRange(Ogre::Font::CodePointRange(9, 166));
+        font->addCodePointRange(Ogre::Font::CodePointRange(32, 126));
         font->load();
         Ogre::Pass* fontPass = font->getMaterial()->getTechnique(0)->getPass(0);
         fontPass->setVertexProgram(vertex->getName());
         fontPass->setFragmentProgram(fragment->getName());
         fontPass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
-        Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
-        startupOverlay = overlays.create("StartupLoadingOverlay");
-        startupTextPanel = static_cast<Ogre::OverlayContainer*>(overlays.createOverlayElement("Panel", "StartupLoadingPanel"));
-        startupTextPanel->setDimensions(1, 1);
-        startupOverlay->add2D(startupTextPanel);
-        startupText = static_cast<Ogre::TextAreaOverlayElement*>(overlays.createOverlayElement("TextArea", "StartupLoadingText"));
-        startupText->setFontName("StartupLoadingFont", "StartupLoading");
-        startupText->setMetricsMode(Ogre::GMM_RELATIVE);
-        startupText->setPosition(0.5f, 0.8f);
-        startupText->setCharHeight(0.025f);
-        startupText->setAlignment(Ogre::TextAreaOverlayElement::Center);
-        startupText->setCaption("Loading...");
-        startupTextPanel->addChild(startupText);
-        startupOverlay->show();
+        Ogre::Pass* ringPass = ringMaterial->getTechnique(0)->getPass(0);
+        ringPass->setVertexProgram(vertex->getName());
+        ringPass->setFragmentProgram(fragment->getName());
+        ringPass->getFragmentProgramParameters()->setNamedConstant("picture", 0);
+        createLoadingText("StartupLoadingFont", "StartupLoading");
         update();
         window.update();
         OD_LOG_INF("startup loading picture drawn");
@@ -283,6 +390,8 @@ void LoadingScreen::presentStartup()
     if(startupWindow->isClosed())
         return;
     fitLoadingImage(*loadingRectangle, startupWindow->getWidth(), startupWindow->getHeight());
+    if(ringRectangle != nullptr)
+        fitLoadingRing(*ringRectangle, startupWindow->getWidth(), startupWindow->getHeight());
     startupWindow->_beginUpdate();
     startupWindow->_updateViewport(STARTUP_VIEWPORT_ORDER);
     startupWindow->_endUpdate();
@@ -324,6 +433,18 @@ LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus) : mContinueLoading(f
             previousQueue = loadingRectangle->getRenderQueueGroup();
             previousRectangleVisible = loadingRectangle->isVisible();
             selectLoadingImage();
+            createLoadingRing(*RenderManager::getSingleton().getSceneManager(), "Graphics");
+            if(!Ogre::FontManager::getSingleton().getByName(LOADING_FONT_NAME, "GUI"))
+            {
+                Ogre::FontPtr font = Ogre::FontManager::getSingleton().create(LOADING_FONT_NAME, "GUI");
+                font->setType(Ogre::FT_TRUETYPE);
+                font->setSource("MedievalSharp-Bold.ttf");
+                font->setTrueTypeSize(128);
+                font->setTrueTypeResolution(72);
+                font->addCodePointRange(Ogre::Font::CodePointRange(32, 126));
+                font->load();
+            }
+            createLoadingText(LOADING_FONT_NAME, "GUI");
         }
         if(existingStatus != nullptr)
         {
@@ -378,16 +499,7 @@ void LoadingScreen::finish()
             delete loadingRectangle;
             loadingRectangle = nullptr;
         }
-        Ogre::OverlayManager& overlays = Ogre::OverlayManager::getSingleton();
-        if(startupOverlay != nullptr)
-            overlays.destroy(startupOverlay);
-        if(startupText != nullptr)
-            overlays.destroyOverlayElement(startupText);
-        if(startupTextPanel != nullptr)
-            overlays.destroyOverlayElement(startupTextPanel);
-        startupOverlay = nullptr;
-        startupText = nullptr;
-        startupTextPanel = nullptr;
+        destroyLoadingIndicator("StartupLoading");
         Ogre::Root::getSingleton().destroySceneManager(startupScene);
         startupScene = nullptr;
         startupWindow = nullptr;
@@ -408,6 +520,7 @@ void LoadingScreen::finish()
     loadingRectangle->setUVs(Ogre::Vector2(0, 0), Ogre::Vector2(0, 1), Ogre::Vector2(1, 0), Ogre::Vector2(1, 1));
     loadingRectangle->setCorners(-1, 1, 1, -1);
     loadingRectangle = nullptr;
+    destroyLoadingIndicator("Graphics");
     previousMaterial.reset();
     loadingMaterial.reset();
     Ogre::MaterialManager::getSingleton().remove("LoadingScreen", "Graphics");
@@ -426,6 +539,8 @@ void LoadingScreen::update()
     loadingRectangle->setVisible(true);
     loadingRectangle->setRenderQueueGroup(RenderManager::OD_RENDER_QUEUE_ID_GUI - 1);
     fitLoadingImage(*loadingRectangle, window->getWidth(), window->getHeight());
+    if(ringRectangle != nullptr)
+        fitLoadingRing(*ringRectangle, window->getWidth(), window->getHeight());
     if(CEGUI::System::getSingletonPtr() == nullptr)
         return;
     CEGUI::Window* root = CEGUI::System::getSingleton().getDefaultGUIContext().getRootWindow();
@@ -468,7 +583,8 @@ void LoadingScreen::update()
             previousVisibility.push_back(std::make_pair(visible, visible->isVisible()));
             visible->setVisible(true);
         }
-        loadingText->setAlpha(1.0f);
+        // The large overlay text replaces the small widget text, which only carries the status logic.
+        loadingText->setAlpha(0.0f);
     }
     inheritLoadingAlpha(root);
     if(loadingText != nullptr)
