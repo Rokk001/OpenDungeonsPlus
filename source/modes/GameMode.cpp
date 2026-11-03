@@ -4078,8 +4078,20 @@ bool GameMode::saveGame(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
+//! rief Receives a notice and presents it as a single message tab per distinct text.
+//! \param event The notice, owned by this mode afterwards (deleted at once when an identical one is pending).
+//! A repeated notice only makes the pending tab unread again, so the queue never piles up identical info buttons.
 void GameMode::receiveEventShortNotice(EventMessage* event)
 {
+    for(MessageTab& pending : mMessageTabs)
+    {
+        if(pending.message->getMessage() != event->getMessage())
+            continue;
+        pending.read = false;
+        delete event;
+        updateEventMessageIndicator(0.0f);
+        return;
+    }
     // The base mode retains ownership; gameplay presents one notice per tab.
     mEventMessages.emplace_back(event);
     CEGUI::Window* tab = CEGUI::WindowManager::getSingleton().createWindow("OD/GameTabButton");
