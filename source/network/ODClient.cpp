@@ -409,6 +409,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             packSend << ClientNotificationType::levelOK;
             send(packSend);
             loading.continueLoading();
+            LoadingScreen::loadStepDone(LoadingScreen::LOAD_MAP_RECEIVED);
             break;
         }
 
@@ -703,6 +704,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
             gameMap->setGamePaused(false);
             // Create ogre entities for the tiles, rooms, and creatures
             gameMap->createAllEntities();
+            LoadingScreen::loadStepDone(LoadingScreen::LOAD_ENTITIES_CREATED);
 
             switch(serverMode)
             {
@@ -717,6 +719,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 default:
                     OD_LOG_ERR("Unknown server mode=" + Helper::toString(static_cast<int32_t>(serverMode)));
             }
+            LoadingScreen::loadStepDone(LoadingScreen::LOAD_MODE_REQUESTED);
 
             Seat* tempSeat = gameMap->getSeatById(seatId);
             if(tempSeat == nullptr)
@@ -738,6 +741,7 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 startY = 0.0;
 
             frameListener->resetCamera(Ogre::Vector3(startX, startY, MAX_CAMERA_Z));
+            LoadingScreen::loadStepDone(LoadingScreen::LOAD_RENDERER_READY);
             // If we are watching a replay, we force stopping the processing loop to
             // allow changing mode (because there is no synchronization as there is no server)
             if(getSource() == ODSource::file)
@@ -2636,6 +2640,7 @@ bool ODClient::connect(const std::string& host, const int port, uint32_t timeout
     LoadingScreen loading;
     if(!ODSocketClient::connect(host, port, timeout, outputReplayFilename))
         return false;
+    LoadingScreen::loadStepDone(LoadingScreen::LOAD_CONNECTED);
 
     // Send a hello request to start the conversation with the server
     ODPacket packSend;

@@ -1,52 +1,69 @@
-"""Check that the solid portions of the centred badge layers stay distinct without compiling the game."""
+"""Check the creature badge: outer ring life, inner ring mana, original sizes. No compile, no game."""
 from pathlib import Path
 import re
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 root = Path(__file__).resolve().parents[2]
 textures = root / 'materials/textures'
-source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text(encoding='utf-8')
-for setting in ('HEALTH_BADGE_SIZE = 112;', 'MANA_RING_SIZE = 64;', 'STATUS_ICON_SIZE = 28;',
-                'CROWN_SIZE = 28;', 'LEVEL_CAPTION_SIZE_ONE_DIGIT = 30;',
-                'LEVEL_CAPTION_SIZE_TWO_DIGITS = 18;'):
+source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text(encoding='utf-8').replace('\r\n', '\n')
+overlay_cpp = (root / 'source/render/MovableTextOverlay.cpp').read_text(encoding='utf-8')
+overlay_h = (root / 'source/render/MovableTextOverlay.h').read_text(encoding='utf-8')
+
+for setting in ('HEALTH_BADGE_SIZE = 64;', 'STATUS_ICON_SIZE = 30;', 'CROWN_SIZE = 64;',
+                'LEVEL_CAPTION_SIZE_ONE_DIGIT = 32;', 'LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;',
+                'BADGE_FLOWER_MATERIAL = "CreatureOverlay0";',
+                'BADGE_OUTER_RING_MATERIAL = "CreatureOverlayHealthOuter";',
+                'BADGE_INNER_RING_MATERIAL = "CreatureOverlayManaInner";'):
     assert setting in source, setting
 assert 'forceTextArea(healthId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in source
+assert 'forceTextArea(manaId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in source
 assert 'forceTextArea(statusId, STATUS_ICON_SIZE, STATUS_ICON_SIZE)' in source
-assert 'setOffset(manaId' not in source
+# The old split into an upper red and a lower blue part is gone.
+assert 'MANA_FLOWER_SHARE' not in source and 'healthBottom' not in source and 'MANA_RING' not in source
 
+# The mana ring (blue, inner picture) lies over the health ring and under the experience ring.
+constructor = source[source.index('CreatureOverlayStatus::CreatureOverlayStatus('):]
+assert constructor.index('CreatureOverlays::health') < constructor.index('CreatureOverlays::mana')
+assert constructor.index('CreatureOverlays::mana') < constructor.index('CreatureOverlays::experience')
+assert 'BADGE_INNER_RING_MATERIAL, getManaColour()' in constructor
+# A creature with mana gets the outer ring picture as health ring, one without mana the whole flower.
+assert 'hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL, getLifeColour()' in source
+# The life ring is red for every seat, not tinted with the seat colour.
+update_health = source[source.index('void CreatureOverlayStatus::updateHealth('):source.index('if(mLevel != mCreature->getLevel())')]
+assert 'getColorValue' not in update_health
+assert 'LIFE_COLOUR_RED = 220.0f' in source and 'LIFE_COLOUR_GREEN = 25.0f' in source and 'LIFE_COLOUR_BLUE = 25.0f' in source
+assert '(mHasMana != hasMana)' in source
 
-def solid_pixels(image, size):
-    """Place a scaled overlay in badge coordinates and return pixels at least half opaque."""
-    alpha = image.convert('RGBA').resize((size, size), Image.Resampling.BILINEAR).getchannel('A')
-    offset = (112 - size) // 2
-    return {(x + offset, y + offset) for y in range(size) for x in range(size) if alpha.getpixel((x, y)) >= 128}
+# Both rings shrink proportionally to their value and keep their lower edge.
+progress = source[source.index('void CreatureOverlayStatus::updateProgress('):]
+assert 'setVerticalBand(healthId, static_cast<Ogre::Real>(1.0 - healthShare), 1.0f)' in progress
+assert 'setVerticalBand(manaId, static_cast<Ogre::Real>(1.0 - manaShare), 1.0f)' in progress
+assert 'void setVerticalBand(uint32_t childOverlayId, Ogre::Real top, Ogre::Real bottom);' in overlay_h
+assert 'setUV(0.0f, top, 1.0f, bottom)' in overlay_cpp
 
+# The ring pictures: inner is the middle of the flower, outer the rest; together they are the flower.
+flower = Image.open(textures / 'CreatureOverlay0.png').convert('RGBA').getchannel('A')
+inner = Image.open(textures / 'CreatureOverlayManaInner.png').convert('RGBA').getchannel('A')
+outer = Image.open(textures / 'CreatureOverlayHealthOuter.png').convert('RGBA').getchannel('A')
+assert flower.size == inner.size == outer.size
+centre = flower.size[0] / 2
+solid_inner = solid_outer = 0
+for y in range(flower.size[1]):
+    for x in range(flower.size[0]):
+        f, i, o = flower.getpixel((x, y)), inner.getpixel((x, y)), outer.getpixel((x, y))
+        assert max(i, o) == f and min(i, o) == 0, (x, y)
+        radius = ((x + 0.5 - centre) ** 2 + (y + 0.5 - centre) ** 2) ** 0.5
+        if i >= 128:
+            solid_inner += 1
+            assert radius <= 32
+        if o >= 128:
+            solid_outer += 1
+            assert radius > 30
+assert solid_inner > 500 and solid_outer > 500
 
-mana = set().union(*(solid_pixels(Image.open(textures / ('ManaRing%d.png' % n)), 64) for n in range(1, 9)))
-backing = solid_pixels(Image.open(textures / 'CreatureOverlay7.png'), 112)
-for n in range(8):
-    petals = solid_pixels(Image.open(textures / ('CreatureOverlay%d.png' % n)), 112) - backing
-    assert not mana & petals, 'mana covers health segments %d' % n
-for atlas_name in ('CreatureExperience.png', 'CreatureRecovery.png'):
-    atlas = Image.open(textures / atlas_name)
-    for frame in range(64):
-        x, y = (frame % 8) * 128, (frame // 8) * 128
-        assert not mana & solid_pixels(atlas.crop((x, y, x + 128, y + 128)), 64), (atlas_name, frame)
-material = (root / 'materials/scripts/CreatureOverlayStatus.material').read_text(encoding='utf-8')
-for name in re.findall(r'texture\s+(\S+)', material):
-    assert not mana & solid_pixels(Image.open(textures / name), 28), name
-assert not mana & solid_pixels(Image.open(textures / 'ChampionCrown.png'), 28), 'champion crown'
-# Approximate the centred font and its one-pixel outline; the in-game renderer remains a visual check.
-for level in range(1, 31):
-    size = 30 if level < 10 else 18
-    font = ImageFont.truetype(str(root / 'gui/fonts/MedievalSharp-Bold.ttf'), size)
-    canvas = Image.new('L', (112, 112), 0)
-    draw = ImageDraw.Draw(canvas)
-    label = str(level)
-    box = draw.textbbox((0, 0), label, font=font)
-    x = (112 - (box[2] - box[0])) / 2 - box[0] - 1
-    y = (112 - (box[3] - box[1])) / 2 - box[1] + 2
-    draw.text((x, y), label, font=font, fill=255, stroke_width=1)
-    text_pixels = {(x, y) for y in range(112) for x in range(112) if canvas.getpixel((x, y)) >= 128}
-    assert not mana & text_pixels, 'level %d overlaps mana' % level
-print('centred badge layers remain distinct in pixel checks')
+material = (root / 'materials/scripts/CreatureOverlay.material').read_text(encoding='utf-8')
+for name, texture in (('CreatureOverlay0', 'CreatureOverlay0.png'),
+                      ('CreatureOverlayHealthOuter', 'CreatureOverlayHealthOuter.png'),
+                      ('CreatureOverlayManaInner', 'CreatureOverlayManaInner.png')):
+    assert re.search(r'material ' + name + r'\s*\{[^}]*?texture ' + re.escape(texture), material, re.S), name
+print('creature badge rings (blue inner mana, outer life), shrinking and sizes pass the checks')

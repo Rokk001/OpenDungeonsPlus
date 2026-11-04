@@ -190,25 +190,111 @@ print('profile layout ok: card %dx%d design px, page %d px, typical latest ends 
 for line in report:
     print('  ' + line)
 
-# Selected profile variant: portrait, attributes, combat, defenses and three detail panels.
+# Selected profile variant (D-1 variant 2): portrait, name, keeper, four attributes, combat block, defense block and
+# three detail tiles. Nothing on the page scrolls: every value has a window that is high enough for its lines.
 chosen = ET.parse(repo / 'gui/WindowDungeonbookProfile.layout').getroot().find('Window')
+assert 'VertScrollbar' not in (repo / 'gui/WindowDungeonbookProfile.layout').read_text(), 'the profile page has no inner scrollbar'
+assert 'HorzScrollbar' not in (repo / 'gui/WindowDungeonbookProfile.layout').read_text()
 areas = {}
-for name in ('Portrait', 'Attributes', 'CombatPanel', 'DefensePanel', 'EquipmentPanel', 'PathPanel', 'SkillsPanel', 'StatsText'):
-    value = chosen.find("Window[@name='%s']/Property[@name='Area']" % name).get('value')
-    coords = [float(x) for x in re.findall(r'\{(-?\d+(?:\.\d+)?),-?\d+(?:\.\d+)?\}', value)]
+for window in chosen.iter('Window'):
+    name = window.get('name')
+    props = {p.get('name'): p.get('value') for p in window.findall('Property')}
+    if 'Area' not in props:
+        continue
+    coords = [(float(a), float(b)) for a, b in re.findall(r'\{(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\}', props['Area'])]
     assert len(coords) == 4, name
-    areas[name] = coords
-assert areas['Portrait'][3] <= areas['Attributes'][1]
-assert areas['Attributes'][3] <= areas['CombatPanel'][1]
-assert areas['CombatPanel'][3] <= areas['DefensePanel'][1]
-assert areas['DefensePanel'][3] <= areas['EquipmentPanel'][1] == areas['PathPanel'][1] == areas['SkillsPanel'][1]
-assert areas['EquipmentPanel'][2] <= areas['PathPanel'][0] and areas['PathPanel'][2] <= areas['SkillsPanel'][0]
-assert areas['SkillsPanel'][3] <= areas['StatsText'][1]
+    assert all(offset == 0 for scale, offset in coords), name + ' uses only relative areas'
+    areas[name] = (coords[0][0], coords[1][0], coords[2][0], coords[3][0])
+assert 'StatsText' not in areas, 'the free-form statistics scroll area is gone'
+wanted = ('Portrait', 'NameText', 'KeeperText', 'SocialButton', 'Attributes', 'CombatPanel', 'CombatLabels', 'CombatValues',
+          'DefensePanel', 'DefenseLabels', 'DefenseValues', 'EquipmentPanel', 'PathPanel', 'SkillsPanel',
+          'EquipmentTile', 'PathTile', 'SkillsTile')
+for name in wanted:
+    assert name in areas, name
 assert {w.get('name') for w in chosen.find("Window[@name='Attributes']").findall('Window')} == {
     'Strength', 'Dexterity', 'Life', 'Mana'}
-for name in ('CombatPanel', 'DefensePanel', 'EquipmentPanel', 'PathPanel', 'SkillsPanel', 'StatsText'):
-    assert chosen.find("Window[@name='%s']/Property[@name='VertScrollbar']" % name).get('value') == 'True'
-print('chosen profile arrangement and scrollable values verified')
+# vertical order of the rows, with a gap between neighbours
+rows = ['Portrait', 'NameText', 'KeeperText', 'Attributes', 'CombatPanel', 'DefensePanel', 'EquipmentTile']
+for upper, lower in zip(rows, rows[1:]):
+    assert areas[upper][3] <= areas[lower][1], (upper, lower)
+assert areas['KeeperText'][1] == areas['SocialButton'][1] and areas['KeeperText'][2] <= areas['SocialButton'][0]
+assert areas['SocialButton'][3] <= areas['Attributes'][1]
+assert areas['EquipmentTile'][1] == areas['PathTile'][1] == areas['SkillsTile'][1]
+assert areas['EquipmentTile'][2] <= areas['PathTile'][0] and areas['PathTile'][2] <= areas['SkillsTile'][0]
+assert areas['SkillsTile'][3] <= 1.0 and areas['SkillsTile'][2] <= 1.0
+# the texts lie inside their tiles
+for panel, tile in (('EquipmentPanel', 'EquipmentTile'), ('PathPanel', 'PathTile'), ('SkillsPanel', 'SkillsTile'),
+                    ('CombatLabels', 'CombatPanel'), ('CombatValues', 'CombatPanel'),
+                    ('DefenseLabels', 'DefensePanel'), ('DefenseValues', 'DefensePanel')):
+    a, b = areas[panel], areas[tile]
+    assert a[0] >= b[0] and a[2] <= b[2] and a[1] >= b[1] and a[3] <= b[3], (panel, tile)
+# all values of the mockup have a label, the three defenses included
+labels = {w.get('name'): w.find("Property[@name='Text']").get('value') for w in chosen.findall('Window')
+          if w.get('name') in ('CombatLabels', 'DefenseLabels')}
+assert labels['CombatLabels'].split(chr(10)) == ['Critical %', 'Attack Rating', 'Defense Rating']
+assert labels['DefenseLabels'].split(chr(10)) == ['Physical Defense', 'Magical Defense', 'Element Defense']
+# SocialWindow fills exactly these windows, one value line per label, and shortens the tiles instead of scrolling
+assert 'setProfileTile(mDungeonbookPage->getChild("EquipmentPanel")' in social
+assert 'getChild("CombatValues")->setText' in social and 'getChild("DefenseValues")->setText' in social
+assert 'selected->magicalDefense' in social and 'selected->elementDefense' in social and 'selected->physicalDefense' in social
+assert 'isTileTextFitting' in social and 'getChild("StatsText")' not in social
+assert '"[" << creature.keeper << "] "' in social and '"Keeper: " + escapeMarkup(selected->keeper)' in social, \
+    'own and allied creatures carry their keeper in the list and on the page'
+combat_values = social[social.index('std::ostringstream combat;'):social.index('getChild("DefenseValues")')]
+assert combat_values.count('\\n') == 4, 'each of the two value columns has three lines (two line breaks)'
+
+# Height model of the page at every screen and user scale. The profile pane is a part of the 880x580 Dungeonbook
+# window. The window is shrunk by Gui::getWindowFitFactor on small screens, the fonts are not, so the lines are
+# compared in screen pixels: line height = font factor * 17.92 design pixels * scale, area = fraction * pane height.
+LINE_8 = 17.92
+LINE = {'MedievalSharp-6': LINE_8 * 6 / 8, 'MedievalSharp-8': LINE_8, 'MedievalSharp-10': LINE_8 * 10 / 8}
+CHAR_8 = 8.2
+window_h, window_w = 580.0, 880.0
+# window: (lines, font) the text needs at least
+need_lines = {
+    'NameText': (1, 'MedievalSharp-10'), 'KeeperText': (1, 'MedievalSharp-8'), 'SocialButton': (1, 'MedievalSharp-8'),
+    'Attributes': (2, 'MedievalSharp-8'), 'CombatLabels': (3, 'MedievalSharp-8'), 'CombatValues': (3, 'MedievalSharp-8'),
+    'DefenseLabels': (3, 'MedievalSharp-8'), 'DefenseValues': (3, 'MedievalSharp-8')}
+tile_need = LINE['MedievalSharp-8'] + 4 * LINE['MedievalSharp-6']  # title plus four value lines in the small font
+fit_report = []
+for screen_w, screen_h in ((640, 480), (800, 600), (1024, 768), (1280, 720), (1920, 1080), (1920, 1200), (7680, 4320)):
+    for user in (0.8, 1.0, 1.2):
+        scale = min(screen_w / 1024.0, screen_h / 768.0) * user
+        fit = 1.0
+        # Gui::getWindowFitFactor: absolute width and height of the centred window against the screen
+        if window_w * scale > screen_w:
+            fit = min(fit, screen_w / (window_w * scale))
+        if window_h * scale > screen_h:
+            fit = min(fit, screen_h / (window_h * scale))
+        win_h = window_h * scale * fit
+        win_w = window_w * scale * fit
+        pane_h = (win_h - title_height * scale - 2 * border * scale * fit) * 0.9
+        pane_w = (win_w - 2 * side * scale * fit) * 0.5
+        for name, (lines, font) in need_lines.items():
+            height = pane_h * (areas[name][3] - areas[name][1])
+            assert height + 1e-6 >= lines * LINE[font] * scale, (
+                '%s too low for its text' % name, screen_w, screen_h, user, height, lines * LINE[font] * scale)
+        for name in ('EquipmentPanel', 'PathPanel', 'SkillsPanel'):
+            height = pane_h * (areas[name][3] - areas[name][1])
+            assert height + 1e-6 >= tile_need * scale, (
+                '%s too low for title and four lines' % name, screen_w, screen_h, user, height, tile_need * scale)
+        # the widest single-line texts must fit their width: attribute tile, labels, button and the tile titles
+        attribute_tile = (areas['Attributes'][2] - areas['Attributes'][0]) * 0.241
+        widths = {
+            'Attributes/Dexterity': (len('Dexterity') * CHAR_8, attribute_tile),
+            'CombatLabels': (len('Defense Rating') * CHAR_8, areas['CombatLabels'][2] - areas['CombatLabels'][0]),
+            'DefenseLabels': (len('Physical Defense') * CHAR_8, areas['DefenseLabels'][2] - areas['DefenseLabels'][0]),
+            'SocialButton': (len('Social profile') * CHAR_8, areas['SocialButton'][2] - areas['SocialButton'][0]),
+            'EquipmentPanel': (len('Equipment') * CHAR_8, areas['EquipmentPanel'][2] - areas['EquipmentPanel'][0])}
+        for name, (need, fraction) in widths.items():
+            assert pane_w * fraction + 1e-6 >= need * scale, (
+                '%s too narrow' % name, screen_w, screen_h, user, pane_w * fraction, need * scale)
+        fit_report.append((screen_w, screen_h, user, pane_w, pane_h))
+for screen_w, screen_h, user, pane_w, pane_h in fit_report:
+    if (screen_w, screen_h) in ((640, 480), (7680, 4320)) and user in (0.8, 1.2):
+        print('  %dx%d user %d%% profile pane %.0fx%.0f px: every value row fits without a scrollbar' % (
+            screen_w, screen_h, round(user * 100), pane_w, pane_h))
+print('chosen profile arrangement without scrollbars verified')
 
 # Variant 2 keeps its illustrated parchment and circular frame behind interactive content.
 background = chosen.find("Window[@name='PageBackground']")
@@ -229,3 +315,85 @@ assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='Dunge
 credits = (repo / 'CREDITS').read_text()
 assert 'gui/DungeonbookPage.png' in credits and 'gui/DungeonbookFrame.png' in credits
 print('profile background, frame and resource registration verified')
+
+# Second page of the profile: the eight values of the former statistics field, reached by a button on the first page.
+# The page covers the first one, has no scrollbar, and every tile is high and wide enough at every screen and UI scale.
+stats_page = chosen.find("Window[@name='StatisticsPage']")
+assert stats_page is not None and stats_page.find("Property[@name='Visible']").get('value') == 'False'
+assert stats_page.find("Property[@name='Image']").get('value') == 'DungeonbookArt/Page', 'the page covers the first page'
+assert chosen.find("Window[@name='StatisticsButton']") is not None, 'the first page needs the button to the statistics'
+assert stats_page.find("Window[@name='BackButton']") is not None, 'the statistics page needs a button back'
+page_areas = {}
+for window in stats_page.findall('Window'):
+    coords = [float(a) for a, b in re.findall(r'\{(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\}',
+                                             window.find("Property[@name='Area']").get('value'))]
+    page_areas[window.get('name')] = (coords[0], coords[1], coords[2], coords[3])
+button_area = areas['StatisticsButton']
+# the button sits left of the portrait ring (a square in the middle of the portrait), so page 1 keeps its arrangement
+assert button_area[2] < 0.35 and button_area[3] <= areas['NameText'][1] and button_area[0] >= areas['Portrait'][0]
+statistics = ('Experience', 'HP', 'Gold', 'SightRadius', 'Potions', 'Inventory', 'DamagePerSecond', 'SkillPoints')
+for name in statistics:
+    tile, panel = page_areas[name + 'Tile'], page_areas[name + 'Panel']
+    assert panel[0] >= tile[0] and panel[2] <= tile[2] and panel[1] >= tile[1] and panel[3] <= tile[3], name
+    assert 0 <= tile[0] < tile[2] <= 1 and 0 <= tile[1] < tile[3] <= 1, name
+tiles = [page_areas[n + 'Tile'] for n in statistics]
+for i, first in enumerate(tiles):
+    for second in tiles[i + 1:]:
+        assert first[2] <= second[0] or second[2] <= first[0] or first[3] <= second[1] or second[3] <= first[1], 'tiles overlap'
+assert max(page_areas['Title'][3], page_areas['BackButton'][3]) <= min(t[1] for t in tiles) and max(t[3] for t in tiles) <= 1.0
+assert page_areas['BackButton'][2] <= page_areas['Title'][0], 'the back button sits where the button to the statistics is'
+# code: shown by the button, filled from the statistics text, shortened to the tile instead of scrolling
+assert 'onStatisticsViewClicked' in social and 'mShowingStatistics' in social
+assert social.count('mShowingStatistics = false;') >= 3, 'selecting another creature returns to the first page'
+for label in ('Experience', 'HP', 'Gold', 'Potions', 'Inventory', 'Raw damage per second', 'Sight radius',
+              'Skill points earned / spent'):
+    assert '"%s"' % label in social, label
+assert 'findStatisticsValue(selected->stats' in social
+assert 'setProfileTile(statisticsPage->getChild(std::string(line.window) + "Panel")' in social
+assert 'creature->getRawDamagePerSecond()' in (repo / 'source/network/ODServer.cpp').read_text(), 'the server still sends them'
+# Fit: the tile text is the title in the 8 point font and up to four value lines in the 6 point font
+tile_lines = LINE['MedievalSharp-8'] + 4 * LINE['MedievalSharp-6']
+for screen_w, screen_h in ((640, 480), (800, 600), (1024, 768), (1280, 720), (1920, 1080), (7680, 4320)):
+    for user in (0.8, 1.0, 1.2):
+        scale = min(screen_w / 1024.0, screen_h / 768.0) * user
+        fit = min(1.0, screen_w / (window_w * scale), screen_h / (window_h * scale))
+        pane_h = (window_h * scale * fit - title_height * scale - 2 * border * scale * fit) * 0.9
+        pane_w = (window_w * scale * fit - 2 * side * scale * fit) * 0.5
+        for name in statistics:
+            panel = page_areas[name + 'Panel']
+            assert pane_h * (panel[3] - panel[1]) + 1e-6 >= tile_lines * scale, (name, screen_w, screen_h, user)
+            # the longest title ("Damage per second") has to fit one line of the tile
+            assert pane_w * (panel[2] - panel[0]) + 1e-6 >= len('Damage per second') * CHAR_8 * scale, (name, screen_w, user)
+        assert pane_h * (page_areas['BackButton'][3] - page_areas['BackButton'][1]) + 1e-6 >= LINE_8 * scale
+        assert pane_w * (page_areas['BackButton'][2] - page_areas['BackButton'][0]) + 1e-6 >= len('Back') * CHAR_8 * scale
+        assert pane_h * (page_areas['Title'][3] - page_areas['Title'][1]) + 1e-6 >= LINE['MedievalSharp-10'] * scale
+        assert pane_w * (button_area[2] - button_area[0]) + 1e-6 >= len('Statistics') * CHAR_8 * scale
+        assert pane_h * (button_area[3] - button_area[1]) + 1e-6 >= LINE_8 * scale
+print('statistics page verified: eight tiles, button there and back, fits 640x480 to 8K at 80 to 120 percent')
+
+# Portrait: with Centre alignment CEGUI adds the minimum of the area to the centred position as an offset, so the image
+# area has to start at 0 (a minimum of 0.16 shifted the picture to the right and down, off the middle of the ring).
+# It is a square (shrunk to the smaller side) that fills the opening of the ring, which is about 71 percent of the ring image.
+image = chosen.find("Window[@name='Portrait']/Window[@name='Image']")
+image_area = [float(a) for a, b in re.findall(r'\{(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\}',
+                                              image.find("Property[@name='Area']").get('value'))]
+assert image_area[0] == 0.0 and abs(image_area[1]) <= 0.02, 'a minimum of the area would move the centred image'
+assert image.find("Property[@name='HorizontalAlignment']").get('value') == 'Centre'
+assert image.find("Property[@name='VerticalAlignment']").get('value') == 'Centre'
+assert image.find("Property[@name='AspectMode']").get('value') == 'Shrink'
+image_size = (image_area[2] - image_area[0], image_area[3] - image_area[1])
+assert abs(image_size[0] - image_size[1]) <= 0.02 and 0.72 <= image_size[0] <= 0.85, 'the picture fills the ring opening'
+assert frame.find("Property[@name='Area']").get('value') == '{{0,0},{0,0},{1,0},{1,0}}'
+assert frame.find("Property[@name='HorizontalAlignment']").get('value') == 'Centre'
+# the portrait block takes a quarter of the page height (it was about a fifth)
+assert areas['Portrait'][3] - areas['Portrait'][1] >= 0.24
+# tiles are tight: no more than about 20 percent higher than title plus four small lines need at the smallest pane
+smallest_pane = (window_h - title_height - 2 * border) * 0.9
+for name in ('EquipmentTile', 'PathTile', 'SkillsTile'):
+    assert (areas[name][3] - areas[name][1]) * smallest_pane <= tile_need * 1.3, name + ' has too much empty space'
+# values are rounded for display
+assert 'std::string formatProfileValue(double value)' in social and 'std::setprecision(2)' in social
+for field in ('critical', 'attackRating', 'defenseRating', 'physicalDefense', 'magicalDefense', 'elementDefense'):
+    assert 'formatProfileValue(selected->%s)' % field in social, field
+assert 'formatProfileValue(values[i])' in social
+print('portrait centred and filling the ring, values rounded, tiles tight')

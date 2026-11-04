@@ -44,9 +44,11 @@ probe = r'''
 #include <stdexcept>
 #include <string>
 #define OD_LOG_WRN(message) ((void)0)
-namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:VERSION.1"; }
+namespace ODApplication { const std::string VERSIONSTRING="OpenDungeons_Version:VERSION.1"; const std::string VERSION="VERSION"; }
 namespace Helper { READER }
-bool load(std::stringstream& levelFile) { std::string nextParam; LOAD return true; }
+void setLoadError(const std::string&) {}
+HELPERFUNCTION
+bool load(std::stringstream& levelFile) { const std::string fileName="probe"; std::string nextParam; LOAD return true; }
 bool list(std::stringstream& levelFile) { std::string nextParam; LIST return true; }
 //! \brief Checks stable level formats with a numbered build and rejects unsupported headers.
 int main(int argc,char** argv) {
@@ -71,6 +73,9 @@ int main(int argc,char** argv) {
 }
 '''
 probe = probe.replace("OpenDungeons_Version:VERSION", "OpenDungeons_Version:" + version)
+helper_start = source.index("bool isSupportedVersionHeader(")
+helper_function = source[helper_start:source.index(chr(10) + "}" + chr(10), helper_start) + 3]
+probe = probe.replace("HELPERFUNCTION", helper_function)
 probe = probe.replace("LOAD", header("bool readGameMapFromFile("))
 probe = probe.replace("LIST", header("bool getMapInfo("))
 probe = probe.replace("READER", reader)

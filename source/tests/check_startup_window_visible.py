@@ -27,7 +27,7 @@ def main():
     resources = application.index("resMgr.setupOgreResources(", show)
     assert startup < application.index('sf::WindowBase sfmlWindow(nativeHandle);') < show, "SFML must attach to the already painted hidden native window"
     assert "sf::RenderWindow sfmlWindow(" not in application, "SFML must not create a visible window before painting"
-    assert show < application.index("LoadingScreen::presentStartup();", show) < logged, "repaint after showing the window"
+    assert show < application.index("LoadingScreen::presentStartup(", show) < logged, "repaint after showing the window"
     assert logged < application.index("if (!Ogre::RTShader::ShaderGenerator::initialize())"), "show before RTSS initialization"
     assert logged < resources, "the window must be shown before blocking resource initialization"
     assert application.count("renderWindow->setHidden(false);") == 1, "exactly one place may show the startup window"

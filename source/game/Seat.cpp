@@ -1642,7 +1642,7 @@ bool Seat::exportSeatToStream(std::ostream& os) const
             os << PLAYER_TYPE_AI;
 
         os << std::endl;
-        if(!getPlayer()->getIsHuman())
+        if(!getPlayer()->getIsHuman() && mAiLevel < KeeperAIType::nbAI)
             os << "aiLevel\t" << KeeperAITypes::toString(mAiLevel) << "\n";
     }
 

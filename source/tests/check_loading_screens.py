@@ -55,14 +55,61 @@ def main():
     assert startup < shown < resources < shaders, "show the first picture before full resource setup and RTSS"
     assert application.index('"materials/textures/loading", "FileSystem", "StartupLoading"') < startup, "register only the picture folder before drawing"
     assert startup < application.index("renderWindow->setVisible(true);", startup), "present the loading picture before showing the native window"
-    constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& overlaySystem)", 1)[1].split("void LoadingScreen::presentStartup()", 1)[0]
+    constructor = source.split("LoadingScreen::LoadingScreen(Ogre::RenderWindow& window, Ogre::OverlaySystem& overlaySystem)", 1)[1].split("float LoadingScreen::startupFraction(", 1)[0]
     assert "selectLoadingImage();" in constructor and "update();" in constructor and "window.update();" in constructor, "startup must present the shared picture mechanism"
     assert "ShaderGenerator" not in constructor, "the first picture must not depend on RTSS"
-    for token in ('addRenderQueueListener(&overlaySystem)', 'setFontName("StartupLoadingFont", "StartupLoading")', 'setCaption("Loading...")', 'startupOverlay->show()'):
-        assert token in constructor, f"missing startup loading text: {token}"
+    for token in ('addRenderQueueListener(&overlaySystem)', 'createLoadingText("StartupLoadingFont", "StartupLoading")', 'createLoadingRing(*startupScene, "StartupLoading")', "ringPass->setFragmentProgram("):
+        assert token in constructor, f"missing startup loading text or ring: {token}"
+    text = source.split("void createLoadingText(", 1)[1].split("void destroyLoadingIndicator(", 1)[0]
+    for token in ('setCaption("Loading...")', "loadingOverlay->show()", "GMM_RELATIVE", "setCharHeight(LOADING_TEXT_HEIGHT)"):
+        assert token in text, f"missing overlay text setup: {token}"
+    height = float(re.search(r"LOADING_TEXT_HEIGHT = ([0-9.]+)f", source).group(1))
+    assert height >= 0.06, "the loading text must be at least 6 percent of the window height (65 px at 1080p, 130 px at 4K)"
+    fonts = re.findall(r"setTrueTypeSize\((\d+)\)", source)
+    assert fonts and all(int(size) >= 96 for size in fonts), "the font bitmap must stay sharp when the text is scaled up"
+    # The ember ring: material, fill by real progress, creation on the startup path and on every later path, cleanup.
+    assert 'createTextureUnitState(texture)' in source and "SBT_TRANSPARENT_ALPHA" in source, "ring material missing"
+    ring = source.split("void writeRingFan(", 1)[1].split("void createLoadingRing(", 1)[0]
+    assert "loadingProgress" in source and "6.2831853f" in ring and "triangle(" in ring, "the ring must fill clockwise by the real progress"
+    assert "steady_clock" not in source and "LOADING_RING_SECONDS" not in source and "time_point" not in source, "no time-based progress or spinning"
+    assert "sine * halfWidth" in ring and "centerY + cosine * halfHeight" in ring, "the fill must start at the top and run clockwise"
+    assert "setUseIdentityProjection(true)" in ring and "setUseIdentityView(true)" in ring, "the ring fan must be drawn in screen space"
+    assert "setCullingMode(Ogre::CULL_NONE)" in source, "the ring must be visible whatever the fan winding"
+    # The grey empty track must always be drawn as a complete circle below the fill.
+    assert "writeRingFan(ring, 6.2831853f," in source and "writeRingFan(ring, filled," in source, "the grey track must cover all 360 degrees and the fill follows the progress"
+    assert source.index("ring.begin(ringTrackMaterial") < source.index("ring.begin(ringMaterial"), "the track section must be drawn before the fill section"
+    assert '"LoadingRingTrack", "loading_ring_empty.png"' in source and "ringTrackMaterial->getTechnique(0)->getPass(0)" in source, "track material must exist on every path including the startup shader"
+    assert 'remove("LoadingRingTrack", group)' in source, "track material must be released"
+    later_construct = source.split("LoadingScreen::LoadingScreen(CEGUI::Window* existingStatus)", 1)[1].split("catch(...)", 1)[0]
+    assert 'createLoadingRing(*RenderManager::getSingleton().getSceneManager(), "Graphics")' in later_construct and "createLoadingText(LOADING_FONT_NAME" in later_construct, "later load paths must create ring and text"
+    assert source.count("fitLoadingRing(*ringObject") == 3, "creation, startup present and update() must both redraw the ring"
+    # Real progress: set between steps on every path, never decreasing, closed at 100 percent.
+    assert "std::max(loadingProgress," in source and "loadingProgress = 0.0f;" in source, "progress must never go backwards and must restart per load"
+    setp = source.split("void LoadingScreen::setProgress(", 1)[1].split("//! \brief", 1)[0]
+    assert "presentStartup();" in setp and "frame->getRenderWindow()->update();" in setp, "setProgress must redraw on the startup and on the later paths"
+    assert "scriptParseEnded" in source and "groupSpanFrom" in source and "getResourceGroups()" in source, "resource group progress must come from the real group initialization"
+    for step in ("LOAD_LEVEL_READ", "LOAD_SERVER_LISTENING", "LOAD_CONNECTED", "LOAD_MAP_RECEIVED", "LOAD_ENTITIES_CREATED", "LOAD_MODE_REQUESTED", "LOAD_RENDERER_READY"):
+        users = [name for name in ("network/ODServer.cpp", "network/ODClient.cpp") if "LoadingScreen::loadStepDone(LoadingScreen::" + step + ")" in (root / "source" / name).read_text(encoding="utf-8")]
+        assert users, f"load step never reported: {step}"
+    for stage in ("1.0f", "2.0f", "3.0f", "4.0f", "5.0f", "6.0f"):
+        assert "LoadingScreen::presentStartup(LoadingScreen::startupFraction(" + stage + "))" in application, f"startup stage {stage} must report its progress"
+    assert "LoadingScreen::beginGroupProgress(" in application, "resource group initialization must report group progress"
+    assert "LoadingScreen::presentStartup(1.0f);" in (root / "source/render/ODFrameListener.cpp").read_text(encoding="utf-8"), "the ring must be closed before the startup picture ends"
+    # Naming and version display on all loading screens.
+    assert "loadingVersionArea->setCaption(ODApplication::VERSION)" in source and "TextAreaOverlayElement::Right" in source, "the version must be a small right-aligned text"
+    assert "LOADING_VERSION_RIGHT = 0.985f" in source and "LOADING_VERSION_TOP = 0.955f" in source, "the version must sit at the bottom right"
+    assert 'hasOverlayElement("DebugMessages")' in source, "the centred welcome and version text must be hidden while loading"
+    assert 'windowTitle = "Moreya "' in application and 'Welcome to Moreya' in application, "visible texts must say Moreya"
+    assert "OpenDungeons " not in source and "Open Dungeons" not in application and 'windowTitle = "OpenDungeons' not in application, "no old name in the visible loading texts"
+    assert 'destroyLoadingIndicator("StartupLoading")' in source and 'destroyLoadingIndicator("Graphics")' in source, "ring and text must be released on both paths"
+    assert "loadingText->setAlpha(0.0f);" in source, "the small widget text must not draw over the large text"
+    ring_png = (root / "materials/textures/loading/loading_ring.png").read_bytes()
+    assert ring_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", ring_png, 16) == (256, 256), "ring texture missing or wrong size"
+    track_png = (root / "materials/textures/loading/loading_ring_empty.png").read_bytes()
+    assert track_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", track_png, 16) == (256, 256), "empty ring texture missing or wrong size"
     for token in ('"StartupLoadingVertex"', '"StartupLoadingFragment"', "vertex->setSource(", "fragment->setSource(", 'setNamedConstant("picture", 0)'):
         assert token in constructor, f"missing standalone startup shader setup: {token}"
-    present = source.split("void LoadingScreen::presentStartup()", 1)[1].split("void LoadingScreen::scriptParseEnded", 1)[0]
+    present = source.split("void LoadingScreen::presentStartup(float progress)", 1)[1].split("void LoadingScreen::resourceGroupScriptingStarted", 1)[0]
     for token in ("messagePump();", "_updateViewport(STARTUP_VIEWPORT_ORDER)", "swapBuffers();"):
         assert token in present, f"startup must pump and present only its own viewport: {token}"
     assert "window.update()" not in present, "do not render a partially initialized menu"
@@ -70,10 +117,10 @@ def main():
     for stage in ("resMgr.setupOgreResources(", "Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();", "SoundEffectsManager soundEffectsManager;", "pybind11::gil_scoped_release pythonMainThreadRelease;", "Gui gui("):
         start = application.index("\n    " + stage, startup)
         following = application[start:].splitlines()[2].strip()
-        assert following == "LoadingScreen::presentStartup();", f"missing startup present after {stage}"
+        assert following.startswith("LoadingScreen::presentStartup("), f"missing startup present after {stage}"
     groups = (root / "source/renderscene/RenderSceneGroup.cpp").read_text(encoding="utf-8")
     reset = groups.split("void RenderSceneGroup::reset(", 1)[1].split("void RenderSceneGroup::freeGroup(", 1)[0]
-    assert reset.index("scene->activate(") < reset.index("LoadingScreen::presentStartup();") < reset.index("++mIndexScene;"), "refresh between synchronous menu commands"
+    assert reset.index("scene->activate(") < reset.index("LoadingScreen::presentStartup(") < reset.index("++mIndexScene;"), "refresh between synchronous menu commands"
     update = source.split("void LoadingScreen::update()", 1)[1]
     fallback = update.split("if(loadingText == nullptr)", 1)[1].split("previousRootAlpha", 1)[0]
     assert 'createWindow("OD/StaticText")' in fallback and 'setText("Loading...")' in fallback, "missing fallback loading text"

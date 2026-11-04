@@ -8,7 +8,7 @@ import sys
 
 import bpy
 import bmesh
-from mathutils import Vector, Quaternion
+from mathutils import Vector, Quaternion, Matrix
 from mathutils.bvhtree import BVHTree
 
 VARIANT_SEED = 0
@@ -43,6 +43,23 @@ class MeshBuilder:
         for i in range(count):
             j = (i + 1) % count
             self.faces.append((start+i, start+count+i, start+count+j, start+j))
+        self.face_materials.extend([material] * (count+2))
+
+    # Append a thin convex plate whose outline lies in the XY plane and whose thickness runs along Z.
+    def slab(self, polygon, z0, z1, material="MenuStone"):
+        start = len(self.vertices)
+        count = len(polygon)
+        self.vertices.extend((x, y, z0) for x, y in polygon)
+        self.vertices.extend((x, y, z1) for x, y in polygon)
+        # Face winding is chosen from the outline direction so the normals always point outwards.
+        area = sum(polygon[i][0]*polygon[(i+1) % count][1]-polygon[(i+1) % count][0]*polygon[i][1] for i in range(count))
+        order = list(range(count)) if area > 0 else list(reversed(range(count)))
+        self.faces.append(tuple(start+count+i for i in order))
+        self.faces.append(tuple(start+i for i in reversed(order)))
+        for index in range(count):
+            a = order[index]
+            b = order[(index+1) % count]
+            self.faces.append((start+a, start+b, start+count+b, start+count+a))
         self.face_materials.extend([material] * (count+2))
 
     # Add a chipped, tilted masonry block with genuinely clipped irregular corners.
@@ -1242,16 +1259,191 @@ def sway_motion(name,t):
     return ((angle*0.25,angle,angle*0.15),(0,0,0))
 
 
-# Pose the crow's idle head and wings, with a brief complete takeoff and landing every twelve seconds.
-def crow_motion(name,t):
-    t=(t+(VARIANT_SEED%17)/17)%1.0
-    flight=max(0,math.sin((t-0.5)*math.pi/0.30)) if 0.5<t<0.8 else 0
-    if name=="Root":
-        return ((0,0,0),(0,0,flight*1.6))
-    if name=="Head":
-        return ((0.05*math.sin(t*4*math.pi),0,0.48*math.sin(t*6*math.pi)),(0,0,0))
-    side=-1 if name=="WingL" else 1
-    return ((0,side*(0.10*math.sin(t*8*math.pi)+flight*0.75*math.sin(t*32*math.pi)),0),(0,0,0))
+CROW_SHOULDER_X=0.15
+CROW_WRIST_X=0.45
+CROW_SHOULDER_Z=0.36
+CROW_WATCH_SECONDS=8
+CROW_FLAP_SECONDS=0.5
+CROW_TAKEOFF_SECONDS=1.35
+CROW_LAND_SECONDS=1.5
+# Height the body is lifted above the perch while the wings carry it (Flap baseline, end of TakeOff, start of Land).
+CROW_AIR_LIFT=0.45
+# Nose-down angle of the landing approach (atan(8/sqrt(8*8+14*14))): Land levels the body again by this amount.
+CROW_APPROACH_PITCH=math.atan2(8.0,math.sqrt(8.0*8.0+14.0*14.0))
+
+
+# Return the outline plates (outline in |x|,y; z shift) of one crow wing.
+# The inner plates belong to the shoulder bone, the outer plates (hand with the primary feathers) to the wrist bone.
+# The outer plates sit slightly below the inner ones so that, folded back on the body, they lie on the outside.
+def crow_wing_plates(outer):
+    plates=[]
+    if not outer:
+        plates.append(([(0.15,-0.07),(0.32,-0.11),(0.45,-0.08),(0.45,0.09),(0.30,0.13),(0.15,0.11)],0.0))
+        for index in range(4):
+            x0=0.19+index*0.065
+            x1=x0+0.075
+            plates.append(([(x0,0.10),(x1,0.10),(x1-0.01,0.27-0.01*index),(x0+0.01,0.25-0.01*index)],-0.004*(index%2)))
+        return plates
+    def edge(x):
+        return 0.07+(1.0-x)*0.2 if x>=0.75 else 0.12-(0.75-x)*0.1
+    plates.append(([(0.45,-0.08),(0.75,-0.12),(1.00,-0.08),(1.00,0.07),(0.75,0.12),(0.45,0.09)],-0.028))
+    tips=[(1.34,0.06),(1.20,0.15),(1.06,0.23),(0.92,0.30),(0.78,0.34)]
+    # The first primary carries the leading edge out to the pointed wing tip.
+    plates.append(([(0.95,-0.09),(1.00,-0.08),tips[0],(1.00,0.06)],-0.032))
+    for index,tip in enumerate(tips[1:],1):
+        x_start=0.98-index*0.14
+        x_end=min(x_start+0.16,1.0)
+        plates.append(([(x_start,edge(x_start)-0.015),(x_end,edge(x_end)-0.015),tip],-0.028-0.004*(index%2)))
+    return plates
+
+
+# Smooth 0..1 ease used by the crow clips.
+def crow_smooth(value):
+    value=max(0.0,min(1.0,value))
+    return value*value*(3.0-2.0*value)
+
+
+# Return the folded rotation of the shoulder bone: the wing hangs against the body side and points back.
+def crow_folded_wing(side):
+    matrix=Matrix(((0,0,-1),(1,0,0),(0,-1,0)))
+    if side<0:
+        mirror=Matrix(((-1,0,0),(0,1,0),(0,0,1)))
+        matrix=mirror @ matrix @ mirror
+    return Quaternion((1,0,0),math.radians(10)) @ matrix.to_quaternion()
+
+
+# Pose every crow bone. spread is 0 folded to 1 open, up is the wing raise in degrees, tip the extra hand raise.
+# Returns bone name to (authored rotation in scene axes, authored translation in scene axes).
+def crow_pose(lift=0.0, pitch=0.0, head_yaw=0.0, head_pitch=0.0, spread=0.0, up=0.0, tip=0.0):
+    identity=Quaternion((1,0,0,0))
+    pose={"Root":(Quaternion((1,0,0),pitch),Vector((0,0,lift))),
+        "Head":(Quaternion((0,0,1),head_yaw) @ Quaternion((1,0,0),head_pitch),Vector((0,0,0)))}
+    for side,wing,hand in ((-1,"WingL","WingTipL"),(1,"WingR","WingTipR")):
+        folded=identity.slerp(crow_folded_wing(side),1.0-spread)
+        pose[wing]=(Quaternion((0,1,0),-side*math.radians(up)*spread) @ folded,Vector((0,0,0)))
+        hang=identity.slerp(Quaternion((0,0,1),side*math.radians(12)),1.0-spread)
+        # Folded, the hand is shortened and narrowed about the wrist so it lies on the inner wing along the body.
+        fold=1.0-spread
+        pose[hand]=(Quaternion((0,1,0),-side*math.radians(tip)*spread) @ hang,Vector((0,0,0)),Vector((1.0-0.62*fold,1.0-0.35*fold,1.0)))
+    return pose
+
+
+# Map the beat fraction to the stroke phase: a fast downstroke (40 percent) and a slower upstroke (60 percent).
+def crow_stroke(fraction):
+    fraction%=1.0
+    return 0.5*fraction/0.4 if fraction<0.4 else 0.5+0.5*(fraction-0.4)/0.6
+
+
+# One wing beat pose: phase is the warped stroke phase (0 is the top of the stroke); centre and swing are in degrees.
+def crow_beat_pose(phase, centre, swing, lift_base, spread=1.0):
+    angle=2.0*math.pi*phase
+    up=centre+swing*math.cos(angle)
+    tip=32.0*(swing/45.0)*math.sin(angle)
+    lift=lift_base+0.045*math.sin(angle)
+    pitch=-0.10*math.sin(angle)
+    return crow_pose(lift,pitch,0.0,0.10*math.sin(angle),spread,up,tip)
+
+
+# Perched idle: folded wings, slow breathing and head turns; the loop closes after exactly eight seconds.
+def crow_watch(seconds):
+    t=seconds/CROW_WATCH_SECONDS
+    turns=2+VARIANT_SEED%3
+    return crow_pose(0.006*math.sin(2*math.pi*4*t),0.0,0.48*math.sin(2*math.pi*turns*t),0.05*math.sin(2*math.pi*2*t))
+
+
+# Wing-beat loop: 0.5 seconds, hard downstroke with the body rising, softer upstroke with the hands flexed.
+def crow_flap(seconds):
+    return crow_beat_pose(crow_stroke(seconds/CROW_FLAP_SECONDS),10.0,45.0,CROW_AIR_LIFT)
+
+
+# Take-off: crouch, open the wings upward, two strong beats while the body leaps, ending on the first Flap pose.
+def crow_takeoff(seconds):
+    prep=0.35
+    if seconds<prep:
+        k=crow_smooth(seconds/prep)
+        return crow_pose(-0.04*math.sin(math.pi*k),0.22*k,0.0,-0.10*k,k,80.0*k,0.0)
+    beat=(seconds-prep)/CROW_FLAP_SECONDS
+    ease=crow_smooth(beat/2.0)
+    centre=15.0+(10.0-15.0)*ease
+    swing=65.0+(45.0-65.0)*ease
+    rise=crow_smooth((seconds-prep)/(CROW_TAKEOFF_SECONDS-prep))
+    pose=crow_beat_pose(crow_stroke(beat),centre,swing,CROW_AIR_LIFT*rise)
+    # Leave the crouch lean while the first downstroke starts.
+    lean=0.22*(1.0-crow_smooth((seconds-prep)/CROW_FLAP_SECONDS))
+    root_rotation,root_move=pose["Root"]
+    pose["Root"]=(Quaternion((1,0,0),lean) @ root_rotation,root_move)
+    return pose
+
+
+# Landing: braking beats with the body flared nose-up, the body sinks to the perch and the wings fold.
+def crow_land(seconds):
+    beat=min(seconds,1.0)/CROW_FLAP_SECONDS
+    ease=crow_smooth(beat/2.0)
+    centre=10.0+(35.0-10.0)*ease
+    sink=crow_smooth((seconds-0.3)/0.9)
+    spread=1.0-crow_smooth((seconds-0.9)/0.6)
+    flare=-(CROW_APPROACH_PITCH+0.20)*crow_smooth(seconds/0.5)
+    if seconds>1.2:
+        flare=-CROW_APPROACH_PITCH-0.20*(1.0-crow_smooth((seconds-1.2)/0.3))
+    pose=crow_beat_pose(crow_stroke(beat),centre,45.0,CROW_AIR_LIFT*(1.0-sink),spread)
+    damp=1.0-crow_smooth(seconds/1.0)
+    angle=2.0*math.pi*crow_stroke(beat)
+    pose["Root"]=(Quaternion((1,0,0),flare-0.10*math.sin(angle)*damp),
+        Vector((0,0,CROW_AIR_LIFT*(1.0-sink)+0.045*math.sin(angle)*damp)))
+    return pose
+
+
+# Rig the crow and key every clip (Watch, Flap, FlapIn, TakeOff, Land) at 24 frames per second.
+def crow_clips(obj, bones):
+    arm_data=bpy.data.armatures.new(obj.name+"Rig")
+    arm=bpy.data.objects.new(obj.name+"Rig",arm_data)
+    bpy.context.scene.collection.objects.link(arm)
+    obj.select_set(False); arm.select_set(True)
+    bpy.context.view_layer.objects.active=arm
+    bpy.ops.object.mode_set(mode="EDIT")
+    for name,pivot,indices,parent in bones:
+        bone=arm.data.edit_bones.new(name)
+        bone.head=pivot; bone.tail=Vector(pivot)+Vector((0,0,0.25))
+        if parent:
+            bone.parent=arm.data.edit_bones[parent]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    arm["ogre_bone_order"]=[bone[0] for bone in bones]
+    for name,pivot,indices,parent in bones:
+        group=obj.vertex_groups.new(name=name)
+        group.add(list(indices),1,"REPLACE")
+    modifier=obj.modifiers.new("Crow skeletal loop","ARMATURE"); modifier.object=arm; obj.parent=arm
+    arm.animation_data_create()
+    clips=(("Watch",CROW_WATCH_SECONDS,crow_watch,2),("Flap",CROW_FLAP_SECONDS,crow_flap,1),
+        ("FlapIn",CROW_FLAP_SECONDS,crow_flap,1),("TakeOff",CROW_TAKEOFF_SECONDS,crow_takeoff,1),
+        ("Land",CROW_LAND_SECONDS,crow_land,1))
+    for clip_name,length,animation,step in clips:
+        arm.animation_data.action=None
+        frame_count=int(round(length*24))
+        frames=list(range(0,frame_count+1,step))
+        if frames[-1]!=frame_count:
+            frames.append(frame_count)
+        for frame in frames:
+            pose=animation(frame/24.0)
+            for name,pivot,indices,parent in bones:
+                bone=arm.pose.bones[name]; bone.rotation_mode="QUATERNION"
+                entry=pose[name]
+                rotation,translation=entry[0],entry[1]
+                scale_scene=entry[2] if len(entry)>2 else Vector((1,1,1))
+                # Convert authored scene-axis movement into the bone bind frame.
+                basis=bone.bone.matrix_local.to_quaternion()
+                bone.rotation_quaternion=basis.inverted() @ rotation @ basis
+                bone.location=basis.inverted() @ translation
+                # The bone frame is a pure axis permutation of the scene frame, so scene scale axes map by absolute value.
+                local_scale=basis.inverted() @ scale_scene
+                bone.scale=Vector((abs(local_scale.x),abs(local_scale.y),abs(local_scale.z)))
+                bone.keyframe_insert("rotation_quaternion",frame=frame,group=name)
+                bone.keyframe_insert("location",frame=frame,group=name)
+                bone.keyframe_insert("scale",frame=frame,group=name)
+        arm.animation_data.action.name=clip_name
+        arm.animation_data.action["ogre_length"]=length
+        arm.animation_data.action.use_fake_user=True
+    bpy.context.scene.frame_set(0)
+    return obj,arm
 
 
 # Build one new separately editable horror prop; every placed variant has its own seeded source file.
@@ -1415,7 +1607,9 @@ def polish_prop():
         ranges={}
         first=len(b.vertices)
         b.oval((0,0.0,0.30),(0.16,0.30,0.22),"MenuCrowBlack",9,5)
-        b.prism([(-0.15,0.23),(0.14,0.24),(0.11,0.05),(-0.10,0.04)],0.14,0.54,"MenuCrowBlack")
+        # Long fanned tail and a mantle plate between the wing roots hide the gap while the wings are open.
+        b.slab([(-0.10,0.22),(0.10,0.22),(0.14,0.52),(0.15,0.80),(0.04,0.88),(-0.04,0.88),(-0.15,0.80),(-0.14,0.52)],0.255,0.275,"MenuCrowBlack")
+        b.slab([(-0.12,-0.08),(0.12,-0.08),(0.17,0.05),(0.17,0.14),(-0.17,0.14),(-0.17,0.05)],CROW_SHOULDER_Z-0.03,CROW_SHOULDER_Z-0.006,"MenuCrowBlack")
         for side in (-1,1):
             b.segment((side*0.08,0.04,0.15),(side*0.10,-0.02,-0.01),0.018,0.015,"MenuCorrodedIron",5)
             for toe in range(3):
@@ -1427,14 +1621,21 @@ def polish_prop():
         for side in (-1,1):
             b.oval((side*0.105,-0.28,0.60),(0.016,0.025,0.018),"MenuGateEyes",6,4)
         ranges["Head"]=range(first,len(b.vertices))
-        for side,label in ((-1,"WingL"),(1,"WingR")):
+        for side,label,tip_label in ((-1,"WingL","WingTipL"),(1,"WingR","WingTipR")):
             first=len(b.vertices)
-            b.prism([(side*0.07,0.40),(side*0.32,0.31),(side*0.25,0.13),
-                (side*0.19,0.10),(side*0.14,0.03),(side*0.10,0.21)],-0.02,0.28,"MenuCrowBlack")
+            for polygon,z_shift in crow_wing_plates(False):
+                b.slab([(side*x,y) for x,y in polygon],CROW_SHOULDER_Z-0.012+z_shift,CROW_SHOULDER_Z+0.012+z_shift,"MenuCrowBlack")
             ranges[label]=range(first,len(b.vertices))
+            first=len(b.vertices)
+            for polygon,z_shift in crow_wing_plates(True):
+                b.slab([(side*x,y) for x,y in polygon],CROW_SHOULDER_Z-0.012+z_shift,CROW_SHOULDER_Z+0.012+z_shift,"MenuCrowBlack")
+            ranges[tip_label]=range(first,len(b.vertices))
         bones=[("Root",(0,0,0),ranges["Root"],None),("Head",(0,-0.15,0.48),ranges["Head"],"Root"),
-            ("WingL",(-0.08,0,0.35),ranges["WingL"],"Root"),("WingR",(0.08,0,0.35),ranges["WingR"],"Root")]
-        clip="Watch"; seconds=12
+            ("WingL",(-CROW_SHOULDER_X,-0.02,CROW_SHOULDER_Z),ranges["WingL"],"Root"),
+            ("WingTipL",(-CROW_WRIST_X,-0.02,CROW_SHOULDER_Z),ranges["WingTipL"],"WingL"),
+            ("WingR",(CROW_SHOULDER_X,-0.02,CROW_SHOULDER_Z),ranges["WingR"],"Root"),
+            ("WingTipR",(CROW_WRIST_X,-0.02,CROW_SHOULDER_Z),ranges["WingTipR"],"WingR")]
+        clip="Crow"; seconds=CROW_WATCH_SECONDS
     elif kind=="Rat":
         b.oval((0,0,0.13),(0.15,0.32,0.14),"MenuRatHide",9,5)
         b.oval((0,-0.29,0.15),(0.10,0.16,0.11),"MenuRatHide",8,4)
@@ -1580,7 +1781,9 @@ def polish_prop():
         for loop,uv in zip(face.loop_indices,((0,0),(1,0),(1,1),(0,1))):
             obj.data.uv_layers.active.data[loop].uv=uv
     if bones:
-        return rigid_loop(obj,bones,clip,seconds,crow_motion if kind=="Crow" else sway_motion,pinned)
+        if kind=="Crow":
+            return crow_clips(obj,bones)
+        return rigid_loop(obj,bones,clip,seconds,sway_motion,pinned)
     return obj
 
 
@@ -1614,7 +1817,7 @@ POLISH_SPECS=[
     ("MenuBurntTorchA",(-8.0,-6.2,-0.15),"BurntTorch"),("MenuBurntTorchB",(8.7,-6.8,-0.15),"BurntTorch"),
     ("MenuCharredRemains",(7.1,-5.8,-0.16),"CharredRemains"),
     ("MenuBrokenSlabLeft",(-4.6,-16.8,-0.16),"BrokenSlab"),("MenuBrokenSlabRight",(4.5,-11.1,-0.16),"BrokenSlab"),
-    ("MenuGateBeast",(0, 13.2, -0.18),"GateBeast"),("MenuLavaWallLeft",(-14.1,5.89,0),"LavaWall"),
+    ("MenuGateBeast",(0, 27.0, -0.18),"GateBeast"),("MenuLavaWallLeft",(-14.1,5.89,0),"LavaWall"),
     ("MenuLavaWallRight",(15.0,5.79,0),"LavaWall"),("MenuVolcanicRuins",(-65, 110, 27.0),"VolcanicRuins"),
     ("MenuHorizonCrows",(-12,65,24),"HorizonCrows"),("MenuTitlePlaque",(0,2.95,10.9),"TitlePlaque"),
     ("MenuTitleCrest",(0,2.9,8.5),"TitleCrest"),("MenuBloodMoon",(-33,83,35),"BloodMoon")]

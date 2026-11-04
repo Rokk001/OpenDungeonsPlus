@@ -105,7 +105,9 @@ void RenderSceneGroup::reset(CameraManager& cameraManager, RenderManager& render
         if(!scene->activate(cameraManager, renderManager))
             return;
 
-        LoadingScreen::presentStartup();
+        // The menu scenes fill the last startup stage, one share per finished command.
+        LoadingScreen::presentStartup(LoadingScreen::startupFraction(6.0f
+            + static_cast<float>(mIndexScene + 1) / static_cast<float>(mScenes.size())));
         ++mIndexScene;
     }
 }

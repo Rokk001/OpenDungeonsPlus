@@ -4279,8 +4279,14 @@ const std::vector<TileSetValue>& GameMap::getMeshesForEnclosedEarth() const
 }
 
 
+//! brief Computes the tile set index of a tile from the neighbours it links to. A missing neighbour outside
+//! the map counts as linked for earth, because the rock border around the map is made of enclosed earth; the
+//! edge tiles then use the same flat earth shape as the border and the map edge shows no step.
 int GameMap::computeTileSetIndex(const Tile* tile) const
 {
+    const TileVisual visual = !isServerGameMap() && !tile->getEverVisible() ?
+        TileVisual::dirtFull : tile->getTileVisual();
+    const bool linksToBorder = visual == TileVisual::dirtFull;
     int index = 0;
     for(int i = 0; i < 4; ++i)
     {
@@ -4308,7 +4314,11 @@ int GameMap::computeTileSetIndex(const Tile* tile) const
         }
         const Tile* t = getTile(tile->getX() + diffX, tile->getY() + diffY);
         if(t == nullptr)
+        {
+            if(linksToBorder)
+                index |= (1 << i);
             continue;
+        }
 
         if(mTileSet->areLinked(tile, t))
             index |= (1 << i);

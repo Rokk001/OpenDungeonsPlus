@@ -1,7 +1,7 @@
 # Keeps the seated tavern clips of one creature as actions of its Blender source and exports them.
 #
 # Usage: blender --background <Model>.blend --python tavern_seats_blend.py -- <seats.skeleton.xml>
-#        [--save <exported.skeleton.xml>] [--review <table.mesh.xml> <review folder>]
+#        [--save <exported.skeleton.xml>] [--review <table.mesh.xml> <review folder> [<mug.mesh.xml>]]
 # Without --save nothing is written to the Blender source. Only --review renders images.
 import math
 import os
@@ -9,14 +9,14 @@ import sys
 import xml.etree.ElementTree as ET
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import odp_ogre_io as oo
 
 CLIPS = ['Sit', 'SitDrink', 'SitSlap', 'SitSlapped', 'SitArmWrestle', 'SitDice', 'SitSlumped']
 # The moment of a clip that the review shows, as a share of its length
-REVIEW_MOMENTS = {'Sit': 0.5, 'SitDrink': 0.5, 'SitSlap': 0.4, 'SitSlapped': 0.2, 'SitArmWrestle': 0.5, 'SitDice': 0.5,
+REVIEW_MOMENTS = {'Sit': 0.5, 'SitDrink': 0.25, 'SitSlap': 0.4, 'SitSlapped': 0.2, 'SitArmWrestle': 0.5, 'SitDice': 0.5,
                   'SitSlumped': 0.5}
 # Where the table stands for a guest on the middle of its bench who looks along -y, and how it is scaled in the game
 TABLE_DISTANCE = 0.4116
@@ -27,6 +27,28 @@ REVIEW_SIZE = 360
 # Returns the armature that the mesh of the source file is bound to.
 def source_armature():
     return next(obj for obj in bpy.data.objects if obj.type == 'ARMATURE')
+
+
+# Adds the bones of the authored skeleton that the source file does not have yet (the mount of the mug), after their parents.
+def add_missing_bones(arm, path):
+    bones, parents, anims = oo.read_skeleton(path)
+    order = list(arm.get('ogre_bone_order', []))
+    missing = [bone for bone in bones if bone['name'] not in arm.data.bones]
+    if not missing:
+        return
+    oo._set_active(arm)
+    bpy.ops.object.mode_set(mode='EDIT')
+    for bone in missing:
+        parent = arm.data.edit_bones[parents[bone['name']]]
+        edit = arm.data.edit_bones.new(bone['name'])
+        edit.head = (0.0, 0.0, 0.0)
+        edit.tail = (0.0, oo.BONE_LEN, 0.0)
+        edit.matrix = parent.matrix @ (Matrix.Translation(bone['pos']) @ bone['rot'].to_matrix().to_4x4())
+        edit.length = oo.BONE_LEN
+        edit.parent = parent
+        order.append(bone['name'])
+    bpy.ops.object.mode_set(mode='OBJECT')
+    arm['ogre_bone_order'] = order
 
 
 # Replaces the actions of the seated clips with the authored ones.
@@ -78,9 +100,24 @@ def add_camera(direction, size):
     return camera
 
 
+# Holds the mug in the mount of the skeleton, as the game attaches it, and returns it (None if there is no mount).
+def add_mug(arm, path):
+    if 'Weapon_R' not in arm.data.bones:
+        return None
+    mug = oo.import_mesh(path, None, 'ReviewMug')
+    mug.parent = arm
+    mug.parent_type = 'BONE'
+    mug.parent_bone = 'Weapon_R'
+    mug.matrix_parent_inverse = Matrix.Identity(4)
+    # Blender attaches at the tail of the bone, the game at its origin
+    mug.matrix_basis = Matrix.Translation((0.0, -arm.data.bones['Weapon_R'].length, 0.0)) @ Matrix.Rotation(math.radians(-90.0), 4, 'X')
+    return mug
+
+
 # Renders one image of every clip with the table in the picture.
-def render_reviews(arm, table_path, folder, model):
+def render_reviews(arm, table_path, folder, model, mug_path=None):
     os.makedirs(folder, exist_ok=True)
+    mug = add_mug(arm, mug_path) if mug_path else None
     mesh_heights = [obj.dimensions.z for obj in bpy.data.objects if obj.type == 'MESH']
     table = add_table(table_path)
     size = max(1.5, max(mesh_heights) * 1.35)
@@ -96,12 +133,16 @@ def render_reviews(arm, table_path, folder, model):
         camera = add_camera(direction, size)
         for clip in CLIPS:
             action = bpy.data.actions[clip]
+            if mug is not None:
+                mug.hide_render = clip != 'SitDrink'
             oo.assign_action(arm, action)
             scene.frame_set(int(round(action['ogre_length'] * oo.FPS * REVIEW_MOMENTS[clip])))
             scene.render.filepath = os.path.join(folder, model + '-' + view + '-' + clip + '.png')
             bpy.ops.render.render(write_still=True)
         bpy.data.objects.remove(camera)
     bpy.data.objects.remove(table)
+    if mug is not None:
+        bpy.data.objects.remove(mug)
 
 
 # Runs the steps for the Blender source that is open.
@@ -110,10 +151,11 @@ def main():
     seats = args[0]
     model = os.path.splitext(os.path.basename(bpy.data.filepath))[0]
     arm = source_armature()
+    add_missing_bones(arm, seats)
     add_actions(arm, seats)
     if '--review' in args:
         at = args.index('--review')
-        render_reviews(arm, args[at + 1], args[at + 2], model)
+        render_reviews(arm, args[at + 1], args[at + 2], model, args[at + 3] if len(args) > at + 3 and not args[at + 3].startswith('--') else None)
     if '--save' in args:
         exported = args[args.index('--save') + 1]
         oo.export_skeleton_xml(arm, exported, only_actions=set(CLIPS))

@@ -71,12 +71,12 @@ private:
     Seat* mSeat;
     MovableTextOverlay* mMovableTextOverlay;
     uint32_t mHealthValue;
+    //! \brief True if the health ring currently uses the outer ring picture because the creature has mana
+    bool mHasMana = false;
     unsigned int mLevel;
     Ogre::Real mTimeDisplayStatus;
     uint32_t mStatus;
     std::vector<uint32_t> mOverlayIds;
-    //! Number of mana ring segments (0 to MANA_RING_SEGMENTS) the mana ring arc shows; above the maximum until the first update
-    uint32_t mManaSegments = 99;
     //! Overlay of the emote. It is only created when the first emote is shown
     bool mEmoteCreated;
     uint32_t mEmoteId;

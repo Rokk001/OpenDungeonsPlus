@@ -214,3 +214,13 @@ assert 'const float step = 0.78f / entries.size()' in game_text
 for count in (5, 11):
     step = 0.78 / count
     assert 0.12 + (count - 1) * step + step * 38 / 46 < 0.9
+
+# The Dungeonbook creature profile page is laid out with relative areas only, so it follows the fitted window at every
+# screen size and UI scale; it has no scrollbar and shows Magical and Element Defense (check_dungeonbook_profile_layout.py
+# verifies the line heights at 640x480 to 8K and 80 to 120 percent).
+dungeonbook_page = (repo / 'gui/WindowDungeonbookProfile.layout').read_text(encoding='utf-8')
+assert 'Scrollbar' not in dungeonbook_page, 'the Dungeonbook profile page must not use inner scrollbars'
+assert 'Magical Defense' in dungeonbook_page and 'Element Defense' in dungeonbook_page
+for area in re.findall(r'name="Area" value="([^"]*)"', dungeonbook_page):
+    assert all(offset == 0 for _scale, offset in udims(area)), 'the Dungeonbook profile page uses relative areas only'
+print('Dungeonbook profile page fits at every scale (relative areas, no scrollbar)')

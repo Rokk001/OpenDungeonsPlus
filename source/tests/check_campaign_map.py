@@ -81,6 +81,19 @@ check("showBriefing(" in click and "startLevel(" not in click, "a click opens th
 check("startLevel(level)" in mode[mode.index("bool MenuModeCampaign::briefingStartPressed"):], "the briefing starts the level")
 check("provinces conquered" in mode and "hidden sites" in mode and "percent" in mode, "progress panel texts")
 
+# Leaving the game (or the main menu) for the campaign page again must not meet the windows of an earlier visit:
+# the mode is created anew on every request but the gui sheet and its map stay
+manager = (root / "source/modes/ModeManager.cpp").read_text(encoding="utf-8")
+check("make_unique<MenuModeCampaign>" in manager, "the campaign mode is created again on every request")
+clear = mode[mode.index("void MenuModeCampaign::clearMap()"):mode.index("void MenuModeCampaign::setMapArea")]
+check("WORLD_WINDOW_PREFIX" in clear and "getChildAtIdx(" in clear and "removeChild(" in clear,
+    "clearMap must remove the map windows of earlier visits by their name prefix")
+check("WORLD_WINDOW_PREFIX + name" in mode, "map windows must carry the prefix clearMap looks for")
+check("mWorldWindows.clear()" in clear and "mLiftWindow = nullptr" in clear, "clearMap must reset its member state")
+quit_game = (root / "source/modes/GameMode.cpp").read_text(encoding="utf-8")
+quit_game = quit_game[quit_game.index("bool GameMode::onClickYesQuitMenu"):]
+check("MENU_CAMPAIGN" in quit_game[:900], "quitting a campaign game returns to the campaign page")
+
 if failures:
     print("\n".join(failures))
     sys.exit(1)
