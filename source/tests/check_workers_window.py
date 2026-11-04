@@ -444,7 +444,7 @@ assert all(row_boxes[n] > 196 for n in ('MerchantButton', 'LabButton', 'SandboxB
 # It stays left of the control panel toggle that ends the row and well inside the minimap column of the bottom bar
 assert button_box[2] <= 400, 'the Workers icon is not floating towards the middle of the screen'
 
-# --- pictures dominate, texts stay small (owner check of build 28): measured at every screen size and UI scale
+# --- pictures dominate, texts stay small (owner check of build 29): measured at every screen size and UI scale
 for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.0, 1.2):
         client, scale = window_rect(screen_w, screen_h, user)
@@ -454,12 +454,12 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             fig = child_rect(child(tablet, 'Figure'), t_rect, scale)
             figure_side = min(fig[2], fig[3])
             assert figure_side >= 0.80 * t_rect[2], ('the worker figure fills the tablet width', rank, figure_side, t_rect[2])
-            assert figure_side >= 0.50 * t_rect[3], ('the worker figure fills the tablet height', rank, figure_side, t_rect[3])
+            assert figure_side >= 0.42 * t_rect[3], ('the worker figure fills the tablet height', rank, figure_side, t_rect[3])
             name_px = font_pixels(child(tablet, 'Name'), screen_w, screen_h, user)
-            assert figure_side >= 5.0 * name_px, ('the job name is small below the figure', rank, figure_side, name_px)
-            assert props(child(tablet, 'Name'))['Font'] == 'MedievalSharp-8', 'the job name is the small text size'
-            assert udims(props(child(tablet, 'Name'))['Area'])[3][0] > udims(props(child(tablet, 'Figure'))['Area'])[3][0], \
-                'the job name stands below the figure'
+            assert figure_side >= 4.0 * name_px, ('the job name is small below the figure', rank, figure_side, name_px)
+            assert props(child(tablet, 'Name'))['Font'] == 'MedievalSharp-10', 'the job name is the second text size'
+            assert udims(props(child(tablet, 'Name'))['Area'])[3][0] > udims(props(child(tablet, 'Figure'))['Area'])[1][0], \
+                'the job name stands below the top of the figure'
             assert props(child(tablet, 'Name'))['VertFormatting'] == 'BottomAligned', 'the name sits right above the buttons'
         for entry in range(7):
             frame = child(window, 'Carry%d' % entry)
@@ -469,7 +469,7 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             assert picture_side >= 0.75 * c_rect[2], ('the carry picture fills its entry', entry, picture_side, c_rect[2])
             assert picture_side >= 0.40 * c_rect[3], ('the carry picture fills its entry height', entry, picture_side, c_rect[3])
             name_px = font_pixels(child(frame, 'Name'), screen_w, screen_h, user)
-            assert picture_side >= 2.5 * name_px, ('the carry name is small below the picture', entry, picture_side, name_px)
+            assert picture_side >= 5.0 * name_px, ('the carry name is small below the picture', entry, picture_side, name_px)
 # Window texts: no text is larger than in the mockup (small names and labels, the count of free workers the largest)
 text_limits = {'FreeCount': 13, 'CarryTitle': 12, 'FreeLabel': 10, 'PriorityLabel': 10, 'GoldLabel': 8, 'DragHint': 8}
 for node in window.findall('Window'):
@@ -478,11 +478,100 @@ for node in window.findall('Window'):
         assert int(props(node)['Font'].rsplit('-', 1)[1]) <= text_limits[name], (name, props(node)['Font'])
     if name.startswith('Working'):
         assert props(node)['Font'] == 'MedievalSharp-8', name + ' is a small text'
+    if name.startswith('Carry') and name[5:].isdigit():
+        assert props(child(node, 'Name'))['Font'] == 'MedievalSharp-8', 'the carry names are the small text size'
 for name in ('ModeAutomatic', 'ModePriority'):
     assert props(child(child(window, name), 'Label'))['Font'] == 'MedievalSharp-10'
 for node in window.iter('Window'):
     if 'Font' in props(node):
         assert int(props(node)['Font'].rsplit('-', 1)[1]) <= 13, (node.get('name'), 'text larger than the mockup')
+
+# --- binding target sizes at 1920x1200 (owner decision 610, mockup variant-b-worker-colour.png), tolerance 10 percent
+from PIL import Image
+
+
+def visible_box(png):
+    """Width and height of the visible (not transparent) part of a 256 pixel picture, as fractions of the picture."""
+    image = Image.open(repo / 'assets-src/gui/icons/tiles' / (png + '.png')).convert('RGBA')
+    box = image.split()[3].point(lambda v: 255 if v > 40 else 0).getbbox()
+    return (box[2] - box[0]) / image.width, (box[3] - box[1]) / image.height
+
+
+def cap_height(node, screen_w, screen_h, user):
+    """Pixel height of a capital letter of the font of a layout window."""
+    font = text_font(font_pixels(node, screen_w, screen_h, user))
+    box = font.getbbox('H')
+    return box[3] - box[1]
+
+
+TARGET_TOLERANCE = 0.10
+target_rows = []
+
+
+def target(item, expected, computed):
+    """Record an item and require every number of it to be within the tolerance of its target."""
+    target_rows.append((item, expected, computed))
+    for want, got in zip(expected, computed):
+        assert abs(got - want) <= TARGET_TOLERANCE * want, ('target missed', item, expected, computed)
+
+
+client, scale = window_rect(1920, 1200, 1.0)
+outer = udims(props(window)['Area'])
+outer_w = (outer[2][0] - outer[0][0]) * 1920 + (outer[2][1] - outer[0][1]) * scale
+outer_h = (outer[3][0] - outer[1][0]) * 1200 + (outer[3][1] - outer[1][1]) * scale
+outer_x = outer[0][0] * 1920 + outer[0][1] * scale
+outer_y = outer[1][0] * 1200 + outer[1][1] * scale
+target('window', (1480, 940), (outer_w, outer_h))
+assert abs(outer_x + outer_w / 2 - 960) < 1 and abs(outer_y + outer_h / 2 - 600) < 1, 'the window is centred'
+tablet_names = ['I', 'II', 'III', 'IV', 'V', 'VI']
+tablet_targets = [(266, 387), (222, 345), (194, 313), (176, 290), (165, 270), (157, 254)]
+tablet_sizes = []
+for rank in range(6):
+    t_rect = child_rect(child(window, 'Rank%d' % rank), client, scale)
+    tablet_sizes.append((t_rect[2], t_rect[3]))
+    target('tablet ' + tablet_names[rank] + (' (rank in between)' if 0 < rank < 5 else ''), tablet_targets[rank], tablet_sizes[rank])
+for rank in range(5):
+    assert tablet_sizes[rank][0] > tablet_sizes[rank + 1][0] and tablet_sizes[rank][1] > tablet_sizes[rank + 1][1], 'falls by rank'
+# The worker figure: the visible part of its picture fills about 70 percent of the width of its tablet
+job_pictures = ['WorkerJobDig', 'WorkerJobClaimGround', 'WorkerJobClaimWall', 'WorkerJobCarry', 'WorkerJobClean', 'WorkerJobReload']
+visible_w = sum(visible_box(name)[0] for name in job_pictures) / len(job_pictures)
+fill = []
+for rank in range(6):
+    tablet = child(window, 'Rank%d' % rank)
+    t_rect = child_rect(tablet, client, scale)
+    fig = child_rect(child(tablet, 'Figure'), t_rect, scale)
+    fill.append(min(fig[2], fig[3]) * visible_w / t_rect[2])
+target('worker figure width / tablet width, rank I', (0.70,), (fill[0],))
+target('worker figure width / tablet width, rank VI', (0.70,), (fill[5],))
+assert all(abs(v - 0.70) <= 0.07 for v in fill), fill
+carry_pictures = ['WorkerCarryOwn', 'WorkerCarryEnemy', 'WorkerCarryCorpses', 'WorkerCarryGold', 'WorkerCarryItems',
+                  'WorkerCarryGift', 'WorkerCarryTrapsDoors']
+c_rect = child_rect(child(window, 'Carry0'), client, scale)
+target('carry entry', (169, 188), (c_rect[2], c_rect[3]))
+for entry in range(7):
+    entry_rect = child_rect(child(window, 'Carry%d' % entry), client, scale)
+    assert abs(entry_rect[2] - c_rect[2]) < 0.5 and abs(entry_rect[3] - c_rect[3]) < 0.5, 'all carry entries are equally large'
+pic = child_rect(child(child(window, 'Carry0'), 'Picture'), c_rect, scale)
+side = min(pic[2], pic[3])
+mean_w = sum(visible_box(name)[0] for name in carry_pictures) / len(carry_pictures)
+mean_h = sum(visible_box(name)[1] for name in carry_pictures) / len(carry_pictures)
+target('carry picture (mean visible part of the seven)', (110, 60), (side * mean_w, side * mean_h))
+job_cap = cap_height(child(child(window, 'Rank0'), 'Name'), 1920, 1200, 1.0)
+carry_cap = cap_height(child(child(window, 'Carry0'), 'Name'), 1920, 1200, 1.0)
+target('job name cap height', (17,), (job_cap,))
+target('carry name cap height', (15,), (carry_cap,))
+for name in ('FreeLabel', 'PriorityLabel', 'DragHint', 'GoldLabel', 'CarryTitle', 'FreeCount'):
+    assert cap_height(child(window, name), 1920, 1200, 1.0) <= 23, (name, 'window text larger than in the mockup')
+assert cap_height(child(window, 'Working0'), 1920, 1200, 1.0) <= carry_cap + 1, 'the Working line is in the small text size'
+# The Working line sits below its tablet, centred under it
+for rank in range(6):
+    t_rect = child_rect(child(window, 'Rank%d' % rank), client, scale)
+    w_rect = child_rect(child(window, 'Working%d' % rank), client, scale)
+    assert w_rect[1] >= t_rect[1] + t_rect[3] - 1, 'Working line below its tablet'
+    assert abs((w_rect[0] + w_rect[2] / 2) - (t_rect[0] + t_rect[2] / 2)) < 2, 'Working line centred under its tablet'
+if '--table' in sys.argv:
+    for item, expected, computed in target_rows:
+        print('| %s | %s | %s |' % (item, ' x '.join('%g' % v for v in expected), ' x '.join('%.1f' % v for v in computed)))
 
 # --- the tick box "Gold first" is large and its ticked state differs clearly from the empty one (R3)
 for name in ('WorkerCheckboxEmpty', 'WorkerCheckboxChecked'):
