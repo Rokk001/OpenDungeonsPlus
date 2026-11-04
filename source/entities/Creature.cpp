@@ -9557,6 +9557,57 @@ void Creature::notePleasureWish()
     fireMoodPost(static_cast<int32_t>(CosmeticMoodPostKind::wish), liked);
 }
 
+//! \brief True when the creature reached the level limit of the training hall of its keeper but may still gain levels in an
+//! arena, so the arena is the only place left where it can progress.
+bool Creature::canOnlyProgressInArena() const
+{
+    bool hallAffinity = false;
+    bool arenaAffinity = false;
+    for(const CreatureRoomAffinity& affinity : mDefinition->getRoomAffinity())
+    {
+        if((affinity.getLikeness() <= 0) || (affinity.getEfficiency() <= 0))
+            continue;
+
+        if(affinity.getRoomType() == RoomType::trainingHall)
+            hallAffinity = true;
+        else if(affinity.getRoomType() == RoomType::arena)
+            arenaAffinity = true;
+    }
+    if(!hallAffinity || !arenaAffinity)
+        return false;
+
+    const double hallCap = std::round(SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall,
+        ConfigManager::getSingleton().getRoomConfigUInt32("TrainHallMaxTrainingLevel"), ResearchEffect::LevelCap));
+    const double arenaCap = std::min(static_cast<double>(MAX_LEVEL), std::round(SkillManager::getResearchValue(getSeat(),
+        SkillType::roomArena, ConfigManager::getSingleton().getRoomConfigUInt32("ArenaMaxTrainingLevel"),
+        ResearchEffect::LevelCap)));
+    return (static_cast<double>(getLevel()) >= hallCap) && (static_cast<double>(getLevel()) < arenaCap);
+}
+
+//! \brief Tells the keeper that the creature is bored and wishes for an arena when it can only progress in an arena and the
+//! keeper has none. The mood level does not matter here. The wish is told again after the usual wish pause.
+void Creature::noteArenaWish()
+{
+    if((mDefinition == nullptr) || mDefinition->isWorker() || (getSeat() == nullptr) || getSeat()->isRogueSeat())
+        return;
+
+    if(!canOnlyProgressInArena())
+        return;
+
+    for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::arena, getSeat()))
+    {
+        if(room->numCoveredTiles() > 0)
+            return;
+    }
+
+    const int64_t turn = getGameMap()->getTurnNumber();
+    if(turn < mWishNextTurn)
+        return;
+
+    mWishNextTurn = turn + static_cast<int64_t>(MOOD_WISH_REPEAT_SECONDS * ODApplication::turnsPerSecond);
+    fireMoodPost(static_cast<int32_t>(CosmeticMoodPostKind::wish), static_cast<int32_t>(RoomType::arena));
+}
+
 //! \brief Tells the keeper that a pleasure room can be used now, once, when the creature had wished for one.
 void Creature::noteWishMet()
 {

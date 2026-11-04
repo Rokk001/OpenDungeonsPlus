@@ -68,3 +68,11 @@ keeper of the room and changes owner with it.
   `check_spa_assets.py` in `source/tests`.
 - `levels/skirmish/TestSpa.level` is a small test map with a 5 x 5 spa, a dormitory, a 4 x 4 tavern, a treasury with 5000
   gold, the spa and the tavern researched, eight creatures of different body sizes and four workers.
+
+## Pleasure buff and arena wish
+
+- While a pleasure buff runs, a creature that found no job is not counted as out of work: its out-of-work turns do not grow
+  and it posts no impatience. The count goes on after the buff ends.
+- A creature that reached the level limit of the training hall of its keeper and may still gain levels in an arena is bored
+  when its keeper has no arena. It writes a wish post for an arena, whatever its mood level, and repeats it after the usual
+  wish pause. The wishes for other pleasure rooms are still only written by upset creatures.

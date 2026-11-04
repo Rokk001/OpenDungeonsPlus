@@ -211,6 +211,24 @@ CreatureProfile SocialGenerator::makeProfile(const SocialData& data, const std::
     profile.mQuirk = pickFrom(quirkRng, candidates, quirkFallback);
 
     // Bio: first template that fits the length limit, starting at the picked one
+    // The wish texts say "a {room}": a room name that starts with a vowel (the arena) takes "an"
+    if(((category == "wish") || (category == "thankswish")) && !room.empty() &&
+       (std::string("AEIOUaeiou").find(room[0]) != std::string::npos))
+    {
+        const char articles[2] = {'a', 'A'};
+        for(char first : articles)
+        {
+            const std::string article = std::string(1, first) + " {room}";
+            std::string::size_type pos = 0;
+            while((pos = text.find(article, pos)) != std::string::npos)
+            {
+                if((pos == 0) || (text[pos - 1] == ' '))
+                    text.insert(pos + 1, "n");
+                pos += article.size() + 1;
+            }
+        }
+    }
+
     std::map<std::string, std::string> slots;
     slots["name"] = profile.getFullName();
     slots["hometown"] = profile.mHometown;

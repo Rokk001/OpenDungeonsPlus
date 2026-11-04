@@ -1227,6 +1227,11 @@ public:
     //! Dungeonbook). The wish is told again every 120 seconds while the keeper still has none.
     void notePleasureWish();
 
+    //! \brief Server side. A creature that reached the training limit of the training hall and can only progress in an arena
+    //! is bored when its keeper has no arena: the keeper is told that the creature wishes for an arena (cosmetic only: a post
+    //! of the Dungeonbook), whatever the mood level of the creature. It shares the wish pause of notePleasureWish.
+    void noteArenaWish();
+
     //! \brief Server side. Starts a jump from the position of the creature to the target and tells the clients
     //! that see it (see sendJumpNotification). The jump lasts SpaJumpTurns turns and reaches SpaJumpHeight tiles.
     //! \param target The point the creature lands on.
@@ -2645,6 +2650,10 @@ private:
     //! affinity and the lava spa). A lock or a full room does not matter, only that there is one.
     //! \return The RoomType of such a room as a number, -1 if the keeper has none.
     int32_t getUsablePleasureRoom() const;
+
+    //! \brief Server side. True when the creature reached the level limit of the training hall of its keeper but may still
+    //! gain levels in an arena.
+    bool canOnlyProgressInArena() const;
 
     //! \brief Server side. Tells the keeper that a pleasure room can be used now when the creature had wished for one.
     void noteWishMet();

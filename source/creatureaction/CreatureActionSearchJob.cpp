@@ -221,6 +221,9 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return true;
     }
 
+    // A creature at the training limit of the training hall wishes for an arena when its keeper has none
+    creature.noteArenaWish();
+
     // An upset creature that found no pleasure room to go to wishes for one when its keeper has none it may use
     if(moodSearch)
         creature.notePleasureWish();
@@ -242,14 +245,17 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         }
     }
 
-    // We found no job. If the creature wanted to work, it gets frustrated
-    for(const CreatureRoomAffinity& affinity : creature.getDefinition()->getRoomAffinity())
+    // We found no job. If the creature wanted to work, it gets frustrated; a running pleasure buff keeps that penalty away
+    if(!creature.hasPleasureBuff())
     {
-        if((affinity.getLikeness() > 0) && (affinity.getEfficiency() > 0))
+        for(const CreatureRoomAffinity& affinity : creature.getDefinition()->getRoomAffinity())
         {
-            creature.increaseNbTurnsOutOfWork();
-            creature.fireImpatientIfNeeded();
-            break;
+            if((affinity.getLikeness() > 0) && (affinity.getEfficiency() > 0))
+            {
+                creature.increaseNbTurnsOutOfWork();
+                creature.fireImpatientIfNeeded();
+                break;
+            }
         }
     }
 
