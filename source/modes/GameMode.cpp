@@ -60,6 +60,7 @@
 #include "render/RenderManager.h"
 #include "render/RoomAmbience.h"
 #include "render/SocialWindow.h"
+#include "render/WorkersWindow.h"
 #include "render/TextRenderer.h"
 #include "social/PostLog.h"
 #include "social/CreatureProfile.h"
@@ -904,6 +905,8 @@ GameMode::GameMode(ModeManager *modeManager):
 
     // Dungeonbook: creature list and post feed
     mSocialWindow.reset(new SocialWindow(mRootWindow, *mGameMap));
+    // Workers window: fixed workers per job, mode, priority and carry order
+    mWorkersWindow.reset(new WorkersWindow(mRootWindow, *mGameMap));
     addEventConnection(mRootWindow->getChild("LabButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleAlchemyLabWindow, this)));
     addEventConnection(mRootWindow->getChild("AlchemyLabWindow/CloseButton")->subscribeEvent(
@@ -1017,6 +1020,8 @@ void GameMode::activate()
     guiSheet->getChild("GhostRoomWindow")->hide();
     guiSheet->getChild("InfirmaryWindow")->hide();
     guiSheet->getChild("InfirmaryButton")->hide();
+    mWorkersWindow->hide();
+    guiSheet->getChild("WorkersButton")->hide();
     guiSheet->getChild("TavernWindow")->hide();
     guiSheet->getChild("SpaWindow")->hide();
     hideMerchantWindow();
@@ -1944,6 +1949,9 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
     case OIS::KC_I:
         toggleInfirmaryWindow();
         break;
+    case OIS::KC_J:
+        mWorkersWindow->toggle();
+        break;
     case OIS::KC_B:
         toggleSocialWindow();
         break;
@@ -2601,6 +2609,7 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     player->frameStarted(evt.timeSinceLastFrame);
     mCreaturePanel->update();
     mSocialWindow->update(evt.timeSinceLastFrame);
+    mWorkersWindow->update();
 
     HeartHealthRing::BadgeState& heartBadge = ODClient::getSingleton().getHeartBadge();
     heartBadge.update(evt.timeSinceLastFrame);
@@ -4410,6 +4419,7 @@ void GameMode::setHelpWindowText()
         << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
         << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl
         << "  - I opens the infirmary window: payer, discharge health, healing switch, patients." << std::endl
+        << "  - J opens the workers window: fixed workers per job, free workers, priority and carry order." << std::endl
         << "  - K opens the merchant: stock, purchases and trading settings." << std::endl
         << "  - L opens the alchemy lab overview." << std::endl
         << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;

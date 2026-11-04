@@ -541,6 +541,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/DungeonbookQuirks.cpp
     ${SRC}/render/CreaturePanel.cpp
     ${SRC}/render/SocialWindow.cpp
+    ${SRC}/render/WorkersWindow.cpp
     ${SRC}/render/LooseGoldMesh.cpp
     ${SRC}/render/MovableTextOverlay.cpp
     ${SRC}/render/RoomAmbience.cpp

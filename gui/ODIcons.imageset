@@ -119,4 +119,38 @@
     <Image height="256" name="InfirmaryButton" width="256" xPos="256" yPos="3072" />
     <Image height="128" name="GhostRoomButton" width="128" xPos="512" yPos="3072" />
     <Image height="256" name="SpaButton" width="256" xPos="768" yPos="3072" />
+    <Image height="256" name="WorkerJobDig" width="256" xPos="0" yPos="3328" />
+    <Image height="256" name="WorkerJobClaimGround" width="256" xPos="256" yPos="3328" />
+    <Image height="256" name="WorkerJobClaimWall" width="256" xPos="512" yPos="3328" />
+    <Image height="256" name="WorkerJobCarry" width="256" xPos="768" yPos="3328" />
+    <Image height="256" name="WorkerJobClean" width="256" xPos="1024" yPos="3328" />
+    <Image height="256" name="WorkerJobReload" width="256" xPos="1280" yPos="3328" />
+    <Image height="256" name="WorkerFreePortrait" width="256" xPos="1536" yPos="3328" />
+    <Image height="256" name="WorkerCarryOwn" width="256" xPos="1792" yPos="3328" />
+    <Image height="256" name="WorkerCarryEnemy" width="256" xPos="0" yPos="3584" />
+    <Image height="256" name="WorkerCarryCorpses" width="256" xPos="256" yPos="3584" />
+    <Image height="256" name="WorkerCarryGold" width="256" xPos="512" yPos="3584" />
+    <Image height="256" name="WorkerCarryItems" width="256" xPos="768" yPos="3584" />
+    <Image height="256" name="WorkerCarryGift" width="256" xPos="1024" yPos="3584" />
+    <Image height="256" name="WorkerCarryTrapsDoors" width="256" xPos="1280" yPos="3584" />
+    <Image height="256" name="WorkerHandInactive" width="256" xPos="1536" yPos="3584" />
+    <Image height="256" name="WorkerHandActive" width="256" xPos="1792" yPos="3584" />
+    <Image height="256" name="WorkerHandDrag" width="256" xPos="0" yPos="3840" />
+    <Image height="256" name="WorkerArrowUpNormal" width="256" xPos="256" yPos="3840" />
+    <Image height="256" name="WorkerArrowUpHover" width="256" xPos="512" yPos="3840" />
+    <Image height="256" name="WorkerArrowUpPressed" width="256" xPos="768" yPos="3840" />
+    <Image height="256" name="WorkerArrowUpDisabled" width="256" xPos="1024" yPos="3840" />
+    <Image height="256" name="WorkerArrowDownNormal" width="256" xPos="1280" yPos="3840" />
+    <Image height="256" name="WorkerArrowDownHover" width="256" xPos="1536" yPos="3840" />
+    <Image height="256" name="WorkerArrowDownPressed" width="256" xPos="1792" yPos="3840" />
+    <Image height="256" name="WorkerArrowDownDisabled" width="256" xPos="0" yPos="4096" />
+    <Image height="256" name="WorkerCheckboxEmpty" width="256" xPos="256" yPos="4096" />
+    <Image height="256" name="WorkerCheckboxChecked" width="256" xPos="512" yPos="4096" />
+    <Image height="256" name="WorkerTabletNormal" width="256" xPos="768" yPos="4096" />
+    <Image height="256" name="WorkerTabletSelected" width="256" xPos="1024" yPos="4096" />
+    <Image height="256" name="WorkerCarryFrameNormal" width="256" xPos="1280" yPos="4096" />
+    <Image height="256" name="WorkerCarryFrameSelected" width="256" xPos="1536" yPos="4096" />
+    <Image height="128" name="WorkersHudNormal" width="256" xPos="1792" yPos="4096" />
+    <Image height="128" name="WorkersHudHover" width="256" xPos="0" yPos="4352" />
+    <Image height="128" name="WorkersHudPressed" width="256" xPos="256" yPos="4352" />
 </Imageset>
