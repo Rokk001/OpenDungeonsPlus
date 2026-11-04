@@ -1123,5 +1123,13 @@
     "xPos": "128",
     "yPos": "2176",
     "source": "tiles/WorkersHudPressed.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkersButton",
+    "width": "128",
+    "xPos": "256",
+    "yPos": "2176",
+    "source": "tiles/WorkersButton.png"
   }
 ]

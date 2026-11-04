@@ -205,3 +205,25 @@ Use case: precise-object-edit. Asset type: game HUD button state. Modify the pro
 ```text
 Use case: precise-object-edit. Asset type: game HUD button state. Modify the provided button to show pressed: darken and recess the existing border. Keep the entire composition, violet worker, frame shape, proportions, stone texture and transparent background identical. No text.
 ```
+
+## WorkersButton and replacement checkbox states
+
+Built-in image generation; transparent exterior, downsampled to 256 pixels. GPLv3+.
+
+### WorkersButton
+
+```text
+Use case: stylized-concept. Produce one square painted game HUD icon. Reference image 1 is the exact narrow weathered black iron frame and cracked dark stone inset style; reference image 2 is the violet keeper worker's appearance. Place one bold readable violet keeper worker bust, no tools, centered inside the framed tile. Match the frame's proportions, chipped edges, restrained lighting, and transparent exterior corners. No text, letters, logos, extra objects or glow. Intended to be downsampled to 256 square.
+```
+
+### WorkerCheckboxEmpty
+
+```text
+Use case: stylized-concept. One empty square checkbox sprite for a painted fantasy game UI, matching the reference's worn dark iron, subtle bronze edge wear and dark cracked stone. Strong thick square black iron frame, large dark empty inset, fills almost the entire image with only a narrow transparent margin. Straight-on view, clear at small size. No check mark, no symbols, no text, no extra border, no glow. Transparent outside frame.
+```
+
+### WorkerCheckboxChecked
+
+```text
+Use case: precise-object-edit. Edit this empty painted checkbox into its checked state. Keep the entire strong iron frame, stone inset, proportions and transparent exterior unchanged. Add one large, bold, clearly readable gold-coloured check mark centered on the dark inset. No text, no other symbols, no glow.
+```

@@ -153,4 +153,5 @@
     <Image height="128" name="WorkersHudNormal" width="256" xPos="1792" yPos="4096" />
     <Image height="128" name="WorkersHudHover" width="256" xPos="0" yPos="4352" />
     <Image height="128" name="WorkersHudPressed" width="256" xPos="256" yPos="4352" />
+    <Image height="256" name="WorkersButton" width="256" xPos="512" yPos="4352" />
 </Imageset>

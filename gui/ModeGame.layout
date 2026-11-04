@@ -359,16 +359,10 @@
             <UserString name="AllowEdgeScrolling" value="true" />
             <UserString name="ContextHelp" value="Infirmary: payer, discharge health, healing switch, patients (I)" />
         </Window>
-        <Window type="OD/InvisibleButton" name="WorkersButton">
-            <Property name="Area" value="{{0,388},{1,-240},{0,500},{1,-184}}" />
-            <Property name="Text" value="Workers" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="HorzLabelFormatting" value="RightAligned" />
-            <Property name="NormalTextColour" value="FFF2C860" />
-            <Property name="HoverTextColour" value="FFFFE9A8" />
-            <Property name="NormalImage" value="OpenDungeonsIcons/WorkersHudNormal" />
-            <Property name="HoverImage" value="OpenDungeonsIcons/WorkersHudHover" />
-            <Property name="PushedImage" value="OpenDungeonsIcons/WorkersHudPressed" />
+        <Window type="OD/GameTabButton" name="WorkersButton">
+            <Property name="Area" value="{{0,388},{1,-224},{0,428},{1,-184}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/WorkersButton" />
+            <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
             <Property name="TooltipText" value="Workers (J)" />
             <UserString name="AllowEdgeScrolling" value="true" />
