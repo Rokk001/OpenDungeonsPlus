@@ -2150,3 +2150,4 @@ materials/textures/LichVermin*.png    AI-generated    GPLv3+    Painted from per
 
 gui/DungeonbookPage.png    AI-generated with Codex image generation    GPLv3+    Original dark parchment and bronze frame for the creature profile, 2026-11-02.
 gui/DungeonbookFrame.png    AI-generated with Codex image generation    GPLv3+    Original circular bronze portrait frame for the creature profile, 2026-11-02.
+assets-src/gui/icons/tiles/Worker*.png    AI-generated with Codex image generation    GPLv3+    Original painted Workers window icons and interface states, 2026-11-04; prompts in assets-src/gui/icons/WORKERS-ICONS.md.
