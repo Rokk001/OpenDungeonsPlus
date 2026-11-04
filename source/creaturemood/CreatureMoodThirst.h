@@ -20,48 +20,40 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Mood modifier of the thirst: from a start value of the thirst (0 - 100) on, every point costs
-//! the configured mood (config line "Thirst <start> <modifier>" in the mood modifiers of a creature type).
+//! \brief Lasting problem: the creature is thirsty.
 class CreatureMoodThirst : public CreatureMood
 {
 public:
-    //! \brief Creates the modifier with no effect (start 0, modifier 0) until it is read from the configuration.
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodThirst() :
-        mStartThirst(0),
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Lasting, CreatureMoodColumns::JumpFallReward),
+        mStartThirst(0)
     {}
 
+    //! \brief Destroys the modifier.
     virtual ~CreatureMoodThirst()
     {}
 
-    //! \brief Returns the name of this modifier ("Thirst").
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Returns the mood of the creature's thirst: 0 below the start value, else (thirst - start) x modifier.
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 1 while the thirst of the creature has reached the start value, otherwise 0.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
-    inline CreatureMoodThirst* clone() const override;
+    CreatureMoodThirst* clone() const override;
 
-    //! \brief Reads the start value and the modifier from the stream.
+    //! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
     virtual bool importFromStream(std::istream& is) override;
-    //! \brief Writes the start value and the modifier to the stream.
+    //! \brief Writes the parameters and then the value columns to the stream.
     virtual void exportToStream(std::ostream& os) const override;
-    //! \brief Appends the column names of the configuration line to the format string.
+    //! \brief Appends the names of the parameters and then of the value columns to the format string.
     virtual void getFormatString(std::string& format) const override;
 
 private:
-    //! \brief Creates the modifier with the given values (used by clone).
-    CreatureMoodThirst(int32_t startThirst, double moodModifier) :
-        mStartThirst(startThirst),
-        mMoodModifier(moodModifier)
-    {}
-
-    //! \brief The thirst (0 - 100) from which the modifier acts.
-    int32_t mStartThirst;
-    //! \brief The mood per point of thirst above the start value (negative = a malus).
-    double mMoodModifier;
+    //! \brief The thirst (0 - 100) from which the problem holds
+    double mStartThirst;
 };
 
 #endif // CREATUREMOODTHIRST_H

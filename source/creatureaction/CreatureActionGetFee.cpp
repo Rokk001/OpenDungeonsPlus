@@ -72,6 +72,8 @@ bool CreatureActionGetFee::handleGetFee(Creature& creature)
             if(creature.getGoldFee() <= 0)
             {
                 creature.setMissedWages(0);
+                // The wage is paid
+                creature.applyPaydayMood();
                 // We were able to take all the gold. We can do something else
                 creature.popAction();
                 return true;

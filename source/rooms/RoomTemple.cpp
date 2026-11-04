@@ -149,7 +149,20 @@ RoomTemple::RoomTemple(GameMap* gameMap) :
 
 bool RoomTemple::hasOpenCreatureSpot(Creature* c)
 {
+    // A creature of the keeper with a running pleasure buff, or with the temple locked after its last visit, stays out
+    if((c != nullptr) && getSeat()->isAlliedSeat(c->getSeat()) && !c->canUsePleasureRoom(PleasureRoomKind::temple))
+        return false;
+
     return mCreaturesUsingRoom.size() < getOuterTiles().size();
+}
+
+bool RoomTemple::addCreatureUsingRoom(Creature* c)
+{
+    if(!Room::addCreatureUsingRoom(c))
+        return false;
+
+    c->beginPleasureVisit(PleasureRoomKind::temple);
+    return true;
 }
 
 std::vector<Tile*> RoomTemple::getOuterTiles() const
@@ -167,6 +180,7 @@ void RoomTemple::removeCreatureUsingRoom(Creature* c)
 {
     Room::removeCreatureUsingRoom(c);
     mPrayerSpots.erase(c);
+    c->finishPleasureVisit(PleasureRoomKind::temple, false);
 }
 
 Tile* RoomTemple::getPrayerSpotForCreature(Creature& creature)
@@ -251,8 +265,7 @@ bool RoomTemple::useRoom(Creature& creature, bool forced)
     int32_t mana = static_cast<int32_t>(mPrayerManaPending);
     mPrayerManaPending -= mana;
     getGameMap()->addManaToSeat(mana, getSeat()->getId());
-    creature.addPrayerRelief(configManager.getRoomConfigInt32("TemplePrayerReliefPerTurn"),
-        configManager.getRoomConfigInt32("TemplePrayerReliefMax"));
+    creature.addPrayerRelief(configManager.getRoomConfigDouble("TemplePrayerReliefPerTurn"));
     addUseDirt(creature, tileCreature, "TempleDirtPerPrayerTurn");
 
     // Creatures of the same keeper that pray in this temple at the same time may reconcile

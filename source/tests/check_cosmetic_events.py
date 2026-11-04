@@ -61,7 +61,8 @@ assert 'calmed = 10,' in event_h and 'bedStatus = 11' in event_h
 assert 'return "calmed";' in read('source/network/CosmeticEvent.cpp') and 'return "bedStatus";' in read('source/network/CosmeticEvent.cpp')
 mood = creature[creature.index('void Creature::computeMood()'):]
 mood = mood[:mood.index('\n}\n')]
-assert 'CosmeticEventType::calmed' in mood and 'mPrayerRelief > 0' in mood and 'CreatureMoodLevel::Angry' in mood
+assert 'CosmeticEventType::calmed' in mood and 'mPrayedSinceMoodLook' in mood and '&& prayed)' in mood and 'CreatureMoodLevel::Angry' in mood
+assert 'mPrayedSinceMoodLook = true;' in creature[creature.index('void Creature::addPrayerRelief('):], 'a prayer turn is remembered for the calmed reaction'
 assert 'CosmeticEventType::bedStatus' in creature and 'mBedNotified' in creature
 reactions = read('source/render/CreatureReactions.cpp')
 assert 'CosmeticEventType::calmed' in reactions and 'CosmeticEventType::bedStatus' in reactions and 'hasNoBed' in reactions

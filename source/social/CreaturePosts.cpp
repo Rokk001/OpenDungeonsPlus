@@ -117,6 +117,10 @@ std::string CreaturePosts::getRoomName(int32_t roomType)
             return "temple";
         case RoomType::toilet:
             return "toilet room";
+        case RoomType::tavern:
+            return "tavern";
+        case RoomType::spa:
+            return "lava spa";
         default:
             return "dungeon";
     }
@@ -138,7 +142,9 @@ void CreaturePosts::reportUpdate(int64_t turn, const std::string& creature, cons
     bool worseMood = (before.mMoodLevel != CreatureMoodLevel::Unknown) &&
         (getMoodRank(after.mMoodLevel) >= getMoodRank(CreatureMoodLevel::Upset)) &&
         (getMoodRank(after.mMoodLevel) > getMoodRank(before.mMoodLevel));
-    if(worseMood || ((newBits & (CreatureMoodValues::Hungry | CreatureMoodValues::Tired)) != 0))
+    // Hunger and tiredness have their own complaint posts (see PostLog::addComplaint), the generic post stays for a
+    // mood that gets worse without a cause with a text of its own
+    if(worseMood)
         log.addPost(turn, creature, className, isWorker, PostCategory::Unhappy, 0);
     if((newBits & CreatureMoodValues::GetFee) != 0)
         log.addPost(turn, creature, className, isWorker, PostCategory::Payday, level);

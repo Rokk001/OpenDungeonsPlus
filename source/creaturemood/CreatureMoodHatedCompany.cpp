@@ -26,14 +26,14 @@ static const std::string CreatureMoodHatedCompanyName = "HatedCompany";
 
 namespace
 {
-//! \brief Creates hated company modifiers when the configuration names "HatedCompany"
+//! \brief Factory that creates CreatureMoodHatedCompany objects from the creature configuration.
 class CreatureMoodHatedCompanyFactory : public CreatureMoodFactory
 {
-    //! \brief Creates an empty hated company modifier
+    //! \brief Creates a new CreatureMoodHatedCompany with default values.
     CreatureMood* createCreatureMood() const override
     { return new CreatureMoodHatedCompany; }
 
-    //! \brief The modifier name used in the configuration
+    //! \brief Returns the configuration name of this modifier.
     const std::string& getCreatureMoodName() const override
     {
         return CreatureMoodHatedCompanyName;
@@ -44,48 +44,20 @@ class CreatureMoodHatedCompanyFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodHatedCompanyFactory);
 }
 
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodHatedCompany::getModifierName() const
 {
     return CreatureMoodHatedCompanyName;
 }
 
-//! \brief Computes this mood contribution.
-double CreatureMoodHatedCompany::computeMood(const Creature& creature) const
+//! \brief Returns the number of creatures of the opposite alignment near the creature.
+double CreatureMoodHatedCompany::getAmount(const Creature& creature) const
 {
-    int32_t turns = std::min(creature.getNbTurnsHatedCompany(), mTurnsMax);
-    return turns * mMoodModifier;
+    return static_cast<double>(creature.getNbHatedCompanyNear());
 }
 
+//! \brief Returns a copy of this modifier.
 CreatureMoodHatedCompany* CreatureMoodHatedCompany::clone() const
 {
     return new CreatureMoodHatedCompany(*this);
-}
-
-bool CreatureMoodHatedCompany::importFromStream(std::istream& is)
-{
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
-    if(!(is >> mTurnsMax))
-        return false;
-    if(!(is >> mMoodModifier))
-        return false;
-
-    return true;
-}
-
-void CreatureMoodHatedCompany::exportToStream(std::ostream& os) const
-{
-    CreatureMood::exportToStream(os);
-    os << "\t" << mTurnsMax;
-    os << "\t" << mMoodModifier;
-}
-
-void CreatureMoodHatedCompany::getFormatString(std::string& format) const
-{
-    CreatureMood::getFormatString(format);
-    if(!format.empty())
-        format += "\t";
-
-    format += "TurnsMax\tMoodModifier";
 }

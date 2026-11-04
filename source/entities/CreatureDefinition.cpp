@@ -103,6 +103,10 @@ CreatureDefinition::CreatureDefinition(
         mTierFourSkill ("none"),
         mUrgeGrowthPerTurn (0.0),
         mCleanliness (1.0),
+        mMoodSensitivity (1.0),
+        mMoodLeaveChance (50.0),
+        mMoodRampageChance (30.0),
+        mMoodRogueChance (20.0),
         mDirtFactor (1.0),
         mThirstGrowthPerTurn (0.0),
         mDeathVanishSeconds (0.0),
@@ -189,6 +193,10 @@ CreatureDefinition::CreatureDefinition(const CreatureDefinition& def) :
         mTierFourSkill(def.mTierFourSkill),
         mUrgeGrowthPerTurn(def.mUrgeGrowthPerTurn),
         mCleanliness(def.mCleanliness),
+        mMoodSensitivity(def.mMoodSensitivity),
+        mMoodLeaveChance(def.mMoodLeaveChance),
+        mMoodRampageChance(def.mMoodRampageChance),
+        mMoodRogueChance(def.mMoodRogueChance),
         mDirtFactor(def.mDirtFactor),
         mThirstGrowthPerTurn(def.mThirstGrowthPerTurn),
         mDeathVanishSeconds(def.mDeathVanishSeconds),
@@ -473,6 +481,10 @@ ODPacket& operator<<(ODPacket& os, const CreatureDefinition* c)
     os << c->mTierFourSkill;
     os << c->mUrgeGrowthPerTurn;
     os << c->mCleanliness;
+    os << c->mMoodSensitivity;
+    os << c->mMoodLeaveChance;
+    os << c->mMoodRampageChance;
+    os << c->mMoodRogueChance;
     os << c->mDirtFactor;
     os << c->mThirstGrowthPerTurn;
     os << c->mDeathVanishSeconds;
@@ -547,6 +559,10 @@ ODPacket& operator>>(ODPacket& is, CreatureDefinition* c)
     is >> c->mTierFourSkill;
     is >> c->mUrgeGrowthPerTurn;
     is >> c->mCleanliness;
+    is >> c->mMoodSensitivity;
+    is >> c->mMoodLeaveChance;
+    is >> c->mMoodRampageChance;
+    is >> c->mMoodRogueChance;
     is >> c->mDirtFactor;
     is >> c->mThirstGrowthPerTurn;
     is >> c->mDeathVanishSeconds;
@@ -920,6 +936,30 @@ bool CreatureDefinition::update(CreatureDefinition* creatureDef, std::stringstre
                 creatureDef->mCleanliness = Helper::toDouble(nextParam);
                 continue;
             }
+            else if (nextParam == "MoodSensitivity")
+            {
+                defFile >> nextParam;
+                creatureDef->mMoodSensitivity = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "MoodLeaveChance")
+            {
+                defFile >> nextParam;
+                creatureDef->mMoodLeaveChance = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "MoodRampageChance")
+            {
+                defFile >> nextParam;
+                creatureDef->mMoodRampageChance = Helper::toDouble(nextParam);
+                continue;
+            }
+            else if (nextParam == "MoodRogueChance")
+            {
+                defFile >> nextParam;
+                creatureDef->mMoodRogueChance = Helper::toDouble(nextParam);
+                continue;
+            }
             else if (nextParam == "DirtFactor")
             {
                 defFile >> nextParam;
@@ -1265,6 +1305,14 @@ void CreatureDefinition::writeCreatureDefinitionDiff(
         file << "    DeathVanishSeconds\t" << def2->mDeathVanishSeconds << std::endl;
     if((def1 == nullptr) ? (def2->mCleanliness != 1.0) : (def1->mCleanliness != def2->mCleanliness))
         file << "    Cleanliness\t" << def2->mCleanliness << std::endl;
+    if((def1 == nullptr) ? (def2->mMoodSensitivity != 1.0) : (def1->mMoodSensitivity != def2->mMoodSensitivity))
+        file << "    MoodSensitivity\t" << def2->mMoodSensitivity << std::endl;
+    if((def1 == nullptr) ? (def2->mMoodLeaveChance != 50.0) : (def1->mMoodLeaveChance != def2->mMoodLeaveChance))
+        file << "    MoodLeaveChance\t" << def2->mMoodLeaveChance << std::endl;
+    if((def1 == nullptr) ? (def2->mMoodRampageChance != 30.0) : (def1->mMoodRampageChance != def2->mMoodRampageChance))
+        file << "    MoodRampageChance\t" << def2->mMoodRampageChance << std::endl;
+    if((def1 == nullptr) ? (def2->mMoodRogueChance != 20.0) : (def1->mMoodRogueChance != def2->mMoodRogueChance))
+        file << "    MoodRogueChance\t" << def2->mMoodRogueChance << std::endl;
     if((def1 == nullptr) ? (def2->mDirtFactor != 1.0) : (def1->mDirtFactor != def2->mDirtFactor))
         file << "    DirtFactor\t" << def2->mDirtFactor << std::endl;
 

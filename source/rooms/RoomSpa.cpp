@@ -428,6 +428,10 @@ bool RoomSpa::canAccept(const Creature& creature) const
     if(creature.getDefinition()->isWorker() || mCoveredTiles.empty())
         return false;
 
+    // A running pleasure buff or the lock of the spa (the relaxation) keeps the creature out
+    if(!creature.canUsePleasureRoom(PleasureRoomKind::spa))
+        return false;
+
     SpaBlock block;
     if(!SpaLayout::findFreeBlock(getPoolSet(), getTakenSet(), creature.getDefinition()->getBedDim1(),
         creature.getDefinition()->getBedDim2(), block))
@@ -531,13 +535,16 @@ void RoomSpa::removeCreatureUsingRoom(Creature* creature)
         return;
 
     // The place goes first: the creature may be on its way out of the game (dead, removed), so it is not touched
-    // here except for the end of a jump. The mood it gained stays; a bath that is broken off gives no relaxation
-    // and no refund.
+    // here except for the end of a jump and its pleasure visit. The mood it gained stays; a bath that is broken off
+    // gives the pleasure buff and closes the spa like a finished one, but no refund.
     if(it->mState == SpaBatherState::jumping)
         creature->cancelJump();
 
     creature->setSpaBathing(false);
+    const bool done = it->mDone;
     mBathers.erase(it);
+    if(!done)
+        finishBrokenVisit(*creature);
 }
 
 bool RoomSpa::shouldStopUseIfHungrySleepy(Creature& creature, bool forced)
@@ -757,6 +764,10 @@ void RoomSpa::startBath(RoomSpaBather& bather)
     bather.mState = SpaBatherState::bathing;
     bather.mTurnsDone = 0.0;
     bather.mCreature->setSpaBathing(true);
+
+    // The pleasure visit starts with the jump of the bath, SpaMoodJump; the turns of the bath add SpaMoodPerTurn
+    bather.mCreature->beginPleasureVisit(PleasureRoomKind::spa);
+    bather.mCreature->addSpaMood(ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodJump"));
     bather.mCreature->setAnimationState(EntityAnimation::bathe_anim, true, Ogre::Vector3::ZERO, false);
 }
 
@@ -778,19 +789,31 @@ void RoomSpa::finishBath(RoomSpaBather& bather)
 {
     Creature* creature = bather.mCreature;
 
-    // The relaxation lasts as long as the research level of the keeper allows; a hangover ends at once together with
-    // the tavern mood malus (the spa mood always applies) and the creature carries mud out of the pool. The bath does
-    // not clean the creature.
+    // The pleasure buff and the lock of the spa (the relaxation) last as long as the research level of the keeper
+    // allows; a hangover ends at once and the creature carries mud out of the pool. The bath does not clean the
+    // creature.
     const ConfigManager& config = ConfigManager::getSingleton();
-    creature->setRelaxTurns(SkillManager::getResearchValue(getSeat(), SkillType::roomSpa,
-        config.getRoomConfigDouble("SpaRelaxTurns"), ResearchEffect::RelaxTime));
+    const double relaxTurns = getRelaxTurns();
+    creature->finishPleasureVisit(PleasureRoomKind::spa, relaxTurns, relaxTurns, true);
+    creature->setRelaxTurns(std::max(creature->getRelaxTurns(), relaxTurns));
     creature->setHangoverTurns(0.0);
-    creature->addTavernMood(0.0, 0.0);
     creature->setSpaMudTilesLeft(static_cast<int32_t>(config.getRoomConfigUInt32("SpaMudTrailTiles")));
     sendBathFinished(*creature);
     bather.mDone = true;
     creature->setSpaBathing(false);
     creature->setAnimationState(EntityAnimation::idle_anim, true);
+}
+
+double RoomSpa::getRelaxTurns() const
+{
+    return SkillManager::getResearchValue(getSeat(), SkillType::roomSpa,
+        ConfigManager::getSingleton().getRoomConfigDouble("SpaRelaxTurns"), ResearchEffect::RelaxTime);
+}
+
+void RoomSpa::finishBrokenVisit(Creature& creature)
+{
+    const double relaxTurns = getRelaxTurns();
+    creature.finishPleasureVisit(PleasureRoomKind::spa, relaxTurns, relaxTurns, false);
 }
 
 void RoomSpa::playSoundAt(Tile* tile, const std::string& family)
@@ -866,7 +889,7 @@ void RoomSpa::upkeepBathers()
 void RoomSpa::abortDisturbedBathers()
 {
     // A fight, a flight, a knock-out or a hand that takes a bather away ends its bath: the mood it gained stays, it
-    // gets no relaxation and no refund
+    // gets the pleasure buff and the closed spa of a visit that gained mood, but no refund
     std::vector<RoomSpaBather>::iterator it = mBathers.begin();
     while(it != mBathers.end())
     {
@@ -876,7 +899,9 @@ void RoomSpa::abortDisturbedBathers()
                 it->mCreature->cancelJump();
 
             it->mCreature->setSpaBathing(false);
+            Creature* disturbed = it->mCreature;
             it = mBathers.erase(it);
+            finishBrokenVisit(*disturbed);
             continue;
         }
         ++it;

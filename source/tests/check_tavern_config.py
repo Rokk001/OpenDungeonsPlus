@@ -72,14 +72,14 @@ skills_cfg = read('config/skills.cfg')
 
 # 1. Every key of the [Tavern] block with the value of the design (sections 4 and 5 of the design)
 TAVERN = {
-    'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '5', 'BeerPrice': '5', 'BeerMood': '100',
-    'BeerMoodTurns': '168', 'NoCoinMood': '-33.3333', 'NoCoinMoodTurns': '168', 'DrinkTurns': '4', 'NextDrinkPercent': '50',
+    'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '5', 'BeerPrice': '5', 'BeerMood': '25',
+    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'NextDrinkPercent': '50',
     'MaxDrinksPerVisit': '5', 'DrunkPerBeer': '25', 'DrunkDecayPerTurn': '0.5', 'StaggerAt': '50',
     'StaggerSpeedFactor': '0.5', 'VomitAt': '75', 'HangoverAt': '50', 'HangoverTurns': '252',
-    'HangoverWorkFactor': '0.5', 'HangoverMood': '-66.6667', 'GameChancePercent': '50', 'GameTurns': '8',
-    'GameWinnerMood': '133.3333', 'GameLoserMood': '-66.6667', 'GameSpectatorMood': '66.6667', 'GameSpectatorRadius': '2',
+    'HangoverWorkFactor': '0.5', 'HangoverMood': '-16.67', 'GameChancePercent': '50', 'GameTurns': '8',
+    'GameWinnerMood': '33.33', 'GameLoserMood': '-16.67', 'GameSpectatorMood': '16.67', 'GameSpectatorRadius': '2',
     'GameUnderdogBasePercent': '50', 'GameUnderdogPerLevel': '2.5', 'GameUnderdogMinPercent': '5',
-    'GameUnderdogMoodPerLevel': '33.3333', 'GameUnderdogMoodMax': '333.3333', 'SlapDamage': '10', 'SlapCritBasePercent': '10',
+    'GameUnderdogMoodPerLevel': '8.3333', 'GameUnderdogMoodMax': '83.3333', 'SlapDamage': '10', 'SlapCritBasePercent': '10',
     'SlapCritPerLevel': '0.25', 'SlapDuelLoseBelowHp': '30', 'DuelKoTurns': '42', 'GameWinnerXp': '2.86',
     'TavernNoticeSeconds': '60',
 }
@@ -89,8 +89,11 @@ for key, value in TAVERN.items():
     assert_documented(global_cfg, key, 'global.cfg')
 extra = set(tavern) - set(TAVERN)
 assert not extra, '[Tavern] keys without a design value: ' + ', '.join(sorted(extra))
+# BeerMoodTurns and NoCoinMoodTurns are gone: the beer and the lack of coin are one-time events, nothing runs over turns
+for gone in ('BeerMoodTurns', 'NoCoinMoodTurns'):
+    assert gone not in tavern and gone not in global_cfg, gone + ' must be removed with its documentation'
 # The turn values are the seconds of the design times the 1.4 turns per second
-for key, seconds in (('BeerMoodTurns', 120), ('NoCoinMoodTurns', 120), ('HangoverTurns', 180), ('DuelKoTurns', 30)):
+for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30)):
     assert round(seconds * 1.4) == float(tavern[key]), key + ' must be ' + str(seconds) + ' s x 1.4 turns per second'
 
 # 2. Values derived from other keys

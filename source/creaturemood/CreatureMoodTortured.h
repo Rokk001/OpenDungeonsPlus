@@ -20,32 +20,28 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Applied while the creature is being tortured. Fades once the torture stops.
+//! \brief Lasting problem: the creature is tortured. The problem lasts a little after the torture stopped.
 class CreatureMoodTortured : public CreatureMood
 {
 public:
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodTortured() :
-        mTurnsMax(0),
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Lasting, CreatureMoodColumns::JumpFallReward)
     {}
 
+    //! \brief Destroys the modifier.
     virtual ~CreatureMoodTortured()
     {}
 
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 1 while the torture still weighs on the creature, otherwise 0.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
-    inline CreatureMoodTortured* clone() const override;
-
-    virtual bool importFromStream(std::istream& is) override;
-    virtual void exportToStream(std::ostream& os) const override;
-    virtual void getFormatString(std::string& format) const override;
-
-private:
-    int32_t mTurnsMax;
-    double mMoodModifier;
+    //! \brief Returns a copy of this modifier.
+    CreatureMoodTortured* clone() const override;
 };
 
 #endif // CREATUREMOODTORTURED_H

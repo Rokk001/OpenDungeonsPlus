@@ -84,9 +84,6 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
             creature.sleepStarted();
         }
 
-        // Sleeping in the lair relieves the mood
-        creature.markRested();
-
         // A friend in a bed close by makes the sleep more pleasant (checked now and then)
         if((nbTurnsActive % 20) == 0)
             creature.reportSleepingNextToFriends();
@@ -137,6 +134,8 @@ bool CreatureActionSleep::handleSleep(Creature& creature, int32_t nbTurnsActive)
 
         if (creature.getWakefulness() >= 100.0 && creature.getHP() >= creature.getMaxHp())
         {
+            // Waking up rested in the lair lifts the mood once
+            creature.applyRestedMood();
             creature.sleepEnded();
             creature.popAction();
             return false;

@@ -23,13 +23,18 @@ once the keeper has researched Beer, beer for gold. All numbers are keys of `con
   walls (at most one per six tiles, never two side by side) and tables are spread over the room (at most one per
   eight tiles, preferably with free floor on both bench sides). A table is two tiles long and has two benches with four places each; a large creature (a bed of
   two by two tiles) takes two neighbouring places, half of a bench. A creature without a free place does not
-  enter: it tries another tavern of its keeper, otherwise it goes back to work until its visit cooldown is over.
+  enter: it tries another tavern of its keeper, otherwise it goes back to work until its visit lock is over.
 - A tavern needs a block of three by three tiles. One that loses it takes no guests until it has one again, and
   its room information says why. When a tavern grows or shrinks, the furniture is spread again, all guests stand
   up, running games end without a winner and the guests look for a place again.
 - A drink takes `DrinkTurns` turns. The keeper chooses per tavern who pays for the beer: the keeper (treasury)
   or the creature (its own purse). If the payer cannot pay, the guest gets water (a creature that cannot pay
   also loses `NoCoinMood` mood). Beer adds drunkenness, mood and urge; water only a little urge.
+- A creature that is not thirsty comes for a leisure visit. It gives at most `PleasureVisitMax` of rooms.cfg (200) mood
+  from beer, games and no coin together; at its end a visit that gained mood starts the pleasure buff (`PleasureBuffMood`
+  over `SpaRelaxTurns`), and the tavern is closed to the creature for `TavernLeisureCooldownTurns`. A creature with a
+  running pleasure buff or a closed tavern does not come for leisure. A thirsty creature may always come for a drink: a
+  drink visit gives `BeerMood` per beer, but no pleasure buff, no lock and no limit.
 - After a drink the guest takes another one with `NextDrinkPercent` / 2 per further drink, at most
   `MaxDrinksPerVisit` per visit. Drunkenness falls by `DrunkDecayPerTurn`; from `StaggerAt` the creature walks
   slower, from `VomitAt` it vomits once per drunk episode (a dirt pile that workers clean). A creature that falls

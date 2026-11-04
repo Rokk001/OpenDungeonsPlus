@@ -57,18 +57,21 @@ assert creature_cpp.count('if(appearanceToken == SPA_SAVE_OPEN)') == 1
 # also urge, dirt and the thirst fields) are zeros for the seats that do not own the creature (the same number of fields)
 full_packet = extract(creature_cpp, 'void Creature::exportToPacket(')
 full_tail_start = full_packet.index('    exportThirstStateToPacket(os);\n    // The lava spa state is only sent to the own seat')
-full_tail = full_packet[full_tail_start:full_packet.index('    os << mCorpseTurns')]
+full_tail = full_packet[full_tail_start:full_packet.index('    exportMoodEffectsToPacket(os, seat);\n    os << mCorpseTurns')]
 assert re.search(r'exportThirstStateToPacket\(os\);\s*//[^\n]*\n\s*//[^\n]*\n\s*if\(seat == getSeat\(\)\)\s*exportSpaStateToPacket\(os\);\s*else', full_tail)
 assert full_tail.count('os << 0.0;') == 2
 update_start = creature_cpp.index('os << mGoldCarried;\n    exportItemsToPacket(os, seat);\n    os << (seat == getSeat() ? mInfirmaryMood : 0.0);\n    if(seat == getSeat())')
 update_packet = creature_cpp[update_start:creature_cpp.index('\n}\n', update_start)]
 assert re.search(r'exportThirstStateToPacket\(os\);\s*exportSpaStateToPacket\(os\);', update_packet)
 assert update_packet.count('os << 0.0;') == 8, 'urge, dirt, four thirst fields and two spa fields as zeros for other seats'
+assert 'exportMoodEffectsToPacket(os, seat);\n    os << mCorpseTurns << mDecayTurns;' in update_packet, 'the running mood effects follow the spa fields in the update packet'
+assert 'exportMoodEffectsToPacket(os, seat);\n    os << mCorpseTurns << mDecayTurns;' in full_packet, 'the running mood effects follow the spa fields in the full packet'
 spa_export = extract(creature_cpp, 'void Creature::exportSpaStateToPacket(')
 assert re.findall(r'os << (m\w+);', spa_export) == ['mSpaMood', 'mRelaxTurns']
 assert creature_cpp.count('importSpaStateFromPacket(is);') == 2, 'full and update packet read the spa state'
 for text in (extract(creature_cpp, 'void Creature::importFromPacket('), extract(creature_cpp, 'void Creature::updateFromPacket(')):
     assert re.search(r'importThirstStateFromPacket\(is\);\s*importSpaStateFromPacket\(is\);', text)
+    assert 'importMoodEffectsFromPacket(is);\n    OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);' in text, 'the running mood effects are read after the spa fields'
 # The effect line of the creature page (relaxation, hangover) is bound to the own seat, not to the allies
 profile_page = extract(creature_cpp, 'float Creature::fillProfilePage(')
 assert 'const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);' in profile_page
@@ -158,7 +161,7 @@ struct ODPacket
 struct ConfigManager
 {
     static ConfigManager& getSingleton() { static ConfigManager instance; return instance; }
-    double getRoomConfigDouble(const std::string& key) const { return (key == "SpaMoodMax") ? 300.0 : 0.0; }
+    double getRoomConfigDouble(const std::string& key) const { return 0.0; }
 };
 @@STRINGS@@
 
@@ -239,9 +242,11 @@ static void checkSpaBlock()
     expect(c1.readBlocks(first) && c1.mSpaMood == 10.0 && c1.mOtherBlock == "x", "spa block after another block");
     Creature c2("c2"); std::istringstream second("[Spa] 10 20 1 [/Spa] [Other] y [/Other]");
     expect(c2.readBlocks(second) && c2.mRelaxTurns == 20.0 && c2.mOtherBlock == "y", "spa block before another block");
-    // Limited like the setters limit them
+    // Limited like the setters limit them: only below 0 (the old-save spa mood has no maximum any more)
     Creature l("l"); std::istringstream limited("[Spa] 99999 -4 -3 [/Spa]");
-    expect(l.readBlocks(limited) && l.mSpaMood == 300.0 && l.mRelaxTurns == 0.0 && l.mSpaMudTilesLeft == 0, "values limited");
+    expect(l.readBlocks(limited) && l.mSpaMood == 99999.0 && l.mRelaxTurns == 0.0 && l.mSpaMudTilesLeft == 0, "values limited");
+    Creature n("n"); std::istringstream negative("[Spa] -7 5 1 [/Spa]");
+    expect(n.readBlocks(negative) && n.mSpaMood == 0.0 && n.mRelaxTurns == 5.0, "a negative spa mood is limited to 0");
     // Broken blocks are refused
     const char* broken[] = { "[Spa] 1 2 [/Spa]", "[Spa] 1 2 3", "[Spa] 1 2 3 [/Other]", "[Spa] a b c [/Spa]", "[Spa]" };
     for(unsigned i = 0; i < sizeof(broken) / sizeof(broken[0]); ++i)

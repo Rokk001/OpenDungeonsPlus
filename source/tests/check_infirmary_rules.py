@@ -90,8 +90,8 @@ struct ConfigManager {
  //! \brief Returns the independently specified value for the requested room key.
  double getRoomConfigDouble(const std::string& name){
   const std::map<std::string,double> values={{"InfirmaryAdmissionWageShare",.3},{"InfirmaryManaPerWage",2},
-   {"InfirmaryFullHealSeconds",60},{"DormitoryFullHealSeconds",150},{"InfirmaryMoodWageShare",.3},
-   {"InfirmaryMoodDefaultTurns",30},{"InfirmaryHealGlowTurns",7},{"InfirmaryCotShareSmall",12},
+   {"InfirmaryFullHealSeconds",60},{"DormitoryFullHealSeconds",150},{"InfirmaryMoodWageShare",.075},
+   {"InfirmaryHealGlowTurns",7},{"InfirmaryCotShareSmall",12},
    {"InfirmaryCotShareMedium",17},{"InfirmaryCotShareLarge",6},{"InfirmaryMinRoomSide",4},
    {"InfirmaryDischargeMinPercent",40},{"InfirmaryDischargeMaxPercent",100},
    {"InfirmaryDischargeStepPercent",10},{"InfirmaryDischargeDefaultPercent",100},
@@ -222,21 +222,15 @@ struct Room{GameMap* map;Seat* seat;std::vector<Tile*> mCoveredTiles;double gold
  //! \brief Supplies the inherited restore hook before the actual infirmary restoration.
  void restoreInitialEntityState(){}
 };
-//! \brief Models the fee and optional mood definitions read by production admission logic.
+//! \brief Models the mood definitions of a creature type; a type without any has no mood and takes no mood event.
 struct CreatureMood{
- //! \brief Supports the production mood casts through the fixture base interface.
+ //! \brief Supports the mood definitions held through the fixture base interface.
  virtual ~CreatureMood(){}
 };
-//! \brief Supplies the independently specified fee mood modifier.
-struct CreatureMoodFee:CreatureMood{
- //! \brief Returns the fee modifier scaled by the production admission mood rule.
- double getMoodModifier()const{return -120;}
-};
-//! \brief Supplies the configured rested lifetime used by admission moods.
-struct CreatureMoodRested:CreatureMood{
- //! \brief Returns the rested lifetime used by the production mood initializer.
- double getTurnsMax()const{return 30;}
-};
+//! \brief Marks a type that has the Fee mood problem (the admission mood no longer reads any of its values).
+struct CreatureMoodFee:CreatureMood{};
+//! \brief Marks a type that has the Rested mood event (the admission mood no longer reads any of its values).
+struct CreatureMoodRested:CreatureMood{};
 //! \brief Holds controlled creature fee, eligibility, bed size and mood definitions.
 struct Definition{double fee=58,sleepHeal=2.05;std::vector<const CreatureMood*> moods;bool worker=false,champion=false;int width=1,height=1;
  //! \brief Returns the wage used for proportional admission and mana costs.
@@ -293,7 +287,7 @@ namespace Random{
 //! \brief Supplies a deterministic non-flee result for the production attack behaviour.
 int Int(int,int){return 0;}}
 //! \brief Supplies mutable resources and records actual admission, healing and action effects.
-struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=100,mInfirmaryMood=0,mInfirmaryMoodTurns=0;
+struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=100,mInfirmaryMood=0,mInfirmaryMoodTurns=0,mStoredMood=500;
  double counter=-73;int glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
  Tile* resumedCarryTarget=nullptr;double resumedCarryCounter=0;bool resumedCarryIsDrag=false,forcedCarry=false;
  //! \brief Reports a hand-drop transport so the real room writer can omit it.
@@ -322,8 +316,10 @@ struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=10
  void resetKoTurns(){counter=0;}
  //! \brief Returns the stable entity name used by reservations and saves.
  const std::string& getName()const{return name;}
- //! \brief Applies the extracted production admission mood initializer.
+ //! \brief Applies the extracted production admission mood event.
  void setInfirmaryAdmissionMood(bool);
+ //! \brief Reduces the one-time mood event of the real creature to its effect on the stored mood (0 to 1500); a type without mood definitions takes none.
+ void applyMoodEvent(double points,bool sensitive){if(definition.getCreatureMoods().empty())return;mStoredMood=std::max(0.0,std::min(1500.0,mStoredMood+points));}
  //! \brief Reports whether the fixture creature is alive for admission and dragging.
  bool isAlive()const{return hp>0;}
  //! \brief Identifies the fixture as an eligible creature outside prison.
@@ -500,9 +496,9 @@ int main(){try{
  Creature creature;CreatureMoodFee fee;CreatureMoodRested rested;creature.definition.moods={&fee,&rested};
  double amount=0;int payer=-1;
  check(room.payAdmission(creature,false,amount,payer),"keeper admission accepted");near(amount,17.4,"fractional admission");
- near(map.treasury,982.6,"keeper exact charge");near(creature.mInfirmaryMood,36,"keeper fee mood");near(creature.mInfirmaryMoodTurns,30,"rested lifetime");
+ near(map.treasury,982.6,"keeper exact charge");near(creature.mStoredMood,504.35,"keeper admission mood: 0.075 of the wage 58 once");near(creature.mInfirmaryMood,0,"old-save carrier unused");near(creature.mInfirmaryMoodTurns,0,"no mood lifetime");
  seat.payer=1;check(room.payAdmission(creature,false,amount,payer),"creature admission accepted");
- near(creature.gold,82.6,"purse exact charge");near(map.credited,17.4,"purse admission credited");near(creature.mInfirmaryMood,-36,"creature fee mood");
+ near(creature.gold,82.6,"purse exact charge");near(map.credited,17.4,"purse admission credited");near(creature.mStoredMood,500,"creature admission mood: the same share taken off again");
  check(room.payAdmission(creature,true,amount,payer)&&payer==0,"manual drop forces keeper");near(creature.gold,82.6,"manual leaves purse");
  seat.player.human=false;double purseBefore=creature.gold;check(room.payAdmission(creature,false,amount,payer)&&payer==1,"AI payer settable like a human's");near(creature.gold,purseBefore-17.4,"AI pays from the purse");seat.player.human=true;
  creature.gold=17.3;double before=map.credited;check(!room.payAdmission(creature,false,amount,payer),"insufficient purse refuses");near(map.credited,before,"refusal no partial charge");
@@ -533,8 +529,11 @@ int main(){try{
  check(!room.restPatient(creature)&&creature.sleeps==sleeps+1,"partial discharge goes to own bed");
  creature.hp=creature.maximum;room.mPatients[0].creature=&creature;sleeps=creature.sleeps;
  check(!room.restPatient(creature)&&creature.sleeps==sleeps,"full discharge returns to normal");
- creature.setInfirmaryAdmissionMood(true);for(int i=0;i<29;++i)expireMood(creature);near(creature.mInfirmaryMood,-36,"mood retained for 29 turns");expireMood(creature);near(creature.mInfirmaryMood,0,"mood expires on turn 30");
- creature.definition.moods.clear();creature.setInfirmaryAdmissionMood(true);near(creature.mInfirmaryMood,0,"no Fee means no admission mood");near(creature.mInfirmaryMoodTurns,30,"missing Rested uses configured duration");
+ creature.mStoredMood=500;creature.setInfirmaryAdmissionMood(true);near(creature.mStoredMood,495.65,"creature-paid admission takes 0.075 of the wage off once");
+ creature.setInfirmaryAdmissionMood(false);near(creature.mStoredMood,500,"keeper-paid admission gives it back once");
+ for(int i=0;i<100;++i)expireMood(creature);near(creature.mStoredMood,500,"no timer fades the admission mood");near(creature.mInfirmaryMoodTurns,0,"admission starts no mood lifetime");
+ creature.mInfirmaryMood=-36;creature.mInfirmaryMoodTurns=30;for(int i=0;i<29;++i)expireMood(creature);near(creature.mInfirmaryMood,-36,"old-save carrier retained for 29 turns");expireMood(creature);near(creature.mInfirmaryMood,0,"old-save carrier expires on turn 30");near(creature.mStoredMood,500,"the carrier never touches the stored mood");
+ creature.definition.moods.clear();creature.setInfirmaryAdmissionMood(true);near(creature.mStoredMood,500,"no mood definitions means no admission mood");near(creature.mInfirmaryMoodTurns,0,"still no mood lifetime");
  CreatureBehaviourAttackEnemy attack;creature.enemies={1};creature.maximum=100;creature.hp=34;creature.actions={CreatureActionType::infirmaryRest};
  attack.processBehaviour(creature);check(creature.fights==0&&creature.flees==0,"patient below 35 percent remains lying");
  creature.actions={CreatureActionType::sleep};attack.processBehaviour(creature);check(creature.fights==0,"sleeper below 35 percent remains lying");

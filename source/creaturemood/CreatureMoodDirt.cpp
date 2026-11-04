@@ -80,9 +80,9 @@ double getRoomDirtMood(const Tile& tile)
         return 0.0;
 
     if(stage == 2)
-        return ConfigManager::getSingleton().getDirtConfigDouble("DirtMoodStage2");
+        return ConfigManager::getSingleton().getDirtConfigDouble("DirtMoodFallPerTurnStage2");
 
-    return ConfigManager::getSingleton().getDirtConfigDouble("DirtMoodStage3");
+    return ConfigManager::getSingleton().getDirtConfigDouble("DirtMoodFallPerTurnStage3");
 }
 
 //! \brief The mood of the dirt piles and vomit puddles (not blood) within DirtPileRadius tiles (Chebyshev distance) of a tile.
@@ -92,7 +92,7 @@ double getPileMood(const GameMap& gameMap, const Tile& tile)
 {
     const ConfigManager& config = ConfigManager::getSingleton();
     int radius = static_cast<int>(config.getDirtConfigDouble("DirtPileRadius"));
-    double pileMood = config.getDirtConfigDouble("DirtPileMood");
+    double pileMood = config.getDirtConfigDouble("DirtPileMoodFallPerTurn");
     double mood = 0.0;
     for(int xx = tile.getX() - radius; xx <= tile.getX() + radius; ++xx)
     {
@@ -123,21 +123,38 @@ const std::string& CreatureMoodDirt::getModifierName() const
     return CreatureMoodDirtName;
 }
 
-//! \brief Room dirt stage mood plus pile mood, both times the Cleanliness of the creature type.
-//! \brief Computes this mood contribution.
-double CreatureMoodDirt::computeMood(const Creature& creature) const
+//! \brief Returns 0: the dirt has no count of causes, its fall comes from getFallPerTurn.
+double CreatureMoodDirt::getAmount(const Creature& creature) const
+{
+    return 0.0;
+}
+
+//! \brief Room dirt stage fall plus pile fall per turn, both times the Cleanliness of the creature type.
+double CreatureMoodDirt::getFallPerTurn(const Creature& creature) const
 {
     if(!canFeelDirt(creature))
-        return 0;
+        return 0.0;
 
     const Tile* tile = creature.getPositionTile();
     const GameMap* gameMap = creature.getGameMap();
     if((tile == nullptr) || (gameMap == nullptr))
-        return 0;
+        return 0.0;
 
     double mood = getRoomDirtMood(*tile) + getPileMood(*gameMap, *tile);
     mood *= creature.getDefinition()->getCleanliness();
     return mood;
+}
+
+//! \brief The cleaning reward of the highest dirt stage times the Cleanliness of the creature type.
+double CreatureMoodDirt::getCleanedReward(const Creature& creature, uint32_t stage)
+{
+    if((stage < 2) || !canFeelDirt(creature))
+        return 0.0;
+
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double reward = (stage == 2) ? config.getDirtConfigDouble("DirtCleanedMoodStage2") :
+        config.getDirtConfigDouble("DirtCleanedMoodStage3");
+    return reward * creature.getDefinition()->getCleanliness();
 }
 
 //! \brief Returns a copy of this modifier.

@@ -120,7 +120,6 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         }
         if(!servingNeed && creature.getDefinition()->hasThirst() &&
            creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
-           (creature.getTavernCooldownTurns() <= 0) &&
            !creature.hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
@@ -144,6 +143,15 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         return true;
     }
 
+    // A casino or temple visit that has gained PleasureVisitMax is over (the pleasure buff and the lock follow when the
+    // creature leaves the room)
+    if(!fighting && (((room->getType() == RoomType::casino) && creature.isPleasureVisitFull(PleasureRoomKind::casino)) ||
+       ((room->getType() == RoomType::temple) && creature.isPleasureVisitFull(PleasureRoomKind::temple))))
+    {
+        creature.popAction();
+        return true;
+    }
+
     if(!creature.decreaseJobCooldown())
         return false;
 
@@ -155,8 +163,7 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
     if(!pleasure && !fighting &&
        (roomType == RoomType::arena || room->shouldNotUseIfBadMood(creature, forced)))
     {
-        if(creature.getMoodValue() >= CreatureMoodLevel::Upset ||
-           creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork())
+        if(creature.getMoodValue() >= CreatureMoodLevel::Upset)
         {
             creature.popAction();
             creature.pushAction(Utils::make_unique<CreatureActionSearchJob>(creature, false));

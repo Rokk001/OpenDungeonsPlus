@@ -388,28 +388,59 @@ BOOST_AUTO_TEST_CASE(test_CombatModifier)
     BOOST_CHECK_EQUAL(relationships.combatModifier("A", onlyFoe), -settings.mCombatPenaltyNemesis);
 }
 
-// The mood penalty counts hated creatures and nemeses (at most the configured number of hated ones) and
+// Returns the MoodPairKind listed for the other creature, or -1 when the other creature is not listed
+static int32_t moodPairKindOf(const std::vector<std::pair<std::string, int32_t> >& pairs, const std::string& other)
+{
+    for(size_t ii = 0; ii < pairs.size(); ++ii)
+    {
+        if(pairs[ii].first == other)
+            return pairs[ii].second;
+    }
+    return -1;
+}
+
+// The mood pairs list the hated creatures and nemeses (at most the configured number of hated ones) with their kind and
 // the helpers isHated and isNemesis tell the two apart
-BOOST_AUTO_TEST_CASE(test_MoodModifier)
+BOOST_AUTO_TEST_CASE(test_MoodPairs)
 {
     CreatureRelationships relationships;
     const RelationshipSettings& settings = relationships.getSettings();
-    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), 0);
+    std::vector<std::pair<std::string, int32_t> > pairs;
+    pairs.push_back(std::make_pair(std::string("old"), 0));
+    relationships.getMoodPairs("A", pairs);
+    BOOST_CHECK(pairs.empty());
 
     relationships.changeValue("A", "Friend", 70, 0);
     relationships.changeValue("A", "Annoying", -40, 0);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), 0);
+    relationships.getMoodPairs("A", pairs);
+    BOOST_CHECK(pairs.empty());
 
     relationships.changeValue("A", "Hated", -60, 0);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), -settings.mMoodPenaltyHated);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("Hated"), -settings.mMoodPenaltyHated);
+    relationships.getMoodPairs("A", pairs);
+    BOOST_REQUIRE_EQUAL(pairs.size(), 1u);
+    BOOST_CHECK_EQUAL(pairs[0].first, "Hated");
+    BOOST_CHECK_EQUAL(pairs[0].second, static_cast<int32_t>(CreatureRelationships::MoodPairHated));
+    relationships.getMoodPairs("Hated", pairs);
+    BOOST_REQUIRE_EQUAL(pairs.size(), 1u);
+    BOOST_CHECK_EQUAL(pairs[0].first, "A");
+    BOOST_CHECK_EQUAL(pairs[0].second, static_cast<int32_t>(CreatureRelationships::MoodPairHated));
 
     relationships.changeValue("A", "Foe", -90, 0);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), -settings.mMoodPenaltyHated - settings.mMoodPenaltyNemesis);
+    relationships.getMoodPairs("A", pairs);
+    BOOST_CHECK_EQUAL(pairs.size(), 2u);
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Hated"), static_cast<int32_t>(CreatureRelationships::MoodPairHated));
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Foe"), static_cast<int32_t>(CreatureRelationships::MoodPairNemesis));
 
-    // At most MoodMaxPairs hated creatures count
+    // At most MoodMaxPairs hated creatures count: the third one is not listed
+    BOOST_REQUIRE_EQUAL(settings.mMoodMaxPairs, 2);
     relationships.changeValue("A", "Hated2", -60, 0);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("A"), -settings.mMoodPenaltyHated - settings.mMoodPenaltyNemesis);
+    relationships.getMoodPairs("A", pairs);
+    BOOST_CHECK_EQUAL(pairs.size(), 2u);
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Hated"), static_cast<int32_t>(CreatureRelationships::MoodPairHated));
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Foe"), static_cast<int32_t>(CreatureRelationships::MoodPairNemesis));
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Hated2"), -1);
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Friend"), -1);
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Annoying"), -1);
 
     BOOST_CHECK(relationships.isHated("A", "Hated"));
     BOOST_CHECK(relationships.isHated("A", "Foe"));
@@ -873,13 +904,47 @@ BOOST_AUTO_TEST_CASE(test_LoversEffects)
     BOOST_CHECK_EQUAL(relationships.combatModifier("Adam", nearby), settings.mCombatBonusLovers);
     BOOST_CHECK(settings.mCombatBonusLovers > settings.mCombatBonusBestFriends);
 
-    // The mood boost is there while the pair exists; removing the creature (death, leaving) ends it
-    BOOST_CHECK_EQUAL(relationships.moodModifier("Adam"), settings.mMoodBonusLovers);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("Eve"), settings.mMoodBonusLovers);
-    BOOST_CHECK_EQUAL(relationships.moodModifier("Bob"), 0);
+    // The partner is listed with the lovers kind while the pair exists; removing the creature (death, leaving) ends it
+    std::vector<std::pair<std::string, int32_t> > pairs;
+    relationships.getMoodPairs("Adam", pairs);
+    BOOST_REQUIRE_EQUAL(pairs.size(), 1u);
+    BOOST_CHECK_EQUAL(pairs[0].first, "Eve");
+    BOOST_CHECK_EQUAL(pairs[0].second, static_cast<int32_t>(CreatureRelationships::MoodPairLovers));
+    relationships.getMoodPairs("Eve", pairs);
+    BOOST_REQUIRE_EQUAL(pairs.size(), 1u);
+    BOOST_CHECK_EQUAL(pairs[0].first, "Adam");
+    BOOST_CHECK_EQUAL(pairs[0].second, static_cast<int32_t>(CreatureRelationships::MoodPairLovers));
+    relationships.getMoodPairs("Bob", pairs);
+    BOOST_CHECK(pairs.empty());
     relationships.removeCreature("Eve");
-    BOOST_CHECK_EQUAL(relationships.moodModifier("Adam"), 0);
+    relationships.getMoodPairs("Adam", pairs);
+    BOOST_CHECK(pairs.empty());
     BOOST_CHECK_EQUAL(relationships.getPartner("Adam"), "");
+}
+
+// The partner is a pure bonus: it is listed in addition to the hated creatures and does not count against MoodMaxPairs
+BOOST_AUTO_TEST_CASE(test_LoversMoodPairsDoNotCountAgainstTheLimit)
+{
+    CreatureRelationships relationships;
+    setupGenders(relationships);
+    const RelationshipSettings& settings = relationships.getSettings();
+    relationships.changeValue("Adam", "Eve", 95, 0);
+    BOOST_REQUIRE(relationships.isLovers("Adam", "Eve"));
+    BOOST_REQUIRE_EQUAL(settings.mMoodMaxPairs, 2);
+
+    relationships.changeValue("Adam", "Hated1", -60, 0);
+    relationships.changeValue("Adam", "Hated2", -60, 0);
+    relationships.changeValue("Adam", "Hated3", -60, 0);
+    relationships.changeValue("Adam", "Foe", -90, 0);
+    std::vector<std::pair<std::string, int32_t> > pairs;
+    relationships.getMoodPairs("Adam", pairs);
+    // The partner plus MoodMaxPairs hated creatures or nemeses (the first two in the order of the names: Foe and Hated1)
+    BOOST_CHECK_EQUAL(pairs.size(), 3u);
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Eve"), static_cast<int32_t>(CreatureRelationships::MoodPairLovers));
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Foe"), static_cast<int32_t>(CreatureRelationships::MoodPairNemesis));
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Hated1"), static_cast<int32_t>(CreatureRelationships::MoodPairHated));
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Hated2"), -1);
+    BOOST_CHECK_EQUAL(moodPairKindOf(pairs, "Hated3"), -1);
 }
 
 // When one partner becomes friends with a third creature, the other partner loses more value towards it than an ordinary friend would
@@ -920,10 +985,51 @@ BOOST_AUTO_TEST_CASE(test_LoversConfigValues)
     RelationshipSettings settings = RelationshipSettings::fromConfig(config);
     BOOST_CHECK_EQUAL(settings.mLoversBreakValue, 60);
     BOOST_CHECK_EQUAL(settings.mCombatBonusLovers, 3.0);
-    BOOST_CHECK_EQUAL(settings.mMoodBonusLovers, 123);
-    BOOST_CHECK_EQUAL(settings.mPartnerGriefMoodPenalty, 900);
+    BOOST_CHECK_EQUAL(settings.mMoodBonusLovers, 123.0);
+    BOOST_CHECK_EQUAL(settings.mPartnerGriefMoodPenalty, 900.0);
     BOOST_CHECK_EQUAL(settings.mLeavePartnerChancePercent, 55);
     BOOST_CHECK_EQUAL(settings.mLoversJealousyValueLoss, 9);
+}
+
+// The mood settings are doubles with the defaults of the config file: penalties and falls of hated creatures, the
+// once-only relationship moods and the limit of the stored mood after a brawl
+BOOST_AUTO_TEST_CASE(test_MoodSettingsDoubles)
+{
+    RelationshipSettings defaults;
+    BOOST_CHECK_EQUAL(defaults.mMoodPenaltyHated, 62.5);
+    BOOST_CHECK_EQUAL(defaults.mMoodPenaltyNemesis, 100.0);
+    BOOST_CHECK_EQUAL(defaults.mMoodFallHated, 0.0744);
+    BOOST_CHECK_EQUAL(defaults.mMoodFallNemesis, 0.119);
+    BOOST_CHECK_EQUAL(defaults.mBrawlEndMoodMax, 300.0);
+    BOOST_CHECK_EQUAL(defaults.mMoodMaxPairs, 2);
+    BOOST_CHECK_EQUAL(defaults.mGriefMoodPenalty, 100.0);
+    BOOST_CHECK_EQUAL(defaults.mPartnerGriefMoodPenalty, 200.0);
+    BOOST_CHECK_EQUAL(defaults.mMoodBonusLovers, 75.0);
+    BOOST_CHECK_EQUAL(defaults.mSleepNextToFriendMood, 12.5);
+    BOOST_CHECK_EQUAL(defaults.mEatTogetherMood, 25.0);
+    BOOST_CHECK_EQUAL(defaults.mSlapFriendsMoodPenalty, 15.0);
+
+    // Fractions are read from the config and a value that is not a number keeps the default
+    std::map<std::string, std::string> config;
+    config["MoodPenaltyHated"] = "12.25";
+    config["MoodPenaltyNemesis"] = "33.5";
+    config["MoodFallHated"] = "0.5";
+    config["MoodFallNemesis"] = "0.75";
+    config["BrawlEndMoodMax"] = "410.5";
+    config["GriefMoodPenalty"] = "45.5";
+    config["SleepNextToFriendMood"] = "6.25";
+    config["EatTogetherMood"] = "not a number";
+    config["SlapFriendsMoodPenalty"] = "7.5";
+    RelationshipSettings settings = RelationshipSettings::fromConfig(config);
+    BOOST_CHECK_EQUAL(settings.mMoodPenaltyHated, 12.25);
+    BOOST_CHECK_EQUAL(settings.mMoodPenaltyNemesis, 33.5);
+    BOOST_CHECK_EQUAL(settings.mMoodFallHated, 0.5);
+    BOOST_CHECK_EQUAL(settings.mMoodFallNemesis, 0.75);
+    BOOST_CHECK_EQUAL(settings.mBrawlEndMoodMax, 410.5);
+    BOOST_CHECK_EQUAL(settings.mGriefMoodPenalty, 45.5);
+    BOOST_CHECK_EQUAL(settings.mSleepNextToFriendMood, 6.25);
+    BOOST_CHECK_EQUAL(settings.mEatTogetherMood, defaults.mEatTogetherMood);
+    BOOST_CHECK_EQUAL(settings.mSlapFriendsMoodPenalty, 7.5);
 }
 
 // The grief, rage and brawl state of creatures is written and read back unchanged, and a creature with nothing to save is not written

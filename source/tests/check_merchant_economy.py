@@ -285,14 +285,14 @@ void transactions(GameMap& map,int32_t marginValue) {
     const double oldGold=seller.gold; check(room.buyFromCreature(seller,0),"actual creature sale succeeds");
     check(std::abs(seller.gold-oldGold-base*.5*(1-marginValue/100.0))<1e-8,"sale payout arithmetic");
     check(std::abs(seat.merchantGold-base*.5*marginValue/100.0)<1e-8,"sale keeper margin arithmetic");
-    check(seller.mood==(10-marginValue)*15,"sale mood points");
+    check(seller.mood==(10-marginValue)*3.75,"sale mood points");
     check(seller.mInventory[0].get()==nullptr&&data.mGoods.size()==1&&data.mGoods[0].mItem.mMerchantGoods,"sale transfers sealed stock");
     Creature buyer(&map,&seat); buyer.mLevel=30; data.mGoods[0].mReservedBy=buyer.name;
     const double before=buyer.gold,keeperBefore=seat.merchantGold; const uint32_t index=data.mGoods[0].mIndex;
     check(room.sellToCreature(buyer,index),"actual creature purchase succeeds");
     check(std::abs(before-buyer.gold-base*(1+marginValue/100.0))<1e-8,"purchase price arithmetic");
     check(std::abs(seat.merchantGold-keeperBefore-base*marginValue/100.0)<1e-8,"purchase keeper margin arithmetic");
-    check(buyer.mood==(10-marginValue)*15,"purchase mood points");
+    check(buyer.mood==(10-marginValue)*3.75,"purchase mood points");
     check(data.mGoods.empty(),"purchase removes one stock entry");
     std::unique_ptr<ItemInstance> keeperItem=itemFor(map,"BLK_A_Head",Quality::common); check(room.addGoods(keeperItem,&tile),"keeper stock fixture");
     Player keeper(&seat); const double treasuryBefore=seat.treasury; check(room.sellToKeeper(keeper,data.mGoods.back().mIndex),"keeper purchase");
@@ -332,7 +332,7 @@ int main(int argc,char** argv) {
     for(const std::string& id:{"healing_small","mana_small","thaw","strength_small"}) {
         Creature recipient(&map,&owner); recipient.mLevel=30; recipient.hp=99; recipient.mana=49; recipient.frozen=true; recipient.fighting=true;
         ItemBagEntity gift(&map,ItemInstance::createPotion(id)); gift.mItem->mGifted=true;
-        check(deliverGift(recipient,gift)&&recipient.drinks==1&&recipient.mood==300&&gift.removed,"useful gift drinks immediately and gives300 mood");
+        check(deliverGift(recipient,gift)&&recipient.drinks==1&&recipient.mood==75&&gift.removed,"useful gift drinks immediately and gives 75 mood");
     }
     Creature recipient(&map,&owner); recipient.mLevel=30; recipient.resizePotionSlots();
     ItemBagEntity stored(&map,ItemInstance::createPotion("healing_small")); check(deliverGift(recipient,stored)&&recipient.mPotionSlots[0].get()!=nullptr&&recipient.drinks==0,"non-useful gift fills free potion slot");
@@ -340,7 +340,7 @@ int main(int argc,char** argv) {
     ItemBagEntity inventoryGift(&map,ItemInstance::createPotion("mana_small")); check(deliverGift(recipient,inventoryGift)&&recipient.mInventory[0].get()!=nullptr,"gift then uses free inventory");
     for(std::unique_ptr<ItemInstance>& slot:recipient.mInventory) if(slot.get()==nullptr) slot=ItemInstance::createPotion("mana_small");
     const double moodBefore=recipient.mood; ItemBagEntity rejected(&map,ItemInstance::createPotion("mana_small")); ItemInstance* rejectedIdentity=rejected.mItem.get();
-    check(!deliverGift(recipient,rejected)&&rejected.mItem.get()==rejectedIdentity&&rejected.mItem->mGifted&&!rejected.removed&&recipient.mood==moodBefore+300,"full gift remains the same bag yet grants300 mood");
+    check(!deliverGift(recipient,rejected)&&rejected.mItem.get()==rejectedIdentity&&rejected.mItem->mGifted&&!rejected.removed&&recipient.mood==moodBefore+75,"full gift remains the same bag yet grants 75 mood");
     rejected.doUpkeep(); check(rejected.mItem.get()==rejectedIdentity&&rejected.mIdleTurns==1&&rejected.removalCalls==0&&rejected.deletionCalls==0,"rejected gift remains a live aging bag without teardown");
     Creature brewer(&map,&owner); brewer.mLevel=30; map.creatures={&brewer}; RoomAlchemyLab laboratory(&map,&owner);
     laboratory.mHerbs={{"Bloodroot",40},{"Moonlily",40},{"Ironfern",40},{"Sunthorn",40}};

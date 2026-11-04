@@ -283,6 +283,10 @@ bool RoomCasino::hasOpenCreatureSpot(Creature* creature)
     if(creature->getGoldCarried() <= 0)
         return false;
 
+    // A running pleasure buff, or the casino locked after the last visit, keeps the creature out
+    if(!creature->canUsePleasureRoom(PleasureRoomKind::casino))
+        return false;
+
     for(std::pair<Tile* const,RoomCasinoGame>& p : mCreaturesSpots)
     {
         if(p.second.mCreature1.mCreature == nullptr)
@@ -305,6 +309,9 @@ bool RoomCasino::addCreatureUsingRoom(Creature* creature)
 
     if(!Room::addCreatureUsingRoom(creature))
         return false;
+
+    // The visit counts toward PleasureVisitMax and ends with the pleasure buff and the lock of the casino
+    creature->beginPleasureVisit(PleasureRoomKind::casino);
 
     // We try to have 2 creatures on the same spot if possible
     RoomCasinoGameCreatureInfo* firstAvailableSpace = nullptr;
@@ -349,6 +356,10 @@ bool RoomCasino::addCreatureUsingRoom(Creature* creature)
 void RoomCasino::removeCreatureUsingRoom(Creature* creature)
 {
     Room::removeCreatureUsingRoom(creature);
+
+    // The visit ends. Paying out smiles it gave the pleasure buff if it gained mood; paying out money the visit costs
+    // mood, gives no buff and still locks the casino
+    creature->finishPleasureVisit(PleasureRoomKind::casino, mPayout == CasinoPayout::money);
 
     // If the creature leaving the casino left another one playing alone, we
     // should search for another creature alone and try to make them match

@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <deque>
 #include <map>
+#include <set>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -79,11 +80,60 @@ enum class PostCategory : uint8_t
     GhostHunted,
     //! A creature of the local player finished a bath in a lava spa and is relaxed
     Relaxed,
+    //! A creature of the local player complains that a lasting mood problem started: no bed, hungry, thirsty, tired,
+    //! no wage paid, wounded, held in the hand, no work, no fight (see MoodCause)
+    ComplainBed,
+    ComplainHungry,
+    ComplainThirsty,
+    ComplainTired,
+    ComplainWage,
+    ComplainWounded,
+    ComplainHeld,
+    ComplainWork,
+    ComplainFight,
+    //! An upset creature of the local player wishes for a pleasure room that its keeper does not have (the room
+    //! type is the argument of the post)
+    Wish,
+    //! A creature of the local player thanks that a problem it complained about ended
+    ThanksBed,
+    ThanksHungry,
+    ThanksThirsty,
+    ThanksTired,
+    ThanksWage,
+    ThanksWounded,
+    ThanksHeld,
+    ThanksWork,
+    ThanksFight,
+    //! A creature of the local player thanks that a pleasure room it wished for can be used now (the room type is
+    //! the argument of the post)
+    ThanksWish,
     Nb
+};
+
+//! \brief The lasting mood problems a creature complains about and thanks for. The numbers are the numbers of the
+//! cause in the mood post cosmetic event.
+enum class MoodCause : int32_t
+{
+    NoBed = 0,
+    Hungry = 1,
+    Thirsty = 2,
+    Tired = 3,
+    NoWage = 4,
+    Wounded = 5,
+    Held = 6,
+    NoWork = 7,
+    NoFight = 8,
+    Nb = 9
 };
 
 //! \brief Name of the category in the texts file ("eat", "levelup", ...), empty for Nb.
 std::string getPostCategoryName(PostCategory category);
+
+//! \brief The category of the complaint about a cause, Nb for an unknown cause.
+PostCategory getComplaintCategory(MoodCause cause);
+
+//! \brief The category of the thank-you for a solved cause, Nb for an unknown cause.
+PostCategory getThanksCategory(MoodCause cause);
 
 //! \brief One entry of the feed. Only numbers and names are stored, the text is rendered
 //! from the templates when the feed is displayed.
@@ -101,7 +151,7 @@ struct Post
     int64_t mTurn;
     PostCategory mCategory;
     uint32_t mVariant;
-    //! Level for level-up and payday posts, room type for work and train posts
+    //! Level for level-up and payday posts, room type for work, train, wish and wish thank-you posts
     int32_t mArgument;
     //! Profile name for relationship posts, or the approved item name for item-deal posts.
     std::string mOther;
@@ -163,6 +213,26 @@ public:
     bool addPost(int64_t turn, const std::string& creature, const std::string& className,
         bool isWorker, PostCategory category, int32_t argument, const std::string& other = std::string());
 
+    //! \brief Adds the complaint about a lasting mood problem that started. Only a complaint that was written is
+    //! remembered, so only it can be thanked for. Returns true if the post was added.
+    bool addComplaint(int64_t turn, const std::string& creature, const std::string& className,
+        bool isWorker, MoodCause cause);
+
+    //! \brief Adds the thank-you for a problem that ended, only if its complaint was written. Returns true if the
+    //! post was added; the complaint is forgotten in any case.
+    bool addComplaintThanks(int64_t turn, const std::string& creature, const std::string& className,
+        bool isWorker, MoodCause cause);
+
+    //! \brief Adds the wish for a pleasure room the keeper does not have. Only a wish that was written is
+    //! remembered. Returns true if the post was added.
+    bool addWish(int64_t turn, const std::string& creature, const std::string& className,
+        bool isWorker, int32_t roomType);
+
+    //! \brief Adds the thank-you for a pleasure room that can be used now, only if the wish was written. Returns
+    //! true if the post was added; the wish is forgotten in any case.
+    bool addWishThanks(int64_t turn, const std::string& creature, const std::string& className,
+        bool isWorker, int32_t roomType);
+
     inline const std::deque<Post>& getPosts() const
     { return mPosts; }
 
@@ -216,6 +286,9 @@ private:
     PostTextFunction mTextFunction;
     //! Texts of the last posts
     std::deque<std::string> mRecentTexts;
+    //! Complaints and wishes that were written and not thanked yet, as "creature|cause" and "creature|wish". Not
+    //! saved, like the posts.
+    std::set<std::string> mOpenMoodPosts;
 };
 
 }
