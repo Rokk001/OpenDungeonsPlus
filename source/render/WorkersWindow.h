@@ -76,6 +76,9 @@ public:
     bool onTabletPressed(const CEGUI::EventArgs& e);
     //! \brief A tablet drag ends: moves the dragged tablet to the tablet under the pointer.
     bool onTabletReleased(const CEGUI::EventArgs& e);
+    //! \brief The left button comes up on the window, a tablet or a carry entry: ends the drag that is running. A drag
+    //! can end on any of them, depending on which window holds the pointer.
+    bool onDragReleased(const CEGUI::EventArgs& e);
     //! \brief Priority arrows.
     bool onPriorityArrowClicked(const CEGUI::EventArgs& e);
     //! \brief "-" and "+" of a tablet.
@@ -116,6 +119,12 @@ public:
         return true;
     }
 
+    //! \brief The slot a point belongs to when a dragged entry is dropped, -1 if none. Each rect is
+    //! {left, top, right, bottom} of a slot in the order of the slots. A slot owns its column: the point may lie
+    //! anywhere between the middles of the gaps to the neighbouring slots and in the height of the row of slots plus a
+    //! quarter of it above and below, so a drop does not have to hit the small painted area exactly.
+    static int32_t getDropSlot(const std::vector<std::array<float, 4> >& rects, float x, float y);
+
     //! \brief Roman numeral of a rank (0 is rank I).
     static const char* getRankNumeral(std::size_t rank);
     //! \brief Name of a job in the order of WorkerJob.
@@ -132,10 +141,12 @@ private:
     void refresh();
     //! \brief Everything the window shows as one list of numbers, to see when a redraw is needed.
     std::vector<uint32_t> getShownState() const;
-    //! \brief Index of the slot (tablet or carry entry) whose area contains the point, or -1.
+    //! \brief Index of the slot (tablet or carry entry) the point drops on (see getDropSlot), or -1.
     int32_t findSlotAt(const char* prefix, std::size_t count, float x, float y) const;
     //! \brief Shows an arrow button enabled (painted normally) or greyed out.
     void setArrowEnabled(CEGUI::Window* arrow, bool up, bool enabled);
+    //! \brief Ends a running drag of tablet or carry entry at the pointer position of the GUI context.
+    void finishDrag();
     //! \brief Reads the slot index from the window of an event, -1 if there is none.
     static int32_t getSlotId(const CEGUI::EventArgs& e);
 

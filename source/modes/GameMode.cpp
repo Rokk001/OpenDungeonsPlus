@@ -4419,7 +4419,7 @@ void GameMode::setHelpWindowText()
         << "  - M opens the map: left-click to move there, right-click or M to close; V cycles views." << std::endl
         << "  - B opens the Dungeonbook: creature profiles and the posts of your minions." << std::endl
         << "  - I opens the infirmary window: payer, discharge health, healing switch, patients." << std::endl
-        << "  - J opens the workers window: fixed workers per job, free workers, priority and carry order." << std::endl
+        << "  - J or the workers icon above the minimap opens the workers window: fixed workers per job, free workers, priority and carry order." << std::endl
         << "  - K opens the merchant: stock, purchases and trading settings." << std::endl
         << "  - L opens the alchemy lab overview." << std::endl
         << "  - Minimap +/-: left-click to zoom in, right-click to zoom out." << std::endl << std::endl;

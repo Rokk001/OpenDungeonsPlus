@@ -68,6 +68,9 @@ WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         CEGUI::Event::Subscriber(&WorkersWindow::onCloseClicked, this)));
     mConnections.push_back(mButton->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&WorkersWindow::onButtonClicked, this)));
+    // A drag can end on the window itself, on any tablet or carry entry, or on the pressed one that holds the pointer
+    mConnections.push_back(mWindow->subscribeEvent(CEGUI::Window::EventMouseButtonUp,
+        CEGUI::Event::Subscriber(&WorkersWindow::onDragReleased, this)));
     mConnections.push_back(mWindow->getChild("ModeAutomatic")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&WorkersWindow::onModeClicked, this)));
     mConnections.push_back(mWindow->getChild("ModePriority")->subscribeEvent(CEGUI::PushButton::EventClicked,
@@ -93,7 +96,7 @@ WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         mConnections.push_back(tablet->subscribeEvent(CEGUI::Window::EventMouseButtonDown,
             CEGUI::Event::Subscriber(&WorkersWindow::onTabletPressed, this)));
         mConnections.push_back(tablet->subscribeEvent(CEGUI::Window::EventMouseButtonUp,
-            CEGUI::Event::Subscriber(&WorkersWindow::onTabletReleased, this)));
+            CEGUI::Event::Subscriber(&WorkersWindow::onDragReleased, this)));
         mConnections.push_back(mWindow->getChild(rank + "/Minus")->subscribeEvent(CEGUI::PushButton::EventClicked,
             CEGUI::Event::Subscriber(&WorkersWindow::onFixedClicked, this)));
         mConnections.push_back(mWindow->getChild(rank + "/Plus")->subscribeEvent(CEGUI::PushButton::EventClicked,
@@ -107,7 +110,7 @@ WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         mConnections.push_back(frame->subscribeEvent(CEGUI::Window::EventMouseButtonDown,
             CEGUI::Event::Subscriber(&WorkersWindow::onCarryPressed, this)));
         mConnections.push_back(frame->subscribeEvent(CEGUI::Window::EventMouseButtonUp,
-            CEGUI::Event::Subscriber(&WorkersWindow::onCarryReleased, this)));
+            CEGUI::Event::Subscriber(&WorkersWindow::onDragReleased, this)));
     }
 }
 
@@ -237,31 +240,57 @@ bool WorkersWindow::onTabletPressed(const CEGUI::EventArgs& e)
         return true;
     mSelectedJob = static_cast<int32_t>(settings.priority[static_cast<std::size_t>(rank)]);
     mDragTablet = mSelectedJob;
+    mDragCarry = -1;
     return true;
 }
 
 //! \brief Left button released after a tablet press: the dragged job takes the place of the tablet under the pointer.
 bool WorkersWindow::onTabletReleased(const CEGUI::EventArgs& e)
 {
+    return onDragReleased(e);
+}
+
+//! \brief Left button released on the window, a tablet or a carry entry: ends the running drag.
+bool WorkersWindow::onDragReleased(const CEGUI::EventArgs& e)
+{
     const CEGUI::MouseEventArgs& mouse = static_cast<const CEGUI::MouseEventArgs&>(e);
-    const int32_t dragged = mDragTablet;
-    mDragTablet = -1;
-    Seat* seat = getSeat();
-    if(seat == nullptr || mouse.button != CEGUI::LeftButton || dragged < 0)
-        return true;
-    WorkerJobSettings next = seat->getWorkerJobSettings();
-    if(next.freeMode != static_cast<uint32_t>(WorkerFreeMode::priority))
-        return true;
-    const int32_t target = findSlotAt("Rank", JOB_COUNT, mouse.position.d_x, mouse.position.d_y);
-    if(target < 0)
-        return true;
-    const std::array<uint32_t, JOB_COUNT>::iterator from = std::find(next.priority.begin(), next.priority.end(),
-        static_cast<uint32_t>(dragged));
-    if(from == next.priority.end())
-        return true;
-    if(moveOrderEntry(next.priority, static_cast<std::size_t>(from - next.priority.begin()), static_cast<std::size_t>(target)))
-        sendSettings(next);
+    if(mouse.button != CEGUI::LeftButton)
+        return false;
+    finishDrag();
     return true;
+}
+
+//! \brief Ends a running drag. The place is read from the pointer of the GUI context: the position of the event is
+//! relative to the window that got it and the pressed tablet keeps the pointer while the button is down.
+void WorkersWindow::finishDrag()
+{
+    const int32_t draggedTablet = mDragTablet;
+    const int32_t draggedCarry = mDragCarry;
+    mDragTablet = -1;
+    mDragCarry = -1;
+    Seat* seat = getSeat();
+    if(seat == nullptr || (draggedTablet < 0 && draggedCarry < 0))
+        return;
+    const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
+    WorkerJobSettings next = seat->getWorkerJobSettings();
+    if(draggedTablet >= 0 && next.freeMode == static_cast<uint32_t>(WorkerFreeMode::priority))
+    {
+        const int32_t target = findSlotAt("Rank", JOB_COUNT, pointer.d_x, pointer.d_y);
+        const std::array<uint32_t, JOB_COUNT>::iterator from = std::find(next.priority.begin(), next.priority.end(),
+            static_cast<uint32_t>(draggedTablet));
+        if(target >= 0 && from != next.priority.end() &&
+            moveOrderEntry(next.priority, static_cast<std::size_t>(from - next.priority.begin()), static_cast<std::size_t>(target)))
+            sendSettings(next);
+    }
+    else if(draggedCarry >= 0)
+    {
+        const int32_t target = findSlotAt("Carry", CARRY_COUNT, pointer.d_x, pointer.d_y);
+        const std::array<uint32_t, CARRY_COUNT>::iterator from = std::find(next.carryOrder.begin(), next.carryOrder.end(),
+            static_cast<uint32_t>(draggedCarry));
+        if(target >= 0 && from != next.carryOrder.end() &&
+            moveOrderEntry(next.carryOrder, static_cast<std::size_t>(from - next.carryOrder.begin()), static_cast<std::size_t>(target)))
+            sendSettings(next);
+    }
 }
 
 //! \brief Up and down arrow of the priority: moves the selected tablet one rank higher or lower.
@@ -326,29 +355,14 @@ bool WorkersWindow::onCarryPressed(const CEGUI::EventArgs& e)
         return true;
     mSelectedCarry = static_cast<int32_t>(seat->getWorkerJobSettings().carryOrder[static_cast<std::size_t>(place)]);
     mDragCarry = mSelectedCarry;
+    mDragTablet = -1;
     return true;
 }
 
 //! \brief Left button released after a carry entry press: the dragged entry takes the place under the pointer.
 bool WorkersWindow::onCarryReleased(const CEGUI::EventArgs& e)
 {
-    const CEGUI::MouseEventArgs& mouse = static_cast<const CEGUI::MouseEventArgs&>(e);
-    const int32_t dragged = mDragCarry;
-    mDragCarry = -1;
-    Seat* seat = getSeat();
-    if(seat == nullptr || mouse.button != CEGUI::LeftButton || dragged < 0)
-        return true;
-    const int32_t target = findSlotAt("Carry", CARRY_COUNT, mouse.position.d_x, mouse.position.d_y);
-    if(target < 0)
-        return true;
-    WorkerJobSettings next = seat->getWorkerJobSettings();
-    const std::array<uint32_t, CARRY_COUNT>::iterator from = std::find(next.carryOrder.begin(), next.carryOrder.end(),
-        static_cast<uint32_t>(dragged));
-    if(from == next.carryOrder.end())
-        return true;
-    if(moveOrderEntry(next.carryOrder, static_cast<std::size_t>(from - next.carryOrder.begin()), static_cast<std::size_t>(target)))
-        sendSettings(next);
-    return true;
+    return onDragReleased(e);
 }
 
 //! \brief Up and down arrow of the carry order: moves the selected entry one place to the left or right.
@@ -397,14 +411,41 @@ void WorkersWindow::sendSettings(const WorkerJobSettings& settings)
     ODClient::getSingleton().sendWorkerJobSettings(settings);
 }
 
-//! \brief Index of the slot named prefix + index whose area contains the point, -1 if none.
+//! \brief Index of the slot named prefix + index that a point drops on, -1 if none.
 int32_t WorkersWindow::findSlotAt(const char* prefix, std::size_t count, float x, float y) const
 {
-    const CEGUI::Vector2f point(x, y);
+    std::vector<std::array<float, 4> > rects;
     for(std::size_t i = 0; i < count; ++i)
     {
-        CEGUI::Window* slot = mWindow->getChild(std::string(prefix) + std::to_string(i));
-        if(slot->getUnclippedOuterRect().get().isPointInRect(point))
+        const CEGUI::Rectf area = mWindow->getChild(std::string(prefix) + std::to_string(i))->getUnclippedOuterRect().get();
+        const std::array<float, 4> rect = {{area.left(), area.top(), area.right(), area.bottom()}};
+        rects.push_back(rect);
+    }
+    return getDropSlot(rects, x, y);
+}
+
+//! \brief The slot a dropped point belongs to: its column of the row, -1 outside the row.
+int32_t WorkersWindow::getDropSlot(const std::vector<std::array<float, 4> >& rects, float x, float y)
+{
+    if(rects.empty())
+        return -1;
+    float top = rects[0][1];
+    float bottom = rects[0][3];
+    for(std::size_t i = 1; i < rects.size(); ++i)
+    {
+        top = std::min(top, rects[i][1]);
+        bottom = std::max(bottom, rects[i][3]);
+    }
+    const float tolerance = (bottom - top) * 0.25f;
+    if(y < top - tolerance || y > bottom + tolerance)
+        return -1;
+    // A slot owns the columns up to the middle of the gap to its neighbour; the outer slots own half a slot beyond
+    for(std::size_t i = 0; i < rects.size(); ++i)
+    {
+        const float left = (i == 0) ? rects[i][0] - (rects[i][2] - rects[i][0]) * 0.5f : (rects[i - 1][2] + rects[i][0]) * 0.5f;
+        const float right = (i + 1 == rects.size()) ? rects[i][2] + (rects[i][2] - rects[i][0]) * 0.5f :
+            (rects[i][2] + rects[i + 1][0]) * 0.5f;
+        if(x >= left && x < right)
             return static_cast<int32_t>(i);
     }
     return -1;
@@ -560,4 +601,5 @@ void WorkersWindow::refresh()
     check->setProperty("NormalImage", checkImage);
     check->setProperty("HoverImage", checkImage);
     check->setProperty("PushedImage", checkImage);
+    mWindow->getChild("GoldLabel")->setProperty("TextColours", settings.goldFirst != 0 ? COLOUR_LIT : COLOUR_NORMAL);
 }
