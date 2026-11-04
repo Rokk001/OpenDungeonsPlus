@@ -2,6 +2,9 @@
 from pathlib import Path
 import math
 import re
+import os
+import subprocess
+import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
 cfg = (root / 'config/mainmenuscene.cfg').read_text(encoding='utf-8').replace('\r\n', '\n')
@@ -12,6 +15,10 @@ CLIPS = ('Watch', 'Flap', 'FlapIn', 'TakeOff', 'Land')
 BONES = ('Root', 'Head', 'WingL', 'WingTipL', 'WingR', 'WingTipR')
 CROWS = ('CrowA', 'CrowB', 'CrowC', 'CrowD')
 
+output = root / 'out/menu-crow-check'
+output.mkdir(parents=True, exist_ok=True)
+converter = os.environ.get('OGRE_XML_CONVERTER', 'OgreXMLConverter')
+
 # Ogre binary serialisation writes strings null-free and newline terminated.
 for crow in CROWS:
     mesh = root / ('models/Menu' + crow + '.mesh')
@@ -20,8 +27,30 @@ for crow in CROWS:
     data = skeleton.read_bytes()
     for name in CLIPS + BONES:
         assert (name + '\n').encode() in data, (crow, name)
-    assert (root / ('assets-src/menu-scene/Menu' + crow + '.blend')).is_file(), crow
     assert b'Menu' + crow.encode() + b'.skeleton' in mesh.read_bytes(), crow
+    mesh_xml = output / (crow + '.mesh.xml')
+    skeleton_xml = output / (crow + '.skeleton.xml')
+    for source, target in ((mesh, mesh_xml), (skeleton, skeleton_xml)):
+        subprocess.run([converter, '-q', str(source), str(target)], check=True, stdin=subprocess.DEVNULL)
+    geometry = ET.parse(mesh_xml).getroot()
+    rig = ET.parse(skeleton_xml).getroot()
+    bones = {index: bone.get('name') for index, bone in enumerate(rig.findall('./bones/bone'))}
+    positions = geometry.findall('./sharedgeometry/vertexbuffer/vertex/position')
+    assigned = {}
+    for assignment in geometry.findall('./boneassignments/vertexboneassignment'):
+        name = bones[int(assignment.get('boneindex'))]
+        assigned.setdefault(name, []).append(positions[int(assignment.get('vertexindex'))])
+    body = assigned['Root'] + assigned['Head']
+    wings = sum((assigned[name] for name in ('WingL', 'WingTipL', 'WingR', 'WingTipR')), [])
+    # The authoring mesh uses Y for nose-to-tail and X for wingspan.
+    length = max(float(p.get('y')) for p in body) - min(float(p.get('y')) for p in body)
+    span = max(float(p.get('x')) for p in wings) - min(float(p.get('x')) for p in wings)
+    assert 1.8 <= span / length <= 2.2, (crow, 'wingspan/body length', span / length)
+    for clip in ('Flap', 'TakeOff'):
+        for wing in ('WingL', 'WingR'):
+            track = rig.find("./animations/animation[@name='%s']/tracks/track[@bone='%s']" % (clip, wing))
+            angles = [float(r.get('angle')) * float(r.find('axis').get('z')) for r in track.findall('./keyframes/keyframe/rotate')]
+            assert max(angles) - min(angles) >= math.radians(80), (crow, clip, wing, angles)
     
 assert 'Own work, created with Blender (AI-assisted)' in credits
 for clip in CLIPS:

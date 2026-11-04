@@ -1606,9 +1606,12 @@ def polish_prop():
     elif kind=="Crow":
         ranges={}
         first=len(b.vertices)
-        b.oval((0,0.0,0.30),(0.16,0.30,0.22),"MenuCrowBlack",9,5)
+        b.oval((0,0.04,0.31),(0.13,0.39,0.16),"MenuCrowBlack",16,9)
+        b.oval((0,-0.26,0.38),(0.105,0.19,0.12),"MenuCrowBlack",16,9)
         # Long fanned tail and a mantle plate between the wing roots hide the gap while the wings are open.
-        b.slab([(-0.10,0.22),(0.10,0.22),(0.14,0.52),(0.15,0.80),(0.04,0.88),(-0.04,0.88),(-0.15,0.80),(-0.14,0.52)],0.255,0.275,"MenuCrowBlack")
+        for feather in range(7):
+            x=(feather-3)*0.035
+            b.slab([(x-0.022,0.27),(x+0.022,0.27),(x+0.017,0.80-abs(feather-3)*0.025),(x,0.86-abs(feather-3)*0.025),(x-0.017,0.80-abs(feather-3)*0.025)],0.27,0.28,"MenuCrowBlack")
         b.slab([(-0.12,-0.08),(0.12,-0.08),(0.17,0.05),(0.17,0.14),(-0.17,0.14),(-0.17,0.05)],CROW_SHOULDER_Z-0.03,CROW_SHOULDER_Z-0.006,"MenuCrowBlack")
         for side in (-1,1):
             b.segment((side*0.08,0.04,0.15),(side*0.10,-0.02,-0.01),0.018,0.015,"MenuCorrodedIron",5)
@@ -1616,10 +1619,10 @@ def polish_prop():
                 b.segment((side*0.10,-0.02,-0.01),(side*0.10+(toe-1)*0.045,-0.17,-0.015),0.012,0.005,"MenuCrowBlack",5)
         ranges["Root"]=range(first,len(b.vertices))
         first=len(b.vertices)
-        b.oval((0,-0.18,0.57),(0.115+(VARIANT_SEED%5)*0.008,0.15,0.135+(VARIANT_SEED%3)*0.012),"MenuCrowBlack",8,5)
-        b.prism([(-0.07,0.56),(0.07,0.56),(0,0.46)],-0.47,-0.24,"MenuCrowBlack")
+        b.oval((0,-0.37,0.43),(0.085,0.12,0.085),"MenuCrowBlack",16,9)
+        b.prism([(-0.045,0.45),(0.045,0.45),(0.025,0.40),(-0.025,0.40)],-0.57,-0.43,"MenuCrowBlack")
         for side in (-1,1):
-            b.oval((side*0.105,-0.28,0.60),(0.016,0.025,0.018),"MenuGateEyes",6,4)
+            b.oval((side*0.079,-0.41,0.45),(0.008,0.012,0.009),"MenuBlack",8,5)
         ranges["Head"]=range(first,len(b.vertices))
         for side,label,tip_label in ((-1,"WingL","WingTipL"),(1,"WingR","WingTipR")):
             first=len(b.vertices)
@@ -1932,7 +1935,8 @@ def main():
         if (private/(name+".blend")).exists() or (private/(name+".mesh.xml")).exists():
             raise FileExistsError("Use a fresh model destination: "+name)
         bpy.ops.wm.save_as_mainfile(filepath=str(private/(name+".blend")))
-        shutil.copyfile(private/(name+".blend"),source/(name+".blend"))
+        if not name.startswith("MenuCrow"):
+            shutil.copyfile(private/(name+".blend"),source/(name+".blend"))
         stats=exporter.export_mesh_xml(obj,arm,str(private/(name+".mesh.xml")),name+".skeleton" if arm else None,smooth=False)
         shutil.copyfile(private/(name+".mesh.xml"),work/(name+".mesh.xml"))
         if arm:
