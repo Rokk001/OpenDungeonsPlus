@@ -414,6 +414,7 @@ bool RoomManager::buildRoomEditor(GameMap* gameMap, RoomType type, ODPacket& pac
     return factory.buildRoomEditor(gameMap, packet);
 }
 
+//! \brief Reads a room of a saved game; a room that could not be read gives no room.
 Room* RoomManager::getRoomFromStream(GameMap* gameMap, std::istream& is)
 {
     RoomType type;
@@ -428,9 +429,24 @@ Room* RoomManager::getRoomFromStream(GameMap* gameMap, std::istream& is)
         return nullptr;
     }
 
+    if(factories[index] == nullptr)
+    {
+        OD_LOG_ERR("no room factory for type=" + Helper::toString(index));
+        return nullptr;
+    }
+
     const RoomFactory& factory = *factories[index];
-    return factory.getRoomFromStream(gameMap, is);
+    Room* room = factory.getRoomFromStream(gameMap, is);
+    if((room != nullptr) && room->hasImportFailed())
+    {
+        // A room that could not be read has no seat or tiles to be added to the map with
+        OD_LOG_ERR("Could not read the room " + room->getName() + " of type=" + Helper::toString(index));
+        delete room;
+        return nullptr;
+    }
+    return room;
 }
+
 bool RoomManager::buildRoomOnTiles(GameMap* gameMap, RoomType type, Player* player, const std::vector<Tile*>& tiles, bool noFee)
 {
     std::vector<const RoomFactory*>& factories = getFactories();

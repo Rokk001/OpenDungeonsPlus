@@ -596,7 +596,8 @@ void Seat::initSeat()
             }
 
             // Legacy saves have no sight ages: give only previously discovered tiles one initial grace period.
-            if(!mHasSavedOwnCreatureSightAges &&
+            if(!mHasSavedOwnCreatureSightAges && (mId >= 0) &&
+               (static_cast<size_t>(mId) < mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()].size()) &&
                mGameMap->everVisitedFlagPool[tile->getX()][tile->getY()][mId])
                 p.second.mOwnCreatureSightAgeTurns = 0;
 
@@ -1247,7 +1248,11 @@ bool Seat::importSeatFromStream(std::istream& is)
     }
     while(true)
     {
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+        {
+            OD_LOG_INF("WARNING: [SkillDone] of seat id=" + Helper::toString(mId) + " has no end");
+            return false;
+        }
         if(str == "[/SkillDone]")
             break;
 
@@ -1431,7 +1436,11 @@ bool Seat::importSeatFromStream(std::istream& is)
 
     while(true)
     {
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+        {
+            OD_LOG_INF("WARNING: [SkillNotAllowed] of seat id=" + Helper::toString(mId) + " has no end");
+            return false;
+        }
         if(str == "[/SkillNotAllowed]")
             break;
 
@@ -1465,7 +1474,11 @@ bool Seat::importSeatFromStream(std::istream& is)
 
     while(true)
     {
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+        {
+            OD_LOG_INF("WARNING: [SkillPending] of seat id=" + Helper::toString(mId) + " has no end");
+            return false;
+        }
         if(str == "[/SkillPending]")
             break;
 
@@ -1524,20 +1537,26 @@ bool Seat::importSeatFromStream(std::istream& is)
 
     while(true)
     {
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+        {
+            OD_LOG_INF("WARNING: [markedTiles] of seat id=" + Helper::toString(mId) + " has no end");
+            return false;
+        }
         if(str == "[/markedTiles]")
             break;
 
         std::pair<int, int> tilecoords;
         tilecoords.first = Helper::toInt(str);
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+            return false;
         tilecoords.second = Helper::toInt(str);
 
         TileStateNotified& tileState = mTilesStateLoaded[tilecoords];
         tileState.mMarkedForDigging = true;
     }
     
-    OD_ASSERT_TRUE(is >> str);
+    if(!(is >> str))
+        return false;
     if(str == "[EverVisitedTiles]")
     {
         while(true)
@@ -1545,18 +1564,30 @@ bool Seat::importSeatFromStream(std::istream& is)
             int xx;
             int yy;
             
-            OD_ASSERT_TRUE(is >> str );
+            if(!(is >> str))
+            {
+                OD_LOG_INF("WARNING: [EverVisitedTiles] of seat id=" + Helper::toString(mId) + " has no end");
+                return false;
+            }
             if(str == "[/EverVisitedTiles]")
             {
-                is >> str;
+                if(!(is >> str))
+                    return false;
                 break;
             }
             
             else
                 xx = Helper::toInt(str);
 
-            OD_ASSERT_TRUE(is >> yy);
-            mGameMap->everVisitedFlagPool[xx][yy][mId] = true;
+            if(!(is >> yy))
+                return false;
+            // A tile or a seat outside of the arrays of the map must not be written to
+            if((xx >= 0) && (yy >= 0) && (xx < mGameMap->getMapSizeX()) && (yy < mGameMap->getMapSizeY()) &&
+               (mId >= 0) && (static_cast<size_t>(mId) < mGameMap->everVisitedFlagPool[xx][yy].size()))
+                mGameMap->everVisitedFlagPool[xx][yy][mId] = true;
+            else
+                OD_LOG_WRN("Ignored ever visited tile x=" + Helper::toString(xx) + ", y=" + Helper::toString(yy)
+                    + " of seat id=" + Helper::toString(mId));
         }   
     }
 
@@ -1566,13 +1597,15 @@ bool Seat::importSeatFromStream(std::istream& is)
         mHasSavedOwnCreatureSightAges = true;
         while(true)
         {
-            OD_ASSERT_TRUE(is >> str);
+            if(!(is >> str))
+                return false;
             if(str == "[/OwnCreatureSightAges]")
                 break;
             const int x = Helper::toInt(str);
             int y;
             int64_t age;
-            OD_ASSERT_TRUE(is >> y >> age);
+            if(!(is >> y >> age))
+                return false;
             if(x < 0 || y < 0 || age < 0)
                 return false;
             TileStateNotified& state = mTilesStateLoaded[std::make_pair(x, y)];
@@ -1580,12 +1613,20 @@ bool Seat::importSeatFromStream(std::istream& is)
                 return false;
             state.mOwnCreatureSightAgeTurns = age;
         }
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+            return false;
     }
 
     if(str == "[AIState]")
     {
         if(!SaveFormat::readBlockLines(is, "[/AIState]", mAiStateLoaded) || !(is >> str)) return false;
+    }
+    else if(str != "[/Seat]")
+    {
+        // Saves written before the AI state got its tags have the lines of the state right after the sight ages
+        if(!SaveFormat::readUntaggedBlockLines(is, str, "[/Seat]", mAiStateLoaded))
+            return false;
+        str = "[/Seat]";
     }
 
     if(str != "[/Seat]")
@@ -1823,7 +1864,12 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     }
     os << "[/OwnCreatureSightAges]\n";
     if(!getPlayer()->getIsHuman() && mGameMap->getAI(*getPlayer()) != nullptr)
+    {
+        // The reader expects the lines of the AI state inside their own block
+        os << "[AIState]\n";
         mGameMap->getAI(*getPlayer())->exportState(os);
+        os << "[/AIState]\n";
+    }
 
     
     return true;
@@ -2825,12 +2871,17 @@ static std::string resolveTileVisualTag(const std::string& tag)
     return std::string(isEndTag ? "[/" : "[") + NameAliases::resolve(name) + "]";
 }
 
+//! \brief Reads the block of one tile visual if it is next. Returns 1 when read or absent, 0 at [/Seat], -1 when invalid.
 int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
 {
     // We check if it is the Seat end tag
     std::string str;
     std::streampos position = is.tellg();
-    OD_ASSERT_TRUE(is >> str);
+    if(!(is >> str))
+    {
+        OD_LOG_INF("WARNING: the tile visual blocks of seat id=" + Helper::toString(mId) + " end without [/Seat]");
+        return -1;
+    }
     if (str == "[/Seat]")
         return 0;
 
@@ -2854,18 +2905,25 @@ int Seat::readTilesVisualInitialStates(TileVisual tileVisual, std::istream& is)
 
     while(true)
     {
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+        {
+            OD_LOG_INF("WARNING: [" + Tile::tileVisualToString(tileVisual) + "] of seat id=" + Helper::toString(mId)
+                + " has no end");
+            return -1;
+        }
         if(resolveTileVisualTag(str) == "[/" + Tile::tileVisualToString(tileVisual) + "]")
             break;
 
         std::pair<int, int> tilecoords;
         tilecoords.first = Helper::toInt(str);
 
-        OD_ASSERT_TRUE(is >> str);
+        if(!(is >> str))
+            return -1;
         tilecoords.second = Helper::toInt(str);
 
         int seatId;
-        OD_ASSERT_TRUE(is >> seatId);
+        if(!(is >> seatId))
+            return -1;
 
         TileStateNotified& tileState = mTilesStateLoaded[tilecoords];
         tileState.mTileVisual = tileVisual;

@@ -195,10 +195,16 @@ void MissileOneHit::missileStopped()
     target->fireHitMissed(mShooterName);
 }
 
+//! \brief Reads a one hit missile from a saved line; a line that cannot be read gives no object.
 MissileOneHit* MissileOneHit::getMissileOneHitFromStream(GameMap* gameMap, std::istream& is)
 {
     MissileOneHit* obj = new MissileOneHit(gameMap);
-    obj->importFromStream(is);
+    if(!obj->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid one hit missile record");
+        delete obj;
+        return nullptr;
+    }
     return obj;
 }
 

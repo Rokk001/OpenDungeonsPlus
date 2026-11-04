@@ -1473,9 +1473,12 @@ void Room::announceKeeperWealth(Tile* tile)
     }
 }
 
+//! \brief Reads the room from the saved lines and remembers if that failed, so that the caller can refuse the room.
 bool Room::importRoomFromStream(Room& room, std::istream& is)
 {
-    return room.importFromStream(is);
+    const bool imported = room.importFromStream(is);
+    room.setImportFailed(!imported);
+    return imported;
 }
 
 void Room::creatureDropped(Creature& creature)

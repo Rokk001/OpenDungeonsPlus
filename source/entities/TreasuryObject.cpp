@@ -332,10 +332,16 @@ const char* TreasuryObject::getMeshNameForGold(double gold)
     return "GoldstackLv4";
 }
 
+//! \brief Reads a treasury object from a saved line; a line that cannot be read gives no object.
 TreasuryObject* TreasuryObject::getTreasuryObjectFromStream(GameMap* gameMap, std::istream& is)
 {
     TreasuryObject* obj = new TreasuryObject(gameMap);
-    obj->importFromStream(is);
+    if(!obj->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid treasury object record");
+        delete obj;
+        return nullptr;
+    }
     return obj;
 }
 
