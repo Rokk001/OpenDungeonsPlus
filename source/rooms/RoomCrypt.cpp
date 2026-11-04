@@ -382,6 +382,10 @@ bool RoomCrypt::hasReservedDelivery(const Creature& body, const Tile* delivery)
 //! \brief Confirms delivery without an independent rot timer, or releases an interrupted delivery.
 void RoomCrypt::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
+    // The carried body was removed or picked up on the way: the carry has already let it go
+    if(carriedEntity == nullptr)
+        return;
+
     for(std::pair<Tile* const, Creature*>& p : mRottingCreatures)
     {
         if(p.second == carriedEntity)

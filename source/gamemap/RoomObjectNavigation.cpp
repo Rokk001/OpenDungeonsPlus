@@ -180,26 +180,74 @@ bool interactionPositionClear(Creature& creature, const Ogre::Vector2& point,
     return true;
 }
 
-bool terrainClear(Creature& creature, const Ogre::Vector2& from, const Ogre::Vector2& to)
+//! Answer of PassableTiles for a tile that was not asked yet, for a tile the creature cannot walk on and for one it can
+const signed char TILE_NOT_ASKED = -1;
+const signed char TILE_BLOCKED = 0;
+const signed char TILE_PASSABLE = 1;
+
+//! \brief Remembers for one route search which tiles a creature can walk on. A search tests thousands of short steps
+//! and every step samples its tiles, so asking the creature each time made a search across a furnished room take
+//! seconds. Neither the tiles nor the creature change during one search, so every tile is asked once and the
+//! answers are the same as before.
+class PassableTiles
 {
-    GameMap& map = *creature.getGameMap();
-    const std::function<bool(int, int)> passable = [&](int x, int y)
+public:
+    //! \brief Prepares an unasked answer for every tile of the map of the creature.
+    explicit PassableTiles(Creature& creature) :
+        mCreature(creature),
+        mMap(*creature.getGameMap()),
+        mWidth(std::max(0, mMap.getMapSizeX())),
+        mHeight(std::max(0, mMap.getMapSizeY())),
+        mAnswers(static_cast<size_t>(mWidth) * static_cast<size_t>(mHeight), TILE_NOT_ASKED)
     {
-        Tile* tile = map.getTile(x, y);
-        return tile != nullptr && (creature.canGoThroughTile(tile) || tile == creature.getPositionTile());
-    };
+    }
+
+    //! \brief Tells whether the creature can walk on the tile at x, y or stands on it; false outside the map.
+    bool isPassable(int x, int y)
+    {
+        if(x < 0 || y < 0 || x >= mWidth || y >= mHeight)
+            return askTile(x, y);
+        signed char& answer = mAnswers[static_cast<size_t>(y) * static_cast<size_t>(mWidth) + static_cast<size_t>(x)];
+        if(answer == TILE_NOT_ASKED)
+            answer = askTile(x, y) ? TILE_PASSABLE : TILE_BLOCKED;
+        return answer == TILE_PASSABLE;
+    }
+
+private:
+    //! \brief Asks the map and the creature, as the search did for every sample before the answers were remembered.
+    bool askTile(int x, int y) const
+    {
+        Tile* tile = mMap.getTile(x, y);
+        return tile != nullptr && (mCreature.canGoThroughTile(tile) || tile == mCreature.getPositionTile());
+    }
+
+    //! The creature that walks
+    Creature& mCreature;
+    //! The map of the creature
+    GameMap& mMap;
+    //! Size of the map in tiles
+    const int mWidth;
+    const int mHeight;
+    //! One answer per tile, row by row
+    std::vector<signed char> mAnswers;
+};
+
+//! \brief Tells whether a creature can walk the straight line from one point to the other on the terrain: every
+//! sampled tile and, where the line crosses a tile corner, both side tiles must be passable.
+bool terrainClear(PassableTiles& passable, const Ogre::Vector2& from, const Ogre::Vector2& to)
+{
     int previousX = Helper::round(from.x), previousY = Helper::round(from.y);
-    if(!passable(previousX, previousY))
+    if(!passable.isPassable(previousX, previousY))
         return false;
     const int steps = std::max(1, int(std::ceil(from.distance(to) * TERRAIN_SAMPLES_PER_TILE)));
     for(int i = 1; i <= steps; ++i)
     {
         const Ogre::Vector2 point = from + (to - from) * (float(i) / steps);
         const int x = Helper::round(point.x), y = Helper::round(point.y);
-        if(!passable(x, y))
+        if(!passable.isPassable(x, y))
             return false;
         if(x != previousX && y != previousY &&
-            (!passable(x, previousY) || !passable(previousX, y)))
+            (!passable.isPassable(x, previousY) || !passable.isPassable(previousX, y)))
             return false;
         previousX = x;
         previousY = y;
@@ -219,7 +267,8 @@ const unsigned MIN_CORRIDOR_TURNS = 2;
 //! Replaces a tile-by-tile staircase path through a diagonal corridor by a short chain of straight legs
 //! (greedy, over tile centres and the midpoints between them) that stays on passable terrain and clear of
 //! furniture. Returns true and rewrites path only if the result is shorter than the original.
-bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstacle>& obstacles,
+//! \param passable The tiles the creature can walk on, remembered for the whole search
+bool smoothCorridor(Creature& creature, PassableTiles& passable, const std::vector<RoomObjectPath::Obstacle>& obstacles,
     std::vector<Ogre::Vector2>& path)
 {
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
@@ -246,7 +295,7 @@ bool smoothCorridor(Creature& creature, const std::vector<RoomObjectPath::Obstac
         return false;
     const std::function<bool(const Ogre::Vector2&, const Ogre::Vector2&)> clear = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
     {
-        return terrainClear(creature, from, to) &&
+        return terrainClear(passable, from, to) &&
             RoomObjectPath::clearSegment(obstacles, from, to, from == start);
     };
     std::vector<Ogre::Vector2> result;
@@ -645,8 +694,10 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
             nearby = true;
         previous = point;
     }
+    // The terrain answers of all the searches below
+    PassableTiles passable(creature);
     if(!nearby)
-        return smoothCorridor(creature, obstacles, path);
+        return smoothCorridor(creature, passable, obstacles, path);
 
     obstacles = bodyObstacles(creature, interaction);
     // A route search tests every grid point and every step against all obstacles, and there are hundreds of them on
@@ -666,7 +717,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         return true;
     }
     const std::function<bool(const Ogre::Vector2&, const Ogre::Vector2&)> terrain = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
-    { return terrainClear(creature, from, to); };
+    { return terrainClear(passable, from, to); };
     std::vector<Ogre::Vector2> result;
     // Coarse tile centers bound the search; they are not mandatory stops inside
     // a furnished room. Refine once to the actual destination through its gaps.
@@ -770,7 +821,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         path.clear();
         return true;
     }
-    smoothCorridor(creature, obstacles, result);
+    smoothCorridor(creature, passable, obstacles, result);
     path.swap(result);
     return true;
 }
@@ -786,6 +837,8 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
         return false;
     const std::vector<RoomObjectPath::Obstacle> furniture = collect(map, 0.0f);
     const std::vector<RoomObjectPath::Obstacle> body = bodyObstacles(creature);
+    // The terrain answers of all the tests and searches below
+    PassableTiles passable(creature);
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
     const int foodX = Helper::round(food.x), foodY = Helper::round(food.y);
     std::vector<Ogre::Vector2> candidates;
@@ -831,7 +884,7 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
         {
             const Ogre::Vector2 staging = point - direction * approach;
             Tile* tile = map.getTile(Helper::round(staging.x), Helper::round(staging.y));
-            if(!creature.canGoThroughTile(tile) || !terrainClear(creature, staging, point) ||
+            if(!creature.canGoThroughTile(tile) || !terrainClear(passable, staging, point) ||
                 !RoomObjectPath::clearSegment(body, staging, point))
                 continue;
             stagingPoints.push_back(staging);
@@ -843,7 +896,7 @@ bool RoomObjectNavigation::foodApproach(Creature& creature, const Ogre::Vector2&
     // their shared movement graph once instead of retrying it for every offset.
     size_t chosen = 0;
     const std::function<bool(const Ogre::Vector2&, const Ogre::Vector2&)> terrain = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
-    { return terrainClear(creature, from, to); };
+    { return terrainClear(passable, from, to); };
     if(!RoomObjectPath::routeToAnyAligned(start, stagingPoints, body, 0, 0,
         map.getMapSizeX() - 1, map.getMapSizeY() - 1, terrain, path, chosen))
     {
@@ -873,6 +926,8 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
     if(room == nullptr)
         return false;
     const std::vector<RoomObjectPath::Obstacle> body = bodyObstacles(creature, interactionObject(creature, wanted));
+    // The terrain answers of the staging tests below
+    PassableTiles passable(creature);
     const Ogre::Vector2 facing = objectPosition + facingOffset;
     Ogre::Vector2 away = wanted - facing;
     if(away.squaredLength() < 0.000001f)
@@ -918,7 +973,7 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
         {
             const Ogre::Vector2 staging = point + away * distance;
             Tile* stagingTile = map.getTile(Helper::round(staging.x), Helper::round(staging.y));
-            if(!creature.canGoThroughTile(stagingTile) || !terrainClear(creature, staging, point) ||
+            if(!creature.canGoThroughTile(stagingTile) || !terrainClear(passable, staging, point) ||
                 !RoomObjectPath::clearSegment(body, staging, point))
                 continue;
             const std::list<Tile*> tiles = map.path(&creature, stagingTile);

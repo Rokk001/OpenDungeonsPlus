@@ -1100,6 +1100,10 @@ Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
 //! \brief Applies delivered gifts, stores specials, and leaves gold to the treasury.
 void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
+    // The carried entity was removed, died or was picked up on the way: the carry has already let it go
+    if(carriedEntity == nullptr || carrier == nullptr)
+        return;
+
     // A gold delivery is deposited through the covering room (the treasury ring), the same
     // way a treasury room handles it: the TreasuryObject handles itself
     if(carriedEntity->getObjectType() == GameEntityType::treasuryObject)
