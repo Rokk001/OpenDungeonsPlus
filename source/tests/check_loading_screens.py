@@ -107,6 +107,19 @@ def main():
     assert ring_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", ring_png, 16) == (256, 256), "ring texture missing or wrong size"
     track_png = (root / "materials/textures/loading/loading_ring_empty.png").read_bytes()
     assert track_png[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack_from(">II", track_png, 16) == (256, 256), "empty ring texture missing or wrong size"
+    # D-4 variant 1: thick thorned iron ring, gap-free ember fill, bottom centre with the text directly above.
+    generator = (root / "tools/make_loading_ring.py").read_text(encoding="utf-8")
+    band = (float(re.search(r"BAND_INNER = ([0-9.]+)", generator).group(1)), float(re.search(r"BAND_OUTER = ([0-9.]+)", generator).group(1)))
+    assert band[1] - band[0] >= 24.0, "the iron band must be thick (at least 24 of 256 px)"
+    assert "ARC_DEGREES" not in generator and "angle <= " not in generator and "heat" not in generator, "the ember must not depend on the angle: no gap, no colour ramp"
+    assert "def shade(x, y, ember)" in generator and "loading_ring_empty.png" in generator, "one generator must write fill and empty track"
+    assert "range(8)" in generator, "the ring needs eight thorns"
+    ring_center = float(re.search(r"LOADING_RING_CENTER = ([0-9.]+)f", source).group(1))
+    ring_radius = float(re.search(r"LOADING_RING_RADIUS = ([0-9.]+)f", source).group(1))
+    text_top = float(re.search(r"LOADING_TEXT_TOP = ([0-9.]+)f", source).group(1))
+    assert ring_center >= 0.8 and ring_center + ring_radius <= 1.0, "the ring must sit at the bottom centre and stay on screen"
+    assert text_top + height <= ring_center - ring_radius + 0.02 and ring_center - ring_radius - (text_top + height) <= 0.04, "the text must sit directly above the ring"
+    assert "setPosition(0.5f, LOADING_TEXT_TOP)" in source and "const float halfWidth" in source and "centerY = 1.0f - 2.0f * LOADING_RING_CENTER" in source, "ring and text must be centred horizontally with shared constants on every path"
     for token in ('"StartupLoadingVertex"', '"StartupLoadingFragment"', "vertex->setSource(", "fragment->setSource(", 'setNamedConstant("picture", 0)'):
         assert token in constructor, f"missing standalone startup shader setup: {token}"
     present = source.split("void LoadingScreen::presentStartup(float progress)", 1)[1].split("void LoadingScreen::resourceGroupScriptingStarted", 1)[0]
