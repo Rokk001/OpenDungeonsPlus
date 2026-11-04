@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
     <Window type="OD/FrameWindow" name="WorkersWindow">
-        <Property name="Area" value="{{0.5,-420},{0.5,-315},{0.5,420},{0.5,315}}" />
+        <Property name="Area" value="{{0.25,-166.4},{0.25,-108.8},{0.75,166.4},{0.75,108.8}}" />
         <Property name="Text" value="Workers" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />
         <Property name="Visible" value="False" />
         <Window type="OD/StaticText" name="FreePanel">
-            <Property name="Area" value="{{0.02,0},{0.02,0},{0.258,0},{0.175,0}}" />
+            <Property name="Area" value="{{0.012,0},{0.02,0},{0.286,0},{0.175,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticImage" name="FreePortrait">
-            <Property name="Area" value="{{0.03,0},{0.03,0},{0.09,0},{0.165,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.03,0},{0.074,0},{0.165,0}}" />
             <Property name="Image" value="OpenDungeonsIcons/WorkerFreePortrait" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -23,7 +23,7 @@
             <Property name="AspectRatio" value="1" />
         </Window>
         <Window type="OD/StaticText" name="FreeLabel">
-            <Property name="Area" value="{{0.095,0},{0.03,0},{0.252,0},{0.09,0}}" />
+            <Property name="Area" value="{{0.078,0},{0.03,0},{0.282,0},{0.09,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -34,7 +34,7 @@
             <Property name="Text" value="Free workers" />
         </Window>
         <Window type="OD/StaticText" name="FreeCount">
-            <Property name="Area" value="{{0.095,0},{0.09,0},{0.252,0},{0.165,0}}" />
+            <Property name="Area" value="{{0.078,0},{0.09,0},{0.282,0},{0.165,0}}" />
             <Property name="Font" value="MedievalSharp-13" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -43,9 +43,9 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/Button" name="ModeAutomatic">
-            <Property name="Area" value="{{0.265,0},{0.03,0},{0.455,0},{0.17,0}}" />
+            <Property name="Area" value="{{0.29,0},{0.03,0},{0.472,0},{0.17,0}}" />
             <Window type="OD/StaticImage" name="Hand">
-                <Property name="Area" value="{{0.03,0},{0.08,0},{0.2,0},{0.92,0}}" />
+                <Property name="Area" value="{{0.02,0},{0.08,0},{0.17,0},{0.92,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerHandInactive" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -54,7 +54,7 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Label">
-                <Property name="Area" value="{{0.21,0},{0.05,0},{0.99,0},{0.95,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.05,0},{0.995,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -65,9 +65,9 @@
             </Window>
         </Window>
         <Window type="OD/Button" name="ModePriority">
-            <Property name="Area" value="{{0.46,0},{0.03,0},{0.65,0},{0.17,0}}" />
+            <Property name="Area" value="{{0.476,0},{0.03,0},{0.668,0},{0.17,0}}" />
             <Window type="OD/StaticImage" name="Hand">
-                <Property name="Area" value="{{0.03,0},{0.08,0},{0.2,0},{0.92,0}}" />
+                <Property name="Area" value="{{0.02,0},{0.08,0},{0.17,0},{0.92,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerHandInactive" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -76,7 +76,7 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Label">
-                <Property name="Area" value="{{0.21,0},{0.05,0},{0.99,0},{0.95,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.05,0},{0.995,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -87,14 +87,14 @@
             </Window>
         </Window>
         <Window type="OD/StaticText" name="PriorityPanel">
-            <Property name="Area" value="{{0.655,0},{0.02,0},{0.98,0},{0.175,0}}" />
+            <Property name="Area" value="{{0.673,0},{0.02,0},{0.99,0},{0.175,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticText" name="PriorityLabel">
-            <Property name="Area" value="{{0.665,0},{0.025,0},{0.84,0},{0.08,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.025,0},{0.885,0},{0.08,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -105,7 +105,7 @@
             <Property name="Text" value="Priority order" />
         </Window>
         <Window type="OD/InvisibleButton" name="PriorityUp">
-            <Property name="Area" value="{{0.665,0},{0.085,0},{0.74,0},{0.17,0}}" />
+            <Property name="Area" value="{{0.68,0},{0.085,0},{0.752,0},{0.17,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkerArrowUpNormal" />
             <Property name="HoverImage" value="OpenDungeonsIcons/WorkerArrowUpHover" />
             <Property name="PushedImage" value="OpenDungeonsIcons/WorkerArrowUpPressed" />
@@ -113,7 +113,7 @@
             <Property name="AspectRatio" value="1" />
         </Window>
         <Window type="OD/InvisibleButton" name="PriorityDown">
-            <Property name="Area" value="{{0.75,0},{0.085,0},{0.825,0},{0.17,0}}" />
+            <Property name="Area" value="{{0.758,0},{0.085,0},{0.83,0},{0.17,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkerArrowDownNormal" />
             <Property name="HoverImage" value="OpenDungeonsIcons/WorkerArrowDownHover" />
             <Property name="PushedImage" value="OpenDungeonsIcons/WorkerArrowDownPressed" />
@@ -121,7 +121,7 @@
             <Property name="AspectRatio" value="1" />
         </Window>
         <Window type="OD/StaticImage" name="DragHand">
-            <Property name="Area" value="{{0.84,0},{0.05,0},{0.895,0},{0.15,0}}" />
+            <Property name="Area" value="{{0.842,0},{0.05,0},{0.89,0},{0.15,0}}" />
             <Property name="Image" value="OpenDungeonsIcons/WorkerHandDrag" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -130,7 +130,7 @@
             <Property name="AspectRatio" value="1" />
         </Window>
         <Window type="OD/StaticText" name="DragHint">
-            <Property name="Area" value="{{0.895,0},{0.04,0},{0.975,0},{0.16,0}}" />
+            <Property name="Area" value="{{0.892,0},{0.075,0},{0.988,0},{0.165,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="WordWrapCentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -140,9 +140,7 @@
             <Property name="Text" value="Drag to reorder" />
         </Window>
         <Window type="OD/InvisibleButton" name="Rank0">
-            <Property name="Area" value="{{0.0200,0},{0.2296,0},{0.1900,0},{0.5900,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.676" />
+            <Property name="Area" value="{{0.0146,0},{0.1848,0},{0.2082,0},{0.649,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.4275,0},{-0.1127,0},{1.4275,0},{1.1422,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerTabletNormal" />
@@ -152,7 +150,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Numeral">
-                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.13,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.15,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -162,7 +160,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Figure">
-                <Property name="Area" value="{{-0.05,0},{0.10,0},{1.05,0},{0.68,0}}" />
+                <Property name="Area" value="{{0.035,0},{0.1,0},{0.965,0},{0.7392,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerJobDig" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -172,8 +170,8 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.54,0},{1.0,0},{0.85,0}}" />
-                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="Area" value="{{0,0},{0.42,0},{1,0},{0.83,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
                 <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
@@ -181,12 +179,12 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Minus">
-                <Property name="Area" value="{{0.06,0},{0.855,0},{0.3,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.06,0},{0.845,0},{0.3,0},{0.975,0}}" />
                 <Property name="Text" value="-" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
             <Window type="OD/StaticText" name="Count">
-                <Property name="Area" value="{{0.31,0},{0.855,0},{0.69,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.31,0},{0.845,0},{0.69,0},{0.975,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -195,13 +193,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Plus">
-                <Property name="Area" value="{{0.7,0},{0.855,0},{0.94,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.7,0},{0.845,0},{0.94,0},{0.975,0}}" />
                 <Property name="Text" value="+" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working0">
-            <Property name="Area" value="{{0.0050,0},{0.5950,0},{0.2050,0},{0.6500,0}}" />
+            <Property name="Area" value="{{-0.0044,0},{0.653,0},{0.2271,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -210,9 +208,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/InvisibleButton" name="Rank1">
-            <Property name="Area" value="{{0.2170,0},{0.2614,0},{0.3720,0},{0.5900,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.676" />
+            <Property name="Area" value="{{0.2306,0},{0.2352,0},{0.3922,0},{0.649,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.4275,0},{-0.1127,0},{1.4275,0},{1.1422,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerTabletNormal" />
@@ -222,7 +218,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Numeral">
-                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.13,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.15,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -232,7 +228,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Figure">
-                <Property name="Area" value="{{-0.05,0},{0.10,0},{1.05,0},{0.68,0}}" />
+                <Property name="Area" value="{{0.035,0},{0.1,0},{0.965,0},{0.6984,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerJobDig" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -242,8 +238,8 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.54,0},{1.0,0},{0.85,0}}" />
-                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="Area" value="{{0,0},{0.42,0},{1,0},{0.83,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
                 <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
@@ -251,12 +247,12 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Minus">
-                <Property name="Area" value="{{0.06,0},{0.855,0},{0.3,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.06,0},{0.845,0},{0.3,0},{0.975,0}}" />
                 <Property name="Text" value="-" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
             <Window type="OD/StaticText" name="Count">
-                <Property name="Area" value="{{0.31,0},{0.855,0},{0.69,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.31,0},{0.845,0},{0.69,0},{0.975,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -265,13 +261,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Plus">
-                <Property name="Area" value="{{0.7,0},{0.855,0},{0.94,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.7,0},{0.845,0},{0.94,0},{0.975,0}}" />
                 <Property name="Text" value="+" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working1">
-            <Property name="Area" value="{{0.1945,0},{0.5950,0},{0.3945,0},{0.6500,0}}" />
+            <Property name="Area" value="{{0.2116,0},{0.653,0},{0.4111,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -280,9 +276,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/InvisibleButton" name="Rank2">
-            <Property name="Area" value="{{0.3990,0},{0.2932,0},{0.5390,0},{0.5900,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.676" />
+            <Property name="Area" value="{{0.4146,0},{0.2736,0},{0.5558,0},{0.649,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.4275,0},{-0.1127,0},{1.4275,0},{1.1422,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerTabletNormal" />
@@ -292,7 +286,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Numeral">
-                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.13,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.15,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -302,7 +296,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Figure">
-                <Property name="Area" value="{{-0.05,0},{0.10,0},{1.05,0},{0.68,0}}" />
+                <Property name="Area" value="{{0.035,0},{0.1,0},{0.965,0},{0.6764,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerJobDig" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -312,8 +306,8 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.54,0},{1.0,0},{0.85,0}}" />
-                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="Area" value="{{0,0},{0.42,0},{1,0},{0.83,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
                 <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
@@ -321,12 +315,12 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Minus">
-                <Property name="Area" value="{{0.06,0},{0.855,0},{0.3,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.06,0},{0.845,0},{0.3,0},{0.975,0}}" />
                 <Property name="Text" value="-" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
             <Window type="OD/StaticText" name="Count">
-                <Property name="Area" value="{{0.31,0},{0.855,0},{0.69,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.31,0},{0.845,0},{0.69,0},{0.975,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -335,13 +329,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Plus">
-                <Property name="Area" value="{{0.7,0},{0.855,0},{0.94,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.7,0},{0.845,0},{0.94,0},{0.975,0}}" />
                 <Property name="Text" value="+" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working2">
-            <Property name="Area" value="{{0.3690,0},{0.5950,0},{0.5690,0},{0.6500,0}}" />
+            <Property name="Area" value="{{0.3956,0},{0.653,0},{0.5747,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -350,9 +344,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/InvisibleButton" name="Rank3">
-            <Property name="Area" value="{{0.5660,0},{0.3144,0},{0.6960,0},{0.5900,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.676" />
+            <Property name="Area" value="{{0.5782,0},{0.3012,0},{0.7063,0},{0.649,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.4275,0},{-0.1127,0},{1.4275,0},{1.1422,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerTabletNormal" />
@@ -362,7 +354,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Numeral">
-                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.13,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.15,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -372,7 +364,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Figure">
-                <Property name="Area" value="{{-0.05,0},{0.10,0},{1.05,0},{0.68,0}}" />
+                <Property name="Area" value="{{0.035,0},{0.1,0},{0.965,0},{0.6644,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerJobDig" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -382,8 +374,8 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.54,0},{1.0,0},{0.85,0}}" />
-                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="Area" value="{{0,0},{0.42,0},{1,0},{0.83,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
                 <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
@@ -391,12 +383,12 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Minus">
-                <Property name="Area" value="{{0.06,0},{0.855,0},{0.3,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.06,0},{0.845,0},{0.3,0},{0.975,0}}" />
                 <Property name="Text" value="-" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
             <Window type="OD/StaticText" name="Count">
-                <Property name="Area" value="{{0.31,0},{0.855,0},{0.69,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.31,0},{0.845,0},{0.69,0},{0.975,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -405,13 +397,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Plus">
-                <Property name="Area" value="{{0.7,0},{0.855,0},{0.94,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.7,0},{0.845,0},{0.94,0},{0.975,0}}" />
                 <Property name="Text" value="+" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working3">
-            <Property name="Area" value="{{0.5310,0},{0.5950,0},{0.7310,0},{0.6500,0}}" />
+            <Property name="Area" value="{{0.5592,0},{0.653,0},{0.7252,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -420,9 +412,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/InvisibleButton" name="Rank4">
-            <Property name="Area" value="{{0.7230,0},{0.3356,0},{0.8430,0},{0.5900,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.676" />
+            <Property name="Area" value="{{0.7287,0},{0.3252,0},{0.8488,0},{0.649,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.4275,0},{-0.1127,0},{1.4275,0},{1.1422,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerTabletNormal" />
@@ -432,7 +422,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Numeral">
-                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.13,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.15,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -442,7 +432,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Figure">
-                <Property name="Area" value="{{-0.05,0},{0.10,0},{1.05,0},{0.68,0}}" />
+                <Property name="Area" value="{{0.035,0},{0.1,0},{0.965,0},{0.6683,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerJobDig" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -452,8 +442,8 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.54,0},{1.0,0},{0.85,0}}" />
-                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="Area" value="{{0,0},{0.42,0},{1,0},{0.83,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
                 <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
@@ -461,12 +451,12 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Minus">
-                <Property name="Area" value="{{0.06,0},{0.855,0},{0.3,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.06,0},{0.845,0},{0.3,0},{0.975,0}}" />
                 <Property name="Text" value="-" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
             <Window type="OD/StaticText" name="Count">
-                <Property name="Area" value="{{0.31,0},{0.855,0},{0.69,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.31,0},{0.845,0},{0.69,0},{0.975,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -475,13 +465,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Plus">
-                <Property name="Area" value="{{0.7,0},{0.855,0},{0.94,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.7,0},{0.845,0},{0.94,0},{0.975,0}}" />
                 <Property name="Text" value="+" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working4">
-            <Property name="Area" value="{{0.6830,0},{0.5950,0},{0.8830,0},{0.6500,0}}" />
+            <Property name="Area" value="{{0.7097,0},{0.653,0},{0.8677,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -490,9 +480,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/InvisibleButton" name="Rank5">
-            <Property name="Area" value="{{0.8700,0},{0.3568,0},{0.9800,0},{0.5900,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.676" />
+            <Property name="Area" value="{{0.8712,0},{0.3444,0},{0.9854,0},{0.649,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.4275,0},{-0.1127,0},{1.4275,0},{1.1422,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerTabletNormal" />
@@ -502,7 +490,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Numeral">
-                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.13,0}}" />
+                <Property name="Area" value="{{0.17,0},{0.03,0},{0.84,0},{0.15,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -512,7 +500,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Figure">
-                <Property name="Area" value="{{-0.05,0},{0.10,0},{1.05,0},{0.68,0}}" />
+                <Property name="Area" value="{{0.035,0},{0.1,0},{0.965,0},{0.6748,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerJobDig" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -522,8 +510,8 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.54,0},{1.0,0},{0.85,0}}" />
-                <Property name="Font" value="MedievalSharp-8" />
+                <Property name="Area" value="{{0,0},{0.42,0},{1,0},{0.83,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
                 <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
@@ -531,12 +519,12 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Minus">
-                <Property name="Area" value="{{0.06,0},{0.855,0},{0.3,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.06,0},{0.845,0},{0.3,0},{0.975,0}}" />
                 <Property name="Text" value="-" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
             <Window type="OD/StaticText" name="Count">
-                <Property name="Area" value="{{0.31,0},{0.855,0},{0.69,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.31,0},{0.845,0},{0.69,0},{0.975,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -545,13 +533,13 @@
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
             <Window type="OD/Button" name="Plus">
-                <Property name="Area" value="{{0.7,0},{0.855,0},{0.94,0},{0.97,0}}" />
+                <Property name="Area" value="{{0.7,0},{0.845,0},{0.94,0},{0.975,0}}" />
                 <Property name="Text" value="+" />
                 <Property name="Font" value="MedievalSharp-10" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working5">
-            <Property name="Area" value="{{0.8250,0},{0.5950,0},{1.0250,0},{0.6500,0}}" />
+            <Property name="Area" value="{{0.8522,0},{0.653,0},{1.0044,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -560,7 +548,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/StaticText" name="CarryTitle">
-            <Property name="Area" value="{{0.3,0},{0.665,0},{0.7,0},{0.725,0}}" />
+            <Property name="Area" value="{{0.3,0},{0.712,0},{0.7,0},{0.77,0}}" />
             <Property name="Font" value="MedievalSharp-12" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -569,9 +557,7 @@
             <Property name="Text" value="Carry order" />
         </Window>
         <Window type="OD/InvisibleButton" name="Carry0">
-            <Property name="Area" value="{{0.0200,0},{0.7450,0},{0.1150,0},{0.9690,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.568" />
+            <Property name="Area" value="{{0.0073,0},{0.778,0},{0.1187,0},{0.9891,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameNormal" />
@@ -581,7 +567,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Number">
-                <Property name="Area" value="{{0.1,0},{0.0,0},{0.9,0},{0.11,0}}" />
+                <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.14,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -591,7 +577,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Picture">
-                <Property name="Area" value="{{-0.02,0},{0.09,0},{1.02,0},{0.55,0}}" />
+                <Property name="Area" value="{{0.0294,0},{0.04,0},{0.9706,0},{0.8582,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -601,19 +587,17 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.53,0},{1.0,0},{0.99,0}}" />
+                <Property name="Area" value="{{0,0},{0.36,0},{1,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
         </Window>
         <Window type="OD/InvisibleButton" name="Carry1">
-            <Property name="Area" value="{{0.1200,0},{0.7450,0},{0.2150,0},{0.9690,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.568" />
+            <Property name="Area" value="{{0.1208,0},{0.778,0},{0.2322,0},{0.9891,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameNormal" />
@@ -623,7 +607,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Number">
-                <Property name="Area" value="{{0.1,0},{0.0,0},{0.9,0},{0.11,0}}" />
+                <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.14,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -633,7 +617,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Picture">
-                <Property name="Area" value="{{-0.02,0},{0.09,0},{1.02,0},{0.55,0}}" />
+                <Property name="Area" value="{{0.0294,0},{0.04,0},{0.9706,0},{0.8582,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -643,19 +627,17 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.53,0},{1.0,0},{0.99,0}}" />
+                <Property name="Area" value="{{0,0},{0.36,0},{1,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
         </Window>
         <Window type="OD/InvisibleButton" name="Carry2">
-            <Property name="Area" value="{{0.2200,0},{0.7450,0},{0.3150,0},{0.9690,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.568" />
+            <Property name="Area" value="{{0.2344,0},{0.778,0},{0.3458,0},{0.9891,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameNormal" />
@@ -665,7 +647,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Number">
-                <Property name="Area" value="{{0.1,0},{0.0,0},{0.9,0},{0.11,0}}" />
+                <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.14,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -675,7 +657,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Picture">
-                <Property name="Area" value="{{-0.02,0},{0.09,0},{1.02,0},{0.55,0}}" />
+                <Property name="Area" value="{{0.0294,0},{0.04,0},{0.9706,0},{0.8582,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -685,19 +667,17 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.53,0},{1.0,0},{0.99,0}}" />
+                <Property name="Area" value="{{0,0},{0.36,0},{1,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
         </Window>
         <Window type="OD/InvisibleButton" name="Carry3">
-            <Property name="Area" value="{{0.3200,0},{0.7450,0},{0.4150,0},{0.9690,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.568" />
+            <Property name="Area" value="{{0.348,0},{0.778,0},{0.4593,0},{0.9891,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameNormal" />
@@ -707,7 +687,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Number">
-                <Property name="Area" value="{{0.1,0},{0.0,0},{0.9,0},{0.11,0}}" />
+                <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.14,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -717,7 +697,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Picture">
-                <Property name="Area" value="{{-0.02,0},{0.09,0},{1.02,0},{0.55,0}}" />
+                <Property name="Area" value="{{0.0294,0},{0.04,0},{0.9706,0},{0.8582,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -727,19 +707,17 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.53,0},{1.0,0},{0.99,0}}" />
+                <Property name="Area" value="{{0,0},{0.36,0},{1,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
         </Window>
         <Window type="OD/InvisibleButton" name="Carry4">
-            <Property name="Area" value="{{0.4200,0},{0.7450,0},{0.5150,0},{0.9690,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.568" />
+            <Property name="Area" value="{{0.4615,0},{0.778,0},{0.5729,0},{0.9891,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameNormal" />
@@ -749,7 +727,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Number">
-                <Property name="Area" value="{{0.1,0},{0.0,0},{0.9,0},{0.11,0}}" />
+                <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.14,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -759,7 +737,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Picture">
-                <Property name="Area" value="{{-0.02,0},{0.09,0},{1.02,0},{0.55,0}}" />
+                <Property name="Area" value="{{0.0294,0},{0.04,0},{0.9706,0},{0.8582,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -769,19 +747,17 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.53,0},{1.0,0},{0.99,0}}" />
+                <Property name="Area" value="{{0,0},{0.36,0},{1,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
         </Window>
         <Window type="OD/InvisibleButton" name="Carry5">
-            <Property name="Area" value="{{0.5200,0},{0.7450,0},{0.6150,0},{0.9690,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.568" />
+            <Property name="Area" value="{{0.5751,0},{0.778,0},{0.6864,0},{0.9891,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameNormal" />
@@ -791,7 +767,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Number">
-                <Property name="Area" value="{{0.1,0},{0.0,0},{0.9,0},{0.11,0}}" />
+                <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.14,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -801,7 +777,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Picture">
-                <Property name="Area" value="{{-0.02,0},{0.09,0},{1.02,0},{0.55,0}}" />
+                <Property name="Area" value="{{0.0294,0},{0.04,0},{0.9706,0},{0.8582,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -811,19 +787,17 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.53,0},{1.0,0},{0.99,0}}" />
+                <Property name="Area" value="{{0,0},{0.36,0},{1,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
         </Window>
         <Window type="OD/InvisibleButton" name="Carry6">
-            <Property name="Area" value="{{0.6200,0},{0.7450,0},{0.7150,0},{0.9690,0}}" />
-            <Property name="AspectMode" value="Shrink" />
-            <Property name="AspectRatio" value="0.568" />
+            <Property name="Area" value="{{0.6886,0},{0.778,0},{0.8,0},{0.9891,0}}" />
             <Window type="OD/StaticImage" name="Frame">
                 <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameNormal" />
@@ -833,7 +807,7 @@
                 <Property name="ClippedByParent" value="False" />
             </Window>
             <Window type="OD/StaticText" name="Number">
-                <Property name="Area" value="{{0.1,0},{0.0,0},{0.9,0},{0.11,0}}" />
+                <Property name="Area" value="{{0.1,0},{0,0},{0.9,0},{0.14,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="HorzFormatting" value="CentreAligned" />
                 <Property name="VertFormatting" value="CentreAligned" />
@@ -843,7 +817,7 @@
                 <Property name="TextColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Picture">
-                <Property name="Area" value="{{-0.02,0},{0.09,0},{1.02,0},{0.55,0}}" />
+                <Property name="Area" value="{{0.0294,0},{0.04,0},{0.9706,0},{0.8582,0}}" />
                 <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -853,17 +827,17 @@
                 <Property name="AspectRatio" value="1" />
             </Window>
             <Window type="OD/StaticText" name="Name">
-                <Property name="Area" value="{{0.0,0},{0.53,0},{1.0,0},{0.99,0}}" />
+                <Property name="Area" value="{{0,0},{0.36,0},{1,0},{0.95,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-                <Property name="VertFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="BottomAligned" />
                 <Property name="MousePassThroughEnabled" value="True" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
             </Window>
         </Window>
         <Window type="OD/InvisibleButton" name="CarryUp">
-            <Property name="Area" value="{{0.73,0},{0.76,0},{0.8,0},{0.86,0}}" />
+            <Property name="Area" value="{{0.8044,0},{0.784,0},{0.832,0},{0.886,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkerArrowUpNormal" />
             <Property name="HoverImage" value="OpenDungeonsIcons/WorkerArrowUpHover" />
             <Property name="PushedImage" value="OpenDungeonsIcons/WorkerArrowUpPressed" />
@@ -871,7 +845,7 @@
             <Property name="AspectRatio" value="1" />
         </Window>
         <Window type="OD/InvisibleButton" name="CarryDown">
-            <Property name="Area" value="{{0.73,0},{0.87,0},{0.8,0},{0.97,0}}" />
+            <Property name="Area" value="{{0.8044,0},{0.891,0},{0.832,0},{0.9871,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkerArrowDownNormal" />
             <Property name="HoverImage" value="OpenDungeonsIcons/WorkerArrowDownHover" />
             <Property name="PushedImage" value="OpenDungeonsIcons/WorkerArrowDownPressed" />
@@ -879,14 +853,14 @@
             <Property name="AspectRatio" value="1" />
         </Window>
         <Window type="OD/StaticText" name="GoldPanel">
-            <Property name="Area" value="{{0.81,0},{0.745,0},{0.98,0},{0.985,0}}" />
+            <Property name="Area" value="{{0.8357,0},{0.778,0},{0.9929,0},{0.9891,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
             <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticImage" name="GoldCoins">
-            <Property name="Area" value="{{0.86,0},{0.755,0},{0.93,0},{0.815,0}}" />
+            <Property name="Area" value="{{0.8924,0},{0.78,0},{0.9361,0},{0.821,0}}" />
             <Property name="Image" value="OpenDungeonsIcons/WorkerCarryGold" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
@@ -895,7 +869,7 @@
             <Property name="AspectRatio" value="1" />
         </Window>
         <Window type="OD/StaticText" name="GoldLabel">
-            <Property name="Area" value="{{0.815,0},{0.815,0},{0.975,0},{0.895,0}}" />
+            <Property name="Area" value="{{0.8379,0},{0.821,0},{0.9907,0},{0.903,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="WordWrapCentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -905,7 +879,7 @@
             <Property name="Text" value="Gold first (for digging)" />
         </Window>
         <Window type="OD/InvisibleButton" name="GoldCheck">
-            <Property name="Area" value="{{0.86,0},{0.9,0},{0.93,0},{0.98,0}}" />
+            <Property name="Area" value="{{0.8823,0},{0.9035,0},{0.9463,0},{0.9876,0}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkerCheckboxEmpty" />
             <Property name="HoverImage" value="OpenDungeonsIcons/WorkerCheckboxEmpty" />
             <Property name="PushedImage" value="OpenDungeonsIcons/WorkerCheckboxEmpty" />
