@@ -177,9 +177,9 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
  struct Near{static bool within(float a,double b){return std::abs(a-b)<1e-4;}};
  //! rief Expected mana segment stage: 0 = full ring, 7 = empty ring (8,7,6,5,3,2,1,0 segments left), same steps as the life ring.
  struct Stage{static unsigned of(double share){if(share<=0)return 7;if(share>=1.)return 0;for(unsigned s=1;s<6;++s)if(share>=1.-s/6.)return s;return 6;}};
- b.mMaxMana=40;for(double mana:{0.,2.,5.,20.,36.,40.,60.,-5.}){b.mMana=mana;status.updateProgress(0);
+ b.mMaxMana=40;for(double mana:{0.,2.,5.,21.,36.,40.,60.,-5.}){b.mMana=mana;status.updateProgress(0);
   const double share=mana<=0?0.:mana>=40?1.:mana/40;
-  check(share==0?!overlay.shown[4]:overlay.shown[4],"mana part is shown while there is mana");
+  check(overlay.shown[4],"the inner ring is shown for a creature with a mana pool, an empty pool shows the empty stage");
   check(overlay.material[4]=="CreatureOverlayManaStage"+std::to_string(Stage::of(share)),"the inner mana ring picks its segment stage from the mana");}
  b.mMaxMana=0;b.mMana=10;status.updateProgress(0);check(!overlay.shown[4],"no mana pool hides the inner ring");
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
