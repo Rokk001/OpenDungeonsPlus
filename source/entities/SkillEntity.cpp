@@ -64,10 +64,16 @@ void SkillEntity::notifyEntityCarryOff(const Ogre::Vector3& position)
     addEntityToPositionTile();
 }
 
+//! \brief Reads a research book from a saved line; a line that cannot be read gives no object.
 SkillEntity* SkillEntity::getSkillEntityFromStream(GameMap* gameMap, std::istream& is)
 {
     SkillEntity* obj = new SkillEntity(gameMap);
-    obj->importFromStream(is);
+    if(!obj->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid research book record");
+        delete obj;
+        return nullptr;
+    }
     return obj;
 }
 

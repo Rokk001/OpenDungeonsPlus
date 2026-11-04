@@ -470,6 +470,7 @@ bool RoomDormitory::importFromStream(std::istream& is)
     return true;
 }
 
+//! \brief Puts the saved beds back under their creatures; a bed whose creature or tile is gone is skipped.
 void RoomDormitory::restoreInitialEntityState()
 {
     for(BedCreatureLoad& bedLoad : mBedCreatureLoad)
@@ -481,7 +482,7 @@ void RoomDormitory::restoreInitialEntityState()
             continue;
         }
         Tile* tile = getGameMap()->getTile(bedLoad.getTileX(), bedLoad.getTileY());
-        if(creature == nullptr)
+        if(tile == nullptr)
         {
             OD_LOG_ERR("tile x=" + Helper::toString(bedLoad.getTileX())
                 + ", y=" + Helper::toString(bedLoad.getTileY()));

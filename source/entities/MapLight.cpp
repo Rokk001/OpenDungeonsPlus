@@ -272,10 +272,16 @@ std::string MapLight::getMapLightStreamFormat()
     return "posX\tposY\tposZ\tdiffuseR\tdiffuseG\tdiffuseB\tspecularR\tspecularG\tspecularB\tattenRange\tattenConst\tattenLin\tattenQuad";
 }
 
+//! \brief Reads a light from a saved line; a line that cannot be read gives no object.
 MapLight* MapLight::getMapLightFromStream(GameMap* gameMap, std::istream& is)
 {
     MapLight* mapLight = new MapLight(gameMap, true);
-    mapLight->importFromStream(is);
+    if(!mapLight->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid light record");
+        delete mapLight;
+        return nullptr;
+    }
     return mapLight;
 }
 

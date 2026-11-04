@@ -70,4 +70,20 @@ bool readBlockLines(std::istream& is, const std::string& endTag, std::vector<std
     }
     return false;
 }
+//! \brief Reads the lines of a block that has no opening tag: the first token is already read, the end tag is consumed.
+bool readUntaggedBlockLines(std::istream& is, const std::string& firstToken, const std::string& endTag,
+    std::vector<std::string>& lines)
+{
+    std::string line;
+    std::getline(is, line);
+    if(!line.empty() && line.back() == '\r') line.pop_back();
+    lines.push_back(firstToken + line);
+    while(std::getline(is, line))
+    {
+        if(!line.empty() && line.back() == '\r') line.pop_back();
+        if(line == endTag) return true;
+        lines.push_back(line);
+    }
+    return false;
+}
 }

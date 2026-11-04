@@ -197,6 +197,14 @@ public:
     virtual void exportToStream(std::ostream& os) const override;
     virtual bool importFromStream(std::istream& is) override;
 
+    //! \brief True if reading this building from a saved line failed; such a building must not be added to the map.
+    bool hasImportFailed() const
+    { return mImportFailed; }
+
+    //! \brief Remembers whether reading this building from a saved line failed.
+    void setImportFailed(bool failed)
+    { mImportFailed = failed; }
+
 protected:
     //! \brief Allows to export/import specific data for child classes. Note that every tile
     //! should be exported on 1 line (thus, no line ending should be added here). Moreover
@@ -231,6 +239,9 @@ protected:
     std::vector<Tile*> mCoveredTiles;
     std::vector<Tile*> mCoveredTilesDestroyed;
     std::map<Tile*, TileData*> mTileData;
+
+    //! \brief Set when reading the building from a saved line failed.
+    bool mImportFailed = false;
 };
 
 #endif // BUILDING_H_

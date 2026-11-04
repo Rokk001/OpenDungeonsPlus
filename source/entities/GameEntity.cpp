@@ -483,6 +483,7 @@ void GameEntity::exportToStream(std::ostream& os) const
     // they should be exported or not
 }
 
+//! \brief Reads seat, name, mesh name and position; an empty mesh name (two tabs in a row) stays empty.
 bool GameEntity::importFromStream(std::istream& is)
 {
     int seatId;
@@ -494,7 +495,16 @@ bool GameEntity::importFromStream(std::istream& is)
 
     if(!(is >> mName))
         return false;
-    if(!(is >> mMeshName))
+    // An entity without a mesh is saved with an empty field between two tabs. Reading it as a word would take the
+    // next number as the mesh name and move every following field by one place.
+    mMeshName.clear();
+    bool emptyMesh = false;
+    if(is.peek() == '\t')
+    {
+        is.get();
+        emptyMesh = (is.peek() == '\t');
+    }
+    if(!emptyMesh && !(is >> mMeshName))
         return false;
     if(!(is >> mPosition.x >> mPosition.y >> mPosition.z))
         return false;

@@ -169,10 +169,16 @@ bool MissileBoulder::wallHitNextDirection(const Ogre::Vector3& actDirection, Til
     return true;
 }
 
+//! \brief Reads a boulder missile from a saved line; a line that cannot be read gives no object.
 MissileBoulder* MissileBoulder::getMissileBoulderFromStream(GameMap* gameMap, std::istream& is)
 {
     MissileBoulder* obj = new MissileBoulder(gameMap);
-    obj->importFromStream(is);
+    if(!obj->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid boulder missile record");
+        delete obj;
+        return nullptr;
+    }
     return obj;
 }
 

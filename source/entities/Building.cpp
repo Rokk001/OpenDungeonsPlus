@@ -439,6 +439,7 @@ void Building::exportToStream(std::ostream& os) const
     }
 }
 
+//! \brief Reads name, seat and the tiles of the building; a seat that does not exist makes the line unreadable.
 bool Building::importFromStream(std::istream& is)
 {
     std::string line;
@@ -459,7 +460,9 @@ bool Building::importFromStream(std::istream& is)
     Seat* seat = getGameMap()->getSeatById(seatId);
     if(seat == nullptr)
     {
-        OD_LOG_ERR("seatId=" + Helper::toString(seatId));
+        // A building of a seat that does not exist cannot be built: its allied seats are read right below
+        OD_LOG_ERR("seatId=" + Helper::toString(seatId) + " of the building " + name + " does not exist");
+        return false;
     }
     setSeat(seat);
 

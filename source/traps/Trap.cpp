@@ -970,9 +970,12 @@ void Trap::fireTrapSound(Tile& tile, const std::string& soundFamily)
     }
 }
 
+//! \brief Reads the trap from the saved lines and remembers if that failed, so that the caller can refuse the trap.
 bool Trap::importTrapFromStream(Trap& trap, std::istream& is)
 {
-    return trap.importFromStream(is);
+    const bool imported = trap.importFromStream(is);
+    trap.setImportFailed(!imported);
+    return imported;
 }
 
 //! \brief Reads the trap type's configured health for each new tile.

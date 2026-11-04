@@ -76,6 +76,60 @@ void setLoadError(const std::string& message)
     lastLoadError = message;
     OD_LOG_ERR("Level load failed: " + message);
 }
+
+//! \brief Largest side of a map that a level or a saved game may declare.
+const int MAX_MAP_SIDE = 4096;
+
+//! \brief Reads a whole number out of a text; false if the text is empty or has anything else than the number.
+bool parseWholeNumber(const std::string& text, int& value)
+{
+    std::istringstream stream(text);
+    stream >> value;
+    if(stream.fail())
+        return false;
+
+    stream >> std::ws;
+    return stream.eof();
+}
+
+//! \brief Checks that a tile line has what Tile::loadFromLine reads: x and y inside of the map, a known type and,
+//! except for water, lava and mana wells, the fullness. On failure the reason is returned in the text.
+bool isValidTileLine(const std::string& line, int mapSizeX, int mapSizeY, std::string& reason)
+{
+    std::vector<std::string> elems = Helper::split(line, '\t');
+    int x = 0;
+    int y = 0;
+    int type = 0;
+    if(elems.size() < 3 || !parseWholeNumber(elems[0], x) || !parseWholeNumber(elems[1], y) ||
+       !parseWholeNumber(elems[2], type))
+    {
+        reason = "a tile line needs x, y and the type separated by tabs";
+        return false;
+    }
+
+    if(x < 0 || y < 0 || x >= mapSizeX || y >= mapSizeY)
+    {
+        reason = "the tile is outside of the map";
+        return false;
+    }
+
+    if(type < 0 || type >= static_cast<int>(TileType::countTileType))
+    {
+        reason = "the tile type is unknown";
+        return false;
+    }
+
+    const TileType tileType = static_cast<TileType>(type);
+    const bool ignoresFullness = (tileType == TileType::water) || (tileType == TileType::lava) ||
+        (tileType == TileType::manaWell);
+    if(!ignoresFullness && elems.size() < 4)
+    {
+        reason = "the tile line has no fullness";
+        return false;
+    }
+
+    return true;
+}
 } // namespace
 
 //! \brief Tells whether a file version header can be loaded, ignoring the build number of the writing version.
@@ -83,7 +137,8 @@ bool isSupportedVersionHeader(const std::string& header)
 {
     if(header == ODApplication::VERSIONSTRING)
         return true;
-    const char* releases[] = {"OpenDungeons_Version:0.7.1", "OpenDungeons_Version:0.7.2", "OpenDungeons_Version:0.7.4"};
+    const char* releases[] = {"OpenDungeons_Version:0.7.1", "OpenDungeons_Version:0.7.2", "OpenDungeons_Version:0.7.3",
+                              "OpenDungeons_Version:0.7.4"};
     for(const char* release : releases)
     {
         const std::string base(release);
@@ -120,6 +175,15 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     int numberOfSeats;
     
     getXandYandSeatsNumber(levelFile,mapSizeX,mapSizeY,numberOfSeats);  
+    // A missing, negative or absurd map size must end in a message, never in a huge or negative allocation
+    if((mapSizeX <= 0) || (mapSizeY <= 0) || (mapSizeX > MAX_MAP_SIDE) || (mapSizeY > MAX_MAP_SIDE))
+    {
+        setLoadError("The map size after [Tiles] is missing or not between 1 and " + Helper::toString(MAX_MAP_SIDE)
+            + " (x=" + Helper::toString(mapSizeX) + ", y=" + Helper::toString(mapSizeY) + "), file=" + fileName);
+        return false;
+    }
+    const int scannedMapSizeX = mapSizeX;
+    const int scannedMapSizeY = mapSizeY;
     levelFile.clear();               // Clear any eof or fail flags
     levelFile.seekg(0, std::ios::beg);  // Move read position to beginning
     gameMap.initializeEverVisitedFlagTilesPools(mapSizeX,mapSizeY,numberOfSeats + 1);  // mind that the mId = 0 is always reserved and is not a valid Seat number, instead mId = 0 is for rogue ( enemy to all ) creatures
@@ -158,7 +222,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_ERR("Unexpected end or invalid stream in [Info], file=" + fileName);
+            setLoadError("Unexpected end or invalid stream in [Info], file=" + fileName);
             return false;
         }
         // Information can contain spaces. We need to use std::getline to get content
@@ -249,7 +313,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_ERR("Unexpected end or invalid stream in [Seats], file=" + fileName);
+            setLoadError("Unexpected end or invalid stream in [Seats], file=" + fileName);
             return false;
         }
 
@@ -259,7 +323,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 
         if (nextParam != "[Seat]")
         {
-            OD_LOG_WRN("Expected a Seat tag but got " + nextParam);
+            setLoadError(std::string("Expected a Seat tag but got " + nextParam) + ", file=" + fileName);
             return false;
         }
 
@@ -291,7 +355,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_ERR("Unexpected end or invalid stream in [Goals], file=" + fileName);
+            setLoadError("Unexpected end or invalid stream in [Goals], file=" + fileName);
             return false;
         }
 
@@ -314,12 +378,15 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 
     // Load the map size on next two lines
 
-    levelFile >> mapSizeX;
-    levelFile >> mapSizeY;
+    if(!(levelFile >> mapSizeX >> mapSizeY) || (mapSizeX != scannedMapSizeX) || (mapSizeY != scannedMapSizeY))
+    {
+        setLoadError("The map size after [Tiles] could not be read, file=" + fileName);
+        return false;
+    }
 
     if (!gameMap.createNewMap(mapSizeX, mapSizeY))
     {
-        OD_LOG_ERR("Could not create map " + Helper::toString(mapSizeX) + "x" + Helper::toString(mapSizeY) + ", file=" + fileName);
+        setLoadError("Could not create map " + Helper::toString(mapSizeX) + "x" + Helper::toString(mapSizeY) + ", file=" + fileName);
         return false;
     }
 
@@ -334,7 +401,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_WRN("unexpected EOF reached");
+            setLoadError(std::string("unexpected EOF reached") + ", file=" + fileName);
             return false;
         }
 
@@ -346,6 +413,13 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         std::string entire_line = nextParam;
         std::getline(levelFile, nextParam);
         entire_line += nextParam;
+
+        std::string tileProblem;
+        if(!isValidTileLine(entire_line, mapSizeX, mapSizeY, tileProblem))
+        {
+            setLoadError("Invalid tile line '" + entire_line.substr(0, 60) + "': " + tileProblem + ", file=" + fileName);
+            return false;
+        }
 
         TileType tt = Tile::getTileTypeFromLine(entire_line);
 
@@ -370,7 +444,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile >> nextParam;
     if (nextParam != "[Rooms]")
     {
-        OD_LOG_WRN("Invalid Rooms start format:" + nextParam);
+        setLoadError(std::string("Invalid Rooms start format:" + nextParam) + ", file=" + fileName);
         return false;
     }
 
@@ -378,7 +452,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_WRN("unexpected EOF reached");
+            setLoadError(std::string("unexpected EOF reached") + ", file=" + fileName);
             return false;
         }
 
@@ -388,7 +462,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 
         if (gameMap.isServerGameMap() && (nextParam != "[Room]"))
         {
-            OD_LOG_WRN("Expected [Room] but got:" + nextParam);
+            setLoadError(std::string("Expected [Room] but got:" + nextParam) + ", file=" + fileName);
             return false;
         }
 
@@ -398,7 +472,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         Room* tempRoom = RoomManager::getRoomFromStream(&gameMap, levelFile);
         if(tempRoom == nullptr)
         {
-            OD_LOG_ERR("unexpected null room");
+            setLoadError(std::string("unexpected null room") + ", file=" + fileName);
             return false;
         }
 
@@ -407,7 +481,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         levelFile >> nextParam;
         if (nextParam != "[/Room]")
         {
-            OD_LOG_WRN("Expected [/Room] but got:" + nextParam);
+            setLoadError(std::string("Expected [/Room] but got:" + nextParam) + ", file=" + fileName);
             return false;
         }
     }
@@ -416,7 +490,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile >> nextParam;
     if (nextParam != "[Traps]")
     {
-        OD_LOG_WRN("Invalid Traps start format:" + nextParam);
+        setLoadError(std::string("Invalid Traps start format:" + nextParam) + ", file=" + fileName);
         return false;
     }
 
@@ -424,7 +498,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_WRN("unexpected EOF reached");
+            setLoadError(std::string("unexpected EOF reached") + ", file=" + fileName);
             return false;
         }
 
@@ -434,14 +508,14 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 
         if (nextParam != "[Trap]")
         {
-            OD_LOG_WRN("Expected [Trap] but got:" + nextParam);
+            setLoadError(std::string("Expected [Trap] but got:" + nextParam) + ", file=" + fileName);
             return false;
         }
 
         Trap* tempTrap = TrapManager::getTrapFromStream(&gameMap, levelFile);
         if(tempTrap == nullptr)
         {
-            OD_LOG_ERR("unexpected null trap");
+            setLoadError(std::string("unexpected null trap") + ", file=" + fileName);
             return false;
         }
 
@@ -450,7 +524,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         levelFile >> nextParam;
         if (nextParam != "[/Trap]")
         {
-            OD_LOG_WRN("Expected [/Trap] but got:" + nextParam);
+            setLoadError(std::string("Expected [/Trap] but got:" + nextParam) + ", file=" + fileName);
             return false;
         }
     }
@@ -458,14 +532,18 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     // Computer the tiles visuals
     for(int ii = 0; ii < mapSizeX; ++ii)
         for(int jj = 0; jj < mapSizeY; ++jj)
-             gameMap.getTile(ii,jj)->computeTileVisual();
+        {
+            Tile* visualTile = gameMap.getTile(ii,jj);
+            if(visualTile != nullptr)
+                visualTile->computeTileVisual();
+        }
 
     
     // Read in the lights
     levelFile >> nextParam;
     if (nextParam != "[Lights]")
     {
-        OD_LOG_WRN("Invalid Lights start format:" + nextParam);
+        setLoadError(std::string("Invalid Lights start format:" + nextParam) + ", file=" + fileName);
         return false;
     }
 
@@ -473,7 +551,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_ERR("Unexpected end or invalid stream in [Lights], file=" + fileName);
+            setLoadError("Unexpected end or invalid stream in [Lights], file=" + fileName);
             return false;
         }
 
@@ -489,7 +567,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         MapLight* tempLight = MapLight::getMapLightFromStream(&gameMap, ss);
         if(tempLight == nullptr)
         {
-            OD_LOG_ERR("unexpected null map light");
+            setLoadError(std::string("unexpected null map light") + ", file=" + fileName);
             return false;
         }
         tempLight->setName(gameMap.nextUniqueNameMapLight());
@@ -511,7 +589,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             // Seek the [Creature] tag
             if (nextParam != "[Creature]")
             {
-                OD_LOG_WRN("Invalid Creature start format:" + nextParam);
+                setLoadError(std::string("Invalid Creature start format:" + nextParam) + ", file=" + fileName);
                 return false;
             }
 
@@ -522,12 +600,12 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
                 CreatureDefinition* def = gameMap.getClassDescriptionForTuning(nextParam);
                 if (def == nullptr)
                 {
-                    OD_LOG_WRN("Invalid Creature definition format for " + nextParam);
+                    setLoadError(std::string("Invalid Creature definition format for " + nextParam) + ", file=" + fileName);
                     return false;
                 }
                 if(!CreatureDefinition::update(def, levelFile, ConfigManager::getSingleton().getCreatureDefinitions()))
                 {
-                    OD_LOG_ERR("Invalid CreatureDefinitions data for " + nextParam + ", file=" + fileName);
+                    setLoadError("Invalid CreatureDefinitions data for " + nextParam + ", file=" + fileName);
                     return false;
                 }
             }
@@ -549,7 +627,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 
             if (nextParam != "[Equipment]")
             {
-                OD_LOG_WRN("Invalid Weapon start format:" + nextParam);
+                setLoadError(std::string("Invalid Weapon start format:" + nextParam) + ", file=" + fileName);
                 return false;
             }
 
@@ -560,12 +638,12 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
                 Weapon* def = gameMap.getWeaponForTuning(nextParam);
                 if (def == nullptr)
                 {
-                    OD_LOG_WRN("Invalid Weapon definition format for " + nextParam);
+                    setLoadError(std::string("Invalid Weapon definition format for " + nextParam) + ", file=" + fileName);
                     return false;
                 }
                 if(!Weapon::update(def, levelFile))
                 {
-                    OD_LOG_ERR("Invalid EquipmentDefinitions data for " + nextParam + ", file=" + fileName);
+                    setLoadError("Invalid EquipmentDefinitions data for " + nextParam + ", file=" + fileName);
                     return false;
                 }
             }
@@ -577,7 +655,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     // Read in the actual creatures themselves
     if (nextParam != "[Creatures]")
     {
-        OD_LOG_WRN("Invalid Creatures start format:" + nextParam);
+        setLoadError(std::string("Invalid Creatures start format:" + nextParam) + ", file=" + fileName);
         return false;
     }
 
@@ -586,7 +664,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!levelFile.good())
         {
-            OD_LOG_ERR("Unexpected end or invalid stream in [Creatures], file=" + fileName);
+            setLoadError("Unexpected end or invalid stream in [Creatures], file=" + fileName);
             return false;
         }
 
@@ -602,8 +680,9 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         Creature* tempCreature = Creature::getCreatureFromStream(&gameMap, ss);
         if(tempCreature == nullptr)
         {
-            OD_LOG_ERR("Creature number " + Helper::toString(nbCreatures + 1)
-                + " of the level could not be read (see the warning above for the reason), line=" + entire_line);
+            setLoadError("Creature number " + Helper::toString(nbCreatures + 1)
+                + " of the level could not be read (see the warning above for the reason), line=" + entire_line.substr(0, 120)
+                + ", file=" + fileName);
             return false;
         }
 
@@ -614,25 +693,25 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
 
     if(!readGameEntity(gameMap, "Spells", GameEntityType::spell, levelFile))
     {
-        OD_LOG_WRN("Invalid Spells section");
+        setLoadError(std::string("Invalid Spells section") + ", file=" + fileName);
         return false;
     }
 
     if(!readGameEntity(gameMap, "CraftedTraps", GameEntityType::craftedTrap, levelFile))
     {
-        OD_LOG_WRN("Invalid CraftedTraps section");
+        setLoadError(std::string("Invalid CraftedTraps section") + ", file=" + fileName);
         return false;
     }
 
     if(!readGameEntity(gameMap, "SkillEntity", GameEntityType::skillEntity, levelFile))
     {
-        OD_LOG_WRN("Invalid SkillEntity section");
+        setLoadError(std::string("Invalid SkillEntity section") + ", file=" + fileName);
         return false;
     }
 
     if(!readGameEntity(gameMap, "GiftBoxEntity", GameEntityType::giftBoxEntity, levelFile))
     {
-        OD_LOG_WRN("Invalid GiftBoxEntity section");
+        setLoadError(std::string("Invalid GiftBoxEntity section") + ", file=" + fileName);
         return false;
     }
 
@@ -642,7 +721,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     levelFile.seekg(itemBagPosition);
     if(nextParam == "[ItemBags]" && !readGameEntity(gameMap, "ItemBags", GameEntityType::itemBagEntity, levelFile))
     {
-        OD_LOG_ERR("Invalid ItemBags section, file=" + fileName);
+        setLoadError("Invalid ItemBags section, file=" + fileName);
         return false;
     }
     // Ghosts are absent from legacy maps; leave the next section untouched.
@@ -652,7 +731,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         levelFile.seekg(ghostPosition);
         if(nextParam == "[Ghosts]" && !readGameEntity(gameMap, "Ghosts", GameEntityType::ghostEntity, levelFile))
         {
-            OD_LOG_ERR("Invalid Ghosts section, file=" + fileName);
+            setLoadError("Invalid Ghosts section, file=" + fileName);
             return false;
         }
     }
@@ -668,7 +747,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         levelFile.seekg(boxPosition);
         if(nextParam == "[GhostBoxes]" && !readGameEntity(gameMap, "GhostBoxes", GameEntityType::ghostBoxEntity, levelFile))
         {
-            OD_LOG_ERR("Invalid GhostBoxes section, file=" + fileName);
+            setLoadError("Invalid GhostBoxes section, file=" + fileName);
             return false;
         }
     }
@@ -679,25 +758,25 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     }
     if(!readDirtSections(gameMap, levelFile))
     {
-        OD_LOG_WRN("Invalid Dirt or DirtPiles section");
+        setLoadError(std::string("Invalid Dirt or DirtPiles section") + ", file=" + fileName);
         return false;
     }
 
     if(!readGameEntity(gameMap, "Missiles", GameEntityType::missileObject, levelFile))
     {
-        OD_LOG_WRN("Invalid Missiles section");
+        setLoadError(std::string("Invalid Missiles section") + ", file=" + fileName);
         return false;
     }
 
     if(!readGameEntity(gameMap, "TreasuryObject", GameEntityType::treasuryObject, levelFile))
     {
-        OD_LOG_WRN("Invalid TreasuryObject section");
+        setLoadError(std::string("Invalid TreasuryObject section") + ", file=" + fileName);
         return false;
     }
 
     if(!readGameEntity(gameMap, "Chickens", GameEntityType::chickenEntity, levelFile))
     {
-        OD_LOG_WRN("Invalid Chickens section");
+        setLoadError(std::string("Invalid Chickens section") + ", file=" + fileName);
         return false;
     }
     
@@ -710,7 +789,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             levelFile >> nextParam;
             if(!levelFile.good())
             {
-                OD_LOG_ERR("Unexpected end or invalid stream in [HerbBundles], file=" + fileName);
+                setLoadError("Unexpected end or invalid stream in [HerbBundles], file=" + fileName);
                 return false;
             }
             if(nextParam == "[/HerbBundles]")
@@ -721,7 +800,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             GameEntity* bundle = Entities::getGameEntityFromStream(&gameMap, GameEntityType::herbBundleEntity, bundleLine);
             if(bundle == nullptr)
             {
-                OD_LOG_ERR("Invalid HerbBundles entry=" + nextParam + remainder + ", file=" + fileName);
+                setLoadError("Invalid HerbBundles entry=" + nextParam + remainder + ", file=" + fileName);
                 return false;
             }
             bundle->addToGameMap();
@@ -734,7 +813,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         {
             if(!levelFile.good())
             {
-                OD_LOG_ERR("Unexpected end or invalid stream in [Scripts], file=" + fileName);
+                setLoadError("Unexpected end or invalid stream in [Scripts], file=" + fileName);
                 return false;
             }
 
@@ -773,7 +852,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
     {
         if(!gameMap.getLevelScript().importFromStream(levelFile))
         {
-            OD_LOG_WRN("Invalid Triggers section");
+            setLoadError(std::string("Invalid Triggers section") + ", file=" + fileName);
             return false;
         }
 
@@ -794,7 +873,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         int64_t relationshipTurn = (gameMap.getSavedTurnNumber() > 0) ? gameMap.getSavedTurnNumber() : gameMap.getTurnNumber();
         if(!relationships->readFromStream(levelFile, relationshipTurn))
         {
-            OD_LOG_WRN("Invalid Relationships section");
+            setLoadError(std::string("Invalid Relationships section") + ", file=" + fileName);
             return false;
         }
 
@@ -809,7 +888,7 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
         std::vector<RelationshipCreatureState> states;
         if(!readRelationshipCreatureStates(levelFile, states))
         {
-            OD_LOG_WRN("Invalid RelationshipState section");
+            setLoadError(std::string("Invalid RelationshipState section") + ", file=" + fileName);
             return false;
         }
 
@@ -946,7 +1025,8 @@ bool readGameEntity(GameMap& gameMap, const std::string& item, GameEntityType ty
         GameEntity* entity = Entities::getGameEntityFromStream(&gameMap, type, ss);
         if(entity == nullptr)
         {
-            OD_LOG_ERR("unexpected null entity type=" + Helper::toString(static_cast<uint32_t>(type)));
+            OD_LOG_ERR("unexpected null entity type=" + Helper::toString(static_cast<uint32_t>(type)) + " in " + item
+                + ", line=" + entire_line.substr(0, 120));
             return false;
         }
 
@@ -1509,8 +1589,8 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
     }
 
     // Load the map size on next two lines
-    int mapSizeX;
-    int mapSizeY;
+    int mapSizeX = 0;
+    int mapSizeY = 0;
     levelFile >> mapSizeX;
     levelFile >> mapSizeY;
 
@@ -1520,6 +1600,7 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
     return true;
 }
 
+//! \brief Finds the map size of the last [Tiles] section and counts the seats; a size that is no number stays -1.
 void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberOfSeats)
 {
     numberOfSeats = 0;
@@ -1536,8 +1617,11 @@ void getXandYandSeatsNumber(std::stringstream& ss,int& xx, int& yy, int& numberO
         else if (nextParam == "[Tiles]")
         {
         
-            ss >> xx;
-            ss >> yy;
+            // A size that is not a number must stay invalid, the caller refuses it
+            if(!(ss >> xx))
+                xx = -1;
+            if(!(ss >> yy))
+                yy = -1;
         
         }
     }
