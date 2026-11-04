@@ -403,6 +403,9 @@ static const std::string ROOM_LOCKS_SAVE_CLOSE = "[/RoomLocks]";
 static const std::string MOOD_DECISION_SAVE_OPEN = "[MoodDecision]";
 //! \brief Tag that closes the block of the leave clock and the rampage.
 static const std::string MOOD_DECISION_SAVE_CLOSE = "[/MoodDecision]";
+//! \brief Tags of the block with the counters that decide whether a counter-driven problem holds, and the slap memory.
+static const std::string MOOD_COUNTERS_SAVE_OPEN = "[MoodCounters]";
+static const std::string MOOD_COUNTERS_SAVE_CLOSE = "[/MoodCounters]";
 //! \brief Turns after the last turn of watching a fight in which a spectator of the arena still counts as watching.
 static const int32_t ARENA_WATCH_GRACE_TURNS = 2;
 //! \brief Tag that opens the optional arena knock-out state.
@@ -759,7 +762,7 @@ Creature::Creature(GameMap* gameMap, const CreatureDefinition* definition, Seat*
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
-    mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
+    mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Happy : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
     mStoredMood              (ConfigManager::getSingleton().getCreatureBaseMood()),
     mMoodPrimed              (false),
@@ -923,7 +926,7 @@ Creature::Creature(GameMap* gameMap) :
     mCarriedEntity           (nullptr),
     mClientCarrying          (false),
     mMoodCooldownTurns       (0),
-    mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Neutral : CreatureMoodLevel::Unknown),
+    mMoodValue               (gameMap->isServerGameMap() ? CreatureMoodLevel::Happy : CreatureMoodLevel::Unknown),
     mMoodPoints              (0),
     mStoredMood              (ConfigManager::getSingleton().getCreatureBaseMood()),
     mMoodPrimed              (false),
@@ -1275,6 +1278,16 @@ void Creature::exportToStream(std::ostream& os) const
         for(const std::pair<const std::string, int32_t>& pair : mMoodRelationPairs)
             os << " " << pair.first << " " << pair.second;
         os << " [/Mood]";
+    }
+    // The counters behind out of work, held in hand, turns without fight and tortured, and the slap memory: without them a
+    // problem that holds would count as ended after a load. Missing in older saves.
+    if(!mDefinition->getCreatureMoods().empty())
+    {
+        os << "	" << MOOD_COUNTERS_SAVE_OPEN << " " << mNbTurnsOutOfWork << " " << mNbTurnsInHand << " " << mNbTurnsWithoutBattle
+           << " " << mNbTurnsTortureMood << " " << mSlapTurns.size();
+        for(int64_t slapTurn : mSlapTurns)
+            os << " " << slapTurn;
+        os << " " << MOOD_COUNTERS_SAVE_CLOSE;
     }
     // Leave clock and rampage, saved one to one: the clock (running flag and game seconds), the rampage (game seconds left,
     // turns to the next hit and the next pile, the target tile). Missing in old saves and when neither runs.
@@ -1647,6 +1660,40 @@ bool Creature::importFromStream(std::istream& is)
             mRampagePileTurns = std::max(0, loadedPileTurns);
             mRampageTargetX = loadedTargetX;
             mRampageTargetY = loadedTargetY;
+            continue;
+        }
+
+        if(appearanceToken == MOOD_COUNTERS_SAVE_OPEN)
+        {
+            int32_t loadedOutOfWork = 0;
+            int32_t loadedInHand = 0;
+            int32_t loadedWithoutBattle = 0;
+            int32_t loadedTorture = 0;
+            uint32_t nbSlaps = 0;
+            std::string countersClose;
+            if(!(is >> loadedOutOfWork >> loadedInHand >> loadedWithoutBattle >> loadedTorture >> nbSlaps) ||
+               (nbSlaps > MOOD_SAVE_MAX_ITEMS))
+            {
+                OD_LOG_WRN("Invalid mood counters block for creature=" + getName());
+                return false;
+            }
+            mSlapTurns.clear();
+            for(uint32_t ii = 0; ii < nbSlaps; ++ii)
+            {
+                int64_t slapTurn = 0;
+                if(!(is >> slapTurn))
+                    return false;
+                mSlapTurns.push_back(slapTurn);
+            }
+            if(!(is >> countersClose) || (countersClose != MOOD_COUNTERS_SAVE_CLOSE))
+            {
+                OD_LOG_WRN("Invalid mood counters block for creature=" + getName());
+                return false;
+            }
+            mNbTurnsOutOfWork = std::max(0, loadedOutOfWork);
+            mNbTurnsInHand = std::max(0, loadedInHand);
+            mNbTurnsWithoutBattle = std::max(0, loadedWithoutBattle);
+            mNbTurnsTortureMood = std::max(0, loadedTorture);
             continue;
         }
 
@@ -7322,13 +7369,15 @@ void Creature::resumeBrawl()
     if(getName() > opponent->getName())
         return;
 
-    if(!canStartBrawl() || !opponent->canStartBrawl())
+    // A brawl between a rampaging creature and one that is not is a rampage brawl again (the rampage itself is saved)
+    const bool rampage = (isRampaging() != opponent->isRampaging());
+    if(!canStartBrawl(rampage) || !opponent->canStartBrawl(rampage))
         return;
 
     int64_t turnsLeft = std::min(mBrawlResumeTurnsLeft, opponent->mBrawlResumeTurnsLeft);
     mBrawlResumeOpponent.clear();
     opponent->mBrawlResumeOpponent.clear();
-    startBrawl(*opponent);
+    startBrawl(*opponent, rampage);
     if(isBrawling())
     {
         int64_t maxTurns = gameMap->getCreatureRelationships()->getSettings().mBrawlMaxTurns;

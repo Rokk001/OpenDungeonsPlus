@@ -124,8 +124,9 @@ double CreatureMoodManager::computeOldSaveMood(const Creature& creature, double 
     if(creature.getMaxHp() > 0.0)
         points += ItemEffects::moodModifier(creature, (creature.getMaxHp() - creature.getHP()) / creature.getMaxHp()
             * config.getLegacyMoodConfigDouble("HpLossFull"));
-    if(creature.getHomeTile() == nullptr)
-        points += ItemEffects::moodModifier(creature, config.getLegacyMoodConfigDouble("NoLair"));
+    // A missing lair is not counted: the beds of a loaded dungeon are restored after the creatures, so a creature without a
+    // home tile here may still get its bed, and a level creature must not start low; a real lack of a bed starts the problem
+    // without a jump after the load.
 
     // The temporary moods the old save held (tavern, spa, infirmary, merchant, prison and torture)
     points += savedTemporaryMood;

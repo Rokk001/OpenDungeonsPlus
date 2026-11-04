@@ -1255,7 +1255,7 @@ public:
     void resumeJump(uint32_t turnsLeft);
 
     //! \brief Server side. Marks whether the creature sits in a lava spa bath. While it does, the spa mood does not
-    //! fade (the bath lifts it exactly to SpaMoodMax); it fades again as soon as the bath is over or broken off.
+    //! change (the bath gives its mood per turn up to PleasureVisitMax); this flag only marks that the bath runs.
     //! \param bathing True while the bath runs.
     inline void setSpaBathing(bool bathing)
     { mSpaBathing = bathing; }

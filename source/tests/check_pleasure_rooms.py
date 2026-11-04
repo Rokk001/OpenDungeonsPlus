@@ -390,6 +390,9 @@ check("mTavernCooldownTurns <= 0" not in creature_cpp, "no drink search looks at
 add_guest = extract(tavern_cpp, "bool RoomTavern::addCreatureUsingRoom(")
 check("beginPleasureVisit(PleasureRoomKind::tavern)" in add_guest and 'getThirst() < getTavernValue("ThirstSeek")' in add_guest,
       "only a creature that is not thirsty starts a leisure visit")
+finish_drink = extract(tavern_cpp, "void RoomTavern::finishDrink(")
+check("isPleasureVisitFull(PleasureRoomKind::tavern)" in finish_drink and finish_drink.index("isPleasureVisitFull") < finish_drink.index("MaxDrinksPerVisit"),
+      "a tavern leisure visit that gained PleasureVisitMax ends before the next drink or game")
 # a drink visit: no visit is running, the beer is a plain event of BeerMood, no buff and no lock
 c = Creature(stored=800.0, thirst=90.0)
 check(c.visit_kind == -1, "a drink visit starts no pleasure visit")

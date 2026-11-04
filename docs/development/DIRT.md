@@ -46,9 +46,12 @@ workers clean as a side job. All numbers are keys of `config/global.cfg` (block 
   hatchery lays slower; prison damage and the time to convert in a torture chamber change with the
   stage (`PrisonDirtDamageStage2/3`, `TortureDirtConvertStage2/3`) - prisons and torture chambers
   profit from dirt.
-- Mood: a creature in a dirty room loses `DirtMoodStage2/3`, and it loses `DirtPileMood` for every
-  pile within `DirtPileRadius` tiles, both times the `Cleanliness` of its type. Free heroes and
-  creatures without a seat have no mood; blood and the crypt give none.
+- Mood: a creature in a dirty room loses `DirtMoodFallPerTurnStage2/3` per turn, and it loses
+  `DirtPileMoodFallPerTurn` per turn for every pile within `DirtPileRadius` tiles, both times the
+  `Cleanliness` of its type; there is no jump when the dirt appears. When a room that holds the
+  creature's bed, or is its work room, is cleaned back to stage 1 the creature gains
+  `DirtCleanedMoodStage2/3` (the highest stage the room had since it was last clean), times its
+  `Cleanliness`. Free heroes and creatures without a seat have no mood; blood and the crypt give none.
 
 ## Cleaning
 

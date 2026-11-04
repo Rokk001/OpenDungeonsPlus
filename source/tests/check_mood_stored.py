@@ -156,4 +156,9 @@ for name in ("AiCare.cpp", "AiWar.cpp"):
 check("isHumanSeat" not in creature_cpp[creature_cpp.index("void Creature::computeMood()"):
                                          creature_cpp.index("void Creature::computeMood()") + 2500],
       "no seat type in the mood computation")
+# the counters behind the counter-driven problems and the slap memory are saved, so a load gives no free reward
+check("[MoodCounters]" in creature_cpp and "mNbTurnsOutOfWork" in creature_cpp[creature_cpp.index("MOOD_COUNTERS_SAVE_OPEN"):]
+      and "mSlapTurns" in creature_cpp[creature_cpp.index("MOOD_COUNTERS_SAVE_OPEN"):], "mood counters are saved")
+check("getLegacyMoodConfigDouble(\"NoLair\")" not in read("source/creaturemood/CreatureMoodManager.cpp"),
+      "an old save does not count a missing lair (a level creature must start at the maximum)")
 print("CHECKS OK")

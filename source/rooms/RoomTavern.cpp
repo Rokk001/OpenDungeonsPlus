@@ -1414,6 +1414,13 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
     playSoundAt(tile, SOUND_POUR);
     ++spot.mDrinks;
 
+    // A leisure visit that has gained PleasureVisitMax ends here: no further drink and no game
+    if(creature->isPleasureVisitFull(PleasureRoomKind::tavern))
+    {
+        setSpotDone(spot, DONE_WAIT_TURNS);
+        return;
+    }
+
     // The guest decides itself about another drink: 50, 25, 12.5 and 6.25 percent after the 1st to the 4th drink,
     // never more than MaxDrinksPerVisit
     if(spot.mDrinks < static_cast<uint32_t>(getTavernValue("MaxDrinksPerVisit")))

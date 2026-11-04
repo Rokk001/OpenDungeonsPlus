@@ -309,6 +309,7 @@ struct Creature
     double getRelaxTurns() const { return mRelaxTurns; }
     inline bool isRoomLocked(PleasureRoomKind kind) const { return getRoomLockTurns(kind) > 0.0; }
     bool hasPleasureBuff() const;
+    bool isRampaging() const { return false; }
     double getRoomLockTurns(PleasureRoomKind kind) const;
     bool canUsePleasureRoom(PleasureRoomKind kind) const;
     void startRoomLock(PleasureRoomKind kind, double turns);

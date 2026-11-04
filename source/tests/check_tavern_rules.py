@@ -483,6 +483,8 @@ struct Creature
     void setDrunk(double val);
     void setHangoverTurns(double turns);
     void addTavernMood(double points);
+    // A leisure visit never reaches PleasureVisitMax in these cases; the limit is worked out in check_pleasure_rooms.py
+    bool isPleasureVisitFull(PleasureRoomKind kind) const { return false; }
     // The leisure visit limit of the real creature (PleasureVisitMax) is worked out in check_pleasure_rooms.py
     void addPleasureMood(PleasureRoomKind kind, double points) { applyMoodEvent(points, false); }
     void drinkTaken(DrinkKind kind);

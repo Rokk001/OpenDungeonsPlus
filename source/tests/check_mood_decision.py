@@ -427,4 +427,10 @@ for path in ("source/ai",):
     for f in (repo / path).glob("*.cpp"):
         check("UnpaidWages" not in f.read_text(encoding="utf-8"), str(f))
 
+# a rampage brawl that was saved comes back as a rampage brawl (save_load, rampage part)
+creature_src = read("source/entities/Creature.cpp")
+resume = extract(creature_src, "void Creature::resumeBrawl(")
+check("isRampaging() != opponent->isRampaging()" in resume and "startBrawl(*opponent, rampage)" in resume,
+      "a resumed brawl between a rampaging creature and another one is a rampage brawl")
+
 print("mood decision ok")

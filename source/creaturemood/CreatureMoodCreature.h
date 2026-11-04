@@ -37,8 +37,9 @@ public:
 
     const std::string& getModifierName() const override;
 
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns the number of creatures of the natural enemy class in sight of the creature.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
     CreatureMoodCreature* clone() const override;
 

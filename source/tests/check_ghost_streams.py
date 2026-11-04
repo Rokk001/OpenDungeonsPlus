@@ -122,7 +122,7 @@ struct CreatureActionHuntGhost{Creature& mCreature;uint32_t mState=0;std::string
 namespace Helper{
  //! \brief Reads the original HP string value.
  double toDouble(const std::string& value){return std::stod(value);}}
-const std::string CORPSE_CARRIER_SAVE_LABEL="CorpseCarrier=";const double THIRST_STATE_MAX=100;
+const std::string CORPSE_CARRIER_SAVE_LABEL="CorpseCarrier=";const std::string MOOD_DECISION_SAVE_OPEN="[MoodDecision]",MOOD_DECISION_SAVE_CLOSE="[/MoodDecision]",MOOD_COUNTERS_SAVE_OPEN="[MoodCounters]",MOOD_COUNTERS_SAVE_CLOSE="[/MoodCounters]";const double THIRST_STATE_MAX=100;
 //! \brief Runs only the real optional seat blocks with legacy defaults and unrelated-tag preservation.
 struct SeatRecord{double mEctoplasmLevels=0;GhostProduct mGhostProduct=GhostProduct::research;bool mGhostRevive=true;std::set<std::string> mGhostBellTargets;
  //! \brief Writes both real seat optional blocks at full precision.
@@ -141,6 +141,10 @@ struct CreatureMoodEffect{std::string mName;double mStrength=0,mTurnsLeft=0;};
 //! \brief Retains exact corpse clocks, transient markers and the revival thirst; the first revival value is the special mood of old saves, read and dropped.
 struct CorpseRecord{int32_t mNbTurnsPrison=0,mNbTurnsTorture=0;double mCorpseTurns=0,mDecayTurns=-1,mThirst=0,mSavedRevivalThirst=0,mStoredMood=0;unsigned int mDeathCounter=1;bool mIsCarried=false,mGhostRevived=false,mRevivalThirstFromSave=false,mMoodPrimed=false;std::string mHpString="0",mCorpseCarrierName;
  MoodDefinitionStub mDefinitionData;MoodDefinitionStub* mDefinition=&mDefinitionData;std::vector<CreatureMoodEffect> mMoodEffects;std::map<std::string,double> mMoodProblems;std::map<std::string,uint32_t> mMoodDirtRooms;std::map<std::string,int32_t> mMoodRelationPairs;
+ //! \brief Supplies the leave clock, rampage and problem counter members the real writer names.
+ bool mLeaveClockRunning=false;double mLeaveClockSeconds=0,mRampageSecondsLeft=0;int32_t mRampageHitTurns=0,mRampagePileTurns=0,mRampageTargetX=-1,mRampageTargetY=-1,mNbTurnsOutOfWork=0,mNbTurnsInHand=0,mNbTurnsWithoutBattle=0,mNbTurnsTortureMood=0;std::vector<int64_t> mSlapTurns;
+ //! \brief True while a rampage has game seconds left.
+ bool isRampaging()const{return mRampageSecondsLeft>0;}
  //! \brief Reports the dead saved record to the real writer.
  bool isAlive()const{return mHpString=="max"||std::stod(mHpString)>0;}
  //! \brief Writes original corpse and revival blocks at full precision.
