@@ -333,7 +333,7 @@
             <UserString name="ContextHelp" value="Production: view workshop progress and change trap order priority" />
         </Window>
         <Window type="OD/GameTabButton" name="LabButton">
-            <Property name="Area" value="{{0,244},{1,-224},{0,284},{1,-184}}" />
+            <Property name="Area" value="{{0,340},{1,-224},{0,380},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/LabButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
@@ -351,7 +351,7 @@
             <UserString name="ContextHelp" value="Dungeonbook: creature profiles and what your minions are posting (B)" />
         </Window>
         <Window type="OD/GameTabButton" name="InfirmaryButton">
-            <Property name="Area" value="{{0,340},{1,-224},{0,380},{1,-184}}" />
+            <Property name="Area" value="{{0,244},{1,-224},{0,284},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/InfirmaryButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
@@ -360,7 +360,7 @@
             <UserString name="ContextHelp" value="Infirmary: payer, discharge health, healing switch, patients (I)" />
         </Window>
         <Window type="OD/GameTabButton" name="WorkersButton">
-            <Property name="Area" value="{{0,388},{1,-224},{0,428},{1,-184}}" />
+            <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WorkersButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
@@ -369,7 +369,7 @@
             <UserString name="ContextHelp" value="Workers: fixed workers per job, free workers, priority and carry order (J)" />
         </Window>
         <Window type="OD/GameTabButton" name="MerchantButton">
-            <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />
+            <Property name="Area" value="{{0,292},{1,-224},{0,332},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/MerchantButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
@@ -379,7 +379,7 @@
             <UserString name="AllowEdgeScrolling" value="true" />
         </Window>
         <Window type="OD/GameTabButton" name="SandboxButton">
-            <Property name="Area" value="{{0,292},{1,-224},{0,332},{1,-184}}" />
+            <Property name="Area" value="{{0,388},{1,-224},{0,428},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WavePortalButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />

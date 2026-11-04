@@ -423,6 +423,67 @@ for screen_w, screen_h in ((640, 480), (800, 600), (1024, 768), (1366, 768), (19
             if name in ('ModeAutomatic', 'ModePriority'):
                 check_tree(node, rect, scale, screen_w, screen_h, user, {})
 
+# --- the icon sits in the icon row directly above the minimap, next to the other icons (owner check of build 28)
+row_boxes = {}
+for node in hud.iter('Window'):
+    node_props = props(node)
+    if node.get('type') == 'OD/GameTabButton' and 'Area' in node_props:
+        box = udims(node_props['Area'])
+        if box[1][0] == 1 and box[1][1] == -224:
+            row_boxes[node.get('name')] = box[0][1]
+assert button_box[0] == row_boxes['WorkersButton'] and button_box[1] == -224
+# The icons of the row stand on a 48 unit grid starting at the minimap edge; every slot is used once
+assert sorted(row_boxes.values()) == list(range(4, 4 + 48 * len(row_boxes), 48)), row_boxes
+assert len(set(row_boxes.values())) == len(row_boxes), 'two icons share a slot'
+# The icons that are always there (goals, skill, production, dungeonbook) come first and the Workers icon is the next one, so it
+# is never separated from them by free slots; icons that only show up later (room buttons, sandbox) follow behind it
+always = [row_boxes[n] for n in ('GoalsButton', 'ResearchButton', 'ProductionButton', 'SocialButton')]
+assert sorted(always) == [4, 52, 100, 148], always
+assert row_boxes['WorkersButton'] == 196, 'the Workers icon is the first one after the always visible icons'
+assert all(row_boxes[n] > 196 for n in ('MerchantButton', 'LabButton', 'SandboxButton', 'InfirmaryButton'))
+# It stays left of the control panel toggle that ends the row and well inside the minimap column of the bottom bar
+assert button_box[2] <= 400, 'the Workers icon is not floating towards the middle of the screen'
+
+# --- pictures dominate, texts stay small (owner check of build 28): measured at every screen size and UI scale
+for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
+    for user in (0.8, 1.0, 1.2):
+        client, scale = window_rect(screen_w, screen_h, user)
+        for rank in range(6):
+            tablet = child(window, 'Rank%d' % rank)
+            t_rect = child_rect(tablet, client, scale)
+            fig = child_rect(child(tablet, 'Figure'), t_rect, scale)
+            figure_side = min(fig[2], fig[3])
+            assert figure_side >= 0.80 * t_rect[2], ('the worker figure fills the tablet width', rank, figure_side, t_rect[2])
+            assert figure_side >= 0.50 * t_rect[3], ('the worker figure fills the tablet height', rank, figure_side, t_rect[3])
+            name_px = font_pixels(child(tablet, 'Name'), screen_w, screen_h, user)
+            assert figure_side >= 5.0 * name_px, ('the job name is small below the figure', rank, figure_side, name_px)
+            assert props(child(tablet, 'Name'))['Font'] == 'MedievalSharp-8', 'the job name is the small text size'
+            assert udims(props(child(tablet, 'Name'))['Area'])[3][0] > udims(props(child(tablet, 'Figure'))['Area'])[3][0], \
+                'the job name stands below the figure'
+            assert props(child(tablet, 'Name'))['VertFormatting'] == 'BottomAligned', 'the name sits right above the buttons'
+        for entry in range(7):
+            frame = child(window, 'Carry%d' % entry)
+            c_rect = child_rect(frame, client, scale)
+            pic = child_rect(child(frame, 'Picture'), c_rect, scale)
+            picture_side = min(pic[2], pic[3])
+            assert picture_side >= 0.75 * c_rect[2], ('the carry picture fills its entry', entry, picture_side, c_rect[2])
+            assert picture_side >= 0.40 * c_rect[3], ('the carry picture fills its entry height', entry, picture_side, c_rect[3])
+            name_px = font_pixels(child(frame, 'Name'), screen_w, screen_h, user)
+            assert picture_side >= 2.5 * name_px, ('the carry name is small below the picture', entry, picture_side, name_px)
+# Window texts: no text is larger than in the mockup (small names and labels, the count of free workers the largest)
+text_limits = {'FreeCount': 13, 'CarryTitle': 12, 'FreeLabel': 10, 'PriorityLabel': 10, 'GoldLabel': 8, 'DragHint': 8}
+for node in window.findall('Window'):
+    name = node.get('name')
+    if name in text_limits:
+        assert int(props(node)['Font'].rsplit('-', 1)[1]) <= text_limits[name], (name, props(node)['Font'])
+    if name.startswith('Working'):
+        assert props(node)['Font'] == 'MedievalSharp-8', name + ' is a small text'
+for name in ('ModeAutomatic', 'ModePriority'):
+    assert props(child(child(window, name), 'Label'))['Font'] == 'MedievalSharp-10'
+for node in window.iter('Window'):
+    if 'Font' in props(node):
+        assert int(props(node)['Font'].rsplit('-', 1)[1]) <= 13, (node.get('name'), 'text larger than the mockup')
+
 # --- the tick box "Gold first" is large and its ticked state differs clearly from the empty one (R3)
 for name in ('WorkerCheckboxEmpty', 'WorkerCheckboxChecked'):
     assert imageset.find("Image[@name='%s']" % name).get('width') == '256', name + ' is the large picture'
