@@ -268,3 +268,243 @@ material ManaRing8
         }
     }
 }
+
+material CreatureOverlayHealthStage0
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage0.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayHealthStage1
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage1.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayHealthStage2
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage2.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayHealthStage3
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage3.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayHealthStage4
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage4.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayHealthStage5
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage5.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayHealthStage6
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage6.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayHealthStage7
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayHealthStage7.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage0
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage0.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage1
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage1.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage2
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage2.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage3
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage3.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage4
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage4.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage5
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage5.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage6
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage6.png
+            }
+        }
+    }
+}
+
+material CreatureOverlayManaStage7
+{
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            texture_unit
+            {
+                texture CreatureOverlayManaStage7.png
+            }
+        }
+    }
+}

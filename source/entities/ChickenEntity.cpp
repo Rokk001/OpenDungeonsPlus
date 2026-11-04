@@ -1196,10 +1196,16 @@ bool ChickenEntity::canSlap(Seat* seat)
     return !mIsSlapped;
 }
 
+//! \brief Reads a chicken from a saved line; a line that cannot be read gives no object.
 ChickenEntity* ChickenEntity::getChickenEntityFromStream(GameMap* gameMap, std::istream& is)
 {
     ChickenEntity* obj = new ChickenEntity(gameMap);
-    obj->importFromStream(is);
+    if(!obj->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid chicken record");
+        delete obj;
+        return nullptr;
+    }
     return obj;
 }
 

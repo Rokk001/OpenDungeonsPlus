@@ -760,7 +760,7 @@ def check_part_g():
             'Ogre::OverlayManager::getSingleton().getViewportHeight()') in update
     assert 'previousPosition = childPosition;' in update, 'the next child centres on the unshifted position'
 
-    # ---- 6.7 the mana part: the lower third of the badge flower, in blue, cut from the top
+    # ---- 6.7 the mana part: the inner segmented ring of the badge flower, in blue
     enum_body = status[status.index('enum class CreatureOverlays'):status.index('};', status.index('enum class CreatureOverlays'))]
     assert enum_body.index('mana,') < enum_body.index('nbCreatureOverlays'), 'enum value mana before nbCreatureOverlays'
     constructor = function(status, 'CreatureOverlayStatus::CreatureOverlayStatus(')
@@ -768,9 +768,9 @@ def check_part_g():
     assert 'createChildOverlay("MedievalSharp", 30,\n        Ogre::ColourValue::White, manaMaterial, false)' in constructor
     assert 'forceTextArea(manaId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in constructor
     assert 'setOffset(manaId' not in constructor and 'displayOverlay(manaId, 0)' in constructor
-    assert 'BADGE_INNER_RING_MATERIAL, getManaColour()' in constructor
-    assert 'BADGE_FLOWER_MATERIAL = "CreatureOverlay0";' in status
-    assert 'MANA_FLOWER_SHARE' not in status and 'BADGE_OUTER_RING_MATERIAL = "CreatureOverlayHealthOuter";' in status
+    assert 'BADGE_INNER_RING_PREFIX + "0", getManaColour()' in constructor
+    assert 'BADGE_FLOWER_PREFIX = "CreatureOverlay";' in status
+    assert 'MANA_FLOWER_SHARE' not in status and 'BADGE_OUTER_RING_PREFIX = "CreatureOverlayHealthStage";' in status
     assert 'MANA_RING' not in status
     channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_COLOUR_RED', 'MANA_COLOUR_GREEN', 'MANA_COLOUR_BLUE')]
     assert channels[2] == 255 and channels[0] < 64 and channels[1] < 128, 'strong blue'
@@ -779,8 +779,8 @@ def check_part_g():
     mana_display = hud.find('.//Window[@name="ManaDisplay"]')
     assert mana_display.find('Property[@name="TextColours"]').get('value') == 'FFF0E2C0', 'ivory HUD mana number'
     progress = function(status, 'void CreatureOverlayStatus::updateProgress(')
-    assert 'getCurrentMana() / maxMana' in progress and 'setVerticalBand(manaId' in progress
-    assert 'setVerticalBand(healthId' in progress and 'displayOverlay(manaId, manaShare > 0.0 ? -1 : 0)' in progress
+    assert 'getCurrentMana() / maxMana' in progress and 'Helper::toString(manaStage)' in progress
+    assert 'setVerticalBand(' not in progress and 'displayOverlay(manaId, hasMana ? -1 : 0)' in progress
 
     # ---- 8.5 client: value 7 and the feedback (sparks on the target creature, else on the attacker, plus the sound)
     assert 'critical = 7' in event_h

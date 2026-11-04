@@ -1,69 +1,60 @@
-"""Check the creature badge: outer ring life, inner ring mana, original sizes. No compile, no game."""
+"""Check badge segment stages and textures without compiling or starting the game."""
 from pathlib import Path
 import re
 from PIL import Image
 
 root = Path(__file__).resolve().parents[2]
 textures = root / 'materials/textures'
-source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text(encoding='utf-8').replace('\r\n', '\n')
-overlay_cpp = (root / 'source/render/MovableTextOverlay.cpp').read_text(encoding='utf-8')
-overlay_h = (root / 'source/render/MovableTextOverlay.h').read_text(encoding='utf-8')
-
-for setting in ('HEALTH_BADGE_SIZE = 64;', 'STATUS_ICON_SIZE = 30;', 'CROWN_SIZE = 64;',
-                'LEVEL_CAPTION_SIZE_ONE_DIGIT = 32;', 'LEVEL_CAPTION_SIZE_TWO_DIGITS = 26;',
-                'BADGE_FLOWER_MATERIAL = "CreatureOverlay0";',
-                'BADGE_OUTER_RING_MATERIAL = "CreatureOverlayHealthOuter";',
-                'BADGE_INNER_RING_MATERIAL = "CreatureOverlayManaInner";'):
-    assert setting in source, setting
+source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text(encoding='utf-8')
+creature = (root / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
+material = (root / 'materials/scripts/CreatureOverlay.material').read_text(encoding='utf-8')
+assert 'NB_OVERLAY_HEALTH_VALUES = 8;' in creature
+assert 'HEALTH_BADGE_SIZE = 64;' in source
 assert 'forceTextArea(healthId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in source
 assert 'forceTextArea(manaId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in source
-assert 'forceTextArea(statusId, STATUS_ICON_SIZE, STATUS_ICON_SIZE)' in source
-# The old split into an upper red and a lower blue part is gone.
-assert 'MANA_FLOWER_SHARE' not in source and 'healthBottom' not in source and 'MANA_RING' not in source
+assert 'BADGE_OUTER_RING_PREFIX = "CreatureOverlayHealthStage";' in source
+assert 'BADGE_INNER_RING_PREFIX = "CreatureOverlayManaStage";' in source
+assert '(hasMana ? BADGE_OUTER_RING_PREFIX : BADGE_FLOWER_PREFIX) + Helper::toString(mHealthValue)' in source
+assert 'BADGE_INNER_RING_PREFIX + Helper::toString(manaStage)' in source
+assert 'setVerticalBand(' not in source
+assert 'if(manaShare > 0.0)' in source and 'if(manaShare >= threshold)' in source
+assert 'threshold -= 1.0 / static_cast<double>(steps);' in source
+assert 'displayOverlay(manaId, hasMana ? -1 : 0)' in source
 
-# The mana ring (blue, inner picture) lies over the health ring and under the experience ring.
-constructor = source[source.index('CreatureOverlayStatus::CreatureOverlayStatus('):]
-assert constructor.index('CreatureOverlays::health') < constructor.index('CreatureOverlays::mana')
-assert constructor.index('CreatureOverlays::mana') < constructor.index('CreatureOverlays::experience')
-assert 'BADGE_INNER_RING_MATERIAL, getManaColour()' in constructor
-# A creature with mana gets the outer ring picture as health ring, one without mana the whole flower.
-assert 'hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL, getLifeColour()' in source
-# The life ring is red for every seat, not tinted with the seat colour.
-update_health = source[source.index('void CreatureOverlayStatus::updateHealth('):source.index('if(mLevel != mCreature->getLevel())')]
-assert 'getColorValue' not in update_health
-assert 'LIFE_COLOUR_RED = 220.0f' in source and 'LIFE_COLOUR_GREEN = 25.0f' in source and 'LIFE_COLOUR_BLUE = 25.0f' in source
-assert '(mHasMana != hasMana)' in source
+# Match the same descending threshold loop as Creature::computeCreatureOverlayHealthValue.
+def stage(share):
+    if share <= 0:
+        return 7
+    threshold = 1.0
+    for value in range(6):
+        if share >= threshold:
+            return value
+        threshold -= 1.0 / 6
+    return 6
 
-# Both rings shrink proportionally to their value and keep their lower edge.
-progress = source[source.index('void CreatureOverlayStatus::updateProgress('):]
-assert 'setVerticalBand(healthId, static_cast<Ogre::Real>(1.0 - healthShare), 1.0f)' in progress
-assert 'setVerticalBand(manaId, static_cast<Ogre::Real>(1.0 - manaShare), 1.0f)' in progress
-assert 'void setVerticalBand(uint32_t childOverlayId, Ogre::Real top, Ogre::Real bottom);' in overlay_h
-assert 'setUV(0.0f, top, 1.0f, bottom)' in overlay_cpp
+for fraction, expected in [(1, 0), (0.9, 1), (0.7, 2), (0.5, 4), (0.3, 5), (0.2, 5), (0.001, 6), (0, 7)]:
+    # The comparisons follow repeated subtraction, including floating-point threshold rounding.
+    assert stage(fraction) == expected, (fraction, stage(fraction), expected)
+for i in range(6):
+    threshold = 1.0
+    for unused in range(i):
+        threshold -= 1.0 / 6
+    assert stage(threshold) == i
+    if i:
+        assert stage(threshold + 1e-9) == i
+    assert stage(threshold - 1e-9) == i + 1
 
-# The ring pictures: inner is the middle of the flower, outer the rest; together they are the flower.
-flower = Image.open(textures / 'CreatureOverlay0.png').convert('RGBA').getchannel('A')
-inner = Image.open(textures / 'CreatureOverlayManaInner.png').convert('RGBA').getchannel('A')
-outer = Image.open(textures / 'CreatureOverlayHealthOuter.png').convert('RGBA').getchannel('A')
-assert flower.size == inner.size == outer.size
-centre = flower.size[0] / 2
-solid_inner = solid_outer = 0
-for y in range(flower.size[1]):
-    for x in range(flower.size[0]):
-        f, i, o = flower.getpixel((x, y)), inner.getpixel((x, y)), outer.getpixel((x, y))
-        assert max(i, o) == f and min(i, o) == 0, (x, y)
-        radius = ((x + 0.5 - centre) ** 2 + (y + 0.5 - centre) ** 2) ** 0.5
-        if i >= 128:
-            solid_inner += 1
-            assert radius <= 32
-        if o >= 128:
-            solid_outer += 1
-            assert radius > 30
-assert solid_inner > 500 and solid_outer > 500
-
-material = (root / 'materials/scripts/CreatureOverlay.material').read_text(encoding='utf-8')
-for name, texture in (('CreatureOverlay0', 'CreatureOverlay0.png'),
-                      ('CreatureOverlayHealthOuter', 'CreatureOverlayHealthOuter.png'),
-                      ('CreatureOverlayManaInner', 'CreatureOverlayManaInner.png')):
-    assert re.search(r'material ' + name + r'\s*\{[^}]*?texture ' + re.escape(texture), material, re.S), name
-print('creature badge rings (blue inner mana, outer life), shrinking and sizes pass the checks')
+for stage_index in range(8):
+    original = Image.open(textures / f'CreatureOverlay{stage_index}.png').convert('RGBA')
+    outer = Image.open(textures / f'CreatureOverlayHealthStage{stage_index}.png').convert('RGBA')
+    inner = Image.open(textures / f'CreatureOverlayManaStage{stage_index}.png').convert('RGBA')
+    assert original.size == outer.size == inner.size == (128, 128)
+    for y in range(128):
+        for x in range(128):
+            pixel = original.getpixel((x, y))
+            a, b = outer.getpixel((x, y)), inner.getpixel((x, y))
+            assert (a == pixel and b[3] == 0) or (b == pixel and a[3] == 0), (stage_index, x, y)
+    for kind in ('Health', 'Mana'):
+        name = f'CreatureOverlay{kind}Stage{stage_index}'
+        assert re.search(r'material ' + name + r'\s*\{[^}]*?texture ' + name + r'\.png', material, re.S), name
+print('creature badge segment stages and textures: ok')

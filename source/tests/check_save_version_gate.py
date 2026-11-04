@@ -28,7 +28,8 @@ version = ".".join(re.search(r"set\(" + name + r"\s+(\d+)\)", cmake).group(1)
                    for name in ["OD_MAJOR_VERSION", "OD_MINOR_VERSION", "OD_PATCH_LEVEL"])
 current = "OpenDungeons_Version:" + version + ".21"
 releases = re.findall(r'"(OpenDungeons_Version:[0-9.]+)"', handler[handler.index("bool isSupportedVersionHeader("):])
-check(releases == ["OpenDungeons_Version:0.7.1", "OpenDungeons_Version:0.7.2", "OpenDungeons_Version:0.7.4"],
+check(releases == ["OpenDungeons_Version:0.7.1", "OpenDungeons_Version:0.7.2", "OpenDungeons_Version:0.7.3",
+                    "OpenDungeons_Version:0.7.4"],
       "supported release list changed: %s" % releases)
 
 

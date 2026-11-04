@@ -25,6 +25,7 @@
 
 namespace Goals
 {
+//! \brief Reads one goal and its sub goals; an unknown goal gives no goal and its sub goals are skipped.
 std::unique_ptr<Goal> loadGoalFromStream(const std::string& goalName, std::istream& is)
 {
     std::string tempArguments;
@@ -78,23 +79,34 @@ std::unique_ptr<Goal> loadGoalFromStream(const std::string& goalName, std::istre
     c = is.peek();
     std::string subGoalName;
     int numSubgoals;
+    // An unknown goal name leaves no goal to hang sub goals on: its sub goals are read and dropped, and a damaged
+    // count or a missing name ends the record instead of reading on.
+    static const int MAX_SUBGOALS = 1000;
     if (c == '+')
     {
         // There is a subgoal which should be added on success.
         is.ignore(1);
-        is >> numSubgoals;
-        is >> subGoalName;
+        if(!(is >> numSubgoals >> subGoalName) || (numSubgoals < 0) || (numSubgoals > MAX_SUBGOALS))
+            return tempGoal;
         for (int i = 0; i < numSubgoals; ++i)
-          tempGoal->addSuccessSubGoal(loadGoalFromStream(subGoalName, is));
+        {
+            std::unique_ptr<Goal> subGoal = loadGoalFromStream(subGoalName, is);
+            if((tempGoal != nullptr) && (subGoal != nullptr))
+                tempGoal->addSuccessSubGoal(std::move(subGoal));
+        }
     }
     else if (c == '-')
     {
         // There is a subgoal which should be added on failure.
         is.ignore(1);
-        is >> numSubgoals;
-        is >> subGoalName;
+        if(!(is >> numSubgoals >> subGoalName) || (numSubgoals < 0) || (numSubgoals > MAX_SUBGOALS))
+            return tempGoal;
         for (int i = 0; i < numSubgoals; ++i)
-          tempGoal->addFailureSubGoal(loadGoalFromStream(subGoalName, is));
+        {
+            std::unique_ptr<Goal> subGoal = loadGoalFromStream(subGoalName, is);
+            if((tempGoal != nullptr) && (subGoal != nullptr))
+                tempGoal->addFailureSubGoal(std::move(subGoal));
+        }
     }
 
     return tempGoal;

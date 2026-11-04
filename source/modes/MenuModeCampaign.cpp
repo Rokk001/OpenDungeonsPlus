@@ -383,6 +383,7 @@ bool MenuModeCampaign::loadCampaign()
     return true;
 }
 
+//! \brief Opens the campaign map and logs when a lost-level message is shown.
 void MenuModeCampaign::activate()
 {
     // Loads the corresponding Gui sheet.
@@ -431,6 +432,7 @@ void MenuModeCampaign::activate()
         }
         else
         {
+            OD_LOG_INF("Campaign menu shows the lost-level message for level " + Helper::toString(playedLevel));
             mResultText = "You did not complete this level. You can try again.";
         }
         campaign.clearPlayedLevel();

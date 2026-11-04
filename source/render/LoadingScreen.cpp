@@ -91,12 +91,12 @@ const float LOADING_VERSION_RIGHT = 0.985f;
 const float LOADING_VERSION_TOP = 0.955f;
 //! Text height as a fraction of the window height; relative metrics make it scale with every resolution.
 const float LOADING_TEXT_HEIGHT = 0.075f;
-//! Top of the text as a fraction of the window height.
-const float LOADING_TEXT_TOP = 0.34f;
-//! Vertical centre of the ring as a fraction of the window height.
-const float LOADING_RING_CENTER = 0.60f;
+//! Top of the text as a fraction of the window height; the text sits directly above the ring at the bottom centre.
+const float LOADING_TEXT_TOP = 0.665f;
+//! Vertical centre of the ring as a fraction of the window height; the ring sits at the bottom centre.
+const float LOADING_RING_CENTER = 0.85f;
 //! Ring radius as a fraction of the window height.
-const float LOADING_RING_RADIUS = 0.11f;
+const float LOADING_RING_RADIUS = 0.10f;
 //! Name of the overlay font created for the loading paths after startup.
 const char* const LOADING_FONT_NAME = "LoadingScreenFont";
 //! Number of startup stages whose completion fills the ring: window, resource setup, resource groups, sound,

@@ -131,10 +131,16 @@ void MissileBlast::explode(Tile* tile)
     }
 }
 
+//! \brief Reads a blast missile from a saved line; a line that cannot be read gives no object.
 MissileBlast* MissileBlast::getMissileBlastFromStream(GameMap* gameMap, std::istream& is)
 {
     MissileBlast* obj = new MissileBlast(gameMap);
-    obj->importFromStream(is);
+    if(!obj->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid blast missile record");
+        delete obj;
+        return nullptr;
+    }
     return obj;
 }
 

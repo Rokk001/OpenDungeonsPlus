@@ -23,5 +23,8 @@ void writeSpellCooldowns(std::ostream& os, const std::vector<std::pair<std::stri
 bool readSpellCooldowns(std::istream& is, std::vector<std::pair<std::string, uint32_t>>& cooldowns);
 //! \brief Reads lines through the specified closing tag.
 bool readBlockLines(std::istream& is, const std::string& endTag, std::vector<std::string>& lines);
+//! \brief Reads the lines of a block that has no opening tag: the first token is already read, the end tag is consumed.
+bool readUntaggedBlockLines(std::istream& is, const std::string& firstToken, const std::string& endTag,
+    std::vector<std::string>& lines);
 }
 #endif

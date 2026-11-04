@@ -416,6 +416,7 @@ bool TrapManager::buildTrapOnTiles(GameMap* gameMap, TrapType type, Seat* seatPt
     return factory.buildTrapOnTiles(gameMap, seatPtr, tiles, noFee);
 }
 
+//! \brief Reads a trap of a saved game; a trap that could not be read gives no trap.
 Trap* TrapManager::getTrapFromStream(GameMap* gameMap, std::istream& is)
 {
     TrapType type;
@@ -430,8 +431,22 @@ Trap* TrapManager::getTrapFromStream(GameMap* gameMap, std::istream& is)
         return nullptr;
     }
 
+    if(factories[index] == nullptr)
+    {
+        OD_LOG_ERR("no trap factory for type=" + Helper::toString(index));
+        return nullptr;
+    }
+
     const TrapFactory& factory = *factories[index];
-    return factory.getTrapFromStream(gameMap, is);
+    Trap* trap = factory.getTrapFromStream(gameMap, is);
+    if((trap != nullptr) && trap->hasImportFailed())
+    {
+        // A trap that could not be read has no seat or tiles to be added to the map with
+        OD_LOG_ERR("Could not read the trap " + trap->getName() + " of type=" + Helper::toString(index));
+        delete trap;
+        return nullptr;
+    }
+    return trap;
 }
 
 const std::string& TrapManager::getTrapNameFromTrapType(TrapType type)

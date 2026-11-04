@@ -177,10 +177,16 @@ bool SpellCallToWar::castSpellOnTile(GameMap* gameMap, Player* player, Tile* til
     return true;
 }
 
+//! \brief Reads a call to war spell from a saved line; a line that cannot be read gives no object.
 Spell* SpellCallToWar::getSpellFromStream(GameMap* gameMap, std::istream &is)
 {
     SpellCallToWar* spell = new SpellCallToWar(gameMap);
-    spell->importFromStream(is);
+    if(!spell->importFromStream(is))
+    {
+        OD_LOG_ERR("Invalid call to war spell record");
+        delete spell;
+        return nullptr;
+    }
     return spell;
 }
 

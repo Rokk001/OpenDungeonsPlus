@@ -78,6 +78,7 @@ std::string Campaign::unescapeText(const std::string& text)
 }
 
 //! \brief Reads campaign levels, including their optional briefing images.
+//! The level list is read; when no campaign level is running, no level counts as played afterwards.
 bool Campaign::importDefinition(std::istream& is)
 {
     std::lock_guard<std::mutex> lock(mMutex);
@@ -140,6 +141,13 @@ bool Campaign::importDefinition(std::istream& is)
 
     mCompleted.assign(mLevels.size(), false);
     mDiscovered.assign(mLevels.size(), false);
+    // No level was played yet. The initial value 0 would name the first level as played and make the
+    // campaign menu show a lost-level message when the list was empty while the campaign was stopped.
+    if(!mActive)
+    {
+        mPlayedLevel = mLevels.size();
+        mPlayedLevelWon = false;
+    }
     return !mLevels.empty();
 }
 
