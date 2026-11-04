@@ -96,8 +96,7 @@ bool CreatureActionSearchSpa::handleSearchSpa(Creature& creature)
 
     // Now, the spa reserves the bath place and handles the creature
     creature.popAction();
-    const bool moodRoom = creature.getMoodValue() >= CreatureMoodLevel::Upset ||
-        creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork();
+    const bool moodRoom = creature.getMoodValue() >= CreatureMoodLevel::Upset;
     creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *chosenTile->getCoveringRoom(), false, moodRoom));
     return true;
 }

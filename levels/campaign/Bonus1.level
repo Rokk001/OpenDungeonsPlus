@@ -1488,6 +1488,7 @@ DwarfWorker	1
     ElementDef/Level	0.1
     FightIdleDist	1
     FeeBase	0
+    MoodSensitivity	1
     FeePerLevel	0
     SkillDamageFactor	0.6029
     SleepHeal	1
@@ -1527,18 +1528,18 @@ DwarfWorker	1
     379	409	440	473	506	540	576	613	650	700
     [/XP]
     [MoodModifiers]
-    # MoodModifierName	StartHunger	MoodModifier
-    Hunger	80	-60
-    # MoodModifierName	StartWakefulness	MoodModifier
-    Wakefulness	20	-160
-    # MoodModifierName	MoodModifier
-    Fee	-120
-    # MoodModifierName	MoodModifier
-    HpLoss	-6
-    # MoodModifierName	TurnsWithoutFightMin	TurnsWithoutFightMax	MoodModifier
-    TurnsWithoutFight	150	20	-35
-    # MoodModifierName	CreatureClass	MoodModifier
-    Creature	Goblin	-500
+    # MoodModifierName	StartHunger	Jump	FallPerTurn	Reward
+    Hunger	80	-300	-1.1905	300
+    # MoodModifierName	StartWakefulness	Jump	FallPerTurn	Reward
+    Wakefulness	20	-300	-1.1905	300
+    # MoodModifierName	Jump	FallPerTurn	Reward
+    Fee	-300	-0.8929	300
+    # MoodModifierName	Jump	FallPerTurn	Reward
+    HpLoss	-125	-0.1488	125
+    # MoodModifierName	TurnsWithoutFightMin	Jump	FallPerTurn	Reward
+    TurnsWithoutFight	150	-100	-0.119	100
+    # MoodModifierName	CreatureClass	FallPerTurn
+    Creature	Goblin	-0.1488
     [/MoodModifiers]
     [CreatureSkills]
     # SkillName	CooldownNbTurns	WarmupNbTurns	RangeMax	RangePerLvl	LevelMin	MissileMesh	MissilePartScript	MissileSpeed	PhyAtk	PhyAtkPerLvl	MagAtk	MagAtkPerLvl	EleAtk	EleAtkPerLvl	PhyMin	PhyMax	MagMin	MagMax	EleMin	EleMax

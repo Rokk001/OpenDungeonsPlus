@@ -26,11 +26,14 @@ static const std::string CreatureMoodTorturedName = "Tortured";
 
 namespace
 {
+//! \brief Factory that creates CreatureMoodTortured objects from the creature configuration.
 class CreatureMoodTorturedFactory : public CreatureMoodFactory
 {
+    //! \brief Creates a new CreatureMoodTortured with default values.
     CreatureMood* createCreatureMood() const override
     { return new CreatureMoodTortured; }
 
+    //! \brief Returns the configuration name of this modifier.
     const std::string& getCreatureMoodName() const override
     {
         return CreatureMoodTorturedName;
@@ -41,48 +44,20 @@ class CreatureMoodTorturedFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodTorturedFactory);
 }
 
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodTortured::getModifierName() const
 {
     return CreatureMoodTorturedName;
 }
 
-//! \brief Computes this mood contribution.
-double CreatureMoodTortured::computeMood(const Creature& creature) const
+//! \brief Returns 1 while the torture still weighs on the creature, otherwise 0.
+double CreatureMoodTortured::getAmount(const Creature& creature) const
 {
-    int32_t turns = std::min(creature.getNbTurnsTortureMood(), mTurnsMax);
-    return turns * mMoodModifier;
+    return (creature.getNbTurnsTortureMood() > 0) ? 1.0 : 0.0;
 }
 
+//! \brief Returns a copy of this modifier.
 CreatureMoodTortured* CreatureMoodTortured::clone() const
 {
     return new CreatureMoodTortured(*this);
-}
-
-bool CreatureMoodTortured::importFromStream(std::istream& is)
-{
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
-    if(!(is >> mTurnsMax))
-        return false;
-    if(!(is >> mMoodModifier))
-        return false;
-
-    return true;
-}
-
-void CreatureMoodTortured::exportToStream(std::ostream& os) const
-{
-    CreatureMood::exportToStream(os);
-    os << "\t" << mTurnsMax;
-    os << "\t" << mMoodModifier;
-}
-
-void CreatureMoodTortured::getFormatString(std::string& format) const
-{
-    CreatureMood::getFormatString(format);
-    if(!format.empty())
-        format += "\t";
-
-    format += "TurnsMax\tMoodModifier";
 }

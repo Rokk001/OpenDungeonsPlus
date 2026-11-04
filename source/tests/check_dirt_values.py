@@ -45,8 +45,9 @@ assert result.returncode == 0, 'dirt_values.py --check failed:\n' + result.stdou
 
 # 2. Every key of the [Dirt] block with the value of the design
 DIRT = {
-    'DirtVisibleFrom': '10', 'DirtStage2At': '33.3333', 'DirtStage3At': '66.6667', 'DirtMoodStage2': '-100', 'DirtMoodStage3': '-200',
-    'DirtPileMood': '-100', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
+    'DirtVisibleFrom': '10', 'DirtStage2At': '33.3333', 'DirtStage3At': '66.6667', 'DirtMoodFallPerTurnStage2': '-0.0298',
+    'DirtMoodFallPerTurnStage3': '-0.0595', 'DirtPileMoodFallPerTurn': '-0.0298', 'DirtCleanedMoodStage2': '25',
+    'DirtCleanedMoodStage3': '50', 'DirtPileRadius': '2', 'DirtOutputStage2': '0.75', 'DirtOutputStage3': '0.5',
     'UrgeSeek': '80', 'UrgeOnTheWay': '75', 'UrgeRelieve': '100', 'UrgePerChicken': '5.962', 'UrgePerDrink': '15',
     'ToiletUseTurns': '4', 'ToiletWaitRadius': '1', 'ToiletReserveFactor': '3',
     'CleanRoomFromStage': '2', 'CleanRateFactor': '1',
@@ -63,6 +64,8 @@ for key, value in DIRT.items():
 extra = set(dirt) - set(DIRT)
 assert not extra, '[Dirt] keys without a design value: ' + ', '.join(sorted(extra))
 assert 'CleaningWorkerSharePercent' not in dirt
+for old in ('DirtMoodStage2', 'DirtMoodStage3', 'DirtPileMood'):
+    assert old not in dirt, 'the old fixed dirt mood ' + old + ' is replaced by the fall per turn keys'
 assert 'CreatureDirtPerFight' not in dirt, 'the old key CreatureDirtPerFight must not come back'
 # The stage thresholds split 0-100 into three equal parts and the block documents each key
 assert float(dirt['DirtStage2At']) < float(dirt['DirtStage3At']) < 100.0

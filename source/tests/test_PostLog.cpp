@@ -199,3 +199,92 @@ BOOST_AUTO_TEST_CASE(test_relationship_post_keeps_other_name)
     BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::Couple), "couple");
     BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::SplitUp), "splitup");
 }
+
+// Case "posts": a creature loses its lair, wishes for a casino that does not exist, the lair comes back
+BOOST_AUTO_TEST_CASE(test_mood_posts_complaint_wish_thanks)
+{
+    PostLog log;
+    log.start(0, TURNS_PER_SECOND);
+    const int32_t casino = 7;
+    BOOST_CHECK(log.addComplaint(10, "Orc1", "Orc", false, social::MoodCause::NoBed));
+    BOOST_CHECK(log.getPosts().back().mCategory == PostCategory::ComplainBed);
+    BOOST_CHECK(log.addWish(20, "Orc1", "Orc", false, casino));
+    BOOST_CHECK(log.getPosts().back().mCategory == PostCategory::Wish);
+    BOOST_CHECK_EQUAL(log.getPosts().back().mArgument, casino);
+    BOOST_CHECK(log.addComplaintThanks(30, "Orc1", "Orc", false, social::MoodCause::NoBed));
+    BOOST_CHECK(log.getPosts().back().mCategory == PostCategory::ThanksBed);
+    BOOST_CHECK(log.addWishThanks(40, "Orc1", "Orc", false, casino));
+    BOOST_CHECK(log.getPosts().back().mCategory == PostCategory::ThanksWish);
+    BOOST_CHECK_EQUAL(log.getPosts().back().mArgument, casino);
+    BOOST_CHECK_EQUAL(static_cast<int>(log.getPosts().size()), 4);
+}
+
+// A thank-you only follows a complaint or wish that was written, and only once
+BOOST_AUTO_TEST_CASE(test_mood_posts_thanks_need_a_written_post)
+{
+    PostLog log;
+    log.start(0, TURNS_PER_SECOND);
+    BOOST_CHECK(!log.addComplaintThanks(10, "Orc1", "Orc", false, social::MoodCause::Hungry));
+    BOOST_CHECK(!log.addWishThanks(10, "Orc1", "Orc", false, 7));
+
+    BOOST_CHECK(log.addComplaint(10, "Orc1", "Orc", false, social::MoodCause::Hungry));
+    // The thank-you of another cause or another creature does not use up the complaint
+    BOOST_CHECK(!log.addComplaintThanks(20, "Orc1", "Orc", false, social::MoodCause::Thirsty));
+    BOOST_CHECK(!log.addComplaintThanks(20, "Orc2", "Orc", false, social::MoodCause::Hungry));
+    BOOST_CHECK(log.addComplaintThanks(20, "Orc1", "Orc", false, social::MoodCause::Hungry));
+    BOOST_CHECK(!log.addComplaintThanks(30, "Orc1", "Orc", false, social::MoodCause::Hungry));
+}
+
+// A complaint that the post limits dropped is not thanked for
+BOOST_AUTO_TEST_CASE(test_mood_posts_dropped_complaint_has_no_thanks)
+{
+    PostLog log;
+    log.start(0, TURNS_PER_SECOND);
+    BOOST_CHECK(log.addComplaint(10, "Orc1", "Orc", false, social::MoodCause::Tired));
+    // Same creature and category within the cooldown: dropped, nothing new is remembered
+    BOOST_CHECK(!log.addComplaint(20, "Orc1", "Orc", false, social::MoodCause::Tired));
+    BOOST_CHECK(log.addComplaintThanks(30, "Orc1", "Orc", false, social::MoodCause::Tired));
+    BOOST_CHECK_EQUAL(static_cast<int>(log.getPosts().size()), 2);
+
+    // A complaint dropped by the limit of the creature leaves nothing to thank for
+    const PostCategory fillers[] = {PostCategory::Eat, PostCategory::Sleep, PostCategory::Train,
+        PostCategory::Work, PostCategory::Fight, PostCategory::Hurt};
+    for(std::size_t i = 0; i < sizeof(fillers) / sizeof(fillers[0]); ++i)
+        add(log, 200 + static_cast<int64_t>(i), "Orc2", fillers[i]);
+    BOOST_CHECK(!log.addComplaint(210, "Orc2", "Orc", false, social::MoodCause::NoWage));
+    BOOST_CHECK(!log.addComplaintThanks(220, "Orc2", "Orc", false, social::MoodCause::NoWage));
+}
+
+// Posts are not saved: after the log stopped (a load starts it again) there is no thank-you for an earlier complaint
+BOOST_AUTO_TEST_CASE(test_mood_posts_are_forgotten_with_the_log)
+{
+    PostLog log;
+    log.start(0, TURNS_PER_SECOND);
+    BOOST_CHECK(log.addComplaint(10, "Orc1", "Orc", false, social::MoodCause::NoWork));
+    BOOST_CHECK(log.addWish(10, "Orc1", "Orc", false, 7));
+    log.stop();
+    BOOST_CHECK(!log.addComplaintThanks(20, "Orc1", "Orc", false, social::MoodCause::NoWork));
+    log.start(1000, TURNS_PER_SECOND);
+    BOOST_CHECK(!log.addComplaintThanks(1100, "Orc1", "Orc", false, social::MoodCause::NoWork));
+    BOOST_CHECK(!log.addWishThanks(1100, "Orc1", "Orc", false, 7));
+}
+
+// Every cause has a complaint and a thank-you category with its own name, a number outside of the causes has none
+BOOST_AUTO_TEST_CASE(test_mood_post_category_names)
+{
+    const social::MoodCause causes[] = {social::MoodCause::NoBed, social::MoodCause::Hungry, social::MoodCause::Thirsty,
+        social::MoodCause::Tired, social::MoodCause::NoWage, social::MoodCause::Wounded, social::MoodCause::Held,
+        social::MoodCause::NoWork, social::MoodCause::NoFight};
+    const char* suffixes[] = {"bed", "hungry", "thirsty", "tired", "wage", "wounded", "held", "work", "fight"};
+    for(std::size_t i = 0; i < sizeof(causes) / sizeof(causes[0]); ++i)
+    {
+        BOOST_CHECK_EQUAL(social::getPostCategoryName(social::getComplaintCategory(causes[i])),
+            std::string("complain") + suffixes[i]);
+        BOOST_CHECK_EQUAL(social::getPostCategoryName(social::getThanksCategory(causes[i])),
+            std::string("thanks") + suffixes[i]);
+    }
+    BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::Wish), "wish");
+    BOOST_CHECK_EQUAL(social::getPostCategoryName(PostCategory::ThanksWish), "thankswish");
+    BOOST_CHECK(social::getComplaintCategory(social::MoodCause::Nb) == PostCategory::Nb);
+    BOOST_CHECK(social::getThanksCategory(social::MoodCause::Nb) == PostCategory::Nb);
+}

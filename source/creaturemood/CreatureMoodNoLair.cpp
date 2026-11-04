@@ -26,7 +26,7 @@ static const std::string CreatureMoodNoLairName = "NoLair";
 
 namespace
 {
-//! \brief Factory that creates CreatureMoodNoLair objects from the mood configuration.
+//! \brief Factory that creates CreatureMoodNoLair objects from the creature configuration.
 class CreatureMoodNoLairFactory : public CreatureMoodFactory
 {
     //! \brief Creates a new CreatureMoodNoLair with default values.
@@ -44,53 +44,20 @@ class CreatureMoodNoLairFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodNoLairFactory);
 }
 
-//! \brief Returns the name under which this modifier is listed in the mood configuration.
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodNoLair::getModifierName() const
 {
     return CreatureMoodNoLairName;
 }
 
-//! \brief Returns the mood change while the creature has no home tile, otherwise 0.
-//! \brief Computes this mood contribution.
-double CreatureMoodNoLair::computeMood(const Creature& creature) const
+//! \brief Returns 1 while the creature has no home tile, otherwise 0.
+double CreatureMoodNoLair::getAmount(const Creature& creature) const
 {
-    if(creature.getHomeTile() != nullptr)
-        return 0;
-
-    return mMoodModifier;
+    return (creature.getHomeTile() == nullptr) ? 1.0 : 0.0;
 }
 
 //! \brief Returns a copy of this modifier.
 CreatureMoodNoLair* CreatureMoodNoLair::clone() const
 {
     return new CreatureMoodNoLair(*this);
-}
-
-//! \brief Reads the modifier parameters from the configuration stream; returns false if a value is missing.
-bool CreatureMoodNoLair::importFromStream(std::istream& is)
-{
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
-    if(!(is >> mMoodModifier))
-        return false;
-
-    return true;
-}
-
-//! \brief Writes the modifier parameters to the stream.
-void CreatureMoodNoLair::exportToStream(std::ostream& os) const
-{
-    CreatureMood::exportToStream(os);
-    os << "\t" << mMoodModifier;
-}
-
-//! \brief Appends the names of the modifier parameters to the format string.
-void CreatureMoodNoLair::getFormatString(std::string& format) const
-{
-    CreatureMood::getFormatString(format);
-    if(!format.empty())
-        format += "\t";
-
-    format += "MoodModifier";
 }

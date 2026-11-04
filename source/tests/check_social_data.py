@@ -9,6 +9,9 @@ Checks:
     and the longest possible bio fits into 160 characters;
   * source/social/ includes no network, server, packet, random or save code;
   * the server side files never include the social headers;
+  * the complaint, wish and thank-you posts of the mood system (case posts): every cause has at least 3 texts for the
+    complaint and for the thank-you, the wish and its thank-you have at least 3 texts that name the room, the names of the
+    categories in PostLog.cpp, the causes of the server and the handling of the event in the client fit together;
   * the golden file has 50 lines.
 Run with: python source/tests/check_social_data.py
 """
@@ -126,6 +129,11 @@ MOOD_STATES = ['Hungry', 'Tired', 'GetFee', 'LeaveDungeon', 'KoTemp', 'InJail', 
 POST_CATEGORIES = ['eat', 'sleep', 'train', 'work', 'fight', 'hurt', 'levelup', 'payday', 'unhappy', 'ko', 'jail',
                    'pickedup', 'slapped', 'arrived', 'left', 'died', 'idle', 'friendship', 'hatred', 'nemesis', 'breakup', 'converted', 'couple', 'splitup', 'relieved', 'filthy', 'bought', 'bargain', 'fleeced', 'gift', 'epicfind',
                    'drank', 'duelwon', 'duellost', 'drunk', 'hungover', 'ghostscared', 'ghosthunted', 'relaxed']
+# Complaints (a lasting mood problem started), thank-yous (it ended), the wish for a pleasure room and its thank-you
+MOOD_CAUSES = ['bed', 'hungry', 'thirsty', 'tired', 'wage', 'wounded', 'held', 'work', 'fight']
+MOOD_POST_CATEGORIES = (['complain' + cause for cause in MOOD_CAUSES] + ['thanks' + cause for cause in MOOD_CAUSES] +
+                        ['wish', 'thankswish'])
+POST_CATEGORIES += MOOD_POST_CATEGORIES
 MAX_LENGTH = {'Job': 40, 'Like': 40, 'Dislike': 40, 'Quirk': 40, 'Bio': 100, 'Relation': 40, 'ClassName': 24, 'MoodLine': 80,
               'Post': 110}
 valid_scopes = set(['*', 'worker', 'fighter']) | set(groups) | set(classes)
@@ -186,6 +194,18 @@ for category in ('eat', 'sleep', 'work'):
         check(sum(1 for scope, _ in texts.get('Post:' + category, []) if scope == name) >= 2,
               'fewer than 2 %s posts for group %s' % (category, name))
 
+# Mood posts: at least 3 texts per cause and kind for everybody, the wish names the room
+for category in MOOD_POST_CATEGORIES:
+    check(sum(1 for scope, _ in texts.get('Post:' + category, []) if scope == '*') >= 3,
+          'fewer than 3 generic posts for ' + category)
+for category in ('wish', 'thankswish'):
+    check(all('{room}' in text for _, text in texts.get('Post:' + category, [])),
+          'a %s text does not name the room' % category)
+for category in MOOD_POST_CATEGORIES:
+    if category not in ('wish', 'thankswish'):
+        check(all('{room}' not in text for _, text in texts.get('Post:' + category, [])),
+              'a %s text uses the room slot but has no room' % category)
+
 # Longest possible bio per class (slots replaced by the longest value that can occur)
 for class_name in classes:
     group = groups[class_to_group[class_name]]
@@ -225,6 +245,47 @@ for source in sources:
     check(not re.search(r'\bauto\b', text), source.name + ' uses auto')
     check('Random::' not in text and 'std::rand' not in text and 'srand' not in text and '<chrono>' not in text
           and 'time(' not in text, source.name + ' uses time or random sources')
+
+# ---- mood posts (case posts): names, causes and the way from the server to the feed ----
+post_log_h = (repo / 'source/social/PostLog.h').read_text(encoding='utf-8')
+post_log_cpp = (repo / 'source/social/PostLog.cpp').read_text(encoding='utf-8')
+named = set(re.findall(r'return "(\w+)";', post_log_cpp.split('std::string getPostCategoryName')[1].split('PostCategory getComplaintCategory')[0]))
+for category in MOOD_POST_CATEGORIES:
+    check(category in named, 'PostLog.cpp has no name for the post category ' + category)
+for category in named:
+    check(category in POST_CATEGORIES, 'the post category %s has no texts check' % category)
+# The order of the causes is the order of the numbers of the cosmetic event
+cause_enum = re.search(r'enum class MoodCause : int32_t\s*\{(.*?)\};', post_log_h, re.S).group(1)
+causes = re.findall(r'(\w+) = (\d+)', cause_enum)
+check([int(number) for _, number in causes] == list(range(10)), 'the mood causes must be numbered 0 to 9')
+event_h = (repo / 'source/network/CosmeticEvent.h').read_text(encoding='utf-8')
+event_causes = re.search(r'enum class CosmeticMoodCause : int32_t\s*\{(.*?)\};', event_h, re.S).group(1)
+check([int(number) for _, number in re.findall(r'(\w+) = (\d+)', event_causes)] == list(range(9)),
+      'the cosmetic mood causes must be numbered 0 to 8')
+check('moodPost = 25' in event_h, 'the cosmetic event moodPost is missing')
+creature_cpp = (repo / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
+fire = creature_cpp.split('void Creature::fireMoodProblemPost')[1].split('void Creature::fireMoodPost')[0]
+for modifier in ('NoLair', 'Hunger', 'Thirst', 'Wakefulness', 'Fee', 'HpLoss', 'HeldInHand', 'OutOfWork',
+                 'TurnsWithoutFight'):
+    check('"%s"' % modifier in fire, 'no mood post cause for the problem ' + modifier)
+check('"Tortured"' not in fire, 'the torture has no post cause')
+problems = creature_cpp.split('void Creature::computeMoodProblems')[1].split('void Creature::computeMoodHatedPairs')[0]
+# A complaint only when the problem starts after the first look (no post for a problem that holds at a load, E19)
+check(re.search(r'if\(mMoodPrimed\)\s*\{[^}]*fireMoodProblemPost\(mood->getModifierName\(\), true\)', problems, re.S)
+      is not None, 'the complaint must only come after the first look at the problems')
+check('fireMoodProblemPost(mood->getModifierName(), false)' in problems, 'the end of a problem is not told')
+# The wish counts a room as missing by its existence, a lock does not change it (E18)
+wish = creature_cpp.split('int32_t Creature::getUsablePleasureRoom')[1].split('void Creature::noteWishMet')[0]
+check('getRoomsByTypeAndSeat' in wish and re.search('[Ll]ock', wish.split('void Creature::notePleasureWish')[0]) is None,
+      'the wish must look at the rooms of the keeper only, a lock must not count')
+check('Upset' in wish and 'notePleasureWish' in (repo / 'source/creatureaction/CreatureActionSearchJob.cpp').read_text(
+      encoding='utf-8'), 'the wish must come from the search for a pleasure room of an upset creature')
+client_cpp = (repo / 'source/network/ODClient.cpp').read_text(encoding='utf-8')
+check('CosmeticEventType::moodPost' in client_cpp and 'socialMoodPost' in client_cpp, 'the client does not write the mood posts')
+# Posts and their memory are never saved (E19)
+check('mOpenMoodPosts' not in creature_cpp, 'the open complaints must stay in the post log, not in the creature')
+check(re.search(r'void PostLog::stop\(\).*?mOpenMoodPosts\.clear\(\)', post_log_cpp, re.S) is not None,
+      'the open complaints must be forgotten when the log stops')
 
 # ---- server path ----
 for pattern in ('network/ODServer*', 'network/ServerNotification*', 'network/ServerMode*', 'network/ODSocketServer*',

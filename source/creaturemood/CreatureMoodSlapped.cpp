@@ -26,7 +26,7 @@ static const std::string CreatureMoodSlappedName = "Slapped";
 
 namespace
 {
-//! \brief Factory that creates CreatureMoodSlapped objects from the mood configuration.
+//! \brief Factory that creates CreatureMoodSlapped objects from the creature configuration.
 class CreatureMoodSlappedFactory : public CreatureMoodFactory
 {
     //! \brief Creates a new CreatureMoodSlapped with default values.
@@ -44,19 +44,16 @@ class CreatureMoodSlappedFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodSlappedFactory);
 }
 
-//! \brief Returns the name under which this modifier is listed in the mood configuration.
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodSlapped::getModifierName() const
 {
     return CreatureMoodSlappedName;
 }
 
-//! \brief Returns the mood change per slap received during the last DurationTurns turns (at most MaxSlaps slaps).
-//! \brief Computes this mood contribution.
-double CreatureMoodSlapped::computeMood(const Creature& creature) const
+//! \brief Returns 0, a slap is an event and not a problem that holds.
+double CreatureMoodSlapped::getAmount(const Creature& creature) const
 {
-    int32_t nbSlaps = creature.getNbRecentSlaps(mDurationTurns);
-    nbSlaps = std::min(nbSlaps, mMaxSlaps);
-    return nbSlaps * mMoodModifier;
+    return 0.0;
 }
 
 //! \brief Returns a copy of this modifier.
@@ -65,37 +62,32 @@ CreatureMoodSlapped* CreatureMoodSlapped::clone() const
     return new CreatureMoodSlapped(*this);
 }
 
-//! \brief Reads the modifier parameters from the configuration stream; returns false if a value is missing.
+//! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
 bool CreatureMoodSlapped::importFromStream(std::istream& is)
 {
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
     if(!(is >> mDurationTurns))
         return false;
+
     if(!(is >> mMaxSlaps))
         return false;
-    if(!(is >> mMoodModifier))
-        return false;
 
-    return true;
+    return CreatureMood::importFromStream(is);
 }
 
-//! \brief Writes the modifier parameters to the stream.
+//! \brief Writes the parameters and then the value columns to the stream.
 void CreatureMoodSlapped::exportToStream(std::ostream& os) const
 {
-    CreatureMood::exportToStream(os);
     os << "\t" << mDurationTurns;
     os << "\t" << mMaxSlaps;
-    os << "\t" << mMoodModifier;
+    CreatureMood::exportToStream(os);
 }
 
-//! \brief Appends the names of the modifier parameters to the format string.
+//! \brief Appends the names of the parameters and then of the value columns to the format string.
 void CreatureMoodSlapped::getFormatString(std::string& format) const
 {
-    CreatureMood::getFormatString(format);
     if(!format.empty())
         format += "\t";
 
-    format += "DurationTurns\tMaxSlaps\tMoodModifier";
+    format += "DurationTurns\tMaxSlaps";
+    CreatureMood::getFormatString(format);
 }

@@ -310,7 +310,7 @@ def main():
     tables = [list(map(float, block.split())) for block in re.findall(r"\[XP\](.*?)\[/XP\]", creatures, re.S) if block.strip()]
     assert tables and all(table == tables[0] for table in tables), "the crystal wage cases require the actual shared XP table"
     assert len(tables[0]) == 29
-    fee_pairs = {(int(base), int(per)) for base, per in re.findall(r"FeeBase\s+(\d+)\s+FeePerLevel\s+(\d+)", creatures)}
+    fee_pairs = {(int(base), int(per)) for base, per in re.findall(r"FeeBase\s+(\d+)(?:\s+Mood\w+\s+[\d.]+)*\s+FeePerLevel\s+(\d+)", creatures)}
     fee_per_level = []
     for wage in (400, 200, 100, 50):
         found = [per for base, per in fee_pairs if base == wage]

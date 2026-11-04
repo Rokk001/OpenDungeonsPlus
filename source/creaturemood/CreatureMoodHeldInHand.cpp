@@ -26,7 +26,7 @@ static const std::string CreatureMoodHeldInHandName = "HeldInHand";
 
 namespace
 {
-//! \brief Factory that creates CreatureMoodHeldInHand objects from the mood configuration.
+//! \brief Factory that creates CreatureMoodHeldInHand objects from the creature configuration.
 class CreatureMoodHeldInHandFactory : public CreatureMoodFactory
 {
     //! \brief Creates a new CreatureMoodHeldInHand with default values.
@@ -44,22 +44,16 @@ class CreatureMoodHeldInHandFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodHeldInHandFactory);
 }
 
-//! \brief Returns the name under which this modifier is listed in the mood configuration.
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodHeldInHand::getModifierName() const
 {
     return CreatureMoodHeldInHandName;
 }
 
-//! \brief Returns the mood change for the turns the creature stayed in the hand beyond TurnsMin (counted up to TurnsMax turns).
-//! \brief Computes this mood contribution.
-double CreatureMoodHeldInHand::computeMood(const Creature& creature) const
+//! \brief Returns 1 while the creature counts at least TurnsMin turns in the hand, otherwise 0.
+double CreatureMoodHeldInHand::getAmount(const Creature& creature) const
 {
-    int32_t turns = creature.getNbTurnsInHand();
-    if(turns < mTurnsMin)
-        return 0;
-
-    turns = std::min(turns - mTurnsMin, mTurnsMax);
-    return turns * mMoodModifier;
+    return (creature.getNbTurnsInHand() >= mTurnsMin) ? 1.0 : 0.0;
 }
 
 //! \brief Returns a copy of this modifier.
@@ -68,37 +62,28 @@ CreatureMoodHeldInHand* CreatureMoodHeldInHand::clone() const
     return new CreatureMoodHeldInHand(*this);
 }
 
-//! \brief Reads the modifier parameters from the configuration stream; returns false if a value is missing.
+//! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
 bool CreatureMoodHeldInHand::importFromStream(std::istream& is)
 {
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
     if(!(is >> mTurnsMin))
         return false;
-    if(!(is >> mTurnsMax))
-        return false;
-    if(!(is >> mMoodModifier))
-        return false;
 
-    return true;
+    return CreatureMood::importFromStream(is);
 }
 
-//! \brief Writes the modifier parameters to the stream.
+//! \brief Writes the parameters and then the value columns to the stream.
 void CreatureMoodHeldInHand::exportToStream(std::ostream& os) const
 {
-    CreatureMood::exportToStream(os);
     os << "\t" << mTurnsMin;
-    os << "\t" << mTurnsMax;
-    os << "\t" << mMoodModifier;
+    CreatureMood::exportToStream(os);
 }
 
-//! \brief Appends the names of the modifier parameters to the format string.
+//! \brief Appends the names of the parameters and then of the value columns to the format string.
 void CreatureMoodHeldInHand::getFormatString(std::string& format) const
 {
-    CreatureMood::getFormatString(format);
     if(!format.empty())
         format += "\t";
 
-    format += "TurnsMin\tTurnsMax\tMoodModifier";
+    format += "TurnsMin";
+    CreatureMood::getFormatString(format);
 }

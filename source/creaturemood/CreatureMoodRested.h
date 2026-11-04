@@ -20,34 +20,28 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Relief given to a creature that sleeps in its lair. Fades after waking up.
+//! \brief One-time event: the creature wakes up rested after sleeping in its lair.
 class CreatureMoodRested : public CreatureMood
 {
 public:
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodRested() :
-        mTurnsMax(0),
-        mMoodModifier(0)
+        CreatureMood(CreatureMoodKind::Event, CreatureMoodColumns::Event)
     {}
 
+    //! \brief Destroys the modifier.
     virtual ~CreatureMoodRested()
     {}
 
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
-    //! \brief Returns the configured lifetime of rested and admission mood.
-    int32_t getTurnsMax() const { return mTurnsMax; }
 
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 0, waking rested is an event and not a problem that holds.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
-    inline CreatureMoodRested* clone() const override;
-
-    virtual bool importFromStream(std::istream& is) override;
-    virtual void exportToStream(std::ostream& os) const override;
-    virtual void getFormatString(std::string& format) const override;
-
-private:
-    int32_t mTurnsMax;
-    double mMoodModifier;
+    //! \brief Returns a copy of this modifier.
+    CreatureMoodRested* clone() const override;
 };
 
 #endif // CREATUREMOODRESTED_H

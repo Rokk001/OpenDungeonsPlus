@@ -328,7 +328,7 @@ void RoomTorture::doUpkeep()
 
         // Only an enemy victim whose mood is broken can convert: it rolls once per second
         if((getSeat() != creature->getSeat()) &&
-           (config.getCreatureBaseMood() + creature->getMoodPoints() <= config.getCreatureMoodFurious()))
+           (creature->getMoodPoints() < config.getCreatureMoodFurious()))
         {
             int32_t brokenTurns = creature->increaseTortureBrokenTurns();
             bool secondPassed = std::floor(brokenTurns / ODApplication::turnsPerSecond)

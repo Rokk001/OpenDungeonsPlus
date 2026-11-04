@@ -103,9 +103,14 @@ struct RelationshipSettings
     //! Defense taken away while a nemesis fights next to the creature
     double mCombatPenaltyNemesis;
 
-    //! Mood points lost for each hated / nemesis creature of the same keeper
-    int32_t mMoodPenaltyHated;
-    int32_t mMoodPenaltyNemesis;
+    //! Mood points lost once (jump) and given back once (reward) for each hated / nemesis creature of the same keeper
+    double mMoodPenaltyHated;
+    double mMoodPenaltyNemesis;
+    //! Mood points per turn a hated / nemesis creature of the same keeper takes while it is in the dungeon
+    double mMoodFallHated;
+    double mMoodFallNemesis;
+    //! The stored mood of two creatures that ended a nemesis brawl is at most this
+    double mBrawlEndMoodMax;
     //! At most this many hated creatures count for the mood
     int32_t mMoodMaxPairs;
 
@@ -132,13 +137,9 @@ struct RelationshipSettings
     int32_t mMentorMinLevelDiff;
     int32_t mMentorXpBonusPercent;
 
-    //! Temporary mood points from relationship events (grief, ...) are capped at this size and
-    //! fade by mTempMoodDecayPerTurn points each turn
-    int32_t mTempMoodMax;
-    int32_t mTempMoodDecayPerTurn;
-    //! Grief: mood points a creature loses when a friend dies, and for how many turns it then
+    //! Grief: mood points a creature loses once when a friend dies, and for how many turns it then
     //! deals mGriefRageBonusPercent percent more damage to the side of the killer
-    int32_t mGriefMoodPenalty;
+    double mGriefMoodPenalty;
     int64_t mGriefRageTurns;
     int32_t mGriefRageBonusPercent;
 
@@ -153,25 +154,25 @@ struct RelationshipSettings
     int32_t mLoversBreakValue;
     //! Defense added to every defense value of a creature that fights next to its partner
     double mCombatBonusLovers;
-    //! Mood points a creature gets while its partner is alive and in the dungeon
-    int32_t mMoodBonusLovers;
-    //! Mood points a creature loses when its partner dies (instead of mGriefMoodPenalty)
-    int32_t mPartnerGriefMoodPenalty;
+    //! Mood points a creature gets once when it becomes a couple with another creature
+    double mMoodBonusLovers;
+    //! Mood points a creature loses once when its partner dies (instead of mGriefMoodPenalty)
+    double mPartnerGriefMoodPenalty;
     //! Chance (percent) that the partner of a creature that leaves the dungeon unhappy leaves with it
     int32_t mLeavePartnerChancePercent;
 
     //! Chance (percent) that the best friend of a creature that leaves the dungeon unhappy leaves with it
     int32_t mLeaveTogetherChancePercent;
 
-    //! Mood points a creature gets while a friend sleeps in a bed at most mNeighbourBedTiles tiles
+    //! Mood points a creature gets once while a friend sleeps in a bed at most mNeighbourBedTiles tiles
     //! away, or eats at the same time at most mEatTogetherTiles tiles away
-    int32_t mSleepNextToFriendMood;
+    double mSleepNextToFriendMood;
     int32_t mNeighbourBedTiles;
-    int32_t mEatTogetherMood;
+    double mEatTogetherMood;
     int32_t mEatTogetherTiles;
 
-    //! Mood points the friends that see a slap lose
-    int32_t mSlapFriendsMoodPenalty;
+    //! Mood points the friends that see a slap lose once
+    double mSlapFriendsMoodPenalty;
 
     //! Start value of a converted prisoner towards each creature that captured it
     int32_t mConvertedCaptorValue;
@@ -303,8 +304,22 @@ public:
     //! of a friend counts once, a nemesis nearby takes the penalty away again.
     double combatModifier(const std::string& creature, const std::vector<std::string>& nearbyFighters) const;
 
-    //! Mood points (zero or negative) the creature gets from the creatures it hates.
-    int32_t moodModifier(const std::string& creature) const;
+    //! The kinds of a mood pair of getMoodPairs
+    enum MoodPairKind
+    {
+        //! A hated creature in the same dungeon
+        MoodPairHated = 0,
+        //! A nemesis in the same dungeon
+        MoodPairNemesis = 1,
+        //! The partner of a couple
+        MoodPairLovers = 2
+    };
+
+    //! \brief Lists the creatures that affect the mood of a creature: its partner, its nemesis and the creatures it hates (at
+    //! most mMoodMaxPairs of them, the partner does not count against the limit).
+    //! \param creature The name of the creature.
+    //! \param pairs Receives the name of the other creature and its MoodPairKind.
+    void getMoodPairs(const std::string& creature, std::vector<std::pair<std::string, int32_t> >& pairs) const;
 
     //! Factor (1.0 or more) for the experience a creature gets while training: a friend among the
     //! trainees (name and level, the caller selects them: same keeper, same room) that is at least

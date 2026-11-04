@@ -1239,6 +1239,16 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 break;
             }
 
+            if(event.is(CosmeticEventType::moodPost))
+            {
+                // A lasting mood problem started or ended, or an upset creature wishes for a pleasure room: the post
+                // is written here, nothing else follows
+                Creature* postCreature = gameMap->getCreature(event.mSubject);
+                if(postCreature != nullptr)
+                    postCreature->socialMoodPost(event.mValue, event.mValue2);
+                break;
+            }
+
             if(event.is(CosmeticEventType::tavernEvent))
             {
                 // A drink, a slap duel or a vomit in or around a tavern: the post is written here, the thought bubble

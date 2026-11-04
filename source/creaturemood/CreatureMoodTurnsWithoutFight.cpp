@@ -19,18 +19,21 @@
 
 #include "creaturemood/CreatureMoodManager.h"
 #include "entities/Creature.h"
-#include "entities/CreatureDefinition.h"
-#include "utils/Helper.h"
+
+#include <algorithm>
 
 static const std::string CreatureMoodTurnsWithoutFightName = "TurnsWithoutFight";
 
 namespace
 {
+//! \brief Factory that creates CreatureMoodTurnsWithoutFight objects from the creature configuration.
 class CreatureMoodTurnsWithoutFightFactory : public CreatureMoodFactory
 {
+    //! \brief Creates a new CreatureMoodTurnsWithoutFight with default values.
     CreatureMood* createCreatureMood() const override
     { return new CreatureMoodTurnsWithoutFight; }
 
+    //! \brief Returns the configuration name of this modifier.
     const std::string& getCreatureMoodName() const override
     {
         return CreatureMoodTurnsWithoutFightName;
@@ -41,55 +44,46 @@ class CreatureMoodTurnsWithoutFightFactory : public CreatureMoodFactory
 static CreatureMoodRegister reg(new CreatureMoodTurnsWithoutFightFactory);
 }
 
+//! \brief Returns the name under which this modifier is listed in the creature configuration.
 const std::string& CreatureMoodTurnsWithoutFight::getModifierName() const
 {
     return CreatureMoodTurnsWithoutFightName;
 }
 
-//! \brief Computes this mood contribution.
-double CreatureMoodTurnsWithoutFight::computeMood(const Creature& creature) const
+//! \brief Returns 1 while the creature counts at least TurnsWithoutFightMin turns without a fight, otherwise 0.
+double CreatureMoodTurnsWithoutFight::getAmount(const Creature& creature) const
 {
-    int32_t turns = creature.getNbTurnsWithoutBattle();
-    if(turns < mTurnsWithoutFightMin)
-        return 0;
-
-    turns = std::min(turns - mTurnsWithoutFightMin, mTurnsWithoutFightMax);
-    return turns * mMoodModifier;
+    return (creature.getNbTurnsWithoutBattle() >= mTurnsWithoutFightMin) ? 1.0 : 0.0;
 }
 
+//! \brief Returns a copy of this modifier.
 CreatureMoodTurnsWithoutFight* CreatureMoodTurnsWithoutFight::clone() const
 {
     return new CreatureMoodTurnsWithoutFight(*this);
 }
 
+//! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
 bool CreatureMoodTurnsWithoutFight::importFromStream(std::istream& is)
 {
-    if(!CreatureMood::importFromStream(is))
-        return false;
-
     if(!(is >> mTurnsWithoutFightMin))
         return false;
-    if(!(is >> mTurnsWithoutFightMax))
-        return false;
-    if(!(is >> mMoodModifier))
-        return false;
 
-    return true;
+    return CreatureMood::importFromStream(is);
 }
 
+//! \brief Writes the parameters and then the value columns to the stream.
 void CreatureMoodTurnsWithoutFight::exportToStream(std::ostream& os) const
 {
-    CreatureMood::exportToStream(os);
     os << "\t" << mTurnsWithoutFightMin;
-    os << "\t" << mTurnsWithoutFightMax;
-    os << "\t" << mMoodModifier;
+    CreatureMood::exportToStream(os);
 }
 
+//! \brief Appends the names of the parameters and then of the value columns to the format string.
 void CreatureMoodTurnsWithoutFight::getFormatString(std::string& format) const
 {
-    CreatureMood::getFormatString(format);
     if(!format.empty())
         format += "\t";
 
-    format += "TurnsWithoutFightMin\tTurnsWithoutFightMax\tMoodModifier";
+    format += "TurnsWithoutFightMin";
+    CreatureMood::getFormatString(format);
 }

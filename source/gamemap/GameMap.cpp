@@ -325,6 +325,7 @@ GameMap::GameMap(bool isServerGameMap, NodeType nt) :
         mSavedTurnNumber(0),
         mIsPaused(false),
         mTimePayDay(0),
+        mLastTurnSeconds(0.0),
         mIsSandbox(false),
         mSandboxMode(*this),
         mFloodFillEnabled(false),
@@ -511,6 +512,7 @@ void GameMap::clearAll()
         mSkirmishSkillStates.clear();
         mSkirmishSkillStatesLevel.clear();
         mTimePayDay = 0;
+        mLastTurnSeconds = 0.0;
         mIsSandbox = false;
         mSandboxMode.reset();
 
@@ -1505,6 +1507,62 @@ void GameMap::checkRelationshipBrawls()
     }
 }
 
+//! \brief Lets the rampaging creatures start brawls with own creatures. The rules are the brawl rules of the relationships
+//! (check interval, chance, distance, end conditions), which apply also when the relationships are switched off.
+void GameMap::checkRampageBrawls()
+{
+    bool anyRampage = false;
+    for(Creature* creature : mCreatures)
+    {
+        if(creature->isRampaging())
+        {
+            anyRampage = true;
+            break;
+        }
+    }
+    if(!anyRampage)
+        return;
+
+    const RelationshipSettings settings = (mCreatureRelationships != nullptr) ? mCreatureRelationships->getSettings() :
+        RelationshipSettings::fromConfig(ConfigManager::getSingleton().getRelationshipsConfig());
+    if(!isBrawlCheckTurn(mTurnNumber, settings))
+        return;
+
+    for(Creature* rampager : mCreatures)
+    {
+        if(!rampager->isRampaging() || !rampager->canStartBrawl(true))
+            continue;
+
+        Tile* tileA = rampager->getPositionTile();
+        std::vector<Creature*> victims;
+        for(Creature* other : mCreatures)
+        {
+            if((other == rampager) || (other->getSeat() != rampager->getSeat()) || other->isRampaging() ||
+               !other->canStartBrawl(true))
+            {
+                continue;
+            }
+
+            Tile* tileB = other->getPositionTile();
+            double dx = static_cast<double>(tileA->getX() - tileB->getX());
+            double dy = static_cast<double>(tileA->getY() - tileB->getY());
+            if(isWithinBrawlDistance(dx, dy, settings))
+                victims.push_back(other);
+        }
+        if(victims.empty())
+            continue;
+
+        if(!brawlChanceHit(Random::Int(0, BRAWL_CHANCE_ROLL_MAX), settings))
+            continue;
+
+        Creature* victim = victims[Random::Uint(0, victims.size() - 1)];
+        if(!pathExists(rampager, tileA, victim->getPositionTile()))
+            continue;
+
+        rampager->startBrawl(*victim, true);
+    }
+}
+
 void GameMap::sendRelationshipTierChanges()
 {
     if(mCreatureRelationships == nullptr)
@@ -1727,6 +1785,7 @@ void GameMap::doTurn(double timeSinceLastTurn)
     OD_LOG_INF("Computing turn " + Helper::toString(mTurnNumber) + ", timeSinceLastTurn=" + Helper::toString(timeSinceLastTurn));
     unsigned int numCallsTo_path_atStart = mNumCallsTo_path;
 
+    mLastTurnSeconds = timeSinceLastTurn;
     updateItemAuraGivers();
     uint32_t miscUpkeepTime = doMiscUpkeep(timeSinceLastTurn);
 
@@ -1740,6 +1799,7 @@ void GameMap::doTurn(double timeSinceLastTurn)
             checkRelationshipBrawls();
             sendRelationshipTierChanges();
         }
+        checkRampageBrawls();
     }
 
     for (Seat* seat : mSeats)

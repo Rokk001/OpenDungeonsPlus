@@ -44,7 +44,7 @@ DEFAULTS = {
     "mGhostAiGoldPerResearchPoint": "GhostAiGoldPerResearchPoint", "mGhostAiGoldPerXp": "GhostAiGoldPerXp",
     "mSoulCrystalNormalXpPerSecond": "SoulCrystalNormalXpPerSecond", "mCreatureMoodUpset": "CreatureMoodUpset",
     "mCreatureMoodAngry": "CreatureMoodAngry", "mCreatureMoodFurious": "CreatureMoodFurious",
-    "mNbTurnsFuriousMax": "NbTurnsFuriousMax",
+    "mMoodRampageBrawlVictim": "MoodRampageBrawlVictim",
 }
 for member, key in DEFAULTS.items():
     shipped = cfg_value(global_cfg, key)
@@ -61,7 +61,7 @@ if well is None or abs(float(well.group(1)) - cfg_value(global_cfg, "ManaWellBon
     problems.append("the mana well default must equal global.cfg ManaWellBonusPerTile")
 
 # getRoomConfigDoubleOrDefault fallbacks: file -> keys
-for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit", "CasinoMoodMax"]),
+for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit"]),
                    ("source/rooms/RoomArena.cpp", ["PitMoodSolitary", "PitMoodSpectator", "PitMoodVictor"]),
                    ("source/rooms/RoomHatchery.cpp", ["HatcheryDirtPerHenTurn"]),
                    ("source/creatureaction/CreatureActionEatChicken.cpp", ["HatcheryGiftHpRecoveredPerChicken"])):
@@ -75,7 +75,6 @@ for path, keys in (("source/entities/Creature.cpp", ["ArenaDirtPerHit", "CasinoM
             problems.append(path + " falls back to " + match.group(1) + " for " + key + ", rooms.cfg has " + str(shipped))
 
 for path, constant, key, cfg in (
-    ("source/entities/Creature.cpp", "DEFAULT_PIT_MOOD_MAX", "PitMoodMax", rooms_cfg),
     ("source/rooms/Room.cpp", "DEFAULT_ROOM_CONVERT_NEUTRAL_SECONDS_PER_TILE", "RoomConvertNeutralSecondsPerTile", rooms_cfg),
     ("source/rooms/Room.cpp", "DEFAULT_ROOM_CONVERT_SECONDS_PER_TILE", "RoomConvertSecondsPerTile", rooms_cfg),
     ("source/rooms/RoomPortal.cpp", "DEFAULT_PORTAL_FIRST_SPAWN_SECONDS", "PortalFirstSpawnSeconds", rooms_cfg),
@@ -85,6 +84,16 @@ for path, constant, key, cfg in (
     shipped = cfg_value(cfg, key)
     if match is None or shipped is None or abs(float(match.group(1)) - shipped) > 1e-9:
         problems.append(path + " default " + constant + " must equal " + key)
+
+# The mood caps and decays of the pit and the casino are gone: the moods are one-time values added to the stored
+# mood, so neither the config nor the code keeps a cap key or a default for them.
+creature_source = read("source", "entities", "Creature.cpp")
+for gone in ("PitMoodMax", "PitMoodDecay", "CasinoMoodMax", "CasinoMoodDecay"):
+    if cfg_value(rooms_cfg, gone) is not None or gone in creature_source:
+        problems.append(gone + " must be gone from rooms.cfg and Creature.cpp")
+for gone in ("DEFAULT_PIT_MOOD_MAX", "DEFAULT_PIT_MOOD_DECAY_PER_SECOND"):
+    if gone in creature_source:
+        problems.append("Creature.cpp must not keep " + gone)
 
 cycle = read("source", "rooms", "HatcheryCycle.h")
 for member, key in (("mLayMax", "HatcheryLayMax"), ("mLayFactor", "HatcheryLayFactor")):
@@ -111,6 +120,21 @@ for key in ('ManaIncomeTilesCap', 'ManaPerClaimedTilePerSecond', 'WorkerManaUpke
         problems.append("missing-key logging is not wired for " + key)
 if 'foundKeys.count(key) == 0' not in manager or 'Missing GameConfig key=' not in manager:
     problems.append("missing GameConfig fallbacks must be logged")
+
+# The rampage block of global.cfg: the shipped values equal the defaults of the ConfigManager constructor, and the keys of the
+# old wage rules and of the old rogue rule are gone from the code and from the configuration
+rampage_block = re.search(r"\[Rampage\](.*?)\[/Rampage\]", global_cfg, re.S)
+if rampage_block is None:
+    problems.append("global.cfg has no [Rampage] block")
+else:
+    for key in ("RampageTileDamage", "RampageHitTurns", "RampagePileTurns"):
+        shipped = cfg_value(rampage_block.group(1), key)
+        match = re.search(r'mRampageConfig\["' + key + r'"\] = ([-0-9.]+);', manager)
+        if shipped is None or match is None or abs(float(match.group(1)) - shipped) > 1e-9:
+            problems.append("the default of " + key + " must equal the [Rampage] block of global.cfg")
+for gone in ("UnpaidWagesStopWork", "UnpaidWagesLeave", "NbTurnsFuriousMax"):
+    if cfg_value(global_cfg, gone) is not None or gone in manager or ("# " + gone) in global_cfg:
+        problems.append(gone + " must be gone from global.cfg and the ConfigManager")
 
 if problems:
     print("\n".join("FAIL: " + p for p in problems))

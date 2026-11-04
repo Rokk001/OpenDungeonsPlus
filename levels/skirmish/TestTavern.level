@@ -1566,6 +1566,7 @@ TavernPayer	0
     ElementDef/Level	0.1
     FightIdleDist	1
     FeeBase	0
+    MoodSensitivity	1
     FeePerLevel	0
     SkillDamageFactor	0.6029
     SleepHeal	1
@@ -1605,32 +1606,32 @@ TavernPayer	0
     379	409	440	473	506	540	576	613	650	700
     [/XP]
     [MoodModifiers]
-    # MoodModifierName	StartHunger	MoodModifier
-    Hunger	80	-60
-    # MoodModifierName	StartWakefulness	MoodModifier
-    Wakefulness	20	-160
-    # MoodModifierName	MoodModifier
-    Fee	-120
-    # MoodModifierName	MoodModifier
-    HpLoss	-6
-    # MoodModifierName	TurnsWithoutFightMin	TurnsWithoutFightMax	MoodModifier
-    TurnsWithoutFight	150	20	-35
-    # MoodModifierName	CreatureClass	MoodModifier
-    Creature	Goblin	-500
-    # MoodModifierName	MoodModifier
-    NoLair	-400
-    # MoodModifierName	TurnsMin	TurnsMax	MoodModifier
-    OutOfWork	10	40	-10
-    # MoodModifierName	TurnsMin	TurnsMax	MoodModifier
-    HeldInHand	100	200	-3
+    # MoodModifierName	StartHunger	Jump	FallPerTurn	Reward
+    Hunger	80	-300	-1.1905	300
+    # MoodModifierName	StartWakefulness	Jump	FallPerTurn	Reward
+    Wakefulness	20	-300	-1.1905	300
+    # MoodModifierName	Jump	FallPerTurn	Reward
+    Fee	-300	-0.8929	300
+    # MoodModifierName	Jump	FallPerTurn	Reward
+    HpLoss	-125	-0.1488	125
+    # MoodModifierName	TurnsWithoutFightMin	Jump	FallPerTurn	Reward
+    TurnsWithoutFight	150	-100	-0.119	100
+    # MoodModifierName	CreatureClass	FallPerTurn
+    Creature	Goblin	-0.1488
+    # MoodModifierName	Jump	FallPerTurn	Reward
+    NoLair	-300	-1.1905	300
+    # MoodModifierName	TurnsMin	Jump	FallPerTurn	Reward
+    OutOfWork	10	-100	-0.119	100
+    # MoodModifierName	TurnsMin	Jump	FallPerTurn	Reward
+    HeldInHand	100	-100	-0.119	100
     # MoodModifierName	DurationTurns	MaxSlaps	MoodModifier
-    Slapped	600	5	-120
-    # MoodModifierName	TurnsMax	MoodModifier
-    Tortured	43	-71
-    # MoodModifierName	TurnsMax	MoodModifier
-    Rested	30	43
-    # MoodModifierName	TurnsMax	MoodModifier
-    HatedCompany	43	-10
+    Slapped	600	5	-100
+    # MoodModifierName	Jump	FallPerTurn	Reward
+    Tortured	-300	-1.1905	300
+    # MoodModifierName	MoodModifier
+    Rested	100
+    # MoodModifierName	FallPerTurn
+    HatedCompany	-0.119
     [/MoodModifiers]
     [CreatureSkills]
     # SkillName	CooldownNbTurns	WarmupNbTurns	RangeMax	RangePerLvl	LevelMin	MissileMesh	MissilePartScript	MissileSpeed	PhyAtk	PhyAtkPerLvl	MagAtk	MagAtkPerLvl	EleAtk	EleAtkPerLvl	PhyMin	PhyMax	MagMin	MagMax	EleMin	EleMax

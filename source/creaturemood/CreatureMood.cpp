@@ -20,6 +20,10 @@
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
+#include <istream>
+#include <ostream>
+#include <typeinfo>
+
 std::string CreatureMood::toString(CreatureMoodLevel moodLevel)
 {
     switch(moodLevel)
@@ -42,10 +46,69 @@ std::string CreatureMood::toString(CreatureMoodLevel moodLevel)
     }
 }
 
+//! \brief Returns the fall per turn of the problem: the fall per turn times how strong it is now.
+double CreatureMood::getFallPerTurn(const Creature& creature) const
+{
+    return getAmount(creature) * mFall;
+}
+
+//! \brief Two modifiers are equal when they have the same type and the same value columns.
 bool CreatureMood::isEqual(const CreatureMood& creatureMood) const
 {
     if(typeid(*this) != typeid(creatureMood))
         return false;
 
-    return true;
+    return (mJump == creatureMood.mJump) && (mFall == creatureMood.mFall) && (mReward == creatureMood.mReward);
+}
+
+//! \brief Appends the names of the value columns to the format string.
+void CreatureMood::getFormatString(std::string& format) const
+{
+    if(!format.empty())
+        format += "\t";
+
+    switch(mColumns)
+    {
+        case CreatureMoodColumns::JumpFallReward:
+            format += "Jump\tFallPerTurn\tReward";
+            break;
+        case CreatureMoodColumns::Fall:
+            format += "FallPerTurn";
+            break;
+        case CreatureMoodColumns::Event:
+            format += "MoodModifier";
+            break;
+    }
+}
+
+//! \brief Reads the value columns of the configuration line; returns false if a value is missing.
+bool CreatureMood::importFromStream(std::istream& is)
+{
+    switch(mColumns)
+    {
+        case CreatureMoodColumns::JumpFallReward:
+            return static_cast<bool>(is >> mJump >> mFall >> mReward);
+        case CreatureMoodColumns::Fall:
+            return static_cast<bool>(is >> mFall);
+        case CreatureMoodColumns::Event:
+            return static_cast<bool>(is >> mJump);
+    }
+    return false;
+}
+
+//! \brief Writes the value columns of the configuration line.
+void CreatureMood::exportToStream(std::ostream& os) const
+{
+    switch(mColumns)
+    {
+        case CreatureMoodColumns::JumpFallReward:
+            os << "\t" << mJump << "\t" << mFall << "\t" << mReward;
+            break;
+        case CreatureMoodColumns::Fall:
+            os << "\t" << mFall;
+            break;
+        case CreatureMoodColumns::Event:
+            os << "\t" << mJump;
+            break;
+    }
 }

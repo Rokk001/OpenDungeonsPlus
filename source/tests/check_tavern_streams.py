@@ -131,6 +131,7 @@ struct CreatureDefinition
 };
 static const double THIRST_STATE_MAX = 100.0;
 static const double NEED_MAX = 100.0;
+enum class PleasureRoomKind { spa, tavern, casino, temple, arena };
 @@STRINGS@@
 
 struct Creature
@@ -139,6 +140,7 @@ struct Creature
     std::string mName;
     double mUrge, mCreatureDirt, mThirst, mTavernMood, mTavernMoodTurns, mDrunk, mHangoverTurns;
     bool mVomited;
+    int32_t mPleasureVisitKind = -1;
     Creature(const std::string& name, CreatureDefinition* def) : mDefinition(def), mName(name), mUrge(0.0), mCreatureDirt(0.0),
         mThirst(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mDrunk(0.0), mHangoverTurns(0.0), mVomited(false) {}
     const std::string& getName() const { return mName; }
@@ -148,7 +150,11 @@ struct Creature
     void setThirst(double val);
     void setDrunk(double val);
     void setHangoverTurns(double turns);
-    void addTavernMood(double points, double turns);
+    // The one-time mood event that addTavernMood calls; the stored mood is not part of the thirst state, so nothing is kept
+    void applyMoodEvent(double points, bool sensitive) {}
+    // The visit limit of the real creature is not part of the thirst state either
+    void addPleasureMood(PleasureRoomKind kind, double points) {}
+    void addTavernMood(double points);
     void exportThirstStateToPacket(ODPacket& os) const;
     void importThirstStateFromPacket(ODPacket& is);
     void writeBlocks(std::ostream& os) const;

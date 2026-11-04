@@ -24,9 +24,10 @@ of its scale, so a single value is never a copy of anything outside the project.
 
 ## Pit and company moods (`config/rooms.cfg`, `config/creatures.cfg`)
 
-- The pit mood cap is 1,500 mood points. The victor bonus is 1,300 (87 percent of the cap), a
-  spectator gains 28 and a creature alone in the pit loses 22 points per second. A hated
-  neighbour costs 9 mood points per turn.
+- The pit has no mood cap of its own: the mood gained in one pleasure visit is limited by
+  `PleasureVisitMax`. The victor bonus is 250 points once, a spectator gains 14 and a creature
+  alone in the pit loses 11 points per second. A hated neighbour costs 0.119 mood points per turn
+  while it is near.
 
 ## Heart reward pool (`source/rooms/RoomDungeonTemple.cpp`)
 

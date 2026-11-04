@@ -75,8 +75,7 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return false;
     }
 
-    const bool moodSearch = creature.getMoodValue() >= CreatureMoodLevel::Upset ||
-        creature.getMissedWages() >= ConfigManager::getSingleton().getUnpaidWagesStopWork();
+    const bool moodSearch = creature.getMoodValue() >= CreatureMoodLevel::Upset;
 
     if(creature.needInterrupt(false))
     {
@@ -89,7 +88,6 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         }
         if(creature.getDefinition()->hasThirst() &&
            creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek") &&
-           (creature.getTavernCooldownTurns() <= 0) &&
            !creature.hasActionBeenTried(CreatureActionType::searchDrink))
         {
             for(Room* candidate : creature.getGameMap()->getRoomsByTypeAndSeat(RoomType::tavern, creature.getSeat()))
@@ -223,6 +221,13 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         return true;
     }
 
+    // A creature at the training limit of the training hall wishes for an arena when its keeper has none
+    creature.noteArenaWish();
+
+    // An upset creature that found no pleasure room to go to wishes for one when its keeper has none it may use
+    if(moodSearch)
+        creature.notePleasureWish();
+
     // Keep the existing room wandering behaviour when no work or pleasure room is available.
     if(!moodSearch && currentRoom != nullptr &&
        creature.getSeat()->canOwnedCreatureUseRoomFrom(currentRoom->getSeat()))
@@ -240,14 +245,17 @@ bool CreatureActionSearchJob::handleSearchJob(Creature& creature, bool forced)
         }
     }
 
-    // We found no job. If the creature wanted to work, it gets frustrated
-    for(const CreatureRoomAffinity& affinity : creature.getDefinition()->getRoomAffinity())
+    // We found no job. If the creature wanted to work, it gets frustrated; a running pleasure buff keeps that penalty away
+    if(!creature.hasPleasureBuff())
     {
-        if((affinity.getLikeness() > 0) && (affinity.getEfficiency() > 0))
+        for(const CreatureRoomAffinity& affinity : creature.getDefinition()->getRoomAffinity())
         {
-            creature.increaseNbTurnsOutOfWork();
-            creature.fireImpatientIfNeeded();
-            break;
+            if((affinity.getLikeness() > 0) && (affinity.getEfficiency() > 0))
+            {
+                creature.increaseNbTurnsOutOfWork();
+                creature.fireImpatientIfNeeded();
+                break;
+            }
         }
     }
 

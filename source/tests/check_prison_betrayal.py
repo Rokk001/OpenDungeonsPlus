@@ -9,7 +9,8 @@ torture = (ROOT / 'source/rooms/RoomTorture.cpp').read_text(encoding='utf-8')
 skills = (ROOT / 'config/skills.cfg').read_text(encoding='utf-8')
 assert re.search(r'^\s*roomPrison\s+BetrayChance\s+add\s+0\s+0\.00033175355450236967\s+0\.0065727699530516446\s*$', skills, re.M)
 assert re.search(r'getResearchValue\(getSeat\(\),\s*SkillType::roomPrison,\s*0\.0,\s*ResearchEffect::BetrayChance\)', prison)
-assert re.search(r'betrayChance\s*>\s*0\.0.*?getCreatureBaseMood\(\)\s*\+\s*creature->getMoodPoints\(\).*?<=\s*.*?getCreatureMoodFurious\(\)', prison, re.S)
+assert re.search(r'betrayChance\s*>\s*0\.0.*?creature->getMoodPoints\(\)\s*<\s*.*?getCreatureMoodFurious\(\)', prison, re.S)
+assert not re.search(r'getCreatureBaseMood\(\)\s*\+\s*creature->getMoodPoints\(\)', prison), 'the effective mood is compared directly'
 assert re.search(r'increasePrisonBrokenTurns\(\).*?floor\(brokenTurns\s*/\s*ODApplication::turnsPerSecond\).*?floor\(\(brokenTurns\s*-\s*1\)\s*/\s*ODApplication::turnsPerSecond\).*?secondPassed\s*&&\s*\(Random::Double\(0\.0,\s*1\.0\)\s*<\s*betrayChance\).*?RoomTorture::revealEnemyInformation\(\*getSeat\(\),\s*\*creature\)', prison, re.S)
 assert 'resetPrisonBrokenTurns()' in prison
 assert 'void RoomTorture::revealEnemyInformation(Seat& keeperSeat, Creature& creature)' in torture

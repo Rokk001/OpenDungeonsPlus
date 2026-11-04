@@ -109,7 +109,7 @@ std::string GiftBoxBonus::getDescription(GiftBoxType type)
         case GiftBoxType::receiveWorkers:
             return "Gives you free workers.";
         case GiftBoxType::makeHappy:
-            return "Removes all the annoyance of your creatures.";
+            return "Sets the mood of all your creatures to the maximum.";
         case GiftBoxType::makeUnhappy:
             return "Makes all enemy creatures unhappy.";
         case GiftBoxType::killCreatures:

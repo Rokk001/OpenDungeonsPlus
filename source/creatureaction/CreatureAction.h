@@ -73,6 +73,7 @@ enum class CreatureActionType
     infirmaryRest, // A patient lying on an infirmary cot.
     huntGhost, // Captures ghosts and returns them for revival or ectoplasm.
     searchSpa, // (fighters only) Looks for a lava spa with a free bath place and lets that room handle the bath
+    rampage, // (fighters only) A rampaging creature walks to a room tile of its keeper and stays on it while it hits the tile
     nb // Must be the last value of this enum
 };
 

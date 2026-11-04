@@ -20,42 +20,51 @@
 
 #include "creaturemood/CreatureMood.h"
 
-//! \brief Applied for each slap the creature received during the last DurationTurns turns.
+//! \brief One-time event: the creature was slapped. At most MaxSlaps slaps within DurationTurns turns cost mood.
 class CreatureMoodSlapped : public CreatureMood
 {
 public:
-    //! \brief Creates the modifier with all values set to zero.
+    //! \brief Creates the modifier with all values set to zero (they are read from the configuration).
     CreatureMoodSlapped() :
+        CreatureMood(CreatureMoodKind::Event, CreatureMoodColumns::Event),
         mDurationTurns(0),
-        mMaxSlaps(0),
-        mMoodModifier(0)
+        mMaxSlaps(0)
     {}
 
     //! \brief Destroys the modifier.
     virtual ~CreatureMoodSlapped()
     {}
 
-    //! \brief Returns the name under which this modifier is listed in the mood configuration.
+    //! \brief Returns the name under which this modifier is listed in the creature configuration.
     const std::string& getModifierName() const override;
 
-    //! \brief Returns the mood change per slap received during the last DurationTurns turns (at most MaxSlaps slaps).
-    //! \brief Computes this mood contribution.
-    virtual double computeMood(const Creature& creature) const override;
+    //! \brief Returns 0, a slap is an event and not a problem that holds.
+    //! \param creature The creature to look at.
+    virtual double getAmount(const Creature& creature) const override;
 
     //! \brief Returns a copy of this modifier.
-    inline CreatureMoodSlapped* clone() const override;
+    CreatureMoodSlapped* clone() const override;
 
-    //! \brief Reads the modifier parameters from the configuration stream; returns false if a value is missing.
+    //! \brief Returns the number of turns a slap counts.
+    inline int32_t getDurationTurns() const
+    { return mDurationTurns; }
+
+    //! \brief Returns the number of slaps within the duration that cost mood.
+    inline int32_t getMaxSlaps() const
+    { return mMaxSlaps; }
+
+    //! \brief Reads the parameters and then the value columns from the configuration stream; returns false if a value is missing.
     virtual bool importFromStream(std::istream& is) override;
-    //! \brief Writes the modifier parameters to the stream.
+    //! \brief Writes the parameters and then the value columns to the stream.
     virtual void exportToStream(std::ostream& os) const override;
-    //! \brief Appends the names of the modifier parameters to the format string.
+    //! \brief Appends the names of the parameters and then of the value columns to the format string.
     virtual void getFormatString(std::string& format) const override;
 
 private:
+    //! \brief Turns a slap counts
     int32_t mDurationTurns;
+    //! \brief Number of slaps within DurationTurns that cost mood
     int32_t mMaxSlaps;
-    double mMoodModifier;
 };
 
 #endif // CREATUREMOODSLAPPED_H

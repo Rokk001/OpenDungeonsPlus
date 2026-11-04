@@ -76,6 +76,8 @@ bool CreatureActionLeaveDungeon::handleLeaveDungeon(Creature& creature)
     if(tempRooms.empty())
     {
         creature.popAction();
+        // A creature that left because of the draw after one pay day at the bottom of its mood draws again
+        creature.drawMoodDecisionAgain();
         return true;
     }
 
