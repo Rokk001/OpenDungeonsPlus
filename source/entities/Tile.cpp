@@ -929,7 +929,11 @@ bool Tile::isClaimedForSeat(const Seat* seat) const
     if(!isClaimed())
         return false;
 
-    if(getSeat()->canOwnedTileBeClaimedBy(seat))
+    // On the client a tile can look claimed while its owner is not known: the server sends the owner only for
+    // some tile visuals (Seat::exportTileToPacket) and not at all with hideSeatId. Such a tile is not claimed
+    // for any seat here, as on the server, where isClaimed() is false for a tile without a seat.
+    const Seat* owner = getSeat();
+    if((owner == nullptr) || owner->canOwnedTileBeClaimedBy(seat))
         return false;
 
     return true;

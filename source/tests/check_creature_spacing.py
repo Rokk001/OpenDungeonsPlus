@@ -56,7 +56,7 @@ assert "walkDistortion && !pathAlreadyRefined && getIsOnServerMap()" in walk
 work = body(navigation, "bool RoomObjectNavigation::workApproach(")
 assert "for(bool includeBodies : {true, false})" in work
 assert "interactionPositionClear(creature, point, facing - point, includeBodies)" in work
-assert "tile->getCoveringRoom() != room" in work and "!terrainClear(creature, staging, point)" in work
+assert "tile->getCoveringRoom() != room" in work and "!terrainClear(passable, staging, point)" in work
 assert occupancy.index("cachedReservations(creature, *cache)") < occupancy.index("if(!includeBodies)") < occupancy.index("cachedBodies(creature, *cache)")
 creature = read("source/entities/Creature.cpp")
 for action in ("fight", "fightFriendly", "watchBanner"):
