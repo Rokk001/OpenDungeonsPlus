@@ -837,11 +837,291 @@
     "source": "tiles/InfirmaryButton.png"
   },
   {
+    "height": "64",
+    "name": "GhostRoomButton",
+    "width": "64",
+    "xPos": "256",
+    "yPos": "1536",
+    "source": "tiles/GhostRoomButton.png"
+  },
+  {
     "height": "128",
     "name": "SpaButton",
     "width": "128",
-    "xPos": "256",
+    "xPos": "384",
     "yPos": "1536",
     "source": "tiles/SpaButton.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerJobDig",
+    "width": "128",
+    "xPos": "0",
+    "yPos": "1664",
+    "source": "tiles/WorkerJobDig.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerJobClaimGround",
+    "width": "128",
+    "xPos": "128",
+    "yPos": "1664",
+    "source": "tiles/WorkerJobClaimGround.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerJobClaimWall",
+    "width": "128",
+    "xPos": "256",
+    "yPos": "1664",
+    "source": "tiles/WorkerJobClaimWall.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerJobCarry",
+    "width": "128",
+    "xPos": "384",
+    "yPos": "1664",
+    "source": "tiles/WorkerJobCarry.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerJobClean",
+    "width": "128",
+    "xPos": "512",
+    "yPos": "1664",
+    "source": "tiles/WorkerJobClean.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerJobReload",
+    "width": "128",
+    "xPos": "640",
+    "yPos": "1664",
+    "source": "tiles/WorkerJobReload.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerFreePortrait",
+    "width": "128",
+    "xPos": "768",
+    "yPos": "1664",
+    "source": "tiles/WorkerFreePortrait.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryOwn",
+    "width": "128",
+    "xPos": "896",
+    "yPos": "1664",
+    "source": "tiles/WorkerCarryOwn.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryEnemy",
+    "width": "128",
+    "xPos": "0",
+    "yPos": "1792",
+    "source": "tiles/WorkerCarryEnemy.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryCorpses",
+    "width": "128",
+    "xPos": "128",
+    "yPos": "1792",
+    "source": "tiles/WorkerCarryCorpses.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryGold",
+    "width": "128",
+    "xPos": "256",
+    "yPos": "1792",
+    "source": "tiles/WorkerCarryGold.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryItems",
+    "width": "128",
+    "xPos": "384",
+    "yPos": "1792",
+    "source": "tiles/WorkerCarryItems.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryGift",
+    "width": "128",
+    "xPos": "512",
+    "yPos": "1792",
+    "source": "tiles/WorkerCarryGift.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryTrapsDoors",
+    "width": "128",
+    "xPos": "640",
+    "yPos": "1792",
+    "source": "tiles/WorkerCarryTrapsDoors.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerHandInactive",
+    "width": "128",
+    "xPos": "768",
+    "yPos": "1792",
+    "source": "tiles/WorkerHandInactive.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerHandActive",
+    "width": "128",
+    "xPos": "896",
+    "yPos": "1792",
+    "source": "tiles/WorkerHandActive.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerHandDrag",
+    "width": "128",
+    "xPos": "0",
+    "yPos": "1920",
+    "source": "tiles/WorkerHandDrag.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowUpNormal",
+    "width": "128",
+    "xPos": "128",
+    "yPos": "1920",
+    "source": "tiles/WorkerArrowUpNormal.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowUpHover",
+    "width": "128",
+    "xPos": "256",
+    "yPos": "1920",
+    "source": "tiles/WorkerArrowUpHover.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowUpPressed",
+    "width": "128",
+    "xPos": "384",
+    "yPos": "1920",
+    "source": "tiles/WorkerArrowUpPressed.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowUpDisabled",
+    "width": "128",
+    "xPos": "512",
+    "yPos": "1920",
+    "source": "tiles/WorkerArrowUpDisabled.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowDownNormal",
+    "width": "128",
+    "xPos": "640",
+    "yPos": "1920",
+    "source": "tiles/WorkerArrowDownNormal.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowDownHover",
+    "width": "128",
+    "xPos": "768",
+    "yPos": "1920",
+    "source": "tiles/WorkerArrowDownHover.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowDownPressed",
+    "width": "128",
+    "xPos": "896",
+    "yPos": "1920",
+    "source": "tiles/WorkerArrowDownPressed.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerArrowDownDisabled",
+    "width": "128",
+    "xPos": "0",
+    "yPos": "2048",
+    "source": "tiles/WorkerArrowDownDisabled.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCheckboxEmpty",
+    "width": "128",
+    "xPos": "128",
+    "yPos": "2048",
+    "source": "tiles/WorkerCheckboxEmpty.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCheckboxChecked",
+    "width": "128",
+    "xPos": "256",
+    "yPos": "2048",
+    "source": "tiles/WorkerCheckboxChecked.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerTabletNormal",
+    "width": "128",
+    "xPos": "384",
+    "yPos": "2048",
+    "source": "tiles/WorkerTabletNormal.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerTabletSelected",
+    "width": "128",
+    "xPos": "512",
+    "yPos": "2048",
+    "source": "tiles/WorkerTabletSelected.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryFrameNormal",
+    "width": "128",
+    "xPos": "640",
+    "yPos": "2048",
+    "source": "tiles/WorkerCarryFrameNormal.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkerCarryFrameSelected",
+    "width": "128",
+    "xPos": "768",
+    "yPos": "2048",
+    "source": "tiles/WorkerCarryFrameSelected.png"
+  },
+  {
+    "height": "64",
+    "name": "WorkersHudNormal",
+    "width": "128",
+    "xPos": "896",
+    "yPos": "2048",
+    "source": "tiles/WorkersHudNormal.png"
+  },
+  {
+    "height": "64",
+    "name": "WorkersHudHover",
+    "width": "128",
+    "xPos": "0",
+    "yPos": "2176",
+    "source": "tiles/WorkersHudHover.png"
+  },
+  {
+    "height": "64",
+    "name": "WorkersHudPressed",
+    "width": "128",
+    "xPos": "128",
+    "yPos": "2176",
+    "source": "tiles/WorkersHudPressed.png"
   }
 ]
