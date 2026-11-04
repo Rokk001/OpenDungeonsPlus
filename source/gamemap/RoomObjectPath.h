@@ -24,6 +24,9 @@ constexpr float routeEscapeReach = 3.0f;
 constexpr float routeGoalReach = 0.5f;
 // Tolerance when old entries of the search queues are discarded.
 constexpr float routeQueueTolerance = 0.0001f;
+// Extra reach of a grid cell when the route search lists the obstacles near it. It only has to cover the rounding of
+// the node positions; a larger value lists more obstacles but never changes a result.
+constexpr float routeCellListMargin = 0.05f;
 
 // Furniture bounds are expressed in mesh-local XY, before the placed object's
 // rotation. Clearance belongs to the moving creature, not to the mesh asset.
@@ -233,6 +236,20 @@ inline bool clearSegment(const std::vector<Obstacle>& obstacles,
     return true;
 }
 
+//! \brief Tells whether none of the obstacles given by index in the two lists touches a creature that walks from one
+//! point to the other. This is clearSegment() without start exit, for the obstacles of the lists only.
+inline bool clearListedSegment(const std::vector<Obstacle>& obstacles, const std::vector<size_t>& always,
+    const std::vector<size_t>& listed, const Ogre::Vector2& from, const Ogre::Vector2& to)
+{
+    for(size_t index : always)
+        if(obstacles[index].intersects(from, to))
+            return false;
+    for(size_t index : listed)
+        if(obstacles[index].intersects(from, to))
+            return false;
+    return true;
+}
+
 // The existing map supplies terrain/door checks for an entire segment. Furniture
 // is checked analytically, so even thin and rotated objects cannot be skipped.
 using TerrainSegment = std::function<bool(const Ogre::Vector2&, const Ogre::Vector2&)>;
@@ -386,6 +403,54 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
             for(const Obstacle& obstacle : obstacles)
                 edge.push_back(obstacle.forHeading(Ogre::Vector2(float(-dx), float(-dy))));
         }
+    // Most furniture is far from a grid edge, yet every edge used to test all of it, and a search across a furnished
+    // room tests hundreds of thousands of edges. An edge joins two neighbouring nodes, so it lies inside the tile-sized
+    // cell (routeCellsPerTile nodes per side) of its lower node, widened by one node step. Each obstacle is listed for
+    // the cells that its bounds for the eight headings can reach. An obstacle that is not listed for a cell is one that
+    // intersects() rejects by these bounds for every edge of the cell, and obstacles without such bounds are tested
+    // for every edge, so each edge test gives the same answer as testing all obstacles.
+    const int cellsX = (width + routeCellsPerTile - 1) / routeCellsPerTile;
+    const int cellsY = (height + routeCellsPerTile - 1) / routeCellsPerTile;
+    const Ogre::Vector2 gridOrigin = Ogre::Vector2(float(minX), float(minY)) + gridOffset;
+    std::vector<std::vector<size_t>> cellObstacles(size_t(cellsX) * size_t(cellsY));
+    std::vector<size_t> unboundedObstacles;
+    for(size_t i = 0; i < obstacles.size(); ++i)
+    {
+        Ogre::Vector2 low(std::numeric_limits<float>::infinity()), high(-std::numeric_limits<float>::infinity());
+        bool bounded = true;
+        for(int heading = 0; heading < 9; ++heading)
+        {
+            // The middle entry is no heading and stays empty
+            if(heading == 4)
+                continue;
+            const Obstacle& edge = edgeObstacles[heading][i];
+            if(!edge.hasWorldBounds)
+            {
+                bounded = false;
+                break;
+            }
+            low.makeFloor(edge.worldMinimum);
+            high.makeCeil(edge.worldMaximum);
+        }
+        // The comparisons also fail for bounds that are not numbers
+        if(!bounded || !(low.x <= high.x) || !(low.y <= high.y))
+        {
+            unboundedObstacles.push_back(i);
+            continue;
+        }
+        // Cell c of an axis holds the edges between gridOrigin + c and gridOrigin + c + 1 on that axis
+        const int firstX = std::max(0, int(std::floor(std::max(-1.0f,
+            std::min(float(cellsX), low.x - gridOrigin.x - 1.0f - routeCellListMargin)))));
+        const int lastX = std::min(cellsX - 1, int(std::floor(std::max(-1.0f,
+            std::min(float(cellsX), high.x - gridOrigin.x + routeCellListMargin)))));
+        const int firstY = std::max(0, int(std::floor(std::max(-1.0f,
+            std::min(float(cellsY), low.y - gridOrigin.y - 1.0f - routeCellListMargin)))));
+        const int lastY = std::min(cellsY - 1, int(std::floor(std::max(-1.0f,
+            std::min(float(cellsY), high.y - gridOrigin.y + routeCellListMargin)))));
+        for(int cellY = firstY; cellY <= lastY; ++cellY)
+            for(int cellX = firstX; cellX <= lastX; ++cellX)
+                cellObstacles[size_t(cellY) * size_t(cellsX) + size_t(cellX)].push_back(i);
+    }
     int destination = -1;
     float best = maximumCost;
     bool forward = false;
@@ -425,7 +490,11 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
                 const Ogre::Vector2 from = forward ? point : target;
                 const Ogre::Vector2 to = forward ? target : point;
                 const int heading = forward ? (1 - dy) * 3 + 1 - dx : (dy + 1) * 3 + dx + 1;
-                if(!clearSegment(edgeObstacles[heading], from, to) || !terrain(from, to))
+                // The cell of the lower of the two nodes holds the obstacles this edge can touch
+                const size_t cell = size_t(std::min(y, y + dy) / routeCellsPerTile) * size_t(cellsX) +
+                    size_t(std::min(x, x + dx) / routeCellsPerTile);
+                if(!clearListedSegment(edgeObstacles[heading], unboundedObstacles, cellObstacles[cell], from, to) ||
+                    !terrain(from, to))
                     continue;
                 nodes[next].*distance = nextCost;
                 nodes[next].*link = current;

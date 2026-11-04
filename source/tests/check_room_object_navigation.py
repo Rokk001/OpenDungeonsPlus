@@ -187,6 +187,9 @@ struct ConfigManager {
  double getNaturalFullHealSeconds()const{return 100;}
 };
 SOURCE
+//! \brief Tests one straight line on the terrain for the creature with fresh terrain answers, as the checks below did
+//! before the production terrain test took the answers remembered for one search.
+bool terrainClear(Creature& creature,const Ogre::Vector2& from,const Ogre::Vector2& to){PassableTiles tiles(creature);return terrainClear(tiles,from,to);}
 //! \brief Mirrors server refinement and spacing without changing exact work routes.
 void Creature::setWalkPath(const std::string&,const std::string&,bool,bool,const std::vector<Ogre::Vector2>& path,bool jitter,bool refined){
  walk=path;alreadyRefined=refined;distortion=jitter&&!refined;if(!refined&&RoomObjectNavigation::refine(*this,walk))distortion=false;
